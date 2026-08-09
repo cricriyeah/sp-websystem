@@ -1,0 +1,83 @@
+{
+  "home": {
+    "title": "Sal y Sol Sportfishing",
+    "description": "Book your private sport fishing tour in La Paz, BCS."
+  },
+  "nav": {
+    "brandMain": "Sal y Sol",
+    "brandAccent": "Sportfishing",
+    "location": "La Paz, BCS",
+    "inicio": "Home",
+    "nosotros": "About",
+    "preguntas": "FAQ",
+    "contacto": "Contact",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "hero": {
+    "headlineStart": "Fishing the",
+    "headlineEmphasis": "Baja",
+    "headlineEnd": "coast just got easier",
+    "subtext": "Head out on a private boat with your own captain and gear included. Departures every day from Marina La Costa."
+  },
+  "booking": {
+    "day": "Date",
+    "time": "Time",
+    "timeHelp": "Departure between 5:00 and 7:00 am",
+    "people": "Guests",
+    "submit": "Book now"
+  },
+  "about": {
+    "headline": "A local fleet, captains from here",
+    "body1": "We run private sport fishing trips in the Bay of La Paz. Every booking covers the whole boat, so you never share it with strangers.",
+    "body2": "Our captains have known these waters their whole lives and go out daily. You show up at the dock, everything else is ready.",
+    "facts": {
+      "duration": { "value": "6 to 8 hours", "label": "Trip length" },
+      "departure": { "value": "5:00 to 7:00 am", "label": "You pick the departure time" },
+      "capacity": { "value": "Up to 6 guests", "label": "No minimum, no age limit" },
+      "season": { "value": "365 days a year", "label": "We sail all year round" }
+    }
+  },
+  "faq": {
+    "headline": "Frequently asked questions",
+    "items": [
+      {
+        "q": "What is included in the trip?",
+        "a": "Full fishing gear and a cooler with ice. Bait, fishing licence, food and drinks are not included."
+      },
+      {
+        "q": "How many people fit on the boat?",
+        "a": "We have two classes: small for up to 3 guests and large for up to 6. The whole boat is yours, never shared. There is no minimum group size and no age restriction."
+      },
+      {
+        "q": "What time do we leave and how long is the trip?",
+        "a": "You choose your departure time between 5:00 and 7:00 am when you book. The trip lasts 6 to 8 hours."
+      },
+      {
+        "q": "Where do we meet?",
+        "a": "At Marina La Costa, Rangel y Navarro, La Paz, BCS, next to Restaurant Marina La Costa. You make your own way to the meeting point."
+      },
+      {
+        "q": "How can I pay?",
+        "a": "Pay 100% online, or leave a 30% deposit online and settle the remaining 70% in cash. We accept pesos and dollars."
+      },
+      {
+        "q": "What happens if the weather is bad?",
+        "a": "If the captain decides conditions are not safe, we cancel and refund 100% of what you paid."
+      },
+      {
+        "q": "Can I change my booking date?",
+        "a": "Yes, with at least 48 hours notice. We move you to the next available slot."
+      }
+    ]
+  },
+  "footer": {
+    "headline": "See you at the dock",
+    "addressLabel": "Meeting point",
+    "address": "Marina La Costa, Rangel y Navarro",
+    "city": "La Paz, Baja California Sur",
+    "hoursLabel": "Departures",
+    "hours": "Every day, 5:00 to 7:00 am",
+    "rights": "All rights reserved."
+  }
+}

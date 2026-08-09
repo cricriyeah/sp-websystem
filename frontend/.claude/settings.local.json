@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npm run *)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(gh repo *)",
+      "Bash(gh api *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx --yes skills add https://github.com/Leonxlnx/taste-skill)",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(node -e \"const p=require\\('./node_modules/@phosphor-icons/react/package.json'\\); console.log\\(p.version\\); console.log\\(Object.keys\\(p.exports||{}\\)\\)\")",
+      "Bash(npx eslint *)",
+      "Bash(node -e \"const d=require\\('./src/app/[lang]/dictionaries/es.json'\\); console.log\\(Object.keys\\(d\\)\\); console.log\\(Object.keys\\(d.about||{}\\)\\);\")"
+    ]
+  },
+  "skillOverrides": {
+    "apple-design": "off"
+  }
+}

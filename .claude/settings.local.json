@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /a)",
+      "Bash(pip --version)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(python -m venv backend/venv)",
+      "Bash(backend/venv/Scripts/python.exe -m pip install --upgrade pip -q)",
+      "Bash(backend/venv/Scripts/python.exe -m pip install django -q)",
+      "Bash(backend/venv/Scripts/python.exe -m django --version)",
+      "Bash(venv/Scripts/python.exe -m django startproject config .)",
+      "Bash(venv/Scripts/python.exe manage.py startapp fleet apps/fleet)",
+      "Bash(venv/Scripts/python.exe manage.py startapp bookings apps/bookings)",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations fleet bookings)",
+      "Bash(venv/Scripts/python.exe manage.py migrate)",
+      "Bash(venv/Scripts/python.exe manage.py check)",
+      "Bash(timeout 6 venv/Scripts/python.exe manage.py runserver 8000)",
+      "Bash(venv/Scripts/python.exe manage.py runserver 8000)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8000/admin/)",
+      "Bash(kill %1)",
+      "Read(//tmp/**)",
+      "Bash(npx --yes create-next-app@latest frontend --typescript --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-tailwind)",
+      "Bash(npm run *)",
+      "Bash(rm -rf .next)",
+      "Bash(curl -s -o /dev/null -w \"root: %{http_code} -> %{redirect_url}\\\\n\" http://127.0.0.1:3000/)",
+      "Bash(curl -s -o /dev/null -w \"es: %{http_code}\\\\n\" http://127.0.0.1:3000/es)",
+      "Bash(venv/Scripts/python.exe -m pip freeze)",
+      "Bash(curl -s -o /dev/null -w \"backend admin: %{http_code}\\\\n\" http://127.0.0.1:8000/admin/)",
+      "Bash(curl -s -o /dev/null -w \"frontend root: %{http_code}\\\\n\" http://127.0.0.1:3000/)"
+    ]
+  }
+}
