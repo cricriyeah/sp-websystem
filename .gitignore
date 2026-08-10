@@ -1,0 +1,17 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+
+# Backend (Django)
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/staticfiles/
+backend/*.log
+
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/tsconfig.tsbuildinfo

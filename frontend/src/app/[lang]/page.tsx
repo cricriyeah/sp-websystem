@@ -4,6 +4,7 @@ import { Hero } from '@/components/hero';
 import { AboutSection } from '@/components/about-section';
 import { FaqSection } from '@/components/faq-section';
 import { SiteFooter } from '@/components/site-footer';
+import { getMinBookableDate } from '@/lib/dates';
 
 export default async function Home({ params }: PageProps<'/[lang]'>) {
   const { lang } = await params;
@@ -11,7 +12,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
   if (!hasLocale(lang)) notFound();
 
   const dict = await getDictionary(lang);
-  const minDate = new Date().toISOString().slice(0, 10);
+  const minDate = getMinBookableDate();
 
   return (
     <main>

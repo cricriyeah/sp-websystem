@@ -25,6 +25,7 @@
     "time": "Hora",
     "timeHelp": "Salida entre 5:00 y 7:00 am",
     "people": "Personas",
+    "maxPeopleNotice": "Máximo 6 personas por viaje.",
     "submit": "Agendar"
   },
   "about": {
@@ -79,5 +80,44 @@
     "hoursLabel": "Salidas",
     "hours": "Todos los días, de 5:00 a 7:00 am",
     "rights": "Todos los derechos reservados."
+  },
+  "checkout": {
+    "back": "Volver",
+    "dayLabel": "Día",
+    "hourLabel": "Hora",
+    "peopleLabel": "Personas",
+    "peopleUnit": { "one": "persona", "other": "personas" },
+    "weekdaysShort": ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"],
+    "tripHeadline": "Fecha y detalles del viaje",
+    "contactHeadline": "Tus datos",
+    "phone": "Número telefónico",
+    "fullName": "Nombre completo",
+    "email": "Correo electrónico",
+    "meetingPointLabel": "Lugar de encuentro",
+    "notice": "Una vez realizado el pago, uno de nuestros agentes se comunicará contigo en las próximas 24 horas antes de tu viaje. Los datos a detalle de la ubicación, traslado, referencias y el nombre del capitán te los proporcionará el agente de atención a clientes.",
+    "amenitiesHeadline": "Amenidades",
+    "amenities": {
+      "drinks": "Bebidas",
+      "lunch": "Lunch (consta de desayuno y comida, el menú del día varía conforme a temporada)",
+      "transport": "Transporte"
+    },
+    "orderSummaryHeadline": "Resumen de tu orden",
+    "tourLabel": "Tour de pesca privado",
+    "total": "Total",
+    "paymentPlaceholder": "Espacio reservado para el formulario de pago de Stripe.",
+    "payButton": "Ir a pagar",
+    "paymentMethod": {
+      "headline": "Forma de pago",
+      "full": "100% en línea",
+      "deposit": "30% de anticipo en línea",
+      "depositNote": "El 70% restante se paga en efectivo el día del viaje."
+    },
+    "amountDueNow": "A pagar ahora",
+    "submitting": "Procesando…",
+    "confirmPay": "Pagar",
+    "missingFields": "Completa tus datos de contacto antes de continuar.",
+    "errorGeneric": "Algo salió mal. Intenta de nuevo.",
+    "dayFullNotice": "Ese día ya no tiene cupo disponible. Te asignamos automáticamente el {date}, la fecha más próxima con espacio.",
+    "paymentUnavailable": "Los pagos en línea todavía no están disponibles. Contáctanos por WhatsApp para reservar."
   }
 }

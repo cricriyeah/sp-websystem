@@ -73,7 +73,7 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
           </motion.p>
 
           <motion.div variants={item} className="mt-10 w-full max-w-3xl">
-            <BookingBar booking={dict.booking} minDate={minDate} />
+            <BookingBar lang={lang} booking={dict.booking} minDate={minDate} />
           </motion.div>
         </motion.div>
       </div>

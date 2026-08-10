@@ -12,6 +12,9 @@ DEBUG = False
 
 ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h]
 
+# URL(s) del frontend en Vercel, ver docs/contexto-negocio.md.
+CORS_ALLOWED_ORIGINS = [o for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o]
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',

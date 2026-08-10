@@ -25,6 +25,7 @@
     "time": "Time",
     "timeHelp": "Departure between 5:00 and 7:00 am",
     "people": "Guests",
+    "maxPeopleNotice": "Maximum 6 guests per trip.",
     "submit": "Book now"
   },
   "about": {
@@ -79,5 +80,44 @@
     "hoursLabel": "Departures",
     "hours": "Every day, 5:00 to 7:00 am",
     "rights": "All rights reserved."
+  },
+  "checkout": {
+    "back": "Back",
+    "dayLabel": "Day",
+    "hourLabel": "Time",
+    "peopleLabel": "Guests",
+    "peopleUnit": { "one": "guest", "other": "guests" },
+    "weekdaysShort": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+    "tripHeadline": "Trip date & details",
+    "contactHeadline": "Your details",
+    "phone": "Phone number",
+    "fullName": "Full name",
+    "email": "Email",
+    "meetingPointLabel": "Meeting point",
+    "notice": "Once your payment goes through, one of our agents will reach out within the next 24 hours before your trip. Exact location details, transport, references and the captain's name will be provided by our customer care agent.",
+    "amenitiesHeadline": "Amenities",
+    "amenities": {
+      "drinks": "Drinks",
+      "lunch": "Lunch (breakfast and lunch, the daily menu varies by season)",
+      "transport": "Transport"
+    },
+    "orderSummaryHeadline": "Order summary",
+    "tourLabel": "Private fishing tour",
+    "total": "Total",
+    "paymentPlaceholder": "Reserved space for the Stripe payment form.",
+    "payButton": "Go to payment",
+    "paymentMethod": {
+      "headline": "Payment method",
+      "full": "100% online",
+      "deposit": "30% deposit online",
+      "depositNote": "The remaining 70% is paid in cash on the day of the trip."
+    },
+    "amountDueNow": "Due now",
+    "submitting": "Processing…",
+    "confirmPay": "Pay",
+    "missingFields": "Fill in your contact details before continuing.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "dayFullNotice": "That day is fully booked. We've automatically moved you to {date}, the next available date.",
+    "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book."
   }
 }

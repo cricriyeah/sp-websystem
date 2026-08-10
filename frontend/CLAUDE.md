@@ -22,4 +22,12 @@ aplicado aqui: `middleware.ts` fue renombrado a `proxy.ts` (exporta `proxy`, no 
 
 ## Estado
 
-Solo scaffold — `[lang]/page.tsx` es un placeholder. Sin pantallas reales todavia.
+`[lang]/reservar/page.tsx` es el checkout real, conectado al backend Django via
+`src/lib/api.ts` (`NEXT_PUBLIC_API_URL`, default `http://localhost:8000` en
+`.env.local`). Trae la tarifa server-side (`getTarifa`), crea la `Reserva`
+(`pendiente_pago`) y el `PaymentIntent` al enviar el formulario, y monta
+`@stripe/react-stripe-js` (`PaymentElement`) cuando el backend responde con
+`client_secret`. Si Stripe no esta configurado en el backend (sin llaves en local),
+el checkout muestra `checkout.paymentUnavailable` en vez de romperse — ver
+`backend/CLAUDE.md` seccion "API publica (frontend)". `[lang]/page.tsx` (home) sigue
+siendo un placeholder.
