@@ -1,5 +1,6 @@
 import { Clock, SunHorizon, UsersThree, CalendarCheck } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { MediaPlaceholder } from '@/components/media-placeholder';
 
 type AboutSectionProps = {
   about: Dictionary['about'];
@@ -24,15 +25,21 @@ export function AboutSection({ about }: AboutSectionProps) {
           <p className="mt-4 max-w-[60ch] text-base leading-relaxed text-muted">{about.body2}</p>
         </div>
 
-        <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:col-span-7">
-          {facts.map(({ icon: Icon, value, label }) => (
-            <div key={label} className="border-t border-border pt-5">
-              <Icon size={24} className="text-accent" />
-              <dt className="mt-4 text-xl font-medium tracking-tight text-foreground">{value}</dt>
-              <dd className="mt-1 text-sm text-muted">{label}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="flex flex-col gap-10 lg:col-span-7">
+          {/* La foto de los capitanes es la que sostiene todo el texto de arriba:
+              sin cara, "no somos una agencia" es solo una frase. */}
+          <MediaPlaceholder hint={about.photoHint} aspect="wide" />
+
+          <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2">
+            {facts.map(({ icon: Icon, value, label }) => (
+              <div key={label} className="border-t border-border pt-5">
+                <Icon size={24} className="text-accent" />
+                <dt className="mt-4 text-xl font-medium tracking-tight text-foreground">{value}</dt>
+                <dd className="mt-1 text-sm text-muted">{label}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
     </section>
   );

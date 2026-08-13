@@ -3,39 +3,69 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Fish, List, X } from '@phosphor-icons/react';
-import type { Locale } from '@/app/[lang]/dictionaries';
-import type { Dictionary } from '@/app/[lang]/dictionaries';
+import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { WhatsappContact } from '@/components/whatsapp-contact';
 
 type SiteHeaderProps = {
   lang: Locale;
   nav: Dictionary['nav'];
+  /**
+   * `hero` va encima del degradado turquesa de la portada; `plain` sobre el
+   * fondo normal de las demas paginas (checkout, deslinde, confirmacion).
+   */
+  tone?: 'hero' | 'plain';
 };
 
-export function SiteHeader({ lang, nav }: SiteHeaderProps) {
-  const [open, setOpen] = useState(false);
+const ESTILOS = {
+  hero: {
+    contenedor: 'relative z-20 shrink-0',
+    marca: 'text-hero-ink',
+    circulo: 'bg-hero-ink text-surface',
+    sublinea: 'text-hero-ink-soft',
+    enlace: 'text-hero-ink-soft hover:text-hero-ink',
+    boton: 'border-hero-ink/25 text-hero-ink',
+  },
+  plain: {
+    contenedor: 'relative z-20 shrink-0 border-b border-border bg-background',
+    marca: 'text-foreground',
+    circulo: 'bg-foreground text-surface',
+    sublinea: 'text-muted',
+    enlace: 'text-muted hover:text-foreground',
+    boton: 'border-border text-foreground',
+  },
+};
 
+export function SiteHeader({ lang, nav, tone = 'hero' }: SiteHeaderProps) {
+  const [open, setOpen] = useState(false);
+  const estilo = ESTILOS[tone];
+
+  // Absolutos y no anclas sueltas: desde el checkout o el deslinde, un `#nosotros`
+  // no llevaria a ningun lado porque esas secciones viven en la portada.
   const links = [
-    { href: '#inicio', label: nav.inicio },
-    { href: '#nosotros', label: nav.nosotros },
-    { href: '#preguntas', label: nav.preguntas },
+    { href: `/${lang}#nosotros`, label: nav.nosotros },
+    { href: `/${lang}#flota`, label: nav.flota },
+    { href: `/${lang}#temporadas`, label: nav.temporadas },
+    { href: `/${lang}#preguntas`, label: nav.preguntas },
   ];
 
   return (
-    <header className="relative z-20 shrink-0">
+    <header className={estilo.contenedor}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 sm:px-8 lg:h-20 lg:px-12">
         <Link
           href={`/${lang}`}
-          className="flex items-center gap-2.5 text-hero-ink"
+          className={`flex items-center gap-2.5 ${estilo.marca}`}
           onClick={() => setOpen(false)}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-hero-ink text-surface">
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${estilo.circulo}`}
+          >
             <Fish size={18} weight="fill" />
           </span>
           <span className="hidden flex-col sm:flex">
             <span className="pb-0.5 text-sm leading-[1.2] font-medium tracking-tight">
               {nav.brandMain} <span className="italic font-light">{nav.brandAccent}</span>
             </span>
-            <span className="text-xs text-hero-ink-soft">{nav.location}</span>
+            <span className={`text-xs ${estilo.sublinea}`}>{nav.location}</span>
           </span>
         </Link>
 
@@ -44,7 +74,7 @@ export function SiteHeader({ lang, nav }: SiteHeaderProps) {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm text-hero-ink-soft transition-colors hover:text-hero-ink"
+              className={`text-sm transition-colors ${estilo.enlace}`}
             >
               {link.label}
             </Link>
@@ -52,19 +82,14 @@ export function SiteHeader({ lang, nav }: SiteHeaderProps) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="#contacto"
-            className="hidden rounded-full border border-hero-ink/25 px-5 py-2.5 text-sm text-hero-ink transition-colors hover:bg-hero-ink hover:text-surface lg:inline-block"
-          >
-            {nav.contacto}
-          </Link>
+          <WhatsappContact nav={nav} tone={tone} />
 
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? nav.closeMenu : nav.openMenu}
             aria-expanded={open}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-hero-ink/25 text-hero-ink lg:hidden"
+            className={`flex h-10 w-10 items-center justify-center rounded-full border lg:hidden ${estilo.boton}`}
           >
             {open ? <X size={18} /> : <List size={18} />}
           </button>
@@ -83,13 +108,7 @@ export function SiteHeader({ lang, nav }: SiteHeaderProps) {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="#contacto"
-            onClick={() => setOpen(false)}
-            className="mt-1 rounded-xl border border-border px-4 py-2.5 text-center text-sm text-foreground"
-          >
-            {nav.contacto}
-          </Link>
+          <WhatsappContact nav={nav} variant="menu" />
         </div>
       ) : null}
     </header>

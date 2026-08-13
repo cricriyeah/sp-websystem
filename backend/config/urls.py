@@ -17,11 +17,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.finance.views import panel_financiero
+
 admin.site.site_header = 'Sal y Sol Sportfishing — Backoffice'
 admin.site.site_title = 'Sal y Sol Sportfishing'
 admin.site.index_title = 'Panel de administracion'
 
 urlpatterns = [
+    # Va antes de `admin/`: esa linea se traga todo lo que cuelgue de ahi.
+    # `admin_view` le pone el login del admin encima; que solo entren jefes lo
+    # decide la vista (ver apps/finance/views.py).
+    path('admin/finanzas/', admin.site.admin_view(panel_financiero), name='finanzas'),
     path('admin/', admin.site.urls),
     path('api/', include('apps.fleet.urls')),
     path('api/', include('apps.bookings.urls')),

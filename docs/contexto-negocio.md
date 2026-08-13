@@ -99,8 +99,42 @@ tours-pesca/
 
 | Rol | Ve | Edita |
 |---|---|---|
-| Jefes | Todo, incluido dashboard financiero | Todo |
-| Coordinadora/vendedora | Vista operativa (calendario, reservas) sin cifras financieras | Cualquier reserva; asigna embarcación/capitán; crea reservas manuales |
+| Jefes | Todo, incluido el panel financiero | Todo |
+| Coordinadora/vendedora | Vista operativa (calendario, reservas) sin la foto global del dinero | Cualquier reserva; asigna embarcación/capitán; crea reservas manuales; marca qué ventas son suyas |
+
+### Comisión de la vendedora
+
+La vendedora cobra comisión por los viajes **que ella vende** (no por los que
+administra: asignar embarcación o capitán a una reserva que llegó sola no la hace suya).
+
+**El cálculo y el pago de la comisión ocurren fuera del sistema.** El sistema no guarda
+porcentajes, montos ni saldos acumulados: lo único que lleva es el registro de a quién
+le corresponde cada venta, para que ese cálculo externo tenga de dónde partir.
+
+Cómo se atribuye una venta, dos vías que conviven:
+
+1. **Link propio.** Cada vendedora tiene un código y le pasa a sus clientes un link con
+   él (`.../reservar?ref=<codigo>`). Quien reserve y pague desde ahí queda atribuido
+   solo. El código vale 30 días desde que el cliente entra por el link.
+2. **Marcado manual.** Para lo que se cerró por WhatsApp o por teléfono, la vendedora
+   marca la reserva como venta suya desde su panel. Solo puede atribuírsela a sí misma.
+
+Hoy hay una sola vendedora, pero el modelo soporta varias sin cambios: cada una es una
+cuenta con su código.
+
+### Panel financiero (solo jefes)
+
+Una pantalla con todo el dinero centralizado:
+
+- Entradas por tarjeta (pagos de la web) y entradas en efectivo (lo que se cobra el día
+  del viaje), por separado.
+- Salidas: únicamente cancelaciones y reembolsos. **No se registran** pagos a capitanes,
+  gastos de operación, pago de comisiones ni retiros — eso se maneja fuera del sistema.
+- Balance del día, del mes y del año, más el histórico día por día.
+- Lo que debería haber en la cuenta de Stripe y lo que debería haber en efectivo.
+
+Pesos y dólares se llevan por separado y nunca se suman: son dos precios de lista que el
+negocio fija a mano, el sistema no aplica ningún tipo de cambio.
 
 Notas de implementación:
 - Toda reserva creada manualmente por la vendedora debe pasar por el mismo motor de validación de cupo

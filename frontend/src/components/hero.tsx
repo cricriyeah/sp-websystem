@@ -31,8 +31,12 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
   };
 
   return (
-    <section id="inicio" className="bg-background">
-      <div className="relative flex min-h-[100dvh] flex-col overflow-hidden">
+    // z-10 para que los paneles del booking bar (calendario, hora) queden por
+    // encima de las secciones que vienen despues en el DOM.
+    <section id="inicio" className="relative z-10 bg-background">
+      {/* Sin overflow-hidden: recortaria esos paneles. Los degradados de abajo
+          son `inset-0`, no se salen del contenedor, asi que no hace falta. */}
+      <div className="relative flex min-h-[100dvh] flex-col">
         {/* TODO: replace with real photography of the fleet leaving Marina La Costa at sunrise. */}
         <div
           className="absolute inset-0"

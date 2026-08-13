@@ -4,3 +4,8 @@ djangorestframework==3.18.0
 django-cors-headers==4.9.0
 stripe==15.4.0
 python-dotenv==1.2.2
+requests==2.34.2
+whitenoise==6.12.0
+# Driver de Postgres (Supabase) que usa settings/production.py. En local no se
+# ocupa — ahi la base es sqlite — pero sin el, el deploy no arranca.
+psycopg[binary]==3.3.4

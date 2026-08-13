@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
-import { toLocalISODate } from '@/lib/dates';
+import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
+import { intlLocale } from '@/lib/intl';
 
 type CheckoutCalendarProps = {
   lang: Locale;
@@ -29,7 +30,7 @@ export function CheckoutCalendar({
   minDate,
   weekdaysShort,
 }: CheckoutCalendarProps) {
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(selected)));
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(fromLocalISODate(selected)));
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart);
@@ -37,9 +38,10 @@ export function CheckoutCalendar({
     return date;
   });
 
-  const monthLabel = new Intl.DateTimeFormat(lang, { month: 'long', year: 'numeric' }).format(
-    days[0]
-  );
+  const monthLabel = new Intl.DateTimeFormat(intlLocale(lang), {
+    month: 'long',
+    year: 'numeric',
+  }).format(days[0]);
   const capitalizedMonth = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
 
   const shiftWeek = (delta: number) => {

@@ -26,6 +26,19 @@ DATABASES = {
     }
 }
 
+# Render termina el TLS en su proxy y nos reenvia la peticion como HTTP plano. Sin
+# esto Django no la reconoce como segura, SECURE_SSL_REDIRECT redirige a https, el
+# proxy vuelve a reenviar en plano y el sitio entero entra en loop de redirects.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# Comprime y le pone hash al nombre de cada estatico para poder cachearlos para
+# siempre. Solo aqui: exige haber corrido collectstatic, asi que en local
+# rompería el admin. Build de Render: `pip install -r requirements.txt &&
+# python manage.py collectstatic --noinput && python manage.py migrate`.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}

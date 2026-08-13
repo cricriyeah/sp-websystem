@@ -1,0 +1,139 @@
+{% extends "admin/base_site.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="flex flex-col gap-8">
+
+    {% comment %}
+    Lo primero que se busca al abrir esta pantalla: cuanto deberia haber ahorita
+    en cada lado, para cuadrarlo contra el banco y contra la caja.
+    {% endcomment %}
+    <section class="flex flex-col gap-3">
+        <div>
+            <h1 class="font-semibold text-base-800 text-xl dark:text-base-200">Lo que deberia haber</h1>
+            <p class="mt-1 text-base-500 text-sm dark:text-base-400">
+                Acumulado de toda la operacion. En la cuenta: cobros con tarjeta menos reembolsos.
+                En efectivo: lo que la vendedora registro haber recibido el dia del viaje.
+            </p>
+        </div>
+
+        <div class="gap-4 grid grid-cols-1 md:grid-cols-2">
+            <div class="border border-base-200 flex flex-col gap-2 p-4 rounded-default dark:border-base-800">
+                <span class="font-medium text-base-500 text-xs uppercase dark:text-base-400">En la cuenta (Stripe)</span>
+                {% for moneda, saldo in acumulado.items %}
+                    <div class="flex items-baseline justify-between">
+                        <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
+                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_cuenta|floatformat:2|intcomma }}</span>
+                    </div>
+                {% empty %}
+                    <span class="text-base-400 text-sm">Sin movimientos todavia.</span>
+                {% endfor %}
+                <p class="text-base-400 text-xs">
+                    Es el bruto: Stripe descuenta su comision antes de depositar, y esa comision
+                    no se registra en el sistema. El deposito real siempre es un poco menor.
+                </p>
+            </div>
+
+            <div class="border border-base-200 flex flex-col gap-2 p-4 rounded-default dark:border-base-800">
+                <span class="font-medium text-base-500 text-xs uppercase dark:text-base-400">En efectivo (caja)</span>
+                {% for moneda, saldo in acumulado.items %}
+                    <div class="flex items-baseline justify-between">
+                        <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
+                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_efectivo|floatformat:2|intcomma }}</span>
+                    </div>
+                {% empty %}
+                    <span class="text-base-400 text-sm">Sin movimientos todavia.</span>
+                {% endfor %}
+                <p class="text-base-400 text-xs">
+                    Incluye el 70% de los anticipos liquidados el dia del viaje y lo que se haya
+                    cotizado aparte (bebidas, transporte). Los reembolsos no se descuentan aqui:
+                    se devuelven por Stripe.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="flex flex-col gap-3">
+        <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
+            Hoy · {{ hoy|date:"j \d\e F \d\e Y" }}
+        </h2>
+        {% include "finance/_tabla_balances.html" with balances=dia %}
+    </section>
+
+    <div class="gap-8 grid grid-cols-1 xl:grid-cols-2">
+        <section class="flex flex-col gap-3">
+            <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
+                Mes en curso · {{ hoy|date:"F Y" }}
+            </h2>
+            {% include "finance/_tabla_balances.html" with balances=mes %}
+        </section>
+
+        <section class="flex flex-col gap-3">
+            <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
+                Año en curso · {{ hoy|date:"Y" }}
+            </h2>
+            {% include "finance/_tabla_balances.html" with balances=anio %}
+        </section>
+    </div>
+
+    {% comment %}
+    Historico: el cierre de cada dia. Los dias sin un solo movimiento no
+    aparecen (ver balances_por_dia).
+    {% endcomment %}
+    <section class="flex flex-col gap-3">
+        <div class="flex flex-wrap gap-3 items-center justify-between">
+            <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
+                Historico · {{ mes_visto|date:"F Y" }}
+            </h2>
+            <div class="flex gap-2 text-sm">
+                <a class="border border-base-200 px-3 py-1 rounded-default text-base-600 hover:bg-base-50 dark:border-base-800 dark:text-base-300 dark:hover:bg-base-800"
+                   href="?mes={{ mes_anterior|date:'Y-m' }}">← {{ mes_anterior|date:"F Y" }}</a>
+                {% if mes_siguiente %}
+                    <a class="border border-base-200 px-3 py-1 rounded-default text-base-600 hover:bg-base-50 dark:border-base-800 dark:text-base-300 dark:hover:bg-base-800"
+                       href="?mes={{ mes_siguiente|date:'Y-m' }}">{{ mes_siguiente|date:"F Y" }} →</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="border border-base-200 rounded-default overflow-hidden dark:border-base-800">
+            <table class="w-full text-sm">
+                <thead class="bg-base-50 text-base-500 dark:bg-base-900 dark:text-base-400">
+                    <tr>
+                        <th class="font-medium px-3 py-2 text-left">Dia</th>
+                        <th class="font-medium px-3 py-2 text-left">Moneda</th>
+                        <th class="font-medium px-3 py-2 text-right">Tarjeta</th>
+                        <th class="font-medium px-3 py-2 text-right">Efectivo</th>
+                        <th class="font-medium px-3 py-2 text-right">Reembolsos</th>
+                        <th class="font-medium px-3 py-2 text-right">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dia, por_moneda in dias %}
+                        {% for moneda, saldo in por_moneda.items %}
+                            <tr class="border-t border-base-200 dark:border-base-800">
+                                <td class="px-3 py-2 text-base-700 dark:text-base-300">
+                                    {% if forloop.first %}{{ dia|date:"D j" }}{% endif %}
+                                </td>
+                                <td class="px-3 py-2 text-base-500 dark:text-base-400">{{ moneda }}</td>
+                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.tarjeta|floatformat:2|intcomma }}</td>
+                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.efectivo|floatformat:2|intcomma }}</td>
+                                <td class="px-3 py-2 text-right {% if saldo.reembolsos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
+                                    {% if saldo.reembolsos %}−{% endif %}{{ saldo.reembolsos|floatformat:2|intcomma }}
+                                </td>
+                                <td class="font-semibold px-3 py-2 text-right text-base-800 dark:text-base-200">{{ saldo.neto|floatformat:2|intcomma }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% empty %}
+                        <tr>
+                            <td class="px-3 py-4 text-base-400 text-center" colspan="6">
+                                Ningun movimiento de dinero en este mes.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

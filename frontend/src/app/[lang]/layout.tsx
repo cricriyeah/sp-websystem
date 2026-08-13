@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import '../globals.css';
-import { hasLocale } from './dictionaries';
+import { getDictionary, hasLocale } from './dictionaries';
 import { notFound } from 'next/navigation';
+import { RefCapture } from '@/components/ref-capture';
+import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from '@/lib/site';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -14,10 +16,38 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
-  title: 'Tours de pesca deportiva',
-  description: 'Sistema de reservas de tours de pesca deportiva.',
-};
+export async function generateMetadata({ params }: LayoutProps<'/[lang]'>): Promise<Metadata> {
+  const { lang } = await params;
+  if (!hasLocale(lang)) return {};
+
+  const dict = await getDictionary(lang);
+
+  return {
+    // metadataBase vuelve absolutas las rutas de imagenes: las redes sociales no
+    // resuelven relativas y la miniatura saldria vacia.
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: dict.meta.home.title,
+      // Las paginas internas solo ponen su nombre; la marca se agrega aqui.
+      template: `%s — ${dict.home.title}`,
+    },
+    description: dict.meta.home.description,
+    alternates: alternativasDe(lang),
+    openGraph: {
+      type: 'website',
+      siteName: dict.home.title,
+      locale: LOCALE_TAG[lang],
+      url: absolutaEn(lang),
+      title: dict.meta.home.title,
+      description: dict.meta.home.description,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: dict.meta.home.title,
+      description: dict.meta.home.description,
+    },
+  };
+}
 
 export async function generateStaticParams() {
   return [{ lang: 'es' }, { lang: 'en' }];
@@ -34,7 +64,11 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {/* No pinta nada: solo guarda el ?ref= de la vendedora si viene en la URL. */}
+        <RefCapture />
+        {children}
+      </body>
     </html>
   );
 }

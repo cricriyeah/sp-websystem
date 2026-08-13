@@ -3,22 +3,91 @@
     "title": "Sal y Sol Sportfishing",
     "description": "Reserva tu tour de pesca deportiva privado en La Paz, BCS."
   },
+  "meta": {
+    "home": {
+      "title": "Tours de pesca deportiva en La Paz, BCS | Sal y Sol Sportfishing",
+      "description": "Salimos a pescar todos los días desde Marina La Costa, en panga privada con capitán y equipo incluido. Reserva en línea en dos minutos o escríbenos por WhatsApp."
+    },
+    "reservar": {
+      "title": "Reserva tu tour de pesca",
+      "description": "Elige tu día y hora de salida, agrega lo que necesites y paga en línea. Salidas de 5:00 a 7:00 am desde Marina La Costa."
+    },
+    "deslinde": {
+      "title": "Deslinde de responsabilidad",
+      "description": "Los riesgos de la actividad y los términos que aceptas al reservar un tour de pesca deportiva con Sal y Sol Sportfishing."
+    },
+    "privacidad": {
+      "title": "Aviso de privacidad",
+      "description": "Qué datos personales recabamos al reservar, para qué los usamos y cómo puedes ejercer tus derechos ARCO."
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "description": "Esta página no existe o cambió de lugar."
+    }
+  },
+  "notFound": {
+    "headline": "Aquí no hay nada, se nos fue el pez",
+    "body": "La página que buscabas no existe o la movimos de lugar. Desde el inicio puedes ver las pangas, qué se está pescando y reservar tu viaje.",
+    "cta": "Ir al inicio",
+    "ctaBook": "Reservar un viaje"
+  },
+  "privacy": {
+    "title": "Aviso de privacidad",
+    "updated": "Última actualización: agosto de 2026",
+    "intro": "Somos un negocio chico y usamos tus datos para una sola cosa: llevarte a pescar. Aquí te decimos exactamente qué guardamos y por qué, sin letras chiquitas.",
+    "sections": [
+      {
+        "title": "Quién es responsable de tus datos",
+        "body": "Sal y Sol Sportfishing, con punto de operación en Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur. Puedes contactarnos por WhatsApp al número que aparece en esta página."
+      },
+      {
+        "title": "Qué datos recabamos",
+        "body": "Al reservar te pedimos tu nombre, teléfono y correo electrónico, además de la fecha, hora y número de personas de tu viaje. Al aceptar el deslinde de responsabilidad guardamos también tu nombre, la fecha y hora de aceptación y tu dirección IP, como constancia de ese acuerdo."
+      },
+      {
+        "title": "Para qué los usamos",
+        "body": "Para coordinar tu viaje: confirmarte la reserva, asignarte capitán y embarcación, y comunicarnos contigo antes de la salida. También para cumplir con la constancia del deslinde. No los usamos para publicidad ni te vamos a llenar de correos."
+      },
+      {
+        "title": "Datos de pago",
+        "body": "Los datos de tu tarjeta NUNCA pasan por nuestros servidores ni los podemos ver. El cobro lo procesa Stripe, que cumple con el estándar PCI DSS. Nosotros solo guardamos el monto, la moneda y un identificador de la transacción."
+      },
+      {
+        "title": "Con quién los compartimos",
+        "body": "Con nadie que no sea necesario para tu viaje: el capitán asignado recibe tu nombre, teléfono y los datos de la salida. Usamos Stripe para el cobro y servicios de correo y WhatsApp para confirmarte. No vendemos ni cedemos tus datos a terceros."
+      },
+      {
+        "title": "Cuánto tiempo los guardamos",
+        "body": "Las reservas se conservan como registro de la operación. Los checkouts que quedaron sin pagar se eliminan automáticamente a los 30 días."
+      },
+      {
+        "title": "Tus derechos ARCO",
+        "body": "Puedes pedirnos acceder a tus datos, rectificarlos si están mal, cancelarlos u oponerte a su uso. Escríbenos por WhatsApp o al correo con el que reservaste y lo resolvemos; no necesitas ningún formato especial."
+      }
+    ],
+    "back": "Volver al inicio"
+  },
   "nav": {
     "brandMain": "Sal y Sol",
     "brandAccent": "Sportfishing",
     "location": "La Paz, BCS",
     "inicio": "Inicio",
     "nosotros": "Nosotros",
+    "flota": "Las pangas",
+    "temporadas": "Qué se pesca",
     "preguntas": "Preguntas",
     "contacto": "Contacto",
+    "humanContact": "¿Te gusta más el contacto humano?",
+    "whatsappCta": "Escríbenos por WhatsApp",
+    "whatsappMessage": "Hola, me gustaría reservar un tour de pesca. ¿Me ayudan?",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú"
   },
   "hero": {
-    "headlineStart": "Pescar en la",
-    "headlineEmphasis": "Baja",
-    "headlineEnd": "nunca fue tan fácil",
-    "subtext": "Sal a pescar en una embarcación privada, con capitán y equipo incluido. Salidas todos los días desde Marina La Costa."
+    "headlineStart": "Vente a pescar",
+    "headlineEmphasis": "con nosotros",
+    "headlineEnd": "a la Bahía de La Paz",
+    "subtext": "Somos capitanes de aquí. Salimos todos los días de madrugada desde Marina La Costa, en nuestras propias pangas, con el equipo listo. Tú solo llega."
   },
   "booking": {
     "day": "Día",
@@ -26,18 +95,112 @@
     "timeHelp": "Salida entre 5:00 y 7:00 am",
     "people": "Personas",
     "maxPeopleNotice": "Máximo 6 personas por viaje.",
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
     "submit": "Agendar"
   },
   "about": {
-    "headline": "Una flota local, capitanes de aquí",
-    "body1": "Operamos tours privados de pesca deportiva en la Bahía de La Paz. Cada reserva es para tu grupo completo: la embarcación nunca se comparte con desconocidos.",
-    "body2": "Los capitanes conocen estas aguas de toda la vida y salen a diario. Tú llegas al muelle, el resto ya está listo.",
+    "headline": "No somos una agencia. Somos los que te van a llevar",
+    "body1": "Aquí no hay intermediarios ni oficinas. Los que contestan el WhatsApp son los mismos que amarran la panga en la madrugada, y los dueños también salen de capitanes. Conocemos esta bahía desde chamacos y seguimos pescando en ella los días que no traemos gente.",
+    "body2": "Cada viaje es solo para tu grupo: la panga no se comparte con desconocidos. Si es tu primera vez, no te preocupes, el capitán te enseña a tirar el anzuelo. Y si algo no salió como esperabas, dínoslo de frente — así arreglamos las cosas aquí.",
+    "photoHint": "Foto de los capitanes en el muelle, de preferencia al amanecer y sin poses",
     "facts": {
       "duration": { "value": "6 a 8 horas", "label": "Duración del viaje" },
       "departure": { "value": "5:00 a 7:00 am", "label": "Tú eliges la hora de salida" },
       "capacity": { "value": "Hasta 6 personas", "label": "Sin mínimo ni límite de edad" },
       "season": { "value": "365 días al año", "label": "Salimos todo el año" }
     }
+  },
+  "fleet": {
+    "headline": "Nuestras pangas",
+    "intro": "Son nuestras, las cuidamos nosotros y las conocemos de memoria. Te asignamos la que mejor le quede a tu grupo — si son pocos no te vamos a cobrar de más por una grande.",
+    "note": "¿Quieres ver más fotos de alguna? Pídelas por WhatsApp y te las mandamos.",
+    "specsLabel": "Lo que trae",
+    "boats": [
+      {
+        "name": "Panga chica",
+        "capacity": "Hasta 3 personas",
+        "specs": ["Motor fuera de borda", "Sombra", "Hielera con hielo", "Equipo de pesca para todos"],
+        "photoHint": "Foto de la panga chica navegando, con gente pescando"
+      },
+      {
+        "name": "Panga grande",
+        "capacity": "Hasta 6 personas",
+        "specs": ["Motor fuera de borda", "Sombra", "Más espacio para pelear el pez", "Hielera con hielo", "Equipo de pesca para todos"],
+        "photoHint": "Foto de la panga grande, de perfil, con la bahía atrás"
+      }
+    ]
+  },
+  "season": {
+    "headline": "Qué se está pescando",
+    "intro": "La bahía cambia con los meses. Esto es lo que se ha estado dando, para que sepas qué esperar antes de venir — y para que no te vendamos humo.",
+    "note": "El mar no da garantías y nosotros tampoco te las vamos a dar. Si el día viene flojo, te lo decimos antes de salir. Pregúntanos por WhatsApp cómo va la semana.",
+    "speciesLabel": "Lo que suele darse",
+    "rows": [
+      { "period": "Diciembre a marzo", "species": "Sierra, jurel, cabrilla, pargo", "note": "Agua fresca, días tranquilos. Buena temporada para quien va empezando." },
+      { "period": "Abril a junio", "species": "Pez gallo, dorado, marlin rayado", "note": "Empieza a calentar el agua y llega lo grande." },
+      { "period": "Julio a septiembre", "species": "Dorado, atún aleta amarilla, pez vela", "note": "La temporada fuerte. Es cuando más se pelea." },
+      { "period": "Octubre a noviembre", "species": "Dorado, pez vela, pargo", "note": "Todavía se da bien y hay menos gente en el agua." }
+    ]
+  },
+  "included": {
+    "headline": "Qué va incluido y qué no",
+    "intro": "Preferimos decírtelo aquí y no en el muelle. Esto es exactamente lo que pagas y lo que tendrías que llevar tú.",
+    "includedTitle": "Va incluido",
+    "included": [
+      "La panga completa para tu grupo, sin compartir",
+      "Capitán",
+      "Equipo de pesca para todos los que van",
+      "Hielera con hielo",
+      "De 6 a 8 horas de viaje"
+    ],
+    "notIncludedTitle": "No va incluido",
+    "notIncluded": [
+      "Licencia de pesca (te explicamos abajo)",
+      "Carnada — pregúntanos y te la conseguimos",
+      "Comida y bebidas, salvo que agregues el lunch al reservar",
+      "Traslado al muelle, salvo que lo pidas y lo cotizemos"
+    ],
+    "bringTitle": "Lo que te recomendamos traer",
+    "bring": [
+      "Bloqueador y gorra: el sol pega fuerte aunque salgas de noche",
+      "Una chamarra ligera, a las 5 de la mañana hace fresco en el agua",
+      "Pastillas para el mareo si eres propenso, tómalas antes de subir",
+      "Identificación",
+      "Hielera si te quieres llevar tu pescado"
+    ],
+    "licenseTitle": "Sobre la licencia de pesca",
+    "licenseBody": "En México cada persona que pesca a bordo necesita su licencia de CONAPESCA. No la incluimos en el precio porque es un trámite personal, pero se saca en línea en unos minutos y es barata. Si se te complica, dinos y te ayudamos a sacarla antes de tu viaje.",
+    "licenseCta": "Pregúntanos por WhatsApp",
+    "catchTitle": "Lo que pesques",
+    "catchBody": "Lo que sacas es tuyo y te lo llevas. Especies como el marlin y el pez vela están reservadas a la pesca deportiva y tienen límite por pescador al día — cuando cae una, lo normal es tomar la foto y regresarla al agua. El capitán te va diciendo qué se puede y qué no, sin sermones."
+  },
+  "gallery": {
+    "headline": "Cómo se ve un día con nosotros",
+    "intro": "Fotos de viajes de verdad, no de banco de imágenes.",
+    "note": "Sigue llegándonos material de los últimos viajes. Si viniste con nosotros y quieres que subamos tu foto, mándanosla.",
+    "videoHint": "Video corto (15-30 s) de la salida al amanecer o de una pelea con el pez",
+    "photoHints": [
+      "Salida del muelle todavía de noche",
+      "Cliente peleando un pez, con el capitán ayudando",
+      "La captura del día en la cubierta",
+      "Grupo de amigos o familia a bordo, riéndose",
+      "Detalle del equipo de pesca listo",
+      "Regreso al muelle con el sol alto"
+    ]
+  },
+  "reviews": {
+    "headline": "Lo que dicen los que ya vinieron",
+    "intro": "Preferimos que lo cuenten ellos.",
+    "note": "Aquí van reseñas reales de clientes. Mándanos las capturas de Google o TripAdvisor y las ponemos tal cual, sin editarlas.",
+    "placeholder": "Espacio para una reseña real de un cliente",
+    "placeholderAuthor": "Nombre del cliente",
+    "cta": "¿Ya viniste con nosotros? Déjanos tu opinión por WhatsApp"
+  },
+  "groups": {
+    "headline": "¿Son más de 6?",
+    "body": "En una panga caben hasta 6. Si van más, no hay problema: coordinamos dos o tres pangas para que salgan juntos a la misma hora y se vean en el agua. Escríbenos y lo armamos contigo.",
+    "cta": "Escríbenos por WhatsApp"
   },
   "faq": {
     "headline": "Preguntas frecuentes",
@@ -68,7 +231,31 @@
       },
       {
         "q": "¿Puedo cambiar la fecha de mi reserva?",
-        "a": "Sí, con al menos 48 horas de anticipación. Te reasignamos al espacio disponible más próximo."
+        "a": "Sí, con al menos 48 horas de anticipación. Te reasignamos al espacio disponible más próximo. Con menos tiempo se nos complica porque ya movimos capitán y panga, pero háblanos y vemos qué se puede hacer."
+      },
+      {
+        "q": "¿Necesito licencia de pesca?",
+        "a": "Sí, cada persona que pesca a bordo necesita la suya, de CONAPESCA. No va incluida en el precio porque es un trámite personal, pero se saca en línea en unos minutos. Si se te complica, escríbenos y te ayudamos antes del viaje."
+      },
+      {
+        "q": "¿Me puedo llevar lo que pesque?",
+        "a": "Claro, es tuyo. Trae una hielera si quieres llevártelo bien. Ojo con el marlin y el pez vela: están reservados a la pesca deportiva y tienen límite por pescador al día, así que normalmente se les toma la foto y se regresan al agua. El capitán te va guiando."
+      },
+      {
+        "q": "Nunca he pescado, ¿voy a hacer el ridículo?",
+        "a": "Para nada, y no serías el primero. El capitán te enseña a tirar el anzuelo y a pelear el pez. Llevamos gente que nunca había subido a una lancha y se van con su pescado."
+      },
+      {
+        "q": "¿Y si me mareo?",
+        "a": "Pasa, sobre todo si el mar viene picado. Si eres propenso, tómate una pastilla antes de subir, no después. Y avísale al capitán: sabe cómo acomodar el viaje para que la pases mejor."
+      },
+      {
+        "q": "Somos más de 6, ¿qué hacemos?",
+        "a": "Coordinamos varias pangas para que salgan a la misma hora y se vean en el agua. Escríbenos por WhatsApp y lo armamos contigo."
+      },
+      {
+        "q": "¿Y si no puedo ir y no es por el clima?",
+        "a": "Te lo decimos claro: el único caso con devolución es el mal clima. Si no puedes venir, háblanos lo antes posible — con 48 horas te movemos la fecha sin problema. Preferimos acomodarte que quedarnos con tu dinero."
       }
     ]
   },
@@ -79,6 +266,10 @@
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Salidas",
     "hours": "Todos los días, de 5:00 a 7:00 am",
+    "exploreLabel": "El viaje",
+    "legalLabel": "Legal",
+    "waiver": "Deslinde de responsabilidad",
+    "privacy": "Aviso de privacidad",
     "rights": "Todos los derechos reservados."
   },
   "checkout": {
@@ -98,11 +289,66 @@
     "amenitiesHeadline": "Amenidades",
     "amenities": {
       "drinks": "Bebidas",
-      "lunch": "Lunch (consta de desayuno y comida, el menú del día varía conforme a temporada)",
-      "transport": "Transporte"
+      "lunch": "Lunch (desayuno y comida; el menú es fijo y cambia cada semana)",
+      "transport": "Transporte desde tu hospedaje"
+    },
+    "lunchPerPerson": "por persona",
+    "requestsHeadline": "Lo que cotiza el agente",
+    "requestsIntro": "Márcalo y nuestro agente te pasa el precio antes del viaje. No se cobra en línea porque depende de lo que elijas y de la distancia.",
+    "requestsBadge": "Sin costo en línea",
+    "waiver": {
+      "accept": "Acepto deslindar a la empresa de cualquier responsabilidad y he leído el",
+      "linkLabel": "deslinde completo",
+      "missing": "Acepta el deslinde de responsabilidad para continuar.",
+      "page": {
+        "title": "Deslinde de responsabilidad",
+        "updated": "Última actualización: agosto de 2026",
+        "intro": "Este documento describe los riesgos de la actividad y los términos que aceptas al reservar un tour de pesca deportiva con Sal y Sol Sportfishing. Al marcar la casilla en el checkout declaras haberlo leído y estar de acuerdo.",
+        "sections": [
+          {
+            "title": "1. Naturaleza de la actividad",
+            "body": "La pesca deportiva se realiza en mar abierto, a bordo de embarcaciones menores, y conlleva riesgos propios de la actividad: oleaje, condiciones climáticas cambiantes, movimiento de la embarcación, uso de anzuelos y equipo de pesca, exposición al sol y contacto con especies marinas. Participas con conocimiento de estos riesgos y por voluntad propia."
+          },
+          {
+            "title": "2. Obligaciones del participante",
+            "body": "Te comprometes a seguir en todo momento las indicaciones del capitán, a usar el chaleco salvavidas cuando él lo indique, y a no abordar bajo los efectos del alcohol o de sustancias que alteren tus reflejos. El capitán puede negar el abordaje o regresar a puerto si considera que tu conducta pone en riesgo a las personas a bordo, sin derecho a reembolso."
+          },
+          {
+            "title": "3. Menores de edad",
+            "body": "No hay restricción de edad, pero los menores viajan bajo la responsabilidad y supervisión permanente del adulto que realizó la reserva."
+          },
+          {
+            "title": "4. Alcance del deslinde",
+            "body": "Liberas a Sal y Sol Sportfishing, a sus capitanes, tripulación y embarcaciones de responsabilidad por lesiones, pérdidas, daños o extravío de objetos personales que ocurran durante el tour y que no deriven de su negligencia comprobada. Este deslinde no limita los derechos que la ley te reconoce de forma irrenunciable."
+          },
+          {
+            "title": "5. Seguridad y cancelación por clima",
+            "body": "La decisión final sobre las condiciones de navegación es del capitán. Si determina que no es seguro salir, el tour se cancela y se te reembolsa el 100% de lo pagado. Las embarcaciones cuentan con seguro vigente."
+          },
+          {
+            "title": "6. Datos que registramos",
+            "body": "Al aceptar guardamos tu nombre, la fecha y hora de aceptación y tu dirección IP, como constancia de este acuerdo. Tus datos de contacto se usan únicamente para coordinar tu viaje."
+          }
+        ],
+        "back": "Volver al checkout"
+      }
+    },
+    "currency": {
+      "headline": "Moneda",
+      "mxn": "Pesos (MXN)",
+      "usd": "Dólares (USD)"
+    },
+    "amenitiesModal": {
+      "headline": "¿Le agregamos algo al viaje?",
+      "body": "Todavía puedes sumar estas opciones. Se cobran junto con tu reserva y no hay que pagarlas aparte el día del viaje.",
+      "confirm": "Continuar al pago",
+      "back": "Volver al checkout",
+      "close": "Cerrar"
     },
     "orderSummaryHeadline": "Resumen de tu orden",
     "tourLabel": "Tour de pesca privado",
+    "extraPeopleLabel": "Personas adicionales",
+    "extraPeopleHint": "El viaje incluye hasta {included} personas. A partir de ahí se cobra {price} por persona.",
     "total": "Total",
     "paymentPlaceholder": "Espacio reservado para el formulario de pago de Stripe.",
     "payButton": "Ir a pagar",
@@ -113,11 +359,26 @@
       "depositNote": "El 70% restante se paga en efectivo el día del viaje."
     },
     "amountDueNow": "A pagar ahora",
+    "cancelPolicy": "Si el capitán cancela por mal clima, te devolvemos el 100%. Si eres tú quien no puede venir, avísanos con 48 horas y te movemos la fecha sin costo.",
     "submitting": "Procesando…",
     "confirmPay": "Pagar",
     "missingFields": "Completa tus datos de contacto antes de continuar.",
     "errorGeneric": "Algo salió mal. Intenta de nuevo.",
     "dayFullNotice": "Ese día ya no tiene cupo disponible. Te asignamos automáticamente el {date}, la fecha más próxima con espacio.",
-    "paymentUnavailable": "Los pagos en línea todavía no están disponibles. Contáctanos por WhatsApp para reservar."
+    "paymentUnavailable": "Los pagos en línea todavía no están disponibles. Contáctanos por WhatsApp para reservar.",
+    "confirmation": {
+      "headline": "¡Listo! Tu reserva está confirmada",
+      "processingHeadline": "Estamos confirmando tu pago",
+      "processingBody": "Tu banco está procesando el cargo. En cuanto se acredite te llega el correo de confirmación; no hace falta que pagues de nuevo.",
+      "emailNotice": "Te enviamos un correo a {email} con el detalle de tu pago. Si no lo ves en unos minutos, revisa tu carpeta de spam.",
+      "tripHeadline": "Tu viaje",
+      "paidLabel": "Pagado",
+      "pendingLabel": "Por pagar en efectivo el día del viaje",
+      "meetingHeadline": "Dónde nos vemos",
+      "agentHeadline": "Qué sigue",
+      "agentBody": "Un agente de ventas se pondrá en contacto contigo en las próximas 24 horas para darte los detalles finales: referencias exactas del punto de encuentro, traslado y el nombre de tu capitán.",
+      "quotesNote": "También te va a cotizar lo que pediste ({items}), que no está incluido en el monto que pagaste.",
+      "backHome": "Volver al inicio"
+    }
   }
 }

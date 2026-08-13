@@ -6,7 +6,10 @@ from .models import Capitan, Embarcacion, Tarifa
 
 @admin.register(Tarifa)
 class TarifaAdmin(ModelAdmin):
-    list_display = ['precio', 'actualizado_en', 'actualizado_por']
+    list_display = [
+        'precio', 'precio_usd', 'precio_persona_extra', 'precio_persona_extra_usd',
+        'actualizado_en', 'actualizado_por',
+    ]
     readonly_fields = ['actualizado_en', 'actualizado_por']
 
     def has_add_permission(self, request):

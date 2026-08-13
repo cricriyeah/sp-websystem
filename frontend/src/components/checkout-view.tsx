@@ -2,18 +2,57 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Fish, MapPin, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { AmenitiesReminder } from '@/components/amenities-reminder';
+import { BookingConfirmation } from '@/components/booking-confirmation';
+import { SiteHeader } from '@/components/site-header';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
-import { ApiError, crearPago, crearReserva, getCupo, type Pago } from '@/lib/api';
-import { toLocalISODate } from '@/lib/dates';
+import { TimeField } from '@/components/time-field';
+import {
+  ApiError,
+  crearPago,
+  getCupo,
+  guardarReserva,
+  type Moneda,
+  type Pago,
+  type SolicitudKey,
+  type Tarifa,
+} from '@/lib/api';
+import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
+import { intlLocale } from '@/lib/intl';
+import { leerRef } from '@/lib/ref';
 
 const CUPO_SEARCH_LIMIT_DAYS = 90;
 
+// Bebidas y transporte no tienen precio en linea: su costo depende del tipo de
+// bebida y de la distancia del traslado, asi que el agente los cotiza aparte.
+const SOLICITUD_KEYS: SolicitudKey[] = ['drinks', 'transport'];
+
+const CLAVE_CHECKOUT_ID = 'salysol:checkout-id';
+
+/**
+ * Identificador de esta sesion de checkout. Vive en sessionStorage para que
+ * sobreviva a una recarga: el backend lo usa como llave y reescribe la misma
+ * reserva en vez de dejar una fila nueva por cada intento.
+ */
+function useCheckoutId() {
+  const [id] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    const guardado = window.sessionStorage.getItem(CLAVE_CHECKOUT_ID);
+    if (guardado) return guardado;
+    const nuevo = crypto.randomUUID();
+    window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
+    return nuevo;
+  });
+  return id;
+}
+
 function addDays(isoDate: string, days: number) {
-  const date = new Date(`${isoDate}T00:00:00`);
+  const date = fromLocalISODate(isoDate);
   date.setDate(date.getDate() + days);
   return toLocalISODate(date);
 }
@@ -22,22 +61,19 @@ type CheckoutViewProps = {
   lang: Locale;
   dict: Dictionary;
   initialDay: string;
-  time: string;
-  people: number;
+  initialTime: string;
+  initialPeople: number;
   minDate: string;
-  tourPrice: number;
+  // null = el backend no dio precio (sin tarifa configurada o caido).
+  tarifa: Tarifa | null;
 };
 
-// Espejo de backend/apps/payments/pricing.py (AMENITY_PRICE) — solo para
-// mostrar el desglose en la UI; el monto que se cobra siempre lo calcula
-// el servidor al crear el PaymentIntent.
-const AMENITY_PRICE = { drinks: 150, lunch: 300, transport: 250 };
-
-type Phase = 'form' | 'submitting' | 'payment' | 'unavailable' | 'error';
+type Phase = 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
 
 function formatDay(date: Date, lang: Locale) {
-  const weekday = new Intl.DateTimeFormat(lang, { weekday: 'long' }).format(date);
-  const month = new Intl.DateTimeFormat(lang, { month: 'long' }).format(date);
+  const locale = intlLocale(lang);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date);
+  const month = new Intl.DateTimeFormat(locale, { month: 'long' }).format(date);
   const day = String(date.getDate()).padStart(2, '0');
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   return lang === 'es'
@@ -45,22 +81,32 @@ function formatDay(date: Date, lang: Locale) {
     : `${cap(weekday)}, ${cap(month)} ${day}`;
 }
 
-function formatHour(time: string) {
-  const [h, m] = time.split(':').map(Number);
-  const period = h >= 12 ? 'pm' : 'am';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
-}
+export function CheckoutView({
+  lang,
+  dict,
+  initialDay,
+  initialTime,
+  initialPeople,
+  minDate,
+  tarifa,
+}: CheckoutViewProps) {
+  const { checkout, booking, nav } = dict;
+  const checkoutId = useCheckoutId();
 
-export function CheckoutView({ lang, dict, initialDay, time, people, minDate, tourPrice }: CheckoutViewProps) {
-  const { checkout, nav, footer } = dict;
   const [day, setDay] = useState(initialDay);
-  const [amenities, setAmenities] = useState({ drinks: false, lunch: false, transport: false });
+  const [time, setTime] = useState(initialTime);
+  const [people, setPeople] = useState(initialPeople);
+  const [moneda, setMoneda] = useState<Moneda>('MXN');
+  const [lunch, setLunch] = useState(false);
+  const [solicitudes, setSolicitudes] = useState({ drinks: false, transport: false });
   const [formaPago, setFormaPago] = useState<'completo' | 'anticipo'>('completo');
   const [contact, setContact] = useState({ phone: '', fullName: '', email: '' });
-  const [phase, setPhase] = useState<Phase>('form');
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [phase, setPhase] = useState<Phase>(tarifa ? 'form' : 'unavailable');
   const [error, setError] = useState('');
   const [pago, setPago] = useState<Pago | null>(null);
+  const [recordatorioAbierto, setRecordatorioAbierto] = useState(false);
+  const [pagoProcesando, setPagoProcesando] = useState(false);
   const [dayFullNotice, setDayFullNotice] = useState<string | null>(null);
   const cupoCheckId = useRef(0);
 
@@ -86,7 +132,7 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
           if (candidate !== day) {
             setDay(candidate);
             setDayFullNotice(
-              checkout.dayFullNotice.replace('{date}', formatDay(new Date(`${candidate}T00:00:00`), lang))
+              checkout.dayFullNotice.replace('{date}', formatDay(fromLocalISODate(candidate), lang))
             );
           }
           return;
@@ -96,63 +142,131 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
     })();
   }, [day, lang, checkout.dayFullNotice]);
 
+  // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
+  const usdDisponible = tarifa?.precio_usd != null;
+  const tourPrice = tarifa ? Number(moneda === 'MXN' ? tarifa.precio : tarifa.precio_usd) : null;
+  const precioLunch = tarifa
+    ? Number(moneda === 'MXN' ? tarifa.precio_lunch : tarifa.precio_lunch_usd)
+    : 0;
+
   const currency = useMemo(
-    () => new Intl.NumberFormat(lang, { style: 'currency', currency: 'MXN' }),
-    [lang]
+    () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
+    [lang, moneda]
   );
 
-  const lines = [
-    { label: checkout.tourLabel, amount: currency.format(tourPrice) },
-    ...(
-      Object.keys(amenities) as Array<keyof typeof amenities>
-    )
-      .filter((key) => amenities[key])
-      .map((key) => ({
-        label: checkout.amenities[key],
-        amount: currency.format(AMENITY_PRICE[key]),
-      })),
-  ];
-  const total = tourPrice + Object.keys(amenities).reduce(
-    (sum, key) => sum + (amenities[key as keyof typeof amenities] ? AMENITY_PRICE[key as keyof typeof amenities] : 0),
-    0
-  );
-  const amountDueNow = formaPago === 'completo' ? total : Math.round(total * 0.3 * 100) / 100;
+  // Lo que se le puede ofrecer todavia al cliente antes de pagar.
+  const faltantes = {
+    lunch: !lunch,
+    solicitudes: SOLICITUD_KEYS.filter((key) => !solicitudes[key]),
+  };
+  const hayAlgoQueOfrecer = faltantes.lunch || faltantes.solicitudes.length > 0;
 
-  const peopleUnit = people === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other;
-  const dayDate = useMemo(() => new Date(`${day}T00:00:00`), [day]);
+  // El precio es por viaje (la reserva es de la embarcacion completa), pero
+  // pasando de las personas incluidas se suma un cargo por cada una. El servidor
+  // recalcula esto mismo al crear el pago: aqui solo se muestra.
+  const personasIncluidas = tarifa?.personas_incluidas ?? 0;
+  const precioPersonaExtra = tarifa
+    ? Number(moneda === 'MXN' ? tarifa.precio_persona_extra : tarifa.precio_persona_extra_usd)
+    : 0;
+  const personasExtra = Math.max(0, people - personasIncluidas);
+  const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
 
-  const handleSubmit = async () => {
+  // Un lunch por persona: comen todos los que van a bordo.
+  const cargoLunch = lunch ? precioLunch * people : 0;
+
+  const lines =
+    tourPrice === null
+      ? []
+      : [
+          { label: checkout.tourLabel, amount: currency.format(tourPrice) },
+          ...(cargoPersonas > 0
+            ? [{
+                label: `${checkout.extraPeopleLabel} (${personasExtra} × ${currency.format(precioPersonaExtra)})`,
+                amount: currency.format(cargoPersonas),
+              }]
+            : []),
+          ...(cargoLunch > 0
+            ? [{
+                label: `Lunch (${people} × ${currency.format(precioLunch)})`,
+                amount: currency.format(cargoLunch),
+              }]
+            : []),
+        ];
+
+  const total = tourPrice === null ? null : tourPrice + cargoPersonas + cargoLunch;
+  const amountDueNow =
+    total === null ? null : formaPago === 'completo' ? total : Math.round(total * 0.3 * 100) / 100;
+
+  const dayDate = useMemo(() => fromLocalISODate(day), [day]);
+
+  /** Primer paso del pago: valida, y antes de tocar la red ofrece las amenidades. */
+  const iniciarPago = () => {
     if (!contact.phone.trim() || !contact.fullName.trim() || !contact.email.trim()) {
       setError(checkout.missingFields);
       setPhase('error');
       return;
     }
 
+    // Sin deslinde aceptado no hay reserva; el backend lo rechaza igual.
+    if (!waiverAccepted) {
+      setError(checkout.waiver.missing);
+      setPhase('error');
+      return;
+    }
+
+    if (hayAlgoQueOfrecer) {
+      setRecordatorioAbierto(true);
+      return;
+    }
+
+    enviar();
+  };
+
+  /**
+   * Unico punto que toca la red. Se protege contra envios repetidos con la
+   * fase: mientras esta en `submitting` no vuelve a entrar, y la reserva se
+   * guarda con `checkout_id`, asi que reintentar tras un error reescribe la
+   * misma fila en vez de crear otra.
+   */
+  const enviar = async () => {
+    if (phase === 'submitting' || phase === 'payment') return;
+
     setPhase('submitting');
     setError('');
 
     try {
-      const reserva = await crearReserva({
+      const reserva = await guardarReserva({
+        checkout_id: checkoutId,
         fecha: day,
         hora: time,
         numero_personas: people,
         nombre_cliente: contact.fullName,
         telefono_cliente: contact.phone,
         correo_cliente: contact.email,
+        moneda,
+        deslinde_aceptado: waiverAccepted,
+        // El nombre del deslinde es el que el cliente ya escribio en sus datos:
+        // pedirlo dos veces no aporta nada y estorba el checkout.
+        deslinde_nombre: contact.fullName.trim(),
+        // Los extras viajan con la reserva, no con el pago: la cocina necesita
+        // saber cuantos lunches y la vendedora a quien cotizarle.
+        lleva_lunch: lunch,
+        pide_bebidas: solicitudes.drinks,
+        pide_transporte: solicitudes.transport,
+        // A quien le cuenta la venta, si el cliente llego por el link de alguien.
+        ref: leerRef(),
       });
 
-      const selectedAmenities = (Object.keys(amenities) as Array<keyof typeof amenities>).filter(
-        (key) => amenities[key]
-      );
-
       const pagoResponse = await crearPago(reserva.id, {
-        amenities: selectedAmenities,
+        checkout_id: checkoutId,
         forma_pago: formaPago,
       });
 
       setPago(pagoResponse);
+      setRecordatorioAbierto(false);
       setPhase('payment');
     } catch (err) {
+      setRecordatorioAbierto(false);
       if (err instanceof ApiError && err.status === 503) {
         setPhase('unavailable');
         return;
@@ -162,26 +276,47 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
     }
   };
 
+  const locked = phase === 'payment' || phase === 'unavailable';
+  const enviando = phase === 'submitting';
+
+  if (phase === 'confirmed') {
+    const porCotizar = SOLICITUD_KEYS.filter((key) => solicitudes[key]).map(
+      (key) => checkout.amenities[key]
+    );
+
+    return (
+      <BookingConfirmation
+        lang={lang}
+        dict={dict}
+        email={contact.email}
+        fecha={formatDay(dayDate, lang)}
+        hora={formatHour(time)}
+        personas={people}
+        pagado={amountDueNow === null ? '—' : currency.format(amountDueNow)}
+        saldoEnEfectivo={
+          total !== null && amountDueNow !== null && total > amountDueNow
+            ? currency.format(total - amountDueNow)
+            : null
+        }
+        porCotizar={porCotizar}
+        procesando={pagoProcesando}
+      />
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-background">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-8 lg:px-12">
+      <SiteHeader lang={lang} nav={nav} tone="plain" />
+
+      <div className="mx-auto max-w-6xl px-6 pt-6 sm:px-8 lg:px-12">
         <Link
           href={`/${lang}`}
-          className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft size={16} />
           {checkout.back}
         </Link>
-
-        <Link href={`/${lang}`} className="flex items-center gap-2 text-foreground">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-surface">
-            <Fish size={16} weight="fill" />
-          </span>
-          <span className="hidden text-sm font-medium tracking-tight sm:inline">
-            {nav.brandMain} <span className="italic font-light">{nav.brandAccent}</span>
-          </span>
-        </Link>
-      </header>
+      </div>
 
       {dayFullNotice && (
         <div className="mx-auto mb-2 flex max-w-6xl items-start gap-3 px-6 sm:px-8 lg:px-12">
@@ -192,7 +327,9 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
         </div>
       )}
 
-      <main className="mx-auto grid max-w-6xl gap-10 px-6 pb-24 sm:px-8 lg:grid-cols-2 lg:items-start lg:gap-16 lg:px-12">
+      {/* 3fr/2fr: los pasos necesitan el ancho (calendario, formulario), el
+          resumen es una columna de cifras y se lee mejor angosta. */}
+      <main className="mx-auto grid max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
         <div className="flex flex-col gap-6">
           <CheckoutSectionCard step={1} title={checkout.tripHeadline}>
             <CheckoutCalendar
@@ -203,22 +340,42 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
               weekdaysShort={checkout.weekdaysShort}
             />
 
-            <dl className="mt-6 flex flex-col gap-2 border-t border-border pt-5 text-sm">
-              <div className="flex gap-2">
-                <dt className="text-muted">{checkout.dayLabel}:</dt>
-                <dd className="text-foreground">{formatDay(dayDate, lang)}</dd>
-              </div>
-              <div className="flex gap-2">
-                <dt className="text-muted">{checkout.hourLabel}:</dt>
-                <dd className="text-foreground">{formatHour(time)}</dd>
-              </div>
-              <div className="flex gap-2">
-                <dt className="text-muted">{checkout.peopleLabel}:</dt>
-                <dd className="text-foreground">
-                  {people} {peopleUnit}
-                </dd>
-              </div>
-            </dl>
+            <p className="mt-5 border-t border-border pt-5 text-sm text-foreground">
+              {formatDay(dayDate, lang)}
+            </p>
+
+            {/* Hora y personas siguen siendo editables aqui: cambiar de idea no
+                deberia obligar a volver a la portada. */}
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              {locked ? (
+                <p className="px-6 py-4 text-sm text-muted">
+                  {checkout.hourLabel}: <span className="text-foreground">{formatHour(time)}</span>
+                </p>
+              ) : (
+                <TimeField
+                  label={checkout.hourLabel}
+                  help={booking.timeHelp}
+                  value={time}
+                  onChange={setTime}
+                />
+              )}
+
+              <PeopleStepper
+                label={checkout.peopleLabel}
+                maxNotice={booking.maxPeopleNotice}
+                value={people}
+                onChange={setPeople}
+                disabled={locked}
+              />
+            </div>
+
+            {precioPersonaExtra > 0 && (
+              <p className="mt-2 px-6 text-xs text-muted">
+                {checkout.extraPeopleHint
+                  .replace('{included}', String(personasIncluidas))
+                  .replace('{price}', currency.format(precioPersonaExtra))}
+              </p>
+            )}
           </CheckoutSectionCard>
 
           <CheckoutSectionCard step={2} title={checkout.contactHeadline}>
@@ -228,7 +385,7 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
                 <input
                   type="tel"
                   required
-                  disabled={phase === 'payment'}
+                  disabled={locked}
                   value={contact.phone}
                   onChange={(e) => setContact((prev) => ({ ...prev, phone: e.target.value }))}
                   className="rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-accent disabled:opacity-60"
@@ -239,7 +396,7 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
                 <input
                   type="text"
                   required
-                  disabled={phase === 'payment'}
+                  disabled={locked}
                   value={contact.fullName}
                   onChange={(e) => setContact((prev) => ({ ...prev, fullName: e.target.value }))}
                   className="rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-accent disabled:opacity-60"
@@ -250,7 +407,7 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
                 <input
                   type="email"
                   required
-                  disabled={phase === 'payment'}
+                  disabled={locked}
                   value={contact.email}
                   onChange={(e) => setContact((prev) => ({ ...prev, email: e.target.value }))}
                   className="rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-accent disabled:opacity-60"
@@ -259,58 +416,107 @@ export function CheckoutView({ lang, dict, initialDay, time, people, minDate, to
             </div>
           </CheckoutSectionCard>
 
-          <CheckoutSectionCard step={3} title={checkout.meetingPointLabel}>
-            <div className="flex gap-3 text-sm">
-              <MapPin size={20} className="mt-0.5 shrink-0 text-accent" />
-              <div>
-                <p className="text-foreground">{footer.address}</p>
-                <p className="text-foreground">{footer.city}</p>
+          {/* El punto de encuentro y el aviso del agente ya no van aqui: son
+              informacion de despues de pagar, viven en BookingConfirmation. */}
+          <CheckoutSectionCard step={3} title={checkout.amenitiesHeadline}>
+            <label className="flex items-start justify-between gap-3 rounded-xl border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background">
+              <span className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={lunch}
+                  disabled={locked}
+                  onChange={(e) => setLunch(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                />
+                <span>{checkout.amenities.lunch}</span>
+              </span>
+              <span className="shrink-0 text-right text-muted">
+                {currency.format(precioLunch)}
+                <span className="block text-xs">{checkout.lunchPerPerson}</span>
+              </span>
+            </label>
+
+            {/* Bloque aparte y sin precio: que quede claro que esto NO se esta
+                pagando ahora, o el cliente llega al muelle creyendo que si. */}
+            <div className="mt-8 border-t border-border pt-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-medium tracking-tight text-foreground">
+                  {checkout.requestsHeadline}
+                </h3>
+                <span className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[11px] text-accent">
+                  {checkout.requestsBadge}
+                </span>
               </div>
-            </div>
+              <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-muted">
+                {checkout.requestsIntro}
+              </p>
 
-            <p className="mt-5 max-w-[60ch] border-t border-border pt-5 text-sm leading-relaxed text-muted">
-              {checkout.notice}
-            </p>
-          </CheckoutSectionCard>
-
-          <CheckoutSectionCard step={4} title={checkout.amenitiesHeadline}>
-            <div className="flex flex-col gap-3">
-              {(Object.keys(amenities) as Array<keyof typeof amenities>).map((key) => (
-                <label
-                  key={key}
-                  className="flex items-start gap-3 rounded-xl border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background"
-                >
-                  <input
-                    type="checkbox"
-                    checked={amenities[key]}
-                    disabled={phase === 'payment'}
-                    onChange={(e) =>
-                      setAmenities((prev) => ({ ...prev, [key]: e.target.checked }))
-                    }
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                  />
-                  <span>{checkout.amenities[key]}</span>
-                </label>
-              ))}
+              <div className="mt-4 flex flex-col gap-3">
+                {SOLICITUD_KEYS.map((key) => (
+                  <label
+                    key={key}
+                    className="flex items-start gap-3 rounded-xl border border-dashed border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-solid has-[:checked]:border-accent has-[:checked]:bg-background"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={solicitudes[key]}
+                      disabled={locked}
+                      onChange={(e) =>
+                        setSolicitudes((prev) => ({ ...prev, [key]: e.target.checked }))
+                      }
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                    />
+                    <span>{checkout.amenities[key]}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </CheckoutSectionCard>
         </div>
 
         <div className="lg:sticky lg:top-10 lg:self-start">
           <StripePanel
+            lang={lang}
             checkout={checkout}
+            waiverAccepted={waiverAccepted}
+            onWaiverChange={setWaiverAccepted}
             lines={lines}
-            total={currency.format(total)}
-            amountDueNow={currency.format(amountDueNow)}
+            total={total === null ? '—' : currency.format(total)}
+            amountDueNow={amountDueNow === null ? '—' : currency.format(amountDueNow)}
+            moneda={moneda}
+            onMonedaChange={setMoneda}
+            usdDisponible={usdDisponible}
             formaPago={formaPago}
             onFormaPagoChange={setFormaPago}
             phase={phase}
             error={error}
             pago={pago}
-            onSubmit={handleSubmit}
+            onSubmit={iniciarPago}
+            onPagoConfirmado={(procesando) => {
+              setPagoProcesando(procesando);
+              setPhase('confirmed');
+            }}
           />
         </div>
       </main>
+
+      {recordatorioAbierto && (
+        <AmenitiesReminder
+          checkout={checkout}
+          faltaLunch={faltantes.lunch}
+          lunch={lunch}
+          onLunchChange={setLunch}
+          precioLunch={currency.format(precioLunch)}
+          solicitudesFaltantes={faltantes.solicitudes}
+          solicitudes={solicitudes}
+          onSolicitudChange={(key, valor) =>
+            setSolicitudes((prev) => ({ ...prev, [key]: valor }))
+          }
+          onContinuar={enviar}
+          onCerrar={() => setRecordatorioAbierto(false)}
+          enviando={enviando}
+        />
+      )}
     </div>
   );
 }

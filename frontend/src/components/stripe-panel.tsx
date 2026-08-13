@@ -8,10 +8,11 @@ import {
   useElements,
   useStripe,
 } from '@stripe/react-stripe-js';
-import { CheckCircle, Lock, Warning } from '@phosphor-icons/react';
-import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { Lock, Warning } from '@phosphor-icons/react';
+import Link from 'next/link';
+import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import type { Pago } from '@/lib/api';
+import type { Moneda, Pago } from '@/lib/api';
 
 type OrderLine = {
   label: string;
@@ -21,31 +22,45 @@ type OrderLine = {
 type Phase = 'form' | 'submitting' | 'payment' | 'unavailable' | 'error';
 
 type StripePanelProps = {
+  lang: Locale;
   checkout: Dictionary['checkout'];
+  waiverAccepted: boolean;
+  onWaiverChange: (value: boolean) => void;
   lines: OrderLine[];
   total: string;
   amountDueNow: string;
+  moneda: Moneda;
+  onMonedaChange: (value: Moneda) => void;
+  usdDisponible: boolean;
   formaPago: 'completo' | 'anticipo';
   onFormaPagoChange: (value: 'completo' | 'anticipo') => void;
   phase: Phase;
   error: string;
   pago: Pago | null;
   onSubmit: () => void;
+  /** Se llama cuando Stripe acepta el pago; el checkout cambia a la pantalla de
+   *  confirmacion. `procesando` es true si el cargo aun no se acredita. */
+  onPagoConfirmado: (procesando: boolean) => void;
 };
 
-function PaymentForm({ checkout }: { checkout: Dictionary['checkout'] }) {
+function PaymentForm({
+  checkout,
+  onPagoConfirmado,
+}: {
+  checkout: Dictionary['checkout'];
+  onPagoConfirmado: (procesando: boolean) => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
   const [formError, setFormError] = useState('');
 
   const handleConfirm = async () => {
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || submitting) return;
     setSubmitting(true);
     setFormError('');
 
-    const { error: confirmError } = await stripe.confirmPayment({
+    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
       redirect: 'if_required',
     });
@@ -56,18 +71,10 @@ function PaymentForm({ checkout }: { checkout: Dictionary['checkout'] }) {
       return;
     }
 
-    setConfirmed(true);
-    setSubmitting(false);
+    // Quien marca la reserva como pagada es el webhook, no esto: segun el metodo
+    // de pago el cargo puede quedar en 'processing' un rato.
+    onPagoConfirmado(paymentIntent?.status !== 'succeeded');
   };
-
-  if (confirmed) {
-    return (
-      <div className="mt-6 flex min-h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-background p-6 text-center">
-        <CheckCircle size={24} className="text-accent" weight="fill" />
-        <p className="text-sm text-foreground">{checkout.notice}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="mt-6 flex flex-col gap-4">
@@ -87,16 +94,23 @@ function PaymentForm({ checkout }: { checkout: Dictionary['checkout'] }) {
 }
 
 export function StripePanel({
+  lang,
   checkout,
+  waiverAccepted,
+  onWaiverChange,
   lines,
   total,
   amountDueNow,
+  moneda,
+  onMonedaChange,
+  usdDisponible,
   formaPago,
   onFormaPagoChange,
   phase,
   error,
   pago,
   onSubmit,
+  onPagoConfirmado,
 }: StripePanelProps) {
   const stripePromise = useMemo(
     () => (pago ? loadStripe(pago.publishable_key) : null),
@@ -104,7 +118,35 @@ export function StripePanel({
   );
 
   return (
-    <CheckoutSectionCard step={5} title={checkout.orderSummaryHeadline}>
+    <CheckoutSectionCard step={4} title={checkout.orderSummaryHeadline} variant="elevated">
+      {usdDisponible && phase !== 'payment' && phase !== 'unavailable' && (
+        <fieldset
+          className="mb-5 flex flex-col gap-2 border-b border-border pb-5"
+          disabled={phase === 'submitting'}
+        >
+          <legend className="mb-1 text-sm font-medium text-foreground">
+            {checkout.currency.headline}
+          </legend>
+          <div className="flex gap-2">
+            {(['MXN', 'USD'] as const).map((option) => (
+              <label
+                key={option}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background"
+              >
+                <input
+                  type="radio"
+                  name="moneda"
+                  checked={moneda === option}
+                  onChange={() => onMonedaChange(option)}
+                  className="h-4 w-4 shrink-0 accent-accent"
+                />
+                {option === 'MXN' ? checkout.currency.mxn : checkout.currency.usd}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
       <dl className="flex flex-col gap-3">
         {lines.map((line) => (
           <div key={line.label} className="flex items-center justify-between text-sm">
@@ -119,7 +161,7 @@ export function StripePanel({
         <p className="text-lg font-medium tracking-tight text-foreground">{total}</p>
       </div>
 
-      {phase !== 'payment' && (
+      {phase !== 'payment' && phase !== 'unavailable' && (
         <fieldset className="mt-5 flex flex-col gap-2 border-t border-border pt-5" disabled={phase === 'submitting'}>
           <legend className="mb-1 text-sm font-medium text-foreground">
             {checkout.paymentMethod.headline}
@@ -161,18 +203,47 @@ export function StripePanel({
 
       {phase === 'payment' && pago && stripePromise && (
         <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret }}>
-          <PaymentForm checkout={checkout} />
+          <PaymentForm checkout={checkout} onPagoConfirmado={onPagoConfirmado} />
         </Elements>
       )}
 
       {phase !== 'payment' && phase !== 'unavailable' && (
         <>
+          {/* Deslinde: una linea discreta arriba del boton de pagar. El texto
+              completo vive en /[lang]/deslinde y abre en otra pestaña para no
+              tirar lo que el cliente ya lleno. */}
+          <label className="mt-5 flex items-start gap-2.5 border-t border-border pt-5 text-xs leading-relaxed text-muted">
+            <input
+              type="checkbox"
+              checked={waiverAccepted}
+              disabled={phase === 'submitting'}
+              onChange={(e) => onWaiverChange(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-accent"
+            />
+            <span>
+              {checkout.waiver.accept}{' '}
+              <Link
+                href={`/${lang}/deslinde`}
+                target="_blank"
+                rel="noopener"
+                className="text-foreground underline underline-offset-2"
+              >
+                {checkout.waiver.linkLabel}
+              </Link>
+              .
+            </span>
+          </label>
+
+          {/* La politica de cancelacion, justo donde se decide pagar: enterarse
+              despues es lo que genera reclamos y contracargos. */}
+          <p className="mt-4 text-xs leading-relaxed text-muted">{checkout.cancelPolicy}</p>
+
           {phase === 'error' && error && <p className="mt-4 text-sm text-red-600">{error}</p>}
           <button
             type="button"
             onClick={onSubmit}
             disabled={phase === 'submitting'}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-surface transition-opacity disabled:opacity-60"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-surface transition-opacity disabled:opacity-60"
           >
             <Lock size={16} />
             {phase === 'submitting' ? checkout.submitting : checkout.payButton}

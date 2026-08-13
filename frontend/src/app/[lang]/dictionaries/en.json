@@ -3,22 +3,91 @@
     "title": "Sal y Sol Sportfishing",
     "description": "Book your private sport fishing tour in La Paz, BCS."
   },
+  "meta": {
+    "home": {
+      "title": "Sport fishing charters in La Paz, BCS | Sal y Sol Sportfishing",
+      "description": "We head out every day from Marina La Costa on a private panga, captain and gear included. Book online in two minutes or message us on WhatsApp."
+    },
+    "reservar": {
+      "title": "Book your fishing trip",
+      "description": "Pick your day and departure time, add what you need and pay online. Departures 5:00 to 7:00 am from Marina La Costa."
+    },
+    "deslinde": {
+      "title": "Liability waiver",
+      "description": "The risks of the activity and the terms you accept when booking a sport fishing trip with Sal y Sol Sportfishing."
+    },
+    "privacidad": {
+      "title": "Privacy notice",
+      "description": "What personal data we collect when you book, what we use it for, and how to exercise your rights."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "description": "This page doesn't exist or has moved."
+    }
+  },
+  "notFound": {
+    "headline": "Nothing here — this one got away",
+    "body": "The page you were looking for doesn't exist or we moved it. From the home page you can see the boats, what's biting and book your trip.",
+    "cta": "Go to home",
+    "ctaBook": "Book a trip"
+  },
+  "privacy": {
+    "title": "Privacy notice",
+    "updated": "Last updated: August 2026",
+    "intro": "We're a small business and we use your data for one thing: taking you fishing. Here's exactly what we keep and why, no fine print.",
+    "sections": [
+      {
+        "title": "Who is responsible for your data",
+        "body": "Sal y Sol Sportfishing, operating out of Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur, Mexico. You can reach us on WhatsApp at the number shown on this site."
+      },
+      {
+        "title": "What we collect",
+        "body": "When you book we ask for your name, phone and email, along with the date, time and number of guests for your trip. When you accept the liability waiver we also store your name, the date and time of acceptance and your IP address, as proof of that agreement."
+      },
+      {
+        "title": "What we use it for",
+        "body": "To run your trip: confirming your booking, assigning a captain and boat, and reaching you before departure. Also to keep the waiver on record. We don't use it for advertising and we won't flood your inbox."
+      },
+      {
+        "title": "Payment data",
+        "body": "Your card details NEVER pass through our servers and we can't see them. Payments are processed by Stripe, which is PCI DSS compliant. We only store the amount, the currency and a transaction reference."
+      },
+      {
+        "title": "Who we share it with",
+        "body": "Only who your trip requires: the assigned captain gets your name, phone and departure details. We use Stripe for payments and email and WhatsApp services to confirm. We don't sell or hand over your data to third parties."
+      },
+      {
+        "title": "How long we keep it",
+        "body": "Bookings are kept as a record of the operation. Checkouts left unpaid are deleted automatically after 30 days."
+      },
+      {
+        "title": "Your rights",
+        "body": "You can ask us to access your data, correct it if it's wrong, delete it or object to its use. Message us on WhatsApp or email us from the address you booked with and we'll sort it out — no special form needed."
+      }
+    ],
+    "back": "Back to home"
+  },
   "nav": {
     "brandMain": "Sal y Sol",
     "brandAccent": "Sportfishing",
     "location": "La Paz, BCS",
     "inicio": "Home",
-    "nosotros": "About",
+    "nosotros": "About us",
+    "flota": "The boats",
+    "temporadas": "What's biting",
     "preguntas": "FAQ",
     "contacto": "Contact",
+    "humanContact": "Prefer talking to a human?",
+    "whatsappCta": "Message us on WhatsApp",
+    "whatsappMessage": "Hi! I'd like to book a fishing tour. Can you help me?",
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
   },
   "hero": {
-    "headlineStart": "Fishing the",
-    "headlineEmphasis": "Baja",
-    "headlineEnd": "coast just got easier",
-    "subtext": "Head out on a private boat with your own captain and gear included. Departures every day from Marina La Costa."
+    "headlineStart": "Come fishing",
+    "headlineEmphasis": "with us",
+    "headlineEnd": "in the Bay of La Paz",
+    "subtext": "We're local captains. We head out every day before sunrise from Marina La Costa, on our own boats, with the gear ready. All you have to do is show up."
   },
   "booking": {
     "day": "Date",
@@ -26,18 +95,112 @@
     "timeHelp": "Departure between 5:00 and 7:00 am",
     "people": "Guests",
     "maxPeopleNotice": "Maximum 6 guests per trip.",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
     "submit": "Book now"
   },
   "about": {
-    "headline": "A local fleet, captains from here",
-    "body1": "We run private sport fishing trips in the Bay of La Paz. Every booking covers the whole boat, so you never share it with strangers.",
-    "body2": "Our captains have known these waters their whole lives and go out daily. You show up at the dock, everything else is ready.",
+    "headline": "We're not an agency. We're the ones taking you out",
+    "body1": "No middlemen, no offices here. Whoever answers the WhatsApp is the same person tying up the boat before dawn, and the owners run trips as captains too. We've known this bay since we were kids and we still fish it on the days we aren't taking guests out.",
+    "body2": "Every trip is yours alone — the boat is never shared with strangers. First time fishing? Don't worry, the captain will show you how to cast and how to fight the fish. And if something didn't go the way you hoped, tell us straight. That's how we sort things out around here.",
+    "photoHint": "Photo of the captains at the dock, ideally at sunrise and unposed",
     "facts": {
       "duration": { "value": "6 to 8 hours", "label": "Trip length" },
       "departure": { "value": "5:00 to 7:00 am", "label": "You pick the departure time" },
       "capacity": { "value": "Up to 6 guests", "label": "No minimum, no age limit" },
       "season": { "value": "365 days a year", "label": "We sail all year round" }
     }
+  },
+  "fleet": {
+    "headline": "Our boats",
+    "intro": "They're ours, we look after them ourselves and we know them inside out. We'll put you on whichever one suits your group — if there are only a few of you we won't charge you extra for a bigger boat.",
+    "note": "Want more photos of one of them? Ask on WhatsApp and we'll send them over.",
+    "specsLabel": "What's on board",
+    "boats": [
+      {
+        "name": "Small panga",
+        "capacity": "Up to 3 guests",
+        "specs": ["Outboard motor", "Shade", "Cooler with ice", "Fishing gear for everyone"],
+        "photoHint": "Photo of the small panga underway, with people fishing"
+      },
+      {
+        "name": "Large panga",
+        "capacity": "Up to 6 guests",
+        "specs": ["Outboard motor", "Shade", "More room to fight the fish", "Cooler with ice", "Fishing gear for everyone"],
+        "photoHint": "Photo of the large panga side-on, with the bay behind it"
+      }
+    ]
+  },
+  "season": {
+    "headline": "What's biting",
+    "intro": "The bay changes through the year. Here's what has been running, so you know what to expect before you come — and so we don't sell you a story.",
+    "note": "The sea makes no promises and neither will we. If the day looks slow, we'll tell you before we head out. Ask us on WhatsApp how the week is going.",
+    "speciesLabel": "What usually runs",
+    "rows": [
+      { "period": "December to March", "species": "Sierra, amberjack, cabrilla, snapper", "note": "Cooler water, calm days. A good season if you're just starting out." },
+      { "period": "April to June", "species": "Roosterfish, dorado, striped marlin", "note": "The water warms up and the big ones arrive." },
+      { "period": "July to September", "species": "Dorado, yellowfin tuna, sailfish", "note": "Peak season. This is when the real fights happen." },
+      { "period": "October to November", "species": "Dorado, sailfish, snapper", "note": "Still running well, and fewer boats on the water." }
+    ]
+  },
+  "included": {
+    "headline": "What's included and what isn't",
+    "intro": "We'd rather tell you here than at the dock. This is exactly what you're paying for and what you'd need to bring yourself.",
+    "includedTitle": "Included",
+    "included": [
+      "The whole boat for your group, never shared",
+      "Captain",
+      "Fishing gear for everyone on board",
+      "Cooler with ice",
+      "6 to 8 hours on the water"
+    ],
+    "notIncludedTitle": "Not included",
+    "notIncluded": [
+      "Fishing licence (see below)",
+      "Bait — ask us and we'll get it for you",
+      "Food and drinks, unless you add lunch when booking",
+      "Ride to the dock, unless you request it and we quote it"
+    ],
+    "bringTitle": "What we'd bring if we were you",
+    "bring": [
+      "Sunscreen and a cap — the sun is harsh even on an early start",
+      "A light jacket, it's chilly on the water at 5am",
+      "Motion sickness tablets if you're prone, taken before boarding, not after",
+      "Photo ID",
+      "A cooler if you want to take your catch home"
+    ],
+    "licenseTitle": "About the fishing licence",
+    "licenseBody": "In Mexico every person fishing on board needs their own CONAPESCA licence. We don't include it in the price because it's a personal permit, but you can get it online in a few minutes and it's inexpensive. If that's a hassle, tell us and we'll help you sort it before your trip.",
+    "licenseCta": "Ask us on WhatsApp",
+    "catchTitle": "Your catch",
+    "catchBody": "What you land is yours to take home. Species like marlin and sailfish are reserved for sport fishing and have a daily limit per angler — when one comes up, the usual thing is a quick photo and back in the water. The captain will tell you what's fair game, without lecturing you."
+  },
+  "gallery": {
+    "headline": "What a day with us looks like",
+    "intro": "Photos from real trips, not stock images.",
+    "note": "More shots from recent trips keep coming in. If you've been out with us and want your photo up here, send it over.",
+    "videoHint": "Short clip (15-30s) of the sunrise departure or a fish being fought",
+    "photoHints": [
+      "Leaving the dock while it's still dark",
+      "Guest fighting a fish with the captain helping",
+      "The day's catch on deck",
+      "Friends or family on board, laughing",
+      "Close-up of the gear ready to go",
+      "Coming back to the dock with the sun up"
+    ]
+  },
+  "reviews": {
+    "headline": "What people who've come say",
+    "intro": "We'd rather they told you themselves.",
+    "note": "Real customer reviews go here. Send us the Google or TripAdvisor screenshots and we'll put them up as they are, unedited.",
+    "placeholder": "Space for a real customer review",
+    "placeholderAuthor": "Customer name",
+    "cta": "Been out with us? Send us your thoughts on WhatsApp"
+  },
+  "groups": {
+    "headline": "More than 6 of you?",
+    "body": "One panga holds up to 6. If there are more of you, no problem: we'll line up two or three boats so you all leave at the same time and can see each other out on the water. Message us and we'll put it together with you.",
+    "cta": "Message us on WhatsApp"
   },
   "faq": {
     "headline": "Frequently asked questions",
@@ -68,7 +231,31 @@
       },
       {
         "q": "Can I change my booking date?",
-        "a": "Yes, with at least 48 hours notice. We move you to the next available slot."
+        "a": "Yes, with at least 48 hours notice. We'll move you to the next available slot. With less notice it gets tricky because the captain and boat are already committed, but talk to us and we'll see what we can do."
+      },
+      {
+        "q": "Do I need a fishing licence?",
+        "a": "Yes, everyone fishing on board needs their own CONAPESCA licence. It isn't included in the price because it's a personal permit, but you can get it online in a few minutes. If that's a hassle, message us and we'll help you before the trip."
+      },
+      {
+        "q": "Can I keep what I catch?",
+        "a": "Of course, it's yours. Bring a cooler if you want to take it home properly. One thing: marlin and sailfish are reserved for sport fishing and have a daily limit per angler, so the usual thing is a photo and back in the water. The captain will guide you."
+      },
+      {
+        "q": "I've never fished. Am I going to embarrass myself?",
+        "a": "Not at all, and you wouldn't be the first. The captain will show you how to cast and how to fight the fish. We've taken out people who had never set foot on a boat and they went home with their catch."
+      },
+      {
+        "q": "What if I get seasick?",
+        "a": "It happens, especially when the water is choppy. If you're prone to it, take a tablet before boarding, not after. And tell the captain — he knows how to shape the trip so you have a better time."
+      },
+      {
+        "q": "There are more than 6 of us. What do we do?",
+        "a": "We line up several boats so you all leave at the same time and can see each other on the water. Message us on WhatsApp and we'll put it together with you."
+      },
+      {
+        "q": "What if I can't make it and it isn't the weather?",
+        "a": "We'll be straight with you: bad weather is the only case with a refund. If you can't come, tell us as early as you can — with 48 hours notice we'll move your date, no problem. We'd rather find you another day than keep your money."
       }
     ]
   },
@@ -79,6 +266,10 @@
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Departures",
     "hours": "Every day, 5:00 to 7:00 am",
+    "exploreLabel": "The trip",
+    "legalLabel": "Legal",
+    "waiver": "Liability waiver",
+    "privacy": "Privacy notice",
     "rights": "All rights reserved."
   },
   "checkout": {
@@ -98,11 +289,66 @@
     "amenitiesHeadline": "Amenities",
     "amenities": {
       "drinks": "Drinks",
-      "lunch": "Lunch (breakfast and lunch, the daily menu varies by season)",
-      "transport": "Transport"
+      "lunch": "Lunch (breakfast and lunch; set menu, changes weekly)",
+      "transport": "Pickup from your accommodation"
+    },
+    "lunchPerPerson": "per guest",
+    "requestsHeadline": "Quoted by our agent",
+    "requestsIntro": "Tick it and our agent sends you the price before the trip. It is not charged online because it depends on what you choose and how far the pickup is.",
+    "requestsBadge": "Not charged online",
+    "waiver": {
+      "accept": "I release the company from any liability and have read the",
+      "linkLabel": "full liability waiver",
+      "missing": "Accept the liability waiver to continue.",
+      "page": {
+        "title": "Liability waiver",
+        "updated": "Last updated: August 2026",
+        "intro": "This document describes the risks of the activity and the terms you accept when booking a sport fishing tour with Sal y Sol Sportfishing. By ticking the box at checkout you declare that you have read it and agree to it.",
+        "sections": [
+          {
+            "title": "1. Nature of the activity",
+            "body": "Sport fishing takes place in open water aboard small boats and carries risks inherent to the activity: swell, changing weather, boat motion, use of hooks and fishing gear, sun exposure and contact with marine species. You take part with full knowledge of these risks and of your own free will."
+          },
+          {
+            "title": "2. Participant obligations",
+            "body": "You agree to follow the captain's instructions at all times, to wear a life jacket whenever he asks, and not to board under the influence of alcohol or any substance that impairs your reflexes. The captain may refuse boarding or return to port if he considers your conduct puts anyone aboard at risk, with no right to a refund."
+          },
+          {
+            "title": "3. Minors",
+            "body": "There is no age restriction, but minors travel under the responsibility and constant supervision of the adult who made the booking."
+          },
+          {
+            "title": "4. Scope of the waiver",
+            "body": "You release Sal y Sol Sportfishing, its captains, crew and boats from liability for injury, loss, damage or misplacement of personal belongings occurring during the tour and not caused by their proven negligence. This waiver does not limit any rights granted to you by law that cannot be waived."
+          },
+          {
+            "title": "5. Safety and weather cancellation",
+            "body": "The final decision on sailing conditions rests with the captain. If he determines it is not safe to sail, the tour is cancelled and you are refunded 100% of what you paid. The boats carry current insurance."
+          },
+          {
+            "title": "6. Data we record",
+            "body": "When you accept, we store your name, the date and time of acceptance and your IP address as proof of this agreement. Your contact details are used solely to coordinate your trip."
+          }
+        ],
+        "back": "Back to checkout"
+      }
+    },
+    "currency": {
+      "headline": "Currency",
+      "mxn": "Pesos (MXN)",
+      "usd": "Dollars (USD)"
+    },
+    "amenitiesModal": {
+      "headline": "Anything else for your trip?",
+      "body": "You can still add these. They are charged together with your booking, so there is nothing extra to pay on the day.",
+      "confirm": "Continue to payment",
+      "back": "Back to checkout",
+      "close": "Close"
     },
     "orderSummaryHeadline": "Order summary",
     "tourLabel": "Private fishing tour",
+    "extraPeopleLabel": "Extra guests",
+    "extraPeopleHint": "The trip covers up to {included} guests. Beyond that it is {price} per guest.",
     "total": "Total",
     "paymentPlaceholder": "Reserved space for the Stripe payment form.",
     "payButton": "Go to payment",
@@ -113,11 +359,26 @@
       "depositNote": "The remaining 70% is paid in cash on the day of the trip."
     },
     "amountDueNow": "Due now",
+    "cancelPolicy": "If the captain cancels for bad weather, you get 100% back. If you're the one who can't make it, tell us 48 hours ahead and we'll move your date at no cost.",
     "submitting": "Processing…",
     "confirmPay": "Pay",
     "missingFields": "Fill in your contact details before continuing.",
     "errorGeneric": "Something went wrong. Please try again.",
     "dayFullNotice": "That day is fully booked. We've automatically moved you to {date}, the next available date.",
-    "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book."
+    "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book.",
+    "confirmation": {
+      "headline": "You're all set. Your booking is confirmed",
+      "processingHeadline": "We're confirming your payment",
+      "processingBody": "Your bank is still processing the charge. As soon as it clears you'll get the confirmation email — there's no need to pay again.",
+      "emailNotice": "We've sent an email to {email} with your payment details. If you don't see it in a few minutes, check your spam folder.",
+      "tripHeadline": "Your trip",
+      "paidLabel": "Paid",
+      "pendingLabel": "Due in cash on the day of the trip",
+      "meetingHeadline": "Where we meet",
+      "agentHeadline": "What happens next",
+      "agentBody": "A sales agent will contact you within the next 24 hours with the final details: exact landmarks for the meeting point, transport and your captain's name.",
+      "quotesNote": "They will also quote what you asked for ({items}), which is not included in the amount you paid.",
+      "backHome": "Back to home"
+    }
   }
 }

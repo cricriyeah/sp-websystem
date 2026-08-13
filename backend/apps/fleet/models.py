@@ -5,15 +5,48 @@ from django.db import models
 
 class Tarifa(models.Model):
     """Singleton: precio unico del tour, no varia por clase de embarcacion
-    (ver docs/contexto-negocio.md, seccion Embarcaciones). Editable solo por jefes."""
+    (ver docs/contexto-negocio.md, seccion Embarcaciones). Editable solo por jefes.
 
-    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    Se cobra en pesos o dolares (doc: "Monedas: pesos y dolares"). Son dos precios
+    de lista independientes, no una conversion: el negocio fija cada uno a mano y
+    el sistema nunca aplica un tipo de cambio. Sin `precio_usd` el checkout solo
+    ofrece pesos."""
+
+    precio = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text='Precio del tour en pesos (MXN).'
+    )
+    precio_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Precio del tour en dolares. Vacio = no se ofrece pago en USD.',
+    )
+    precio_persona_extra = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text='Cargo en pesos por cada persona arriba de las incluidas en el '
+                  'precio del viaje. 0 = el precio no cambia con el numero de personas.',
+    )
+    precio_persona_extra_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='El mismo cargo en dolares. Vacio = no se puede cobrar en USD un '
+                  'viaje que lleve personas extra.',
+    )
+    precio_lunch = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text='Precio del lunch en pesos, POR PERSONA. El menu es fijo y cambia '
+                  'cada semana, asi que este monto se actualiza aqui.',
+    )
+    precio_lunch_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='El mismo precio del lunch en dolares, por persona.',
+    )
     actualizado_en = models.DateTimeField(auto_now=True)
     actualizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
     )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, force_insert=False, **kwargs):
+        # Siempre la misma fila. Se ignora force_insert a proposito: un segundo
+        # Tarifa.objects.create() debe actualizar el precio, no reventar con
+        # IntegrityError sobre pk=1.
         self.pk = 1
         super().save(*args, **kwargs)
 
@@ -26,6 +59,18 @@ class Tarifa(models.Model):
     @classmethod
     def actual(cls):
         return cls.objects.first()
+
+    def precio_en(self, moneda):
+        """Precio de lista en la moneda pedida, o None si no esta configurado."""
+        return self.precio if moneda == 'MXN' else self.precio_usd
+
+    def persona_extra_en(self, moneda):
+        """Cargo por persona adicional en esa moneda. None = sin configurar."""
+        return self.precio_persona_extra if moneda == 'MXN' else self.precio_persona_extra_usd
+
+    def lunch_en(self, moneda):
+        """Precio del lunch por persona en esa moneda. None = sin configurar."""
+        return self.precio_lunch if moneda == 'MXN' else self.precio_lunch_usd
 
 
 class Embarcacion(models.Model):

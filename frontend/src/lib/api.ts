@@ -1,7 +1,24 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
+export type Moneda = 'MXN' | 'USD';
+
+/** Extras que se piden pero NO se cobran en linea: los cotiza el agente. */
+export type SolicitudKey = 'drinks' | 'transport';
+
+// Precios de lista del backend. `precio` es en pesos y los `*_usd` vienen null
+// mientras el negocio no fije ese precio en dolares. Todas las cifras llegan de
+// aqui a proposito: la web no debe tener ninguna hardcodeada
+// (ver backend/apps/payments/pricing.py).
 export type Tarifa = {
   precio: string;
+  precio_usd: string | null;
+  /** Cargo por cada persona arriba de `personas_incluidas`. */
+  precio_persona_extra: string;
+  precio_persona_extra_usd: string | null;
+  personas_incluidas: number;
+  /** Precio del lunch POR PERSONA. */
+  precio_lunch: string;
+  precio_lunch_usd: string | null;
 };
 
 export type Cupo = {
@@ -12,12 +29,29 @@ export type Cupo = {
 };
 
 export type ReservaInput = {
+  // Identificador de la sesion de checkout que genera el navegador. El backend
+  // lo usa como llave: mientras la reserva siga pendiente de pago, reenviar el
+  // checkout reescribe la misma fila en vez de crear otra.
+  checkout_id: string;
   fecha: string;
   hora: string;
   numero_personas: number;
   nombre_cliente: string;
   telefono_cliente: string;
   correo_cliente: string;
+  moneda: Moneda;
+  // Deslinde de responsabilidad. El servidor sella la fecha/hora y la IP.
+  deslinde_aceptado: boolean;
+  deslinde_nombre: string;
+  // Extras. El lunch se cobra (por persona); bebidas y transporte quedan como
+  // solicitud para que el agente las cotice.
+  lleva_lunch: boolean;
+  pide_bebidas: boolean;
+  pide_transporte: boolean;
+  // Codigo de la vendedora que trajo al cliente (ver src/lib/ref.ts). El backend
+  // ignora en silencio el que no resuelva: un link viejo no puede impedir una
+  // reserva.
+  ref?: string;
 };
 
 export type Reserva = ReservaInput & {
@@ -26,7 +60,9 @@ export type Reserva = ReservaInput & {
 };
 
 export type PagoInput = {
-  amenities: string[];
+  // Acredita que quien pide el cobro es quien abrio este checkout: los ids de
+  // reserva son consecutivos y la API es publica.
+  checkout_id: string;
   forma_pago: 'completo' | 'anticipo';
 };
 
@@ -62,7 +98,8 @@ export const getTarifa = () => request<Tarifa>('/api/tarifa/');
 
 export const getCupo = (fecha: string) => request<Cupo>(`/api/cupo/?fecha=${fecha}`);
 
-export const crearReserva = (data: ReservaInput) =>
+/** Crea la reserva de este checkout, o actualiza la que ya existia. */
+export const guardarReserva = (data: ReservaInput) =>
   request<Reserva>('/api/reservas/', { method: 'POST', body: JSON.stringify(data) });
 
 export const crearPago = (reservaId: number, data: PagoInput) =>

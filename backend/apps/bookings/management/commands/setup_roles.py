@@ -19,6 +19,12 @@ class Command(BaseCommand):
             ('bookings', 'reserva', ['add', 'change', 'view']),
             # Cupo diario: puede cerrar/reducir el dia cuando falten embarcaciones.
             ('bookings', 'cupodiario', ['add', 'change', 'view']),
+            # Checkouts abandonados: lista de recuperacion, solo lectura (el proxy
+            # de Reserva no se edita ni se borra a mano, ver CheckoutAbandonadoAdmin).
+            ('bookings', 'checkoutabandonado', ['view']),
+            # Vendedoras: solo consulta, para tener a la mano su propio codigo de
+            # link (?ref=). Darlas de alta o cambiar codigos es cosa de jefes.
+            ('bookings', 'vendedora', ['view']),
             # Catalogo de flota: solo consulta, para asignar embarcacion/capitan.
             ('fleet', 'embarcacion', ['view']),
             ('fleet', 'capitan', ['view']),

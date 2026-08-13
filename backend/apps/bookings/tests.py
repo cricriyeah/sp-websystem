@@ -1,3 +1,554 @@
-from django.test import TestCase
+from datetime import date, time, timedelta
+from decimal import Decimal
+from io import StringIO
 
-# Create your tests here.
+from django.contrib.auth.models import Permission, User
+from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.db.models import ProtectedError
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from apps.fleet.models import Embarcacion
+
+from .admin import telefono_marcable
+from .models import (
+    CUPO_MAXIMO_DEFAULT,
+    HORAS_PARA_CONSIDERAR_ABANDONADO,
+    CheckoutAbandonado,
+    CupoDiario,
+    Reserva,
+    Vendedora,
+)
+
+
+def envejecer(reserva, **delta):
+    """`creado_en` es auto_now_add, hay que reescribirlo con un UPDATE."""
+    Reserva.objects.filter(pk=reserva.pk).update(creado_en=timezone.now() - timedelta(**delta))
+    return reserva
+
+
+def datos_reserva(**overrides):
+    base = {
+        'fecha': date.today() + timedelta(days=10),
+        'hora': time(6, 0),
+        'numero_personas': 2,
+        'nombre_cliente': 'Ana Ruiz',
+        'telefono_cliente': '+5216121234567',
+        'correo_cliente': 'ana@example.com',
+        'canal_origen': Reserva.CanalOrigen.WEB,
+        'deslinde_aceptado': True,
+        'deslinde_nombre': 'Ana Ruiz',
+    }
+    base.update(overrides)
+    return base
+
+
+def crear_reserva(**overrides):
+    reserva = Reserva(**datos_reserva(**overrides))
+    reserva.full_clean()
+    reserva.save()
+    return reserva
+
+
+class VentanaSalidaTests(TestCase):
+    def test_hora_fuera_de_la_ventana_es_invalida(self):
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(hora=time(8, 0))).full_clean()
+
+
+class NumeroPersonasTests(TestCase):
+    def test_mas_de_seis_personas_es_invalido(self):
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(numero_personas=7)).full_clean()
+
+    def test_una_persona_es_valido(self):
+        Reserva(**datos_reserva(numero_personas=1)).full_clean()
+
+    def test_no_cabe_en_la_embarcacion_asignada(self):
+        chica = Embarcacion.objects.create(
+            nombre='La Chica', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3
+        )
+        reserva = Reserva(**datos_reserva(numero_personas=5, embarcacion=chica))
+        with self.assertRaises(ValidationError) as ctx:
+            reserva.full_clean()
+        self.assertIn('embarcacion', ctx.exception.message_dict)
+
+
+class DeslindeTests(TestCase):
+    def test_reserva_web_sin_deslinde_es_invalida(self):
+        with self.assertRaises(ValidationError) as ctx:
+            Reserva(**datos_reserva(deslinde_aceptado=False)).full_clean()
+        self.assertIn('deslinde_aceptado', ctx.exception.message_dict)
+
+    def test_reserva_por_whatsapp_no_requiere_deslinde_en_el_sistema(self):
+        Reserva(**datos_reserva(
+            canal_origen=Reserva.CanalOrigen.WHATSAPP, deslinde_aceptado=False, deslinde_nombre=''
+        )).full_clean()
+
+
+class CupoTests(TestCase):
+    def test_pendiente_de_pago_no_ocupa_cupo(self):
+        fecha = date.today() + timedelta(days=10)
+        for _ in range(CUPO_MAXIMO_DEFAULT + 2):
+            crear_reserva(fecha=fecha)
+        crear_reserva(fecha=fecha).full_clean()
+
+    def test_se_llena_con_reservas_pagadas(self):
+        fecha = date.today() + timedelta(days=10)
+        for _ in range(CUPO_MAXIMO_DEFAULT):
+            crear_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)).full_clean()
+
+    def test_cupo_diario_override_cierra_el_dia(self):
+        fecha = date.today() + timedelta(days=10)
+        CupoDiario.objects.create(fecha=fecha, cupo_maximo=0)
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)).full_clean()
+
+
+class CambioDeFechaTests(TestCase):
+    def test_permitido_con_mas_de_48_horas(self):
+        reserva = crear_reserva(
+            fecha=date.today() + timedelta(days=10), estado=Reserva.Estado.PAGADA
+        )
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        reserva.fecha = date.today() + timedelta(days=12)
+        reserva.full_clean()
+
+    def test_bloqueado_dentro_de_las_48_horas(self):
+        manana = timezone.localtime().date() + timedelta(days=1)
+        reserva = crear_reserva(fecha=manana, estado=Reserva.Estado.PAGADA)
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        reserva.fecha = manana + timedelta(days=5)
+        with self.assertRaises(ValidationError) as ctx:
+            reserva.full_clean()
+        self.assertIn('fecha', ctx.exception.message_dict)
+
+    def test_cancelar_por_mal_clima_no_pide_48_horas(self):
+        manana = timezone.localtime().date() + timedelta(days=1)
+        reserva = crear_reserva(fecha=manana, estado=Reserva.Estado.PAGADA)
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        reserva.estado = Reserva.Estado.CANCELADA
+        reserva.motivo_cancelacion = 'Mal clima'
+        reserva.cancelada_en = timezone.now()
+        reserva.reembolsada = True
+        reserva.full_clean()
+
+
+class CupoApiTests(TestCase):
+    def test_fecha_invalida_responde_400(self):
+        response = self.client.get('/api/cupo/?fecha=no-es-fecha')
+        self.assertEqual(response.status_code, 400)
+
+    def test_sin_fecha_responde_400(self):
+        self.assertEqual(self.client.get('/api/cupo/').status_code, 400)
+
+    def test_fecha_valida_responde_el_cupo(self):
+        fecha = date.today() + timedelta(days=10)
+        crear_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)
+        response = self.client.get(f'/api/cupo/?fecha={fecha}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['ocupadas'], 1)
+        self.assertTrue(response.json()['disponible'])
+
+
+class TelefonoMarcableTests(TestCase):
+    def test_completa_la_lada_de_pais_a_los_de_10_digitos(self):
+        self.assertEqual(telefono_marcable('612 123 4567'), '526121234567')
+
+    def test_respeta_el_que_ya_trae_lada(self):
+        self.assertEqual(telefono_marcable('+52 1 612 123 4567'), '5216121234567')
+
+    def test_descarta_el_incompleto(self):
+        self.assertEqual(telefono_marcable('612 1234'), '')
+        self.assertEqual(telefono_marcable(''), '')
+        self.assertEqual(telefono_marcable(None), '')
+
+
+class CheckoutAbandonadoTests(TestCase):
+    def test_no_lista_al_que_apenas_empezo(self):
+        crear_reserva()  # pendiente_pago, recien creada
+        self.assertEqual(CheckoutAbandonado.abandonados().count(), 0)
+
+    def test_lista_al_que_lleva_rato_sin_pagar(self):
+        envejecer(crear_reserva(), hours=HORAS_PARA_CONSIDERAR_ABANDONADO + 1)
+        self.assertEqual(CheckoutAbandonado.abandonados().count(), 1)
+
+    def test_no_lista_las_que_si_pagaron(self):
+        envejecer(crear_reserva(estado=Reserva.Estado.PAGADA), hours=48)
+        self.assertEqual(CheckoutAbandonado.abandonados().count(), 0)
+
+    def test_el_listado_del_admin_es_solo_lectura(self):
+        envejecer(crear_reserva(), hours=48)
+        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+
+        response = self.client.get(reverse('admin:bookings_checkoutabandonado_changelist'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'wa.me')
+        # Ni superusuario puede agregar o borrar desde aqui.
+        self.assertEqual(
+            self.client.get(reverse('admin:bookings_checkoutabandonado_add')).status_code, 403
+        )
+
+    def test_la_vendedora_puede_verlo(self):
+        vendedora = User.objects.create_user('vendedora', password='x', is_staff=True)
+        vendedora.user_permissions.add(
+            Permission.objects.get(codename='view_checkoutabandonado')
+        )
+        self.client.force_login(vendedora)
+        self.assertEqual(
+            self.client.get(reverse('admin:bookings_checkoutabandonado_changelist')).status_code,
+            200,
+        )
+
+
+class LimpiarCheckoutsAbandonadosTests(TestCase):
+    def ejecutar(self, **kwargs):
+        salida = StringIO()
+        call_command('limpiar_checkouts_abandonados', stdout=salida, **kwargs)
+        return salida.getvalue()
+
+    def test_borra_los_viejos(self):
+        envejecer(crear_reserva(), days=40)
+        self.ejecutar()
+        self.assertEqual(Reserva.objects.count(), 0)
+
+    def test_respeta_los_recientes(self):
+        envejecer(crear_reserva(), days=5)
+        self.ejecutar()
+        self.assertEqual(Reserva.objects.count(), 1)
+
+    def test_nunca_toca_una_reserva_pagada(self):
+        envejecer(crear_reserva(estado=Reserva.Estado.PAGADA), days=400)
+        self.ejecutar()
+        self.assertEqual(Reserva.objects.count(), 1)
+
+    def test_dias_configurable(self):
+        envejecer(crear_reserva(), days=5)
+        self.ejecutar(dias=3)
+        self.assertEqual(Reserva.objects.count(), 0)
+
+    def test_dry_run_no_borra(self):
+        envejecer(crear_reserva(), days=40)
+        salida = self.ejecutar(dry_run=True)
+        self.assertIn('Se borrarian 1', salida)
+        self.assertEqual(Reserva.objects.count(), 1)
+
+
+class LiquidacionEnEfectivoTests(TestCase):
+    """El 70% que se cobra en el muelle tiene que dejar rastro."""
+
+    def setUp(self):
+        self.jefa = User.objects.create_superuser('jefa', password='x')
+        self.client.force_login(self.jefa)
+        self.url = reverse('admin:bookings_reserva_changelist')
+
+    def reserva_con_anticipo(self):
+        reserva = crear_reserva(estado=Reserva.Estado.PAGADA)
+        reserva.precio_total = Decimal('4500.00')
+        reserva.monto_pagado = Decimal('1350.00')
+        reserva.forma_pago = Reserva.FormaPago.ANTICIPO
+        reserva.save()
+        return reserva
+
+    def liquidar(self, reserva):
+        return self.client.post(self.url, {
+            'action': 'registrar_liquidacion_en_efectivo',
+            '_selected_action': [str(reserva.pk)],
+        }, follow=True)
+
+    def test_el_saldo_arranca_en_el_70_por_ciento(self):
+        self.assertEqual(self.reserva_con_anticipo().saldo_pendiente, Decimal('3150.00'))
+
+    def test_registrar_la_liquidacion_deja_el_saldo_en_cero(self):
+        reserva = self.reserva_con_anticipo()
+        self.liquidar(reserva)
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.monto_efectivo, Decimal('3150.00'))
+        self.assertEqual(reserva.saldo_pendiente, Decimal('0.00'))
+        self.assertTrue(reserva.liquidado)
+
+    def test_deja_constancia_de_quien_y_cuando_cobro(self):
+        reserva = self.reserva_con_anticipo()
+        self.liquidar(reserva)
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.efectivo_cobrado_por, self.jefa)
+        self.assertIsNotNone(reserva.efectivo_cobrado_en)
+
+    def test_liquidar_dos_veces_no_cobra_de_mas(self):
+        reserva = self.reserva_con_anticipo()
+        self.liquidar(reserva)
+        self.liquidar(reserva)
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.monto_efectivo, Decimal('3150.00'))
+
+    def test_una_reserva_pagada_al_100_no_debe_nada(self):
+        reserva = crear_reserva(estado=Reserva.Estado.PAGADA)
+        reserva.precio_total = Decimal('4500.00')
+        reserva.monto_pagado = Decimal('4500.00')
+        reserva.forma_pago = Reserva.FormaPago.COMPLETO
+        reserva.save()
+
+        self.assertTrue(reserva.liquidado)
+        self.liquidar(reserva)
+
+        reserva.refresh_from_db()
+        self.assertIsNone(reserva.monto_efectivo)
+
+    def test_se_puede_cobrar_de_mas_por_lo_cotizado_aparte(self):
+        # Bebidas y transporte los cotiza el agente y se pagan en efectivo, asi
+        # que el efectivo recibido puede superar el saldo del tour.
+        reserva = self.reserva_con_anticipo()
+        reserva.monto_efectivo = Decimal('3900.00')
+        reserva.full_clean()
+        reserva.save()
+
+        self.assertEqual(reserva.saldo_pendiente, Decimal('-750.00'))
+        self.assertTrue(reserva.liquidado)
+
+
+class ReservasNuevasAdminTests(TestCase):
+    """Contador de reservas nuevas del listado del admin (ver ReservaAdmin)."""
+
+    def setUp(self):
+        self.url = reverse('admin:bookings_reserva_nuevas')
+
+    def semilla(self):
+        """Primera llamada, sin `desde`: devuelve la hora del servidor y cero."""
+        body = self.client.get(self.url).json()
+        self.assertEqual(body['nuevas'], 0)
+        return body['desde']
+
+    def test_anonimo_no_pasa(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response['Location'])
+
+    def test_staff_sin_permiso_de_ver_reservas_recibe_403(self):
+        vendedora = User.objects.create_user('sin_permisos', password='x', is_staff=True)
+        self.client.force_login(vendedora)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_vendedora_con_permiso_puede_consultar(self):
+        vendedora = User.objects.create_user('vendedora', password='x', is_staff=True)
+        vendedora.user_permissions.add(Permission.objects.get(codename='view_reserva'))
+        self.client.force_login(vendedora)
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_cuenta_las_pagadas_que_entraron_despues(self):
+        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        desde = self.semilla()
+
+        crear_reserva(estado=Reserva.Estado.PAGADA)
+        crear_reserva(estado=Reserva.Estado.PAGADA)
+        body = self.client.get(self.url, {'desde': desde}).json()
+
+        self.assertEqual(body['nuevas'], 2)
+        # El ancla no se mueve: el contador sigue subiendo hasta que se recargue.
+        self.assertEqual(body['desde'], desde)
+
+        crear_reserva(estado=Reserva.Estado.PAGADA)
+        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 3)
+
+    def test_ignora_los_checkouts_abandonados(self):
+        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        desde = self.semilla()
+
+        crear_reserva()  # pendiente_pago
+        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 0)
+
+    def test_ignora_lo_anterior_a_la_carga_de_la_pagina(self):
+        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        crear_reserva(estado=Reserva.Estado.PAGADA)
+        desde = self.semilla()
+
+        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 0)
+
+    def test_desde_invalido_responde_400(self):
+        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        self.assertEqual(self.client.get(self.url, {'desde': 'ayer'}).status_code, 400)
+
+
+class ReservaApiTests(TestCase):
+    CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
+
+    def payload(self, **overrides):
+        datos = {
+            'checkout_id': self.CHECKOUT_ID,
+            'fecha': str(date.today() + timedelta(days=10)),
+            'hora': '06:00',
+            'numero_personas': 2,
+            'nombre_cliente': 'Ana Ruiz',
+            'telefono_cliente': '+5216121234567',
+            'correo_cliente': 'ana@example.com',
+            'moneda': 'USD',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Ana Ruiz',
+        }
+        datos.update(overrides)
+        return datos
+
+    def enviar(self, **overrides):
+        return self.client.post(
+            '/api/reservas/', self.payload(**overrides), content_type='application/json'
+        )
+
+    def test_crea_pendiente_de_pago_y_sella_el_deslinde(self):
+        response = self.enviar()
+        self.assertEqual(response.status_code, 201)
+
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
+        self.assertEqual(reserva.canal_origen, Reserva.CanalOrigen.WEB)
+        self.assertEqual(reserva.moneda, 'USD')
+        self.assertIsNotNone(reserva.deslinde_aceptado_en)
+        self.assertIsNotNone(reserva.deslinde_ip)
+
+    def test_reintentar_el_checkout_no_duplica_la_reserva(self):
+        primera = self.enviar()
+        segunda = self.enviar()
+
+        self.assertEqual(primera.status_code, 201)
+        self.assertEqual(segunda.status_code, 200)
+        self.assertEqual(primera.json()['id'], segunda.json()['id'])
+        self.assertEqual(Reserva.objects.count(), 1)
+
+    def test_corregir_los_datos_actualiza_la_misma_reserva(self):
+        creada = self.enviar()
+        nueva_fecha = str(date.today() + timedelta(days=20))
+        self.enviar(fecha=nueva_fecha, numero_personas=5, hora='05:30')
+
+        self.assertEqual(Reserva.objects.count(), 1)
+        reserva = Reserva.objects.get(pk=creada.json()['id'])
+        self.assertEqual(str(reserva.fecha), nueva_fecha)
+        self.assertEqual(reserva.numero_personas, 5)
+        self.assertEqual(str(reserva.hora), '05:30:00')
+
+    def test_otro_checkout_id_es_otra_reserva(self):
+        self.enviar()
+        self.enviar(checkout_id='22222222-2222-4222-8222-222222222222')
+        self.assertEqual(Reserva.objects.count(), 2)
+
+    def test_una_reserva_ya_pagada_no_se_reescribe(self):
+        creada = self.enviar()
+        Reserva.objects.filter(pk=creada.json()['id']).update(estado=Reserva.Estado.PAGADA)
+
+        # El mismo checkout_id ya no encuentra fila editable: empieza una nueva.
+        response = self.enviar(numero_personas=6)
+        self.assertEqual(response.status_code, 201)
+        self.assertNotEqual(response.json()['id'], creada.json()['id'])
+
+        pagada = Reserva.objects.get(pk=creada.json()['id'])
+        self.assertEqual(pagada.numero_personas, 2)
+
+    def test_sin_checkout_id_no_se_acepta(self):
+        response = self.client.post(
+            '/api/reservas/', self.payload(checkout_id=None), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('checkout_id', response.json())
+
+    def test_rechaza_sin_deslinde(self):
+        response = self.enviar(deslinde_aceptado=False)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('deslinde_aceptado', response.json())
+
+    def test_rechaza_hora_fuera_de_la_ventana(self):
+        self.assertEqual(self.enviar(hora='09:00').status_code, 400)
+
+    def test_rechaza_mas_de_seis_personas(self):
+        self.assertEqual(self.enviar(numero_personas=8).status_code, 400)
+
+
+class AtribucionDeVentaTests(TestCase):
+    """A quien le cuenta cada venta. La comision se liquida fuera del sistema;
+    aqui lo unico que importa es que el registro no se pierda ni se invente."""
+
+    CHECKOUT_ID = '33333333-3333-4333-8333-333333333333'
+
+    def setUp(self):
+        self.maria = Vendedora.objects.create(
+            usuario=User.objects.create_user('maria', password='x', is_staff=True),
+            codigo='maria',
+        )
+
+    def enviar(self, **overrides):
+        datos = {
+            'checkout_id': self.CHECKOUT_ID,
+            'fecha': str(date.today() + timedelta(days=10)),
+            'hora': '06:00',
+            'numero_personas': 2,
+            'nombre_cliente': 'Ana Ruiz',
+            'telefono_cliente': '+5216121234567',
+            'correo_cliente': 'ana@example.com',
+            'moneda': 'MXN',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Ana Ruiz',
+        }
+        datos.update(overrides)
+        return self.client.post('/api/reservas/', datos, content_type='application/json')
+
+    def test_el_link_de_la_vendedora_le_atribuye_la_venta(self):
+        response = self.enviar(ref='maria')
+
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertEqual(reserva.vendedora, self.maria)
+        self.assertIsNotNone(reserva.vendedora_asignada_en)
+
+    def test_sin_ref_la_venta_queda_sin_atribuir(self):
+        reserva = Reserva.objects.get(pk=self.enviar().json()['id'])
+
+        self.assertIsNone(reserva.vendedora)
+        self.assertIsNone(reserva.vendedora_asignada_en)
+
+    def test_un_codigo_que_no_existe_no_impide_reservar(self):
+        response = self.enviar(ref='quien-sabe')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Reserva.objects.get(pk=response.json()['id']).vendedora)
+
+    def test_el_codigo_de_una_vendedora_dada_de_baja_ya_no_atribuye(self):
+        self.maria.activo = False
+        self.maria.save()
+
+        reserva = Reserva.objects.get(pk=self.enviar(ref='maria').json()['id'])
+        self.assertIsNone(reserva.vendedora)
+
+    def test_reenviar_el_checkout_sin_ref_no_borra_la_atribucion(self):
+        # El cliente entro por el link, corrige la fecha y reenvia: la reserva es
+        # la misma fila y la venta sigue siendo de quien lo trajo.
+        creada = self.enviar(ref='maria')
+        self.enviar(numero_personas=4)
+
+        reserva = Reserva.objects.get(pk=creada.json()['id'])
+        self.assertEqual(reserva.numero_personas, 4)
+        self.assertEqual(reserva.vendedora, self.maria)
+
+    def test_atribuir_a_mano_sella_la_fecha(self):
+        reserva = crear_reserva()
+        self.assertIsNone(reserva.vendedora_asignada_en)
+
+        reserva.vendedora = self.maria
+        reserva.save()
+
+        self.assertIsNotNone(Reserva.objects.get(pk=reserva.pk).vendedora_asignada_en)
+
+    def test_quitar_la_atribucion_limpia_la_fecha(self):
+        reserva = crear_reserva(vendedora=self.maria)
+        reserva.vendedora = None
+        reserva.save()
+
+        self.assertIsNone(Reserva.objects.get(pk=reserva.pk).vendedora_asignada_en)
+
+    def test_no_se_puede_borrar_una_vendedora_con_ventas(self):
+        """Borrarla dejaria ventas sin dueño: para dar de baja se usa `activo`."""
+        crear_reserva(vendedora=self.maria)
+
+        with self.assertRaises(ProtectedError):
+            self.maria.delete()

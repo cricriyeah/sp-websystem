@@ -5,6 +5,8 @@ Settings comunes a todos los entornos (local y production heredan de aqui).
 import os
 from pathlib import Path
 
+from django.urls import reverse_lazy
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 INSTALLED_APPS = [
@@ -18,6 +20,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Separador de miles en el panel de finanzas (filtro `intcomma`): una cifra
+    # de seis digitos sin separar no se lee de un vistazo.
+    'django.contrib.humanize',
 
     'rest_framework',
     'corsheaders',
@@ -25,6 +30,8 @@ INSTALLED_APPS = [
     'apps.fleet',
     'apps.bookings',
     'apps.payments',
+    'apps.notifications',
+    'apps.finance',
 ]
 
 REST_FRAMEWORK = {
@@ -40,6 +47,15 @@ STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
+# Confirmacion automatica al cliente (ver apps/notifications/services.py). Vacias
+# en local: sin llaves no se manda nada y el cobro sigue funcionando igual.
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM = os.environ.get('RESEND_FROM', '')
+WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '')
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
+WHATSAPP_TEMPLATE = os.environ.get('WHATSAPP_TEMPLATE', 'reserva_confirmada')
+WHATSAPP_TEMPLATE_LANG = os.environ.get('WHATSAPP_TEMPLATE_LANG', 'es_MX')
+
 # Config visual de unfold. El tema (colores, sidebar) se define aqui en codigo,
 # no es editable en vivo desde el admin como admin_interface.
 UNFOLD = {
@@ -48,6 +64,104 @@ UNFOLD = {
     'SITE_SYMBOL': 'anchor',
     'SHOW_HISTORY': True,
     'SHOW_VIEW_ON_SITE': False,
+    # El menu lateral se arma a mano porque el panel de finanzas no es un modelo
+    # y no aparece solo. Cada item se filtra con el permiso del usuario: la
+    # vendedora ve la operacion, los jefes ven ademas el dinero. Si se agrega un
+    # modelo nuevo hay que darlo de alta aqui — mientras tanto sigue alcanzable
+    # desde el menu "todas las aplicaciones" (`show_all_applications`).
+    'SIDEBAR': {
+        'show_search': True,
+        'show_all_applications': True,
+        'navigation': [
+            {
+                'title': 'Operacion',
+                'items': [
+                    {
+                        'title': 'Reservas',
+                        'icon': 'event',
+                        'link': reverse_lazy('admin:bookings_reserva_changelist'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_reserva'),
+                    },
+                    {
+                        'title': 'Checkouts abandonados',
+                        'icon': 'remove_shopping_cart',
+                        'link': reverse_lazy('admin:bookings_checkoutabandonado_changelist'),
+                        'permission': lambda request: request.user.has_perm(
+                            'bookings.view_checkoutabandonado'
+                        ),
+                    },
+                    {
+                        'title': 'Cupo diario',
+                        'icon': 'event_busy',
+                        'link': reverse_lazy('admin:bookings_cupodiario_changelist'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_cupodiario'),
+                    },
+                ],
+            },
+            {
+                'title': 'Catalogo',
+                'separator': True,
+                'items': [
+                    {
+                        'title': 'Embarcaciones',
+                        'icon': 'sailing',
+                        'link': reverse_lazy('admin:fleet_embarcacion_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_embarcacion'),
+                    },
+                    {
+                        'title': 'Capitanes',
+                        'icon': 'badge',
+                        'link': reverse_lazy('admin:fleet_capitan_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_capitan'),
+                    },
+                    {
+                        'title': 'Vendedoras',
+                        'icon': 'support_agent',
+                        'link': reverse_lazy('admin:bookings_vendedora_changelist'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_vendedora'),
+                    },
+                ],
+            },
+            {
+                # Solo jefes. La vendedora no ve este bloque completo, igual que
+                # hoy no ve `fleet.Tarifa` (ver docs/contexto-negocio.md, Roles).
+                'title': 'Dinero',
+                'separator': True,
+                'items': [
+                    {
+                        'title': 'Finanzas',
+                        'icon': 'payments',
+                        'link': reverse_lazy('finanzas'),
+                        'permission': lambda request: request.user.is_superuser,
+                    },
+                    {
+                        'title': 'Tarifa',
+                        'icon': 'sell',
+                        'link': reverse_lazy('admin:fleet_tarifa_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_tarifa'),
+                    },
+                ],
+            },
+            {
+                'title': 'Sistema',
+                'separator': True,
+                'items': [
+                    {
+                        'title': 'Usuarios',
+                        'icon': 'person',
+                        'link': reverse_lazy('admin:auth_user_changelist'),
+                        'permission': lambda request: request.user.has_perm('auth.view_user'),
+                    },
+                    {
+                        'title': 'Grupos',
+                        'icon': 'group',
+                        'link': reverse_lazy('admin:auth_group_changelist'),
+                        'permission': lambda request: request.user.has_perm('auth.view_group'),
+                    },
+                ],
+            },
+        ],
+    },
     'COLORS': {
         'primary': {
             '50': '255 247 237', '100': '255 237 213', '200': '254 215 170',
@@ -60,6 +174,9 @@ UNFOLD = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Sirve los estaticos del admin (y de apps.bookings) en Render, que no tiene
+    # un nginx delante. Va justo despues de SecurityMiddleware, como pide su doc.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -106,5 +223,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+
+# Destino de `manage.py collectstatic`. Ignorado por git; en Render lo genera el
+# build. En local no hace falta correrlo: con DEBUG=True el runserver sirve los
+# estaticos directo desde cada app.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

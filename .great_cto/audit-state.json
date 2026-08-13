@@ -1,0 +1,8 @@
+{
+  "audit_sha": "30000789a41c5d27d1b8357c78ef6a3e8b95ef3f",
+  "date": "2026-08-12",
+  "findings": { "P0": 2, "P1": 4, "P2": 6, "P3": 4 },
+  "beads_ids": [],
+  "beads_unavailable": true,
+  "tasks_file": ".great_cto/tasks.md"
+}
