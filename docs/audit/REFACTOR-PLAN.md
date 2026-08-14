@@ -1,6 +1,12 @@
-# Refactor / Remediation Plan — sistema-pescadeportiva — 2026-08-12
+# Refactor / Remediation Plan — sistema-pescadeportiva
 
 Work packets ordered by tier. Tier = priority. Effort is wall-clock for one dev.
+
+WP-01 through WP-14 are from the 2026-08-12 audit (11 of 14 done — see
+`docs/audit/AUDIT-2026-08-14.md` "Verification of prior findings" for per-item
+status). WP-15 onward are from the 2026-08-14 re-audit
+(`docs/audit/AUDIT-2026-08-14.md`, findings F-17..F-21), driven by the upcoming
+switch to real Stripe keys + real Supabase Postgres.
 
 ---
 
@@ -135,3 +141,56 @@ Files: `backend/requirements.txt`
 Steps: `pip install pip-audit && pip-audit -r backend/requirements.txt`; triage any findings.
 Tests: n/a — one-off scan, then folded into WP-04 CI job.
 Done when: current dependency set is confirmed clean or findings are triaged into follow-up tasks.
+
+---
+
+## WP-15: Decouple health check from business data (F-17)
+Tier: 0 | Effort: 30m | Risk: Low
+Files: `backend/config/urls.py`, new `backend/apps/fleet/views.py` (or a new tiny `apps/core`), `render.yaml`
+Steps:
+1. Add a `GET /healthz` view that returns 200 based on infra readiness only (e.g. `connection.ensure_connection()` then 200; no `Tarifa` lookup).
+2. Mount it in `config/urls.py` outside `/api/` (avoid any future confusion with the public API surface).
+3. Change `render.yaml`'s `healthCheckPath` from `/api/tarifa/` to `/healthz`.
+4. Leave `/api/tarifa/`'s 503-when-unconfigured behavior untouched — that's correct for its actual client-facing purpose.
+Tests: manual curl on a fresh migrated-but-unseeded DB, confirm `/healthz` returns 200 while `/api/tarifa/` still correctly returns 503.
+Done when: a freshly migrated, zero-data database passes Render's health check.
+
+## WP-16: Go-live checklist doc + first-boot sequencing (F-18, F-22, F-23)
+Tier: 0 | Effort: 1-2h | Risk: Low
+Files: new `docs/deploy/GO-LIVE.md`
+Steps:
+1. Write the ordered checklist from `AUDIT-2026-08-14.md`'s "Go-Live Checklist" section as a standalone doc: env vars (with required-vs-optional table from F-22), Stripe live-mode webhook registration, first-boot Shell sequence (`createsuperuser` → create `Tarifa` → `setup_roles` → vendedora accounts), frontend `NEXT_PUBLIC_API_URL` verification (F-23), and the `X-Forwarded-Proto` verification already flagged as open in `TM-payments.md`.
+2. Commit `frontend/.env.example` alongside (F-23), mirroring `backend/.env.example`'s format.
+Tests: n/a — documentation, but walk it once against a real or scratch Render environment before the actual go-live to confirm no step is missing.
+Done when: another person could execute the first production deploy from this doc alone.
+
+## WP-17: Fix cupo-diario race condition under concurrent Postgres writes (F-19)
+Tier: 0 | Effort: 3-4h | Risk: Medium (touches the core booking invariant — review carefully)
+Files: `backend/apps/bookings/models.py:47-76` (`CupoDiario`, `validar_cupo_diario`), `backend/apps/payments/services.py:56-94` (`aplicar_pago_exitoso`), `backend/apps/payments/management/commands/conciliar_pagos.py` (confirm it goes through the same locked path)
+Steps:
+1. In `validar_cupo_diario`, acquire a row lock scoped to `fecha` before counting — simplest approach: `CupoDiario.objects.select_for_update().get_or_create(fecha=fecha, defaults={'cupo_maximo': CUPO_MAXIMO_DEFAULT})`, then use that row's `cupo_maximo` (already the pattern `cupo_maximo_del_dia` follows, just without the lock) and only then run the `.count()`.
+2. Confirm every caller path that can transition a `Reserva` into `ESTADOS_QUE_OCUPAN_CUPO` runs inside `transaction.atomic()` — webhook path already does; verify admin-driven manual state changes (e.g. cash settlement, manual "Cancelar por mal clima" reversal if any) and `conciliar_pagos` (which calls `aplicar_pago_exitoso`, already atomic) are covered.
+3. Double-check `select_for_update()` on a freshly-`get_or_create`'d row doesn't deadlock against itself in SQLite-based tests (SQLite ignores `select_for_update()` per Django docs — no-op there, so this is safe for the existing suite, but see WP-18 to actually prove it works).
+Tests: unit test with `TransactionTestCase` for the sequential cases (still must not regress); the real proof is the concurrency test added in WP-18, which requires Postgres.
+Done when: two reservations for the same near-full date, paid concurrently via two real threads/connections against Postgres, cannot both succeed when only one slot remains.
+
+## WP-18: Add Postgres to CI, close the portability blind spot (F-20)
+Tier: 0 | Effort: 2-3h | Risk: Low
+Files: `.github/workflows/ci.yml`, possibly new `backend/config/settings/ci.py`
+Steps:
+1. Add a `postgres:16` `services:` container to the `backend` CI job (GitHub Actions native support, free).
+2. Point `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` at the service container; either reuse `settings/production` with `DEBUG` overridden for test convenience, or add a thin `settings/ci.py` importing from `production.py`'s DB config but relaxing SSL/HSTS checks that don't apply to a CI container.
+3. Run `python manage.py test apps` against it in the same job (or a parallel one) as the existing SQLite run — keep both, since SQLite is still useful for fast local iteration.
+4. Add the concurrency regression test from WP-17 to this Postgres-backed run specifically (it cannot run meaningfully under SQLite).
+Tests: the CI job itself is the test — confirm it goes green with a real Postgres connection, and confirm it goes red if WP-17's fix is reverted locally (sanity-check the test actually catches the bug).
+Done when: every backend test, including the new concurrency test, runs against Postgres on every push/PR.
+
+## WP-19: Pin Stripe API version (F-21)
+Tier: 1 | Effort: 30m | Risk: Low
+Files: `backend/apps/payments/views.py`, `backend/apps/payments/services.py` (or a single shared init point, e.g. `apps/payments/apps.py` `AppConfig.ready()`), `docs/vendors/stripe.md`
+Steps:
+1. Set `stripe.api_version = '<version tested against live keys>'` once, in one place (avoid repeating the literal across every file that imports `stripe`).
+2. Record the pinned version and the date it was last reviewed in `docs/vendors/stripe.md`.
+3. Add a note to the go-live checklist (WP-16) to bump this deliberately, not silently, whenever the Stripe SDK is upgraded.
+Tests: run the existing payment test suite after pinning, confirm no behavior change (expected — pinning to the version already in effect should be a no-op).
+Done when: `stripe.api_version` is explicit in code and documented.

@@ -1,0 +1,3 @@
+DONE: re-audit complete — 12/16 prior findings verified fixed, 2 new Critical (F-17 first-deploy health-check blocker, F-19 cupo-diario race condition under concurrent Postgres) + 4 supporting findings (F-18,F-20,F-21 High/Critical infra; F-22,F-23 checklist).
+  artifact: docs/audit/AUDIT-2026-08-14.md, docs/audit/REFACTOR-PLAN.md (WP-15..WP-19), .great_cto/tasks.md (2026-08-14 section)
+  next: CTO triage Tier 0 (F-17 health check + F-19 race condition are launch blockers) before production Stripe/Supabase testing begins.

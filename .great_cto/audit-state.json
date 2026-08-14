@@ -1,8 +1,7 @@
 {
-  "audit_sha": "30000789a41c5d27d1b8357c78ef6a3e8b95ef3f",
-  "date": "2026-08-12",
-  "findings": { "P0": 2, "P1": 4, "P2": 6, "P3": 4 },
+  "audit_sha": "084714079d9d3f481192945224167546ab5af512",
+  "date": "2026-08-14",
+  "findings": { "P0": 4, "P1": 2, "P2": 0, "P3": 0 },
   "beads_ids": [],
-  "beads_unavailable": true,
-  "tasks_file": ".great_cto/tasks.md"
+  "note": "bd unavailable; tasks tracked in .great_cto/tasks.md under '2026-08-14' section"
 }

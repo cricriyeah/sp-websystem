@@ -56,3 +56,37 @@ parte del hallazgo original, ver `docs/vendors/supabase.md`.
 La auditoria no lo detecto porque solo reviso los settings de Django, no el arranque
 del proceso: `manage.py runserver` funciona en local y nada senala que falte, hasta que
 el deploy no levanta.
+
+---
+
+# Tasks from Re-Audit 2026-08-14 (`bd` still unavailable)
+
+Fuente: `docs/audit/AUDIT-2026-08-14.md` (F-17..F-23). Verificacion de los 12
+hallazgos previos marcados HECHO: todos siguen en pie salvo lo ya sabido
+(F-06/F-08/F-14/F-16 siguen abiertos, sin cambio de severidad salvo la nota de
+F-06 abajo). Motivador de esta pasada: el dueño va a empezar pruebas en
+produccion con llaves de Stripe reales y Supabase real.
+
+| Estado | Priority | Title | Source | Effort |
+|--------|----------|-------|--------|--------|
+| PENDIENTE | P0 | DEPLOY: healthCheckPath (`/api/tarifa/`) 503-ea hasta crear `Tarifa` a mano — Render cancela el primer deploy por health check fallido. Agregar `/healthz` desacoplado de datos de negocio. | F-17 / WP-15 | 30m |
+| PENDIENTE | P0 | DOCS: Escribir `docs/deploy/GO-LIVE.md` con la secuencia exacta de primer arranque (env vars, registrar webhook live, createsuperuser, crear Tarifa, setup_roles, altas de vendedora) + `frontend/.env.example` | F-18/F-22/F-23 / WP-16 | 1-2h |
+| PENDIENTE | P0 | SEC/DATA: Condicion de carrera en `validar_cupo_diario` — dos reservas del mismo dia pagadas en paralelo (Postgres real, sin lock) pueden sobrevender el cupo. select_for_update() solo cubre la reserva propia, no el conteo del dia. No se puede probar con SQLite. | F-19 / WP-17 | 3-4h |
+| PENDIENTE | P0 | CHORE: Agregar Postgres real a CI (`services: postgres`) — los 139 tests nunca han corrido contra el motor de produccion. Requisito para poder probar F-19 de verdad. | F-20 / WP-18 | 2-3h |
+| PENDIENTE | P1 | CHORE: Fijar `stripe.api_version` explicito (hoy usa el default de la cuenta, sin pin) | F-21 / WP-19 | 30m |
+| REEVALUAR | P1→P0? | Sentry/alertas (F-06 original) — con F-19 en juego, un sobrecupo o webhook atorado solo se descubre por reclamo de cliente o corriendo `conciliar_pagos --dry-run` a mano. Subir prioridad antes de abrir a produccion real. | F-06 (existente) | 2-3h |
+
+Total nuevo: 6 items (P0:4 P1:2, uno de ellos una re-evaluacion de prioridad de
+un hallazgo ya existente, no uno nuevo). F-22/F-23 son items de checklist, no
+bugs de codigo — se resuelven escribiendo el documento de WP-16, no con un cambio
+de codigo aparte.
+
+## Decisiones/hallazgos de esta pasada que no son tareas
+
+- `docs/threat-models/TM-payments.md` C-3/C-6 asumen que el chequeo de cupo esta
+  serializado; no cubren dos reservas *distintas* del mismo dia en paralelo. Se
+  recomienda una entrada C-10 una vez resuelto F-19 (WP-17), no una tarea aparte
+  — va como parte de ese work packet.
+- No se encontro `vercel.json` ni configuracion de despliegue del frontend en el
+  repo — se desconoce con certeza donde vive el build de produccion del
+  frontend. Pregunta abierta para el mantenedor, no un hallazgo de codigo.
