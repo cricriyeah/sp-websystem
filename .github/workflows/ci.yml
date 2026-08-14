@@ -82,6 +82,14 @@ jobs:
 
       - run: npm ci
 
+      # Next genera los tipos de rutas (`PageProps`, `LayoutProps`) dentro de
+      # .next/, y `next-env.d.ts` los importa de ahi. En una maquina de trabajo
+      # ya existen porque el dev server los dejo; en CI, recien clonado, no —
+      # asi que `tsc` falla con "Cannot find name 'PageProps'" sin este paso.
+      # `typegen` los genera sin pagar un build completo.
+      - name: Generar tipos de rutas
+        run: npx next typegen
+
       # Los tres pasos que hoy se corren a mano y se olvidan.
       - name: Tipos
         run: npx tsc --noEmit
