@@ -105,10 +105,22 @@
     "body2": "Cada viaje es solo para tu grupo: la panga no se comparte con desconocidos. Si es tu primera vez, no te preocupes, el capitán te enseña a tirar el anzuelo. Y si algo no salió como esperabas, dínoslo de frente — así arreglamos las cosas aquí.",
     "photoHint": "Foto de los capitanes en el muelle, de preferencia al amanecer y sin poses",
     "facts": {
-      "duration": { "value": "6 a 8 horas", "label": "Duración del viaje" },
-      "departure": { "value": "5:00 a 7:00 am", "label": "Tú eliges la hora de salida" },
-      "capacity": { "value": "Hasta 6 personas", "label": "Sin mínimo ni límite de edad" },
-      "season": { "value": "365 días al año", "label": "Salimos todo el año" }
+      "duration": {
+        "value": "6 a 8 horas",
+        "label": "Duración del viaje"
+      },
+      "departure": {
+        "value": "5:00 a 7:00 am",
+        "label": "Tú eliges la hora de salida"
+      },
+      "capacity": {
+        "value": "Hasta 6 personas",
+        "label": "Sin mínimo ni límite de edad"
+      },
+      "season": {
+        "value": "365 días al año",
+        "label": "Salimos todo el año"
+      }
     }
   },
   "fleet": {
@@ -120,13 +132,24 @@
       {
         "name": "Panga chica",
         "capacity": "Hasta 3 personas",
-        "specs": ["Motor fuera de borda", "Sombra", "Hielera con hielo", "Equipo de pesca para todos"],
+        "specs": [
+          "Motor fuera de borda",
+          "Sombra",
+          "Hielera con hielo",
+          "Equipo de pesca para todos"
+        ],
         "photoHint": "Foto de la panga chica navegando, con gente pescando"
       },
       {
         "name": "Panga grande",
         "capacity": "Hasta 6 personas",
-        "specs": ["Motor fuera de borda", "Sombra", "Más espacio para pelear el pez", "Hielera con hielo", "Equipo de pesca para todos"],
+        "specs": [
+          "Motor fuera de borda",
+          "Sombra",
+          "Más espacio para pelear el pez",
+          "Hielera con hielo",
+          "Equipo de pesca para todos"
+        ],
         "photoHint": "Foto de la panga grande, de perfil, con la bahía atrás"
       }
     ]
@@ -137,10 +160,26 @@
     "note": "El mar no da garantías y nosotros tampoco te las vamos a dar. Si el día viene flojo, te lo decimos antes de salir. Pregúntanos por WhatsApp cómo va la semana.",
     "speciesLabel": "Lo que suele darse",
     "rows": [
-      { "period": "Diciembre a marzo", "species": "Sierra, jurel, cabrilla, pargo", "note": "Agua fresca, días tranquilos. Buena temporada para quien va empezando." },
-      { "period": "Abril a junio", "species": "Pez gallo, dorado, marlin rayado", "note": "Empieza a calentar el agua y llega lo grande." },
-      { "period": "Julio a septiembre", "species": "Dorado, atún aleta amarilla, pez vela", "note": "La temporada fuerte. Es cuando más se pelea." },
-      { "period": "Octubre a noviembre", "species": "Dorado, pez vela, pargo", "note": "Todavía se da bien y hay menos gente en el agua." }
+      {
+        "period": "Diciembre a marzo",
+        "species": "Sierra, jurel, cabrilla, pargo",
+        "note": "Agua fresca, días tranquilos. Buena temporada para quien va empezando."
+      },
+      {
+        "period": "Abril a junio",
+        "species": "Pez gallo, dorado, marlin rayado",
+        "note": "Empieza a calentar el agua y llega lo grande."
+      },
+      {
+        "period": "Julio a septiembre",
+        "species": "Dorado, atún aleta amarilla, pez vela",
+        "note": "La temporada fuerte. Es cuando más se pelea."
+      },
+      {
+        "period": "Octubre a noviembre",
+        "species": "Dorado, pez vela, pargo",
+        "note": "Todavía se da bien y hay menos gente en el agua."
+      }
     ]
   },
   "included": {
@@ -277,8 +316,19 @@
     "dayLabel": "Día",
     "hourLabel": "Hora",
     "peopleLabel": "Personas",
-    "peopleUnit": { "one": "persona", "other": "personas" },
-    "weekdaysShort": ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"],
+    "peopleUnit": {
+      "one": "persona",
+      "other": "personas"
+    },
+    "weekdaysShort": [
+      "Lu",
+      "Ma",
+      "Mi",
+      "Ju",
+      "Vi",
+      "Sa",
+      "Do"
+    ],
     "tripHeadline": "Fecha y detalles del viaje",
     "contactHeadline": "Tus datos",
     "phone": "Número telefónico",
@@ -363,6 +413,9 @@
     "submitting": "Procesando…",
     "confirmPay": "Pagar",
     "missingFields": "Completa tus datos de contacto antes de continuar.",
+    "invalidPhone": "Revisa tu teléfono: debe llevar al menos 10 dígitos con lada, por ejemplo 612 123 4567.",
+    "invalidEmail": "Revisa tu correo: ahí es donde te llega la confirmación de tu reserva.",
+    "invalidName": "Escribe tu nombre completo, sin números.",
     "errorGeneric": "Algo salió mal. Intenta de nuevo.",
     "dayFullNotice": "Ese día ya no tiene cupo disponible. Te asignamos automáticamente el {date}, la fecha más próxima con espacio.",
     "paymentUnavailable": "Los pagos en línea todavía no están disponibles. Contáctanos por WhatsApp para reservar.",

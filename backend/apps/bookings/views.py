@@ -3,7 +3,12 @@ from datetime import date
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva, cupo_maximo_del_dia
+from .models import (
+    ESTADOS_QUE_OCUPAN_CUPO,
+    Reserva,
+    cupo_maximo_del_dia,
+    proxima_fecha_disponible,
+)
 from .serializers import CupoSerializer, ReservaCheckoutSerializer
 
 
@@ -30,6 +35,9 @@ class CupoDisponibleView(APIView):
             'cupo_maximo': cupo_maximo,
             'ocupadas': ocupadas,
             'disponible': ocupadas < cupo_maximo,
+            # Se responde siempre, tambien cuando el dia pedido si tiene
+            # espacio: asi el navegador nunca necesita una segunda vuelta.
+            'proxima_disponible': proxima_fecha_disponible(fecha),
         }
         return Response(CupoSerializer(data).data)
 

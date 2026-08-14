@@ -8,6 +8,8 @@ from django.utils import timezone
 
 from apps.fleet.models import Capitan, Embarcacion
 
+from .validators import validar_nombre_persona, validar_telefono
+
 VENTANA_SALIDA_INICIO = time(5, 0)
 VENTANA_SALIDA_FIN = time(7, 0)
 
@@ -64,6 +66,39 @@ class CupoDiario(models.Model):
 def cupo_maximo_del_dia(fecha):
     override = CupoDiario.objects.filter(fecha=fecha).first()
     return override.cupo_maximo if override else CUPO_MAXIMO_DEFAULT
+
+
+# Hasta donde se busca un dia con espacio cuando el pedido esta lleno. Tres meses
+# cubre de sobra la ventana en que la gente planea un viaje de pesca.
+DIAS_BUSQUEDA_DISPONIBILIDAD = 90
+
+
+def proxima_fecha_disponible(desde, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
+    """Primera fecha con cupo a partir de `desde`, o None si no hay en `dias`.
+
+    Se resuelve con **dos consultas**, no una por dia. Antes esta busqueda vivia
+    en el navegador (`checkout-view.tsx`) y hacia una peticion por cada dia que
+    probaba: hasta 90 seguidas, que con el limite de 60/min por IP terminaban en
+    un 429 que el frontend se tragaba en silencio. La ayuda de "te muevo al
+    siguiente dia con espacio" dejaba de funcionar justo en temporada alta, que
+    es cuando hace falta.
+    """
+    hasta = desde + timedelta(days=dias - 1)
+
+    ocupadas_por_fecha = dict(
+        Reserva.objects.filter(fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO)
+        .values_list('fecha')
+        .annotate(total=models.Count('id'))
+    )
+    topes = dict(
+        CupoDiario.objects.filter(fecha__range=(desde, hasta)).values_list('fecha', 'cupo_maximo')
+    )
+
+    for i in range(dias):
+        fecha = desde + timedelta(days=i)
+        if ocupadas_por_fecha.get(fecha, 0) < topes.get(fecha, CUPO_MAXIMO_DEFAULT):
+            return fecha
+    return None
 
 
 def bloquear_cupo_del_dia(fecha):
@@ -199,8 +234,8 @@ class Reserva(models.Model):
     )
 
     # Datos del cliente (no se pide peso ni si sabe nadar, ver docs/contexto-negocio.md)
-    nombre_cliente = models.CharField(max_length=150)
-    telefono_cliente = models.CharField(max_length=20)
+    nombre_cliente = models.CharField(max_length=150, validators=[validar_nombre_persona])
+    telefono_cliente = models.CharField(max_length=20, validators=[validar_telefono])
     correo_cliente = models.EmailField()
 
     # Deslinde de responsabilidad: casilla aceptada + nombre escrito por el cliente,

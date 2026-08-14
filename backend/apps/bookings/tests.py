@@ -18,6 +18,7 @@ from apps.testing import ApiTestCase
 from .admin import telefono_marcable
 from .models import (
     CUPO_MAXIMO_DEFAULT,
+    proxima_fecha_disponible,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
     CheckoutAbandonado,
     CupoDiario,
@@ -662,3 +663,91 @@ class ThrottleTests(ApiTestCase):
         from apps.payments.views import StripeWebhookView
 
         self.assertEqual(StripeWebhookView.throttle_classes, [])
+
+
+class ValidacionDeContactoTests(TestCase):
+    """El telefono y el nombre se aprietan distinto a proposito.
+
+    El telefono es con lo que la vendedora contacta al cliente: uno invalido es
+    alguien en el muelle a las 6 am sin que nadie lo espere. El nombre se aprieta
+    poco — la regla intuitiva ("solo letras") rompe personas reales.
+    """
+
+    def test_telefono_con_letras_no_pasa(self):
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(telefono_cliente='asdf')).full_clean()
+
+    def test_telefono_incompleto_no_pasa(self):
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(telefono_cliente='612 123')).full_clean()
+
+    def test_acepta_el_telefono_como_lo_escribe_la_gente(self):
+        for numero in ('6121234567', '612 123 4567', '(612) 123-4567', '+52 1 612 123 4567'):
+            with self.subTest(numero=numero):
+                Reserva(**datos_reserva(telefono_cliente=numero)).full_clean()
+
+    def test_nombre_con_numeros_no_pasa(self):
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(nombre_cliente='12345')).full_clean()
+
+    def test_nombre_sin_ninguna_letra_no_pasa(self):
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(nombre_cliente='-----')).full_clean()
+
+    def test_no_rechaza_nombres_reales(self):
+        """El fallo caro aqui no es guardar un nombre raro: es dejar a una
+        persona sin poder reservar por llamarse como se llama."""
+        for nombre in ("Jose Munoz", "José Muñoz", "O'Brien", "Garcia-Lopez", "Ana de la Torre"):
+            with self.subTest(nombre=nombre):
+                Reserva(**datos_reserva(nombre_cliente=nombre, deslinde_nombre=nombre)).full_clean()
+
+
+class ProximaFechaDisponibleTests(TestCase):
+    """La busqueda del siguiente dia con espacio vive en el servidor.
+
+    Antes la hacia el navegador con una peticion por dia — hasta 90 seguidas,
+    que con el limite de 60/min terminaban en 429 y el frontend se lo tragaba
+    en silencio.
+    """
+
+    def test_si_el_dia_pedido_tiene_espacio_se_devuelve_ese(self):
+        fecha = date.today() + timedelta(days=10)
+        self.assertEqual(proxima_fecha_disponible(fecha), fecha)
+
+    def test_salta_los_dias_llenos(self):
+        primero = date.today() + timedelta(days=10)
+        for _ in range(CUPO_MAXIMO_DEFAULT):
+            crear_reserva(fecha=primero, estado=Reserva.Estado.PAGADA)
+
+        self.assertEqual(proxima_fecha_disponible(primero), primero + timedelta(days=1))
+
+    def test_respeta_el_cupo_cerrado_a_mano(self):
+        primero = date.today() + timedelta(days=10)
+        CupoDiario.objects.create(fecha=primero, cupo_maximo=0)
+
+        self.assertEqual(proxima_fecha_disponible(primero), primero + timedelta(days=1))
+
+    def test_sin_ningun_dia_libre_devuelve_none(self):
+        desde = date.today() + timedelta(days=10)
+        for i in range(3):
+            CupoDiario.objects.create(fecha=desde + timedelta(days=i), cupo_maximo=0)
+
+        self.assertIsNone(proxima_fecha_disponible(desde, dias=3))
+
+    def test_no_hace_una_consulta_por_dia(self):
+        """El punto entero del cambio: el costo no crece con la ventana."""
+        desde = date.today() + timedelta(days=10)
+        with self.assertNumQueries(2):
+            proxima_fecha_disponible(desde, dias=90)
+
+
+class CupoApiDevuelveProximaTests(ApiTestCase):
+    def test_la_respuesta_trae_la_proxima_fecha_disponible(self):
+        fecha = date.today() + timedelta(days=10)
+        for _ in range(CUPO_MAXIMO_DEFAULT):
+            crear_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)
+
+        cuerpo = self.client.get(f'/api/cupo/?fecha={fecha}').json()
+
+        self.assertFalse(cuerpo['disponible'])
+        self.assertEqual(cuerpo['proxima_disponible'], str(fecha + timedelta(days=1)))

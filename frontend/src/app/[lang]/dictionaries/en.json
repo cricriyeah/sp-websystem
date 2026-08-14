@@ -105,10 +105,22 @@
     "body2": "Every trip is yours alone — the boat is never shared with strangers. First time fishing? Don't worry, the captain will show you how to cast and how to fight the fish. And if something didn't go the way you hoped, tell us straight. That's how we sort things out around here.",
     "photoHint": "Photo of the captains at the dock, ideally at sunrise and unposed",
     "facts": {
-      "duration": { "value": "6 to 8 hours", "label": "Trip length" },
-      "departure": { "value": "5:00 to 7:00 am", "label": "You pick the departure time" },
-      "capacity": { "value": "Up to 6 guests", "label": "No minimum, no age limit" },
-      "season": { "value": "365 days a year", "label": "We sail all year round" }
+      "duration": {
+        "value": "6 to 8 hours",
+        "label": "Trip length"
+      },
+      "departure": {
+        "value": "5:00 to 7:00 am",
+        "label": "You pick the departure time"
+      },
+      "capacity": {
+        "value": "Up to 6 guests",
+        "label": "No minimum, no age limit"
+      },
+      "season": {
+        "value": "365 days a year",
+        "label": "We sail all year round"
+      }
     }
   },
   "fleet": {
@@ -120,13 +132,24 @@
       {
         "name": "Small panga",
         "capacity": "Up to 3 guests",
-        "specs": ["Outboard motor", "Shade", "Cooler with ice", "Fishing gear for everyone"],
+        "specs": [
+          "Outboard motor",
+          "Shade",
+          "Cooler with ice",
+          "Fishing gear for everyone"
+        ],
         "photoHint": "Photo of the small panga underway, with people fishing"
       },
       {
         "name": "Large panga",
         "capacity": "Up to 6 guests",
-        "specs": ["Outboard motor", "Shade", "More room to fight the fish", "Cooler with ice", "Fishing gear for everyone"],
+        "specs": [
+          "Outboard motor",
+          "Shade",
+          "More room to fight the fish",
+          "Cooler with ice",
+          "Fishing gear for everyone"
+        ],
         "photoHint": "Photo of the large panga side-on, with the bay behind it"
       }
     ]
@@ -137,10 +160,26 @@
     "note": "The sea makes no promises and neither will we. If the day looks slow, we'll tell you before we head out. Ask us on WhatsApp how the week is going.",
     "speciesLabel": "What usually runs",
     "rows": [
-      { "period": "December to March", "species": "Sierra, amberjack, cabrilla, snapper", "note": "Cooler water, calm days. A good season if you're just starting out." },
-      { "period": "April to June", "species": "Roosterfish, dorado, striped marlin", "note": "The water warms up and the big ones arrive." },
-      { "period": "July to September", "species": "Dorado, yellowfin tuna, sailfish", "note": "Peak season. This is when the real fights happen." },
-      { "period": "October to November", "species": "Dorado, sailfish, snapper", "note": "Still running well, and fewer boats on the water." }
+      {
+        "period": "December to March",
+        "species": "Sierra, amberjack, cabrilla, snapper",
+        "note": "Cooler water, calm days. A good season if you're just starting out."
+      },
+      {
+        "period": "April to June",
+        "species": "Roosterfish, dorado, striped marlin",
+        "note": "The water warms up and the big ones arrive."
+      },
+      {
+        "period": "July to September",
+        "species": "Dorado, yellowfin tuna, sailfish",
+        "note": "Peak season. This is when the real fights happen."
+      },
+      {
+        "period": "October to November",
+        "species": "Dorado, sailfish, snapper",
+        "note": "Still running well, and fewer boats on the water."
+      }
     ]
   },
   "included": {
@@ -277,8 +316,19 @@
     "dayLabel": "Day",
     "hourLabel": "Time",
     "peopleLabel": "Guests",
-    "peopleUnit": { "one": "guest", "other": "guests" },
-    "weekdaysShort": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+    "peopleUnit": {
+      "one": "guest",
+      "other": "guests"
+    },
+    "weekdaysShort": [
+      "Mo",
+      "Tu",
+      "We",
+      "Th",
+      "Fr",
+      "Sa",
+      "Su"
+    ],
     "tripHeadline": "Trip date & details",
     "contactHeadline": "Your details",
     "phone": "Phone number",
@@ -363,6 +413,9 @@
     "submitting": "Processing…",
     "confirmPay": "Pay",
     "missingFields": "Fill in your contact details before continuing.",
+    "invalidPhone": "Check your phone number: it needs at least 10 digits including area code, e.g. 612 123 4567.",
+    "invalidEmail": "Check your email: that's where your booking confirmation is sent.",
+    "invalidName": "Enter your full name, without numbers.",
     "errorGeneric": "Something went wrong. Please try again.",
     "dayFullNotice": "That day is fully booked. We've automatically moved you to {date}, the next available date.",
     "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book.",

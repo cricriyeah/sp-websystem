@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Reserva, Vendedora
+from .validators import validar_nombre_persona
 
 
 class CupoSerializer(serializers.Serializer):
@@ -11,6 +12,9 @@ class CupoSerializer(serializers.Serializer):
     cupo_maximo = serializers.IntegerField()
     ocupadas = serializers.IntegerField()
     disponible = serializers.BooleanField()
+    # Primera fecha con espacio a partir de la pedida. Evita que el navegador
+    # tenga que preguntar dia por dia (ver models.proxima_fecha_disponible).
+    proxima_disponible = serializers.DateField(allow_null=True)
 
 
 def ip_del_cliente(request):
@@ -72,6 +76,14 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     def validate_deslinde_nombre(self, value):
         if not value.strip():
             raise serializers.ValidationError('Escribe tu nombre para aceptar el deslinde.')
+        # Mismo criterio que `nombre_cliente`: esto es constancia legal, y un
+        # deslinde firmado como "12345" no acredita a nadie. El campo del modelo
+        # es `blank=True` (las reservas por WhatsApp no lo llevan), asi que la
+        # regla se aplica aqui, donde ya se sabe que viene con contenido.
+        try:
+            validar_nombre_persona(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages)
         return value.strip()
 
     def validate(self, attrs):

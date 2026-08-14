@@ -26,6 +26,11 @@ export type Cupo = {
   cupo_maximo: number;
   ocupadas: number;
   disponible: boolean;
+  // Primera fecha con espacio a partir de la pedida, o null si no hay ninguna
+  // en los proximos 90 dias. La calcula el backend en una sola consulta: antes
+  // el navegador la buscaba preguntando dia por dia, hasta 90 peticiones
+  // seguidas que agotaban el limite de 60/min y morian en un 429 silencioso.
+  proxima_disponible: string | null;
 };
 
 export type ReservaInput = {

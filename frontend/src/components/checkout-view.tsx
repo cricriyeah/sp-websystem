@@ -22,11 +22,33 @@ import {
   type SolicitudKey,
   type Tarifa,
 } from '@/lib/api';
-import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
+import { formatHour, fromLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
 import { leerRef } from '@/lib/ref';
 
-const CUPO_SEARCH_LIMIT_DAYS = 90;
+// Mismas reglas que el backend (apps/bookings/validators.py). Aqui existen para
+// que el cliente vea el error antes de llegar a la pantalla de pago, no para
+// sustituir la validacion del servidor — esta se salta con un curl.
+const DIGITOS_TELEFONO_MIN = 10;
+const DIGITOS_TELEFONO_MAX = 15;
+
+function telefonoValido(valor: string) {
+  if (!/^[\d\s+()\-.]+$/.test(valor.trim())) return false;
+  const digitos = valor.replace(/\D/g, '').length;
+  return digitos >= DIGITOS_TELEFONO_MIN && digitos <= DIGITOS_TELEFONO_MAX;
+}
+
+// Deliberadamente permisivo: acentos, apostrofos y guiones son parte de nombres
+// reales. Solo se rechaza lo que claramente no es un nombre.
+function nombreValido(valor: string) {
+  return !/\d/.test(valor) && /\p{L}/u.test(valor);
+}
+
+// No se intenta replicar el RFC del correo: el backend tiene la ultima palabra
+// (`EmailField`). Esto solo caza los errores de dedo obvios.
+function correoValido(valor: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
+}
 
 // Bebidas y transporte no tienen precio en linea: su costo depende del tipo de
 // bebida y de la distancia del traslado, asi que el agente los cotiza aparte.
@@ -49,12 +71,6 @@ function useCheckoutId() {
     return nuevo;
   });
   return id;
-}
-
-function addDays(isoDate: string, days: number) {
-  const date = fromLocalISODate(isoDate);
-  date.setDate(date.getDate() + days);
-  return toLocalISODate(date);
 }
 
 type CheckoutViewProps = {
@@ -118,27 +134,24 @@ export function CheckoutView({
     const checkId = ++cupoCheckId.current;
 
     (async () => {
-      let candidate = day;
-      for (let i = 0; i < CUPO_SEARCH_LIMIT_DAYS; i++) {
-        let disponible: boolean;
-        try {
-          disponible = (await getCupo(candidate)).disponible;
-        } catch {
-          return;
-        }
-        if (cupoCheckId.current !== checkId) return;
-
-        if (disponible) {
-          if (candidate !== day) {
-            setDay(candidate);
-            setDayFullNotice(
-              checkout.dayFullNotice.replace('{date}', formatDay(fromLocalISODate(candidate), lang))
-            );
-          }
-          return;
-        }
-        candidate = addDays(candidate, 1);
+      let cupo;
+      try {
+        cupo = await getCupo(day);
+      } catch {
+        // Sin respuesta no se avisa nada: es ayuda adelantada, el cupo real lo
+        // valida el backend al cobrar. Nunca debe trabar el checkout.
+        return;
       }
+      if (cupoCheckId.current !== checkId) return;
+      if (cupo.disponible || !cupo.proxima_disponible) return;
+
+      setDay(cupo.proxima_disponible);
+      setDayFullNotice(
+        checkout.dayFullNotice.replace(
+          '{date}',
+          formatDay(fromLocalISODate(cupo.proxima_disponible), lang)
+        )
+      );
     })();
   }, [day, lang, checkout.dayFullNotice]);
 
@@ -203,6 +216,26 @@ export function CheckoutView({
   const iniciarPago = () => {
     if (!contact.phone.trim() || !contact.fullName.trim() || !contact.email.trim()) {
       setError(checkout.missingFields);
+      setPhase('error');
+      return;
+    }
+
+    // Un mensaje por campo. El generico obligaba al cliente a adivinar cual de
+    // los tres estaba mal, ya con todo el formulario lleno.
+    if (!nombreValido(contact.fullName)) {
+      setError(checkout.invalidName);
+      setPhase('error');
+      return;
+    }
+
+    if (!telefonoValido(contact.phone)) {
+      setError(checkout.invalidPhone);
+      setPhase('error');
+      return;
+    }
+
+    if (!correoValido(contact.email)) {
+      setError(checkout.invalidEmail);
       setPhase('error');
       return;
     }
