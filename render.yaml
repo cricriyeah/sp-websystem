@@ -26,7 +26,13 @@ services:
     # Sin `--workers` gunicorn arranca uno solo y una peticion lenta a Stripe
     # bloquea al resto. 3 es lo que sostiene el plan starter sin quedarse sin RAM.
     startCommand: gunicorn config.wsgi:application --workers 3 --timeout 60
-    healthCheckPath: /api/tarifa/
+    # NO apuntar esto a una ruta que dependa de datos de negocio. Estuvo en
+    # /api/tarifa/, que responde 503 mientras no exista la fila de Tarifa: en una
+    # base recien migrada no existe, el health check nunca pasaba y Render
+    # cancelaba el deploy — pero la Tarifa no se puede crear hasta que el
+    # servicio este arriba. /healthz solo comprueba proceso vivo + base
+    # alcanzable (ver backend/config/health.py).
+    healthCheckPath: /healthz
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production

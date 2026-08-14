@@ -16,6 +16,40 @@ jobs:
     defaults:
       run:
         working-directory: backend
+
+    # La suite corre contra los dos motores. sqlite es lo que usa quien
+    # desarrolla en local; Postgres es lo que corre en produccion, y las
+    # diferencias entre ambos no son cosmeticas — sqlite serializa toda escritura
+    # con un solo escritor, asi que cualquier condicion de carrera es invisible
+    # ahi por construccion. Correr solo en sqlite fue lo que dejo pasar F-19.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - motor: sqlite
+            settings: config.settings.local
+          - motor: postgres
+            settings: config.settings.ci
+
+    name: backend (${{ matrix.motor }})
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pescadeportiva_test
+        ports:
+          - 5432:5432
+        # Sin esto los tests arrancan antes de que Postgres acepte conexiones y
+        # fallan con "connection refused" de forma intermitente.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -27,16 +61,26 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      # Los tests corren con settings/local (sqlite, sin llaves de Stripe). Las
-      # rutas de cobro estan cubiertas con la API de Stripe simulada, asi que el
-      # CI no necesita credenciales de ningun tipo.
-      - name: Tests
-        run: python manage.py test apps --verbosity 2
+      # Sin llaves de Stripe ni de Resend: las rutas de cobro y de notificacion
+      # van con esas APIs simuladas, asi que el CI no necesita credenciales.
+      # Se incluye `config` ademas de `apps` — ahi vive la prueba de la sonda de
+      # salud (config/tests_health.py), que `test apps` no recogeria.
+      - name: Tests (${{ matrix.motor }})
+        env:
+          DJANGO_SETTINGS_MODULE: ${{ matrix.settings }}
+          DB_NAME: pescadeportiva_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: "5432"
+        run: python manage.py test apps config --verbosity 2
 
       # `check --deploy` audita la configuracion real de produccion (SSL, HSTS,
       # cookies, SECRET_KEY). Con variables de relleno: no se conecta a nada, solo
       # revisa settings, pero production.py revienta si falta alguna.
       - name: Revision de settings de produccion
+        # Solo una vez: no depende del motor de base, revisa settings estaticos.
+        if: matrix.motor == 'postgres'
         env:
           DJANGO_SETTINGS_MODULE: config.settings.production
           # Larga y variada a proposito: `check --deploy` avisa (W009) de las

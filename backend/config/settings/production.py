@@ -31,6 +31,13 @@ DATABASES = {
 # proxy vuelve a reenviar en plano y el sitio entero entra en loop de redirects.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = True
+
+# La sonda de salud queda exenta del redirect a https. Si el sondeo interno de
+# Render llegara sin `X-Forwarded-Proto`, Django le responderia un 301 y el
+# balanceador lo leeria como servicio caido — tumbando un deploy sano por una
+# cuestion de protocolo. No expone nada: /healthz no devuelve datos (ver
+# config/health.py). El patron va sin barra inicial, que es como Django lo compara.
+SECURE_REDIRECT_EXEMPT = [r'^healthz$']
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
