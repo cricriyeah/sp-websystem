@@ -71,11 +71,13 @@ class SobreventaConcurrenteTests(TransactionTestCase):
             reserva.save()
 
         # Dos clientes distintos, los dos a punto de pagar ese ultimo lugar.
+        # Sin digitos en el nombre: `validar_nombre_persona` los rechaza (ver
+        # apps/bookings/validators.py).
         self.pendientes = []
-        for i in range(2):
+        for nombre in ('Cliente Uno', 'Cliente Dos'):
             reserva = Reserva(**_datos(
                 fecha=self.fecha,
-                nombre_cliente=f'Cliente {i}',
+                nombre_cliente=nombre,
                 precio_total=Decimal('4500.00'),
                 forma_pago=Reserva.FormaPago.COMPLETO,
             ))
