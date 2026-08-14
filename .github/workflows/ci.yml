@@ -1,0 +1,96 @@
+# Corre en cada push y cada PR. Existe porque los 125 tests del backend cubren
+# justo lo delicado (cupo, ventana de salida, deslinde, cobro duplicado,
+# reembolso fallido) y hasta ahora no los corria nadie antes de desplegar: una
+# regresion en el webhook se descubria con un cliente que ya habia pagado.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      # Los tests corren con settings/local (sqlite, sin llaves de Stripe). Las
+      # rutas de cobro estan cubiertas con la API de Stripe simulada, asi que el
+      # CI no necesita credenciales de ningun tipo.
+      - name: Tests
+        run: python manage.py test apps --verbosity 2
+
+      # `check --deploy` audita la configuracion real de produccion (SSL, HSTS,
+      # cookies, SECRET_KEY). Con variables de relleno: no se conecta a nada, solo
+      # revisa settings, pero production.py revienta si falta alguna.
+      - name: Revision de settings de produccion
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          # Larga y variada a proposito: `check --deploy` avisa (W009) de las
+          # claves cortas o predecibles, y este relleno no debe disparar ese
+          # aviso o taparia uno de verdad. No es un secreto, no abre nada.
+          DJANGO_SECRET_KEY: nR7wKq2ZxP9mTvL4bE6yGjH8sD3fA5cU1oI0eYtXwQzVnMkRpB
+          DJANGO_ALLOWED_HOSTS: example.com
+          DB_NAME: ci
+          DB_USER: ci
+          DB_PASSWORD: ci
+          DB_HOST: localhost
+        run: python manage.py check --deploy --fail-level WARNING
+
+  # Escaneo de CVEs de las dependencias de Python. Se separa del job de tests
+  # para que un aviso nuevo publicado hoy no bloquee un deploy que no lo toca.
+  auditoria-dependencias:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install pip-audit
+      - run: pip-audit -r requirements.txt --strict
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      # Los tres pasos que hoy se corren a mano y se olvidan.
+      - name: Tipos
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Vulnerabilidades de npm
+        run: npm audit --audit-level=high

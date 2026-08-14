@@ -11,6 +11,8 @@ class CupoDisponibleView(APIView):
     """Cupo restante para una fecha, para que el checkout avise antes de pagar
     (la validacion real y definitiva ocurre al confirmar el pago, ver apps/payments)."""
 
+    throttle_scope = 'consulta'
+
     def get(self, request):
         fecha = request.query_params.get('fecha')
         if not fecha:
@@ -42,6 +44,8 @@ class ReservaCheckoutView(APIView):
     durante toda la sesion, asi que reintentar tras un error o corregir la fecha
     reescribe la misma fila en vez de dejar reservas abandonadas duplicadas.
     """
+
+    throttle_scope = 'reservas'
 
     def post(self, request):
         checkout_id = request.data.get('checkout_id')

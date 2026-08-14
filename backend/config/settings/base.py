@@ -39,7 +39,30 @@ REST_FRAMEWORK = {
     # reservas/pagos. El backoffice (admin) sigue protegido por su cuenta.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
     'DEFAULT_AUTHENTICATION_CLASSES': [],
+    # Sin login no hay nada que frene a alguien que le pegue en bucle a estas
+    # rutas: reservas basura que ensucian el panel y PaymentIntents en masa
+    # contra la cuenta de Stripe. `ScopedRateThrottle` limita por IP solo las
+    # vistas que declaran `throttle_scope` — el webhook de Stripe queda fuera a
+    # proposito (ver apps/payments/views.py), sus rafagas de reintentos son
+    # legitimas y frenarlas perderia cobros.
+    'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.ScopedRateThrottle'],
+    'DEFAULT_THROTTLE_RATES': {
+        # Crear/actualizar reserva y crear cobro: el checkout real reenvia unas
+        # pocas veces por sesion, 20/min por IP no le estorba a nadie.
+        'reservas': os.environ.get('THROTTLE_RESERVAS', '20/min'),
+        'pagos': os.environ.get('THROTTLE_PAGOS', '20/min'),
+        # Consultas de solo lectura: el calendario del checkout las dispara al
+        # cambiar de dia, se toca mas seguido.
+        'consulta': os.environ.get('THROTTLE_CONSULTA', '60/min'),
+    },
 }
+
+# Cuantos proxies de confianza hay delante de la app. Define que posicion de
+# `X-Forwarded-For` es creible (ver apps/bookings/serializers.py). 0 = sin proxy,
+# se usa la IP de la conexion; production.py lo sube a 1 por el balanceador de
+# Render. Nunca poner un numero mayor al de saltos reales: cada salto de mas es
+# una posicion que el cliente puede escribir a mano.
+TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '0'))
 
 # Cuenta estandar (no Stripe Connect), ver docs/contexto-negocio.md.
 # Vacias en local hasta pegar llaves de prueba reales en el entorno.
@@ -51,6 +74,14 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 # en local: sin llaves no se manda nada y el cobro sigue funcionando igual.
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM = os.environ.get('RESEND_FROM', '')
+# Copia oculta de cada confirmacion a una direccion del negocio. No es un
+# respaldo, es un rastro fuera de la base: si algun dia hay que restaurar y se
+# pierden las reservas de medio dia, en ese buzon queda a quien hay que hablarle
+# para que nadie llegue al muelle sin que lo esperen (ver docs/vendors/supabase.md).
+# Va en copia OCULTA a proposito: el cliente no tiene por que ver una direccion
+# interna. Varias direcciones separadas por coma. Ojo al configurarla — una
+# direccion equivocada aqui manda datos de clientes a un tercero.
+RESEND_BCC = [c.strip() for c in os.environ.get('RESEND_BCC', '').split(',') if c.strip()]
 WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '')
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
 WHATSAPP_TEMPLATE = os.environ.get('WHATSAPP_TEMPLATE', 'reserva_confirmada')

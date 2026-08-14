@@ -70,7 +70,30 @@
       "Bash(cp ~/.claude/plugins/known_marketplaces.json ~/.claude/plugins/known_marketplaces.json.bak)",
       "Bash(node *)",
       "WebSearch",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(curl -s -o /dev/null -w \"backend /api/tarifa/: %{http_code}\\\\n\" http://127.0.0.1:8000/api/tarifa/)",
+      "Bash(curl -s -o /dev/null -w \"frontend /es: %{http_code}\\\\n\" http://localhost:3000/es)",
+      "WebFetch(domain:feedback.render.com)",
+      "Bash(./venv/Scripts/python.exe -m pip index versions gunicorn)",
+      "Bash(./venv/Scripts/python.exe -m pip install pip-audit)",
+      "Bash(DJANGO_SETTINGS_MODULE=config.settings.production DJANGO_SECRET_KEY=solo-revision DJANGO_ALLOWED_HOSTS=example.com DB_NAME=ci DB_USER=ci DB_PASSWORD=ci DB_HOST=localhost ./venv/Scripts/python.exe manage.py check --deploy)",
+      "Bash(npx tsc *)",
+      "Bash(DJANGO_SETTINGS_MODULE=config.settings.production DJANGO_SECRET_KEY=nR7wKq2ZxP9mTvL4bE6yGjH8sD3fA5cU1oI0eYtXwQzVnMkRpB DJANGO_ALLOWED_HOSTS=example.com DB_NAME=ci DB_USER=ci DB_PASSWORD=ci DB_HOST=localhost ./venv/Scripts/python.exe manage.py check --deploy --fail-level WARNING)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/es)",
+      "Bash(curl -s -o /dev/null -w \"tarifa: %{http_code}\\\\n\" http://127.0.0.1:8000/api/tarifa/)",
+      "Bash(curl -s -o /dev/null -w \"cupo:   %{http_code}\\\\n\" \"http://127.0.0.1:8000/api/cupo/?fecha=2026-09-01\")",
+      "Bash(curl -s -D - -o /dev/null --retry 5 --retry-delay 1 --retry-connrefused http://localhost:3000/es)",
+      "Bash(curl -s -D - -o /dev/null --retry 8 --retry-delay 1 --retry-connrefused http://localhost:3100/es)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Get-Process -Id $_ | Select-Object Id, ProcessName } })",
+      "Bash(curl -s -o /dev/null -w \"frontend 3000: %{http_code}\\\\n\" --retry 10 --retry-delay 1 --retry-connrefused http://localhost:3000/es)",
+      "Bash(curl -s -o /dev/null -w \"backend  8000: %{http_code}\\\\n\" http://127.0.0.1:8000/api/tarifa/)",
+      "WebFetch(domain:stripe.com)",
+      "Bash(./venv/Scripts/python.exe manage.py runserver 8000)",
+      "Bash(curl -s -o /dev/null -w \"backend  8000: %{http_code}\\\\n\" --retry 10 --retry-delay 1 --retry-connrefused http://127.0.0.1:8000/api/tarifa/)",
+      "Bash(curl -s -o /dev/null -w \"3001 \\(huerfano?\\): %{http_code}\\\\n\" --max-time 3 http://localhost:3001/es)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(./venv/Scripts/python.exe manage.py test apps.notifications -v 2)",
+      "Bash(./venv/Scripts/python.exe manage.py test apps)"
     ]
   }
 }

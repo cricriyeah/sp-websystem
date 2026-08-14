@@ -1,16 +1,19 @@
 from datetime import date, time, timedelta
 from decimal import Decimal
 from io import StringIO
+from unittest import mock
 
 from django.contrib.auth.models import Permission, User
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db.models import ProtectedError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from rest_framework.throttling import ScopedRateThrottle
 
 from apps.fleet.models import Embarcacion
+from apps.testing import ApiTestCase
 
 from .admin import telefono_marcable
 from .models import (
@@ -138,7 +141,7 @@ class CambioDeFechaTests(TestCase):
         reserva.full_clean()
 
 
-class CupoApiTests(TestCase):
+class CupoApiTests(ApiTestCase):
     def test_fecha_invalida_responde_400(self):
         response = self.client.get('/api/cupo/?fecha=no-es-fecha')
         self.assertEqual(response.status_code, 400)
@@ -375,7 +378,7 @@ class ReservasNuevasAdminTests(TestCase):
         self.assertEqual(self.client.get(self.url, {'desde': 'ayer'}).status_code, 400)
 
 
-class ReservaApiTests(TestCase):
+class ReservaApiTests(ApiTestCase):
     CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
 
     def payload(self, **overrides):
@@ -466,7 +469,7 @@ class ReservaApiTests(TestCase):
         self.assertEqual(self.enviar(numero_personas=8).status_code, 400)
 
 
-class AtribucionDeVentaTests(TestCase):
+class AtribucionDeVentaTests(ApiTestCase):
     """A quien le cuenta cada venta. La comision se liquida fuera del sistema;
     aqui lo unico que importa es que el registro no se pierda ni se invente."""
 
@@ -552,3 +555,110 @@ class AtribucionDeVentaTests(TestCase):
 
         with self.assertRaises(ProtectedError):
             self.maria.delete()
+
+
+class IpDelDeslindeTests(ApiTestCase):
+    """La IP que queda en el deslinde es constancia legal: si el propio cliente
+    puede elegirla, no prueba nada. `X-Forwarded-For` es una lista donde cada
+    salto agrega al final, asi que lo unico creible es lo que escribio nuestro
+    proxy — contando desde la derecha (ver apps/bookings/serializers.py)."""
+
+    CHECKOUT_ID = '44444444-4444-4444-8444-444444444444'
+
+    def enviar(self, **extra):
+        datos = {
+            'checkout_id': self.CHECKOUT_ID,
+            'fecha': str(date.today() + timedelta(days=10)),
+            'hora': '06:00',
+            'numero_personas': 2,
+            'nombre_cliente': 'Ana Ruiz',
+            'telefono_cliente': '+5216121234567',
+            'correo_cliente': 'ana@example.com',
+            'moneda': 'MXN',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Ana Ruiz',
+        }
+        response = self.client.post(
+            '/api/reservas/', datos, content_type='application/json', **extra
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        return Reserva.objects.get(pk=response.json()['id'])
+
+    @override_settings(TRUSTED_PROXY_COUNT=1)
+    def test_ignora_la_ip_que_el_cliente_escribe_a_mano(self):
+        """Forma real del header detras de Render: el cliente mando su propio
+        `X-Forwarded-For` y el proxy le agrego la IP verdadera al final."""
+        reserva = self.enviar(HTTP_X_FORWARDED_FOR='1.2.3.4, 203.0.113.9')
+
+        self.assertEqual(reserva.deslinde_ip, '203.0.113.9')
+
+    @override_settings(TRUSTED_PROXY_COUNT=1)
+    def test_toma_la_ip_del_proxy_cuando_no_hay_nada_inventado(self):
+        reserva = self.enviar(HTTP_X_FORWARDED_FOR='203.0.113.9')
+
+        self.assertEqual(reserva.deslinde_ip, '203.0.113.9')
+
+    @override_settings(TRUSTED_PROXY_COUNT=0)
+    def test_sin_proxy_de_confianza_no_se_le_cree_al_header(self):
+        """Config local: no hay proxy delante, asi que cualquier
+        `X-Forwarded-For` que llegue lo puso el cliente. Se usa la IP de la
+        conexion real, que nadie puede inventar."""
+        reserva = self.enviar(HTTP_X_FORWARDED_FOR='1.2.3.4', REMOTE_ADDR='198.51.100.7')
+
+        self.assertEqual(reserva.deslinde_ip, '198.51.100.7')
+
+    @override_settings(TRUSTED_PROXY_COUNT=1)
+    def test_header_mas_corto_de_lo_esperado_no_se_adivina(self):
+        """Si el proxy no dejo su parte, algo esta mal configurado. Antes que
+        registrar un dato falso se cae a la IP de la conexion."""
+        reserva = self.enviar(REMOTE_ADDR='198.51.100.7')
+
+        self.assertEqual(reserva.deslinde_ip, '198.51.100.7')
+
+
+class ThrottleTests(ApiTestCase):
+    """Las rutas publicas no piden login: sin limite, cualquiera puede llenar el
+    panel de reservas basura o disparar PaymentIntents en masa contra la cuenta
+    de Stripe."""
+
+    @mock.patch.dict(ScopedRateThrottle.THROTTLE_RATES, {'consulta': '2/min'})
+    def test_pasado_el_limite_responde_429(self):
+        url = f'/api/cupo/?fecha={date.today() + timedelta(days=10)}'
+
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.get(url).status_code, 429)
+
+    @mock.patch.dict(ScopedRateThrottle.THROTTLE_RATES, {'reservas': '1/min'})
+    def test_el_limite_es_por_ip_no_global(self):
+        """Dos clientes distintos detras de la misma pagina no se estorban."""
+        datos = {
+            'checkout_id': '55555555-5555-4555-8555-555555555555',
+            'fecha': str(date.today() + timedelta(days=10)),
+            'hora': '06:00',
+            'numero_personas': 2,
+            'nombre_cliente': 'Ana Ruiz',
+            'telefono_cliente': '+5216121234567',
+            'correo_cliente': 'ana@example.com',
+            'moneda': 'MXN',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Ana Ruiz',
+        }
+
+        def enviar(ip):
+            return self.client.post(
+                '/api/reservas/', datos, content_type='application/json', REMOTE_ADDR=ip
+            )
+
+        self.assertEqual(enviar('198.51.100.1').status_code, 201)
+        self.assertEqual(enviar('198.51.100.1').status_code, 429)
+        # Otra IP arranca con su propio contador.
+        self.assertEqual(enviar('198.51.100.2').status_code, 200)
+
+    def test_el_webhook_de_stripe_no_se_limita(self):
+        """Stripe reintenta en rafagas cuando algo falla; un 429 aqui es un cobro
+        que se queda sin reserva. La firma del evento es lo que autentica esta
+        ruta, no el volumen."""
+        from apps.payments.views import StripeWebhookView
+
+        self.assertEqual(StripeWebhookView.throttle_classes, [])

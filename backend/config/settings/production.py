@@ -34,6 +34,48 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
+# Un salto: el balanceador de Render. Marca que posicion de `X-Forwarded-For` es
+# creible para la constancia del deslinde (ver apps/bookings/serializers.py).
+# Subirlo solo si de verdad se mete otro proxy/CDN delante.
+TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '1'))
+
+# HSTS: le dice al navegador "de aqui en adelante entra solo por https", lo que
+# cierra la ventana de downgrade que deja el redirect de arriba en la segunda
+# visita. Arranca en 1 hora a proposito — el navegador **recuerda** este valor y
+# no hay forma de retirarlo antes de que expire, asi que un año puesto sobre un
+# dominio que todavia se esta moviendo puede dejarlo inalcanzable. Subir a
+# 31536000 (via env var, sin tocar codigo) despues de un par de dias sirviendo
+# https estable. `preload` se queda fuera: entrar a la lista de Chrome es un
+# tramite aparte y salir de ella tarda meses.
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '3600'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+# `check --deploy` corre en CI con --fail-level WARNING para que una regresion de
+# configuracion no llegue a produccion. W021 (falta SECURE_HSTS_PRELOAD) se
+# silencia porque no es un descuido: ver el bloque de HSTS de arriba. Nada mas
+# debe entrar a esta lista sin una razon escrita al lado.
+SILENCED_SYSTEM_CHECKS = ['security.W021']
+
+# Sin esto los `logger.exception(...)` de apps/payments se los traga el default de
+# Django y no llegan al log de Render: un webhook fallando en silencio es
+# exactamente el caso que hay que poder ver. Nivel INFO en las apps propias,
+# WARNING en el resto para que el ruido de Django no tape lo que importa.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'consola': {'format': '{levelname} {asctime} {name} {message}', 'style': '{'},
+    },
+    'handlers': {
+        'consola': {'class': 'logging.StreamHandler', 'formatter': 'consola'},
+    },
+    'root': {'handlers': ['consola'], 'level': 'WARNING'},
+    'loggers': {
+        'apps': {'handlers': ['consola'], 'level': 'INFO', 'propagate': False},
+        'django.request': {'handlers': ['consola'], 'level': 'WARNING', 'propagate': False},
+    },
+}
+
 # Comprime y le pone hash al nombre de cada estatico para poder cachearlos para
 # siempre. Solo aqui: exige haber corrido collectstatic, asi que en local
 # rompería el admin. Build de Render: `pip install -r requirements.txt &&

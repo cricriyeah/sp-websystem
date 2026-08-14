@@ -37,6 +37,8 @@ class CrearPagoView(APIView):
     intents sueltos que podrian terminar cobrando dos veces.
     """
 
+    throttle_scope = 'pagos'
+
     def post(self, request, pk):
         reserva = get_object_or_404(Reserva, pk=pk)
 
@@ -149,6 +151,11 @@ class StripeWebhookView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    # Sin limite de peticiones, explicito para que nadie se lo ponga despues por
+    # simetria con las otras vistas: Stripe reintenta en rafagas cuando algo
+    # falla y un 429 aqui es un cobro que se queda sin reserva. Lo que autentica
+    # esta ruta es la firma del evento, no el volumen.
+    throttle_classes = []
 
     def post(self, request):
         try:

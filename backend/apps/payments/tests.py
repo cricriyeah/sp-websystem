@@ -12,6 +12,7 @@ from django.test import TestCase, override_settings
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva
 from apps.fleet.models import Tarifa
+from apps.testing import ApiTestCase
 
 from .pricing import (
     PERSONAS_INCLUIDAS,
@@ -92,7 +93,7 @@ class PricingTests(TestCase):
 
 
 @override_settings(**LLAVES)
-class CrearPagoTests(TestCase):
+class CrearPagoTests(ApiTestCase):
     def setUp(self):
         Tarifa.objects.create(
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),

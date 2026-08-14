@@ -68,21 +68,33 @@ def _cuerpo_html(reserva):
 
 
 def enviar_correo_confirmacion(reserva):
-    """Correo de confirmacion via Resend. Devuelve True si se mando."""
+    """Correo de confirmacion via Resend. Devuelve True si se mando.
+
+    Si `RESEND_BCC` esta configurado, el negocio recibe copia oculta de cada
+    confirmacion. Ver el comentario de ese setting en config/settings/base.py.
+    """
     if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
         logger.info('Resend sin configurar, no se mando correo de la reserva %s', reserva.pk)
         return False
+
+    cuerpo = {
+        'from': settings.RESEND_FROM,
+        'to': [reserva.correo_cliente],
+        'subject': _asunto(reserva),
+        'html': _cuerpo_html(reserva),
+    }
+
+    # Copia al negocio, solo si esta configurada. Se omite la clave entera cuando
+    # no hay direcciones en vez de mandar una lista vacia: Resend la aceptaria,
+    # pero deja el cuerpo de la peticion mas limpio de leer en sus logs.
+    if settings.RESEND_BCC:
+        cuerpo['bcc'] = settings.RESEND_BCC
 
     try:
         response = requests.post(
             'https://api.resend.com/emails',
             headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
-            json={
-                'from': settings.RESEND_FROM,
-                'to': [reserva.correo_cliente],
-                'subject': _asunto(reserva),
-                'html': _cuerpo_html(reserva),
-            },
+            json=cuerpo,
             timeout=TIMEOUT_SEGUNDOS,
         )
         response.raise_for_status()

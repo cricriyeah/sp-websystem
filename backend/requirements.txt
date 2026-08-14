@@ -9,3 +9,8 @@ whitenoise==6.12.0
 # Driver de Postgres (Supabase) que usa settings/production.py. En local no se
 # ocupa — ahi la base es sqlite — pero sin el, el deploy no arranca.
 psycopg[binary]==3.3.4
+# Servidor WSGI de produccion. `manage.py runserver` es un servidor de desarrollo
+# de un solo hilo y la propia documentacion de Django prohibe usarlo para servir
+# de verdad. En Windows se instala pero no corre (le falta `fcntl`): en local se
+# sigue usando runserver, esto es solo para el contenedor Linux de Render.
+gunicorn==26.0.0

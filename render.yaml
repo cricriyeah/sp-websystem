@@ -1,0 +1,128 @@
+# Infraestructura de Render en el repo (Blueprint).
+#
+# Antes esto vivia solo en el dashboard: si alguien borraba un cron o le movia el
+# horario no quedaba rastro ni forma de revisarlo, y `conciliar_pagos` es
+# justamente la red que atrapa a un cliente que pago y se quedo sin reserva.
+#
+# Las variables marcadas `sync: false` NO se guardan aqui: son secretos y se
+# capturan en el dashboard la primera vez. Este archivo nunca debe contener una
+# llave de Stripe ni la contraseña de la base.
+#
+# Para aplicarlo: Render Dashboard > Blueprints > New Blueprint Instance,
+# apuntando a este repo. Ojo: al adoptar el blueprint, los servicios que ya
+# existan hay que enlazarlos por nombre o Render crea unos nuevos al lado.
+
+services:
+  - type: web
+    name: pescadeportiva-api
+    runtime: python
+    plan: starter
+    region: oregon
+    rootDir: backend
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate
+    # Sin `--workers` gunicorn arranca uno solo y una peticion lenta a Stripe
+    # bloquea al resto. 3 es lo que sostiene el plan starter sin quedarse sin RAM.
+    startCommand: gunicorn config.wsgi:application --workers 3 --timeout 60
+    healthCheckPath: /api/tarifa/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      # Un salto de proxy: el balanceador de Render. Ver
+      # backend/apps/bookings/serializers.py (constancia del deslinde).
+      - key: TRUSTED_PROXY_COUNT
+        value: "1"
+      # Arranca en 1 hora. Subir a 31536000 tras un par de dias con https estable
+      # — el navegador recuerda este valor y no se puede retirar antes de tiempo.
+      - key: SECURE_HSTS_SECONDS
+        value: "3600"
+      # Solo de la web: los cron no atienden peticiones ni cobran.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - fromGroup: pescadeportiva-secrets
+
+  # Red de seguridad del cobro: una entrega de webhook puede perderse para
+  # siempre (backend caido, secret mal puesto, Stripe se rinde tras sus
+  # reintentos) y entonces hay alguien que pago y no tiene reserva. Esto le
+  # pregunta a Stripe como quedo cada pago pendiente y aplica lo mismo que el
+  # webhook. Es idempotente: en la segunda vuelta ya no encuentra nada.
+  - type: cron
+    name: pescadeportiva-conciliar-pagos
+    runtime: python
+    plan: starter
+    region: oregon
+    rootDir: backend
+    schedule: "0 * * * *"  # cada hora en punto
+    buildCommand: pip install -r requirements.txt
+    command: python manage.py conciliar_pagos --dias 7
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      - fromGroup: pescadeportiva-secrets
+
+  # Borra las filas `pendiente_pago` viejas (checkouts que nadie termino) para
+  # que la lista de recuperacion no crezca sin fin. Nunca toca una reserva pagada.
+  - type: cron
+    name: pescadeportiva-limpiar-checkouts
+    runtime: python
+    plan: starter
+    region: oregon
+    rootDir: backend
+    schedule: "30 9 * * *"  # 09:30 UTC = 02:30 en America/Mazatlan, fuera de horario
+    buildCommand: pip install -r requirements.txt
+    command: python manage.py limpiar_checkouts_abandonados --dias 30
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      - fromGroup: pescadeportiva-secrets
+
+# Credenciales compartidas por los tres servicios. Se capturan una sola vez en
+# este grupo (dashboard > Environment Groups) en vez de repetirlas —y arriesgarse
+# a que se desincronicen— en cada uno. `DJANGO_SECRET_KEY` va aqui y no como
+# `generateValue` en la web: si cada servicio generara la suya, serian tres
+# distintas y cualquier cosa firmada por uno no la reconoceria el otro.
+envVarGroups:
+  - name: pescadeportiva-secrets
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      # Direccion del negocio que recibe copia oculta de cada confirmacion. Es el
+      # rastro fuera de la base para reconstruir reservas despues de restaurar un
+      # respaldo (ver docs/vendors/supabase.md). Verificar bien el valor: una
+      # direccion equivocada manda datos de clientes a un tercero.
+      - key: RESEND_BCC
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
