@@ -69,10 +69,10 @@ produccion con llaves de Stripe reales y Supabase real.
 
 | Estado | Priority | Title | Source | Effort |
 |--------|----------|-------|--------|--------|
-| PENDIENTE | P0 | DEPLOY: healthCheckPath (`/api/tarifa/`) 503-ea hasta crear `Tarifa` a mano — Render cancela el primer deploy por health check fallido. Agregar `/healthz` desacoplado de datos de negocio. | F-17 / WP-15 | 30m |
-| PENDIENTE | P0 | DOCS: Escribir `docs/deploy/GO-LIVE.md` con la secuencia exacta de primer arranque (env vars, registrar webhook live, createsuperuser, crear Tarifa, setup_roles, altas de vendedora) + `frontend/.env.example` | F-18/F-22/F-23 / WP-16 | 1-2h |
-| PENDIENTE | P0 | SEC/DATA: Condicion de carrera en `validar_cupo_diario` — dos reservas del mismo dia pagadas en paralelo (Postgres real, sin lock) pueden sobrevender el cupo. select_for_update() solo cubre la reserva propia, no el conteo del dia. No se puede probar con SQLite. | F-19 / WP-17 | 3-4h |
-| PENDIENTE | P0 | CHORE: Agregar Postgres real a CI (`services: postgres`) — los 139 tests nunca han corrido contra el motor de produccion. Requisito para poder probar F-19 de verdad. | F-20 / WP-18 | 2-3h |
+| HECHO 2026-08-14 | P0 | DEPLOY: healthCheckPath (`/api/tarifa/`) 503-ea hasta crear `Tarifa` a mano — Render cancela el primer deploy por health check fallido. Agregar `/healthz` desacoplado de datos de negocio. | F-17 / WP-15 | 30m |
+| HECHO 2026-08-14 | P0 | DOCS: Escribir `docs/deploy/GO-LIVE.md` con la secuencia exacta de primer arranque (env vars, registrar webhook live, createsuperuser, crear Tarifa, setup_roles, altas de vendedora) + `frontend/.env.example` | F-18/F-22/F-23 / WP-16 | 1-2h |
+| HECHO 2026-08-14 | P0 | SEC/DATA: Condicion de carrera en `validar_cupo_diario` — dos reservas del mismo dia pagadas en paralelo (Postgres real, sin lock) pueden sobrevender el cupo. select_for_update() solo cubre la reserva propia, no el conteo del dia. No se puede probar con SQLite. | F-19 / WP-17 | 3-4h |
+| HECHO 2026-08-14 | P0 | CHORE: Agregar Postgres real a CI (`services: postgres`) — los 139 tests nunca han corrido contra el motor de produccion. Requisito para poder probar F-19 de verdad. | F-20 / WP-18 | 2-3h |
 | PENDIENTE | P1 | CHORE: Fijar `stripe.api_version` explicito (hoy usa el default de la cuenta, sin pin) | F-21 / WP-19 | 30m |
 | REEVALUAR | P1→P0? | Sentry/alertas (F-06 original) — con F-19 en juego, un sobrecupo o webhook atorado solo se descubre por reclamo de cliente o corriendo `conciliar_pagos --dry-run` a mano. Subir prioridad antes de abrir a produccion real. | F-06 (existente) | 2-3h |
 
