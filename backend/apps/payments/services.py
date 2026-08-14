@@ -18,6 +18,7 @@ from apps.bookings.models import Reserva
 from apps.notifications.services import notificar_reserva_pagada
 
 from .pricing import a_centavos, de_centavos, monto_inicial
+from .stripe_client import configurar_stripe
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +228,7 @@ def aplicar_disputa(charge, abierta):
 def reembolsar(intent, motivo):
     """Devuelve el cobro completo. La idempotency_key evita que un reintento del
     webhook genere un segundo reembolso del mismo intent."""
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+    configurar_stripe()
     try:
         stripe.Refund.create(
             payment_intent=intent['id'],

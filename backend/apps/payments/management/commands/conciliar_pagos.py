@@ -18,6 +18,7 @@ from django.utils import timezone
 
 from apps.bookings.models import Reserva
 from apps.payments.services import aplicar_pago_exitoso
+from apps.payments.stripe_client import configurar_stripe
 
 DIAS_POR_DEFECTO = 7
 
@@ -40,7 +41,7 @@ class Command(BaseCommand):
             self.stderr.write('STRIPE_SECRET_KEY sin configurar, no hay nada que conciliar.')
             return
 
-        stripe.api_key = settings.STRIPE_SECRET_KEY
+        configurar_stripe()
         desde = timezone.now() - timedelta(days=options['dias'])
 
         pendientes = Reserva.objects.filter(

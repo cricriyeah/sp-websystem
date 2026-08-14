@@ -53,6 +53,12 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      # Alertas de error (sentry.io). Sin esta variable no se manda nada y el
+      # backend funciona igual. El plan gratuito cubre 5,000 errores al mes, de
+      # sobra para este volumen — si se llega al tope, es señal de que hay algo
+      # roto que arreglar, no de que haga falta pagar.
+      - key: SENTRY_DSN
+        sync: false
       - fromGroup: pescadeportiva-secrets
 
   # Red de seguridad del cobro: una entrega de webhook puede perderse para

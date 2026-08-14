@@ -66,6 +66,17 @@ TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '0'))
 
 # Cuenta estandar (no Stripe Connect), ver docs/contexto-negocio.md.
 # Vacias en local hasta pegar llaves de prueba reales en el entorno.
+# Version de la API de Stripe, explicita. La libreria ya manda una por su cuenta
+# (la que trae `stripe.api_version`, hoy 2026-07-29.dahlia con stripe==15.4.0),
+# asi que esto NO cambia el comportamiento actual — lo que cambia es de donde
+# sale el numero. Sin fijarlo aqui, la version de la API viaja pegada a la
+# version de la libreria: un `pip install -U stripe` la moveria en silencio, sin
+# que aparezca en ningun diff que Stripe empezo a contestar con otro formato.
+#
+# Subirla es una decision aparte de actualizar la libreria: hay que leer el
+# changelog de Stripe y probar. Ver docs/vendors/stripe.md.
+STRIPE_API_VERSION = os.environ.get('STRIPE_API_VERSION', '2026-07-29.dahlia')
+
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')

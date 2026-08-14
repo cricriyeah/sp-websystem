@@ -14,3 +14,5 @@ psycopg[binary]==3.3.4
 # de verdad. En Windows se instala pero no corre (le falta `fcntl`): en local se
 # sigue usando runserver, esto es solo para el contenedor Linux de Render.
 gunicorn==26.0.0
+# Alertas de error. Inerte sin SENTRY_DSN — ver config/settings/production.py.
+sentry-sdk[django]==2.68.0

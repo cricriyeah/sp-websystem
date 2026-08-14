@@ -67,6 +67,37 @@ SILENCED_SYSTEM_CHECKS = ['security.W021']
 # Django y no llegan al log de Render: un webhook fallando en silencio es
 # exactamente el caso que hay que poder ver. Nivel INFO en las apps propias,
 # WARNING en el resto para que el ruido de Django no tape lo que importa.
+# Alertas de error. Sin `SENTRY_DSN` no se inicializa nada y el backend se
+# comporta igual que antes — como Stripe y Resend, la funcion se enciende sola
+# cuando su variable existe, y su ausencia no rompe el arranque.
+#
+# Existe porque hasta ahora un fallo solo dejaba rastro en el log de Render, que
+# es un archivo que nadie abre sin motivo. El caso que importa es el webhook de
+# Stripe: si empieza a fallar, el dinero entra y las reservas no se marcan
+# pagadas — y eso se descubria por reclamo del cliente.
+#
+# El DSN no es un secreto del mismo tipo que una llave de Stripe: sirve para
+# *mandar* errores, no para leerlos. Aun asi va por variable de entorno, por
+# consistencia y porque no gana nada estando en el repo.
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        # Solo errores. El tracing de rendimiento se come la cuota gratuita
+        # (5,000 eventos/mes) sin dar nada a cambio a este volumen.
+        traces_sample_rate=0,
+        # NO mandar cuerpos de peticion ni cookies: por estas rutas viajan
+        # telefono, correo y la constancia del deslinde. Un error de pago no debe
+        # convertirse en una copia de datos de clientes en un tercero.
+        send_default_pii=False,
+        environment=os.environ.get('SENTRY_ENVIRONMENT', 'production'),
+        # Para saber que version fallo. Render lo expone solo.
+        release=os.environ.get('RENDER_GIT_COMMIT', ''),
+    )
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

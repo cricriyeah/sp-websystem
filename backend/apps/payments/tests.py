@@ -564,3 +564,36 @@ class ConciliarPagosTests(TestCase):
         self.assertEqual(self.reserva.monto_pagado, Decimal('4500.00'))
         # La segunda vuelta ya no la ve: dejo de estar pendiente.
         self.assertEqual(retrieve.call_count, 1)
+
+
+class VersionDeApiTests(TestCase):
+    """La version de la API de Stripe se fija de forma explicita.
+
+    La libreria ya manda una por su cuenta, asi que esto no cambia el
+    comportamiento — cambia de donde sale el numero. Sin fijarla, la version de
+    la API viaja pegada a la de la libreria y un `pip install -U stripe` la
+    moveria en silencio, sin que aparezca en ningun diff que Stripe empezo a
+    contestar con otro formato.
+    """
+
+    def test_configurar_stripe_fija_llave_y_version(self):
+        from apps.payments.stripe_client import configurar_stripe
+
+        with override_settings(STRIPE_SECRET_KEY='sk_test_x', STRIPE_API_VERSION='2026-07-29.dahlia'):
+            configurar_stripe()
+
+        self.assertEqual(stripe.api_key, 'sk_test_x')
+        self.assertEqual(stripe.api_version, '2026-07-29.dahlia')
+
+    def test_la_version_fijada_es_la_que_espera_la_libreria_instalada(self):
+        """Si al subir `stripe` en requirements.txt no se revisa este valor, la
+        libreria y la version de API dejarian de coincidir. Este test obliga a
+        tomar la decision a proposito en vez de arrastrarla."""
+        from django.conf import settings as cfg
+
+        self.assertEqual(
+            cfg.STRIPE_API_VERSION, stripe.api_version,
+            'STRIPE_API_VERSION no coincide con la que trae stripe=='
+            f'{stripe.VERSION}. Al actualizar la libreria hay que leer el '
+            'changelog de Stripe y decidir si se sube tambien la version de API.',
+        )

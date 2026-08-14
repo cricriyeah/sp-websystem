@@ -10,6 +10,7 @@ from apps.bookings.models import Reserva
 from apps.fleet.models import Tarifa
 
 from .pricing import a_centavos, cargo_por_lunch, cargo_por_personas, monto_inicial, personas_extra
+from .stripe_client import configurar_stripe
 from .services import aplicar_disputa, aplicar_pago_exitoso, aplicar_reembolso
 
 logger = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ class CrearPagoView(APIView):
         if not settings.STRIPE_SECRET_KEY:
             return Response({'detail': 'Stripe no esta configurado todavia.'}, status=503)
 
-        stripe.api_key = settings.STRIPE_SECRET_KEY
+        configurar_stripe()
         try:
             intent = self._intent_de(reserva, monto_a_cobrar)
         except PagoEnCurso:
