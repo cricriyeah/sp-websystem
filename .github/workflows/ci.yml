@@ -50,21 +50,34 @@ jobs:
           DB_HOST: localhost
         run: python manage.py check --deploy --fail-level WARNING
 
-  # Escaneo de CVEs de las dependencias de Python. Se separa del job de tests
-  # para que un aviso nuevo publicado hoy no bloquee un deploy que no lo toca.
+  # Escaneo de CVEs de las dos mitades. Va en un job aparte, y no dentro de los
+  # de tests/build, porque un aviso publicado hoy en una dependencia transitiva
+  # no deberia bloquear un cambio que no la toca. Falla visible, no bloqueante:
+  # se revisa y se arregla, pero en su propio tiempo.
   auditoria-dependencias:
     runs-on: ubuntu-latest
     continue-on-error: true
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       - run: pip install pip-audit
-      - run: pip-audit -r requirements.txt --strict
+      - name: CVEs de Python
+        run: pip-audit -r requirements.txt --strict
+        working-directory: backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - name: CVEs de npm
+        run: npm audit --audit-level=high
+        working-directory: frontend
 
   frontend:
     runs-on: ubuntu-latest
@@ -99,6 +112,3 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Vulnerabilidades de npm
-        run: npm audit --audit-level=high
