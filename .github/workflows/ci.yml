@@ -6,8 +6,9 @@
 name: CI
 
 on:
+  # Todas las ramas, no solo main: una rama de trabajo sin CI es una rama en la
+  # que no se sabe nada hasta que ya se fusiono.
   push:
-    branches: [main]
   pull_request:
 
 jobs:

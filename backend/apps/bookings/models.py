@@ -3,7 +3,7 @@ from datetime import datetime, time, timedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import connection, models
 from django.utils import timezone
 
 from apps.fleet.models import Capitan, Embarcacion
@@ -66,9 +66,48 @@ def cupo_maximo_del_dia(fecha):
     return override.cupo_maximo if override else CUPO_MAXIMO_DEFAULT
 
 
+def bloquear_cupo_del_dia(fecha):
+    """Serializa la validacion de cupo de una fecha entre transacciones.
+
+    Sin esto hay sobreventa: contar y guardar no son una operacion atomica. Dos
+    clientes distintos pagando el ultimo lugar del mismo dia al mismo tiempo
+    hacen que las dos transacciones cuenten `cupo - 1` ocupadas, las dos pasen la
+    validacion y las dos queden confirmadas. Alguien llega al muelle y no hay
+    panga. `select_for_update` sobre la reserva propia no lo evita: bloquea la
+    fila que se esta pagando, no el conjunto contra el que se cuenta, y una fila
+    que todavia no existe no se puede bloquear.
+
+    Un advisory lock de Postgres si sirve para eso: no necesita una fila, se toma
+    sobre un numero arbitrario — aqui el ordinal de la fecha, unico y estable por
+    dia — y la variante `_xact_` se libera sola al terminar la transaccion, sin
+    riesgo de dejarlo colgado si algo revienta a medias.
+
+    Dos condiciones para que proteja de verdad:
+
+    - **Tiene que haber transaccion.** Fuera de una, Postgres la abre y la cierra
+      con la propia consulta, asi que el lock se suelta antes de guardar y no
+      sirve de nada. Las dos rutas que crean reservas cumplen: el webhook corre
+      en `transaction.atomic` (ver apps/payments/services.py) y el admin de
+      Django envuelve cada guardado en una transaccion.
+    - **Se toma antes de contar**, no despues, o la carrera ya ocurrio.
+
+    En sqlite es un no-op: no tiene advisory locks y no le hacen falta — serializa
+    toda escritura con un solo escritor. Ese es justamente el motivo por el que
+    esta condicion de carrera era invisible en los tests hasta que el CI empezo a
+    correrlos tambien contra Postgres (ver config/settings/ci.py).
+    """
+    if connection.vendor != 'postgresql':
+        return
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT pg_advisory_xact_lock(%s)', [fecha.toordinal()])
+
+
 def validar_cupo_diario(fecha, excluir_pk=None):
     """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
     de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md)."""
+    # Antes de contar, no despues: ver bloquear_cupo_del_dia.
+    bloquear_cupo_del_dia(fecha)
+
     ocupadas = Reserva.objects.filter(fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
     if excluir_pk is not None:
         ocupadas = ocupadas.exclude(pk=excluir_pk)
