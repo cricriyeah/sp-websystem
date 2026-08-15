@@ -27,12 +27,36 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
 
+    # Bloqueo por fuerza bruta en el login del admin. Django admin no trae
+    # lockout y el admin es la unica puerta de autenticacion del sistema — sin
+    # esto se pueden probar contraseñas sin limite. Ver AXES_* mas abajo.
+    'axes',
+
     'apps.fleet',
     'apps.bookings',
     'apps.payments',
     'apps.notifications',
     'apps.finance',
 ]
+
+# Bloqueo por intentos fallidos (django-axes). Cierra la unica puerta de auth del
+# sistema: el /admin/login/. El throttle de DRF de arriba NO lo cubre — ese es
+# para la API, y el login del admin es una vista de Django, no de DRF.
+AXES_FAILURE_LIMIT = 5
+# Bloqueo por combinacion usuario+IP, no por usuario solo: asi un atacante no
+# puede dejar fuera a la jefa de verdad fallando 5 veces con su nombre desde otra
+# maquina (denegacion de servicio contra la cuenta legitima).
+AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
+# Se libera solo tras 1 hora, sin que nadie tenga que ir a desbloquear a mano.
+AXES_COOLOFF_TIME = 1
+# Un login exitoso borra los fallos previos de esa cuenta: quien se equivoco tres
+# veces y despues entro bien no arrastra el conteo.
+AXES_RESET_ON_SUCCESS = True
+# La IP real viene por proxy en produccion. Se reusa el mismo conteo de saltos de
+# confianza que la constancia del deslinde (ver production.py / serializers.py):
+# tomar la IP equivocada aqui permitiria evadir el bloqueo cambiando un header.
+AXES_IPWARE_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '0')) or None
+AXES_IPWARE_META_PRECEDENCE_ORDER = ['HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
 
 REST_FRAMEWORK = {
     # API publica (web) sin login: la web nunca autentica, solo crea
@@ -226,6 +250,17 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Al final y despues de AuthenticationMiddleware, como pide su doc: necesita
+    # ver el request ya con usuario para contar los intentos.
+    'axes.middleware.AxesMiddleware',
+]
+
+# django-axes se engancha como backend de autenticacion: intercepta el login
+# antes que el de Django y bloquea si la cuenta+IP ya supero el limite. El de
+# Django va despues, para que los logins normales sigan funcionando igual.
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 ROOT_URLCONF = 'config.urls'

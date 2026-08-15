@@ -16,3 +16,6 @@ psycopg[binary]==3.3.4
 gunicorn==26.0.0
 # Alertas de error. Inerte sin SENTRY_DSN — ver config/settings/production.py.
 sentry-sdk[django]==2.68.0
+# Bloqueo por fuerza bruta en el login del admin. Django admin no trae lockout y
+# el admin es la unica puerta de autenticacion del sistema — ver config/settings/base.py.
+django-axes==8.3.1
