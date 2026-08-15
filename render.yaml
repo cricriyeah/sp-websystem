@@ -74,7 +74,7 @@ services:
     rootDir: backend
     schedule: "0 * * * *"  # cada hora en punto
     buildCommand: pip install -r requirements.txt
-    command: python manage.py conciliar_pagos --dias 7
+    startCommand: python manage.py conciliar_pagos --dias 7
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
@@ -92,7 +92,7 @@ services:
     rootDir: backend
     schedule: "30 9 * * *"  # 09:30 UTC = 02:30 en America/Mazatlan, fuera de horario
     buildCommand: pip install -r requirements.txt
-    command: python manage.py limpiar_checkouts_abandonados --dias 30
+    startCommand: python manage.py limpiar_checkouts_abandonados --dias 30
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
