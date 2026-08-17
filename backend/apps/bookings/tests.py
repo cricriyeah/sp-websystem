@@ -448,6 +448,20 @@ class ReservaApiTests(ApiTestCase):
         self.assertIsNotNone(reserva.deslinde_aceptado_en)
         self.assertIsNotNone(reserva.deslinde_ip)
 
+    def test_un_checkout_id_que_no_es_uuid_da_400_y_no_500(self):
+        """La busqueda del upsert corre antes de que el serializer valide nada.
+
+        Con el valor crudo metido directo al filtro de un UUIDField, Postgres
+        rechaza la consulta y la ruta — que es publica y sin autenticacion —
+        contesta 500. Lo que corresponde es el 400 del serializer.
+        """
+        # Un entero no entra aqui: DRF lo acepta como UUID (`UUID(int=...)`).
+        for basura in ['no-soy-un-uuid', '', {'a': 1}, ['x']]:
+            with self.subTest(checkout_id=basura):
+                response = self.enviar(checkout_id=basura)
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('checkout_id', response.json())
+
     def test_reintentar_el_checkout_no_duplica_la_reserva(self):
         primera = self.enviar()
         segunda = self.enviar()

@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 
 from rest_framework.response import Response
@@ -56,14 +57,7 @@ class ReservaCheckoutView(APIView):
     throttle_scope = 'reservas'
 
     def post(self, request):
-        checkout_id = request.data.get('checkout_id')
-        existente = (
-            Reserva.objects.filter(
-                checkout_id=checkout_id, estado=Reserva.Estado.PENDIENTE_PAGO
-            ).first()
-            if checkout_id
-            else None
-        )
+        existente = self._pendiente_de(request.data.get('checkout_id'))
 
         serializer = ReservaCheckoutSerializer(
             existente, data=request.data, context={'request': request}
@@ -71,3 +65,25 @@ class ReservaCheckoutView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=200 if existente else 201)
+
+    @staticmethod
+    def _pendiente_de(checkout_id):
+        """La reserva sin pagar de este checkout, si la hay.
+
+        El valor llega crudo del request: esta busqueda es la que decide que
+        instancia recibe el serializer, asi que corre **antes** de que el
+        serializer valide nada. Metido directo al filtro de un `UUIDField`, uno
+        mal formado revienta con `ValidationError` (o `AttributeError`, si no es
+        ni texto) y esta ruta — publica y sin autenticacion — contesta 500.
+
+        Aqui solo se decide si hay algo que buscar. Si no es un UUID no se busca:
+        el 400 lo da el serializer, que es a quien le toca.
+        """
+        try:
+            uuid.UUID(str(checkout_id))
+        except (ValueError, TypeError):
+            return None
+
+        return Reserva.objects.filter(
+            checkout_id=checkout_id, estado=Reserva.Estado.PENDIENTE_PAGO
+        ).first()
