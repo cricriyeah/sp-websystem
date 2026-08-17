@@ -86,6 +86,29 @@ type CheckoutViewProps = {
 
 type Phase = 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
 
+/**
+ * El texto que ve el cliente, segun lo que contesto el backend.
+ *
+ * Antes todo lo que no fuera 503 caia en un mensaje generico, y eso costo caro:
+ * con la llave de Stripe mal capturada en Render, `crear-pago` devolvia 502 en
+ * cada intento y el checkout solo decia "Algo salio mal" — sin nada que
+ * separara una caida del procesador de un cobro que ya venia en curso, que son
+ * dos situaciones con remedios opuestos para quien esta del otro lado.
+ *
+ * Lo que no se muestra es el detalle tecnico: al cliente le importa si se le
+ * cobro y que hacer ahora. El diagnostico va al log del backend y a Sentry.
+ */
+function mensajeDeError(err: unknown, checkout: Dictionary['checkout']) {
+  if (err instanceof ApiError) {
+    // 502: el backend no pudo hablar con Stripe, asi que no hay ningun cobro.
+    if (err.status === 502) return checkout.errorPaymentProvider;
+    // 409: ya hay un intent cobrando esta reserva (apps/payments/views.py).
+    // Reintentar aqui es justo lo que puede acabar en un cargo duplicado.
+    if (err.status === 409) return checkout.errorPaymentInProgress;
+  }
+  return checkout.errorGeneric;
+}
+
 function formatDay(date: Date, lang: Locale) {
   const locale = intlLocale(lang);
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date);
@@ -304,7 +327,7 @@ export function CheckoutView({
         setPhase('unavailable');
         return;
       }
-      setError(checkout.errorGeneric);
+      setError(mensajeDeError(err, checkout));
       setPhase('error');
     }
   };

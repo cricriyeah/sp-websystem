@@ -417,6 +417,8 @@
     "invalidEmail": "Check your email: that's where your booking confirmation is sent.",
     "invalidName": "Enter your full name, without numbers.",
     "errorGeneric": "Something went wrong. Please try again.",
+    "errorPaymentProvider": "We couldn't reach the payment processor. You have not been charged. Wait a moment and try again, or message us on WhatsApp and we'll take it from there.",
+    "errorPaymentInProgress": "There's already a payment in progress for this booking. Wait a few seconds and reload the page before trying again, so you aren't charged twice.",
     "dayFullNotice": "That day is fully booked. We've automatically moved you to {date}, the next available date.",
     "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book.",
     "confirmation": {
