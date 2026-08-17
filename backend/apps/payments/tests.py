@@ -14,6 +14,7 @@ from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva
 from apps.fleet.models import Tarifa
 from apps.testing import ApiTestCase
 
+from .checks import revisar_llaves_de_stripe
 from .pricing import (
     PERSONAS_INCLUIDAS,
     a_centavos,
@@ -25,6 +26,60 @@ from .pricing import (
 )
 
 LLAVES = {'STRIPE_SECRET_KEY': 'sk_test_falsa', 'STRIPE_WEBHOOK_SECRET': 'whsec_falsa'}
+
+
+class LlavesDeStripeCruzadasTests(TestCase):
+    """Check de arranque que detecta una llave de Stripe puesta en la variable
+    equivocada.
+
+    Nace de un caso real en produccion: en Render quedo el signing secret del
+    webhook (`whsec_...`) dentro de `STRIPE_SECRET_KEY`. Stripe rechazaba cada
+    llamada con `AuthenticationError`, `crear-pago` devolvia 502 y el checkout
+    mostraba un error generico — el sintoma no apuntaba a la causa por ningun
+    lado. Las dos llaves tienen prefijo fijo, asi que el cruce se puede ver sin
+    hablar con Stripe.
+    """
+
+    def errores(self, **llaves):
+        with override_settings(**llaves):
+            return [e.id for e in revisar_llaves_de_stripe(None)]
+
+    def test_llaves_correctas_no_reportan_nada(self):
+        self.assertEqual(self.errores(**LLAVES), [])
+
+    def test_llaves_vacias_no_reportan_nada(self):
+        # Vacio significa "esta funcion esta apagada", que es comportamiento
+        # documentado: sin llaves, crear-pago responde 503 a proposito.
+        self.assertEqual(self.errores(STRIPE_SECRET_KEY='', STRIPE_WEBHOOK_SECRET=''), [])
+
+    def test_el_signing_secret_dentro_de_la_llave_secreta(self):
+        """El caso que de verdad paso."""
+        self.assertEqual(
+            self.errores(STRIPE_SECRET_KEY='whsec_falsa', STRIPE_WEBHOOK_SECRET='whsec_falsa'),
+            ['payments.E001'],
+        )
+
+    def test_la_llave_secreta_dentro_del_signing_secret(self):
+        self.assertEqual(
+            self.errores(STRIPE_SECRET_KEY='sk_test_falsa', STRIPE_WEBHOOK_SECRET='sk_test_falsa'),
+            ['payments.E002'],
+        )
+
+    def test_las_dos_cruzadas_reportan_las_dos(self):
+        self.assertEqual(
+            self.errores(STRIPE_SECRET_KEY='whsec_falsa', STRIPE_WEBHOOK_SECRET='sk_test_falsa'),
+            ['payments.E001', 'payments.E002'],
+        )
+
+    def test_la_publicable_en_lugar_de_la_secreta(self):
+        # Otro cruce plausible: las dos salen de la misma pantalla del dashboard.
+        self.assertEqual(self.errores(STRIPE_SECRET_KEY='pk_test_falsa'), ['payments.E001'])
+
+    def test_el_mensaje_no_incluye_el_valor_de_la_llave(self):
+        """Un check que imprime la llave la deja en el log del deploy."""
+        with override_settings(STRIPE_SECRET_KEY='whsec_secretisimo'):
+            texto = ' '.join(f'{e.msg} {e.hint}' for e in revisar_llaves_de_stripe(None))
+        self.assertNotIn('secretisimo', texto)
 
 
 def crear_reserva(**overrides):
