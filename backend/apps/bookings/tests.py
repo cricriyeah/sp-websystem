@@ -317,6 +317,40 @@ class LiquidacionEnEfectivoTests(TestCase):
         self.assertTrue(reserva.liquidado)
 
 
+class AdminDeCuentasTests(TestCase):
+    """auth.User y auth.Group re-registrados con el ModelAdmin de Unfold.
+
+    Django los registra con su ModelAdmin de siempre. La plantilla de Unfold
+    `unfold/helpers/add_link.html` corta en `{% if cl.model_admin.show_add_link %}`,
+    atributo que solo existe en el ModelAdmin de Unfold, asi que con el registro
+    por defecto el listado carga **sin boton de agregar** y no hay forma de dar de
+    alta una vendedora desde la interfaz. Ver `admin.py` y `setup_roles`.
+    """
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+
+    def test_el_listado_de_usuarios_ofrece_el_boton_de_agregar(self):
+        html = self.client.get(reverse('admin:auth_user_changelist')).content.decode()
+        self.assertIn(reverse('admin:auth_user_add'), html)
+        self.assertIn('addlink', html)
+
+    def test_el_listado_de_grupos_ofrece_el_boton_de_agregar(self):
+        html = self.client.get(reverse('admin:auth_group_changelist')).content.decode()
+        self.assertIn(reverse('admin:auth_group_add'), html)
+        self.assertIn('addlink', html)
+
+    def test_el_alta_de_usuario_carga_y_da_de_alta_la_cuenta(self):
+        self.assertEqual(self.client.get(reverse('admin:auth_user_add')).status_code, 200)
+
+        self.client.post(reverse('admin:auth_user_add'), {
+            'username': 'vendedora_nueva',
+            'password1': 'una-contrasena-larga-9',
+            'password2': 'una-contrasena-larga-9',
+        })
+        self.assertTrue(User.objects.filter(username='vendedora_nueva').exists())
+
+
 class ReservasNuevasAdminTests(TestCase):
     """Contador de reservas nuevas del listado del admin (ver ReservaAdmin)."""
 

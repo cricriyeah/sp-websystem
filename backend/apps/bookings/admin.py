@@ -2,6 +2,9 @@ import re
 from urllib.parse import quote
 
 from django.contrib import admin
+from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.urls import path
@@ -10,6 +13,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.html import format_html
 from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
+from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
@@ -308,3 +312,38 @@ class CheckoutAbandonadoAdmin(ModelAdmin):
             '<a href="mailto:{}">Correo</a>',
             numero, quote(mensaje), numero, obj.correo_cliente,
         )
+
+
+# ---------------------------------------------------------------------------
+# Cuentas del backoffice (auth.User / auth.Group)
+#
+# Django ya trae admin para las dos, pero registrado con su ModelAdmin de
+# siempre. Unfold sobreescribe las plantillas del admin de todo el sitio, y las
+# suyas solo pintan el boton "Add" (y el resto de la barra de acciones) cuando
+# el ModelAdmin lleva su mixin. Sin esto la lista de Usuarios carga pero no hay
+# forma de agregar uno desde la interfaz — que es justo como se dan de alta las
+# vendedoras (ver `setup_roles` y ../CLAUDE.md, "Roles: Jefes vs Vendedora").
+#
+# Viven aqui y no en su propia app porque `setup_roles` tambien es de bookings:
+# los roles del backoffice son una sola cosa y conviene que se lean juntos.
+#
+# Se re-registran heredando del UserAdmin/GroupAdmin de Django para no perder
+# nada suyo: el flujo de cambio de contraseña, los filtros de permisos y el
+# buscador siguen siendo los de Django.
+# ---------------------------------------------------------------------------
+admin.site.unregister(User)
+admin.site.unregister(Group)
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin, ModelAdmin):
+    # Los formularios de Unfold son los de Django con sus widgets. Sin ellos el
+    # campo de contraseña se pinta sin estilo y el enlace para cambiarla no sale.
+    form = UserChangeForm
+    add_form = UserCreationForm
+    change_password_form = AdminPasswordChangeForm
+
+
+@admin.register(Group)
+class GroupAdmin(BaseGroupAdmin, ModelAdmin):
+    pass
