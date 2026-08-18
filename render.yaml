@@ -53,12 +53,6 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      # Alertas de error (sentry.io). Sin esta variable no se manda nada y el
-      # backend funciona igual. El plan gratuito cubre 5,000 errores al mes, de
-      # sobra para este volumen — si se llega al tope, es señal de que hay algo
-      # roto que arreglar, no de que haga falta pagar.
-      - key: SENTRY_DSN
-        sync: false
       - fromGroup: pescadeportiva-secrets
 
   # Red de seguridad del cobro: una entrega de webhook puede perderse para
@@ -137,4 +131,16 @@ envVarGroups:
       - key: WHATSAPP_TOKEN
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      # Alertas de error (sentry.io). Sin esta variable no se manda nada y el
+      # backend funciona igual. El plan gratuito cubre 5,000 errores al mes, de
+      # sobra para este volumen — si se llega al tope, es señal de que hay algo
+      # roto que arreglar, no de que haga falta pagar.
+      #
+      # Va en el grupo y no en el servicio web porque los cron tambien la
+      # necesitan. Estuvo solo en la web, y eso dejaba a `conciliar_pagos`
+      # corriendo cada hora sin vigilancia: si falla, nadie se entera — y ese
+      # cron es justo la red que atrapa a un cliente que pago y se quedo sin
+      # reserva. El fallo mas caro del sistema es tambien el mas silencioso.
+      - key: SENTRY_DSN
         sync: false

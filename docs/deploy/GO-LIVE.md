@@ -74,6 +74,7 @@ más tiempo hacen perder:
 | `RESEND_API_KEY` `RESEND_FROM` | No se manda correo de confirmación. El cobro sigue funcionando |
 | `RESEND_BCC` | El negocio no recibe copia. Ver `docs/vendors/supabase.md`: es el rastro fuera de la base |
 | `WHATSAPP_TOKEN` `WHATSAPP_PHONE_NUMBER_ID` | No se manda WhatsApp. El cobro sigue funcionando |
+| `SENTRY_DSN` | No llega aviso de ningún error. Todo sigue funcionando, pero un webhook que empieza a fallar se descubre por reclamo del cliente. Va en el **grupo**, no en el servicio web: los cron también la necesitan, y `conciliar_pagos` sin vigilancia es el punto ciego más caro |
 
 ### Con valor por defecto — solo tocar si hace falta
 
@@ -283,11 +284,18 @@ Todas se pueden correr y reportar sin revelar un valor:
 
 ## Lo que sigue abierto al momento de escribir esto
 
-- **F-06 — sin alertas de error.** `LOGGING` manda todo al log de Render, pero
-  nadie recibe aviso. Un webhook fallando en silencio se descubre por reclamo del
-  cliente. Es el hueco más grande que queda.
-- **F-21 — `stripe.api_version` sin fijar.** Se usa el default de la cuenta, que
-  Stripe puede mover.
+- **F-06 — cerrado.** Hay alertas de error vía Sentry (`SENTRY_DSN`), disponibles
+  para la web y para los dos cron. Siguen sin llegar a ningún lado si la variable
+  no se captura: la función se enciende sola cuando existe, y su ausencia no
+  rompe el arranque ni deja rastro de que falta.
+- **F-21 — cerrado.** `STRIPE_API_VERSION` fijada explícitamente en settings, así
+  que actualizar la librería ya no mueve la versión de la API en silencio.
+- **Llaves cruzadas.** Un `whsec_` capturado dentro de `STRIPE_SECRET_KEY` tumbó
+  el checkout completo en producción, y el síntoma (502 y un error genérico en la
+  web) no apuntaba a la causa por ningún lado. Ahora hay un check de arranque que
+  lo convierte en un deploy que no sale (`backend/apps/payments/checks.py`). Lo
+  que ese check **no** puede decir es si la llave es válida, solo si tiene la
+  forma que le toca: una `sk_test_` de otra cuenta pasa igual.
 - **Respaldos** — decisión registrada en `docs/vendors/supabase.md`: sin PITR,
   ventana de pérdida de hasta 24 horas. Mientras siga así, **tomar un respaldo
   manual antes de correr cualquier migración**.
