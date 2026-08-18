@@ -18,6 +18,7 @@ from apps.testing import ApiTestCase
 from .admin import telefono_marcable
 from .models import (
     CUPO_MAXIMO_DEFAULT,
+    MAX_PERSONAS,
     proxima_fecha_disponible,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
     CheckoutAbandonado,
@@ -63,9 +64,22 @@ class VentanaSalidaTests(TestCase):
 
 
 class NumeroPersonasTests(TestCase):
-    def test_mas_de_seis_personas_es_invalido(self):
+    def test_el_tope_es_la_panga_mas_grande_de_la_flota(self):
+        """La flota real son 8 pangas de maximo 3 y 2 de maximo 5.
+
+        El tope estuvo en 6, que no lo cumple ninguna: la web aceptaba y cobraba
+        un viaje de 6 personas que despues no habia forma de operar.
+        """
+        Reserva(**datos_reserva(numero_personas=MAX_PERSONAS)).full_clean()
+
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(numero_personas=7)).full_clean()
+            Reserva(**datos_reserva(numero_personas=MAX_PERSONAS + 1)).full_clean()
+
+    def test_seis_personas_ya_no_se_acepta(self):
+        # Explicito y no derivado de MAX_PERSONAS: si alguien sube la constante
+        # sin comprar una panga mas grande, este test lo detiene.
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(numero_personas=6)).full_clean()
 
     def test_una_persona_es_valido(self):
         Reserva(**datos_reserva(numero_personas=1)).full_clean()
@@ -492,7 +506,7 @@ class ReservaApiTests(ApiTestCase):
         Reserva.objects.filter(pk=creada.json()['id']).update(estado=Reserva.Estado.PAGADA)
 
         # El mismo checkout_id ya no encuentra fila editable: empieza una nueva.
-        response = self.enviar(numero_personas=6)
+        response = self.enviar(numero_personas=5)
         self.assertEqual(response.status_code, 201)
         self.assertNotEqual(response.json()['id'], creada.json()['id'])
 

@@ -60,8 +60,19 @@ tours-pesca/
 - **No se piden datos adicionales de seguridad** (ni peso, ni si sabe nadar) — solo nombre, teléfono, correo.
 
 ### Embarcaciones
-- 2 clases: chica (máx. 3 personas) y grande (máx. 6 personas). Precio fijo, no varía por clase.
-- Capacidad operativa actual de la flota: **8 a 10 viajes por día en total.**
+- Flota real (dato del negocio, agosto 2026): **8 pangas de máximo 3 personas y 2 de máximo 5.**
+  Precio fijo, no varía por clase.
+- **El tope de personas por viaje es 5**, la panga más grande. Está en el código como
+  `MAX_PERSONAS` (backend) y `MAX_PEOPLE` (frontend); los tres números son el mismo visto
+  desde tres lados y hay que moverlos juntos. Estuvo en 6 y la web cobraba viajes que
+  ninguna panga podía llevar.
+- Un grupo de 4 o 5 personas solo cabe en **2** de las 10 pangas. El cupo del día cuenta
+  viajes, no si queda una panga del tamaño que ese grupo necesita: vender tres grupos de
+  4 el mismo día es vendible hoy y no es operable. Pendiente de resolver.
+- Una panga y un capitán hacen **un solo viaje por día**: las salidas son de 5 a 7am y el
+  viaje dura de 6 a 7 horas, así que no hay forma de escalonar dos con la misma panga.
+- Capacidad operativa actual de la flota: **8 a 10 viajes por día en total**, y varía —
+  hay días con menos pangas disponibles. El ajuste por día se hace con `CupoDiario`.
 
 ### Pagos
 - El cliente elige libremente: 100% en línea, o 30% de anticipo en línea + 70% restante en efectivo.

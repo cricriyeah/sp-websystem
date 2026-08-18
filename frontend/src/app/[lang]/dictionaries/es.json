@@ -94,7 +94,7 @@
     "time": "Hora",
     "timeHelp": "Salida entre 5:00 y 7:00 am",
     "people": "Personas",
-    "maxPeopleNotice": "Máximo 6 personas por viaje.",
+    "maxPeopleNotice": "Máximo 5 personas por viaje.",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "submit": "Agendar"
@@ -114,7 +114,7 @@
         "label": "Tú eliges la hora de salida"
       },
       "capacity": {
-        "value": "Hasta 6 personas",
+        "value": "Hasta 5 personas",
         "label": "Sin mínimo ni límite de edad"
       },
       "season": {
@@ -142,7 +142,7 @@
       },
       {
         "name": "Panga grande",
-        "capacity": "Hasta 6 personas",
+        "capacity": "Hasta 5 personas",
         "specs": [
           "Motor fuera de borda",
           "Sombra",
@@ -237,8 +237,8 @@
     "cta": "¿Ya viniste con nosotros? Déjanos tu opinión por WhatsApp"
   },
   "groups": {
-    "headline": "¿Son más de 6?",
-    "body": "En una panga caben hasta 6. Si van más, no hay problema: coordinamos dos o tres pangas para que salgan juntos a la misma hora y se vean en el agua. Escríbenos y lo armamos contigo.",
+    "headline": "¿Son más de 5?",
+    "body": "En una panga caben hasta 5. Si van más, no hay problema: coordinamos dos o tres pangas para que salgan juntos a la misma hora y se vean en el agua. Escríbenos y lo armamos contigo.",
     "cta": "Escríbenos por WhatsApp"
   },
   "faq": {
@@ -250,7 +250,7 @@
       },
       {
         "q": "¿Cuántas personas caben en la embarcación?",
-        "a": "Tenemos dos clases: chica hasta 3 personas y grande hasta 6. Toda la embarcación es tuya, no se comparte. No hay mínimo de personas ni restricción de edad."
+        "a": "Tenemos dos clases: chica hasta 3 personas y grande hasta 5. Toda la embarcación es tuya, no se comparte. No hay mínimo de personas ni restricción de edad."
       },
       {
         "q": "¿A qué hora salimos y cuánto dura?",
@@ -289,7 +289,7 @@
         "a": "Pasa, sobre todo si el mar viene picado. Si eres propenso, tómate una pastilla antes de subir, no después. Y avísale al capitán: sabe cómo acomodar el viaje para que la pases mejor."
       },
       {
-        "q": "Somos más de 6, ¿qué hacemos?",
+        "q": "Somos más de 5, ¿qué hacemos?",
         "a": "Coordinamos varias pangas para que salgan a la misma hora y se vean en el agua. Escríbenos por WhatsApp y lo armamos contigo."
       },
       {

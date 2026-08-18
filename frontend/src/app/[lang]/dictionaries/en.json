@@ -94,7 +94,7 @@
     "time": "Time",
     "timeHelp": "Departure between 5:00 and 7:00 am",
     "people": "Guests",
-    "maxPeopleNotice": "Maximum 6 guests per trip.",
+    "maxPeopleNotice": "Maximum 5 guests per trip.",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "submit": "Book now"
@@ -114,7 +114,7 @@
         "label": "You pick the departure time"
       },
       "capacity": {
-        "value": "Up to 6 guests",
+        "value": "Up to 5 guests",
         "label": "No minimum, no age limit"
       },
       "season": {
@@ -142,7 +142,7 @@
       },
       {
         "name": "Large panga",
-        "capacity": "Up to 6 guests",
+        "capacity": "Up to 5 guests",
         "specs": [
           "Outboard motor",
           "Shade",
@@ -237,8 +237,8 @@
     "cta": "Been out with us? Send us your thoughts on WhatsApp"
   },
   "groups": {
-    "headline": "More than 6 of you?",
-    "body": "One panga holds up to 6. If there are more of you, no problem: we'll line up two or three boats so you all leave at the same time and can see each other out on the water. Message us and we'll put it together with you.",
+    "headline": "More than 5 of you?",
+    "body": "One panga holds up to 5. If there are more of you, no problem: we'll line up two or three boats so you all leave at the same time and can see each other out on the water. Message us and we'll put it together with you.",
     "cta": "Message us on WhatsApp"
   },
   "faq": {
@@ -250,7 +250,7 @@
       },
       {
         "q": "How many people fit on the boat?",
-        "a": "We have two classes: small for up to 3 guests and large for up to 6. The whole boat is yours, never shared. There is no minimum group size and no age restriction."
+        "a": "We have two classes: small for up to 3 guests and large for up to 5. The whole boat is yours, never shared. There is no minimum group size and no age restriction."
       },
       {
         "q": "What time do we leave and how long is the trip?",
@@ -289,7 +289,7 @@
         "a": "It happens, especially when the water is choppy. If you're prone to it, take a tablet before boarding, not after. And tell the captain — he knows how to shape the trip so you have a better time."
       },
       {
-        "q": "There are more than 6 of us. What do we do?",
+        "q": "There are more than 5 of us. What do we do?",
         "a": "We line up several boats so you all leave at the same time and can see each other on the water. Message us on WhatsApp and we'll put it together with you."
       },
       {

@@ -199,23 +199,24 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch('stripe.PaymentIntent.create')
     def test_cobra_500_por_cada_persona_arriba_de_3(self, create):
         create.return_value = intent_falso()
-        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=6)
-        # 4500 del viaje + 3 personas extra x 500.
-        self.assertEqual(self.post().json()['monto_a_cobrar'], '6000.00')
+        # 5 es el tope de la flota (MAX_PERSONAS): la panga mas grande lleva 5.
+        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
+        # 4500 del viaje + 2 personas extra x 500.
+        self.assertEqual(self.post().json()['monto_a_cobrar'], '5500.00')
 
     @mock.patch('stripe.PaymentIntent.create')
     def test_el_cargo_por_personas_sale_de_la_reserva_no_del_cliente(self, create):
         create.return_value = intent_falso()
-        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=6)
-        # Aunque el cliente insista en que van 2, se cobra por las 6 reservadas.
-        self.assertEqual(self.post(numero_personas=2).json()['monto_a_cobrar'], '6000.00')
+        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
+        # Aunque el cliente insista en que van 2, se cobra por las 5 reservadas.
+        self.assertEqual(self.post(numero_personas=2).json()['monto_a_cobrar'], '5500.00')
 
     @mock.patch('stripe.PaymentIntent.create')
     def test_el_anticipo_incluye_el_cargo_por_personas(self, create):
         create.return_value = intent_falso()
-        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=6)
-        # 30% de 6000.
-        self.assertEqual(self.post(forma_pago='anticipo').json()['monto_a_cobrar'], '1800.00')
+        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
+        # 30% de 5500.
+        self.assertEqual(self.post(forma_pago='anticipo').json()['monto_a_cobrar'], '1650.00')
 
     @mock.patch('stripe.PaymentIntent.create')
     def test_el_lunch_se_cobra_por_cada_persona(self, create):

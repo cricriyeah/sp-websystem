@@ -276,8 +276,10 @@ admin y el shell:
   Los 4 campos (`deslinde_aceptado`, `deslinde_nombre`, `deslinde_aceptado_en`,
   `deslinde_ip`) son readonly en el admin: son constancia legal, no datos editables.
   Las reservas por WhatsApp no lo requieren (el cliente no firma en el sistema).
-- **Personas**: 1 a `MAX_PERSONAS = 6` (la embarcacion mas grande), y si ya hay
-  embarcacion asignada tampoco puede exceder su `capacidad_maxima`.
+- **Personas**: 1 a `MAX_PERSONAS = 5` (la embarcacion mas grande), y si ya hay
+  embarcacion asignada tampoco puede exceder su `capacidad_maxima`. El mismo tope vive
+  en `frontend/src/lib/dates.ts` (`MAX_PEOPLE`) y en la copia de las dos dictionaries:
+  se mueven juntos o el cliente llena todo el checkout para toparse con un 400 al final.
 - **Cambio de fecha**: minimo `HORAS_MINIMAS_CAMBIO_FECHA = 48` de anticipacion sobre la
   salida original. `from_db()` guarda la salida original en `_salida_original` para poder
   compararla. No aplica a canceladas (mal clima no avisa con 48 horas) ni a reservas que

@@ -15,8 +15,14 @@ VENTANA_SALIDA_FIN = time(7, 0)
 
 # Sin minimo de personas y sin restriccion de edad; el tope es la embarcacion
 # mas grande de la flota (ver docs/contexto-negocio.md, seccion Embarcaciones).
+#
+# La flota real son 8 pangas de maximo 3 personas y 2 de maximo 5. Estuvo en 6,
+# que no lo cumple ninguna: la web aceptaba y cobraba viajes de 6 personas que
+# despues no habia panga donde meter. Subir esta constante sin comprar una panga
+# mas grande vuelve a abrir ese hueco — el tope de aqui y la flota de alla son el
+# mismo numero visto desde dos lados.
 MIN_PERSONAS = 1
-MAX_PERSONAS = 6
+MAX_PERSONAS = 5
 
 # Cambio de fecha permitido con minimo 48 horas de anticipacion sobre la salida
 # original (ver docs/contexto-negocio.md, seccion Cancelaciones y cambios).

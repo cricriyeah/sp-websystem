@@ -35,5 +35,13 @@ export function fromLocalISODate(iso: string): Date {
   return new Date(`${iso}T00:00:00`);
 }
 
-export const MAX_PEOPLE = 6;
+/**
+ * Tope de personas por viaje: la panga mas grande de la flota lleva 5.
+ *
+ * Tiene que coincidir con `MAX_PERSONAS` en backend/apps/bookings/models.py. El
+ * servidor rechaza lo que se pase, asi que un valor mas alto aqui no vende de
+ * mas — deja al cliente llenar todo el checkout para toparse con un 400 al
+ * final, que es la peor forma de enterarse.
+ */
+export const MAX_PEOPLE = 5;
 export const MIN_PEOPLE = 1;
