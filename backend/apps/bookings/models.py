@@ -6,7 +6,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import connection, models
 from django.utils import timezone
 
-from apps.fleet.models import Capitan, Embarcacion
+from apps.fleet.models import Capitan, Embarcacion, capacidades_disponibles
 
 from .validators import validar_nombre_persona, validar_telefono
 
@@ -189,17 +189,46 @@ def bloquear_cupo_del_dia(fecha):
         cursor.execute('SELECT pg_advisory_xact_lock(%s)', [fecha.toordinal()])
 
 
-def validar_cupo_diario(fecha, excluir_pk=None):
-    """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
-    de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md)."""
-    # Antes de contar, no despues: ver bloquear_cupo_del_dia.
-    bloquear_cupo_del_dia(fecha)
+def evaluar_cupo(fecha, personas, excluir_pk=None):
+    """Por que no entra un grupo de `personas` ese dia, o None si si entra.
 
+    Solo consulta: **no toma el lock**. La usa `/api/cupo/`, que es una lectura
+    informativa, y `validar_cupo_diario`, que si lo toma antes de llamar aqui.
+    """
     ocupadas = Reserva.objects.filter(fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
     if excluir_pk is not None:
         ocupadas = ocupadas.exclude(pk=excluir_pk)
-    if ocupadas.count() >= cupo_maximo_del_dia(fecha):
-        raise ValidationError(f'No hay cupo disponible para el {fecha}: se alcanzo el maximo de viajes del dia.')
+
+    return motivo_sin_lugar(
+        personas,
+        list(ocupadas.values_list('numero_personas', flat=True)),
+        capacidades_disponibles(fecha),
+        cupo_maximo_del_dia(fecha),
+    )
+
+
+def validar_cupo_diario(fecha, personas, excluir_pk=None):
+    """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
+    de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md).
+
+    Dos motivos con dos mensajes distintos, porque son dos problemas distintos para
+    quien los lee: el dia se lleno, o el dia tiene espacio pero ya no hay panga
+    donde quepa ese grupo.
+    """
+    # Antes de contar, no despues: ver bloquear_cupo_del_dia. Ahora el lock ademas
+    # cubre el ultimo lugar *de ese tamano*, no solo el ultimo lugar.
+    bloquear_cupo_del_dia(fecha)
+
+    motivo = evaluar_cupo(fecha, personas, excluir_pk=excluir_pk)
+    if motivo == MOTIVO_LLENO:
+        raise ValidationError(
+            f'No hay cupo disponible para el {fecha}: se alcanzo el maximo de viajes del dia.'
+        )
+    if motivo == MOTIVO_SIN_PANGA:
+        raise ValidationError(
+            f'No queda panga para un grupo de {personas} personas el {fecha}. '
+            f'Las de mayor capacidad ya estan comprometidas.'
+        )
 
 
 class Vendedora(models.Model):
@@ -432,7 +461,7 @@ class Reserva(models.Model):
 
     def clean(self):
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            validar_cupo_diario(self.fecha, excluir_pk=self.pk)
+            validar_cupo_diario(self.fecha, self.numero_personas, excluir_pk=self.pk)
         if self.estado != self.Estado.CANCELADA and (self.cancelada_por_id or self.cancelada_en):
             raise ValidationError('cancelada_por/cancelada_en solo aplican cuando estado es cancelada.')
         if self.canal_origen == self.CanalOrigen.WEB and not self.deslinde_aceptado:

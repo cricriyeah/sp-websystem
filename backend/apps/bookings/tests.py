@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.fleet.models import Embarcacion
+from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
 from apps.testing import ApiTestCase, crear_flota
 
 from .admin import telefono_marcable
@@ -869,3 +869,74 @@ class MotivoSinLugarTests(TestCase):
     def test_un_grupo_chico_si_entra_el_mismo_dia(self):
         """Se acabaron las grandes, no el dia."""
         self.assertIsNone(motivo_sin_lugar(2, [4, 4], self.FLOTA, tope=10))
+
+
+class CupoPorTamanoDelGrupoTests(TestCase):
+    """Un dia puede tener lugares libres y aun asi no poder recibir a un grupo de
+    4: solo dos pangas de la flota lo llevan."""
+
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=10)
+
+    def _vender(self, personas):
+        return crear_reserva(
+            fecha=self.fecha, numero_personas=personas, estado=Reserva.Estado.PAGADA
+        )
+
+    def test_un_tercer_grupo_de_cuatro_se_rechaza(self):
+        self._vender(4)
+        self._vender(4)
+        with self.assertRaises(ValidationError) as ctx:
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
+        self.assertIn('No queda panga', str(ctx.exception))
+
+    def test_un_grupo_chico_el_mismo_dia_si_se_acepta(self):
+        """El dia no esta lleno, solo se acabaron las pangas grandes."""
+        self._vender(4)
+        self._vender(4)
+        Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+                                estado=Reserva.Estado.PAGADA)).full_clean()
+
+    def test_un_dia_lleno_a_secas_da_el_mensaje_del_tope_de_viajes(self):
+        for _ in range(CUPO_MAXIMO_DEFAULT):
+            self._vender(2)
+        with self.assertRaises(ValidationError) as ctx:
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
+        self.assertIn('maximo de viajes', str(ctx.exception))
+
+    def test_el_cupo_cerrado_a_mano_manda_sobre_la_flota(self):
+        CupoDiario.objects.create(fecha=self.fecha, cupo_maximo=3)
+        for _ in range(3):
+            self._vender(2)
+        with self.assertRaises(ValidationError) as ctx:
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
+        self.assertIn('maximo de viajes', str(ctx.exception))
+
+    def test_editar_una_reserva_no_la_cuenta_contra_si_misma(self):
+        self._vender(4)
+        reserva = self._vender(4)
+        reserva.nombre_cliente = 'Ana Ruiz Corregido'
+        reserva.full_clean()
+
+    def test_una_reserva_cancelada_libera_su_panga(self):
+        self._vender(4)
+        cancelada = self._vender(4)
+        cancelada.estado = Reserva.Estado.CANCELADA
+        cancelada.save()
+
+        Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+                                estado=Reserva.Estado.PAGADA)).full_clean()
+
+    def test_una_panga_marcada_fuera_reduce_el_cupo_de_ese_dia(self):
+        grande = Embarcacion.objects.filter(capacidad_maxima=5).first()
+        EmbarcacionNoDisponible.objects.create(
+            fecha=self.fecha, embarcacion=grande, motivo='Motor'
+        )
+        self._vender(4)
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
