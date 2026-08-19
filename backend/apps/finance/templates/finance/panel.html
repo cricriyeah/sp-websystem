@@ -21,7 +21,7 @@
             <div class="border border-base-200 flex flex-col gap-2 p-4 rounded-default dark:border-base-800">
                 <span class="font-medium text-base-500 text-xs uppercase dark:text-base-400">En la cuenta (Stripe)</span>
                 {% for moneda, saldo in acumulado.items %}
-                    <div class="flex items-baseline justify-between">
+                    <div class="flex justify-between" style="align-items: baseline">
                         <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
                         <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_cuenta|floatformat:2|intcomma }}</span>
                     </div>
@@ -37,7 +37,7 @@
             <div class="border border-base-200 flex flex-col gap-2 p-4 rounded-default dark:border-base-800">
                 <span class="font-medium text-base-500 text-xs uppercase dark:text-base-400">En efectivo (caja)</span>
                 {% for moneda, saldo in acumulado.items %}
-                    <div class="flex items-baseline justify-between">
+                    <div class="flex justify-between" style="align-items: baseline">
                         <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
                         <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_efectivo|floatformat:2|intcomma }}</span>
                     </div>
@@ -69,7 +69,7 @@
                     {{ periodo_desde|date:"j M Y" }} — {{ periodo_hasta|date:"j M Y" }}
                 </span>
             </h2>
-            <select class="bg-white border border-base-200 px-3 py-1.5 rounded-default text-base-700 text-sm dark:bg-base-900 dark:border-base-800 dark:text-base-300"
+            <select class="bg-white border border-base-200 px-3 py-2 rounded-default text-base-700 text-sm dark:bg-base-900 dark:border-base-800 dark:text-base-300"
                     name="periodo" onchange="this.form.submit()">
                 {% for clave, etiqueta in periodos %}
                     <option value="{{ clave }}" {% if clave == periodo %}selected{% endif %}>{{ etiqueta }}</option>
@@ -86,24 +86,20 @@
         Una grafica por moneda. MXN y USD nunca se mezclan: el sistema no guarda
         tipo de cambio, asi que un total junto seria un numero inventado.
         {% endcomment %}
-        {% for moneda, barras in grafica.items %}
+        {% comment %}
+        Chart.js ya viene con Unfold y su app.js instancia solo cada canvas con
+        class="chart": lee el JSON de `data-value` y dibuja. Aqui no se escribe
+        JavaScript ni se instala nada.
+
+        Una grafica por moneda. MXN y USD nunca se mezclan: el sistema no guarda
+        tipo de cambio, asi que un total junto seria un numero inventado.
+        {% endcomment %}
+        {% for moneda, serie in grafica.items %}
             <div class="border border-base-200 flex flex-col gap-3 p-4 rounded-default dark:border-base-800">
                 <span class="font-medium text-base-500 text-xs uppercase dark:text-base-400">
                     Entradas por dia · {{ moneda }}
                 </span>
-                <div class="flex gap-px h-32 items-end">
-                    {% for barra in barras %}
-                        <div class="flex-1 flex h-full items-end group relative"
-                             title="{{ barra.dia|date:'j M' }}: {{ barra.monto|floatformat:2|intcomma }} {{ moneda }}">
-                            <div class="bg-primary-500 rounded-t-sm w-full dark:bg-primary-400"
-                                 style="height: {{ barra.altura }}%"></div>
-                        </div>
-                    {% endfor %}
-                </div>
-                <div class="flex text-base-400 text-xs justify-between">
-                    <span>{{ barras.0.dia|date:"j M" }}</span>
-                    {% with ultima=barras|last %}<span>{{ ultima.dia|date:"j M" }}</span>{% endwith %}
-                </div>
+                {% include "unfold/components/chart/bar.html" with data=serie height=180 %}
             </div>
         {% empty %}
             <p class="text-base-400 text-sm">Sin entradas en este periodo, no hay nada que graficar.</p>

@@ -4,8 +4,12 @@ Lo que se protege aqui: que cada peso caiga en el dia en que se movio, que las
 monedas no se mezclen, que un reembolso reste, y que la foto completa del dinero
 solo la vean los jefes.
 """
+import json
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from pathlib import Path
+
+import unfold
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -295,72 +299,6 @@ class PanelPorPeriodoTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.context['periodo'], PERIODO_DEFAULT)
 
-    def test_la_grafica_solo_trae_las_monedas_con_movimiento(self):
-        hoy = date.today()
-        crear_reserva(monto_pagado=Decimal('4500.00'),
-                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
-
-        grafica = self.client.get(self.url, {'periodo': 'hoy'}).context['grafica']
-
-        self.assertEqual(list(grafica), ['MXN'])
-
-    def test_cada_barra_trae_su_dia_su_monto_y_su_altura(self):
-        hoy = date.today()
-        crear_reserva(monto_pagado=Decimal('1000.00'),
-                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
-
-        barras = self.client.get(self.url, {'periodo': 'hoy'}).context['grafica']['MXN']
-
-        self.assertEqual(len(barras), 1)
-        self.assertEqual(barras[0].dia, hoy)
-        self.assertEqual(barras[0].monto, Decimal('1000.00'))
-        self.assertEqual(barras[0].altura, 100)
-
-    def test_la_barra_mas_alta_es_el_dia_mayor_y_las_otras_se_escalan_contra_el(self):
-        hoy = date.today()
-        ayer = hoy - timedelta(days=1)
-        crear_reserva(monto_pagado=Decimal('1000.00'),
-                      pagada_en=timezone.make_aware(datetime.combine(ayer, time(12, 0))))
-        crear_reserva(monto_pagado=Decimal('500.00'),
-                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
-
-        barras = self.client.get(self.url, {'periodo': 'semana'}).context['grafica']['MXN']
-        por_dia = {b.dia: b for b in barras}
-
-        self.assertEqual(por_dia[ayer].altura, 100)
-        self.assertEqual(por_dia[hoy].altura, 50)
-
-    def test_la_grafica_incluye_los_dias_sin_movimiento_del_periodo(self):
-        """Un hueco en la grafica es informacion: se ve que ese dia no entro nada.
-
-        La tabla del historico si los omite, pero ahi cada renglon es un dato; en
-        una barra el vacio es el dato."""
-        hoy = date.today()
-        crear_reserva(monto_pagado=Decimal('1000.00'),
-                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
-
-        barras = self.client.get(self.url, {'periodo': 'mes'}).context['grafica']['MXN']
-
-        self.assertEqual(len(barras), hoy.day)
-        self.assertEqual(barras[0].dia, hoy.replace(day=1))
-        self.assertEqual(barras[-1].dia, hoy)
-
-    def test_un_periodo_sin_ningun_movimiento_no_divide_entre_cero(self):
-        respuesta = self.client.get(self.url, {'periodo': 'hoy'})
-        self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(respuesta.context['grafica'], {})
-
-    def test_el_efectivo_tambien_cuenta_en_la_barra(self):
-        """La barra es lo que ENTRO ese dia, no solo lo que cobro Stripe."""
-        hoy = date.today()
-        momento_hoy = timezone.make_aware(datetime.combine(hoy, time(12, 0)))
-        crear_reserva(monto_pagado=Decimal('1000.00'), pagada_en=momento_hoy,
-                      monto_efectivo=Decimal('500.00'), efectivo_cobrado_en=momento_hoy)
-
-        barras = self.client.get(self.url, {'periodo': 'hoy'}).context['grafica']['MXN']
-
-        self.assertEqual(barras[0].monto, Decimal('1500.00'))
-
     def test_el_balance_mostrado_es_el_del_periodo_elegido(self):
         """Es el punto del select: filtrar los balances, no solo la grafica."""
         hoy = date.today()
@@ -380,43 +318,99 @@ class PanelPorPeriodoTests(TestCase):
         respuesta = self.client.get(self.url, {'periodo': 'mes_pasado'})
         self.assertEqual(respuesta.context['periodo_etiqueta'], 'Mes pasado')
 
-    def test_un_dia_con_poco_dinero_no_se_ve_como_un_dia_sin_nada(self):
-        """500 pesos contra un dia de 100 mil redondean a 0% de altura.
+    def _serie(self, periodo, moneda='MXN'):
+        """El JSON que la vista le entrega al canvas de Chart.js."""
+        grafica = self.client.get(self.url, {'periodo': periodo}).context['grafica']
+        return json.loads(grafica[moneda])
 
-        Una barra invisible miente: dice "ese dia no entro nada" cuando si entro.
-        El piso de 1% no distorsiona la lectura y salva el dato."""
+    def test_solo_grafica_las_monedas_con_movimiento(self):
+        """Una grafica plana de dolares en un mes que solo cobro pesos es ruido."""
         hoy = date.today()
-        ayer = hoy - timedelta(days=1)
-        crear_reserva(monto_pagado=Decimal('100000.00'),
-                      pagada_en=timezone.make_aware(datetime.combine(ayer, time(12, 0))))
-        crear_reserva(monto_pagado=Decimal('100.00'),
+        crear_reserva(monto_pagado=Decimal('4500.00'),
                       pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
 
-        barras = self.client.get(self.url, {'periodo': 'semana'}).context['grafica']['MXN']
-        por_dia = {b.dia: b for b in barras}
+        grafica = self.client.get(self.url, {'periodo': 'hoy'}).context['grafica']
 
-        self.assertEqual(por_dia[hoy].altura, 1)
+        self.assertEqual(list(grafica), ['MXN'])
 
-    def test_un_dia_sin_movimiento_si_tiene_altura_cero(self):
-        """El piso es para el dinero chico, no para el vacio."""
-        hoy = date.today()
-        crear_reserva(monto_pagado=Decimal('1000.00'),
-                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
+    def test_un_periodo_sin_movimiento_no_grafica_nada(self):
+        self.assertEqual(self.client.get(self.url, {'periodo': 'hoy'}).context['grafica'], {})
 
-        barras = self.client.get(self.url, {'periodo': 'mes'}).context['grafica']['MXN']
-
-        self.assertEqual(barras[0].altura, 0)
-
-    def test_la_grafica_rotula_el_primer_y_el_ultimo_dia(self):
-        """Sin las dos fechas de los extremos, las barras no dicen de cuando son."""
+    def test_una_etiqueta_y_un_dato_por_cada_dia_del_periodo(self):
+        """Los dias vacios se grafican a proposito: en una grafica el hueco es el dato."""
         hoy = date.today()
         crear_reserva(monto_pagado=Decimal('1000.00'),
                       pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
 
-        respuesta = self.client.get(self.url, {'periodo': 'mes'})
+        serie = self._serie('mes')
 
-        primero = hoy.replace(day=1)
-        self.assertContains(respuesta, formats.date_format(primero, 'j M'))
-        self.assertContains(respuesta, formats.date_format(hoy, 'j M'))
-        # Y nunca el objeto crudo.
-        self.assertNotContains(respuesta, 'Barra(dia=')
+        self.assertEqual(len(serie['labels']), hoy.day)
+        self.assertEqual(len(serie['datasets'][0]['data']), hoy.day)
+        self.assertEqual(serie['datasets'][0]['data'][0], 0)
+        self.assertEqual(serie['datasets'][0]['data'][-1], 1000.0)
+
+    def test_el_dato_de_cada_dia_es_lo_que_entro_ese_dia(self):
+        """Tarjeta mas efectivo: la barra es lo que ENTRO, no solo lo que cobro Stripe."""
+        hoy = date.today()
+        cuando = timezone.make_aware(datetime.combine(hoy, time(12, 0)))
+        crear_reserva(monto_pagado=Decimal('1000.00'), pagada_en=cuando,
+                      monto_efectivo=Decimal('500.00'), efectivo_cobrado_en=cuando)
+
+        self.assertEqual(self._serie('hoy')['datasets'][0]['data'], [1500.0])
+
+    def test_el_color_sigue_al_tema_del_admin(self):
+        """Se manda la variable CSS, no un color fijo: el app.js de Unfold la
+        resuelve contra el tema, asi que la grafica cambia con el modo oscuro y
+        con el color primario que se configure."""
+        hoy = date.today()
+        crear_reserva(monto_pagado=Decimal('1000.00'),
+                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
+
+        self.assertIn('var(--color-primary', self._serie('hoy')['datasets'][0]['backgroundColor'])
+
+    def test_la_moneda_nombra_la_serie(self):
+        """MXN y USD nunca se mezclan: cada grafica dice de que moneda habla."""
+        hoy = date.today()
+        crear_reserva(monto_pagado=Decimal('1000.00'),
+                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
+
+        self.assertIn('MXN', self._serie('hoy')['datasets'][0]['label'])
+
+    def test_la_pagina_pinta_un_canvas_por_moneda(self):
+        """El canvas con class="chart" es lo que el app.js de Unfold busca para
+        instanciar Chart.js. Sin esa clase y sin data-value no se dibuja nada."""
+        hoy = date.today()
+        crear_reserva(monto_pagado=Decimal('1000.00'),
+                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
+
+        html = self.client.get(self.url, {'periodo': 'hoy'}).content.decode()
+
+        self.assertRegex(html, r'<canvas[^>]*class="[^"]*chart[^"]*"[^>]*data-type="bar"')
+        self.assertIn('data-value', html)
+
+    def test_las_barras_no_se_quedan_con_el_grosor_de_sparkline_de_unfold(self):
+        """Unfold trae `maxBarThickness: 4` en sus opciones por defecto.
+
+        Tiene sentido para sus graficas de tarjeta, que son sparklines; en una
+        grafica mensual a todo lo ancho deja unas rayitas de 4px ilegibles. Se
+        corrige en el dataset y no mandando `options` propias, porque el app.js
+        **reemplaza** sus opciones enteras si se le pasan — y ahi se irian la
+        rejilla punteada, los colores del tema y el tooltip.
+        """
+        hoy = date.today()
+        crear_reserva(monto_pagado=Decimal('1000.00'),
+                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
+
+        dataset = self._serie('mes')['datasets'][0]
+
+        self.assertGreater(dataset['maxBarThickness'], 4)
+
+    def test_no_se_mandan_opciones_propias_al_canvas(self):
+        """Mandar `options` tira las de Unfold completas. Ver el test de arriba."""
+        hoy = date.today()
+        crear_reserva(monto_pagado=Decimal('1000.00'),
+                      pagada_en=timezone.make_aware(datetime.combine(hoy, time(12, 0))))
+
+        html = self.client.get(self.url, {'periodo': 'hoy'}).content.decode()
+
+        self.assertNotIn('data-options', html)

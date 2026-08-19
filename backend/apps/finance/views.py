@@ -4,14 +4,14 @@ Va montado dentro del admin (`/admin/finanzas/`, ver `config/urls.py`) para
 heredar su sesion, su menu y su login — no es una app aparte con su propia
 autenticacion.
 """
+import json
 from calendar import monthrange
-from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal
 
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
+from django.utils import formats
 
 from .services import balances, balances_por_dia, resumen
 
@@ -54,41 +54,25 @@ def rango_del_periodo(periodo, hoy):
     return hoy.replace(day=1), hoy
 
 
-@dataclass(frozen=True)
-class Barra:
-    """Un dia de la grafica de entradas."""
-
-    dia: date
-    monto: Decimal
-    # Porcentaje contra el dia mas alto del periodo, que es lo unico que necesita
-    # la plantilla para dibujar la barra con una clase de altura.
-    altura: int
-
-
-def _altura(monto, maximo):
-    """Porcentaje de la barra, con piso de 1 para el dinero que si entro.
-
-    500 pesos contra un dia de 100 mil redondean a 0 y la barra desaparece: se ve
-    igual que un dia en el que no entro nada, que es justo lo contrario de lo que
-    paso. Un 1% no distorsiona la comparacion y salva el dato. El cero se reserva
-    para los dias vacios de verdad.
-    """
-    if not monto:
-        return 0
-    return max(1, round(monto / maximo * 100))
-
-
 def _grafica_de_entradas(desde, hasta):
-    """`{moneda: [Barra, ...]}` con una barra por cada dia del rango.
+    """`{moneda: json}` con la serie de entradas por dia, lista para Chart.js.
+
+    El JSON va tal cual al `data-value` del canvas: el `app.js` de Unfold recorre
+    los `.chart` de la pagina, lo parsea y instancia Chart.js solo. No hace falta
+    escribir JavaScript, y la libreria ya viene con el tema — no se instala nada.
 
     Se incluyen los dias sin movimiento a proposito. El historico de abajo si los
     omite —ahi cada renglon es un dato y una fila vacia es ruido—, pero en una
     grafica el hueco *es* el dato: se ve de un golpe que ese dia no entro nada.
 
     Cada moneda va por separado y nunca se suman: el sistema no guarda tipo de
-    cambio, asi que un total mezclado seria un numero inventado. Una moneda sin
-    un solo movimiento en el periodo no aparece, para no dibujar una grafica plana
-    de dolares en un negocio que ese mes solo cobro en pesos.
+    cambio, asi que un total mezclado seria un numero inventado. Una moneda sin un
+    solo movimiento en el periodo no aparece, para no dibujar una grafica plana de
+    dolares en un mes que solo cobro en pesos.
+
+    El color se manda como variable CSS y no como valor fijo: Unfold la resuelve
+    contra el tema, asi la grafica sigue el modo oscuro y el color primario que se
+    configure en el admin.
     """
     entradas_por_dia = {
         dia: {moneda: saldo.entradas for moneda, saldo in por_moneda.items()}
@@ -104,17 +88,29 @@ def _grafica_de_entradas(desde, hasta):
 
     dias = [desde + timedelta(days=i) for i in range((hasta - desde).days + 1)]
 
-    grafica = {}
-    for moneda in sorted(monedas):
-        montos = [entradas_por_dia.get(dia, {}).get(moneda, Decimal(0)) for dia in dias]
-        # El maximo nunca es cero aqui: la moneda esta en `monedas` justamente
-        # porque tuvo al menos un dia con entradas.
-        maximo = max(montos)
-        grafica[moneda] = [
-            Barra(dia=dia, monto=monto, altura=_altura(monto, maximo))
-            for dia, monto in zip(dias, montos)
-        ]
-    return grafica
+    return {
+        moneda: json.dumps({
+            'labels': [formats.date_format(dia, 'j M') for dia in dias],
+            'datasets': [{
+                'label': f'Entradas ({moneda})',
+                'data': [
+                    float(entradas_por_dia.get(dia, {}).get(moneda, 0)) for dia in dias
+                ],
+                'backgroundColor': 'var(--color-primary-500)',
+                # Unfold trae `maxBarThickness: 4` en sus opciones por defecto,
+                # que va bien en sus graficas de tarjeta —son sparklines— y deja
+                # rayitas ilegibles en una grafica mensual a todo lo ancho. Se
+                # corrige aqui, en el dataset, y no mandando `options` propias: su
+                # app.js **reemplaza** sus opciones enteras si se le pasan, y ahi
+                # se irian la rejilla punteada, los colores del tema y el tooltip.
+                'maxBarThickness': 40,
+                'barPercentage': 0.9,
+                'categoryPercentage': 0.9,
+                'borderRadius': 3,
+            }],
+        })
+        for moneda in sorted(monedas)
+    }
 
 
 def _mes_pedido(request, hoy):
