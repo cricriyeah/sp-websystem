@@ -958,3 +958,46 @@ class CupoPorTamanoDelGrupoTests(TestCase):
         with self.assertRaises(ValidationError):
             Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
                                     estado=Reserva.Estado.PAGADA)).full_clean()
+
+
+class CupoApiPorTamanoTests(ApiTestCase):
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=10)
+
+    def test_sin_personas_responde_como_antes(self):
+        """Compatibilidad: nada que llame a la API vieja se puede romper."""
+        cuerpo = self.client.get(f'/api/cupo/?fecha={self.fecha}').json()
+        self.assertTrue(cuerpo['disponible'])
+        self.assertIsNone(cuerpo['motivo_no_disponible'])
+        self.assertEqual(cuerpo['cupo_maximo'], CUPO_MAXIMO_DEFAULT)
+
+    def test_un_grupo_de_cuatro_sin_pangas_grandes_libres(self):
+        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+
+        grande = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=4').json()
+        self.assertFalse(grande['disponible'])
+        self.assertEqual(grande['motivo_no_disponible'], MOTIVO_SIN_PANGA)
+        self.assertEqual(grande['proxima_disponible'], str(self.fecha + timedelta(days=1)))
+
+        chico = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=2').json()
+        self.assertTrue(chico['disponible'])
+        self.assertIsNone(chico['motivo_no_disponible'])
+
+    def test_un_dia_lleno_dice_lleno(self):
+        for _ in range(CUPO_MAXIMO_DEFAULT):
+            crear_reserva(fecha=self.fecha, numero_personas=2, estado=Reserva.Estado.PAGADA)
+
+        cuerpo = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=2').json()
+        self.assertEqual(cuerpo['motivo_no_disponible'], MOTIVO_LLENO)
+
+    def test_personas_que_no_es_numero_da_400(self):
+        respuesta = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=cuatro')
+        self.assertEqual(respuesta.status_code, 400)
+
+    def test_personas_fuera_del_rango_da_400(self):
+        for valor in (0, MAX_PERSONAS + 1):
+            with self.subTest(personas=valor):
+                respuesta = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas={valor}')
+                self.assertEqual(respuesta.status_code, 400)

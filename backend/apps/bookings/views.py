@@ -6,16 +6,20 @@ from rest_framework.views import APIView
 
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
+    MAX_PERSONAS,
+    MIN_PERSONAS,
     Reserva,
     cupo_maximo_del_dia,
+    evaluar_cupo,
     proxima_fecha_disponible,
 )
 from .serializers import CupoSerializer, ReservaCheckoutSerializer
 
 
 class CupoDisponibleView(APIView):
-    """Cupo restante para una fecha, para que el checkout avise antes de pagar
-    (la validacion real y definitiva ocurre al confirmar el pago, ver apps/payments)."""
+    """Cupo restante para una fecha y un tamano de grupo, para que el checkout
+    avise antes de pagar (la validacion real y definitiva ocurre al confirmar el
+    pago, ver apps/payments)."""
 
     throttle_scope = 'consulta'
 
@@ -29,16 +33,30 @@ class CupoDisponibleView(APIView):
         except ValueError:
             return Response({'detail': 'fecha debe tener el formato YYYY-MM-DD.'}, status=400)
 
-        cupo_maximo = cupo_maximo_del_dia(fecha)
-        ocupadas = Reserva.objects.filter(fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO).count()
+        # Opcional con default 1 a proposito: una peticion sin `personas` tiene que
+        # responder lo mismo que antes de que el cupo supiera de tamanos.
+        try:
+            personas = int(request.query_params.get('personas', MIN_PERSONAS))
+        except (TypeError, ValueError):
+            return Response({'detail': 'personas debe ser un numero entero.'}, status=400)
+        if not (MIN_PERSONAS <= personas <= MAX_PERSONAS):
+            return Response(
+                {'detail': f'personas debe estar entre {MIN_PERSONAS} y {MAX_PERSONAS}.'},
+                status=400,
+            )
+
+        motivo = evaluar_cupo(fecha, personas)
         data = {
             'fecha': fecha,
-            'cupo_maximo': cupo_maximo,
-            'ocupadas': ocupadas,
-            'disponible': ocupadas < cupo_maximo,
-            # Se responde siempre, tambien cuando el dia pedido si tiene
-            # espacio: asi el navegador nunca necesita una segunda vuelta.
-            'proxima_disponible': proxima_fecha_disponible(fecha, 1),
+            'cupo_maximo': cupo_maximo_del_dia(fecha),
+            'ocupadas': Reserva.objects.filter(
+                fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO
+            ).count(),
+            'disponible': motivo is None,
+            # Se responde siempre, tambien cuando el dia pedido si tiene espacio:
+            # asi el navegador nunca necesita una segunda vuelta.
+            'proxima_disponible': proxima_fecha_disponible(fecha, personas),
+            'motivo_no_disponible': motivo,
         }
         return Response(CupoSerializer(data).data)
 

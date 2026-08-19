@@ -12,9 +12,13 @@ class CupoSerializer(serializers.Serializer):
     cupo_maximo = serializers.IntegerField()
     ocupadas = serializers.IntegerField()
     disponible = serializers.BooleanField()
-    # Primera fecha con espacio a partir de la pedida. Evita que el navegador
-    # tenga que preguntar dia por dia (ver models.proxima_fecha_disponible).
+    # Primera fecha con espacio PARA ESE GRUPO a partir de la pedida. Evita que el
+    # navegador tenga que preguntar dia por dia (ver models.proxima_fecha_disponible).
     proxima_disponible = serializers.DateField(allow_null=True)
+    # 'lleno' | 'sin_panga' | null. Sin esto el frontend no puede decir la verdad
+    # de por que no se puede: "ese dia esta lleno" y "el dia tiene espacio pero ya
+    # no hay panga para tu grupo" son mensajes distintos para el cliente.
+    motivo_no_disponible = serializers.CharField(allow_null=True)
 
 
 def ip_del_cliente(request):
