@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from apps.payments.pricing import PERSONAS_INCLUIDAS
 
-from .models import Tarifa
+from .models import Embarcacion, Tarifa
 
 
 class TarifaTests(TestCase):
@@ -45,3 +45,27 @@ class TarifaApiTests(TestCase):
         Tarifa.objects.create(precio=Decimal('4500.00'))
         body = self.client.get('/api/tarifa/').json()
         self.assertNotIn('amenidades', body)
+
+
+class EmbarcacionTests(TestCase):
+    def test_nace_activa(self):
+        panga = Embarcacion.objects.create(
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5
+        )
+        self.assertTrue(panga.activa)
+
+    def test_la_etiqueta_de_clase_no_carga_la_capacidad(self):
+        """La capacidad vive en `capacidad_maxima` y en ningun otro lado.
+
+        La etiqueta decia "Grande (max. 6 personas)" y era falsa: ninguna panga
+        lleva mas de 5. Un numero escrito en dos lugares es un numero que puede
+        discrepar."""
+        for clase in Embarcacion.Clase:
+            self.assertNotIn('personas', clase.label)
+
+    def test_str_muestra_la_capacidad(self):
+        """El selector de la agenda ensena la capacidad donde se necesita."""
+        panga = Embarcacion.objects.create(
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5
+        )
+        self.assertEqual(str(panga), 'Lupita (Grande, max. 5)')

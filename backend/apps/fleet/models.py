@@ -75,20 +75,35 @@ class Tarifa(models.Model):
 
 class Embarcacion(models.Model):
     class Clase(models.TextChoices):
-        CHICA = 'chica', 'Chica (máx. 3 personas)'
-        GRANDE = 'grande', 'Grande (máx. 6 personas)'
+        # Sin cifra en la etiqueta a proposito: la capacidad vive en
+        # `capacidad_maxima` y unicamente ahi. Decian "(max. 3 personas)" y
+        # "(max. 6 personas)" — la segunda era falsa y nadie se entero, porque el
+        # numero de verdad estaba en otro campo. `Clase` sigue existiendo porque
+        # el negocio piensa en chicas y grandes y la copia del sitio las nombra
+        # asi; solo deja de cargar un dato que no le toca.
+        CHICA = 'chica', 'Chica'
+        GRANDE = 'grande', 'Grande'
 
     nombre = models.CharField(max_length=100, unique=True)
     clase = models.CharField(max_length=10, choices=Clase.choices)
     capacidad_maxima = models.PositiveSmallIntegerField(
         help_text='Numero maximo de personas que puede llevar esta embarcacion.'
     )
+    activa = models.BooleanField(
+        default=True,
+        help_text='Desmarcalo para sacar la panga de la flota sin borrarla (vendida, '
+                  'fuera de servicio). Una panga inactiva deja de contar para el cupo '
+                  'pero conserva los viajes historicos que tiene asignados. Mismo '
+                  'patron que Vendedora.activo: borrarla dejaria viajes sin panga.',
+    )
 
     class Meta:
         ordering = ['nombre']
 
     def __str__(self):
-        return f'{self.nombre} ({self.get_clase_display()})'
+        # Con la capacidad, porque el selector de la agenda es donde se asigna una
+        # panga a un grupo y ahi hace falta saber cuanta gente lleva.
+        return f'{self.nombre} ({self.get_clase_display()}, max. {self.capacidad_maxima})'
 
 
 class Capitan(models.Model):

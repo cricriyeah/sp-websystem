@@ -25,8 +25,9 @@ class TarifaAdmin(ModelAdmin):
 
 @admin.register(Embarcacion)
 class EmbarcacionAdmin(ModelAdmin):
-    list_display = ['nombre', 'clase', 'capacidad_maxima']
-    list_filter = ['clase']
+    list_display = ['nombre', 'clase', 'capacidad_maxima', 'activa']
+    list_filter = ['clase', 'activa']
+    list_editable = ['activa']
     search_fields = ['nombre']
 
 
