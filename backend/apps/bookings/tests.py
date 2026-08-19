@@ -1001,3 +1001,34 @@ class CupoApiPorTamanoTests(ApiTestCase):
             with self.subTest(personas=valor):
                 respuesta = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas={valor}')
                 self.assertEqual(respuesta.status_code, 400)
+
+
+class RevisarCupoTests(TestCase):
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=10)
+
+    def _salida(self, **opciones):
+        salida = StringIO()
+        call_command('revisar_cupo', stdout=salida, **opciones)
+        return salida.getvalue()
+
+    def test_no_reporta_nada_cuando_todos_los_dias_cierran(self):
+        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        self.assertNotIn(str(self.fecha), self._salida())
+
+    def test_encuentra_un_dia_vendido_que_no_es_operable(self):
+        """Tres grupos de 4 con solo dos pangas grandes: se vendio antes de que el
+        motor supiera de tamanos y hay que resolverlo a mano.
+
+        Se usa Reserva.objects.create sin full_clean a proposito: es exactamente la
+        fila que este comando existe para encontrar.
+        """
+        for _ in range(3):
+            Reserva.objects.create(**datos_reserva(
+                fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA
+            ))
+
+        salida = self._salida()
+        self.assertIn(str(self.fecha), salida)
+        self.assertIn('4, 4, 4', salida)
