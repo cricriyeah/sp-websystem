@@ -52,9 +52,12 @@ via env var). Rutas montadas bajo `/api/` en `config/urls.py`:
 - `GET /api/tarifa/` — `{precio, precio_usd, amenidades}` (`apps/fleet`). Las amenidades
   vienen de aqui a proposito: la web no tiene ninguna cifra hardcodeada. 503 si no hay
   `Tarifa` creada.
-- `GET /api/cupo/?fecha=YYYY-MM-DD` — cupo restante ese dia, solo informativo
-  (`apps/bookings`); la validacion definitiva ocurre al confirmar el pago. 400 si falta
-  el parametro o no es una fecha ISO.
+- `GET /api/cupo/?fecha=YYYY-MM-DD&personas=N` — si cabe un grupo de N ese dia, solo
+  informativo (`apps/bookings`); la validacion definitiva ocurre al confirmar el pago.
+  `personas` es opcional (default 1), asi que una peticion sin el responde lo mismo que
+  antes. Responde ademas `motivo_no_disponible`: `'lleno'` (se acabaron los viajes del
+  dia) o `'sin_panga'` (queda dia pero no embarcacion para ese grupo). 400 si falta
+  `fecha`, no es una fecha ISO, o `personas` no es un entero entre 1 y `MAX_PERSONAS`.
 - `POST /api/reservas/` — crea `Reserva` en `pendiente_pago`, `canal_origen='web'`
   (`apps/bookings`). No ocupa cupo todavia. Requiere `moneda`, `deslinde_aceptado` y
   `deslinde_nombre`; la fecha/hora y la IP del deslinde las sella el servidor. Acepta
@@ -197,14 +200,39 @@ corresponde cada venta.
 
 ## Cupo diario
 
-Motor unico en `apps/bookings/models.py`: `validar_cupo_diario(fecha, excluir_pk=None)`,
-llamado desde `Reserva.clean()`. Solo cuentan contra el cupo los estados en
-`ESTADOS_QUE_OCUPAN_CUPO` (`pagada`, `asignada`, `completada`) — `pendiente_pago` no
-bloquea a otros clientes. Override manual de cupo por dia: modelo `CupoDiario`
-(sin registro para un dia -> aplica `CUPO_MAXIMO_DEFAULT = 10`). Cualquier flujo nuevo
-que cree/edite una `Reserva` (API de pago, panel vendedora) debe llamar
+Motor unico en `apps/bookings/models.py`:
+`validar_cupo_diario(fecha, personas, excluir_pk=None)`, llamado desde `Reserva.clean()`.
+Decide dos cosas y las distingue en el mensaje:
+
+1. **Tope de viajes del dia** — `CupoDiario` de esa fecha, o `CUPO_MAXIMO_DEFAULT = 10`.
+2. **Que exista una panga donde quepa ese grupo** — `caben(grupos, capacidades)` empareja
+   de mayor a menor los grupos ya vendidos mas el nuevo contra las capacidades a flote
+   (`fleet.capacidades_disponibles(fecha)`). Un dia puede tener lugares libres y aun asi
+   no admitir un grupo de 4: solo dos pangas de la flota llevan mas de 3 personas.
+
+Los dos numeros son independientes a proposito: `CupoDiario` es un tope que decide el
+negocio (por ejemplo, faltan capitanes) y `fleet.EmbarcacionNoDisponible` es que panga
+fisicamente no sale ese dia. Una panga dada de baja para siempre se desmarca con
+`Embarcacion.activa`, no se borra.
+
+El nucleo (`caben`, `motivo_sin_lugar`) es puro y no toca la base: lo comparten la
+validacion, `/api/cupo/`, `proxima_fecha_disponible` y el comando `revisar_cupo`, para
+que los cuatro no puedan decidir distinto. `evaluar_cupo` consulta sin tomar el lock;
+`validar_cupo_diario` lo toma antes de contar (ver `bloquear_cupo_del_dia`).
+
+Solo cuentan contra el cupo los estados en `ESTADOS_QUE_OCUPAN_CUPO` (`pagada`,
+`asignada`, `completada`) — `pendiente_pago` no bloquea a otros clientes. Cualquier flujo
+nuevo que cree/edite una `Reserva` (API de pago, panel vendedora) debe llamar
 `instance.full_clean()` antes de `save()` para que este motor corra — no duplicar la
 logica en otro lado.
+
+**El catalogo `Embarcacion` tiene que estar completo en produccion.** Con la flota
+incompleta `capacidades_disponibles` devuelve una lista corta y el sitio deja de vender:
+fallo seguro y no silencioso, pero fallo.
+
+- Auditoria: `manage.py revisar_cupo [--dias 90]` lista los dias ya vendidos que la flota
+  real no puede operar. La validacion corre al guardar, asi que las reservas anteriores a
+  este motor sobrevivieron intactas.
 
 ## Cancelacion y reembolso
 

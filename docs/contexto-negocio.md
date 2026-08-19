@@ -66,9 +66,19 @@ tours-pesca/
   `MAX_PERSONAS` (backend) y `MAX_PEOPLE` (frontend); los tres números son el mismo visto
   desde tres lados y hay que moverlos juntos. Estuvo en 6 y la web cobraba viajes que
   ninguna panga podía llevar.
-- Un grupo de 4 o 5 personas solo cabe en **2** de las 10 pangas. El cupo del día cuenta
-  viajes, no si queda una panga del tamaño que ese grupo necesita: vender tres grupos de
-  4 el mismo día es vendible hoy y no es operable. Pendiente de resolver.
+- Un grupo de 4 o 5 personas solo cabe en **2** de las 10 pangas, y el cupo lo tiene en
+  cuenta: el sistema rechaza un tercer grupo de 4 el mismo día aunque queden lugares
+  libres, porque no habría panga donde meterlo. Son dos condiciones distintas — el tope
+  de viajes que decide el negocio (`CupoDiario`) y que exista una panga del tamaño que
+  ese grupo necesita.
+- Cuando una panga no sale un día (mantenimiento, motor descompuesto) se registra en el
+  admin, en **"embarcaciones no disponibles"**: se anota qué panga falta esa fecha, no
+  cuántas quedan. Sin registro, ese día está la flota completa. Una panga que sale de la
+  flota para siempre se desmarca como **activa**, no se borra: conserva sus viajes
+  históricos.
+- **El catálogo de embarcaciones tiene que estar completo.** Si falta capturar pangas, el
+  sistema cree que hay menos de las que hay y deja de vender. Es un fallo visible y no
+  silencioso, pero es un fallo.
 - Una panga y un capitán hacen **un solo viaje por día**: las salidas son de 5 a 7am y el
   viaje dura de 6 a 7 horas, así que no hay forma de escalonar dos con la misma panga.
 - Capacidad operativa actual de la flota: **8 a 10 viajes por día en total**, y varía —
