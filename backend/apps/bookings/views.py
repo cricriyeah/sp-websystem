@@ -38,7 +38,7 @@ class CupoDisponibleView(APIView):
             'disponible': ocupadas < cupo_maximo,
             # Se responde siempre, tambien cuando el dia pedido si tiene
             # espacio: asi el navegador nunca necesita una segunda vuelta.
-            'proxima_disponible': proxima_fecha_disponible(fecha),
+            'proxima_disponible': proxima_fecha_disponible(fecha, 1),
         }
         return Response(CupoSerializer(data).data)
 

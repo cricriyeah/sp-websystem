@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, time, timedelta
 
 from django.conf import settings
@@ -6,7 +7,12 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import connection, models
 from django.utils import timezone
 
-from apps.fleet.models import Capitan, Embarcacion, capacidades_disponibles
+from apps.fleet.models import (
+    Capitan,
+    Embarcacion,
+    capacidades_disponibles,
+    capacidades_por_fecha,
+)
 
 from .validators import validar_nombre_persona, validar_telefono
 
@@ -125,30 +131,39 @@ def motivo_sin_lugar(personas, grupos, capacidades, tope):
 DIAS_BUSQUEDA_DISPONIBILIDAD = 90
 
 
-def proxima_fecha_disponible(desde, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
-    """Primera fecha con cupo a partir de `desde`, o None si no hay en `dias`.
+def proxima_fecha_disponible(desde, personas, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
+    """Primera fecha donde cabe un grupo de `personas`, o None si no hay en `dias`.
 
-    Se resuelve con **dos consultas**, no una por dia. Antes esta busqueda vivia
-    en el navegador (`checkout-view.tsx`) y hacia una peticion por cada dia que
-    probaba: hasta 90 seguidas, que con el limite de 60/min por IP terminaban en
-    un 429 que el frontend se tragaba en silencio. La ayuda de "te muevo al
-    siguiente dia con espacio" dejaba de funcionar justo en temporada alta, que
-    es cuando hace falta.
+    Se resuelve con **cuatro consultas**, no una por dia: reservas del rango,
+    CupoDiario del rango, y las dos de la flota. Antes esta busqueda vivia en el
+    navegador (`checkout-view.tsx`) y hacia una peticion por cada dia que probaba:
+    hasta 90 seguidas, que con el limite de 60/min por IP terminaban en un 429 que
+    el frontend se tragaba en silencio. La ayuda de "te muevo al siguiente dia con
+    espacio" dejaba de funcionar justo en temporada alta, que es cuando hace falta.
+    El costo no puede volver a crecer con la ventana.
     """
     hasta = desde + timedelta(days=dias - 1)
 
-    ocupadas_por_fecha = dict(
-        Reserva.objects.filter(fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO)
-        .values_list('fecha')
-        .annotate(total=models.Count('id'))
-    )
+    grupos_por_fecha = defaultdict(list)
+    for fecha, personas_de_esa in Reserva.objects.filter(
+        fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO
+    ).values_list('fecha', 'numero_personas'):
+        grupos_por_fecha[fecha].append(personas_de_esa)
+
     topes = dict(
         CupoDiario.objects.filter(fecha__range=(desde, hasta)).values_list('fecha', 'cupo_maximo')
     )
+    capacidades = capacidades_por_fecha(desde, hasta)
 
     for i in range(dias):
         fecha = desde + timedelta(days=i)
-        if ocupadas_por_fecha.get(fecha, 0) < topes.get(fecha, CUPO_MAXIMO_DEFAULT):
+        motivo = motivo_sin_lugar(
+            personas,
+            grupos_por_fecha[fecha],
+            capacidades[fecha],
+            topes.get(fecha, CUPO_MAXIMO_DEFAULT),
+        )
+        if motivo is None:
             return fecha
     return None
 

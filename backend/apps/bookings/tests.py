@@ -779,35 +779,53 @@ class ProximaFechaDisponibleTests(TestCase):
     en silencio.
     """
 
+    def setUp(self):
+        # Dos de estos tests no crean ninguna reserva, asi que nadie sembraria la
+        # flota por ellos y sin pangas no cabria nadie.
+        crear_flota()
+
     def test_si_el_dia_pedido_tiene_espacio_se_devuelve_ese(self):
         fecha = date.today() + timedelta(days=10)
-        self.assertEqual(proxima_fecha_disponible(fecha), fecha)
+        self.assertEqual(proxima_fecha_disponible(fecha, 2), fecha)
 
     def test_salta_los_dias_llenos(self):
         primero = date.today() + timedelta(days=10)
         for _ in range(CUPO_MAXIMO_DEFAULT):
             crear_reserva(fecha=primero, estado=Reserva.Estado.PAGADA)
 
-        self.assertEqual(proxima_fecha_disponible(primero), primero + timedelta(days=1))
+        self.assertEqual(proxima_fecha_disponible(primero, 2), primero + timedelta(days=1))
 
     def test_respeta_el_cupo_cerrado_a_mano(self):
         primero = date.today() + timedelta(days=10)
         CupoDiario.objects.create(fecha=primero, cupo_maximo=0)
 
-        self.assertEqual(proxima_fecha_disponible(primero), primero + timedelta(days=1))
+        self.assertEqual(proxima_fecha_disponible(primero, 2), primero + timedelta(days=1))
 
     def test_sin_ningun_dia_libre_devuelve_none(self):
         desde = date.today() + timedelta(days=10)
         for i in range(3):
             CupoDiario.objects.create(fecha=desde + timedelta(days=i), cupo_maximo=0)
 
-        self.assertIsNone(proxima_fecha_disponible(desde, dias=3))
+        self.assertIsNone(proxima_fecha_disponible(desde, 2, dias=3))
 
     def test_no_hace_una_consulta_por_dia(self):
-        """El punto entero del cambio: el costo no crece con la ventana."""
+        """El punto entero del cambio: el costo no crece con la ventana.
+
+        Cuatro consultas fijas: reservas del rango, CupoDiario del rango, y las dos
+        de la flota (pangas activas y las marcadas fuera).
+        """
         desde = date.today() + timedelta(days=10)
-        with self.assertNumQueries(2):
-            proxima_fecha_disponible(desde, dias=90)
+        with self.assertNumQueries(4):
+            proxima_fecha_disponible(desde, 2, dias=90)
+
+    def test_salta_los_dias_sin_panga_para_ese_grupo(self):
+        """El dia tiene lugares libres, pero no para un grupo de 4."""
+        primero = date.today() + timedelta(days=10)
+        crear_reserva(fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
+
+        self.assertEqual(proxima_fecha_disponible(primero, 4), primero + timedelta(days=1))
+        self.assertEqual(proxima_fecha_disponible(primero, 2), primero)
 
 
 class CupoApiDevuelveProximaTests(ApiTestCase):
