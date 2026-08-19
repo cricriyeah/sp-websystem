@@ -150,16 +150,21 @@ export function CheckoutView({
   const cupoCheckId = useRef(0);
 
   // El cupo real se valida en el backend (al pagar), esto solo es feedback
-  // adelantado: si el dia elegido ya esta lleno, reasigna automaticamente al
-  // dia mas proximo con espacio y avisa. Nunca bloquea el flujo (ver
-  // docs/contexto-negocio.md — el checkout no debe poner trabas).
+  // adelantado: si el dia elegido ya no admite a este grupo, reasigna
+  // automaticamente al dia mas proximo con espacio y avisa. Nunca bloquea el
+  // flujo (ver docs/contexto-negocio.md — el checkout no debe poner trabas).
+  //
+  // Depende tambien de `people`: un dia puede tener lugares libres y aun asi no
+  // poder recibir a un grupo de 4, porque solo dos pangas de la flota lo llevan.
+  // Sin esa dependencia, subir el numero de personas dejaria al cliente en un dia
+  // que ya no le sirve.
   useEffect(() => {
     const checkId = ++cupoCheckId.current;
 
     (async () => {
       let cupo;
       try {
-        cupo = await getCupo(day);
+        cupo = await getCupo(day, people);
       } catch {
         // Sin respuesta no se avisa nada: es ayuda adelantada, el cupo real lo
         // valida el backend al cobrar. Nunca debe trabar el checkout.
@@ -169,14 +174,20 @@ export function CheckoutView({
       if (cupo.disponible || !cupo.proxima_disponible) return;
 
       setDay(cupo.proxima_disponible);
+      // Dos mensajes distintos porque son dos problemas distintos: al cliente de
+      // 4 personas hay que decirle que el dia si tiene espacio pero no para su
+      // grupo — si no, ve lugares libres y no entiende por que no puede.
+      const plantilla =
+        cupo.motivo_no_disponible === 'sin_panga'
+          ? checkout.noBoatForGroupNotice
+          : checkout.dayFullNotice;
       setDayFullNotice(
-        checkout.dayFullNotice.replace(
-          '{date}',
-          formatDay(fromLocalISODate(cupo.proxima_disponible), lang)
-        )
+        plantilla
+          .replace('{date}', formatDay(fromLocalISODate(cupo.proxima_disponible), lang))
+          .replace('{people}', String(people))
       );
     })();
-  }, [day, lang, checkout.dayFullNotice]);
+  }, [day, people, lang, checkout.dayFullNotice, checkout.noBoatForGroupNotice]);
 
   // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
   const usdDisponible = tarifa?.precio_usd != null;

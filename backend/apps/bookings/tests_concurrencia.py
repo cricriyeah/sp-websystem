@@ -22,6 +22,8 @@ from unittest import mock, skipUnless
 from django.db import connection, connections
 from django.test import TransactionTestCase
 
+from apps.testing import crear_flota
+
 from .models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, Reserva
 
 SOLO_POSTGRES = skipUnless(
@@ -62,6 +64,7 @@ class SobreventaConcurrenteTests(TransactionTestCase):
     """El ultimo lugar del dia solo se puede vender una vez."""
 
     def setUp(self):
+        crear_flota()  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
         self.fecha = date.today() + timedelta(days=10)
 
         # Se llena el dia hasta dejar exactamente un lugar libre.

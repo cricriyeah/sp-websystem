@@ -12,13 +12,17 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.fleet.models import Embarcacion
-from apps.testing import ApiTestCase
+from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
+from apps.testing import ApiTestCase, crear_flota
 
 from .admin import telefono_marcable
 from .models import (
     CUPO_MAXIMO_DEFAULT,
     MAX_PERSONAS,
+    MOTIVO_LLENO,
+    MOTIVO_SIN_PANGA,
+    caben,
+    motivo_sin_lugar,
     proxima_fecha_disponible,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
     CheckoutAbandonado,
@@ -35,6 +39,9 @@ def envejecer(reserva, **delta):
 
 
 def datos_reserva(**overrides):
+    # Hay tests que llaman Reserva(**datos_reserva()).full_clean() directo, y el
+    # motor de cupo le pregunta a la flota: sin pangas no cabe nadie.
+    crear_flota()
     base = {
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
@@ -772,35 +779,53 @@ class ProximaFechaDisponibleTests(TestCase):
     en silencio.
     """
 
+    def setUp(self):
+        # Dos de estos tests no crean ninguna reserva, asi que nadie sembraria la
+        # flota por ellos y sin pangas no cabria nadie.
+        crear_flota()
+
     def test_si_el_dia_pedido_tiene_espacio_se_devuelve_ese(self):
         fecha = date.today() + timedelta(days=10)
-        self.assertEqual(proxima_fecha_disponible(fecha), fecha)
+        self.assertEqual(proxima_fecha_disponible(fecha, 2), fecha)
 
     def test_salta_los_dias_llenos(self):
         primero = date.today() + timedelta(days=10)
         for _ in range(CUPO_MAXIMO_DEFAULT):
             crear_reserva(fecha=primero, estado=Reserva.Estado.PAGADA)
 
-        self.assertEqual(proxima_fecha_disponible(primero), primero + timedelta(days=1))
+        self.assertEqual(proxima_fecha_disponible(primero, 2), primero + timedelta(days=1))
 
     def test_respeta_el_cupo_cerrado_a_mano(self):
         primero = date.today() + timedelta(days=10)
         CupoDiario.objects.create(fecha=primero, cupo_maximo=0)
 
-        self.assertEqual(proxima_fecha_disponible(primero), primero + timedelta(days=1))
+        self.assertEqual(proxima_fecha_disponible(primero, 2), primero + timedelta(days=1))
 
     def test_sin_ningun_dia_libre_devuelve_none(self):
         desde = date.today() + timedelta(days=10)
         for i in range(3):
             CupoDiario.objects.create(fecha=desde + timedelta(days=i), cupo_maximo=0)
 
-        self.assertIsNone(proxima_fecha_disponible(desde, dias=3))
+        self.assertIsNone(proxima_fecha_disponible(desde, 2, dias=3))
 
     def test_no_hace_una_consulta_por_dia(self):
-        """El punto entero del cambio: el costo no crece con la ventana."""
+        """El punto entero del cambio: el costo no crece con la ventana.
+
+        Cuatro consultas fijas: reservas del rango, CupoDiario del rango, y las dos
+        de la flota (pangas activas y las marcadas fuera).
+        """
         desde = date.today() + timedelta(days=10)
-        with self.assertNumQueries(2):
-            proxima_fecha_disponible(desde, dias=90)
+        with self.assertNumQueries(4):
+            proxima_fecha_disponible(desde, 2, dias=90)
+
+    def test_salta_los_dias_sin_panga_para_ese_grupo(self):
+        """El dia tiene lugares libres, pero no para un grupo de 4."""
+        primero = date.today() + timedelta(days=10)
+        crear_reserva(fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
+
+        self.assertEqual(proxima_fecha_disponible(primero, 4), primero + timedelta(days=1))
+        self.assertEqual(proxima_fecha_disponible(primero, 2), primero)
 
 
 class CupoApiDevuelveProximaTests(ApiTestCase):
@@ -813,3 +838,197 @@ class CupoApiDevuelveProximaTests(ApiTestCase):
 
         self.assertFalse(cuerpo['disponible'])
         self.assertEqual(cuerpo['proxima_disponible'], str(fecha + timedelta(days=1)))
+
+
+class CabenTests(TestCase):
+    """El criterio que decide si se cobra o no. Exacto, no heuristica."""
+
+    FLOTA = [5, 5, 3, 3, 3, 3, 3, 3, 3, 3]
+
+    def test_sin_grupos_siempre_cabe(self):
+        self.assertTrue(caben([], self.FLOTA))
+
+    def test_mas_grupos_que_pangas_no_cabe(self):
+        self.assertFalse(caben([2] * 11, self.FLOTA))
+
+    def test_tres_grupos_de_cuatro_no_caben_en_dos_pangas_grandes(self):
+        self.assertFalse(caben([4, 4, 4], self.FLOTA))
+
+    def test_dos_de_cuatro_y_ocho_de_tres_si_caben(self):
+        """El caso apretado que si es operable: no puede rechazarse."""
+        self.assertTrue(caben([4, 4, 3, 3, 3, 3, 3, 3, 3, 3], self.FLOTA))
+
+    def test_un_grupo_mas_grande_que_la_panga_mas_grande_no_cabe(self):
+        self.assertFalse(caben([6], [5]))
+
+    def test_no_depende_del_orden_de_llegada(self):
+        """Se emparejan de mayor a menor, asi que el resultado es el mismo vengan
+        como vengan."""
+        grupos = [4, 2, 4, 3]
+        self.assertEqual(
+            caben(sorted(grupos, reverse=True), self.FLOTA),
+            caben(sorted(list(reversed(grupos)), reverse=True), self.FLOTA),
+        )
+
+
+class MotivoSinLugarTests(TestCase):
+    FLOTA = [5, 5, 3, 3, 3, 3, 3, 3, 3, 3]
+
+    def test_si_cabe_no_hay_motivo(self):
+        self.assertIsNone(motivo_sin_lugar(2, [], self.FLOTA, tope=10))
+
+    def test_el_tope_de_viajes_manda_sobre_el_de_pangas(self):
+        """Si el dia esta lleno a secas, ese es el mensaje util."""
+        self.assertEqual(motivo_sin_lugar(4, [2] * 10, self.FLOTA, tope=10), MOTIVO_LLENO)
+
+    def test_sin_panga_para_ese_grupo(self):
+        self.assertEqual(motivo_sin_lugar(4, [4, 4], self.FLOTA, tope=10), MOTIVO_SIN_PANGA)
+
+    def test_un_grupo_chico_si_entra_el_mismo_dia(self):
+        """Se acabaron las grandes, no el dia."""
+        self.assertIsNone(motivo_sin_lugar(2, [4, 4], self.FLOTA, tope=10))
+
+
+class CupoPorTamanoDelGrupoTests(TestCase):
+    """Un dia puede tener lugares libres y aun asi no poder recibir a un grupo de
+    4: solo dos pangas de la flota lo llevan."""
+
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=10)
+
+    def _vender(self, personas):
+        return crear_reserva(
+            fecha=self.fecha, numero_personas=personas, estado=Reserva.Estado.PAGADA
+        )
+
+    def test_un_tercer_grupo_de_cuatro_se_rechaza(self):
+        self._vender(4)
+        self._vender(4)
+        with self.assertRaises(ValidationError) as ctx:
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
+        self.assertIn('No queda panga', str(ctx.exception))
+
+    def test_un_grupo_chico_el_mismo_dia_si_se_acepta(self):
+        """El dia no esta lleno, solo se acabaron las pangas grandes."""
+        self._vender(4)
+        self._vender(4)
+        Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+                                estado=Reserva.Estado.PAGADA)).full_clean()
+
+    def test_un_dia_lleno_a_secas_da_el_mensaje_del_tope_de_viajes(self):
+        for _ in range(CUPO_MAXIMO_DEFAULT):
+            self._vender(2)
+        with self.assertRaises(ValidationError) as ctx:
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
+        self.assertIn('maximo de viajes', str(ctx.exception))
+
+    def test_el_cupo_cerrado_a_mano_manda_sobre_la_flota(self):
+        CupoDiario.objects.create(fecha=self.fecha, cupo_maximo=3)
+        for _ in range(3):
+            self._vender(2)
+        with self.assertRaises(ValidationError) as ctx:
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
+        self.assertIn('maximo de viajes', str(ctx.exception))
+
+    def test_editar_una_reserva_no_la_cuenta_contra_si_misma(self):
+        self._vender(4)
+        reserva = self._vender(4)
+        reserva.nombre_cliente = 'Ana Ruiz Corregido'
+        reserva.full_clean()
+
+    def test_una_reserva_cancelada_libera_su_panga(self):
+        self._vender(4)
+        cancelada = self._vender(4)
+        cancelada.estado = Reserva.Estado.CANCELADA
+        cancelada.save()
+
+        Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+                                estado=Reserva.Estado.PAGADA)).full_clean()
+
+    def test_una_panga_marcada_fuera_reduce_el_cupo_de_ese_dia(self):
+        grande = Embarcacion.objects.filter(capacidad_maxima=5).first()
+        EmbarcacionNoDisponible.objects.create(
+            fecha=self.fecha, embarcacion=grande, motivo='Motor'
+        )
+        self._vender(4)
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+                                    estado=Reserva.Estado.PAGADA)).full_clean()
+
+
+class CupoApiPorTamanoTests(ApiTestCase):
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=10)
+
+    def test_sin_personas_responde_como_antes(self):
+        """Compatibilidad: nada que llame a la API vieja se puede romper."""
+        cuerpo = self.client.get(f'/api/cupo/?fecha={self.fecha}').json()
+        self.assertTrue(cuerpo['disponible'])
+        self.assertIsNone(cuerpo['motivo_no_disponible'])
+        self.assertEqual(cuerpo['cupo_maximo'], CUPO_MAXIMO_DEFAULT)
+
+    def test_un_grupo_de_cuatro_sin_pangas_grandes_libres(self):
+        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+
+        grande = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=4').json()
+        self.assertFalse(grande['disponible'])
+        self.assertEqual(grande['motivo_no_disponible'], MOTIVO_SIN_PANGA)
+        self.assertEqual(grande['proxima_disponible'], str(self.fecha + timedelta(days=1)))
+
+        chico = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=2').json()
+        self.assertTrue(chico['disponible'])
+        self.assertIsNone(chico['motivo_no_disponible'])
+
+    def test_un_dia_lleno_dice_lleno(self):
+        for _ in range(CUPO_MAXIMO_DEFAULT):
+            crear_reserva(fecha=self.fecha, numero_personas=2, estado=Reserva.Estado.PAGADA)
+
+        cuerpo = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=2').json()
+        self.assertEqual(cuerpo['motivo_no_disponible'], MOTIVO_LLENO)
+
+    def test_personas_que_no_es_numero_da_400(self):
+        respuesta = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=cuatro')
+        self.assertEqual(respuesta.status_code, 400)
+
+    def test_personas_fuera_del_rango_da_400(self):
+        for valor in (0, MAX_PERSONAS + 1):
+            with self.subTest(personas=valor):
+                respuesta = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas={valor}')
+                self.assertEqual(respuesta.status_code, 400)
+
+
+class RevisarCupoTests(TestCase):
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=10)
+
+    def _salida(self, **opciones):
+        salida = StringIO()
+        call_command('revisar_cupo', stdout=salida, **opciones)
+        return salida.getvalue()
+
+    def test_no_reporta_nada_cuando_todos_los_dias_cierran(self):
+        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        self.assertNotIn(str(self.fecha), self._salida())
+
+    def test_encuentra_un_dia_vendido_que_no_es_operable(self):
+        """Tres grupos de 4 con solo dos pangas grandes: se vendio antes de que el
+        motor supiera de tamanos y hay que resolverlo a mano.
+
+        Se usa Reserva.objects.create sin full_clean a proposito: es exactamente la
+        fila que este comando existe para encontrar.
+        """
+        for _ in range(3):
+            Reserva.objects.create(**datos_reserva(
+                fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA
+            ))
+
+        salida = self._salida()
+        self.assertIn(str(self.fecha), salida)
+        self.assertIn('4, 4, 4', salida)

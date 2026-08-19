@@ -420,6 +420,7 @@
     "errorPaymentProvider": "We couldn't reach the payment processor. You have not been charged. Wait a moment and try again, or message us on WhatsApp and we'll take it from there.",
     "errorPaymentInProgress": "There's already a payment in progress for this booking. Wait a few seconds and reload the page before trying again, so you aren't charged twice.",
     "dayFullNotice": "That day is fully booked. We've automatically moved you to {date}, the next available date.",
+    "noBoatForGroupNotice": "That day still has room, but no boat left for a group of {people}: only two in the fleet carry more than 3. We've automatically moved you to {date}, the next date with one available.",
     "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book.",
     "confirmation": {
       "headline": "You're all set. Your booking is confirmed",

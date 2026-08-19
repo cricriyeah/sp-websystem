@@ -12,7 +12,7 @@ from django.test import TestCase, override_settings
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva
 from apps.fleet.models import Tarifa
-from apps.testing import ApiTestCase
+from apps.testing import ApiTestCase, crear_flota
 
 from .checks import revisar_llaves_de_stripe
 from .pricing import (
@@ -83,6 +83,7 @@ class LlavesDeStripeCruzadasTests(TestCase):
 
 
 def crear_reserva(**overrides):
+    crear_flota()  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
     datos = {
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),

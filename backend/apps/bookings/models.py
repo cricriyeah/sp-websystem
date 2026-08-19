@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, time, timedelta
 
 from django.conf import settings
@@ -6,7 +7,12 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import connection, models
 from django.utils import timezone
 
-from apps.fleet.models import Capitan, Embarcacion
+from apps.fleet.models import (
+    Capitan,
+    Embarcacion,
+    capacidades_disponibles,
+    capacidades_por_fecha,
+)
 
 from .validators import validar_nombre_persona, validar_telefono
 
@@ -74,35 +80,90 @@ def cupo_maximo_del_dia(fecha):
     return override.cupo_maximo if override else CUPO_MAXIMO_DEFAULT
 
 
+# Por que no se puede vender un lugar. Viajan al frontend en la respuesta de
+# /api/cupo/, porque "ese dia esta lleno" y "no queda panga para tu grupo" son dos
+# cosas distintas para el cliente que las lee.
+MOTIVO_LLENO = 'lleno'
+MOTIVO_SIN_PANGA = 'sin_panga'
+
+
+def caben(grupos, capacidades):
+    """Hay forma de darle a cada grupo una panga donde quepa?
+
+    Las dos listas llegan ordenadas **de mayor a menor**.
+
+    Se emparejan de mayor a menor: el grupo mas grande con la panga mas grande. Si
+    a algun grupo le toca una panga mas chica que el, no hay reparto posible — y no
+    lo hay con ningun otro orden, porque cualquier reparto valido tendria que darle
+    a ese grupo una panga al menos igual de grande, y todas las de arriba ya estan
+    ocupadas por grupos aun mayores.
+
+    Con 10 pangas el costo es irrelevante, pero importa que el criterio sea exacto
+    y no una heuristica: de esto depende si se cobra o no.
+    """
+    if len(grupos) > len(capacidades):
+        return False
+    return all(g <= c for g, c in zip(grupos, capacidades))
+
+
+def motivo_sin_lugar(personas, grupos, capacidades, tope):
+    """Por que no entra un grupo de `personas` mas, o None si si entra.
+
+    `grupos` son los tamanos ya vendidos de ese dia, sin el nuevo. `capacidades`
+    viene ordenada de mayor a menor. `tope` es el maximo de viajes del dia.
+
+    Es el nucleo puro del cupo: no toca la base. Lo llaman la validacion al
+    guardar, el endpoint /api/cupo/, la busqueda de la proxima fecha y el comando
+    revisar_cupo — los cuatro tienen que decidir igual, y por eso deciden aqui.
+
+    El orden de las dos comprobaciones importa: si el dia esta lleno a secas, ese
+    es el mensaje util, no el de las pangas.
+    """
+    if len(grupos) + 1 > tope:
+        return MOTIVO_LLENO
+    if not caben(sorted([*grupos, personas], reverse=True), capacidades):
+        return MOTIVO_SIN_PANGA
+    return None
+
+
 # Hasta donde se busca un dia con espacio cuando el pedido esta lleno. Tres meses
 # cubre de sobra la ventana en que la gente planea un viaje de pesca.
 DIAS_BUSQUEDA_DISPONIBILIDAD = 90
 
 
-def proxima_fecha_disponible(desde, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
-    """Primera fecha con cupo a partir de `desde`, o None si no hay en `dias`.
+def proxima_fecha_disponible(desde, personas, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
+    """Primera fecha donde cabe un grupo de `personas`, o None si no hay en `dias`.
 
-    Se resuelve con **dos consultas**, no una por dia. Antes esta busqueda vivia
-    en el navegador (`checkout-view.tsx`) y hacia una peticion por cada dia que
-    probaba: hasta 90 seguidas, que con el limite de 60/min por IP terminaban en
-    un 429 que el frontend se tragaba en silencio. La ayuda de "te muevo al
-    siguiente dia con espacio" dejaba de funcionar justo en temporada alta, que
-    es cuando hace falta.
+    Se resuelve con **cuatro consultas**, no una por dia: reservas del rango,
+    CupoDiario del rango, y las dos de la flota. Antes esta busqueda vivia en el
+    navegador (`checkout-view.tsx`) y hacia una peticion por cada dia que probaba:
+    hasta 90 seguidas, que con el limite de 60/min por IP terminaban en un 429 que
+    el frontend se tragaba en silencio. La ayuda de "te muevo al siguiente dia con
+    espacio" dejaba de funcionar justo en temporada alta, que es cuando hace falta.
+    El costo no puede volver a crecer con la ventana.
     """
     hasta = desde + timedelta(days=dias - 1)
 
-    ocupadas_por_fecha = dict(
-        Reserva.objects.filter(fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO)
-        .values_list('fecha')
-        .annotate(total=models.Count('id'))
-    )
+    grupos_por_fecha = defaultdict(list)
+    for fecha, personas_de_esa in Reserva.objects.filter(
+        fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO
+    ).values_list('fecha', 'numero_personas'):
+        grupos_por_fecha[fecha].append(personas_de_esa)
+
     topes = dict(
         CupoDiario.objects.filter(fecha__range=(desde, hasta)).values_list('fecha', 'cupo_maximo')
     )
+    capacidades = capacidades_por_fecha(desde, hasta)
 
     for i in range(dias):
         fecha = desde + timedelta(days=i)
-        if ocupadas_por_fecha.get(fecha, 0) < topes.get(fecha, CUPO_MAXIMO_DEFAULT):
+        motivo = motivo_sin_lugar(
+            personas,
+            grupos_por_fecha[fecha],
+            capacidades[fecha],
+            topes.get(fecha, CUPO_MAXIMO_DEFAULT),
+        )
+        if motivo is None:
             return fecha
     return None
 
@@ -143,17 +204,46 @@ def bloquear_cupo_del_dia(fecha):
         cursor.execute('SELECT pg_advisory_xact_lock(%s)', [fecha.toordinal()])
 
 
-def validar_cupo_diario(fecha, excluir_pk=None):
-    """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
-    de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md)."""
-    # Antes de contar, no despues: ver bloquear_cupo_del_dia.
-    bloquear_cupo_del_dia(fecha)
+def evaluar_cupo(fecha, personas, excluir_pk=None):
+    """Por que no entra un grupo de `personas` ese dia, o None si si entra.
 
+    Solo consulta: **no toma el lock**. La usa `/api/cupo/`, que es una lectura
+    informativa, y `validar_cupo_diario`, que si lo toma antes de llamar aqui.
+    """
     ocupadas = Reserva.objects.filter(fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
     if excluir_pk is not None:
         ocupadas = ocupadas.exclude(pk=excluir_pk)
-    if ocupadas.count() >= cupo_maximo_del_dia(fecha):
-        raise ValidationError(f'No hay cupo disponible para el {fecha}: se alcanzo el maximo de viajes del dia.')
+
+    return motivo_sin_lugar(
+        personas,
+        list(ocupadas.values_list('numero_personas', flat=True)),
+        capacidades_disponibles(fecha),
+        cupo_maximo_del_dia(fecha),
+    )
+
+
+def validar_cupo_diario(fecha, personas, excluir_pk=None):
+    """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
+    de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md).
+
+    Dos motivos con dos mensajes distintos, porque son dos problemas distintos para
+    quien los lee: el dia se lleno, o el dia tiene espacio pero ya no hay panga
+    donde quepa ese grupo.
+    """
+    # Antes de contar, no despues: ver bloquear_cupo_del_dia. Ahora el lock ademas
+    # cubre el ultimo lugar *de ese tamano*, no solo el ultimo lugar.
+    bloquear_cupo_del_dia(fecha)
+
+    motivo = evaluar_cupo(fecha, personas, excluir_pk=excluir_pk)
+    if motivo == MOTIVO_LLENO:
+        raise ValidationError(
+            f'No hay cupo disponible para el {fecha}: se alcanzo el maximo de viajes del dia.'
+        )
+    if motivo == MOTIVO_SIN_PANGA:
+        raise ValidationError(
+            f'No queda panga para un grupo de {personas} personas el {fecha}. '
+            f'Las de mayor capacidad ya estan comprometidas.'
+        )
 
 
 class Vendedora(models.Model):
@@ -386,7 +476,7 @@ class Reserva(models.Model):
 
     def clean(self):
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            validar_cupo_diario(self.fecha, excluir_pk=self.pk)
+            validar_cupo_diario(self.fecha, self.numero_personas, excluir_pk=self.pk)
         if self.estado != self.Estado.CANCELADA and (self.cancelada_por_id or self.cancelada_en):
             raise ValidationError('cancelada_por/cancelada_en solo aplican cuando estado es cancelada.')
         if self.canal_origen == self.CanalOrigen.WEB and not self.deslinde_aceptado:

@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.bookings.models import Reserva
+from apps.testing import crear_flota
 
 from .services import balances, balances_por_dia, resumen
 
@@ -22,6 +23,7 @@ def momento(anio, mes, dia, hora=12):
 
 
 def crear_reserva(**overrides):
+    crear_flota()  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
     datos = {
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
