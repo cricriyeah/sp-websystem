@@ -19,6 +19,10 @@ from .admin import telefono_marcable
 from .models import (
     CUPO_MAXIMO_DEFAULT,
     MAX_PERSONAS,
+    MOTIVO_LLENO,
+    MOTIVO_SIN_PANGA,
+    caben,
+    motivo_sin_lugar,
     proxima_fecha_disponible,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
     CheckoutAbandonado,
@@ -816,3 +820,52 @@ class CupoApiDevuelveProximaTests(ApiTestCase):
 
         self.assertFalse(cuerpo['disponible'])
         self.assertEqual(cuerpo['proxima_disponible'], str(fecha + timedelta(days=1)))
+
+
+class CabenTests(TestCase):
+    """El criterio que decide si se cobra o no. Exacto, no heuristica."""
+
+    FLOTA = [5, 5, 3, 3, 3, 3, 3, 3, 3, 3]
+
+    def test_sin_grupos_siempre_cabe(self):
+        self.assertTrue(caben([], self.FLOTA))
+
+    def test_mas_grupos_que_pangas_no_cabe(self):
+        self.assertFalse(caben([2] * 11, self.FLOTA))
+
+    def test_tres_grupos_de_cuatro_no_caben_en_dos_pangas_grandes(self):
+        self.assertFalse(caben([4, 4, 4], self.FLOTA))
+
+    def test_dos_de_cuatro_y_ocho_de_tres_si_caben(self):
+        """El caso apretado que si es operable: no puede rechazarse."""
+        self.assertTrue(caben([4, 4, 3, 3, 3, 3, 3, 3, 3, 3], self.FLOTA))
+
+    def test_un_grupo_mas_grande_que_la_panga_mas_grande_no_cabe(self):
+        self.assertFalse(caben([6], [5]))
+
+    def test_no_depende_del_orden_de_llegada(self):
+        """Se emparejan de mayor a menor, asi que el resultado es el mismo vengan
+        como vengan."""
+        grupos = [4, 2, 4, 3]
+        self.assertEqual(
+            caben(sorted(grupos, reverse=True), self.FLOTA),
+            caben(sorted(list(reversed(grupos)), reverse=True), self.FLOTA),
+        )
+
+
+class MotivoSinLugarTests(TestCase):
+    FLOTA = [5, 5, 3, 3, 3, 3, 3, 3, 3, 3]
+
+    def test_si_cabe_no_hay_motivo(self):
+        self.assertIsNone(motivo_sin_lugar(2, [], self.FLOTA, tope=10))
+
+    def test_el_tope_de_viajes_manda_sobre_el_de_pangas(self):
+        """Si el dia esta lleno a secas, ese es el mensaje util."""
+        self.assertEqual(motivo_sin_lugar(4, [2] * 10, self.FLOTA, tope=10), MOTIVO_LLENO)
+
+    def test_sin_panga_para_ese_grupo(self):
+        self.assertEqual(motivo_sin_lugar(4, [4, 4], self.FLOTA, tope=10), MOTIVO_SIN_PANGA)
+
+    def test_un_grupo_chico_si_entra_el_mismo_dia(self):
+        """Se acabaron las grandes, no el dia."""
+        self.assertIsNone(motivo_sin_lugar(2, [4, 4], self.FLOTA, tope=10))

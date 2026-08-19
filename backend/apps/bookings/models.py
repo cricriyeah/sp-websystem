@@ -74,6 +74,52 @@ def cupo_maximo_del_dia(fecha):
     return override.cupo_maximo if override else CUPO_MAXIMO_DEFAULT
 
 
+# Por que no se puede vender un lugar. Viajan al frontend en la respuesta de
+# /api/cupo/, porque "ese dia esta lleno" y "no queda panga para tu grupo" son dos
+# cosas distintas para el cliente que las lee.
+MOTIVO_LLENO = 'lleno'
+MOTIVO_SIN_PANGA = 'sin_panga'
+
+
+def caben(grupos, capacidades):
+    """Hay forma de darle a cada grupo una panga donde quepa?
+
+    Las dos listas llegan ordenadas **de mayor a menor**.
+
+    Se emparejan de mayor a menor: el grupo mas grande con la panga mas grande. Si
+    a algun grupo le toca una panga mas chica que el, no hay reparto posible — y no
+    lo hay con ningun otro orden, porque cualquier reparto valido tendria que darle
+    a ese grupo una panga al menos igual de grande, y todas las de arriba ya estan
+    ocupadas por grupos aun mayores.
+
+    Con 10 pangas el costo es irrelevante, pero importa que el criterio sea exacto
+    y no una heuristica: de esto depende si se cobra o no.
+    """
+    if len(grupos) > len(capacidades):
+        return False
+    return all(g <= c for g, c in zip(grupos, capacidades))
+
+
+def motivo_sin_lugar(personas, grupos, capacidades, tope):
+    """Por que no entra un grupo de `personas` mas, o None si si entra.
+
+    `grupos` son los tamanos ya vendidos de ese dia, sin el nuevo. `capacidades`
+    viene ordenada de mayor a menor. `tope` es el maximo de viajes del dia.
+
+    Es el nucleo puro del cupo: no toca la base. Lo llaman la validacion al
+    guardar, el endpoint /api/cupo/, la busqueda de la proxima fecha y el comando
+    revisar_cupo — los cuatro tienen que decidir igual, y por eso deciden aqui.
+
+    El orden de las dos comprobaciones importa: si el dia esta lleno a secas, ese
+    es el mensaje util, no el de las pangas.
+    """
+    if len(grupos) + 1 > tope:
+        return MOTIVO_LLENO
+    if not caben(sorted([*grupos, personas], reverse=True), capacidades):
+        return MOTIVO_SIN_PANGA
+    return None
+
+
 # Hasta donde se busca un dia con espacio cuando el pedido esta lleno. Tres meses
 # cubre de sobra la ventana en que la gente planea un viaje de pesca.
 DIAS_BUSQUEDA_DISPONIBILIDAD = 90
