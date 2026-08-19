@@ -13,7 +13,7 @@ from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
 from apps.fleet.models import Embarcacion
-from apps.testing import ApiTestCase
+from apps.testing import ApiTestCase, crear_flota
 
 from .admin import telefono_marcable
 from .models import (
@@ -35,6 +35,9 @@ def envejecer(reserva, **delta):
 
 
 def datos_reserva(**overrides):
+    # Hay tests que llaman Reserva(**datos_reserva()).full_clean() directo, y el
+    # motor de cupo le pregunta a la flota: sin pangas no cabe nadie.
+    crear_flota()
     base = {
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
