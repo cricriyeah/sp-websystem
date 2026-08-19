@@ -1,3 +1,6 @@
+from collections import defaultdict
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -117,3 +120,82 @@ class Capitan(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class EmbarcacionNoDisponible(models.Model):
+    """Una panga que no puede salir un dia concreto: mantenimiento, motor, lo que sea.
+
+    Se registra **que falta**, no cuantas hay. Un conteo ("hoy hay 7") es un dato
+    que nadie puede auditar despues; "la Lupita esta en mantenimiento el jueves"
+    si. Sin registro para una fecha, ese dia esta la flota activa completa.
+
+    No se confunde con `CupoDiario` (en `apps/bookings`), que es un tope de viajes
+    que decide el negocio: son dos cosas distintas y meterlas en un solo numero las
+    volveria imposibles de separar. Un dia puede tener las 10 pangas y un
+    `CupoDiario` de 6 porque no hay capitanes; o el tope de 10 y solo 7 pangas a
+    flote.
+    """
+
+    fecha = models.DateField()
+    embarcacion = models.ForeignKey(
+        # PROTECT: si esta panga tiene historial de bajas, borrarla dejaria
+        # registros huerfanos. Para sacarla de la flota se desmarca `activa`.
+        Embarcacion, on_delete=models.PROTECT, related_name='no_disponibles',
+    )
+    motivo = models.CharField(
+        max_length=200, blank=True,
+        help_text='Mantenimiento, motor descompuesto, prestada. Opcional.',
+    )
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='embarcaciones_dadas_de_baja',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('fecha', 'embarcacion')
+        ordering = ['-fecha', 'embarcacion__nombre']
+        verbose_name = 'embarcacion no disponible'
+        verbose_name_plural = 'embarcaciones no disponibles'
+
+    def __str__(self):
+        return f'{self.embarcacion.nombre} fuera el {self.fecha}'
+
+
+def capacidades_por_fecha(desde, hasta):
+    """Capacidad de cada panga que puede salir, por dia, de mayor a menor.
+
+    `{fecha: [5, 3, 3, ...]}` con una entrada por cada dia del rango, incluidos
+    los dias en que no falta ninguna.
+
+    Son **dos consultas para todo el rango**, no una por dia: de aqui cuelga la
+    busqueda de los proximos 90 dias del checkout, y esa busqueda ya murio una vez
+    por hacer una peticion por dia (ver bookings.proxima_fecha_disponible).
+
+    La flota no sabe nada de reservas a proposito: esto responde que hay a flote,
+    no que esta vendido.
+    """
+    activas = list(Embarcacion.objects.filter(activa=True).values_list('id', 'capacidad_maxima'))
+
+    fuera = defaultdict(set)
+    for fecha, embarcacion_id in EmbarcacionNoDisponible.objects.filter(
+        fecha__range=(desde, hasta)
+    ).values_list('fecha', 'embarcacion_id'):
+        fuera[fecha].add(embarcacion_id)
+
+    dias = (hasta - desde).days + 1
+    return {
+        fecha: sorted(
+            (capacidad for pk, capacidad in activas if pk not in fuera[fecha]), reverse=True
+        )
+        for fecha in (desde + timedelta(days=i) for i in range(dias))
+    }
+
+
+def capacidades_disponibles(fecha):
+    """Las capacidades a flote ese dia, de mayor a menor.
+
+    Es el caso de un dia de `capacidades_por_fecha`, y se implementa asi para que
+    la ruta de una fecha y la de 90 dias no puedan discrepar nunca.
+    """
+    return capacidades_por_fecha(fecha, fecha)[fecha]
