@@ -420,6 +420,7 @@
     "errorPaymentProvider": "No pudimos conectar con el procesador de pagos. No se te cobró nada. Espera un momento e intenta de nuevo, o escríbenos por WhatsApp y lo cerramos contigo.",
     "errorPaymentInProgress": "Ya hay un cobro en curso para esta reserva. Espera unos segundos y recarga la página antes de volver a intentar, para no pagar dos veces.",
     "dayFullNotice": "Ese día ya no tiene cupo disponible. Te asignamos automáticamente el {date}, la fecha más próxima con espacio.",
+    "noBoatForGroupNotice": "Ese día todavía tiene espacio, pero ya no queda una panga para un grupo de {people} personas: solo dos de la flota llevan más de 3. Te asignamos automáticamente el {date}, la fecha más próxima con una disponible.",
     "paymentUnavailable": "Los pagos en línea todavía no están disponibles. Contáctanos por WhatsApp para reservar.",
     "confirmation": {
       "headline": "¡Listo! Tu reserva está confirmada",

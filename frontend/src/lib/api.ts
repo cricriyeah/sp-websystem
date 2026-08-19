@@ -26,11 +26,16 @@ export type Cupo = {
   cupo_maximo: number;
   ocupadas: number;
   disponible: boolean;
-  // Primera fecha con espacio a partir de la pedida, o null si no hay ninguna
-  // en los proximos 90 dias. La calcula el backend en una sola consulta: antes
-  // el navegador la buscaba preguntando dia por dia, hasta 90 peticiones
-  // seguidas que agotaban el limite de 60/min y morian en un 429 silencioso.
+  // Primera fecha con espacio PARA ESE GRUPO a partir de la pedida, o null si no
+  // hay ninguna en los proximos 90 dias. La calcula el backend en cuatro
+  // consultas: antes el navegador la buscaba preguntando dia por dia, hasta 90
+  // peticiones seguidas que agotaban el limite de 60/min y morian en un 429
+  // silencioso.
   proxima_disponible: string | null;
+  // Por que no se puede. 'lleno' = se acabaron los viajes del dia. 'sin_panga' =
+  // el dia tiene espacio, pero ya no queda embarcacion donde quepa este grupo:
+  // solo dos de la flota llevan mas de 3 personas.
+  motivo_no_disponible: 'lleno' | 'sin_panga' | null;
 };
 
 export type ReservaInput = {
@@ -101,7 +106,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const getTarifa = () => request<Tarifa>('/api/tarifa/');
 
-export const getCupo = (fecha: string) => request<Cupo>(`/api/cupo/?fecha=${fecha}`);
+export const getCupo = (fecha: string, personas: number) =>
+  request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`);
 
 /** Crea la reserva de este checkout, o actualiza la que ya existia. */
 export const guardarReserva = (data: ReservaInput) =>
