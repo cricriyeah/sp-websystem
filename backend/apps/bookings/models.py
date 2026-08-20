@@ -59,13 +59,34 @@ def salida_aware(fecha, hora):
 
 
 class CupoDiario(models.Model):
-    """Override manual del cupo maximo de viajes para un dia especifico.
-    Sin registro para un dia -> aplica CUPO_MAXIMO_DEFAULT."""
+    """Tope de viajes que el negocio decide para un dia. Sin registro para un dia
+    aplica CUPO_MAXIMO_DEFAULT.
+
+    **No es lo mismo que las pangas fuera de servicio**, y confundirlos es facil.
+    Esto es una decision del negocio ("ese sabado solo quiero sacar 4 viajes");
+    `fleet.EmbarcacionNoDisponible` es un hecho fisico ("la Lupita esta en
+    mantenimiento el jueves"). Son dos condiciones y se cumplen las dos.
+
+    Antes se usaba tambien para reducir el dia cuando iban a faltar embarcaciones.
+    Eso ya no: para eso esta el otro modelo, que registra cual falta y por que, y
+    ademas le dice al motor de cupo que capacidad se perdio y no solo cuantos
+    viajes. Lo que sigue siendo de aqui:
+
+    - **Cerrar el dia entero** con un 0: mal clima pronosticado, festivo, no se
+      opera. Con el otro modelo habria que marcar las diez pangas una por una.
+    - **Faltan capitanes.** El motor de cupo no sabe nada de capitanes: puede
+      vender diez viajes un dia en que solo hay seis disponibles. Hasta que eso se
+      modele, este es el unico freno.
+    - Cualquier tope que el negocio quiera poner sin una razon fisica detras.
+    """
 
     fecha = models.DateField(unique=True)
     cupo_maximo = models.PositiveSmallIntegerField(
-        help_text='Cupo maximo de viajes para este dia. Usalo para cerrar o reducir '
-                   'el dia cuando se sepa que van a faltar embarcaciones.'
+        help_text='Tope de viajes que decide el negocio para este dia. Ponlo en 0 para '
+                  'cerrar el dia (mal clima, festivo), o usalo cuando falten capitanes: '
+                  'el cupo todavia no sabe contarlos. Si lo que falta es una PANGA no uses '
+                  'esto — marcala en "Embarcaciones no disponibles", que registra cual y '
+                  'por que.'
     )
 
     class Meta:

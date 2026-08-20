@@ -213,10 +213,20 @@ Decide dos cosas y las distingue en el mensaje:
    (`fleet.capacidades_disponibles(fecha)`). Un dia puede tener lugares libres y aun asi
    no admitir un grupo de 4: solo dos pangas de la flota llevan mas de 3 personas.
 
-Los dos numeros son independientes a proposito: `CupoDiario` es un tope que decide el
-negocio (por ejemplo, faltan capitanes) y `fleet.EmbarcacionNoDisponible` es que panga
-fisicamente no sale ese dia. Una panga dada de baja para siempre se desmarca con
-`Embarcacion.activa`, no se borra.
+Los dos numeros son independientes a proposito y confundirlos es facil:
+
+- `CupoDiario` es un **tope que decide el negocio**. Sirve para cerrar el dia entero
+  (un 0), para cuando **faltan capitanes** —el motor de cupo no sabe contarlos, puede
+  vender diez viajes un dia con seis capitanes— y para cualquier tope sin razon fisica.
+- `fleet.EmbarcacionNoDisponible` es un **hecho fisico**: que panga no sale ese dia.
+  Reemplaza al uso viejo de `CupoDiario` para "van a faltar embarcaciones", porque
+  registra cual falta y por que, y le dice al motor que capacidad se perdio y no solo
+  cuantos viajes.
+- Una panga dada de baja para siempre se desmarca con `Embarcacion.activa`, no se borra.
+
+No bajar el `CupoDiario` **y** marcar la panga fuera por el mismo motivo: no rompe nada
+(queda mas restrictivo, no menos) pero deja dos registros diciendo lo mismo y ninguno
+explicando el porque.
 
 El nucleo (`caben`, `motivo_sin_lugar`) es puro y no toca la base: lo comparten la
 validacion, `/api/cupo/`, `proxima_fecha_disponible` y el comando `revisar_cupo`, para

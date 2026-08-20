@@ -84,8 +84,13 @@ tours-pesca/
   **El sistema lo hace cumplir**: asignar la misma panga —o el mismo capitán— a dos viajes
   del mismo día se rechaza al guardar, venga de la agenda o del admin de reservas. Una
   reserva cancelada suelta su panga.
-- Capacidad operativa actual de la flota: **8 a 10 viajes por día en total**, y varía —
-  hay días con menos pangas disponibles. El ajuste por día se hace con `CupoDiario`.
+- Capacidad operativa actual de la flota: **8 a 10 viajes por día en total**, y varía.
+  Hay dos formas de ajustar un día y no son intercambiables:
+  - Falta una **panga** (mantenimiento, motor): se marca en *Pangas fuera de servicio*.
+    Queda registrado cuál falta y por qué.
+  - Falta otra cosa: **cerrar el día** entero por mal clima, o **faltan capitanes** —el
+    sistema todavía no los cuenta al vender— o simplemente quieres sacar menos viajes
+    ese día. Eso es *Cupo diario*.
 
 ### Pagos
 - El cliente elige libremente: 100% en línea, o 30% de anticipo en línea + 70% restante en efectivo.
