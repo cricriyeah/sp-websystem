@@ -17,6 +17,11 @@ class Command(BaseCommand):
         permisos = [
             # Reservas: vista operativa completa. Sin delete (se cancela, no se borra).
             ('bookings', 'reserva', ['add', 'change', 'view']),
+            # Agenda: repartir panga y capitan de los viajes ya vendidos. Es un
+            # proxy de Reserva y por eso tiene permisos propios. Sin add ni
+            # delete: una reserva se crea vendiendo y se cancela, no se inventa
+            # ni se borra desde la agenda.
+            ('bookings', 'agenda', ['change', 'view']),
             # Cupo diario: puede cerrar/reducir el dia cuando falten embarcaciones.
             ('bookings', 'cupodiario', ['add', 'change', 'view']),
             # Checkouts abandonados: lista de recuperacion, solo lectura (el proxy
@@ -28,6 +33,11 @@ class Command(BaseCommand):
             # Catalogo de flota: solo consulta, para asignar embarcacion/capitan.
             ('fleet', 'embarcacion', ['view']),
             ('fleet', 'capitan', ['view']),
+            # Que panga no sale un dia (mantenimiento, motor). Es trabajo diario
+            # suyo, no de los jefes. Con delete a proposito: si marco una fuera
+            # por error, o el motor se arreglo antes, tiene que poder deshacerlo
+            # — no es un registro historico, es el estado de un dia.
+            ('fleet', 'embarcacionnodisponible', ['add', 'change', 'delete', 'view']),
             # fleet.Tarifa deliberadamente fuera: es informacion financiera, solo jefes.
         ]
 

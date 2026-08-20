@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
+from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible
 from apps.testing import ApiTestCase, crear_flota
 
 from .admin import telefono_marcable
@@ -25,6 +25,7 @@ from .models import (
     motivo_sin_lugar,
     proxima_fecha_disponible,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
+    Agenda,
     CheckoutAbandonado,
     CupoDiario,
     Reserva,
@@ -1032,3 +1033,202 @@ class RevisarCupoTests(TestCase):
         salida = self._salida()
         self.assertIn(str(self.fecha), salida)
         self.assertIn('4, 4, 4', salida)
+
+
+class AgendaListaTests(TestCase):
+    """La agenda reparte lo vendido: solo lo que todavia se puede repartir."""
+
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=3)
+
+    def test_lista_las_pagadas_y_las_asignadas(self):
+        pagada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        asignada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        asignada.embarcacion = Embarcacion.objects.first()
+        asignada.estado = Reserva.Estado.ASIGNADA
+        asignada.save()
+
+        en_agenda = set(Agenda.por_repartir().values_list('pk', flat=True))
+
+        self.assertEqual(en_agenda, {pagada.pk, asignada.pk})
+
+    def test_no_lista_las_que_no_se_reparten(self):
+        """Una cancelada no se reparte, una completada ya salio, y una
+        pendiente_pago no es una reserva todavia."""
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
+        Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
+        Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
+
+        self.assertEqual(Agenda.por_repartir().count(), 0)
+
+    def test_ordena_lo_que_sale_primero_primero(self):
+        """Al reves que el listado de Reservas, que es un historial."""
+        tarde = crear_reserva(fecha=self.fecha + timedelta(days=1),
+                              estado=Reserva.Estado.PAGADA)
+        temprano = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        self.assertEqual(
+            list(Agenda.por_repartir().values_list('pk', flat=True)),
+            [temprano.pk, tarde.pk],
+        )
+
+
+class TransicionDeAsignacionTests(TestCase):
+    """Poner la panga da el viaje por asignado; quitarla lo regresa.
+
+    El capitan no entra en esto a proposito: se acordo que poner la panga baste,
+    sabiendo que un viaje puede llegar a la salida sin capitan. La compensacion es
+    el aviso en rojo de la agenda, no una validacion que frene el trabajo.
+    """
+
+    def setUp(self):
+        crear_flota()
+        self.panga = Embarcacion.objects.first()
+        self.capitan = Capitan.objects.create(nombre='Juan Perez', telefono='+5216121234567')
+        self.fecha = date.today() + timedelta(days=3)
+
+    def test_ponerle_panga_a_una_pagada_la_deja_asignada(self):
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.ASIGNADA)
+
+    def test_quitarle_la_panga_a_una_asignada_la_regresa_a_pagada(self):
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.embarcacion = None
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+
+    def test_guardar_solo_la_embarcacion_tambien_mueve_el_estado(self):
+        """El listado editable del admin puede guardar con update_fields; si
+        `estado` no va en esa lista, el UPDATE no lo escribe y la fila queda
+        diciendo `pagada` con una panga puesta."""
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        reserva.embarcacion = self.panga
+        reserva.save(update_fields=['embarcacion'])
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.ASIGNADA)
+
+    def test_el_capitan_solo_no_asigna_el_viaje(self):
+        """Sin panga no hay viaje repartido, por mucho capitan que tenga."""
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        reserva.capitan = self.capitan
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+
+    def test_una_completada_no_se_mueve(self):
+        """Estados finales: los decide una persona, no un efecto secundario."""
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.COMPLETADA)
+
+    def test_una_cancelada_no_se_mueve(self):
+        reserva = Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.CANCELADA)
+
+    def test_una_pendiente_de_pago_no_se_asigna_por_ponerle_panga(self):
+        """Un checkout sin pagar no es un viaje que repartir."""
+        reserva = Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
+
+
+class UnaSalidaPorDiaTests(TestCase):
+    """Una panga hace un solo viaje al dia, y un capitan tambien.
+
+    Las salidas son de 5 a 7am y el viaje dura de 6 a 7 horas, asi que escalonar
+    dos salidas con la misma panga no existe. El repo decia lo contrario hasta
+    esta tarea (ver backend/CLAUDE.md).
+    """
+
+    def setUp(self):
+        crear_flota()
+        self.panga = Embarcacion.objects.first()
+        self.capitan = Capitan.objects.create(nombre='Juan Perez', telefono='+5216121234567')
+        self.fecha = date.today() + timedelta(days=3)
+
+    def test_la_misma_panga_dos_veces_el_mismo_dia_se_rechaza(self):
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                      embarcacion=self.panga)
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra.embarcacion = self.panga
+        with self.assertRaises(ValidationError) as ctx:
+            otra.full_clean()
+
+        self.assertIn('embarcacion', ctx.exception.message_dict)
+        self.assertIn('una sola salida por dia', str(ctx.exception))
+
+    def test_el_mismo_capitan_dos_veces_el_mismo_dia_se_rechaza(self):
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                      capitan=self.capitan)
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra.capitan = self.capitan
+        with self.assertRaises(ValidationError) as ctx:
+            otra.full_clean()
+
+        self.assertIn('capitan', ctx.exception.message_dict)
+
+    def test_la_misma_panga_en_dias_distintos_se_acepta(self):
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                      embarcacion=self.panga)
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha + timedelta(days=1),
+                                       estado=Reserva.Estado.PAGADA))
+        otra.embarcacion = self.panga
+        otra.full_clean()
+
+    def test_una_cancelada_suelta_su_panga(self):
+        cancelada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                                  embarcacion=self.panga)
+        cancelada.estado = Reserva.Estado.CANCELADA
+        cancelada.save()
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra.embarcacion = self.panga
+        otra.full_clean()
+
+    def test_editar_una_reserva_ya_asignada_no_choca_consigo_misma(self):
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                                embarcacion=self.panga)
+
+        reserva.nombre_cliente = 'Ana Ruiz Corregido'
+        reserva.full_clean()
+
+    def test_una_reserva_sin_panga_no_choca_con_otra_sin_panga(self):
+        """Dos viajes sin repartir el mismo dia son lo normal, no un choque."""
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)).full_clean()

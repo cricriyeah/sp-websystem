@@ -1,4 +1,5 @@
 import re
+from datetime import timedelta
 from urllib.parse import quote
 
 from django.contrib import admin
@@ -6,6 +7,7 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
+from django.db import models
 from django.http import JsonResponse
 from django.urls import path
 from django.utils import timezone
@@ -18,6 +20,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
+    Agenda,
     CheckoutAbandonado,
     CupoDiario,
     Reserva,
@@ -347,3 +350,91 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 @admin.register(Group)
 class GroupAdmin(BaseGroupAdmin, ModelAdmin):
     pass
+
+
+# Los avisos de la agenda. El texto va como argumento y no incrustado: desde
+# Django 5 `format_html` sin argumentos es un error, y asi ademas queda escapado.
+AVISO = '<span style="color:#dc2626;font-weight:600">{}</span>'
+
+
+class CuandoFilter(admin.SimpleListFilter):
+    """Los dos modos de usar la agenda, que son dos rangos de fechas y nada mas.
+
+    "Cerrar el dia" y "repartir la semana" no son dos pantallas: es la misma tabla
+    mirando distintos dias.
+    """
+
+    title = 'cuando'
+    parameter_name = 'cuando'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('manana', 'Manana'),
+            ('semana', 'Proximos 7 dias'),
+        ]
+
+    def queryset(self, request, queryset):
+        hoy = timezone.localdate()
+
+        if self.value() == 'manana':
+            # Cerrar el dia se hace la tarde anterior: si la salida es a las 6am,
+            # a esa hora ya nadie esta asignando pangas.
+            return queryset.filter(fecha=hoy + timedelta(days=1))
+
+        # Por defecto, repartir la semana. Los atrasados sin repartir entran a
+        # proposito: un viaje cobrado que ya paso y nadie asigno es un error que
+        # hay que ver. Los que si se repartieron no: esos ya se resolvieron,
+        # aunque hayan pasado.
+        return queryset.filter(
+            models.Q(fecha__range=(hoy, hoy + timedelta(days=7)))
+            | models.Q(fecha__lt=hoy, estado=Reserva.Estado.PAGADA)
+        )
+
+
+@admin.register(Agenda)
+class AgendaAdmin(ModelAdmin):
+    """Repartir los viajes ya vendidos: que panga y que capitan le toca a cada uno.
+
+    Se edita en el propio listado, que es el punto entero de la pantalla: con ocho
+    o diez viajes en un fin de semana, entrar a cada reserva son treinta clics
+    para lo que en la cabeza es una sola decision.
+    """
+
+    list_display = [
+        'fecha', 'hora', 'nombre_cliente', 'numero_personas',
+        'embarcacion', 'capitan', 'aviso',
+    ]
+    list_editable = ['embarcacion', 'capitan']
+    list_display_links = ['nombre_cliente']
+    list_filter = [CuandoFilter]
+    search_fields = ['nombre_cliente', 'telefono_cliente']
+    autocomplete_fields = ['embarcacion', 'capitan']
+    list_per_page = 50
+
+    def get_queryset(self, request):
+        # `embarcacion` y `capitan` salen en el listado: sin esto es una consulta
+        # por fila.
+        return Agenda.por_repartir().select_related('embarcacion', 'capitan')
+
+    def has_add_permission(self, request):
+        # Una reserva se crea vendiendo, no se inventa desde aqui.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Una reserva se cancela, no se borra (ver docs/contexto-negocio.md).
+        return False
+
+    @admin.display(description='Aviso')
+    def aviso(self, obj):
+        """Lo que esta mal, en rojo y sin ambiguedad.
+
+        Un viaje `pagada` sin panga y con fecha futura NO se marca: eso no es un
+        error, es el trabajo pendiente y es justo a lo que se viene a esta
+        pantalla. Marcarlo volveria roja la agenda entera el primer dia y el rojo
+        dejaria de significar algo.
+        """
+        if obj.estado == Reserva.Estado.PAGADA and obj.fecha < timezone.localdate():
+            return format_html(AVISO, 'ATRASADO')
+        if obj.estado == Reserva.Estado.ASIGNADA and not obj.capitan_id:
+            return format_html(AVISO, 'SIN CAPITAN')
+        return '—'

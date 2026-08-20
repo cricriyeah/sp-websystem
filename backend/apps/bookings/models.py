@@ -463,6 +463,15 @@ class Reserva(models.Model):
         return instance
 
     def save(self, *args, **kwargs):
+        self._derivar_estado_de_asignacion()
+
+        # Si la llamada trae `update_fields` y toca la embarcacion, `estado` tiene
+        # que ir en esa lista o el UPDATE no lo escribe: la fila quedaria diciendo
+        # `pagada` con una panga puesta. El listado editable del admin guarda asi.
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None and 'embarcacion' in update_fields:
+            kwargs['update_fields'] = [*update_fields, 'estado']
+
         # Sella cuando se atribuyo la venta, venga de donde venga (link ?ref= al
         # crear la reserva, panel de la vendedora, shell). Va en save() y no en la
         # vista porque hay varias entradas y todas deben dejar la misma constancia.
@@ -474,6 +483,27 @@ class Reserva(models.Model):
         super().save(*args, **kwargs)
         self._vendedora_original = self.vendedora_id
 
+    def _derivar_estado_de_asignacion(self):
+        """Poner la panga da el viaje por asignado; quitarla lo regresa a pagada.
+
+        Va en save() y no en el admin para que valga igual desde el shell o desde
+        cualquier pantalla futura, y va en save() y no en clean() porque clean()
+        solo corre cuando alguien valida: un save() directo dejaria el estado
+        diciendo una cosa y la panga otra.
+
+        Solo entre esos dos estados. `completada` y `cancelada` son finales y los
+        decide una persona, no el efecto secundario de editar un campo; y una
+        `pendiente_pago` no es un viaje que repartir.
+
+        El capitan no cuenta: se acordo que poner la panga baste, sabiendo que un
+        viaje puede llegar a la salida sin capitan. Eso se avisa en rojo en la
+        agenda, no se frena aqui.
+        """
+        if self.estado == self.Estado.PAGADA and self.embarcacion_id:
+            self.estado = self.Estado.ASIGNADA
+        elif self.estado == self.Estado.ASIGNADA and not self.embarcacion_id:
+            self.estado = self.Estado.PAGADA
+
     def clean(self):
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
             validar_cupo_diario(self.fecha, self.numero_personas, excluir_pk=self.pk)
@@ -484,6 +514,7 @@ class Reserva(models.Model):
                 {'deslinde_aceptado': 'La reserva web requiere aceptar el deslinde de responsabilidad.'}
             )
         self._validar_capacidad_embarcacion()
+        self._validar_una_salida_por_dia()
         self._validar_cambio_de_fecha()
 
     def _validar_capacidad_embarcacion(self):
@@ -491,6 +522,38 @@ class Reserva(models.Model):
             raise ValidationError({
                 'embarcacion': f'{self.embarcacion} admite hasta {self.embarcacion.capacidad_maxima} '
                                f'personas y la reserva es para {self.numero_personas}.',
+            })
+
+    def _validar_una_salida_por_dia(self):
+        """Una panga hace un solo viaje al dia, y un capitan tambien.
+
+        Las salidas son de 5 a 7am y el viaje dura de 6 a 7 horas: no hay forma de
+        escalonar dos salidas con la misma panga. `backend/CLAUDE.md` decia lo
+        contrario ("la doble asignacion no se valida a proposito") y esa nota se
+        corrige junto con este cambio.
+
+        Cuentan los estados que ya ocupan cupo: una reserva cancelada suelta su
+        panga y su capitan para que otro viaje del dia los use.
+
+        La regla ya estaba medio vigente sin que nadie la escribiera — el motor de
+        cupo exige que haya al menos tantas pangas a flote como viajes, o sea, ya
+        vende como si cada panga hiciera una sola salida diaria. Esto la hace
+        cumplir del otro lado, al repartir.
+        """
+        del_dia = Reserva.objects.filter(fecha=self.fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
+        if self.pk:
+            del_dia = del_dia.exclude(pk=self.pk)
+
+        if self.embarcacion_id and del_dia.filter(embarcacion_id=self.embarcacion_id).exists():
+            raise ValidationError({
+                'embarcacion': f'{self.embarcacion.nombre} ya tiene un viaje el {self.fecha}. '
+                               f'Una panga hace una sola salida por dia.',
+            })
+
+        if self.capitan_id and del_dia.filter(capitan_id=self.capitan_id).exists():
+            raise ValidationError({
+                'capitan': f'{self.capitan.nombre} ya tiene un viaje el {self.fecha}. '
+                           f'Un capitan hace una sola salida por dia.',
             })
 
     @property
@@ -564,3 +627,34 @@ class CheckoutAbandonado(Reserva):
     def abandonados(cls):
         limite = timezone.now() - timedelta(hours=HORAS_PARA_CONSIDERAR_ABANDONADO)
         return cls.objects.filter(estado=Reserva.Estado.PENDIENTE_PAGO, creado_en__lt=limite)
+
+
+class Agenda(Reserva):
+    """Proxy de `Reserva` para repartir los viajes ya vendidos.
+
+    Es la pantalla donde se decide que panga y que capitan le toca a cada viaje.
+    Proxy y no modelo nuevo a proposito, igual que `CheckoutAbandonado`: es la
+    misma fila vista con otro filtro y otras columnas. Si un viaje se cancela,
+    desaparece de aqui solo.
+
+    Lista solo `pagada` y `asignada`, que son los dos estados que todavia se
+    pueden repartir. Una cancelada no se reparte, una completada ya salio, y una
+    `pendiente_pago` no es una reserva todavia — esa vive en la pantalla de
+    checkouts abandonados.
+    """
+
+    ESTADOS_EN_AGENDA = [Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA]
+
+    class Meta:
+        proxy = True
+        # Ascendente, al reves que el listado de Reservas: eso es un historial y
+        # ensena lo mas reciente arriba; esto es una agenda y lo que sale primero
+        # va primero. De paso, los viajes atrasados quedan hasta arriba solos por
+        # ser los mas viejos: lo que esta mal aparece sin que nadie lo ordene.
+        ordering = ['fecha', 'hora']
+        verbose_name = 'agenda'
+        verbose_name_plural = 'agenda'
+
+    @classmethod
+    def por_repartir(cls):
+        return cls.objects.filter(estado__in=cls.ESTADOS_EN_AGENDA)

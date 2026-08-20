@@ -81,6 +81,9 @@ tours-pesca/
   silencioso, pero es un fallo.
 - Una panga y un capitán hacen **un solo viaje por día**: las salidas son de 5 a 7am y el
   viaje dura de 6 a 7 horas, así que no hay forma de escalonar dos con la misma panga.
+  **El sistema lo hace cumplir**: asignar la misma panga —o el mismo capitán— a dos viajes
+  del mismo día se rechaza al guardar, venga de la agenda o del admin de reservas. Una
+  reserva cancelada suelta su panga.
 - Capacidad operativa actual de la flota: **8 a 10 viajes por día en total**, y varía —
   hay días con menos pangas disponibles. El ajuste por día se hace con `CupoDiario`.
 
