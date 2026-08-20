@@ -463,6 +463,15 @@ class Reserva(models.Model):
         return instance
 
     def save(self, *args, **kwargs):
+        self._derivar_estado_de_asignacion()
+
+        # Si la llamada trae `update_fields` y toca la embarcacion, `estado` tiene
+        # que ir en esa lista o el UPDATE no lo escribe: la fila quedaria diciendo
+        # `pagada` con una panga puesta. El listado editable del admin guarda asi.
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None and 'embarcacion' in update_fields:
+            kwargs['update_fields'] = [*update_fields, 'estado']
+
         # Sella cuando se atribuyo la venta, venga de donde venga (link ?ref= al
         # crear la reserva, panel de la vendedora, shell). Va en save() y no en la
         # vista porque hay varias entradas y todas deben dejar la misma constancia.
@@ -473,6 +482,27 @@ class Reserva(models.Model):
                 kwargs['update_fields'] = [*update_fields, 'vendedora_asignada_en']
         super().save(*args, **kwargs)
         self._vendedora_original = self.vendedora_id
+
+    def _derivar_estado_de_asignacion(self):
+        """Poner la panga da el viaje por asignado; quitarla lo regresa a pagada.
+
+        Va en save() y no en el admin para que valga igual desde el shell o desde
+        cualquier pantalla futura, y va en save() y no en clean() porque clean()
+        solo corre cuando alguien valida: un save() directo dejaria el estado
+        diciendo una cosa y la panga otra.
+
+        Solo entre esos dos estados. `completada` y `cancelada` son finales y los
+        decide una persona, no el efecto secundario de editar un campo; y una
+        `pendiente_pago` no es un viaje que repartir.
+
+        El capitan no cuenta: se acordo que poner la panga baste, sabiendo que un
+        viaje puede llegar a la salida sin capitan. Eso se avisa en rojo en la
+        agenda, no se frena aqui.
+        """
+        if self.estado == self.Estado.PAGADA and self.embarcacion_id:
+            self.estado = self.Estado.ASIGNADA
+        elif self.estado == self.Estado.ASIGNADA and not self.embarcacion_id:
+            self.estado = self.Estado.PAGADA
 
     def clean(self):
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:

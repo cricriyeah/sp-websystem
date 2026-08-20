@@ -1074,3 +1074,91 @@ class AgendaListaTests(TestCase):
             list(Agenda.por_repartir().values_list('pk', flat=True)),
             [temprano.pk, tarde.pk],
         )
+
+
+class TransicionDeAsignacionTests(TestCase):
+    """Poner la panga da el viaje por asignado; quitarla lo regresa.
+
+    El capitan no entra en esto a proposito: se acordo que poner la panga baste,
+    sabiendo que un viaje puede llegar a la salida sin capitan. La compensacion es
+    el aviso en rojo de la agenda, no una validacion que frene el trabajo.
+    """
+
+    def setUp(self):
+        crear_flota()
+        self.panga = Embarcacion.objects.first()
+        self.capitan = Capitan.objects.create(nombre='Juan Perez', telefono='+5216121234567')
+        self.fecha = date.today() + timedelta(days=3)
+
+    def test_ponerle_panga_a_una_pagada_la_deja_asignada(self):
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.ASIGNADA)
+
+    def test_quitarle_la_panga_a_una_asignada_la_regresa_a_pagada(self):
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.embarcacion = None
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+
+    def test_guardar_solo_la_embarcacion_tambien_mueve_el_estado(self):
+        """El listado editable del admin puede guardar con update_fields; si
+        `estado` no va en esa lista, el UPDATE no lo escribe y la fila queda
+        diciendo `pagada` con una panga puesta."""
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        reserva.embarcacion = self.panga
+        reserva.save(update_fields=['embarcacion'])
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.ASIGNADA)
+
+    def test_el_capitan_solo_no_asigna_el_viaje(self):
+        """Sin panga no hay viaje repartido, por mucho capitan que tenga."""
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        reserva.capitan = self.capitan
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+
+    def test_una_completada_no_se_mueve(self):
+        """Estados finales: los decide una persona, no un efecto secundario."""
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.COMPLETADA)
+
+    def test_una_cancelada_no_se_mueve(self):
+        reserva = Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.CANCELADA)
+
+    def test_una_pendiente_de_pago_no_se_asigna_por_ponerle_panga(self):
+        """Un checkout sin pagar no es un viaje que repartir."""
+        reserva = Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
+
+        reserva.embarcacion = self.panga
+        reserva.save()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
