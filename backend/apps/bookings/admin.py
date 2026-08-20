@@ -27,6 +27,10 @@ from .models import (
     Vendedora,
 )
 
+# Que tan atras llega "recien llegadas". 48 horas cubre un fin de semana y lo que
+# entro mientras nadie miraba, sin que la lista deje de ser corta.
+HORAS_RECIEN_LLEGADA = 48
+
 # Lada de Mexico, para completar los telefonos que el cliente escribio a 10 digitos.
 LADA_PAIS = '52'
 
@@ -72,14 +76,87 @@ class VendedoraAdmin(ModelAdmin):
         return obj.ventas.count()
 
 
+class LlegadaFilter(admin.SimpleListFilter):
+    """Lo ultimo que entro al sistema, sin importar para cuando sea el viaje.
+
+    En el listado de Reservas si puede ser un filtro aparte: aqui no hay ninguna
+    ventana de fechas con la que chocar. En la agenda es una opcion del filtro
+    "Cuando" justo porque ahi si la hay.
+    """
+
+    title = 'llegada'
+    parameter_name = 'llegada'
+
+    def lookups(self, request, model_admin):
+        return [('recientes', f'Recien llegadas ({HORAS_RECIEN_LLEGADA}h)')]
+
+    def queryset(self, request, queryset):
+        if self.value() != 'recientes':
+            return queryset
+        return queryset.filter(
+            creado_en__gte=timezone.now() - timedelta(hours=HORAS_RECIEN_LLEGADA))
+
+
+class AvisoDeReservasNuevasMixin:
+    """Contador de reservas nuevas para un listado del admin.
+
+    El admin es HTML renderizado en el servidor: no hay push ni reactividad. Esto
+    le da a cada listado un endpoint `nuevas/` que dice cuantas reservas entraron
+    desde que se cargo la pagina, y `bookings/reservas-nuevas.js` lo consulta cada
+    30 segundos para pintar un boton flotante.
+
+    Lo comparten el listado de Reservas y la Agenda: en las dos se esta mirando la
+    pantalla cuando entra una reserva nueva. Cada admin registra su propia URL con
+    su nombre, y el JS arma el endpoint relativo a la pagina en la que esta.
+    """
+
+    def get_urls(self):
+        # Va antes de super(): las URLs del admin terminan en un catch-all
+        # `<path:object_id>/` que si no se tragaria 'nuevas/'.
+        return [
+            path(
+                'nuevas/',
+                self.admin_site.admin_view(self.reservas_nuevas_view),
+                name=f'bookings_{self.model._meta.model_name}_nuevas',
+            ),
+        ] + super().get_urls()
+
+    def reservas_nuevas_view(self, request):
+        """Cuantas reservas entraron desde que la vendedora cargo el listado.
+
+        Sin `desde` devuelve la hora del servidor y cero: asi el navegador nunca
+        usa su propio reloj como referencia. Con `desde` cuenta solo las que ya
+        ocupan cupo (pagadas en adelante) — los checkouts abandonados dejan filas
+        en pendiente_pago y avisar de esas volveria el contador puro ruido.
+        """
+        if not self.has_view_permission(request):
+            raise PermissionDenied
+
+        desde_param = request.GET.get('desde')
+        if not desde_param:
+            return JsonResponse({'desde': timezone.now().isoformat(), 'nuevas': 0})
+
+        desde = parse_datetime(desde_param)
+        if desde is None:
+            return JsonResponse({'detail': 'desde invalido.'}, status=400)
+        if timezone.is_naive(desde):
+            desde = timezone.make_aware(desde)
+
+        nuevas = Reserva.objects.filter(
+            creado_en__gt=desde, estado__in=ESTADOS_QUE_OCUPAN_CUPO
+        ).count()
+        return JsonResponse({'desde': desde.isoformat(), 'nuevas': nuevas})
+
+
 @admin.register(Reserva)
-class ReservaAdmin(ModelAdmin):
+class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
     list_display = [
         'fecha', 'hora', 'nombre_cliente', 'numero_personas',
         'estado', 'canal_origen', 'vendedora', 'cobro', 'extras',
         'embarcacion', 'capitan', 'reembolsada',
     ]
     list_filter = [
+        LlegadaFilter,
         'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago', 'en_disputa',
         'lleva_lunch', 'pide_bebidas', 'pide_transporte',
         'embarcacion', 'capitan', 'reembolsada',
@@ -108,6 +185,8 @@ class ReservaAdmin(ModelAdmin):
     class Media:
         # Aviso de reservas nuevas en el listado, ver reservas_nuevas_view.
         js = ['bookings/reservas-nuevas.js']
+        # Ancho de las columnas de asignacion, ver el propio archivo.
+        css = {'all': ['bookings/admin-columnas.css']}
 
     @admin.display(description='Extras')
     def extras(self, obj):
@@ -156,43 +235,6 @@ class ReservaAdmin(ModelAdmin):
         return format_html(
             '<span style="color:#b91c1c">{} (descuadre de {})</span>', resumen, saldo
         )
-
-    def get_urls(self):
-        # Va antes de super(): las URLs del admin terminan en un catch-all
-        # `<path:object_id>/` que si no se tragaria 'nuevas/'.
-        return [
-            path(
-                'nuevas/',
-                self.admin_site.admin_view(self.reservas_nuevas_view),
-                name='bookings_reserva_nuevas',
-            ),
-        ] + super().get_urls()
-
-    def reservas_nuevas_view(self, request):
-        """Cuantas reservas entraron desde que la vendedora cargo el listado.
-
-        Sin `desde` devuelve la hora del servidor y cero: asi el navegador nunca
-        usa su propio reloj como referencia. Con `desde` cuenta solo las que ya
-        ocupan cupo (pagadas en adelante) — los checkouts abandonados dejan filas
-        en pendiente_pago y avisar de esas volveria el contador puro ruido.
-        """
-        if not self.has_view_permission(request):
-            raise PermissionDenied
-
-        desde_param = request.GET.get('desde')
-        if not desde_param:
-            return JsonResponse({'desde': timezone.now().isoformat(), 'nuevas': 0})
-
-        desde = parse_datetime(desde_param)
-        if desde is None:
-            return JsonResponse({'detail': 'desde invalido.'}, status=400)
-        if timezone.is_naive(desde):
-            desde = timezone.make_aware(desde)
-
-        nuevas = Reserva.objects.filter(
-            creado_en__gt=desde, estado__in=ESTADOS_QUE_OCUPAN_CUPO
-        ).count()
-        return JsonResponse({'desde': desde.isoformat(), 'nuevas': nuevas})
 
     @admin.action(description='Marcar como venta mia')
     def marcar_como_venta_mia(self, request, queryset):
@@ -371,10 +413,19 @@ class CuandoFilter(admin.SimpleListFilter):
         return [
             ('manana', 'Manana'),
             ('semana', 'Proximos 7 dias'),
+            ('recientes', f'Recien llegadas ({HORAS_RECIEN_LLEGADA}h)'),
         ]
 
     def queryset(self, request, queryset):
         hoy = timezone.localdate()
+
+        if self.value() == 'recientes':
+            # Lo ultimo que entro al sistema, **sin** la ventana de fechas: una
+            # reserva que llego hoy para diciembre tiene que aparecer. Por eso es
+            # una opcion de este filtro y no un filtro aparte, que se sumaria a la
+            # ventana y la dejaria fuera.
+            return queryset.filter(
+                creado_en__gte=timezone.now() - timedelta(hours=HORAS_RECIEN_LLEGADA))
 
         if self.value() == 'manana':
             # Cerrar el dia se hace la tarde anterior: si la salida es a las 6am,
@@ -392,7 +443,7 @@ class CuandoFilter(admin.SimpleListFilter):
 
 
 @admin.register(Agenda)
-class AgendaAdmin(ModelAdmin):
+class AgendaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
     """Repartir los viajes ya vendidos: que panga y que capitan le toca a cada uno.
 
     Se edita en el propio listado, que es el punto entero de la pantalla: con ocho
@@ -411,10 +462,27 @@ class AgendaAdmin(ModelAdmin):
     autocomplete_fields = ['embarcacion', 'capitan']
     list_per_page = 50
 
+    class Media:
+        # Mismo aviso de reservas nuevas que el listado de Reservas: repartir
+        # tambien se hace mirando esta pantalla.
+        js = ['bookings/reservas-nuevas.js']
+        css = {'all': ['bookings/admin-columnas.css']}
+
     def get_queryset(self, request):
         # `embarcacion` y `capitan` salen en el listado: sin esto es una consulta
         # por fila.
         return Agenda.por_repartir().select_related('embarcacion', 'capitan')
+
+    def get_ordering(self, request):
+        """Lo recien llegado se ordena por llegada, no por fecha de viaje.
+
+        Con el orden normal (fecha, hora) lo que acaba de entrar quedaria
+        enterrado entre lo de la semana, que es lo contrario de para que sirve ese
+        modo.
+        """
+        if request.GET.get(CuandoFilter.parameter_name) == 'recientes':
+            return ['-creado_en']
+        return super().get_ordering(request)
 
     def has_add_permission(self, request):
         # Una reserva se crea vendiendo, no se inventa desde aqui.

@@ -10,9 +10,10 @@
 
   var INTERVALO_MS = 30000;
 
-  // Solo en el listado de reservas. Se valida contra la URL y no contra el DOM
-  // porque unfold reescribe las plantillas del admin y sus ids pueden cambiar.
-  if (!/\/bookings\/reserva\/$/.test(window.location.pathname)) return;
+  // Solo en los listados que tienen su endpoint `nuevas/`: Reservas y Agenda. Se
+  // valida contra la URL y no contra el DOM porque unfold reescribe las
+  // plantillas del admin y sus ids pueden cambiar.
+  if (!/\/bookings\/(reserva|agenda)\/$/.test(window.location.pathname)) return;
 
   var endpoint = new URL('nuevas/', window.location.origin + window.location.pathname).toString();
   var desde = null;

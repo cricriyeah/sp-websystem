@@ -1,0 +1,35 @@
+/* Ancho de las columnas de asignacion en el admin (Agenda y Reservas).
+ *
+ * Estas dos columnas llevan un selector de embarcacion y otro de capitan, y
+ * Unfold le pone `min-w-0` y `overflow-hidden` a cada celda del listado. El
+ * resultado es que los nombres se cortan justo donde importan: "Lupita (Grande,
+ * max. 5)" queda en "Lupita (Gran...".
+ *
+ * Va en una hoja propia y no en clases de Tailwind a proposito: el admin sirve
+ * el `styles.css` que Unfold trae ya compilado y aqui no hay build de Tailwind,
+ * asi que una clase que Unfold no use simplemente no existe y el navegador la
+ * ignora sin decir nada.
+ *
+ * Los selectores `column-*` y `field-*` son de Django y Unfold los conserva
+ * (verificado contra el HTML que emite, no asumido).
+ */
+
+.column-embarcacion,
+.field-embarcacion,
+.column-capitan,
+.field-capitan {
+  min-width: 15rem;
+  overflow: visible;
+}
+
+/* El widget de dentro tiene que crecer con la celda, si no el ancho extra queda
+ * en blanco y el nombre se sigue cortando igual. */
+.field-embarcacion select,
+.field-capitan select,
+.field-embarcacion input,
+.field-capitan input,
+.field-embarcacion .select2-container,
+.field-capitan .select2-container {
+  min-width: 14rem;
+  width: 100%;
+}
