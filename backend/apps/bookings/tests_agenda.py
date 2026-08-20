@@ -6,6 +6,7 @@ lo que esta mal.
 """
 from datetime import date, time, timedelta
 
+from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.management import call_command
 from django.test import TestCase
@@ -152,3 +153,34 @@ class AgendaPermisosTests(TestCase):
         respuesta = self.client.get(
             reverse('admin:fleet_embarcacionnodisponible_add'))
         self.assertEqual(respuesta.status_code, 200)
+
+
+class MenuLateralTests(TestCase):
+    """El menu de unfold se arma a mano en `UNFOLD['SIDEBAR']` (config/settings/
+    base.py): un modelo nuevo no aparece solo. Sin esto la pantalla existe, tiene
+    su URL y funciona — pero nadie la encuentra salvo hundida en "todas las
+    aplicaciones", que es tanto como no tenerla.
+
+    Se revisa la configuracion y no el HTML de `/admin/` a proposito: esa pagina
+    lista todas las apps (`show_all_applications`), asi que buscar la URL ahi pasa
+    aunque el menu lateral no la tenga. La primera version de esta prueba hacia
+    justo eso y pasaba sin que el menu existiera.
+    """
+
+    def _enlaces_del_menu(self):
+        return {
+            str(item['link'])
+            for grupo in settings.UNFOLD['SIDEBAR']['navigation']
+            for item in grupo['items']
+        }
+
+    def test_el_menu_lleva_a_la_agenda(self):
+        self.assertIn(
+            reverse('admin:bookings_agenda_changelist'), self._enlaces_del_menu())
+
+    def test_el_menu_lleva_a_las_embarcaciones_no_disponibles(self):
+        """Marcar que una panga no sale un dia es trabajo diario. Llego con la
+        pieza del cupo y se quedo sin entrada en el menu."""
+        self.assertIn(
+            reverse('admin:fleet_embarcacionnodisponible_changelist'),
+            self._enlaces_del_menu())

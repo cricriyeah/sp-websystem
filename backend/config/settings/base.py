@@ -149,6 +149,12 @@ UNFOLD = {
                         'permission': lambda request: request.user.has_perm('bookings.view_reserva'),
                     },
                     {
+                        'title': 'Agenda',
+                        'icon': 'assignment_turned_in',
+                        'link': reverse_lazy('admin:bookings_agenda_changelist'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_agenda'),
+                    },
+                    {
                         'title': 'Checkouts abandonados',
                         'icon': 'remove_shopping_cart',
                         'link': reverse_lazy('admin:bookings_checkoutabandonado_changelist'),
@@ -161,6 +167,14 @@ UNFOLD = {
                         'icon': 'event_busy',
                         'link': reverse_lazy('admin:bookings_cupodiario_changelist'),
                         'permission': lambda request: request.user.has_perm('bookings.view_cupodiario'),
+                    },
+                    {
+                        'title': 'Pangas fuera de servicio',
+                        'icon': 'build',
+                        'link': reverse_lazy('admin:fleet_embarcacionnodisponible_changelist'),
+                        'permission': lambda request: request.user.has_perm(
+                            'fleet.view_embarcacionnodisponible'
+                        ),
                     },
                 ],
             },
