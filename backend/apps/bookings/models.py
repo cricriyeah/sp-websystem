@@ -564,3 +564,34 @@ class CheckoutAbandonado(Reserva):
     def abandonados(cls):
         limite = timezone.now() - timedelta(hours=HORAS_PARA_CONSIDERAR_ABANDONADO)
         return cls.objects.filter(estado=Reserva.Estado.PENDIENTE_PAGO, creado_en__lt=limite)
+
+
+class Agenda(Reserva):
+    """Proxy de `Reserva` para repartir los viajes ya vendidos.
+
+    Es la pantalla donde se decide que panga y que capitan le toca a cada viaje.
+    Proxy y no modelo nuevo a proposito, igual que `CheckoutAbandonado`: es la
+    misma fila vista con otro filtro y otras columnas. Si un viaje se cancela,
+    desaparece de aqui solo.
+
+    Lista solo `pagada` y `asignada`, que son los dos estados que todavia se
+    pueden repartir. Una cancelada no se reparte, una completada ya salio, y una
+    `pendiente_pago` no es una reserva todavia — esa vive en la pantalla de
+    checkouts abandonados.
+    """
+
+    ESTADOS_EN_AGENDA = [Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA]
+
+    class Meta:
+        proxy = True
+        # Ascendente, al reves que el listado de Reservas: eso es un historial y
+        # ensena lo mas reciente arriba; esto es una agenda y lo que sale primero
+        # va primero. De paso, los viajes atrasados quedan hasta arriba solos por
+        # ser los mas viejos: lo que esta mal aparece sin que nadie lo ordene.
+        ordering = ['fecha', 'hora']
+        verbose_name = 'agenda'
+        verbose_name_plural = 'agenda'
+
+    @classmethod
+    def por_repartir(cls):
+        return cls.objects.filter(estado__in=cls.ESTADOS_EN_AGENDA)

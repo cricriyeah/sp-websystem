@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
+from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible
 from apps.testing import ApiTestCase, crear_flota
 
 from .admin import telefono_marcable
@@ -25,6 +25,7 @@ from .models import (
     motivo_sin_lugar,
     proxima_fecha_disponible,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
+    Agenda,
     CheckoutAbandonado,
     CupoDiario,
     Reserva,
@@ -1032,3 +1033,44 @@ class RevisarCupoTests(TestCase):
         salida = self._salida()
         self.assertIn(str(self.fecha), salida)
         self.assertIn('4, 4, 4', salida)
+
+
+class AgendaListaTests(TestCase):
+    """La agenda reparte lo vendido: solo lo que todavia se puede repartir."""
+
+    def setUp(self):
+        crear_flota()
+        self.fecha = date.today() + timedelta(days=3)
+
+    def test_lista_las_pagadas_y_las_asignadas(self):
+        pagada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        asignada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        asignada.embarcacion = Embarcacion.objects.first()
+        asignada.estado = Reserva.Estado.ASIGNADA
+        asignada.save()
+
+        en_agenda = set(Agenda.por_repartir().values_list('pk', flat=True))
+
+        self.assertEqual(en_agenda, {pagada.pk, asignada.pk})
+
+    def test_no_lista_las_que_no_se_reparten(self):
+        """Una cancelada no se reparte, una completada ya salio, y una
+        pendiente_pago no es una reserva todavia."""
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
+        Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
+        Reserva.objects.create(**datos_reserva(
+            fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
+
+        self.assertEqual(Agenda.por_repartir().count(), 0)
+
+    def test_ordena_lo_que_sale_primero_primero(self):
+        """Al reves que el listado de Reservas, que es un historial."""
+        tarde = crear_reserva(fecha=self.fecha + timedelta(days=1),
+                              estado=Reserva.Estado.PAGADA)
+        temprano = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        self.assertEqual(
+            list(Agenda.por_repartir().values_list('pk', flat=True)),
+            [temprano.pk, tarde.pk],
+        )
