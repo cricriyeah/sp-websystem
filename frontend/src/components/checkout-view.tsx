@@ -12,6 +12,7 @@ import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
+import { Turnstile } from '@/components/turnstile';
 import {
   ApiError,
   crearPago,
@@ -322,6 +323,7 @@ export function CheckoutView({
         pide_transporte: solicitudes.transport,
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
+        captcha_token: captchaToken.current,
       });
 
       const pagoResponse = await crearPago(reserva.id, {
@@ -344,6 +346,10 @@ export function CheckoutView({
   };
 
   const locked = phase === 'payment' || phase === 'unavailable';
+  // Token de Turnstile. Lo produce el widget solo; el backend lo exige unicamente
+  // al crear la reserva, asi que estar vacio no bloquea un reenvio.
+  const captchaToken = useRef('');
+
   const enviando = phase === 'submitting';
 
   if (phase === 'confirmed') {
@@ -564,6 +570,7 @@ export function CheckoutView({
               setPhase('confirmed');
             }}
           />
+          <Turnstile onToken={(token) => (captchaToken.current = token)} />
         </div>
       </main>
 

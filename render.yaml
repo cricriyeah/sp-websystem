@@ -144,3 +144,11 @@ envVarGroups:
       # reserva. El fallo mas caro del sistema es tambien el mas silencioso.
       - key: SENTRY_DSN
         sync: false
+      # Secret de Cloudflare Turnstile, el gate anti-bot de POST /api/reservas/
+      # (ver backend/apps/bookings/captcha.py). Sin ella la verificacion es un
+      # no-op y el checkout acepta todo, asi que si el sitio ya esta en vivo hay
+      # que ponerla. La site key publica correspondiente va en Vercel como
+      # NEXT_PUBLIC_TURNSTILE_SITE_KEY — son un par, tienen que salir del mismo
+      # widget del dashboard de Cloudflare.
+      - key: TURNSTILE_SECRET_KEY
+        sync: false

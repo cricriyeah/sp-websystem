@@ -13,7 +13,8 @@ from .models import (
     evaluar_cupo,
     proxima_fecha_disponible,
 )
-from .serializers import CupoSerializer, ReservaCheckoutSerializer
+from .captcha import verificar_turnstile
+from .serializers import CupoSerializer, ReservaCheckoutSerializer, ip_del_cliente
 
 
 class CupoDisponibleView(APIView):
@@ -76,6 +77,20 @@ class ReservaCheckoutView(APIView):
 
     def post(self, request):
         existente = self._pendiente_de(request.data.get('checkout_id'))
+
+        # El captcha se cobra solo al CREAR, no al corregir. El token de
+        # Turnstile es de un solo uso y este endpoint es un upsert: el checkout
+        # reenvia la misma reserva cada vez que el cliente cambia la fecha o
+        # reintenta tras un error, asi que pedirlo siempre romperia el checkout
+        # al segundo cambio. Cobrarlo al crear deja el costo donde importa — un
+        # bot paga un captcha por cada reserva nueva que quiera meter.
+        if existente is None and not verificar_turnstile(
+            request.data.get('captcha_token'), ip_del_cliente(request)
+        ):
+            return Response(
+                {'captcha': 'No pudimos verificar que eres una persona. Recarga e intenta de nuevo.'},
+                status=403,
+            )
 
         serializer = ReservaCheckoutSerializer(
             existente, data=request.data, context={'request': request}

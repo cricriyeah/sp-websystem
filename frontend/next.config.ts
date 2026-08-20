@@ -16,12 +16,15 @@ const csp = [
   // Stripe.js se sirve desde su CDN y monta los campos de tarjeta en un iframe
   // suyo — asi es como el numero de tarjeta nunca toca nuestro dominio y el
   // sistema se queda en alcance PCI-DSS SAQ-A.
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+  // challenges.cloudflare.com sirve el widget de Turnstile, el gate anti-bot
+  // del checkout. Sin esto el CSP lo bloquea y el widget nunca da un token.
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  `connect-src 'self' ${apiUrl} https://api.stripe.com`,
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  `connect-src 'self' ${apiUrl} https://api.stripe.com https://challenges.cloudflare.com`,
+  // Turnstile monta su reto en un iframe propio, igual que Stripe.
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
   // Nadie debe poder meter el checkout dentro de un iframe: es como se monta un
   // clickjacking sobre un formulario de pago.
   "frame-ancestors 'none'",
