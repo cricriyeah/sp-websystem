@@ -1162,3 +1162,73 @@ class TransicionDeAsignacionTests(TestCase):
 
         reserva.refresh_from_db()
         self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
+
+
+class UnaSalidaPorDiaTests(TestCase):
+    """Una panga hace un solo viaje al dia, y un capitan tambien.
+
+    Las salidas son de 5 a 7am y el viaje dura de 6 a 7 horas, asi que escalonar
+    dos salidas con la misma panga no existe. El repo decia lo contrario hasta
+    esta tarea (ver backend/CLAUDE.md).
+    """
+
+    def setUp(self):
+        crear_flota()
+        self.panga = Embarcacion.objects.first()
+        self.capitan = Capitan.objects.create(nombre='Juan Perez', telefono='+5216121234567')
+        self.fecha = date.today() + timedelta(days=3)
+
+    def test_la_misma_panga_dos_veces_el_mismo_dia_se_rechaza(self):
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                      embarcacion=self.panga)
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra.embarcacion = self.panga
+        with self.assertRaises(ValidationError) as ctx:
+            otra.full_clean()
+
+        self.assertIn('embarcacion', ctx.exception.message_dict)
+        self.assertIn('una sola salida por dia', str(ctx.exception))
+
+    def test_el_mismo_capitan_dos_veces_el_mismo_dia_se_rechaza(self):
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                      capitan=self.capitan)
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra.capitan = self.capitan
+        with self.assertRaises(ValidationError) as ctx:
+            otra.full_clean()
+
+        self.assertIn('capitan', ctx.exception.message_dict)
+
+    def test_la_misma_panga_en_dias_distintos_se_acepta(self):
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                      embarcacion=self.panga)
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha + timedelta(days=1),
+                                       estado=Reserva.Estado.PAGADA))
+        otra.embarcacion = self.panga
+        otra.full_clean()
+
+    def test_una_cancelada_suelta_su_panga(self):
+        cancelada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                                  embarcacion=self.panga)
+        cancelada.estado = Reserva.Estado.CANCELADA
+        cancelada.save()
+
+        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra.embarcacion = self.panga
+        otra.full_clean()
+
+    def test_editar_una_reserva_ya_asignada_no_choca_consigo_misma(self):
+        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+                                embarcacion=self.panga)
+
+        reserva.nombre_cliente = 'Ana Ruiz Corregido'
+        reserva.full_clean()
+
+    def test_una_reserva_sin_panga_no_choca_con_otra_sin_panga(self):
+        """Dos viajes sin repartir el mismo dia son lo normal, no un choque."""
+        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+
+        Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)).full_clean()

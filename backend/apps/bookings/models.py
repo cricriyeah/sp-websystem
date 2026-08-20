@@ -514,6 +514,7 @@ class Reserva(models.Model):
                 {'deslinde_aceptado': 'La reserva web requiere aceptar el deslinde de responsabilidad.'}
             )
         self._validar_capacidad_embarcacion()
+        self._validar_una_salida_por_dia()
         self._validar_cambio_de_fecha()
 
     def _validar_capacidad_embarcacion(self):
@@ -521,6 +522,38 @@ class Reserva(models.Model):
             raise ValidationError({
                 'embarcacion': f'{self.embarcacion} admite hasta {self.embarcacion.capacidad_maxima} '
                                f'personas y la reserva es para {self.numero_personas}.',
+            })
+
+    def _validar_una_salida_por_dia(self):
+        """Una panga hace un solo viaje al dia, y un capitan tambien.
+
+        Las salidas son de 5 a 7am y el viaje dura de 6 a 7 horas: no hay forma de
+        escalonar dos salidas con la misma panga. `backend/CLAUDE.md` decia lo
+        contrario ("la doble asignacion no se valida a proposito") y esa nota se
+        corrige junto con este cambio.
+
+        Cuentan los estados que ya ocupan cupo: una reserva cancelada suelta su
+        panga y su capitan para que otro viaje del dia los use.
+
+        La regla ya estaba medio vigente sin que nadie la escribiera — el motor de
+        cupo exige que haya al menos tantas pangas a flote como viajes, o sea, ya
+        vende como si cada panga hiciera una sola salida diaria. Esto la hace
+        cumplir del otro lado, al repartir.
+        """
+        del_dia = Reserva.objects.filter(fecha=self.fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
+        if self.pk:
+            del_dia = del_dia.exclude(pk=self.pk)
+
+        if self.embarcacion_id and del_dia.filter(embarcacion_id=self.embarcacion_id).exists():
+            raise ValidationError({
+                'embarcacion': f'{self.embarcacion.nombre} ya tiene un viaje el {self.fecha}. '
+                               f'Una panga hace una sola salida por dia.',
+            })
+
+        if self.capitan_id and del_dia.filter(capitan_id=self.capitan_id).exists():
+            raise ValidationError({
+                'capitan': f'{self.capitan.nombre} ya tiene un viaje el {self.fecha}. '
+                           f'Un capitan hace una sola salida por dia.',
             })
 
     @property
