@@ -62,6 +62,10 @@ export type ReservaInput = {
   // ignora en silencio el que no resuelva: un link viejo no puede impedir una
   // reserva.
   ref?: string;
+  // Token de Cloudflare Turnstile. El backend solo lo exige al CREAR la reserva
+  // — el token es de un solo uso y este endpoint es un upsert, asi que corregir
+  // la fecha reenvia sin token (ver backend/apps/bookings/views.py).
+  captcha_token?: string;
 };
 
 export type Reserva = ReservaInput & {
