@@ -108,9 +108,12 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   por eso puede superar el saldo del tour y no se valida contra el. `saldo_pendiente`
   ya lo descuenta. La accion de admin "Registrar liquidacion en efectivo" rellena el
   saldo exacto y sella quien y cuando; para un monto distinto se edita a mano.
-- **La doble asignacion de panga/capitan no se valida a proposito**: la vendedora puede
-  querer sacar dos viajes con la misma panga escalonando la salida. Es criterio suyo,
-  no del sistema.
+- **Una panga hace una sola salida por dia, y un capitan tambien.** Se valida en
+  `Reserva._validar_una_salida_por_dia()`, llamada desde `clean()`, asi que aplica igual
+  desde la agenda, desde el admin de Reservas y desde el shell. Cuentan los estados de
+  `ESTADOS_QUE_OCUPAN_CUPO`: una cancelada suelta su panga. Las salidas son de 5 a 7am y
+  el viaje dura de 6 a 7 horas — escalonar no existe. (Esta nota decia lo contrario hasta
+  agosto de 2026, cuando el negocio aclaro la regla.)
 - **Red de seguridad**: `manage.py conciliar_pagos [--dias 7] [--dry-run]` busca reservas
   `pendiente_pago` que ya tengan PaymentIntent, le pregunta a Stripe como quedo y aplica
   lo mismo que el webhook. Existe porque una entrega de webhook puede perderse para
@@ -233,6 +236,25 @@ fallo seguro y no silencioso, pero fallo.
 - Auditoria: `manage.py revisar_cupo [--dias 90]` lista los dias ya vendidos que la flota
   real no puede operar. La validacion corre al guardar, asi que las reservas anteriores a
   este motor sobrevivieron intactas.
+
+## Agenda operativa
+
+`bookings.Agenda`, proxy de `Reserva` (mismo patron que `CheckoutAbandonado`). Es donde
+se reparten los viajes vendidos: que panga y que capitan le toca a cada uno.
+
+- Lista solo `pagada` y `asignada`, con `list_editable` para embarcacion y capitan: se
+  reparte desde el listado, sin entrar a cada reserva.
+- **Poner la panga sube el estado a `asignada`; quitarla lo regresa a `pagada`.** La
+  transicion vive en `Reserva._derivar_estado_de_asignacion()`, llamada desde `save()` —
+  no en el admin, y no en `clean()`, que solo corre cuando alguien valida.
+- **El capitan no se exige.** Un viaje `asignada` sin capitan se marca "SIN CAPITAN" en
+  rojo; es un riesgo aceptado a cambio de que poner la panga baste.
+- Un viaje `pagada` con fecha pasada se marca "ATRASADO": se cobro y nadie lo repartio.
+  Uno `pagada` con fecha futura no se marca — eso es el trabajo pendiente, no un error.
+- Filtro "Cuando" con dos modos: **Manana** (cerrar el dia, que se hace la tarde
+  anterior) y **Proximos 7 dias** (repartir la semana, incluye los atrasados que siguen
+  en `pagada`). Sin filtro abre en la semana.
+- Los permisos son propios del proxy: `manage.py setup_roles` se los da a la vendedora.
 
 ## Cancelacion y reembolso
 
