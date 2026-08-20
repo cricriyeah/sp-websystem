@@ -321,3 +321,18 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Gate anti-bot del checkout publico (ver apps/bookings/captcha.py). Vacias en
+# local: sin llaves la verificacion es un no-op y el checkout funciona igual,
+# mismo patron que Stripe y Resend. La publica va aparte en el frontend
+# (NEXT_PUBLIC_TURNSTILE_SITE_KEY) porque la pinta el navegador.
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
+
+# Duracion de la sesion del backoffice. El default de Django son dos semanas, que
+# para un panel con dinero y datos de clientes es demasiado: una laptop olvidada
+# sigue con sesion viva medio mes. Diez horas cubren una jornada completa.
+SESSION_COOKIE_AGE = int(os.environ.get('SESSION_COOKIE_AGE', 60 * 60 * 10))
+
+# La cuenta atras se reinicia con cada peticion, no desde el login: a quien esta
+# trabajando no se le cierra la sesion a media tarde por haber entrado temprano.
+SESSION_SAVE_EVERY_REQUEST = True
