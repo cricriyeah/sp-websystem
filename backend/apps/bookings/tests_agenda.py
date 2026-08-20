@@ -13,10 +13,11 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.fleet.models import Capitan, Embarcacion
+from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible
 from apps.testing import crear_flota
 
 from .models import Reserva
+from .panorama import armar_panorama
 
 
 def datos(**overrides):
@@ -334,3 +335,143 @@ class RecienLlegadasTests(TestCase):
 
         self.assertIn(reciente.pk, filas)
         self.assertIn(vieja.pk, filas)
+
+
+class PanoramaTests(TestCase):
+    """La cuadricula de dias x pangas que va arriba de la agenda.
+
+    Responde la pregunta que la tabla no responde: que panga tengo libre el
+    jueves. Solo lectura — repartir se sigue haciendo en la tabla.
+    """
+
+    def setUp(self):
+        crear_flota()
+        self.hoy = date.today()
+        self.grande = Embarcacion.objects.filter(capacidad_maxima=5).order_by('nombre').first()
+
+    def test_un_renglon_por_panga_activa_y_una_columna_por_dia(self):
+        panorama = armar_panorama(self.hoy, dias=7)
+
+        self.assertEqual(len(panorama.dias), 7)
+        self.assertEqual(panorama.dias[0], self.hoy)
+        self.assertEqual(len(panorama.renglones), Embarcacion.objects.filter(activa=True).count())
+        self.assertTrue(all(len(r.celdas) == 7 for r in panorama.renglones))
+
+    def test_las_pangas_grandes_van_arriba(self):
+        """Son las escasas: solo dos llevan mas de 3 personas."""
+        capacidades = [r.embarcacion.capacidad_maxima for r in armar_panorama(self.hoy).renglones]
+
+        self.assertEqual(capacidades, sorted(capacidades, reverse=True))
+
+    def test_una_panga_inactiva_no_tiene_renglon(self):
+        self.grande.activa = False
+        self.grande.save()
+
+        pangas = [r.embarcacion.pk for r in armar_panorama(self.hoy).renglones]
+
+        self.assertNotIn(self.grande.pk, pangas)
+
+    def test_el_viaje_asignado_cae_en_su_celda(self):
+        reserva = viaje(fecha=self.hoy + timedelta(days=2),
+                        estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande)
+
+        renglon = self._renglon_de(armar_panorama(self.hoy), self.grande)
+
+        self.assertEqual(renglon.celdas[2].reserva.pk, reserva.pk)
+        self.assertIsNone(renglon.celdas[1].reserva)
+
+    def test_una_panga_fuera_de_servicio_no_se_ve_igual_que_una_libre(self):
+        """Vacio significa disponible. Confundir las dos haria asignar un viaje a
+        una panga que no sale."""
+        EmbarcacionNoDisponible.objects.create(
+            fecha=self.hoy + timedelta(days=3), embarcacion=self.grande, motivo='Motor')
+
+        renglon = self._renglon_de(armar_panorama(self.hoy), self.grande)
+
+        self.assertFalse(renglon.celdas[3].disponible)
+        self.assertTrue(renglon.celdas[2].disponible)
+
+    def test_los_viajes_sin_panga_no_se_pierden(self):
+        """No tienen renglon donde caer: sin esto serian invisibles, que es lo
+        peor que puede hacer un panorama."""
+        pendiente = viaje(fecha=self.hoy + timedelta(days=1))
+
+        panorama = armar_panorama(self.hoy)
+
+        self.assertEqual([r.pk for r in panorama.sin_repartir[1]], [pendiente.pk])
+        self.assertEqual(panorama.sin_repartir[0], [])
+
+    def test_el_conteo_del_pie_cuadra(self):
+        viaje(fecha=self.hoy, estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande)
+        EmbarcacionNoDisponible.objects.create(
+            fecha=self.hoy, embarcacion=Embarcacion.objects.filter(capacidad_maxima=3).first())
+
+        panorama = armar_panorama(self.hoy)
+
+        self.assertEqual(panorama.ocupadas[0], 1)
+        self.assertEqual(panorama.a_flote[0], 9)
+
+    def test_una_cancelada_libera_su_celda(self):
+        cancelada = viaje(fecha=self.hoy, estado=Reserva.Estado.ASIGNADA,
+                          embarcacion=self.grande)
+        Reserva.objects.filter(pk=cancelada.pk).update(estado=Reserva.Estado.CANCELADA)
+
+        renglon = self._renglon_de(armar_panorama(self.hoy), self.grande)
+
+        self.assertIsNone(renglon.celdas[0].reserva)
+
+    def test_no_crece_en_consultas_con_los_dias(self):
+        """Tres fijas: reservas del rango, pangas activas y las marcadas fuera.
+        Sin ninguna por celda — son 70 celdas con la flota completa."""
+        with self.assertNumQueries(3):
+            armar_panorama(self.hoy, dias=7)
+
+    def _renglon_de(self, panorama, embarcacion):
+        return next(r for r in panorama.renglones if r.embarcacion.pk == embarcacion.pk)
+
+
+class PanoramaEnLaAgendaTests(TestCase):
+    """La cuadricula se pinta dentro del listado de la agenda, plegable."""
+
+    def setUp(self):
+        crear_flota()
+        self.url = reverse('admin:bookings_agenda_changelist')
+        self.client.force_login(
+            User.objects.create_superuser('jefe', 'jefe@example.com', 'x')
+        )
+
+    def test_la_agenda_trae_el_panorama_en_su_contexto(self):
+        panorama = self.client.get(self.url).context['panorama']
+
+        self.assertEqual(len(panorama.dias), 7)
+        self.assertEqual(len(panorama.renglones), 10)
+
+    def test_el_panorama_no_sigue_al_filtro_de_fechas(self):
+        """Siempre los proximos 7 dias. En "Manana" quedaria una sola columna y
+        en "Recien llegadas" no hay ventana de fechas que dibujar; y es cerrando
+        el dia de manana cuando mas sirve ver la semana completa."""
+        for modo in ['manana', 'recientes', 'semana']:
+            with self.subTest(modo=modo):
+                panorama = self.client.get(self.url, {'cuando': modo}).context['panorama']
+                self.assertEqual(len(panorama.dias), 7)
+                self.assertEqual(panorama.dias[0], date.today())
+
+    def test_la_cuadricula_se_pinta_y_es_plegable(self):
+        viaje(fecha=date.today() + timedelta(days=1),
+              estado=Reserva.Estado.ASIGNADA,
+              embarcacion=Embarcacion.objects.filter(capacidad_maxima=5).first())
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn('<details', html)
+        self.assertIn('data-panorama', html)
+        self.assertIn('Ana Ruiz', html)
+
+    def test_el_script_del_toggle_se_carga(self):
+        self.assertContains(self.client.get(self.url), 'bookings/panorama.js')
+
+    def test_el_listado_de_reservas_no_trae_panorama(self):
+        """Es una ayuda para repartir, no para el historial."""
+        respuesta = self.client.get(reverse('admin:bookings_reserva_changelist'))
+
+        self.assertIsNone(respuesta.context.get('panorama'))

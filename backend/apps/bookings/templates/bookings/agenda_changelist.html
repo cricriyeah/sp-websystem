@@ -1,0 +1,103 @@
+{% extends "admin/change_list.html" %}
+
+{% comment %}
+La cuadricula de dias x pangas, encima de la tabla de la agenda.
+
+Se engancha en el bloque `result_list` de la plantilla de unfold (verificado
+contra `unfold/templates/admin/change_list.html`, no asumido) y llama a
+`block.super` para que la tabla siga saliendo debajo, intacta.
+
+Los estilos van en `style=` en linea y no en clases de Tailwind: el admin sirve
+el `styles.css` que unfold trae ya compilado y aqui no hay build de Tailwind, asi
+que una clase que unfold no use no existe y el navegador la ignora sin decir nada.
+{% endcomment %}
+
+{% block result_list %}
+    {% if panorama %}
+        <details data-panorama open
+                 class="border border-base-200 rounded-default dark:border-base-800"
+                 style="margin-bottom: 1.5rem">
+            <summary class="font-medium px-4 py-3 text-base-700 text-sm dark:text-base-300"
+                     style="cursor: pointer; user-select: none">
+                Panorama de la semana — que panga esta libre cada dia
+            </summary>
+
+            <div style="overflow-x: auto; padding: 0 1rem 1rem">
+                <table class="text-sm" style="width: 100%; border-collapse: collapse">
+                    <thead>
+                        <tr>
+                            <th class="text-base-500 dark:text-base-400"
+                                style="text-align: left; padding: 0.5rem; white-space: nowrap">Panga</th>
+                            {% for dia in panorama.dias %}
+                                <th class="text-base-500 dark:text-base-400"
+                                    style="text-align: left; padding: 0.5rem; white-space: nowrap">
+                                    {{ dia|date:"D j M" }}
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for renglon in panorama.renglones %}
+                            <tr class="border-t border-base-200 dark:border-base-800">
+                                <td class="text-base-700 dark:text-base-300"
+                                    style="padding: 0.4rem 0.5rem; white-space: nowrap">
+                                    {{ renglon.embarcacion.nombre }}
+                                    <span class="text-base-400" style="font-size: 0.75rem">
+                                        ({{ renglon.embarcacion.capacidad_maxima }})
+                                    </span>
+                                </td>
+                                {% for celda in renglon.celdas %}
+                                    <td style="padding: 0.4rem 0.5rem; white-space: nowrap">
+                                        {% if not celda.disponible %}
+                                            {# Fuera de servicio no es lo mismo que libre. #}
+                                            <span class="text-base-400" style="font-style: italic">fuera</span>
+                                        {% elif celda.reserva %}
+                                            <span class="text-base-700 dark:text-base-300">
+                                                {{ celda.reserva.nombre_cliente }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-base-300 dark:text-base-600">·</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+
+                        {% comment %}
+                        Los viajes vendidos sin panga no caben en ningun renglon
+                        de arriba. Este es en la practica la lista de trabajo.
+                        {% endcomment %}
+                        <tr class="border-t border-base-200 dark:border-base-800">
+                            <td style="padding: 0.5rem; white-space: nowrap">
+                                <span style="color: #dc2626; font-weight: 600">Sin repartir</span>
+                            </td>
+                            {% for pendientes in panorama.sin_repartir %}
+                                <td style="padding: 0.5rem; white-space: nowrap">
+                                    {% if pendientes %}
+                                        <span style="color: #dc2626; font-weight: 600">{{ pendientes|length }}</span>
+                                    {% else %}
+                                        <span class="text-base-300 dark:text-base-600">·</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-t border-base-200 dark:border-base-800">
+                            <td class="text-base-500 dark:text-base-400"
+                                style="padding: 0.5rem; white-space: nowrap">Ocupadas</td>
+                            {% for ocupadas, a_flote in panorama.pie %}
+                                <td class="text-base-500 dark:text-base-400"
+                                    style="padding: 0.5rem; white-space: nowrap">
+                                    {{ ocupadas }}/{{ a_flote }}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </details>
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}

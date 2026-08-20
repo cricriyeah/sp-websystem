@@ -26,6 +26,7 @@ from .models import (
     Reserva,
     Vendedora,
 )
+from .panorama import armar_panorama
 
 # Que tan atras llega "recien llegadas". 48 horas cubre un fin de semana y lo que
 # entro mientras nadie miraba, sin que la lista deje de ser corta.
@@ -462,11 +463,27 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
     autocomplete_fields = ['embarcacion', 'capitan']
     list_per_page = 50
 
+    # La cuadricula de dias x pangas va encima de la tabla, ver la plantilla.
+    change_list_template = 'bookings/agenda_changelist.html'
+
     class Media:
         # Mismo aviso de reservas nuevas que el listado de Reservas: repartir
         # tambien se hace mirando esta pantalla.
-        js = ['bookings/reservas-nuevas.js']
+        js = ['bookings/reservas-nuevas.js', 'bookings/panorama.js']
         css = {'all': ['bookings/admin-columnas.css']}
+
+    def changelist_view(self, request, extra_context=None):
+        """Mete el panorama de la semana en el contexto del listado.
+
+        Siempre los proximos 7 dias, **sin seguir el filtro de fechas**. En el
+        modo "Manana" quedaria una sola columna y en "Recien llegadas" no hay
+        ventana de fechas que dibujar; ademas es justo cerrando el dia de manana
+        cuando mas sirve ver la semana completa alrededor.
+        """
+        return super().changelist_view(request, {
+            **(extra_context or {}),
+            'panorama': armar_panorama(timezone.localdate()),
+        })
 
     def get_queryset(self, request):
         # `embarcacion` y `capitan` salen en el listado: sin esto es una consulta
