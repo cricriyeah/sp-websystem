@@ -63,6 +63,10 @@
       {
         "title": "Your rights",
         "body": "You can ask us to access your data, correct it if it's wrong, delete it or object to its use. Message us on WhatsApp or email us from the address you booked with and we'll sort it out — no special form needed."
+      },
+      {
+        "title": "Cookies and browser storage",
+        "body": "We store in your browser only what the booking needs: your trip details while you fill them in, and the code of the person who helped you, if you arrived through their link. That cannot be turned off without breaking the booking. Everything else — measuring how the site is used so we can improve it — only happens if you accept it in the notice that appears at the bottom when you arrive; if you ignore it or reject it, nothing is activated. You can change your mind by clearing this site's data from your browser."
       }
     ],
     "back": "Back to home"
@@ -98,7 +102,10 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "submit": "Book now",
-    "dayFull": "Crossed-out days have no room left for your group."
+    "dayFull": "Crossed-out days have no room left for your group.",
+    "askPeople": "How many of you?",
+    "askDay": "What day?",
+    "askTime": "What time?"
   },
   "about": {
     "headline": "We're not an agency. We're the ones taking you out",
@@ -440,5 +447,30 @@
     "dayFullOffer": "{date} has no room left for {people} people.",
     "takeOffered": "See {date}",
     "keepLooking": "Pick another day"
+  },
+  "feedback": {
+    "close": "Dismiss",
+    "error": {
+      "conexion": "We couldn't connect. Check your internet and try again.",
+      "no_disponible": "Online payments aren't available right now.",
+      "demasiados_intentos": "Too many attempts in a row. Wait a minute and try again.",
+      "sin_cupo": "That day filled up while you were filling in your details. Pick another date.",
+      "desconocido": "Something went wrong on our end. Please try again."
+    },
+    "helpTitle": "Would you rather we help you?",
+    "helpCta": "Message us on WhatsApp",
+    "helpMessage": "Hi, I tried booking on your site for {date} at {time} for {people} people and couldn't complete it. Can you help?",
+    "savingWait": "Saving your booking…",
+    "payingWait": "Confirming your payment with the bank. Please don't close this window.",
+    "paySlow": "This is taking longer than usual. It's still processing — don't close or reload.",
+    "saved": "Done, your booking is saved.",
+    "dateChanged": "We moved your date to {date}."
+  },
+  "cookies": {
+    "title": "Cookie notice",
+    "body": "We use the minimum needed for the page to work. If you accept, we can also measure how the site is used to improve it. Your call.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "more": "Read the privacy notice"
   }
 }

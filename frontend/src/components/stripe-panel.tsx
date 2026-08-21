@@ -12,6 +12,8 @@ import { Lock, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { ErrorBlock } from '@/components/error-block';
+import { WaitNotice } from '@/components/wait-notice';
 import type { Moneda, Pago } from '@/lib/api';
 
 type OrderLine = {
@@ -37,6 +39,9 @@ type StripePanelProps = {
   phase: Phase;
   error: string;
   pago: Pago | null;
+  feedback: Dictionary['feedback'];
+  /** Mensaje ya redactado para la vendedora, con la fecha y el grupo del cliente. */
+  ayudaMensaje: string;
   onSubmit: () => void;
   /** Se llama cuando Stripe acepta el pago; el checkout cambia a la pantalla de
    *  confirmacion. `procesando` es true si el cargo aun no se acredita. */
@@ -45,9 +50,13 @@ type StripePanelProps = {
 
 function PaymentForm({
   checkout,
+  feedback,
+  ayudaMensaje,
   onPagoConfirmado,
 }: {
   checkout: Dictionary['checkout'];
+  feedback: Dictionary['feedback'];
+  ayudaMensaje: string;
   onPagoConfirmado: (procesando: boolean) => void;
 }) {
   const stripe = useStripe();
@@ -79,7 +88,23 @@ function PaymentForm({
   return (
     <div className="mt-6 flex flex-col gap-4">
       <PaymentElement />
-      {formError && <p className="text-sm text-red-600">{formError}</p>}
+
+      {/* La espera del banco es la mas larga de todo el flujo y la que mas caro
+          sale malinterpretar: si el cliente cree que se rompio y recarga, lo hace
+          a media autorizacion. */}
+      {submitting && (
+        <WaitNotice mensaje={feedback.payingWait} mensajeLento={feedback.paySlow} />
+      )}
+
+      {formError && (
+        <ErrorBlock
+          mensaje={formError}
+          ayudaTitulo={feedback.helpTitle}
+          ayudaCta={feedback.helpCta}
+          ayudaMensaje={ayudaMensaje}
+        />
+      )}
+
       <button
         type="button"
         onClick={handleConfirm}
@@ -109,6 +134,8 @@ export function StripePanel({
   phase,
   error,
   pago,
+  feedback,
+  ayudaMensaje,
   onSubmit,
   onPagoConfirmado,
 }: StripePanelProps) {
@@ -203,7 +230,12 @@ export function StripePanel({
 
       {phase === 'payment' && pago && stripePromise && (
         <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret }}>
-          <PaymentForm checkout={checkout} onPagoConfirmado={onPagoConfirmado} />
+          <PaymentForm
+            checkout={checkout}
+            feedback={feedback}
+            ayudaMensaje={ayudaMensaje}
+            onPagoConfirmado={onPagoConfirmado}
+          />
         </Elements>
       )}
 
@@ -238,7 +270,17 @@ export function StripePanel({
               despues es lo que genera reclamos y contracargos. */}
           <p className="mt-4 text-xs leading-relaxed text-muted">{checkout.cancelPolicy}</p>
 
-          {phase === 'error' && error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+          {phase === 'submitting' && <WaitNotice mensaje={feedback.savingWait} />}
+
+          {phase === 'error' && error && (
+            <ErrorBlock
+              mensaje={error}
+              ayudaTitulo={feedback.helpTitle}
+              ayudaCta={feedback.helpCta}
+              ayudaMensaje={ayudaMensaje}
+            />
+          )}
+
           <button
             type="button"
             onClick={onSubmit}

@@ -7,15 +7,29 @@ import { formatHour, TOUR_HOURS } from '@/lib/dates';
 type TimeFieldProps = {
   label: string;
   help: string;
-  value: string;
+  /** `null` = todavia no contesta. */
+  value: string | null;
   onChange: (time: string) => void;
+  /** Pregunta grande mientras no hay respuesta. */
+  placeholder?: string;
+  solicitarApertura?: number;
 };
 
-export function TimeField({ label, help, value, onChange }: TimeFieldProps) {
+export function TimeField({
+  label,
+  help,
+  value,
+  onChange,
+  placeholder,
+  solicitarApertura,
+}: TimeFieldProps) {
   return (
     <FieldPopover
       label={label}
-      value={formatHour(value)}
+      value={value ? formatHour(value) : ''}
+      vacio={value === null}
+      placeholder={placeholder}
+      solicitarApertura={solicitarApertura}
       icon={<Clock size={20} className="shrink-0 text-muted" />}
       // Ayuda + las 9 salidas de la ventana de 5 a 7 am.
       alturaEstimada={400}

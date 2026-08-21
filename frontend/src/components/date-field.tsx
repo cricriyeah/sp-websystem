@@ -11,15 +11,19 @@ import { intlLocale } from '@/lib/intl';
 type DateFieldProps = {
   lang: Locale;
   label: string;
-  value: string;
+  /** `null` = todavia no contesta: se muestra la pregunta en vez de una fecha. */
+  value: string | null;
   onChange: (isoDate: string) => void;
   minDate: string;
   prevMonthLabel: string;
   nextMonthLabel: string;
   /** Cuantas personas van. Un dia puede tener lugar para 2 y no para 4. */
   personas: number;
-  /** Leyenda del dia sin lugar, para el title del boton deshabilitado. */
+  /** Leyenda del dia sin lugar. */
   fullLabel: string;
+  /** Pregunta grande mientras no hay respuesta. */
+  placeholder?: string;
+  solicitarApertura?: number;
 };
 
 const inicioDeMes = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
@@ -47,20 +51,26 @@ export function DateField({
   nextMonthLabel,
   personas,
   fullLabel,
+  placeholder,
+  solicitarApertura,
 }: DateFieldProps) {
   const locale = intlLocale(lang);
 
-  const seleccionada = fromLocalISODate(value);
-  const etiquetaValor = new Intl.DateTimeFormat(locale, {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-  }).format(seleccionada);
+  const etiquetaValor = value
+    ? new Intl.DateTimeFormat(locale, {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+      }).format(fromLocalISODate(value))
+    : '';
 
   return (
     <FieldPopover
       label={label}
       value={etiquetaValor}
+      vacio={value === null}
+      placeholder={placeholder}
+      solicitarApertura={solicitarApertura}
       icon={<CalendarBlank size={20} className="shrink-0 text-muted" />}
       // Encabezado + iniciales + 6 filas de dias, con el mes mas largo posible.
       alturaEstimada={360}
@@ -68,7 +78,8 @@ export function DateField({
       {(cerrar) => (
         <PanelCalendario
           locale={locale}
-          value={value}
+          value={value ?? minDate}
+          seleccionado={value}
           onChange={onChange}
           minDate={minDate}
           personas={personas}
@@ -92,6 +103,7 @@ export function DateField({
 function PanelCalendario({
   locale,
   value,
+  seleccionado,
   onChange,
   minDate,
   personas,
@@ -101,7 +113,11 @@ function PanelCalendario({
   cerrar,
 }: {
   locale: string;
+  /** Mes que se abre. Sin respuesta todavia, es el primer dia disponible. */
   value: string;
+  /** La fecha elegida, o null si aun no hay ninguna: sin ella no se pinta nada
+   *  como seleccionado, para no sugerir una eleccion que el cliente no hizo. */
+  seleccionado: string | null;
   onChange: (isoDate: string) => void;
   minDate: string;
   personas: number;
@@ -119,7 +135,7 @@ function PanelCalendario({
   const ultimoDia = toLocalISODate(
     new Date(mesVisible.getFullYear(), mesVisible.getMonth(), diasDelMes),
   );
-  const disponibilidad = useDisponibilidad(primerDia, ultimoDia, personas);
+  const { dias: disponibilidad, cargando } = useDisponibilidad(primerDia, ultimoDia, personas);
 
   const etiquetaMes = new Intl.DateTimeFormat(locale, {
     month: 'long',
@@ -169,7 +185,7 @@ function PanelCalendario({
         {Array.from({ length: diasDelMes }, (_, i) => {
           const dia = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), i + 1);
           const iso = toLocalISODate(dia);
-          const esSeleccionada = iso === value;
+          const esSeleccionada = iso === seleccionado;
           const pasada = iso < minDate;
           // Sin lugar para ESTE grupo. Mientras la consulta no responde el mapa
           // esta vacio y no se agrisa nada: nunca se bloquea un dia por no saber.
@@ -187,6 +203,11 @@ function PanelCalendario({
                 cerrar();
               }}
               className={`flex h-9 items-center justify-center rounded-lg text-sm transition-colors ${
+                // Mientras no sabemos, los dias futuros se atenuan en vez de
+                // verse plenamente disponibles: asi el tachado que llega medio
+                // segundo despues no es un cambio de contenido a la vista.
+                cargando && !pasada ? 'opacity-50 motion-safe:animate-pulse ' : ''
+              }${
                 // Lleno gana sobre seleccionado: pintar de naranja un dia que no
                 // se puede tomar dice "elegido y todo bien" y contradice al resto
                 // de la pantalla. Conserva el anillo, pierde el relleno.

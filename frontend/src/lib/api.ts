@@ -99,10 +99,22 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+    });
+  } catch (causa) {
+    // Sin red, `fetch` lanza un TypeError pelado. Se convierte en ApiError con
+    // status 0 para que quien llama tenga una sola forma de error que atrapar:
+    // antes este caso se colaba como excepcion cruda y terminaba tragado por un
+    // `catch {}` vacio, dejando al cliente mirando una pantalla que no reacciona.
+    // Los clientes de este sitio reservan desde el wifi de un hotel; esto no es
+    // un caso raro.
+    throw new ApiError(0, causa instanceof Error ? causa.message : 'network');
+  }
+
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(res.status, body ?? res.statusText);
   return body as T;

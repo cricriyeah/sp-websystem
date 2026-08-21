@@ -3,7 +3,9 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import '../globals.css';
 import { getDictionary, hasLocale } from './dictionaries';
 import { notFound } from 'next/navigation';
+import { CookieNotice } from '@/components/cookie-notice';
 import { RefCapture } from '@/components/ref-capture';
+import { ProveedorToast } from '@/components/toast';
 import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from '@/lib/site';
 
 const geistSans = Geist({
@@ -58,6 +60,8 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
 
   if (!hasLocale(lang)) notFound();
 
+  const dict = await getDictionary(lang);
+
   return (
     <html
       lang={lang}
@@ -67,7 +71,12 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
       <body suppressHydrationWarning>
         {/* No pinta nada: solo guarda el ?ref= de la vendedora si viene en la URL. */}
         <RefCapture />
-        {children}
+        {/* Envuelve todo para que cualquier pantalla pueda avisar sin montar su
+            propio sistema: un solo lenguaje visual para todo el feedback. */}
+        <ProveedorToast cerrarLabel={dict.feedback.close}>{children}</ProveedorToast>
+        {/* Va fuera del proveedor de avisos: no es feedback de una accion del
+            cliente, es un tramite que se contesta una vez y no vuelve. */}
+        <CookieNotice lang={lang} cookies={dict.cookies} />
       </body>
     </html>
   );

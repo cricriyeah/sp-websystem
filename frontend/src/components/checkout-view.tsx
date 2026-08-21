@@ -9,10 +9,12 @@ import { BookingConfirmation } from '@/components/booking-confirmation';
 import { SiteHeader } from '@/components/site-header';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { CLASES_CAMPO_CON_ERROR, FieldError, propsDeError } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
 import { Turnstile } from '@/components/turnstile';
+import { useToast } from '@/components/toast';
 import {
   ApiError,
   crearPago,
@@ -24,6 +26,7 @@ import {
   type Tarifa,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate } from '@/lib/dates';
+import { mensajeDeAyuda, mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import { leerRef } from '@/lib/ref';
 
@@ -99,7 +102,20 @@ type Phase = 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | '
  * Lo que no se muestra es el detalle tecnico: al cliente le importa si se le
  * cobro y que hacer ahora. El diagnostico va al log del backend y a Sentry.
  */
-function mensajeDeError(err: unknown, checkout: Dictionary['checkout']) {
+type CampoContacto = 'fullName' | 'phone' | 'email';
+
+/**
+ * Orden en que se busca el primer campo malo para mandarle el foco. Es el orden
+ * visual del formulario, no el de validacion: mandar el foco a un campo que esta
+ * mas arriba de otro que tambien fallo desorienta.
+ */
+const ORDEN_CAMPOS: CampoContacto[] = ['phone', 'fullName', 'email'];
+
+function mensajeDeError(
+  err: unknown,
+  checkout: Dictionary['checkout'],
+  feedback: Dictionary['feedback'],
+) {
   if (err instanceof ApiError) {
     // 502: el backend no pudo hablar con Stripe, asi que no hay ningun cobro.
     if (err.status === 502) return checkout.errorPaymentProvider;
@@ -107,7 +123,9 @@ function mensajeDeError(err: unknown, checkout: Dictionary['checkout']) {
     // Reintentar aqui es justo lo que puede acabar en un cargo duplicado.
     if (err.status === 409) return checkout.errorPaymentInProgress;
   }
-  return checkout.errorGeneric;
+  // El resto lo resuelve el catalogo compartido, que ademas cubre el caso que
+  // antes no tenia mensaje ninguno: que no haya red. Ver src/lib/errores.ts.
+  return mensajeDeFallo(err, feedback.error);
 }
 
 function formatDay(date: Date, lang: Locale) {
@@ -140,7 +158,19 @@ export function CheckoutView({
   const [lunch, setLunch] = useState(false);
   const [solicitudes, setSolicitudes] = useState({ drinks: false, transport: false });
   const [formaPago, setFormaPago] = useState<'completo' | 'anticipo'>('completo');
+  const { mostrar: avisar } = useToast();
+
   const [contact, setContact] = useState({ phone: '', fullName: '', email: '' });
+
+  // Para poder mandarle el foco al primer campo con error.
+  const refPhone = useRef<HTMLInputElement>(null);
+  const refFullName = useRef<HTMLInputElement>(null);
+  const refEmail = useRef<HTMLInputElement>(null);
+  const refsContacto: Record<CampoContacto, React.RefObject<HTMLInputElement | null>> = {
+    phone: refPhone,
+    fullName: refFullName,
+    email: refEmail,
+  };
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [phase, setPhase] = useState<Phase>(tarifa ? 'form' : 'unavailable');
   const [error, setError] = useState('');
@@ -255,35 +285,49 @@ export function CheckoutView({
 
   const dayDate = useMemo(() => fromLocalISODate(day), [day]);
 
+  /** Que campo esta mal y por que. Vacio = ninguno. */
+  const [erroresCampo, setErroresCampo] = useState<Partial<Record<CampoContacto, string>>>({});
+
+  /**
+   * Valida los datos de contacto y devuelve los errores por campo.
+   *
+   * Antes esto ponia un solo mensaje generico al pie del panel de pago, asi que
+   * el cliente sabia que algo estaba mal pero tenia que ponerse a buscar cual:
+   * una tarea de busqueda encima de una tarea de formulario. Ahora cada mensaje
+   * viaja pegado a su campo.
+   */
+  const validarContacto = (): Partial<Record<CampoContacto, string>> => {
+    const errores: Partial<Record<CampoContacto, string>> = {};
+
+    if (!contact.fullName.trim()) errores.fullName = checkout.missingFields;
+    else if (!nombreValido(contact.fullName)) errores.fullName = checkout.invalidName;
+
+    if (!contact.phone.trim()) errores.phone = checkout.missingFields;
+    else if (!telefonoValido(contact.phone)) errores.phone = checkout.invalidPhone;
+
+    if (!contact.email.trim()) errores.email = checkout.missingFields;
+    else if (!correoValido(contact.email)) errores.email = checkout.invalidEmail;
+
+    return errores;
+  };
+
   /** Primer paso del pago: valida, y antes de tocar la red ofrece las amenidades. */
   const iniciarPago = () => {
-    if (!contact.phone.trim() || !contact.fullName.trim() || !contact.email.trim()) {
-      setError(checkout.missingFields);
-      setPhase('error');
+    const errores = validarContacto();
+    setErroresCampo(errores);
+
+    if (Object.keys(errores).length > 0) {
+      // El foco salta al primer campo malo. Sin esto, quien navega con teclado o
+      // con lector de pantalla no tiene forma de enterarse de que hay un error:
+      // el mensaje existe visualmente y para el nadie lo dijo.
+      const primero = ORDEN_CAMPOS.find((campo) => errores[campo]);
+      if (primero) refsContacto[primero].current?.focus();
       return;
     }
 
-    // Un mensaje por campo. El generico obligaba al cliente a adivinar cual de
-    // los tres estaba mal, ya con todo el formulario lleno.
-    if (!nombreValido(contact.fullName)) {
-      setError(checkout.invalidName);
-      setPhase('error');
-      return;
-    }
-
-    if (!telefonoValido(contact.phone)) {
-      setError(checkout.invalidPhone);
-      setPhase('error');
-      return;
-    }
-
-    if (!correoValido(contact.email)) {
-      setError(checkout.invalidEmail);
-      setPhase('error');
-      return;
-    }
-
-    // Sin deslinde aceptado no hay reserva; el backend lo rechaza igual.
+    // Sin deslinde aceptado no hay reserva; el backend lo rechaza igual. Este
+    // si va al bloque de error: la casilla vive junto al boton de pagar, asi que
+    // el mensaje ya esta al lado de su causa.
     if (!waiverAccepted) {
       setError(checkout.waiver.missing);
       setPhase('error');
@@ -342,13 +386,17 @@ export function CheckoutView({
       setPago(pagoResponse);
       setRecordatorioAbierto(false);
       setPhase('payment');
+      // La reserva ya quedo guardada aunque el pago siga pendiente: decirlo
+      // separa los dos pasos, para que un fallo de tarjeta no se lea como
+      // "se perdio todo lo que llene".
+      avisar('exito', dict.feedback.saved);
     } catch (err) {
       setRecordatorioAbierto(false);
       if (err instanceof ApiError && err.status === 503) {
         setPhase('unavailable');
         return;
       }
-      setError(mensajeDeError(err, checkout));
+      setError(mensajeDeError(err, checkout, dict.feedback));
       setPhase('error');
     }
   };
@@ -359,6 +407,15 @@ export function CheckoutView({
   const captchaToken = useRef('');
 
   const enviando = phase === 'submitting';
+
+  // Lo que se le manda a la vendedora si el cliente usa la salida de emergencia
+  // de un error. Lleva su fecha, hora y grupo para que ella no tenga que
+  // preguntarlos y el no tenga que redactar nada ya estando frustrado.
+  const ayudaMensaje = mensajeDeAyuda(dict.feedback.helpMessage, {
+    fecha: formatDay(dayDate, lang),
+    hora: formatHour(time),
+    personas: people,
+  });
 
   if (phase === 'confirmed') {
     const porCotizar = SOLICITUD_KEYS.filter((key) => solicitudes[key]).map(
@@ -412,7 +469,17 @@ export function CheckoutView({
             {sinLugar.alternativa && (
               <button
                 type="button"
-                onClick={() => setDay(sinLugar.alternativa!)}
+                onClick={() => {
+                  const nueva = sinLugar.alternativa!;
+                  setDay(nueva);
+                  avisar(
+                    'info',
+                    dict.feedback.dateChanged.replace(
+                      '{date}',
+                      formatDay(fromLocalISODate(nueva), lang),
+                    ),
+                  );
+                }}
                 className="shrink-0 self-start rounded-full bg-accent px-4 py-2 text-xs font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:self-auto"
               >
                 {checkout.takeOffered.replace(
@@ -483,35 +550,71 @@ export function CheckoutView({
               <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
                 <span className="text-muted">{checkout.phone}</span>
                 <input
+                  ref={refPhone}
                   type="tel"
                   required
                   disabled={locked}
                   value={contact.phone}
-                  onChange={(e) => setContact((prev) => ({ ...prev, phone: e.target.value }))}
-                  className="rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-accent disabled:opacity-60"
+                  onChange={(e) => {
+                    setContact((prev) => ({ ...prev, phone: e.target.value }));
+                    // El error se limpia al escribir: dejarlo puesto mientras el
+                    // cliente corrige lo convierte en un regano que no se calla.
+                    if (erroresCampo.phone) setErroresCampo((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                  {...propsDeError('error-phone', Boolean(erroresCampo.phone))}
+                  className={`rounded-xl border bg-background px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
+                    erroresCampo.phone ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
+                  }`}
                 />
+                {erroresCampo.phone && (
+                  <FieldError id="error-phone" mensaje={erroresCampo.phone} />
+                )}
               </label>
               <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
                 <span className="text-muted">{checkout.fullName}</span>
                 <input
+                  ref={refFullName}
                   type="text"
                   required
                   disabled={locked}
                   value={contact.fullName}
-                  onChange={(e) => setContact((prev) => ({ ...prev, fullName: e.target.value }))}
-                  className="rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-accent disabled:opacity-60"
+                  onChange={(e) => {
+                    setContact((prev) => ({ ...prev, fullName: e.target.value }));
+                    // El error se limpia al escribir: dejarlo puesto mientras el
+                    // cliente corrige lo convierte en un regano que no se calla.
+                    if (erroresCampo.fullName) setErroresCampo((prev) => ({ ...prev, fullName: undefined }));
+                  }}
+                  {...propsDeError('error-fullName', Boolean(erroresCampo.fullName))}
+                  className={`rounded-xl border bg-background px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
+                    erroresCampo.fullName ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
+                  }`}
                 />
+                {erroresCampo.fullName && (
+                  <FieldError id="error-fullName" mensaje={erroresCampo.fullName} />
+                )}
               </label>
               <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
                 <span className="text-muted">{checkout.email}</span>
                 <input
+                  ref={refEmail}
                   type="email"
                   required
                   disabled={locked}
                   value={contact.email}
-                  onChange={(e) => setContact((prev) => ({ ...prev, email: e.target.value }))}
-                  className="rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-accent disabled:opacity-60"
+                  onChange={(e) => {
+                    setContact((prev) => ({ ...prev, email: e.target.value }));
+                    // El error se limpia al escribir: dejarlo puesto mientras el
+                    // cliente corrige lo convierte en un regano que no se calla.
+                    if (erroresCampo.email) setErroresCampo((prev) => ({ ...prev, email: undefined }));
+                  }}
+                  {...propsDeError('error-email', Boolean(erroresCampo.email))}
+                  className={`rounded-xl border bg-background px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
+                    erroresCampo.email ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
+                  }`}
                 />
+                {erroresCampo.email && (
+                  <FieldError id="error-email" mensaje={erroresCampo.email} />
+                )}
               </label>
             </div>
           </CheckoutSectionCard>
@@ -591,6 +694,8 @@ export function CheckoutView({
             phase={phase}
             error={error}
             pago={pago}
+            feedback={dict.feedback}
+            ayudaMensaje={ayudaMensaje}
             onSubmit={iniciarPago}
             onPagoConfirmado={(procesando) => {
               setPagoProcesando(procesando);

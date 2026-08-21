@@ -63,7 +63,11 @@ export function CheckoutCalendar({
     return date;
   });
 
-  const disponibilidad = useDisponibilidad(toIso(days[0]), toIso(days[6]), personas);
+  const { dias: disponibilidad, cargando } = useDisponibilidad(
+    toIso(days[0]),
+    toIso(days[6]),
+    personas,
+  );
 
   const monthLabel = new Intl.DateTimeFormat(intlLocale(lang), {
     month: 'long',
@@ -114,6 +118,8 @@ export function CheckoutCalendar({
               disabled={isDisabled}
               onClick={() => onSelect(iso)}
               className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-2.5 text-xs transition-colors ${
+                cargando && !isPast ? 'opacity-50 motion-safe:animate-pulse ' : ''
+              }${
                 // Un dia lleno nunca se pinta como seleccion normal, aunque sea
                 // el elegido: llegar por URL con una fecha que ya se lleno
                 // dejaba el dia en naranja —"elegido y todo bien"— contradiciendo

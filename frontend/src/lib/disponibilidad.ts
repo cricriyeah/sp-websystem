@@ -17,18 +17,24 @@ import { getCupoRango, type DisponibilidadRango, type MotivoNoDisponible } from 
  * que alguien intente reservar.
  */
 export function useDisponibilidad(desde: string, hasta: string, personas: number) {
-  const [dias, setDias] = useState<DisponibilidadRango>({});
+  // Se guarda junto con la consulta que lo produjo. Asi `cargando` se DERIVA de
+  // comparar la clave pedida con la cargada, en vez de ponerse a mano al entrar
+  // al efecto: un `setState` al inicio de un efecto provoca un render de mas y
+  // React 19 lo marca como error.
+  const clave = `${desde}|${hasta}|${personas}`;
+  const [cargado, setCargado] = useState<{ clave: string; dias: DisponibilidadRango } | null>(null);
 
   useEffect(() => {
     let cancelado = false;
 
     getCupoRango(desde, hasta, personas)
-      .then((mapa) => {
-        if (!cancelado) setDias(mapa);
+      .then((dias) => {
+        if (!cancelado) setCargado({ clave: `${desde}|${hasta}|${personas}`, dias });
       })
       .catch(() => {
-        // Ver el comentario de arriba: sin respuesta no se agrisa nada.
-        if (!cancelado) setDias({});
+        // Ver el comentario de arriba: sin respuesta no se agrisa nada. Se marca
+        // como cargado igual, o el calendario se quedaria atenuado para siempre.
+        if (!cancelado) setCargado({ clave: `${desde}|${hasta}|${personas}`, dias: {} });
       });
 
     return () => {
@@ -36,7 +42,10 @@ export function useDisponibilidad(desde: string, hasta: string, personas: number
     };
   }, [desde, hasta, personas]);
 
-  return dias;
+  return {
+    dias: cargado?.clave === clave ? cargado.dias : {},
+    cargando: cargado?.clave !== clave,
+  };
 }
 
 /** El motivo de ese dia, o null si cabe o si todavia no sabemos. */
