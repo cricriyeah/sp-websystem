@@ -62,8 +62,9 @@ def _cuerpo_html(reserva):
         f'</ul>'
         f'{pendiente}'
         f'{por_cotizar}'
-        f'<p>Un agente te contacta en las proximas 24 horas antes del viaje con los '
-        f'detalles de ubicacion, traslado y el nombre de tu capitan.</p>'
+        f'<p>Te llega un segundo correo con el nombre de tu capitan y la panga que '
+        f'les toca, en cuanto queden asignados. Si pediste traslado, el agente te '
+        f'cotiza eso aparte.</p>'
     )
 
 
@@ -100,6 +101,74 @@ def enviar_correo_confirmacion(reserva):
         response.raise_for_status()
     except requests.RequestException:
         logger.exception('Fallo el correo de confirmacion de la reserva %s', reserva.pk)
+        return False
+    return True
+
+
+def _asunto_asignacion(reserva):
+    return f'Tu capitan y tu panga — {reserva.fecha} {reserva.hora:%H:%M}'
+
+
+def _cuerpo_asignacion_html(reserva):
+    """Lo que el cliente necesita el dia del viaje, y nada mas.
+
+    El telefono del capitan NO va aqui a proposito: el capitan sale de madrugada
+    y no puede estar contestando dudas de clientes a cualquier hora. Todo pasa
+    por el numero del negocio, que es el que si tiene quien lo atienda.
+    """
+    pendiente = ''
+    if reserva.forma_pago == reserva.FormaPago.ANTICIPO and reserva.precio_total and reserva.monto_pagado:
+        restante = reserva.precio_total - reserva.monto_pagado
+        pendiente = (
+            f'<p>Recuerda que llevas {restante} {reserva.moneda} por liquidar en efectivo '
+            f'el dia del viaje.</p>'
+        )
+
+    return (
+        f'<p>Hola {reserva.nombre_cliente}, ya sabemos con quien sales.</p>'
+        f'<ul>'
+        f'<li><strong>Capitan:</strong> {reserva.capitan.nombre}</li>'
+        f'<li><strong>Panga:</strong> {reserva.embarcacion.nombre}</li>'
+        f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
+        f'<li><strong>Hora de salida:</strong> {reserva.hora:%H:%M}</li>'
+        f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'
+        f'</ul>'
+        f'{pendiente}'
+        f'<p>Llega 15 minutos antes de la hora de salida. Si algo cambia de tu lado, '
+        f'escribenos por WhatsApp y lo movemos.</p>'
+    )
+
+
+def enviar_correo_asignacion(reserva):
+    """Segundo correo: con que capitan y en que panga sale el cliente.
+
+    Se manda aparte del de confirmacion porque los dos datos no existen cuando
+    entra el pago — la panga y el capitan se reparten despues, desde la agenda
+    del admin. Devuelve True si se mando.
+    """
+    if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
+        logger.info('Resend sin configurar, no se mando el aviso de asignacion %s', reserva.pk)
+        return False
+
+    cuerpo = {
+        'from': settings.RESEND_FROM,
+        'to': [reserva.correo_cliente],
+        'subject': _asunto_asignacion(reserva),
+        'html': _cuerpo_asignacion_html(reserva),
+    }
+    if settings.RESEND_BCC:
+        cuerpo['bcc'] = settings.RESEND_BCC
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json=cuerpo,
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        logger.exception('Fallo el aviso de asignacion de la reserva %s', reserva.pk)
         return False
     return True
 

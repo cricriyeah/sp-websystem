@@ -63,6 +63,10 @@
       {
         "title": "Your rights",
         "body": "You can ask us to access your data, correct it if it's wrong, delete it or object to its use. Message us on WhatsApp or email us from the address you booked with and we'll sort it out — no special form needed."
+      },
+      {
+        "title": "Cookies and browser storage",
+        "body": "We store in your browser only what the booking needs: your trip details while you fill them in, and the code of the person who helped you, if you arrived through their link. That cannot be turned off without breaking the booking. Everything else — measuring how the site is used so we can improve it — only happens if you accept it in the notice that appears at the bottom when you arrive; if you ignore it or reject it, nothing is activated. You can change your mind by clearing this site's data from your browser."
       }
     ],
     "back": "Back to home"
@@ -97,7 +101,11 @@
     "maxPeopleNotice": "Maximum 5 guests per trip.",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "submit": "Book now"
+    "submit": "Book now",
+    "dayFull": "Crossed-out days have no room left for your group.",
+    "askPeople": "How many of you?",
+    "askDay": "What day?",
+    "askTime": "What time?"
   },
   "about": {
     "headline": "We're not an agency. We're the ones taking you out",
@@ -419,8 +427,7 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "errorPaymentProvider": "We couldn't reach the payment processor. You have not been charged. Wait a moment and try again, or message us on WhatsApp and we'll take it from there.",
     "errorPaymentInProgress": "There's already a payment in progress for this booking. Wait a few seconds and reload the page before trying again, so you aren't charged twice.",
-    "dayFullNotice": "That day is fully booked. We've automatically moved you to {date}, the next available date.",
-    "noBoatForGroupNotice": "That day still has room, but no boat left for a group of {people}: only two in the fleet carry more than 3. We've automatically moved you to {date}, the next date with one available.",
+    "noBoatForGroupNotice": "{date} still has room, but no boat left for a group of {people}: only two in the fleet carry more than 3.",
     "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book.",
     "confirmation": {
       "headline": "You're all set. Your booking is confirmed",
@@ -435,6 +442,35 @@
       "agentBody": "A sales agent will contact you within the next 24 hours with the final details: exact landmarks for the meeting point, transport and your captain's name.",
       "quotesNote": "They will also quote what you asked for ({items}), which is not included in the amount you paid.",
       "backHome": "Back to home"
-    }
+    },
+    "dayFull": "Crossed-out days have no room left for your group.",
+    "dayFullOffer": "{date} has no room left for {people} people.",
+    "takeOffered": "See {date}",
+    "keepLooking": "Pick another day"
+  },
+  "feedback": {
+    "close": "Dismiss",
+    "error": {
+      "conexion": "We couldn't connect. Check your internet and try again.",
+      "no_disponible": "Online payments aren't available right now.",
+      "demasiados_intentos": "Too many attempts in a row. Wait a minute and try again.",
+      "sin_cupo": "That day filled up while you were filling in your details. Pick another date.",
+      "desconocido": "Something went wrong on our end. Please try again."
+    },
+    "helpTitle": "Would you rather we help you?",
+    "helpCta": "Message us on WhatsApp",
+    "helpMessage": "Hi, I tried booking on your site for {date} at {time} for {people} people and couldn't complete it. Can you help?",
+    "savingWait": "Saving your booking…",
+    "payingWait": "Confirming your payment with the bank. Please don't close this window.",
+    "paySlow": "This is taking longer than usual. It's still processing — don't close or reload.",
+    "saved": "Done, your booking is saved.",
+    "dateChanged": "We moved your date to {date}."
+  },
+  "cookies": {
+    "title": "Cookie notice",
+    "body": "We use the minimum needed for the page to work. If you accept, we can also measure how the site is used to improve it. Your call.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "more": "Read the privacy notice"
   }
 }

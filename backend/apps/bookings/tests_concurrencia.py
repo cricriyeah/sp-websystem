@@ -164,6 +164,12 @@ class SobreventaConcurrenteTests(TransactionTestCase):
 class LockDelDiaTests(TransactionTestCase):
     """El lock es por fecha, no global: dos dias distintos no deben estorbarse."""
 
+    def setUp(self):
+        # Sin flota no cabe nadie y los dos pagos salen con `sin_cupo` antes de
+        # llegar al lock, que es lo que esta clase dice probar. `TransactionTestCase`
+        # trunca las tablas entre casos, asi que la flota de la otra clase no sirve.
+        crear_flota()
+
     @mock.patch('apps.payments.services.stripe.Refund.create')
     def test_dias_distintos_no_se_bloquean_entre_si(self, refund):
         import threading

@@ -14,19 +14,27 @@ type HeroProps = {
 export function Hero({ lang, dict, minDate }: HeroProps) {
   const reduce = useReducedMotion();
 
+  // El contenido del heroe **no arranca invisible**. Antes entraba desde
+  // `opacity: 0` con retraso y escalonado, asi que durante casi un segundo la
+  // portada era un degradado en blanco: titular, subtitulo y barra de reserva
+  // aparecian los tres despues.
+  //
+  // Ese segundo es justamente el porton donde se forma el juicio visual del
+  // sitio, y se estaba gastando en nada. Ahora el primer pintado ya trae la
+  // composicion real y el movimiento se queda en un desplazamiento corto: se
+  // conserva la entrada sin pagarla con un cuadro vacio.
   const container = {
     hidden: {},
     show: {
-      transition: { staggerChildren: reduce ? 0 : 0.12, delayChildren: reduce ? 0 : 0.1 },
+      transition: { staggerChildren: reduce ? 0 : 0.07 },
     },
   };
 
   const item = {
-    hidden: reduce ? {} : { opacity: 0, y: 18 },
+    hidden: reduce ? {} : { y: 14 },
     show: {
-      opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const },
+      transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
     },
   };
 

@@ -63,6 +63,10 @@
       {
         "title": "Tus derechos ARCO",
         "body": "Puedes pedirnos acceder a tus datos, rectificarlos si están mal, cancelarlos u oponerte a su uso. Escríbenos por WhatsApp o al correo con el que reservaste y lo resolvemos; no necesitas ningún formato especial."
+      },
+      {
+        "title": "Cookies y almacenamiento en tu navegador",
+        "body": "Guardamos en tu navegador lo indispensable para que la reserva funcione: los datos de tu viaje mientras lo llenas y el código de la persona que te atendió, si llegaste por su link. Eso no se puede desactivar sin romper la reserva. Todo lo demás —medir cómo se usa el sitio para mejorarlo— solo ocurre si lo aceptas en el aviso que aparece abajo cuando entras; si no respondes o lo rechazas, no se activa nada. Puedes cambiar de opinión borrando los datos del sitio desde tu navegador."
       }
     ],
     "back": "Volver al inicio"
@@ -97,7 +101,11 @@
     "maxPeopleNotice": "Máximo 5 personas por viaje.",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "submit": "Agendar"
+    "submit": "Agendar",
+    "dayFull": "Los días tachados ya no tienen lugar para tu grupo.",
+    "askPeople": "¿Cuántos son?",
+    "askDay": "¿Qué día?",
+    "askTime": "¿Qué hora?"
   },
   "about": {
     "headline": "No somos una agencia. Somos los que te van a llevar",
@@ -419,8 +427,7 @@
     "errorGeneric": "Algo salió mal. Intenta de nuevo.",
     "errorPaymentProvider": "No pudimos conectar con el procesador de pagos. No se te cobró nada. Espera un momento e intenta de nuevo, o escríbenos por WhatsApp y lo cerramos contigo.",
     "errorPaymentInProgress": "Ya hay un cobro en curso para esta reserva. Espera unos segundos y recarga la página antes de volver a intentar, para no pagar dos veces.",
-    "dayFullNotice": "Ese día ya no tiene cupo disponible. Te asignamos automáticamente el {date}, la fecha más próxima con espacio.",
-    "noBoatForGroupNotice": "Ese día todavía tiene espacio, pero ya no queda una panga para un grupo de {people} personas: solo dos de la flota llevan más de 3. Te asignamos automáticamente el {date}, la fecha más próxima con una disponible.",
+    "noBoatForGroupNotice": "El {date} todavía tiene espacio, pero ya no queda una panga para un grupo de {people} personas: solo dos de la flota llevan más de 3.",
     "paymentUnavailable": "Los pagos en línea todavía no están disponibles. Contáctanos por WhatsApp para reservar.",
     "confirmation": {
       "headline": "¡Listo! Tu reserva está confirmada",
@@ -435,6 +442,35 @@
       "agentBody": "Un agente de ventas se pondrá en contacto contigo en las próximas 24 horas para darte los detalles finales: referencias exactas del punto de encuentro, traslado y el nombre de tu capitán.",
       "quotesNote": "También te va a cotizar lo que pediste ({items}), que no está incluido en el monto que pagaste.",
       "backHome": "Volver al inicio"
-    }
+    },
+    "dayFull": "Los días tachados ya no tienen lugar para tu grupo.",
+    "dayFullOffer": "El {date} ya no tiene lugar para {people} personas.",
+    "takeOffered": "Ver el {date}",
+    "keepLooking": "Elegir otro día"
+  },
+  "feedback": {
+    "close": "Cerrar aviso",
+    "error": {
+      "conexion": "No pudimos conectar. Revisa tu internet e intenta otra vez.",
+      "no_disponible": "Los pagos en línea no están disponibles en este momento.",
+      "demasiados_intentos": "Demasiados intentos seguidos. Espera un minuto y vuelve a intentar.",
+      "sin_cupo": "Ese día se llenó mientras llenabas tus datos. Elige otra fecha.",
+      "desconocido": "Algo salió mal de nuestro lado. Intenta otra vez."
+    },
+    "helpTitle": "¿Prefieres que te ayudemos?",
+    "helpCta": "Escríbenos por WhatsApp",
+    "helpMessage": "Hola, intenté reservar en la página para el {date} a las {time} para {people} personas y no pude completarlo. ¿Me ayudan?",
+    "savingWait": "Guardando tu reserva…",
+    "payingWait": "Confirmando tu pago con el banco. No cierres esta ventana.",
+    "paySlow": "Esto está tardando más de lo normal. Sigue en proceso — no cierres ni recargues.",
+    "saved": "Listo, guardamos tu reserva.",
+    "dateChanged": "Cambiamos tu fecha al {date}."
+  },
+  "cookies": {
+    "title": "Aviso de cookies",
+    "body": "Usamos lo mínimo para que la página funcione. Si aceptas, también podremos medir cómo se usa el sitio para mejorarlo. Tú eliges.",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "more": "Ver el aviso de privacidad"
   }
 }

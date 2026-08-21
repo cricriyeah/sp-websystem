@@ -14,6 +14,19 @@ type FieldPopoverProps = {
   alturaEstimada: number;
   /** Recibe `cerrar` para que al elegir una opcion el panel se cierre solo. */
   children: (cerrar: () => void) => ReactNode;
+  /**
+   * Contador para pedir apertura desde fuera. Al incrementarlo, el panel se
+   * abre. Lo usa la barra de reserva para encadenar las preguntas: contestar
+   * "cuantos son" abre sola la de "que dia".
+   *
+   * Es un contador y no un booleano a proposito: permite volver a pedir la
+   * apertura del mismo campo mas de una vez sin tener que bajarlo primero.
+   */
+  solicitarApertura?: number;
+  /** Sin respuesta todavia: la pregunta se muestra grande y sola. */
+  vacio?: boolean;
+  /** Texto grande cuando esta vacio (la pregunta). */
+  placeholder?: string;
 };
 
 /**
@@ -24,7 +37,16 @@ type FieldPopoverProps = {
  * Se encarga de lo aburrido pero necesario: cerrar al hacer clic fuera, cerrar
  * con Escape y devolver el foco al boton para que se pueda usar con teclado.
  */
-export function FieldPopover({ label, value, icon, alturaEstimada, children }: FieldPopoverProps) {
+export function FieldPopover({
+  label,
+  value,
+  icon,
+  alturaEstimada,
+  children,
+  solicitarApertura = 0,
+  vacio = false,
+  placeholder,
+}: FieldPopoverProps) {
   const [open, setOpen] = useState(false);
   const [haciaArriba, setHaciaArriba] = useState(false);
   const contenedor = useRef<HTMLDivElement>(null);
@@ -51,6 +73,15 @@ export function FieldPopover({ label, value, icon, alturaEstimada, children }: F
   // Solo cambia estado: se lo pasamos a `children`, que corre en render, y una
   // funcion que tocara refs ahi dentro dispara la regla react-hooks/refs.
   const cerrar = () => setOpen(false);
+
+  // Apertura pedida desde fuera. Va como ajuste durante el render y no en un
+  // efecto: asi el panel ya sale abierto en el mismo pintado, sin el parpadeo de
+  // verlo cerrado un cuadro.
+  const [aperturaVista, setAperturaVista] = useState(solicitarApertura);
+  if (solicitarApertura !== aperturaVista) {
+    setAperturaVista(solicitarApertura);
+    if (solicitarApertura > 0) setOpen(true);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -88,9 +119,19 @@ export function FieldPopover({ label, value, icon, alturaEstimada, children }: F
         className="flex flex-1 items-center gap-3 rounded-2xl px-6 py-4 text-left transition-colors hover:bg-background sm:rounded-none"
       >
         {icon}
+        {/* Sin contestar, la pregunta ocupa el lugar grande y no hay etiqueta
+            chica: no tiene sentido rotular un dato que todavia no existe. Al
+            contestar, la pregunta se encoge y la respuesta toma su lugar — asi
+            cada respuesta se vuelve un compromiso visible. */}
         <span className="flex flex-col items-start gap-0.5">
-          <span className="text-xs text-muted">{label}</span>
-          <span className="text-sm whitespace-nowrap text-foreground">{value}</span>
+          {!vacio && <span className="text-xs text-muted">{label}</span>}
+          <span
+            className={`whitespace-nowrap ${
+              vacio ? 'text-sm font-medium text-foreground/70' : 'text-sm text-foreground'
+            }`}
+          >
+            {vacio ? placeholder : value}
+          </span>
         </span>
       </button>
 

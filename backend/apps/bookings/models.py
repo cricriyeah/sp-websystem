@@ -165,6 +165,29 @@ def proxima_fecha_disponible(desde, personas, dias=DIAS_BUSQUEDA_DISPONIBILIDAD)
     """
     hasta = desde + timedelta(days=dias - 1)
 
+    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas).items()):
+        if motivo is None:
+            return fecha
+    return None
+
+
+def disponibilidad_por_fecha(desde, hasta, personas):
+    """Por que no cabe un grupo de `personas` cada dia del rango, o None si cabe.
+
+    `{fecha: None | MOTIVO_LLENO | MOTIVO_SIN_PANGA}`, una entrada por dia,
+    extremos incluidos.
+
+    Se resuelve con **cuatro consultas para todo el rango**, no una por dia:
+    reservas, CupoDiario, y las dos de la flota. Esa es la razon de existir de
+    esta funcion. Pintar los dias llenos en gris preguntando dia por dia son 30
+    peticiones por mes, y el limite de `consulta` es 60/min por IP: el segundo mes
+    devuelve 429. Es el mismo error que ya se cometio una vez con la busqueda del
+    siguiente dia disponible, cuando vivia en el navegador.
+
+    El motivo importa y por eso se devuelve en vez de un booleano: 'lleno' es del
+    dia, pero 'sin_panga' depende del tamano del grupo — el mismo dia admite a dos
+    personas y rechaza a cuatro, porque solo dos pangas de la flota pasan de tres.
+    """
     grupos_por_fecha = defaultdict(list)
     for fecha, personas_de_esa in Reserva.objects.filter(
         fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO
@@ -176,17 +199,15 @@ def proxima_fecha_disponible(desde, personas, dias=DIAS_BUSQUEDA_DISPONIBILIDAD)
     )
     capacidades = capacidades_por_fecha(desde, hasta)
 
-    for i in range(dias):
-        fecha = desde + timedelta(days=i)
-        motivo = motivo_sin_lugar(
+    return {
+        fecha: motivo_sin_lugar(
             personas,
             grupos_por_fecha[fecha],
             capacidades[fecha],
             topes.get(fecha, CUPO_MAXIMO_DEFAULT),
         )
-        if motivo is None:
-            return fecha
-    return None
+        for fecha in (desde + timedelta(days=i) for i in range((hasta - desde).days + 1))
+    }
 
 
 def bloquear_cupo_del_dia(fecha):
@@ -401,6 +422,11 @@ class Reserva(models.Model):
     # y `actualizado_en` se mueve con cualquier edicion posterior, asi que ninguno
     # de los dos sirve para cuadrar un dia.
     pagada_en = models.DateTimeField(null=True, blank=True)
+
+    # Cuando salio el segundo correo, el que dice con que capitan y en que panga
+    # sale el cliente. Existe para que no salga dos veces: la agenda se guarda
+    # muchas veces por reserva y el cliente recibe este aviso una sola.
+    aviso_asignacion_enviado_en = models.DateTimeField(null=True, blank=True)
 
     # Efectivo recibido el dia del viaje: el 70% restante cuando el cliente pago
     # anticipo, y lo que se haya cotizado aparte (bebidas, transporte). Puede

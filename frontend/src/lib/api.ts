@@ -99,10 +99,22 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+    });
+  } catch (causa) {
+    // Sin red, `fetch` lanza un TypeError pelado. Se convierte en ApiError con
+    // status 0 para que quien llama tenga una sola forma de error que atrapar:
+    // antes este caso se colaba como excepcion cruda y terminaba tragado por un
+    // `catch {}` vacio, dejando al cliente mirando una pantalla que no reacciona.
+    // Los clientes de este sitio reservan desde el wifi de un hotel; esto no es
+    // un caso raro.
+    throw new ApiError(0, causa instanceof Error ? causa.message : 'network');
+  }
+
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(res.status, body ?? res.statusText);
   return body as T;
@@ -112,6 +124,23 @@ export const getTarifa = () => request<Tarifa>('/api/tarifa/');
 
 export const getCupo = (fecha: string, personas: number) =>
   request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`);
+
+/** Por que no cabe el grupo cada dia del rango; null = si cabe. */
+export type MotivoNoDisponible = 'lleno' | 'sin_panga';
+export type DisponibilidadRango = Record<string, MotivoNoDisponible | null>;
+
+/**
+ * Disponibilidad de todo un rango en UNA peticion, para pintar en gris los dias
+ * llenos del calendario.
+ *
+ * No preguntar dia por dia: son 30 peticiones por mes contra un limite de 60/min
+ * por IP, y el segundo mes devuelve 429. El backend tampoco pasa de 62 dias por
+ * llamada.
+ */
+export const getCupoRango = (desde: string, hasta: string, personas: number) =>
+  request<{ dias: DisponibilidadRango }>(
+    `/api/cupo/rango/?desde=${desde}&hasta=${hasta}&personas=${personas}`,
+  ).then((r) => r.dias);
 
 /** Crea la reserva de este checkout, o actualiza la que ya existia. */
 export const guardarReserva = (data: ReservaInput) =>
