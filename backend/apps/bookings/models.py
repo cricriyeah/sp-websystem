@@ -423,6 +423,11 @@ class Reserva(models.Model):
     # de los dos sirve para cuadrar un dia.
     pagada_en = models.DateTimeField(null=True, blank=True)
 
+    # Cuando salio el segundo correo, el que dice con que capitan y en que panga
+    # sale el cliente. Existe para que no salga dos veces: la agenda se guarda
+    # muchas veces por reserva y el cliente recibe este aviso una sola.
+    aviso_asignacion_enviado_en = models.DateTimeField(null=True, blank=True)
+
     # Efectivo recibido el dia del viaje: el 70% restante cuando el cliente pago
     # anticipo, y lo que se haya cotizado aparte (bebidas, transporte). Puede
     # superar el saldo del tour justo por eso, asi que no se valida contra el.

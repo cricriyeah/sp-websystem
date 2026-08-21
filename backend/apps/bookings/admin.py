@@ -174,6 +174,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
         'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en', 'deslinde_ip',
         'efectivo_cobrado_en', 'efectivo_cobrado_por', 'en_disputa',
         'vendedora_asignada_en', 'pagada_en', 'monto_reembolsado', 'reembolsada_en',
+        'aviso_asignacion_enviado_en',
     ]
     actions = [
         'cancelar_por_mal_clima', 'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
@@ -454,7 +455,7 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
 
     list_display = [
         'fecha', 'hora', 'nombre_cliente', 'numero_personas',
-        'embarcacion', 'capitan', 'aviso',
+        'embarcacion', 'capitan', 'avisado', 'aviso',
     ]
     list_editable = ['embarcacion', 'capitan']
     list_display_links = ['nombre_cliente']
@@ -508,6 +509,16 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Una reserva se cancela, no se borra (ver docs/contexto-negocio.md).
         return False
+
+    @admin.display(description='Avisado', boolean=True)
+    def avisado(self, obj):
+        """Si al cliente ya le salio el correo con su capitan y su panga.
+
+        Importa porque un cambio posterior de capitan NO se reenvia solo: esa
+        llamada la hace la vendedora, y para hacerla necesita saber que fue lo
+        ultimo que el cliente leyo.
+        """
+        return obj.aviso_asignacion_enviado_en is not None
 
     @admin.display(description='Aviso')
     def aviso(self, obj):

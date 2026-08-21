@@ -11,8 +11,15 @@ import requests
 from django.test import TestCase, override_settings
 
 from apps.bookings.models import Reserva
+from apps.fleet.models import Capitan, Embarcacion
 
-from .services import enviar_correo_confirmacion, notificar_reserva_pagada
+from .services import (
+    PUNTO_DE_ENCUENTRO,
+    _asunto,
+    enviar_correo_asignacion,
+    enviar_correo_confirmacion,
+    notificar_reserva_pagada,
+)
 
 LLAVES = {'RESEND_API_KEY': 'test-key', 'RESEND_FROM': 'reservas@ejemplo.com'}
 
@@ -116,3 +123,63 @@ class SinLlavesTests(TestCase):
         """Config local: sin llaves no se manda nada y el cobro sigue igual."""
         self.assertFalse(enviar_correo_confirmacion(crear_reserva()))
         post.assert_not_called()
+
+
+@override_settings(**LLAVES)
+class CorreoDeAsignacionTests(TestCase):
+    """El segundo correo: el que dice con quien y en que panga sale el cliente.
+
+    El correo de confirmacion se manda cuando entra el pago, y en ese momento
+    todavia no hay capitan ni embarcacion: se reparten despues, desde la agenda
+    del admin. Este correo cierra ese hueco.
+    """
+
+    def _reserva_asignada(self):
+        embarcacion = Embarcacion.objects.create(
+            nombre='Dona Chuy', clase=Embarcacion.Clase.CHICA, capacidad_maxima=6
+        )
+        capitan = Capitan.objects.create(nombre='Ramon Geraldo', telefono='+5216129876543')
+        reserva = crear_reserva()
+        reserva.estado = Reserva.Estado.ASIGNADA
+        reserva.embarcacion = embarcacion
+        reserva.capitan = capitan
+        reserva.save()
+        return reserva
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_el_correo_lleva_panga_capitan_hora_y_punto_de_encuentro(self, post):
+        reserva = self._reserva_asignada()
+
+        self.assertTrue(enviar_correo_asignacion(reserva))
+
+        html = _cuerpo_enviado(post)['html']
+        self.assertIn('Dona Chuy', html)
+        self.assertIn('Ramon Geraldo', html)
+        self.assertIn('06:00', html)
+        self.assertIn(PUNTO_DE_ENCUENTRO, html)
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_no_publica_el_telefono_del_capitan(self, post):
+        """El capitan no recibe llamadas de clientes a cualquier hora: todo pasa
+        por el numero del negocio. El dato existe en el modelo, no en el correo."""
+        reserva = self._reserva_asignada()
+
+        enviar_correo_asignacion(reserva)
+
+        self.assertNotIn('9876543', _cuerpo_enviado(post)['html'])
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_va_al_cliente_y_no_reusa_el_asunto_de_la_confirmacion(self, post):
+        reserva = self._reserva_asignada()
+
+        enviar_correo_asignacion(reserva)
+
+        cuerpo = _cuerpo_enviado(post)
+        self.assertEqual(cuerpo['to'], ['ana@example.com'])
+        self.assertNotEqual(cuerpo['subject'], _asunto(reserva))
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_si_resend_falla_devuelve_false_sin_lanzar(self, post):
+        post.side_effect = requests.RequestException('boom')
+
+        self.assertFalse(enviar_correo_asignacion(self._reserva_asignada()))
