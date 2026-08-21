@@ -97,7 +97,8 @@
     "maxPeopleNotice": "Maximum 5 guests per trip.",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "submit": "Book now"
+    "submit": "Book now",
+    "dayFull": "Crossed-out days have no room left for your group."
   },
   "about": {
     "headline": "We're not an agency. We're the ones taking you out",
@@ -419,8 +420,7 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "errorPaymentProvider": "We couldn't reach the payment processor. You have not been charged. Wait a moment and try again, or message us on WhatsApp and we'll take it from there.",
     "errorPaymentInProgress": "There's already a payment in progress for this booking. Wait a few seconds and reload the page before trying again, so you aren't charged twice.",
-    "dayFullNotice": "That day is fully booked. We've automatically moved you to {date}, the next available date.",
-    "noBoatForGroupNotice": "That day still has room, but no boat left for a group of {people}: only two in the fleet carry more than 3. We've automatically moved you to {date}, the next date with one available.",
+    "noBoatForGroupNotice": "{date} still has room, but no boat left for a group of {people}: only two in the fleet carry more than 3.",
     "paymentUnavailable": "Online payments aren't available yet. Contact us on WhatsApp to book.",
     "confirmation": {
       "headline": "You're all set. Your booking is confirmed",
@@ -435,6 +435,10 @@
       "agentBody": "A sales agent will contact you within the next 24 hours with the final details: exact landmarks for the meeting point, transport and your captain's name.",
       "quotesNote": "They will also quote what you asked for ({items}), which is not included in the amount you paid.",
       "backHome": "Back to home"
-    }
+    },
+    "dayFull": "Crossed-out days have no room left for your group.",
+    "dayFullOffer": "{date} has no room left for {people} people.",
+    "takeOffered": "See {date}",
+    "keepLooking": "Pick another day"
   }
 }

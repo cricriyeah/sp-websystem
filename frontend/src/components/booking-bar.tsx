@@ -39,6 +39,8 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
         minDate={minDate}
         prevMonthLabel={booking.prevMonth}
         nextMonthLabel={booking.nextMonth}
+        personas={people}
+        fullLabel={booking.dayFull}
       />
 
       <TimeField label={booking.time} help={booking.timeHelp} value={time} onChange={setTime} />

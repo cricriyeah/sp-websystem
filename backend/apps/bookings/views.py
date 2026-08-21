@@ -10,6 +10,7 @@ from .models import (
     MIN_PERSONAS,
     Reserva,
     cupo_maximo_del_dia,
+    disponibilidad_por_fecha,
     evaluar_cupo,
     proxima_fecha_disponible,
 )
@@ -60,6 +61,69 @@ class CupoDisponibleView(APIView):
             'motivo_no_disponible': motivo,
         }
         return Response(CupoSerializer(data).data)
+
+
+# Tope de dias que puede pedir /api/cupo/rango/ de un golpe. Dos meses cubren de
+# sobra lo que un calendario pinta a la vez (el del hero muestra un mes, el del
+# checkout una semana) y dejan margen para precargar el mes siguiente. Existe
+# para que una sola peticion no pueda pedir diez anios y barrer la tabla de
+# reservas: la ruta es publica y sin autenticacion.
+MAX_DIAS_RANGO = 62
+
+
+class CupoRangoView(APIView):
+    """Disponibilidad de cada dia de un rango, para pintar el calendario.
+
+    Existe para que el cliente vea los dias llenos **antes** de tocar uno. Antes
+    solo se podia preguntar dia por dia (`/api/cupo/`), y un mes son 30
+    peticiones contra un limite de 60/min: el segundo mes devuelve 429.
+
+    Responde `{'dias': {'2026-09-07': None, '2026-09-08': 'lleno', ...}}`, donde
+    None significa que si cabe. Es informativo, igual que /api/cupo/: la
+    validacion que manda ocurre al confirmar el pago.
+    """
+
+    throttle_scope = 'consulta'
+
+    def get(self, request):
+        fechas = {}
+        for nombre in ('desde', 'hasta'):
+            crudo = request.query_params.get(nombre)
+            if not crudo:
+                return Response({'detail': f'Falta el parametro {nombre}.'}, status=400)
+            try:
+                fechas[nombre] = date.fromisoformat(crudo)
+            except ValueError:
+                return Response(
+                    {'detail': f'{nombre} debe tener el formato YYYY-MM-DD.'}, status=400
+                )
+
+        desde, hasta = fechas['desde'], fechas['hasta']
+        if hasta < desde:
+            return Response({'detail': 'hasta no puede ser anterior a desde.'}, status=400)
+        if (hasta - desde).days + 1 > MAX_DIAS_RANGO:
+            return Response(
+                {'detail': f'El rango no puede pasar de {MAX_DIAS_RANGO} dias.'}, status=400
+            )
+
+        # Mismo default y mismos limites que /api/cupo/: las dos rutas contestan
+        # sobre el mismo grupo y no pueden discrepar en que es un grupo valido.
+        try:
+            personas = int(request.query_params.get('personas', MIN_PERSONAS))
+        except (TypeError, ValueError):
+            return Response({'detail': 'personas debe ser un numero entero.'}, status=400)
+        if not (MIN_PERSONAS <= personas <= MAX_PERSONAS):
+            return Response(
+                {'detail': f'personas debe estar entre {MIN_PERSONAS} y {MAX_PERSONAS}.'},
+                status=400,
+            )
+
+        return Response({
+            'dias': {
+                fecha.isoformat(): motivo
+                for fecha, motivo in disponibilidad_por_fecha(desde, hasta, personas).items()
+            }
+        })
 
 
 class ReservaCheckoutView(APIView):

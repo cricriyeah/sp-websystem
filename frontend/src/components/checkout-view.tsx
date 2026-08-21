@@ -147,18 +147,21 @@ export function CheckoutView({
   const [pago, setPago] = useState<Pago | null>(null);
   const [recordatorioAbierto, setRecordatorioAbierto] = useState(false);
   const [pagoProcesando, setPagoProcesando] = useState(false);
-  const [dayFullNotice, setDayFullNotice] = useState<string | null>(null);
+  // Dia sin lugar para este grupo, con la alternativa que ofrece el backend.
+  // **No se reasigna la fecha sola.** Antes se hacia (`setDay(proxima)`) y el
+  // campo cambiaba bajo las manos del cliente despues de que el ya habia
+  // elegido: rompe la expectativa universal de que tocar un dia lo selecciona, y
+  // el peor caso era llegar desde la portada, donde el salto ocurria durante el
+  // primer pintado. Ahora los dias llenos van en gris en el calendario y esto
+  // solo cubre el caso que el gris no alcanza a atajar: llegar por URL con una
+  // fecha que ya no sirve, o que se llene mientras el cliente llena el formulario.
+  const [sinLugar, setSinLugar] = useState<{ mensaje: string; alternativa: string | null } | null>(
+    null,
+  );
   const cupoCheckId = useRef(0);
 
-  // El cupo real se valida en el backend (al pagar), esto solo es feedback
-  // adelantado: si el dia elegido ya no admite a este grupo, reasigna
-  // automaticamente al dia mas proximo con espacio y avisa. Nunca bloquea el
-  // flujo (ver docs/contexto-negocio.md — el checkout no debe poner trabas).
-  //
-  // Depende tambien de `people`: un dia puede tener lugares libres y aun asi no
-  // poder recibir a un grupo de 4, porque solo dos pangas de la flota lo llevan.
-  // Sin esa dependencia, subir el numero de personas dejaria al cliente en un dia
-  // que ya no le sirve.
+  // Depende de `people` ademas de `day`: un dia puede tener lugares libres y aun
+  // asi no recibir a un grupo de 4, porque solo dos pangas de la flota lo llevan.
   useEffect(() => {
     const checkId = ++cupoCheckId.current;
 
@@ -172,23 +175,28 @@ export function CheckoutView({
         return;
       }
       if (cupoCheckId.current !== checkId) return;
-      if (cupo.disponible || !cupo.proxima_disponible) return;
 
-      setDay(cupo.proxima_disponible);
+      if (cupo.disponible) {
+        setSinLugar(null);
+        return;
+      }
+
       // Dos mensajes distintos porque son dos problemas distintos: al cliente de
       // 4 personas hay que decirle que el dia si tiene espacio pero no para su
       // grupo — si no, ve lugares libres y no entiende por que no puede.
       const plantilla =
         cupo.motivo_no_disponible === 'sin_panga'
           ? checkout.noBoatForGroupNotice
-          : checkout.dayFullNotice;
-      setDayFullNotice(
-        plantilla
-          .replace('{date}', formatDay(fromLocalISODate(cupo.proxima_disponible), lang))
-          .replace('{people}', String(people))
-      );
+          : checkout.dayFullOffer;
+
+      setSinLugar({
+        mensaje: plantilla
+          .replace('{date}', formatDay(fromLocalISODate(day), lang))
+          .replace('{people}', String(people)),
+        alternativa: cupo.proxima_disponible,
+      });
     })();
-  }, [day, people, lang, checkout.dayFullNotice, checkout.noBoatForGroupNotice]);
+  }, [day, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice]);
 
   // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
   const usdDisponible = tarifa?.precio_usd != null;
@@ -391,11 +399,28 @@ export function CheckoutView({
         </Link>
       </div>
 
-      {dayFullNotice && (
+      {sinLugar && (
         <div className="mx-auto mb-2 flex max-w-6xl items-start gap-3 px-6 sm:px-8 lg:px-12">
-          <div className="flex w-full items-start gap-3 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground">
-            <Warning size={18} className="mt-0.5 shrink-0 text-accent" />
-            <p>{dayFullNotice}</p>
+          <div className="flex w-full flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Warning size={18} className="mt-0.5 shrink-0 text-accent" />
+              <p>{sinLugar.mensaje}</p>
+            </div>
+            {/* La alternativa se OFRECE, no se aplica. Es el cliente quien decide
+                cambiar de fecha: para un turista con vuelo el jueves, el
+                siguiente dia libre puede no servirle de nada. */}
+            {sinLugar.alternativa && (
+              <button
+                type="button"
+                onClick={() => setDay(sinLugar.alternativa!)}
+                className="shrink-0 self-start rounded-full bg-accent px-4 py-2 text-xs font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:self-auto"
+              >
+                {checkout.takeOffered.replace(
+                  '{date}',
+                  formatDay(fromLocalISODate(sinLugar.alternativa), lang),
+                )}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -410,6 +435,8 @@ export function CheckoutView({
               selected={day}
               onSelect={setDay}
               minDate={minDate}
+              personas={people}
+              fullLabel={checkout.dayFull}
               weekdaysShort={checkout.weekdaysShort}
             />
 

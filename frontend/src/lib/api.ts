@@ -113,6 +113,23 @@ export const getTarifa = () => request<Tarifa>('/api/tarifa/');
 export const getCupo = (fecha: string, personas: number) =>
   request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`);
 
+/** Por que no cabe el grupo cada dia del rango; null = si cabe. */
+export type MotivoNoDisponible = 'lleno' | 'sin_panga';
+export type DisponibilidadRango = Record<string, MotivoNoDisponible | null>;
+
+/**
+ * Disponibilidad de todo un rango en UNA peticion, para pintar en gris los dias
+ * llenos del calendario.
+ *
+ * No preguntar dia por dia: son 30 peticiones por mes contra un limite de 60/min
+ * por IP, y el segundo mes devuelve 429. El backend tampoco pasa de 62 dias por
+ * llamada.
+ */
+export const getCupoRango = (desde: string, hasta: string, personas: number) =>
+  request<{ dias: DisponibilidadRango }>(
+    `/api/cupo/rango/?desde=${desde}&hasta=${hasta}&personas=${personas}`,
+  ).then((r) => r.dias);
+
 /** Crea la reserva de este checkout, o actualiza la que ya existia. */
 export const guardarReserva = (data: ReservaInput) =>
   request<Reserva>('/api/reservas/', { method: 'POST', body: JSON.stringify(data) });

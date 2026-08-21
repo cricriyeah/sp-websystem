@@ -97,7 +97,8 @@
     "maxPeopleNotice": "Máximo 5 personas por viaje.",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "submit": "Agendar"
+    "submit": "Agendar",
+    "dayFull": "Los días tachados ya no tienen lugar para tu grupo."
   },
   "about": {
     "headline": "No somos una agencia. Somos los que te van a llevar",
@@ -419,8 +420,7 @@
     "errorGeneric": "Algo salió mal. Intenta de nuevo.",
     "errorPaymentProvider": "No pudimos conectar con el procesador de pagos. No se te cobró nada. Espera un momento e intenta de nuevo, o escríbenos por WhatsApp y lo cerramos contigo.",
     "errorPaymentInProgress": "Ya hay un cobro en curso para esta reserva. Espera unos segundos y recarga la página antes de volver a intentar, para no pagar dos veces.",
-    "dayFullNotice": "Ese día ya no tiene cupo disponible. Te asignamos automáticamente el {date}, la fecha más próxima con espacio.",
-    "noBoatForGroupNotice": "Ese día todavía tiene espacio, pero ya no queda una panga para un grupo de {people} personas: solo dos de la flota llevan más de 3. Te asignamos automáticamente el {date}, la fecha más próxima con una disponible.",
+    "noBoatForGroupNotice": "El {date} todavía tiene espacio, pero ya no queda una panga para un grupo de {people} personas: solo dos de la flota llevan más de 3.",
     "paymentUnavailable": "Los pagos en línea todavía no están disponibles. Contáctanos por WhatsApp para reservar.",
     "confirmation": {
       "headline": "¡Listo! Tu reserva está confirmada",
@@ -435,6 +435,10 @@
       "agentBody": "Un agente de ventas se pondrá en contacto contigo en las próximas 24 horas para darte los detalles finales: referencias exactas del punto de encuentro, traslado y el nombre de tu capitán.",
       "quotesNote": "También te va a cotizar lo que pediste ({items}), que no está incluido en el monto que pagaste.",
       "backHome": "Volver al inicio"
-    }
+    },
+    "dayFull": "Los días tachados ya no tienen lugar para tu grupo.",
+    "dayFullOffer": "El {date} ya no tiene lugar para {people} personas.",
+    "takeOffered": "Ver el {date}",
+    "keepLooking": "Elegir otro día"
   }
 }
