@@ -43,6 +43,27 @@ class HealthzTests(TestCase):
         self.assertEqual(respuesta.status_code, 503)
         self.assertEqual(respuesta.json()['database'], 'unreachable')
 
+    def test_el_503_no_publica_los_datos_de_la_conexion(self):
+        """La ruta es publica y sin autenticacion. Los errores de psycopg traen
+        el host, el puerto y el usuario de la base: eso va al log, nunca al
+        cuerpo de la respuesta."""
+        detalle = (
+            'connection to server at "db.abcdefgh.supabase.co" (10.0.0.1), port 5432 '
+            'failed: FATAL: password authentication failed for user "postgres"'
+        )
+        with mock.patch('config.health.connection') as conexion:
+            conexion.cursor.side_effect = Exception(detalle)
+
+            with self.assertLogs('config.health', level='ERROR') as registro:
+                respuesta = self.client.get('/healthz')
+
+        cuerpo = respuesta.content.decode()
+        for filtracion in ('supabase.co', '5432', 'postgres', '10.0.0.1'):
+            self.assertNotIn(filtracion, cuerpo)
+
+        # Pero quien si puede leerlo —el log de Render— lo tiene completo.
+        self.assertIn('supabase.co', registro.output[0])
+
     def test_no_depende_de_servicios_externos(self):
         """Que Stripe o Resend esten caidos no significa que esta version deba
         salir de servicio: la sonda no debe llamarlos."""

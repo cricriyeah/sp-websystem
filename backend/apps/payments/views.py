@@ -47,7 +47,15 @@ class CrearPagoView(APIView):
         # cualquiera podria adivinar un id y generar cobros sobre la reserva de
         # otra persona. El checkout_id lo genera el navegador del cliente y solo
         # lo conoce quien abrio ese checkout.
-        if reserva.checkout_id and str(reserva.checkout_id) != str(request.data.get('checkout_id')):
+        #
+        # Una reserva SIN checkout_id no nacio en el checkout web: la capturo la
+        # vendedora (canal WhatsApp) y nadie tiene la llave para cobrarla por
+        # aqui. Antes la condicion arrancaba con `reserva.checkout_id and`, asi
+        # que para esas el guard entero se saltaba y bastaba adivinar el id para
+        # sacarles el client_secret, pisarles el intent o cambiarles la
+        # forma_pago a anticipo. Se cobran por otro lado (efectivo o un cobro que
+        # arma la vendedora), no por esta ruta.
+        if not reserva.checkout_id or str(reserva.checkout_id) != str(request.data.get('checkout_id')):
             return Response({'detail': 'checkout_id invalido para esta reserva.'}, status=403)
 
         if reserva.estado != Reserva.Estado.PENDIENTE_PAGO:

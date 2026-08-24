@@ -183,3 +183,63 @@ class CorreoDeAsignacionTests(TestCase):
         post.side_effect = requests.RequestException('boom')
 
         self.assertFalse(enviar_correo_asignacion(self._reserva_asignada()))
+
+
+@override_settings(**LLAVES)
+class EscapadoDelCorreoTests(TestCase):
+    """Lo que escribe el cliente no puede volverse markup del correo.
+
+    `validar_nombre_persona` acepta acentos, apostrofos y guiones porque son
+    parte de nombres reales y solo rechaza digitos, asi que un `<a href=...>`
+    pasa la validacion. Los cuerpos se arman con f-strings y no con plantillas,
+    de modo que nadie escapa por nosotros. El correo no lo lee solo el cliente:
+    con `RESEND_BCC` la copia cae en el buzon del negocio.
+    """
+
+    NOMBRE_CON_MARKUP = 'Ana <a href="https://malo.tld">Confirma aqui</a>'
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_el_nombre_no_se_convierte_en_un_enlace(self, post):
+        reserva = crear_reserva()
+        reserva.nombre_cliente = self.NOMBRE_CON_MARKUP
+
+        self.assertTrue(enviar_correo_confirmacion(reserva))
+
+        html = _cuerpo_enviado(post)['html']
+        self.assertNotIn('<a href', html)
+        self.assertIn('&lt;a href', html)
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_el_nombre_de_la_panga_tampoco(self, post):
+        """El catalogo lo escriben los jefes desde el admin, no un extraño, pero
+        el escapado es del renderizado y no de la confianza en la fuente."""
+        embarcacion = Embarcacion.objects.create(
+            nombre='Dona <b>Chuy</b>', clase=Embarcacion.Clase.CHICA, capacidad_maxima=6
+        )
+        capitan = Capitan.objects.create(nombre='Ramon Geraldo', telefono='+5216129876543')
+        reserva = crear_reserva()
+        reserva.nombre_cliente = self.NOMBRE_CON_MARKUP
+        reserva.estado = Reserva.Estado.ASIGNADA
+        reserva.embarcacion = embarcacion
+        reserva.capitan = capitan
+        reserva.save()
+
+        self.assertTrue(enviar_correo_asignacion(reserva))
+
+        html = _cuerpo_enviado(post)['html']
+        self.assertNotIn('<a href', html)
+        self.assertNotIn('Dona <b>Chuy</b>', html)
+        self.assertIn('Dona &lt;b&gt;Chuy&lt;/b&gt;', html)
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_un_nombre_con_apostrofo_sigue_leyendose_bien(self, post):
+        """El escapado no puede romper un nombre real. `escape` convierte el
+        apostrofo en `&#x27;`, que el correo pinta como apostrofo: lo que ve el
+        cliente es O'Brien, no la entidad."""
+        reserva = crear_reserva()
+        reserva.nombre_cliente = "Ana O'Brien Garcia-Lopez"
+
+        enviar_correo_confirmacion(reserva)
+
+        self.assertIn('Ana O&#x27;Brien Garcia-Lopez', _cuerpo_enviado(post)['html'])
+

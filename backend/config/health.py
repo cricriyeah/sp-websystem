@@ -15,8 +15,12 @@ la base contesta. Nada de filas de negocio. Si alguna vez hace falta una sonda
 que valide que el sistema esta listo para vender, va en otra ruta y **no** en el
 `healthCheckPath` de Render.
 """
+import logging
+
 from django.db import connection
 from django.http import JsonResponse
+
+logger = logging.getLogger(__name__)
 
 
 def healthz(request):
@@ -33,11 +37,18 @@ def healthz(request):
             cursor.execute('SELECT 1')
             cursor.fetchone()
     except Exception as exc:
-        # Sin logger.exception: si la base esta caida esto se repite en cada
-        # sondeo y llenaria el log justo cuando hay que leerlo.
-        return JsonResponse(
-            {'status': 'error', 'database': 'unreachable', 'detail': str(exc)[:200]},
-            status=503,
-        )
+        # El motivo va al log y NO al cuerpo de la respuesta. Esta ruta es
+        # publica, sin autenticacion y exenta del redirect a https, y los errores
+        # de psycopg vienen con el host, el puerto y el usuario de la base
+        # (`connection to server at "db.xxxx.supabase.co" (...), port 5432
+        # failed: FATAL: password authentication failed for user "postgres"`).
+        # Devolverlo entregaba ese mapa a cualquiera que sondeara justo cuando la
+        # base esta caida.
+        #
+        # `logger.error` y no `logger.exception`: el traceback se repetiria en
+        # cada sondeo y llenaria el log justo cuando hay que leerlo. Una linea
+        # por sondeo si cabe, y es la que dice que paso.
+        logger.error('La base no contesta en /healthz: %s', exc)
+        return JsonResponse({'status': 'error', 'database': 'unreachable'}, status=503)
 
     return JsonResponse({'status': 'ok', 'database': 'ok'})

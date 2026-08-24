@@ -7,6 +7,7 @@ nada. Ninguna falla de notificacion debe tumbar el cobro: el webhook de Stripe
 ya recibio el dinero, asi que todo error se registra y se sigue.
 """
 import logging
+from html import escape
 
 import requests
 from django.conf import settings
@@ -16,6 +17,22 @@ logger = logging.getLogger(__name__)
 TIMEOUT_SEGUNDOS = 10
 
 PUNTO_DE_ENCUENTRO = 'Marina La Costa, Rangel y Navarro, La Paz, BCS'
+
+
+def _html(valor):
+    """Escapa un dato escrito por una persona antes de meterlo al correo.
+
+    Los cuerpos se arman con f-strings, asi que aqui no hay un motor de
+    plantillas que escape solo. Y `validar_nombre_persona` es permisivo a
+    proposito —acepta acentos, apostrofos y guiones porque son parte de nombres
+    reales, y solo rechaza digitos—, asi que `<` y `>` pasan: sin esto, un
+    nombre como `Ana <a href="https://malo.tld">Ver reserva</a>` llega
+    renderizado al cliente y, por `RESEND_BCC`, tambien al buzon del negocio.
+
+    Se escapa al usar el dato y no al guardarlo: en la base tiene que quedar lo
+    que la persona escribio, que es lo que la vendedora lee y corrige.
+    """
+    return escape(str(valor))
 
 
 def _asunto(reserva):
@@ -52,7 +69,7 @@ def _cuerpo_html(reserva):
         )
 
     return (
-        f'<p>Hola {reserva.nombre_cliente}, tu reserva quedo confirmada.</p>'
+        f'<p>Hola {_html(reserva.nombre_cliente)}, tu reserva quedo confirmada.</p>'
         f'<ul>'
         f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
         f'<li><strong>Hora de salida:</strong> {reserva.hora:%H:%M}</li>'
@@ -125,10 +142,10 @@ def _cuerpo_asignacion_html(reserva):
         )
 
     return (
-        f'<p>Hola {reserva.nombre_cliente}, ya sabemos con quien sales.</p>'
+        f'<p>Hola {_html(reserva.nombre_cliente)}, ya sabemos con quien sales.</p>'
         f'<ul>'
-        f'<li><strong>Capitan:</strong> {reserva.capitan.nombre}</li>'
-        f'<li><strong>Panga:</strong> {reserva.embarcacion.nombre}</li>'
+        f'<li><strong>Capitan:</strong> {_html(reserva.capitan.nombre)}</li>'
+        f'<li><strong>Panga:</strong> {_html(reserva.embarcacion.nombre)}</li>'
         f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
         f'<li><strong>Hora de salida:</strong> {reserva.hora:%H:%M}</li>'
         f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'

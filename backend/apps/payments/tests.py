@@ -82,6 +82,9 @@ class LlavesDeStripeCruzadasTests(TestCase):
         self.assertNotIn('secretisimo', texto)
 
 
+CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
+
+
 def crear_reserva(**overrides):
     crear_flota()  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
     datos = {
@@ -94,6 +97,11 @@ def crear_reserva(**overrides):
         'canal_origen': Reserva.CanalOrigen.WEB,
         'deslinde_aceptado': True,
         'deslinde_nombre': 'Ana Ruiz',
+        # Como en produccion: una reserva web trae el identificador que genero el
+        # navegador, y es lo que acredita al dueño del checkout frente a
+        # `crear-pago`. Sin esto los tests cobrarian por una puerta que la web
+        # real no usa.
+        'checkout_id': CHECKOUT_ID,
     }
     datos.update(overrides)
     reserva = Reserva(**datos)
@@ -160,7 +168,7 @@ class CrearPagoTests(ApiTestCase):
         self.url = f'/api/reservas/{self.reserva.pk}/crear-pago/'
 
     def post(self, **body):
-        datos = {'forma_pago': 'completo'}
+        datos = {'forma_pago': 'completo', 'checkout_id': str(self.reserva.checkout_id)}
         datos.update(body)
         return self.client.post(self.url, datos, content_type='application/json')
 
@@ -245,7 +253,8 @@ class CrearPagoTests(ApiTestCase):
         reserva = crear_reserva(moneda='USD', lleva_lunch=True)
         response = self.client.post(
             f'/api/reservas/{reserva.pk}/crear-pago/',
-            {'forma_pago': 'completo'}, content_type='application/json',
+            {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 503)
         create.assert_not_called()
@@ -259,7 +268,8 @@ class CrearPagoTests(ApiTestCase):
         reserva = crear_reserva(moneda='USD', numero_personas=5)
         response = self.client.post(
             f'/api/reservas/{reserva.pk}/crear-pago/',
-            {'forma_pago': 'completo'}, content_type='application/json',
+            {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 503)
         create.assert_not_called()
@@ -321,7 +331,8 @@ class CrearPagoTests(ApiTestCase):
         reserva = crear_reserva(moneda='USD')
         response = self.client.post(
             f'/api/reservas/{reserva.pk}/crear-pago/',
-            {'amenities': [], 'forma_pago': 'completo'}, content_type='application/json',
+            {'amenities': [], 'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 503)
         create.assert_not_called()
@@ -333,15 +344,43 @@ class CrearPagoTests(ApiTestCase):
     def test_sin_el_checkout_id_correcto_no_se_puede_cobrar(self, create):
         """Los ids de reserva son consecutivos y la API es publica: adivinar uno
         no debe alcanzar para generar cobros sobre la reserva de otra persona."""
-        self.reserva.checkout_id = '11111111-1111-4111-8111-111111111111'
-        self.reserva.save()
-
-        self.assertEqual(self.post().status_code, 403)
+        self.assertEqual(self.post(checkout_id=None).status_code, 403)
         self.assertEqual(self.post(checkout_id='22222222-2222-4222-8222-222222222222').status_code, 403)
         create.assert_not_called()
 
         create.return_value = intent_falso()
         self.assertEqual(self.post(checkout_id=str(self.reserva.checkout_id)).status_code, 200)
+
+    @mock.patch('stripe.PaymentIntent.create')
+    def test_una_reserva_de_whatsapp_no_se_cobra_por_esta_ruta(self, create):
+        """Las que captura la vendedora no traen checkout_id, asi que no hay
+        llave que las acredite: por aqui no se tocan.
+
+        Con el guard escrito como `if reserva.checkout_id and ...` estas se
+        colaban enteras — adivinando el id se sacaba su client_secret, se les
+        pisaba el intent y se les podia cambiar la forma_pago a anticipo, que
+        deja el viaje confirmado pagando el 30%."""
+        self.reserva.checkout_id = None
+        self.reserva.canal_origen = Reserva.CanalOrigen.WHATSAPP
+        self.reserva.save()
+
+        self.assertEqual(self.post(checkout_id=None).status_code, 403)
+        # Tampoco vale mandar cualquier cosa, ni repetir el que tenia antes.
+        self.assertEqual(self.post(checkout_id=CHECKOUT_ID).status_code, 403)
+        create.assert_not_called()
+
+    def test_el_403_no_delata_en_que_estado_esta_la_reserva(self):
+        """El guard corre antes que la revision de estado, asi que quien no
+        trae la llave recibe siempre lo mismo. Si se invirtiera el orden, el 409
+        de 'ya no esta pendiente' le diria a un extraño cuales reservas ya se
+        pagaron — recorriendo ids consecutivos, eso es un mapa del negocio."""
+        ajeno = '22222222-2222-4222-8222-222222222222'
+        self.assertEqual(self.post(checkout_id=ajeno).status_code, 403)
+
+        self.reserva.estado = Reserva.Estado.PAGADA
+        self.reserva.save(update_fields=['estado'])
+
+        self.assertEqual(self.post(checkout_id=ajeno).status_code, 403)
 
 
 @override_settings(**LLAVES)
