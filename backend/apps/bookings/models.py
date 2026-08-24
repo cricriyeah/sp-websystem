@@ -43,6 +43,11 @@ HORAS_PARA_CONSIDERAR_ABANDONADO = 2
 # Los jefes/vendedora cierran o reducen un dia especifico creando un CupoDiario.
 CUPO_MAXIMO_DEFAULT = 10
 
+# Version del deslinde que el sitio muestra hoy. Al cambiar el texto de
+# `checkout.waiver.page` en los diccionarios del frontend hay que subir esta
+# fecha, o las constancias nuevas quedaran selladas contra un texto viejo.
+DESLINDE_VERSION = '2026-08-21'
+
 # Solo estas cuentan contra el cupo: una reserva pendiente_pago (checkout iniciado
 # pero no pagado) no debe bloquear el cupo de otro cliente.
 ESTADOS_QUE_OCUPAN_CUPO = ['pagada', 'asignada', 'completada']
@@ -383,6 +388,10 @@ class Reserva(models.Model):
     deslinde_nombre = models.CharField(max_length=150, blank=True)
     deslinde_aceptado_en = models.DateTimeField(null=True, blank=True)
     deslinde_ip = models.GenericIPAddressField(null=True, blank=True)
+    # Que version del texto acepto. La clausula 8(d) del deslinde promete
+    # conservar "un registro del texto aceptado", y sin esto una constancia
+    # apunta a lo que diga el sitio hoy, no a lo que el cliente leyo ese dia.
+    deslinde_version = models.CharField(max_length=20, blank=True)
 
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE_PAGO)
     canal_origen = models.CharField(max_length=10, choices=CanalOrigen.choices)

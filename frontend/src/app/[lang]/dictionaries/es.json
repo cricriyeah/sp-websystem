@@ -34,39 +34,51 @@
   "privacy": {
     "title": "Aviso de privacidad",
     "updated": "Última actualización: agosto de 2026",
-    "intro": "Somos un negocio chico y usamos tus datos para una sola cosa: llevarte a pescar. Aquí te decimos exactamente qué guardamos y por qué, sin letras chiquitas.",
+    "intro": "Somos un negocio chico y usamos tus datos para una sola cosa: llevarte a pescar. Aquí te decimos exactamente qué guardamos, para qué y por cuánto tiempo, sin letras chiquitas.",
     "sections": [
       {
         "title": "Quién es responsable de tus datos",
-        "body": "Sal y Sol Sportfishing, con punto de operación en Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur. Puedes contactarnos por WhatsApp al número que aparece en esta página."
+        "body": "Sal y Sol Sportfishing, con punto de operación en Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur, México, es responsable de los datos personales descritos en este aviso.\n\nPara cualquier asunto relacionado con tus datos —incluidas las solicitudes que se describen en «Tus derechos ARCO»— escríbenos por WhatsApp al número que aparece en este sitio, o por correo a privacidad@salysolsportfishing.com. Respondemos en un plazo máximo de 20 días hábiles, como lo exige la legislación mexicana en materia de datos personales."
       },
       {
         "title": "Qué datos recabamos",
-        "body": "Al reservar te pedimos tu nombre, teléfono y correo electrónico, además de la fecha, hora y número de personas de tu viaje. Al aceptar el deslinde de responsabilidad guardamos también tu nombre, la fecha y hora de aceptación y tu dirección IP, como constancia de ese acuerdo."
+        "body": "- **Al reservar:** tu nombre, teléfono y correo electrónico, además de la fecha, hora y número de personas de tu viaje.\n- **Al aceptar el deslinde de responsabilidad:** tu nombre, la fecha y hora de aceptación y tu dirección IP, como constancia de ese acuerdo.\n- **Al pagar:** el monto, la moneda y un identificador de la transacción (ver «Datos de pago»: nunca vemos los datos de tu tarjeta).\n- **De forma automática, mediante cookies:** ver «Cookies y almacenamiento en tu navegador».\n\nSolo recabamos lo necesario para operar tu viaje. No pedimos datos personales sensibles (salud, religión, etc.), y si alguna vez nos mencionas una condición médica en un mensaje, la usamos únicamente para cuidarte en el agua, nunca para otro fin."
       },
       {
         "title": "Para qué los usamos",
-        "body": "Para coordinar tu viaje: confirmarte la reserva, asignarte capitán y embarcación, y comunicarnos contigo antes de la salida. También para cumplir con la constancia del deslinde. No los usamos para publicidad ni te vamos a llenar de correos."
+        "body": "- Confirmar tu reserva, asignarte capitán y embarcación, y comunicarnos contigo antes de la salida.\n- Conservar el deslinde de responsabilidad como constancia, por si llegara a hacer falta.\n- Procesar el pago y conservar el registro de la transacción para efectos contables y fiscales.\n- Atribuir la venta, si reservaste por el enlace de alguien más (ver «Cookies»).\n\nTodo lo anterior es necesario para prestarte el servicio que nos pides, así que no pedimos un consentimiento aparte para ello. **No** usamos tus datos para publicidad, no armamos perfiles de mercadotecnia y no te vamos a llenar el correo. Si eso llegara a cambiar, primero te pediremos tu consentimiento expreso y por separado."
       },
       {
         "title": "Datos de pago",
-        "body": "Los datos de tu tarjeta NUNCA pasan por nuestros servidores ni los podemos ver. El cobro lo procesa Stripe, que cumple con el estándar PCI DSS. Nosotros solo guardamos el monto, la moneda y un identificador de la transacción."
+        "body": "Los datos de tu tarjeta **nunca** pasan por nuestros servidores ni los podemos ver. El cobro lo procesa Stripe, que cumple con el estándar PCI DSS. Nosotros solo guardamos el monto, la moneda y un identificador de la transacción."
       },
       {
         "title": "Con quién los compartimos",
-        "body": "Con nadie que no sea necesario para tu viaje: el capitán asignado recibe tu nombre, teléfono y los datos de la salida. Usamos Stripe para el cobro y servicios de correo y WhatsApp para confirmarte. No vendemos ni cedemos tus datos a terceros."
+        "body": "Solo compartimos lo que cada viaje requiere:\n\n- El **capitán asignado** recibe tu nombre, teléfono y los datos de la salida.\n- **Stripe** (con sede en Estados Unidos) procesa los pagos.\n- **Los servicios de correo y de WhatsApp/Meta** (con sede en Estados Unidos) se usan para confirmarte y comunicarnos contigo.\n\nEstos proveedores reciben únicamente lo que necesitan para hacer su trabajo y están sujetos a sus propias obligaciones de protección de datos. Como algunos tienen su sede fuera de México, esto implica una transferencia internacional de tus datos, hecha solo para los fines descritos en este aviso. No vendemos tus datos ni los entregamos a terceros para ningún otro propósito."
       },
       {
         "title": "Cuánto tiempo los guardamos",
-        "body": "Las reservas se conservan como registro de la operación. Los checkouts que quedaron sin pagar se eliminan automáticamente a los 30 días."
+        "body": "- **Las reservas y las constancias del deslinde** se conservan el tiempo necesario para resolver cualquier controversia sobre el viaje, y conforme a los plazos de prescripción aplicables.\n- **Los registros de pago y transacciones** se conservan al menos 5 años, como lo exige la normativa fiscal y contable mexicana.\n- **Los checkouts que quedaron sin pagar** se eliminan automáticamente a los 30 días.\n- Cumplidos esos plazos, tus datos se eliminan o se anonimizan."
       },
       {
         "title": "Tus derechos ARCO",
-        "body": "Puedes pedirnos acceder a tus datos, rectificarlos si están mal, cancelarlos u oponerte a su uso. Escríbenos por WhatsApp o al correo con el que reservaste y lo resolvemos; no necesitas ningún formato especial."
+        "body": "Conforme a la legislación mexicana, puedes ejercer tus derechos ARCO en cualquier momento:\n\n- **Acceder** a los datos personales que tenemos de ti.\n- **Rectificarlos** si están incompletos o son incorrectos.\n- **Cancelarlos** (pedir su eliminación), sujeto a las obligaciones legales de conservación descritas arriba.\n- **Oponerte** a un uso específico de tus datos.\n\nTambién puedes **revocar** en cualquier momento el consentimiento que nos hayas dado.\n\nEscríbenos por WhatsApp o al correo desde la dirección con la que reservaste y lo resolvemos; no necesitas ningún formato especial. Te confirmamos la recepción de tu solicitud y respondemos en un plazo máximo de 20 días hábiles."
+      },
+      {
+        "title": "Seguridad",
+        "body": "Mantenemos el acceso a las reservas y a las constancias del deslinde limitado a las personas que lo necesitan para operar tu viaje, y nos apoyamos en proveedores (Stripe, nuestro hospedaje y los servicios de correo y WhatsApp) que mantienen sus propias certificaciones de seguridad conforme a los estándares de la industria."
+      },
+      {
+        "title": "Menores de edad",
+        "body": "Nuestros viajes y este sitio están dirigidos a personas adultas. Si participa un menor de edad, el deslinde de responsabilidad debe ser aceptado por su padre, madre o tutor legal, y tratamos los datos del menor con las mismas protecciones descritas en este aviso."
       },
       {
         "title": "Cookies y almacenamiento en tu navegador",
-        "body": "Guardamos en tu navegador lo indispensable para que la reserva funcione: los datos de tu viaje mientras lo llenas y el código de la persona que te atendió, si llegaste por su link. Eso no se puede desactivar sin romper la reserva. Todo lo demás —medir cómo se usa el sitio para mejorarlo— solo ocurre si lo aceptas en el aviso que aparece abajo cuando entras; si no respondes o lo rechazas, no se activa nada. Puedes cambiar de opinión borrando los datos del sitio desde tu navegador."
+        "body": "Guardamos en tu navegador solo lo que la reserva necesita: los datos de tu viaje mientras los llenas y el código de la persona que te refirió, si llegaste por su enlace. Eso no se puede desactivar sin romper la reserva.\n\nTodo lo demás —medir cómo se usa el sitio para mejorarlo— solo ocurre si lo aceptas en el aviso que aparece abajo cuando entras. Si no respondes o lo rechazas, no se activa nada. Puedes cambiar de opinión en cualquier momento borrando los datos de este sitio desde tu navegador."
+      },
+      {
+        "title": "Cambios a este aviso",
+        "body": "Si hacemos cambios importantes en la forma en que tratamos tus datos, publicaremos aquí un aviso actualizado con una nueva fecha de «Última actualización», y te avisaremos por WhatsApp o correo si el cambio afecta datos que ya tenemos de ti."
       }
     ],
     "back": "Volver al inicio"
@@ -359,33 +371,41 @@
       "linkLabel": "deslinde completo",
       "missing": "Acepta el deslinde de responsabilidad para continuar.",
       "page": {
-        "title": "Deslinde de responsabilidad",
-        "updated": "Última actualización: agosto de 2026",
-        "intro": "Este documento describe los riesgos de la actividad y los términos que aceptas al reservar un tour de pesca deportiva con Sal y Sol Sportfishing. Al marcar la casilla en el checkout declaras haberlo leído y estar de acuerdo.",
+        "title": "Exención de responsabilidad y liberación por actividad de pesca deportiva",
+        "updated": "Última actualización: 21 de agosto de 2026",
+        "intro": "Esta EXENCIÓN DE RESPONSABILIDAD Y LIBERACIÓN POR ACTIVIDAD DE PESCA DEPORTIVA (el «Acuerdo») se celebra de forma electrónica en la fecha de aceptación indicada a continuación, entre:\n\nsal y sol, una empresa organizada y existente conforme a las leyes de Baja California Sur, México, con domicilio principal en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (la «Parte Liberada»);\n\ny\n\nla persona identificada mediante el nombre, correo electrónico y teléfono capturados en el formulario de reservación/aceptación del sitio web de la Parte Liberada (el «Participante»).\n\n(Cada una, individualmente, una «Parte» y, en conjunto, las «Partes».)",
         "sections": [
           {
-            "title": "1. Naturaleza de la actividad",
-            "body": "La pesca deportiva se realiza en mar abierto, a bordo de embarcaciones menores, y conlleva riesgos propios de la actividad: oleaje, condiciones climáticas cambiantes, movimiento de la embarcación, uso de anzuelos y equipo de pesca, exposición al sol y contacto con especies marinas. Participas con conocimiento de estos riesgos y por voluntad propia."
+            "title": "1. Declaraciones",
+            "body": "1.1 Propósito de la Liberación. El Participante desea participar en actividades de pesca deportiva proporcionadas, organizadas o facilitadas por la Parte Liberada. Como condición para poder participar en el tour de pesca, el Participante suscribe esta exención de responsabilidad de forma voluntaria y con pleno entendimiento de sus consecuencias legales.\n\n1.2 Reconocimiento de Riesgos. El Participante reconoce que la pesca deportiva se realiza en aguas abiertas a bordo de embarcaciones pequeñas y conlleva riesgos inherentes a la actividad, incluyendo, entre otros, oleaje, condiciones climáticas cambiantes, movimiento de la embarcación, uso de anzuelos y equipo de pesca, exposición solar y contacto con especies marinas."
           },
           {
-            "title": "2. Obligaciones del participante",
-            "body": "Te comprometes a seguir en todo momento las indicaciones del capitán, a usar el chaleco salvavidas cuando él lo indique, y a no abordar bajo los efectos del alcohol o de sustancias que alteren tus reflejos. El capitán puede negar el abordaje o regresar a puerto si considera que tu conducta pone en riesgo a las personas a bordo, sin derecho a reembolso."
+            "title": "2. Definiciones",
+            "body": "Salvo que se indique lo contrario, los siguientes términos tendrán los significados que se establecen a continuación:\n\n«Actividad» significa cualquier tour de pesca deportiva, excursión en embarcación o actividad recreativa relacionada con el agua, organizada, operada o proporcionada por la Parte Liberada.\n\n«Reclamaciones» significa cualquier y todas las responsabilidades, demandas, acciones, causas de acción, juicios, daños, pérdidas, costos o gastos de cualquier tipo o naturaleza, conocidos o desconocidos, previstos o imprevistos.\n\n«Fecha de Vigencia» significa la fecha en que este Acuerdo es aceptado electrónicamente por el Participante en relación con la reservación del tour de pesca deportiva.\n\n«Participante» significa la persona que participa en la actividad de pesca deportiva y que acepta esta liberación de responsabilidad.\n\n«Parte Liberada» significa sal y sol, sus propietarios, directores, funcionarios, empleados, agentes, representantes, capitanes, tripulantes y afiliadas."
           },
           {
-            "title": "3. Menores de edad",
-            "body": "No hay restricción de edad, pero los menores viajan bajo la responsabilidad y supervisión permanente del adulto que realizó la reserva."
+            "title": "3. Alcance y aplicación de la liberación",
+            "body": "3.1 Momento de Aplicación. Esta liberación aplicará en todo momento en que el Participante tome parte en la Actividad. Los términos y condiciones aquí contenidos permanecerán en pleno vigor y efecto durante cada participación en actividades de pesca deportiva con la Parte Liberada.\n\n3.2 Asunción de Riesgos. El Participante asume expresa y específicamente todos los riesgos asociados con la participación en la pesca deportiva, previsibles o imprevisibles, incluyendo daños a la propiedad, lesiones personales, enfermedad o muerte derivados de la participación en la Actividad.\n\n3.3 La Liberación Incluye Negligencia Ordinaria; Se Exceptúa la Negligencia Grave. Esta liberación cubre, y el Participante renuncia expresamente a, cualquier reclamación derivada de negligencia ordinaria de la Parte Liberada. Esta liberación no cubre, y la Parte Liberada no pretende liberar, renunciar ni descargar responsabilidad por, negligencia grave, conducta dolosa o actos intencionales, en la medida en que dicha limitación sea exigida por la legislación aplicable."
           },
           {
-            "title": "4. Alcance del deslinde",
-            "body": "Liberas a Sal y Sol Sportfishing, a sus capitanes, tripulación y embarcaciones de responsabilidad por lesiones, pérdidas, daños o extravío de objetos personales que ocurran durante el tour y que no deriven de su negligencia comprobada. Este deslinde no limita los derechos que la ley te reconoce de forma irrenunciable."
+            "title": "4. Tratamiento médico y emergencias",
+            "body": "4.1 Consentimiento para Tratamiento Médico de Emergencia. El Participante autoriza expresamente a la Parte Liberada, sus capitanes y tripulantes a gestionar, consentir y obtener o administrar primeros auxilios y tratamiento médico de emergencia en su nombre, en caso de que el Participante no pueda hacerlo por sí mismo durante la Actividad, incluyendo su traslado a la instalación médica apropiada más cercana. Esta autorización no obliga a la Parte Liberada a proporcionar tratamiento médico ni la hace responsable del costo, calidad o resultado de dicho tratamiento.\n\n4.2 Responsabilidad del Participante sobre su Salud. El Participante declara y garantiza que se encuentra físicamente apto y mentalmente capaz para participar en actividades de pesca deportiva, y asume la responsabilidad exclusiva de cualquier gasto médico incurrido a consecuencia de enfermedad o lesión sufrida durante la Actividad."
           },
           {
-            "title": "5. Seguridad y cancelación por clima",
-            "body": "La decisión final sobre las condiciones de navegación es del capitán. Si determina que no es seguro salir, el tour se cancela y se te reembolsa el 100% de lo pagado. Las embarcaciones cuentan con seguro vigente."
+            "title": "5. Uso de imagen y fotografía",
+            "body": "5.1 Otorgamiento de Permiso. El Participante otorga a la Parte Liberada, sus sucesores y cesionarios, el derecho irrevocable e irrestricto de usar, publicar y registrar los derechos de autor sobre fotografías, videos y grabaciones de audio del Participante tomadas durante la Actividad, con fines promocionales, comerciales o cualquier otro fin lícito, sin compensación ni aprobación previa."
           },
           {
-            "title": "6. Datos que registramos",
-            "body": "Al aceptar guardamos tu nombre, la fecha y hora de aceptación y tu dirección IP, como constancia de este acuerdo. Tus datos de contacto se usan únicamente para coordinar tu viaje."
+            "title": "6. Liberación de responsabilidad y compromiso de no demandar",
+            "body": "6.1 Liberación y Descargo. El Participante, por sí mismo y por sus herederos, albaceas, administradores y cesionarios, libera, renuncia y descarga permanentemente a la Parte Liberada de cualquier reclamación, demanda o causa de acción derivada de la participación en la Actividad de pesca deportiva, con excepción únicamente de aquellas reclamaciones derivadas de negligencia grave, conducta dolosa o actos intencionales.\n\n6.2 Compromiso de No Demandar. El Participante se compromete a no iniciar ninguna acción legal, demanda o reclamación contra la Parte Liberada por lesión, pérdida o daño sufrido durante el tour de pesca deportiva, sujeto a las limitaciones establecidas en este Acuerdo."
+          },
+          {
+            "title": "7. Ley aplicable y disposiciones varias",
+            "body": "7.1 Ley Aplicable. Este Acuerdo se interpretará y regirá conforme a las leyes del Estado de Baja California Sur y la legislación federal aplicable de los Estados Unidos Mexicanos, sin considerar sus principios de conflicto de leyes. Las Partes se someten a la jurisdicción de los tribunales competentes de La Paz, Baja California Sur.\n\n7.2 Divisibilidad. Si alguna disposición, cláusula u oración de este Acuerdo se declara inválida, ilícita o inaplicable por un tribunal competente, dicha disposición se modificará en la medida mínima necesaria para hacerla válida y aplicable, y las demás disposiciones permanecerán en pleno vigor y efecto.\n\n7.3 Acuerdo Total. Este Acuerdo constituye el entendimiento total entre las Partes respecto de su objeto y sustituye cualquier discusión, negociación o manifestación previa, oral o escrita."
+          },
+          {
+            "title": "8. Aceptación electrónica",
+            "body": "Este Acuerdo está diseñado para su celebración electrónica. Al marcar la casilla de aceptación y enviar el formulario de reservación/exención en el sitio web de la Parte Liberada, el Participante acepta de forma afirmativa que: (a) ha leído y entendido este Acuerdo en su totalidad; (b) es mayor de 18 años, o bien este Acuerdo ha sido aceptado por separado por su padre, madre o tutor legal; (c) su nombre completo escrito constituye su firma electrónica; y (d) la Parte Liberada podrá conservar un registro del texto aceptado, el nombre escrito por el Participante, así como la fecha, hora y dirección IP de la aceptación, como evidencia de este Acuerdo."
           }
         ],
         "back": "Volver al checkout"

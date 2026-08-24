@@ -34,39 +34,51 @@
   "privacy": {
     "title": "Privacy notice",
     "updated": "Last updated: August 2026",
-    "intro": "We're a small business and we use your data for one thing: taking you fishing. Here's exactly what we keep and why, no fine print.",
+    "intro": "We're a small business and we use your data for one thing: taking you fishing. Here's exactly what we keep, why, and for how long — no fine print.",
     "sections": [
       {
         "title": "Who is responsible for your data",
-        "body": "Sal y Sol Sportfishing, operating out of Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur, Mexico. You can reach us on WhatsApp at the number shown on this site."
+        "body": "Sal y Sol Sportfishing, operating out of Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur, Mexico, is responsible for the personal data described in this notice.\n\nFor anything related to your data — including the requests described under «Your rights» below — contact us on WhatsApp at the number shown on this site, or by email at privacidad@salysolsportfishing.com. We aim to respond within 20 business days, as required under Mexican data protection law."
       },
       {
         "title": "What we collect",
-        "body": "When you book we ask for your name, phone and email, along with the date, time and number of guests for your trip. When you accept the liability waiver we also store your name, the date and time of acceptance and your IP address, as proof of that agreement."
+        "body": "- **When you book:** your name, phone number and email, plus the date, time and number of guests for your trip.\n- **When you accept the liability waiver:** your name, the date and time of acceptance, and your IP address, as proof of that agreement.\n- **When you pay:** the amount, currency and a transaction reference (see «Payment data» below — we never see your card details).\n- **Automatically, through cookies:** see «Cookies and browser storage» below.\n\nWe only collect what's needed to run your trip. We don't ask for sensitive personal data (health, religion, etc.), and if a medical condition ever comes up in a message to us, we only use it to keep you safe on the water — never for any other purpose."
       },
       {
         "title": "What we use it for",
-        "body": "To run your trip: confirming your booking, assigning a captain and boat, and reaching you before departure. Also to keep the waiver on record. We don't use it for advertising and we won't flood your inbox."
+        "body": "- Confirming your booking, assigning a captain and boat, and reaching you before departure.\n- Keeping the liability waiver on record in case it's ever needed.\n- Processing payment and keeping the transaction record for accounting and tax purposes.\n- Referral tracking, if you booked through someone else's link (see «Cookies» below).\n\nAll of the above are necessary to provide the service you're requesting — we don't ask for separate consent for them. We do **not** use your data for advertising, we don't build marketing profiles, and we won't flood your inbox. If that ever changes, we'll ask for your explicit, separate consent first."
       },
       {
         "title": "Payment data",
-        "body": "Your card details NEVER pass through our servers and we can't see them. Payments are processed by Stripe, which is PCI DSS compliant. We only store the amount, the currency and a transaction reference."
+        "body": "Your card details **never** pass through our servers and we can't see them. Payments are processed by Stripe, which is PCI DSS compliant. We only store the amount, the currency and a transaction reference."
       },
       {
         "title": "Who we share it with",
-        "body": "Only who your trip requires: the assigned captain gets your name, phone and departure details. We use Stripe for payments and email and WhatsApp services to confirm. We don't sell or hand over your data to third parties."
+        "body": "We only share what each trip requires:\n\n- The **assigned captain** gets your name, phone and departure details.\n- **Stripe** (based in the United States) processes payments.\n- **Email and WhatsApp/Meta services** (based in the United States) are used to confirm and communicate with you.\n\nThese providers only receive what they need to do their job, and are bound by their own data protection obligations. Because some of them are based outside Mexico, this involves an international transfer of your data — solely for the purposes described in this notice. We don't sell your data or hand it over to third parties for any other purpose."
       },
       {
         "title": "How long we keep it",
-        "body": "Bookings are kept as a record of the operation. Checkouts left unpaid are deleted automatically after 30 days."
+        "body": "- **Bookings and waiver records** are kept as long as needed to resolve any dispute about the trip, and as required by applicable statutes of limitation.\n- **Payment/transaction records** are kept for at least 5 years, as required by Mexican tax and accounting regulations.\n- **Unpaid checkouts** are deleted automatically after 30 days.\n- After these periods, your data is deleted or anonymized."
       },
       {
-        "title": "Your rights",
-        "body": "You can ask us to access your data, correct it if it's wrong, delete it or object to its use. Message us on WhatsApp or email us from the address you booked with and we'll sort it out — no special form needed."
+        "title": "Your rights (ARCO rights)",
+        "body": "Under Mexican law, you can exercise your ARCO rights at any time:\n\n- **Access** the personal data we hold about you.\n- **Rectify** it if it's incomplete or incorrect.\n- **Cancel** it (request deletion), subject to legal retention obligations described above.\n- **Oppose** a specific use of your data.\n\nYou can also **revoke** any consent you've given us, at any time.\n\nMessage us on WhatsApp or email us from the address you booked with, and we'll sort it out — no special form needed. We'll confirm receipt of your request and respond within 20 business days."
+      },
+      {
+        "title": "Security",
+        "body": "We keep access to booking and waiver records limited to the people who need it to run your trip, and we rely on providers (Stripe, our hosting and email/WhatsApp providers) that maintain their own industry-standard security certifications."
+      },
+      {
+        "title": "Minors",
+        "body": "Our trips and this site are intended for adults. If a minor participates, the liability waiver must be accepted by a parent or legal guardian, and we treat the minor's data with the same protections described in this notice."
       },
       {
         "title": "Cookies and browser storage",
-        "body": "We store in your browser only what the booking needs: your trip details while you fill them in, and the code of the person who helped you, if you arrived through their link. That cannot be turned off without breaking the booking. Everything else — measuring how the site is used so we can improve it — only happens if you accept it in the notice that appears at the bottom when you arrive; if you ignore it or reject it, nothing is activated. You can change your mind by clearing this site's data from your browser."
+        "body": "We store in your browser only what the booking needs: your trip details while you fill them in, and the code of the person who referred you, if you arrived through their link. That can't be turned off without breaking the booking.\n\nEverything else — measuring how the site is used so we can improve it — only happens if you accept it in the notice that appears at the bottom when you arrive. If you ignore it or reject it, nothing is activated. You can change your mind at any time by clearing this site's data from your browser."
+      },
+      {
+        "title": "Changes to this notice",
+        "body": "If we make significant changes to how we handle your data, we'll post an updated notice here with a new «Last updated» date, and let you know via WhatsApp or email if the change affects data we already hold about you."
       }
     ],
     "back": "Back to home"
@@ -359,33 +371,41 @@
       "linkLabel": "full liability waiver",
       "missing": "Accept the liability waiver to continue.",
       "page": {
-        "title": "Liability waiver",
-        "updated": "Last updated: August 2026",
-        "intro": "This document describes the risks of the activity and the terms you accept when booking a sport fishing tour with Sal y Sol Sportfishing. By ticking the box at checkout you declare that you have read it and agree to it.",
+        "title": "Sportfishing activity liability waiver and release",
+        "updated": "Last updated: August 21, 2026",
+        "intro": "This is a courtesy translation. The Agreement is executed in Spanish and governed by the laws of Baja California Sur, Mexico; in case of any discrepancy between the two versions, the Spanish version prevails.\n\nThis SPORTFISHING ACTIVITY LIABILITY WAIVER AND RELEASE (the \"Agreement\") is entered into electronically on the acceptance date indicated below, between:\n\nsal y sol, a company organized and existing under the laws of Baja California Sur, Mexico, with its principal place of business at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (the \"Released Party\");\n\nand\n\nthe person identified by the name, email address and phone number captured in the booking/acceptance form on the Released Party's website (the \"Participant\").\n\n(Each individually a \"Party\" and together the \"Parties.\")",
         "sections": [
           {
-            "title": "1. Nature of the activity",
-            "body": "Sport fishing takes place in open water aboard small boats and carries risks inherent to the activity: swell, changing weather, boat motion, use of hooks and fishing gear, sun exposure and contact with marine species. You take part with full knowledge of these risks and of your own free will."
+            "title": "1. Recitals",
+            "body": "1.1 Purpose of the Release. The Participant wishes to take part in sportfishing activities provided, organized or facilitated by the Released Party. As a condition of being allowed to take part in the fishing tour, the Participant enters into this liability waiver voluntarily and with full understanding of its legal consequences.\n\n1.2 Acknowledgment of Risks. The Participant acknowledges that sportfishing takes place in open water aboard small vessels and carries risks inherent to the activity, including, among others, swell, changing weather conditions, movement of the vessel, use of hooks and fishing gear, sun exposure and contact with marine species."
           },
           {
-            "title": "2. Participant obligations",
-            "body": "You agree to follow the captain's instructions at all times, to wear a life jacket whenever he asks, and not to board under the influence of alcohol or any substance that impairs your reflexes. The captain may refuse boarding or return to port if he considers your conduct puts anyone aboard at risk, with no right to a refund."
+            "title": "2. Definitions",
+            "body": "Unless otherwise stated, the following terms have the meanings set out below:\n\n\"Activity\" means any sportfishing tour, vessel excursion or water-related recreational activity organized, operated or provided by the Released Party.\n\n\"Claims\" means any and all liabilities, demands, actions, causes of action, lawsuits, damages, losses, costs or expenses of any kind or nature, known or unknown, foreseen or unforeseen.\n\n\"Effective Date\" means the date on which this Agreement is electronically accepted by the Participant in connection with the sportfishing tour booking.\n\n\"Participant\" means the person taking part in the sportfishing activity who accepts this release of liability.\n\n\"Released Party\" means sal y sol, its owners, directors, officers, employees, agents, representatives, captains, crew members and affiliates."
           },
           {
-            "title": "3. Minors",
-            "body": "There is no age restriction, but minors travel under the responsibility and constant supervision of the adult who made the booking."
+            "title": "3. Scope and application of the release",
+            "body": "3.1 When It Applies. This release shall apply at all times while the Participant takes part in the Activity. The terms and conditions contained herein shall remain in full force and effect during each participation in sportfishing activities with the Released Party.\n\n3.2 Assumption of Risk. The Participant expressly and specifically assumes all risks associated with taking part in sportfishing, whether foreseeable or unforeseeable, including property damage, personal injury, illness or death arising from participation in the Activity.\n\n3.3 The Release Covers Ordinary Negligence; Gross Negligence Is Excepted. This release covers, and the Participant expressly waives, any claim arising from the ordinary negligence of the Released Party. This release does not cover, and the Released Party does not intend to release, waive or discharge liability for, gross negligence, willful misconduct or intentional acts, to the extent such a limitation is required by applicable law."
           },
           {
-            "title": "4. Scope of the waiver",
-            "body": "You release Sal y Sol Sportfishing, its captains, crew and boats from liability for injury, loss, damage or misplacement of personal belongings occurring during the tour and not caused by their proven negligence. This waiver does not limit any rights granted to you by law that cannot be waived."
+            "title": "4. Medical treatment and emergencies",
+            "body": "4.1 Consent to Emergency Medical Treatment. The Participant expressly authorizes the Released Party, its captains and crew members to arrange, consent to and obtain or administer first aid and emergency medical treatment on the Participant's behalf, in the event the Participant is unable to do so during the Activity, including transport to the nearest appropriate medical facility. This authorization does not obligate the Released Party to provide medical treatment, nor does it make it responsible for the cost, quality or outcome of such treatment.\n\n4.2 Participant's Responsibility for Their Own Health. The Participant represents and warrants that they are physically fit and mentally capable of taking part in sportfishing activities, and assumes sole responsibility for any medical expenses incurred as a result of illness or injury suffered during the Activity."
           },
           {
-            "title": "5. Safety and weather cancellation",
-            "body": "The final decision on sailing conditions rests with the captain. If he determines it is not safe to sail, the tour is cancelled and you are refunded 100% of what you paid. The boats carry current insurance."
+            "title": "5. Use of likeness and photography",
+            "body": "5.1 Grant of Permission. The Participant grants the Released Party, its successors and assigns, the irrevocable and unrestricted right to use, publish and copyright photographs, video and audio recordings of the Participant taken during the Activity, for promotional, commercial or any other lawful purpose, without compensation or prior approval."
           },
           {
-            "title": "6. Data we record",
-            "body": "When you accept, we store your name, the date and time of acceptance and your IP address as proof of this agreement. Your contact details are used solely to coordinate your trip."
+            "title": "6. Release of liability and covenant not to sue",
+            "body": "6.1 Release and Discharge. The Participant, on their own behalf and on behalf of their heirs, executors, administrators and assigns, permanently releases, waives and discharges the Released Party from any claim, demand or cause of action arising from participation in the sportfishing Activity, with the sole exception of claims arising from gross negligence, willful misconduct or intentional acts.\n\n6.2 Covenant Not to Sue. The Participant covenants not to bring any legal action, lawsuit or claim against the Released Party for injury, loss or damage suffered during the sportfishing tour, subject to the limitations set out in this Agreement."
+          },
+          {
+            "title": "7. Governing law and miscellaneous provisions",
+            "body": "7.1 Governing Law. This Agreement shall be construed and governed in accordance with the laws of the State of Baja California Sur and the applicable federal law of the United Mexican States, without regard to its conflict-of-laws principles. The Parties submit to the jurisdiction of the competent courts of La Paz, Baja California Sur.\n\n7.2 Severability. If any provision, clause or sentence of this Agreement is held invalid, unlawful or unenforceable by a court of competent jurisdiction, such provision shall be modified to the minimum extent necessary to make it valid and enforceable, and the remaining provisions shall remain in full force and effect.\n\n7.3 Entire Agreement. This Agreement constitutes the entire understanding between the Parties with respect to its subject matter and supersedes any prior discussion, negotiation or representation, whether oral or written."
+          },
+          {
+            "title": "8. Electronic acceptance",
+            "body": "This Agreement is designed to be entered into electronically. By checking the acceptance box and submitting the booking/waiver form on the Released Party's website, the Participant affirmatively agrees that: (a) they have read and understood this Agreement in its entirety; (b) they are over 18 years of age, or else this Agreement has been separately accepted by their parent or legal guardian; (c) their typed full name constitutes their electronic signature; and (d) the Released Party may retain a record of the accepted text, the name typed by the Participant, and the date, time and IP address of acceptance, as evidence of this Agreement."
           }
         ],
         "back": "Back to checkout"

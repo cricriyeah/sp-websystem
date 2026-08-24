@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { SiteHeader } from '@/components/site-header';
+import { TextoLegal } from '@/components/texto-legal';
 import { alternativasDe } from '@/lib/site';
 
 export async function generateMetadata({
@@ -44,7 +45,9 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
           {privacy.title}
         </h1>
         <p className="mt-2 text-sm text-muted">{privacy.updated}</p>
-        <p className="mt-6 max-w-[65ch] text-base leading-relaxed text-muted">{privacy.intro}</p>
+        <div className="mt-6">
+          <TextoLegal texto={privacy.intro} />
+        </div>
 
         <div className="mt-12 flex flex-col gap-10 border-t border-border pt-10">
           {privacy.sections.map((section) => (
@@ -52,9 +55,9 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
               <h2 className="text-base font-medium tracking-tight text-foreground">
                 {section.title}
               </h2>
-              <p className="mt-3 max-w-[65ch] text-base leading-relaxed text-muted">
-                {section.body}
-              </p>
+              <div className="mt-3">
+                <TextoLegal texto={section.body} />
+              </div>
             </section>
           ))}
         </div>

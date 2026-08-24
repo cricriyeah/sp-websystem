@@ -172,6 +172,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
     readonly_fields = [
         'cancelada_por', 'cancelada_en', 'creado_en', 'actualizado_en',
         'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en', 'deslinde_ip',
+        'deslinde_version',
         'efectivo_cobrado_en', 'efectivo_cobrado_por', 'en_disputa',
         'vendedora_asignada_en', 'pagada_en', 'monto_reembolsado', 'reembolsada_en',
         'aviso_asignacion_enviado_en',

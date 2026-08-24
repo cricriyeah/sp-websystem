@@ -18,6 +18,7 @@ from apps.testing import ApiTestCase, crear_flota
 from .admin import telefono_marcable
 from .models import (
     CUPO_MAXIMO_DEFAULT,
+    DESLINDE_VERSION,
     MAX_PERSONAS,
     MOTIVO_LLENO,
     MOTIVO_SIN_PANGA,
@@ -469,6 +470,20 @@ class ReservaApiTests(ApiTestCase):
         self.assertEqual(reserva.moneda, 'USD')
         self.assertIsNotNone(reserva.deslinde_aceptado_en)
         self.assertIsNotNone(reserva.deslinde_ip)
+        self.assertEqual(reserva.deslinde_version, DESLINDE_VERSION)
+
+    def test_la_version_del_deslinde_la_pone_el_servidor(self):
+        """Una constancia que el propio firmante puede elegir no acredita nada.
+
+        La clausula 8(d) del deslinde promete conservar registro del texto
+        aceptado; si el cliente pudiera mandar la version, podria firmar hoy
+        diciendo que acepto el texto de hace un ano.
+        """
+        response = self.enviar(deslinde_version='1999-01-01')
+        self.assertEqual(response.status_code, 201)
+
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertEqual(reserva.deslinde_version, DESLINDE_VERSION)
 
     def test_un_checkout_id_que_no_es_uuid_da_400_y_no_500(self):
         """La busqueda del upsert corre antes de que el serializer valide nada.

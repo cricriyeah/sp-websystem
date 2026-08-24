@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { SiteHeader } from '@/components/site-header';
+import { TextoLegal } from '@/components/texto-legal';
 import { alternativasDe } from '@/lib/site';
 
 export async function generateMetadata({ params }: PageProps<'/[lang]/deslinde'>): Promise<Metadata> {
@@ -41,13 +42,17 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
         {page.title}
       </h1>
       <p className="mt-2 text-sm text-muted">{page.updated}</p>
-      <p className="mt-6 max-w-[65ch] text-base leading-relaxed text-muted">{page.intro}</p>
+      <div className="mt-6">
+        <TextoLegal texto={page.intro} />
+      </div>
 
       <div className="mt-12 flex flex-col gap-10 border-t border-border pt-10">
         {page.sections.map((section) => (
           <section key={section.title}>
             <h2 className="text-base font-medium tracking-tight text-foreground">{section.title}</h2>
-            <p className="mt-3 max-w-[65ch] text-base leading-relaxed text-muted">{section.body}</p>
+            <div className="mt-3">
+              <TextoLegal texto={section.body} />
+            </div>
           </section>
           ))}
         </div>

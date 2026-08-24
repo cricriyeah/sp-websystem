@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Reserva, Vendedora
+from .models import DESLINDE_VERSION, Reserva, Vendedora
 from .validators import validar_nombre_persona
 
 
@@ -112,6 +112,9 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             canal_origen=Reserva.CanalOrigen.WEB,
             deslinde_aceptado_en=timezone.now(),
             deslinde_ip=ip_del_cliente(request),
+            # La version la pone el servidor y no el cliente: una constancia que
+            # el propio firmante puede elegir no acredita nada.
+            deslinde_version=DESLINDE_VERSION,
             **({'vendedora': vendedora} if vendedora else {}),
             **kwargs,
         )
