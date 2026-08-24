@@ -162,6 +162,80 @@ lleve un par de deploys sanos.
 
 ---
 
+## 3-bis. Data API de Supabase — RESUELTO el 24 de agosto de 2026
+
+**Era el hallazgo más grave de toda la revisión previa al lanzamiento.**
+
+Supabase publica por defecto un PostgREST sobre el esquema `public` en
+`https://<ref>.supabase.co/rest/v1/`. Django crea **todas** sus tablas en ese
+esquema, así que la base entera estaba alcanzable desde internet con la `anon
+key` — una llave que por diseño es pública. El propio linter de Supabase lo
+marcaba como `facing: EXTERNAL` en 21 tablas, más dos avisos de
+`sensitive_columns_exposed`.
+
+Lo que estaba del otro lado, por gravedad real:
+
+- **`django_session`.** Su `session_key` **es** el valor de la cookie
+  `sessionid`. Leer esa tabla permite pegar una sesión activa en otro navegador
+  y entrar al backoffice como quien la abrió, sin contraseña. Ni django-axes ni
+  un segundo factor sirven contra eso: no se pasa por la puerta, se copia la
+  llave.
+- **`auth_user.password`.** Hashes PBKDF2 de Django — no es texto plano, pero un
+  hash filtrado se ataca offline sin que nadie se entere.
+- **`bookings_reserva`.** Nombre, teléfono, correo e IP del deslinde de cada
+  cliente. Exactamente lo que el aviso de privacidad promete proteger.
+- **`axes_accessattempt`** (usuarios intentados) y **`django_admin_log`** (quién
+  hizo qué): material de reconocimiento.
+
+Y Supabase concede `GRANT ALL` a `anon` por defecto, no `GRANT SELECT`: si eso
+seguía puesto, no era solo lectura. Una fila insertada en `auth_user` con
+`is_superuser = true` habría sido control total.
+
+### Cómo se cerró
+
+**Se deshabilitó la Data API completa** desde el dashboard (Settings → API). Es
+el corte limpio y era viable porque este proyecto usa Supabase **solo como
+Postgres gestionado** — nada de PostgREST, Auth, Storage ni Realtime (ver
+`docs/vendors/supabase.md`). Nada que mantener, nada que se reabra solo.
+
+Verificado después del cambio: `/healthz` (que hace `SELECT 1`), `/api/tarifa/`
+y el checkout siguen en 200. Apagar la Data API no toca la conexión directa de
+`psycopg`, que es por donde entra Django.
+
+### Lo que quedó pendiente de esto
+
+- **Revocar los permisos de `anon` de todos modos.** Ya no es urgente con la Data
+  API apagada, pero sobrevive a que alguien la reactive por error más adelante.
+  No toca a Django, que entra con otro rol:
+
+  ```sql
+  REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+  REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+  REVOKE ALL ON SCHEMA public FROM anon, authenticated;
+
+  -- Lo que de verdad importa: que las tablas FUTURAS nazcan cerradas.
+  -- Sin esto, la proxima migracion vuelve a abrir el hueco.
+  ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+    REVOKE ALL ON TABLES FROM anon, authenticated;
+  ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+    REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+  ```
+
+- **Higiene, porque no se puede probar que la llave nunca se filtró.** Cambiar la
+  contraseña de las cuentas del backoffice, y rotar `DJANGO_SECRET_KEY` en Render
+  para invalidar de golpe todas las sesiones que estuvieron alcanzables. Cuesta
+  poco hoy — la única molestia es volver a entrar — y dejaría de ser opcional si
+  esto hubiera pasado con clientes reales.
+
+**RLS no es la respuesta aquí y no hace falta.** Sirve cuando un cliente no
+confiable habla directo con Postgres (navegador + anon key + PostgREST), que es
+justo lo que se acaba de apagar. Aquí el navegador nunca toca la base: habla con
+Django, y Django habla con Postgres por una sola conexión privilegiada. Toda la
+autorización vive en la aplicación. Además, activarlo tabla por tabla es frágil:
+cada migración nueva crea una tabla sin RLS y el aviso vuelve.
+
+---
+
 ## 4. Dos ajustes menores pendientes
 
 - **Subir el HSTS a un año.** `SECURE_HSTS_SECONDS` está en `3600` (una hora),
