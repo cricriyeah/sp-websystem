@@ -8,6 +8,7 @@ import { AmenitiesReminder } from '@/components/amenities-reminder';
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { SiteHeader } from '@/components/site-header';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
+import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CLASES_CAMPO_CON_ERROR, FieldError, propsDeError } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
@@ -705,6 +706,8 @@ export function CheckoutView({
           <Turnstile onToken={(token) => (captchaToken.current = token)} />
         </div>
       </main>
+
+      <CheckoutFooter lang={lang} footer={dict.footer} nav={nav} />
 
       {recordatorioAbierto && (
         <AmenitiesReminder

@@ -241,9 +241,11 @@ export function StripePanel({
 
       {phase !== 'payment' && phase !== 'unavailable' && (
         <>
-          {/* Deslinde: una linea discreta arriba del boton de pagar. El texto
-              completo vive en /[lang]/deslinde y abre en otra pestaña para no
-              tirar lo que el cliente ya lleno. */}
+          {/* Deslinde y aviso de privacidad: una linea discreta arriba del
+              boton de pagar. Una sola casilla para los dos documentos porque es
+              un solo consentimiento del checkout; el texto completo de cada uno
+              vive en su propia pagina y abre en otra pestaña para no tirar lo
+              que el cliente ya lleno. */}
           <label className="mt-5 flex items-start gap-2.5 border-t border-border pt-5 text-xs leading-relaxed text-muted">
             <input
               type="checkbox"
@@ -261,6 +263,15 @@ export function StripePanel({
                 className="text-foreground underline underline-offset-2"
               >
                 {checkout.waiver.linkLabel}
+              </Link>{' '}
+              {checkout.waiver.and}{' '}
+              <Link
+                href={`/${lang}/privacidad`}
+                target="_blank"
+                rel="noopener"
+                className="text-foreground underline underline-offset-2"
+              >
+                {checkout.waiver.privacyLinkLabel}
               </Link>
               .
             </span>

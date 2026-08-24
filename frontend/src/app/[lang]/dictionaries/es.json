@@ -81,7 +81,7 @@
         "body": "Si hacemos cambios importantes en la forma en que tratamos tus datos, publicaremos aquí un aviso actualizado con una nueva fecha de «Última actualización», y te avisaremos por WhatsApp o correo si el cambio afecta datos que ya tenemos de ti."
       }
     ],
-    "back": "Volver al inicio"
+    "back": "Atrás"
   },
   "nav": {
     "brandMain": "Sal y Sol",
@@ -369,7 +369,9 @@
     "waiver": {
       "accept": "Acepto deslindar a la empresa de cualquier responsabilidad y he leído el",
       "linkLabel": "deslinde completo",
-      "missing": "Acepta el deslinde de responsabilidad para continuar.",
+      "and": "y el",
+      "privacyLinkLabel": "aviso de privacidad",
+      "missing": "Acepta el deslinde de responsabilidad y el aviso de privacidad para continuar.",
       "page": {
         "title": "Exención de responsabilidad y liberación por actividad de pesca deportiva",
         "updated": "Última actualización: 21 de agosto de 2026",
@@ -408,7 +410,7 @@
             "body": "Este Acuerdo está diseñado para su celebración electrónica. Al marcar la casilla de aceptación y enviar el formulario de reservación/exención en el sitio web de la Parte Liberada, el Participante acepta de forma afirmativa que: (a) ha leído y entendido este Acuerdo en su totalidad; (b) es mayor de 18 años, o bien este Acuerdo ha sido aceptado por separado por su padre, madre o tutor legal; (c) su nombre completo escrito constituye su firma electrónica; y (d) la Parte Liberada podrá conservar un registro del texto aceptado, el nombre escrito por el Participante, así como la fecha, hora y dirección IP de la aceptación, como evidencia de este Acuerdo."
           }
         ],
-        "back": "Volver al checkout"
+        "back": "Atrás"
       }
     },
     "currency": {

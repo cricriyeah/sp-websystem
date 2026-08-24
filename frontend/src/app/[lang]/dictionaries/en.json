@@ -81,7 +81,7 @@
         "body": "If we make significant changes to how we handle your data, we'll post an updated notice here with a new «Last updated» date, and let you know via WhatsApp or email if the change affects data we already hold about you."
       }
     ],
-    "back": "Back to home"
+    "back": "Back"
   },
   "nav": {
     "brandMain": "Sal y Sol",
@@ -369,7 +369,9 @@
     "waiver": {
       "accept": "I release the company from any liability and have read the",
       "linkLabel": "full liability waiver",
-      "missing": "Accept the liability waiver to continue.",
+      "and": "and the",
+      "privacyLinkLabel": "privacy notice",
+      "missing": "Accept the liability waiver and the privacy notice to continue.",
       "page": {
         "title": "Sportfishing activity liability waiver and release",
         "updated": "Last updated: August 21, 2026",
@@ -408,7 +410,7 @@
             "body": "This Agreement is designed to be entered into electronically. By checking the acceptance box and submitting the booking/waiver form on the Released Party's website, the Participant affirmatively agrees that: (a) they have read and understood this Agreement in its entirety; (b) they are over 18 years of age, or else this Agreement has been separately accepted by their parent or legal guardian; (c) their typed full name constitutes their electronic signature; and (d) the Released Party may retain a record of the accepted text, the name typed by the Participant, and the date, time and IP address of acceptance, as evidence of this Agreement."
           }
         ],
-        "back": "Back to checkout"
+        "back": "Back"
       }
     },
     "currency": {

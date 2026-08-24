@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
 import { TextoLegal } from '@/components/texto-legal';
+import { LegalBackLink } from '@/components/legal-back-link';
 import { alternativasDe } from '@/lib/site';
 
 export async function generateMetadata({ params }: PageProps<'/[lang]/deslinde'>): Promise<Metadata> {
@@ -30,13 +30,7 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
       <SiteHeader lang={lang} nav={dict.nav} tone="plain" />
 
       <main className="mx-auto max-w-3xl px-6 py-12 sm:px-8 lg:px-12">
-      <Link
-        href={`/${lang}/reservar`}
-        className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-      >
-        <ArrowLeft size={16} />
-        {page.back}
-      </Link>
+      <LegalBackLink label={page.back} fallbackHref={`/${lang}/reservar`} />
 
       <h1 className="mt-8 text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
         {page.title}
@@ -57,6 +51,8 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
           ))}
         </div>
       </main>
+
+      <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} />
     </div>
   );
 }
