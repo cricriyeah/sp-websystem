@@ -25,7 +25,12 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Excluye _next, archivos estaticos y metadata files.
-    '/((?!_next|api|favicon.ico|sitemap.xml|robots.txt).*)',
+    // Excluye _next, la API y **cualquier ruta con punto**, que es como se
+    // reconoce un archivo servido desde /public: el logo, los iconos, el
+    // favicon, sitemap.xml, robots.txt. Sin el `.*\..*`, una peticion a
+    // /logos/logo.png se redirigia a /es/logos/logo.png —que no existe— y la
+    // imagen salia rota; el optimizador de next/image devolvia 400 al recibir
+    // una redireccion en vez del archivo.
+    '/((?!_next|api|.*\..*).*)',
   ],
 };

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { MediaPlaceholder } from '@/components/media-placeholder';
 
@@ -6,33 +7,52 @@ type GallerySectionProps = {
 };
 
 /**
- * Galeria del viaje. En pesca deportiva la prueba mas fuerte son las fotos, asi
- * que la estructura queda lista y cada hueco dice que toma le falta.
+ * Las 6 fotos son reales; el video sigue de placeholder porque todavia no
+ * existe. El orden de `FOTOS` esta pareado con `gallery.photoHints` uno a uno
+ * (el hint ahora es el `alt` de la foto real, no una toma pendiente) — si se
+ * agrega o se quita una foto, hay que tocar los dos arreglos juntos.
+ */
+const FOTOS = [
+  '/photos/pesca-del-dia-cubierta.png',
+  '/photos/marlin-en-equipo.png',
+  '/photos/grupo-cabrilla-costa.png',
+  '/photos/pareja-dorados.png',
+  '/photos/cana-doblada-dorado.png',
+  '/photos/yellowtail-pelicanos-bahia.png',
+];
+
+/**
+ * A sangre: sin contenedor, sin titulo. Las fotos hablan solas, el unico texto
+ * es la nota chica de abajo, con el padding normal del sitio.
  */
 export function GallerySection({ gallery }: GallerySectionProps) {
   return (
-    <section id="galeria" className="scroll-mt-20 bg-background py-24 lg:py-32">
-      <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
-        <h2 className="text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
-          {gallery.headline}
-        </h2>
-        <p className="mt-5 max-w-[60ch] text-base leading-relaxed text-muted">{gallery.intro}</p>
-
-        <div className="mt-12 grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <MediaPlaceholder hint={gallery.videoHint} aspect="video" kind="video" />
+    <section id="galeria" className="scroll-mt-20 bg-background">
+      <div className="grid grid-cols-2 gap-[3px] lg:grid-cols-4">
+        <div className="col-span-2">
+          <MediaPlaceholder
+            hint={gallery.videoHint}
+            aspect="fill"
+            showHint={false}
+            className="min-h-[240px] lg:min-h-[460px]"
+          />
+        </div>
+        {gallery.photoHints.map((hint, i) => (
+          <div key={hint} className="relative min-h-[240px] lg:min-h-[460px]">
+            <Image
+              src={FOTOS[i]}
+              alt={hint}
+              fill
+              sizes="(min-width: 1024px) 25vw, 50vw"
+              className="object-cover"
+            />
           </div>
-          <MediaPlaceholder hint={gallery.photoHints[0]} aspect="video" />
-        </div>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {gallery.photoHints.slice(1).map((hint) => (
-            <MediaPlaceholder key={hint} hint={hint} aspect="square" />
-          ))}
-        </div>
-
-        <p className="mt-10 max-w-[60ch] text-sm leading-relaxed text-muted">{gallery.note}</p>
+        ))}
       </div>
+
+      <p className="px-6 pt-5 pb-16 text-sm text-muted sm:px-8 lg:px-12 lg:pb-20">
+        {gallery.intro}
+      </p>
     </section>
   );
 }

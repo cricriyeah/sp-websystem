@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, Check, Lock, Warning } from '@phosphor-icons/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AmenitiesReminder } from '@/components/amenities-reminder';
 import { BookingConfirmation } from '@/components/booking-confirmation';
@@ -23,7 +24,6 @@ import {
   guardarReserva,
   type Moneda,
   type Pago,
-  type SolicitudKey,
   type Tarifa,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate } from '@/lib/dates';
@@ -54,10 +54,6 @@ function nombreValido(valor: string) {
 function correoValido(valor: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
 }
-
-// Bebidas y transporte no tienen precio en linea: su costo depende del tipo de
-// bebida y de la distancia del traslado, asi que el agente los cotiza aparte.
-const SOLICITUD_KEYS: SolicitudKey[] = ['drinks', 'transport'];
 
 const CLAVE_CHECKOUT_ID = 'salysol:checkout-id';
 
@@ -155,9 +151,23 @@ export function CheckoutView({
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
   const [people, setPeople] = useState(initialPeople);
-  const [moneda, setMoneda] = useState<Moneda>('MXN');
+  // Numero de la reserva, para la pantalla de confirmacion (folio, recibo,
+  // mensaje de WhatsApp). Se conoce en cuanto se guarda la reserva, antes de
+  // que el pago pase.
+  const [reservaId, setReservaId] = useState<number | null>(null);
+  // Precarga segun el idioma del sitio (en -> USD, es -> MXN): el cliente que
+  // llega en ingles es sobre todo turismo de EEUU/Canada y hoy tenia que darle
+  // clic al selector en cada checkout para corregir un default que casi nunca
+  // le servia. El selector se queda visible y editable — esto solo cambia la
+  // primera respuesta, nunca decide por el cliente sin dejarlo ver ni tocar.
+  //
+  // Sin precio en USD configurado no hay selector que ofrecer (ver
+  // `usdDisponible` en StripePanel, que lo oculta entero): forzar USD aqui
+  // dejaria al cliente sin forma de volver a MXN, con un total en $0.
+  const [moneda, setMoneda] = useState<Moneda>(
+    lang === 'en' && tarifa?.precio_usd != null ? 'USD' : 'MXN',
+  );
   const [lunch, setLunch] = useState(false);
-  const [solicitudes, setSolicitudes] = useState({ drinks: false, transport: false });
   const [formaPago, setFormaPago] = useState<'completo' | 'anticipo'>('completo');
   const { mostrar: avisar } = useToast();
 
@@ -238,15 +248,11 @@ export function CheckoutView({
 
   const currency = useMemo(
     () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
-    [lang, moneda]
+    [lang, moneda],
   );
 
-  // Lo que se le puede ofrecer todavia al cliente antes de pagar.
-  const faltantes = {
-    lunch: !lunch,
-    solicitudes: SOLICITUD_KEYS.filter((key) => !solicitudes[key]),
-  };
-  const hayAlgoQueOfrecer = faltantes.lunch || faltantes.solicitudes.length > 0;
+  // Lo unico que se le puede ofrecer todavia al cliente antes de pagar.
+  const faltaLunch = !lunch;
 
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
@@ -267,16 +273,20 @@ export function CheckoutView({
       : [
           { label: checkout.tourLabel, amount: currency.format(tourPrice) },
           ...(cargoPersonas > 0
-            ? [{
-                label: `${checkout.extraPeopleLabel} (${personasExtra} × ${currency.format(precioPersonaExtra)})`,
-                amount: currency.format(cargoPersonas),
-              }]
+            ? [
+                {
+                  label: `${checkout.extraPeopleLabel} (${personasExtra} × ${currency.format(precioPersonaExtra)})`,
+                  amount: currency.format(cargoPersonas),
+                },
+              ]
             : []),
           ...(cargoLunch > 0
-            ? [{
-                label: `Lunch (${people} × ${currency.format(precioLunch)})`,
-                amount: currency.format(cargoLunch),
-              }]
+            ? [
+                {
+                  label: `Lunch (${people} × ${currency.format(precioLunch)})`,
+                  amount: currency.format(cargoLunch),
+                },
+              ]
             : []),
         ];
 
@@ -288,6 +298,27 @@ export function CheckoutView({
 
   /** Que campo esta mal y por que. Vacio = ninguno. */
   const [erroresCampo, setErroresCampo] = useState<Partial<Record<CampoContacto, string>>>({});
+
+  // Cuantos de los tres pasos ya se ven. Empieza en 1: dia/hora/personas llegan
+  // precargados desde la barra de reserva, asi que el primer paso no tiene un
+  // momento natural de "ya se lleno" — necesita un click explicito para avanzar.
+  const [pasosVisibles, setPasosVisibles] = useState(1);
+  const sinMovimiento = useReducedMotion();
+  const refPaso2 = useRef<HTMLDivElement>(null);
+  const refPaso3 = useRef<HTMLDivElement>(null);
+
+  // Al revelarse un paso nuevo, la pagina lo trae a la vista sola: sin esto,
+  // en pantallas chicas el paso aparece fuera de cuadro, abajo del todo, y el
+  // cliente no se entera de que ya puede seguir. No corre en el primer
+  // pintado (pasosVisibles arranca en 1, ninguna rama aplica) — solo en las
+  // transiciones reales.
+  useEffect(() => {
+    const comportamiento = sinMovimiento ? 'auto' : 'smooth';
+    if (pasosVisibles === 2)
+      refPaso2.current?.scrollIntoView({ behavior: comportamiento, block: 'start' });
+    if (pasosVisibles === 3)
+      refPaso3.current?.scrollIntoView({ behavior: comportamiento, block: 'start' });
+  }, [pasosVisibles, sinMovimiento]);
 
   /**
    * Valida los datos de contacto y devuelve los errores por campo.
@@ -310,6 +341,20 @@ export function CheckoutView({
     else if (!correoValido(contact.email)) errores.email = checkout.invalidEmail;
 
     return errores;
+  };
+
+  /**
+   * Al salir de cualquier campo de contacto: si los tres ya son validos, revela
+   * el paso 3 solo, sin boton.
+   *
+   * Sin foco de por medio y a diferencia de `iniciarPago`, aqui NO se ponen
+   * errores ni se salta el foco — hacerlo en cada blur regañaria a mitad de
+   * llenado (ej. tras escribir el telefono, antes de siquiera llegar al
+   * nombre). Los errores de verdad siguen siendo responsabilidad del envio.
+   */
+  const alSalirDeContacto = () => {
+    if (pasosVisibles !== 2) return;
+    if (Object.keys(validarContacto()).length === 0) setPasosVisibles(3);
   };
 
   /** Primer paso del pago: valida, y antes de tocar la red ofrece las amenidades. */
@@ -335,7 +380,7 @@ export function CheckoutView({
       return;
     }
 
-    if (hayAlgoQueOfrecer) {
+    if (faltaLunch) {
       setRecordatorioAbierto(true);
       return;
     }
@@ -369,15 +414,15 @@ export function CheckoutView({
         // El nombre del deslinde es el que el cliente ya escribio en sus datos:
         // pedirlo dos veces no aporta nada y estorba el checkout.
         deslinde_nombre: contact.fullName.trim(),
-        // Los extras viajan con la reserva, no con el pago: la cocina necesita
-        // saber cuantos lunches y la vendedora a quien cotizarle.
+        // El extra viaja con la reserva, no con el pago: la cocina necesita saber
+        // cuantos lunches preparar.
         lleva_lunch: lunch,
-        pide_bebidas: solicitudes.drinks,
-        pide_transporte: solicitudes.transport,
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         captcha_token: captchaToken.current,
       });
+
+      setReservaId(reserva.id);
 
       const pagoResponse = await crearPago(reserva.id, {
         checkout_id: checkoutId,
@@ -419,14 +464,15 @@ export function CheckoutView({
   });
 
   if (phase === 'confirmed') {
-    const porCotizar = SOLICITUD_KEYS.filter((key) => solicitudes[key]).map(
-      (key) => checkout.amenities[key]
-    );
-
     return (
       <BookingConfirmation
         lang={lang}
         dict={dict}
+        // No-null: esta fase solo se alcanza despues de crearPago, que ya
+        // exigio reserva.id para pedir el cobro — para entonces siempre esta
+        // puesto.
+        numeroDeConfirmacion={reservaId!}
+        nombre={contact.fullName}
         email={contact.email}
         fecha={formatDay(dayDate, lang)}
         hora={formatHour(time)}
@@ -437,15 +483,14 @@ export function CheckoutView({
             ? currency.format(total - amountDueNow)
             : null
         }
-        porCotizar={porCotizar}
         procesando={pagoProcesando}
       />
     );
   }
 
   return (
-    <div className="min-h-dvh bg-background">
-      <SiteHeader lang={lang} nav={nav} tone="plain" />
+    <div className="min-h-dvh bg-surface">
+      <SiteHeader lang={lang} nav={nav} />
 
       <div className="mx-auto max-w-6xl px-6 pt-6 sm:px-8 lg:px-12">
         <Link
@@ -459,7 +504,7 @@ export function CheckoutView({
 
       {sinLugar && (
         <div className="mx-auto mb-2 flex max-w-6xl items-start gap-3 px-6 sm:px-8 lg:px-12">
-          <div className="flex w-full flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex w-full flex-col gap-2 border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <Warning size={18} className="mt-0.5 shrink-0 text-accent" />
               <p>{sinLugar.mensaje}</p>
@@ -544,188 +589,252 @@ export function CheckoutView({
                   .replace('{price}', currency.format(precioPersonaExtra))}
               </p>
             )}
+
+            {/* Dia, hora y personas llegan precargados desde la barra de la
+                portada: no hay un "se acaba de llenar" que dispare el paso
+                siguiente solo, hace falta que el cliente lo confirme. */}
+            {pasosVisibles === 1 ? (
+              <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-foreground">{checkout.tripConfirmQuestion}</p>
+                <button
+                  type="button"
+                  onClick={() => setPasosVisibles(2)}
+                  className="shrink-0 rounded-full bg-foreground px-6 py-2.5 text-sm font-medium text-surface transition-transform active:scale-[0.98]"
+                >
+                  {checkout.confirmStep}
+                </button>
+              </div>
+            ) : (
+              <p className="mt-6 flex items-center gap-2 border-t border-border pt-5 text-sm text-exito">
+                <Check size={16} weight="bold" />
+                {checkout.stepConfirmed}
+              </p>
+            )}
           </CheckoutSectionCard>
 
-          <CheckoutSectionCard step={2} title={checkout.contactHeadline}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
-                <span className="text-muted">{checkout.phone}</span>
-                <input
-                  ref={refPhone}
-                  type="tel"
-                  required
-                  disabled={locked}
-                  value={contact.phone}
-                  onChange={(e) => {
-                    setContact((prev) => ({ ...prev, phone: e.target.value }));
-                    // El error se limpia al escribir: dejarlo puesto mientras el
-                    // cliente corrige lo convierte en un regano que no se calla.
-                    if (erroresCampo.phone) setErroresCampo((prev) => ({ ...prev, phone: undefined }));
-                  }}
-                  {...propsDeError('error-phone', Boolean(erroresCampo.phone))}
-                  className={`rounded-xl border bg-background px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
-                    erroresCampo.phone ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
-                  }`}
-                />
-                {erroresCampo.phone && (
-                  <FieldError id="error-phone" mensaje={erroresCampo.phone} />
+          {pasosVisibles < 2 ? null : (
+            <motion.div
+              ref={refPaso2}
+              className="scroll-mt-28"
+              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <CheckoutSectionCard step={2} title={checkout.contactHeadline}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
+                    <span className="text-muted">{checkout.phone}</span>
+                    <input
+                      ref={refPhone}
+                      type="tel"
+                      required
+                      disabled={locked}
+                      value={contact.phone}
+                      onChange={(e) => {
+                        setContact((prev) => ({ ...prev, phone: e.target.value }));
+                        // El error se limpia al escribir: dejarlo puesto mientras el
+                        // cliente corrige lo convierte en un regano que no se calla.
+                        if (erroresCampo.phone)
+                          setErroresCampo((prev) => ({ ...prev, phone: undefined }));
+                      }}
+                      onBlur={alSalirDeContacto}
+                      {...propsDeError('error-phone', Boolean(erroresCampo.phone))}
+                      className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
+                        erroresCampo.phone
+                          ? CLASES_CAMPO_CON_ERROR
+                          : 'border-border focus:border-accent'
+                      }`}
+                    />
+                    {erroresCampo.phone && (
+                      <FieldError id="error-phone" mensaje={erroresCampo.phone} />
+                    )}
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
+                    <span className="text-muted">{checkout.fullName}</span>
+                    <input
+                      ref={refFullName}
+                      type="text"
+                      required
+                      disabled={locked}
+                      value={contact.fullName}
+                      onChange={(e) => {
+                        setContact((prev) => ({ ...prev, fullName: e.target.value }));
+                        // El error se limpia al escribir: dejarlo puesto mientras el
+                        // cliente corrige lo convierte en un regano que no se calla.
+                        if (erroresCampo.fullName)
+                          setErroresCampo((prev) => ({ ...prev, fullName: undefined }));
+                      }}
+                      onBlur={alSalirDeContacto}
+                      {...propsDeError('error-fullName', Boolean(erroresCampo.fullName))}
+                      className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
+                        erroresCampo.fullName
+                          ? CLASES_CAMPO_CON_ERROR
+                          : 'border-border focus:border-accent'
+                      }`}
+                    />
+                    {erroresCampo.fullName && (
+                      <FieldError id="error-fullName" mensaje={erroresCampo.fullName} />
+                    )}
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
+                    <span className="text-muted">{checkout.email}</span>
+                    <input
+                      ref={refEmail}
+                      type="email"
+                      required
+                      disabled={locked}
+                      value={contact.email}
+                      onChange={(e) => {
+                        setContact((prev) => ({ ...prev, email: e.target.value }));
+                        // El error se limpia al escribir: dejarlo puesto mientras el
+                        // cliente corrige lo convierte en un regano que no se calla.
+                        if (erroresCampo.email)
+                          setErroresCampo((prev) => ({ ...prev, email: undefined }));
+                      }}
+                      onBlur={alSalirDeContacto}
+                      {...propsDeError('error-email', Boolean(erroresCampo.email))}
+                      className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
+                        erroresCampo.email
+                          ? CLASES_CAMPO_CON_ERROR
+                          : 'border-border focus:border-accent'
+                      }`}
+                    />
+                    {erroresCampo.email && (
+                      <FieldError id="error-email" mensaje={erroresCampo.email} />
+                    )}
+                  </label>
+                </div>
+
+                {/* Sin boton: avanza solo al salir de un campo con los tres validos
+                    (`alSalirDeContacto`). Mientras tanto no hay nada que mostrar
+                    aqui — nagear con errores antes de que el cliente termine de
+                    llenar seria peor que quedarse callado. */}
+                {pasosVisibles > 2 && (
+                  <p className="mt-6 flex items-center gap-2 border-t border-border pt-5 text-sm text-exito">
+                    <Check size={16} weight="bold" />
+                    {checkout.stepConfirmed}
+                  </p>
                 )}
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
-                <span className="text-muted">{checkout.fullName}</span>
-                <input
-                  ref={refFullName}
-                  type="text"
-                  required
-                  disabled={locked}
-                  value={contact.fullName}
-                  onChange={(e) => {
-                    setContact((prev) => ({ ...prev, fullName: e.target.value }));
-                    // El error se limpia al escribir: dejarlo puesto mientras el
-                    // cliente corrige lo convierte en un regano que no se calla.
-                    if (erroresCampo.fullName) setErroresCampo((prev) => ({ ...prev, fullName: undefined }));
-                  }}
-                  {...propsDeError('error-fullName', Boolean(erroresCampo.fullName))}
-                  className={`rounded-xl border bg-background px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
-                    erroresCampo.fullName ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
-                  }`}
-                />
-                {erroresCampo.fullName && (
-                  <FieldError id="error-fullName" mensaje={erroresCampo.fullName} />
-                )}
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                <span className="text-muted">{checkout.email}</span>
-                <input
-                  ref={refEmail}
-                  type="email"
-                  required
-                  disabled={locked}
-                  value={contact.email}
-                  onChange={(e) => {
-                    setContact((prev) => ({ ...prev, email: e.target.value }));
-                    // El error se limpia al escribir: dejarlo puesto mientras el
-                    // cliente corrige lo convierte en un regano que no se calla.
-                    if (erroresCampo.email) setErroresCampo((prev) => ({ ...prev, email: undefined }));
-                  }}
-                  {...propsDeError('error-email', Boolean(erroresCampo.email))}
-                  className={`rounded-xl border bg-background px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
-                    erroresCampo.email ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
-                  }`}
-                />
-                {erroresCampo.email && (
-                  <FieldError id="error-email" mensaje={erroresCampo.email} />
-                )}
-              </label>
-            </div>
-          </CheckoutSectionCard>
+              </CheckoutSectionCard>
+            </motion.div>
+          )}
 
           {/* El punto de encuentro y el aviso del agente ya no van aqui: son
-              informacion de despues de pagar, viven en BookingConfirmation. */}
-          <CheckoutSectionCard step={3} title={checkout.amenitiesHeadline}>
-            <label className="flex items-start justify-between gap-3 rounded-xl border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background">
-              <span className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={lunch}
-                  disabled={locked}
-                  onChange={(e) => setLunch(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                />
-                <span>{checkout.amenities.lunch}</span>
-              </span>
-              <span className="shrink-0 text-right text-muted">
-                {currency.format(precioLunch)}
-                <span className="block text-xs">{checkout.lunchPerPerson}</span>
-              </span>
-            </label>
+              informacion de despues de pagar, viven en BookingConfirmation.
 
-            {/* Bloque aparte y sin precio: que quede claro que esto NO se esta
-                pagando ahora, o el cliente llega al muelle creyendo que si. */}
-            <div className="mt-8 border-t border-border pt-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-medium tracking-tight text-foreground">
-                  {checkout.requestsHeadline}
-                </h3>
-                <span className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[11px] text-accent">
-                  {checkout.requestsBadge}
-                </span>
-              </div>
-              <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-muted">
-                {checkout.requestsIntro}
-              </p>
-
-              <div className="mt-4 flex flex-col gap-3">
-                {SOLICITUD_KEYS.map((key) => (
-                  <label
-                    key={key}
-                    className="flex items-start gap-3 rounded-xl border border-dashed border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-solid has-[:checked]:border-accent has-[:checked]:bg-background"
-                  >
+              Bebidas y transporte se quitaron del checkout: dependian de datos
+              que el sitio no captura (desde donde recoger, que bebida) y
+              complicaban la operatividad. La vendedora las sigue marcando a
+              mano en reservas que le llegan por WhatsApp o telefono. */}
+          {pasosVisibles < 3 ? null : (
+            <motion.div
+              ref={refPaso3}
+              className="scroll-mt-28"
+              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <CheckoutSectionCard step={3} title={checkout.lunchStepHeadline}>
+                <label className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface">
+                  <span className="flex items-start gap-3">
                     <input
                       type="checkbox"
-                      checked={solicitudes[key]}
+                      checked={lunch}
                       disabled={locked}
-                      onChange={(e) =>
-                        setSolicitudes((prev) => ({ ...prev, [key]: e.target.checked }))
-                      }
+                      onChange={(e) => setLunch(e.target.checked)}
                       className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
                     />
-                    <span>{checkout.amenities[key]}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </CheckoutSectionCard>
+                    <span>{checkout.amenities.lunch}</span>
+                  </span>
+                  <span className="shrink-0 text-right text-muted">
+                    {currency.format(precioLunch)}
+                    <span className="block text-xs">{checkout.lunchPerPerson}</span>
+                  </span>
+                </label>
+              </CheckoutSectionCard>
+            </motion.div>
+          )}
         </div>
 
-        <div className="lg:sticky lg:top-10 lg:self-start">
-          <StripePanel
-            lang={lang}
-            checkout={checkout}
-            waiverAccepted={waiverAccepted}
-            onWaiverChange={setWaiverAccepted}
-            lines={lines}
-            total={total === null ? '—' : currency.format(total)}
-            amountDueNow={amountDueNow === null ? '—' : currency.format(amountDueNow)}
-            moneda={moneda}
-            onMonedaChange={setMoneda}
-            usdDisponible={usdDisponible}
-            formaPago={formaPago}
-            onFormaPagoChange={setFormaPago}
-            phase={phase}
-            error={error}
-            pago={pago}
-            feedback={dict.feedback}
-            ayudaMensaje={ayudaMensaje}
-            onSubmit={iniciarPago}
-            onPagoConfirmado={(procesando) => {
-              setPagoProcesando(procesando);
-              setPhase('confirmed');
-            }}
-          />
-          <Turnstile onToken={(token) => (captchaToken.current = token)} />
+        {/* Ya no es `sticky`: se queda donde cae en su columna, no persigue el
+            scroll. */}
+        <div>
+          {/* Un solo StripePanel en todo el arbol — montarlo dos veces (uno por
+              breakpoint) inicializaria Stripe.js y el widget de Turnstile por
+              duplicado. En escritorio se ve siempre, en su propia columna: ahi
+              nunca compite por el mismo canal de atencion que el formulario. En
+              movil, donde SI comparte canal con los pasos, solo se ve completo
+              hasta que el contacto (paso 2) ya se confirmo solo — antes de eso
+              queda montado pero oculto, nunca se desmonta ni se vuelve a armar. */}
+          <div className={pasosVisibles < 3 ? 'hidden lg:block' : undefined}>
+            <StripePanel
+              lang={lang}
+              checkout={checkout}
+              waiverAccepted={waiverAccepted}
+              onWaiverChange={setWaiverAccepted}
+              lines={lines}
+              total={total === null ? '—' : currency.format(total)}
+              amountDueNow={amountDueNow === null ? '—' : currency.format(amountDueNow)}
+              moneda={moneda}
+              onMonedaChange={setMoneda}
+              usdDisponible={usdDisponible}
+              formaPago={formaPago}
+              onFormaPagoChange={setFormaPago}
+              phase={phase}
+              error={error}
+              pago={pago}
+              feedback={dict.feedback}
+              ayudaMensaje={ayudaMensaje}
+              onSubmit={iniciarPago}
+              onPagoConfirmado={(procesando) => {
+                setPagoProcesando(procesando);
+                setPhase('confirmed');
+              }}
+            />
+            {/* Fuera de la tarjeta de resumen, debajo: no es parte del desglose de
+                precio, es la respuesta a "es seguro pagar aqui". */}
+            <p className="mt-4 text-xs leading-relaxed text-muted">{checkout.securityNote}</p>
+            <Turnstile onToken={(token) => (captchaToken.current = token)} />
+          </div>
+
+          {/* Movil, mientras falta el contacto: una franja con el total en vez
+              de la tarjeta completa. No es que "no haya nada" — el total sigue
+              a la vista todo el tiempo, solo que no compite con el campo que se
+              esta llenando ahora mismo. */}
+          {pasosVisibles < 3 && (
+            <motion.div
+              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="flex items-center justify-between border border-border bg-background px-5 py-4 lg:hidden"
+            >
+              <span className="text-sm text-muted">{checkout.total}</span>
+              <span className="flex items-center gap-2 text-base font-medium text-foreground">
+                {total === null ? '—' : currency.format(total)}
+                <Lock size={14} weight="bold" className="text-muted" />
+              </span>
+            </motion.div>
+          )}
         </div>
       </main>
 
       <CheckoutFooter lang={lang} footer={dict.footer} nav={nav} />
 
-      {recordatorioAbierto && (
-        <AmenitiesReminder
-          checkout={checkout}
-          faltaLunch={faltantes.lunch}
-          lunch={lunch}
-          onLunchChange={setLunch}
-          precioLunch={currency.format(precioLunch)}
-          solicitudesFaltantes={faltantes.solicitudes}
-          solicitudes={solicitudes}
-          onSolicitudChange={(key, valor) =>
-            setSolicitudes((prev) => ({ ...prev, [key]: valor }))
-          }
-          onContinuar={enviar}
-          onCerrar={() => setRecordatorioAbierto(false)}
-          enviando={enviando}
-        />
-      )}
+      <AnimatePresence>
+        {recordatorioAbierto && (
+          <AmenitiesReminder
+            key="amenities-reminder"
+            checkout={checkout}
+            faltaLunch={faltaLunch}
+            lunch={lunch}
+            onLunchChange={setLunch}
+            precioLunch={currency.format(precioLunch)}
+            onContinuar={enviar}
+            onCerrar={() => setRecordatorioAbierto(false)}
+            enviando={enviando}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

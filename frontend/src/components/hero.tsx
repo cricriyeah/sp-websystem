@@ -1,8 +1,6 @@
-'use client';
-
-import { motion, useReducedMotion } from 'motion/react';
-import { SiteHeader } from '@/components/site-header';
 import { BookingBar } from '@/components/booking-bar';
+import { HeroCarousel } from '@/components/hero-carousel';
+import { ID_BARRA_PORTADA } from '@/components/sticky-booking-bar';
 import type { Locale, Dictionary } from '@/app/[lang]/dictionaries';
 
 type HeroProps = {
@@ -11,84 +9,116 @@ type HeroProps = {
   minDate: string;
 };
 
+/**
+ * Portada: foto a sangre, barra de reserva montada sobre ella y la fila de
+ * datos del viaje.
+ *
+ * **La barra de reserva encima de la foto es la pieza que define el sitio.** Es
+ * lo que separa una pagina de reservas de un folleto: la conversion vive arriba,
+ * no al final. La fila de datos que va debajo estaba antes dentro de "Nosotros",
+ * donde llegaba demasiado tarde para ayudar a decidir.
+ *
+ * **La entrada del titular no retrasa nada.** Titular y subtitulo entran con
+ * `.titulo-entra` (globals.css): sube y aparece, empieza en el primer cuadro y
+ * termina en medio segundo. No se usan las clases `.rev` de las secciones de
+ * abajo, que esperan a que el bloque entre en pantalla — aqui ya estamos en
+ * pantalla, y un titular que tarda en existir es el peor primer segundo posible.
+ * La barra de reserva **no** se anima: es la accion, y tiene que poder tocarse
+ * desde el primer cuadro.
+ *
+ * La barra superior **no** va aqui aunque visualmente la corone: se pinta en la
+ * pagina, arriba de este componente. Estuvo dentro y por eso no podia quedarse
+ * pegada al bajar — un `sticky` solo se pega mientras su contenedor sigue a la
+ * vista, y este `<section>` termina en la fila de datos.
+ *
+ * Es un Server Component: lo unico que necesita JavaScript son la barra de
+ * reserva y el carrusel de fondo, cada uno su propia isla de cliente.
+ */
+const FOTOS_HERO = [
+  '/photos/cola-amarilla-acantilado.png',
+  '/photos/marlin-en-equipo.png',
+  '/photos/dorado-bajo-toldo.png',
+  '/photos/capitan-cabrilla-bahia.png',
+  '/photos/pesca-del-dia-cubierta.png',
+  '/photos/pareja-dorados.png',
+  '/photos/cana-doblada-dorado.png',
+  '/photos/grupo-cabrilla-costa.png',
+  '/photos/yellowtail-pelicanos-bahia.png',
+];
 export function Hero({ lang, dict, minDate }: HeroProps) {
-  const reduce = useReducedMotion();
-
-  // El contenido del heroe **no arranca invisible**. Antes entraba desde
-  // `opacity: 0` con retraso y escalonado, asi que durante casi un segundo la
-  // portada era un degradado en blanco: titular, subtitulo y barra de reserva
-  // aparecian los tres despues.
-  //
-  // Ese segundo es justamente el porton donde se forma el juicio visual del
-  // sitio, y se estaba gastando en nada. Ahora el primer pintado ya trae la
-  // composicion real y el movimiento se queda en un desplazamiento corto: se
-  // conserva la entrada sin pagarla con un cuadro vacio.
-  const container = {
-    hidden: {},
-    show: {
-      transition: { staggerChildren: reduce ? 0 : 0.07 },
-    },
-  };
-
-  const item = {
-    hidden: reduce ? {} : { y: 14 },
-    show: {
-      y: 0,
-      transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
-    },
-  };
+  const facts = [
+    dict.about.facts.duration,
+    dict.about.facts.departure,
+    dict.about.facts.capacity,
+    dict.about.facts.season,
+  ];
 
   return (
-    // z-10 para que los paneles del booking bar (calendario, hora) queden por
-    // encima de las secciones que vienen despues en el DOM.
+    // z-10 para que los paneles de la barra (calendario, hora) queden por encima
+    // de las secciones que vienen despues en el DOM.
     <section id="inicio" className="relative z-10 bg-background">
-      {/* Sin overflow-hidden: recortaria esos paneles. Los degradados de abajo
-          son `inset-0`, no se salen del contenedor, asi que no hace falta. */}
-      <div className="relative flex min-h-[100dvh] flex-col">
-        {/* TODO: replace with real photography of the fleet leaving Marina La Costa at sunrise. */}
+      {/* La altura se mide contra la ventana y no en pixeles fijos: la barra de
+          reserva monta sobre el borde de abajo de la foto, y con 640px fijos caia
+          fuera de pantalla en cualquier laptop de 720-800px de alto. Se topa en
+          520px para que en un monitor grande la foto no crezca sin control.
+
+          Es `min-height` y no `height`: el titular vive en el flujo, no clavado
+          al fondo con `absolute`. Con altura fija y texto absoluto, un titular
+          de tres renglones crecia hacia arriba hasta pegarse a la barra
+          superior. Asi la foto se estira si el texto lo necesita y el aire de
+          arriba (`pt-20`) esta siempre. */}
+      <div className="relative w-full overflow-hidden">
+        <HeroCarousel fotos={FOTOS_HERO} />
+        {/* El texto nunca va directo sobre la foto: siempre sobre un degradado. */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(178deg, #eef8f7 0%, #c2e8e6 16%, #86d5d6 38%, #43aeb4 66%, #1c858c 100%)',
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(circle at 50% 4%, rgba(255,238,196,0.9), rgba(255,238,196,0) 42%)',
+              'linear-gradient(to top, rgba(10,11,14,0.88) 0%, rgba(10,11,14,0.42) 44%, rgba(10,11,14,0.10) 100%)',
           }}
         />
 
-        <SiteHeader lang={lang} nav={dict.nav} />
-
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:px-8 lg:px-12"
-        >
-          <motion.h1
-            variants={item}
-            className="max-w-3xl pb-1 text-4xl leading-[1.15] font-medium tracking-tight text-hero-ink sm:text-5xl lg:text-6xl"
-          >
-            {dict.hero.headlineStart} <em className="italic">{dict.hero.headlineEmphasis}</em>{' '}
-            {dict.hero.headlineEnd}
-          </motion.h1>
-
-          <motion.p
-            variants={item}
-            className="mt-6 max-w-xl text-base text-hero-ink-soft sm:text-lg"
-          >
-            {dict.hero.subtext}
-          </motion.p>
-
-          <motion.div variants={item} className="mt-10 w-full max-w-3xl">
-            <BookingBar lang={lang} booking={dict.booking} minDate={minDate} />
-          </motion.div>
-        </motion.div>
+        {/* `justify-end` deja el bloque abajo cuando sobra sitio —la foto se lee
+            de arriba abajo y el texto pesa al pie— y lo empuja hacia arriba solo
+            si el titular no cabe, respetando siempre el aire de arriba. */}
+        <div className="relative flex min-h-[52svh] flex-col justify-end lg:min-h-[min(56svh,520px)]">
+          <div className="mx-auto w-full max-w-6xl px-6 pt-20 pb-10 sm:px-8 lg:px-12 lg:pt-28 lg:pb-16">
+            <h1 className="titulo-entra max-w-[19ch] text-[38px] leading-[1.02] text-hero-ink sm:text-6xl lg:text-[76px] lg:leading-[0.98]">
+              {dict.hero.headlineStart} <span className="acento">{dict.hero.headlineEmphasis}</span>{' '}
+              {dict.hero.headlineEnd}
+            </h1>
+            <p className="titulo-entra titulo-entra-tarde mt-5 max-w-[52ch] text-base leading-relaxed text-hero-ink-soft lg:mt-6 lg:text-lg">
+              {dict.hero.subtext}
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Monta sobre la foto: la barra pertenece a la foto, no a lo que sigue.
+          El `id` no es decoracion: es lo que vigila StickyBookingBar para saber
+          cuando esta barra se fue de cuadro y toca sacar la de abajo. */}
+      <div
+        id={ID_BARRA_PORTADA}
+        className="relative mx-auto -mt-8 max-w-6xl px-6 sm:px-8 lg:-mt-12 lg:px-12"
+      >
+        <BookingBar lang={lang} booking={dict.booking} minDate={minDate} />
+      </div>
+
+      <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-6 pt-12 pb-16 sm:px-8 lg:grid-cols-4 lg:gap-x-0 lg:px-12 lg:pt-14 lg:pb-20">
+        {facts.map(({ value, label }, i) => (
+          <div
+            key={label}
+            className={`flex flex-col gap-1 lg:px-8 ${
+              i === 0 ? 'lg:pl-0' : 'lg:border-l lg:border-border'
+            } ${i === 3 ? 'lg:pr-0' : ''}`}
+          >
+            <dt className="text-xl font-bold tracking-[-0.02em] text-accent lg:text-[23px]">
+              {value}
+            </dt>
+            <dd className="text-sm text-muted">{label}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

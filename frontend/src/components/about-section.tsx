@@ -1,45 +1,35 @@
-import { Clock, SunHorizon, UsersThree, CalendarCheck } from '@phosphor-icons/react/ssr';
+import Image from 'next/image';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
-import { MediaPlaceholder } from '@/components/media-placeholder';
 
 type AboutSectionProps = {
   about: Dictionary['about'];
 };
 
+/**
+ * La foto rompe hasta el borde: va a sangre en su columna, sin el contenedor
+ * `max-w-6xl` que usa el texto. Los datos del viaje (duracion, hora, cupo, ano)
+ * ya viven en la portada — repetirlos aqui era la misma tabla dos veces.
+ */
 export function AboutSection({ about }: AboutSectionProps) {
-  const facts = [
-    { icon: Clock, ...about.facts.duration },
-    { icon: SunHorizon, ...about.facts.departure },
-    { icon: UsersThree, ...about.facts.capacity },
-    { icon: CalendarCheck, ...about.facts.season },
-  ];
-
   return (
-    <section id="nosotros" className="scroll-mt-20 bg-background py-24 lg:py-32">
-      <div className="mx-auto grid max-w-6xl gap-14 px-6 sm:px-8 lg:grid-cols-12 lg:gap-20 lg:px-12">
-        <div className="lg:col-span-5">
-          <h2 className="text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
-            {about.headline}
-          </h2>
-          <p className="mt-6 max-w-[60ch] text-base leading-relaxed text-muted">{about.body1}</p>
-          <p className="mt-4 max-w-[60ch] text-base leading-relaxed text-muted">{about.body2}</p>
-        </div>
+    <section id="nosotros" className="scroll-mt-20 grid bg-surface lg:grid-cols-2">
+      <div className="relative min-h-[320px] lg:min-h-[620px]">
+        <Image
+          src="/photos/capitan-cabrilla-bahia.png"
+          alt={about.photoHint}
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className="object-cover"
+        />
+      </div>
 
-        <div className="flex flex-col gap-10 lg:col-span-7">
-          {/* La foto de los capitanes es la que sostiene todo el texto de arriba:
-              sin cara, "no somos una agencia" es solo una frase. */}
-          <MediaPlaceholder hint={about.photoHint} aspect="wide" />
-
-          <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2">
-            {facts.map(({ icon: Icon, value, label }) => (
-              <div key={label} className="border-t border-border pt-5">
-                <Icon size={24} className="text-accent" />
-                <dt className="mt-4 text-xl font-medium tracking-tight text-foreground">{value}</dt>
-                <dd className="mt-1 text-sm text-muted">{label}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+      <div className="flex flex-col justify-center gap-6 px-6 py-16 sm:px-8 lg:px-20 lg:py-24">
+        <span aria-hidden className="rev-regla block h-[3px] w-12 bg-action" />
+        <h2 className="max-w-[16ch] text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[50px]">
+          {about.headline}
+        </h2>
+        <p className="max-w-[52ch] text-lg leading-relaxed text-foreground">{about.body1}</p>
+        <p className="max-w-[52ch] text-lg leading-relaxed text-muted">{about.body2}</p>
       </div>
     </section>
   );

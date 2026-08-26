@@ -5,31 +5,238 @@
 :root {
   color-scheme: light;
 
-  --background: #f5f4ef;
-  --foreground: #10231f;
-  --surface: #ffffff;
-  --muted: #56685f;
-  --border: #e2e5dd;
-  --accent: #c04a18;
-  --accent-foreground: #ffffff;
+  /* --- Paleta v3 -------------------------------------------------------
+     Regla que gobierna todo el sitio: los fondos de seccion son solo tres
+     (papel, bruma y bruma profunda). Ningun color de acento es fondo de
+     seccion. El color grande de la pagina lo ponen las fotos.
+     La bruma es el mismo indigo de la marca con la saturacion bajada, para
+     que fondo y acento sean el mismo color en dos volumenes y no compitan. */
+  --paper: #ffffff;
+  --mist: #f1f3fb;
+  --mist-deep: #e4e7f6;
+  --ink: #16171c;
+  --ink-soft: #55565f;
+  --line: #dde0ee;
+  --line-strong: #d1d5eb;
+  --indigo: #281ab5;
+  --indigo-deep: #311c99;
+  --yellow: #ffde00;
+  --amber: #ffb600;
 
-  /* Text sitting on top of the bright hero card. */
-  --hero-ink: #0b2420;
-  --hero-ink-soft: #14403a;
+  /* --- Nombres semanticos: es lo que usan los componentes --------------- */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --surface: var(--mist);
+  --surface-deep: var(--mist-deep);
+  --muted: var(--ink-soft);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+
+  /* Un solo acento, el indigo. El amarillo NO es un segundo acento: es el
+     color de la accion y de las marcas solidas —el relleno del boton de
+     reservar, la regla que abre cada seccion, la palabra caligrafica del
+     titular sobre la foto—. La regla que no se rompe es la de contraste:
+     amarillo como relleno o sobre foto oscura, **nunca** como texto sobre
+     papel (1.1:1, ilegible). */
+  --accent: var(--indigo);
+  --accent-deep: var(--indigo-deep);
+  --accent-foreground: #ffffff;
+  --action: var(--yellow);
+  --action-foreground: var(--ink);
+
+  /* Texto sobre foto: siempre encima de un degradado oscuro, nunca directo. */
+  --hero-ink: #ffffff;
+  --hero-ink-soft: rgba(255, 255, 255, 0.86);
+
+  /* Estados. Fuera de la paleta a proposito: son senales del sistema, no
+     decoracion, y tienen que leerse distinto del indigo y del amarillo. */
+  --exito: #0f7a46;
+  --exito-fondo: #dcf3e6;
+  --error: #c22118;
+  --error-fondo: #fbe3e0;
+  --aviso: #8a5a00;
+  --aviso-fondo: #fff1cc;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-surface-deep: var(--surface-deep);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
   --color-accent-foreground: var(--accent-foreground);
+  --color-action: var(--action);
+  --color-action-foreground: var(--action-foreground);
+  --color-amber: var(--amber);
   --color-hero-ink: var(--hero-ink);
   --color-hero-ink-soft: var(--hero-ink-soft);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-exito: var(--exito);
+  --color-exito-fondo: var(--exito-fondo);
+  --color-error: var(--error);
+  --color-error-fondo: var(--error-fondo);
+  --color-aviso: var(--aviso);
+  --color-aviso-fondo: var(--aviso-fondo);
+
+  --font-sans: var(--font-cuerpo);
+  --font-display: var(--font-titulo);
+  --font-script: var(--font-acento);
+
+  /* Espaciado de los titulares. Bebas Neue es condensada y solo de caja alta:
+     en versales el ojo no tiene ascendentes ni descendentes para separar una
+     letra de la otra, asi que pegadas se leen como un bloque. Va como variable
+     y no suelto en cada titular para poder afinarlo en un solo lugar.
+
+     Ojo: NO se toca `--tracking-tight` de Tailwind. Esa la usan tambien rotulos
+     y parrafos en la fuente de cuerpo (el checkout, los avisos), donde una
+     separacion de versales se ve suelta y mal. */
+  --tracking-titulo: 0.055em;
+}
+
+/* El "pop" del check de confirmacion de pago (booking-confirmation.tsx). Un
+   leve overshoot en 60% en vez de una curva con rebote propia: mas facil de
+   leer que un cubic-bezier con overshoot, y el rebote se siente igual.
+   `prefers-reduced-motion: reduce` ya colapsa cualquier animacion a 0.01ms
+   mas abajo en este archivo — no hace falta un guard aparte aqui. */
+@keyframes confirmacion-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* --- Reveals de la portada ---------------------------------------------
+   CSS puro, sin libreria. Son de una sola pasada y `animation-timeline:
+   view()` los ata al scroll sin una linea de JavaScript. Meter Motion aqui
+   significaria mandar un bundle de cliente a una portada que hoy se renderiza
+   entera en el servidor, para algo que la plataforma ya da gratis.
+   Cada una tiene un motivo, no estan por verse bien:
+     .rev        jerarquia, el contenido entra en el orden en que se lee
+     .rev-foto   la foto es la protagonista, se descubre en vez de aparecer
+     .rev-regla  marca el arranque de una seccion nueva                    */
+@keyframes revelar {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes revelar-foto {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 42% 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Entrada del titular de la portada. Distinta de `.rev`: aquella espera a que
+   el bloque entre en cuadro con `animation-timeline: view()`, y el titular ya
+   esta en cuadro al cargar. Sube poco (0.14em, ligado al tamano de letra) y
+   dura medio segundo — lo justo para que se sienta vivo sin que el visitante
+   espere a leer de que va el sitio. La barra de reserva no lleva ninguna: es
+   la accion, tiene que estar lista desde el primer cuadro. */
+@keyframes titulo-entra {
+  from {
+    opacity: 0;
+    transform: translateY(0.14em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes barrer {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@layer components {
+  .rev {
+    animation: revelar 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .rev-foto {
+    animation: revelar-foto 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .rev-regla {
+    animation: barrer 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: left;
+  }
+
+  .titulo-entra {
+    animation: titulo-entra 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* El subtitulo entra detras del titular, no a la vez: el orden en que
+     aparecen es el orden en que se leen. */
+  .titulo-entra-tarde {
+    animation-delay: 0.12s;
+  }
+
+  .d1 {
+    animation-delay: 0.07s;
+  }
+
+  .d2 {
+    animation-delay: 0.14s;
+  }
+
+  .d3 {
+    animation-delay: 0.21s;
+  }
+
+  /* Donde el navegador lo soporta, cada pieza se revela al entrar en cuadro
+     en vez de dispararse todo junto al cargar. */
+  @supports (animation-timeline: view()) {
+    .rev,
+    .rev-foto,
+    .rev-regla {
+      animation-timeline: view();
+      animation-range: entry 5% cover 28%;
+      animation-delay: 0s;
+    }
+  }
+
+  /* Bella Fashion es caligrafica: su altura de x es mucho menor que la del
+     titular, asi que al mismo tamano se veria encogida. Sube a 1.28em y
+     reserva abajo para que no se corte el descendente. */
+  .acento {
+    font-family: var(--font-acento), cursive;
+    font-weight: 50;
+    font-size: 0.65em;
+    line-height: 1.05;
+    padding-bottom: 0.06em;
+    /* Amarillo solo aqui dentro del titular: va sobre la foto oscura de la
+       portada, nunca sobre papel. Es el ambar y no el amarillo de la accion:
+       ese esta reservado al boton de reservar —tenerlo tambien en el titular
+       hacia que la portada tuviera dos cosas gritando el mismo color sin ser lo
+       mismo— y ademas el ambar es el amarillo del logo. */
+    color: var(--amber);
+  }
 }
 
 @layer base {
@@ -49,9 +256,30 @@
     flex-direction: column;
     color: var(--foreground);
     background: var(--background);
-    font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+    font-family: var(--font-cuerpo), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Bebas Neue tiene un solo peso. `font-synthesis: none` impide que el
+     navegador invente una negrita estirando los contornos, que se ve sucia. Los
+     titulares van en 400 y la jerarquia la hace el tamano.
+
+     Solo `h1` y `h2`: es una fuente de titular y de caja alta, y a tamano de
+     subtitulo (los `h3` del sitio van en 18px) un renglon en versales se lee
+     peor que la de cuerpo. Los subtitulos heredan la de cuerpo. Los `h2` que en
+     realidad son rotulos chicos —las tarjetas del checkout, los bloques de la
+     confirmacion— llevan `font-sans` explicito por la misma razon.
+
+     El fallback es condensado a proposito (Oswald, Arial Narrow): si Bebas no
+     carga, un titular de 90px maquetado para condensada no cabe en una de
+     ancho normal y desborda la caja. */
+  h1,
+  h2 {
+    font-family: var(--font-titulo), 'Oswald', 'Arial Narrow', Arial, sans-serif;
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: var(--tracking-titulo);
   }
 
   a {

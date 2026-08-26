@@ -1,4 +1,4 @@
-import { Quotes } from '@phosphor-icons/react/ssr';
+import { Star } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { WhatsappInline } from '@/components/whatsapp-inline';
 
@@ -7,10 +7,11 @@ type ReviewsSectionProps = {
   reviews: Dictionary['reviews'];
 };
 
-const HUECOS = 3;
+const HUECOS = 2;
 
 /**
- * Reseñas de clientes.
+ * Bloques de cita, sin tarjeta: cinco estrellas, la cita grande y el nombre
+ * debajo, nada de borde ni fondo.
  *
  * Los huecos van vacios A PROPOSITO. Poner citas inventadas con nombres
  * inventados seria fabricar prueba social, y en un negocio que se vende por
@@ -19,28 +20,49 @@ const HUECOS = 3;
  */
 export function ReviewsSection({ nav, reviews }: ReviewsSectionProps) {
   return (
-    <section id="resenas" className="scroll-mt-20 bg-surface py-24 lg:py-32">
-      <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
-        <h2 className="text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
+    <section
+      id="resenas"
+      className="relative scroll-mt-20 overflow-hidden bg-background py-24 lg:py-32"
+    >
+      {/* Radial apagado detras de las citas, con el mismo indigo del acento:
+          rompe el fondo plano sin competir con el, y se desvanece rapido en
+          vez de cubrir la seccion entera como un degradado parejo. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: 'radial-gradient(55% 60% at 12% 8%, rgba(40,26,181,0.05), transparent 70%)',
+        }}
+      />
+      <div className="relative mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
+        <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
+        <h2 className="max-w-[16ch] text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[58px]">
           {reviews.headline}
         </h2>
-        <p className="mt-5 max-w-[60ch] text-base leading-relaxed text-muted">{reviews.intro}</p>
+        <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-muted">{reviews.intro}</p>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 grid gap-12 sm:grid-cols-2 lg:gap-16">
           {Array.from({ length: HUECOS }, (_, i) => (
-            <article
-              key={i}
-              className="flex min-h-44 flex-col justify-between rounded-2xl border border-dashed border-border p-6"
-            >
-              <Quotes size={20} weight="fill" className="text-muted/40" />
-              <p className="mt-4 text-sm leading-relaxed text-muted">{reviews.placeholder}</p>
-              <p className="mt-4 text-xs text-muted/70">— {reviews.placeholderAuthor}</p>
-            </article>
+            <div key={i} className="flex flex-col gap-4">
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }, (_, s) => (
+                  <Star key={s} size={18} weight="fill" className="text-amber" />
+                ))}
+              </div>
+              <p className="max-w-[36ch] text-2xl leading-snug font-medium tracking-tight text-foreground">
+                {reviews.placeholder}
+              </p>
+              <span className="text-sm text-muted">{reviews.placeholderAuthor}</span>
+            </div>
           ))}
         </div>
 
-        <p className="mt-10 max-w-[60ch] text-sm leading-relaxed text-muted">{reviews.note}</p>
-        <WhatsappInline nav={nav} label={reviews.cta} className="mt-5" />
+        {/* El divisor sigue: separa las citas del CTA de abajo, aunque el texto
+            que explicaba de donde salen las resenas ya no va aqui — era una nota
+            para nosotros, no para quien visita el sitio. */}
+        <div className="mt-12 border-t border-border pt-6">
+          <WhatsappInline nav={nav} label={reviews.cta} />
+        </div>
       </div>
     </section>
   );

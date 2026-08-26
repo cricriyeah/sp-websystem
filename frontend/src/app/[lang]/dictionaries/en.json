@@ -6,7 +6,7 @@
   "meta": {
     "home": {
       "title": "Sport fishing charters in La Paz, BCS | Sal y Sol Sportfishing",
-      "description": "We head out every day from Marina La Costa on a private panga, captain and gear included. Book online in two minutes or message us on WhatsApp."
+      "description": "We head out every day from Marina La Costa on a private panga with a local captain. Book online in two minutes or message us on WhatsApp."
     },
     "reservar": {
       "title": "Book your fishing trip",
@@ -89,11 +89,12 @@
     "location": "La Paz, BCS",
     "inicio": "Home",
     "nosotros": "About us",
-    "flota": "The boats",
     "temporadas": "What's biting",
+    "galeria": "Gallery",
     "preguntas": "FAQ",
     "contacto": "Contact",
-    "humanContact": "Prefer talking to a human?",
+    "reservar": "Book now",
+    "humanContact": "Talk to an agent",
     "whatsappCta": "Message us on WhatsApp",
     "whatsappMessage": "Hi! I'd like to book a fishing tour. Can you help me?",
     "openMenu": "Open menu",
@@ -103,7 +104,7 @@
     "headlineStart": "Come fishing",
     "headlineEmphasis": "with us",
     "headlineEnd": "in the Bay of La Paz",
-    "subtext": "We're local captains. We head out every day before sunrise from Marina La Costa, on our own boats, with the gear ready. All you have to do is show up."
+    "subtext": "We're local captains. We head out every day before sunrise from Marina La Costa, on our own boats. You bring your gear, we bring the rest."
   },
   "booking": {
     "day": "Date",
@@ -117,13 +118,16 @@
     "dayFull": "Crossed-out days have no room left for your group.",
     "askPeople": "How many of you?",
     "askDay": "What day?",
-    "askTime": "What time?"
+    "askTime": "What time?",
+    "stickyOpen": "Book your trip",
+    "stickyClose": "Close",
+    "stickyTitle": "Book your trip"
   },
   "about": {
     "headline": "We're not an agency. We're the ones taking you out",
     "body1": "No middlemen, no offices here. Whoever answers the WhatsApp is the same person tying up the boat before dawn, and the owners run trips as captains too. We've known this bay since we were kids and we still fish it on the days we aren't taking guests out.",
     "body2": "Every trip is yours alone — the boat is never shared with strangers. First time fishing? Don't worry, the captain will show you how to cast and how to fight the fish. And if something didn't go the way you hoped, tell us straight. That's how we sort things out around here.",
-    "photoHint": "Photo of the captains at the dock, ideally at sunrise and unposed",
+    "photoHint": "Captain holding a freshly caught grouper, with La Paz in the background",
     "facts": {
       "duration": {
         "value": "6 to 8 hours",
@@ -142,37 +146,6 @@
         "label": "We sail all year round"
       }
     }
-  },
-  "fleet": {
-    "headline": "Our boats",
-    "intro": "They're ours, we look after them ourselves and we know them inside out. We'll put you on whichever one suits your group — if there are only a few of you we won't charge you extra for a bigger boat.",
-    "note": "Want more photos of one of them? Ask on WhatsApp and we'll send them over.",
-    "specsLabel": "What's on board",
-    "boats": [
-      {
-        "name": "Small panga",
-        "capacity": "Up to 3 guests",
-        "specs": [
-          "Outboard motor",
-          "Shade",
-          "Cooler with ice",
-          "Fishing gear for everyone"
-        ],
-        "photoHint": "Photo of the small panga underway, with people fishing"
-      },
-      {
-        "name": "Large panga",
-        "capacity": "Up to 5 guests",
-        "specs": [
-          "Outboard motor",
-          "Shade",
-          "More room to fight the fish",
-          "Cooler with ice",
-          "Fishing gear for everyone"
-        ],
-        "photoHint": "Photo of the large panga side-on, with the bay behind it"
-      }
-    ]
   },
   "season": {
     "headline": "What's biting",
@@ -203,36 +176,61 @@
     ]
   },
   "included": {
-    "headline": "What's included and what isn't",
-    "intro": "We'd rather tell you here than at the dock. This is exactly what you're paying for and what you'd need to bring yourself.",
+    "headline": "What your trip includes",
+    "intro": "We'd rather tell you here than at the dock: this is what you're paying for, what you bring yourself, and what you can ask us for on the side.",
     "includedTitle": "Included",
     "included": [
-      "The whole boat for your group, never shared",
-      "Captain",
-      "Fishing gear for everyone on board",
-      "Cooler with ice",
-      "6 to 8 hours on the water"
+      {
+        "icon": "panga",
+        "title": "The whole panga",
+        "body": "Yours and your group's. Never shared with another booking."
+      },
+      {
+        "icon": "capitan",
+        "title": "Local captain",
+        "body": "Out in this bay every day, and he knows where the fish are."
+      },
+      {
+        "icon": "hielera",
+        "title": "Cooler with ice",
+        "body": "For your catch and for whatever you bring on board."
+      },
+      {
+        "icon": "horas",
+        "title": "6 to 8 hours",
+        "body": "You leave between 5:00 and 7:00 am, at the time you pick."
+      }
     ],
-    "notIncludedTitle": "Not included",
-    "notIncluded": [
-      "Fishing licence (see below)",
-      "Bait — ask us and we'll get it for you",
-      "Food and drinks, unless you add lunch when booking",
-      "Ride to the dock, unless you request it and we quote it"
-    ],
-    "bringTitle": "What we'd bring if we were you",
+    "bringTitle": "What you bring",
     "bring": [
+      "Your fishing gear",
+      "Your fishing licence",
+      "Photo ID",
       "Sunscreen and a cap — the sun is harsh even on an early start",
       "A light jacket, it's chilly on the water at 5am",
       "Motion sickness tablets if you're prone, taken before boarding, not after",
-      "Photo ID",
       "A cooler if you want to take your catch home"
     ],
-    "licenseTitle": "About the fishing licence",
-    "licenseBody": "In Mexico every person fishing on board needs their own CONAPESCA licence. We don't include it in the price because it's a personal permit, but you can get it online in a few minutes and it's inexpensive. If that's a hassle, tell us and we'll help you sort it before your trip.",
-    "licenseCta": "Ask us on WhatsApp",
-    "catchTitle": "Your catch",
-    "catchBody": "What you land is yours to take home. Species like marlin and sailfish are reserved for sport fishing and have a daily limit per angler — when one comes up, the usual thing is a quick photo and back in the water. The captain will tell you what's fair game, without lecturing you."
+    "addonsTitle": "What you can ask us for",
+    "addonsIntro": "None of this is in the base price, but we'll sort it out with you before you sail.",
+    "addons": [
+      {
+        "title": "Fishing gear",
+        "body": "If you don't have your own, give us notice and we'll get it for you."
+      },
+      {
+        "title": "Bait",
+        "body": "Tell us before the trip and we'll have it ready at the dock."
+      },
+      {
+        "title": "Lunch on board",
+        "body": "Added when you book, in the same step as the payment."
+      },
+      {
+        "title": "Ride to the dock",
+        "body": "If you need one, we'll quote it with you on WhatsApp."
+      }
+    ]
   },
   "gallery": {
     "headline": "What a day with us looks like",
@@ -240,33 +238,27 @@
     "note": "More shots from recent trips keep coming in. If you've been out with us and want your photo up here, send it over.",
     "videoHint": "Short clip (15-30s) of the sunrise departure or a fish being fought",
     "photoHints": [
-      "Leaving the dock while it's still dark",
-      "Guest fighting a fish with the captain helping",
-      "The day's catch on deck",
-      "Friends or family on board, laughing",
-      "Close-up of the gear ready to go",
-      "Coming back to the dock with the sun up"
+      "The day's full catch on deck",
+      "Marlin landed as a team, ready for the photo and release",
+      "Family with their catch, close to shore",
+      "Two friends with their mahi",
+      "Rod bent, fighting a mahi",
+      "Heading back into the bay, pelicans alongside"
     ]
   },
   "reviews": {
     "headline": "What people who've come say",
     "intro": "We'd rather they told you themselves.",
-    "note": "Real customer reviews go here. Send us the Google or TripAdvisor screenshots and we'll put them up as they are, unedited.",
     "placeholder": "Space for a real customer review",
     "placeholderAuthor": "Customer name",
     "cta": "Been out with us? Send us your thoughts on WhatsApp"
-  },
-  "groups": {
-    "headline": "More than 5 of you?",
-    "body": "One panga holds up to 5. If there are more of you, no problem: we'll line up two or three boats so you all leave at the same time and can see each other out on the water. Message us and we'll put it together with you.",
-    "cta": "Message us on WhatsApp"
   },
   "faq": {
     "headline": "Frequently asked questions",
     "items": [
       {
         "q": "What is included in the trip?",
-        "a": "Full fishing gear and a cooler with ice. Bait, fishing licence, food and drinks are not included."
+        "a": "The whole boat for your group with its captain, a cooler with ice and 6 to 8 hours on the water. You bring your own fishing gear; if you don't have any, give us notice and we'll get it for you. Bait, food and the licence are separate."
       },
       {
         "q": "How many people fit on the boat?",
@@ -294,23 +286,11 @@
       },
       {
         "q": "Do I need a fishing licence?",
-        "a": "Yes, everyone fishing on board needs their own CONAPESCA licence. It isn't included in the price because it's a personal permit, but you can get it online in a few minutes. If that's a hassle, message us and we'll help you before the trip."
+        "a": "Yes, every person fishing on board needs their own, from CONAPESCA. It's a personal permit you get online in a few minutes; there is a step-by-step section above, and if it gives you trouble we'll do it with you."
       },
       {
         "q": "Can I keep what I catch?",
         "a": "Of course, it's yours. Bring a cooler if you want to take it home properly. One thing: marlin and sailfish are reserved for sport fishing and have a daily limit per angler, so the usual thing is a photo and back in the water. The captain will guide you."
-      },
-      {
-        "q": "I've never fished. Am I going to embarrass myself?",
-        "a": "Not at all, and you wouldn't be the first. The captain will show you how to cast and how to fight the fish. We've taken out people who had never set foot on a boat and they went home with their catch."
-      },
-      {
-        "q": "What if I get seasick?",
-        "a": "It happens, especially when the water is choppy. If you're prone to it, take a tablet before boarding, not after. And tell the captain — he knows how to shape the trip so you have a better time."
-      },
-      {
-        "q": "There are more than 5 of us. What do we do?",
-        "a": "We line up several boats so you all leave at the same time and can see each other on the water. Message us on WhatsApp and we'll put it together with you."
       },
       {
         "q": "What if I can't make it and it isn't the weather?",
@@ -350,22 +330,20 @@
       "Su"
     ],
     "tripHeadline": "Trip date & details",
+    "tripConfirmQuestion": "Confirm the day and time?",
+    "confirmStep": "Confirm",
+    "stepConfirmed": "Confirmed",
     "contactHeadline": "Your details",
     "phone": "Phone number",
     "fullName": "Full name",
     "email": "Email",
     "meetingPointLabel": "Meeting point",
     "notice": "Once your payment goes through, one of our agents will reach out within the next 24 hours before your trip. Exact location details, transport, references and the captain's name will be provided by our customer care agent.",
-    "amenitiesHeadline": "Amenities",
+    "lunchStepHeadline": "Lunch",
     "amenities": {
-      "drinks": "Drinks",
-      "lunch": "Lunch (breakfast and lunch; set menu, changes weekly)",
-      "transport": "Pickup from your accommodation"
+      "lunch": "Lunch (breakfast and lunch; set menu, changes weekly)"
     },
     "lunchPerPerson": "per guest",
-    "requestsHeadline": "Quoted by our agent",
-    "requestsIntro": "Tick it and our agent sends you the price before the trip. It is not charged online because it depends on what you choose and how far the pickup is.",
-    "requestsBadge": "Not charged online",
     "waiver": {
       "accept": "I release the company from any liability and have read the",
       "linkLabel": "full liability waiver",
@@ -439,7 +417,7 @@
       "depositNote": "The remaining 70% is paid in cash on the day of the trip."
     },
     "amountDueNow": "Due now",
-    "cancelPolicy": "If the captain cancels for bad weather, you get 100% back. If you're the one who can't make it, tell us 48 hours ahead and we'll move your date at no cost.",
+    "securityNote": "Your online payment is 100% secure. Stripe processes it with encryption, and your card details never touch our servers.",
     "submitting": "Processing…",
     "confirmPay": "Pay",
     "missingFields": "Fill in your contact details before continuing.",
@@ -461,8 +439,12 @@
       "pendingLabel": "Due in cash on the day of the trip",
       "meetingHeadline": "Where we meet",
       "agentHeadline": "What happens next",
-      "agentBody": "A sales agent will contact you within the next 24 hours with the final details: exact landmarks for the meeting point, transport and your captain's name.",
-      "quotesNote": "They will also quote what you asked for ({items}), which is not included in the amount you paid.",
+      "agentBody": "A sales agent will contact you within the next 24 hours with the final details: the exact meeting point, your captain's name and your boat. If you'd like a pickup from your hotel, drinks on board, or have any question, message them directly — no need to wait for them to reach out first.",
+      "referenceLabel": "Booking reference",
+      "receiptTitle": "Booking receipt",
+      "downloadReceipt": "Download receipt",
+      "whatsappCta": "Contact your agent",
+      "whatsappMessage": "Hi, I'm {nombre}. I booked for {fecha} (reference #{folio}).",
       "backHome": "Back to home"
     },
     "dayFull": "Crossed-out days have no room left for your group.",
@@ -494,5 +476,27 @@
     "accept": "Accept",
     "reject": "Reject",
     "more": "Read the privacy notice"
+  },
+  "license": {
+    "headline": "Your fishing licence",
+    "intro": "In Mexico every person fishing on board needs their own CONAPESCA licence. It is not in the price of the trip because it's a personal permit, issued in your name. It's the step guests ask about most, so here it is in full.",
+    "steps": [
+      {
+        "title": "You get it online",
+        "body": "The whole thing is done on the internet and takes a few minutes. No office visit, and no need to show up early at the dock for it."
+      },
+      {
+        "title": "Pick how long it lasts",
+        "body": "There are daily, weekly, monthly and yearly licences. For a one-off trip, the daily one is enough."
+      },
+      {
+        "title": "One per person",
+        "body": "Everyone on board carries their own, in their own name. Having it on your phone is enough — no need to print it."
+      }
+    ],
+    "helpTitle": "Rather not deal with it?",
+    "helpBody": "Message us before your trip and we'll walk you through it. Much easier to sort out from home than at five in the morning on the dock.",
+    "cta": "Ask us on WhatsApp",
+    "whatsappMessage": "Hi! I'd like to go fishing with you and I could use a hand getting my CONAPESCA licence."
   }
 }

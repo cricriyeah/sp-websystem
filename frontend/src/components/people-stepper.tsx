@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, UsersThree } from '@phosphor-icons/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { MAX_PEOPLE, MIN_PEOPLE } from '@/lib/dates';
 
 type PeopleStepperProps = {
@@ -35,6 +36,7 @@ export function PeopleStepper({
   const vacio = value === null;
   const [showMaxNotice, setShowMaxNotice] = useState(false);
   const noticeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sinMovimiento = useReducedMotion();
 
   useEffect(() => () => {
     if (noticeTimeout.current) clearTimeout(noticeTimeout.current);
@@ -59,9 +61,12 @@ export function PeopleStepper({
   };
 
   return (
-    <div className="relative flex flex-1 items-center gap-3 rounded-2xl px-6 py-4">
+    <div className="relative flex flex-1 items-center gap-3 px-6 py-3.5">
       <UsersThree size={20} className="shrink-0 text-muted" />
-      <span className="flex flex-1 flex-col items-start gap-0.5 text-left">
+      {/* Alto reservado, igual que en FieldPopover: la etiqueta solo existe una
+          vez contestado, y dejar que el contenido mande el alto hacia que la
+          barra entera creciera al contestar. Ver el comentario largo alla. */}
+      <span className="flex h-10 flex-1 flex-col items-start justify-center gap-0.5 text-left">
         {!vacio && <span className="text-xs text-muted">{label}</span>}
         <span className="flex w-full items-center justify-between">
           <span
@@ -94,11 +99,20 @@ export function PeopleStepper({
         </span>
       </span>
 
-      {showMaxNotice && (
-        <span className="absolute -bottom-8 left-0 z-10 rounded-lg bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-surface shadow-lg">
-          {maxNotice}
-        </span>
-      )}
+      <AnimatePresence>
+        {showMaxNotice && (
+          <motion.span
+            key="max-notice"
+            initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4 }}
+            transition={{ duration: 0.16 }}
+            className="absolute -bottom-8 left-0 z-10 rounded-lg bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-surface shadow-lg"
+          >
+            {maxNotice}
+          </motion.span>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

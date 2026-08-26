@@ -55,7 +55,10 @@ tours-pesca/
 - Ventana de salida: 5:00 a 7:00 am. **El cliente elige la hora exacta dentro de esa ventana al reservar.**
 - Opera los 365 días del año (la pesca varía por temporada, la operación no se detiene).
 - **Sin restricción de edad y sin mínimo de personas** — un viaje puede salir con una sola persona.
-- Incluye: equipo de pesca, hielera con hielo. No incluye: carnada, licencia de pesca, alimentos, bebidas.
+- Incluye: la panga completa con capitán, hielera con hielo, 6 a 8 horas de viaje.
+- **El equipo de pesca NO va incluido** (corregido por el dueño, 25 de agosto de 2026; antes este documento decía que sí). Cada cliente trae el suyo; si no tiene, se le consigue aparte avisando antes de la salida.
+- Tampoco incluye: carnada, licencia de pesca, alimentos, bebidas, traslado al muelle. Todo eso se pide por WhatsApp y se cotiza aparte, salvo el lunch, que se agrega al reservar.
+- El sitio público no lista lo que NO incluye: lo dice como «lo que llevas tú» y «lo que nos puedes pedir». Es decisión de presentación, no un cambio de lo que se entrega.
 - Punto de encuentro: Marina La Costa (Rangel y Navarro / Restaurant Marina La Costa). El cliente llega por su cuenta.
 - **No se piden datos adicionales de seguridad** (ni peso, ni si sabe nadar) — solo nombre, teléfono, correo.
 

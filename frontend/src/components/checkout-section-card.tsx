@@ -14,8 +14,8 @@ type CheckoutSectionCardProps = {
 };
 
 const ESTILOS = {
-  flat: 'border-border bg-surface',
-  elevated: 'border-border bg-surface shadow-[0_18px_45px_rgba(11,36,32,0.16)]',
+  flat: 'border-border bg-background',
+  elevated: 'border-border bg-background shadow-[0_18px_45px_rgba(11,36,32,0.16)]',
 };
 
 export function CheckoutSectionCard({
@@ -25,18 +25,18 @@ export function CheckoutSectionCard({
   children,
 }: CheckoutSectionCardProps) {
   return (
-    <section className={`rounded-3xl border p-6 sm:p-8 ${ESTILOS[variant]}`}>
+    <section className={`border p-6 sm:p-8 ${ESTILOS[variant]}`}>
       <div className="flex items-center gap-3">
         <span
           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
             variant === 'elevated'
               ? 'bg-accent text-accent-foreground'
-              : 'border border-border bg-surface text-muted'
+              : 'border border-border bg-background text-muted'
           }`}
         >
           {step}
         </span>
-        <h2 className="text-sm font-medium tracking-tight text-foreground">{title}</h2>
+        <h2 className="font-sans text-sm font-medium tracking-tight text-foreground">{title}</h2>
       </div>
       <div className="mt-5">{children}</div>
     </section>

@@ -15,11 +15,11 @@ export default async function NotFound() {
 
   return (
     <div className="min-h-dvh bg-background">
-      <SiteHeader lang="es" nav={dict.nav} tone="plain" />
+      <SiteHeader lang="es" nav={dict.nav} />
 
       <main className="mx-auto flex max-w-2xl flex-col justify-center px-6 py-24 sm:px-8">
         <p className="text-sm font-medium tracking-wide text-accent uppercase">404</p>
-        <h1 className="mt-3 text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
+        <h1 className="mt-3 text-3xl leading-[1.15] text-foreground sm:text-4xl">
           {copy.headline}
         </h1>
         <p className="mt-5 max-w-[60ch] text-base leading-relaxed text-muted">{copy.body}</p>

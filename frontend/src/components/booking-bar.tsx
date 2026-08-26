@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { useEstadoReserva } from '@/components/booking-state';
 import { DateField } from '@/components/date-field';
 import { PeopleStepper } from '@/components/people-stepper';
 import { TimeField } from '@/components/time-field';
@@ -22,6 +23,10 @@ type BookingBarProps = {
  * posibles —solo dos de las diez pangas pasan de tres personas— asi que
  * preguntar la fecha antes deja que la respuesta siguiente invalide la anterior.
  *
+ * **Las respuestas no son suyas.** Viven en `ProveedorReserva`, asi que la barra
+ * de la portada y la que se pega abajo al bajar muestran lo mismo: contestar en
+ * una es contestar en las dos.
+ *
  * **Arranca vacia, sin valores por defecto.** Un default es una decision tomada
  * por el cliente que el tiene que descubrir y deshacer. El precio de quitarlos es
  * real —pasa de verificar a producir, que cuesta mas— y se paga encadenando las
@@ -31,9 +36,9 @@ type BookingBarProps = {
 export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
   const router = useRouter();
 
-  const [people, setPeople] = useState<number | null>(null);
-  const [day, setDay] = useState<string | null>(null);
-  const [time, setTime] = useState<string | null>(null);
+  // Compartido con la barra pegada de abajo cuando las dos viven bajo
+  // ProveedorReserva; propio si esta barra anda suelta. Ver booking-state.tsx.
+  const { people, day, time, setPeople, setDay, setTime } = useEstadoReserva();
 
   // Contadores para pedirle apertura a cada panel. Se incrementan al contestar la
   // pregunta anterior, y al intentar enviar con algo sin contestar.
@@ -61,9 +66,11 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
   const completo = people !== null && day !== null && time !== null;
 
   return (
+    // Recta y blanca, con sombra: es lo unico del sitio que flota, porque es lo
+    // unico que se sale de su seccion para montarse sobre la foto.
     <form
       onSubmit={handleSubmit}
-      className="flex w-full flex-col gap-2 rounded-3xl bg-surface p-3 shadow-[0_20px_50px_rgba(11,36,32,0.16)] sm:flex-row sm:items-stretch sm:gap-0 sm:divide-x sm:divide-border sm:rounded-full sm:p-3"
+      className="flex w-full flex-col gap-2 bg-background p-3 shadow-[0_18px_44px_rgba(22,23,28,0.16)] sm:flex-row sm:items-stretch sm:gap-0 sm:divide-x sm:divide-border sm:p-3"
     >
       <PeopleStepper
         label={booking.people}
@@ -109,12 +116,15 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
       />
 
       <div className="flex items-center px-1 py-1 sm:pl-3">
+        {/* El amarillo es el color de la accion y solo aparece aqui y en la barra
+            superior. Sin contestar todo cae a bruma con borde: se sigue pudiendo
+            pulsar (abre la pregunta que falta) pero no compite por atencion. */}
         <button
           type="submit"
-          className={`flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-8 py-4 text-sm font-medium transition-all active:scale-[0.98] sm:w-auto ${
+          className={`flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-semibold whitespace-nowrap transition-all active:scale-[0.98] sm:w-auto ${
             completo
-              ? 'bg-accent text-accent-foreground'
-              : 'bg-accent/40 text-accent-foreground/80'
+              ? 'bg-action text-action-foreground'
+              : 'border border-border-strong bg-surface text-muted'
           }`}
         >
           {booking.submit}

@@ -31,11 +31,9 @@ export function TimeField({
       placeholder={placeholder}
       solicitarApertura={solicitarApertura}
       icon={<Clock size={20} className="shrink-0 text-muted" />}
-      // Ayuda + las 9 salidas de la ventana de 5 a 7 am.
-      alturaEstimada={400}
     >
       {(cerrar) => (
-        <div className="w-56">
+        <div className="w-full sm:w-56">
           <p className="px-1 pb-2 text-xs text-muted">{help}</p>
           {/* La ventana de salida es de 5 a 7 am en pasos de 15 minutos: caben
               las 9 opciones sin scroll, no hace falta virtualizar nada. */}

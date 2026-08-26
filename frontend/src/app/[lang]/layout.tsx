@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Instrument_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import '../globals.css';
 import { getDictionary, hasLocale } from './dictionaries';
 import { notFound } from 'next/navigation';
@@ -8,14 +9,33 @@ import { RefCapture } from '@/components/ref-capture';
 import { ProveedorToast } from '@/components/toast';
 import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from '@/lib/site';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+// Cuerpo, cifras y toda la interfaz de reserva.
+const instrumentSans = Instrument_Sans({
+  variable: '--font-cuerpo',
   subsets: ['latin'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+// Titulares. Bebas Neue trae un solo peso y **solo caja alta** —sus minusculas
+// son las mismas mayusculas—, asi que todo titular sale en versales quiera o no.
+// La jerarquia la hace el tamano. globals.css le pone `font-synthesis: none`
+// para que ningun navegador finja una negrita que la fuente no tiene, y el
+// espaciado positivo que las versales necesitan para no amontonarse.
+const bebasNeue = localFont({
+  src: '../fonts/BebasNeue-Regular.woff2',
+  variable: '--font-titulo',
+  weight: '400',
+  style: 'normal',
+  display: 'swap',
+});
+
+// Palabras sueltas de acento dentro de un titular. Ojo: la licencia instalada
+// es «personal use only», ver src/app/fonts/LICENCIAS.md antes de lanzar.
+const bellaFashion = localFont({
+  src: '../fonts/BellaFashion-Regular.woff2',
+  variable: '--font-acento',
+  weight: '400',
+  style: 'normal',
+  display: 'swap',
 });
 
 export async function generateMetadata({ params }: LayoutProps<'/[lang]'>): Promise<Metadata> {
@@ -66,7 +86,7 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
     <html
       lang={lang}
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={`${instrumentSans.variable} ${bebasNeue.variable} ${bellaFashion.variable}`}
     >
       <body suppressHydrationWarning>
         {/* No pinta nada: solo guarda el ?ref= de la vendedora si viene en la URL. */}

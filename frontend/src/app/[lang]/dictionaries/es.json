@@ -6,7 +6,7 @@
   "meta": {
     "home": {
       "title": "Tours de pesca deportiva en La Paz, BCS | Sal y Sol Sportfishing",
-      "description": "Salimos a pescar todos los días desde Marina La Costa, en panga privada con capitán y equipo incluido. Reserva en línea en dos minutos o escríbenos por WhatsApp."
+      "description": "Salimos a pescar todos los días desde Marina La Costa, en panga privada y con capitán. Reserva en línea en dos minutos o escríbenos por WhatsApp."
     },
     "reservar": {
       "title": "Reserva tu tour de pesca",
@@ -89,11 +89,12 @@
     "location": "La Paz, BCS",
     "inicio": "Inicio",
     "nosotros": "Nosotros",
-    "flota": "Las pangas",
     "temporadas": "Qué se pesca",
+    "galeria": "Galería",
     "preguntas": "Preguntas",
     "contacto": "Contacto",
-    "humanContact": "¿Te gusta más el contacto humano?",
+    "reservar": "Reservar",
+    "humanContact": "Habla con un agente",
     "whatsappCta": "Escríbenos por WhatsApp",
     "whatsappMessage": "Hola, me gustaría reservar un tour de pesca. ¿Me ayudan?",
     "openMenu": "Abrir menú",
@@ -103,7 +104,7 @@
     "headlineStart": "Vente a pescar",
     "headlineEmphasis": "con nosotros",
     "headlineEnd": "a la Bahía de La Paz",
-    "subtext": "Somos capitanes de aquí. Salimos todos los días de madrugada desde Marina La Costa, en nuestras propias pangas, con el equipo listo. Tú solo llega."
+    "subtext": "Somos capitanes de aquí. Salimos todos los días de madrugada desde Marina La Costa, en nuestras propias pangas. Tú traes tu equipo y nosotros el resto."
   },
   "booking": {
     "day": "Día",
@@ -117,13 +118,16 @@
     "dayFull": "Los días tachados ya no tienen lugar para tu grupo.",
     "askPeople": "¿Cuántos son?",
     "askDay": "¿Qué día?",
-    "askTime": "¿Qué hora?"
+    "askTime": "¿Qué hora?",
+    "stickyOpen": "Reserva tu viaje",
+    "stickyClose": "Cerrar",
+    "stickyTitle": "Reserva tu viaje"
   },
   "about": {
     "headline": "No somos una agencia. Somos los que te van a llevar",
     "body1": "Aquí no hay intermediarios ni oficinas. Los que contestan el WhatsApp son los mismos que amarran la panga en la madrugada, y los dueños también salen de capitanes. Conocemos esta bahía desde chamacos y seguimos pescando en ella los días que no traemos gente.",
     "body2": "Cada viaje es solo para tu grupo: la panga no se comparte con desconocidos. Si es tu primera vez, no te preocupes, el capitán te enseña a tirar el anzuelo. Y si algo no salió como esperabas, dínoslo de frente — así arreglamos las cosas aquí.",
-    "photoHint": "Foto de los capitanes en el muelle, de preferencia al amanecer y sin poses",
+    "photoHint": "Capitán con una cabrilla recién pescada, con La Paz al fondo",
     "facts": {
       "duration": {
         "value": "6 a 8 horas",
@@ -142,37 +146,6 @@
         "label": "Salimos todo el año"
       }
     }
-  },
-  "fleet": {
-    "headline": "Nuestras pangas",
-    "intro": "Son nuestras, las cuidamos nosotros y las conocemos de memoria. Te asignamos la que mejor le quede a tu grupo — si son pocos no te vamos a cobrar de más por una grande.",
-    "note": "¿Quieres ver más fotos de alguna? Pídelas por WhatsApp y te las mandamos.",
-    "specsLabel": "Lo que trae",
-    "boats": [
-      {
-        "name": "Panga chica",
-        "capacity": "Hasta 3 personas",
-        "specs": [
-          "Motor fuera de borda",
-          "Sombra",
-          "Hielera con hielo",
-          "Equipo de pesca para todos"
-        ],
-        "photoHint": "Foto de la panga chica navegando, con gente pescando"
-      },
-      {
-        "name": "Panga grande",
-        "capacity": "Hasta 5 personas",
-        "specs": [
-          "Motor fuera de borda",
-          "Sombra",
-          "Más espacio para pelear el pez",
-          "Hielera con hielo",
-          "Equipo de pesca para todos"
-        ],
-        "photoHint": "Foto de la panga grande, de perfil, con la bahía atrás"
-      }
-    ]
   },
   "season": {
     "headline": "Qué se está pescando",
@@ -203,36 +176,61 @@
     ]
   },
   "included": {
-    "headline": "Qué va incluido y qué no",
-    "intro": "Preferimos decírtelo aquí y no en el muelle. Esto es exactamente lo que pagas y lo que tendrías que llevar tú.",
+    "headline": "Qué incluye tu viaje",
+    "intro": "Preferimos decírtelo aquí y no en el muelle: esto es lo que pagas, lo que llevas tú y lo que nos puedes pedir aparte.",
     "includedTitle": "Va incluido",
     "included": [
-      "La panga completa para tu grupo, sin compartir",
-      "Capitán",
-      "Equipo de pesca para todos los que van",
-      "Hielera con hielo",
-      "De 6 a 8 horas de viaje"
+      {
+        "icon": "panga",
+        "title": "La panga entera",
+        "body": "Tuya y de tu grupo. Nunca se comparte con otra reserva."
+      },
+      {
+        "icon": "capitan",
+        "title": "Capitán local",
+        "body": "Sale a diario en esta bahía y sabe dónde está el pescado."
+      },
+      {
+        "icon": "hielera",
+        "title": "Hielera con hielo",
+        "body": "Para lo que pesques y para lo que subas a bordo."
+      },
+      {
+        "icon": "horas",
+        "title": "De 6 a 8 horas",
+        "body": "Sales entre las 5:00 y las 7:00 am, a la hora que elijas."
+      }
     ],
-    "notIncludedTitle": "No va incluido",
-    "notIncluded": [
-      "Licencia de pesca (te explicamos abajo)",
-      "Carnada — pregúntanos y te la conseguimos",
-      "Comida y bebidas, salvo que agregues el lunch al reservar",
-      "Traslado al muelle, salvo que lo pidas y lo cotizemos"
-    ],
-    "bringTitle": "Lo que te recomendamos traer",
+    "bringTitle": "Lo que llevas tú",
     "bring": [
+      "Tu equipo de pesca",
+      "Tu licencia de pesca",
+      "Identificación",
       "Bloqueador y gorra: el sol pega fuerte aunque salgas de noche",
       "Una chamarra ligera, a las 5 de la mañana hace fresco en el agua",
       "Pastillas para el mareo si eres propenso, tómalas antes de subir",
-      "Identificación",
       "Hielera si te quieres llevar tu pescado"
     ],
-    "licenseTitle": "Sobre la licencia de pesca",
-    "licenseBody": "En México cada persona que pesca a bordo necesita su licencia de CONAPESCA. No la incluimos en el precio porque es un trámite personal, pero se saca en línea en unos minutos y es barata. Si se te complica, dinos y te ayudamos a sacarla antes de tu viaje.",
-    "licenseCta": "Pregúntanos por WhatsApp",
-    "catchTitle": "Lo que pesques",
-    "catchBody": "Lo que sacas es tuyo y te lo llevas. Especies como el marlin y el pez vela están reservadas a la pesca deportiva y tienen límite por pescador al día — cuando cae una, lo normal es tomar la foto y regresarla al agua. El capitán te va diciendo qué se puede y qué no, sin sermones."
+    "addonsTitle": "Lo que nos puedes pedir",
+    "addonsIntro": "Nada de esto va en el precio base, pero lo resolvemos contigo antes de la salida.",
+    "addons": [
+      {
+        "title": "Equipo de pesca",
+        "body": "Si no tienes el tuyo, dinos con tiempo y te lo conseguimos."
+      },
+      {
+        "title": "Carnada",
+        "body": "Avísanos antes del viaje y la tenemos lista en el muelle."
+      },
+      {
+        "title": "Lunch a bordo",
+        "body": "Se agrega al reservar, en el mismo paso del pago."
+      },
+      {
+        "title": "Traslado al muelle",
+        "body": "Si lo necesitas, lo cotizamos contigo por WhatsApp."
+      }
+    ]
   },
   "gallery": {
     "headline": "Cómo se ve un día con nosotros",
@@ -240,33 +238,27 @@
     "note": "Sigue llegándonos material de los últimos viajes. Si viniste con nosotros y quieres que subamos tu foto, mándanosla.",
     "videoHint": "Video corto (15-30 s) de la salida al amanecer o de una pelea con el pez",
     "photoHints": [
-      "Salida del muelle todavía de noche",
-      "Cliente peleando un pez, con el capitán ayudando",
-      "La captura del día en la cubierta",
-      "Grupo de amigos o familia a bordo, riéndose",
-      "Detalle del equipo de pesca listo",
-      "Regreso al muelle con el sol alto"
+      "La pesca del día completa en la cubierta",
+      "Marlin capturado en equipo, listo para la foto y la liberación",
+      "Familia con su captura, cerca de la costa",
+      "Dos amigos con su dorado",
+      "La caña doblada, peleando un dorado",
+      "De regreso a la bahía, con pelícanos alrededor"
     ]
   },
   "reviews": {
     "headline": "Lo que dicen los que ya vinieron",
     "intro": "Preferimos que lo cuenten ellos.",
-    "note": "Aquí van reseñas reales de clientes. Mándanos las capturas de Google o TripAdvisor y las ponemos tal cual, sin editarlas.",
     "placeholder": "Espacio para una reseña real de un cliente",
     "placeholderAuthor": "Nombre del cliente",
     "cta": "¿Ya viniste con nosotros? Déjanos tu opinión por WhatsApp"
-  },
-  "groups": {
-    "headline": "¿Son más de 5?",
-    "body": "En una panga caben hasta 5. Si van más, no hay problema: coordinamos dos o tres pangas para que salgan juntos a la misma hora y se vean en el agua. Escríbenos y lo armamos contigo.",
-    "cta": "Escríbenos por WhatsApp"
   },
   "faq": {
     "headline": "Preguntas frecuentes",
     "items": [
       {
         "q": "¿Qué incluye el tour?",
-        "a": "Equipo de pesca completo y hielera con hielo. No incluye carnada, licencia de pesca, alimentos ni bebidas."
+        "a": "La panga completa para tu grupo con su capitán, hielera con hielo y de 6 a 8 horas de viaje. El equipo de pesca lo llevas tú; si no tienes, dinos con tiempo y te lo conseguimos. La carnada, la comida y la licencia van aparte."
       },
       {
         "q": "¿Cuántas personas caben en la embarcación?",
@@ -294,23 +286,11 @@
       },
       {
         "q": "¿Necesito licencia de pesca?",
-        "a": "Sí, cada persona que pesca a bordo necesita la suya, de CONAPESCA. No va incluida en el precio porque es un trámite personal, pero se saca en línea en unos minutos. Si se te complica, escríbenos y te ayudamos antes del viaje."
+        "a": "Sí, cada persona que pesca a bordo necesita la suya, de CONAPESCA. Es un trámite personal que se saca en línea en unos minutos; arriba te explicamos cómo, paso por paso, y si se te complica lo hacemos contigo."
       },
       {
         "q": "¿Me puedo llevar lo que pesque?",
         "a": "Claro, es tuyo. Trae una hielera si quieres llevártelo bien. Ojo con el marlin y el pez vela: están reservados a la pesca deportiva y tienen límite por pescador al día, así que normalmente se les toma la foto y se regresan al agua. El capitán te va guiando."
-      },
-      {
-        "q": "Nunca he pescado, ¿voy a hacer el ridículo?",
-        "a": "Para nada, y no serías el primero. El capitán te enseña a tirar el anzuelo y a pelear el pez. Llevamos gente que nunca había subido a una lancha y se van con su pescado."
-      },
-      {
-        "q": "¿Y si me mareo?",
-        "a": "Pasa, sobre todo si el mar viene picado. Si eres propenso, tómate una pastilla antes de subir, no después. Y avísale al capitán: sabe cómo acomodar el viaje para que la pases mejor."
-      },
-      {
-        "q": "Somos más de 5, ¿qué hacemos?",
-        "a": "Coordinamos varias pangas para que salgan a la misma hora y se vean en el agua. Escríbenos por WhatsApp y lo armamos contigo."
       },
       {
         "q": "¿Y si no puedo ir y no es por el clima?",
@@ -350,22 +330,20 @@
       "Do"
     ],
     "tripHeadline": "Fecha y detalles del viaje",
+    "tripConfirmQuestion": "¿Confirmas el día y la hora?",
+    "confirmStep": "Confirmar",
+    "stepConfirmed": "Confirmado",
     "contactHeadline": "Tus datos",
     "phone": "Número telefónico",
     "fullName": "Nombre completo",
     "email": "Correo electrónico",
     "meetingPointLabel": "Lugar de encuentro",
     "notice": "Una vez realizado el pago, uno de nuestros agentes se comunicará contigo en las próximas 24 horas antes de tu viaje. Los datos a detalle de la ubicación, traslado, referencias y el nombre del capitán te los proporcionará el agente de atención a clientes.",
-    "amenitiesHeadline": "Amenidades",
+    "lunchStepHeadline": "Lunch",
     "amenities": {
-      "drinks": "Bebidas",
-      "lunch": "Lunch (desayuno y comida; el menú es fijo y cambia cada semana)",
-      "transport": "Transporte desde tu hospedaje"
+      "lunch": "Lunch (desayuno y comida; el menú es fijo y cambia cada semana)"
     },
     "lunchPerPerson": "por persona",
-    "requestsHeadline": "Lo que cotiza el agente",
-    "requestsIntro": "Márcalo y nuestro agente te pasa el precio antes del viaje. No se cobra en línea porque depende de lo que elijas y de la distancia.",
-    "requestsBadge": "Sin costo en línea",
     "waiver": {
       "accept": "Acepto deslindar a la empresa de cualquier responsabilidad y he leído el",
       "linkLabel": "deslinde completo",
@@ -439,7 +417,7 @@
       "depositNote": "El 70% restante se paga en efectivo el día del viaje."
     },
     "amountDueNow": "A pagar ahora",
-    "cancelPolicy": "Si el capitán cancela por mal clima, te devolvemos el 100%. Si eres tú quien no puede venir, avísanos con 48 horas y te movemos la fecha sin costo.",
+    "securityNote": "Tu pago en línea es 100% seguro. Lo procesa Stripe con cifrado y los datos de tu tarjeta nunca pasan por nuestros servidores.",
     "submitting": "Procesando…",
     "confirmPay": "Pagar",
     "missingFields": "Completa tus datos de contacto antes de continuar.",
@@ -461,8 +439,12 @@
       "pendingLabel": "Por pagar en efectivo el día del viaje",
       "meetingHeadline": "Dónde nos vemos",
       "agentHeadline": "Qué sigue",
-      "agentBody": "Un agente de ventas se pondrá en contacto contigo en las próximas 24 horas para darte los detalles finales: referencias exactas del punto de encuentro, traslado y el nombre de tu capitán.",
-      "quotesNote": "También te va a cotizar lo que pediste ({items}), que no está incluido en el monto que pagaste.",
+      "agentBody": "Un agente de ventas te contacta en las próximas 24 horas con los detalles finales: el punto de encuentro exacto, el nombre de tu capitán y tu panga. Si quieres traslado desde tu hospedaje, llevar bebidas a bordo, o tienes cualquier duda, escríbele directo — no hace falta esperar a que él te hable primero.",
+      "referenceLabel": "Folio de reserva",
+      "receiptTitle": "Recibo de reserva",
+      "downloadReceipt": "Descargar recibo",
+      "whatsappCta": "Contactar a tu agente",
+      "whatsappMessage": "Hola, soy {nombre}. Reservé para el {fecha} (folio #{folio}).",
       "backHome": "Volver al inicio"
     },
     "dayFull": "Los días tachados ya no tienen lugar para tu grupo.",
@@ -494,5 +476,27 @@
     "accept": "Aceptar",
     "reject": "Rechazar",
     "more": "Ver el aviso de privacidad"
+  },
+  "license": {
+    "headline": "Tu licencia de pesca",
+    "intro": "En México, cada persona que va a pescar a bordo necesita su propia licencia de CONAPESCA. No va en el precio del viaje porque es un permiso personal, a tu nombre. Es el trámite que más dudas nos genera, así que aquí va completo.",
+    "steps": [
+      {
+        "title": "Se saca en línea",
+        "body": "El trámite es por internet y toma unos minutos. No tienes que ir a ninguna oficina ni llegar antes al muelle por eso."
+      },
+      {
+        "title": "Elige la vigencia",
+        "body": "Hay licencias por día, semana, mes y año. Si vienes por un viaje suelto, con la de un día basta."
+      },
+      {
+        "title": "Es por persona",
+        "body": "Cada quien a bordo lleva la suya, a su nombre. Con traerla en el celular es suficiente, no hace falta imprimirla."
+      }
+    ],
+    "helpTitle": "¿Se te complica?",
+    "helpBody": "Escríbenos antes de tu viaje y la sacamos contigo, paso por paso. Es mucho más fácil resolverlo desde tu casa que a las cinco de la mañana en el muelle.",
+    "cta": "Pregúntanos por WhatsApp",
+    "whatsappMessage": "Hola, quiero salir a pescar con ustedes y me gustaria ayuda para sacar mi licencia de CONAPESCA."
   }
 }

@@ -31,7 +31,7 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
         href={href}
         target="_blank"
         rel="noopener"
-        className="mt-1 flex flex-col gap-1 rounded-xl bg-accent px-4 py-3 text-accent-foreground"
+        className="mt-1 flex flex-col gap-1 bg-accent px-4 py-3 text-accent-foreground"
       >
         <span className="text-xs opacity-90">{nav.humanContact}</span>
         <span className="flex items-center gap-2 text-sm font-medium">
@@ -55,7 +55,7 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
         target="_blank"
         rel="noopener"
         aria-label={`${nav.whatsappCta}: ${numero}`}
-        className="flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground shadow-[0_8px_20px_rgba(192,74,24,0.35)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+        className="flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
       >
         <WhatsappLogo size={18} weight="fill" />
         {numero}

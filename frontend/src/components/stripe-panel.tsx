@@ -2,12 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Lock, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
@@ -92,9 +87,7 @@ function PaymentForm({
       {/* La espera del banco es la mas larga de todo el flujo y la que mas caro
           sale malinterpretar: si el cliente cree que se rompio y recarga, lo hace
           a media autorizacion. */}
-      {submitting && (
-        <WaitNotice mensaje={feedback.payingWait} mensajeLento={feedback.paySlow} />
-      )}
+      {submitting && <WaitNotice mensaje={feedback.payingWait} mensajeLento={feedback.paySlow} />}
 
       {formError && (
         <ErrorBlock
@@ -139,41 +132,10 @@ export function StripePanel({
   onSubmit,
   onPagoConfirmado,
 }: StripePanelProps) {
-  const stripePromise = useMemo(
-    () => (pago ? loadStripe(pago.publishable_key) : null),
-    [pago]
-  );
+  const stripePromise = useMemo(() => (pago ? loadStripe(pago.publishable_key) : null), [pago]);
 
   return (
     <CheckoutSectionCard step={4} title={checkout.orderSummaryHeadline} variant="elevated">
-      {usdDisponible && phase !== 'payment' && phase !== 'unavailable' && (
-        <fieldset
-          className="mb-5 flex flex-col gap-2 border-b border-border pb-5"
-          disabled={phase === 'submitting'}
-        >
-          <legend className="mb-1 text-sm font-medium text-foreground">
-            {checkout.currency.headline}
-          </legend>
-          <div className="flex gap-2">
-            {(['MXN', 'USD'] as const).map((option) => (
-              <label
-                key={option}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background"
-              >
-                <input
-                  type="radio"
-                  name="moneda"
-                  checked={moneda === option}
-                  onChange={() => onMonedaChange(option)}
-                  className="h-4 w-4 shrink-0 accent-accent"
-                />
-                {option === 'MXN' ? checkout.currency.mxn : checkout.currency.usd}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      )}
-
       <dl className="flex flex-col gap-3">
         {lines.map((line) => (
           <div key={line.label} className="flex items-center justify-between text-sm">
@@ -188,15 +150,50 @@ export function StripePanel({
         <p className="text-lg font-medium tracking-tight text-foreground">{total}</p>
       </div>
 
+      {/* Ya se precarga segun el idioma (ver checkout-view.tsx): esto deja de
+          ser la primera decision del checkout y pasa a ser una correccion
+          disponible para quien la busque, junto al total que ya describe. Por
+          eso va aqui y no arriba de todo, y por eso es chico. */}
+      {usdDisponible && phase !== 'payment' && phase !== 'unavailable' && (
+        <fieldset
+          className="mt-2 flex items-center justify-end gap-2"
+          disabled={phase === 'submitting'}
+        >
+          <legend className="sr-only">{checkout.currency.headline}</legend>
+          <span className="text-xs text-muted">{checkout.currency.headline}</span>
+          <div className="flex overflow-hidden rounded-full border border-border text-xs">
+            {(['MXN', 'USD'] as const).map((option) => (
+              <label
+                key={option}
+                aria-label={option === 'MXN' ? checkout.currency.mxn : checkout.currency.usd}
+                className="cursor-pointer px-2.5 py-1 font-medium text-muted transition-colors has-[:checked]:bg-foreground has-[:checked]:text-surface"
+              >
+                <input
+                  type="radio"
+                  name="moneda"
+                  checked={moneda === option}
+                  onChange={() => onMonedaChange(option)}
+                  className="sr-only"
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
       {phase !== 'payment' && phase !== 'unavailable' && (
-        <fieldset className="mt-5 flex flex-col gap-2 border-t border-border pt-5" disabled={phase === 'submitting'}>
+        <fieldset
+          className="mt-5 flex flex-col gap-2 border-t border-border pt-5"
+          disabled={phase === 'submitting'}
+        >
           <legend className="mb-1 text-sm font-medium text-foreground">
             {checkout.paymentMethod.headline}
           </legend>
           {(['completo', 'anticipo'] as const).map((option) => (
             <label
               key={option}
-              className="flex items-start gap-3 rounded-xl border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background"
+              className="flex items-start gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
             >
               <input
                 type="radio"
@@ -206,9 +203,13 @@ export function StripePanel({
                 className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
               />
               <span>
-                {option === 'completo' ? checkout.paymentMethod.full : checkout.paymentMethod.deposit}
+                {option === 'completo'
+                  ? checkout.paymentMethod.full
+                  : checkout.paymentMethod.deposit}
                 {option === 'anticipo' && (
-                  <span className="mt-0.5 block text-xs text-muted">{checkout.paymentMethod.depositNote}</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    {checkout.paymentMethod.depositNote}
+                  </span>
                 )}
               </span>
             </label>
@@ -222,7 +223,7 @@ export function StripePanel({
       )}
 
       {phase === 'unavailable' && (
-        <div className="mt-6 flex min-h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-6 text-center">
+        <div className="mt-6 flex min-h-40 flex-col items-center justify-center gap-2 border border-dashed border-border p-6 text-center">
           <Warning size={20} className="text-muted" />
           <p className="text-sm text-muted">{checkout.paymentUnavailable}</p>
         </div>
@@ -276,10 +277,6 @@ export function StripePanel({
               .
             </span>
           </label>
-
-          {/* La politica de cancelacion, justo donde se decide pagar: enterarse
-              despues es lo que genera reclamos y contracargos. */}
-          <p className="mt-4 text-xs leading-relaxed text-muted">{checkout.cancelPolicy}</p>
 
           {phase === 'submitting' && <WaitNotice mensaje={feedback.savingWait} />}
 

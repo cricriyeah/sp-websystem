@@ -2,9 +2,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export type Moneda = 'MXN' | 'USD';
 
-/** Extras que se piden pero NO se cobran en linea: los cotiza el agente. */
-export type SolicitudKey = 'drinks' | 'transport';
-
 // Precios de lista del backend. `precio` es en pesos y los `*_usd` vienen null
 // mientras el negocio no fije ese precio en dolares. Todas las cifras llegan de
 // aqui a proposito: la web no debe tener ninguna hardcodeada
@@ -53,11 +50,12 @@ export type ReservaInput = {
   // Deslinde de responsabilidad. El servidor sella la fecha/hora y la IP.
   deslinde_aceptado: boolean;
   deslinde_nombre: string;
-  // Extras. El lunch se cobra (por persona); bebidas y transporte quedan como
-  // solicitud para que el agente las cotice.
+  // El unico extra que ofrece el checkout web. Bebidas y transporte se quitaron
+  // del sitio (complicaban la operatividad: dependen de datos que el checkout no
+  // captura, como desde donde recoger al cliente); la vendedora las sigue
+  // marcando a mano en reservas por WhatsApp/telefono, por eso el backend
+  // conserva `pide_bebidas`/`pide_transporte` aunque el checkout ya no los mande.
   lleva_lunch: boolean;
-  pide_bebidas: boolean;
-  pide_transporte: boolean;
   // Codigo de la vendedora que trajo al cliente (ver src/lib/ref.ts). El backend
   // ignora en silencio el que no resuelva: un link viejo no puede impedir una
   // reserva.

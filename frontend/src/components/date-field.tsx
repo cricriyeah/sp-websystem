@@ -72,8 +72,6 @@ export function DateField({
       placeholder={placeholder}
       solicitarApertura={solicitarApertura}
       icon={<CalendarBlank size={20} className="shrink-0 text-muted" />}
-      // Encabezado + iniciales + 6 filas de dias, con el mes mas largo posible.
-      alturaEstimada={360}
     >
       {(cerrar) => (
         <PanelCalendario
@@ -92,7 +90,6 @@ export function DateField({
     </FieldPopover>
   );
 }
-
 
 /**
  * El mes en si. Vive aparte porque `FieldPopover` solo renderiza sus hijos
@@ -148,7 +145,7 @@ function PanelCalendario({
     setMesVisible((actual) => new Date(actual.getFullYear(), actual.getMonth() + delta, 1));
 
   return (
-    <div className="w-72">
+    <div className="w-full sm:w-72">
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"

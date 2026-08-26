@@ -1,71 +1,113 @@
-import { Check, IdentificationCard, Minus, Suitcase } from '@phosphor-icons/react/ssr';
+import { Boat, Check, Clock, Plus, Snowflake, SteeringWheel } from '@phosphor-icons/react/ssr';
+import type { ComponentType } from 'react';
+import type { IconProps } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
-import { WhatsappInline } from '@/components/whatsapp-inline';
 
 type IncludedSectionProps = {
-  nav: Dictionary['nav'];
   included: Dictionary['included'];
 };
 
 /**
- * Transparencia sobre el precio: que va incluido, que no, y que traer.
- *
- * La licencia de pesca y el manejo de la captura viven aqui porque son los dos
- * temas que le pueden arruinar el dia a un cliente si se entera en el muelle.
+ * El icono no puede vivir en el JSON, asi que el diccionario manda una clave y
+ * aqui se traduce a componente. Si alguien agrega una linea con una clave que
+ * no existe, cae en el check en vez de romper la pagina.
  */
-export function IncludedSection({ nav, included }: IncludedSectionProps) {
-  const columnas = [
-    { icono: Check, titulo: included.includedTitle, items: included.included, acento: true },
-    { icono: Minus, titulo: included.notIncludedTitle, items: included.notIncluded, acento: false },
-    { icono: Suitcase, titulo: included.bringTitle, items: included.bring, acento: false },
-  ];
+const ICONOS: Record<string, ComponentType<IconProps>> = {
+  panga: Boat,
+  capitan: SteeringWheel,
+  hielera: Snowflake,
+  horas: Clock,
+};
 
+/**
+ * Que trae el viaje, en tres bloques con **tres pesos visuales distintos**.
+ *
+ * La version anterior eran tres listas de texto seguidas: se leian como la
+ * misma cosa dicha tres veces y la seccion entera quedaba plana. Aqui cada
+ * bloque se ve como lo que es:
+ *
+ *   - **Va incluido** son tarjetas con icono. Es lo que el cliente compra, y
+ *     es lo unico de esta seccion que justifica el precio: tiene que pesar mas
+ *     que el resto.
+ *   - **Lo que llevas tu** es una lista de verificacion, con su casilla. Se lee
+ *     como lo que es —una maleta que hay que hacer— y no como una carencia.
+ *   - **Lo que nos puedes pedir** son extras marcados con un `+`. El signo hace
+ *     el trabajo que antes hacia la equis, pero en positivo: esto se suma, no
+ *     te falta.
+ *
+ * **No hay lista de "no incluido"** y no es un olvido. Antes eran dos columnas
+ * enfrentadas, una de checks y otra de equis, y la de equis era lo primero que
+ * saltaba a la vista: cuatro renglones seguidos diciendo que no. Nada de lo que
+ * habia ahi se perdio, solo cambio de lugar y de tono.
+ *
+ * Es Server Component: aqui no hay nada interactivo.
+ */
+export function IncludedSection({ included }: IncludedSectionProps) {
   return (
     <section id="incluye" className="scroll-mt-20 bg-surface py-24 lg:py-32">
       <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
-        <h2 className="text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
-          {included.headline}
-        </h2>
-        <p className="mt-5 max-w-[60ch] text-base leading-relaxed text-muted">{included.intro}</p>
-
-        <div className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          {columnas.map(({ icono: Icono, titulo, items, acento }) => (
-            <div key={titulo} className="border-t border-border pt-5">
-              <h3 className="flex items-center gap-2 text-sm font-medium tracking-tight text-foreground">
-                <Icono size={16} className={acento ? 'text-accent' : 'text-muted'} />
-                {titulo}
-              </h3>
-              <ul className="mt-4 flex flex-col gap-2.5 text-sm leading-relaxed text-muted">
-                {items.map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <span className={acento ? 'text-accent' : 'text-muted/60'}>·</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
+          <div>
+            <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
+            <h2 className="max-w-[14ch] text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[58px]">
+              {included.headline}
+            </h2>
+          </div>
+          <p className="max-w-[46ch] text-lg leading-relaxed text-muted lg:pb-2">
+            {included.intro}
+          </p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-accent/30 bg-accent/5 p-6">
-            <h3 className="flex items-center gap-2 text-sm font-medium tracking-tight text-foreground">
-              <IdentificationCard size={18} className="text-accent" />
-              {included.licenseTitle}
-            </h3>
-            <p className="mt-3 max-w-[60ch] text-sm leading-relaxed text-foreground">
-              {included.licenseBody}
-            </p>
-            <WhatsappInline nav={nav} label={included.licenseCta} className="mt-4" />
+        {/* Las tarjetas van sobre `bg-background` y la seccion sobre `bg-surface`:
+            el contraste las levanta sin necesidad de sombra ni de color. */}
+        <div className="mt-12 grid gap-px border border-border-strong bg-border-strong sm:grid-cols-2 lg:grid-cols-4">
+          {included.included.map((item) => {
+            const Icono = ICONOS[item.icon] ?? Check;
+            return (
+              <div key={item.title} className="flex flex-col gap-3 bg-background p-7 lg:p-8">
+                <Icono size={26} weight="light" className="text-accent" />
+                <span className="text-lg leading-snug text-foreground">{item.title}</span>
+                <span className="text-sm leading-relaxed text-muted">{item.body}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-16 grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-20">
+          <div>
+            <h3 className="text-lg text-foreground">{included.bringTitle}</h3>
+            <ul className="mt-5 flex flex-col gap-3">
+              {included.bring.map((item) => (
+                <li key={item} className="flex items-start gap-3 text-base leading-snug">
+                  <span
+                    aria-hidden
+                    className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center border border-border-strong"
+                  >
+                    <Check size={11} weight="bold" className="text-accent" />
+                  </span>
+                  <span className="text-foreground">{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <div className="rounded-2xl border border-border p-6">
-            <h3 className="text-sm font-medium tracking-tight text-foreground">
-              {included.catchTitle}
-            </h3>
-            <p className="mt-3 max-w-[60ch] text-sm leading-relaxed text-muted">
-              {included.catchBody}
-            </p>
+          <div className="border-t border-border-strong pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-20">
+            <h3 className="text-lg text-foreground">{included.addonsTitle}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">{included.addonsIntro}</p>
+            <ul className="mt-5 flex flex-col">
+              {included.addons.map((addon) => (
+                <li
+                  key={addon.title}
+                  className="flex items-start gap-3 border-b border-border py-4 last:border-b-0"
+                >
+                  <Plus size={14} weight="bold" className="mt-1.5 shrink-0 text-accent" />
+                  <span className="flex flex-col gap-1">
+                    <span className="text-base leading-snug text-foreground">{addon.title}</span>
+                    <span className="text-sm leading-relaxed text-muted">{addon.body}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>
