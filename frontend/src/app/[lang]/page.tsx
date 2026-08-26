@@ -40,9 +40,9 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
   const minDate = getMinBookableDate();
 
   // Orden pensado como la conversacion que tendrias en el muelle: quienes somos,
-  // que se esta pescando, que trae el viaje y que llevas tu, el unico tramite
-  // que tienes que hacer antes (la licencia), como se ve, que dicen otros, y
-  // hasta el final las dudas sueltas.
+  // que se esta pescando, que trae el viaje, como se ve, el unico tramite que
+  // tienes que hacer antes (la licencia), que dicen otros, y hasta el final las
+  // dudas sueltas.
   return (
     <>
       <StructuredData lang={lang} dict={dict} />
@@ -58,8 +58,8 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
           <AboutSection about={dict.about} />
           <SeasonSection season={dict.season} />
           <IncludedSection included={dict.included} />
-          <LicenseSection nav={dict.nav} license={dict.license} />
           <GallerySection gallery={dict.gallery} />
+          <LicenseSection nav={dict.nav} license={dict.license} />
           <ReviewsSection nav={dict.nav} reviews={dict.reviews} />
           <FaqSection faq={dict.faq} />
         </main>

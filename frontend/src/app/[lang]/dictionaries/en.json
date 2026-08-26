@@ -151,26 +151,36 @@
     "headline": "What's biting",
     "intro": "The bay changes through the year. Here's what has been running, so you know what to expect before you come — and so we don't sell you a story.",
     "note": "The sea makes no promises and neither will we. If the day looks slow, we'll tell you before we head out. Ask us on WhatsApp how the week is going.",
-    "speciesLabel": "What usually runs",
+    "yearLabel": "The whole year, month by month",
+    "strongLabel": "Peak season",
+    "othersLabel": "Also running",
     "rows": [
       {
         "period": "December to March",
-        "species": "Sierra, amberjack, cabrilla, snapper",
+        "months": ["Dec", "Jan", "Feb", "Mar"],
+        "star": "Amberjack",
+        "others": "Sierra, cabrilla, snapper",
         "note": "Cooler water, calm days. A good season if you're just starting out."
       },
       {
         "period": "April to June",
-        "species": "Roosterfish, dorado, striped marlin",
+        "months": ["Apr", "May", "Jun"],
+        "star": "Striped marlin",
+        "others": "Roosterfish, dorado",
         "note": "The water warms up and the big ones arrive."
       },
       {
         "period": "July to September",
-        "species": "Dorado, yellowfin tuna, sailfish",
+        "months": ["Jul", "Aug", "Sep"],
+        "star": "Dorado",
+        "others": "Yellowfin tuna, sailfish",
         "note": "Peak season. This is when the real fights happen."
       },
       {
         "period": "October to November",
-        "species": "Dorado, sailfish, snapper",
+        "months": ["Oct", "Nov"],
+        "star": "Snapper",
+        "others": "Dorado, sailfish",
         "note": "Still running well, and fewer boats on the water."
       }
     ]
@@ -234,10 +244,9 @@
   },
   "gallery": {
     "headline": "What a day with us looks like",
-    "intro": "Photos from real trips, not stock images.",
     "note": "More shots from recent trips keep coming in. If you've been out with us and want your photo up here, send it over.",
-    "videoHint": "Short clip (15-30s) of the sunrise departure or a fish being fought",
     "photoHints": [
+      "Mahi just brought aboard, in the shade of the canopy",
       "The day's full catch on deck",
       "Marlin landed as a team, ready for the photo and release",
       "Family with their catch, close to shore",
@@ -249,8 +258,31 @@
   "reviews": {
     "headline": "What people who've come say",
     "intro": "We'd rather they told you themselves.",
-    "placeholder": "Space for a real customer review",
-    "placeholderAuthor": "Customer name",
+    "exampleNote": "Example reviews to show how this section looks — real reviews from Google, Facebook and WhatsApp go here as they come in.",
+    "prev": "Previous review",
+    "next": "Next review",
+    "items": [
+      {
+        "quote": "We left at 5am and by 7 we already had dorado in the boat. The captain knew every corner of the bay.",
+        "author": "Regina Castellanos"
+      },
+      {
+        "quote": "We went as a family and even my 10-year-old caught his first fish. They treated us amazingly from start to finish.",
+        "author": "Héctor Villaseñor"
+      },
+      {
+        "quote": "It was my first time fishing and I couldn't believe how fast the tuna bit. I'd do it again without a doubt.",
+        "author": "Daniela Priego"
+      },
+      {
+        "quote": "The gear was in perfect shape and the captain explained everything patiently. An unforgettable morning.",
+        "author": "Emilio Zaragoza"
+      },
+      {
+        "quote": "We watched the sunrise over the bay and came back with a full cooler. Worth every peso.",
+        "author": "Fernanda Cobos"
+      }
+    ],
     "cta": "Been out with us? Send us your thoughts on WhatsApp"
   },
   "faq": {
@@ -305,6 +337,8 @@
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Departures",
     "hours": "Every day, 5:00 to 7:00 am",
+    "officeLabel": "Office",
+    "office": "C. Toronja 561, Indeco, Donceles 28, 23070",
     "exploreLabel": "The trip",
     "legalLabel": "Legal",
     "waiver": "Liability waiver",
@@ -417,7 +451,8 @@
       "depositNote": "The remaining 70% is paid in cash on the day of the trip."
     },
     "amountDueNow": "Due now",
-    "securityNote": "Your online payment is 100% secure. Stripe processes it with encryption, and your card details never touch our servers.",
+    "securityNoteBefore": "Your online payment is 100% secure. ",
+    "securityNoteAfter": " processes it with encryption, and your card details never touch our servers.",
     "submitting": "Processing…",
     "confirmPay": "Pay",
     "missingFields": "Fill in your contact details before continuing.",

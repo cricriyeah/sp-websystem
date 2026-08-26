@@ -113,7 +113,7 @@ export function AmenitiesReminder({
           type="button"
           onClick={onContinuar}
           disabled={enviando}
-          className="mt-6 flex w-full items-center justify-center rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-surface transition-opacity disabled:opacity-60"
+          className="mt-6 flex w-full items-center justify-center rounded-xl bg-action px-4 py-3 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
         >
           {enviando ? checkout.submitting : checkout.amenitiesModal.confirm}
         </button>

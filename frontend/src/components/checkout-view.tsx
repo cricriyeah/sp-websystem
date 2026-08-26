@@ -494,7 +494,10 @@ export function CheckoutView({
 
       <div className="mx-auto max-w-6xl px-6 pt-6 sm:px-8 lg:px-12">
         <Link
-          href={`/${lang}`}
+          // Con lo que el cliente ya habia contestado: `page.tsx` de la portada
+          // lo lee y precarga el booking bar, para no hacerlo empezar de cero
+          // solo por haber vuelto a revisar algo.
+          href={`/${lang}?${new URLSearchParams({ day, time, people: String(people) }).toString()}`}
           className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft size={16} />
@@ -599,7 +602,7 @@ export function CheckoutView({
                 <button
                   type="button"
                   onClick={() => setPasosVisibles(2)}
-                  className="shrink-0 rounded-full bg-foreground px-6 py-2.5 text-sm font-medium text-surface transition-transform active:scale-[0.98]"
+                  className="shrink-0 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
                 >
                   {checkout.confirmStep}
                 </button>
@@ -793,7 +796,18 @@ export function CheckoutView({
             />
             {/* Fuera de la tarjeta de resumen, debajo: no es parte del desglose de
                 precio, es la respuesta a "es seguro pagar aqui". */}
-            <p className="mt-4 text-xs leading-relaxed text-muted">{checkout.securityNote}</p>
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              {checkout.securityNoteBefore}
+              <a
+                href="https://stripe.com"
+                target="_blank"
+                rel="noopener"
+                className="text-foreground underline underline-offset-2"
+              >
+                Stripe
+              </a>
+              {checkout.securityNoteAfter}
+            </p>
             <Turnstile onToken={(token) => (captchaToken.current = token)} />
           </div>
 

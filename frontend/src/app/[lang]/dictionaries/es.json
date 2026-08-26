@@ -151,26 +151,36 @@
     "headline": "Qué se está pescando",
     "intro": "La bahía cambia con los meses. Esto es lo que se ha estado dando, para que sepas qué esperar antes de venir — y para que no te vendamos humo.",
     "note": "El mar no da garantías y nosotros tampoco te las vamos a dar. Si el día viene flojo, te lo decimos antes de salir. Pregúntanos por WhatsApp cómo va la semana.",
-    "speciesLabel": "Lo que suele darse",
+    "yearLabel": "El año completo, mes por mes",
+    "strongLabel": "Temporada fuerte",
+    "othersLabel": "También",
     "rows": [
       {
         "period": "Diciembre a marzo",
-        "species": "Sierra, jurel, cabrilla, pargo",
+        "months": ["Dic", "Ene", "Feb", "Mar"],
+        "star": "Jurel",
+        "others": "Sierra, cabrilla, pargo",
         "note": "Agua fresca, días tranquilos. Buena temporada para quien va empezando."
       },
       {
         "period": "Abril a junio",
-        "species": "Pez gallo, dorado, marlin rayado",
+        "months": ["Abr", "May", "Jun"],
+        "star": "Marlin rayado",
+        "others": "Pez gallo, dorado",
         "note": "Empieza a calentar el agua y llega lo grande."
       },
       {
         "period": "Julio a septiembre",
-        "species": "Dorado, atún aleta amarilla, pez vela",
+        "months": ["Jul", "Ago", "Sep"],
+        "star": "Dorado",
+        "others": "Atún aleta amarilla, pez vela",
         "note": "La temporada fuerte. Es cuando más se pelea."
       },
       {
         "period": "Octubre a noviembre",
-        "species": "Dorado, pez vela, pargo",
+        "months": ["Oct", "Nov"],
+        "star": "Pargo",
+        "others": "Dorado, pez vela",
         "note": "Todavía se da bien y hay menos gente en el agua."
       }
     ]
@@ -234,10 +244,9 @@
   },
   "gallery": {
     "headline": "Cómo se ve un día con nosotros",
-    "intro": "Fotos de viajes de verdad, no de banco de imágenes.",
     "note": "Sigue llegándonos material de los últimos viajes. Si viniste con nosotros y quieres que subamos tu foto, mándanosla.",
-    "videoHint": "Video corto (15-30 s) de la salida al amanecer o de una pelea con el pez",
     "photoHints": [
+      "Dorado recién subido, a la sombra del toldo",
       "La pesca del día completa en la cubierta",
       "Marlin capturado en equipo, listo para la foto y la liberación",
       "Familia con su captura, cerca de la costa",
@@ -249,8 +258,31 @@
   "reviews": {
     "headline": "Lo que dicen los que ya vinieron",
     "intro": "Preferimos que lo cuenten ellos.",
-    "placeholder": "Espacio para una reseña real de un cliente",
-    "placeholderAuthor": "Nombre del cliente",
+    "exampleNote": "Reseñas de ejemplo para mostrar cómo luce esta sección — aquí van las reseñas reales de Google, Facebook y WhatsApp en cuanto lleguen.",
+    "prev": "Reseña anterior",
+    "next": "Reseña siguiente",
+    "items": [
+      {
+        "quote": "Salimos a las 5 de la mañana y para las 7 ya teníamos dorado en la panga. El capitán conocía cada rincón de la bahía.",
+        "author": "Regina Castellanos"
+      },
+      {
+        "quote": "Fuimos en familia y hasta mi hijo de 10 años sacó su primer pez. Nos trataron increíble de principio a fin.",
+        "author": "Héctor Villaseñor"
+      },
+      {
+        "quote": "Fue mi primera vez pescando y no podía creer lo rápido que picó el atún. Repetiría sin pensarlo.",
+        "author": "Daniela Priego"
+      },
+      {
+        "quote": "El equipo estaba en perfectas condiciones y el capitán nos explicó todo con mucha paciencia. Una mañana inolvidable.",
+        "author": "Emilio Zaragoza"
+      },
+      {
+        "quote": "Vimos amanecer sobre la bahía y volvimos con la hielera llena. Vale cada peso.",
+        "author": "Fernanda Cobos"
+      }
+    ],
     "cta": "¿Ya viniste con nosotros? Déjanos tu opinión por WhatsApp"
   },
   "faq": {
@@ -305,6 +337,8 @@
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Salidas",
     "hours": "Todos los días, de 5:00 a 7:00 am",
+    "officeLabel": "Oficina",
+    "office": "C. Toronja 561, Indeco, Donceles 28, 23070",
     "exploreLabel": "El viaje",
     "legalLabel": "Legal",
     "waiver": "Deslinde de responsabilidad",
@@ -417,7 +451,8 @@
       "depositNote": "El 70% restante se paga en efectivo el día del viaje."
     },
     "amountDueNow": "A pagar ahora",
-    "securityNote": "Tu pago en línea es 100% seguro. Lo procesa Stripe con cifrado y los datos de tu tarjeta nunca pasan por nuestros servidores.",
+    "securityNoteBefore": "Tu pago en línea es 100% seguro. Lo procesa ",
+    "securityNoteAfter": " con cifrado y los datos de tu tarjeta nunca pasan por nuestros servidores.",
     "submitting": "Procesando…",
     "confirmPay": "Pagar",
     "missingFields": "Completa tus datos de contacto antes de continuar.",

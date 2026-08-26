@@ -11,8 +11,8 @@ type FieldPopoverProps = {
   children: (cerrar: () => void) => ReactNode;
   /**
    * Contador para pedir apertura desde fuera. Al incrementarlo, el panel se
-   * abre. Lo usa la barra de reserva para encadenar las preguntas: contestar
-   * "cuantos son" abre sola la de "que dia".
+   * abre. Lo usa la barra de reserva para abrir la pregunta que falta cuando
+   * se intenta enviar el formulario sin contestarla.
    *
    * Es un contador y no un booleano a proposito: permite volver a pedir la
    * apertura del mismo campo mas de una vez sin tener que bajarlo primero.

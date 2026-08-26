@@ -45,3 +45,36 @@ export function fromLocalISODate(iso: string): Date {
  */
 export const MAX_PEOPLE = 5;
 export const MIN_PEOPLE = 1;
+
+/**
+ * Lee dia/hora/personas de un parametro de la URL, validando cada uno por su
+ * cuenta: uno mal formado no tira a los otros dos que si vinieron bien.
+ * Devuelve `undefined` para lo que falte o no pase la validacion — nunca un
+ * valor inventado. Quien llama decide el fallback: el checkout siempre
+ * necesita uno (ahi no hay campo vacio posible), la portada no — un campo sin
+ * responder se queda vacio a proposito.
+ *
+ * `get` es indireccion a proposito: `/[lang]/reservar` lee del `searchParams`
+ * que le da el servidor, y la portada del `URLSearchParams` de
+ * `window.location.search` en el cliente (ver el comentario largo en
+ * `booking-state.tsx` sobre por que ahi no puede ser server-side).
+ */
+export function parseBookingQuery(
+  get: (key: string) => string | undefined,
+  minDate: string,
+): { day?: string; time?: string; people?: number } {
+  const dayParam = get('day');
+  const day =
+    dayParam && /^\d{4}-\d{2}-\d{2}$/.test(dayParam) && dayParam >= minDate ? dayParam : undefined;
+
+  const timeParam = get('time');
+  const time = timeParam && TOUR_HOURS.includes(timeParam) ? timeParam : undefined;
+
+  const peopleParam = get('people');
+  const peopleNum = peopleParam ? Number(peopleParam) : NaN;
+  const people = Number.isInteger(peopleNum)
+    ? Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, peopleNum))
+    : undefined;
+
+  return { day, time, people };
+}

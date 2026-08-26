@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
+
+/** Nunca corre en el servidor: solo se llama dentro de un efecto. */
+function precargaReserva() {
+  const params = new URLSearchParams(window.location.search);
+  return parseBookingQuery((key) => params.get(key) ?? undefined, getMinBookableDate());
+}
 
 export type EstadoReserva = {
   people: number | null;
@@ -31,6 +38,24 @@ export function ProveedorReserva({ children }: { children: ReactNode }) {
   const [people, setPeople] = useState<number | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
+
+  // Precarga con lo que el cliente ya habia contestado si vuelve del checkout
+  // (ver el enlace "volver" en checkout-view.tsx). Va en un efecto, no en el
+  // estado inicial: `window.location.search` no existe en el servidor, y
+  // leerlo ahi produciria un primer pintado del cliente distinto del HTML ya
+  // enviado (la pagina sigue pre-renderizada estatica). Contestar un instante
+  // despues de montar es el precio de que la portada siga siendo estatica para
+  // todo el mundo — mismo razonamiento que en `ref-capture.tsx` con `?ref=`.
+  /* eslint-disable react-hooks/set-state-in-effect -- precarga unica desde una
+     fuente que no existe en el servidor; no hay forma de calcularla durante
+     el render sin romper la hidratacion. */
+  useEffect(() => {
+    const precarga = precargaReserva();
+    if (precarga.people !== undefined) setPeople(precarga.people);
+    if (precarga.day !== undefined) setDay(precarga.day);
+    if (precarga.time !== undefined) setTime(precarga.time);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <ContextoReserva.Provider value={{ people, day, time, setPeople, setDay, setTime }}>

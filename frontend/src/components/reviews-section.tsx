@@ -1,5 +1,5 @@
-import { Star } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { ReviewsCarousel } from '@/components/reviews-carousel';
 import { WhatsappInline } from '@/components/whatsapp-inline';
 
 type ReviewsSectionProps = {
@@ -7,16 +7,16 @@ type ReviewsSectionProps = {
   reviews: Dictionary['reviews'];
 };
 
-const HUECOS = 2;
-
 /**
- * Bloques de cita, sin tarjeta: cinco estrellas, la cita grande y el nombre
+ * Carrusel de citas, sin tarjeta: cinco estrellas, la cita grande y el nombre
  * debajo, nada de borde ni fondo.
  *
- * Los huecos van vacios A PROPOSITO. Poner citas inventadas con nombres
- * inventados seria fabricar prueba social, y en un negocio que se vende por
- * cercania y confianza es justo lo que no se debe hacer. Cuando lleguen las
- * reseñas reales (Google, TripAdvisor, WhatsApp) se pegan tal cual aqui.
+ * `reviews.items` son de ejemplo A PROPOSITO — nombres y citas inventados,
+ * marcados como tal con `reviews.exampleNote` a la vista de quien visite el
+ * sitio. Poner citas inventadas SIN avisar seria fabricar prueba social, y en
+ * un negocio que se vende por cercania y confianza es justo lo que no se debe
+ * hacer. Cuando lleguen las reseñas reales (Google, Facebook, WhatsApp),
+ * `reviews.items` se reemplaza por esas y `exampleNote` se borra.
  */
 export function ReviewsSection({ nav, reviews }: ReviewsSectionProps) {
   return (
@@ -41,25 +41,16 @@ export function ReviewsSection({ nav, reviews }: ReviewsSectionProps) {
         </h2>
         <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-muted">{reviews.intro}</p>
 
-        <div className="mt-14 grid gap-12 sm:grid-cols-2 lg:gap-16">
-          {Array.from({ length: HUECOS }, (_, i) => (
-            <div key={i} className="flex flex-col gap-4">
-              <div className="flex gap-1">
-                {Array.from({ length: 5 }, (_, s) => (
-                  <Star key={s} size={18} weight="fill" className="text-amber" />
-                ))}
-              </div>
-              <p className="max-w-[36ch] text-2xl leading-snug font-medium tracking-tight text-foreground">
-                {reviews.placeholder}
-              </p>
-              <span className="text-sm text-muted">{reviews.placeholderAuthor}</span>
-            </div>
-          ))}
+        {/* A la vista de quien visite el sitio, no solo en un comentario del
+            codigo: nadie deberia poder confundir estas citas con reseñas
+            reales de un cliente. */}
+        <p className="mt-3 max-w-[60ch] text-xs text-muted italic">{reviews.exampleNote}</p>
+
+        <div className="mt-14">
+          <ReviewsCarousel resenas={reviews.items} prevLabel={reviews.prev} nextLabel={reviews.next} />
         </div>
 
-        {/* El divisor sigue: separa las citas del CTA de abajo, aunque el texto
-            que explicaba de donde salen las resenas ya no va aqui — era una nota
-            para nosotros, no para quien visita el sitio. */}
+        {/* Separa el carrusel del CTA de abajo. */}
         <div className="mt-12 border-t border-border pt-6">
           <WhatsappInline nav={nav} label={reviews.cta} />
         </div>

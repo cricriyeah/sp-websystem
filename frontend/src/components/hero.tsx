@@ -1,5 +1,4 @@
 import { BookingBar } from '@/components/booking-bar';
-import { HeroCarousel } from '@/components/hero-carousel';
 import { ID_BARRA_PORTADA } from '@/components/sticky-booking-bar';
 import type { Locale, Dictionary } from '@/app/[lang]/dictionaries';
 
@@ -31,20 +30,9 @@ type HeroProps = {
  * pegada al bajar — un `sticky` solo se pega mientras su contenedor sigue a la
  * vista, y este `<section>` termina en la fila de datos.
  *
- * Es un Server Component: lo unico que necesita JavaScript son la barra de
- * reserva y el carrusel de fondo, cada uno su propia isla de cliente.
+ * Es un Server Component: lo unico que necesita JavaScript es la barra de
+ * reserva, su propia isla de cliente.
  */
-const FOTOS_HERO = [
-  '/photos/cola-amarilla-acantilado.png',
-  '/photos/marlin-en-equipo.png',
-  '/photos/dorado-bajo-toldo.png',
-  '/photos/capitan-cabrilla-bahia.png',
-  '/photos/pesca-del-dia-cubierta.png',
-  '/photos/pareja-dorados.png',
-  '/photos/cana-doblada-dorado.png',
-  '/photos/grupo-cabrilla-costa.png',
-  '/photos/yellowtail-pelicanos-bahia.png',
-];
 export function Hero({ lang, dict, minDate }: HeroProps) {
   const facts = [
     dict.about.facts.duration,
@@ -68,7 +56,19 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
           superior. Asi la foto se estira si el texto lo necesita y el aire de
           arriba (`pt-20`) esta siempre. */}
       <div className="relative w-full overflow-hidden">
-        <HeroCarousel fotos={FOTOS_HERO} />
+        {/* Decorativo: es el fondo detras del titular, que ya dice de que va el
+            sitio. `poster` evita el cuadro en blanco mientras el video (pesado)
+            termina de cargar. */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/photos/cola-amarilla-acantilado.png"
+          className="absolute inset-0 h-full w-full object-cover"
+        >
+          <source src="/videos/videohero.webm" type="video/webm" />
+        </video>
         {/* El texto nunca va directo sobre la foto: siempre sobre un degradado. */}
         <div
           className="absolute inset-0"
@@ -99,7 +99,7 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
           cuando esta barra se fue de cuadro y toca sacar la de abajo. */}
       <div
         id={ID_BARRA_PORTADA}
-        className="relative mx-auto -mt-8 max-w-6xl px-6 sm:px-8 lg:-mt-12 lg:px-12"
+        className="relative mx-auto -mt-8 max-w-6xl px-6 sm:px-8 lg:-mt-12 lg:max-w-4xl lg:px-12"
       >
         <BookingBar lang={lang} booking={dict.booking} minDate={minDate} />
       </div>

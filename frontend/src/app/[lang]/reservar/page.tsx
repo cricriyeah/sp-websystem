@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
 import { getTarifa } from '@/lib/api';
-import { getMinBookableDate, MAX_PEOPLE, MIN_PEOPLE, TOUR_HOURS } from '@/lib/dates';
+import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { alternativasDe } from '@/lib/site';
 
 export async function generateMetadata({
@@ -22,16 +22,6 @@ export async function generateMetadata({
   };
 }
 
-function clampTime(time: string | undefined, fallback: string) {
-  return time && TOUR_HOURS.includes(time) ? time : fallback;
-}
-
-function clampPeople(people: string | undefined, fallback: number) {
-  const n = Number(people);
-  if (!Number.isInteger(n)) return fallback;
-  return Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, n));
-}
-
 export default async function ReservarPage({
   params,
   searchParams,
@@ -47,12 +37,13 @@ export default async function ReservarPage({
   // modo "pagos no disponibles" en vez de inventar una cifra.
   const tarifa = await getTarifa().catch(() => null);
 
-  const dayParam = typeof query.day === 'string' ? query.day : undefined;
-  const day = dayParam && /^\d{4}-\d{2}-\d{2}$/.test(dayParam) && dayParam >= minDate
-    ? dayParam
-    : minDate;
-  const time = clampTime(typeof query.time === 'string' ? query.time : undefined, '06:00');
-  const people = clampPeople(typeof query.people === 'string' ? query.people : undefined, 2);
+  const parsed = parseBookingQuery(
+    (key) => (typeof query[key] === 'string' ? query[key] : undefined),
+    minDate,
+  );
+  const day = parsed.day ?? minDate;
+  const time = parsed.time ?? '06:00';
+  const people = parsed.people ?? 2;
 
   return (
     <CheckoutView

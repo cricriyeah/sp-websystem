@@ -27,11 +27,14 @@ type BookingBarProps = {
  * de la portada y la que se pega abajo al bajar muestran lo mismo: contestar en
  * una es contestar en las dos.
  *
- * **Arranca vacia, sin valores por defecto.** Un default es una decision tomada
- * por el cliente que el tiene que descubrir y deshacer. El precio de quitarlos es
- * real —pasa de verificar a producir, que cuesta mas— y se paga encadenando las
- * preguntas: contestar una abre la siguiente, asi que el esfuerzo es un toque por
- * respuesta y nunca hay que buscar donde seguir.
+ * **Arranca vacia, sin valores por defecto, y no encadena preguntas.** Un
+ * default es una decision tomada por el cliente que el tiene que descubrir y
+ * deshacer. Contestar una pregunta solia abrir sola la siguiente, pero eso le
+ * quitaba el control a quien queria corregir una respuesta ya dada: el foco se
+ * le iba de las manos justo cuando queria quedarse en el mismo campo. Cada
+ * panel se abre ahora solo porque se le hizo clic — la unica apertura que sigue
+ * siendo automatica es la del campo que falta, y solo al intentar enviar con
+ * el formulario incompleto.
  */
 export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
   const router = useRouter();
@@ -40,8 +43,8 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
   // ProveedorReserva; propio si esta barra anda suelta. Ver booking-state.tsx.
   const { people, day, time, setPeople, setDay, setTime } = useEstadoReserva();
 
-  // Contadores para pedirle apertura a cada panel. Se incrementan al contestar la
-  // pregunta anterior, y al intentar enviar con algo sin contestar.
+  // Contadores para pedirle apertura a cada panel. Solo se incrementan al
+  // intentar enviar con algo sin contestar (ver handleSubmit).
   const [abrirDia, setAbrirDia] = useState(0);
   const [abrirHora, setAbrirHora] = useState(0);
 
@@ -77,13 +80,7 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
         placeholder={booking.askPeople}
         maxNotice={booking.maxPeopleNotice}
         value={people}
-        onChange={(n) => {
-          const primeraRespuesta = people === null;
-          setPeople(n);
-          // Encadenar solo la primera vez: si el cliente esta corrigiendo el
-          // numero, abrirle el calendario en la cara seria quitarle el control.
-          if (primeraRespuesta && day === null) setAbrirDia((v) => v + 1);
-        }}
+        onChange={setPeople}
       />
 
       <DateField
@@ -91,11 +88,7 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
         label={booking.day}
         placeholder={booking.askDay}
         value={day}
-        onChange={(d) => {
-          const primeraRespuesta = day === null;
-          setDay(d);
-          if (primeraRespuesta && time === null) setAbrirHora((v) => v + 1);
-        }}
+        onChange={setDay}
         minDate={minDate}
         prevMonthLabel={booking.prevMonth}
         nextMonthLabel={booking.nextMonth}

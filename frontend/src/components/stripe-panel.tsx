@@ -102,7 +102,7 @@ function PaymentForm({
         type="button"
         onClick={handleConfirm}
         disabled={!stripe || submitting}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-surface transition-opacity disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
       >
         <Lock size={16} />
         {submitting ? checkout.submitting : checkout.confirmPay}
@@ -293,7 +293,7 @@ export function StripePanel({
             type="button"
             onClick={onSubmit}
             disabled={phase === 'submitting'}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-surface transition-opacity disabled:opacity-60"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
           >
             <Lock size={16} />
             {phase === 'submitting' ? checkout.submitting : checkout.payButton}

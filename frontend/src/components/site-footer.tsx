@@ -65,6 +65,8 @@ export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
             <span className="text-base text-muted">{footer.city}</span>
             <span className="mt-3 text-xs font-semibold text-muted">{footer.hoursLabel}</span>
             <span className="text-base text-foreground">{footer.hours}</span>
+            <span className="mt-3 text-xs font-semibold text-muted">{footer.officeLabel}</span>
+            <span className="text-base text-foreground">{footer.office}</span>
           </div>
 
           <nav aria-label={footer.exploreLabel} className="flex flex-col gap-3">
@@ -85,21 +87,14 @@ export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
             ))}
           </nav>
         </div>
-
-        <div className="flex flex-col gap-2 border-t border-border-strong py-8 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm text-muted">
-            {nav.brandMain} {nav.brandAccent}. {footer.rights}
-          </span>
-          <span className="text-sm text-muted">{nav.location}</span>
-        </div>
       </div>
 
-      {/* La marca a lo ancho, cerrando la pagina. Es el ultimo golpe de vista y
-          por eso va sin contenedor: se alinea con el borde de la ventana, no con
-          la reja de 1152px del resto del pie.
+      {/* La marca a lo ancho, cerrando la seccion superior del pie. Sigue
+          dentro de la reja de 1152px: asi queda alineada con la barra de
+          derechos que va debajo, con su propio borde arriba.
 
           `alt=""` porque no aporta nada nuevo a quien no la ve — el nombre ya
-          esta escrito dos renglones arriba, en la linea de derechos. */}
+          esta escrito abajo, en la linea de derechos. */}
       <div className="relative mx-auto max-w-6xl overflow-hidden px-6 pb-10 sm:px-8 lg:px-12">
         <Image
           src="/logos/svglogosalysol2.svg"
@@ -111,6 +106,13 @@ export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
           // debajo, en pantallas mas angostas sigue ocupando lo que haya.
           className="mx-auto h-auto w-full max-w-[922px]"
         />
+
+        <div className="mt-8 flex flex-col gap-2 border-t border-border-strong pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-sm text-muted">
+            {nav.brandMain} {nav.brandAccent}. {footer.rights}
+          </span>
+          <span className="text-sm text-muted">{nav.location}</span>
+        </div>
       </div>
     </footer>
   );

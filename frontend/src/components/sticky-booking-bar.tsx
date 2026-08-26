@@ -106,7 +106,7 @@ export function StickyBookingBar({ lang, booking, minDate }: StickyBookingBarPro
           // ultimos px y el boton quedaria debajo de ella.
           className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-12 print:hidden"
         >
-          <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-6xl lg:max-w-4xl">
             {/* Escritorio: el formulario completo, igual que en la portada. */}
             <div className="hidden sm:block">
               <BookingBar lang={lang} booking={booking} minDate={minDate} />
