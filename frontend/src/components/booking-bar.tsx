@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from '@phosphor-icons/react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { useEstadoReserva } from '@/components/booking-state';
 import { DateField } from '@/components/date-field';
@@ -38,6 +39,7 @@ type BookingBarProps = {
  */
 export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
   const router = useRouter();
+  const sinMovimiento = useReducedMotion();
 
   // Compartido con la barra pegada de abajo cuando las dos viven bajo
   // ProveedorReserva; propio si esta barra anda suelta. Ver booking-state.tsx.
@@ -112,9 +114,31 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
         {/* El amarillo es el color de la accion y solo aparece aqui y en la barra
             superior. Sin contestar todo cae a bruma con borde: se sigue pudiendo
             pulsar (abre la pregunta que falta) pero no compite por atencion. */}
-        <button
+        <motion.button
           type="submit"
-          className={`flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-semibold whitespace-nowrap transition-all active:scale-[0.98] sm:w-auto ${
+          // Nadie mira la barra en cuanto se completa el ultimo campo — el
+          // pulso es lo que hace que el ojo vuelva solo al boton, sin decirle
+          // "ya puedes reservar" con texto. Se apaga solo (2 vueltas) para que
+          // no se vuelva ruido de fondo si el cliente se queda leyendo.
+          animate={
+            completo && !sinMovimiento
+              ? {
+                  scale: [1, 1.045, 1],
+                  boxShadow: [
+                    '0 0 0 0 rgba(255,222,0,0)',
+                    '0 0 0 10px rgba(255,222,0,0.28)',
+                    '0 0 0 0 rgba(255,222,0,0)',
+                  ],
+                }
+              : { scale: 1, boxShadow: '0 0 0 0 rgba(255,222,0,0)' }
+          }
+          transition={
+            completo && !sinMovimiento
+              ? { duration: 1.4, repeat: 2, repeatDelay: 0.6, ease: 'easeInOut' }
+              : { duration: 0.2 }
+          }
+          whileTap={{ scale: 0.98 }}
+          className={`flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-semibold whitespace-nowrap transition-colors sm:w-auto ${
             completo
               ? 'bg-action text-action-foreground'
               : 'border border-border-strong bg-surface text-muted'
@@ -122,7 +146,7 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
         >
           {booking.submit}
           <ArrowRight size={16} weight="bold" />
-        </button>
+        </motion.button>
       </div>
     </form>
   );
