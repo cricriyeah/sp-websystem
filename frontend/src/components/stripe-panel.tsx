@@ -8,6 +8,7 @@ import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorBlock } from '@/components/error-block';
+import { Turnstile } from '@/components/turnstile';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Moneda, Pago } from '@/lib/api';
 
@@ -41,6 +42,8 @@ type StripePanelProps = {
   /** Se llama cuando Stripe acepta el pago; el checkout cambia a la pantalla de
    *  confirmacion. `procesando` es true si el cargo aun no se acredita. */
   onPagoConfirmado: (procesando: boolean) => void;
+  /** Token del widget de Turnstile, montado aqui mismo (ver mas abajo). */
+  onCaptchaToken: (token: string) => void;
 };
 
 function PaymentForm({
@@ -131,6 +134,7 @@ export function StripePanel({
   ayudaMensaje,
   onSubmit,
   onPagoConfirmado,
+  onCaptchaToken,
 }: StripePanelProps) {
   const stripePromise = useMemo(() => (pago ? loadStripe(pago.publishable_key) : null), [pago]);
 
@@ -277,6 +281,10 @@ export function StripePanel({
               .
             </span>
           </label>
+
+          {/* Mismo lugar donde el cliente ya esta mirando, justo antes de pagar
+              — no debajo de la tarjeta, donde parecia parte de otra cosa. */}
+          <Turnstile onToken={onCaptchaToken} />
 
           {phase === 'submitting' && <WaitNotice mensaje={feedback.savingWait} />}
 
