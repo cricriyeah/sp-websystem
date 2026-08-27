@@ -208,6 +208,12 @@ function PanelCalendario({
                 // Lleno gana sobre seleccionado: pintar de naranja un dia que no
                 // se puede tomar dice "elegido y todo bien" y contradice al resto
                 // de la pantalla. Conserva el anillo, pierde el relleno.
+                //
+                // Lleno y pasado comparten la misma opacidad: los dos son
+                // "no clickeable" y no hay razon para que uno se vea mas
+                // descartado que el otro. Disponible lleva un tinte de acento
+                // suave para que el ojo lea "aqui si" sin depender solo del
+                // tachado del dia lleno.
                 sinLugar
                   ? `cursor-not-allowed text-muted/50 line-through decoration-muted/40 ${
                       esSeleccionada ? 'ring-1 ring-accent' : ''
@@ -215,8 +221,8 @@ function PanelCalendario({
                   : esSeleccionada
                     ? 'bg-accent font-medium text-accent-foreground'
                     : pasada
-                      ? 'cursor-not-allowed text-muted/35'
-                      : 'text-foreground hover:bg-background'
+                      ? 'cursor-not-allowed text-muted/50'
+                      : 'text-accent hover:bg-accent/10'
               }`}
             >
               {i + 1}

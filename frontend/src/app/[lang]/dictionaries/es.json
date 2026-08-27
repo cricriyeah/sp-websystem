@@ -367,13 +367,26 @@
     "tripConfirmQuestion": "¿Confirmas el día y la hora?",
     "confirmStep": "Confirmar",
     "stepConfirmed": "Confirmado",
+    "changeStep": "Cambiar",
+    "doneEditing": "Listo",
+    "stepper": {
+      "trip": "Viaje",
+      "contact": "Datos",
+      "extras": "Extras",
+      "payment": "Pago",
+      "stepOf": "Paso {current} de {total}"
+    },
     "contactHeadline": "Tus datos",
+    "contactConfirmQuestion": "¿Tus datos están correctos?",
     "phone": "Número telefónico",
     "fullName": "Nombre completo",
     "email": "Correo electrónico",
     "meetingPointLabel": "Lugar de encuentro",
     "notice": "Una vez realizado el pago, uno de nuestros agentes se comunicará contigo en las próximas 24 horas antes de tu viaje. Los datos a detalle de la ubicación, traslado, referencias y el nombre del capitán te los proporcionará el agente de atención a clientes.",
     "lunchStepHeadline": "Lunch",
+    "extrasConfirmQuestion": "¿Listo con los extras?",
+    "extrasSummaryWithLunch": "Con lunch",
+    "extrasSummaryNoLunch": "Sin lunch",
     "amenities": {
       "lunch": "Lunch (desayuno y comida; el menú es fijo y cambia cada semana)"
     },
@@ -480,7 +493,43 @@
       "downloadReceipt": "Descargar recibo",
       "whatsappCta": "Contactar a tu agente",
       "whatsappMessage": "Hola, soy {nombre}. Reservé para el {fecha} (folio #{folio}).",
-      "backHome": "Volver al inicio"
+      "backHome": "Volver al inicio",
+      "needsHeadline": "¿Te falta algo para el viaje?",
+      "needsIntro": "Estás a tiempo de pedirlo. Toca lo que necesites y le escribes a tu agente con el mensaje ya listo.",
+      "needs": [
+        {
+          "icon": "equipo",
+          "title": "¿No traes equipo?",
+          "body": "Si no tienes caña, dinos con tiempo y te la conseguimos para ese día.",
+          "ask": "No traigo equipo de pesca, ¿me lo pueden conseguir?"
+        },
+        {
+          "icon": "carnada",
+          "title": "¿Necesitas carnada?",
+          "body": "La dejamos lista en el muelle. Avísanos por lo menos un día antes.",
+          "ask": "¿Me pueden tener carnada lista en el muelle?"
+        },
+        {
+          "icon": "bebidas",
+          "title": "¿Bebidas o comida?",
+          "body": "Puedes subir lo que quieras a bordo. La hielera con hielo ya va incluida.",
+          "ask": "Quiero llevar bebidas y comida a bordo, ¿algo que deba saber?"
+        },
+        {
+          "icon": "traslado",
+          "title": "¿Cómo llegas al muelle?",
+          "body": "Si necesitas que te recojan en tu hospedaje, lo cotizamos contigo.",
+          "ask": "¿Me pueden cotizar el traslado desde mi hospedaje al muelle?"
+        },
+        {
+          "icon": "especial",
+          "title": "¿Algún requerimiento especial?",
+          "body": "Niños a bordo, movilidad reducida, mareo, o cualquier cosa que debamos saber.",
+          "ask": "Tengo un requerimiento especial para el viaje, ¿lo vemos?"
+        }
+      ],
+      "needsMessage": "Hola, soy {nombre} (folio #{folio}), reservé para el {fecha}. {ask}",
+      "needsOther": "Tengo otra duda sobre mi reserva"
     },
     "dayFull": "Los días tachados ya no tienen lugar para tu grupo.",
     "dayFullOffer": "El {date} ya no tiene lugar para {people} personas.",

@@ -135,7 +135,7 @@ export function StripePanel({
   const stripePromise = useMemo(() => (pago ? loadStripe(pago.publishable_key) : null), [pago]);
 
   return (
-    <CheckoutSectionCard step={4} title={checkout.orderSummaryHeadline} variant="elevated">
+    <CheckoutSectionCard title={checkout.orderSummaryHeadline} variant="elevated">
       <dl className="flex flex-col gap-3">
         {lines.map((line) => (
           <div key={line.label} className="flex items-center justify-between text-sm">

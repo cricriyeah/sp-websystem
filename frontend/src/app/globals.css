@@ -116,6 +116,21 @@
   }
 }
 
+/* Onda que sale de atras del check. El pop solo dura medio segundo y se lo
+   pierde quien no estaba mirando ese punto exacto de la pantalla; la onda es
+   movimiento periferico, que el ojo detecta sin estar fijado ahi. Dos pasadas
+   y para: es una confirmacion, no un indicador de carga. */
+@keyframes confirmacion-onda {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
 /* --- Reveals de la portada ---------------------------------------------
    CSS puro, sin libreria. Son de una sola pasada y `animation-timeline:
    view()` los ata al scroll sin una linea de JavaScript. Meter Motion aqui

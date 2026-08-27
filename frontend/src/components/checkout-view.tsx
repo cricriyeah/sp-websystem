@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Lock, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, Lock, Warning } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AmenitiesReminder } from '@/components/amenities-reminder';
@@ -11,6 +11,7 @@ import { SiteHeader } from '@/components/site-header';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { CheckoutStepper } from '@/components/checkout-stepper';
 import { CLASES_CAMPO_CON_ERROR, FieldError, propsDeError } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
@@ -303,22 +304,24 @@ export function CheckoutView({
   // precargados desde la barra de reserva, asi que el primer paso no tiene un
   // momento natural de "ya se lleno" — necesita un click explicito para avanzar.
   const [pasosVisibles, setPasosVisibles] = useState(1);
+  // El paso 3 (extras) no tiene un dato que validar como el 1 o el 2 — es una
+  // sola casilla opcional — asi que necesita su propio "ya termine aqui" en
+  // vez de derivarlo de `pasosVisibles`. Confirmarlo es lo que revela el
+  // panel de pago completo en movil y adelanta el stepper al paso 4.
+  const [extrasConfirmado, setExtrasConfirmado] = useState(false);
+  // Que paso ya confirmado se reabrio a mano con "Cambiar". `null` = ninguno,
+  // todo se muestra segun `pasosVisibles` como siempre. Reabrir no reinicia
+  // nada: el dato ya validado se queda en su estado normal, esto solo decide
+  // que tarjeta se ve expandida.
+  const [pasoEditando, setPasoEditando] = useState<number | null>(null);
   const sinMovimiento = useReducedMotion();
-  const refPaso2 = useRef<HTMLDivElement>(null);
-  const refPaso3 = useRef<HTMLDivElement>(null);
 
-  // Al revelarse un paso nuevo, la pagina lo trae a la vista sola: sin esto,
-  // en pantallas chicas el paso aparece fuera de cuadro, abajo del todo, y el
-  // cliente no se entera de que ya puede seguir. No corre en el primer
-  // pintado (pasosVisibles arranca en 1, ninguna rama aplica) — solo en las
-  // transiciones reales.
-  useEffect(() => {
-    const comportamiento = sinMovimiento ? 'auto' : 'smooth';
-    if (pasosVisibles === 2)
-      refPaso2.current?.scrollIntoView({ behavior: comportamiento, block: 'start' });
-    if (pasosVisibles === 3)
-      refPaso3.current?.scrollIntoView({ behavior: comportamiento, block: 'start' });
-  }, [pasosVisibles, sinMovimiento]);
+  // Antes, al revelarse un paso nuevo, la pagina lo traia a la vista con
+  // `scrollIntoView`: el paso 1 se quedaba expandido entero (calendario, hora,
+  // personas) y el 2 quedaba fuera de cuadro, abajo del todo. Ahora el paso
+  // recien confirmado se colapsa solo a un renglon (`colapsado1`/`colapsado2`
+  // abajo), asi que el siguiente aparece justo debajo de donde el cliente ya
+  // esta mirando — el salto de scroll dejo de hacer falta.
 
   /**
    * Valida los datos de contacto y devuelve los errores por campo.
@@ -344,17 +347,24 @@ export function CheckoutView({
   };
 
   /**
-   * Al salir de cualquier campo de contacto: si los tres ya son validos, revela
-   * el paso 3 solo, sin boton.
-   *
-   * Sin foco de por medio y a diferencia de `iniciarPago`, aqui NO se ponen
-   * errores ni se salta el foco — hacerlo en cada blur regañaria a mitad de
-   * llenado (ej. tras escribir el telefono, antes de siquiera llegar al
-   * nombre). Los errores de verdad siguen siendo responsabilidad del envio.
+   * Boton "Confirmar" del paso 2 — igual que el del paso 1, un clic explicito
+   * en vez de avanzar solo al salir del ultimo campo. Antes avanzaba en el
+   * `onBlur`, pero eso mezclaba dos señales distintas (dejar el campo,
+   * terminar el paso) en un mismo gesto, y no se replica en el paso 3 (una
+   * casilla no tiene "salir del campo" que valga como confirmacion).
    */
-  const alSalirDeContacto = () => {
-    if (pasosVisibles !== 2) return;
-    if (Object.keys(validarContacto()).length === 0) setPasosVisibles(3);
+  const confirmarContacto = () => {
+    const errores = validarContacto();
+    setErroresCampo(errores);
+
+    if (Object.keys(errores).length > 0) {
+      const primero = ORDEN_CAMPOS.find((campo) => errores[campo]);
+      if (primero) refsContacto[primero].current?.focus();
+      return;
+    }
+
+    setPasosVisibles(3);
+    if (pasoEditando === 2) setPasoEditando(null);
   };
 
   /** Primer paso del pago: valida, y antes de tocar la red ofrece las amenidades. */
@@ -454,6 +464,24 @@ export function CheckoutView({
 
   const enviando = phase === 'submitting';
 
+  // Colapsado = ya confirmado y no se esta reabriendo a mano. El paso 3
+  // (extras) deja de poderse reabrir una vez `locked`: el checkbox ya esta
+  // deshabilitado, reabrirlo no dejaria cambiar nada — por eso ese caso
+  // ignora `pasoEditando` a proposito.
+  const colapsado1 = pasosVisibles > 1 && pasoEditando !== 1;
+  const colapsado2 = pasosVisibles > 2 && pasoEditando !== 2;
+  const colapsado3 = locked || (extrasConfirmado && pasoEditando !== 3);
+
+  const resumenPaso1 = `${formatDay(dayDate, lang)} · ${formatHour(time)} · ${people} ${checkout.peopleLabel.toLowerCase()}`;
+  const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
+
+  // El stepper de arriba cuenta el pago como paso 4 en cuanto el paso 3 se
+  // confirma — ahi es cuando el panel de pago completo aparece en movil — o
+  // antes si ya se mando el formulario (desde escritorio el panel siempre
+  // estuvo a la vista, sin pasar por el boton de extras).
+  const pasoActualStepper =
+    phase === 'submitting' || phase === 'payment' || extrasConfirmado ? 4 : pasosVisibles;
+
   // Lo que se le manda a la vendedora si el cliente usa la salida de emergencia
   // de un error. Lleva su fecha, hora y grupo para que ella no tenga que
   // preguntarlos y el no tenga que redactar nada ya estando frustrado.
@@ -541,11 +569,19 @@ export function CheckoutView({
         </div>
       )}
 
+      <CheckoutStepper stepper={checkout.stepper} actual={pasoActualStepper} />
+
       {/* 3fr/2fr: los pasos necesitan el ancho (calendario, formulario), el
           resumen es una columna de cifras y se lee mejor angosta. */}
       <main className="mx-auto grid max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
         <div className="flex flex-col gap-6">
-          <CheckoutSectionCard step={1} title={checkout.tripHeadline}>
+          <CheckoutSectionCard
+            title={checkout.tripHeadline}
+            estado={colapsado1 ? 'completado' : pasoEditando === 1 ? 'editando' : 'activo'}
+            resumen={resumenPaso1}
+            actionLabel={colapsado1 ? checkout.changeStep : pasoEditando === 1 ? checkout.doneEditing : undefined}
+            onAction={() => setPasoEditando(colapsado1 ? 1 : null)}
+          >
             <CheckoutCalendar
               lang={lang}
               selected={day}
@@ -596,7 +632,7 @@ export function CheckoutView({
             {/* Dia, hora y personas llegan precargados desde la barra de la
                 portada: no hay un "se acaba de llenar" que dispare el paso
                 siguiente solo, hace falta que el cliente lo confirme. */}
-            {pasosVisibles === 1 ? (
+            {pasosVisibles === 1 && (
               <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-foreground">{checkout.tripConfirmQuestion}</p>
                 <button
@@ -607,23 +643,24 @@ export function CheckoutView({
                   {checkout.confirmStep}
                 </button>
               </div>
-            ) : (
-              <p className="mt-6 flex items-center gap-2 border-t border-border pt-5 text-sm text-exito">
-                <Check size={16} weight="bold" />
-                {checkout.stepConfirmed}
-              </p>
             )}
           </CheckoutSectionCard>
 
           {pasosVisibles < 2 ? null : (
             <motion.div
-              ref={refPaso2}
-              className="scroll-mt-28"
               initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              <CheckoutSectionCard step={2} title={checkout.contactHeadline}>
+              <CheckoutSectionCard
+                title={checkout.contactHeadline}
+                estado={colapsado2 ? 'completado' : pasoEditando === 2 ? 'editando' : 'activo'}
+                resumen={resumenPaso2}
+                actionLabel={
+                  colapsado2 ? checkout.changeStep : pasoEditando === 2 ? checkout.doneEditing : undefined
+                }
+                onAction={() => setPasoEditando(colapsado2 ? 2 : null)}
+              >
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
                     <span className="text-muted">{checkout.phone}</span>
@@ -640,7 +677,6 @@ export function CheckoutView({
                         if (erroresCampo.phone)
                           setErroresCampo((prev) => ({ ...prev, phone: undefined }));
                       }}
-                      onBlur={alSalirDeContacto}
                       {...propsDeError('error-phone', Boolean(erroresCampo.phone))}
                       className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
                         erroresCampo.phone
@@ -667,7 +703,6 @@ export function CheckoutView({
                         if (erroresCampo.fullName)
                           setErroresCampo((prev) => ({ ...prev, fullName: undefined }));
                       }}
-                      onBlur={alSalirDeContacto}
                       {...propsDeError('error-fullName', Boolean(erroresCampo.fullName))}
                       className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
                         erroresCampo.fullName
@@ -694,7 +729,6 @@ export function CheckoutView({
                         if (erroresCampo.email)
                           setErroresCampo((prev) => ({ ...prev, email: undefined }));
                       }}
-                      onBlur={alSalirDeContacto}
                       {...propsDeError('error-email', Boolean(erroresCampo.email))}
                       className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
                         erroresCampo.email
@@ -708,15 +742,17 @@ export function CheckoutView({
                   </label>
                 </div>
 
-                {/* Sin boton: avanza solo al salir de un campo con los tres validos
-                    (`alSalirDeContacto`). Mientras tanto no hay nada que mostrar
-                    aqui — nagear con errores antes de que el cliente termine de
-                    llenar seria peor que quedarse callado. */}
-                {pasosVisibles > 2 && (
-                  <p className="mt-6 flex items-center gap-2 border-t border-border pt-5 text-sm text-exito">
-                    <Check size={16} weight="bold" />
-                    {checkout.stepConfirmed}
-                  </p>
+                {(pasosVisibles === 2 || pasoEditando === 2) && (
+                  <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-foreground">{checkout.contactConfirmQuestion}</p>
+                    <button
+                      type="button"
+                      onClick={confirmarContacto}
+                      className="shrink-0 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
+                    >
+                      {checkout.confirmStep}
+                    </button>
+                  </div>
                 )}
               </CheckoutSectionCard>
             </motion.div>
@@ -731,13 +767,23 @@ export function CheckoutView({
               mano en reservas que le llegan por WhatsApp o telefono. */}
           {pasosVisibles < 3 ? null : (
             <motion.div
-              ref={refPaso3}
-              className="scroll-mt-28"
               initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              <CheckoutSectionCard step={3} title={checkout.lunchStepHeadline}>
+              <CheckoutSectionCard
+                title={checkout.lunchStepHeadline}
+                estado={colapsado3 ? 'completado' : pasoEditando === 3 ? 'editando' : 'activo'}
+                resumen={lunch ? checkout.extrasSummaryWithLunch : checkout.extrasSummaryNoLunch}
+                actionLabel={
+                  colapsado3 && !locked
+                    ? checkout.changeStep
+                    : pasoEditando === 3
+                      ? checkout.doneEditing
+                      : undefined
+                }
+                onAction={locked ? undefined : () => setPasoEditando(colapsado3 ? 3 : null)}
+              >
                 <label className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface">
                   <span className="flex items-start gap-3">
                     <input
@@ -754,6 +800,22 @@ export function CheckoutView({
                     <span className="block text-xs">{checkout.lunchPerPerson}</span>
                   </span>
                 </label>
+
+                {(!extrasConfirmado || pasoEditando === 3) && (
+                  <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-foreground">{checkout.extrasConfirmQuestion}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExtrasConfirmado(true);
+                        if (pasoEditando === 3) setPasoEditando(null);
+                      }}
+                      className="shrink-0 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
+                    >
+                      {checkout.confirmStep}
+                    </button>
+                  </div>
+                )}
               </CheckoutSectionCard>
             </motion.div>
           )}
@@ -767,9 +829,10 @@ export function CheckoutView({
               duplicado. En escritorio se ve siempre, en su propia columna: ahi
               nunca compite por el mismo canal de atencion que el formulario. En
               movil, donde SI comparte canal con los pasos, solo se ve completo
-              hasta que el contacto (paso 2) ya se confirmo solo — antes de eso
-              queda montado pero oculto, nunca se desmonta ni se vuelve a armar. */}
-          <div className={pasosVisibles < 3 ? 'hidden lg:block' : undefined}>
+              hasta que el paso 3 (extras) se confirma con su propio boton —
+              antes de eso queda montado pero oculto, nunca se desmonta ni se
+              vuelve a armar. */}
+          <div className={!extrasConfirmado ? 'hidden lg:block' : undefined}>
             <StripePanel
               lang={lang}
               checkout={checkout}
@@ -811,11 +874,11 @@ export function CheckoutView({
             <Turnstile onToken={(token) => (captchaToken.current = token)} />
           </div>
 
-          {/* Movil, mientras falta el contacto: una franja con el total en vez
-              de la tarjeta completa. No es que "no haya nada" — el total sigue
-              a la vista todo el tiempo, solo que no compite con el campo que se
-              esta llenando ahora mismo. */}
-          {pasosVisibles < 3 && (
+          {/* Movil, mientras faltan los extras por confirmar: una franja con el
+              total en vez de la tarjeta completa. No es que "no haya nada" —
+              el total sigue a la vista todo el tiempo, solo que no compite con
+              el paso que se esta llenando ahora mismo. */}
+          {!extrasConfirmado && (
             <motion.div
               initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}

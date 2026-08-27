@@ -367,13 +367,26 @@
     "tripConfirmQuestion": "Confirm the day and time?",
     "confirmStep": "Confirm",
     "stepConfirmed": "Confirmed",
+    "changeStep": "Change",
+    "doneEditing": "Done",
+    "stepper": {
+      "trip": "Trip",
+      "contact": "Details",
+      "extras": "Extras",
+      "payment": "Payment",
+      "stepOf": "Step {current} of {total}"
+    },
     "contactHeadline": "Your details",
+    "contactConfirmQuestion": "Is your info correct?",
     "phone": "Phone number",
     "fullName": "Full name",
     "email": "Email",
     "meetingPointLabel": "Meeting point",
     "notice": "Once your payment goes through, one of our agents will reach out within the next 24 hours before your trip. Exact location details, transport, references and the captain's name will be provided by our customer care agent.",
     "lunchStepHeadline": "Lunch",
+    "extrasConfirmQuestion": "Done with extras?",
+    "extrasSummaryWithLunch": "With lunch",
+    "extrasSummaryNoLunch": "No lunch",
     "amenities": {
       "lunch": "Lunch (breakfast and lunch; set menu, changes weekly)"
     },
@@ -480,7 +493,43 @@
       "downloadReceipt": "Download receipt",
       "whatsappCta": "Contact your agent",
       "whatsappMessage": "Hi, I'm {nombre}. I booked for {fecha} (reference #{folio}).",
-      "backHome": "Back to home"
+      "backHome": "Back to home",
+      "needsHeadline": "Anything missing for your trip?",
+      "needsIntro": "There's still time to ask. Tap what you need and message your agent with the text already written.",
+      "needs": [
+        {
+          "icon": "equipo",
+          "title": "No gear of your own?",
+          "body": "If you're not bringing a rod, tell us ahead of time and we'll get one for your day.",
+          "ask": "I'm not bringing fishing gear — can you get some for me?"
+        },
+        {
+          "icon": "carnada",
+          "title": "Need bait?",
+          "body": "We'll have it ready at the dock. Just let us know at least a day ahead.",
+          "ask": "Can you have bait ready for me at the dock?"
+        },
+        {
+          "icon": "bebidas",
+          "title": "Drinks or food?",
+          "body": "Bring whatever you like on board. The cooler with ice is already included.",
+          "ask": "I'd like to bring drinks and food on board — anything I should know?"
+        },
+        {
+          "icon": "traslado",
+          "title": "How are you getting to the dock?",
+          "body": "If you need a pickup from where you're staying, we'll quote it with you.",
+          "ask": "Can you quote me a pickup from my hotel to the dock?"
+        },
+        {
+          "icon": "especial",
+          "title": "Any special requirement?",
+          "body": "Kids on board, reduced mobility, seasickness, or anything else we should know.",
+          "ask": "I have a special requirement for the trip — can we go over it?"
+        }
+      ],
+      "needsMessage": "Hi, I'm {nombre} (reference #{folio}), I booked for {fecha}. {ask}",
+      "needsOther": "I have another question about my booking"
     },
     "dayFull": "Crossed-out days have no room left for your group.",
     "dayFullOffer": "{date} has no room left for {people} people.",
