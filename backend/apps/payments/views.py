@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 import stripe
 from django.conf import settings
@@ -147,6 +148,99 @@ class CrearPagoView(APIView):
             metadata={'reserva_id': reserva.id},
             idempotency_key=f'reserva-{reserva.pk}-{moneda}-{centavos}',
         )
+
+
+class EstadoReservaView(APIView):
+    """Estado de la reserva de un checkout, para reponerlo tras un refresh o un
+    cierre accidental de la pestana.
+
+    El `checkout_id` es la unica llave: nace en el navegador
+    (`crypto.randomUUID()`, ver frontend/src/components/checkout-view.tsx) y
+    sobrevive en `sessionStorage`. Nadie mas lo conoce y no es adivinable (UUID4,
+    122 bits al azar), asi que sirve como capacidad de acceso igual que ya lo usa
+    `CrearPagoView` — no hace falta login para que esto siga siendo del cliente
+    que abrio ese checkout.
+
+    Es de solo lectura y no llama a Stripe: solo lee lo que ya quedo guardado en
+    la `Reserva`. Retomar un pago sigue pasando por `crear-pago`, que ya sabe
+    reusar el intent o devolver 409 si sigue cobrando — duplicar esa logica aqui
+    solo agregaria una segunda fuente de verdad y una dependencia de red mas a
+    una consulta que debe ser rapida y no debe poder tumbarse si Stripe esta
+    lento.
+
+    Cada rama del estado devuelve solo lo que esa pantalla necesita — no hay
+    campo que sirva para las tres a la vez:
+    - `cancelada`: nada mas. No hay pantalla que reconstruir.
+    - `pendiente_pago`: lo que hace falta para reponer el formulario y, si el
+      cliente decide continuar, volver a pedir el cobro. Sin `stripe_payment_intent_id`
+      ni ningun dato de Stripe.
+    - `pagada` (incluye asignada/completada, que son pagada + reparto interno):
+      lo que pide `BookingConfirmation`. Sin telefono ni ningun dato que esa
+      pantalla no muestre — no se manda de vuelta mas de lo que ya se le iba a
+      ensenar al propio cliente.
+    """
+
+    throttle_scope = 'estado_reserva'
+
+    # pagada/asignada/completada son la misma cosa para el cliente que reconecta:
+    # ya le cobraron. Que panga y capitan le toquen es reparto interno, no algo
+    # que el checkout necesite distinguir.
+    ESTADOS_PAGADA = {Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA, Reserva.Estado.COMPLETADA}
+
+    def get(self, request):
+        crudo = request.query_params.get('checkout_id')
+        try:
+            checkout_id = uuid.UUID(str(crudo))
+        except (ValueError, TypeError):
+            return Response({'detail': 'checkout_id invalido.'}, status=400)
+
+        # Un checkout_id no es unico en la tabla a proposito (ver
+        # bookings.Reserva.checkout_id): el mismo navegador puede dejar mas de
+        # una fila con el mismo identificador si el cliente reserva dos viajes
+        # en la misma pestana. La ultima es siempre la que le corresponde a la
+        # sesion de checkout que esta corriendo ahora.
+        reserva = Reserva.objects.filter(checkout_id=checkout_id).order_by('-id').first()
+        if reserva is None:
+            return Response(
+                {'detail': 'No se encontro una reserva para este checkout.'}, status=404
+            )
+
+        if reserva.estado == Reserva.Estado.CANCELADA:
+            return Response({'estado': 'cancelada'})
+
+        if reserva.estado in self.ESTADOS_PAGADA:
+            return Response({
+                'estado': 'pagada',
+                'reserva_id': reserva.id,
+                'fecha': reserva.fecha,
+                'hora': reserva.hora,
+                'numero_personas': reserva.numero_personas,
+                'nombre_cliente': reserva.nombre_cliente,
+                'correo_cliente': reserva.correo_cliente,
+                'moneda': reserva.moneda,
+                'forma_pago': reserva.forma_pago,
+                # str() a proposito: el encoder de DRF convierte un Decimal a
+                # float (4500.0), no a texto, y eso pierde precision de centavos
+                # justo en un monto de dinero (mismo motivo que `crear-pago`
+                # con `monto_a_cobrar`).
+                'monto_pagado': str(reserva.monto_pagado) if reserva.monto_pagado is not None else None,
+                'precio_total': str(reserva.precio_total) if reserva.precio_total is not None else None,
+            })
+
+        # Solo queda pendiente_pago: es el unico otro valor de Estado.
+        return Response({
+            'estado': 'pendiente_pago',
+            'reserva_id': reserva.id,
+            'fecha': reserva.fecha,
+            'hora': reserva.hora,
+            'numero_personas': reserva.numero_personas,
+            'nombre_cliente': reserva.nombre_cliente,
+            'telefono_cliente': reserva.telefono_cliente,
+            'correo_cliente': reserva.correo_cliente,
+            'moneda': reserva.moneda,
+            'forma_pago': reserva.forma_pago,
+            'lleva_lunch': reserva.lleva_lunch,
+        })
 
 
 class StripeWebhookView(APIView):

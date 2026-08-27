@@ -78,6 +78,11 @@ REST_FRAMEWORK = {
         # Consultas de solo lectura: el calendario del checkout las dispara al
         # cambiar de dia, se toca mas seguido.
         'consulta': os.environ.get('THROTTLE_CONSULTA', '60/min'),
+        # Consultar el estado de un checkout por su checkout_id devuelve datos
+        # personales (nombre, correo, telefono) si el UUID acierta. El UUID es
+        # impredecible (122 bits), pero el limite mas bajo que 'consulta' frena
+        # ademas cualquier intento de barrido desde una sola IP.
+        'estado_reserva': os.environ.get('THROTTLE_ESTADO_RESERVA', '20/min'),
     },
 }
 

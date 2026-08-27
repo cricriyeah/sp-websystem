@@ -549,6 +549,7 @@
     "helpCta": "Message us on WhatsApp",
     "helpMessage": "Hi, I tried booking on your site for {date} at {time} for {people} people and couldn't complete it. Can you help?",
     "savingWait": "Saving your booking…",
+    "recoveringNotice": "Looking up your booking…",
     "payingWait": "Confirming your payment with the bank. Please don't close this window.",
     "paySlow": "This is taking longer than usual. It's still processing — don't close or reload.",
     "saved": "Done, your booking is saved.",

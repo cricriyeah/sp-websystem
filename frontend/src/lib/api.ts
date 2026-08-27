@@ -150,4 +150,45 @@ export const crearPago = (reservaId: number, data: PagoInput) =>
     body: JSON.stringify(data),
   });
 
+/**
+ * Estado de la reserva de este `checkout_id`, para reponer un checkout tras un
+ * refresh o un cierre accidental de la pestana (ver backend/apps/payments/views.py,
+ * `EstadoReservaView`). Un 404 es el caso normal de una pestana nueva, sin nada
+ * que recuperar — quien llama debe tratarlo como "no hay nada", no como un error.
+ */
+export type EstadoReservaPendiente = {
+  estado: 'pendiente_pago';
+  reserva_id: number;
+  fecha: string;
+  hora: string;
+  numero_personas: number;
+  nombre_cliente: string;
+  telefono_cliente: string;
+  correo_cliente: string;
+  moneda: Moneda;
+  forma_pago: 'completo' | 'anticipo' | '';
+  lleva_lunch: boolean;
+};
+
+export type EstadoReservaPagada = {
+  estado: 'pagada';
+  reserva_id: number;
+  fecha: string;
+  hora: string;
+  numero_personas: number;
+  nombre_cliente: string;
+  correo_cliente: string;
+  moneda: Moneda;
+  forma_pago: 'completo' | 'anticipo' | '';
+  monto_pagado: string | null;
+  precio_total: string | null;
+};
+
+export type EstadoReservaCancelada = { estado: 'cancelada' };
+
+export type EstadoReserva = EstadoReservaPendiente | EstadoReservaPagada | EstadoReservaCancelada;
+
+export const getEstadoReserva = (checkoutId: string) =>
+  request<EstadoReserva>(`/api/reservas/estado/?checkout_id=${checkoutId}`);
+
 export { ApiError };

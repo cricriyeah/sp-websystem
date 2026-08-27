@@ -549,6 +549,7 @@
     "helpCta": "Escríbenos por WhatsApp",
     "helpMessage": "Hola, intenté reservar en la página para el {date} a las {time} para {people} personas y no pude completarlo. ¿Me ayudan?",
     "savingWait": "Guardando tu reserva…",
+    "recoveringNotice": "Buscando tu reserva…",
     "payingWait": "Confirmando tu pago con el banco. No cierres esta ventana.",
     "paySlow": "Esto está tardando más de lo normal. Sigue en proceso — no cierres ni recargues.",
     "saved": "Listo, guardamos tu reserva.",

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Lock, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, EnvelopeSimple, Lock, Phone, User, Warning } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AmenitiesReminder } from '@/components/amenities-reminder';
@@ -16,12 +16,13 @@ import { CLASES_CAMPO_CON_ERROR, FieldError, propsDeError } from '@/components/f
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
-import { Turnstile } from '@/components/turnstile';
 import { useToast } from '@/components/toast';
+import { WaitNotice } from '@/components/wait-notice';
 import {
   ApiError,
   crearPago,
   getCupo,
+  getEstadoReserva,
   guardarReserva,
   type Moneda,
   type Pago,
@@ -56,23 +57,38 @@ function correoValido(valor: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
 }
 
+// Los montos que manda el backend son texto con dos decimales (Decimal, ver
+// `Reserva.precio_total`/`monto_pagado`) justo para no pasar por el float de
+// JS. Restarlos como Number a secas reintroduce ese mismo riesgo un paso
+// despues — redondear a centavos antes de restar es lo mismo que ya hace el
+// servidor (`a_centavos` en apps/payments/pricing.py) para el mismo problema.
+function centavosDe(monto: string) {
+  return Math.round(Number(monto) * 100);
+}
+
 const CLAVE_CHECKOUT_ID = 'salysol:checkout-id';
 
 /**
  * Identificador de esta sesion de checkout. Vive en sessionStorage para que
  * sobreviva a una recarga: el backend lo usa como llave y reescribe la misma
  * reserva en vez de dejar una fila nueva por cada intento.
+ *
+ * `recuperable` dice si este id ya existia en sessionStorage antes de este
+ * montaje — o sea, si vale la pena preguntarle al backend por una reserva
+ * asociada (ver el efecto de recuperacion mas abajo). Una pestana nueva
+ * siempre genera un id nuevo y `recuperable` sale en `false`: no hay nada que
+ * buscar y no tiene sentido gastar la peticion.
  */
 function useCheckoutId() {
-  const [id] = useState(() => {
-    if (typeof window === 'undefined') return '';
+  const [value] = useState(() => {
+    if (typeof window === 'undefined') return { id: '', recuperable: false };
     const guardado = window.sessionStorage.getItem(CLAVE_CHECKOUT_ID);
-    if (guardado) return guardado;
+    if (guardado) return { id: guardado, recuperable: true };
     const nuevo = crypto.randomUUID();
     window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
-    return nuevo;
+    return { id: nuevo, recuperable: false };
   });
-  return id;
+  return value;
 }
 
 type CheckoutViewProps = {
@@ -86,7 +102,11 @@ type CheckoutViewProps = {
   tarifa: Tarifa | null;
 };
 
-type Phase = 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
+// 'recuperando': solo se pasa por aqui si esta pestana ya tenia un checkout_id
+// guardado (ver useCheckoutId) — se pregunta si tiene una reserva detras antes
+// de decidir si el checkout arranca vacio, precargado, o directo en la
+// confirmacion.
+type Phase = 'recuperando' | 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
 
 /**
  * El texto que ve el cliente, segun lo que contesto el backend.
@@ -147,7 +167,7 @@ export function CheckoutView({
   tarifa,
 }: CheckoutViewProps) {
   const { checkout, booking, nav } = dict;
-  const checkoutId = useCheckoutId();
+  const { id: checkoutId, recuperable } = useCheckoutId();
 
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
@@ -184,8 +204,19 @@ export function CheckoutView({
     email: refEmail,
   };
   const [waiverAccepted, setWaiverAccepted] = useState(false);
-  const [phase, setPhase] = useState<Phase>(tarifa ? 'form' : 'unavailable');
+  const [phase, setPhase] = useState<Phase>(
+    recuperable ? 'recuperando' : tarifa ? 'form' : 'unavailable',
+  );
   const [error, setError] = useState('');
+  // Monto real cobrado, cuando la confirmacion viene de una reserva recuperada
+  // (ver el efecto de abajo) en vez de un pago recien hecho en esta misma
+  // visita. `null` = mostrar lo que ya calcula el resto del checkout
+  // (`amountDueNow`/`total`), que es lo correcto para un pago fresco: la
+  // reserva recuperada puede llevar otra tarifa o amenidades que ya no estan
+  // en el estado local, asi que aqui se confia lo que de verdad se cobro y no
+  // lo que la tarifa de hoy recalcularia.
+  const [recuperadoPagado, setRecuperadoPagado] = useState<number | null>(null);
+  const [recuperadoSaldo, setRecuperadoSaldo] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
   const [recordatorioAbierto, setRecordatorioAbierto] = useState(false);
   const [pagoProcesando, setPagoProcesando] = useState(false);
@@ -315,6 +346,120 @@ export function CheckoutView({
   // que tarjeta se ve expandida.
   const [pasoEditando, setPasoEditando] = useState<number | null>(null);
   const sinMovimiento = useReducedMotion();
+
+  /**
+   * Repone el checkout de esta pestana, si `checkoutId` ya traia una reserva
+   * detras (ver `useCheckoutId`).
+   *
+   * Antes, recargar a media compra dejaba el formulario en blanco: si el pago
+   * ya habia pasado, el cliente se topaba con un 409 sin ninguna forma de ver
+   * su confirmacion; si seguia sin pagar, tenia que volver a escribir todo.
+   * Un `checkout_id` ajeno no sirve de nada aqui — es un UUID al azar que solo
+   * conoce el navegador que lo genero (mismo principio que ya usa
+   * `crear-pago`) — asi que no hace falta ninguna otra verificacion antes de
+   * mostrar lo que el backend responda.
+   *
+   * Corre una sola vez al montar: `checkoutId` y `recuperable` no cambian
+   * durante la vida del componente.
+   */
+  useEffect(() => {
+    if (!recuperable) return;
+    let cancelado = false;
+
+    (async () => {
+      let estado;
+      try {
+        estado = await getEstadoReserva(checkoutId);
+      } catch {
+        // 404 (nada que recuperar), sin red, lo que sea: seguir como si esta
+        // pestana no tuviera nada guardado. Nunca debe trabar el checkout.
+        if (!cancelado) setPhase(tarifa ? 'form' : 'unavailable');
+        return;
+      }
+      if (cancelado) return;
+
+      if (estado.estado === 'pagada') {
+        setReservaId(estado.reserva_id);
+        setDay(estado.fecha);
+        setTime(estado.hora);
+        setPeople(estado.numero_personas);
+        setContact((c) => ({ ...c, fullName: estado.nombre_cliente, email: estado.correo_cliente }));
+        setMoneda(estado.moneda);
+        setRecuperadoPagado(estado.monto_pagado !== null ? Number(estado.monto_pagado) : null);
+        setRecuperadoSaldo(
+          estado.forma_pago === 'anticipo' &&
+            estado.precio_total !== null &&
+            estado.monto_pagado !== null
+            ? (centavosDe(estado.precio_total) - centavosDe(estado.monto_pagado)) / 100
+            : null,
+        );
+        setPhase('confirmed');
+        return;
+      }
+
+      if (estado.estado === 'pendiente_pago') {
+        // Repone el formulario completo, deslinde aparte: es una constancia
+        // legal por envio y no se puede dar por aceptada de una vez anterior.
+        setReservaId(estado.reserva_id);
+        setDay(estado.fecha);
+        setTime(estado.hora);
+        setPeople(estado.numero_personas);
+        setContact({
+          fullName: estado.nombre_cliente,
+          phone: estado.telefono_cliente,
+          email: estado.correo_cliente,
+        });
+        setMoneda(estado.moneda);
+        setLunch(estado.lleva_lunch);
+        if (estado.forma_pago) setFormaPago(estado.forma_pago);
+        setPasosVisibles(3);
+        setExtrasConfirmado(true);
+        setPhase(tarifa ? 'form' : 'unavailable');
+        return;
+      }
+
+      // 'cancelada': nada que reponer — esta reserva ya no sirve. Se sigue con
+      // el formulario vacio normal, como si no hubiera nada guardado.
+      setPhase(tarifa ? 'form' : 'unavailable');
+    })();
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Borra el `checkout_id` de esta pestana al salir de la confirmacion — pero
+   * solo si se sale navegando, nunca si se sale recargando la pagina.
+   *
+   * Sin esto, un cliente que paga y le da a "Reservar" otra vez EN LA MISMA
+   * PESTANA (sin cerrarla ni recargar) se encontraria de nuevo con la
+   * confirmacion del viaje que ya pago: el efecto de recuperacion de arriba
+   * sigue viendo el mismo `checkout_id` y esa reserva sigue siendo la mas
+   * reciente. Una vez que el cliente ya vio su folio, ese `checkout_id` dejo de
+   * servir para nada mas que repetirle lo mismo.
+   *
+   * La distincion entre "recargar" y "navegar" no hay que inventarla: un
+   * recargo destruye el runtime de React entero, asi que este cleanup nunca
+   * llega a correr y el `checkout_id` sobrevive — reponer la MISMA confirmacion
+   * tras un recargo (el caso que motivo todo esto) sigue funcionando igual.
+   * Una navegacion de Next (el link "Volver al inicio", el boton atras) si
+   * desmonta el componente en el propio React, y ahi es donde este cleanup
+   * corre y limpia la llave antes de que el cliente pueda volver a usarla.
+   */
+  const phaseRef = useRef(phase);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  useEffect(() => {
+    return () => {
+      if (phaseRef.current === 'confirmed') {
+        window.sessionStorage.removeItem(CLAVE_CHECKOUT_ID);
+      }
+    };
+  }, []);
 
   // Antes, al revelarse un paso nuevo, la pagina lo traia a la vista con
   // `scrollIntoView`: el paso 1 se quedaba expandido entero (calendario, hora,
@@ -491,27 +636,51 @@ export function CheckoutView({
     personas: people,
   });
 
+  // Se pregunta antes de pintar nada del formulario: si esta reserva ya se
+  // pago, no tiene sentido mostrar un instante el paso 1 vacio para luego
+  // reemplazarlo por la confirmacion.
+  if (phase === 'recuperando') {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-surface px-6">
+        <WaitNotice mensaje={dict.feedback.recoveringNotice} />
+      </div>
+    );
+  }
+
   if (phase === 'confirmed') {
     return (
       <BookingConfirmation
         lang={lang}
         dict={dict}
-        // No-null: esta fase solo se alcanza despues de crearPago, que ya
-        // exigio reserva.id para pedir el cobro — para entonces siempre esta
-        // puesto.
+        // No-null: esta fase solo se alcanza despues de crearPago (pago fresco)
+        // o de recuperar una reserva ya pagada por su checkout_id — las dos
+        // rutas ponen `reservaId` antes de llegar aqui.
         numeroDeConfirmacion={reservaId!}
         nombre={contact.fullName}
         email={contact.email}
         fecha={formatDay(dayDate, lang)}
         hora={formatHour(time)}
         personas={people}
-        pagado={amountDueNow === null ? '—' : currency.format(amountDueNow)}
-        saldoEnEfectivo={
-          total !== null && amountDueNow !== null && total > amountDueNow
-            ? currency.format(total - amountDueNow)
-            : null
+        // Un pago recuperado manda su propio monto (lo que Stripe cobro de
+        // verdad): la tarifa de hoy o las amenidades en el estado local pueden
+        // no ser ya las mismas con las que se pago.
+        pagado={
+          recuperadoPagado !== null
+            ? currency.format(recuperadoPagado)
+            : amountDueNow === null
+              ? '—'
+              : currency.format(amountDueNow)
         }
-        procesando={pagoProcesando}
+        saldoEnEfectivo={
+          recuperadoPagado !== null
+            ? recuperadoSaldo !== null && recuperadoSaldo > 0
+              ? currency.format(recuperadoSaldo)
+              : null
+            : total !== null && amountDueNow !== null && total > amountDueNow
+              ? currency.format(total - amountDueNow)
+              : null
+        }
+        procesando={recuperadoPagado !== null ? false : pagoProcesando}
       />
     );
   }
@@ -573,8 +742,8 @@ export function CheckoutView({
 
       {/* 3fr/2fr: los pasos necesitan el ancho (calendario, formulario), el
           resumen es una columna de cifras y se lee mejor angosta. */}
-      <main className="mx-auto grid max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
-        <div className="flex flex-col gap-6">
+      <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
+        <div className="flex min-w-0 flex-col gap-6">
           <CheckoutSectionCard
             title={checkout.tripHeadline}
             estado={colapsado1 ? 'completado' : pasoEditando === 1 ? 'editando' : 'activo'}
@@ -664,78 +833,96 @@ export function CheckoutView({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
                     <span className="text-muted">{checkout.phone}</span>
-                    <input
-                      ref={refPhone}
-                      type="tel"
-                      required
-                      disabled={locked}
-                      value={contact.phone}
-                      onChange={(e) => {
-                        setContact((prev) => ({ ...prev, phone: e.target.value }));
-                        // El error se limpia al escribir: dejarlo puesto mientras el
-                        // cliente corrige lo convierte en un regano que no se calla.
-                        if (erroresCampo.phone)
-                          setErroresCampo((prev) => ({ ...prev, phone: undefined }));
-                      }}
-                      {...propsDeError('error-phone', Boolean(erroresCampo.phone))}
-                      className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
-                        erroresCampo.phone
-                          ? CLASES_CAMPO_CON_ERROR
-                          : 'border-border focus:border-accent'
-                      }`}
-                    />
+                    <span className="relative">
+                      <Phone
+                        size={18}
+                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+                      />
+                      <input
+                        ref={refPhone}
+                        type="tel"
+                        required
+                        disabled={locked}
+                        value={contact.phone}
+                        onChange={(e) => {
+                          setContact((prev) => ({ ...prev, phone: e.target.value }));
+                          // El error se limpia al escribir: dejarlo puesto mientras el
+                          // cliente corrige lo convierte en un regano que no se calla.
+                          if (erroresCampo.phone)
+                            setErroresCampo((prev) => ({ ...prev, phone: undefined }));
+                        }}
+                        {...propsDeError('error-phone', Boolean(erroresCampo.phone))}
+                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
+                          erroresCampo.phone
+                            ? CLASES_CAMPO_CON_ERROR
+                            : 'border-border focus:border-accent'
+                        }`}
+                      />
+                    </span>
                     {erroresCampo.phone && (
                       <FieldError id="error-phone" mensaje={erroresCampo.phone} />
                     )}
                   </label>
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
                     <span className="text-muted">{checkout.fullName}</span>
-                    <input
-                      ref={refFullName}
-                      type="text"
-                      required
-                      disabled={locked}
-                      value={contact.fullName}
-                      onChange={(e) => {
-                        setContact((prev) => ({ ...prev, fullName: e.target.value }));
-                        // El error se limpia al escribir: dejarlo puesto mientras el
-                        // cliente corrige lo convierte en un regano que no se calla.
-                        if (erroresCampo.fullName)
-                          setErroresCampo((prev) => ({ ...prev, fullName: undefined }));
-                      }}
-                      {...propsDeError('error-fullName', Boolean(erroresCampo.fullName))}
-                      className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
-                        erroresCampo.fullName
-                          ? CLASES_CAMPO_CON_ERROR
-                          : 'border-border focus:border-accent'
-                      }`}
-                    />
+                    <span className="relative">
+                      <User
+                        size={18}
+                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+                      />
+                      <input
+                        ref={refFullName}
+                        type="text"
+                        required
+                        disabled={locked}
+                        value={contact.fullName}
+                        onChange={(e) => {
+                          setContact((prev) => ({ ...prev, fullName: e.target.value }));
+                          // El error se limpia al escribir: dejarlo puesto mientras el
+                          // cliente corrige lo convierte en un regano que no se calla.
+                          if (erroresCampo.fullName)
+                            setErroresCampo((prev) => ({ ...prev, fullName: undefined }));
+                        }}
+                        {...propsDeError('error-fullName', Boolean(erroresCampo.fullName))}
+                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
+                          erroresCampo.fullName
+                            ? CLASES_CAMPO_CON_ERROR
+                            : 'border-border focus:border-accent'
+                        }`}
+                      />
+                    </span>
                     {erroresCampo.fullName && (
                       <FieldError id="error-fullName" mensaje={erroresCampo.fullName} />
                     )}
                   </label>
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
                     <span className="text-muted">{checkout.email}</span>
-                    <input
-                      ref={refEmail}
-                      type="email"
-                      required
-                      disabled={locked}
-                      value={contact.email}
-                      onChange={(e) => {
-                        setContact((prev) => ({ ...prev, email: e.target.value }));
-                        // El error se limpia al escribir: dejarlo puesto mientras el
-                        // cliente corrige lo convierte en un regano que no se calla.
-                        if (erroresCampo.email)
-                          setErroresCampo((prev) => ({ ...prev, email: undefined }));
-                      }}
-                      {...propsDeError('error-email', Boolean(erroresCampo.email))}
-                      className={`border bg-surface px-4 py-3 text-foreground outline-none disabled:opacity-60 ${
-                        erroresCampo.email
-                          ? CLASES_CAMPO_CON_ERROR
-                          : 'border-border focus:border-accent'
-                      }`}
-                    />
+                    <span className="relative">
+                      <EnvelopeSimple
+                        size={18}
+                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+                      />
+                      <input
+                        ref={refEmail}
+                        type="email"
+                        required
+                        disabled={locked}
+                        value={contact.email}
+                        onChange={(e) => {
+                          setContact((prev) => ({ ...prev, email: e.target.value }));
+                          // El error se limpia al escribir: dejarlo puesto mientras el
+                          // cliente corrige lo convierte en un regano que no se calla.
+                          if (erroresCampo.email)
+                            setErroresCampo((prev) => ({ ...prev, email: undefined }));
+                        }}
+                        {...propsDeError('error-email', Boolean(erroresCampo.email))}
+                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
+                          erroresCampo.email
+                            ? CLASES_CAMPO_CON_ERROR
+                            : 'border-border focus:border-accent'
+                        }`}
+                      />
+                    </span>
                     {erroresCampo.email && (
                       <FieldError id="error-email" mensaje={erroresCampo.email} />
                     )}
@@ -823,7 +1010,7 @@ export function CheckoutView({
 
         {/* Ya no es `sticky`: se queda donde cae en su columna, no persigue el
             scroll. */}
-        <div>
+        <div className="min-w-0">
           {/* Un solo StripePanel en todo el arbol — montarlo dos veces (uno por
               breakpoint) inicializaria Stripe.js y el widget de Turnstile por
               duplicado. En escritorio se ve siempre, en su propia columna: ahi
@@ -856,6 +1043,7 @@ export function CheckoutView({
                 setPagoProcesando(procesando);
                 setPhase('confirmed');
               }}
+              onCaptchaToken={(token) => (captchaToken.current = token)}
             />
             {/* Fuera de la tarjeta de resumen, debajo: no es parte del desglose de
                 precio, es la respuesta a "es seguro pagar aqui". */}
@@ -871,7 +1059,6 @@ export function CheckoutView({
               </a>
               {checkout.securityNoteAfter}
             </p>
-            <Turnstile onToken={(token) => (captchaToken.current = token)} />
           </div>
 
           {/* Movil, mientras faltan los extras por confirmar: una franja con el

@@ -383,6 +383,95 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(self.post(checkout_id=ajeno).status_code, 403)
 
 
+class EstadoReservaTests(ApiTestCase):
+    """El endpoint de recuperacion del checkout (`/api/reservas/estado/`).
+
+    Nace de un caso real: recargar o cerrar por accidente a media compra
+    dejaba el checkout en blanco. Si el pago ya habia pasado, el cliente se
+    topaba con el 409 de `crear-pago` sin ninguna forma de ver su confirmacion
+    — un cliente que ya pago viendo una pantalla de error. Esto expone lo que
+    hace falta para reponer esa pantalla, sin volver a golpear a Stripe."""
+
+    def setUp(self):
+        self.reserva = crear_reserva()
+
+    def get(self, checkout_id):
+        return self.client.get('/api/reservas/estado/', {'checkout_id': checkout_id})
+
+    def test_checkout_id_invalido_responde_400(self):
+        self.assertEqual(self.get('no-es-un-uuid').status_code, 400)
+
+    def test_checkout_id_sin_reserva_responde_404(self):
+        ajeno = '22222222-2222-4222-8222-222222222222'
+        self.assertEqual(self.get(ajeno).status_code, 404)
+
+    def test_pendiente_de_pago_repone_lo_necesario_para_el_formulario(self):
+        response = self.get(str(self.reserva.checkout_id))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body['estado'], 'pendiente_pago')
+        self.assertEqual(body['reserva_id'], self.reserva.pk)
+        self.assertEqual(body['nombre_cliente'], 'Ana Ruiz')
+        self.assertEqual(body['telefono_cliente'], '+5216121234567')
+        self.assertEqual(body['correo_cliente'], 'ana@example.com')
+        # Nada de Stripe ni de la constancia legal del deslinde: esta ruta no
+        # llama a Stripe y el deslinde no se repone solo.
+        self.assertNotIn('stripe_payment_intent_id', body)
+        self.assertNotIn('deslinde_aceptado', body)
+
+    def test_pagada_repone_lo_necesario_para_la_confirmacion_sin_telefono(self):
+        self.reserva.estado = Reserva.Estado.PAGADA
+        self.reserva.precio_total = Decimal('4500.00')
+        self.reserva.monto_pagado = Decimal('4500.00')
+        self.reserva.forma_pago = Reserva.FormaPago.COMPLETO
+        self.reserva.save()
+
+        body = self.get(str(self.reserva.checkout_id)).json()
+        self.assertEqual(body['estado'], 'pagada')
+        self.assertEqual(body['monto_pagado'], '4500.00')
+        # La confirmacion no muestra telefono: no se manda de vuelta.
+        self.assertNotIn('telefono_cliente', body)
+
+    def test_asignada_y_completada_cuentan_como_pagada(self):
+        for estado in (Reserva.Estado.ASIGNADA, Reserva.Estado.COMPLETADA):
+            self.reserva.estado = estado
+            self.reserva.save(update_fields=['estado'])
+            self.assertEqual(self.get(str(self.reserva.checkout_id)).json()['estado'], 'pagada')
+
+    def test_cancelada_no_manda_ningun_dato_personal(self):
+        self.reserva.estado = Reserva.Estado.CANCELADA
+        self.reserva.save(update_fields=['estado'])
+
+        self.assertEqual(self.get(str(self.reserva.checkout_id)).json(), {'estado': 'cancelada'})
+
+    def test_dos_reservas_con_el_mismo_checkout_id_devuelve_la_mas_reciente(self):
+        """checkout_id no es unico a proposito (la misma pestana puede reservar
+        dos viajes seguidos): quien pregunta por el debe ver la sesion que esta
+        corriendo ahora, no la primera que encuentre la base."""
+        vieja = self.reserva
+        vieja.estado = Reserva.Estado.PAGADA
+        vieja.save(update_fields=['estado'])
+
+        nueva = crear_reserva(
+            fecha=date.today() + timedelta(days=20), nombre_cliente='Otro Cliente',
+        )
+        self.assertEqual(nueva.checkout_id, vieja.checkout_id)
+
+        body = self.get(str(vieja.checkout_id)).json()
+        self.assertEqual(body['estado'], 'pendiente_pago')
+        self.assertEqual(body['reserva_id'], nueva.pk)
+
+    def test_un_checkout_id_ajeno_no_revela_nada(self):
+        """Mismo principio que ya protege a `crear-pago`: el UUID es la unica
+        llave, y sin acertarlo no hay estado ni dato que ver."""
+        ajeno = '33333333-3333-4333-8333-333333333333'
+        self.reserva.estado = Reserva.Estado.PAGADA
+        self.reserva.save(update_fields=['estado'])
+
+        self.assertEqual(self.get(ajeno).status_code, 404)
+
+
 @override_settings(**LLAVES)
 class WebhookTests(TestCase):
     def setUp(self):
