@@ -26,9 +26,8 @@ type HeroProps = {
  * desde el primer cuadro.
  *
  * La barra superior **no** va aqui aunque visualmente la corone: se pinta en la
- * pagina, arriba de este componente. Estuvo dentro y por eso no podia quedarse
- * pegada al bajar — un `sticky` solo se pega mientras su contenedor sigue a la
- * vista, y este `<section>` termina en la fila de datos.
+ * pagina, arriba de este componente, y flota `fixed` sobre el video — por eso
+ * el video puede llegar hasta el borde real de arriba sin dejarle un hueco.
  *
  * Es un Server Component: lo unico que necesita JavaScript es la barra de
  * reserva, su propia isla de cliente.
@@ -50,11 +49,24 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
           fuera de pantalla en cualquier laptop de 720-800px de alto. Se topa en
           520px para que en un monitor grande la foto no crezca sin control.
 
+          `--nav-alto` se le suma **a los dos**, al alto minimo y al `pt` de
+          abajo, y esa es la parte que no es obvia. La barra ya no ocupa lugar
+          en el flujo (es `fixed`, para que el video llegue hasta el borde real
+          de arriba), asi que el hueco que dejaba hay que reponerlo; pero cual
+          de las dos medidas manda depende del alto de la ventana. El bloque de
+          texto es `justify-end`: si sobra sitio se pega abajo y el aire de
+          arriba lo pone el alto minimo, y si no sobra la caja crece con el
+          contenido y el aire lo pone el `pt`. Subir una sola de las dos
+          arregla la mitad de las ventanas y en la otra mitad no mueve nada
+          — que es exactamente lo que paso al intentarlo con el alto minimo
+          solo. Subiendo las dos, el titular queda donde estaba siempre, y
+          todo lo que antes era el fondo blanco de la barra ahora es video.
+
           Es `min-height` y no `height`: el titular vive en el flujo, no clavado
           al fondo con `absolute`. Con altura fija y texto absoluto, un titular
           de tres renglones crecia hacia arriba hasta pegarse a la barra
           superior. Asi la foto se estira si el texto lo necesita y el aire de
-          arriba (`pt-20`) esta siempre. */}
+          arriba esta siempre. */}
       <div className="relative w-full overflow-hidden">
         {/* Decorativo: es el fondo detras del titular, que ya dice de que va el
             sitio. `poster` evita el cuadro en blanco mientras el video (pesado)
@@ -64,7 +76,7 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
           muted
           loop
           playsInline
-          poster="/photos/cola-amarilla-acantilado.png"
+          poster="/photos/cola-amarilla-acantilado.webp"
           className="absolute inset-0 h-full w-full object-cover"
         >
           <source src="/videos/videohero.webm" type="video/webm" />
@@ -81,8 +93,8 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
         {/* `justify-end` deja el bloque abajo cuando sobra sitio —la foto se lee
             de arriba abajo y el texto pesa al pie— y lo empuja hacia arriba solo
             si el titular no cabe, respetando siempre el aire de arriba. */}
-        <div className="relative flex min-h-[52svh] flex-col justify-end lg:min-h-[min(56svh,520px)]">
-          <div className="mx-auto w-full max-w-6xl px-6 pt-20 pb-10 sm:px-8 lg:px-12 lg:pt-28 lg:pb-16">
+        <div className="relative flex min-h-[calc(52svh_+_var(--nav-alto))] flex-col justify-end lg:min-h-[calc(min(56svh,520px)_+_var(--nav-alto))]">
+          <div className="mx-auto w-full max-w-6xl px-6 pt-[calc(5rem_+_var(--nav-alto))] pb-10 sm:px-8 lg:px-12 lg:pt-[calc(7rem_+_var(--nav-alto))] lg:pb-16">
             <h1 className="titulo-entra max-w-[19ch] text-[38px] leading-[1.02] text-hero-ink sm:text-6xl lg:text-[76px] lg:leading-[0.98]">
               {dict.hero.headlineStart} <span className="acento">{dict.hero.headlineEmphasis}</span>{' '}
               {dict.hero.headlineEnd}

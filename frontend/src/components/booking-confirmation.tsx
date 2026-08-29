@@ -32,6 +32,14 @@ type BookingConfirmationProps = {
   fecha: string;
   hora: string;
   personas: number;
+  /**
+   * Extras comprados (brunch, licencia, carnada, traslado), ya formateados.
+   * Vacio en una reserva que se repuso por `checkout_id`: esa ruta solo
+   * devuelve lo que se cobro, no el desglose (ver EstadoReservaView), y
+   * recalcularlo con el catalogo de hoy podria enseñar otro precio del que
+   * el cliente pago.
+   */
+  extras: { label: string; amount: string }[];
   pagado: string;
   /** Lo que queda por pagar en efectivo, o null si pago el 100%. */
   saldoEnEfectivo: string | null;
@@ -79,6 +87,7 @@ export function BookingConfirmation({
   fecha,
   hora,
   personas,
+  extras,
   pagado,
   saldoEnEfectivo,
   procesando,
@@ -116,7 +125,11 @@ export function BookingConfirmation({
         <SiteHeader lang={lang} nav={nav} />
       </div>
 
-      <main className="mx-auto w-full max-w-6xl px-6 py-12 sm:px-8 lg:py-16 print:max-w-none print:p-0">
+      {/* SiteHeader es `fixed` y no reserva espacio: sin `--nav-alto` (ver
+          globals.css) el contenido arrancaria debajo de la barra. Los 3/4rem
+          son la separacion que llevaba de siempre. Impreso no aplica:
+          `print:p-0` lo borra entero, ahi no hay barra que despejar. */}
+      <main className="mx-auto w-full max-w-6xl px-6 pt-[calc(3rem_+_var(--nav-alto))] pb-12 sm:px-8 lg:pt-[calc(4rem_+_var(--nav-alto))] lg:pb-16 print:max-w-none print:p-0">
         {/* El aviso de exito va arriba de las dos columnas y a todo el ancho: es
             lo unico que el cliente necesita ver en el primer cuadro, y compartir
             fila con el detalle del viaje le quitaria ese lugar. */}
@@ -196,6 +209,15 @@ export function BookingConfirmation({
                     <dt className="text-muted">{checkout.peopleLabel}</dt>
                     <dd className="text-right text-foreground">{personas}</dd>
                   </div>
+                  {/* Lo que compro aparte del viaje. Va antes del corte de
+                      "pagado" porque es parte del detalle de lo que lleva, no
+                      del dinero. */}
+                  {extras.map((extra) => (
+                    <div key={extra.label} className="flex justify-between gap-4">
+                      <dt className="min-w-0 text-muted">{extra.label}</dt>
+                      <dd className="text-right text-foreground">{extra.amount}</dd>
+                    </div>
+                  ))}
                   <div className="mt-2 flex justify-between gap-4 border-t border-border pt-3">
                     <dt className="text-muted">{confirmation.paidLabel}</dt>
                     <dd className="text-right font-medium text-foreground">{pagado}</dd>

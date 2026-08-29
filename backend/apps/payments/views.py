@@ -3,14 +3,15 @@ import uuid
 
 import stripe
 from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.bookings.models import Reserva
-from apps.fleet.models import Tarifa
+from apps.fleet.models import Tarifa, TransportePrecio
 
-from .pricing import a_centavos, cargo_por_lunch, cargo_por_personas, monto_inicial, personas_extra
+from .pricing import a_centavos, cargo_por_extra, cargo_por_personas, cargo_por_transporte, monto_inicial, personas_extra
 from .stripe_client import configurar_stripe
 from .services import aplicar_disputa, aplicar_pago_exitoso, aplicar_reembolso
 
@@ -79,21 +80,30 @@ class CrearPagoView(APIView):
                 status=503,
             )
 
-        precio_lunch = tarifa.lunch_en(reserva.moneda)
-        if reserva.lleva_lunch and precio_lunch is None:
-            return Response(
-                {'detail': f'No hay precio de lunch configurado en {reserva.moneda}.'}, status=503
-            )
-
         forma_pago = request.data.get('forma_pago', Reserva.FormaPago.COMPLETO)
         if forma_pago not in Reserva.FormaPago.values:
             return Response({'detail': 'forma_pago invalida.'}, status=400)
 
-        # Bebidas y transporte no suman: los cotiza el agente aparte.
+        # Extras/transporte se resuelven EN MEMORIA aqui, antes de cualquier
+        # guard que pueda cortar con un return (PagoEnCurso -> 409, Stripe
+        # caido -> 502): esta ruta hoy no escribe nada antes de asegurar el
+        # intent, y un item recongelado/borrado a medias en un doble clic
+        # (el segundo mientras el primero sigue `processing`) romperia esa
+        # garantia. Solo se persiste todo junto, mas abajo, con el intent ya
+        # en la mano.
+        cargo_extras, extras_a_borrar, extras_a_congelar, error = self._resolver_extras(reserva)
+        if error:
+            return Response({'detail': error}, status=503)
+        cargo_transporte, transporte_a_borrar, transporte_congelado, error = self._resolver_transporte(reserva)
+        if error:
+            return Response({'detail': error}, status=503)
+
+        # Bebidas no suma: la cotiza el agente aparte.
         precio_total = (
             precio_tour
             + cargo_por_personas(precio_persona_extra or 0, reserva.numero_personas)
-            + (cargo_por_lunch(precio_lunch, reserva.numero_personas) if reserva.lleva_lunch else 0)
+            + cargo_extras
+            + cargo_transporte
         )
         monto_a_cobrar = monto_inicial(precio_total, forma_pago)
 
@@ -111,10 +121,26 @@ class CrearPagoView(APIView):
             logger.exception('Stripe fallo al preparar el pago de la reserva %s', reserva.pk)
             return Response({'detail': 'No se pudo iniciar el pago. Intenta de nuevo.'}, status=502)
 
-        reserva.precio_total = precio_total
-        reserva.forma_pago = forma_pago
-        reserva.stripe_payment_intent_id = intent.id
-        reserva.save(update_fields=['precio_total', 'forma_pago', 'stripe_payment_intent_id'])
+        with transaction.atomic():
+            for extra in extras_a_borrar:
+                extra.delete()
+            for extra, precio_unitario, cantidad in extras_a_congelar:
+                extra.precio_unitario = precio_unitario
+                extra.cantidad = cantidad
+                extra.save(update_fields=['precio_unitario', 'cantidad'])
+
+            if transporte_a_borrar is not None:
+                transporte_a_borrar.delete()
+            if transporte_congelado is not None:
+                transporte, precio_calculado = transporte_congelado
+                transporte.numero_personas = reserva.numero_personas
+                transporte.precio_calculado = precio_calculado
+                transporte.save(update_fields=['numero_personas', 'precio_calculado'])
+
+            reserva.precio_total = precio_total
+            reserva.forma_pago = forma_pago
+            reserva.stripe_payment_intent_id = intent.id
+            reserva.save(update_fields=['precio_total', 'forma_pago', 'stripe_payment_intent_id'])
 
         return Response({
             'client_secret': intent.client_secret,
@@ -122,6 +148,49 @@ class CrearPagoView(APIView):
             'monto_a_cobrar': str(monto_a_cobrar),
             'moneda': reserva.moneda,
         })
+
+    def _resolver_extras(self, reserva):
+        """Recorre lo que el cliente selecciono en el checkout y decide, sin
+        tocar la base: que se cae (item desactivado desde que se eligio) y que
+        se congela con el precio VIGENTE del catalogo — nunca el que traia la
+        reserva desde el checkout. Devuelve (cargo_total, a_borrar, a_congelar, error)."""
+        cargo_total = 0
+        a_borrar = []
+        a_congelar = []
+        for extra in reserva.extras_seleccionados.select_related('extras_item'):
+            item = extra.extras_item
+            if not item.activo:
+                a_borrar.append(extra)
+                continue
+            precio = item.precio_en(reserva.moneda)
+            if precio is None:
+                return 0, [], [], f'No hay precio de "{item.nombre}" configurado en {reserva.moneda}.'
+            cantidad = reserva.numero_personas if item.cobrar_por_persona else 1
+            cargo = cargo_por_extra(precio, item.cobrar_por_persona, reserva.numero_personas)
+            cargo_total += cargo
+            a_congelar.append((extra, precio, cantidad))
+        return cargo_total, a_borrar, a_congelar, None
+
+    def _resolver_transporte(self, reserva):
+        """Mismo criterio que `_resolver_extras`, para el traslado (a lo mas
+        una fila por reserva). Devuelve (cargo, a_borrar_o_None, congelado_o_None, error)."""
+        if not hasattr(reserva, 'transporte'):
+            return 0, None, None, None
+
+        transporte = reserva.transporte
+        precio_zona = TransportePrecio.objects.filter(zona=transporte.zona, activo=True).first()
+        if precio_zona is None:
+            return 0, transporte, None, None
+
+        precio_base = precio_zona.precio_en(reserva.moneda)
+        recargo = precio_zona.recargo_en(reserva.moneda)
+        if precio_base is None:
+            return 0, None, None, f'No hay precio de transporte configurado en {reserva.moneda}.'
+
+        cargo = cargo_por_transporte(
+            precio_base, recargo, precio_zona.min_personas_recargo, reserva.numero_personas
+        )
+        return cargo, None, (transporte, cargo), None
 
     def _intent_de(self, reserva, monto):
         """Reusa el intent de la reserva si sigue sin cobrar; si no, crea uno.
@@ -209,6 +278,7 @@ class EstadoReservaView(APIView):
             return Response({'estado': 'cancelada'})
 
         if reserva.estado in self.ESTADOS_PAGADA:
+            transporte = getattr(reserva, 'transporte', None)
             return Response({
                 'estado': 'pagada',
                 'reserva_id': reserva.id,
@@ -225,9 +295,29 @@ class EstadoReservaView(APIView):
                 # con `monto_a_cobrar`).
                 'monto_pagado': str(reserva.monto_pagado) if reserva.monto_pagado is not None else None,
                 'precio_total': str(reserva.precio_total) if reserva.precio_total is not None else None,
+                # Desglose ya congelado al pagar (`ReservaExtra`/`ReservaTransporte`,
+                # ver `CrearPagoView`): el precio que de verdad se cobro, no el
+                # vigente del catalogo hoy. Sin esto la confirmacion de un
+                # checkout recuperado solo podia enseñar el total.
+                'extras': [
+                    {
+                        'nombre': extra.extras_item.nombre,
+                        'cobrar_por_persona': extra.extras_item.cobrar_por_persona,
+                        'monto': str(extra.subtotal) if extra.subtotal is not None else None,
+                    }
+                    for extra in reserva.extras_seleccionados.select_related('extras_item').all()
+                ],
+                'transporte': (
+                    {'monto': str(transporte.precio_calculado)}
+                    if transporte is not None and transporte.precio_calculado is not None
+                    else None
+                ),
             })
 
         # Solo queda pendiente_pago: es el unico otro valor de Estado.
+        # La seleccion de extras/transporte se devuelve por id — no hay precio
+        # que reponer todavia, eso solo existe desde que se paga.
+        transporte = getattr(reserva, 'transporte', None)
         return Response({
             'estado': 'pendiente_pago',
             'reserva_id': reserva.id,
@@ -239,7 +329,12 @@ class EstadoReservaView(APIView):
             'correo_cliente': reserva.correo_cliente,
             'moneda': reserva.moneda,
             'forma_pago': reserva.forma_pago,
-            'lleva_lunch': reserva.lleva_lunch,
+            'extras': list(reserva.extras_seleccionados.values_list('extras_item_id', flat=True)),
+            'transporte': {
+                'punto_encuentro': transporte.punto_encuentro_id,
+                'direccion_personalizada': transporte.direccion_personalizada,
+                'zona': transporte.zona,
+            } if transporte else None,
         })
 
 

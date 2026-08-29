@@ -22,7 +22,7 @@ type LicenseSectionProps = {
  */
 export function LicenseSection({ nav, license }: LicenseSectionProps) {
   return (
-    <section id="licencia" className="scroll-mt-20 bg-background py-24 lg:py-32">
+    <section id="licencia" className="scroll-mt-24 bg-background py-24 lg:py-32">
       <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
         <p className="flex items-center gap-2 text-sm font-medium text-accent">
           <IdentificationCard size={20} weight="fill" />

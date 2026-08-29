@@ -5,13 +5,25 @@ import { X } from '@phosphor-icons/react';
 import { motion, useReducedMotion } from 'motion/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 
+export type ExtraPendiente = {
+  id: number;
+  nombre: string;
+  /** Ya formateado en la moneda del checkout; null = sin precio en esa moneda. */
+  monto: string | null;
+};
+
 type AmenitiesReminderProps = {
   checkout: Dictionary['checkout'];
-  /** true si todavia no pidio lunch (hay algo que ofrecerle). */
-  faltaLunch: boolean;
-  lunch: boolean;
-  onLunchChange: (valor: boolean) => void;
-  precioLunch: string;
+  /** Extras del catalogo que el cliente no lleva. */
+  pendientes: ExtraPendiente[];
+  onSeleccionarExtra: (id: number) => void;
+  /**
+   * El traslado, cuando no eligio ninguno. Va aparte de `pendientes` porque no
+   * se puede resolver con una casilla: hace falta decir desde donde recogen al
+   * cliente, y eso solo se contesta en el paso de Extras. Por eso es un boton
+   * que lleva de vuelta ahi, no un check.
+   */
+  transportePendiente?: { etiqueta: string; monto: string | null; onElegir: () => void } | null;
   onContinuar: () => void;
   onCerrar: () => void;
   /** Bloquea los botones mientras se esta creando el pago. */
@@ -19,18 +31,18 @@ type AmenitiesReminderProps = {
 };
 
 /**
- * Ultimo recordatorio antes de pagar: "¿seguro que no quieres agregar el lunch?".
+ * Ultimo recordatorio antes de pagar: "¿seguro que no quieres agregar tus extras?".
  *
- * No cobra ni guarda nada por si mismo — solo muestra la opcion y avisa al
- * checkout cuando el cliente decide seguir. Todo lo que toca la red pasa por
+ * No cobra ni guarda nada por si mismo — solo muestra lo que se preselecciona
+ * por defecto (brunch, licencia, carnada) y que el cliente desmarco, y avisa
+ * al checkout cuando decide seguir. Todo lo que toca la red pasa por
  * `onContinuar`, que el checkout protege contra envios repetidos.
  */
 export function AmenitiesReminder({
   checkout,
-  faltaLunch,
-  lunch,
-  onLunchChange,
-  precioLunch,
+  pendientes,
+  onSeleccionarExtra,
+  transportePendiente,
   onContinuar,
   onCerrar,
   enviando,
@@ -90,23 +102,48 @@ export function AmenitiesReminder({
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">{checkout.amenitiesModal.body}</p>
 
-        {faltaLunch && (
-          <label className="mt-6 flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background">
-            <span className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={lunch}
-                disabled={enviando}
-                onChange={(e) => onLunchChange(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-              />
-              <span>{checkout.amenities.lunch}</span>
-            </span>
-            <span className="shrink-0 text-right text-muted">
-              {precioLunch}
-              <span className="block text-xs">{checkout.lunchPerPerson}</span>
-            </span>
-          </label>
+        {(pendientes.length > 0 || transportePendiente) && (
+          <div className="mt-6 flex flex-col gap-2">
+            {pendientes.map((extra) => (
+              <label
+                key={extra.id}
+                className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background"
+              >
+                <span className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={false}
+                    disabled={enviando}
+                    onChange={() => onSeleccionarExtra(extra.id)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                  />
+                  <span>{extra.nombre}</span>
+                </span>
+                <span className="shrink-0 text-right text-muted">
+                  {extra.monto ?? checkout.extrasUnavailableInCurrency}
+                </span>
+              </label>
+            ))}
+
+            {transportePendiente && (
+              <div className="flex items-center justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground">
+                <span className="min-w-0">
+                  {transportePendiente.etiqueta}
+                  {transportePendiente.monto && (
+                    <span className="block text-xs text-muted">{transportePendiente.monto}</span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={transportePendiente.onElegir}
+                  disabled={enviando}
+                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-40"
+                >
+                  {checkout.transporte.choose}
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         <button

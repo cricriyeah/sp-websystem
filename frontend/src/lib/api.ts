@@ -5,7 +5,9 @@ export type Moneda = 'MXN' | 'USD';
 // Precios de lista del backend. `precio` es en pesos y los `*_usd` vienen null
 // mientras el negocio no fije ese precio en dolares. Todas las cifras llegan de
 // aqui a proposito: la web no debe tener ninguna hardcodeada
-// (ver backend/apps/payments/pricing.py).
+// (ver backend/apps/payments/pricing.py). Los extras del checkout (brunch,
+// licencia, carnada, transporte) ya no viven aqui: vienen de `/api/extras/`,
+// ver `getExtras` mas abajo.
 export type Tarifa = {
   precio: string;
   precio_usd: string | null;
@@ -13,9 +15,60 @@ export type Tarifa = {
   precio_persona_extra: string;
   precio_persona_extra_usd: string | null;
   personas_incluidas: number;
-  /** Precio del lunch POR PERSONA. */
-  precio_lunch: string;
-  precio_lunch_usd: string | null;
+};
+
+/**
+ * Catalogo de extras del checkout (`GET /api/extras/?personas=N&moneda=M`).
+ *
+ * `monto` ya viene resuelto por el servidor para ese `(personas, moneda)` —
+ * la web nunca reimplementa si un extra cobra por persona ni el umbral del
+ * recargo de transporte, esas reglas viven solo en
+ * apps/payments/pricing.py. `null` = sin precio configurado en esa moneda.
+ */
+export type ExtraCatalogo = {
+  id: number;
+  tipo: 'brunch' | 'licencia' | 'carnada' | 'otro';
+  nombre: string;
+  descripcion: string;
+  cobrar_por_persona: boolean;
+  preseleccionado: boolean;
+  monto: string | null;
+};
+
+export type Zona = 'centro' | 'periferia';
+
+export type TransportePrecioCatalogo = {
+  zona: Zona;
+  min_personas_recargo: number;
+  monto: string | null;
+};
+
+export type PuntoEncuentro = {
+  id: number;
+  nombre: string;
+  zona: Zona;
+};
+
+export type CatalogoExtras = {
+  extras: ExtraCatalogo[];
+  transporte: TransportePrecioCatalogo[];
+  puntos_encuentro: PuntoEncuentro[];
+};
+
+export const getExtras = (personas: number, moneda: Moneda) =>
+  request<CatalogoExtras>(`/api/extras/?personas=${personas}&moneda=${moneda}`);
+
+/**
+ * Lo que el cliente eligio para el traslado, si eligio uno. `null` = sin
+ * transporte. `zona` solo cuenta cuando se manda `direccion_personalizada`:
+ * si viene `punto_encuentro`, el backend la ignora y usa la del hotel elegido
+ * (ver apps/bookings/serializers.py, evita que se pague el precio de otra
+ * zona mandando una `zona` que no corresponde).
+ */
+export type TransporteSeleccion = {
+  punto_encuentro?: number | null;
+  direccion_personalizada?: string;
+  zona?: Zona | '';
 };
 
 export type Cupo = {
@@ -50,12 +103,11 @@ export type ReservaInput = {
   // Deslinde de responsabilidad. El servidor sella la fecha/hora y la IP.
   deslinde_aceptado: boolean;
   deslinde_nombre: string;
-  // El unico extra que ofrece el checkout web. Bebidas y transporte se quitaron
-  // del sitio (complicaban la operatividad: dependen de datos que el checkout no
-  // captura, como desde donde recoger al cliente); la vendedora las sigue
-  // marcando a mano en reservas por WhatsApp/telefono, por eso el backend
-  // conserva `pide_bebidas`/`pide_transporte` aunque el checkout ya no los mande.
-  lleva_lunch: boolean;
+  // Ids de `ExtrasItem` elegidos (brunch, licencia, carnada). Sin precio: el
+  // unico que lo congela es `crear-pago`, con el catalogo vigente en ese
+  // momento (ver backend/apps/bookings/serializers.py).
+  extras?: number[];
+  transporte?: TransporteSeleccion | null;
   // Codigo de la vendedora que trajo al cliente (ver src/lib/ref.ts). El backend
   // ignora en silencio el que no resuelva: un link viejo no puede impedir una
   // reserva.
@@ -167,7 +219,14 @@ export type EstadoReservaPendiente = {
   correo_cliente: string;
   moneda: Moneda;
   forma_pago: 'completo' | 'anticipo' | '';
-  lleva_lunch: boolean;
+  // Solo ids/datos, sin precio: eso solo existe desde que se paga (ver
+  // apps/payments/views.py, EstadoReservaView).
+  extras: number[];
+  transporte: {
+    punto_encuentro: number | null;
+    direccion_personalizada: string;
+    zona: Zona;
+  } | null;
 };
 
 export type EstadoReservaPagada = {
@@ -182,6 +241,10 @@ export type EstadoReservaPagada = {
   forma_pago: 'completo' | 'anticipo' | '';
   monto_pagado: string | null;
   precio_total: string | null;
+  // Desglose ya congelado al pagar (mismo precio cobrado, no el vigente del
+  // catalogo hoy) — ver apps/payments/views.py, EstadoReservaView.
+  extras: { nombre: string; cobrar_por_persona: boolean; monto: string | null }[];
+  transporte: { monto: string } | null;
 };
 
 export type EstadoReservaCancelada = { estado: 'cancelada' };

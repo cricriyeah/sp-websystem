@@ -33,7 +33,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
   return (
     <footer
       id="contacto"
-      className="relative scroll-mt-20 overflow-hidden border-t border-border bg-background"
+      className="relative scroll-mt-24 overflow-hidden border-t border-border bg-background"
     >
       {/* Mismo tratamiento que resenas: radial apagado con el indigo de la
           marca, no un degradado parejo de banco de imagenes. Aqui va arriba a

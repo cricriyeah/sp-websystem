@@ -12,10 +12,10 @@ type AboutSectionProps = {
  */
 export function AboutSection({ about }: AboutSectionProps) {
   return (
-    <section id="nosotros" className="scroll-mt-20 grid bg-surface lg:grid-cols-2">
+    <section id="nosotros" className="scroll-mt-24 grid bg-surface lg:grid-cols-2">
       <div className="relative min-h-[320px] lg:min-h-[620px]">
         <Image
-          src="/photos/capitan-cabrilla-bahia.png"
+          src="/photos/capitan-cabrilla-bahia.webp"
           alt={about.photoHint}
           fill
           sizes="(min-width: 1024px) 50vw, 100vw"

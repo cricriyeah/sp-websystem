@@ -10,16 +10,17 @@ import stripe
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 
-from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva
-from apps.fleet.models import Tarifa
+from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
+from apps.fleet.models import ExtrasItem, Tarifa, TransportePrecio
 from apps.testing import ApiTestCase, crear_flota
 
 from .checks import revisar_llaves_de_stripe
 from .pricing import (
     PERSONAS_INCLUIDAS,
     a_centavos,
-    cargo_por_lunch,
+    cargo_por_extra,
     cargo_por_personas,
+    cargo_por_transporte,
     de_centavos,
     monto_inicial,
     personas_extra,
@@ -142,10 +143,6 @@ class PricingTests(TestCase):
         self.assertEqual(a_centavos(Decimal('1357.50')), 135750)
         self.assertEqual(de_centavos(135750), Decimal('1357.50'))
 
-    def test_el_lunch_es_uno_por_persona(self):
-        self.assertEqual(cargo_por_lunch(Decimal('300'), 1), 300)
-        self.assertEqual(cargo_por_lunch(Decimal('300'), 6), Decimal('1800'))
-
     def test_hasta_las_personas_incluidas_no_hay_cargo(self):
         for personas in range(1, PERSONAS_INCLUIDAS + 1):
             self.assertEqual(personas_extra(personas), 0)
@@ -155,6 +152,29 @@ class PricingTests(TestCase):
         self.assertEqual(cargo_por_personas(Decimal('500'), PERSONAS_INCLUIDAS + 1), 500)
         self.assertEqual(cargo_por_personas(Decimal('500'), 6), Decimal('1500'))
 
+    def test_extra_por_persona_cobra_segun_cuantos_van(self):
+        self.assertEqual(cargo_por_extra(Decimal('150'), True, 1), Decimal('150'))
+        self.assertEqual(cargo_por_extra(Decimal('150'), True, 4), Decimal('600'))
+
+    def test_extra_plano_no_multiplica_por_personas(self):
+        self.assertEqual(cargo_por_extra(Decimal('400'), False, 5), Decimal('400'))
+
+    def test_extra_sin_precio_en_la_moneda_es_none(self):
+        self.assertIsNone(cargo_por_extra(None, True, 3))
+
+    def test_transporte_sin_recargo_bajo_el_minimo(self):
+        self.assertEqual(
+            cargo_por_transporte(Decimal('2000'), Decimal('1500'), 4, 3), Decimal('2000')
+        )
+
+    def test_transporte_con_recargo_desde_el_minimo(self):
+        self.assertEqual(
+            cargo_por_transporte(Decimal('2000'), Decimal('1500'), 4, 4), Decimal('3500')
+        )
+
+    def test_transporte_sin_precio_base_en_la_moneda_es_none(self):
+        self.assertIsNone(cargo_por_transporte(None, Decimal('1500'), 4, 5))
+
 
 @override_settings(**LLAVES)
 class CrearPagoTests(ApiTestCase):
@@ -162,7 +182,6 @@ class CrearPagoTests(ApiTestCase):
         Tarifa.objects.create(
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
             precio_persona_extra=Decimal('500.00'), precio_persona_extra_usd=Decimal('30.00'),
-            precio_lunch=Decimal('300.00'), precio_lunch_usd=Decimal('18.00'),
         )
         self.reserva = crear_reserva()
         self.url = f'/api/reservas/{self.reserva.pk}/crear-pago/'
@@ -171,6 +190,28 @@ class CrearPagoTests(ApiTestCase):
         datos = {'forma_pago': 'completo', 'checkout_id': str(self.reserva.checkout_id)}
         datos.update(body)
         return self.client.post(self.url, datos, content_type='application/json')
+
+    def seleccionar_extra(self, reserva=None, **overrides):
+        """Simula lo que deja el checkout: la SELECCION de un extra, sin precio
+        congelado todavia (eso solo lo escribe `CrearPagoView`)."""
+        datos = {
+            'tipo': ExtrasItem.Tipo.BRUNCH, 'nombre': 'Brunch', 'precio': Decimal('300'),
+            'precio_usd': Decimal('18'), 'cobrar_por_persona': True,
+        }
+        datos.update(overrides)
+        item = ExtrasItem.objects.create(**datos)
+        return ReservaExtra.objects.create(reserva=reserva or self.reserva, extras_item=item)
+
+    def seleccionar_transporte(self, reserva=None, zona=TransportePrecio.Zona.CENTRO, **precio_overrides):
+        """Idem para transporte: crea el precio de zona vigente y deja la
+        SELECCION (sin `numero_personas`/`precio_calculado`) en la reserva."""
+        datos = {'zona': zona, 'precio_base': Decimal('2000'), 'recargo_grupo': Decimal('1500'),
+                  'min_personas_recargo': 4}
+        datos.update(precio_overrides)
+        TransportePrecio.objects.create(**datos)
+        return ReservaTransporte.objects.create(
+            reserva=reserva or self.reserva, zona=zona, direccion_personalizada='Malecon 123',
+        )
 
     @mock.patch('stripe.PaymentIntent.create')
     def test_cobra_lo_que_calcula_el_servidor_no_lo_que_manda_el_cliente(self, create):
@@ -228,29 +269,25 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(self.post(forma_pago='anticipo').json()['monto_a_cobrar'], '1650.00')
 
     @mock.patch('stripe.PaymentIntent.create')
-    def test_el_lunch_se_cobra_por_cada_persona(self, create):
+    def test_el_brunch_se_cobra_por_cada_persona(self, create):
         create.return_value = intent_falso()
-        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=4, lleva_lunch=True)
-        # 4500 del viaje + 1 persona extra x 500 + 4 lunches x 300.
+        Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=4)
+        self.seleccionar_extra()
+        # 4500 del viaje + 1 persona extra x 500 + 4 brunches x 300.
         self.assertEqual(self.post().json()['monto_a_cobrar'], '6200.00')
 
     @mock.patch('stripe.PaymentIntent.create')
-    def test_bebidas_y_transporte_no_suman_al_cobro(self, create):
+    def test_bebidas_no_suma_pero_transporte_si(self, create):
         create.return_value = intent_falso()
-        Reserva.objects.filter(pk=self.reserva.pk).update(
-            pide_bebidas=True, pide_transporte=True
-        )
-        # Los cotiza el agente aparte: el cobro en linea no cambia.
-        self.assertEqual(self.post().json()['monto_a_cobrar'], '4500.00')
+        Reserva.objects.filter(pk=self.reserva.pk).update(pide_bebidas=True)
+        self.seleccionar_transporte()  # 2 personas, bajo el minimo de recargo: solo precio_base.
+        # Bebidas la cotiza el agente aparte, no cambia el cobro. Transporte si suma.
+        self.assertEqual(self.post().json()['monto_a_cobrar'], '6500.00')
 
     @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_precio_de_lunch_en_dolares_no_se_cobra_a_medias(self, create):
-        Tarifa.objects.create(
-            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
-            precio_persona_extra=Decimal('500.00'), precio_persona_extra_usd=Decimal('30.00'),
-            precio_lunch=Decimal('300.00'), precio_lunch_usd=None,
-        )
-        reserva = crear_reserva(moneda='USD', lleva_lunch=True)
+    def test_sin_precio_de_extra_en_dolares_no_se_cobra_a_medias(self, create):
+        reserva = crear_reserva(moneda='USD')
+        self.seleccionar_extra(reserva=reserva, precio=Decimal('300'), precio_usd=None)
         response = self.client.post(
             f'/api/reservas/{reserva.pk}/crear-pago/',
             {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
@@ -258,6 +295,58 @@ class CrearPagoTests(ApiTestCase):
         )
         self.assertEqual(response.status_code, 503)
         create.assert_not_called()
+
+    @mock.patch('stripe.PaymentIntent.create')
+    def test_congela_el_precio_vigente_del_catalogo_no_el_de_cuando_se_selecciono(self, create):
+        create.return_value = intent_falso()
+        seleccion = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
+        # El precio de lista cambia despues de que el cliente eligio, antes de pagar.
+        seleccion.extras_item.precio = Decimal('500')
+        seleccion.extras_item.save(update_fields=['precio'])
+
+        response = self.post()
+
+        # 4500 + 2 personas x 500 (el precio vigente, no los 300 de cuando eligio).
+        self.assertEqual(response.json()['monto_a_cobrar'], '5500.00')
+        seleccion.refresh_from_db()
+        self.assertEqual(seleccion.precio_unitario, Decimal('500'))
+        self.assertEqual(seleccion.cantidad, 2)
+
+    @mock.patch('stripe.PaymentIntent.create')
+    def test_un_extra_desactivado_se_cae_sin_bloquear_los_demas(self, create):
+        create.return_value = intent_falso()
+        activo = self.seleccionar_extra(
+            tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
+            precio_usd=Decimal('25'), cobrar_por_persona=False,
+        )
+        a_caer = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
+        a_caer.extras_item.activo = False
+        a_caer.extras_item.save(update_fields=['activo'])
+
+        response = self.post()
+
+        self.assertEqual(response.status_code, 200)
+        # Solo la licencia entra al cobro: 4500 + 450.
+        self.assertEqual(response.json()['monto_a_cobrar'], '4950.00')
+        self.assertFalse(ReservaExtra.objects.filter(pk=a_caer.pk).exists())
+        activo.refresh_from_db()
+        self.assertEqual(activo.precio_unitario, Decimal('450'))
+
+    @mock.patch('stripe.PaymentIntent.retrieve')
+    @mock.patch('stripe.PaymentIntent.create')
+    def test_409_por_pago_en_curso_no_deja_extras_a_medias(self, create, retrieve):
+        create.return_value = intent_falso()
+        self.post()
+
+        extra = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
+        retrieve.return_value = intent_falso(status='processing')
+
+        response = self.post()
+
+        self.assertEqual(response.status_code, 409)
+        extra.refresh_from_db()
+        self.assertIsNone(extra.precio_unitario)
+        self.assertIsNone(extra.cantidad)
 
     @mock.patch('stripe.PaymentIntent.create')
     def test_sin_cargo_en_dolares_no_se_cobra_a_medias(self, create):
@@ -299,14 +388,14 @@ class CrearPagoTests(ApiTestCase):
         create.return_value = intent_falso()
         self.post()
 
-        # El cliente vuelve atras y agrega el lunch: mismo intent, otro monto.
-        Reserva.objects.filter(pk=self.reserva.pk).update(lleva_lunch=True)
+        # El cliente vuelve atras y agrega el brunch: mismo intent, otro monto.
+        self.seleccionar_extra(precio=Decimal('150'), precio_usd=Decimal('9'))
         retrieve.return_value = intent_falso()
-        modify.return_value = intent_falso(amount=510000)
+        modify.return_value = intent_falso(amount=480000)
         self.post()
 
         self.assertEqual(create.call_count, 1)
-        self.assertEqual(modify.call_args.kwargs['amount'], a_centavos(Decimal('5100.00')))
+        self.assertEqual(modify.call_args.kwargs['amount'], a_centavos(Decimal('4800.00')))
 
     @mock.patch('stripe.PaymentIntent.retrieve')
     @mock.patch('stripe.PaymentIntent.create')
@@ -432,6 +521,41 @@ class EstadoReservaTests(ApiTestCase):
         self.assertEqual(body['monto_pagado'], '4500.00')
         # La confirmacion no muestra telefono: no se manda de vuelta.
         self.assertNotIn('telefono_cliente', body)
+
+    def test_pagada_incluye_el_desglose_de_extras_y_transporte_ya_congelado(self):
+        self.reserva.estado = Reserva.Estado.PAGADA
+        self.reserva.precio_total = Decimal('5400.00')
+        self.reserva.monto_pagado = Decimal('5400.00')
+        self.reserva.forma_pago = Reserva.FormaPago.COMPLETO
+        self.reserva.save()
+
+        item = ExtrasItem.objects.create(
+            tipo=ExtrasItem.Tipo.BRUNCH, nombre='Brunch', precio=Decimal('300'),
+            cobrar_por_persona=True,
+        )
+        ReservaExtra.objects.create(
+            reserva=self.reserva, extras_item=item,
+            precio_unitario=Decimal('300'), cantidad=self.reserva.numero_personas,
+        )
+        ReservaTransporte.objects.create(
+            reserva=self.reserva, zona=TransportePrecio.Zona.CENTRO,
+            direccion_personalizada='Malecon 123', numero_personas=self.reserva.numero_personas,
+            precio_calculado=Decimal('2000.00'),
+        )
+
+        body = self.get(str(self.reserva.checkout_id)).json()
+        self.assertEqual(body['extras'], [
+            {'nombre': 'Brunch', 'cobrar_por_persona': True, 'monto': '600.00'},
+        ])
+        self.assertEqual(body['transporte'], {'monto': '2000.00'})
+
+    def test_pagada_sin_extras_ni_transporte_los_manda_vacios(self):
+        self.reserva.estado = Reserva.Estado.PAGADA
+        self.reserva.save(update_fields=['estado'])
+
+        body = self.get(str(self.reserva.checkout_id)).json()
+        self.assertEqual(body['extras'], [])
+        self.assertIsNone(body['transporte'])
 
     def test_asignada_y_completada_cuentan_como_pagada(self):
         for estado in (Reserva.Estado.ASIGNADA, Reserva.Estado.COMPLETADA):

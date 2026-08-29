@@ -33,6 +33,15 @@ class Command(BaseCommand):
             # Catalogo de flota: solo consulta, para asignar embarcacion/capitan.
             ('fleet', 'embarcacion', ['view']),
             ('fleet', 'capitan', ['view']),
+            # Puntos de encuentro del transporte: catalogo operativo (que hotel es
+            # de que zona), no un precio. fleet.ExtrasItem/TransportePrecio
+            # deliberadamente fuera, mismo trato que fleet.Tarifa: son precios.
+            ('fleet', 'puntoencuentro', ['view']),
+            # Que compro el cliente en el checkout: sin esto Django quita en
+            # silencio los inlines de ReservaAdmin para ella (get_inline_instances
+            # los descarta sin permiso, sin error) y deja de ver que se vendio.
+            ('bookings', 'reservaextra', ['view']),
+            ('bookings', 'reservatransporte', ['view']),
             # Que panga no sale un dia (mantenimiento, motor). Es trabajo diario
             # suyo, no de los jefes. Con delete a proposito: si marco una fuera
             # por error, o el motor se arreglo antes, tiene que poder deshacerlo

@@ -45,6 +45,12 @@ export default async function ReservarPage({
   const time = parsed.time ?? '06:00';
   const people = parsed.people ?? 2;
 
+  // El booking bar siempre manda los tres juntos: si trae alguno explicito es
+  // que el cliente acaba de elegir viaje, no que recargo esta misma pagina.
+  // Distingue esa llegada de una recuperacion de checkout a medio pagar (ver
+  // el comentario largo en CheckoutView).
+  const queryOverride = parsed.day !== undefined || parsed.time !== undefined || parsed.people !== undefined;
+
   return (
     <CheckoutView
       lang={lang}
@@ -54,6 +60,7 @@ export default async function ReservarPage({
       initialPeople={people}
       minDate={minDate}
       tarifa={tarifa}
+      queryOverride={queryOverride}
     />
   );
 }

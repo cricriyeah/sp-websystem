@@ -48,24 +48,40 @@ def _cuerpo_html(reserva):
             f'Quedan {restante} {reserva.moneda} por liquidar en efectivo el dia del viaje.</p>'
         )
 
-    lunch = (
-        f'<li><strong>Lunch:</strong> {reserva.numero_personas} (incluido en tu pago)</li>'
-        if reserva.lleva_lunch else ''
+    # Lo que compro en el checkout (brunch, licencia, carnada): ya tiene precio
+    # congelado porque este correo solo se manda despues de pagar. `reserva.pk`
+    # se checa aparte porque en produccion siempre existe (este correo solo se
+    # dispara desde una reserva ya guardada y pagada) pero las pruebas de
+    # renderizado del correo usan una `Reserva` en memoria sin guardar, y
+    # consultar una relacion inversa sin pk revienta con ValueError, no con
+    # AttributeError — `getattr(..., None)` no lo atrapa.
+    extras = ''.join(
+        f'<li><strong>{_html(extra.extras_item.nombre)}:</strong> {extra.cantidad} '
+        f'(incluido en tu pago)</li>'
+        for extra in (reserva.extras_seleccionados.select_related('extras_item') if reserva.pk else [])
     )
 
-    # Aviso explicito: si el cliente cree que su traslado ya esta pagado, el
-    # problema aparece el dia del viaje y en el muelle.
+    # El punto de encuentro real si compro traslado; si no, el general.
+    transporte = reserva.transporte if reserva.pk and hasattr(reserva, 'transporte') else None
+    if transporte:
+        lugar = transporte.punto_encuentro.nombre if transporte.punto_encuentro else transporte.direccion_personalizada
+        punto_de_encuentro = f'{_html(lugar)} (incluye tu traslado, ya pagado)'
+    else:
+        punto_de_encuentro = PUNTO_DE_ENCUENTRO
+
+    # Aviso explicito: si el cliente cree que algo ya esta pagado sin estarlo,
+    # el problema aparece el dia del viaje.
     por_cotizar = ''
     if reserva.tiene_cotizaciones_pendientes:
         pedidos = [
             etiqueta for pedido, etiqueta in
-            ((reserva.pide_bebidas, 'bebidas'), (reserva.pide_transporte, 'transporte'))
+            ((reserva.pide_bebidas, 'bebidas'), (reserva.pide_extras_whatsapp, 'extras'))
             if pedido
         ]
         por_cotizar = (
             f'<p><strong>Pediste {" y ".join(pedidos)}.</strong> Eso <strong>no</strong> esta '
-            f'incluido en el monto que acabas de pagar: su precio depende de lo que elijas y de '
-            f'la distancia, asi que nuestro agente te lo cotiza y lo acuerdas directamente con el.</p>'
+            f'incluido en el monto que acabas de pagar: nuestro agente te lo cotiza y lo '
+            f'acuerdas directamente con el.</p>'
         )
 
     return (
@@ -74,14 +90,13 @@ def _cuerpo_html(reserva):
         f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
         f'<li><strong>Hora de salida:</strong> {reserva.hora:%H:%M}</li>'
         f'<li><strong>Personas:</strong> {reserva.numero_personas}</li>'
-        f'{lunch}'
-        f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'
+        f'{extras}'
+        f'<li><strong>Punto de encuentro:</strong> {punto_de_encuentro}</li>'
         f'</ul>'
         f'{pendiente}'
         f'{por_cotizar}'
         f'<p>Te llega un segundo correo con el nombre de tu capitan y la panga que '
-        f'les toca, en cuanto queden asignados. Si pediste traslado, el agente te '
-        f'cotiza eso aparte.</p>'
+        f'les toca, en cuanto queden asignados.</p>'
     )
 
 

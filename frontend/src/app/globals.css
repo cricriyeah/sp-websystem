@@ -56,6 +56,30 @@
   --error-fondo: #fbe3e0;
   --aviso: #8a5a00;
   --aviso-fondo: #fff1cc;
+
+  /* Lo que hay que despejar arriba para no quedar debajo del SiteHeader: su
+     separacion del borde mas su propia altura (ver site-header.tsx). La barra
+     es `fixed` para que el video de la portada pueda llegar hasta el borde
+     real de arriba, y `fixed` no reserva espacio en el flujo — cada pagina que
+     la monta tiene que dejarle ese hueco a mano.
+
+     Vive aqui y no como numero suelto en cada componente porque son cinco
+     pantallas las que lo necesitan y ya se desincronizo una vez: quedaron con
+     96px cuando la barra ya medIa 104, y el contenido arrancaba debajo de
+     ella. Cambiar el alto de la barra obliga a cambiar esto, y solo esto. */
+  --nav-alto: 92px; /* top-3 (12) + h-20 (80) */
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --nav-alto: 96px; /* sm:top-4 (16) + h-20 (80) */
+  }
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --nav-alto: 104px; /* sm:top-4 (16) + lg:h-[88px] */
+  }
 }
 
 @theme inline {

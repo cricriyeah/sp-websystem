@@ -32,15 +32,6 @@ class Tarifa(models.Model):
         help_text='El mismo cargo en dolares. Vacio = no se puede cobrar en USD un '
                   'viaje que lleve personas extra.',
     )
-    precio_lunch = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0,
-        help_text='Precio del lunch en pesos, POR PERSONA. El menu es fijo y cambia '
-                  'cada semana, asi que este monto se actualiza aqui.',
-    )
-    precio_lunch_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='El mismo precio del lunch en dolares, por persona.',
-    )
     actualizado_en = models.DateTimeField(auto_now=True)
     actualizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
@@ -71,9 +62,106 @@ class Tarifa(models.Model):
         """Cargo por persona adicional en esa moneda. None = sin configurar."""
         return self.precio_persona_extra if moneda == 'MXN' else self.precio_persona_extra_usd
 
-    def lunch_en(self, moneda):
-        """Precio del lunch por persona en esa moneda. None = sin configurar."""
-        return self.precio_lunch if moneda == 'MXN' else self.precio_lunch_usd
+
+class ExtrasItem(models.Model):
+    """Catalogo de extras del checkout: brunch, licencia, carnada. Editable solo
+    por jefes, igual que `Tarifa` (es precio, informacion financiera).
+
+    Sin fechas de vigencia a proposito: el precio vigente se edita a mano,
+    igual que ya se hace con `Tarifa`, y cada reserva congela su propio precio
+    al pagar (`bookings.ReservaExtra.precio_unitario`) — eso ya resuelve lo que
+    una tabla de historico resolveria, sin la tabla.
+    """
+
+    class Tipo(models.TextChoices):
+        BRUNCH = 'brunch', 'Brunch'
+        LICENCIA = 'licencia', 'Licencia de pesca'
+        CARNADA = 'carnada', 'Carnada'
+        OTRO = 'otro', 'Otro'
+
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    nombre = models.CharField(max_length=150)
+    descripcion = models.TextField(blank=True)
+    precio = models.DecimalField(max_digits=10, decimal_places=2, help_text='Precio en pesos (MXN).')
+    precio_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Precio en dolares. Vacio = no se ofrece en USD.',
+    )
+    cobrar_por_persona = models.BooleanField(
+        default=True,
+        help_text='Marcado: el precio se multiplica por el numero de personas de '
+                  'la reserva (igual que el brunch). Sin marcar: precio plano, se '
+                  'cobra una sola vez por reserva.',
+    )
+    preseleccionado = models.BooleanField(
+        default=False,
+        help_text='Viene marcado por defecto en el checkout (licencia y carnada).',
+    )
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['tipo', 'nombre']
+        verbose_name = 'extra del checkout'
+        verbose_name_plural = 'extras del checkout'
+
+    def __str__(self):
+        return self.nombre
+
+    def precio_en(self, moneda):
+        return self.precio if moneda == 'MXN' else self.precio_usd
+
+
+class TransportePrecio(models.Model):
+    """Precio de traslado por zona. Dos filas fijas: centro y periferia."""
+
+    class Zona(models.TextChoices):
+        CENTRO = 'centro', 'Centro'
+        PERIFERIA = 'periferia', 'Periferia'
+
+    zona = models.CharField(max_length=10, choices=Zona.choices, unique=True)
+    precio_base = models.DecimalField(max_digits=10, decimal_places=2, help_text='Precio en pesos (MXN).')
+    precio_base_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Precio en dolares. Vacio = no se ofrece en USD.',
+    )
+    recargo_grupo = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text='Se suma al precio base desde `min_personas_recargo` personas.',
+    )
+    recargo_grupo_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    min_personas_recargo = models.PositiveSmallIntegerField(default=4)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['zona']
+        verbose_name = 'precio de transporte'
+        verbose_name_plural = 'precios de transporte'
+
+    def __str__(self):
+        return f'Transporte {self.get_zona_display()}: ${self.precio_base} MXN'
+
+    def precio_en(self, moneda):
+        return self.precio_base if moneda == 'MXN' else self.precio_base_usd
+
+    def recargo_en(self, moneda):
+        return self.recargo_grupo if moneda == 'MXN' else self.recargo_grupo_usd
+
+
+class PuntoEncuentro(models.Model):
+    """Catalogo de hoteles/hospedajes conocidos en La Paz, con su zona ya
+    clasificada — evita depender de geocoding para una direccion libre."""
+
+    nombre = models.CharField(max_length=150)
+    zona = models.CharField(max_length=10, choices=TransportePrecio.Zona.choices)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = 'punto de encuentro'
+        verbose_name_plural = 'puntos de encuentro'
+
+    def __str__(self):
+        return f'{self.nombre} ({self.get_zona_display()})'
 
 
 class Embarcacion(models.Model):

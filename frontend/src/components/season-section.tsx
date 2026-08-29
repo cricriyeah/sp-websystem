@@ -22,10 +22,10 @@ const TEMPORADA_FUERTE = 2;
  * en cuadro.
  */
 const FOTOS_TEMPORADA = [
-  '/photos/yellowtail-pelicanos-bahia.png',
-  '/photos/marlin-en-equipo.png',
-  '/photos/cana-doblada-dorado.png',
-  '/photos/pesca-del-dia-cubierta.png',
+  '/photos/yellowtail-pelicanos-bahia.webp',
+  '/photos/marlin-en-equipo.webp',
+  '/photos/cana-doblada-dorado.webp',
+  '/photos/pesca-del-dia-cubierta.webp',
 ];
 
 /**
@@ -49,7 +49,7 @@ const FOTOS_TEMPORADA = [
  */
 export function SeasonSection({ season }: SeasonSectionProps) {
   return (
-    <section id="temporadas" className="scroll-mt-20 bg-background py-24 lg:py-32">
+    <section id="temporadas" className="scroll-mt-24 bg-background py-24 lg:py-32">
       <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
         <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
         <h2 className="max-w-[16ch] text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[58px]">

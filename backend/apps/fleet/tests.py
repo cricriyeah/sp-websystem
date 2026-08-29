@@ -9,7 +9,10 @@ from apps.payments.pricing import PERSONAS_INCLUIDAS
 from .models import (
     Embarcacion,
     EmbarcacionNoDisponible,
+    ExtrasItem,
+    PuntoEncuentro,
     Tarifa,
+    TransportePrecio,
     capacidades_disponibles,
     capacidades_por_fecha,
 )
@@ -39,13 +42,12 @@ class TarifaApiTests(TestCase):
     def test_devuelve_todas_las_cifras_del_checkout(self):
         Tarifa.objects.create(
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
-            precio_persona_extra=Decimal('500.00'), precio_lunch=Decimal('300.00'),
+            precio_persona_extra=Decimal('500.00'),
         )
         body = self.client.get('/api/tarifa/').json()
         self.assertEqual(body['precio'], '4500.00')
         self.assertEqual(body['precio_usd'], '260.00')
         self.assertEqual(body['precio_persona_extra'], '500.00')
-        self.assertEqual(body['precio_lunch'], '300.00')
         self.assertEqual(body['personas_incluidas'], PERSONAS_INCLUIDAS)
 
     def test_no_publica_precio_de_lo_que_se_cotiza(self):
@@ -53,6 +55,88 @@ class TarifaApiTests(TestCase):
         Tarifa.objects.create(precio=Decimal('4500.00'))
         body = self.client.get('/api/tarifa/').json()
         self.assertNotIn('amenidades', body)
+
+
+class ExtrasItemTests(TestCase):
+    def test_precio_por_moneda(self):
+        item = ExtrasItem.objects.create(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'), precio_usd=Decimal('25'),
+        )
+        self.assertEqual(item.precio_en('MXN'), Decimal('450'))
+        self.assertEqual(item.precio_en('USD'), Decimal('25'))
+
+    def test_sin_precio_en_dolares_devuelve_none(self):
+        item = ExtrasItem.objects.create(tipo='carnada', nombre='Carnada', precio=Decimal('200'))
+        self.assertIsNone(item.precio_en('USD'))
+
+
+class TransportePrecioTests(TestCase):
+    def test_precio_y_recargo_por_moneda(self):
+        centro = TransportePrecio.objects.create(
+            zona='centro', precio_base=Decimal('2000'), precio_base_usd=Decimal('110'),
+            recargo_grupo=Decimal('1500'), recargo_grupo_usd=Decimal('85'),
+        )
+        self.assertEqual(centro.precio_en('MXN'), Decimal('2000'))
+        self.assertEqual(centro.precio_en('USD'), Decimal('110'))
+        self.assertEqual(centro.recargo_en('MXN'), Decimal('1500'))
+        self.assertEqual(centro.recargo_en('USD'), Decimal('85'))
+
+    def test_una_sola_fila_por_zona(self):
+        TransportePrecio.objects.create(zona='centro', precio_base=Decimal('2000'))
+        with self.assertRaises(IntegrityError):
+            TransportePrecio.objects.create(zona='centro', precio_base=Decimal('2100'))
+
+
+class ExtrasPublicosApiTests(TestCase):
+    def test_extra_por_persona_multiplica(self):
+        ExtrasItem.objects.create(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'), cobrar_por_persona=True,
+        )
+        body = self.client.get('/api/extras/?personas=3').json()
+        self.assertEqual(body['extras'][0]['monto'], '1350.00')
+
+    def test_extra_plano_no_multiplica(self):
+        ExtrasItem.objects.create(
+            tipo='carnada', nombre='Carnada', precio=Decimal('200'), cobrar_por_persona=False,
+        )
+        body = self.client.get('/api/extras/?personas=5').json()
+        self.assertEqual(body['extras'][0]['monto'], '200.00')
+
+    def test_item_inactivo_no_aparece(self):
+        ExtrasItem.objects.create(tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False)
+        body = self.client.get('/api/extras/').json()
+        self.assertEqual(body['extras'], [])
+
+    def test_sin_precio_en_la_moneda_pedida_monto_es_null(self):
+        ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
+        body = self.client.get('/api/extras/?moneda=USD').json()
+        self.assertIsNone(body['extras'][0]['monto'])
+
+    def test_transporte_con_recargo_desde_el_minimo(self):
+        TransportePrecio.objects.create(
+            zona='centro', precio_base=Decimal('2000'), recargo_grupo=Decimal('1500'),
+            min_personas_recargo=4,
+        )
+        body = self.client.get('/api/extras/?personas=4').json()
+        self.assertEqual(body['transporte'][0]['monto'], '3500.00')
+
+    def test_puntos_de_encuentro_activos(self):
+        PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        PuntoEncuentro.objects.create(nombre='Fuera de servicio', zona='centro', activo=False)
+        body = self.client.get('/api/extras/').json()
+        self.assertEqual([p['nombre'] for p in body['puntos_encuentro']], ['Hotel CostaBaja'])
+
+    def test_moneda_invalida_es_400(self):
+        self.assertEqual(self.client.get('/api/extras/?moneda=EUR').status_code, 400)
+
+    def test_personas_invalida_es_400(self):
+        self.assertEqual(self.client.get('/api/extras/?personas=0').status_code, 400)
+        self.assertEqual(self.client.get('/api/extras/?personas=abc').status_code, 400)
+
+    def test_defaults_sin_query_params(self):
+        response = self.client.get('/api/extras/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'extras': [], 'transporte': [], 'puntos_encuentro': []})
 
 
 class EmbarcacionTests(TestCase):

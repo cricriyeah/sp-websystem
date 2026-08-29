@@ -24,6 +24,8 @@ from .models import (
     CheckoutAbandonado,
     CupoDiario,
     Reserva,
+    ReservaExtra,
+    ReservaTransporte,
     Vendedora,
 )
 from .panorama import armar_panorama
@@ -149,6 +151,40 @@ class AvisoDeReservasNuevasMixin:
         return JsonResponse({'desde': desde.isoformat(), 'nuevas': nuevas})
 
 
+class ReservaExtraInline(admin.TabularInline):
+    """Solo lectura: es historial de lo que se vendio en el checkout web, el
+    unico que congela precio (ver CrearPagoView). No se edita desde aqui
+    porque no hay un segundo mecanismo que congele precio."""
+
+    model = ReservaExtra
+    extra = 0
+    fields = ['extras_item', 'precio_unitario', 'cantidad', 'subtotal_mostrado']
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description='Subtotal')
+    def subtotal_mostrado(self, obj):
+        return obj.subtotal if obj.subtotal is not None else '—'
+
+
+class ReservaTransporteInline(admin.StackedInline):
+    model = ReservaTransporte
+    extra = 0
+    fields = ['punto_encuentro', 'direccion_personalizada', 'zona', 'numero_personas', 'precio_calculado']
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Reserva)
 class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
     list_display = [
@@ -159,12 +195,13 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
     list_filter = [
         LlegadaFilter,
         'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago', 'en_disputa',
-        'lleva_lunch', 'pide_bebidas', 'pide_transporte',
+        'pide_bebidas', 'pide_extras_whatsapp',
         'embarcacion', 'capitan', 'reembolsada',
     ]
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora']
+    inlines = [ReservaExtraInline, ReservaTransporteInline]
     # El deslinde es el registro legal de lo que acepto el cliente: se consulta,
     # no se edita (ver docs/contexto-negocio.md, seccion Legal). Las fechas y los
     # montos del cobro los sella el sistema desde Stripe: editarlos a mano
@@ -183,7 +220,10 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
 
     def get_queryset(self, request):
         # `vendedora` sale en el listado: sin esto es una consulta por fila.
-        return super().get_queryset(request).select_related('vendedora__usuario')
+        # `extras_seleccionados`/`transporte` los lee la columna `extras()`, mismo motivo.
+        return super().get_queryset(request).select_related('vendedora__usuario').prefetch_related(
+            'extras_seleccionados__extras_item', 'transporte'
+        )
 
     class Media:
         # Aviso de reservas nuevas en el listado, ver reservas_nuevas_view.
@@ -193,17 +233,18 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
 
     @admin.display(description='Extras')
     def extras(self, obj):
-        """Que pidio el cliente. Lo que va a cotizar el agente se marca en naranja:
-        son las que le faltan por resolver antes del viaje."""
-        partes = []
-        if obj.lleva_lunch:
-            partes.append(f'{obj.numero_personas} lunch')
+        """Que compro el cliente en el checkout web. Lo que va a cotizar el
+        agente se marca en naranja: son las que le faltan por resolver antes
+        del viaje."""
+        partes = [item.extras_item.nombre for item in obj.extras_seleccionados.all()]
+        if hasattr(obj, 'transporte'):
+            partes.append('transporte')
         if not obj.tiene_cotizaciones_pendientes:
             return ', '.join(partes) or '—'
 
         a_cotizar = [
             etiqueta for pedido, etiqueta in
-            ((obj.pide_bebidas, 'bebidas'), (obj.pide_transporte, 'transporte'))
+            ((obj.pide_bebidas, 'bebidas'), (obj.pide_extras_whatsapp, 'extras'))
             if pedido
         ]
         return format_html(

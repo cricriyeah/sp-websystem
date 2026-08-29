@@ -33,7 +33,7 @@ export function FaqSection({ faq }: FaqSectionProps) {
   const idBase = useId();
 
   return (
-    <section id="preguntas" className="scroll-mt-20 bg-surface py-24 lg:py-32">
+    <section id="preguntas" className="scroll-mt-24 bg-surface py-24 lg:py-32">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 sm:px-8 lg:grid-cols-[280px_1fr] lg:gap-20 lg:px-12">
         {/* La barra y el titular van envueltos: son la primera **columna** del
             grid, no dos celdas. Sueltos, la barra ocupaba la celda del titular

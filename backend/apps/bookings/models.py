@@ -10,6 +10,9 @@ from django.utils import timezone
 from apps.fleet.models import (
     Capitan,
     Embarcacion,
+    ExtrasItem,
+    PuntoEncuentro,
+    TransportePrecio,
     capacidades_disponibles,
     capacidades_por_fecha,
 )
@@ -457,16 +460,18 @@ class Reserva(models.Model):
     # verlo: una reserva en disputa no se toca hasta que Stripe resuelva.
     en_disputa = models.BooleanField(default=False, verbose_name='en disputa')
 
-    # Extras que pidio el cliente en el checkout. Se guardan aqui y no solo en el
-    # cobro porque la operacion los necesita: sin esto nadie sabe cuantos lunches
-    # preparar ni a quien hay que cotizarle un traslado.
-    #
-    # El lunch se cobra en linea (precio por persona, en `Tarifa`). Bebidas y
-    # transporte NO: su precio depende del tipo de bebida y de la distancia, asi
-    # que quedan como solicitud para que el agente las cotice aparte.
-    lleva_lunch = models.BooleanField(default=False, verbose_name='lunch')
+    # Brunch, licencia, carnada y transporte se venden con precio congelado
+    # solo por el checkout web (ver ReservaExtra/ReservaTransporte mas abajo,
+    # y CrearPagoView, que es quien los escribe). Bebidas sigue sin precio en
+    # linea: depende del tipo de bebida, no de algo que el catalogo resuelva.
     pide_bebidas = models.BooleanField(default=False, verbose_name='bebidas (a cotizar)')
-    pide_transporte = models.BooleanField(default=False, verbose_name='transporte (a cotizar)')
+
+    # Reservas que crea la vendedora fuera del checkout web (WhatsApp,
+    # telefono) no tienen forma de congelar precio de catalogo — esta pieza
+    # es web-only a proposito (ver docs/superpowers/specs/2026-08-28-extras-checkout-design.md,
+    # seccion "Que pasa con lleva_lunch"). Mismo trato simple que pide_bebidas:
+    # solo anota que el cliente quiere algo, se cotiza y cobra aparte.
+    pide_extras_whatsapp = models.BooleanField(default=False, verbose_name='extras (a cotizar, reserva manual)')
 
     # Quedan vacios hasta que la vendedora asigna manualmente desde su panel.
     embarcacion = models.ForeignKey(
@@ -513,9 +518,19 @@ class Reserva(models.Model):
     def from_db(cls, db, field_names, values):
         # Guarda la salida original para poder aplicar la regla de 48 horas en
         # clean() cuando la vendedora reprograma una reserva ya existente.
+        #
+        # Solo si fecha/hora vinieron cargadas: una consulta con campos
+        # restringidos (por ejemplo, la que arma el collector de borrado de
+        # Django al revisar el PROTECT de `vendedora`) instancia con `fecha`
+        # diferido. Leerlo aqui dispara `refresh_from_db(fields=['fecha'])`,
+        # que vuelve a llamar a `from_db()` — y si esa segunda consulta
+        # tambien viene restringida, se repite para siempre (RecursionError,
+        # visto de verdad al borrar una Vendedora con reservas).
         instance = super().from_db(db, field_names, values)
-        instance._salida_original = (instance.fecha, instance.hora)
-        instance._vendedora_original = instance.vendedora_id
+        if 'fecha' in field_names and 'hora' in field_names:
+            instance._salida_original = (instance.fecha, instance.hora)
+        if 'vendedora' in field_names or 'vendedora_id' in field_names:
+            instance._vendedora_original = instance.vendedora_id
         return instance
 
     def save(self, *args, **kwargs):
@@ -619,7 +634,7 @@ class Reserva(models.Model):
     @property
     def tiene_cotizaciones_pendientes(self):
         """Pidio algo cuyo precio no se cobro en linea y el agente debe cotizar."""
-        return self.pide_bebidas or self.pide_transporte
+        return self.pide_bebidas or self.pide_extras_whatsapp
 
     @property
     def saldo_pendiente(self):
@@ -655,6 +670,80 @@ class Reserva(models.Model):
             raise ValidationError({
                 'fecha': f'El cambio de fecha requiere al menos {HORAS_MINIMAS_CAMBIO_FECHA} horas '
                          f'de anticipacion sobre la salida original ({original[0]} {original[1]}).',
+            })
+
+
+class ReservaExtra(models.Model):
+    """Un extra del catalogo (brunch, licencia, carnada) que el cliente eligio
+    en el checkout, para esta reserva.
+
+    `precio_unitario`/`cantidad` quedan en null mientras la reserva sigue
+    `pendiente_pago`: esta fila es solo la SELECCION. El unico que congela el
+    precio es `CrearPagoView` (apps/payments/views.py), con el precio vigente
+    del catalogo al momento de pagar — asi hay un solo lugar que decide
+    cuanto cuesta algo, igual que ya pasa con `precio_total`.
+    """
+
+    reserva = models.ForeignKey(
+        Reserva, on_delete=models.CASCADE, related_name='extras_seleccionados',
+    )
+    extras_item = models.ForeignKey(ExtrasItem, on_delete=models.PROTECT)
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cantidad = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('reserva', 'extras_item')
+        verbose_name = 'extra seleccionado'
+        verbose_name_plural = 'extras seleccionados'
+
+    def __str__(self):
+        return f'{self.extras_item.nombre} — reserva {self.reserva_id}'
+
+    @property
+    def subtotal(self):
+        if self.precio_unitario is None or self.cantidad is None:
+            return None
+        return self.precio_unitario * self.cantidad
+
+
+class ReservaTransporte(models.Model):
+    """El traslado que el cliente eligio para esta reserva, si eligio uno.
+
+    `zona` es un snapshot explicito (viene del `punto_encuentro` o la elige
+    el cliente en "otra direccion"), pero cuando viene de un hotel del
+    catalogo NUNCA se confia la que mande el cliente: se deriva de
+    `punto_encuentro.zona` en el serializer, y `clean()` lo hace cumplir
+    tambien aqui — si no, alguien podria elegir un hotel de centro y mandar
+    `zona=periferia` para pagar el precio de la zona mas barata.
+
+    `numero_personas`/`precio_calculado` quedan en null hasta que se paga,
+    igual que en `ReservaExtra` — mismo dueno unico del precio, `CrearPagoView`.
+    """
+
+    reserva = models.OneToOneField(Reserva, on_delete=models.CASCADE, related_name='transporte')
+    punto_encuentro = models.ForeignKey(
+        PuntoEncuentro, on_delete=models.PROTECT, null=True, blank=True,
+    )
+    direccion_personalizada = models.CharField(max_length=255, blank=True)
+    zona = models.CharField(max_length=10, choices=TransportePrecio.Zona.choices)
+    numero_personas = models.PositiveSmallIntegerField(null=True, blank=True)
+    precio_calculado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'transporte de la reserva'
+        verbose_name_plural = 'transportes de reserva'
+
+    def __str__(self):
+        return f'Transporte de la reserva {self.reserva_id} ({self.get_zona_display()})'
+
+    def clean(self):
+        if bool(self.punto_encuentro_id) == bool(self.direccion_personalizada):
+            raise ValidationError(
+                'Elige un punto de encuentro del catalogo o escribe una direccion, no los dos ni ninguno.'
+            )
+        if self.punto_encuentro_id and self.zona != self.punto_encuentro.zona:
+            raise ValidationError({
+                'zona': 'La zona no coincide con la del punto de encuentro elegido.',
             })
 
 

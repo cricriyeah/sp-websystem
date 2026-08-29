@@ -29,7 +29,10 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
     <div className="min-h-dvh bg-background">
       <SiteHeader lang={lang} nav={dict.nav} />
 
-      <main className="mx-auto max-w-3xl px-6 py-12 sm:px-8 lg:px-12">
+      {/* SiteHeader es `fixed` y no reserva espacio: sin `--nav-alto` (ver
+          globals.css) el contenido arrancaria debajo de la barra. El 3rem es
+          la separacion que llevaba de siempre. */}
+      <main className="mx-auto max-w-3xl px-6 pt-[calc(3rem_+_var(--nav-alto))] pb-12 sm:px-8 lg:px-12">
       <LegalBackLink label={page.back} fallbackHref={`/${lang}/reservar`} />
 
       <h1 className="mt-8 font-sans text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">

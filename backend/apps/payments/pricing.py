@@ -9,11 +9,16 @@ Que se cobra en linea y que no:
 
 - Tour: precio por viaje (la reserva es de la embarcacion completa).
 - Personas extra: cargo por cada una arriba de `PERSONAS_INCLUIDAS`.
-- Lunch: precio fijo POR PERSONA. El menu es fijo (no se elige guiso), asi que
-  basta con saber cuantos van.
-- Bebidas y transporte: **no se cobran en linea**. El precio depende del tipo de
-  bebida y de la distancia del traslado, cosas que no se saben al reservar. Se
-  registran como solicitud y el agente de ventas las cotiza aparte.
+- Extras del catalogo (brunch, licencia, carnada): precio de `fleet.ExtrasItem`,
+  por persona o plano segun `cobrar_por_persona`. El precio que se congela es
+  siempre el vigente del catalogo al momento de pagar, nunca el que trae la
+  reserva desde que se armo el checkout (ver `CrearPagoView`).
+- Transporte: precio de `fleet.TransportePrecio` por zona, mas recargo desde
+  `min_personas_recargo`. Se resuelve por zona (no por distancia real) porque
+  eso es lo unico que se sabe al reservar sin depender de geocoding.
+- Bebidas: **no se cobra en linea**. El precio depende del tipo de bebida, dato
+  que no se sabe al reservar. Se registra como solicitud y el agente de ventas
+  la cotiza aparte.
 """
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -40,9 +45,26 @@ def cargo_por_personas(precio_persona_extra, numero_personas):
     return Decimal(precio_persona_extra) * personas_extra(numero_personas)
 
 
-def cargo_por_lunch(precio_lunch, numero_personas):
-    """Los lunches son uno por persona: comen todos los que van a bordo."""
-    return Decimal(precio_lunch) * numero_personas
+def cargo_por_extra(precio, cobrar_por_persona, numero_personas):
+    """Cuanto cobra un extra del catalogo (brunch, licencia, carnada) ya
+    resuelto en una moneda. `precio` es lo que ya devolvio
+    `ExtrasItem.precio_en(moneda)`: esta funcion no sabe que es un ExtrasItem,
+    solo suma. None si no hay precio en esa moneda."""
+    if precio is None:
+        return None
+    cantidad = numero_personas if cobrar_por_persona else 1
+    return Decimal(precio) * cantidad
+
+
+def cargo_por_transporte(precio_base, recargo_grupo, min_personas_recargo, numero_personas):
+    """precio_base/recargo_grupo ya resueltos en la moneda que toque (ver
+    TransportePrecio.precio_en/recargo_en). None si no hay precio base ahi."""
+    if precio_base is None:
+        return None
+    cargo = Decimal(precio_base)
+    if numero_personas >= min_personas_recargo:
+        cargo += Decimal(recargo_grupo or 0)
+    return cargo
 
 
 def monto_inicial(precio_total, forma_pago):

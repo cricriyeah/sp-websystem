@@ -5,13 +5,15 @@ webhook de Stripe ya recibio el dinero cuando esto corre) y que la copia al
 negocio salga oculta y solo cuando esta configurada.
 """
 from datetime import date, time, timedelta
+from decimal import Decimal
 from unittest import mock
 
 import requests
 from django.test import TestCase, override_settings
 
-from apps.bookings.models import Reserva
-from apps.fleet.models import Capitan, Embarcacion
+from apps.bookings.models import Reserva, ReservaExtra, ReservaTransporte
+from apps.fleet.models import Capitan, Embarcacion, ExtrasItem, PuntoEncuentro
+from apps.testing import crear_flota
 
 from .services import (
     PUNTO_DE_ENCUENTRO,
@@ -36,6 +38,23 @@ def crear_reserva():
         deslinde_aceptado=True,
         deslinde_nombre='Ana Ruiz',
     )
+
+
+def crear_reserva_guardada(**overrides):
+    """A diferencia de `crear_reserva()`, esta si queda en la base: hace falta
+    tener `pk` para poder colgarle `ReservaExtra`/`ReservaTransporte`."""
+    crear_flota()
+    datos = dict(
+        fecha=date.today() + timedelta(days=10), hora=time(6, 0), numero_personas=2,
+        nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
+        canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True, deslinde_nombre='Ana Ruiz',
+        moneda='MXN',
+    )
+    datos.update(overrides)
+    reserva = Reserva(**datos)
+    reserva.full_clean()
+    reserva.save()
+    return reserva
 
 
 def _cuerpo_enviado(post):
@@ -242,4 +261,54 @@ class EscapadoDelCorreoTests(TestCase):
         enviar_correo_confirmacion(reserva)
 
         self.assertIn('Ana O&#x27;Brien Garcia-Lopez', _cuerpo_enviado(post)['html'])
+
+
+@override_settings(**LLAVES)
+class ExtrasEnElCorreoTests(TestCase):
+    """`_cuerpo_html` lista lo que se compro en el checkout (ya pagado) y avisa
+    de lo que sigue pendiente de cotizar. Antes nada probaba esta funcion
+    porque el guard de llaves vacias corta antes de llegar a ella."""
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_lista_brunch_licencia_carnada_y_transporte_pagado(self, post):
+        reserva = crear_reserva_guardada()
+        for tipo, nombre in (('brunch', 'Brunch'), ('licencia', 'Licencia'), ('carnada', 'Carnada')):
+            item = ExtrasItem.objects.create(tipo=tipo, nombre=nombre, precio=Decimal('300'))
+            ReservaExtra.objects.create(
+                reserva=reserva, extras_item=item, precio_unitario=Decimal('300'), cantidad=2,
+            )
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        ReservaTransporte.objects.create(
+            reserva=reserva, punto_encuentro=hotel, zona='centro',
+            numero_personas=2, precio_calculado=Decimal('2000'),
+        )
+
+        self.assertTrue(enviar_correo_confirmacion(reserva))
+
+        html = _cuerpo_enviado(post)['html']
+        self.assertIn('Brunch', html)
+        self.assertIn('Licencia', html)
+        self.assertIn('Carnada', html)
+        self.assertIn('Hotel CostaBaja', html)
+        self.assertIn('ya pagado', html)
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_reserva_sin_extras_no_muestra_nada_de_mas(self, post):
+        reserva = crear_reserva_guardada()
+
+        self.assertTrue(enviar_correo_confirmacion(reserva))
+
+        html = _cuerpo_enviado(post)['html']
+        self.assertNotIn('incluido en tu pago', html)
+        self.assertIn(PUNTO_DE_ENCUENTRO, html)
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_bebidas_pendientes_avisa_sin_prometer_extras(self, post):
+        reserva = crear_reserva_guardada(pide_bebidas=True)
+
+        self.assertTrue(enviar_correo_confirmacion(reserva))
+
+        html = _cuerpo_enviado(post)['html']
+        self.assertIn('Pediste bebidas', html)
+        self.assertNotIn('Pediste bebidas y extras', html)
 

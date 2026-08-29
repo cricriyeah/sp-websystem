@@ -17,8 +17,9 @@ const TOTAL_PASOS = 4;
  *
  * Version de escritorio: los 4 pasos a la vista, con la linea entre ellos
  * rellenandose segun avanza. Version de movil: puntos + una sola etiqueta,
- * fija arriba (`top-20`, la altura del `SiteHeader`) porque sin ella fuera de
- * cuadro el cliente pierde la unica senal de "cuanto falta" que tiene.
+ * fija justo debajo del `SiteHeader` (`--nav-alto`, ver globals.css) porque
+ * sin ella fuera de cuadro el cliente pierde la unica senal de "cuanto falta"
+ * que tiene.
  */
 export function CheckoutStepper({ stepper, actual }: CheckoutStepperProps) {
   const pasos = [stepper.trip, stepper.contact, stepper.extras, stepper.payment];
@@ -26,7 +27,7 @@ export function CheckoutStepper({ stepper, actual }: CheckoutStepperProps) {
   return (
     <>
       {/* --- Movil: compacta y fija. --------------------------------------- */}
-      <div className="sticky top-20 z-30 border-b border-border bg-surface/95 px-6 py-3 backdrop-blur-sm sm:px-8 lg:hidden">
+      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-surface/95 px-6 py-3 backdrop-blur-sm sm:px-8 lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
             {pasos.map((_, i) => {

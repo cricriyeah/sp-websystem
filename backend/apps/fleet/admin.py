@@ -1,7 +1,15 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 
-from .models import Capitan, Embarcacion, EmbarcacionNoDisponible, Tarifa
+from .models import (
+    Capitan,
+    Embarcacion,
+    EmbarcacionNoDisponible,
+    ExtrasItem,
+    PuntoEncuentro,
+    Tarifa,
+    TransportePrecio,
+)
 
 
 @admin.register(Tarifa)
@@ -21,6 +29,34 @@ class TarifaAdmin(ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.actualizado_por = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(ExtrasItem)
+class ExtrasItemAdmin(ModelAdmin):
+    """Precios editables sin deploy. Sin permisos para Vendedora, mismo trato
+    que Tarifa: es informacion financiera."""
+
+    list_display = ['nombre', 'tipo', 'precio', 'precio_usd', 'cobrar_por_persona', 'preseleccionado', 'activo']
+    list_filter = ['tipo', 'activo']
+    list_editable = ['precio', 'precio_usd', 'activo']
+    search_fields = ['nombre']
+
+
+@admin.register(TransportePrecio)
+class TransportePrecioAdmin(ModelAdmin):
+    list_display = [
+        'zona', 'precio_base', 'precio_base_usd', 'recargo_grupo', 'recargo_grupo_usd',
+        'min_personas_recargo', 'activo',
+    ]
+    list_editable = ['precio_base', 'precio_base_usd', 'recargo_grupo', 'recargo_grupo_usd', 'activo']
+
+
+@admin.register(PuntoEncuentro)
+class PuntoEncuentroAdmin(ModelAdmin):
+    list_display = ['nombre', 'zona', 'activo']
+    list_filter = ['zona', 'activo']
+    list_editable = ['zona', 'activo']
+    search_fields = ['nombre']
 
 
 @admin.register(Embarcacion)

@@ -22,7 +22,7 @@ export function ReviewsSection({ nav, reviews }: ReviewsSectionProps) {
   return (
     <section
       id="resenas"
-      className="relative scroll-mt-20 overflow-hidden bg-background py-24 lg:py-32"
+      className="relative scroll-mt-24 overflow-hidden bg-background py-24 lg:py-32"
     >
       {/* Radial apagado detras de las citas, con el mismo indigo del acento:
           rompe el fondo plano sin competir con el, y se desvanece rapido en

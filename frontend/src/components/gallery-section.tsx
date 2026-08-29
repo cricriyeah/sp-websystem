@@ -15,13 +15,13 @@ type GallerySectionProps = {
  * (1 doble + 2, y 4 abajo) sin dejar huecos.
  */
 const FOTOS = [
-  '/photos/dorado-bajo-toldo.png',
-  '/photos/pesca-del-dia-cubierta.png',
-  '/photos/marlin-en-equipo.png',
-  '/photos/grupo-cabrilla-costa.png',
-  '/photos/pareja-dorados.png',
-  '/photos/cana-doblada-dorado.png',
-  '/photos/yellowtail-pelicanos-bahia.png',
+  '/photos/dorado-bajo-toldo.webp',
+  '/photos/pesca-del-dia-cubierta.webp',
+  '/photos/marlin-en-equipo.webp',
+  '/photos/grupo-cabrilla-costa.webp',
+  '/photos/pareja-dorados.webp',
+  '/photos/cana-doblada-dorado.webp',
+  '/photos/yellowtail-pelicanos-bahia.webp',
 ];
 
 /**
@@ -30,7 +30,7 @@ const FOTOS = [
  */
 export function GallerySection({ gallery }: GallerySectionProps) {
   return (
-    <section id="galeria" className="scroll-mt-20 bg-background pt-24 lg:pt-32">
+    <section id="galeria" className="scroll-mt-24 bg-background pt-24 lg:pt-32">
       <div className="mx-auto max-w-6xl px-6 pb-10 sm:px-8 lg:px-12 lg:pb-14">
         <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
         <h2 className="max-w-[16ch] text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[58px]">

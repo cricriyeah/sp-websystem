@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible
+from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible, ExtrasItem, PuntoEncuentro
 from apps.testing import ApiTestCase, crear_flota
 
 from .admin import telefono_marcable
@@ -30,6 +30,7 @@ from .models import (
     CheckoutAbandonado,
     CupoDiario,
     Reserva,
+    ReservaTransporte,
     Vendedora,
 )
 
@@ -553,6 +554,147 @@ class ReservaApiTests(ApiTestCase):
 
     def test_rechaza_mas_de_seis_personas(self):
         self.assertEqual(self.enviar(numero_personas=8).status_code, 400)
+
+
+class ExtrasYTransporteApiTests(ApiTestCase):
+    """`/api/reservas/` acepta la seleccion de extras/transporte del paso
+    Extras del checkout. Solo escribe la SELECCION — el precio lo congela
+    CrearPagoView al pagar, ver docs/superpowers/specs/2026-08-28-extras-checkout-design.md."""
+
+    CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
+
+    def payload(self, **overrides):
+        datos = {
+            'checkout_id': self.CHECKOUT_ID,
+            'fecha': str(date.today() + timedelta(days=10)),
+            'hora': '06:00',
+            'numero_personas': 2,
+            'nombre_cliente': 'Ana Ruiz',
+            'telefono_cliente': '+5216121234567',
+            'correo_cliente': 'ana@example.com',
+            'moneda': 'MXN',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Ana Ruiz',
+        }
+        datos.update(overrides)
+        return datos
+
+    def enviar(self, **overrides):
+        return self.client.post(
+            '/api/reservas/', self.payload(**overrides), content_type='application/json'
+        )
+
+    def test_selecciona_extras_sin_precio(self):
+        brunch = ExtrasItem.objects.create(tipo='brunch', nombre='Brunch', precio=Decimal('300'))
+        licencia = ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
+
+        response = self.enviar(extras=[brunch.pk, licencia.pk])
+
+        self.assertEqual(response.status_code, 201)
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        seleccionados = set(reserva.extras_seleccionados.values_list('extras_item_id', flat=True))
+        self.assertEqual(seleccionados, {brunch.pk, licencia.pk})
+        for extra in reserva.extras_seleccionados.all():
+            self.assertIsNone(extra.precio_unitario)
+            self.assertIsNone(extra.cantidad)
+
+    def test_un_extra_inactivo_no_se_puede_seleccionar(self):
+        inactivo = ExtrasItem.objects.create(
+            tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
+        )
+        self.assertEqual(self.enviar(extras=[inactivo.pk]).status_code, 400)
+
+    def test_reenviar_el_checkout_reescribe_la_seleccion_completa(self):
+        brunch = ExtrasItem.objects.create(tipo='brunch', nombre='Brunch', precio=Decimal('300'))
+        licencia = ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
+        creada = self.enviar(extras=[brunch.pk])
+
+        self.enviar(extras=[licencia.pk])
+
+        reserva = Reserva.objects.get(pk=creada.json()['id'])
+        self.assertEqual(
+            set(reserva.extras_seleccionados.values_list('extras_item_id', flat=True)), {licencia.pk}
+        )
+
+    def test_selecciona_transporte_por_punto_de_encuentro(self):
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+
+        response = self.enviar(transporte={'punto_encuentro': hotel.pk})
+
+        self.assertEqual(response.status_code, 201)
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertEqual(reserva.transporte.punto_encuentro_id, hotel.pk)
+        self.assertEqual(reserva.transporte.zona, 'centro')
+        self.assertIsNone(reserva.transporte.precio_calculado)
+
+    def test_selecciona_transporte_por_direccion_propia(self):
+        response = self.enviar(transporte={'direccion_personalizada': 'Malecon 123', 'zona': 'periferia'})
+
+        self.assertEqual(response.status_code, 201)
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertEqual(reserva.transporte.direccion_personalizada, 'Malecon 123')
+        self.assertEqual(reserva.transporte.zona, 'periferia')
+
+    def test_la_zona_de_un_hotel_no_se_puede_falsificar(self):
+        """El cliente elige un hotel de centro pero manda zona=periferia (la
+        mas barata): el servidor debe ignorar esa zona y usar la del hotel."""
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+
+        response = self.enviar(transporte={'punto_encuentro': hotel.pk, 'zona': 'periferia'})
+
+        self.assertEqual(response.status_code, 201)
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertEqual(reserva.transporte.zona, 'centro')
+
+    def test_quitar_el_transporte_borra_la_fila(self):
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        creada = self.enviar(transporte={'punto_encuentro': hotel.pk})
+
+        self.enviar(transporte=None)
+
+        reserva = Reserva.objects.get(pk=creada.json()['id'])
+        self.assertFalse(ReservaTransporte.objects.filter(reserva=reserva).exists())
+
+    def test_sin_transporte_no_crea_fila(self):
+        response = self.enviar()
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertFalse(hasattr(reserva, 'transporte'))
+
+
+class ReservaTransporteCleanTests(TestCase):
+    def setUp(self):
+        self.reserva = crear_reserva()
+
+    def test_rechaza_los_dos_vacios(self):
+        transporte = ReservaTransporte(reserva=self.reserva, zona='centro')
+        with self.assertRaises(ValidationError):
+            transporte.clean()
+
+    def test_rechaza_los_dos_con_valor(self):
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        transporte = ReservaTransporte(
+            reserva=self.reserva, punto_encuentro=hotel,
+            direccion_personalizada='Malecon 123', zona='centro',
+        )
+        with self.assertRaises(ValidationError):
+            transporte.clean()
+
+    def test_rechaza_zona_que_no_coincide_con_el_punto_de_encuentro(self):
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        transporte = ReservaTransporte(reserva=self.reserva, punto_encuentro=hotel, zona='periferia')
+        with self.assertRaises(ValidationError):
+            transporte.clean()
+
+    def test_acepta_punto_de_encuentro_con_su_propia_zona(self):
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        transporte = ReservaTransporte(reserva=self.reserva, punto_encuentro=hotel, zona='centro')
+        transporte.clean()
+
+    def test_acepta_direccion_personalizada_con_zona_elegida(self):
+        transporte = ReservaTransporte(
+            reserva=self.reserva, direccion_personalizada='Malecon 123', zona='periferia',
+        )
+        transporte.clean()
 
 
 class AtribucionDeVentaTests(ApiTestCase):
