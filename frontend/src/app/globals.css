@@ -67,18 +67,18 @@
      pantallas las que lo necesitan y ya se desincronizo una vez: quedaron con
      96px cuando la barra ya medIa 104, y el contenido arrancaba debajo de
      ella. Cambiar el alto de la barra obliga a cambiar esto, y solo esto. */
-  --nav-alto: 92px; /* top-3 (12) + h-20 (80) */
+  --nav-alto: 80px; /* top-0 + h-20 (80) en movil */
 }
 
 @media (min-width: 40rem) {
   :root {
-    --nav-alto: 96px; /* sm:top-4 (16) + h-20 (80) */
+    --nav-alto: 80px; /* top-0 + h-20 (80) en tablet */
   }
 }
 
 @media (min-width: 64rem) {
   :root {
-    --nav-alto: 104px; /* sm:top-4 (16) + lg:h-[88px] */
+    --nav-alto: 104px; /* lg:top-4 (16) + lg:h-[88px] en escritorio */
   }
 }
 

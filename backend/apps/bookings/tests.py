@@ -12,7 +12,14 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible, ExtrasItem, PuntoEncuentro
+from apps.fleet.models import (
+    Capitan,
+    CodigoPromocional,
+    Embarcacion,
+    EmbarcacionNoDisponible,
+    ExtrasItem,
+    PuntoEncuentro,
+)
 from apps.testing import ApiTestCase, crear_flota
 
 from .admin import telefono_marcable
@@ -23,8 +30,11 @@ from .models import (
     MOTIVO_LLENO,
     MOTIVO_SIN_PANGA,
     caben,
+    codigo_promocional_valido,
+    evaluar_codigo_promocional,
     motivo_sin_lugar,
     proxima_fecha_disponible,
+    validar_codigo_promocional_en_pago,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
     Agenda,
     CheckoutAbandonado,
@@ -164,6 +174,102 @@ class CambioDeFechaTests(TestCase):
         reserva.cancelada_en = timezone.now()
         reserva.reembolsada = True
         reserva.full_clean()
+
+
+class CodigoPromocionalValidoTests(TestCase):
+    def crear_codigo(self, **overrides):
+        datos = {'codigo': 'VERANO10', 'porcentaje_descuento': Decimal('10')}
+        datos.update(overrides)
+        return CodigoPromocional.objects.create(**datos)
+
+    def test_codigo_activo_sin_restricciones_es_valido(self):
+        promo = self.crear_codigo()
+        self.assertTrue(codigo_promocional_valido(promo, 'cliente@example.com'))
+
+    def test_codigo_inactivo_no_es_valido(self):
+        promo = self.crear_codigo(activo=False)
+        self.assertFalse(codigo_promocional_valido(promo, 'cliente@example.com'))
+
+    def test_antes_de_fecha_inicio_no_es_valido(self):
+        promo = self.crear_codigo(fecha_inicio=timezone.now() + timedelta(days=1))
+        self.assertFalse(codigo_promocional_valido(promo, 'cliente@example.com'))
+
+    def test_despues_de_fecha_fin_no_es_valido(self):
+        promo = self.crear_codigo(fecha_fin=timezone.now() - timedelta(days=1))
+        self.assertFalse(codigo_promocional_valido(promo, 'cliente@example.com'))
+
+    def test_no_alcanza_el_monto_minimo(self):
+        promo = self.crear_codigo(monto_minimo=Decimal('5000'))
+        self.assertFalse(codigo_promocional_valido(
+            promo, 'cliente@example.com', monto_viaje=Decimal('4000'), moneda='MXN',
+        ))
+
+    def test_alcanza_el_monto_minimo_por_moneda_separado(self):
+        promo = self.crear_codigo(monto_minimo=Decimal('5000'), monto_minimo_usd=Decimal('100'))
+        self.assertFalse(codigo_promocional_valido(
+            promo, 'cliente@example.com', monto_viaje=Decimal('4000'), moneda='MXN',
+        ))
+        self.assertTrue(codigo_promocional_valido(
+            promo, 'cliente@example.com', monto_viaje=Decimal('200'), moneda='USD',
+        ))
+
+    def test_usos_maximos_agotados_no_cuenta_pendiente_de_pago(self):
+        promo = self.crear_codigo(usos_maximos=1)
+        crear_reserva(codigo_promocional=promo)  # pendiente_pago, no ocupa cupo
+        self.assertTrue(codigo_promocional_valido(promo, 'otro@example.com'))
+
+        crear_reserva(codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
+        self.assertFalse(codigo_promocional_valido(promo, 'otro@example.com'))
+
+    def test_usos_maximos_por_cliente(self):
+        promo = self.crear_codigo(usos_maximos_por_cliente=1)
+        crear_reserva(
+            codigo_promocional=promo, estado=Reserva.Estado.PAGADA,
+            correo_cliente='repetido@example.com',
+        )
+        self.assertFalse(codigo_promocional_valido(promo, 'repetido@example.com'))
+        self.assertTrue(codigo_promocional_valido(promo, 'nuevo@example.com'))
+
+    def test_excluir_pk_no_cuenta_la_reserva_propia(self):
+        promo = self.crear_codigo(usos_maximos=1)
+        reserva = crear_reserva(codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
+        self.assertFalse(codigo_promocional_valido(promo, 'otro@example.com'))
+        self.assertTrue(codigo_promocional_valido(promo, 'otro@example.com', excluir_pk=reserva.pk))
+
+
+class EvaluarCodigoPromocionalTests(TestCase):
+    def test_codigo_vacio_devuelve_none(self):
+        self.assertIsNone(evaluar_codigo_promocional('', 'cliente@example.com'))
+
+    def test_codigo_inexistente_devuelve_none(self):
+        self.assertIsNone(evaluar_codigo_promocional('NOEXISTE', 'cliente@example.com'))
+
+    def test_normaliza_mayusculas_y_espacios(self):
+        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        promo = evaluar_codigo_promocional(' verano10 ', 'cliente@example.com')
+        self.assertIsNotNone(promo)
+        self.assertEqual(promo.codigo, 'VERANO10')
+
+    def test_codigo_invalido_devuelve_none(self):
+        CodigoPromocional.objects.create(
+            codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
+        )
+        self.assertIsNone(evaluar_codigo_promocional('VIEJO', 'cliente@example.com'))
+
+
+class ValidarCodigoPromocionalEnPagoTests(TestCase):
+    def test_codigo_valido_no_lanza(self):
+        promo = CodigoPromocional.objects.create(codigo='OK10', porcentaje_descuento=Decimal('10'))
+        validar_codigo_promocional_en_pago(promo, 'MXN', Decimal('4500'), 'cliente@example.com')
+
+    def test_codigo_agotado_lanza_con_la_clave_codigo_promocional(self):
+        promo = CodigoPromocional.objects.create(
+            codigo='AGOTADO', porcentaje_descuento=Decimal('10'), usos_maximos=1,
+        )
+        crear_reserva(codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
+        with self.assertRaises(ValidationError) as ctx:
+            validar_codigo_promocional_en_pago(promo, 'MXN', Decimal('4500'), 'otro@example.com')
+        self.assertIn('codigo_promocional', ctx.exception.message_dict)
 
 
 class CupoApiTests(ApiTestCase):
@@ -588,7 +694,7 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         brunch = ExtrasItem.objects.create(tipo='brunch', nombre='Brunch', precio=Decimal('300'))
         licencia = ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
 
-        response = self.enviar(extras=[brunch.pk, licencia.pk])
+        response = self.enviar(extras=[{'id': brunch.pk}, {'id': licencia.pk}])
 
         self.assertEqual(response.status_code, 201)
         reserva = Reserva.objects.get(pk=response.json()['id'])
@@ -597,23 +703,55 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         for extra in reserva.extras_seleccionados.all():
             self.assertIsNone(extra.precio_unitario)
             self.assertIsNone(extra.cantidad)
+            self.assertIsNone(extra.cantidad_solicitada)
 
     def test_un_extra_inactivo_no_se_puede_seleccionar(self):
         inactivo = ExtrasItem.objects.create(
             tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
         )
-        self.assertEqual(self.enviar(extras=[inactivo.pk]).status_code, 400)
+        self.assertEqual(self.enviar(extras=[{'id': inactivo.pk}]).status_code, 400)
 
     def test_reenviar_el_checkout_reescribe_la_seleccion_completa(self):
         brunch = ExtrasItem.objects.create(tipo='brunch', nombre='Brunch', precio=Decimal('300'))
         licencia = ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
-        creada = self.enviar(extras=[brunch.pk])
+        creada = self.enviar(extras=[{'id': brunch.pk}])
 
-        self.enviar(extras=[licencia.pk])
+        self.enviar(extras=[{'id': licencia.pk}])
 
         reserva = Reserva.objects.get(pk=creada.json()['id'])
         self.assertEqual(
             set(reserva.extras_seleccionados.values_list('extras_item_id', flat=True)), {licencia.pk}
+        )
+
+    def test_manda_cantidad_para_un_extra_con_cantidad_editable(self):
+        licencia = ExtrasItem.objects.create(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'), cantidad_editable=True,
+        )
+
+        response = self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 2}])
+
+        self.assertEqual(response.status_code, 201)
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        extra = reserva.extras_seleccionados.get(extras_item=licencia)
+        self.assertEqual(extra.cantidad_solicitada, 2)
+        # Sin precio ni cantidad congelados: eso sigue siendo trabajo exclusivo
+        # de CrearPagoView, la seleccion no lo adelanta.
+        self.assertIsNone(extra.cantidad)
+
+    def test_reenviar_con_otra_cantidad_actualiza_la_fila_existente(self):
+        """Cambiar la cantidad de un extra ya elegido, en un reenvio del
+        checkout, debe actualizar la fila — no perderse ni crear una segunda."""
+        licencia = ExtrasItem.objects.create(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'), cantidad_editable=True,
+        )
+        creada = self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 2}])
+
+        self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 4}])
+
+        reserva = Reserva.objects.get(pk=creada.json()['id'])
+        self.assertEqual(reserva.extras_seleccionados.count(), 1)
+        self.assertEqual(
+            reserva.extras_seleccionados.get(extras_item=licencia).cantidad_solicitada, 4,
         )
 
     def test_selecciona_transporte_por_punto_de_encuentro(self):
@@ -659,6 +797,18 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         response = self.enviar()
         reserva = Reserva.objects.get(pk=response.json()['id'])
         self.assertFalse(hasattr(reserva, 'transporte'))
+
+    def test_manda_cantidad_de_personas_para_el_transporte(self):
+        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+
+        response = self.enviar(
+            numero_personas=5, transporte={'punto_encuentro': hotel.pk, 'cantidad': 2},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        reserva = Reserva.objects.get(pk=response.json()['id'])
+        self.assertEqual(reserva.transporte.personas_solicitadas, 2)
+        self.assertIsNone(reserva.transporte.numero_personas)
 
 
 class ReservaTransporteCleanTests(TestCase):

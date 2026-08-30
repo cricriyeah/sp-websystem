@@ -38,7 +38,10 @@ class ExtrasItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ExtrasItem
-        fields = ['id', 'tipo', 'nombre', 'descripcion', 'cobrar_por_persona', 'preseleccionado', 'monto']
+        fields = [
+            'id', 'tipo', 'nombre', 'descripcion', 'cobrar_por_persona',
+            'cantidad_editable', 'preseleccionado', 'monto',
+        ]
 
     def get_monto(self, obj):
         monto = cargo_por_extra(

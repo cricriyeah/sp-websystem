@@ -63,6 +63,19 @@ class TransporteSeleccionSerializer(serializers.Serializer):
     zona = serializers.ChoiceField(
         choices=TransportePrecio.Zona.choices, required=False, allow_blank=True, default='',
     )
+    # Cuantas personas del grupo usan el transporte. None = todo el grupo (de
+    # siempre). El cargo real (y si aplica el recargo de grupo) lo decide
+    # CrearPagoView con el numero de personas ya acotado a la reserva.
+    cantidad = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=1)
+
+
+class ExtraSeleccionSerializer(serializers.Serializer):
+    """Un item del catalogo que el cliente marco, con cuantas personas lo
+    necesitan si el item tiene `cantidad_editable` (ver fleet.ExtrasItem) —
+    el backend ignora `cantidad` en los demas. None = todo el grupo."""
+
+    id = serializers.PrimaryKeyRelatedField(queryset=ExtrasItem.objects.filter(activo=True))
+    cantidad = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=1)
 
 
 class ReservaCheckoutSerializer(serializers.ModelSerializer):
@@ -90,10 +103,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     # validated_data aunque el cliente no la mande — cada envio del checkout
     # reescribe la seleccion completa, y sin el default, omitir la clave (en
     # vez de mandarla vacia) dejaria viva una seleccion vieja que ya no aplica.
-    extras = serializers.PrimaryKeyRelatedField(
-        queryset=ExtrasItem.objects.filter(activo=True), many=True,
-        required=False, default=list, write_only=True,
-    )
+    extras = ExtraSeleccionSerializer(many=True, required=False, default=list, write_only=True)
     transporte = TransporteSeleccionSerializer(
         required=False, allow_null=True, default=None, write_only=True,
     )
@@ -212,14 +222,36 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     def _sincronizar_extras(self, reserva, items_elegidos):
         """Reescribe la seleccion completa: borra lo que ya no viene, crea lo
         que falta. Mismo criterio que el resto del checkout (cada envio
-        reescribe la fila), sin precio — eso lo pone CrearPagoView al pagar."""
-        ids_elegidos = {item.pk for item in items_elegidos}
+        reescribe la fila), sin precio — eso lo pone CrearPagoView al pagar.
+
+        `items_elegidos` es una lista de `{'id': ExtrasItem, 'cantidad': int|None}`
+        (ver `ExtraSeleccionSerializer`). `cantidad` se guarda en
+        `cantidad_solicitada` incluso si el item no es `cantidad_editable` — no
+        hace daño guardarla, CrearPagoView solo la lee cuando el catalogo la
+        habilita — pero nunca se toca `precio_unitario`/`cantidad`, esos son
+        exclusivos de CrearPagoView.
+
+        No basta con crear lo que falta: si el cliente ya habia marcado un
+        extra y solo cambia la cantidad en un reenvio del checkout, la fila
+        existente debe actualizarse tambien, o el cambio se perderia en
+        silencio."""
+        ids_elegidos = {dato['id'].pk for dato in items_elegidos}
         reserva.extras_seleccionados.exclude(extras_item_id__in=ids_elegidos).delete()
-        ids_existentes = set(reserva.extras_seleccionados.values_list('extras_item_id', flat=True))
-        ReservaExtra.objects.bulk_create([
-            ReservaExtra(reserva=reserva, extras_item=item)
-            for item in items_elegidos if item.pk not in ids_existentes
-        ])
+
+        existentes = {
+            extra.extras_item_id: extra
+            for extra in reserva.extras_seleccionados.all()
+        }
+        for dato in items_elegidos:
+            item, cantidad = dato['id'], dato['cantidad']
+            extra = existentes.get(item.pk)
+            if extra is None:
+                ReservaExtra.objects.create(
+                    reserva=reserva, extras_item=item, cantidad_solicitada=cantidad,
+                )
+            elif extra.cantidad_solicitada != cantidad:
+                extra.cantidad_solicitada = cantidad
+                extra.save(update_fields=['cantidad_solicitada'])
 
     def _construir_transporte(self, reserva, datos):
         """No guarda: full_clean() se llama antes de tocar la base (junto al
@@ -241,4 +273,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         # Nunca la que mande el cliente si eligio un hotel del catalogo: se
         # deriva de ahi, o alguien podria pagar el precio de otra zona.
         transporte.zona = punto_encuentro.zona if punto_encuentro else datos.get('zona', '')
+        # Cuantas personas del grupo lo usan. None = todo el grupo (de siempre);
+        # CrearPagoView es quien la acota al numero de personas real y la congela.
+        transporte.personas_solicitadas = datos.get('cantidad')
         return transporte

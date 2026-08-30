@@ -27,6 +27,7 @@ APLICADO = 'aplicado'
 YA_APLICADO = 'ya_aplicado'
 DUPLICADO_REEMBOLSADO = 'duplicado_reembolsado'
 SIN_CUPO_REEMBOLSADO = 'sin_cupo_reembolsado'
+CODIGO_INVALIDO_REEMBOLSADO = 'codigo_invalido_reembolsado'
 SIN_RESERVA_REEMBOLSADO = 'sin_reserva_reembolsado'
 FALLO_REEMBOLSO = 'fallo_reembolso'
 
@@ -86,7 +87,12 @@ def aplicar_pago_exitoso(intent):
     try:
         reserva.full_clean()
         reserva.save()
-    except DjangoValidationError:
+    except DjangoValidationError as exc:
+        # `codigo_promocional` es la unica clave que Reserva.clean() usa para
+        # este rechazo (ver validar_codigo_promocional_en_pago) — cualquier
+        # otra cosa (cupo, deslinde, etc.) cae en el motivo generico de abajo.
+        if 'codigo_promocional' in getattr(exc, 'error_dict', {}):
+            return _cancelar_codigo_promocional_invalido(reserva, intent)
         return _cancelar_sin_cupo(reserva, intent)
 
     # El cobro ya esta hecho: una notificacion caida no debe devolver error a
@@ -155,6 +161,27 @@ def _cancelar_sin_cupo(reserva, intent):
     reserva.full_clean()
     reserva.save()
     return SIN_CUPO_REEMBOLSADO
+
+
+def _cancelar_codigo_promocional_invalido(reserva, intent):
+    """El codigo promocional se agoto, vencio o se desactivo mientras el
+    cliente pagaba. Mismo remedio que sin cupo: se devuelve el 100% y la
+    reserva queda cancelada con el motivo real, no uno prestado de cupo."""
+    if not reembolsar(intent, 'codigo promocional invalido'):
+        return FALLO_REEMBOLSO
+
+    reserva.estado = Reserva.Estado.CANCELADA
+    reserva.motivo_cancelacion = (
+        'El codigo promocional ya no era valido al confirmar el pago '
+        '(se agoto, vencio o se desactivo). Reembolso automatico.'
+    )
+    reserva.cancelada_en = timezone.now()
+    reserva.reembolsada = True
+    reserva.monto_reembolsado = de_centavos(intent['amount_received'])
+    reserva.reembolsada_en = timezone.now()
+    reserva.full_clean()
+    reserva.save()
+    return CODIGO_INVALIDO_REEMBOLSADO
 
 
 def _reserva_del_cargo(objeto):

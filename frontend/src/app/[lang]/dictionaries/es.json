@@ -377,7 +377,7 @@
     "stepper": {
       "trip": "Viaje",
       "contact": "Datos",
-      "extras": "Extras",
+      "extras": "Personalizar",
       "payment": "Pago",
       "stepOf": "Paso {current} de {total}"
     },
@@ -388,17 +388,31 @@
     "email": "Correo electrónico",
     "meetingPointLabel": "Lugar de encuentro",
     "notice": "En cuanto se confirme tu pago, un asesor de nuestro equipo te contactará en las próximas 24 horas para darte la bienvenida y compartirte todos los detalles de tu viaje: ubicación exacta, recomendaciones y el nombre de tu capitán.",
-    "extrasStepHeadline": "Extras de tu viaje",
-    "extrasConfirmQuestion": "¿Listo con tus extras?",
-    "noExtrasSelected": "Sin extras",
+    "extrasStepHeadline": "Personaliza tu viaje",
+    "extrasConfirmQuestion": "¿Todo listo con tus complementos?",
+    "continueToPayment": "Continuar al pago",
+    "noExtrasSelected": "Sin complementos seleccionados",
     "extrasPerPerson": "por persona",
     "extrasUnavailableInCurrency": "No disponible en esta moneda",
     "recommendedBadge": "Recomendado",
+    "cantidadDeLabel": "{cantidad} de {total}",
+    "extrasNames": {
+      "licencia": "Licencia de pesca",
+      "carnada": "Carnada fresca",
+      "brunch": "Paquete de brunch",
+      "otro": ""
+    },
+    "extrasDescriptions": {
+      "brunch": "Desayuno y comida. El menú cambia cada semana. Incluye bebidas (agua y refrescos) y botanas para el viaje."
+    },
     "extrasHints": {
       "licencia": "Obligatoria por ley para pescar en aguas mexicanas.",
       "carnada": "La mayoría de nuestros capitanes la recomienda para tu salida.",
       "brunch": "",
       "otro": ""
+    },
+    "licenseQuantity": {
+      "question": "¿A cuántos de tu grupo les tramitamos la licencia?"
     },
     "transporte": {
       "headline": "Transporte",
@@ -407,11 +421,16 @@
       "customOption": "Otra dirección",
       "selectHotelPlaceholder": "Elige tu hotel",
       "addressPlaceholder": "Escribe la dirección donde te recogemos",
+      "customAddressNote": "Cubre la recogida en cualquier punto de La Paz. Si tu ubicación está en la zona centro, la tarifa se ajusta al confirmar.",
       "fromPrice": "Desde {price}",
       "choose": "Elegir",
       "zoneLabel": "Zona de la dirección",
       "zoneCentro": "Centro",
       "zonePeriferia": "Periferia"
+    },
+    "transportQuantity": {
+      "question": "¿Cuántos de tu grupo usan el transporte?",
+      "finalPriceNote": "El precio final se confirma al pagar."
     },
     "waiver": {
       "accept": "He leído y acepto el",
@@ -486,6 +505,15 @@
       "depositNote": "El 70% restante se liquida cómodamente en efectivo el día de tu viaje."
     },
     "amountDueNow": "Total a pagar ahora",
+    "promoCode": {
+      "toggle": "¿Tienes un código promocional?",
+      "label": "Código promocional",
+      "placeholder": "Código",
+      "checking": "Verificando…",
+      "valid": "Código aplicado: {percent}% de descuento.",
+      "invalid": "Ese código no es válido.",
+      "discountLabel": "Descuento"
+    },
     "securityNoteBefore": "Tu pago en línea es 100% seguro. Es procesado por ",
     "securityNoteAfter": " con encriptación bancaria y los datos de tu tarjeta nunca pasan por nuestros servidores.",
     "refundNote": "Garantía de tranquilidad: si el capitán cancela por mal clima, te reembolsamos el 100% de lo pagado.",

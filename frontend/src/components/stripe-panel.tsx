@@ -6,8 +6,10 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import { Lock, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { CheckCircle } from '@phosphor-icons/react';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorBlock } from '@/components/error-block';
+import { FieldError } from '@/components/field-error';
 import { Turnstile } from '@/components/turnstile';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Moneda, Pago } from '@/lib/api';
@@ -32,6 +34,10 @@ type StripePanelProps = {
   usdDisponible: boolean;
   formaPago: 'completo' | 'anticipo';
   onFormaPagoChange: (value: 'completo' | 'anticipo') => void;
+  codigoPromocional: string;
+  onCodigoPromocionalChange: (value: string) => void;
+  promoEstado: 'idle' | 'verificando' | 'valido' | 'invalido';
+  promoPorcentaje: string | null;
   phase: Phase;
   error: string;
   pago: Pago | null;
@@ -127,6 +133,10 @@ export function StripePanel({
   usdDisponible,
   formaPago,
   onFormaPagoChange,
+  codigoPromocional,
+  onCodigoPromocionalChange,
+  promoEstado,
+  promoPorcentaje,
   phase,
   error,
   pago,
@@ -137,6 +147,10 @@ export function StripePanel({
   onCaptchaToken,
 }: StripePanelProps) {
   const stripePromise = useMemo(() => (pago ? loadStripe(pago.publishable_key) : null), [pago]);
+  // Cerrado por default: la mayoria de las reservas no lleva codigo, mismo
+  // criterio que la moneda mas abajo — una correccion disponible para quien
+  // la busca, no la primera decision del checkout.
+  const [promoAbierto, setPromoAbierto] = useState(false);
 
   return (
     <CheckoutSectionCard title={checkout.orderSummaryHeadline} variant="elevated">
@@ -222,6 +236,45 @@ export function StripePanel({
           <div className="mt-1 flex items-center justify-between text-sm">
             <span className="text-muted">{checkout.amountDueNow}</span>
             <span className="text-foreground">{amountDueNow}</span>
+          </div>
+
+          <div className="mt-3 border-t border-border pt-3">
+            {!promoAbierto && !codigoPromocional ? (
+              <button
+                type="button"
+                onClick={() => setPromoAbierto(true)}
+                className="text-xs font-medium text-muted underline underline-offset-2 transition-colors hover:text-foreground"
+              >
+                {checkout.promoCode.toggle}
+              </button>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
+                  {checkout.promoCode.label}
+                </label>
+                <input
+                  id="codigo-promocional"
+                  type="text"
+                  value={codigoPromocional}
+                  disabled={phase === 'submitting'}
+                  onChange={(e) => onCodigoPromocionalChange(e.target.value)}
+                  placeholder={checkout.promoCode.placeholder}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                />
+                {promoEstado === 'verificando' && (
+                  <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
+                )}
+                {promoEstado === 'valido' && promoPorcentaje && (
+                  <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                    <CheckCircle size={14} weight="fill" />
+                    {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje)))}
+                  </p>
+                )}
+                {promoEstado === 'invalido' && (
+                  <FieldError id="codigo-promocional-error" mensaje={checkout.promoCode.invalid} />
+                )}
+              </div>
+            )}
           </div>
         </fieldset>
       )}

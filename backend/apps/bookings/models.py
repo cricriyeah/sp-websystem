@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from apps.fleet.models import (
     Capitan,
+    CodigoPromocional,
     Embarcacion,
     ExtrasItem,
     PuntoEncuentro,
@@ -296,6 +297,86 @@ def validar_cupo_diario(fecha, personas, excluir_pk=None):
         )
 
 
+def codigo_promocional_valido(promo, correo_cliente, monto_viaje=None, moneda=None, excluir_pk=None):
+    """Si este codigo se puede aplicar ahora mismo, para este cliente y (si se
+    conoce) este monto/moneda.
+
+    Deliberadamente no dice POR QUE no aplica (inactivo, vencido, agotado, ya
+    usado por este cliente, no alcanza el minimo): distinguirlo le daria
+    pistas a quien prueba codigos al azar sobre cual de esos motivos fue.
+
+    Sin lock: quien necesita el lock antes de contar (la confirmacion del
+    pago) lo toma antes de llamar aqui, igual que `evaluar_cupo` vs
+    `validar_cupo_diario`.
+
+    Los usos se cuentan contando `Reserva` que ya lo aplicaron
+    (`ESTADOS_QUE_OCUPAN_CUPO`), no con un contador aparte — mismo principio
+    que el cupo diario y el panel de finanzas: un numero guardado a mano se
+    puede desincronizar de la reserva real, contar la reserva no.
+    """
+    if not promo.activo:
+        return False
+
+    ahora = timezone.now()
+    if promo.fecha_inicio and ahora < promo.fecha_inicio:
+        return False
+    if promo.fecha_fin and ahora > promo.fecha_fin:
+        return False
+
+    if monto_viaje is not None:
+        minimo = promo.monto_minimo_en(moneda)
+        if minimo is not None and monto_viaje < minimo:
+            return False
+
+    usados = Reserva.objects.filter(codigo_promocional=promo, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
+    if excluir_pk is not None:
+        usados = usados.exclude(pk=excluir_pk)
+
+    if promo.usos_maximos is not None and usados.count() >= promo.usos_maximos:
+        return False
+
+    if promo.usos_maximos_por_cliente is not None and correo_cliente:
+        usados_de_este_cliente = usados.filter(correo_cliente__iexact=correo_cliente.strip())
+        if usados_de_este_cliente.count() >= promo.usos_maximos_por_cliente:
+            return False
+
+    return True
+
+
+def evaluar_codigo_promocional(codigo_str, correo_cliente):
+    """Validacion en vivo, mientras el cliente escribe el codigo en el
+    checkout: sin lock y sin `monto_viaje` (extras/transporte todavia no se
+    resuelven en ese paso, asi que `monto_minimo` no se puede evaluar aqui
+    todavia — lo confirma crear-pago, que si conoce el total exacto).
+    None si el codigo no existe o no aplica; el CodigoPromocional si si.
+    """
+    if not codigo_str:
+        return None
+    try:
+        promo = CodigoPromocional.objects.get(codigo=codigo_str.strip().upper())
+    except CodigoPromocional.DoesNotExist:
+        return None
+    return promo if codigo_promocional_valido(promo, correo_cliente) else None
+
+
+def validar_codigo_promocional_en_pago(promo, moneda, monto_viaje, correo_cliente, excluir_pk=None):
+    """Revalidacion autoritativa al confirmar el pago (webhook). Toma el lock
+    de la fila del codigo antes de contar — mismo principio que
+    `bloquear_cupo_del_dia`, pero aqui si hay una fila real que bloquear (el
+    codigo, no "el dia"), asi que `select_for_update` alcanza sin necesitar
+    un advisory lock.
+
+    Lanza ValidationError con la clave `codigo_promocional` (no un mensaje
+    plano) para que `apps/payments/services.py` distinga este rechazo del de
+    cupo y cancele con el motivo real, no uno prestado.
+    """
+    promo_bloqueado = CodigoPromocional.objects.select_for_update().get(pk=promo.pk)
+    if not codigo_promocional_valido(
+        promo_bloqueado, correo_cliente, monto_viaje=monto_viaje, moneda=moneda, excluir_pk=excluir_pk,
+    ):
+        raise ValidationError({'codigo_promocional': 'El codigo promocional ya no es valido.'})
+
+
 class Vendedora(models.Model):
     """Quien vendio el viaje. Existe para saber que venta es de quien.
 
@@ -428,6 +509,20 @@ class Reserva(models.Model):
     precio_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     stripe_payment_intent_id = models.CharField(max_length=100, blank=True)
+
+    # Igual que extras/transporte: se congela en CrearPagoView, nunca antes.
+    # PROTECT porque descuento_aplicado (y precio_total) ya lo asumen —
+    # borrar el codigo dejaria reservas historicas sin de donde salio su
+    # descuento. Un codigo se desactiva (`activo=False`), no se borra.
+    codigo_promocional = models.ForeignKey(
+        'fleet.CodigoPromocional', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='reservas',
+    )
+    # Monto ya restado de precio_total (que es SIEMPRE el total final, post
+    # descuento — es lo que de verdad cobro Stripe). El subtotal antes del
+    # descuento se recupera como precio_total + descuento_aplicado, para no
+    # tener un tercer numero que pueda desincronizarse de los otros dos.
+    descuento_aplicado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     # Cuando entro el cobro con tarjeta. Es la fecha con la que ese dinero cuenta
     # en el panel de finanzas: `creado_en` es cuando el cliente abrio el checkout
@@ -578,6 +673,12 @@ class Reserva(models.Model):
     def clean(self):
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
             validar_cupo_diario(self.fecha, self.numero_personas, excluir_pk=self.pk)
+            if self.codigo_promocional_id:
+                validar_codigo_promocional_en_pago(
+                    self.codigo_promocional, self.moneda,
+                    (self.precio_total or 0) + (self.descuento_aplicado or 0),
+                    self.correo_cliente, excluir_pk=self.pk,
+                )
         if self.estado != self.Estado.CANCELADA and (self.cancelada_por_id or self.cancelada_en):
             raise ValidationError('cancelada_por/cancelada_en solo aplican cuando estado es cancelada.')
         if self.canal_origen == self.CanalOrigen.WEB and not self.deslinde_aceptado:
@@ -690,6 +791,10 @@ class ReservaExtra(models.Model):
     extras_item = models.ForeignKey(ExtrasItem, on_delete=models.PROTECT)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cantidad = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Lo que el cliente eligio en el checkout para un extra con `cantidad_editable`
+    # (ver fleet.ExtrasItem). Null = todo el grupo (comportamiento de siempre). El
+    # congelado real, `cantidad`, lo sigue poniendo solo CrearPagoView.
+    cantidad_solicitada = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         unique_together = ('reserva', 'extras_item')
@@ -726,6 +831,10 @@ class ReservaTransporte(models.Model):
     )
     direccion_personalizada = models.CharField(max_length=255, blank=True)
     zona = models.CharField(max_length=10, choices=TransportePrecio.Zona.choices)
+    # Cuantas personas del grupo eligio el cliente que usan el transporte. Null =
+    # todo el grupo (comportamiento de siempre). El congelado real, `numero_personas`,
+    # lo sigue poniendo solo CrearPagoView.
+    personas_solicitadas = models.PositiveSmallIntegerField(null=True, blank=True)
     numero_personas = models.PositiveSmallIntegerField(null=True, blank=True)
     precio_calculado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 

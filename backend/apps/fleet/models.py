@@ -1,8 +1,10 @@
 from collections import defaultdict
 from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -97,6 +99,13 @@ class ExtrasItem(models.Model):
         default=False,
         help_text='Viene marcado por defecto en el checkout (licencia y carnada).',
     )
+    cantidad_editable = models.BooleanField(
+        default=False,
+        help_text='Si esta marcado, el checkout deja elegir cuantas personas del '
+                  'grupo lo necesitan (ej. licencia: alguien puede ya traer la suya '
+                  'tramitada aparte), en vez de aplicarlo a todo el grupo. Solo tiene '
+                  'sentido junto con "Cobrar por persona".',
+    )
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -106,6 +115,13 @@ class ExtrasItem(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def clean(self):
+        if self.cantidad_editable and not self.cobrar_por_persona:
+            raise ValidationError({
+                'cantidad_editable': 'No tiene sentido sin "Cobrar por persona": un '
+                                     'precio plano no se reparte por cantidad de gente.',
+            })
 
     def precio_en(self, moneda):
         return self.precio if moneda == 'MXN' else self.precio_usd
@@ -162,6 +178,76 @@ class PuntoEncuentro(models.Model):
 
     def __str__(self):
         return f'{self.nombre} ({self.get_zona_display()})'
+
+
+class CodigoPromocional(models.Model):
+    """Codigo de descuento aplicable en el checkout. Editable solo por jefes —
+    es dato financiero, igual que `Tarifa` y `ExtrasItem`: la vendedora no
+    tiene permisos sobre este modelo (ver `setup_roles`).
+
+    El descuento se calcula y se aplica siempre en el servidor
+    (`apps/payments/pricing.py`); el checkout nunca manda mas que el string
+    del codigo. Sin tabla de auditoria de usos aparte a proposito: cada uso
+    ya deja su rastro en la `Reserva` que lo aplico
+    (`bookings.Reserva.codigo_promocional`), mismo principio que ya usa el
+    cupo diario (`ESTADOS_QUE_OCUPAN_CUPO`) y el panel de finanzas — un libro
+    paralelo de usos solo puede acabar descuadrado con la reserva real. Ver
+    `apps/bookings/models.py` (`codigo_promocional_valido`) para donde se
+    cuentan esos usos.
+    """
+
+    codigo = models.CharField(max_length=20, unique=True)
+    descripcion = models.CharField(
+        max_length=200, blank=True, help_text='Uso interno, no se muestra al cliente.'
+    )
+    porcentaje_descuento = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01')), MaxValueValidator(Decimal('100'))],
+    )
+    activo = models.BooleanField(default=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True, help_text='Vacio = vigente desde ya.')
+    fecha_fin = models.DateTimeField(null=True, blank=True, help_text='Vacio = sin fecha de expiracion.')
+    usos_maximos = models.PositiveIntegerField(null=True, blank=True, help_text='Vacio = sin limite.')
+    usos_maximos_por_cliente = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text='Por correo del cliente. Vacio = sin limite.',
+    )
+    # Dos campos, no uno con tipo de cambio: mismo patron que Tarifa.precio/
+    # precio_usd — el negocio fija cada minimo a mano, sin conversion (ver
+    # docs/contexto-negocio.md, pesos y dolares nunca se suman).
+    monto_minimo = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Minimo en pesos para que aplique. Vacio = sin minimo.',
+    )
+    monto_minimo_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Minimo en dolares. Vacio = sin minimo en esa moneda.',
+    )
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+        verbose_name = 'codigo promocional'
+        verbose_name_plural = 'codigos promocionales'
+
+    def __str__(self):
+        return self.codigo
+
+    def save(self, *args, **kwargs):
+        # Normalizado aqui (no solo en el form del admin) para que tambien
+        # quede consistente si algo lo crea desde el shell o un fixture.
+        self.codigo = self.codigo.strip().upper()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        if self.fecha_inicio and self.fecha_fin and self.fecha_inicio >= self.fecha_fin:
+            raise ValidationError({'fecha_fin': 'Debe ser posterior a la fecha de inicio.'})
+
+    def monto_minimo_en(self, moneda):
+        return self.monto_minimo if moneda == 'MXN' else self.monto_minimo_usd
 
 
 class Embarcacion(models.Model):

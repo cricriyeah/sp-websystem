@@ -1,8 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CaretDown, EnvelopeSimple, Lock, Phone, User, Warning } from '@phosphor-icons/react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CaretDown,
+  EnvelopeSimple,
+  Lock,
+  Minus,
+  Phone,
+  Plus,
+  User,
+  Warning,
+} from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AmenitiesReminder, type ExtraPendiente } from '@/components/amenities-reminder';
@@ -25,8 +36,10 @@ import {
   getEstadoReserva,
   getExtras,
   guardarReserva,
+  validarCodigoPromocional,
   type CatalogoExtras,
   type EstadoReservaPagada,
+  type ExtraCatalogo,
   type Moneda,
   type Pago,
   type Tarifa,
@@ -82,16 +95,34 @@ const CLAVE_CHECKOUT_ID = 'salysol:checkout-id';
  * asociada (ver el efecto de recuperacion mas abajo). Una pestana nueva
  * siempre genera un id nuevo y `recuperable` sale en `false`: no hay nada que
  * buscar y no tiene sentido gastar la peticion.
+ *
+ * NOTA: sessionStorage se lee en un useLayoutEffect para evitar el mismatch de
+ * hidratacion. El useState initializer corre tanto en SSR como en el cliente; si
+ * accede a sessionStorage ahi, el servidor devuelve {id:'',recuperable:false} y
+ * el cliente encuentra un id guardado y devuelve otro valor — React lo detecta
+ * como mismatch y tumba el arbol entero. Al arrancar con null en ambos lados y
+ * leer sessionStorage despues del montaje, SSR y cliente parten del mismo punto.
  */
 function useCheckoutId() {
-  const [value] = useState(() => {
-    if (typeof window === 'undefined') return { id: '', recuperable: false };
+  // null = aun no se ha leido sessionStorage (estado transitorio solo del cliente
+  // antes del primer paint). Se resuelve en el useLayoutEffect de abajo.
+  const [value, setValue] = useState<{ id: string; recuperable: boolean } | null>(null);
+
+  // useLayoutEffect corre antes del primer paint visible: el componente padre
+  // puede leer `recuperable` antes de renderizar la pantalla de carga inicial,
+  // igual que antes. No se usa useEffect (que corre despues del paint) para
+  // evitar un flash de la pantalla equivocada en reconexiones.
+  useLayoutEffect(() => {
     const guardado = window.sessionStorage.getItem(CLAVE_CHECKOUT_ID);
-    if (guardado) return { id: guardado, recuperable: true };
+    if (guardado) {
+      setValue({ id: guardado, recuperable: true });
+      return;
+    }
     const nuevo = crypto.randomUUID();
     window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
-    return { id: nuevo, recuperable: false };
-  });
+    setValue({ id: nuevo, recuperable: false });
+  }, []);
+
   return value;
 }
 
@@ -176,7 +207,11 @@ export function CheckoutView({
   queryOverride,
 }: CheckoutViewProps) {
   const { checkout, booking, nav } = dict;
-  const { id: checkoutId, recuperable } = useCheckoutId();
+  // null mientras sessionStorage todavia no se ha leido (solo dura hasta el
+  // primer useLayoutEffect del cliente — ver useCheckoutId).
+  const checkoutIdValue = useCheckoutId();
+  const checkoutId = checkoutIdValue?.id ?? '';
+  const recuperable = checkoutIdValue?.recuperable ?? false;
 
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
@@ -216,7 +251,12 @@ export function CheckoutView({
   const [transporteModo, setTransporteModo] = useState<'ninguno' | 'punto' | 'direccion'>('ninguno');
   const [puntoEncuentroId, setPuntoEncuentroId] = useState<number | null>(null);
   const [direccionPersonalizada, setDireccionPersonalizada] = useState('');
-  const [zonaTransporte, setZonaTransporte] = useState<Zona>('centro');
+  // Cuantas personas eligio el cliente para un extra con `cantidad_editable`
+  // (ver ExtraCatalogo) — solo importa para esos, id de ExtrasItem -> cantidad.
+  // Ausente = todo el grupo, mismo comportamiento que un extra sin este control.
+  const [cantidadesExtras, setCantidadesExtras] = useState<Record<number, number>>({});
+  // Cuantas personas usan el transporte. `null` = todo el grupo (de siempre).
+  const [personasTransporte, setPersonasTransporte] = useState<number | null>(null);
   /**
    * En que quedo el efecto de recuperacion, para que los extras
    * preseleccionados del catalogo (licencia, carnada) no compitan con una
@@ -229,8 +269,12 @@ export function CheckoutView({
    * normal: la reserva vieja ya se pago o nunca existio— nadie aplicaba los
    * defaults y el paso de Extras arrancaba vacio para siempre.
    */
+  // 'pendiente' como estado inicial es conservador: si el useLayoutEffect
+  // descubre que no hay sessionStorage, lo cambia a 'sin-reserva' de inmediato.
+  // Esto evita que el codigo de extras asuma defaults antes de saber si hay
+  // una reserva que recuperar.
   const [recuperacion, setRecuperacion] = useState<'pendiente' | 'sin-reserva' | 'repuesta'>(
-    recuperable ? 'pendiente' : 'sin-reserva',
+    'pendiente',
   );
   const [formaPago, setFormaPago] = useState<'completo' | 'anticipo'>('completo');
   const { mostrar: avisar } = useToast();
@@ -241,15 +285,27 @@ export function CheckoutView({
   const refPhone = useRef<HTMLInputElement>(null);
   const refFullName = useRef<HTMLInputElement>(null);
   const refEmail = useRef<HTMLInputElement>(null);
+  const refStripePanel = useRef<HTMLDivElement>(null);
   const refsContacto: Record<CampoContacto, React.RefObject<HTMLInputElement | null>> = {
     phone: refPhone,
     fullName: refFullName,
     email: refEmail,
   };
   const [waiverAccepted, setWaiverAccepted] = useState(false);
-  const [phase, setPhase] = useState<Phase>(
-    recuperable ? 'recuperando' : tarifa ? 'form' : 'unavailable',
-  );
+  // La fase inicial se decide en el useLayoutEffect de abajo, una vez que
+  // checkoutIdValue esta disponible. Antes de eso se usa 'recuperando' como
+  // pantalla de espera neutral — muestra el spinner de "buscando tu reserva"
+  // sin comprometer nada hasta saber si hay sessionStorage que recuperar.
+  const [phase, setPhase] = useState<Phase>('recuperando');
+  const phaseInicializada = useRef(false);
+  useLayoutEffect(() => {
+    // Solo se ejecuta una vez, cuando checkoutIdValue pasa de null a un valor
+    // real. A partir de ahi la logica de recuperacion toma el control.
+    if (checkoutIdValue === null || phaseInicializada.current) return;
+    phaseInicializada.current = true;
+    setPhase(recuperable ? 'recuperando' : tarifa ? 'form' : 'unavailable');
+    setRecuperacion(recuperable ? 'pendiente' : 'sin-reserva');
+  }, [checkoutIdValue, recuperable, tarifa]);
   const [error, setError] = useState('');
   // Monto real cobrado, cuando la confirmacion viene de una reserva recuperada
   // (ver el efecto de abajo) en vez de un pago recien hecho en esta misma
@@ -266,7 +322,14 @@ export function CheckoutView({
   // esto — el formateo real ocurre despues, al construir `lineasExtrasRecuperadas`.
   const [recuperadoExtras, setRecuperadoExtras] = useState<EstadoReservaPagada['extras']>([]);
   const [recuperadoTransporteMonto, setRecuperadoTransporteMonto] = useState<number | null>(null);
+  const [recuperadoCodigoPromocional, setRecuperadoCodigoPromocional] = useState<string | null>(null);
+  const [recuperadoDescuento, setRecuperadoDescuento] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
+  const [codigoPromocional, setCodigoPromocional] = useState('');
+  const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>(
+    'idle',
+  );
+  const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
   const [recordatorioAbierto, setRecordatorioAbierto] = useState(false);
   const [pagoProcesando, setPagoProcesando] = useState(false);
   // Dia sin lugar para este grupo, con la alternativa que ofrece el backend.
@@ -320,6 +383,51 @@ export function CheckoutView({
     })();
   }, [day, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice]);
 
+  const promoCheckId = useRef(0);
+
+  // El estado deriva del tecleo mismo (idle/verificando), aqui en el handler y
+  // no en el efecto de abajo: poner un setState sincrono en el cuerpo de un
+  // efecto dispara un render en cascada. El efecto solo hace lo que si
+  // necesita esperar — la llamada de red con debounce.
+  const onCodigoPromocionalChange = (value: string) => {
+    setCodigoPromocional(value);
+    setPromoEstado(value.trim() ? 'verificando' : 'idle');
+    if (!value.trim()) setPromoPorcentaje(null);
+  };
+
+  // Con debounce (no en cada tecla): a diferencia de `getCupo`, este si depende
+  // de texto libre. La respuesta es solo informativa — `crear-pago` vuelve a
+  // validar el codigo con el subtotal real (ver apps/payments/views.py) — asi
+  // que un fallo de red aqui no debe bloquear nada, solo deja el campo sin
+  // confirmar.
+  useEffect(() => {
+    const codigo = codigoPromocional.trim();
+    if (!codigo) return;
+
+    const checkId = ++promoCheckId.current;
+
+    const timer = setTimeout(async () => {
+      let resultado;
+      try {
+        resultado = await validarCodigoPromocional(codigo, contact.email);
+      } catch {
+        if (promoCheckId.current === checkId) setPromoEstado('idle');
+        return;
+      }
+      if (promoCheckId.current !== checkId) return;
+
+      if (resultado.valido) {
+        setPromoEstado('valido');
+        setPromoPorcentaje(resultado.porcentaje_descuento);
+      } else {
+        setPromoEstado('invalido');
+        setPromoPorcentaje(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [codigoPromocional, contact.email]);
+
   /**
    * Catalogo de extras con el monto ya resuelto por el servidor para
    * `people`/`moneda` — la web nunca reimplementa si un extra cobra por
@@ -362,10 +470,22 @@ export function CheckoutView({
       ? catalogo.extras.filter((e) => e.preseleccionado).map((e) => e.id)
       : []);
 
-  const alternarExtra = (id: number, marcado: boolean) =>
+  const alternarExtra = (id: number, marcado: boolean) => {
     setExtrasElegidos(
       marcado ? [...extrasSeleccionados, id] : extrasSeleccionados.filter((x) => x !== id),
     );
+    // Sin cantidad elegida no pasa nada (se deriva "todo el grupo" por
+    // default), pero al desmarcar se limpia para no arrastrar un numero de
+    // una eleccion anterior si el cliente lo vuelve a marcar despues.
+    if (!marcado) {
+      setCantidadesExtras((actual) => {
+        if (!(id in actual)) return actual;
+        const resto = { ...actual };
+        delete resto[id];
+        return resto;
+      });
+    }
+  };
 
   // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
   const usdDisponible = tarifa?.precio_usd != null;
@@ -380,27 +500,66 @@ export function CheckoutView({
   const transporteCatalogo = catalogo?.transporte ?? [];
   const puntosEncuentro = catalogo?.puntos_encuentro ?? [];
 
-  const extrasSeleccionadosItems = extrasCatalogo.filter((e) => extrasSeleccionados.includes(e.id));
-  // `monto` ya viene TOTAL para el grupo (ver apps/fleet/serializers.py,
-  // ExtrasItemSerializer.get_monto): aqui solo se suma, nunca se recalcula si
-  // cobra por persona o no.
-  const cargoExtras = extrasSeleccionadosItems.reduce(
-    (acc, e) => acc + (e.monto != null ? Number(e.monto) : 0),
-    0,
-  );
+  const getNombreExtra = (e: { tipo?: string; nombre: string }) =>
+    (e.tipo && (checkout.extrasNames as Record<string, string>)?.[e.tipo]) || e.nombre;
 
-  // La zona del traslado: la del hotel elegido, o la que el cliente escribio
-  // a mano con "otra direccion". Sin ninguna de las dos, sin transporte.
+  const getDescripcionExtra = (e: { tipo?: string; descripcion?: string }) =>
+    (e.tipo && (checkout.extrasDescriptions as Record<string, string>)?.[e.tipo]) || e.descripcion;
+
+  const extrasSeleccionadosItems = extrasCatalogo.filter((e) => extrasSeleccionados.includes(e.id));
+
+  // "2 de 5": misma leyenda para el extra con cantidad editable y para el
+  // transporte, para que las dos digan la cantidad elegida de la misma forma.
+  const deLabel = (cantidad: number, total: number) =>
+    checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(total));
+
+  // Cuantas personas lleva ESTE extra. Solo se aparta de `people` (todo el
+  // grupo, el comportamiento de siempre) si el item es `cantidad_editable`
+  // (ej. licencia: alguien puede ya traer la suya tramitada aparte) y el
+  // cliente eligio menos — acotado por si `people` bajo despues de elegirla.
+  const cantidadDeExtra = (item: ExtraCatalogo) =>
+    item.cantidad_editable ? Math.min(cantidadesExtras[item.id] ?? people, people) : people;
+
+  const ajustarCantidadExtra = (item: ExtraCatalogo, delta: number) =>
+    setCantidadesExtras((actual) => {
+      const actualCantidad = Math.min(actual[item.id] ?? people, people);
+      return { ...actual, [item.id]: Math.min(people, Math.max(1, actualCantidad + delta)) };
+    });
+
+  // `monto` viene TOTAL para el grupo completo (ver apps/fleet/serializers.py,
+  // ExtrasItemSerializer.get_monto). Para uno `cantidad_editable` se
+  // reescala al precio unitario (monto/people) por la cantidad elegida, que
+  // puede ser menor al grupo — para los demas se suma tal cual, como siempre.
+  const cargoExtras = extrasSeleccionadosItems.reduce((acc, e) => {
+    if (e.monto == null) return acc;
+    const monto = Number(e.monto);
+    if (!e.cantidad_editable) return acc + monto;
+    return acc + (monto / people) * cantidadDeExtra(e);
+  }, 0);
+
+  // La zona del traslado: la del hotel elegido, o siempre 'periferia' si el cliente escribio
+  // a mano con "otra direccion" (para cubrir toda la zona de La Paz con tarifa fija clara).
   const zonaTransporteActual: Zona | null =
     transporteModo === 'punto'
       ? (puntosEncuentro.find((p) => p.id === puntoEncuentroId)?.zona ?? null)
       : transporteModo === 'direccion'
-        ? zonaTransporte
+        ? 'periferia'
         : null;
   const transportePrecio = zonaTransporteActual
     ? (transporteCatalogo.find((t) => t.zona === zonaTransporteActual) ?? null)
     : null;
   const cargoTransporte = transportePrecio?.monto != null ? Number(transportePrecio.monto) : 0;
+  // Acotado al grupo actual, igual que `cantidadDeExtra`. El precio mostrado
+  // arriba sigue siendo el del catalogo para el grupo completo a proposito
+  // (el recargo de transporte no escala linealmente, ver
+  // apps/payments/pricing.py) — esto solo es lo que se manda al elegir.
+  const personasTransporteEfectivo = Math.min(personasTransporte ?? people, people);
+
+  const ajustarPersonasTransporte = (delta: number) =>
+    setPersonasTransporte((actual) => {
+      const actualCantidad = Math.min(actual ?? people, people);
+      return Math.min(people, Math.max(1, actualCantidad + delta));
+    });
 
   /**
    * Las tres formas de resolver el traslado, cada una con el control que le
@@ -461,7 +620,7 @@ export function CheckoutView({
       valor: 'direccion',
       etiqueta: checkout.transporte.customOption,
       panel: (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="text-muted">{checkout.transporte.addressPlaceholder}</span>
             <input
@@ -472,41 +631,9 @@ export function CheckoutView({
               className="w-full border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent disabled:opacity-60"
             />
           </label>
-
-          {/* Cada zona con su precio: sin el, elegir entre "centro" y
-              "periferia" es adivinar cual le toca y cuanto cambia el total. */}
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="mb-1.5 text-sm text-muted">{checkout.transporte.zoneLabel}</legend>
-            <div className="grid grid-cols-2 gap-2">
-              {(['centro', 'periferia'] as const).map((z) => {
-                const precioZona = transporteCatalogo.find((t) => t.zona === z);
-                return (
-                  <label
-                    key={z}
-                    className="flex cursor-pointer items-center gap-2 border border-border px-3 py-2.5 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
-                  >
-                    <input
-                      type="radio"
-                      name="zona-transporte"
-                      checked={zonaTransporte === z}
-                      onChange={() => setZonaTransporte(z)}
-                      className="h-4 w-4 shrink-0 accent-accent"
-                    />
-                    <span className="min-w-0 flex-1">
-                      {z === 'centro'
-                        ? checkout.transporte.zoneCentro
-                        : checkout.transporte.zonePeriferia}
-                      {precioZona?.monto != null && (
-                        <span className="block text-xs text-muted">
-                          {currency.format(Number(precioZona.monto))}
-                        </span>
-                      )}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
+          <p className="text-xs leading-relaxed text-muted">
+            {checkout.transporte.customAddressNote}
+          </p>
         </div>
       ),
     },
@@ -526,7 +653,7 @@ export function CheckoutView({
    */
   const extrasPendientes: ExtraPendiente[] = extrasCatalogo
     .filter((e) => !extrasSeleccionados.includes(e.id) && e.monto !== null)
-    .map((e) => ({ id: e.id, nombre: e.nombre, monto: currency.format(Number(e.monto)) }));
+    .map((e) => ({ id: e.id, nombre: getNombreExtra(e), monto: currency.format(Number(e.monto)) }));
 
   /**
    * El traslado tambien cuenta como algo que le falta al cliente, pero no
@@ -563,20 +690,43 @@ export function CheckoutView({
   const personasExtra = Math.max(0, people - personasIncluidas);
   const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
 
+  const subtotalSinDescuento =
+    tourPrice === null ? null : tourPrice + cargoPersonas + cargoExtras + cargoTransporte;
+
+  // Solo informativo (redondeo igual al de `cargo_por_descuento` en
+  // apps/payments/pricing.py): el monto real lo congela `crear-pago` sobre el
+  // subtotal exacto, este puede diferir por centavos de redondeo.
+  const descuentoPromocional =
+    subtotalSinDescuento !== null && promoEstado === 'valido' && promoPorcentaje
+      ? Math.min(
+          subtotalSinDescuento,
+          Math.round(subtotalSinDescuento * (Number(promoPorcentaje) / 100) * 100) / 100,
+        )
+      : 0;
+
   /**
-   * Las lineas de lo que se compro aparte del viaje. Se arman una sola vez y
-   * las usan los dos lugares que las enseñan — el resumen de pago y el ticket
-   * de la confirmacion — para que no puedan decir cosas distintas.
+   * Las lineas de lo que se compro aparte del viaje (mas el descuento, si
+   * aplica). Se arman una sola vez y las usan los dos lugares que las
+   * enseñan — el resumen de pago y el ticket de la confirmacion — para que
+   * no puedan decir cosas distintas.
    */
   const lineasExtras = [
     ...extrasSeleccionadosItems
       .filter((e) => e.monto != null)
       .map((e) => {
         const totalExtra = Number(e.monto);
+        const nombreTraducido = getNombreExtra(e);
+        if (e.cantidad_editable) {
+          const cantidad = cantidadDeExtra(e);
+          return {
+            label: `${nombreTraducido} (${deLabel(cantidad, people)})`,
+            amount: currency.format((totalExtra / people) * cantidad),
+          };
+        }
         return {
           label: e.cobrar_por_persona
-            ? `${e.nombre} (${people} × ${currency.format(totalExtra / people)})`
-            : e.nombre,
+            ? `${nombreTraducido} (${people} × ${currency.format(totalExtra / people)})`
+            : nombreTraducido,
           amount: currency.format(totalExtra),
         };
       }),
@@ -588,18 +738,36 @@ export function CheckoutView({
           },
         ]
       : []),
+    ...(descuentoPromocional > 0
+      ? [
+          {
+            label: `${checkout.promoCode.discountLabel} (${codigoPromocional.trim().toUpperCase()})`,
+            amount: `-${currency.format(descuentoPromocional)}`,
+          },
+        ]
+      : []),
   ];
 
   /**
    * Mismo formato que `lineasExtras`, pero a partir del desglose ya congelado
    * que trae una reserva recuperada (ver `EstadoReservaPagada`) — no del
-   * catalogo vigente, que puede haber cambiado de precio desde entonces.
+   * catalogo vigente, que puede haber cambiado de precio desde entonces. El
+   * descuento tambien viene ya congelado: el % vigente del codigo hoy podria
+   * ser otro.
    */
   const lineasExtrasRecuperadas = [
     ...recuperadoExtras
       .filter((e) => e.monto != null)
       .map((e) => {
         const totalExtra = Number(e.monto);
+        // `cantidad` ya es la congelada real: si vino menor al grupo, este
+        // extra tenia `cantidad_editable` y el cliente pidio menos.
+        if (e.cantidad !== null && e.cantidad !== people) {
+          return {
+            label: `${e.nombre} (${deLabel(e.cantidad, people)})`,
+            amount: currency.format(totalExtra),
+          };
+        }
         return {
           label: e.cobrar_por_persona
             ? `${e.nombre} (${people} × ${currency.format(totalExtra / people)})`
@@ -609,6 +777,14 @@ export function CheckoutView({
       }),
     ...(recuperadoTransporteMonto !== null
       ? [{ label: checkout.transporte.headline, amount: currency.format(recuperadoTransporteMonto) }]
+      : []),
+    ...(recuperadoDescuento !== null
+      ? [
+          {
+            label: `${checkout.promoCode.discountLabel} (${recuperadoCodigoPromocional})`,
+            amount: `-${currency.format(recuperadoDescuento)}`,
+          },
+        ]
       : []),
   ];
 
@@ -628,7 +804,7 @@ export function CheckoutView({
           ...lineasExtras,
         ];
 
-  const total = tourPrice === null ? null : tourPrice + cargoPersonas + cargoExtras + cargoTransporte;
+  const total = subtotalSinDescuento === null ? null : subtotalSinDescuento - descuentoPromocional;
   const amountDueNow =
     total === null ? null : formaPago === 'completo' ? total : Math.round(total * 0.3 * 100) / 100;
 
@@ -669,6 +845,11 @@ export function CheckoutView({
    * durante la vida del componente.
    */
   useEffect(() => {
+    // Espera a que useLayoutEffect resuelva sessionStorage antes de decidir
+    // si hay algo que recuperar. Sin esta guarda, el efecto corria con
+    // recuperable=false (el default de null) y dejaba phase en 'recuperando'
+    // para siempre.
+    if (checkoutIdValue === null) return;
     if (!recuperable) return;
     let cancelado = false;
 
@@ -706,6 +887,10 @@ export function CheckoutView({
         setRecuperadoTransporteMonto(
           estado.transporte?.monto != null ? Number(estado.transporte.monto) : null,
         );
+        setRecuperadoCodigoPromocional(estado.codigo_promocional);
+        setRecuperadoDescuento(
+          estado.descuento_aplicado !== null ? Number(estado.descuento_aplicado) : null,
+        );
         // Esta pantalla no tiene paso de Extras que precargar, pero el efecto
         // de los defaults no puede quedarse esperando un veredicto que nunca
         // llega: si el cliente vuelve a reservar en esta misma pestana, el
@@ -736,17 +921,25 @@ export function CheckoutView({
           email: estado.correo_cliente,
         });
         setMoneda(estado.moneda);
-        setExtrasElegidos(estado.extras);
+        setExtrasElegidos(estado.extras.map((e) => e.id));
+        // Cantidad ya elegida para un extra con `cantidad_editable` (ver
+        // ExtraCatalogo) — sin esto, recargar la pagina la borraria en silencio.
+        setCantidadesExtras(
+          Object.fromEntries(
+            estado.extras.filter((e) => e.cantidad != null).map((e) => [e.id, e.cantidad as number]),
+          ),
+        );
         // Lo que el cliente ya habia elegido gana sobre los recomendados del
         // catalogo (ver el efecto de los defaults, mas arriba).
         setRecuperacion('repuesta');
         if (estado.transporte?.punto_encuentro) {
           setTransporteModo('punto');
           setPuntoEncuentroId(estado.transporte.punto_encuentro);
+          setPersonasTransporte(estado.transporte.cantidad);
         } else if (estado.transporte) {
           setTransporteModo('direccion');
           setDireccionPersonalizada(estado.transporte.direccion_personalizada);
-          setZonaTransporte(estado.transporte.zona);
+          setPersonasTransporte(estado.transporte.cantidad);
         } else {
           setTransporteModo('ninguno');
         }
@@ -767,7 +960,7 @@ export function CheckoutView({
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [checkoutIdValue]);
 
   /**
    * Borra el `checkout_id` de esta pestana al salir de la confirmacion — pero
@@ -911,13 +1104,21 @@ export function CheckoutView({
         deslinde_nombre: contact.fullName.trim(),
         // La seleccion viaja con la reserva, sin precio: crear-pago la congela
         // con el catalogo vigente al pagar (ver backend/apps/bookings/serializers.py).
-        extras: extrasSeleccionados,
+        // `cantidad` solo se manda si el item la deja elegir (ver ExtraCatalogo).
+        extras: extrasSeleccionados.map((id) => {
+          const item = extrasCatalogo.find((e) => e.id === id);
+          return { id, cantidad: item?.cantidad_editable ? cantidadDeExtra(item) : undefined };
+        }),
         transporte:
           transporteModo === 'ninguno'
             ? null
             : transporteModo === 'punto'
-              ? { punto_encuentro: puntoEncuentroId }
-              : { direccion_personalizada: direccionPersonalizada.trim(), zona: zonaTransporte },
+              ? { punto_encuentro: puntoEncuentroId, cantidad: personasTransporteEfectivo }
+              : {
+                  direccion_personalizada: direccionPersonalizada.trim(),
+                  zona: 'periferia',
+                  cantidad: personasTransporteEfectivo,
+                },
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         captcha_token: captchaToken.current,
@@ -928,6 +1129,11 @@ export function CheckoutView({
       const pagoResponse = await crearPago(reserva.id, {
         checkout_id: checkoutId,
         forma_pago: formaPago,
+        // Solo si la validacion en vivo lo dio por bueno; `crear-pago` lo
+        // vuelve a validar de todos modos con el subtotal real (ver
+        // apps/payments/views.py, `_resolver_codigo_promocional`).
+        codigo_promocional:
+          promoEstado === 'valido' ? codigoPromocional.trim().toUpperCase() : undefined,
       });
 
       setPago(pagoResponse);
@@ -941,6 +1147,16 @@ export function CheckoutView({
       setRecordatorioAbierto(false);
       if (err instanceof ApiError && err.status === 503) {
         setPhase('unavailable');
+        return;
+      }
+      // El codigo paso la validacion en vivo pero crear-pago lo rechazo con el
+      // subtotal real (se agoto justo ahora, o vencio mientras el cliente
+      // llenaba el formulario). Se marca invalido para que reintentar sin el
+      // codigo funcione al primer intento, en vez de repetir el mismo 400.
+      if (err instanceof ApiError && err.status === 400 && promoEstado === 'valido') {
+        setPromoEstado('invalido');
+        setError(checkout.promoCode.invalid);
+        setPhase('error');
         return;
       }
       setError(mensajeDeError(err, checkout, dict.feedback));
@@ -1313,7 +1529,7 @@ export function CheckoutView({
                 title={checkout.extrasStepHeadline}
                 estado={colapsado3 ? 'completado' : pasoEditando === 3 ? 'editando' : 'activo'}
                 resumen={
-                  [...extrasSeleccionadosItems.map((e) => e.nombre), ...(transporteModo !== 'ninguno' ? [checkout.transporte.headline] : [])].join(', ') ||
+                  [...extrasSeleccionadosItems.map((e) => getNombreExtra(e)), ...(transporteModo !== 'ninguno' ? [checkout.transporte.headline] : [])].join(', ') ||
                   checkout.noExtrasSelected
                 }
                 actionLabel={
@@ -1327,44 +1543,78 @@ export function CheckoutView({
               >
                 <div className="flex flex-col gap-2">
                   {extrasCatalogo.map((item) => (
-                    <label
-                      key={item.id}
-                      className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
-                    >
-                      <span className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={extrasSeleccionados.includes(item.id)}
-                          disabled={locked}
-                          onChange={(e) => alternarExtra(item.id, e.target.checked)}
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                        />
-                        <span>
-                          {item.nombre}
-                          {item.preseleccionado && (
-                            <span className="ml-2 text-xs font-medium text-accent">
-                              {checkout.recommendedBadge}
-                            </span>
-                          )}
-                          {item.descripcion && (
-                            <span className="block text-xs text-muted">{item.descripcion}</span>
-                          )}
-                          {item.preseleccionado && checkout.extrasHints[item.tipo] && (
-                            <span className="block text-xs text-muted">
-                              {checkout.extrasHints[item.tipo]}
-                            </span>
+                    <div key={item.id}>
+                      <label className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface">
+                        <span className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={extrasSeleccionados.includes(item.id)}
+                            disabled={locked}
+                            onChange={(e) => alternarExtra(item.id, e.target.checked)}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                          />
+                          <span>
+                            {getNombreExtra(item)}
+                            {item.preseleccionado && (
+                              <span className="ml-2 text-xs font-medium text-accent">
+                                {checkout.recommendedBadge}
+                              </span>
+                            )}
+                            {getDescripcionExtra(item) && (
+                              <span className="block text-xs text-muted">{getDescripcionExtra(item)}</span>
+                            )}
+                            {item.preseleccionado && checkout.extrasHints[item.tipo] && (
+                              <span className="block text-xs text-muted">
+                                {checkout.extrasHints[item.tipo]}
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right text-muted">
+                          {item.monto === null
+                            ? checkout.extrasUnavailableInCurrency
+                            : currency.format(Number(item.monto))}
+                          {item.cobrar_por_persona && item.monto !== null && (
+                            <span className="block text-xs">{checkout.extrasPerPerson}</span>
                           )}
                         </span>
-                      </span>
-                      <span className="shrink-0 text-right text-muted">
-                        {item.monto === null
-                          ? checkout.extrasUnavailableInCurrency
-                          : currency.format(Number(item.monto))}
-                        {item.cobrar_por_persona && item.monto !== null && (
-                          <span className="block text-xs">{checkout.extrasPerPerson}</span>
+                      </label>
+
+                      {/* Solo si el item lo permite (ej. licencia: alguien puede
+                          ya traer la suya tramitada aparte) y hay mas de una
+                          persona entre quien repartir. Pegado a la tarjeta que
+                          lo revela, no suelto al fondo del grupo. */}
+                      {item.cantidad_editable &&
+                        extrasSeleccionados.includes(item.id) &&
+                        people > 1 && (
+                          <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
+                            <span className="text-muted">{checkout.licenseQuantity.question}</span>
+                            <span className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => ajustarCantidadExtra(item, -1)}
+                                disabled={locked || cantidadDeExtra(item) <= 1}
+                                aria-label="-"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
+                              >
+                                <Minus size={12} />
+                              </button>
+                              <span className="min-w-[5.5rem] text-center whitespace-nowrap">
+                                {deLabel(cantidadDeExtra(item), people)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => ajustarCantidadExtra(item, 1)}
+                                disabled={locked || cantidadDeExtra(item) >= people}
+                                aria-label="+"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
+                              >
+                                <Plus size={12} />
+                              </button>
+                            </span>
+                          </div>
                         )}
-                      </span>
-                    </label>
+                    </div>
                   ))}
                 </div>
 
@@ -1433,20 +1683,62 @@ export function CheckoutView({
                       );
                     })}
                   </div>
+
+                  {/* Solo importa para el recargo de grupo (el precio base no
+                      escala por persona, ver apps/payments/pricing.py): quien
+                      no sube a la camioneta no debe contarse para alcanzarlo.
+                      El precio de arriba sigue siendo el del catalogo para el
+                      grupo completo — la nota de abajo evita que se lea como
+                      definitivo. */}
+                  {transporteModo !== 'ninguno' && people > 1 && (
+                    <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3">
+                      <div className="flex items-center justify-between gap-3 text-sm text-foreground">
+                        <span className="text-muted">{checkout.transportQuantity.question}</span>
+                        <span className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => ajustarPersonasTransporte(-1)}
+                            disabled={locked || personasTransporteEfectivo <= 1}
+                            aria-label="-"
+                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <span className="min-w-[5.5rem] text-center whitespace-nowrap">
+                            {deLabel(personasTransporteEfectivo, people)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => ajustarPersonasTransporte(1)}
+                            disabled={locked || personasTransporteEfectivo >= people}
+                            aria-label="+"
+                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted">{checkout.transportQuantity.finalPriceNote}</p>
+                    </div>
+                  )}
                 </fieldset>
 
                 {(!extrasConfirmado || pasoEditando === 3) && (
                   <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm text-foreground">{checkout.extrasConfirmQuestion}</p>
+                    <p className="text-sm font-medium text-foreground">{checkout.extrasConfirmQuestion}</p>
                     <button
                       type="button"
                       onClick={() => {
                         setExtrasConfirmado(true);
                         if (pasoEditando === 3) setPasoEditando(null);
+                        setTimeout(() => {
+                          refStripePanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 80);
                       }}
-                      className="shrink-0 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
+                      className="flex items-center justify-center gap-2 bg-action px-6 py-3 text-sm font-semibold text-action-foreground shadow-sm transition-transform active:scale-[0.98]"
                     >
-                      {checkout.confirmStep}
+                      <span>{checkout.continueToPayment || checkout.confirmStep}</span>
+                      <ArrowRight size={16} weight="bold" />
                     </button>
                   </div>
                 )}
@@ -1466,7 +1758,7 @@ export function CheckoutView({
               hasta que el paso 3 (extras) se confirma con su propio boton —
               antes de eso queda montado pero oculto, nunca se desmonta ni se
               vuelve a armar. */}
-          <div className={!extrasConfirmado ? 'hidden lg:block' : undefined}>
+          <div ref={refStripePanel} className={`scroll-mt-28 ${!extrasConfirmado ? 'hidden lg:block' : undefined}`}>
             <StripePanel
               lang={lang}
               checkout={checkout}
@@ -1480,6 +1772,10 @@ export function CheckoutView({
               usdDisponible={usdDisponible}
               formaPago={formaPago}
               onFormaPagoChange={setFormaPago}
+              codigoPromocional={codigoPromocional}
+              onCodigoPromocionalChange={onCodigoPromocionalChange}
+              promoEstado={promoEstado}
+              promoPorcentaje={promoPorcentaje}
               phase={phase}
               error={error}
               pago={pago}

@@ -377,7 +377,7 @@
     "stepper": {
       "trip": "Trip",
       "contact": "Details",
-      "extras": "Extras",
+      "extras": "Customize",
       "payment": "Payment",
       "stepOf": "Step {current} of {total}"
     },
@@ -388,17 +388,31 @@
     "email": "Email",
     "meetingPointLabel": "Meeting point",
     "notice": "As soon as your payment is confirmed, an advisor from our team will contact you within 24 hours to welcome you and share all your trip details: exact dock location, helpful recommendations, and your captain's name.",
-    "extrasStepHeadline": "Trip extras",
-    "extrasConfirmQuestion": "Done with extras?",
-    "noExtrasSelected": "No extras",
+    "extrasStepHeadline": "Customize your trip",
+    "extrasConfirmQuestion": "All set with your choices?",
+    "continueToPayment": "Continue to payment",
+    "noExtrasSelected": "No add-ons selected",
     "extrasPerPerson": "per guest",
     "extrasUnavailableInCurrency": "Not available in this currency",
     "recommendedBadge": "Recommended",
+    "cantidadDeLabel": "{cantidad} of {total}",
+    "extrasNames": {
+      "licencia": "Fishing license",
+      "carnada": "Fresh bait",
+      "brunch": "Brunch package",
+      "otro": ""
+    },
+    "extrasDescriptions": {
+      "brunch": "Breakfast and lunch. Menu changes weekly. Includes drinks (water and sodas) and snacks for the trip."
+    },
     "extrasHints": {
       "licencia": "Legally required to fish in Mexican waters.",
       "carnada": "Recommended by most of our captains for your trip.",
       "brunch": "",
       "otro": ""
+    },
+    "licenseQuantity": {
+      "question": "How many in your group need us to get their license?"
     },
     "transporte": {
       "headline": "Transport",
@@ -407,11 +421,16 @@
       "customOption": "Another address",
       "selectHotelPlaceholder": "Choose your hotel",
       "addressPlaceholder": "Write the pickup address",
+      "customAddressNote": "Covers pickup from anywhere in La Paz. If your address is in the central zone, the price is adjusted at confirmation.",
       "fromPrice": "From {price}",
       "choose": "Choose",
       "zoneLabel": "Address zone",
       "zoneCentro": "Downtown",
       "zonePeriferia": "Outskirts"
+    },
+    "transportQuantity": {
+      "question": "How many in your group use the transport?",
+      "finalPriceNote": "The final price is confirmed at checkout."
     },
     "waiver": {
       "accept": "I have read and agree to the",
@@ -486,6 +505,15 @@
       "depositNote": "The remaining 70% is comfortably paid in cash on the morning of your trip."
     },
     "amountDueNow": "Total due now",
+    "promoCode": {
+      "toggle": "Have a promo code?",
+      "label": "Promo code",
+      "placeholder": "Code",
+      "checking": "Checking…",
+      "valid": "Code applied: {percent}% off.",
+      "invalid": "That code isn't valid.",
+      "discountLabel": "Discount"
+    },
     "securityNoteBefore": "Your online payment is 100% secure. It is processed by ",
     "securityNoteAfter": " with bank-grade encryption, and your card details never touch our servers.",
     "refundNote": "Peace-of-mind guarantee: if the captain cancels due to bad weather, you receive a 100% full refund.",

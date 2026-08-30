@@ -19,6 +19,11 @@ Que se cobra en linea y que no:
 - Bebidas: **no se cobra en linea**. El precio depende del tipo de bebida, dato
   que no se sabe al reservar. Se registra como solicitud y el agente de ventas
   la cotiza aparte.
+- Codigo promocional: descuento porcentual sobre el subtotal de arriba (tour +
+  personas + extras + transporte), nunca sobre uno inventado por el cliente.
+  El checkout solo manda el string del codigo; que exista, siga vigente y
+  tenga usos disponibles se valida en `fleet.CodigoPromocional`/
+  `apps.bookings.models.codigo_promocional_valido`, no aqui.
 """
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -65,6 +70,14 @@ def cargo_por_transporte(precio_base, recargo_grupo, min_personas_recargo, numer
     if numero_personas >= min_personas_recargo:
         cargo += Decimal(recargo_grupo or 0)
     return cargo
+
+
+def cargo_por_descuento(precio_total, porcentaje_descuento):
+    """Cuanto se resta del subtotal por un codigo promocional ya validado
+    (ver apps/bookings/models.py, codigo_promocional_valido). Redondeado a
+    centavos igual que el resto de los cargos."""
+    descuento = Decimal(precio_total) * Decimal(porcentaje_descuento) / 100
+    return descuento.quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 
 def monto_inicial(precio_total, forma_pago):

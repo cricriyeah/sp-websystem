@@ -31,6 +31,10 @@ export type ExtraCatalogo = {
   nombre: string;
   descripcion: string;
   cobrar_por_persona: boolean;
+  // Si el checkout deja elegir cuantas personas del grupo lo necesitan (ej.
+  // licencia: alguien puede ya traer la suya tramitada aparte) en vez de
+  // aplicarlo a todo el grupo. Ver fleet.ExtrasItem.
+  cantidad_editable: boolean;
   preseleccionado: boolean;
   monto: string | null;
 };
@@ -69,6 +73,21 @@ export type TransporteSeleccion = {
   punto_encuentro?: number | null;
   direccion_personalizada?: string;
   zona?: Zona | '';
+  // Cuantas personas del grupo usan el transporte. `null`/ausente = todo el
+  // grupo. Solo afecta si aplica el recargo de grupo (ver
+  // apps/payments/views.py, `_resolver_transporte`) — el precio base no
+  // escala por persona.
+  cantidad?: number | null;
+};
+
+/**
+ * Un item del catalogo que el cliente marco en el checkout. `cantidad` solo
+ * importa si el item tiene `cantidad_editable` (ver `ExtraCatalogo`) — el
+ * backend la ignora en los demas. `null`/ausente = todo el grupo.
+ */
+export type ExtraSeleccion = {
+  id: number;
+  cantidad?: number | null;
 };
 
 export type Cupo = {
@@ -103,10 +122,11 @@ export type ReservaInput = {
   // Deslinde de responsabilidad. El servidor sella la fecha/hora y la IP.
   deslinde_aceptado: boolean;
   deslinde_nombre: string;
-  // Ids de `ExtrasItem` elegidos (brunch, licencia, carnada). Sin precio: el
+  // `ExtrasItem` elegidos (brunch, licencia, carnada), con cuantas personas si
+  // el item tiene `cantidad_editable` (ver `ExtraCatalogo`). Sin precio: el
   // unico que lo congela es `crear-pago`, con el catalogo vigente en ese
   // momento (ver backend/apps/bookings/serializers.py).
-  extras?: number[];
+  extras?: ExtraSeleccion[];
   transporte?: TransporteSeleccion | null;
   // Codigo de la vendedora que trajo al cliente (ver src/lib/ref.ts). El backend
   // ignora en silencio el que no resuelva: un link viejo no puede impedir una
@@ -128,6 +148,9 @@ export type PagoInput = {
   // reserva son consecutivos y la API es publica.
   checkout_id: string;
   forma_pago: 'completo' | 'anticipo';
+  // Solo si el cliente aplico uno en el paso de pago; el descuento real lo
+  // calcula y congela crear-pago (ver apps/payments/views.py), nunca el navegador.
+  codigo_promocional?: string;
 };
 
 export type Pago = {
@@ -219,13 +242,15 @@ export type EstadoReservaPendiente = {
   correo_cliente: string;
   moneda: Moneda;
   forma_pago: 'completo' | 'anticipo' | '';
-  // Solo ids/datos, sin precio: eso solo existe desde que se paga (ver
-  // apps/payments/views.py, EstadoReservaView).
-  extras: number[];
+  // Solo seleccion, sin precio: eso solo existe desde que se paga (ver
+  // apps/payments/views.py, EstadoReservaView). `cantidad` es la que el
+  // cliente ya habia elegido (solo importa en items `cantidad_editable`).
+  extras: ExtraSeleccion[];
   transporte: {
     punto_encuentro: number | null;
     direccion_personalizada: string;
     zona: Zona;
+    cantidad: number | null;
   } | null;
 };
 
@@ -243,8 +268,17 @@ export type EstadoReservaPagada = {
   precio_total: string | null;
   // Desglose ya congelado al pagar (mismo precio cobrado, no el vigente del
   // catalogo hoy) — ver apps/payments/views.py, EstadoReservaView.
-  extras: { nombre: string; cobrar_por_persona: boolean; monto: string | null }[];
-  transporte: { monto: string } | null;
+  extras: {
+    nombre: string;
+    cobrar_por_persona: boolean;
+    monto: string | null;
+    // Cuantas personas del grupo lo tenian, ya congelado: con
+    // `cantidad_editable` puede ser menor que `numero_personas`.
+    cantidad: number | null;
+  }[];
+  transporte: { monto: string; numero_personas: number | null } | null;
+  codigo_promocional: string | null;
+  descuento_aplicado: string | null;
 };
 
 export type EstadoReservaCancelada = { estado: 'cancelada' };
@@ -253,5 +287,19 @@ export type EstadoReserva = EstadoReservaPendiente | EstadoReservaPagada | Estad
 
 export const getEstadoReserva = (checkoutId: string) =>
   request<EstadoReserva>(`/api/reservas/estado/?checkout_id=${checkoutId}`);
+
+/**
+ * Validacion en vivo de un codigo promocional mientras el cliente lo escribe
+ * (ver apps/payments/views.py, ValidarCodigoPromocionalView). Solo informativa:
+ * `crear-pago` vuelve a validarlo con el subtotal real antes de congelar el
+ * descuento. `valido: false` cubre por igual un codigo que no existe, vencido,
+ * agotado o desactivado — nunca distingue el motivo.
+ */
+export type CodigoPromocionalCheck = { valido: boolean; porcentaje_descuento: string | null };
+
+export const validarCodigoPromocional = (codigo: string, correoCliente: string) =>
+  request<CodigoPromocionalCheck>(
+    `/api/codigo-promocional/validar/?codigo=${encodeURIComponent(codigo)}&correo_cliente=${encodeURIComponent(correoCliente)}`,
+  );
 
 export { ApiError };

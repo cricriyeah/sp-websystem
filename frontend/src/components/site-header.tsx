@@ -47,15 +47,9 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
     // ese lugar. `inset-x-0`: sin ancho explicito una caja `fixed` se encoge a
     // su contenido en vez de cubrir el ancho de la ventana, que es lo que
     // necesita el padding lateral de abajo para funcionar.
-    <div className={`fixed inset-x-0 top-3 z-40 px-4 sm:top-4 sm:px-6 lg:px-8 ${className}`}>
-      {/* `<header>` es la pastilla flotante: bordeada por los cuatro lados y
-          con sombra, como cualquier otra tarjeta del sitio (mismo patron que
-          el aviso de cookies). Esquinas rectas a proposito, no `rounded-*`:
-          es la unica tarjeta del sitio que no las lleva. `relative` es lo que
-          la vuelve el ancla del menu movil de abajo. Sigue en `bg-background`
-          opaco: abajo pasa una foto a sangre y el texto de la barra sobre
-          ella no se leeria. */}
-      <header className="relative mx-auto flex h-20 max-w-6xl items-center justify-between gap-6 border border-border bg-background px-6 shadow-[0_18px_45px_rgba(11,36,32,0.16)] sm:px-8 lg:h-[88px] lg:px-12">
+    <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
+      {/* `<header>` va pegado a los bordes en movil y como pastilla flotante en escritorio (lg:). */}
+      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-6 border-b border-border bg-background px-6 sm:px-8 lg:h-[88px] lg:max-w-6xl lg:border lg:border-border lg:px-12 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
         {/* Solo el logo, sin el nombre al lado. Por eso el `alt` lleva la marca
             completa y no va vacio: es lo unico que identifica al sitio aqui, y
             con `alt=""` un lector de pantalla anunciaria un enlace sin nombre. */}
@@ -89,7 +83,6 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <LangSwitch lang={lang} label={nav.switchLang} />
           <WhatsappContact nav={nav} tone="plain" />
 
           <button
@@ -111,13 +104,7 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              // `absolute`: sin esto el menu vivia en el flujo normal del
-              // `<header>` y al abrirse empujaba hacia abajo todo el contenido
-              // de la pagina en vez de montarse encima. `top-full` mas `mt-2`
-              // lo cuelga como su propia tarjeta flotante, separada de la
-              // pastilla de arriba y no pegada a ella — la pastilla ya no
-              // tiene un solo borde recto de donde colgarse.
-              className="absolute inset-x-0 top-full mt-2 flex flex-col border border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 lg:hidden"
+              className="absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 lg:hidden"
             >
               {links.map((link) => (
                 <Link
@@ -131,7 +118,7 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
               ))}
               <div className="flex items-center justify-between border-b border-border-strong py-3.5">
                 <span className="text-[15px] text-muted">{nav.switchLang}</span>
-                <LangSwitch lang={lang} label={nav.switchLang} />
+                <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />
               </div>
               <div className="py-3">
                 <WhatsappContact nav={nav} variant="menu" />

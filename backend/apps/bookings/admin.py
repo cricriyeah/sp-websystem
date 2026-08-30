@@ -158,7 +158,7 @@ class ReservaExtraInline(admin.TabularInline):
 
     model = ReservaExtra
     extra = 0
-    fields = ['extras_item', 'precio_unitario', 'cantidad', 'subtotal_mostrado']
+    fields = ['extras_item', 'cantidad_solicitada', 'precio_unitario', 'cantidad', 'subtotal_mostrado']
     readonly_fields = fields
 
     def has_add_permission(self, request, obj=None):
@@ -175,7 +175,10 @@ class ReservaExtraInline(admin.TabularInline):
 class ReservaTransporteInline(admin.StackedInline):
     model = ReservaTransporte
     extra = 0
-    fields = ['punto_encuentro', 'direccion_personalizada', 'zona', 'numero_personas', 'precio_calculado']
+    fields = [
+        'punto_encuentro', 'direccion_personalizada', 'zona',
+        'personas_solicitadas', 'numero_personas', 'precio_calculado',
+    ]
     readonly_fields = fields
 
     def has_add_permission(self, request, obj=None):
@@ -196,7 +199,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
         LlegadaFilter,
         'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago', 'en_disputa',
         'pide_bebidas', 'pide_extras_whatsapp',
-        'embarcacion', 'capitan', 'reembolsada',
+        'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional',
     ]
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     date_hierarchy = 'fecha'
@@ -213,6 +216,9 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
         'efectivo_cobrado_en', 'efectivo_cobrado_por', 'en_disputa',
         'vendedora_asignada_en', 'pagada_en', 'monto_reembolsado', 'reembolsada_en',
         'aviso_asignacion_enviado_en',
+        # Se congelan en CrearPagoView junto con precio_total: editarlos aqui a
+        # mano los desincronizaria de ese numero y del conteo de usos del codigo.
+        'codigo_promocional', 'descuento_aplicado',
     ]
     actions = [
         'cancelar_por_mal_clima', 'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',

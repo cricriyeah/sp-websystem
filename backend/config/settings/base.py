@@ -83,6 +83,11 @@ REST_FRAMEWORK = {
         # impredecible (122 bits), pero el limite mas bajo que 'consulta' frena
         # ademas cualquier intento de barrido desde una sola IP.
         'estado_reserva': os.environ.get('THROTTLE_ESTADO_RESERVA', '20/min'),
+        # Validar un codigo promocional en vivo: son pocos caracteres,
+        # memorizables, y la respuesta ya es generica a proposito (ver
+        # apps/bookings/models.py, codigo_promocional_valido). Mismo limite que
+        # 'pagos' para no dejar barrer el catalogo de codigos a fuerza bruta.
+        'codigo_promocional': os.environ.get('THROTTLE_CODIGO_PROMOCIONAL', '20/min'),
     },
 }
 
@@ -205,6 +210,14 @@ UNFOLD = {
                         'link': reverse_lazy('admin:bookings_vendedora_changelist'),
                         'permission': lambda request: request.user.has_perm('bookings.view_vendedora'),
                     },
+                    {
+                        'title': 'Puntos de encuentro',
+                        'icon': 'hotel',
+                        'link': reverse_lazy('admin:fleet_puntoencuentro_changelist'),
+                        'permission': lambda request: request.user.has_perm(
+                            'fleet.view_puntoencuentro'
+                        ),
+                    },
                 ],
             },
             {
@@ -224,6 +237,28 @@ UNFOLD = {
                         'icon': 'sell',
                         'link': reverse_lazy('admin:fleet_tarifa_changelist'),
                         'permission': lambda request: request.user.has_perm('fleet.view_tarifa'),
+                    },
+                    {
+                        'title': 'Extras',
+                        'icon': 'add_shopping_cart',
+                        'link': reverse_lazy('admin:fleet_extrasitem_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_extrasitem'),
+                    },
+                    {
+                        'title': 'Transporte',
+                        'icon': 'local_shipping',
+                        'link': reverse_lazy('admin:fleet_transporteprecio_changelist'),
+                        'permission': lambda request: request.user.has_perm(
+                            'fleet.view_transporteprecio'
+                        ),
+                    },
+                    {
+                        'title': 'Codigos promocionales',
+                        'icon': 'confirmation_number',
+                        'link': reverse_lazy('admin:fleet_codigopromocional_changelist'),
+                        'permission': lambda request: request.user.has_perm(
+                            'fleet.view_codigopromocional'
+                        ),
                     },
                 ],
             },

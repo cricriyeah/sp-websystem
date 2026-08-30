@@ -1,12 +1,15 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
 
 from apps.payments.pricing import PERSONAS_INCLUIDAS
 
 from .models import (
+    CodigoPromocional,
     Embarcacion,
     EmbarcacionNoDisponible,
     ExtrasItem,
@@ -68,6 +71,21 @@ class ExtrasItemTests(TestCase):
     def test_sin_precio_en_dolares_devuelve_none(self):
         item = ExtrasItem.objects.create(tipo='carnada', nombre='Carnada', precio=Decimal('200'))
         self.assertIsNone(item.precio_en('USD'))
+
+    def test_cantidad_editable_sin_cobrar_por_persona_no_es_valido(self):
+        item = ExtrasItem(
+            tipo='carnada', nombre='Carnada', precio=Decimal('200'),
+            cobrar_por_persona=False, cantidad_editable=True,
+        )
+        with self.assertRaises(ValidationError):
+            item.full_clean()
+
+    def test_cantidad_editable_con_cobrar_por_persona_es_valido(self):
+        item = ExtrasItem(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
+            cobrar_por_persona=True, cantidad_editable=True,
+        )
+        item.full_clean()
 
 
 class TransportePrecioTests(TestCase):
@@ -199,6 +217,42 @@ class CapacidadesDisponiblesTests(TestCase):
         rango = capacidades_por_fecha(self.fecha, self.fecha + timedelta(days=2))
         self.assertEqual(len(rango), 3)
         self.assertEqual(rango[self.fecha], [5, 3])
+
+
+class CodigoPromocionalTests(TestCase):
+    def test_normaliza_codigo_a_mayusculas_y_sin_espacios(self):
+        promo = CodigoPromocional.objects.create(
+            codigo=' verano10 ', porcentaje_descuento=Decimal('10'),
+        )
+        self.assertEqual(promo.codigo, 'VERANO10')
+
+    def test_codigo_repetido_no_se_puede_crear(self):
+        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        with self.assertRaises(IntegrityError):
+            CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('15'))
+
+    def test_fecha_fin_debe_ser_posterior_a_fecha_inicio(self):
+        ahora = timezone.now()
+        promo = CodigoPromocional(
+            codigo='X', porcentaje_descuento=Decimal('10'),
+            fecha_inicio=ahora, fecha_fin=ahora - timedelta(days=1),
+        )
+        with self.assertRaises(ValidationError):
+            promo.full_clean()
+
+    def test_monto_minimo_en_devuelve_el_de_la_moneda_pedida(self):
+        promo = CodigoPromocional.objects.create(
+            codigo='MIN', porcentaje_descuento=Decimal('10'),
+            monto_minimo=Decimal('5000'), monto_minimo_usd=Decimal('300'),
+        )
+        self.assertEqual(promo.monto_minimo_en('MXN'), Decimal('5000'))
+        self.assertEqual(promo.monto_minimo_en('USD'), Decimal('300'))
+
+    def test_porcentaje_fuera_de_rango_no_es_valido(self):
+        with self.assertRaises(ValidationError):
+            CodigoPromocional(codigo='CERO', porcentaje_descuento=Decimal('0')).full_clean()
+        with self.assertRaises(ValidationError):
+            CodigoPromocional(codigo='MAS', porcentaje_descuento=Decimal('101')).full_clean()
 
 
 class EmbarcacionNoDisponibleUnicidadTests(TransactionTestCase):

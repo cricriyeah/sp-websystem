@@ -57,6 +57,10 @@ class Command(BaseCommand):
             defaults={
                 'precio': PLACEHOLDER_LICENCIA, 'precio_usd': None,
                 'cobrar_por_persona': True, 'preseleccionado': True, 'activo': True,
+                # Alguien del grupo puede ya traer su licencia tramitada aparte
+                # (se tramita por dia/semana/mes/año) — el checkout deja elegir
+                # a cuantos se las tramita el negocio, no forzar a todo el grupo.
+                'cantidad_editable': True,
             },
         )
         creados += nuevo

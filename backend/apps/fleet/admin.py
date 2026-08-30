@@ -3,6 +3,7 @@ from unfold.admin import ModelAdmin
 
 from .models import (
     Capitan,
+    CodigoPromocional,
     Embarcacion,
     EmbarcacionNoDisponible,
     ExtrasItem,
@@ -36,9 +37,12 @@ class ExtrasItemAdmin(ModelAdmin):
     """Precios editables sin deploy. Sin permisos para Vendedora, mismo trato
     que Tarifa: es informacion financiera."""
 
-    list_display = ['nombre', 'tipo', 'precio', 'precio_usd', 'cobrar_por_persona', 'preseleccionado', 'activo']
+    list_display = [
+        'nombre', 'tipo', 'precio', 'precio_usd', 'cobrar_por_persona',
+        'cantidad_editable', 'preseleccionado', 'activo',
+    ]
     list_filter = ['tipo', 'activo']
-    list_editable = ['precio', 'precio_usd', 'activo']
+    list_editable = ['precio', 'precio_usd', 'cantidad_editable', 'activo']
     search_fields = ['nombre']
 
 
@@ -57,6 +61,28 @@ class PuntoEncuentroAdmin(ModelAdmin):
     list_filter = ['zona', 'activo']
     list_editable = ['zona', 'activo']
     search_fields = ['nombre']
+
+
+@admin.register(CodigoPromocional)
+class CodigoPromocionalAdmin(ModelAdmin):
+    """Sin permisos para Vendedora, mismo trato que Tarifa/ExtrasItem: es
+    informacion financiera. El uso de cada codigo no se audita aqui — se ve
+    en la lista de Reservas (columna/filtro `codigo_promocional`), la misma
+    fuente que ya cuenta contra `usos_maximos`."""
+
+    list_display = [
+        'codigo', 'porcentaje_descuento', 'activo', 'usos_maximos',
+        'usos_maximos_por_cliente', 'fecha_inicio', 'fecha_fin',
+    ]
+    list_filter = ['activo']
+    list_editable = ['porcentaje_descuento', 'activo']
+    search_fields = ['codigo', 'descripcion']
+    readonly_fields = ['creado_por', 'creado_en', 'actualizado_en']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.creado_por = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Embarcacion)
