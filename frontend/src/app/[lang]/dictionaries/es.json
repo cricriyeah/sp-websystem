@@ -389,11 +389,13 @@
     "meetingPointLabel": "Lugar de encuentro",
     "notice": "En cuanto se confirme tu pago, un asesor de nuestro equipo te contactará en las próximas 24 horas para darte la bienvenida y compartirte todos los detalles de tu viaje: ubicación exacta, recomendaciones y el nombre de tu capitán.",
     "extrasStepHeadline": "Personaliza tu viaje",
-    "extrasConfirmQuestion": "¿Todo listo con tus complementos?",
+    "extrasConfirmQuestion": "¿Todo listo para continuar?",
     "continueToPayment": "Continuar al pago",
-    "noExtrasSelected": "Sin complementos seleccionados",
+    "noExtrasSelected": "Nada más seleccionado",
     "extrasPerPerson": "por persona",
     "extrasUnavailableInCurrency": "No disponible en esta moneda",
+    "extrasRequiredLabel": "Necesario para tu salida",
+    "extrasOptionalLabel": "Extras",
     "recommendedBadge": "Recomendado",
     "cantidadDeLabel": "{cantidad} de {total}",
     "extrasNames": {
@@ -411,6 +413,12 @@
       "brunch": "",
       "otro": ""
     },
+    "extrasWarnings": {
+      "licencia": "Sin licencia no puedes pescar en aguas mexicanas: es obligatoria por ley. Nosotros nos encargamos del trámite.",
+      "carnada": "",
+      "brunch": "",
+      "otro": ""
+    },
     "licenseQuantity": {
       "question": "¿A cuántos de tu grupo les tramitamos la licencia?"
     },
@@ -423,6 +431,7 @@
       "addressPlaceholder": "Escribe la dirección donde te recogemos",
       "customAddressNote": "Cubre la recogida en cualquier punto de La Paz. Si tu ubicación está en la zona centro, la tarifa se ajusta al confirmar.",
       "fromPrice": "Desde {price}",
+      "hotelRequired": "Elige el hotel donde te recogemos.",
       "choose": "Elegir",
       "zoneLabel": "Zona de la dirección",
       "zoneCentro": "Centro",
@@ -487,6 +496,8 @@
     "amenitiesModal": {
       "headline": "¿Deseas personalizar tu salida con algún extra?",
       "body": "Puedes complementar tu día en el mar con estas opciones adicionales. Se integran fácilmente a tu reserva para tu total comodidad.",
+      "necesarioLabel": "Necesario para tu salida",
+      "optionalLabel": "Extras",
       "confirm": "Continuar al pago",
       "back": "Volver al resumen",
       "close": "Cerrar"
@@ -516,8 +527,8 @@
     },
     "securityNoteBefore": "Tu pago en línea es 100% seguro. Es procesado por ",
     "securityNoteAfter": " con encriptación bancaria y los datos de tu tarjeta nunca pasan por nuestros servidores.",
-    "refundNote": "Garantía de tranquilidad: si el capitán cancela por mal clima, te reembolsamos el 100% de lo pagado.",
     "submitting": "Procesando de forma segura…",
+    "paymentBridge": "Tu lugar ya está reservado. Completa el pago para confirmarlo.",
     "confirmPay": "Pagar",
     "missingFields": "Por favor completa tus datos de contacto para continuar.",
     "invalidPhone": "Por favor ingresa un número de teléfono válido con al menos 10 dígitos (ej. 612 123 4567).",

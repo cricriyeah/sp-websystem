@@ -11,6 +11,7 @@ import {
   Minus,
   Phone,
   Plus,
+  ShieldCheck,
   User,
   Warning,
 } from '@phosphor-icons/react';
@@ -255,6 +256,13 @@ export function CheckoutView({
   const [transporteModo, setTransporteModo] = useState<'ninguno' | 'punto' | 'direccion'>('ninguno');
   const [puntoEncuentroId, setPuntoEncuentroId] = useState<number | null>(null);
   const [direccionPersonalizada, setDireccionPersonalizada] = useState('');
+  // 'punto' con `puntoEncuentroId` en null no es "sin transporte": el backend
+  // (`_guardar` en serializers.py) trata esa combinacion exactamente igual que
+  // el toggle en 'ninguno' — el traslado se descarta en silencio, sin error,
+  // porque no puede distinguir "no quiere" de "quiso pero no eligio hotel".
+  // Por eso el bloqueo tiene que vivir aqui, antes de que salga la peticion.
+  const [errorTransporte, setErrorTransporte] = useState(false);
+  const refPuntoEncuentro = useRef<HTMLLabelElement>(null);
   // Cuantas personas eligio el cliente para un extra con `cantidad_editable`
   // (ver ExtraCatalogo) — solo importa para esos, id de ExtrasItem -> cantidad.
   // Ausente = todo el grupo, mismo comportamiento que un extra sin este control.
@@ -296,6 +304,13 @@ export function CheckoutView({
     email: refEmail,
   };
   const [waiverAccepted, setWaiverAccepted] = useState(false);
+  // Antes esto usaba el `ErrorBlock` grande (icono + boton de WhatsApp) del
+  // mecanismo generico de `phase === 'error'`, pensado para fallos de red o
+  // de pago que el cliente no puede resolver solo. Olvidarse de una casilla
+  // si puede resolverlo solo, y el bloque completo empujaba el boton de pagar
+  // hacia abajo. Mismo patron liviano que ya usan telefono/nombre/correo:
+  // texto rojo pegado al campo, sin abrir un bloque nuevo.
+  const [errorWaiver, setErrorWaiver] = useState(false);
   // La fase inicial se decide en el useLayoutEffect de abajo, una vez que
   // checkoutIdValue esta disponible. Antes de eso se usa 'recuperando' como
   // pantalla de espera neutral — muestra el spinner de "buscando tu reserva"
@@ -504,6 +519,21 @@ export function CheckoutView({
   const transporteCatalogo = catalogo?.transporte ?? [];
   const puntosEncuentro = catalogo?.puntos_encuentro ?? [];
 
+  /**
+   * La licencia va primero y separada del resto: es el unico item del catalogo
+   * que no es un antojo (obligatoria por ley para pescar, ver
+   * `extrasHints.licencia`), y mezclada sin distincion con brunch/carnada el
+   * cliente la trata igual de opcional que un postre. `primerOpcionalIndice`
+   * marca donde insertar el segundo encabezado dentro del mismo `.map` — evita
+   * duplicar el markup de la tarjeta en dos listas separadas.
+   */
+  const extrasOrdenados = [
+    ...extrasCatalogo.filter((e) => e.tipo === 'licencia'),
+    ...extrasCatalogo.filter((e) => e.tipo !== 'licencia'),
+  ];
+  const hayNecesario = extrasOrdenados.some((e) => e.tipo === 'licencia');
+  const primerOpcionalIndice = extrasOrdenados.findIndex((e) => e.tipo !== 'licencia');
+
   const getNombreExtra = (e: { tipo?: string; nombre: string }) =>
     (e.tipo && (checkout.extrasNames as Record<string, string>)?.[e.tipo]) || e.nombre;
 
@@ -587,18 +617,22 @@ export function CheckoutView({
             valor: 'punto' as const,
             etiqueta: checkout.transporte.hotelOption,
             panel: (
-              <label className="flex flex-col gap-1.5 text-sm">
+              <label className="flex flex-col gap-1.5 text-sm" ref={refPuntoEncuentro}>
                 <span className="text-muted">{checkout.transporte.selectHotelPlaceholder}</span>
                 <span className="relative">
                   <select
                     value={puntoEncuentroId ?? ''}
-                    onChange={(e) =>
-                      setPuntoEncuentroId(e.target.value ? Number(e.target.value) : null)
-                    }
+                    onChange={(e) => {
+                      setPuntoEncuentroId(e.target.value ? Number(e.target.value) : null);
+                      setErrorTransporte(false);
+                    }}
+                    {...propsDeError('error-punto-encuentro', errorTransporte)}
                     // `appearance-none` + caret propio: con la flecha nativa,
                     // el control se ve de otro sistema operativo en cada
                     // maquina y rompe con el resto del checkout.
-                    className="w-full appearance-none border border-border bg-background py-3 pr-11 pl-4 text-sm text-foreground outline-none transition-colors focus:border-accent disabled:opacity-60"
+                    className={`w-full appearance-none border bg-background py-3 pr-11 pl-4 text-sm text-foreground outline-none transition-colors focus:border-accent disabled:opacity-60 ${
+                      errorTransporte ? CLASES_CAMPO_CON_ERROR : 'border-border'
+                    }`}
                   >
                     <option value="" disabled>
                       {checkout.transporte.selectHotelPlaceholder}
@@ -615,6 +649,9 @@ export function CheckoutView({
                     className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted"
                   />
                 </span>
+                {errorTransporte && (
+                  <FieldError id="error-punto-encuentro" mensaje={checkout.transporte.hotelRequired} />
+                )}
               </label>
             ),
           },
@@ -657,7 +694,13 @@ export function CheckoutView({
    */
   const extrasPendientes: ExtraPendiente[] = extrasCatalogo
     .filter((e) => !extrasSeleccionados.includes(e.id) && e.monto !== null)
-    .map((e) => ({ id: e.id, nombre: getNombreExtra(e), monto: currency.format(Number(e.monto)) }));
+    .map((e) => ({
+      id: e.id,
+      tipo: e.tipo,
+      nombre: getNombreExtra(e),
+      monto: currency.format(Number(e.monto)),
+      hint: checkout.extrasHints[e.tipo] || null,
+    }));
 
   /**
    * El traslado tambien cuenta como algo que le falta al cliente, pero no
@@ -1063,12 +1106,23 @@ export function CheckoutView({
       return;
     }
 
-    // Sin deslinde aceptado no hay reserva; el backend lo rechaza igual. Este
-    // si va al bloque de error: la casilla vive junto al boton de pagar, asi que
-    // el mensaje ya esta al lado de su causa.
+    // 'punto' sin hotel elegido no lo rechaza el backend — lo trata como "sin
+    // transporte" (ver la nota junto a `errorTransporte` mas arriba) y la
+    // reserva sigue de largo sin traslado. Tiene que frenar aqui. El paso 3
+    // pudo haberse colapsado ya (`extrasConfirmado`), asi que hay que
+    // reabrirlo o el select del hotel ni siquiera esta montado para enfocarlo.
+    if (transporteModo === 'punto' && puntoEncuentroId === null) {
+      setErrorTransporte(true);
+      setPasoEditando(3);
+      setTimeout(() => {
+        refPuntoEncuentro.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 80);
+      return;
+    }
+
+    // Sin deslinde aceptado no hay reserva; el backend lo rechaza igual.
     if (!waiverAccepted) {
-      setError(checkout.waiver.missing);
-      setPhase('error');
+      setErrorWaiver(true);
       return;
     }
 
@@ -1546,8 +1600,18 @@ export function CheckoutView({
                 onAction={locked ? undefined : () => setPasoEditando(colapsado3 ? 3 : null)}
               >
                 <div className="flex flex-col gap-2">
-                  {extrasCatalogo.map((item) => (
+                  {extrasOrdenados.map((item, indice) => (
                     <div key={item.id}>
+                      {hayNecesario && indice === 0 && (
+                        <p className="mb-2 text-xs font-medium tracking-wide text-muted uppercase">
+                          {checkout.extrasRequiredLabel}
+                        </p>
+                      )}
+                      {hayNecesario && indice === primerOpcionalIndice && (
+                        <p className="mt-3 mb-2 text-xs font-medium tracking-wide text-muted uppercase">
+                          {checkout.extrasOptionalLabel}
+                        </p>
+                      )}
                       <label className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface">
                         <span className="flex items-start gap-3">
                           <input
@@ -1567,11 +1631,13 @@ export function CheckoutView({
                             {getDescripcionExtra(item) && (
                               <span className="block text-xs text-muted">{getDescripcionExtra(item)}</span>
                             )}
-                            {item.preseleccionado && checkout.extrasHints[item.tipo] && (
-                              <span className="block text-xs text-muted">
-                                {checkout.extrasHints[item.tipo]}
-                              </span>
-                            )}
+                            {item.preseleccionado &&
+                              extrasSeleccionados.includes(item.id) &&
+                              checkout.extrasHints[item.tipo] && (
+                                <span className="block text-xs text-muted">
+                                  {checkout.extrasHints[item.tipo]}
+                                </span>
+                              )}
                           </span>
                         </span>
                         <span className="shrink-0 text-right text-muted">
@@ -1583,6 +1649,20 @@ export function CheckoutView({
                           )}
                         </span>
                       </label>
+
+                      {/* Al desmarcarla, el mismo aviso ambar que usa `sinLugar`
+                          mas arriba: sin licencia el cliente no puede pescar, y
+                          esperar hasta el recordatorio de antes de pagar
+                          (`AmenitiesReminder`) era tarde para algo que se decide
+                          aqui mismo, al quitarle el check. Solo `extrasWarnings`
+                          trae texto para 'licencia' — los demas tipos no tienen
+                          esta urgencia y se quedan con el hint gris de arriba. */}
+                      {!extrasSeleccionados.includes(item.id) && checkout.extrasWarnings[item.tipo] && (
+                        <div className="flex items-start gap-2 border border-t-0 border-action/40 bg-action/10 px-4 py-2.5 text-xs text-foreground">
+                          <Warning size={14} className="mt-0.5 shrink-0 text-action" />
+                          <p>{checkout.extrasWarnings[item.tipo]}</p>
+                        </div>
+                      )}
 
                       {/* Solo si el item lo permite (ej. licencia: alguien puede
                           ya traer la suya tramitada aparte) y hay mas de una
@@ -1658,7 +1738,10 @@ export function CheckoutView({
                               type="radio"
                               name="transporte-modo"
                               checked={activa}
-                              onChange={() => setTransporteModo(opcion.valor)}
+                              onChange={() => {
+                                setTransporteModo(opcion.valor);
+                                setErrorTransporte(false);
+                              }}
                               className="h-4 w-4 shrink-0 accent-accent"
                             />
                             <span className="flex-1">{opcion.etiqueta}</span>
@@ -1767,7 +1850,11 @@ export function CheckoutView({
               lang={lang}
               checkout={checkout}
               waiverAccepted={waiverAccepted}
-              onWaiverChange={setWaiverAccepted}
+              onWaiverChange={(value) => {
+                setWaiverAccepted(value);
+                if (value) setErrorWaiver(false);
+              }}
+              errorWaiver={errorWaiver}
               lines={lines}
               total={total === null ? '—' : currency.format(total)}
               amountDueNow={amountDueNow === null ? '—' : currency.format(amountDueNow)}
@@ -1793,23 +1880,24 @@ export function CheckoutView({
               onCaptchaToken={(token) => (captchaToken.current = token)}
             />
             {/* Fuera de la tarjeta de resumen, debajo: no es parte del desglose de
-                precio, es la respuesta a "es seguro pagar aqui" y a "que pasa si
-                no puedo ir por el clima" — las dos dudas que quedan justo antes
-                de tocar pagar, y que si solo viven en el FAQ nadie las ve desde
-                aqui. */}
-            <p className="mt-4 text-xs leading-relaxed text-muted">
-              {checkout.securityNoteBefore}
-              <a
-                href="https://stripe.com"
-                target="_blank"
-                rel="noopener"
-                className="text-foreground underline underline-offset-2"
-              >
-                Stripe
-              </a>
-              {checkout.securityNoteAfter}
+                precio, es la respuesta a "es seguro pagar aqui" — la duda que
+                queda justo antes de tocar pagar, y que si solo vive en el FAQ
+                nadie la ve desde aqui. */}
+            <p className="mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+              <ShieldCheck size={14} weight="fill" className="mt-0.5 shrink-0 text-muted" />
+              <span>
+                {checkout.securityNoteBefore}
+                <a
+                  href="https://stripe.com"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-foreground underline underline-offset-2"
+                >
+                  Stripe
+                </a>
+                {checkout.securityNoteAfter}
+              </span>
             </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-muted">{checkout.refundNote}</p>
           </div>
 
           {/* Movil, mientras faltan los extras por confirmar: una franja con el
@@ -1840,6 +1928,7 @@ export function CheckoutView({
           <AmenitiesReminder
             key="amenities-reminder"
             checkout={checkout}
+            feedback={dict.feedback}
             pendientes={extrasPendientes}
             onSeleccionarExtra={(id) => alternarExtra(id, true)}
             transportePendiente={transportePendiente}

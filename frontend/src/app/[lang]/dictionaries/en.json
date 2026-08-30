@@ -389,11 +389,13 @@
     "meetingPointLabel": "Meeting point",
     "notice": "As soon as your payment is confirmed, an advisor from our team will contact you within 24 hours to welcome you and share all your trip details: exact dock location, helpful recommendations, and your captain's name.",
     "extrasStepHeadline": "Customize your trip",
-    "extrasConfirmQuestion": "All set with your choices?",
+    "extrasConfirmQuestion": "All set to continue?",
     "continueToPayment": "Continue to payment",
-    "noExtrasSelected": "No add-ons selected",
+    "noExtrasSelected": "Nothing else selected",
     "extrasPerPerson": "per guest",
     "extrasUnavailableInCurrency": "Not available in this currency",
+    "extrasRequiredLabel": "Required for your trip",
+    "extrasOptionalLabel": "Extras",
     "recommendedBadge": "Recommended",
     "cantidadDeLabel": "{cantidad} of {total}",
     "extrasNames": {
@@ -411,6 +413,12 @@
       "brunch": "",
       "otro": ""
     },
+    "extrasWarnings": {
+      "licencia": "Without a license you can't fish in Mexican waters — it's legally required. We'll handle the paperwork for you.",
+      "carnada": "",
+      "brunch": "",
+      "otro": ""
+    },
     "licenseQuantity": {
       "question": "How many in your group need us to get their license?"
     },
@@ -423,6 +431,7 @@
       "addressPlaceholder": "Write the pickup address",
       "customAddressNote": "Covers pickup from anywhere in La Paz. If your address is in the central zone, the price is adjusted at confirmation.",
       "fromPrice": "From {price}",
+      "hotelRequired": "Choose the hotel where we'll pick you up.",
       "choose": "Choose",
       "zoneLabel": "Address zone",
       "zoneCentro": "Downtown",
@@ -487,6 +496,8 @@
     "amenitiesModal": {
       "headline": "Would you like to customize your trip with extras?",
       "body": "You can complement your day on the water with these convenient add-ons. They'll be seamlessly added to your reservation for your comfort.",
+      "necesarioLabel": "Required for your trip",
+      "optionalLabel": "Extras",
       "confirm": "Continue to payment",
       "back": "Back to summary",
       "close": "Close"
@@ -516,8 +527,8 @@
     },
     "securityNoteBefore": "Your online payment is 100% secure. It is processed by ",
     "securityNoteAfter": " with bank-grade encryption, and your card details never touch our servers.",
-    "refundNote": "Peace-of-mind guarantee: if the captain cancels due to bad weather, you receive a 100% full refund.",
     "submitting": "Processing securely…",
+    "paymentBridge": "Your spot is already reserved. Complete the payment to confirm it.",
     "confirmPay": "Pay",
     "missingFields": "Please complete your contact details before continuing.",
     "invalidPhone": "Please enter a valid phone number with at least 10 digits (e.g. 612 123 4567).",

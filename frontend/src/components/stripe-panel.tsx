@@ -3,13 +3,14 @@
 import { useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { motion, useReducedMotion } from 'motion/react';
 import { Lock, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckCircle } from '@phosphor-icons/react';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorBlock } from '@/components/error-block';
-import { FieldError } from '@/components/field-error';
+import { FieldError, propsDeError } from '@/components/field-error';
 import { Turnstile } from '@/components/turnstile';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Moneda, Pago } from '@/lib/api';
@@ -26,6 +27,7 @@ type StripePanelProps = {
   checkout: Dictionary['checkout'];
   waiverAccepted: boolean;
   onWaiverChange: (value: boolean) => void;
+  errorWaiver: boolean;
   lines: OrderLine[];
   total: string;
   amountDueNow: string;
@@ -91,6 +93,13 @@ function PaymentForm({
 
   return (
     <div className="mt-6 flex flex-col gap-4">
+      {/* Puente entre los dos envios: sin esto, pasar de "reserva guardada"
+          (el toast de exito) a un formulario de tarjeta nuevo se lee como "¿otra
+          vez lo mismo?" en vez de "el siguiente paso" — el crear-Reserva y el
+          cobro son dos peticiones distintas porque Stripe Elements necesita el
+          PaymentIntent para montarse, pero eso es un detalle tecnico que al
+          cliente no le toca notar. */}
+      <p className="text-sm text-muted">{checkout.paymentBridge}</p>
       <PaymentElement />
 
       {/* La espera del banco es la mas larga de todo el flujo y la que mas caro
@@ -125,6 +134,7 @@ export function StripePanel({
   checkout,
   waiverAccepted,
   onWaiverChange,
+  errorWaiver,
   lines,
   total,
   amountDueNow,
@@ -151,6 +161,7 @@ export function StripePanel({
   // criterio que la moneda mas abajo — una correccion disponible para quien
   // la busca, no la primera decision del checkout.
   const [promoAbierto, setPromoAbierto] = useState(false);
+  const sinMovimiento = useReducedMotion();
 
   return (
     <CheckoutSectionCard title={checkout.orderSummaryHeadline} variant="elevated">
@@ -310,6 +321,7 @@ export function StripePanel({
               checked={waiverAccepted}
               disabled={phase === 'submitting'}
               onChange={(e) => onWaiverChange(e.target.checked)}
+              {...propsDeError('error-waiver', errorWaiver)}
               className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-accent"
             />
             <span>
@@ -334,6 +346,7 @@ export function StripePanel({
               .
             </span>
           </label>
+          {errorWaiver && <FieldError id="error-waiver" mensaje={checkout.waiver.missing} />}
 
           {/* Mismo lugar donde el cliente ya esta mirando, justo antes de pagar
               — no debajo de la tarjeta, donde parecia parte de otra cosa. */}
@@ -350,15 +363,40 @@ export function StripePanel({
             />
           )}
 
-          <button
+          {/* Es donde de verdad se perdian los clientes: llenaban todo y el
+              boton se quedaba igual de quieto que el resto de la tarjeta, sin
+              nada que lo distinguiera como "esto es lo que sigue". Mismo pulso
+              que booking-bar (color, timing, se apaga solo tras 2 vueltas,
+              fallback de opacidad con movimiento reducido), disparado por
+              `waiverAccepted`: es lo unico que el cliente tiene que decidir
+              activamente antes de que este boton sirva de algo — nombre,
+              telefono y correo ya quedaron confirmados en el paso 2. */}
+          <motion.button
             type="button"
             onClick={onSubmit}
             disabled={phase === 'submitting'}
+            animate={
+              waiverAccepted && phase !== 'submitting' && !sinMovimiento
+                ? {
+                    scale: [1, 1.045, 1],
+                    boxShadow: [
+                      '0 0 0 0 rgba(255,222,0,0)',
+                      '0 0 0 10px rgba(255,222,0,0.28)',
+                      '0 0 0 0 rgba(255,222,0,0)',
+                    ],
+                  }
+                : { scale: 1, boxShadow: '0 0 0 0 rgba(255,222,0,0)' }
+            }
+            transition={
+              waiverAccepted && phase !== 'submitting' && !sinMovimiento
+                ? { duration: 1.4, repeat: 2, repeatDelay: 0.6, ease: 'easeInOut' }
+                : { duration: 0.2 }
+            }
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
           >
             <Lock size={16} />
             {phase === 'submitting' ? checkout.submitting : checkout.payButton}
-          </button>
+          </motion.button>
         </>
       )}
     </CheckoutSectionCard>

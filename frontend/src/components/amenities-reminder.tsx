@@ -4,16 +4,21 @@ import { useEffect } from 'react';
 import { X } from '@phosphor-icons/react';
 import { motion, useReducedMotion } from 'motion/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { WaitNotice } from '@/components/wait-notice';
 
 export type ExtraPendiente = {
   id: number;
+  tipo: 'brunch' | 'licencia' | 'carnada' | 'otro';
   nombre: string;
   /** Ya formateado en la moneda del checkout; null = sin precio en esa moneda. */
   monto: string | null;
+  /** Aviso corto (ej. "Obligatoria por ley..."), o null si el tipo no lleva uno. */
+  hint: string | null;
 };
 
 type AmenitiesReminderProps = {
   checkout: Dictionary['checkout'];
+  feedback: Dictionary['feedback'];
   /** Extras del catalogo que el cliente no lleva. */
   pendientes: ExtraPendiente[];
   onSeleccionarExtra: (id: number) => void;
@@ -40,6 +45,7 @@ type AmenitiesReminderProps = {
  */
 export function AmenitiesReminder({
   checkout,
+  feedback,
   pendientes,
   onSeleccionarExtra,
   transportePendiente,
@@ -102,49 +108,89 @@ export function AmenitiesReminder({
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">{checkout.amenitiesModal.body}</p>
 
-        {(pendientes.length > 0 || transportePendiente) && (
-          <div className="mt-6 flex flex-col gap-2">
-            {pendientes.map((extra) => (
-              <label
-                key={extra.id}
-                className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background"
-              >
-                <span className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={false}
-                    disabled={enviando}
-                    onChange={() => onSeleccionarExtra(extra.id)}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                  />
-                  <span>{extra.nombre}</span>
-                </span>
-                <span className="shrink-0 text-right text-muted">
-                  {extra.monto ?? checkout.extrasUnavailableInCurrency}
-                </span>
-              </label>
-            ))}
+        {(() => {
+          // La licencia (y el traslado, misma naturaleza logistica) van en su
+          // propio bloque: mezclados sin distincion con brunch/carnada, el
+          // cliente les da el mismo peso a un tramite que a un antojo. Ver el
+          // mismo criterio en el paso 3 del checkout (`extrasOrdenados`).
+          const necesarios = pendientes.filter((e) => e.tipo === 'licencia');
+          const opcionales = pendientes.filter((e) => e.tipo !== 'licencia');
+          const hayNecesario = necesarios.length > 0 || Boolean(transportePendiente);
 
-            {transportePendiente && (
-              <div className="flex items-center justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground">
-                <span className="min-w-0">
-                  {transportePendiente.etiqueta}
-                  {transportePendiente.monto && (
-                    <span className="block text-xs text-muted">{transportePendiente.monto}</span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={transportePendiente.onElegir}
+          if (necesarios.length === 0 && opcionales.length === 0 && !transportePendiente) return null;
+
+          const item = (extra: ExtraPendiente) => (
+            <label
+              key={extra.id}
+              className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-background"
+            >
+              <span className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={false}
                   disabled={enviando}
-                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-40"
-                >
-                  {checkout.transporte.choose}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+                  onChange={() => onSeleccionarExtra(extra.id)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                />
+                <span>
+                  {extra.nombre}
+                  {extra.hint && <span className="block text-xs text-muted">{extra.hint}</span>}
+                </span>
+              </span>
+              <span className="shrink-0 text-right text-muted">
+                {extra.monto ?? checkout.extrasUnavailableInCurrency}
+              </span>
+            </label>
+          );
+
+          return (
+            <div className="mt-6 flex flex-col gap-4">
+              {hayNecesario && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-medium tracking-wide text-muted uppercase">
+                    {checkout.amenitiesModal.necesarioLabel}
+                  </p>
+                  {necesarios.map(item)}
+                  {transportePendiente && (
+                    <div className="flex items-center justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground">
+                      <span className="min-w-0">
+                        {transportePendiente.etiqueta}
+                        {transportePendiente.monto && (
+                          <span className="block text-xs text-muted">{transportePendiente.monto}</span>
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={transportePendiente.onElegir}
+                        disabled={enviando}
+                        className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-40"
+                      >
+                        {checkout.transporte.choose}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {opcionales.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {hayNecesario && (
+                    <p className="text-xs font-medium tracking-wide text-muted uppercase">
+                      {checkout.amenitiesModal.optionalLabel}
+                    </p>
+                  )}
+                  {opcionales.map(item)}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* El `WaitNotice` real (el que escala el mensaje pasados 4s) vive en
+            el panel de atras, tapado por este overlay — sin esto, mientras el
+            modal esta abierto lo unico que ve el cliente es el texto generico
+            del boton de abajo. */}
+        {enviando && <WaitNotice mensaje={feedback.savingWait} />}
 
         <button
           type="button"

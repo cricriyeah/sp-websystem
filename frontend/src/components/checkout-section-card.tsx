@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { CaretDown, Check } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
@@ -50,6 +50,13 @@ export function CheckoutSectionCard({
   const abierto = estado !== 'completado';
   const confirmado = estado !== 'activo';
   const sinMovimiento = useReducedMotion();
+  // `overflow-hidden` solo hace falta MIENTRAS la altura esta en un valor
+  // intermedio (la transicion de 0 a 'auto'): asentada, el cuadro ya mide lo
+  // que su contenido necesita y no hay nada que recortar. Dejarlo puesto
+  // siempre le cortaba cualquier cosa que un hijo pintara fuera de su propia
+  // caja — un box-shadow de foco, un anillo de pulso — contra el borde exacto
+  // del padding, sin aviso.
+  const [enTransicion, setEnTransicion] = useState(false);
 
   const encabezado = (
     <>
@@ -116,7 +123,9 @@ export function CheckoutSectionCard({
             animate={{ height: 'auto', opacity: 1 }}
             exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
+            onAnimationStart={() => setEnTransicion(true)}
+            onAnimationComplete={() => setEnTransicion(false)}
+            className={enTransicion ? 'overflow-hidden' : 'overflow-visible'}
           >
             <div className="mt-5">{children}</div>
           </motion.div>
