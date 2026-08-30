@@ -112,6 +112,9 @@ function useCheckoutId() {
   // puede leer `recuperable` antes de renderizar la pantalla de carga inicial,
   // igual que antes. No se usa useEffect (que corre despues del paint) para
   // evitar un flash de la pantalla equivocada en reconexiones.
+  /* eslint-disable react-hooks/set-state-in-effect -- lectura unica de sessionStorage,
+     que no existe en el servidor; no hay forma de resolverla durante el render sin
+     romper la hidratacion (ver nota arriba). */
   useLayoutEffect(() => {
     const guardado = window.sessionStorage.getItem(CLAVE_CHECKOUT_ID);
     if (guardado) {
@@ -122,6 +125,7 @@ function useCheckoutId() {
     window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
     setValue({ id: nuevo, recuperable: false });
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return value;
 }

@@ -91,7 +91,11 @@ export function ProveedorToast({
       <div
         aria-live="polite"
         aria-atomic="false"
-        className="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:items-end sm:px-0"
+        // top-4 solo, sin sumar --nav-alto, dejaba el aviso flotando encima del
+        // SiteHeader (fixed, z-40): el toast (z-50) le gana en apilado, pero
+        // termina superpuesto al logo/header en vez de aparecer despejado
+        // arriba de todo. Mismo offset que usa checkout-view para su contenido.
+        className="pointer-events-none fixed inset-x-0 top-[calc(var(--nav-alto)+1rem)] z-50 flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:items-end sm:px-0"
       >
         <AnimatePresence initial={false}>
           {toasts.map((toast) => {

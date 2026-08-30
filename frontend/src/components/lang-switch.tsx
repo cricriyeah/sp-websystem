@@ -114,7 +114,11 @@ export function LangSwitch({
   function select(locale: Locale) {
     setOpen(false);
     if (locale === lang) return;
-    const next = pathname.replace(/^\/(es|en)/, `/${locale}`);
+    // usePathname() no incluye el query string: sin window.location.search aqui,
+    // cambiar de idioma a medio checkout tira ?day=&time=&people= y la pagina
+    // vuelve a caer en los defaults del servidor (minDate, no el dia que el
+    // cliente ya habia elegido).
+    const next = pathname.replace(/^\/(es|en)/, `/${locale}`) + window.location.search;
     router.push(next);
   }
 
