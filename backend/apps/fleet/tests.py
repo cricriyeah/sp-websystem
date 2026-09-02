@@ -4,11 +4,13 @@ from io import StringIO
 
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db.utils import IntegrityError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from apps.payments.pricing import PERSONAS_INCLUIDAS
+from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 
 from .models import (
@@ -23,7 +25,6 @@ from .models import (
     capacidades_por_fecha,
 )
 
-
 _CONTADOR_SEDES = iter(range(10_000))
 
 
@@ -31,6 +32,24 @@ def _crear_empresa(slug):
     n = next(_CONTADOR_SEDES)
     sede = Sede.objects.create(nombre=f'Sede de prueba {n}', slug=f'sede-{n}-{slug}')
     return Empresa.objects.create(sede=sede, nombre=f'Empresa {slug}', slug=slug, activo=True)
+
+
+class EmpresaFKTests(TestCase):
+    # F1 dejo estos dos en null=True (paso transitorio); F3 los cerro a
+    # obligatorios para los 8 modelos -- no queda un estado "nullable" real
+    # en ningun punto del historial final.
+    def test_tarifa_tiene_campo_empresa(self):
+        campo = Tarifa._meta.get_field('empresa')
+        self.assertFalse(campo.null)
+        self.assertEqual(campo.remote_field.on_delete.__name__, 'PROTECT')
+
+    def test_embarcacionnodisponible_tiene_campo_empresa(self):
+        campo = EmbarcacionNoDisponible._meta.get_field('empresa')
+        self.assertFalse(campo.null)
+
+    def test_empresa_es_obligatoria_en_tarifa(self):
+        campo = Tarifa._meta.get_field('empresa')
+        self.assertFalse(campo.null)
 
 
 class TarifaTests(TestCase):
@@ -63,6 +82,90 @@ class TarifaTests(TestCase):
     def test_sin_precio_en_dolares_devuelve_none(self):
         tarifa = Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
         self.assertIsNone(tarifa.precio_en('USD'))
+
+
+class TarifaApiTests(TestCase):
+    def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
+
+    def test_sin_tarifa_responde_503(self):
+        self.assertEqual(self.client.get('/api/empresa-a/tarifa/').status_code, 503)
+
+    def test_devuelve_todas_las_cifras_del_checkout(self):
+        with scope.con_empresa(self.empresa):
+            Tarifa.objects.create(
+                precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
+                precio_persona_extra=Decimal('500.00'), empresa=self.empresa,
+            )
+        body = self.client.get('/api/empresa-a/tarifa/').json()
+        self.assertEqual(body['precio'], '4500.00')
+        self.assertEqual(body['precio_usd'], '260.00')
+        self.assertEqual(body['precio_persona_extra'], '500.00')
+        self.assertEqual(body['personas_incluidas'], PERSONAS_INCLUIDAS)
+
+    def test_no_publica_precio_de_lo_que_se_cotiza(self):
+        with scope.con_empresa(self.empresa):
+            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa)
+        body = self.client.get('/api/empresa-a/tarifa/').json()
+        self.assertNotIn('amenidades', body)
+
+    def test_empresa_inexistente_responde_404(self):
+        self.assertEqual(self.client.get('/api/no-existe/tarifa/').status_code, 404)
+
+    def test_no_ve_la_tarifa_de_otra_empresa(self):
+        otra = _crear_empresa(slug='empresa-b')
+        with scope.con_empresa(otra):
+            Tarifa.objects.create(precio=Decimal('9999.00'), empresa=otra)
+        self.assertEqual(self.client.get('/api/empresa-a/tarifa/').status_code, 503)
+
+
+class ExtrasItemTests(TestCase):
+    def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
+
+    def test_precio_por_moneda(self):
+        item = ExtrasItem.objects.create(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'), precio_usd=Decimal('25'),
+            empresa=self.empresa,
+        )
+        self.assertEqual(item.precio_en('MXN'), Decimal('450'))
+        self.assertEqual(item.precio_en('USD'), Decimal('25'))
+
+    def test_sin_precio_en_dolares_devuelve_none(self):
+        item = ExtrasItem.objects.create(
+            tipo='carnada', nombre='Carnada', precio=Decimal('200'), empresa=self.empresa,
+        )
+        self.assertIsNone(item.precio_en('USD'))
+
+    def test_cantidad_editable_sin_cobrar_por_persona_no_es_valido(self):
+        item = ExtrasItem(
+            tipo='carnada', nombre='Carnada', precio=Decimal('200'),
+            cobrar_por_persona=False, cantidad_editable=True, empresa=self.empresa,
+        )
+        with self.assertRaises(ValidationError):
+            item.full_clean()
+
+    def test_cantidad_editable_con_cobrar_por_persona_es_valido(self):
+        item = ExtrasItem(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
+            cobrar_por_persona=True, cantidad_editable=True, empresa=self.empresa,
+        )
+        item.full_clean()
+
+
+class TransportePrecioTests(TestCase):
+    def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
+
+    def test_precio_y_recargo_por_moneda(self):
+        centro = TransportePrecio.objects.create(
+            zona='centro', precio_base=Decimal('2000'), precio_base_usd=Decimal('110'),
+            recargo_grupo=Decimal('1500'), recargo_grupo_usd=Decimal('85'), empresa=self.empresa,
+        )
+        self.assertEqual(centro.precio_en('MXN'), Decimal('2000'))
+        self.assertEqual(centro.precio_en('USD'), Decimal('110'))
+        self.assertEqual(centro.recargo_en('MXN'), Decimal('1500'))
+        self.assertEqual(centro.recargo_en('USD'), Decimal('85'))
 
 
 class UnicidadPorEmpresaTests(TransactionTestCase):
@@ -129,145 +232,108 @@ class UnicidadPorEmpresaTests(TransactionTestCase):
         self.assertEqual(Embarcacion.objects.count(), 2)
 
 
-class TarifaApiTests(TestCase):
-    def test_sin_tarifa_responde_503(self):
-        self.assertEqual(self.client.get('/api/tarifa/').status_code, 503)
-
-    def test_devuelve_todas_las_cifras_del_checkout(self):
-        Tarifa.objects.create(
-            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
-            precio_persona_extra=Decimal('500.00'),
-        )
-        body = self.client.get('/api/tarifa/').json()
-        self.assertEqual(body['precio'], '4500.00')
-        self.assertEqual(body['precio_usd'], '260.00')
-        self.assertEqual(body['precio_persona_extra'], '500.00')
-        self.assertEqual(body['personas_incluidas'], PERSONAS_INCLUIDAS)
-
-    def test_no_publica_precio_de_lo_que_se_cotiza(self):
-        # Bebidas y transporte no tienen precio en linea, los cotiza el agente.
-        Tarifa.objects.create(precio=Decimal('4500.00'))
-        body = self.client.get('/api/tarifa/').json()
-        self.assertNotIn('amenidades', body)
-
-
-class ExtrasItemTests(TestCase):
-    def test_precio_por_moneda(self):
-        item = ExtrasItem.objects.create(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'), precio_usd=Decimal('25'),
-        )
-        self.assertEqual(item.precio_en('MXN'), Decimal('450'))
-        self.assertEqual(item.precio_en('USD'), Decimal('25'))
-
-    def test_sin_precio_en_dolares_devuelve_none(self):
-        item = ExtrasItem.objects.create(tipo='carnada', nombre='Carnada', precio=Decimal('200'))
-        self.assertIsNone(item.precio_en('USD'))
-
-    def test_cantidad_editable_sin_cobrar_por_persona_no_es_valido(self):
-        item = ExtrasItem(
-            tipo='carnada', nombre='Carnada', precio=Decimal('200'),
-            cobrar_por_persona=False, cantidad_editable=True,
-        )
-        with self.assertRaises(ValidationError):
-            item.full_clean()
-
-    def test_cantidad_editable_con_cobrar_por_persona_es_valido(self):
-        item = ExtrasItem(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-            cobrar_por_persona=True, cantidad_editable=True,
-        )
-        item.full_clean()
-
-
-class TransportePrecioTests(TestCase):
-    def test_precio_y_recargo_por_moneda(self):
-        centro = TransportePrecio.objects.create(
-            zona='centro', precio_base=Decimal('2000'), precio_base_usd=Decimal('110'),
-            recargo_grupo=Decimal('1500'), recargo_grupo_usd=Decimal('85'),
-        )
-        self.assertEqual(centro.precio_en('MXN'), Decimal('2000'))
-        self.assertEqual(centro.precio_en('USD'), Decimal('110'))
-        self.assertEqual(centro.recargo_en('MXN'), Decimal('1500'))
-        self.assertEqual(centro.recargo_en('USD'), Decimal('85'))
-
-    def test_una_sola_fila_por_zona(self):
-        TransportePrecio.objects.create(zona='centro', precio_base=Decimal('2000'))
-        with self.assertRaises(IntegrityError):
-            TransportePrecio.objects.create(zona='centro', precio_base=Decimal('2100'))
-
-
 class ExtrasPublicosApiTests(TestCase):
+    def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
+
     def test_extra_por_persona_multiplica(self):
-        ExtrasItem.objects.create(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'), cobrar_por_persona=True,
-        )
-        body = self.client.get('/api/extras/?personas=3').json()
+        with scope.con_empresa(self.empresa):
+            ExtrasItem.objects.create(
+                tipo='licencia', nombre='Licencia', precio=Decimal('450'),
+                cobrar_por_persona=True, empresa=self.empresa,
+            )
+        body = self.client.get('/api/empresa-a/extras/?personas=3').json()
         self.assertEqual(body['extras'][0]['monto'], '1350.00')
 
     def test_extra_plano_no_multiplica(self):
-        ExtrasItem.objects.create(
-            tipo='carnada', nombre='Carnada', precio=Decimal('200'), cobrar_por_persona=False,
-        )
-        body = self.client.get('/api/extras/?personas=5').json()
+        with scope.con_empresa(self.empresa):
+            ExtrasItem.objects.create(
+                tipo='carnada', nombre='Carnada', precio=Decimal('200'),
+                cobrar_por_persona=False, empresa=self.empresa,
+            )
+        body = self.client.get('/api/empresa-a/extras/?personas=5').json()
         self.assertEqual(body['extras'][0]['monto'], '200.00')
 
     def test_item_inactivo_no_aparece(self):
-        ExtrasItem.objects.create(tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False)
-        body = self.client.get('/api/extras/').json()
+        with scope.con_empresa(self.empresa):
+            ExtrasItem.objects.create(
+                tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
+                empresa=self.empresa,
+            )
+        body = self.client.get('/api/empresa-a/extras/').json()
         self.assertEqual(body['extras'], [])
 
     def test_sin_precio_en_la_moneda_pedida_monto_es_null(self):
-        ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
-        body = self.client.get('/api/extras/?moneda=USD').json()
+        with scope.con_empresa(self.empresa):
+            ExtrasItem.objects.create(
+                tipo='licencia', nombre='Licencia', precio=Decimal('450'), empresa=self.empresa,
+            )
+        body = self.client.get('/api/empresa-a/extras/?moneda=USD').json()
         self.assertIsNone(body['extras'][0]['monto'])
 
     def test_transporte_con_recargo_desde_el_minimo(self):
-        TransportePrecio.objects.create(
-            zona='centro', precio_base=Decimal('2000'), recargo_grupo=Decimal('1500'),
-            min_personas_recargo=4,
-        )
-        body = self.client.get('/api/extras/?personas=4').json()
+        with scope.con_empresa(self.empresa):
+            TransportePrecio.objects.create(
+                zona='centro', precio_base=Decimal('2000'), recargo_grupo=Decimal('1500'),
+                min_personas_recargo=4, empresa=self.empresa,
+            )
+        body = self.client.get('/api/empresa-a/extras/?personas=4').json()
         self.assertEqual(body['transporte'][0]['monto'], '3500.00')
 
     def test_puntos_de_encuentro_activos(self):
-        PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
-        PuntoEncuentro.objects.create(nombre='Fuera de servicio', zona='centro', activo=False)
-        body = self.client.get('/api/extras/').json()
+        with scope.con_empresa(self.empresa):
+            PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro', empresa=self.empresa)
+            PuntoEncuentro.objects.create(
+                nombre='Fuera de servicio', zona='centro', activo=False, empresa=self.empresa,
+            )
+        body = self.client.get('/api/empresa-a/extras/').json()
         self.assertEqual([p['nombre'] for p in body['puntos_encuentro']], ['Hotel CostaBaja'])
 
     def test_moneda_invalida_es_400(self):
-        self.assertEqual(self.client.get('/api/extras/?moneda=EUR').status_code, 400)
+        self.assertEqual(self.client.get('/api/empresa-a/extras/?moneda=EUR').status_code, 400)
 
     def test_personas_invalida_es_400(self):
-        self.assertEqual(self.client.get('/api/extras/?personas=0').status_code, 400)
-        self.assertEqual(self.client.get('/api/extras/?personas=abc').status_code, 400)
+        self.assertEqual(self.client.get('/api/empresa-a/extras/?personas=0').status_code, 400)
+        self.assertEqual(self.client.get('/api/empresa-a/extras/?personas=abc').status_code, 400)
 
     def test_defaults_sin_query_params(self):
-        response = self.client.get('/api/extras/')
+        response = self.client.get('/api/empresa-a/extras/')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'extras': [], 'transporte': [], 'puntos_encuentro': []})
 
+    def test_empresa_inexistente_responde_404(self):
+        self.assertEqual(self.client.get('/api/no-existe/extras/').status_code, 404)
+
+    def test_no_mezcla_catalogo_de_otra_empresa(self):
+        otra = _crear_empresa(slug='empresa-b')
+        with scope.con_empresa(otra):
+            ExtrasItem.objects.create(
+                tipo='carnada', nombre='Carnada de otra empresa', precio=Decimal('999'),
+                empresa=otra,
+            )
+        body = self.client.get('/api/empresa-a/extras/').json()
+        self.assertEqual(body['extras'], [])
+
 
 class EmbarcacionTests(TestCase):
+    def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
+
     def test_nace_activa(self):
         panga = Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+            empresa=self.empresa,
         )
         self.assertTrue(panga.activa)
 
     def test_la_etiqueta_de_clase_no_carga_la_capacidad(self):
-        """La capacidad vive en `capacidad_maxima` y en ningun otro lado.
-
-        La etiqueta decia "Grande (max. 6 personas)" y era falsa: ninguna panga
-        lleva mas de 5. Un numero escrito en dos lugares es un numero que puede
-        discrepar."""
         for clase in Embarcacion.Clase:
             self.assertNotIn('personas', clase.label)
 
     def test_str_muestra_la_capacidad(self):
-        """El selector de la agenda ensena la capacidad donde se necesita."""
         panga = Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+            empresa=self.empresa,
         )
         self.assertEqual(str(panga), 'Lupita (Grande, max. 5)')
 
@@ -294,7 +360,6 @@ class CapacidadesDisponiblesTests(TestCase):
         self.assertEqual(capacidades_disponibles(self.fecha, self.empresa), [3])
 
     def test_excluye_la_marcada_no_disponible_solo_ese_dia(self):
-        """Una panga en mantenimiento el jueves vuelve a contar el viernes."""
         EmbarcacionNoDisponible.objects.create(
             fecha=self.fecha, embarcacion=self.grande, motivo='Mantenimiento',
             empresa=self.empresa,
@@ -305,8 +370,6 @@ class CapacidadesDisponiblesTests(TestCase):
         )
 
     def test_el_rango_no_hace_una_consulta_por_dia(self):
-        """El costo no puede crecer con la ventana: de aqui cuelga la busqueda de
-        los proximos 90 dias del checkout."""
         with self.assertNumQueries(2):
             capacidades_por_fecha(self.fecha, self.fecha + timedelta(days=89), self.empresa)
 
@@ -325,21 +388,28 @@ class CapacidadesDisponiblesTests(TestCase):
 
 
 class CodigoPromocionalTests(TestCase):
+    def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
+
     def test_normaliza_codigo_a_mayusculas_y_sin_espacios(self):
         promo = CodigoPromocional.objects.create(
-            codigo=' verano10 ', porcentaje_descuento=Decimal('10'),
+            codigo=' verano10 ', porcentaje_descuento=Decimal('10'), empresa=self.empresa,
         )
         self.assertEqual(promo.codigo, 'VERANO10')
 
-    def test_codigo_repetido_no_se_puede_crear(self):
-        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+    def test_codigo_repetido_en_la_misma_empresa_no_se_puede_crear(self):
+        CodigoPromocional.objects.create(
+            codigo='VERANO10', porcentaje_descuento=Decimal('10'), empresa=self.empresa,
+        )
         with self.assertRaises(IntegrityError):
-            CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('15'))
+            CodigoPromocional.objects.create(
+                codigo='VERANO10', porcentaje_descuento=Decimal('15'), empresa=self.empresa,
+            )
 
     def test_fecha_fin_debe_ser_posterior_a_fecha_inicio(self):
         ahora = timezone.now()
         promo = CodigoPromocional(
-            codigo='X', porcentaje_descuento=Decimal('10'),
+            codigo='X', porcentaje_descuento=Decimal('10'), empresa=self.empresa,
             fecha_inicio=ahora, fecha_fin=ahora - timedelta(days=1),
         )
         with self.assertRaises(ValidationError):
@@ -347,7 +417,7 @@ class CodigoPromocionalTests(TestCase):
 
     def test_monto_minimo_en_devuelve_el_de_la_moneda_pedida(self):
         promo = CodigoPromocional.objects.create(
-            codigo='MIN', porcentaje_descuento=Decimal('10'),
+            codigo='MIN', porcentaje_descuento=Decimal('10'), empresa=self.empresa,
             monto_minimo=Decimal('5000'), monto_minimo_usd=Decimal('300'),
         )
         self.assertEqual(promo.monto_minimo_en('MXN'), Decimal('5000'))
@@ -355,41 +425,31 @@ class CodigoPromocionalTests(TestCase):
 
     def test_porcentaje_fuera_de_rango_no_es_valido(self):
         with self.assertRaises(ValidationError):
-            CodigoPromocional(codigo='CERO', porcentaje_descuento=Decimal('0')).full_clean()
+            CodigoPromocional(
+                codigo='CERO', porcentaje_descuento=Decimal('0'), empresa=self.empresa,
+            ).full_clean()
         with self.assertRaises(ValidationError):
-            CodigoPromocional(codigo='MAS', porcentaje_descuento=Decimal('101')).full_clean()
+            CodigoPromocional(
+                codigo='MAS', porcentaje_descuento=Decimal('101'), empresa=self.empresa,
+            ).full_clean()
 
 
 class EmbarcacionNoDisponibleUnicidadTests(TransactionTestCase):
     """Aparte y con TransactionTestCase: un IntegrityError deja inutilizable la
-    transaccion que envuelve a un TestCase normal."""
+    transaccion que envuelve a un TestCase normal. NO usa hilos (ver nota de
+    verificacion de la Task F9 en el plan: la mencion de threading para esta
+    clase especifica es incorrecta)."""
 
     def test_una_panga_no_se_puede_marcar_dos_veces_el_mismo_dia(self):
+        empresa = _crear_empresa(slug='empresa-a')
         fecha = date.today() + timedelta(days=10)
         grande = Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+            empresa=empresa,
         )
-        EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande)
+        EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande, empresa=empresa)
         with self.assertRaises(IntegrityError):
-            EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande)
-
-
-class EmpresaFKTests(TestCase):
-    # F1 dejo estos dos en null=True (paso transitorio); F3 los cierra a
-    # obligatorios para los 8 modelos -- se actualizan aqui a proposito, no
-    # queda un estado "nullable" real en ningun punto del historial final.
-    def test_tarifa_tiene_campo_empresa(self):
-        campo = Tarifa._meta.get_field('empresa')
-        self.assertFalse(campo.null)
-        self.assertEqual(campo.remote_field.on_delete.__name__, 'PROTECT')
-
-    def test_embarcacionnodisponible_tiene_campo_empresa(self):
-        campo = EmbarcacionNoDisponible._meta.get_field('empresa')
-        self.assertFalse(campo.null)
-
-    def test_empresa_es_obligatoria_en_tarifa(self):
-        campo = Tarifa._meta.get_field('empresa')
-        self.assertFalse(campo.null)
+            EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande, empresa=empresa)
 
 
 class SeedExtrasTests(TestCase):
@@ -410,3 +470,7 @@ class SeedExtrasTests(TestCase):
     def test_sin_empresa_falla_explicito(self):
         with self.assertRaises(Exception):
             call_command('seed_extras', stdout=StringIO())
+
+    def test_empresa_inexistente_falla_explicito(self):
+        with self.assertRaises(CommandError):
+            call_command('seed_extras', empresa='no-existe', stdout=StringIO())
