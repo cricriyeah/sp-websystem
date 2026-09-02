@@ -270,11 +270,18 @@ class EmbarcacionNoDisponibleUnicidadTests(TransactionTestCase):
 
 
 class EmpresaFKTests(TestCase):
+    # F1 dejo estos dos en null=True (paso transitorio); F3 los cierra a
+    # obligatorios para los 8 modelos -- se actualizan aqui a proposito, no
+    # queda un estado "nullable" real en ningun punto del historial final.
     def test_tarifa_tiene_campo_empresa(self):
         campo = Tarifa._meta.get_field('empresa')
-        self.assertTrue(campo.null)
+        self.assertFalse(campo.null)
         self.assertEqual(campo.remote_field.on_delete.__name__, 'PROTECT')
 
     def test_embarcacionnodisponible_tiene_campo_empresa(self):
         campo = EmbarcacionNoDisponible._meta.get_field('empresa')
-        self.assertTrue(campo.null)
+        self.assertFalse(campo.null)
+
+    def test_empresa_es_obligatoria_en_tarifa(self):
+        campo = Tarifa._meta.get_field('empresa')
+        self.assertFalse(campo.null)
