@@ -1,6 +1,9 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 
+from apps.tenancy import scope
+from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin
+
 from .models import (
     Capitan,
     CodigoPromocional,
@@ -14,7 +17,7 @@ from .models import (
 
 
 @admin.register(Tarifa)
-class TarifaAdmin(ModelAdmin):
+class TarifaAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
         'precio', 'precio_usd', 'precio_persona_extra', 'precio_persona_extra_usd',
         'actualizado_en', 'actualizado_por',
@@ -22,7 +25,13 @@ class TarifaAdmin(ModelAdmin):
     readonly_fields = ['actualizado_en', 'actualizado_por']
 
     def has_add_permission(self, request):
-        return not Tarifa.objects.exists()
+        empresa = scope.empresa_actual(request)
+        if empresa is None:
+            # Operador de plataforma: sin empresa_actual, no hay singleton que
+            # guardar — el formulario exige elegir Empresa explicitamente
+            # (ver EmpresaScopedAdminMixin.get_fields).
+            return True
+        return not Tarifa.objects.filter(empresa=empresa).exists()
 
     def has_delete_permission(self, request, obj=None):
         return False
@@ -33,7 +42,7 @@ class TarifaAdmin(ModelAdmin):
 
 
 @admin.register(ExtrasItem)
-class ExtrasItemAdmin(ModelAdmin):
+class ExtrasItemAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     """Precios editables sin deploy. Sin permisos para Vendedora, mismo trato
     que Tarifa: es informacion financiera."""
 
@@ -47,7 +56,7 @@ class ExtrasItemAdmin(ModelAdmin):
 
 
 @admin.register(TransportePrecio)
-class TransportePrecioAdmin(ModelAdmin):
+class TransportePrecioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
         'zona', 'precio_base', 'precio_base_usd', 'recargo_grupo', 'recargo_grupo_usd',
         'min_personas_recargo', 'activo',
@@ -56,7 +65,7 @@ class TransportePrecioAdmin(ModelAdmin):
 
 
 @admin.register(PuntoEncuentro)
-class PuntoEncuentroAdmin(ModelAdmin):
+class PuntoEncuentroAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = ['nombre', 'zona', 'activo']
     list_filter = ['zona', 'activo']
     list_editable = ['zona', 'activo']
@@ -64,7 +73,7 @@ class PuntoEncuentroAdmin(ModelAdmin):
 
 
 @admin.register(CodigoPromocional)
-class CodigoPromocionalAdmin(ModelAdmin):
+class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     """Sin permisos para Vendedora, mismo trato que Tarifa/ExtrasItem: es
     informacion financiera. El uso de cada codigo no se audita aqui — se ve
     en la lista de Reservas (columna/filtro `codigo_promocional`), la misma
@@ -86,7 +95,7 @@ class CodigoPromocionalAdmin(ModelAdmin):
 
 
 @admin.register(Embarcacion)
-class EmbarcacionAdmin(ModelAdmin):
+class EmbarcacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = ['nombre', 'clase', 'capacidad_maxima', 'activa']
     list_filter = ['clase', 'activa']
     list_editable = ['activa']
@@ -94,13 +103,13 @@ class EmbarcacionAdmin(ModelAdmin):
 
 
 @admin.register(Capitan)
-class CapitanAdmin(ModelAdmin):
+class CapitanAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = ['nombre', 'telefono']
     search_fields = ['nombre', 'telefono']
 
 
 @admin.register(EmbarcacionNoDisponible)
-class EmbarcacionNoDisponibleAdmin(ModelAdmin):
+class EmbarcacionNoDisponibleAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     """Aqui se marca que una panga no sale un dia. Mientras no exista la agenda
     operativa, este es el unico lugar para hacerlo."""
 
