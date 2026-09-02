@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     # esto se pueden probar contraseñas sin limite. Ver AXES_* mas abajo.
     'axes',
 
+    'apps.tenancy',
     'apps.fleet',
     'apps.bookings',
     'apps.payments',
