@@ -1,6 +1,8 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tenancy import scope
+
 from .models import ExtrasItem, PuntoEncuentro, Tarifa, TransportePrecio
 from .serializers import (
     ExtrasItemSerializer,
@@ -17,26 +19,31 @@ PERSONAS_MAXIMO_PREVIEW = 50
 
 
 class TarifaView(APIView):
-    """Precio unico del tour, para que el checkout de la web no lo hardcodee."""
+    """Precio unico del tour de una Empresa, para que el checkout de la web no lo hardcodee."""
 
-    def get(self, request):
-        tarifa = Tarifa.actual()
-        if tarifa is None:
-            return Response({'detail': 'Tarifa no configurada.'}, status=503)
-        return Response(TarifaSerializer(tarifa).data)
+    def get(self, request, empresa_slug):
+        empresa = scope.resolver_empresa_publica(empresa_slug)
+        with scope.con_empresa(empresa):
+            tarifa = Tarifa.de(empresa)
+            if tarifa is None:
+                return Response({'detail': 'Tarifa no configurada.'}, status=503)
+            return Response(TarifaSerializer(tarifa).data)
 
 
 class ExtrasPublicosView(APIView):
-    """Catalogo de extras del checkout (brunch, licencia, carnada, transporte,
-    puntos de encuentro) con el monto ya resuelto para `personas`/`moneda`.
+    """Catalogo de extras del checkout de una Empresa (brunch, licencia, carnada,
+    transporte, puntos de encuentro) con el monto ya resuelto para
+    `personas`/`moneda`.
 
     La web nunca calcula si un extra cobra por persona ni si aplica el
     recargo de grupo: pide este endpoint con el numero de personas y la
     moneda que tenga en pantalla y muestra lo que responde, igual que ya
-    hace con `/api/tarifa/`.
+    hace con `/api/<empresa_slug>/tarifa/`.
     """
 
-    def get(self, request):
+    def get(self, request, empresa_slug):
+        empresa = scope.resolver_empresa_publica(empresa_slug)
+
         moneda = request.query_params.get('moneda', 'MXN')
         if moneda not in ('MXN', 'USD'):
             return Response({'detail': 'moneda invalida.'}, status=400)
@@ -50,14 +57,15 @@ class ExtrasPublicosView(APIView):
             return Response({'detail': 'personas invalida.'}, status=400)
 
         contexto = {'personas': personas, 'moneda': moneda}
-        return Response({
-            'extras': ExtrasItemSerializer(
-                ExtrasItem.objects.filter(activo=True), many=True, context=contexto
-            ).data,
-            'transporte': TransportePrecioSerializer(
-                TransportePrecio.objects.filter(activo=True), many=True, context=contexto
-            ).data,
-            'puntos_encuentro': PuntoEncuentroSerializer(
-                PuntoEncuentro.objects.filter(activo=True), many=True
-            ).data,
-        })
+        with scope.con_empresa(empresa):
+            return Response({
+                'extras': ExtrasItemSerializer(
+                    ExtrasItem.objects.filter(activo=True, empresa=empresa), many=True, context=contexto
+                ).data,
+                'transporte': TransportePrecioSerializer(
+                    TransportePrecio.objects.filter(activo=True, empresa=empresa), many=True, context=contexto
+                ).data,
+                'puntos_encuentro': PuntoEncuentroSerializer(
+                    PuntoEncuentro.objects.filter(activo=True, empresa=empresa), many=True
+                ).data,
+            })
