@@ -1,63 +1,83 @@
-"""Crea/actualiza el grupo 'Vendedora' con los permisos de docs/contexto-negocio.md
-(seccion 5, Roles y permisos). Idempotente: correr de nuevo solo sincroniza permisos.
+"""Crea/actualiza los grupos 'Jefe', 'Vendedora' y 'OperadorPlataforma' con los
+permisos de docs/contexto-negocio.md (seccion 5, Roles y permisos) mas los
+ajustes de la expansion multi-sede (ver plan Pieza 1, Revision 8, H5).
+Idempotente: correr de nuevo solo sincroniza permisos.
 
-Los jefes NO usan un grupo: son cuentas Django is_superuser=True (ven/editan todo).
+Debe correr ANTES de manage.py migrar_la_paz_a_empresa: ese comando asume
+que estos tres grupos ya existen.
 """
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
+PERMISOS_VENDEDORA = [
+    ('bookings', 'reserva', ['add', 'change', 'view']),
+    ('bookings', 'agenda', ['change', 'view']),
+    ('bookings', 'cupodiario', ['add', 'change', 'view']),
+    ('bookings', 'checkoutabandonado', ['view']),
+    ('bookings', 'vendedora', ['view']),
+    ('fleet', 'embarcacion', ['view']),
+    ('fleet', 'capitan', ['view']),
+    ('fleet', 'puntoencuentro', ['view']),
+    ('bookings', 'reservaextra', ['view']),
+    ('bookings', 'reservatransporte', ['view']),
+    ('fleet', 'embarcacionnodisponible', ['add', 'change', 'delete', 'view']),
+]
+
+# Todo lo que Vendedora no tiene: borrar, y el catalogo financiero completo
+# (antes reservado a is_superuser=True). 'payments' no tiene modelos propios
+# en el admin -- el cobro se opera via Stripe, no via CRUD local -- por eso
+# no hay fila aparte para esa app.
+PERMISOS_JEFE = PERMISOS_VENDEDORA + [
+    ('bookings', 'reserva', ['delete']),
+    ('bookings', 'cupodiario', ['delete']),
+    ('bookings', 'vendedora', ['add', 'change', 'delete']),
+    ('fleet', 'embarcacion', ['add', 'change', 'delete']),
+    ('fleet', 'capitan', ['add', 'change', 'delete']),
+    ('fleet', 'puntoencuentro', ['add', 'change', 'delete']),
+    ('fleet', 'extrasitem', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'transporteprecio', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'codigopromocional', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'tarifa', ['add', 'change', 'view']),
+    # H5: solo view+change sobre auth.user -- el alta pasa por la accion
+    # "Dar de alta vendedora" (apps/bookings/admin.py), cuyo has_add_permission
+    # bloquea el "Agregar usuario" directo del UserAdmin. Cero permisos sobre
+    # auth.group: GroupAdmin queda exclusivo del operador de plataforma.
+    ('auth', 'user', ['view', 'change']),
+]
+
+PERMISOS_OPERADOR = PERMISOS_JEFE + [
+    ('auth', 'user', ['add', 'delete']),
+    ('auth', 'group', ['add', 'change', 'delete', 'view']),
+    ('tenancy', 'sede', ['add', 'change', 'delete', 'view']),
+    ('tenancy', 'empresa', ['add', 'change', 'delete', 'view']),
+    ('tenancy', 'membresiaempresa', ['add', 'change', 'delete', 'view']),
+]
+
 
 class Command(BaseCommand):
-    help = "Crea/actualiza el grupo 'Vendedora' con permisos operativos (sin acceso financiero)."
+    help = "Crea/actualiza los grupos 'Jefe', 'Vendedora' y 'OperadorPlataforma'."
 
     def handle(self, *args, **options):
-        group, _ = Group.objects.get_or_create(name='Vendedora')
+        vendedora = self._grupo('Vendedora', PERMISOS_VENDEDORA)
+        jefe = self._grupo('Jefe', PERMISOS_JEFE)
+        operador = self._grupo('OperadorPlataforma', PERMISOS_OPERADOR)
+        self.stdout.write(self.style.SUCCESS(
+            f"Grupos listos: Vendedora ({vendedora.permissions.count()}), "
+            f"Jefe ({jefe.permissions.count()}), "
+            f"OperadorPlataforma ({operador.permissions.count()})."
+        ))
 
-        permisos = [
-            # Reservas: vista operativa completa. Sin delete (se cancela, no se borra).
-            ('bookings', 'reserva', ['add', 'change', 'view']),
-            # Agenda: repartir panga y capitan de los viajes ya vendidos. Es un
-            # proxy de Reserva y por eso tiene permisos propios. Sin add ni
-            # delete: una reserva se crea vendiendo y se cancela, no se inventa
-            # ni se borra desde la agenda.
-            ('bookings', 'agenda', ['change', 'view']),
-            # Cupo diario: puede cerrar/reducir el dia cuando falten embarcaciones.
-            ('bookings', 'cupodiario', ['add', 'change', 'view']),
-            # Checkouts abandonados: lista de recuperacion, solo lectura (el proxy
-            # de Reserva no se edita ni se borra a mano, ver CheckoutAbandonadoAdmin).
-            ('bookings', 'checkoutabandonado', ['view']),
-            # Vendedoras: solo consulta, para tener a la mano su propio codigo de
-            # link (?ref=). Darlas de alta o cambiar codigos es cosa de jefes.
-            ('bookings', 'vendedora', ['view']),
-            # Catalogo de flota: solo consulta, para asignar embarcacion/capitan.
-            ('fleet', 'embarcacion', ['view']),
-            ('fleet', 'capitan', ['view']),
-            # Puntos de encuentro del transporte: catalogo operativo (que hotel es
-            # de que zona), no un precio. fleet.ExtrasItem/TransportePrecio
-            # deliberadamente fuera, mismo trato que fleet.Tarifa: son precios.
-            ('fleet', 'puntoencuentro', ['view']),
-            # Que compro el cliente en el checkout: sin esto Django quita en
-            # silencio los inlines de ReservaAdmin para ella (get_inline_instances
-            # los descarta sin permiso, sin error) y deja de ver que se vendio.
-            ('bookings', 'reservaextra', ['view']),
-            ('bookings', 'reservatransporte', ['view']),
-            # Que panga no sale un dia (mantenimiento, motor). Es trabajo diario
-            # suyo, no de los jefes. Con delete a proposito: si marco una fuera
-            # por error, o el motor se arreglo antes, tiene que poder deshacerlo
-            # — no es un registro historico, es el estado de un dia.
-            ('fleet', 'embarcacionnodisponible', ['add', 'change', 'delete', 'view']),
-            # fleet.Tarifa deliberadamente fuera: es informacion financiera, solo jefes.
-        ]
-
-        perms = []
+    def _grupo(self, nombre, permisos):
+        group, _ = Group.objects.get_or_create(name=nombre)
+        perms, vistos = [], set()
         for app_label, modelo, acciones in permisos:
             ct = ContentType.objects.get(app_label=app_label, model=modelo)
             for accion in acciones:
+                clave = (app_label, modelo, accion)
+                if clave in vistos:
+                    continue
+                vistos.add(clave)
                 perms.append(Permission.objects.get(content_type=ct, codename=f'{accion}_{modelo}'))
-
         group.permissions.set(perms)
-
-        self.stdout.write(self.style.SUCCESS(
-            f"Grupo 'Vendedora' listo con {len(perms)} permisos."
-        ))
+        return group
