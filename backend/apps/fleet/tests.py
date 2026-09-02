@@ -7,6 +7,7 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from apps.payments.pricing import PERSONAS_INCLUIDAS
+from apps.tenancy.models import Empresa, Sede
 
 from .models import (
     CodigoPromocional,
@@ -21,21 +22,109 @@ from .models import (
 )
 
 
+_CONTADOR_SEDES = iter(range(10_000))
+
+
+def _crear_empresa(slug):
+    n = next(_CONTADOR_SEDES)
+    sede = Sede.objects.create(nombre=f'Sede de prueba {n}', slug=f'sede-{n}-{slug}')
+    return Empresa.objects.create(sede=sede, nombre=f'Empresa {slug}', slug=slug, activo=True)
+
+
 class TarifaTests(TestCase):
-    def test_es_singleton(self):
-        Tarifa.objects.create(precio=Decimal('4500.00'))
-        Tarifa.objects.create(precio=Decimal('5000.00'))
-        self.assertEqual(Tarifa.objects.count(), 1)
-        self.assertEqual(Tarifa.actual().precio, Decimal('5000.00'))
+    def setUp(self):
+        self.empresa_a = _crear_empresa(slug='empresa-a')
+        self.empresa_b = _crear_empresa(slug='empresa-b')
+
+    def test_una_tarifa_por_empresa(self):
+        Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
+        Tarifa.objects.create(precio=Decimal('5000.00'), empresa=self.empresa_a)
+        self.assertEqual(Tarifa.objects.filter(empresa=self.empresa_a).count(), 1)
+        self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('5000.00'))
+
+    def test_cada_empresa_tiene_su_propia_tarifa(self):
+        Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
+        Tarifa.objects.create(precio=Decimal('3000.00'), empresa=self.empresa_b)
+        self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('4500.00'))
+        self.assertEqual(Tarifa.de(self.empresa_b).precio, Decimal('3000.00'))
+
+    def test_sin_tarifa_de_devuelve_none(self):
+        self.assertIsNone(Tarifa.de(self.empresa_b))
 
     def test_precio_por_moneda(self):
-        tarifa = Tarifa.objects.create(precio=Decimal('4500.00'), precio_usd=Decimal('260.00'))
+        tarifa = Tarifa.objects.create(
+            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'), empresa=self.empresa_a,
+        )
         self.assertEqual(tarifa.precio_en('MXN'), Decimal('4500.00'))
         self.assertEqual(tarifa.precio_en('USD'), Decimal('260.00'))
 
     def test_sin_precio_en_dolares_devuelve_none(self):
-        tarifa = Tarifa.objects.create(precio=Decimal('4500.00'))
+        tarifa = Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
         self.assertIsNone(tarifa.precio_en('USD'))
+
+
+class UnicidadPorEmpresaTests(TransactionTestCase):
+    def setUp(self):
+        self.empresa_a = _crear_empresa(slug='empresa-a')
+        self.empresa_b = _crear_empresa(slug='empresa-b')
+
+    def test_zona_de_transporte_repetida_en_la_misma_empresa_falla(self):
+        TransportePrecio.objects.create(
+            zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
+        )
+        with self.assertRaises(IntegrityError):
+            TransportePrecio.objects.create(
+                zona='centro', precio_base=Decimal('2100'), empresa=self.empresa_a,
+            )
+
+    def test_zona_de_transporte_repetida_entre_empresas_distintas_es_valida(self):
+        TransportePrecio.objects.create(
+            zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
+        )
+        TransportePrecio.objects.create(
+            zona='centro', precio_base=Decimal('1800'), empresa=self.empresa_b,
+        )
+        self.assertEqual(TransportePrecio.objects.count(), 2)
+
+    def test_codigo_promocional_repetido_en_la_misma_empresa_falla(self):
+        CodigoPromocional.objects.create(
+            codigo='VERANO10', porcentaje_descuento=Decimal('10'), empresa=self.empresa_a,
+        )
+        with self.assertRaises(IntegrityError):
+            CodigoPromocional.objects.create(
+                codigo='VERANO10', porcentaje_descuento=Decimal('15'), empresa=self.empresa_a,
+            )
+
+    def test_codigo_promocional_repetido_entre_empresas_es_valido(self):
+        CodigoPromocional.objects.create(
+            codigo='VERANO10', porcentaje_descuento=Decimal('10'), empresa=self.empresa_a,
+        )
+        CodigoPromocional.objects.create(
+            codigo='VERANO10', porcentaje_descuento=Decimal('20'), empresa=self.empresa_b,
+        )
+        self.assertEqual(CodigoPromocional.objects.count(), 2)
+
+    def test_nombre_de_embarcacion_repetido_en_la_misma_empresa_falla(self):
+        Embarcacion.objects.create(
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+            empresa=self.empresa_a,
+        )
+        with self.assertRaises(IntegrityError):
+            Embarcacion.objects.create(
+                nombre='Lupita', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
+                empresa=self.empresa_a,
+            )
+
+    def test_nombre_de_embarcacion_repetido_entre_empresas_es_valido(self):
+        Embarcacion.objects.create(
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+            empresa=self.empresa_a,
+        )
+        Embarcacion.objects.create(
+            nombre='Lupita', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
+            empresa=self.empresa_b,
+        )
+        self.assertEqual(Embarcacion.objects.count(), 2)
 
 
 class TarifaApiTests(TestCase):
@@ -183,40 +272,54 @@ class EmbarcacionTests(TestCase):
 
 class CapacidadesDisponiblesTests(TestCase):
     def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
         self.fecha = date.today() + timedelta(days=10)
         self.chica = Embarcacion.objects.create(
-            nombre='Chuy', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3
+            nombre='Chuy', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
+            empresa=self.empresa,
         )
         self.grande = Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+            empresa=self.empresa,
         )
 
     def test_devuelve_las_capacidades_de_mayor_a_menor(self):
-        self.assertEqual(capacidades_disponibles(self.fecha), [5, 3])
+        self.assertEqual(capacidades_disponibles(self.fecha, self.empresa), [5, 3])
 
     def test_excluye_las_inactivas(self):
         self.grande.activa = False
         self.grande.save()
-        self.assertEqual(capacidades_disponibles(self.fecha), [3])
+        self.assertEqual(capacidades_disponibles(self.fecha, self.empresa), [3])
 
     def test_excluye_la_marcada_no_disponible_solo_ese_dia(self):
         """Una panga en mantenimiento el jueves vuelve a contar el viernes."""
         EmbarcacionNoDisponible.objects.create(
-            fecha=self.fecha, embarcacion=self.grande, motivo='Mantenimiento'
+            fecha=self.fecha, embarcacion=self.grande, motivo='Mantenimiento',
+            empresa=self.empresa,
         )
-        self.assertEqual(capacidades_disponibles(self.fecha), [3])
-        self.assertEqual(capacidades_disponibles(self.fecha + timedelta(days=1)), [5, 3])
+        self.assertEqual(capacidades_disponibles(self.fecha, self.empresa), [3])
+        self.assertEqual(
+            capacidades_disponibles(self.fecha + timedelta(days=1), self.empresa), [5, 3],
+        )
 
     def test_el_rango_no_hace_una_consulta_por_dia(self):
         """El costo no puede crecer con la ventana: de aqui cuelga la busqueda de
         los proximos 90 dias del checkout."""
         with self.assertNumQueries(2):
-            capacidades_por_fecha(self.fecha, self.fecha + timedelta(days=89))
+            capacidades_por_fecha(self.fecha, self.fecha + timedelta(days=89), self.empresa)
 
     def test_el_rango_trae_una_entrada_por_dia(self):
-        rango = capacidades_por_fecha(self.fecha, self.fecha + timedelta(days=2))
+        rango = capacidades_por_fecha(self.fecha, self.fecha + timedelta(days=2), self.empresa)
         self.assertEqual(len(rango), 3)
         self.assertEqual(rango[self.fecha], [5, 3])
+
+    def test_pangas_de_otra_empresa_no_cuentan(self):
+        otra_empresa = _crear_empresa(slug='empresa-b')
+        Embarcacion.objects.create(
+            nombre='Otra panga', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=6,
+            empresa=otra_empresa,
+        )
+        self.assertEqual(capacidades_disponibles(self.fecha, self.empresa), [5, 3])
 
 
 class CodigoPromocionalTests(TestCase):

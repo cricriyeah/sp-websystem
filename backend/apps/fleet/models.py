@@ -40,22 +40,30 @@ class Tarifa(models.Model):
     )
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='tarifa')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['empresa'], name='tarifa_unica_por_empresa'),
+        ]
+
     def save(self, *args, force_insert=False, **kwargs):
-        # Siempre la misma fila. Se ignora force_insert a proposito: un segundo
-        # Tarifa.objects.create() debe actualizar el precio, no reventar con
-        # IntegrityError sobre pk=1.
-        self.pk = 1
+        # Una tarifa por Empresa, no una tarifa por sistema: un segundo
+        # Tarifa.objects.create(empresa=X) debe actualizar el precio de X, no
+        # reventar con IntegrityError sobre la UniqueConstraint de arriba.
+        if not self.pk:
+            existente = Tarifa.objects.filter(empresa=self.empresa).first()
+            if existente:
+                self.pk = existente.pk
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         raise ValidationError('La tarifa no se puede eliminar, solo editar.')
 
     def __str__(self):
-        return f'Tarifa: ${self.precio} MXN'
+        return f'Tarifa de {self.empresa}: ${self.precio} MXN'
 
     @classmethod
-    def actual(cls):
-        return cls.objects.first()
+    def de(cls, empresa):
+        return cls.objects.filter(empresa=empresa).first()
 
     def precio_en(self, moneda):
         """Precio de lista en la moneda pedida, o None si no esta configurado."""
@@ -136,7 +144,7 @@ class TransportePrecio(models.Model):
         CENTRO = 'centro', 'Centro'
         PERIFERIA = 'periferia', 'Periferia'
 
-    zona = models.CharField(max_length=10, choices=Zona.choices, unique=True)
+    zona = models.CharField(max_length=10, choices=Zona.choices)
     precio_base = models.DecimalField(max_digits=10, decimal_places=2, help_text='Precio en pesos (MXN).')
     precio_base_usd = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
@@ -155,6 +163,9 @@ class TransportePrecio(models.Model):
         ordering = ['zona']
         verbose_name = 'precio de transporte'
         verbose_name_plural = 'precios de transporte'
+        constraints = [
+            models.UniqueConstraint(fields=['zona', 'empresa'], name='transporteprecio_zona_unica_por_empresa'),
+        ]
 
     def __str__(self):
         return f'Transporte {self.get_zona_display()}: ${self.precio_base} MXN'
@@ -200,7 +211,7 @@ class CodigoPromocional(models.Model):
     cuentan esos usos.
     """
 
-    codigo = models.CharField(max_length=20, unique=True)
+    codigo = models.CharField(max_length=20)
     descripcion = models.CharField(
         max_length=200, blank=True, help_text='Uso interno, no se muestra al cliente.'
     )
@@ -237,6 +248,9 @@ class CodigoPromocional(models.Model):
         ordering = ['-creado_en']
         verbose_name = 'codigo promocional'
         verbose_name_plural = 'codigos promocionales'
+        constraints = [
+            models.UniqueConstraint(fields=['codigo', 'empresa'], name='codigopromocional_codigo_unico_por_empresa'),
+        ]
 
     def __str__(self):
         return self.codigo
@@ -266,7 +280,7 @@ class Embarcacion(models.Model):
         CHICA = 'chica', 'Chica'
         GRANDE = 'grande', 'Grande'
 
-    nombre = models.CharField(max_length=100, unique=True)
+    nombre = models.CharField(max_length=100)
     clase = models.CharField(max_length=10, choices=Clase.choices)
     capacidad_maxima = models.PositiveSmallIntegerField(
         help_text='Numero maximo de personas que puede llevar esta embarcacion.'
@@ -282,6 +296,9 @@ class Embarcacion(models.Model):
 
     class Meta:
         ordering = ['nombre']
+        constraints = [
+            models.UniqueConstraint(fields=['nombre', 'empresa'], name='embarcacion_nombre_unico_por_empresa'),
+        ]
 
     def __str__(self):
         # Con la capacidad, porque el selector de la agenda es donde se asigna una
@@ -344,8 +361,10 @@ class EmbarcacionNoDisponible(models.Model):
         return f'{self.embarcacion.nombre} fuera el {self.fecha}'
 
 
-def capacidades_por_fecha(desde, hasta):
-    """Capacidad de cada panga que puede salir, por dia, de mayor a menor.
+def capacidades_por_fecha(desde, hasta, empresa):
+    """Capacidad de cada panga que puede salir, por dia, de mayor a menor, para
+    esa Empresa. `empresa` es obligatorio — sin filtro por Empresa, en
+    sqlite/tests la flota de una Empresa cuenta como capacidad de otra.
 
     `{fecha: [5, 3, 3, ...]}` con una entrada por cada dia del rango, incluidos
     los dias en que no falta ninguna.
@@ -357,11 +376,14 @@ def capacidades_por_fecha(desde, hasta):
     La flota no sabe nada de reservas a proposito: esto responde que hay a flote,
     no que esta vendido.
     """
-    activas = list(Embarcacion.objects.filter(activa=True).values_list('id', 'capacidad_maxima'))
+    activas = list(
+        Embarcacion.objects.filter(activa=True, empresa=empresa)
+        .values_list('id', 'capacidad_maxima')
+    )
 
     fuera = defaultdict(set)
     for fecha, embarcacion_id in EmbarcacionNoDisponible.objects.filter(
-        fecha__range=(desde, hasta)
+        fecha__range=(desde, hasta), empresa=empresa
     ).values_list('fecha', 'embarcacion_id'):
         fuera[fecha].add(embarcacion_id)
 
@@ -374,10 +396,10 @@ def capacidades_por_fecha(desde, hasta):
     }
 
 
-def capacidades_disponibles(fecha):
-    """Las capacidades a flote ese dia, de mayor a menor.
+def capacidades_disponibles(fecha, empresa):
+    """Las capacidades a flote ese dia para esa Empresa, de mayor a menor.
 
     Es el caso de un dia de `capacidades_por_fecha`, y se implementa asi para que
     la ruta de una fecha y la de 90 dias no puedan discrepar nunca.
     """
-    return capacidades_por_fecha(fecha, fecha)[fecha]
+    return capacidades_por_fecha(fecha, fecha, empresa)[fecha]
