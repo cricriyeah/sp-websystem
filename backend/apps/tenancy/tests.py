@@ -1,13 +1,15 @@
 from django.contrib import admin as django_admin
 from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
+from django.contrib.admin.utils import flatten_fieldsets
 from django.core.exceptions import ValidationError
 from django.db import connection, models
 from django.db.utils import IntegrityError
 from django.test import RequestFactory, TestCase, TransactionTestCase
 
 from . import scope
-from .admin_mixins import EmpresaScopedAdminMixin
+from .admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from .models import Empresa, MembresiaEmpresa, Sede
 
 User = get_user_model()
@@ -166,3 +168,96 @@ class EmpresaScopedAdminMixinTests(TestCase):
         with scope.como_operador_plataforma():
             count = self.admin.get_queryset(self._request(operador)).count()
         self.assertEqual(count, 2)
+
+
+class _UserAdminDePrueba(EmpresaScopedUserAdminMixin, BaseUserAdmin, django_admin.ModelAdmin):
+    pass
+
+
+class EmpresaScopedUserAdminMixinTests(TestCase):
+    def setUp(self):
+        # slug 'sede-test': 'la-paz' ya existe committeada por la migracion 0002.
+        sede = Sede.objects.create(nombre='La Paz', slug='sede-test')
+        self.empresa_a = Empresa.objects.create(sede=sede, nombre='A', slug='empresa-a')
+        self.empresa_b = Empresa.objects.create(sede=sede, nombre='B', slug='empresa-b')
+
+        self.jefe_a = User.objects.create_user(username='jefe-a', password='x', is_staff=True)
+        MembresiaEmpresa.objects.create(user=self.jefe_a, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.JEFE)
+
+        self.vendedora_b = User.objects.create_user(username='vend-b', password='x', is_staff=True)
+        MembresiaEmpresa.objects.create(
+            user=self.vendedora_b, empresa=self.empresa_b, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        )
+
+        self.admin = _UserAdminDePrueba(User, django_admin.site)
+
+    def _request(self, user):
+        request = RequestFactory().get('/')
+        request.user = user
+        return request
+
+    def test_get_queryset_no_cruza_empresas(self):
+        with scope.con_empresa(self.empresa_a):
+            qs = self.admin.get_queryset(self._request(self.jefe_a))
+        self.assertIn(self.jefe_a, qs)
+        self.assertNotIn(self.vendedora_b, qs)
+
+    def test_get_queryset_operador_ve_todo(self):
+        grupo, _ = Group.objects.get_or_create(name=scope.NOMBRE_GRUPO_OPERADOR_PLATAFORMA)
+        operador = User.objects.create_user(username='op', password='x', is_staff=True)
+        operador.groups.add(grupo)
+        with scope.como_operador_plataforma():
+            qs = self.admin.get_queryset(self._request(operador))
+        self.assertIn(self.jefe_a, qs)
+        self.assertIn(self.vendedora_b, qs)
+
+    def test_no_ve_ni_puede_acceder_a_ficha_de_usuario_ajeno(self):
+        with scope.con_empresa(self.empresa_a):
+            self.assertFalse(
+                self.admin.has_view_permission(self._request(self.jefe_a), self.vendedora_b)
+            )
+            self.assertFalse(
+                self.admin.has_change_permission(self._request(self.jefe_a), self.vendedora_b)
+            )
+
+    def test_has_add_permission_falso_para_no_operador(self):
+        with scope.con_empresa(self.empresa_a):
+            self.assertFalse(self.admin.has_add_permission(self._request(self.jefe_a)))
+
+    def test_get_fieldsets_de_jefe_no_incluye_campos_de_permisos_completos(self):
+        with scope.con_empresa(self.empresa_a):
+            fieldsets = self.admin.get_fieldsets(self._request(self.jefe_a), self.jefe_a)
+        campos_planos = {campo for _, opciones in fieldsets for campo in opciones.get('fields', ())}
+        self.assertNotIn('is_superuser', campos_planos)
+        self.assertNotIn('user_permissions', campos_planos)
+        self.assertNotIn('groups', campos_planos)
+        self.assertIn('is_active', campos_planos)
+
+    def test_get_fieldsets_de_operador_incluye_todo(self):
+        grupo, _ = Group.objects.get_or_create(name=scope.NOMBRE_GRUPO_OPERADOR_PLATAFORMA)
+        operador = User.objects.create_user(username='op2', password='x', is_staff=True)
+        operador.groups.add(grupo)
+        with scope.como_operador_plataforma():
+            fieldsets = self.admin.get_fieldsets(self._request(operador), operador)
+        campos_planos = {campo for _, opciones in fieldsets for campo in opciones.get('fields', ())}
+        self.assertIn('is_superuser', campos_planos)
+
+    def test_post_completo_inyectando_is_superuser_no_escala(self):
+        """Prueba directa de H1: simula un jefe enviando el form completo del
+        changelist con is_superuser=on inyectado a mano (bypaseando el HTML
+        real, que ya no pinta el campo) -- ModelForm solo procesa los campos
+        de `fields` (derivados de get_fieldsets), asi que un campo ausente de
+        ahi nunca llega a `cleaned_data` sin importar que traiga el POST."""
+        with scope.con_empresa(self.empresa_a):
+            request = self._request(self.jefe_a)
+            fieldsets = self.admin.get_fieldsets(request, self.jefe_a)
+            form_class = self.admin.get_form(
+                request, self.jefe_a, change=True, fields=flatten_fieldsets(fieldsets),
+            )
+            form = form_class(
+                data={'is_superuser': 'on', 'is_active': 'on', 'username': 'jefe-a'},
+                instance=self.jefe_a,
+            )
+            self.assertTrue(form.is_valid(), form.errors)
+            usuario_actualizado = form.save(commit=False)
+            self.assertFalse(usuario_actualizado.is_superuser)
