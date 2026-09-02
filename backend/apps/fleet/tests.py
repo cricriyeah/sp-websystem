@@ -1,7 +1,9 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from io import StringIO
 
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
 from django.db.utils import IntegrityError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
@@ -388,3 +390,23 @@ class EmpresaFKTests(TestCase):
     def test_empresa_es_obligatoria_en_tarifa(self):
         campo = Tarifa._meta.get_field('empresa')
         self.assertFalse(campo.null)
+
+
+class SeedExtrasTests(TestCase):
+    def setUp(self):
+        self.empresa = _crear_empresa(slug='empresa-a')
+
+    def test_siembra_el_catalogo_para_la_empresa_dada(self):
+        call_command('seed_extras', empresa='empresa-a', stdout=StringIO())
+        self.assertEqual(ExtrasItem.objects.filter(empresa=self.empresa).count(), 3)
+        self.assertEqual(TransportePrecio.objects.filter(empresa=self.empresa).count(), 2)
+        self.assertEqual(PuntoEncuentro.objects.filter(empresa=self.empresa).count(), 1)
+
+    def test_es_idempotente(self):
+        call_command('seed_extras', empresa='empresa-a', stdout=StringIO())
+        call_command('seed_extras', empresa='empresa-a', stdout=StringIO())
+        self.assertEqual(ExtrasItem.objects.filter(empresa=self.empresa).count(), 3)
+
+    def test_sin_empresa_falla_explicito(self):
+        with self.assertRaises(Exception):
+            call_command('seed_extras', stdout=StringIO())
