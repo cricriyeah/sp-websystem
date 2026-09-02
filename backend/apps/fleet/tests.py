@@ -267,3 +267,14 @@ class EmbarcacionNoDisponibleUnicidadTests(TransactionTestCase):
         EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande)
         with self.assertRaises(IntegrityError):
             EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande)
+
+
+class EmpresaFKTests(TestCase):
+    def test_tarifa_tiene_campo_empresa(self):
+        campo = Tarifa._meta.get_field('empresa')
+        self.assertTrue(campo.null)
+        self.assertEqual(campo.remote_field.on_delete.__name__, 'PROTECT')
+
+    def test_embarcacionnodisponible_tiene_campo_empresa(self):
+        campo = EmbarcacionNoDisponible._meta.get_field('empresa')
+        self.assertTrue(campo.null)

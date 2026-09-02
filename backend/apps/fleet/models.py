@@ -38,6 +38,10 @@ class Tarifa(models.Model):
     actualizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
     )
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tarifa',
+    )
 
     def save(self, *args, force_insert=False, **kwargs):
         # Siempre la misma fila. Se ignora force_insert a proposito: un segundo
@@ -107,6 +111,10 @@ class ExtrasItem(models.Model):
                   'sentido junto con "Cobrar por persona".',
     )
     activo = models.BooleanField(default=True)
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='extras_items',
+    )
 
     class Meta:
         ordering = ['tipo', 'nombre']
@@ -147,6 +155,10 @@ class TransportePrecio(models.Model):
     recargo_grupo_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     min_personas_recargo = models.PositiveSmallIntegerField(default=4)
     activo = models.BooleanField(default=True)
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='precios_transporte',
+    )
 
     class Meta:
         ordering = ['zona']
@@ -170,6 +182,10 @@ class PuntoEncuentro(models.Model):
     nombre = models.CharField(max_length=150)
     zona = models.CharField(max_length=10, choices=TransportePrecio.Zona.choices)
     activo = models.BooleanField(default=True)
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='puntos_encuentro',
+    )
 
     class Meta:
         ordering = ['nombre']
@@ -227,6 +243,10 @@ class CodigoPromocional(models.Model):
     )
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='codigos_promocionales',
+    )
 
     class Meta:
         ordering = ['-creado_en']
@@ -273,6 +293,10 @@ class Embarcacion(models.Model):
                   'pero conserva los viajes historicos que tiene asignados. Mismo '
                   'patron que Vendedora.activo: borrarla dejaria viajes sin panga.',
     )
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='embarcaciones',
+    )
 
     class Meta:
         ordering = ['nombre']
@@ -288,6 +312,10 @@ class Capitan(models.Model):
 
     nombre = models.CharField(max_length=150)
     telefono = models.CharField(max_length=20)
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='capitanes',
+    )
 
     class Meta:
         ordering = ['nombre']
@@ -325,6 +353,10 @@ class EmbarcacionNoDisponible(models.Model):
         related_name='embarcaciones_dadas_de_baja',
     )
     creado_en = models.DateTimeField(auto_now_add=True)
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='embarcaciones_no_disponibles',
+    )
 
     class Meta:
         unique_together = ('fecha', 'embarcacion')
