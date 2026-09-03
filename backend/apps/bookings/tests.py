@@ -20,7 +20,7 @@ from apps.fleet.models import (
     ExtrasItem,
     PuntoEncuentro,
 )
-from apps.testing import ApiTestCase, crear_flota
+from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
 
 from .admin import telefono_marcable
 from .models import (
@@ -51,11 +51,12 @@ def envejecer(reserva, **delta):
     return reserva
 
 
-def datos_reserva(**overrides):
-    # Hay tests que llaman Reserva(**datos_reserva()).full_clean() directo, y el
+def datos_reserva(empresa, **overrides):
+    # Hay tests que llaman Reserva(**datos_reserva(empresa)).full_clean() directo, y el
     # motor de cupo le pregunta a la flota: sin pangas no cabe nadie.
-    crear_flota()
+    crear_flota(empresa)
     base = {
+        'empresa': empresa,
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -70,81 +71,83 @@ def datos_reserva(**overrides):
     return base
 
 
-def crear_reserva(**overrides):
-    reserva = Reserva(**datos_reserva(**overrides))
+def crear_reserva(empresa, **overrides):
+    reserva = Reserva(**datos_reserva(empresa, **overrides))
     reserva.full_clean()
     reserva.save()
     return reserva
 
 
-class VentanaSalidaTests(TestCase):
+class VentanaSalidaTests(EmpresaTestCase):
     def test_hora_fuera_de_la_ventana_es_invalida(self):
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(hora=time(8, 0))).full_clean()
+            Reserva(**datos_reserva(self.empresa, hora=time(8, 0))).full_clean()
 
 
-class NumeroPersonasTests(TestCase):
+class NumeroPersonasTests(EmpresaTestCase):
     def test_el_tope_es_la_panga_mas_grande_de_la_flota(self):
         """La flota real son 8 pangas de maximo 3 y 2 de maximo 5.
 
         El tope estuvo en 6, que no lo cumple ninguna: la web aceptaba y cobraba
         un viaje de 6 personas que despues no habia forma de operar.
         """
-        Reserva(**datos_reserva(numero_personas=MAX_PERSONAS)).full_clean()
+        Reserva(**datos_reserva(self.empresa, numero_personas=MAX_PERSONAS)).full_clean()
 
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(numero_personas=MAX_PERSONAS + 1)).full_clean()
+            Reserva(**datos_reserva(self.empresa, numero_personas=MAX_PERSONAS + 1)).full_clean()
 
     def test_seis_personas_ya_no_se_acepta(self):
         # Explicito y no derivado de MAX_PERSONAS: si alguien sube la constante
         # sin comprar una panga mas grande, este test lo detiene.
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(numero_personas=6)).full_clean()
+            Reserva(**datos_reserva(self.empresa, numero_personas=6)).full_clean()
 
     def test_una_persona_es_valido(self):
-        Reserva(**datos_reserva(numero_personas=1)).full_clean()
+        Reserva(**datos_reserva(self.empresa, numero_personas=1)).full_clean()
 
     def test_no_cabe_en_la_embarcacion_asignada(self):
         chica = Embarcacion.objects.create(
-            nombre='La Chica', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3
+            empresa=self.empresa, nombre='La Chica',
+            clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
         )
-        reserva = Reserva(**datos_reserva(numero_personas=5, embarcacion=chica))
+        reserva = Reserva(**datos_reserva(self.empresa, numero_personas=5, embarcacion=chica))
         with self.assertRaises(ValidationError) as ctx:
             reserva.full_clean()
         self.assertIn('embarcacion', ctx.exception.message_dict)
 
 
-class DeslindeTests(TestCase):
+class DeslindeTests(EmpresaTestCase):
     def test_reserva_web_sin_deslinde_es_invalida(self):
         with self.assertRaises(ValidationError) as ctx:
-            Reserva(**datos_reserva(deslinde_aceptado=False)).full_clean()
+            Reserva(**datos_reserva(self.empresa, deslinde_aceptado=False)).full_clean()
         self.assertIn('deslinde_aceptado', ctx.exception.message_dict)
 
     def test_reserva_por_whatsapp_no_requiere_deslinde_en_el_sistema(self):
         Reserva(**datos_reserva(
-            canal_origen=Reserva.CanalOrigen.WHATSAPP, deslinde_aceptado=False, deslinde_nombre=''
+            self.empresa,
+            canal_origen=Reserva.CanalOrigen.WHATSAPP, deslinde_aceptado=False, deslinde_nombre='',
         )).full_clean()
 
 
-class CupoTests(TestCase):
+class CupoTests(EmpresaTestCase):
     def test_pendiente_de_pago_no_ocupa_cupo(self):
         fecha = date.today() + timedelta(days=10)
         for _ in range(CUPO_MAXIMO_DEFAULT + 2):
-            crear_reserva(fecha=fecha)
-        crear_reserva(fecha=fecha).full_clean()
+            crear_reserva(self.empresa, fecha=fecha)
+        crear_reserva(self.empresa, fecha=fecha).full_clean()
 
     def test_se_llena_con_reservas_pagadas(self):
         fecha = date.today() + timedelta(days=10)
         for _ in range(CUPO_MAXIMO_DEFAULT):
-            crear_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)
+            crear_reserva(self.empresa, fecha=fecha, estado=Reserva.Estado.PAGADA)
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)).full_clean()
+            Reserva(**datos_reserva(self.empresa, fecha=fecha, estado=Reserva.Estado.PAGADA)).full_clean()
 
     def test_cupo_diario_override_cierra_el_dia(self):
         fecha = date.today() + timedelta(days=10)
-        CupoDiario.objects.create(fecha=fecha, cupo_maximo=0)
+        CupoDiario.objects.create(empresa=self.empresa, fecha=fecha, cupo_maximo=0)
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)).full_clean()
+            Reserva(**datos_reserva(self.empresa, fecha=fecha, estado=Reserva.Estado.PAGADA)).full_clean()
 
 
 class CambioDeFechaTests(TestCase):
