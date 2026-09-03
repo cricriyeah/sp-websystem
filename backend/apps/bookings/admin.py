@@ -7,9 +7,10 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
-from django.db import models
-from django.http import JsonResponse
-from django.urls import path
+from django.db import models, transaction
+from django.http import HttpResponseRedirect, JsonResponse
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.html import format_html
@@ -18,7 +19,10 @@ from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from apps.tenancy import scope
-from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin
+from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
+from apps.tenancy.models import MembresiaEmpresa
+
+from .forms import AltaVendedoraForm
 
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
@@ -450,12 +454,58 @@ admin.site.unregister(Group)
 
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin, ModelAdmin):
+class UserAdmin(EmpresaScopedUserAdminMixin, BaseUserAdmin, ModelAdmin):
     # Los formularios de Unfold son los de Django con sus widgets. Sin ellos el
     # campo de contraseña se pinta sin estilo y el enlace para cambiarla no sale.
     form = UserChangeForm
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
+
+    def get_urls(self):
+        # Antes de super(): el admin termina en un catch-all <path:object_id>/.
+        return [
+            path(
+                'dar-de-alta-vendedora/',
+                self.admin_site.admin_view(self.dar_de_alta_vendedora_view),
+                name='bookings_user_dar_de_alta_vendedora',
+            ),
+        ] + super().get_urls()
+
+    def dar_de_alta_vendedora_view(self, request):
+        """Unico flujo para crear una vendedora: cuenta + grupo + MembresiaEmpresa
+        + bookings.Vendedora en una transaccion. Un jefe la da de alta para su
+        propia Empresa; el operador de plataforma elige cual."""
+        es_operador = scope.es_operador_plataforma(request.user)
+        if not (es_operador or request.user.groups.filter(name='Jefe').exists()):
+            raise PermissionDenied
+
+        if request.method == 'POST':
+            form = AltaVendedoraForm(request.POST, es_operador=es_operador)
+            if form.is_valid():
+                empresa = form.cleaned_data['empresa'] if es_operador else scope.empresa_actual(request)
+                with transaction.atomic():
+                    nuevo = User.objects.create_user(
+                        username=form.cleaned_data['username'],
+                        password=form.cleaned_data['password'],
+                        first_name=form.cleaned_data['nombre'],
+                        is_staff=True,
+                    )
+                    nuevo.groups.add(Group.objects.get(name='Vendedora'))
+                    MembresiaEmpresa.objects.create(
+                        user=nuevo, empresa=empresa, rol=MembresiaEmpresa.Rol.VENDEDORA,
+                    )
+                    Vendedora.objects.create(
+                        usuario=nuevo, empresa=empresa, codigo=form.cleaned_data['codigo'],
+                    )
+                self.message_user(request, f'Vendedora {nuevo.get_username()} dada de alta.')
+                return HttpResponseRedirect(reverse('admin:auth_user_changelist'))
+        else:
+            form = AltaVendedoraForm(es_operador=es_operador)
+
+        return TemplateResponse(
+            request, 'bookings/alta_vendedora.html',
+            {**self.admin_site.each_context(request), 'form': form, 'title': 'Dar de alta vendedora'},
+        )
 
 
 @admin.register(Group)

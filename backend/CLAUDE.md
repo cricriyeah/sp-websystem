@@ -131,8 +131,9 @@ Igual con las notificaciones: `RESEND_API_KEY`, `RESEND_FROM`, `WHATSAPP_TOKEN`,
 ## Panel de finanzas (apps/finance)
 
 Pantalla unica de dinero, en `/admin/finanzas/` (`apps/finance/views.py`, montada en
-`config/urls.py` **antes** de `admin/`, que si no se traga la ruta). Solo
-superusuarios: la vista corta con `is_superuser`, igual de cerrada que `fleet.Tarifa`.
+`config/urls.py` **antes** de `admin/`, que si no se traga la ruta).
+Corta con `scope.es_operador_plataforma(request.user)` (ve todas las Empresas) o
+`scope.empresa_actual(request)` no vacío (ve la suya) — ya no con `is_superuser` (ver expansión multi-sede).
 Muestra entradas (tarjeta / efectivo), salidas (reembolsos), balance de hoy, del mes y
 del año, historico por dia con navegacion de meses, y los dos saldos teoricos contra
 los que se cuadra: lo que deberia haber en la cuenta de Stripe y lo que deberia haber
@@ -357,9 +358,10 @@ admin y el shell:
   **`fleet.Tarifa` deliberadamente sin permisos** — informacion financiera, asi el
   modulo ni aparece en su admin. El panel de finanzas (`/admin/finanzas/`) va por la
   misma linea: corta con `request.user.is_superuser`, nunca con solo "es staff".
-- Crear cuentas de vendedora: `createsuperuser` es solo para jefes. Para vendedora,
-  crear un `User` normal (`is_staff=True`) desde el admin o shell, agregarlo al grupo
-  `Vendedora` y darle de alta su fila en `bookings.Vendedora` con su codigo de link.
+- Crear cuentas de vendedora: acción "Dar de alta vendedora" en `/admin/auth/user/` (un jefe la ve para su
+  propia Empresa; el operador de plataforma elige la Empresa). Crea el `User`, lo agrega al grupo `Vendedora`,
+  su `MembresiaEmpresa` y su `bookings.Vendedora` en una sola transacción — reemplaza el flujo manual de tres
+  pasos sueltos de antes de la expansión multi-sede.
 
 ## Gotchas
 

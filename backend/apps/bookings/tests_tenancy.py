@@ -9,10 +9,11 @@ from django.core.management import call_command
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import RequestFactory, TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.fleet.models import CodigoPromocional, ExtrasItem, PuntoEncuentro, TransportePrecio
-from apps.tenancy.models import Empresa, Sede
+from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
 from apps.testing import crear_flota
 
 from .admin import AgendaAdmin, CheckoutAbandonadoAdmin
@@ -238,3 +239,41 @@ class AdminScopingTests(TestCase):
              mock.patch('apps.bookings.admin.scope.es_operador_plataforma', return_value=False):
             filas = list(admin.get_queryset(request))
         self.assertEqual([f.pk for f in filas], [reserva_a.pk])
+
+
+class AltaVendedoraTests(TestCase):
+    def setUp(self):
+        self.empresa = crear_empresa(slug='empresa-alta', nombre='Alta')
+        self.jefe = get_user_model().objects.create_user('jefe1', password='x', is_staff=True)
+        self.jefe.groups.add(Group.objects.create(name='Jefe'))
+        Group.objects.get_or_create(name='Vendedora')
+        MembresiaEmpresa.objects.create(user=self.jefe, empresa=self.empresa, rol=MembresiaEmpresa.Rol.JEFE)
+
+    def test_jefe_da_de_alta_vendedora_sin_elegir_empresa(self):
+        self.client.force_login(self.jefe)
+        with mock.patch('apps.bookings.admin.scope.empresa_actual', return_value=self.empresa), \
+             mock.patch('apps.bookings.admin.scope.es_operador_plataforma', return_value=False):
+            response = self.client.post(reverse('admin:bookings_user_dar_de_alta_vendedora'), {
+                'username': 'vendedora_nueva', 'password': 'una-clave-larga-123',
+                'nombre': 'Nueva Vendedora', 'codigo': 'nueva10',
+            })
+        self.assertEqual(response.status_code, 302)
+        nuevo = get_user_model().objects.get(username='vendedora_nueva')
+        self.assertTrue(nuevo.groups.filter(name='Vendedora').exists())
+        self.assertFalse(nuevo.groups.filter(name='Jefe').exists())
+        self.assertTrue(MembresiaEmpresa.objects.filter(
+            user=nuevo, empresa=self.empresa, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        ).exists())
+        self.assertTrue(Vendedora.objects.filter(usuario=nuevo, empresa=self.empresa, codigo='nueva10').exists())
+
+    def test_username_repetido_da_error_de_formulario_no_500(self):
+        get_user_model().objects.create_user('ya_existe', password='x')
+        self.client.force_login(self.jefe)
+        with mock.patch('apps.bookings.admin.scope.empresa_actual', return_value=self.empresa), \
+             mock.patch('apps.bookings.admin.scope.es_operador_plataforma', return_value=False):
+            response = self.client.post(reverse('admin:bookings_user_dar_de_alta_vendedora'), {
+                'username': 'ya_existe', 'password': 'una-clave-larga-123',
+                'nombre': 'Nueva', 'codigo': 'otro10',
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ya existe una cuenta')
