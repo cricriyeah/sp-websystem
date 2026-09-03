@@ -2,6 +2,7 @@ from datetime import date, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
@@ -146,3 +147,16 @@ class CodigoPromocionalEmpresaTests(TestCase):
 
         self.assertIsNotNone(evaluar_codigo_promocional('VERANO10', 'x@example.com', empresa_a))
         self.assertIsNone(evaluar_codigo_promocional('VERANO10', 'x@example.com', empresa_b))
+
+
+class ConsistenciaEmpresaReservaTests(TestCase):
+    def test_vendedora_de_otra_empresa_no_se_puede_asignar(self):
+        empresa_a = crear_empresa(slug='empresa-a5', nombre='A5')
+        empresa_b = crear_empresa(slug='empresa-b5', nombre='B5')
+        vendedora_b = Vendedora.objects.create(
+            usuario=get_user_model().objects.create_user('vb5'), empresa=empresa_b, codigo='vb5',
+        )
+        reserva = Reserva(**datos_reserva(empresa_a, vendedora=vendedora_b))
+
+        with self.assertRaises(ValidationError):
+            reserva.full_clean()

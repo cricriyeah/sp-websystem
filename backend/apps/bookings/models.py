@@ -706,6 +706,22 @@ class Reserva(models.Model):
         self._validar_capacidad_embarcacion()
         self._validar_una_salida_por_dia()
         self._validar_cambio_de_fecha()
+        self._validar_consistencia_de_empresa()
+
+    def _validar_consistencia_de_empresa(self):
+        """Ninguna FK puede pertenecer a otra Empresa. RLS filtra filas por
+        consulta, no valida referencias cruzadas que arme el operador de
+        plataforma desde el admin (sin formfield_for_foreignkey filtrado)."""
+        for campo, relacionado in (
+            ('embarcacion', self.embarcacion),
+            ('capitan', self.capitan),
+            ('vendedora', self.vendedora),
+            ('codigo_promocional', self.codigo_promocional),
+        ):
+            if relacionado is not None and relacionado.empresa_id != self.empresa_id:
+                raise ValidationError({
+                    campo: f'{relacionado} pertenece a otra Empresa, no se puede usar aqui.',
+                })
 
     def _validar_capacidad_embarcacion(self):
         if self.embarcacion_id and self.numero_personas > self.embarcacion.capacidad_maxima:
