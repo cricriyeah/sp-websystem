@@ -17,6 +17,9 @@ from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
+from apps.tenancy import scope
+from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin
+
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
@@ -53,13 +56,13 @@ def telefono_marcable(telefono):
 
 
 @admin.register(CupoDiario)
-class CupoDiarioAdmin(ModelAdmin):
+class CupoDiarioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = ['fecha', 'cupo_maximo']
     ordering = ['fecha']
 
 
 @admin.register(Vendedora)
-class VendedoraAdmin(ModelAdmin):
+class VendedoraAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     """Quienes venden. La comision se liquida fuera del sistema: aqui solo se
     lleva el registro de que venta es de quien."""
 
@@ -67,6 +70,13 @@ class VendedoraAdmin(ModelAdmin):
     list_filter = ['activo']
     search_fields = ['usuario__username', 'usuario__first_name', 'usuario__last_name', 'codigo']
     readonly_fields = ['creado_en']
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # `usuario` no lleva FK `empresa` (es `auth.User`): se filtra por membresia,
+        # no con `campos_escopeados_por_empresa`. El operador de plataforma ve todo.
+        if db_field.name == 'usuario' and not scope.es_operador_plataforma(request.user):
+            kwargs['queryset'] = User.objects.filter(membresias__empresa=scope.empresa_actual(request))
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     @admin.display(description='Su link')
     def link_de_venta(self, obj):
@@ -146,7 +156,8 @@ class AvisoDeReservasNuevasMixin:
             desde = timezone.make_aware(desde)
 
         nuevas = Reserva.objects.filter(
-            creado_en__gt=desde, estado__in=ESTADOS_QUE_OCUPAN_CUPO
+            creado_en__gt=desde, estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+            empresa=scope.empresa_actual(request),
         ).count()
         return JsonResponse({'desde': desde.isoformat(), 'nuevas': nuevas})
 
@@ -189,7 +200,7 @@ class ReservaTransporteInline(admin.StackedInline):
 
 
 @admin.register(Reserva)
-class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
+class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
         'fecha', 'hora', 'nombre_cliente', 'numero_personas',
         'estado', 'canal_origen', 'vendedora', 'cobro', 'extras',
@@ -295,7 +306,9 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
         se puede atribuir una venta a otra persona desde aqui — y queda en el
         History de cada reserva quien la reclamo y cuando.
         """
-        vendedora = Vendedora.objects.filter(usuario=request.user, activo=True).first()
+        vendedora = Vendedora.objects.filter(
+            usuario=request.user, empresa=scope.empresa_actual(request), activo=True,
+        ).first()
         if vendedora is None:
             self.message_user(
                 request,
@@ -357,7 +370,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
 
 
 @admin.register(CheckoutAbandonado)
-class CheckoutAbandonadoAdmin(ModelAdmin):
+class CheckoutAbandonadoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     """Lista de recuperacion: quien empezo a reservar y no termino de pagar.
 
     Solo lectura. No es una reserva todavia, no hay nada que editar aqui — lo que
@@ -371,7 +384,13 @@ class CheckoutAbandonadoAdmin(ModelAdmin):
     date_hierarchy = 'creado_en'
 
     def get_queryset(self, request):
-        return CheckoutAbandonado.abandonados()
+        # `super()` aplica el filtro por empresa del mixin; aqui se replica lo que
+        # hace `CheckoutAbandonado.abandonados()` (mismo criterio, sin perder el
+        # aislamiento).
+        return super().get_queryset(request).filter(
+            estado=Reserva.Estado.PENDIENTE_PAGO,
+            creado_en__lt=timezone.now() - timedelta(hours=HORAS_PARA_CONSIDERAR_ABANDONADO),
+        )
 
     def has_add_permission(self, request):
         return False
@@ -493,7 +512,7 @@ class CuandoFilter(admin.SimpleListFilter):
 
 
 @admin.register(Agenda)
-class AgendaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
+class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     """Repartir los viajes ya vendidos: que panga y que capitan le toca a cada uno.
 
     Se edita en el propio listado, que es el punto entero de la pantalla: con ocho
@@ -535,9 +554,12 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, ModelAdmin):
         })
 
     def get_queryset(self, request):
-        # `embarcacion` y `capitan` salen en el listado: sin esto es una consulta
-        # por fila.
-        return Agenda.por_repartir().select_related('embarcacion', 'capitan')
+        # `super()` aplica el filtro por empresa del mixin; se replica el criterio
+        # de `Agenda.por_repartir()` sin perder el aislamiento. `embarcacion` y
+        # `capitan` salen en el listado: sin `select_related` es una consulta por fila.
+        return super().get_queryset(request).filter(
+            estado__in=Agenda.ESTADOS_EN_AGENDA
+        ).select_related('embarcacion', 'capitan')
 
     def get_ordering(self, request):
         """Lo recien llegado se ordena por llegada, no por fecha de viaje.

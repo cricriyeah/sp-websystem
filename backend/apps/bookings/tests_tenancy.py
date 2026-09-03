@@ -1,5 +1,6 @@
 from datetime import date, time, timedelta
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -7,14 +8,18 @@ from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
+from django.utils import timezone
 
 from apps.fleet.models import CodigoPromocional, ExtrasItem, PuntoEncuentro, TransportePrecio
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
+from .admin import AgendaAdmin, CheckoutAbandonadoAdmin
 from .models import (
     MOTIVO_SIN_PANGA,
+    Agenda,
+    CheckoutAbandonado,
     CupoDiario,
     Reserva,
     ReservaExtra,
@@ -196,3 +201,40 @@ class ConsistenciaEmpresaExtrasTransporteTests(TestCase):
         transporte = ReservaTransporte(reserva=reserva, punto_encuentro=punto_b, zona=punto_b.zona)
         with self.assertRaises(ValidationError):
             transporte.full_clean(exclude=['reserva'])
+
+
+class AdminScopingTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.empresa_a = crear_empresa(slug='empresa-a8', nombre='A8')
+        self.empresa_b = crear_empresa(slug='empresa-b8', nombre='B8')
+        r_a = Reserva.objects.create(**datos_reserva(self.empresa_a, estado=Reserva.Estado.PENDIENTE_PAGO))
+        r_b = Reserva.objects.create(**datos_reserva(self.empresa_b, estado=Reserva.Estado.PENDIENTE_PAGO))
+        Reserva.objects.filter(pk__in=[r_a.pk, r_b.pk]).update(
+            creado_en=timezone.now() - timedelta(hours=3)
+        )
+
+    def test_checkout_abandonado_admin_aisla_por_empresa(self):
+        admin = CheckoutAbandonadoAdmin(CheckoutAbandonado, admin_site=mock.Mock())
+        request = self.factory.get('/admin/bookings/checkoutabandonado/')
+        request.user = mock.Mock()
+        with mock.patch('apps.bookings.admin.scope.empresa_actual', return_value=self.empresa_a), \
+             mock.patch('apps.bookings.admin.scope.es_operador_plataforma', return_value=False):
+            filas = list(admin.get_queryset(request))
+        self.assertEqual(len(filas), 1)
+        self.assertEqual(filas[0].empresa_id, self.empresa_a.id)
+
+    def test_agenda_admin_aisla_por_empresa(self):
+        reserva_a = Reserva.objects.create(**datos_reserva(
+            self.empresa_a, estado=Reserva.Estado.PAGADA, fecha=date.today() + timedelta(days=3),
+        ))
+        Reserva.objects.create(**datos_reserva(
+            self.empresa_b, estado=Reserva.Estado.PAGADA, fecha=date.today() + timedelta(days=3),
+        ))
+        admin = AgendaAdmin(Agenda, admin_site=mock.Mock())
+        request = self.factory.get('/admin/bookings/agenda/')
+        request.user = mock.Mock()
+        with mock.patch('apps.bookings.admin.scope.empresa_actual', return_value=self.empresa_a), \
+             mock.patch('apps.bookings.admin.scope.es_operador_plataforma', return_value=False):
+            filas = list(admin.get_queryset(request))
+        self.assertEqual([f.pk for f in filas], [reserva_a.pk])
