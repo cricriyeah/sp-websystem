@@ -277,3 +277,31 @@ class AltaVendedoraTests(TestCase):
             })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Ya existe una cuenta')
+
+
+class RutasPublicasEmpresaTests(TestCase):
+    def setUp(self):
+        self.empresa = crear_empresa(slug='empresa-cupo', nombre='Cupo')
+        crear_flota(self.empresa)
+
+    def test_responde_para_slug_valido(self):
+        response = self.client.get(
+            reverse('cupo', kwargs={'empresa_slug': self.empresa.slug}),
+            {'fecha': (date.today() + timedelta(days=5)).isoformat()},
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_404_si_empresa_no_existe(self):
+        response = self.client.get(
+            reverse('cupo', kwargs={'empresa_slug': 'no-existe'}),
+            {'fecha': (date.today() + timedelta(days=5)).isoformat()},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_404_si_empresa_pausada(self):
+        pausada = crear_empresa(slug='empresa-pausada', nombre='Pausada', activo=False)
+        response = self.client.get(
+            reverse('cupo', kwargs={'empresa_slug': pausada.slug}),
+            {'fecha': (date.today() + timedelta(days=5)).isoformat()},
+        )
+        self.assertEqual(response.status_code, 404)
