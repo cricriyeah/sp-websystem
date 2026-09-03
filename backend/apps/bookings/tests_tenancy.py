@@ -73,3 +73,24 @@ class EmpresaObligatoriaTests(TestCase):
     def test_cupo_diario_sin_empresa_revienta(self):
         with self.assertRaises(IntegrityError):
             CupoDiario.objects.create(fecha='2026-12-05', cupo_maximo=5)
+
+
+class UnicidadPorEmpresaTests(TestCase):
+    def test_dos_empresas_pueden_tener_cupo_diario_la_misma_fecha(self):
+        empresa_a = crear_empresa(slug='empresa-a', nombre='A')
+        empresa_b = crear_empresa(slug='empresa-b', nombre='B')
+        CupoDiario.objects.create(empresa=empresa_a, fecha='2026-12-10', cupo_maximo=5)
+        CupoDiario.objects.create(empresa=empresa_b, fecha='2026-12-10', cupo_maximo=8)  # no debe reventar
+
+    def test_misma_empresa_no_puede_repetir_fecha_de_cupo(self):
+        empresa = crear_empresa(slug='empresa-c', nombre='C')
+        CupoDiario.objects.create(empresa=empresa, fecha='2026-12-11', cupo_maximo=5)
+        with self.assertRaises(IntegrityError):
+            CupoDiario.objects.create(empresa=empresa, fecha='2026-12-11', cupo_maximo=8)
+
+    def test_dos_empresas_pueden_repetir_codigo_de_vendedora(self):
+        User = get_user_model()
+        empresa_a = crear_empresa(slug='empresa-a2', nombre='A2')
+        empresa_b = crear_empresa(slug='empresa-b2', nombre='B2')
+        Vendedora.objects.create(usuario=User.objects.create_user('v_a'), empresa=empresa_a, codigo='verano10')
+        Vendedora.objects.create(usuario=User.objects.create_user('v_b'), empresa=empresa_b, codigo='verano10')

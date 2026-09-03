@@ -90,7 +90,7 @@ class CupoDiario(models.Model):
     - Cualquier tope que el negocio quiera poner sin una razon fisica detras.
     """
 
-    fecha = models.DateField(unique=True)
+    fecha = models.DateField()
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='cupos_diarios')
     cupo_maximo = models.PositiveSmallIntegerField(
         help_text='Tope de viajes que decide el negocio para este dia. Ponlo en 0 para '
@@ -102,6 +102,9 @@ class CupoDiario(models.Model):
 
     class Meta:
         ordering = ['fecha']
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'fecha'], name='cupodiario_unico_por_empresa_fecha'),
+        ]
 
     def __str__(self):
         return f'{self.fecha}: {self.cupo_maximo} viajes'
@@ -405,7 +408,7 @@ class Vendedora(models.Model):
     )
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='vendedoras')
     codigo = models.SlugField(
-        max_length=30, unique=True,
+        max_length=30,
         help_text='Lo que va en el link que le manda a sus clientes: ?ref=<codigo>. '
                   'Solo letras, numeros y guiones.',
     )
@@ -420,6 +423,9 @@ class Vendedora(models.Model):
         ordering = ['usuario__username']
         verbose_name = 'vendedora'
         verbose_name_plural = 'vendedoras'
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'codigo'], name='vendedora_unico_por_empresa_codigo'),
+        ]
 
     def __str__(self):
         return self.usuario.get_full_name() or self.usuario.get_username()
