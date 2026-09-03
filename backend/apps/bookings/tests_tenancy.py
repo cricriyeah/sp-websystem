@@ -1,3 +1,5 @@
+from datetime import date, time, timedelta
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.management import call_command
@@ -6,8 +8,9 @@ from django.db.utils import IntegrityError
 from django.test import TestCase
 
 from apps.tenancy.models import Empresa, Sede
+from apps.testing import crear_flota
 
-from .models import CupoDiario, Vendedora
+from .models import MOTIVO_SIN_PANGA, CupoDiario, Reserva, Vendedora, evaluar_cupo
 
 
 class SetupRolesTests(TestCase):
@@ -94,3 +97,39 @@ class UnicidadPorEmpresaTests(TestCase):
         empresa_b = crear_empresa(slug='empresa-b2', nombre='B2')
         Vendedora.objects.create(usuario=User.objects.create_user('v_a'), empresa=empresa_a, codigo='verano10')
         Vendedora.objects.create(usuario=User.objects.create_user('v_b'), empresa=empresa_b, codigo='verano10')
+
+
+def datos_reserva(empresa, **overrides):
+    crear_flota(empresa)
+    base = {
+        'empresa': empresa,
+        'fecha': date.today() + timedelta(days=15),
+        'hora': time(6, 0),
+        'numero_personas': 2,
+        'nombre_cliente': 'Ana Ruiz',
+        'telefono_cliente': '+5216121234567',
+        'correo_cliente': 'ana@example.com',
+        'canal_origen': Reserva.CanalOrigen.WEB,
+        'deslinde_aceptado': True,
+        'deslinde_nombre': 'Ana Ruiz',
+    }
+    base.update(overrides)
+    return base
+
+
+class CupoEmpresaAisladoTests(TestCase):
+    def test_cupo_de_una_empresa_no_bloquea_a_otra(self):
+        empresa_a = crear_empresa(slug='empresa-a3', nombre='A3')
+        empresa_b = crear_empresa(slug='empresa-b3', nombre='B3')
+        crear_flota(empresa_a, composicion=[(1, 3)])
+        crear_flota(empresa_b, composicion=[(1, 3)])
+        fecha = date.today() + timedelta(days=20)
+
+        Reserva.objects.create(**datos_reserva(
+            empresa_a, fecha=fecha, numero_personas=3, estado=Reserva.Estado.PAGADA,
+        ))
+
+        # La empresa A ya usó su única panga de 3; la B, con su propia panga de
+        # 3 sin usar, debe seguir aceptando un grupo de 3.
+        self.assertIsNone(evaluar_cupo(fecha, 3, empresa_b))
+        self.assertEqual(evaluar_cupo(fecha, 3, empresa_a), MOTIVO_SIN_PANGA)

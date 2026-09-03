@@ -110,8 +110,8 @@ class CupoDiario(models.Model):
         return f'{self.fecha}: {self.cupo_maximo} viajes'
 
 
-def cupo_maximo_del_dia(fecha):
-    override = CupoDiario.objects.filter(fecha=fecha).first()
+def cupo_maximo_del_dia(fecha, empresa):
+    override = CupoDiario.objects.filter(fecha=fecha, empresa=empresa).first()
     return override.cupo_maximo if override else CUPO_MAXIMO_DEFAULT
 
 
@@ -166,7 +166,7 @@ def motivo_sin_lugar(personas, grupos, capacidades, tope):
 DIAS_BUSQUEDA_DISPONIBILIDAD = 90
 
 
-def proxima_fecha_disponible(desde, personas, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
+def proxima_fecha_disponible(desde, personas, empresa, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
     """Primera fecha donde cabe un grupo de `personas`, o None si no hay en `dias`.
 
     Se resuelve con **cuatro consultas**, no una por dia: reservas del rango,
@@ -179,13 +179,13 @@ def proxima_fecha_disponible(desde, personas, dias=DIAS_BUSQUEDA_DISPONIBILIDAD)
     """
     hasta = desde + timedelta(days=dias - 1)
 
-    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas).items()):
+    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas, empresa).items()):
         if motivo is None:
             return fecha
     return None
 
 
-def disponibilidad_por_fecha(desde, hasta, personas):
+def disponibilidad_por_fecha(desde, hasta, personas, empresa):
     """Por que no cabe un grupo de `personas` cada dia del rango, o None si cabe.
 
     `{fecha: None | MOTIVO_LLENO | MOTIVO_SIN_PANGA}`, una entrada por dia,
@@ -204,14 +204,15 @@ def disponibilidad_por_fecha(desde, hasta, personas):
     """
     grupos_por_fecha = defaultdict(list)
     for fecha, personas_de_esa in Reserva.objects.filter(
-        fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO
+        fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
     ).values_list('fecha', 'numero_personas'):
         grupos_por_fecha[fecha].append(personas_de_esa)
 
     topes = dict(
-        CupoDiario.objects.filter(fecha__range=(desde, hasta)).values_list('fecha', 'cupo_maximo')
+        CupoDiario.objects.filter(fecha__range=(desde, hasta), empresa=empresa)
+        .values_list('fecha', 'cupo_maximo')
     )
-    capacidades = capacidades_por_fecha(desde, hasta)
+    capacidades = capacidades_por_fecha(desde, hasta, empresa)
 
     return {
         fecha: motivo_sin_lugar(
@@ -224,7 +225,7 @@ def disponibilidad_por_fecha(desde, hasta, personas):
     }
 
 
-def bloquear_cupo_del_dia(fecha):
+def bloquear_cupo_del_dia(empresa_id, fecha):
     """Serializa la validacion de cupo de una fecha entre transacciones.
 
     Sin esto hay sobreventa: contar y guardar no son una operacion atomica. Dos
@@ -253,32 +254,35 @@ def bloquear_cupo_del_dia(fecha):
     toda escritura con un solo escritor. Ese es justamente el motivo por el que
     esta condicion de carrera era invisible en los tests hasta que el CI empezo a
     correrlos tambien contra Postgres (ver config/settings/ci.py).
+
+    Toma el par `(empresa_id, fecha)`, no solo la fecha: dos Empresas venden el
+    mismo dia sin pisarse el candado, cada una serializa solo contra si misma.
     """
     if connection.vendor != 'postgresql':
         return
     with connection.cursor() as cursor:
-        cursor.execute('SELECT pg_advisory_xact_lock(%s)', [fecha.toordinal()])
+        cursor.execute('SELECT pg_advisory_xact_lock(%s, %s)', [empresa_id, fecha.toordinal()])
 
 
-def evaluar_cupo(fecha, personas, excluir_pk=None):
+def evaluar_cupo(fecha, personas, empresa, excluir_pk=None):
     """Por que no entra un grupo de `personas` ese dia, o None si si entra.
 
     Solo consulta: **no toma el lock**. La usa `/api/cupo/`, que es una lectura
     informativa, y `validar_cupo_diario`, que si lo toma antes de llamar aqui.
     """
-    ocupadas = Reserva.objects.filter(fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
+    ocupadas = Reserva.objects.filter(fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa)
     if excluir_pk is not None:
         ocupadas = ocupadas.exclude(pk=excluir_pk)
 
     return motivo_sin_lugar(
         personas,
         list(ocupadas.values_list('numero_personas', flat=True)),
-        capacidades_disponibles(fecha),
-        cupo_maximo_del_dia(fecha),
+        capacidades_disponibles(fecha, empresa),
+        cupo_maximo_del_dia(fecha, empresa),
     )
 
 
-def validar_cupo_diario(fecha, personas, excluir_pk=None):
+def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None):
     """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
     de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md).
 
@@ -288,9 +292,9 @@ def validar_cupo_diario(fecha, personas, excluir_pk=None):
     """
     # Antes de contar, no despues: ver bloquear_cupo_del_dia. Ahora el lock ademas
     # cubre el ultimo lugar *de ese tamano*, no solo el ultimo lugar.
-    bloquear_cupo_del_dia(fecha)
+    bloquear_cupo_del_dia(empresa.pk, fecha)
 
-    motivo = evaluar_cupo(fecha, personas, excluir_pk=excluir_pk)
+    motivo = evaluar_cupo(fecha, personas, empresa, excluir_pk=excluir_pk)
     if motivo == MOTIVO_LLENO:
         raise ValidationError(
             f'No hay cupo disponible para el {fecha}: se alcanzo el maximo de viajes del dia.'
@@ -682,7 +686,7 @@ class Reserva(models.Model):
 
     def clean(self):
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            validar_cupo_diario(self.fecha, self.numero_personas, excluir_pk=self.pk)
+            validar_cupo_diario(self.fecha, self.numero_personas, self.empresa, excluir_pk=self.pk)
             if self.codigo_promocional_id:
                 validar_codigo_promocional_en_pago(
                     self.codigo_promocional, self.moneda,
@@ -722,7 +726,9 @@ class Reserva(models.Model):
         vende como si cada panga hiciera una sola salida diaria. Esto la hace
         cumplir del otro lado, al repartir.
         """
-        del_dia = Reserva.objects.filter(fecha=self.fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
+        del_dia = Reserva.objects.filter(
+            fecha=self.fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa_id=self.empresa_id,
+        )
         if self.pk:
             del_dia = del_dia.exclude(pk=self.pk)
 
