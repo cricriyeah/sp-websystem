@@ -846,6 +846,20 @@ class ReservaExtra(models.Model):
             return None
         return self.precio_unitario * self.cantidad
 
+    def clean(self):
+        if self.extras_item_id:
+            reserva = self._reserva_o_ninguna()
+            if reserva is not None and self.extras_item.empresa_id != reserva.empresa_id:
+                raise ValidationError({
+                    'extras_item': 'Ese extra pertenece a otra Empresa.',
+                })
+
+    def _reserva_o_ninguna(self):
+        try:
+            return self.reserva
+        except Reserva.DoesNotExist:
+            return None
+
 
 class ReservaTransporte(models.Model):
     """El traslado que el cliente eligio para esta reserva, si eligio uno.
@@ -890,6 +904,23 @@ class ReservaTransporte(models.Model):
             raise ValidationError({
                 'zona': 'La zona no coincide con la del punto de encuentro elegido.',
             })
+        if self.punto_encuentro_id:
+            reserva = self._reserva_o_ninguna()
+            if reserva is not None and self.punto_encuentro.empresa_id != reserva.empresa_id:
+                raise ValidationError({
+                    'punto_encuentro': 'Ese punto de encuentro pertenece a otra Empresa.',
+                })
+
+    def _reserva_o_ninguna(self):
+        """`self.reserva` puede no ser resoluble todavia: en el checkout,
+        clean() corre con `exclude=['reserva']` ANTES de que la Reserva tenga
+        pk (ver ReservaCheckoutSerializer._guardar). El objeto sigue
+        disponible via el descriptor cacheado del FK — no se re-resuelve por
+        self.reserva_id, que en ese momento es None."""
+        try:
+            return self.reserva
+        except Reserva.DoesNotExist:
+            return None
 
 
 class CheckoutAbandonado(Reserva):

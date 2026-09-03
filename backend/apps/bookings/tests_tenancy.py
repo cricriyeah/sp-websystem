@@ -1,4 +1,5 @@
 from datetime import date, time, timedelta
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -8,11 +9,20 @@ from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
-from apps.fleet.models import CodigoPromocional
+from apps.fleet.models import CodigoPromocional, ExtrasItem, PuntoEncuentro, TransportePrecio
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
-from .models import MOTIVO_SIN_PANGA, CupoDiario, Reserva, Vendedora, evaluar_codigo_promocional, evaluar_cupo
+from .models import (
+    MOTIVO_SIN_PANGA,
+    CupoDiario,
+    Reserva,
+    ReservaExtra,
+    ReservaTransporte,
+    Vendedora,
+    evaluar_codigo_promocional,
+    evaluar_cupo,
+)
 
 
 class SetupRolesTests(TestCase):
@@ -160,3 +170,29 @@ class ConsistenciaEmpresaReservaTests(TestCase):
 
         with self.assertRaises(ValidationError):
             reserva.full_clean()
+
+
+class ConsistenciaEmpresaExtrasTransporteTests(TestCase):
+    def test_extra_de_otra_empresa_no_se_puede_asociar(self):
+        empresa_a = crear_empresa(slug='empresa-a6', nombre='A6')
+        empresa_b = crear_empresa(slug='empresa-b6', nombre='B6')
+        extra_b = ExtrasItem.objects.create(
+            empresa=empresa_b, tipo=ExtrasItem.Tipo.BRUNCH, nombre='Brunch', precio=Decimal('100'), activo=True,
+        )
+        reserva = Reserva.objects.create(**datos_reserva(empresa_a))
+
+        extra = ReservaExtra(reserva=reserva, extras_item=extra_b)
+        with self.assertRaises(ValidationError):
+            extra.full_clean()
+
+    def test_punto_encuentro_de_otra_empresa_no_se_puede_asociar(self):
+        empresa_a = crear_empresa(slug='empresa-a7', nombre='A7')
+        empresa_b = crear_empresa(slug='empresa-b7', nombre='B7')
+        punto_b = PuntoEncuentro.objects.create(
+            empresa=empresa_b, nombre='Hotel X', zona=TransportePrecio.Zona.CENTRO, activo=True,
+        )
+        reserva = Reserva.objects.create(**datos_reserva(empresa_a))
+
+        transporte = ReservaTransporte(reserva=reserva, punto_encuentro=punto_b, zona=punto_b.zona)
+        with self.assertRaises(ValidationError):
+            transporte.full_clean(exclude=['reserva'])
