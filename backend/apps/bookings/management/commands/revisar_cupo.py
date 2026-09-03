@@ -20,12 +20,14 @@ from apps.bookings.models import (
     cupo_maximo_del_dia,
 )
 from apps.fleet.models import capacidades_por_fecha
+from apps.tenancy import scope
+from apps.tenancy.models import Empresa
 
 DIAS_POR_DEFECTO = 90
 
 
 class Command(BaseCommand):
-    help = 'Lista los dias ya vendidos que no se pueden operar con la flota real.'
+    help = 'Lista los dias ya vendidos que no se pueden operar con la flota real, por Empresa.'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -37,27 +39,34 @@ class Command(BaseCommand):
         desde = timezone.localdate()
         hasta = desde + timedelta(days=options['dias'] - 1)
 
+        problemas_totales = 0
+        for empresa in Empresa.objects.filter(activo=True):
+            with scope.con_empresa(empresa):
+                problemas_totales += self._revisar_empresa(empresa, desde, hasta)
+
+        if problemas_totales:
+            self.stdout.write(f'{problemas_totales} dia(s) por resolver a mano en total.')
+
+    def _revisar_empresa(self, empresa, desde, hasta):
         grupos_por_fecha = {}
         for fecha, personas in Reserva.objects.filter(
-            fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO
+            fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
         ).values_list('fecha', 'numero_personas'):
             grupos_por_fecha.setdefault(fecha, []).append(personas)
 
-        capacidades = capacidades_por_fecha(desde, hasta)
+        capacidades = capacidades_por_fecha(desde, hasta, empresa)
 
         problemas = 0
         for fecha in sorted(grupos_por_fecha):
             grupos = sorted(grupos_por_fecha[fecha], reverse=True)
-            if len(grupos) <= cupo_maximo_del_dia(fecha) and caben(grupos, capacidades[fecha]):
+            if len(grupos) <= cupo_maximo_del_dia(fecha, empresa) and caben(grupos, capacidades[fecha]):
                 continue
 
             problemas += 1
             self.stdout.write(
-                f'{fecha}: {len(grupos)} viajes vendidos '
+                f'[{empresa.slug}] {fecha}: {len(grupos)} viajes vendidos '
                 f'({", ".join(str(g) for g in grupos)} personas) '
                 f'y solo {len(capacidades[fecha])} pangas a flote '
                 f'({", ".join(str(c) for c in capacidades[fecha])}). No cierra.'
             )
-
-        if problemas:
-            self.stdout.write(f'{problemas} dia(s) por resolver a mano.')
+        return problemas

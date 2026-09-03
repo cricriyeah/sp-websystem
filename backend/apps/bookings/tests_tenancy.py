@@ -1,6 +1,7 @@
 import uuid
 from datetime import date, time, timedelta
 from decimal import Decimal
+from io import StringIO
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -351,3 +352,37 @@ class SerializerEmpresaTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn('extras', serializer.errors)
+
+
+class ComandosEmpresaTests(TestCase):
+    def test_limpiar_checkouts_no_cuenta_doble_entre_empresas(self):
+        empresa_a = crear_empresa(slug='empresa-a11', nombre='A11')
+        crear_empresa(slug='empresa-b11', nombre='B11')  # sin checkouts viejos
+        vieja = Reserva.objects.create(**datos_reserva(empresa_a, estado=Reserva.Estado.PENDIENTE_PAGO))
+        Reserva.objects.filter(pk=vieja.pk).update(creado_en=timezone.now() - timedelta(days=40))
+
+        out = StringIO()
+        call_command('limpiar_checkouts_abandonados', '--dry-run', stdout=out)
+
+        self.assertIn('Se borrarian 1 checkout', out.getvalue())
+
+    def test_revisar_cupo_no_mezcla_reservas_de_otra_empresa(self):
+        empresa_a = crear_empresa(slug='empresa-a12', nombre='A12')
+        empresa_b = crear_empresa(slug='empresa-b12', nombre='B12')
+        crear_flota(empresa_a, composicion=[(1, 3)])
+        crear_flota(empresa_b, composicion=[(1, 3)])
+        fecha = date.today() + timedelta(days=30)
+
+        # Dos reservas del mismo dia, cada una en su propia Empresa: cada una
+        # cabe sola en su unica panga de 3. Si se mezclaran, "2 viajes
+        # vendidos" contra 1 sola panga marcaria un falso problema.
+        Reserva.objects.create(**datos_reserva(
+            empresa_a, fecha=fecha, numero_personas=3, estado=Reserva.Estado.PAGADA,
+        ))
+        Reserva.objects.create(**datos_reserva(
+            empresa_b, fecha=fecha, numero_personas=3, estado=Reserva.Estado.PAGADA,
+        ))
+
+        out = StringIO()
+        call_command('revisar_cupo', stdout=out)
+        self.assertNotIn('No cierra', out.getvalue())

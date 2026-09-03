@@ -14,12 +14,14 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from apps.bookings.models import Reserva
+from apps.tenancy import scope
+from apps.tenancy.models import Empresa
 
 DIAS_POR_DEFECTO = 30
 
 
 class Command(BaseCommand):
-    help = 'Borra los checkouts abandonados (pendiente_pago) mas viejos que N dias.'
+    help = 'Borra los checkouts abandonados (pendiente_pago) mas viejos que N dias, en todas las Empresas.'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -35,16 +37,20 @@ class Command(BaseCommand):
         dias = options['dias']
         limite = timezone.now() - timedelta(days=dias)
 
-        viejos = Reserva.objects.filter(
-            estado=Reserva.Estado.PENDIENTE_PAGO, creado_en__lt=limite
-        )
-        total = viejos.count()
+        total = 0
+        for empresa in Empresa.objects.filter(activo=True):
+            with scope.con_empresa(empresa):
+                viejos = Reserva.objects.filter(
+                    estado=Reserva.Estado.PENDIENTE_PAGO, creado_en__lt=limite, empresa=empresa,
+                )
+                total += viejos.count()
+                if not options['dry_run']:
+                    viejos.delete()
 
         if options['dry_run']:
             self.stdout.write(f'Se borrarian {total} checkout(s) abandonado(s) de mas de {dias} dias.')
             return
 
-        viejos.delete()
         self.stdout.write(self.style.SUCCESS(
             f'{total} checkout(s) abandonado(s) de mas de {dias} dias borrado(s).'
         ))
