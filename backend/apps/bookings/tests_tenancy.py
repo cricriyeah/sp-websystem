@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, time, timedelta
 from decimal import Decimal
 from unittest import mock
@@ -317,3 +318,36 @@ class ArmarPanoramaEmpresaTests(TestCase):
 
         panorama = armar_panorama(date.today(), empresa_a)
         self.assertEqual(len(panorama.renglones), 1)
+
+
+class SerializerEmpresaTests(TestCase):
+    def test_extras_de_otra_empresa_no_pasan_el_checkout(self):
+        from rest_framework.test import APIRequestFactory
+
+        from .serializers import ReservaCheckoutSerializer
+
+        empresa_a = crear_empresa(slug='empresa-a10', nombre='A10')
+        empresa_b = crear_empresa(slug='empresa-b10', nombre='B10')
+        crear_flota(empresa_a)
+        extra_b = ExtrasItem.objects.create(
+            empresa=empresa_b, tipo=ExtrasItem.Tipo.BRUNCH, nombre='Brunch', precio=Decimal('100'), activo=True,
+        )
+
+        factory = APIRequestFactory()
+        request = factory.post('/api/empresa-a10/reservas/')
+        serializer = ReservaCheckoutSerializer(data={
+            'checkout_id': str(uuid.uuid4()),
+            'fecha': (date.today() + timedelta(days=8)).isoformat(),
+            'hora': '06:00',
+            'numero_personas': 2,
+            'nombre_cliente': 'Ana Ruiz',
+            'telefono_cliente': '+5216121234567',
+            'correo_cliente': 'ana@example.com',
+            'moneda': 'MXN',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Ana Ruiz',
+            'extras': [{'id': extra_b.pk}],
+        }, context={'request': request, 'empresa': empresa_a})
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('extras', serializer.errors)

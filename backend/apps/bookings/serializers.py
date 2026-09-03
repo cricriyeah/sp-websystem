@@ -60,6 +60,17 @@ class TransporteSeleccionSerializer(serializers.Serializer):
         queryset=PuntoEncuentro.objects.filter(activo=True), required=False, allow_null=True, default=None,
     )
     direccion_personalizada = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def get_fields(self):
+        # El queryset del PrimaryKeyRelatedField se evalua al importar el modulo
+        # (cuerpo de clase del serializer padre), sin contexto. `get_fields()` es
+        # el unico gancho de DRF que corre por-peticion con `self.context` puesto
+        # (`__init__` no vuelve a correr tras el `deepcopy` del padre).
+        fields = super().get_fields()
+        fields['punto_encuentro'].queryset = PuntoEncuentro.objects.filter(
+            activo=True, empresa=self.context['empresa'],
+        )
+        return fields
     zona = serializers.ChoiceField(
         choices=TransportePrecio.Zona.choices, required=False, allow_blank=True, default='',
     )
@@ -76,6 +87,12 @@ class ExtraSeleccionSerializer(serializers.Serializer):
 
     id = serializers.PrimaryKeyRelatedField(queryset=ExtrasItem.objects.filter(activo=True))
     cantidad = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=1)
+
+    def get_fields(self):
+        # Ver la nota en TransporteSeleccionSerializer.get_fields.
+        fields = super().get_fields()
+        fields['id'].queryset = ExtrasItem.objects.filter(activo=True, empresa=self.context['empresa'])
+        return fields
 
 
 class ReservaCheckoutSerializer(serializers.ModelSerializer):
@@ -155,7 +172,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         # Reserva. Solo se atribuye cuando el codigo resuelve: si no viene ref (o
         # no sirve) se respeta lo que ya tuviera la reserva, para no borrar una
         # atribucion hecha a mano cuando el cliente reenvia el checkout.
-        vendedora = Vendedora.por_codigo(self.validated_data.pop('ref', ''))
+        vendedora = Vendedora.por_codigo(self.validated_data.pop('ref', ''), self.context['empresa'])
 
         return super().save(
             canal_origen=Reserva.CanalOrigen.WEB,
@@ -170,6 +187,10 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         extras, transporte = self._sacar_extras_y_transporte(validated_data)
+        # La Empresa la fija la vista (slug de la URL), nunca el payload del
+        # cliente. `update()` no la toca: recuperar un checkout conserva su
+        # Empresa (y seria la misma, resuelta del mismo slug).
+        validated_data['empresa'] = self.context['empresa']
         return self._guardar(Reserva(**validated_data), extras, transporte)
 
     def update(self, instance, validated_data):
@@ -211,11 +232,20 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
         # Cada envio reescribe la seleccion completa, sin excepciones: una lista
         # vacia borra lo que hubiera, sin transporte borra el traslado.
-        self._sincronizar_extras(reserva, extras)
-        if quiere_transporte:
-            self._construir_transporte(reserva, transporte).save()
-        else:
-            ReservaTransporte.objects.filter(reserva=reserva).delete()
+        # `_sincronizar_extras` corre despues de `reserva.save()` (necesita el pk),
+        # asi que no entra al `try` de arriba; se envuelve aparte para que un
+        # ValidationError de `ReservaExtra.clean()` (red de seguridad cross-empresa)
+        # salga como 400 y no como 500 en una ruta publica.
+        try:
+            self._sincronizar_extras(reserva, extras)
+            if quiere_transporte:
+                self._construir_transporte(reserva, transporte).save()
+            else:
+                ReservaTransporte.objects.filter(reserva=reserva).delete()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
+            )
 
         return reserva
 
@@ -246,9 +276,9 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             item, cantidad = dato['id'], dato['cantidad']
             extra = existentes.get(item.pk)
             if extra is None:
-                ReservaExtra.objects.create(
-                    reserva=reserva, extras_item=item, cantidad_solicitada=cantidad,
-                )
+                nuevo = ReservaExtra(reserva=reserva, extras_item=item, cantidad_solicitada=cantidad)
+                nuevo.full_clean()
+                nuevo.save()
             elif extra.cantidad_solicitada != cantidad:
                 extra.cantidad_solicitada = cantidad
                 extra.save(update_fields=['cantidad_solicitada'])
