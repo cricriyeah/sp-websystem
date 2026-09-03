@@ -14,7 +14,14 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.fleet.models import CodigoPromocional, ExtrasItem, PuntoEncuentro, TransportePrecio
+from apps.fleet.models import (
+    Capitan,
+    CodigoPromocional,
+    Embarcacion,
+    ExtrasItem,
+    PuntoEncuentro,
+    TransportePrecio,
+)
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
 from apps.testing import crear_flota
 
@@ -386,3 +393,21 @@ class ComandosEmpresaTests(TestCase):
         out = StringIO()
         call_command('revisar_cupo', stdout=out)
         self.assertNotIn('No cierra', out.getvalue())
+
+
+class AvisoAsignacionRescopeTests(TestCase):
+    def test_avisa_dentro_del_alcance_reabierto(self):
+        empresa = crear_empresa(slug='empresa-aviso', nombre='Aviso')
+        crear_flota(empresa)
+        embarcacion = Embarcacion.objects.filter(empresa=empresa).first()
+        capitan = Capitan.objects.create(empresa=empresa, nombre='Cap', telefono='6120000000')
+
+        with mock.patch('apps.bookings.signals.enviar_correo_asignacion', return_value=True) as enviar_mock:
+            with self.captureOnCommitCallbacks(execute=True):
+                reserva = Reserva.objects.create(**datos_reserva(
+                    empresa, estado=Reserva.Estado.PAGADA, embarcacion=embarcacion, capitan=capitan,
+                ))
+
+        enviar_mock.assert_called_once()
+        reserva.refresh_from_db()
+        self.assertIsNotNone(reserva.aviso_asignacion_enviado_en)

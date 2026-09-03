@@ -16,6 +16,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from apps.notifications.services import enviar_correo_asignacion
+from apps.tenancy import scope
+from apps.tenancy.models import Empresa
 
 from .models import Reserva
 
@@ -40,21 +42,31 @@ def _le_toca_aviso(reserva):
 def avisar_asignacion(sender, instance, **kwargs):
     if not _le_toca_aviso(instance):
         return
-    transaction.on_commit(lambda: _mandar(instance))
+    # SET LOCAL muere al COMMIT: el callback no puede depender del alcance de la
+    # transaccion que lo encolo (ver "Quien corre fuera del alcance" del plan de
+    # expansion multi-sede). Se captura el entero, no el objeto, y se re-resuelve
+    # todo -- Reserva incluida -- dentro de un con_empresa nuevo al ejecutarse.
+    empresa_id = instance.empresa_id
+    transaction.on_commit(lambda: _mandar(instance.pk, empresa_id))
 
 
-def _mandar(reserva):
-    try:
-        enviado = enviar_correo_asignacion(reserva)
-    except Exception:
-        logger.exception('Fallo el aviso de asignacion de la reserva %s', reserva.pk)
-        return
+def _mandar(reserva_pk, empresa_id):
+    empresa = Empresa.objects.get(pk=empresa_id)
+    with scope.con_empresa(empresa):
+        try:
+            reserva = Reserva.objects.select_related('capitan', 'embarcacion').get(pk=reserva_pk)
+        except Reserva.DoesNotExist:
+            return
 
-    # Solo se marca si de verdad salio: si Resend estaba caido, el siguiente
-    # guardado de esa reserva lo reintenta en vez de darlo por hecho.
-    if not enviado:
-        return
+        try:
+            enviado = enviar_correo_asignacion(reserva)
+        except Exception:
+            logger.exception('Fallo el aviso de asignacion de la reserva %s', reserva.pk)
+            return
 
-    ahora = timezone.now()
-    Reserva.objects.filter(pk=reserva.pk).update(aviso_asignacion_enviado_en=ahora)
-    reserva.aviso_asignacion_enviado_en = ahora
+        # Solo se marca si de verdad salio: si Resend estaba caido, el siguiente
+        # guardado de esa reserva lo reintenta en vez de darlo por hecho.
+        if not enviado:
+            return
+
+        Reserva.objects.filter(pk=reserva.pk).update(aviso_asignacion_enviado_en=timezone.now())
