@@ -1,12 +1,15 @@
+from datetime import date
+
 from django.contrib import admin as django_admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.contrib.admin.utils import flatten_fieldsets
 from django.core.exceptions import ValidationError
-from django.db import connection, models
 from django.db.utils import IntegrityError
 from django.test import RequestFactory, TestCase, TransactionTestCase
+
+from apps.bookings.models import CupoDiario
 
 from . import scope
 from .admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
@@ -80,35 +83,17 @@ class BackfillSedeYEmpresaLaPazTests(TestCase):
         self.assertTrue(empresa.exclusiva)
 
 
-class ModeloDePrueba(models.Model):
-    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT)
-    nombre = models.CharField(max_length=50)
+class _CupoDiarioAdmin(EmpresaScopedAdminMixin, django_admin.ModelAdmin):
+    """Admin de prueba para el mixin. `EmpresaScopedAdminMixin` es generico: se
+    ejerce contra cualquier modelo con FK `empresa`. Se usa `CupoDiario` (real,
+    con migracion) en vez de un modelo de test suelto -- uno sin migracion deja
+    una tabla que solo existe durante esta clase y hace reventar el colector de
+    borrado de `Empresa` (`no such table`) en cualquier otro test del proceso."""
 
-    class Meta:
-        app_label = 'tenancy'
-
-
-class ModeloDePruebaAdmin(EmpresaScopedAdminMixin, django_admin.ModelAdmin):
-    fields = ['nombre', 'empresa']
+    fields = ['fecha', 'cupo_maximo', 'empresa']
 
 
 class EmpresaScopedAdminMixinTests(TestCase):
-    # ModeloDePrueba no tiene migracion (es de test), asi que el test runner no
-    # le crea tabla al construir la base -- se crea/borra a mano por clase.
-    # DDL fuera del atomic de TestCase: sqlite no deja al schema_editor apagar
-    # los FK checks a media transaccion, asi que va antes de super().setUpClass().
-    @classmethod
-    def setUpClass(cls):
-        with connection.schema_editor() as schema_editor:
-            schema_editor.create_model(ModeloDePrueba)
-        super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        with connection.schema_editor() as schema_editor:
-            schema_editor.delete_model(ModeloDePrueba)
-
     def setUp(self):
         # slug 'sede-test' a proposito: 'la-paz' ya existe committeada por la
         # migracion 0002 y un TestCase la ve (ver ModelosTests arriba).
@@ -117,7 +102,7 @@ class EmpresaScopedAdminMixinTests(TestCase):
         self.empresa_b = Empresa.objects.create(sede=sede, nombre='B', slug='empresa-b')
         self.jefe = User.objects.create_user(username='jefe', password='x', is_staff=True)
         MembresiaEmpresa.objects.create(user=self.jefe, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.JEFE)
-        self.admin = ModeloDePruebaAdmin(ModeloDePrueba, django_admin.site)
+        self.admin = _CupoDiarioAdmin(CupoDiario, django_admin.site)
 
     def _request(self, user):
         request = RequestFactory().get('/')
@@ -141,30 +126,30 @@ class EmpresaScopedAdminMixinTests(TestCase):
         grupo, _ = Group.objects.get_or_create(name=scope.NOMBRE_GRUPO_OPERADOR_PLATAFORMA)
         operador = User.objects.create_user(username='op2', password='x', is_staff=True)
         operador.groups.add(grupo)
-        instancia = ModeloDePrueba(nombre='x', empresa=self.empresa_a)
+        instancia = CupoDiario(fecha=date(2026, 12, 1), cupo_maximo=5, empresa=self.empresa_a)
         with scope.como_operador_plataforma():
             fields = self.admin.get_fields(self._request(operador), obj=instancia)
         self.assertNotIn('empresa', fields)
 
     def test_save_model_autoasigna_empresa_en_creacion_para_no_operador(self):
-        obj = ModeloDePrueba(nombre='x')
+        obj = CupoDiario(fecha=date(2026, 12, 1), cupo_maximo=5)
         with scope.con_empresa(self.empresa_a):
             self.admin.save_model(self._request(self.jefe), obj, form=None, change=False)
         self.assertEqual(obj.empresa_id, self.empresa_a.id)
 
     def test_get_queryset_filtra_por_empresa_para_no_operador(self):
-        ModeloDePrueba.objects.create(nombre='de a', empresa=self.empresa_a)
-        ModeloDePrueba.objects.create(nombre='de b', empresa=self.empresa_b)
+        CupoDiario.objects.create(fecha=date(2026, 12, 1), cupo_maximo=5, empresa=self.empresa_a)
+        CupoDiario.objects.create(fecha=date(2026, 12, 2), cupo_maximo=5, empresa=self.empresa_b)
         with scope.con_empresa(self.empresa_a):
-            nombres = set(self.admin.get_queryset(self._request(self.jefe)).values_list('nombre', flat=True))
-        self.assertEqual(nombres, {'de a'})
+            fechas = set(self.admin.get_queryset(self._request(self.jefe)).values_list('fecha', flat=True))
+        self.assertEqual(fechas, {date(2026, 12, 1)})
 
     def test_get_queryset_no_filtra_para_operador(self):
         grupo, _ = Group.objects.get_or_create(name=scope.NOMBRE_GRUPO_OPERADOR_PLATAFORMA)
         operador = User.objects.create_user(username='op3', password='x', is_staff=True)
         operador.groups.add(grupo)
-        ModeloDePrueba.objects.create(nombre='de a', empresa=self.empresa_a)
-        ModeloDePrueba.objects.create(nombre='de b', empresa=self.empresa_b)
+        CupoDiario.objects.create(fecha=date(2026, 12, 1), cupo_maximo=5, empresa=self.empresa_a)
+        CupoDiario.objects.create(fecha=date(2026, 12, 2), cupo_maximo=5, empresa=self.empresa_b)
         with scope.como_operador_plataforma():
             count = self.admin.get_queryset(self._request(operador)).count()
         self.assertEqual(count, 2)
