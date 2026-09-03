@@ -352,7 +352,7 @@ def codigo_promocional_valido(promo, correo_cliente, monto_viaje=None, moneda=No
     return True
 
 
-def evaluar_codigo_promocional(codigo_str, correo_cliente):
+def evaluar_codigo_promocional(codigo_str, correo_cliente, empresa):
     """Validacion en vivo, mientras el cliente escribe el codigo en el
     checkout: sin lock y sin `monto_viaje` (extras/transporte todavia no se
     resuelven en ese paso, asi que `monto_minimo` no se puede evaluar aqui
@@ -362,13 +362,13 @@ def evaluar_codigo_promocional(codigo_str, correo_cliente):
     if not codigo_str:
         return None
     try:
-        promo = CodigoPromocional.objects.get(codigo=codigo_str.strip().upper())
+        promo = CodigoPromocional.objects.get(codigo=codigo_str.strip().upper(), empresa=empresa)
     except CodigoPromocional.DoesNotExist:
         return None
     return promo if codigo_promocional_valido(promo, correo_cliente) else None
 
 
-def validar_codigo_promocional_en_pago(promo, moneda, monto_viaje, correo_cliente, excluir_pk=None):
+def validar_codigo_promocional_en_pago(promo, moneda, monto_viaje, correo_cliente, empresa, excluir_pk=None):
     """Revalidacion autoritativa al confirmar el pago (webhook). Toma el lock
     de la fila del codigo antes de contar — mismo principio que
     `bloquear_cupo_del_dia`, pero aqui si hay una fila real que bloquear (el
@@ -379,7 +379,11 @@ def validar_codigo_promocional_en_pago(promo, moneda, monto_viaje, correo_client
     plano) para que `apps/payments/services.py` distinga este rechazo del de
     cupo y cancele con el motivo real, no uno prestado.
     """
-    promo_bloqueado = CodigoPromocional.objects.select_for_update().get(pk=promo.pk)
+    try:
+        promo_bloqueado = CodigoPromocional.objects.select_for_update().get(pk=promo.pk, empresa=empresa)
+    except CodigoPromocional.DoesNotExist:
+        raise ValidationError({'codigo_promocional': 'El codigo promocional ya no es valido.'})
+
     if not codigo_promocional_valido(
         promo_bloqueado, correo_cliente, monto_viaje=monto_viaje, moneda=moneda, excluir_pk=excluir_pk,
     ):
@@ -435,12 +439,12 @@ class Vendedora(models.Model):
         return self.usuario.get_full_name() or self.usuario.get_username()
 
     @classmethod
-    def por_codigo(cls, codigo):
+    def por_codigo(cls, codigo, empresa):
         """La vendedora activa de ese codigo, o None. Un codigo que ya no existe
         (o que el cliente escribio mal) nunca debe tumbar un checkout."""
         if not codigo:
             return None
-        return cls.objects.filter(codigo=codigo, activo=True).first()
+        return cls.objects.filter(codigo=codigo, empresa=empresa, activo=True).first()
 
 
 class Reserva(models.Model):
@@ -691,7 +695,7 @@ class Reserva(models.Model):
                 validar_codigo_promocional_en_pago(
                     self.codigo_promocional, self.moneda,
                     (self.precio_total or 0) + (self.descuento_aplicado or 0),
-                    self.correo_cliente, excluir_pk=self.pk,
+                    self.correo_cliente, self.empresa, excluir_pk=self.pk,
                 )
         if self.estado != self.Estado.CANCELADA and (self.cancelada_por_id or self.cancelada_en):
             raise ValidationError('cancelada_por/cancelada_en solo aplican cuando estado es cancelada.')

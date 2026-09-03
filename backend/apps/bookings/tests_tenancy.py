@@ -7,10 +7,11 @@ from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
+from apps.fleet.models import CodigoPromocional
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
-from .models import MOTIVO_SIN_PANGA, CupoDiario, Reserva, Vendedora, evaluar_cupo
+from .models import MOTIVO_SIN_PANGA, CupoDiario, Reserva, Vendedora, evaluar_codigo_promocional, evaluar_cupo
 
 
 class SetupRolesTests(TestCase):
@@ -133,3 +134,15 @@ class CupoEmpresaAisladoTests(TestCase):
         # 3 sin usar, debe seguir aceptando un grupo de 3.
         self.assertIsNone(evaluar_cupo(fecha, 3, empresa_b))
         self.assertEqual(evaluar_cupo(fecha, 3, empresa_a), MOTIVO_SIN_PANGA)
+
+
+class CodigoPromocionalEmpresaTests(TestCase):
+    def test_codigo_de_una_empresa_no_valida_en_otra(self):
+        empresa_a = crear_empresa(slug='empresa-a4', nombre='A4')
+        empresa_b = crear_empresa(slug='empresa-b4', nombre='B4')
+        CodigoPromocional.objects.create(
+            empresa=empresa_a, codigo='VERANO10', porcentaje_descuento=10, activo=True,
+        )
+
+        self.assertIsNotNone(evaluar_codigo_promocional('VERANO10', 'x@example.com', empresa_a))
+        self.assertIsNone(evaluar_codigo_promocional('VERANO10', 'x@example.com', empresa_b))
