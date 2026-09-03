@@ -59,24 +59,24 @@ class Panorama:
         return list(zip(self.ocupadas, self.a_flote))
 
 
-def armar_panorama(desde, dias=DIAS_DEL_PANORAMA):
-    """La cuadricula completa a partir de `desde`, en tres consultas."""
+def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
+    """La cuadricula completa a partir de `desde`, en tres consultas, para una Empresa."""
     fechas = [desde + timedelta(days=i) for i in range(dias)]
     hasta = fechas[-1]
 
     # Las grandes arriba: son las escasas, solo dos llevan mas de 3 personas.
     embarcaciones = list(
-        Embarcacion.objects.filter(activa=True).order_by('-capacidad_maxima', 'nombre')
+        Embarcacion.objects.filter(activa=True, empresa=empresa).order_by('-capacidad_maxima', 'nombre')
     )
 
     fuera = {(f, e) for f, e in EmbarcacionNoDisponible.objects.filter(
-        fecha__range=(desde, hasta)
+        fecha__range=(desde, hasta), empresa=empresa,
     ).values_list('fecha', 'embarcacion_id')}
 
     asignadas = {}
     sin_panga = {fecha: [] for fecha in fechas}
     for reserva in Reserva.objects.filter(
-        fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO
+        fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
     ).select_related('embarcacion'):
         if reserva.embarcacion_id:
             asignadas[(reserva.fecha, reserva.embarcacion_id)] = reserva

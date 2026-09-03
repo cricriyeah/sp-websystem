@@ -17,6 +17,7 @@ from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
 from apps.testing import crear_flota
 
 from .admin import AgendaAdmin, CheckoutAbandonadoAdmin
+from .panorama import armar_panorama
 from .models import (
     MOTIVO_SIN_PANGA,
     Agenda,
@@ -305,3 +306,14 @@ class RutasPublicasEmpresaTests(TestCase):
             {'fecha': (date.today() + timedelta(days=5)).isoformat()},
         )
         self.assertEqual(response.status_code, 404)
+
+
+class ArmarPanoramaEmpresaTests(TestCase):
+    def test_panorama_no_mezcla_pangas_de_otra_empresa(self):
+        empresa_a = crear_empresa(slug='empresa-a9', nombre='A9')
+        empresa_b = crear_empresa(slug='empresa-b9', nombre='B9')
+        crear_flota(empresa_a, composicion=[(1, 3)])
+        crear_flota(empresa_b, composicion=[(2, 3)])
+
+        panorama = armar_panorama(date.today(), empresa_a)
+        self.assertEqual(len(panorama.renglones), 1)

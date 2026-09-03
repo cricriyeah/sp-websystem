@@ -600,7 +600,7 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
         """
         return super().changelist_view(request, {
             **(extra_context or {}),
-            'panorama': armar_panorama(timezone.localdate()),
+            'panorama': armar_panorama(timezone.localdate(), scope.empresa_actual(request)),
         })
 
     def get_queryset(self, request):
