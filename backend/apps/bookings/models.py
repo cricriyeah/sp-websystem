@@ -91,9 +91,7 @@ class CupoDiario(models.Model):
     """
 
     fecha = models.DateField(unique=True)
-    empresa = models.ForeignKey(
-        Empresa, on_delete=models.PROTECT, null=True, blank=True, related_name='cupos_diarios',
-    )
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='cupos_diarios')
     cupo_maximo = models.PositiveSmallIntegerField(
         help_text='Tope de viajes que decide el negocio para este dia. Ponlo en 0 para '
                   'cerrar el dia (mal clima, festivo), o usalo cuando falten capitanes: '
@@ -405,9 +403,7 @@ class Vendedora(models.Model):
         on_delete=models.PROTECT,
         related_name='vendedora',
     )
-    empresa = models.ForeignKey(
-        Empresa, on_delete=models.PROTECT, null=True, blank=True, related_name='vendedoras',
-    )
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='vendedoras')
     codigo = models.SlugField(
         max_length=30, unique=True,
         help_text='Lo que va en el link que le manda a sus clientes: ?ref=<codigo>. '
@@ -466,9 +462,7 @@ class Reserva(models.Model):
     numero_personas = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(MIN_PERSONAS), MaxValueValidator(MAX_PERSONAS)]
     )
-    empresa = models.ForeignKey(
-        Empresa, on_delete=models.PROTECT, null=True, blank=True, related_name='reservas',
-    )
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='reservas')
 
     # Datos del cliente (no se pide peso ni si sabe nadar, ver docs/contexto-negocio.md)
     nombre_cliente = models.CharField(max_length=150, validators=[validar_nombre_persona])

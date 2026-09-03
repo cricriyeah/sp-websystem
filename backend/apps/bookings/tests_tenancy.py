@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.db.models import ProtectedError
+from django.db.utils import IntegrityError
 from django.test import TestCase
 
 from apps.tenancy.models import Empresa, Sede
@@ -66,3 +67,9 @@ class ReservaEmpresaFKTests(TestCase):
 
         with self.assertRaises(ProtectedError):
             empresa.delete()
+
+
+class EmpresaObligatoriaTests(TestCase):
+    def test_cupo_diario_sin_empresa_revienta(self):
+        with self.assertRaises(IntegrityError):
+            CupoDiario.objects.create(fecha='2026-12-05', cupo_maximo=5)
