@@ -83,7 +83,7 @@ class CheckoutConCaptchaTests(ApiTestCase):
     CHECKOUT_ID = '22222222-2222-4222-8222-222222222222'
 
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
 
     def payload(self, **overrides):
         datos = {
@@ -103,7 +103,7 @@ class CheckoutConCaptchaTests(ApiTestCase):
 
     def enviar(self, **overrides):
         return self.client.post(
-            '/api/reservas/', self.payload(**overrides), content_type='application/json'
+            f'/api/{self.empresa.slug}/reservas/', self.payload(**overrides), content_type='application/json'
         )
 
     @override_settings(TURNSTILE_SECRET_KEY='')
