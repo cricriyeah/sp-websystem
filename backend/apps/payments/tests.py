@@ -1,6 +1,7 @@
 """Pruebas del cobro. Lo que se protege aqui es que nadie pague dos veces y que
 lo cobrado cuadre con lo calculado — Stripe va simulado, no se llama a la red.
 """
+import uuid
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from io import StringIO
@@ -8,15 +9,19 @@ from unittest import mock
 
 import stripe
 from django.core.management import call_command
+from django.db import connection
 from django.db.utils import DatabaseError
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
+from django.utils import timezone
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
 from apps.fleet.models import CodigoPromocional, ExtrasItem, Tarifa, TransportePrecio
+from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import ApiTestCase, crear_flota
 
 from .checks import revisar_llaves_de_stripe
+from .services import APLICADO, _reserva_del_cargo, aplicar_pago_exitoso, reembolsar
 from .stripe_client import configurar_stripe
 from .pricing import (
     PERSONAS_INCLUIDAS,
@@ -1227,3 +1232,141 @@ class ConfigurarStripeTests(TestCase):
         api_key_antes = getattr(stripe, 'api_key', None)
         configurar_stripe(self.empresa)
         self.assertEqual(getattr(stripe, 'api_key', None), api_key_antes)
+
+
+class NotificarReservaPagadaOnCommitTests(TransactionTestCase):
+    """TransactionTestCase, no TestCase: transaction.on_commit solo dispara
+    con un commit real — TestCase envuelve cada test en una transaccion que
+    nunca comitea, y el callback nunca correria.
+
+    Prueba directa del bug N1 (Revision 4): SET LOCAL muere al COMMIT, asi que
+    el callback de on_commit debe reabrir su propio con_empresa — si no lo
+    hace, este test lo detecta viendo connection.alcance_actual en None (o en
+    la Empresa equivocada) dentro del callback.
+    """
+
+    def setUp(self):
+        # Slugs distintos de 'la-paz'/'sal-y-sol' -- ya existen, sembrados por
+        # tenancy.0002_crear_sede_empresa_la_paz.
+        self.sede = Sede.objects.create(
+            nombre='Sede on-commit test', slug='sede-on-commit-test', zona_horaria='America/Mazatlan',
+        )
+        self.empresa = Empresa.objects.create(
+            sede=self.sede, nombre='Empresa on-commit test', slug='empresa-on-commit-test',
+            stripe_secret_key='sk_test_x', stripe_webhook_secret='whsec_x',
+            stripe_publishable_key='pk_x',
+        )
+        with scope.con_empresa(self.empresa):
+            crear_flota(self.empresa)
+
+    def _crear_reserva(self):
+        reserva = Reserva(
+            empresa=self.empresa, fecha=date.today() + timedelta(days=10),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='Ana Ruiz',
+            telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+            deslinde_nombre='Ana Ruiz', checkout_id=uuid.uuid4(), moneda='MXN',
+        )
+        with scope.con_empresa(self.empresa):
+            reserva.full_clean()
+            reserva.save()
+        return reserva
+
+    @mock.patch('apps.payments.services.notificar_reserva_pagada')
+    def test_el_callback_ve_el_alcance_correcto_tras_el_commit(self, mock_notificar):
+        reserva = self._crear_reserva()
+        intent = {
+            'id': 'pi_1', 'amount_received': 157500, 'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+
+        capturado = {}
+
+        def _espia(reserva_arg):
+            capturado['alcance'] = connection.alcance_actual
+            capturado['reserva_id'] = reserva_arg.pk
+
+        mock_notificar.side_effect = _espia
+
+        with scope.con_empresa(self.empresa):
+            resultado = aplicar_pago_exitoso(intent, self.empresa)
+
+        self.assertEqual(resultado, APLICADO)
+        mock_notificar.assert_called_once()
+        # alcance_actual es ('empresa', id), no el id solo (ver apps.tenancy.scope).
+        self.assertEqual(capturado['alcance'], ('empresa', self.empresa.pk))
+        self.assertEqual(capturado['reserva_id'], reserva.pk)
+
+
+class ReembolsarTests(TestCase):
+    def setUp(self):
+        sede = Sede.objects.create(
+            nombre='Sede reembolsar test', slug='sede-reembolsar-test', zona_horaria='America/Mazatlan',
+        )
+        self.empresa = Empresa.objects.create(
+            sede=sede, nombre='Empresa reembolsar test', slug='empresa-reembolsar-test',
+            stripe_secret_key='sk_test_x', stripe_webhook_secret='whsec_x',
+            stripe_publishable_key='pk_x',
+        )
+
+    @mock.patch('apps.payments.services.configurar_stripe')
+    def test_idempotency_key_va_en_options_no_en_params(self, mock_configurar):
+        cliente = mock.Mock()
+        mock_configurar.return_value = cliente
+
+        resultado = reembolsar({'id': 'pi_1'}, 'prueba', self.empresa)
+
+        self.assertTrue(resultado)
+        mock_configurar.assert_called_once_with(self.empresa)
+        params, options = cliente.refunds.create.call_args.args
+        self.assertEqual(params, {'payment_intent': 'pi_1'})
+        self.assertNotIn('idempotency_key', params)
+        self.assertEqual(options, {'idempotency_key': 'refund-pi_1'})
+
+    @mock.patch('apps.payments.services.configurar_stripe')
+    def test_stripe_error_devuelve_false(self, mock_configurar):
+        cliente = mock.Mock()
+        cliente.refunds.create.side_effect = stripe.StripeError('boom')
+        mock_configurar.return_value = cliente
+        self.assertFalse(reembolsar({'id': 'pi_1'}, 'prueba', self.empresa))
+
+
+class ReservaDelCargoAisladaPorEmpresaTests(TestCase):
+    def setUp(self):
+        sede = Sede.objects.create(
+            nombre='Sede cargo test', slug='sede-cargo-test', zona_horaria='America/Mazatlan',
+        )
+        self.empresa_a = Empresa.objects.create(
+            sede=sede, nombre='A', slug='empresa-cargo-a',
+            stripe_secret_key='sk_a', stripe_webhook_secret='whsec_a',
+            stripe_publishable_key='pk_a',
+        )
+        self.empresa_b = Empresa.objects.create(
+            sede=sede, nombre='B', slug='empresa-cargo-b',
+            stripe_secret_key='sk_b', stripe_webhook_secret='whsec_b',
+            stripe_publishable_key='pk_b',
+        )
+        with scope.con_empresa(self.empresa_a):
+            crear_flota(self.empresa_a)
+            self.reserva_a = Reserva(
+                empresa=self.empresa_a, fecha=date.today() + timedelta(days=10),
+                hora=time(6, 0), numero_personas=2, nombre_cliente='Ana',
+                telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+                deslinde_nombre='Ana', checkout_id=uuid.uuid4(), moneda='MXN',
+                stripe_payment_intent_id='pi_compartido',
+            )
+            self.reserva_a.full_clean()
+            self.reserva_a.save()
+
+    def test_no_encuentra_la_reserva_de_otra_empresa(self):
+        with scope.con_empresa(self.empresa_b):
+            self.assertIsNone(
+                _reserva_del_cargo({'payment_intent': 'pi_compartido'}, self.empresa_b)
+            )
+
+    def test_encuentra_la_reserva_de_su_propia_empresa(self):
+        with scope.con_empresa(self.empresa_a):
+            encontrada = _reserva_del_cargo({'payment_intent': 'pi_compartido'}, self.empresa_a)
+        self.assertEqual(encontrada.pk, self.reserva_a.pk)
