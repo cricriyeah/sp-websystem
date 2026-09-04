@@ -1,4 +1,5 @@
 from datetime import date
+from io import StringIO
 
 from django.contrib import admin as django_admin
 from django.contrib.auth import get_user_model
@@ -6,6 +7,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.contrib.admin.utils import flatten_fieldsets
 from django.core.exceptions import ValidationError
+from django.core.management import CommandError, call_command
 from django.db.utils import IntegrityError
 from django.test import RequestFactory, TestCase, TransactionTestCase
 
@@ -246,3 +248,57 @@ class EmpresaScopedUserAdminMixinTests(TestCase):
             self.assertTrue(form.is_valid(), form.errors)
             usuario_actualizado = form.save(commit=False)
             self.assertFalse(usuario_actualizado.is_superuser)
+
+
+class MigrarLaPazAEmpresaTests(TestCase):
+    """`tenancy.0002_crear_sede_empresa_la_paz` ya siembra la Sede 'la-paz' y la
+    Empresa 'sal-y-sol' -- esta clase no las vuelve a crear (colisionaria con
+    IntegrityError, mismo motivo que ModelosTests usa slugs distintos)."""
+
+    def setUp(self):
+        call_command('setup_roles', stdout=StringIO())
+        self.empresa = Empresa.objects.get(slug='sal-y-sol')
+
+        self.operador = User.objects.create_superuser(username='admin_sistema', password='x')
+        self.jefe1 = User.objects.create_superuser(username='jefe1', password='x')
+        self.vendedora1 = User.objects.create_user(username='vend1', password='x', is_staff=True)
+        self.vendedora1.groups.add(Group.objects.get(name='Vendedora'))
+
+    def test_sin_operador_falla_explicito(self):
+        with self.assertRaises(CommandError):
+            call_command('migrar_la_paz_a_empresa', stdout=StringIO())
+
+    def test_migra_operador_jefes_y_vendedoras(self):
+        call_command('migrar_la_paz_a_empresa', operador='admin_sistema', stdout=StringIO())
+
+        self.operador.refresh_from_db()
+        self.assertFalse(self.operador.is_superuser)
+        self.assertTrue(self.operador.groups.filter(name='OperadorPlataforma').exists())
+        self.assertFalse(MembresiaEmpresa.objects.filter(user=self.operador).exists())
+
+        self.jefe1.refresh_from_db()
+        self.assertFalse(self.jefe1.is_superuser)
+        self.assertTrue(self.jefe1.groups.filter(name='Jefe').exists())
+        self.assertTrue(MembresiaEmpresa.objects.filter(
+            user=self.jefe1, empresa=self.empresa, rol=MembresiaEmpresa.Rol.JEFE,
+        ).exists())
+
+        self.assertTrue(MembresiaEmpresa.objects.filter(
+            user=self.vendedora1, empresa=self.empresa, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        ).exists())
+
+    def test_dry_run_no_cambia_nada(self):
+        call_command('migrar_la_paz_a_empresa', operador='admin_sistema', dry_run=True, stdout=StringIO())
+        self.operador.refresh_from_db()
+        self.assertTrue(self.operador.is_superuser)
+        self.assertFalse(MembresiaEmpresa.objects.exists())
+
+    def test_sin_setup_roles_previo_falla_explicito(self):
+        Group.objects.all().delete()
+        with self.assertRaises(CommandError):
+            call_command('migrar_la_paz_a_empresa', operador='admin_sistema', stdout=StringIO())
+
+    def test_sin_empresa_sal_y_sol_falla_explicito(self):
+        self.empresa.delete()
+        with self.assertRaises(CommandError):
+            call_command('migrar_la_paz_a_empresa', operador='admin_sistema', stdout=StringIO())
