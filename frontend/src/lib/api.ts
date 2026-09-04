@@ -1,4 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+// Mismo slug que crea `tenancy.0002_crear_sede_empresa_la_paz` en el backend.
+const EMPRESA_SLUG = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol';
 
 export type Moneda = 'MXN' | 'USD';
 
@@ -172,9 +174,15 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // Cada ruta exportada de este archivo empieza con '/api/' (ver getTarifa,
+  // getCupo, etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
+  // que cada funcion exportada tenga que acordarse del slug.
+  const rutaConEmpresa = path.startsWith('/api/')
+    ? `/api/${EMPRESA_SLUG}${path.slice(4)}`
+    : path;
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${API_URL}${rutaConEmpresa}`, {
       ...init,
       headers: { 'Content-Type': 'application/json', ...init?.headers },
     });
