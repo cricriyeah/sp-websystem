@@ -8,6 +8,7 @@ from io import StringIO
 from unittest import mock
 
 import stripe
+from stripe import StripeClient
 from django.core.management import call_command
 from django.db import connection
 from django.db.utils import DatabaseError
@@ -212,6 +213,9 @@ class PricingTests(TestCase):
 @override_settings(**LLAVES)
 class CrearPagoTests(ApiTestCase):
     def setUp(self):
+        self.empresa.stripe_secret_key = 'sk_test_falsa'
+        self.empresa.stripe_publishable_key = 'pk_test_falsa'
+        self.empresa.save(update_fields=['stripe_secret_key', 'stripe_publishable_key'])
         Tarifa.objects.create(
             empresa=self.empresa,
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
@@ -253,31 +257,31 @@ class CrearPagoTests(ApiTestCase):
             reserva=reserva or self.reserva, zona=zona, direccion_personalizada='Malecon 123',
         )
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_cobra_lo_que_calcula_el_servidor_no_lo_que_manda_el_cliente(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_cobra_lo_que_calcula_el_servidor_no_lo_que_manda_el_cliente(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         # El cliente intenta colar su propio total y sus propios extras.
         response = self.post(precio_total='1.00', total=1, lleva_lunch=True, amenities=['lunch'])
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(create.call_args.kwargs['amount'], a_centavos(Decimal('4500.00')))
+        self.assertEqual(payment_intents.create.call_args.args[0]['amount'], a_centavos(Decimal('4500.00')))
         self.assertEqual(response.json()['monto_a_cobrar'], '4500.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_anticipo_cobra_el_30_por_ciento(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_anticipo_cobra_el_30_por_ciento(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         response = self.post(forma_pago='anticipo')
 
-        self.assertEqual(create.call_args.kwargs['amount'], 135000)
+        self.assertEqual(payment_intents.create.call_args.args[0]['amount'], 135000)
         self.assertEqual(response.json()['monto_a_cobrar'], '1350.00')
         # El total completo queda guardado: el 70% se cobra en efectivo.
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.precio_total, Decimal('4500.00'))
         self.assertEqual(self.reserva.saldo_pendiente, Decimal('4500.00'))
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_hasta_3_personas_el_precio_no_cambia(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_hasta_3_personas_el_precio_no_cambia(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         for personas in (1, 2, 3):
             # Se limpia el intent para que cada vuelta sea un checkout nuevo y no
             # entre por la rama que reusa el intent anterior.
@@ -286,39 +290,39 @@ class CrearPagoTests(ApiTestCase):
             )
             self.assertEqual(self.post().json()['monto_a_cobrar'], '4500.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_cobra_500_por_cada_persona_arriba_de_3(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_cobra_500_por_cada_persona_arriba_de_3(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         # 5 es el tope de la flota (MAX_PERSONAS): la panga mas grande lleva 5.
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         # 4500 del viaje + 2 personas extra x 500.
         self.assertEqual(self.post().json()['monto_a_cobrar'], '5500.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_el_cargo_por_personas_sale_de_la_reserva_no_del_cliente(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_el_cargo_por_personas_sale_de_la_reserva_no_del_cliente(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         # Aunque el cliente insista en que van 2, se cobra por las 5 reservadas.
         self.assertEqual(self.post(numero_personas=2).json()['monto_a_cobrar'], '5500.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_el_anticipo_incluye_el_cargo_por_personas(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_el_anticipo_incluye_el_cargo_por_personas(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         # 30% de 5500.
         self.assertEqual(self.post(forma_pago='anticipo').json()['monto_a_cobrar'], '1650.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_el_brunch_se_cobra_por_cada_persona(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_el_brunch_se_cobra_por_cada_persona(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=4)
         self.seleccionar_extra()
         # 4500 del viaje + 1 persona extra x 500 + 4 brunches x 300.
         self.assertEqual(self.post().json()['monto_a_cobrar'], '6200.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_cantidad_editable_cobra_solo_lo_que_el_cliente_pidio(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_cantidad_editable_cobra_solo_lo_que_el_cliente_pidio(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         self.seleccionar_extra(
             tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
@@ -331,9 +335,9 @@ class CrearPagoTests(ApiTestCase):
         extra = ReservaExtra.objects.get(reserva=self.reserva)
         self.assertEqual(extra.cantidad, 2)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_cantidad_editable_se_acota_al_grupo_nunca_cobra_de_mas(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_cantidad_editable_se_acota_al_grupo_nunca_cobra_de_mas(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         # El cliente eligio "5" antes de bajar el grupo a 2: nunca debe cobrar
         # licencia para mas personas de las que trae la reserva.
         self.seleccionar_extra(
@@ -347,9 +351,9 @@ class CrearPagoTests(ApiTestCase):
         extra = ReservaExtra.objects.get(reserva=self.reserva)
         self.assertEqual(extra.cantidad, 2)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_cantidad_solicitada_cantidad_editable_cobra_todo_el_grupo(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_sin_cantidad_solicitada_cantidad_editable_cobra_todo_el_grupo(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=4)
         self.seleccionar_extra(
             tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
@@ -359,9 +363,9 @@ class CrearPagoTests(ApiTestCase):
         # 4500 + 1 persona extra x 500 + 4 licencias x 450.
         self.assertEqual(self.post().json()['monto_a_cobrar'], '6800.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_transporte_sin_suficientes_personas_no_aplica_el_recargo(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_transporte_sin_suficientes_personas_no_aplica_el_recargo(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         transporte = self.seleccionar_transporte()
         transporte.personas_solicitadas = 2
@@ -375,9 +379,9 @@ class CrearPagoTests(ApiTestCase):
         transporte.refresh_from_db()
         self.assertEqual(transporte.numero_personas, 2)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_transporte_con_suficientes_personas_solicitadas_si_aplica_el_recargo(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_transporte_con_suficientes_personas_solicitadas_si_aplica_el_recargo(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         transporte = self.seleccionar_transporte()
         transporte.personas_solicitadas = 4
@@ -388,9 +392,9 @@ class CrearPagoTests(ApiTestCase):
         # 4500 + 2 personas extra x 500 + 2000 + 1500 de recargo (4 alcanza el minimo).
         self.assertEqual(response.json()['monto_a_cobrar'], '9000.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_personas_solicitadas_transporte_usa_todo_el_grupo(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_sin_personas_solicitadas_transporte_usa_todo_el_grupo(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=4)
         self.seleccionar_transporte()
 
@@ -400,16 +404,16 @@ class CrearPagoTests(ApiTestCase):
         # el grupo cuenta para el recargo. 4500 + 1 x 500 + 2000 + 1500.
         self.assertEqual(response.json()['monto_a_cobrar'], '8500.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_bebidas_no_suma_pero_transporte_si(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_bebidas_no_suma_pero_transporte_si(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(pide_bebidas=True)
         self.seleccionar_transporte()  # 2 personas, bajo el minimo de recargo: solo precio_base.
         # Bebidas la cotiza el agente aparte, no cambia el cobro. Transporte si suma.
         self.assertEqual(self.post().json()['monto_a_cobrar'], '6500.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_precio_de_extra_en_dolares_no_se_cobra_a_medias(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_sin_precio_de_extra_en_dolares_no_se_cobra_a_medias(self, payment_intents):
         reserva = crear_reserva(self.empresa, moneda='USD')
         self.seleccionar_extra(reserva=reserva, precio=Decimal('300'), precio_usd=None)
         response = self.client.post(
@@ -418,11 +422,11 @@ class CrearPagoTests(ApiTestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 503)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_congela_el_precio_vigente_del_catalogo_no_el_de_cuando_se_selecciono(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_congela_el_precio_vigente_del_catalogo_no_el_de_cuando_se_selecciono(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         seleccion = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
         # El precio de lista cambia despues de que el cliente eligio, antes de pagar.
         seleccion.extras_item.precio = Decimal('500')
@@ -436,9 +440,9 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(seleccion.precio_unitario, Decimal('500'))
         self.assertEqual(seleccion.cantidad, 2)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_un_extra_desactivado_se_cae_sin_bloquear_los_demas(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_un_extra_desactivado_se_cae_sin_bloquear_los_demas(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         activo = self.seleccionar_extra(
             tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
             precio_usd=Decimal('25'), cobrar_por_persona=False,
@@ -456,14 +460,13 @@ class CrearPagoTests(ApiTestCase):
         activo.refresh_from_db()
         self.assertEqual(activo.precio_unitario, Decimal('450'))
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_409_por_pago_en_curso_no_deja_extras_a_medias(self, create, retrieve):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_409_por_pago_en_curso_no_deja_extras_a_medias(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         self.post()
 
         extra = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
-        retrieve.return_value = intent_falso(status='processing')
+        payment_intents.retrieve.return_value = intent_falso(status='processing')
 
         response = self.post()
 
@@ -472,8 +475,8 @@ class CrearPagoTests(ApiTestCase):
         self.assertIsNone(extra.precio_unitario)
         self.assertIsNone(extra.cantidad)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_cargo_en_dolares_no_se_cobra_a_medias(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_sin_cargo_en_dolares_no_se_cobra_a_medias(self, payment_intents):
         Tarifa.objects.create(
             empresa=self.empresa,
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
@@ -486,61 +489,57 @@ class CrearPagoTests(ApiTestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 503)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_manda_idempotency_key(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_manda_idempotency_key(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         self.post()
-        self.assertIn('idempotency_key', create.call_args.kwargs)
+        self.assertIn('idempotency_key', payment_intents.create.call_args.args[1])
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_dos_clics_reusan_el_mismo_intent(self, create, retrieve):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_dos_clics_reusan_el_mismo_intent(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         self.post()
 
-        retrieve.return_value = intent_falso()
+        payment_intents.retrieve.return_value = intent_falso()
         response = self.post()
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(create.call_count, 1)  # no se creo un segundo intent
+        self.assertEqual(payment_intents.create.call_count, 1)  # no se creo un segundo intent
 
-    @mock.patch('stripe.PaymentIntent.modify')
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_cambiar_los_extras_ajusta_el_intent_en_vez_de_duplicarlo(self, create, retrieve, modify):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_cambiar_los_extras_ajusta_el_intent_en_vez_de_duplicarlo(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         self.post()
 
         # El cliente vuelve atras y agrega el brunch: mismo intent, otro monto.
         self.seleccionar_extra(precio=Decimal('150'), precio_usd=Decimal('9'))
-        retrieve.return_value = intent_falso()
-        modify.return_value = intent_falso(amount=480000)
+        payment_intents.retrieve.return_value = intent_falso()
+        payment_intents.update.return_value = intent_falso(amount=480000)
         self.post()
 
-        self.assertEqual(create.call_count, 1)
-        self.assertEqual(modify.call_args.kwargs['amount'], a_centavos(Decimal('4800.00')))
+        self.assertEqual(payment_intents.create.call_count, 1)
+        self.assertEqual(payment_intents.update.call_args.args[1]['amount'], a_centavos(Decimal('4800.00')))
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_no_crea_otro_intent_si_ya_hay_uno_cobrando(self, create, retrieve):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_no_crea_otro_intent_si_ya_hay_uno_cobrando(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         self.post()
 
-        retrieve.return_value = intent_falso(status='succeeded')
+        payment_intents.retrieve.return_value = intent_falso(status='succeeded')
         response = self.post()
 
         self.assertEqual(response.status_code, 409)
-        self.assertEqual(create.call_count, 1)
+        self.assertEqual(payment_intents.create.call_count, 1)
 
     def test_reserva_ya_pagada_no_se_vuelve_a_cobrar(self):
         self.reserva.estado = Reserva.Estado.PAGADA
         self.reserva.save()
         self.assertEqual(self.post().status_code, 409)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_precio_en_dolares_responde_503(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_sin_precio_en_dolares_responde_503(self, payment_intents):
         Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'), precio_usd=None)
         reserva = crear_reserva(self.empresa, moneda='USD')
         response = self.client.post(
@@ -549,24 +548,24 @@ class CrearPagoTests(ApiTestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 503)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
 
     def test_forma_pago_invalida_responde_400(self):
         self.assertEqual(self.post(forma_pago='trueque').status_code, 400)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_el_checkout_id_correcto_no_se_puede_cobrar(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_sin_el_checkout_id_correcto_no_se_puede_cobrar(self, payment_intents):
         """Los ids de reserva son consecutivos y la API es publica: adivinar uno
         no debe alcanzar para generar cobros sobre la reserva de otra persona."""
         self.assertEqual(self.post(checkout_id=None).status_code, 403)
         self.assertEqual(self.post(checkout_id='22222222-2222-4222-8222-222222222222').status_code, 403)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
 
-        create.return_value = intent_falso()
+        payment_intents.create.return_value = intent_falso()
         self.assertEqual(self.post(checkout_id=str(self.reserva.checkout_id)).status_code, 200)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_una_reserva_de_whatsapp_no_se_cobra_por_esta_ruta(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_una_reserva_de_whatsapp_no_se_cobra_por_esta_ruta(self, payment_intents):
         """Las que captura la vendedora no traen checkout_id, asi que no hay
         llave que las acredite: por aqui no se tocan.
 
@@ -581,7 +580,7 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(self.post(checkout_id=None).status_code, 403)
         # Tampoco vale mandar cualquier cosa, ni repetir el que tenia antes.
         self.assertEqual(self.post(checkout_id=CHECKOUT_ID).status_code, 403)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
 
     def test_el_403_no_delata_en_que_estado_esta_la_reserva(self):
         """El guard corre antes que la revision de estado, asi que quien no
@@ -596,9 +595,9 @@ class CrearPagoTests(ApiTestCase):
 
         self.assertEqual(self.post(checkout_id=ajeno).status_code, 403)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_codigo_promocional_valido_aplica_el_descuento(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_codigo_promocional_valido_aplica_el_descuento(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         CodigoPromocional.objects.create(
             empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
         )
@@ -612,9 +611,9 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(self.reserva.descuento_aplicado, Decimal('450.00'))
         self.assertEqual(self.reserva.precio_total, Decimal('4050.00'))
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_codigo_promocional_no_distingue_mayusculas_ni_espacios(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_codigo_promocional_no_distingue_mayusculas_ni_espacios(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         CodigoPromocional.objects.create(
             empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
         )
@@ -623,27 +622,27 @@ class CrearPagoTests(ApiTestCase):
 
         self.assertEqual(response.json()['monto_a_cobrar'], '4050.00')
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_codigo_promocional_inexistente_responde_400(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_codigo_promocional_inexistente_responde_400(self, payment_intents):
         response = self.post(codigo_promocional='NOEXISTE')
 
         self.assertEqual(response.status_code, 400)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
         self.reserva.refresh_from_db()
         self.assertIsNone(self.reserva.codigo_promocional)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_codigo_promocional_inactivo_responde_400(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_codigo_promocional_inactivo_responde_400(self, payment_intents):
         CodigoPromocional.objects.create(
             empresa=self.empresa, codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
         )
         response = self.post(codigo_promocional='VIEJO')
 
         self.assertEqual(response.status_code, 400)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_codigo_promocional_bajo_el_monto_minimo_responde_400(self, create):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_codigo_promocional_bajo_el_monto_minimo_responde_400(self, payment_intents):
         CodigoPromocional.objects.create(
             empresa=self.empresa, codigo='DESDE10000', porcentaje_descuento=Decimal('10'),
             monto_minimo=Decimal('10000'),
@@ -651,20 +650,20 @@ class CrearPagoTests(ApiTestCase):
         response = self.post(codigo_promocional='DESDE10000')
 
         self.assertEqual(response.status_code, 400)
-        create.assert_not_called()
+        payment_intents.create.assert_not_called()
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_sin_codigo_promocional_no_hay_descuento(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_sin_codigo_promocional_no_hay_descuento(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         self.post()
 
         self.reserva.refresh_from_db()
         self.assertIsNone(self.reserva.codigo_promocional)
         self.assertIsNone(self.reserva.descuento_aplicado)
 
-    @mock.patch('stripe.PaymentIntent.create')
-    def test_el_descuento_se_calcula_sobre_el_subtotal_con_extras_y_transporte(self, create):
-        create.return_value = intent_falso()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_el_descuento_se_calcula_sobre_el_subtotal_con_extras_y_transporte(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
         CodigoPromocional.objects.create(
             empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
         )
@@ -914,6 +913,9 @@ class EstadoReservaTests(ApiTestCase):
 class WebhookTests(ApiTestCase):
     def setUp(self):
         super().setUp()
+        self.empresa.stripe_secret_key = 'sk_test_falsa'
+        self.empresa.stripe_webhook_secret = 'whsec_falsa'
+        self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
         Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
         self.reserva = crear_reserva(self.empresa)
         self.reserva.precio_total = Decimal('4500.00')
@@ -950,40 +952,40 @@ class WebhookTests(ApiTestCase):
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.pagada_en, datetime.fromtimestamp(1772000000, UTC))
 
-    @mock.patch('stripe.Refund.create')
-    def test_el_mismo_evento_dos_veces_no_cobra_ni_reembolsa_de_mas(self, refund):
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_el_mismo_evento_dos_veces_no_cobra_ni_reembolsa_de_mas(self, refunds):
         self.entregar(evento_pagado(self.reserva.pk))
         self.entregar(evento_pagado(self.reserva.pk))
 
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.monto_pagado, Decimal('4500.00'))
-        refund.assert_not_called()
+        refunds.create.assert_not_called()
 
-    @mock.patch('stripe.Refund.create')
-    def test_un_segundo_cobro_distinto_se_reembolsa(self, refund):
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_un_segundo_cobro_distinto_se_reembolsa(self, refunds):
         self.entregar(evento_pagado(self.reserva.pk, intent_id='pi_1'))
         self.entregar(evento_pagado(self.reserva.pk, intent_id='pi_2'))
 
-        refund.assert_called_once()
-        self.assertEqual(refund.call_args.kwargs['payment_intent'], 'pi_2')
+        refunds.create.assert_called_once()
+        self.assertEqual(refunds.create.call_args.args[0]['payment_intent'], 'pi_2')
         # La reserva conserva el primer cobro, no se duplica el monto.
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.monto_pagado, Decimal('4500.00'))
         self.assertEqual(self.reserva.stripe_payment_intent_id, 'pi_1')
 
-    @mock.patch('stripe.Refund.create')
-    def test_pago_sin_reserva_se_reembolsa(self, refund):
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_pago_sin_reserva_se_reembolsa(self, refunds):
         self.assertEqual(self.entregar(evento_pagado(99999)).status_code, 200)
-        refund.assert_called_once()
+        refunds.create.assert_called_once()
 
-    @mock.patch('stripe.Refund.create')
-    def test_si_el_dia_se_lleno_reembolsa_y_cancela(self, refund):
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_si_el_dia_se_lleno_reembolsa_y_cancela(self, refunds):
         for _ in range(CUPO_MAXIMO_DEFAULT):
-            crear_reserva(fecha=self.reserva.fecha, estado=Reserva.Estado.PAGADA)
+            crear_reserva(self.empresa, fecha=self.reserva.fecha, estado=Reserva.Estado.PAGADA)
 
         self.entregar(evento_pagado(self.reserva.pk))
 
-        refund.assert_called_once()
+        refunds.create.assert_called_once()
         # El cobro y su devolucion quedan los dos registrados: en la cuenta de
         # verdad entro y salio ese dinero, y el panel de finanzas tiene que
         # poder contarlo asi.
@@ -996,34 +998,36 @@ class WebhookTests(ApiTestCase):
         self.assertTrue(self.reserva.reembolsada)
         self.assertIn('Sin cupo', self.reserva.motivo_cancelacion)
 
-    @mock.patch('stripe.Refund.create')
-    def test_si_el_codigo_promocional_ya_no_es_valido_reembolsa_y_cancela(self, refund):
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_si_el_codigo_promocional_ya_no_es_valido_reembolsa_y_cancela(self, refunds):
         """El codigo se agoto (otra reserva se adelanto) entre `crear-pago` y el
         webhook: mismo remedio que el cupo lleno, con el motivo real."""
         promo = CodigoPromocional.objects.create(
-            codigo='VERANO10', porcentaje_descuento=Decimal('10'), usos_maximos=1,
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'), usos_maximos=1,
         )
         self.reserva.codigo_promocional = promo
         self.reserva.descuento_aplicado = Decimal('450.00')
         self.reserva.precio_total = Decimal('4050.00')
         self.reserva.save()
         crear_reserva(
+            self.empresa,
             fecha=self.reserva.fecha, codigo_promocional=promo, estado=Reserva.Estado.PAGADA,
         )
 
         self.entregar(evento_pagado(self.reserva.pk, amount=405000))
 
-        refund.assert_called_once()
+        refunds.create.assert_called_once()
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.estado, Reserva.Estado.CANCELADA)
         self.assertTrue(self.reserva.reembolsada)
         self.assertEqual(self.reserva.monto_reembolsado, Decimal('4050.00'))
         self.assertIn('codigo promocional', self.reserva.motivo_cancelacion)
 
-    @mock.patch('stripe.Refund.create', side_effect=stripe.APIConnectionError('stripe caido'))
-    def test_si_falla_el_reembolso_no_se_cancela_a_ciegas(self, refund):
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_si_falla_el_reembolso_no_se_cancela_a_ciegas(self, refunds):
+        refunds.create.side_effect = stripe.APIConnectionError('stripe caido')
         for _ in range(CUPO_MAXIMO_DEFAULT):
-            crear_reserva(fecha=self.reserva.fecha, estado=Reserva.Estado.PAGADA)
+            crear_reserva(self.empresa, fecha=self.reserva.fecha, estado=Reserva.Estado.PAGADA)
 
         self.assertEqual(self.entregar(evento_pagado(self.reserva.pk)).status_code, 200)
 
@@ -1032,6 +1036,19 @@ class WebhookTests(ApiTestCase):
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
         self.assertFalse(self.reserva.reembolsada)
+
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_el_reembolso_manda_idempotency_key_en_options_no_en_params(self, refunds):
+        """Regresión directa de la Revisión 6, N-D: `idempotency_key` en `params`
+        en vez de `options` pierde la protección de doble reembolso — Stripe la
+        ignoraría como un campo más del payload, no como la cabecera
+        `Idempotency-Key`."""
+        self.entregar(evento_pagado(99999))  # pago sin reserva -> se reembolsa
+
+        refunds.create.assert_called_once()
+        params, options = refunds.create.call_args.args
+        self.assertNotIn('idempotency_key', params)
+        self.assertIn('idempotency_key', options)
 
     def test_registra_el_descuadre_pero_no_rebota_el_pago(self):
         with self.assertLogs('apps.payments.services', level='ERROR') as logs:
@@ -1046,7 +1063,8 @@ class WebhookTests(ApiTestCase):
     def test_firma_invalida_responde_400(self):
         with mock.patch('stripe.Webhook.construct_event', side_effect=ValueError):
             response = self.client.post(
-                '/api/stripe/webhook/', '{}', content_type='application/json',
+                reverse('stripe-webhook', kwargs={'empresa_slug': self.empresa.slug}),
+                '{}', content_type='application/json',
                 HTTP_STRIPE_SIGNATURE='falsa',
             )
         self.assertEqual(response.status_code, 400)
@@ -1067,6 +1085,9 @@ class EventosDeStripeTests(ApiTestCase):
 
     def setUp(self):
         super().setUp()
+        self.empresa.stripe_secret_key = 'sk_test_falsa'
+        self.empresa.stripe_webhook_secret = 'whsec_falsa'
+        self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
         Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
         self.reserva = crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         self.reserva.precio_total = Decimal('4500.00')
@@ -1178,48 +1199,48 @@ class ConciliarPagosTests(EmpresaTestCase):
             'sk_test_falsa',
         )
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    def test_aplica_el_pago_que_el_webhook_nunca_entrego(self, retrieve):
-        retrieve.return_value = self.intent_stripe()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_aplica_el_pago_que_el_webhook_nunca_entrego(self, payment_intents):
+        payment_intents.retrieve.return_value = self.intent_stripe()
         self.ejecutar()
 
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.estado, Reserva.Estado.PAGADA)
         self.assertEqual(self.reserva.monto_pagado, Decimal('4500.00'))
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    def test_dry_run_no_toca_nada(self, retrieve):
-        retrieve.return_value = self.intent_stripe()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_dry_run_no_toca_nada(self, payment_intents):
+        payment_intents.retrieve.return_value = self.intent_stripe()
         salida = self.ejecutar(dry_run=True)
 
         self.assertIn('succeeded', salida)
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    def test_no_toca_los_que_no_se_pagaron(self, retrieve):
-        retrieve.return_value = self.intent_stripe(status='requires_payment_method')
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_no_toca_los_que_no_se_pagaron(self, payment_intents):
+        payment_intents.retrieve.return_value = self.intent_stripe(status='requires_payment_method')
         self.ejecutar()
 
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    def test_ignora_las_reservas_sin_intent(self, retrieve):
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_ignora_las_reservas_sin_intent(self, payment_intents):
         Reserva.objects.filter(pk=self.reserva.pk).update(stripe_payment_intent_id='')
         self.ejecutar()
-        retrieve.assert_not_called()
+        payment_intents.retrieve.assert_not_called()
 
-    @mock.patch('stripe.PaymentIntent.retrieve')
-    def test_correr_dos_veces_no_duplica_nada(self, retrieve):
-        retrieve.return_value = self.intent_stripe()
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_correr_dos_veces_no_duplica_nada(self, payment_intents):
+        payment_intents.retrieve.return_value = self.intent_stripe()
         self.ejecutar()
         self.ejecutar()
 
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.monto_pagado, Decimal('4500.00'))
         # La segunda vuelta ya no la ve: dejo de estar pendiente.
-        self.assertEqual(retrieve.call_count, 1)
+        self.assertEqual(payment_intents.retrieve.call_count, 1)
 
 
 class VersionDeApiTests(TestCase):
