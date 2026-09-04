@@ -7,21 +7,20 @@ lo que esta mal.
 from datetime import date, time, timedelta
 
 from django.conf import settings
-from django.contrib.auth.models import Group, User
-from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible
-from apps.testing import crear_flota
+from apps.testing import EmpresaTestCase, crear_flota
 
 from .models import Reserva
 from .panorama import armar_panorama
 
 
-def datos(**overrides):
+def datos(empresa, **overrides):
     base = {
+        'empresa': empresa,
         'fecha': date.today() + timedelta(days=3),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -37,20 +36,18 @@ def datos(**overrides):
     return base
 
 
-def viaje(**overrides):
+def viaje(empresa, **overrides):
     """Se guarda sin full_clean para poder sembrar fechas pasadas: la regla de las
     48 horas no deja reprogramar hacia atras, y aqui hace falta un atrasado."""
-    crear_flota()
-    return Reserva.objects.create(**datos(**overrides))
+    crear_flota(empresa)
+    return Reserva.objects.create(**datos(empresa, **overrides))
 
 
-class AgendaAdminTests(TestCase):
+class AgendaAdminTests(EmpresaTestCase):
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
         self.url = reverse('admin:bookings_agenda_changelist')
-        self.client.force_login(
-            User.objects.create_superuser('jefe', 'jefe@example.com', 'x')
-        )
+        self.client.force_login(self.crear_jefe())
 
     def _filas(self, **params):
         respuesta = self.client.get(self.url, params)
@@ -58,56 +55,62 @@ class AgendaAdminTests(TestCase):
         return {r.pk for r in respuesta.context['cl'].result_list}
 
     def test_el_modo_manana_trae_solo_manana(self):
-        manana = viaje(fecha=date.today() + timedelta(days=1))
-        viaje(fecha=date.today() + timedelta(days=2))
+        manana = viaje(self.empresa, fecha=date.today() + timedelta(days=1))
+        viaje(self.empresa, fecha=date.today() + timedelta(days=2))
 
         self.assertEqual(self._filas(cuando='manana'), {manana.pk})
 
     def test_el_modo_semana_trae_los_proximos_siete_dias(self):
-        dentro = viaje(fecha=date.today() + timedelta(days=6))
-        viaje(fecha=date.today() + timedelta(days=30))
+        dentro = viaje(self.empresa, fecha=date.today() + timedelta(days=6))
+        viaje(self.empresa, fecha=date.today() + timedelta(days=30))
 
         self.assertEqual(self._filas(cuando='semana'), {dentro.pk})
 
     def test_el_modo_semana_trae_los_atrasados_sin_repartir(self):
         """Un viaje cobrado que ya paso y nadie repartio es un error que hay que
         ver. Esconderlo no lo arregla."""
-        atrasado = viaje(fecha=date.today() - timedelta(days=2))
+        atrasado = viaje(self.empresa, fecha=date.today() - timedelta(days=2))
 
         self.assertIn(atrasado.pk, self._filas(cuando='semana'))
 
     def test_el_modo_semana_no_trae_los_atrasados_ya_repartidos(self):
         """Ese se repartio, aunque haya pasado."""
-        repartido = viaje(fecha=date.today() - timedelta(days=2),
-                          estado=Reserva.Estado.ASIGNADA,
-                          embarcacion=Embarcacion.objects.first())
+        repartido = viaje(
+            self.empresa, fecha=date.today() - timedelta(days=2),
+            estado=Reserva.Estado.ASIGNADA,
+            embarcacion=Embarcacion.objects.filter(empresa=self.empresa).first(),
+        )
 
         self.assertNotIn(repartido.pk, self._filas(cuando='semana'))
 
     def test_sin_filtro_abre_en_la_semana(self):
-        dentro = viaje(fecha=date.today() + timedelta(days=2))
-        viaje(fecha=date.today() + timedelta(days=30))
+        dentro = viaje(self.empresa, fecha=date.today() + timedelta(days=2))
+        viaje(self.empresa, fecha=date.today() + timedelta(days=30))
 
         self.assertEqual(self._filas(), {dentro.pk})
 
     def test_avisa_de_un_viaje_asignado_sin_capitan(self):
-        viaje(fecha=date.today() + timedelta(days=2),
-              estado=Reserva.Estado.ASIGNADA,
-              embarcacion=Embarcacion.objects.first())
+        viaje(
+            self.empresa, fecha=date.today() + timedelta(days=2),
+            estado=Reserva.Estado.ASIGNADA,
+            embarcacion=Embarcacion.objects.filter(empresa=self.empresa).first(),
+        )
 
         self.assertContains(self.client.get(self.url), 'SIN CAPITAN')
 
     def test_no_avisa_cuando_el_viaje_tiene_capitan(self):
-        viaje(fecha=date.today() + timedelta(days=2),
-              estado=Reserva.Estado.ASIGNADA,
-              embarcacion=Embarcacion.objects.first(),
-              capitan=Capitan.objects.create(nombre='Juan Perez',
-                                             telefono='+5216121234567'))
+        viaje(
+            self.empresa, fecha=date.today() + timedelta(days=2),
+            estado=Reserva.Estado.ASIGNADA,
+            embarcacion=Embarcacion.objects.filter(empresa=self.empresa).first(),
+            capitan=Capitan.objects.create(
+                empresa=self.empresa, nombre='Juan Perez', telefono='+5216121234567'),
+        )
 
         self.assertNotContains(self.client.get(self.url), 'SIN CAPITAN')
 
     def test_avisa_de_un_viaje_atrasado(self):
-        viaje(fecha=date.today() - timedelta(days=2))
+        viaje(self.empresa, fecha=date.today() - timedelta(days=2))
 
         self.assertContains(self.client.get(self.url), 'ATRASADO')
 
@@ -115,7 +118,7 @@ class AgendaAdminTests(TestCase):
         """No es un error: es el trabajo pendiente, y es a lo que se viene aqui.
         Marcarlo volveria roja la agenda entera y el rojo dejaria de significar
         algo."""
-        viaje(fecha=date.today() + timedelta(days=2))
+        viaje(self.empresa, fecha=date.today() + timedelta(days=2))
 
         respuesta = self.client.get(self.url)
         self.assertNotContains(respuesta, 'ATRASADO')
@@ -123,7 +126,7 @@ class AgendaAdminTests(TestCase):
 
     def test_la_panga_y_el_capitan_se_editan_en_el_listado(self):
         """El punto entero de la pantalla: repartir sin entrar a cada reserva."""
-        viaje(fecha=date.today() + timedelta(days=2))
+        viaje(self.empresa, fecha=date.today() + timedelta(days=2))
 
         formset = self.client.get(self.url).context['cl'].formset
 
@@ -131,13 +134,10 @@ class AgendaAdminTests(TestCase):
         self.assertIn('capitan', formset.forms[0].fields)
 
 
-class AgendaPermisosTests(TestCase):
+class AgendaPermisosTests(EmpresaTestCase):
     def setUp(self):
-        crear_flota()
-        call_command('setup_roles')
-        self.vendedora = User.objects.create_user(
-            'maria', 'maria@example.com', 'x', is_staff=True)
-        self.vendedora.groups.add(Group.objects.get(name='Vendedora'))
+        crear_flota(self.empresa)
+        self.vendedora = self.crear_vendedora(username='maria')
         self.client.force_login(self.vendedora)
 
     def test_la_vendedora_ve_la_agenda(self):
@@ -188,7 +188,7 @@ class MenuLateralTests(TestCase):
             self._enlaces_del_menu())
 
 
-class AnchoDeColumnasTests(TestCase):
+class AnchoDeColumnasTests(EmpresaTestCase):
     """Las columnas de embarcacion y capitan llevan selectores y Unfold le pone
     `min-w-0` y `overflow-hidden` a cada celda, asi que se aprietan hasta quedar
     ilegibles. Se corrige con una hoja propia y no con clases de Tailwind: el
@@ -202,10 +202,8 @@ class AnchoDeColumnasTests(TestCase):
     HOJA = 'bookings/admin-columnas.css'
 
     def setUp(self):
-        crear_flota()
-        self.client.force_login(
-            User.objects.create_superuser('jefe', 'jefe@example.com', 'x')
-        )
+        crear_flota(self.empresa)
+        self.client.force_login(self.crear_jefe())
 
     def test_la_agenda_carga_la_hoja(self):
         respuesta = self.client.get(reverse('admin:bookings_agenda_changelist'))
@@ -216,7 +214,7 @@ class AnchoDeColumnasTests(TestCase):
         self.assertContains(respuesta, self.HOJA)
 
 
-class AvisoDeReservasNuevasTests(TestCase):
+class AvisoDeReservasNuevasTests(EmpresaTestCase):
     """El aviso de reservas nuevas vive en las dos pantallas.
 
     Es un boton flotante que consulta cada 30 segundos y **nunca recarga solo**:
@@ -227,10 +225,8 @@ class AvisoDeReservasNuevasTests(TestCase):
     SCRIPT = 'bookings/reservas-nuevas.js'
 
     def setUp(self):
-        crear_flota()
-        self.client.force_login(
-            User.objects.create_superuser('jefe', 'jefe@example.com', 'x')
-        )
+        crear_flota(self.empresa)
+        self.client.force_login(self.crear_jefe())
 
     def test_la_agenda_carga_el_script(self):
         self.assertContains(
@@ -248,7 +244,7 @@ class AvisoDeReservasNuevasTests(TestCase):
 
     def test_el_endpoint_de_la_agenda_cuenta_las_que_entraron_despues(self):
         antes = timezone.now().isoformat()
-        viaje()
+        viaje(self.empresa)
 
         cuerpo = self.client.get(
             reverse('admin:bookings_agenda_nuevas'), {'desde': antes}).json()
@@ -259,7 +255,7 @@ class AvisoDeReservasNuevasTests(TestCase):
         """Cada checkout abandonado deja una fila en pendiente_pago; avisar de
         esas volveria el contador puro ruido."""
         antes = timezone.now().isoformat()
-        viaje(estado=Reserva.Estado.PENDIENTE_PAGO)
+        viaje(self.empresa, estado=Reserva.Estado.PENDIENTE_PAGO)
 
         cuerpo = self.client.get(
             reverse('admin:bookings_agenda_nuevas'), {'desde': antes}).json()
@@ -267,7 +263,7 @@ class AvisoDeReservasNuevasTests(TestCase):
         self.assertEqual(cuerpo['nuevas'], 0)
 
 
-class RecienLlegadasTests(TestCase):
+class RecienLlegadasTests(EmpresaTestCase):
     """Lo ultimo que entro al sistema, sin importar para cuando sea el viaje.
 
     En la agenda es una tercera opcion del mismo filtro "Cuando" y no un filtro
@@ -276,10 +272,8 @@ class RecienLlegadasTests(TestCase):
     """
 
     def setUp(self):
-        crear_flota()
-        self.client.force_login(
-            User.objects.create_superuser('jefe', 'jefe@example.com', 'x')
-        )
+        crear_flota(self.empresa)
+        self.client.force_login(self.crear_jefe())
 
     def _envejecer(self, reserva, horas):
         Reserva.objects.filter(pk=reserva.pk).update(
@@ -292,7 +286,7 @@ class RecienLlegadasTests(TestCase):
         return [r.pk for r in respuesta.context['cl'].result_list]
 
     def test_la_agenda_trae_lo_recien_llegado_aunque_el_viaje_sea_lejano(self):
-        lejano = viaje(fecha=date.today() + timedelta(days=120))
+        lejano = viaje(self.empresa, fecha=date.today() + timedelta(days=120))
 
         url = reverse('admin:bookings_agenda_changelist')
         self.assertIn(lejano.pk, self._filas(url, cuando='recientes'))
@@ -300,7 +294,8 @@ class RecienLlegadasTests(TestCase):
         self.assertNotIn(lejano.pk, self._filas(url, cuando='semana'))
 
     def test_la_agenda_no_trae_lo_que_entro_hace_mas_de_48_horas(self):
-        vieja = self._envejecer(viaje(fecha=date.today() + timedelta(days=120)), horas=72)
+        vieja = self._envejecer(
+            viaje(self.empresa, fecha=date.today() + timedelta(days=120)), horas=72)
 
         self.assertNotIn(
             vieja.pk,
@@ -309,8 +304,9 @@ class RecienLlegadasTests(TestCase):
     def test_lo_recien_llegado_sale_ordenado_por_llegada(self):
         """Con el orden por fecha de viaje, lo que acaba de entrar quedaria
         enterrado entre lo de la semana — lo contrario de para que sirve."""
-        primera = self._envejecer(viaje(fecha=date.today() + timedelta(days=2)), horas=10)
-        segunda = viaje(fecha=date.today() + timedelta(days=90))
+        primera = self._envejecer(
+            viaje(self.empresa, fecha=date.today() + timedelta(days=2)), horas=10)
+        segunda = viaje(self.empresa, fecha=date.today() + timedelta(days=90))
 
         filas = self._filas(
             reverse('admin:bookings_agenda_changelist'), cuando='recientes')
@@ -318,8 +314,9 @@ class RecienLlegadasTests(TestCase):
         self.assertEqual(filas, [segunda.pk, primera.pk])
 
     def test_el_listado_de_reservas_tiene_su_propio_filtro(self):
-        reciente = viaje(fecha=date.today() + timedelta(days=120))
-        vieja = self._envejecer(viaje(fecha=date.today() + timedelta(days=90)), horas=72)
+        reciente = viaje(self.empresa, fecha=date.today() + timedelta(days=120))
+        vieja = self._envejecer(
+            viaje(self.empresa, fecha=date.today() + timedelta(days=90)), horas=72)
 
         filas = self._filas(
             reverse('admin:bookings_reserva_changelist'), llegada='recientes')
@@ -328,8 +325,9 @@ class RecienLlegadasTests(TestCase):
         self.assertNotIn(vieja.pk, filas)
 
     def test_el_listado_de_reservas_sin_el_filtro_las_trae_todas(self):
-        reciente = viaje(fecha=date.today() + timedelta(days=120))
-        vieja = self._envejecer(viaje(fecha=date.today() + timedelta(days=90)), horas=72)
+        reciente = viaje(self.empresa, fecha=date.today() + timedelta(days=120))
+        vieja = self._envejecer(
+            viaje(self.empresa, fecha=date.today() + timedelta(days=90)), horas=72)
 
         filas = self._filas(reverse('admin:bookings_reserva_changelist'))
 
@@ -337,7 +335,7 @@ class RecienLlegadasTests(TestCase):
         self.assertIn(vieja.pk, filas)
 
 
-class PanoramaTests(TestCase):
+class PanoramaTests(EmpresaTestCase):
     """La cuadricula de dias x pangas que va arriba de la agenda.
 
     Responde la pregunta que la tabla no responde: que panga tengo libre el
@@ -345,21 +343,28 @@ class PanoramaTests(TestCase):
     """
 
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
         self.hoy = date.today()
-        self.grande = Embarcacion.objects.filter(capacidad_maxima=5).order_by('nombre').first()
+        self.grande = Embarcacion.objects.filter(
+            empresa=self.empresa, capacidad_maxima=5).order_by('nombre').first()
 
     def test_un_renglon_por_panga_activa_y_una_columna_por_dia(self):
-        panorama = armar_panorama(self.hoy, dias=7)
+        panorama = armar_panorama(self.hoy, self.empresa, dias=7)
 
         self.assertEqual(len(panorama.dias), 7)
         self.assertEqual(panorama.dias[0], self.hoy)
-        self.assertEqual(len(panorama.renglones), Embarcacion.objects.filter(activa=True).count())
+        self.assertEqual(
+            len(panorama.renglones),
+            Embarcacion.objects.filter(empresa=self.empresa, activa=True).count(),
+        )
         self.assertTrue(all(len(r.celdas) == 7 for r in panorama.renglones))
 
     def test_las_pangas_grandes_van_arriba(self):
         """Son las escasas: solo dos llevan mas de 3 personas."""
-        capacidades = [r.embarcacion.capacidad_maxima for r in armar_panorama(self.hoy).renglones]
+        capacidades = [
+            r.embarcacion.capacidad_maxima
+            for r in armar_panorama(self.hoy, self.empresa).renglones
+        ]
 
         self.assertEqual(capacidades, sorted(capacidades, reverse=True))
 
@@ -367,15 +372,17 @@ class PanoramaTests(TestCase):
         self.grande.activa = False
         self.grande.save()
 
-        pangas = [r.embarcacion.pk for r in armar_panorama(self.hoy).renglones]
+        pangas = [r.embarcacion.pk for r in armar_panorama(self.hoy, self.empresa).renglones]
 
         self.assertNotIn(self.grande.pk, pangas)
 
     def test_el_viaje_asignado_cae_en_su_celda(self):
-        reserva = viaje(fecha=self.hoy + timedelta(days=2),
-                        estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande)
+        reserva = viaje(
+            self.empresa, fecha=self.hoy + timedelta(days=2),
+            estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande,
+        )
 
-        renglon = self._renglon_de(armar_panorama(self.hoy), self.grande)
+        renglon = self._renglon_de(armar_panorama(self.hoy, self.empresa), self.grande)
 
         self.assertEqual(renglon.celdas[2].reserva.pk, reserva.pk)
         self.assertIsNone(renglon.celdas[1].reserva)
@@ -384,9 +391,11 @@ class PanoramaTests(TestCase):
         """Vacio significa disponible. Confundir las dos haria asignar un viaje a
         una panga que no sale."""
         EmbarcacionNoDisponible.objects.create(
-            fecha=self.hoy + timedelta(days=3), embarcacion=self.grande, motivo='Motor')
+            empresa=self.empresa, fecha=self.hoy + timedelta(days=3),
+            embarcacion=self.grande, motivo='Motor',
+        )
 
-        renglon = self._renglon_de(armar_panorama(self.hoy), self.grande)
+        renglon = self._renglon_de(armar_panorama(self.hoy, self.empresa), self.grande)
 
         self.assertFalse(renglon.celdas[3].disponible)
         self.assertTrue(renglon.celdas[2].disponible)
@@ -394,29 +403,34 @@ class PanoramaTests(TestCase):
     def test_los_viajes_sin_panga_no_se_pierden(self):
         """No tienen renglon donde caer: sin esto serian invisibles, que es lo
         peor que puede hacer un panorama."""
-        pendiente = viaje(fecha=self.hoy + timedelta(days=1))
+        pendiente = viaje(self.empresa, fecha=self.hoy + timedelta(days=1))
 
-        panorama = armar_panorama(self.hoy)
+        panorama = armar_panorama(self.hoy, self.empresa)
 
         self.assertEqual([r.pk for r in panorama.sin_repartir[1]], [pendiente.pk])
         self.assertEqual(panorama.sin_repartir[0], [])
 
     def test_el_conteo_del_pie_cuadra(self):
-        viaje(fecha=self.hoy, estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande)
+        viaje(self.empresa, fecha=self.hoy, estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande)
         EmbarcacionNoDisponible.objects.create(
-            fecha=self.hoy, embarcacion=Embarcacion.objects.filter(capacidad_maxima=3).first())
+            empresa=self.empresa, fecha=self.hoy,
+            embarcacion=Embarcacion.objects.filter(
+                empresa=self.empresa, capacidad_maxima=3).first(),
+        )
 
-        panorama = armar_panorama(self.hoy)
+        panorama = armar_panorama(self.hoy, self.empresa)
 
         self.assertEqual(panorama.ocupadas[0], 1)
         self.assertEqual(panorama.a_flote[0], 9)
 
     def test_una_cancelada_libera_su_celda(self):
-        cancelada = viaje(fecha=self.hoy, estado=Reserva.Estado.ASIGNADA,
-                          embarcacion=self.grande)
+        cancelada = viaje(
+            self.empresa, fecha=self.hoy, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grande,
+        )
         Reserva.objects.filter(pk=cancelada.pk).update(estado=Reserva.Estado.CANCELADA)
 
-        renglon = self._renglon_de(armar_panorama(self.hoy), self.grande)
+        renglon = self._renglon_de(armar_panorama(self.hoy, self.empresa), self.grande)
 
         self.assertIsNone(renglon.celdas[0].reserva)
 
@@ -424,21 +438,19 @@ class PanoramaTests(TestCase):
         """Tres fijas: reservas del rango, pangas activas y las marcadas fuera.
         Sin ninguna por celda — son 70 celdas con la flota completa."""
         with self.assertNumQueries(3):
-            armar_panorama(self.hoy, dias=7)
+            armar_panorama(self.hoy, self.empresa, dias=7)
 
     def _renglon_de(self, panorama, embarcacion):
         return next(r for r in panorama.renglones if r.embarcacion.pk == embarcacion.pk)
 
 
-class PanoramaEnLaAgendaTests(TestCase):
+class PanoramaEnLaAgendaTests(EmpresaTestCase):
     """La cuadricula se pinta dentro del listado de la agenda, plegable."""
 
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
         self.url = reverse('admin:bookings_agenda_changelist')
-        self.client.force_login(
-            User.objects.create_superuser('jefe', 'jefe@example.com', 'x')
-        )
+        self.client.force_login(self.crear_jefe())
 
     def test_la_agenda_trae_el_panorama_en_su_contexto(self):
         panorama = self.client.get(self.url).context['panorama']
@@ -457,9 +469,12 @@ class PanoramaEnLaAgendaTests(TestCase):
                 self.assertEqual(panorama.dias[0], date.today())
 
     def test_la_cuadricula_se_pinta_y_es_plegable(self):
-        viaje(fecha=date.today() + timedelta(days=1),
-              estado=Reserva.Estado.ASIGNADA,
-              embarcacion=Embarcacion.objects.filter(capacidad_maxima=5).first())
+        viaje(
+            self.empresa, fecha=date.today() + timedelta(days=1),
+            estado=Reserva.Estado.ASIGNADA,
+            embarcacion=Embarcacion.objects.filter(
+                empresa=self.empresa, capacidad_maxima=5).first(),
+        )
 
         html = self.client.get(self.url).content.decode()
 
