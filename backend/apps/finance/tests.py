@@ -9,11 +9,13 @@ import uuid
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
+from unittest import mock
 
 import unfold
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core.exceptions import PermissionDenied
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import formats, timezone
 
@@ -23,7 +25,7 @@ from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
 from .services import balances, balances_por_dia, resumen
-from .views import PERIODO_DEFAULT, PERIODOS, rango_del_periodo
+from .views import PERIODO_DEFAULT, PERIODOS, panel_financiero, rango_del_periodo
 
 
 def momento(anio, mes, dia, hora=12):
@@ -468,3 +470,64 @@ class BalancesFiltradosPorEmpresaTests(TestCase):
     def test_resumen_respeta_el_filtro(self):
         acumulado = resumen(self.hoy, empresa=self.empresa_b)['acumulado']['MXN'].tarjeta
         self.assertEqual(acumulado, Decimal('2000.00'))
+
+
+class PanelFinancieroPermisoTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user(username='jefe', password='x', is_staff=True)
+
+    @mock.patch('apps.finance.views.scope.empresa_actual')
+    @mock.patch('apps.finance.views.scope.es_operador_plataforma')
+    def test_sin_membresia_ni_operador_403(self, mock_operador, mock_empresa_actual):
+        mock_operador.return_value = False
+        mock_empresa_actual.return_value = None
+        request = self.factory.get('/admin/finanzas/')
+        request.user = self.user
+        with self.assertRaises(PermissionDenied):
+            panel_financiero(request)
+
+    @mock.patch('apps.finance.views.scope.empresa_actual')
+    @mock.patch('apps.finance.views.scope.es_operador_plataforma')
+    @mock.patch('apps.finance.views.resumen')
+    @mock.patch('apps.finance.views.balances')
+    @mock.patch('apps.finance.views.balances_por_dia')
+    def test_jefe_ve_solo_su_empresa(
+        self, mock_balances_por_dia, mock_balances, mock_resumen,
+        mock_operador, mock_empresa_actual,
+    ):
+        mock_operador.return_value = False
+        empresa = mock.Mock()
+        mock_empresa_actual.return_value = empresa
+        mock_resumen.return_value = {'dia': {}, 'mes': {}, 'anio': {}, 'acumulado': {}}
+        mock_balances.return_value = {}
+        mock_balances_por_dia.return_value = []
+
+        request = self.factory.get('/admin/finanzas/')
+        request.user = self.user
+        panel_financiero(request)
+
+        self.assertEqual(mock_resumen.call_args.kwargs.get('empresa'), empresa)
+        self.assertEqual(mock_balances.call_args.kwargs.get('empresa'), empresa)
+        self.assertEqual(mock_balances_por_dia.call_args.kwargs.get('empresa'), empresa)
+
+    @mock.patch('apps.finance.views.scope.empresa_actual')
+    @mock.patch('apps.finance.views.scope.es_operador_plataforma')
+    @mock.patch('apps.finance.views.resumen')
+    @mock.patch('apps.finance.views.balances')
+    @mock.patch('apps.finance.views.balances_por_dia')
+    def test_operador_de_plataforma_ve_todas(
+        self, mock_balances_por_dia, mock_balances, mock_resumen,
+        mock_operador, mock_empresa_actual,
+    ):
+        mock_operador.return_value = True
+        mock_empresa_actual.return_value = None
+        mock_resumen.return_value = {'dia': {}, 'mes': {}, 'anio': {}, 'acumulado': {}}
+        mock_balances.return_value = {}
+        mock_balances_por_dia.return_value = []
+
+        request = self.factory.get('/admin/finanzas/')
+        request.user = self.user
+        panel_financiero(request)
+
+        self.assertIsNone(mock_resumen.call_args.kwargs.get('empresa'))

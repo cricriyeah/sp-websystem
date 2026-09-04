@@ -13,6 +13,8 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
 from django.utils import formats
 
+from apps.tenancy import scope
+
 from .services import balances, balances_por_dia, resumen
 
 
@@ -54,7 +56,7 @@ def rango_del_periodo(periodo, hoy):
     return hoy.replace(day=1), hoy
 
 
-def _grafica_de_entradas(desde, hasta):
+def _grafica_de_entradas(desde, hasta, empresa=None):
     """`{moneda: json}` con la serie de entradas por dia, lista para Chart.js.
 
     El JSON va tal cual al `data-value` del canvas: el `app.js` de Unfold recorre
@@ -76,7 +78,7 @@ def _grafica_de_entradas(desde, hasta):
     """
     entradas_por_dia = {
         dia: {moneda: saldo.entradas for moneda, saldo in por_moneda.items()}
-        for dia, por_moneda in balances_por_dia(desde, hasta)
+        for dia, por_moneda in balances_por_dia(desde, hasta, empresa=empresa)
     }
 
     monedas = {
@@ -136,11 +138,14 @@ def _mes_vecino(primero, salto):
 def panel_financiero(request):
     """Entradas, salidas y balance del dia, del mes y del año.
 
-    Restringido a superusuarios: es la unica pantalla con la foto completa del
-    dinero. La vendedora no la ve, igual que no ve `fleet.Tarifa`
-    (ver docs/contexto-negocio.md, seccion Roles y permisos).
+    El operador de plataforma ve todas las Empresas juntas; un jefe (o
+    vendedora con membresia) ve solo la suya. Ya no corta con `is_superuser`
+    — los jefes dejaron de serlo (ver apps.tenancy), el corte real es
+    membresia-o-operador.
     """
-    if not request.user.is_superuser:
+    operador = scope.es_operador_plataforma(request.user)
+    empresa = None if operador else scope.empresa_actual(request)
+    if not operador and empresa is None:
         raise PermissionDenied
 
     hoy = date.today()
@@ -157,7 +162,7 @@ def panel_financiero(request):
         **admin.site.each_context(request),
         'title': 'Finanzas',
         'hoy': hoy,
-        **resumen(hoy),
+        **resumen(hoy, empresa=empresa),
         # El periodo elegido en el select: filtra el balance de arriba y la
         # grafica. El historico de abajo sigue siendo mes a mes con sus flechas,
         # que es lo unico que deja llegar a un mes viejo cualquiera.
@@ -166,11 +171,11 @@ def panel_financiero(request):
         'periodo_etiqueta': dict(PERIODOS)[periodo],
         'periodo_desde': desde,
         'periodo_hasta': hasta,
-        'saldo_periodo': balances(desde, hasta),
-        'grafica': _grafica_de_entradas(desde, hasta),
+        'saldo_periodo': balances(desde, hasta, empresa=empresa),
+        'grafica': _grafica_de_entradas(desde, hasta, empresa=empresa),
         'mes_visto': mes,
         'mes_anterior': _mes_vecino(mes, -1),
         # Sin boton para adelantarse a meses que todavia no pasan.
         'mes_siguiente': siguiente if siguiente <= hoy.replace(day=1) else None,
-        'dias': balances_por_dia(mes, ultimo_dia),
+        'dias': balances_por_dia(mes, ultimo_dia, empresa=empresa),
     })
