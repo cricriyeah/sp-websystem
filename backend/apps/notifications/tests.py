@@ -9,11 +9,11 @@ from decimal import Decimal
 from unittest import mock
 
 import requests
-from django.test import TestCase, override_settings
+from django.test import override_settings
 
 from apps.bookings.models import Reserva, ReservaExtra, ReservaTransporte
 from apps.fleet.models import Capitan, Embarcacion, ExtrasItem, PuntoEncuentro
-from apps.testing import crear_flota
+from apps.testing import EmpresaTestCase, crear_flota
 
 from .services import (
     PUNTO_DE_ENCUENTRO,
@@ -26,8 +26,9 @@ from .services import (
 LLAVES = {'RESEND_API_KEY': 'test-key', 'RESEND_FROM': 'reservas@ejemplo.com'}
 
 
-def crear_reserva():
+def crear_reserva(empresa):
     return Reserva(
+        empresa=empresa,
         fecha=date.today() + timedelta(days=10),
         hora=time(6, 0),
         numero_personas=2,
@@ -40,12 +41,12 @@ def crear_reserva():
     )
 
 
-def crear_reserva_guardada(**overrides):
+def crear_reserva_guardada(empresa, **overrides):
     """A diferencia de `crear_reserva()`, esta si queda en la base: hace falta
     tener `pk` para poder colgarle `ReservaExtra`/`ReservaTransporte`."""
-    crear_flota()
+    crear_flota(empresa)
     datos = dict(
-        fecha=date.today() + timedelta(days=10), hora=time(6, 0), numero_personas=2,
+        empresa=empresa, fecha=date.today() + timedelta(days=10), hora=time(6, 0), numero_personas=2,
         nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
         canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True, deslinde_nombre='Ana Ruiz',
         moneda='MXN',
@@ -63,7 +64,7 @@ def _cuerpo_enviado(post):
 
 
 @override_settings(**LLAVES, RESEND_BCC=['operacion@ejemplo.com'])
-class CopiaAlNegocioTests(TestCase):
+class CopiaAlNegocioTests(EmpresaTestCase):
     """La copia existe para tener un rastro fuera de la base de datos: si hay que
     restaurar un respaldo y se pierde medio dia de reservas, en ese buzon queda a
     quien hablarle (ver docs/vendors/supabase.md)."""
@@ -72,7 +73,7 @@ class CopiaAlNegocioTests(TestCase):
     def test_manda_copia_al_negocio(self, post):
         post.return_value.raise_for_status.return_value = None
 
-        self.assertTrue(enviar_correo_confirmacion(crear_reserva()))
+        self.assertTrue(enviar_correo_confirmacion(crear_reserva(self.empresa)))
         self.assertEqual(_cuerpo_enviado(post)['bcc'], ['operacion@ejemplo.com'])
 
     @mock.patch('apps.notifications.services.requests.post')
@@ -80,7 +81,7 @@ class CopiaAlNegocioTests(TestCase):
         """El cliente no tiene por que ver una direccion interna del negocio."""
         post.return_value.raise_for_status.return_value = None
 
-        enviar_correo_confirmacion(crear_reserva())
+        enviar_correo_confirmacion(crear_reserva(self.empresa))
 
         cuerpo = _cuerpo_enviado(post)
         self.assertEqual(cuerpo['to'], ['ana@example.com'])
@@ -92,7 +93,7 @@ class CopiaAlNegocioTests(TestCase):
         """Si esta copia va a servir de rastro, tiene que traer con que ubicar al
         cliente y saber cuando sale."""
         post.return_value.raise_for_status.return_value = None
-        reserva = crear_reserva()
+        reserva = crear_reserva(self.empresa)
 
         enviar_correo_confirmacion(reserva)
 
@@ -105,18 +106,18 @@ class CopiaAlNegocioTests(TestCase):
 
 
 @override_settings(**LLAVES, RESEND_BCC=[])
-class SinCopiaConfiguradaTests(TestCase):
+class SinCopiaConfiguradaTests(EmpresaTestCase):
     @mock.patch('apps.notifications.services.requests.post')
     def test_sin_bcc_configurado_no_se_manda_la_clave(self, post):
         post.return_value.raise_for_status.return_value = None
 
-        enviar_correo_confirmacion(crear_reserva())
+        enviar_correo_confirmacion(crear_reserva(self.empresa))
 
         self.assertNotIn('bcc', _cuerpo_enviado(post))
 
 
 @override_settings(**LLAVES, RESEND_BCC=['operacion@ejemplo.com'])
-class FallosNoTumbanElCobroTests(TestCase):
+class FallosNoTumbanElCobroTests(EmpresaTestCase):
     """El dinero ya entro cuando esto corre: un fallo aqui se registra y se sigue,
     nunca se propaga al webhook (haria que Stripe reintente el evento en bucle)."""
 
@@ -124,28 +125,28 @@ class FallosNoTumbanElCobroTests(TestCase):
     def test_si_resend_falla_devuelve_false_sin_lanzar(self, post):
         post.side_effect = requests.RequestException('resend caido')
 
-        self.assertFalse(enviar_correo_confirmacion(crear_reserva()))
+        self.assertFalse(enviar_correo_confirmacion(crear_reserva(self.empresa)))
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_notificar_no_lanza_aunque_los_dos_canales_fallen(self, post):
         post.side_effect = requests.RequestException('todo caido')
 
-        resultado = notificar_reserva_pagada(crear_reserva())
+        resultado = notificar_reserva_pagada(crear_reserva(self.empresa))
 
         self.assertEqual(resultado, {'email': False, 'whatsapp': False})
 
 
 @override_settings(RESEND_API_KEY='', RESEND_FROM='', RESEND_BCC=['operacion@ejemplo.com'])
-class SinLlavesTests(TestCase):
+class SinLlavesTests(EmpresaTestCase):
     @mock.patch('apps.notifications.services.requests.post')
     def test_sin_llaves_de_resend_no_se_llama_a_la_red(self, post):
         """Config local: sin llaves no se manda nada y el cobro sigue igual."""
-        self.assertFalse(enviar_correo_confirmacion(crear_reserva()))
+        self.assertFalse(enviar_correo_confirmacion(crear_reserva(self.empresa)))
         post.assert_not_called()
 
 
 @override_settings(**LLAVES)
-class CorreoDeAsignacionTests(TestCase):
+class CorreoDeAsignacionTests(EmpresaTestCase):
     """El segundo correo: el que dice con quien y en que panga sale el cliente.
 
     El correo de confirmacion se manda cuando entra el pago, y en ese momento
@@ -155,10 +156,12 @@ class CorreoDeAsignacionTests(TestCase):
 
     def _reserva_asignada(self):
         embarcacion = Embarcacion.objects.create(
-            nombre='Dona Chuy', clase=Embarcacion.Clase.CHICA, capacidad_maxima=6
+            empresa=self.empresa, nombre='Dona Chuy',
+            clase=Embarcacion.Clase.CHICA, capacidad_maxima=6,
         )
-        capitan = Capitan.objects.create(nombre='Ramon Geraldo', telefono='+5216129876543')
-        reserva = crear_reserva()
+        capitan = Capitan.objects.create(
+            empresa=self.empresa, nombre='Ramon Geraldo', telefono='+5216129876543')
+        reserva = crear_reserva(self.empresa)
         reserva.estado = Reserva.Estado.ASIGNADA
         reserva.embarcacion = embarcacion
         reserva.capitan = capitan
@@ -205,7 +208,7 @@ class CorreoDeAsignacionTests(TestCase):
 
 
 @override_settings(**LLAVES)
-class EscapadoDelCorreoTests(TestCase):
+class EscapadoDelCorreoTests(EmpresaTestCase):
     """Lo que escribe el cliente no puede volverse markup del correo.
 
     `validar_nombre_persona` acepta acentos, apostrofos y guiones porque son
@@ -219,7 +222,7 @@ class EscapadoDelCorreoTests(TestCase):
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_el_nombre_no_se_convierte_en_un_enlace(self, post):
-        reserva = crear_reserva()
+        reserva = crear_reserva(self.empresa)
         reserva.nombre_cliente = self.NOMBRE_CON_MARKUP
 
         self.assertTrue(enviar_correo_confirmacion(reserva))
@@ -233,10 +236,12 @@ class EscapadoDelCorreoTests(TestCase):
         """El catalogo lo escriben los jefes desde el admin, no un extraño, pero
         el escapado es del renderizado y no de la confianza en la fuente."""
         embarcacion = Embarcacion.objects.create(
-            nombre='Dona <b>Chuy</b>', clase=Embarcacion.Clase.CHICA, capacidad_maxima=6
+            empresa=self.empresa, nombre='Dona <b>Chuy</b>',
+            clase=Embarcacion.Clase.CHICA, capacidad_maxima=6,
         )
-        capitan = Capitan.objects.create(nombre='Ramon Geraldo', telefono='+5216129876543')
-        reserva = crear_reserva()
+        capitan = Capitan.objects.create(
+            empresa=self.empresa, nombre='Ramon Geraldo', telefono='+5216129876543')
+        reserva = crear_reserva(self.empresa)
         reserva.nombre_cliente = self.NOMBRE_CON_MARKUP
         reserva.estado = Reserva.Estado.ASIGNADA
         reserva.embarcacion = embarcacion
@@ -255,7 +260,7 @@ class EscapadoDelCorreoTests(TestCase):
         """El escapado no puede romper un nombre real. `escape` convierte el
         apostrofo en `&#x27;`, que el correo pinta como apostrofo: lo que ve el
         cliente es O'Brien, no la entidad."""
-        reserva = crear_reserva()
+        reserva = crear_reserva(self.empresa)
         reserva.nombre_cliente = "Ana O'Brien Garcia-Lopez"
 
         enviar_correo_confirmacion(reserva)
@@ -264,20 +269,21 @@ class EscapadoDelCorreoTests(TestCase):
 
 
 @override_settings(**LLAVES)
-class ExtrasEnElCorreoTests(TestCase):
+class ExtrasEnElCorreoTests(EmpresaTestCase):
     """`_cuerpo_html` lista lo que se compro en el checkout (ya pagado) y avisa
     de lo que sigue pendiente de cotizar. Antes nada probaba esta funcion
     porque el guard de llaves vacias corta antes de llegar a ella."""
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_lista_brunch_licencia_carnada_y_transporte_pagado(self, post):
-        reserva = crear_reserva_guardada()
+        reserva = crear_reserva_guardada(self.empresa)
         for tipo, nombre in (('brunch', 'Brunch'), ('licencia', 'Licencia'), ('carnada', 'Carnada')):
-            item = ExtrasItem.objects.create(tipo=tipo, nombre=nombre, precio=Decimal('300'))
+            item = ExtrasItem.objects.create(
+                empresa=self.empresa, tipo=tipo, nombre=nombre, precio=Decimal('300'))
             ReservaExtra.objects.create(
                 reserva=reserva, extras_item=item, precio_unitario=Decimal('300'), cantidad=2,
             )
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
         ReservaTransporte.objects.create(
             reserva=reserva, punto_encuentro=hotel, zona='centro',
             numero_personas=2, precio_calculado=Decimal('2000'),
@@ -294,7 +300,7 @@ class ExtrasEnElCorreoTests(TestCase):
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_reserva_sin_extras_no_muestra_nada_de_mas(self, post):
-        reserva = crear_reserva_guardada()
+        reserva = crear_reserva_guardada(self.empresa)
 
         self.assertTrue(enviar_correo_confirmacion(reserva))
 
@@ -304,11 +310,10 @@ class ExtrasEnElCorreoTests(TestCase):
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_bebidas_pendientes_avisa_sin_prometer_extras(self, post):
-        reserva = crear_reserva_guardada(pide_bebidas=True)
+        reserva = crear_reserva_guardada(self.empresa, pide_bebidas=True)
 
         self.assertTrue(enviar_correo_confirmacion(reserva))
 
         html = _cuerpo_enviado(post)['html']
         self.assertIn('Pediste bebidas', html)
         self.assertNotIn('Pediste bebidas y extras', html)
-
