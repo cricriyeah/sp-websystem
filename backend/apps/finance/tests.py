@@ -5,6 +5,7 @@ monedas no se mezclen, que un reembolso reste, y que la foto completa del dinero
 solo la vean los jefes.
 """
 import json
+import uuid
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -17,6 +18,8 @@ from django.urls import reverse
 from django.utils import formats, timezone
 
 from apps.bookings.models import Reserva
+from apps.tenancy import scope
+from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
 from .services import balances, balances_por_dia, resumen
@@ -414,3 +417,54 @@ class PanelPorPeriodoTests(TestCase):
         html = self.client.get(self.url, {'periodo': 'hoy'}).content.decode()
 
         self.assertNotIn('data-options', html)
+
+
+class BalancesFiltradosPorEmpresaTests(TestCase):
+    def setUp(self):
+        # Slug distinto de 'la-paz' -- ya existe, sembrado por
+        # tenancy.0002_crear_sede_empresa_la_paz (ver apps/testing.py).
+        self.sede = Sede.objects.create(
+            nombre='Sede finance test', slug='sede-finance-test', zona_horaria='America/Mazatlan',
+        )
+        self.empresa_a = Empresa.objects.create(
+            sede=self.sede, nombre='A', slug='empresa-a',
+            stripe_secret_key='sk_a', stripe_webhook_secret='whsec_a',
+            stripe_publishable_key='pk_a',
+        )
+        self.empresa_b = Empresa.objects.create(
+            sede=self.sede, nombre='B', slug='empresa-b',
+            stripe_secret_key='sk_b', stripe_webhook_secret='whsec_b',
+            stripe_publishable_key='pk_b',
+        )
+        self.hoy = date.today()
+        with scope.con_empresa(self.empresa_a):
+            crear_flota(self.empresa_a)
+            self._crear_reserva_pagada(self.empresa_a, Decimal('1000.00'))
+        with scope.con_empresa(self.empresa_b):
+            crear_flota(self.empresa_b)
+            self._crear_reserva_pagada(self.empresa_b, Decimal('2000.00'))
+
+    def _crear_reserva_pagada(self, empresa, monto):
+        reserva = Reserva(
+            empresa=empresa, fecha=self.hoy + timedelta(days=10), hora=time(6, 0),
+            numero_personas=2, nombre_cliente='Cliente', telefono_cliente='+5216121234567',
+            correo_cliente='cliente@example.com', canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True, deslinde_nombre='Cliente', checkout_id=uuid.uuid4(),
+            moneda='MXN', estado=Reserva.Estado.PAGADA,
+            monto_pagado=monto, pagada_en=timezone.now(),
+        )
+        reserva.full_clean()
+        reserva.save()
+        return reserva
+
+    def test_sin_empresa_suma_todas(self):
+        total = balances()['MXN'].tarjeta
+        self.assertEqual(total, Decimal('3000.00'))
+
+    def test_con_empresa_solo_esa(self):
+        total = balances(empresa=self.empresa_a)['MXN'].tarjeta
+        self.assertEqual(total, Decimal('1000.00'))
+
+    def test_resumen_respeta_el_filtro(self):
+        acumulado = resumen(self.hoy, empresa=self.empresa_b)['acumulado']['MXN'].tarjeta
+        self.assertEqual(acumulado, Decimal('2000.00'))

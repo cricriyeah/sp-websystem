@@ -77,6 +77,10 @@ class Balance:
         return bool(self.tarjeta or self.efectivo or self.reembolsos)
 
 
+def _reservas(empresa):
+    return Reserva.objects.filter(empresa=empresa) if empresa is not None else Reserva.objects.all()
+
+
 def _sumar(qs, campo_monto, campo_fecha, desde=None, hasta=None, agrupar_por_dia=False):
     """Suma un movimiento por moneda (y por dia si se pide).
 
@@ -97,21 +101,22 @@ def _sumar(qs, campo_monto, campo_fecha, desde=None, hasta=None, agrupar_por_dia
     return qs.values(*agrupacion).annotate(total=Sum(campo_monto))
 
 
-def balances(desde=None, hasta=None):
-    """Balance por moneda del periodo. Sin fechas, todo el historico.
+def balances(desde=None, hasta=None, empresa=None):
+    """Balance por moneda del periodo. Sin fechas, todo el historico. Sin
+    `empresa`, todas las Empresas juntas (uso: operador de plataforma).
 
     Devuelve solo las monedas que tuvieron movimiento; un negocio que nunca
     cobro en dolares no tiene por que ver una columna de dolares vacia.
     """
     resultado = {}
     for atributo, campo_monto, campo_fecha in MOVIMIENTOS:
-        for fila in _sumar(Reserva.objects.all(), campo_monto, campo_fecha, desde, hasta):
+        for fila in _sumar(_reservas(empresa), campo_monto, campo_fecha, desde, hasta):
             balance = resultado.setdefault(fila['moneda'], Balance(moneda=fila['moneda']))
             setattr(balance, atributo, fila['total'] or CERO)
     return dict(sorted(resultado.items()))
 
 
-def balances_por_dia(desde, hasta):
+def balances_por_dia(desde, hasta, empresa=None):
     """Historico: un balance por dia (y por moneda) del rango pedido.
 
     Los dias sin un solo movimiento no aparecen — en temporada baja la tabla
@@ -120,7 +125,7 @@ def balances_por_dia(desde, hasta):
     resultado = {}
     for atributo, campo_monto, campo_fecha in MOVIMIENTOS:
         filas = _sumar(
-            Reserva.objects.all(), campo_monto, campo_fecha, desde, hasta, agrupar_por_dia=True
+            _reservas(empresa), campo_monto, campo_fecha, desde, hasta, agrupar_por_dia=True
         )
         for fila in filas:
             del_dia = resultado.setdefault(fila['dia'], {})
@@ -135,17 +140,17 @@ def balances_por_dia(desde, hasta):
     ]
 
 
-def resumen(hoy=None):
+def resumen(hoy=None, empresa=None):
     """Todo lo que pinta el panel, en una sola llamada."""
     hoy = hoy or date.today()
     inicio_mes = hoy.replace(day=1)
     inicio_anio = hoy.replace(month=1, day=1)
 
     return {
-        'dia': balances(hoy, hoy),
-        'mes': balances(inicio_mes, hoy),
-        'anio': balances(inicio_anio, hoy),
+        'dia': balances(hoy, hoy, empresa=empresa),
+        'mes': balances(inicio_mes, hoy, empresa=empresa),
+        'anio': balances(inicio_anio, hoy, empresa=empresa),
         # Sin fechas: el acumulado de siempre, que es contra lo que se cuadra la
         # cuenta bancaria y la caja.
-        'acumulado': balances(),
+        'acumulado': balances(empresa=empresa),
     }
