@@ -12,9 +12,11 @@ from django.test import TestCase, override_settings
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
 from apps.fleet.models import CodigoPromocional, ExtrasItem, Tarifa, TransportePrecio
+from apps.tenancy.models import Empresa, Sede
 from apps.testing import ApiTestCase, crear_flota
 
 from .checks import revisar_llaves_de_stripe
+from .stripe_client import configurar_stripe
 from .pricing import (
     PERSONAS_INCLUIDAS,
     a_centavos,
@@ -1162,15 +1164,6 @@ class VersionDeApiTests(TestCase):
     contestar con otro formato.
     """
 
-    def test_configurar_stripe_fija_llave_y_version(self):
-        from apps.payments.stripe_client import configurar_stripe
-
-        with override_settings(STRIPE_SECRET_KEY='sk_test_x', STRIPE_API_VERSION='2026-07-29.dahlia'):
-            configurar_stripe()
-
-        self.assertEqual(stripe.api_key, 'sk_test_x')
-        self.assertEqual(stripe.api_version, '2026-07-29.dahlia')
-
     def test_la_version_fijada_es_la_que_espera_la_libreria_instalada(self):
         """Si al subir `stripe` en requirements.txt no se revisa este valor, la
         libreria y la version de API dejarian de coincidir. Este test obliga a
@@ -1183,3 +1176,37 @@ class VersionDeApiTests(TestCase):
             f'{stripe.VERSION}. Al actualizar la libreria hay que leer el '
             'changelog de Stripe y decidir si se sube tambien la version de API.',
         )
+
+
+class ConfigurarStripeTests(TestCase):
+    """configurar_stripe(empresa) devuelve un cliente explicito, sin tocar
+    stripe.api_key/api_version como estado global del proceso."""
+
+    def setUp(self):
+        # Slugs deliberadamente distintos de 'la-paz'/'sal-y-sol' -- esas filas
+        # ya existen, sembradas por tenancy.0002_crear_sede_empresa_la_paz (ver
+        # apps/testing.py, misma razon con SLUG_EMPRESA_DE_PRUEBA).
+        sede = Sede.objects.create(
+            nombre='Sede stripe test', slug='sede-stripe-test', zona_horaria='America/Mazatlan',
+        )
+        self.empresa = Empresa.objects.create(
+            sede=sede, nombre='Empresa stripe test', slug='empresa-stripe-test',
+            stripe_secret_key='sk_test_abc', stripe_webhook_secret='whsec_abc',
+            stripe_publishable_key='pk_test_abc',
+        )
+
+    @mock.patch('apps.payments.stripe_client.stripe.StripeClient')
+    def test_usa_las_llaves_de_la_empresa(self, mock_cliente_cls):
+        from django.conf import settings as django_settings
+
+        resultado = configurar_stripe(self.empresa)
+
+        mock_cliente_cls.assert_called_once_with(
+            api_key='sk_test_abc', stripe_version=django_settings.STRIPE_API_VERSION,
+        )
+        self.assertIs(resultado, mock_cliente_cls.return_value)
+
+    def test_no_muta_stripe_api_key_global(self):
+        api_key_antes = getattr(stripe, 'api_key', None)
+        configurar_stripe(self.empresa)
+        self.assertEqual(getattr(stripe, 'api_key', None), api_key_antes)
