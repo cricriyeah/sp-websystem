@@ -3,7 +3,7 @@ from decimal import Decimal
 from io import StringIO
 from unittest import mock
 
-from django.contrib.auth.models import Permission, User
+from django.contrib.auth.models import Group, Permission, User
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db.models import ProtectedError
@@ -20,6 +20,7 @@ from apps.fleet.models import (
     ExtrasItem,
     PuntoEncuentro,
 )
+from apps.tenancy import scope
 from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
 
 from .admin import telefono_marcable
@@ -150,10 +151,10 @@ class CupoTests(EmpresaTestCase):
             Reserva(**datos_reserva(self.empresa, fecha=fecha, estado=Reserva.Estado.PAGADA)).full_clean()
 
 
-class CambioDeFechaTests(TestCase):
+class CambioDeFechaTests(EmpresaTestCase):
     def test_permitido_con_mas_de_48_horas(self):
         reserva = crear_reserva(
-            fecha=date.today() + timedelta(days=10), estado=Reserva.Estado.PAGADA
+            self.empresa, fecha=date.today() + timedelta(days=10), estado=Reserva.Estado.PAGADA
         )
         reserva = Reserva.objects.get(pk=reserva.pk)
         reserva.fecha = date.today() + timedelta(days=12)
@@ -161,7 +162,7 @@ class CambioDeFechaTests(TestCase):
 
     def test_bloqueado_dentro_de_las_48_horas(self):
         manana = timezone.localtime().date() + timedelta(days=1)
-        reserva = crear_reserva(fecha=manana, estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, fecha=manana, estado=Reserva.Estado.PAGADA)
         reserva = Reserva.objects.get(pk=reserva.pk)
         reserva.fecha = manana + timedelta(days=5)
         with self.assertRaises(ValidationError) as ctx:
@@ -170,7 +171,7 @@ class CambioDeFechaTests(TestCase):
 
     def test_cancelar_por_mal_clima_no_pide_48_horas(self):
         manana = timezone.localtime().date() + timedelta(days=1)
-        reserva = crear_reserva(fecha=manana, estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, fecha=manana, estado=Reserva.Estado.PAGADA)
         reserva = Reserva.objects.get(pk=reserva.pk)
         reserva.estado = Reserva.Estado.CANCELADA
         reserva.motivo_cancelacion = 'Mal clima'
@@ -179,9 +180,9 @@ class CambioDeFechaTests(TestCase):
         reserva.full_clean()
 
 
-class CodigoPromocionalValidoTests(TestCase):
+class CodigoPromocionalValidoTests(EmpresaTestCase):
     def crear_codigo(self, **overrides):
-        datos = {'codigo': 'VERANO10', 'porcentaje_descuento': Decimal('10')}
+        datos = {'empresa': self.empresa, 'codigo': 'VERANO10', 'porcentaje_descuento': Decimal('10')}
         datos.update(overrides)
         return CodigoPromocional.objects.create(**datos)
 
@@ -218,16 +219,16 @@ class CodigoPromocionalValidoTests(TestCase):
 
     def test_usos_maximos_agotados_no_cuenta_pendiente_de_pago(self):
         promo = self.crear_codigo(usos_maximos=1)
-        crear_reserva(codigo_promocional=promo)  # pendiente_pago, no ocupa cupo
+        crear_reserva(self.empresa, codigo_promocional=promo)  # pendiente_pago, no ocupa cupo
         self.assertTrue(codigo_promocional_valido(promo, 'otro@example.com'))
 
-        crear_reserva(codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
         self.assertFalse(codigo_promocional_valido(promo, 'otro@example.com'))
 
     def test_usos_maximos_por_cliente(self):
         promo = self.crear_codigo(usos_maximos_por_cliente=1)
         crear_reserva(
-            codigo_promocional=promo, estado=Reserva.Estado.PAGADA,
+            self.empresa, codigo_promocional=promo, estado=Reserva.Estado.PAGADA,
             correo_cliente='repetido@example.com',
         )
         self.assertFalse(codigo_promocional_valido(promo, 'repetido@example.com'))
@@ -235,58 +236,62 @@ class CodigoPromocionalValidoTests(TestCase):
 
     def test_excluir_pk_no_cuenta_la_reserva_propia(self):
         promo = self.crear_codigo(usos_maximos=1)
-        reserva = crear_reserva(codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
         self.assertFalse(codigo_promocional_valido(promo, 'otro@example.com'))
         self.assertTrue(codigo_promocional_valido(promo, 'otro@example.com', excluir_pk=reserva.pk))
 
 
-class EvaluarCodigoPromocionalTests(TestCase):
+class EvaluarCodigoPromocionalTests(EmpresaTestCase):
     def test_codigo_vacio_devuelve_none(self):
-        self.assertIsNone(evaluar_codigo_promocional('', 'cliente@example.com'))
+        self.assertIsNone(evaluar_codigo_promocional('', 'cliente@example.com', self.empresa))
 
     def test_codigo_inexistente_devuelve_none(self):
-        self.assertIsNone(evaluar_codigo_promocional('NOEXISTE', 'cliente@example.com'))
+        self.assertIsNone(evaluar_codigo_promocional('NOEXISTE', 'cliente@example.com', self.empresa))
 
     def test_normaliza_mayusculas_y_espacios(self):
-        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
-        promo = evaluar_codigo_promocional(' verano10 ', 'cliente@example.com')
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        promo = evaluar_codigo_promocional(' verano10 ', 'cliente@example.com', self.empresa)
         self.assertIsNotNone(promo)
         self.assertEqual(promo.codigo, 'VERANO10')
 
     def test_codigo_invalido_devuelve_none(self):
         CodigoPromocional.objects.create(
-            codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
+            empresa=self.empresa, codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
         )
-        self.assertIsNone(evaluar_codigo_promocional('VIEJO', 'cliente@example.com'))
+        self.assertIsNone(evaluar_codigo_promocional('VIEJO', 'cliente@example.com', self.empresa))
 
 
-class ValidarCodigoPromocionalEnPagoTests(TestCase):
+class ValidarCodigoPromocionalEnPagoTests(EmpresaTestCase):
     def test_codigo_valido_no_lanza(self):
-        promo = CodigoPromocional.objects.create(codigo='OK10', porcentaje_descuento=Decimal('10'))
-        validar_codigo_promocional_en_pago(promo, 'MXN', Decimal('4500'), 'cliente@example.com')
+        promo = CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='OK10', porcentaje_descuento=Decimal('10'))
+        validar_codigo_promocional_en_pago(
+            promo, 'MXN', Decimal('4500'), 'cliente@example.com', self.empresa)
 
     def test_codigo_agotado_lanza_con_la_clave_codigo_promocional(self):
         promo = CodigoPromocional.objects.create(
-            codigo='AGOTADO', porcentaje_descuento=Decimal('10'), usos_maximos=1,
+            empresa=self.empresa, codigo='AGOTADO', porcentaje_descuento=Decimal('10'), usos_maximos=1,
         )
-        crear_reserva(codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, codigo_promocional=promo, estado=Reserva.Estado.PAGADA)
         with self.assertRaises(ValidationError) as ctx:
-            validar_codigo_promocional_en_pago(promo, 'MXN', Decimal('4500'), 'otro@example.com')
+            validar_codigo_promocional_en_pago(
+                promo, 'MXN', Decimal('4500'), 'otro@example.com', self.empresa)
         self.assertIn('codigo_promocional', ctx.exception.message_dict)
 
 
 class CupoApiTests(ApiTestCase):
     def test_fecha_invalida_responde_400(self):
-        response = self.client.get('/api/cupo/?fecha=no-es-fecha')
+        response = self.client.get(f'/api/{self.empresa.slug}/cupo/?fecha=no-es-fecha')
         self.assertEqual(response.status_code, 400)
 
     def test_sin_fecha_responde_400(self):
-        self.assertEqual(self.client.get('/api/cupo/').status_code, 400)
+        self.assertEqual(self.client.get(f'/api/{self.empresa.slug}/cupo/').status_code, 400)
 
     def test_fecha_valida_responde_el_cupo(self):
         fecha = date.today() + timedelta(days=10)
-        crear_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)
-        response = self.client.get(f'/api/cupo/?fecha={fecha}')
+        crear_reserva(self.empresa, fecha=fecha, estado=Reserva.Estado.PAGADA)
+        response = self.client.get(f'/api/{self.empresa.slug}/cupo/?fecha={fecha}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['ocupadas'], 1)
         self.assertTrue(response.json()['disponible'])
@@ -305,22 +310,22 @@ class TelefonoMarcableTests(TestCase):
         self.assertEqual(telefono_marcable(None), '')
 
 
-class CheckoutAbandonadoTests(TestCase):
+class CheckoutAbandonadoTests(EmpresaTestCase):
     def test_no_lista_al_que_apenas_empezo(self):
-        crear_reserva()  # pendiente_pago, recien creada
+        crear_reserva(self.empresa)  # pendiente_pago, recien creada
         self.assertEqual(CheckoutAbandonado.abandonados().count(), 0)
 
     def test_lista_al_que_lleva_rato_sin_pagar(self):
-        envejecer(crear_reserva(), hours=HORAS_PARA_CONSIDERAR_ABANDONADO + 1)
+        envejecer(crear_reserva(self.empresa), hours=HORAS_PARA_CONSIDERAR_ABANDONADO + 1)
         self.assertEqual(CheckoutAbandonado.abandonados().count(), 1)
 
     def test_no_lista_las_que_si_pagaron(self):
-        envejecer(crear_reserva(estado=Reserva.Estado.PAGADA), hours=48)
+        envejecer(crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA), hours=48)
         self.assertEqual(CheckoutAbandonado.abandonados().count(), 0)
 
     def test_el_listado_del_admin_es_solo_lectura(self):
-        envejecer(crear_reserva(), hours=48)
-        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        envejecer(crear_reserva(self.empresa), hours=48)
+        self.client.force_login(self.crear_jefe())
 
         response = self.client.get(reverse('admin:bookings_checkoutabandonado_changelist'))
         self.assertEqual(response.status_code, 200)
@@ -331,7 +336,7 @@ class CheckoutAbandonadoTests(TestCase):
         )
 
     def test_la_vendedora_puede_verlo(self):
-        vendedora = User.objects.create_user('vendedora', password='x', is_staff=True)
+        vendedora = self.crear_vendedora(permisos=[])
         vendedora.user_permissions.add(
             Permission.objects.get(codename='view_checkoutabandonado')
         )
@@ -342,49 +347,57 @@ class CheckoutAbandonadoTests(TestCase):
         )
 
 
-class LimpiarCheckoutsAbandonadosTests(TestCase):
+class LimpiarCheckoutsAbandonadosTests(EmpresaTestCase):
     def ejecutar(self, **kwargs):
+        # El comando itera todas las Empresas y abre su propio scope.con_empresa
+        # por cada una -- no es reentrante con el que EmpresaTestCase ya dejo
+        # abierto para self.empresa (ver apps/testing.py y progress.md linea ~133).
         salida = StringIO()
-        call_command('limpiar_checkouts_abandonados', stdout=salida, **kwargs)
+        self._alcance.__exit__(None, None, None)
+        try:
+            call_command('limpiar_checkouts_abandonados', stdout=salida, **kwargs)
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
         return salida.getvalue()
 
     def test_borra_los_viejos(self):
-        envejecer(crear_reserva(), days=40)
+        envejecer(crear_reserva(self.empresa), days=40)
         self.ejecutar()
         self.assertEqual(Reserva.objects.count(), 0)
 
     def test_respeta_los_recientes(self):
-        envejecer(crear_reserva(), days=5)
+        envejecer(crear_reserva(self.empresa), days=5)
         self.ejecutar()
         self.assertEqual(Reserva.objects.count(), 1)
 
     def test_nunca_toca_una_reserva_pagada(self):
-        envejecer(crear_reserva(estado=Reserva.Estado.PAGADA), days=400)
+        envejecer(crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA), days=400)
         self.ejecutar()
         self.assertEqual(Reserva.objects.count(), 1)
 
     def test_dias_configurable(self):
-        envejecer(crear_reserva(), days=5)
+        envejecer(crear_reserva(self.empresa), days=5)
         self.ejecutar(dias=3)
         self.assertEqual(Reserva.objects.count(), 0)
 
     def test_dry_run_no_borra(self):
-        envejecer(crear_reserva(), days=40)
+        envejecer(crear_reserva(self.empresa), days=40)
         salida = self.ejecutar(dry_run=True)
         self.assertIn('Se borrarian 1', salida)
         self.assertEqual(Reserva.objects.count(), 1)
 
 
-class LiquidacionEnEfectivoTests(TestCase):
+class LiquidacionEnEfectivoTests(EmpresaTestCase):
     """El 70% que se cobra en el muelle tiene que dejar rastro."""
 
     def setUp(self):
-        self.jefa = User.objects.create_superuser('jefa', password='x')
+        self.jefa = self.crear_jefe()
         self.client.force_login(self.jefa)
         self.url = reverse('admin:bookings_reserva_changelist')
 
     def reserva_con_anticipo(self):
-        reserva = crear_reserva(estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         reserva.precio_total = Decimal('4500.00')
         reserva.monto_pagado = Decimal('1350.00')
         reserva.forma_pago = Reserva.FormaPago.ANTICIPO
@@ -426,7 +439,7 @@ class LiquidacionEnEfectivoTests(TestCase):
         self.assertEqual(reserva.monto_efectivo, Decimal('3150.00'))
 
     def test_una_reserva_pagada_al_100_no_debe_nada(self):
-        reserva = crear_reserva(estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         reserva.precio_total = Decimal('4500.00')
         reserva.monto_pagado = Decimal('4500.00')
         reserva.forma_pago = Reserva.FormaPago.COMPLETO
@@ -458,10 +471,18 @@ class AdminDeCuentasTests(TestCase):
     atributo que solo existe en el ModelAdmin de Unfold, asi que con el registro
     por defecto el listado carga **sin boton de agregar** y no hay forma de dar de
     alta una vendedora desde la interfaz. Ver `admin.py` y `setup_roles`.
+
+    El operador de plataforma es quien de verdad tiene `add`/`delete` sobre
+    `auth.user` y todo `auth.group` (H5, `setup_roles.py`) -- Jefe perdio el alta
+    directa de usuario (pasa por "Dar de alta vendedora") y todo permiso sobre
+    `auth.group`. Sin `MembresiaEmpresa`, asi que no necesita `EmpresaTestCase`.
     """
 
     def setUp(self):
-        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        call_command('setup_roles', verbosity=0)
+        operador = User.objects.create_user('operador', password='x', is_staff=True)
+        operador.groups.add(Group.objects.get(name='OperadorPlataforma'))
+        self.client.force_login(operador)
 
     def test_el_listado_de_usuarios_ofrece_el_boton_de_agregar(self):
         html = self.client.get(reverse('admin:auth_user_changelist')).content.decode()
@@ -484,7 +505,7 @@ class AdminDeCuentasTests(TestCase):
         self.assertTrue(User.objects.filter(username='vendedora_nueva').exists())
 
 
-class ReservasNuevasAdminTests(TestCase):
+class ReservasNuevasAdminTests(EmpresaTestCase):
     """Contador de reservas nuevas del listado del admin (ver ReservaAdmin)."""
 
     def setUp(self):
@@ -502,47 +523,47 @@ class ReservasNuevasAdminTests(TestCase):
         self.assertIn('login', response['Location'])
 
     def test_staff_sin_permiso_de_ver_reservas_recibe_403(self):
-        vendedora = User.objects.create_user('sin_permisos', password='x', is_staff=True)
+        vendedora = self.crear_vendedora(username='sin_permisos', permisos=[])
         self.client.force_login(vendedora)
         self.assertEqual(self.client.get(self.url).status_code, 403)
 
     def test_vendedora_con_permiso_puede_consultar(self):
-        vendedora = User.objects.create_user('vendedora', password='x', is_staff=True)
+        vendedora = self.crear_vendedora(permisos=[])
         vendedora.user_permissions.add(Permission.objects.get(codename='view_reserva'))
         self.client.force_login(vendedora)
         self.assertEqual(self.client.get(self.url).status_code, 200)
 
     def test_cuenta_las_pagadas_que_entraron_despues(self):
-        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        self.client.force_login(self.crear_jefe())
         desde = self.semilla()
 
-        crear_reserva(estado=Reserva.Estado.PAGADA)
-        crear_reserva(estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         body = self.client.get(self.url, {'desde': desde}).json()
 
         self.assertEqual(body['nuevas'], 2)
         # El ancla no se mueve: el contador sigue subiendo hasta que se recargue.
         self.assertEqual(body['desde'], desde)
 
-        crear_reserva(estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 3)
 
     def test_ignora_los_checkouts_abandonados(self):
-        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        self.client.force_login(self.crear_jefe())
         desde = self.semilla()
 
-        crear_reserva()  # pendiente_pago
+        crear_reserva(self.empresa)  # pendiente_pago
         self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 0)
 
     def test_ignora_lo_anterior_a_la_carga_de_la_pagina(self):
-        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
-        crear_reserva(estado=Reserva.Estado.PAGADA)
+        self.client.force_login(self.crear_jefe())
+        crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         desde = self.semilla()
 
         self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 0)
 
     def test_desde_invalido_responde_400(self):
-        self.client.force_login(User.objects.create_superuser('jefa', password='x'))
+        self.client.force_login(self.crear_jefe())
         self.assertEqual(self.client.get(self.url, {'desde': 'ayer'}).status_code, 400)
 
 
@@ -567,7 +588,8 @@ class ReservaApiTests(ApiTestCase):
 
     def enviar(self, **overrides):
         return self.client.post(
-            '/api/reservas/', self.payload(**overrides), content_type='application/json'
+            f'/api/{self.empresa.slug}/reservas/', self.payload(**overrides),
+            content_type='application/json',
         )
 
     def test_crea_pendiente_de_pago_y_sella_el_deslinde(self):
@@ -648,7 +670,8 @@ class ReservaApiTests(ApiTestCase):
 
     def test_sin_checkout_id_no_se_acepta(self):
         response = self.client.post(
-            '/api/reservas/', self.payload(checkout_id=None), content_type='application/json'
+            f'/api/{self.empresa.slug}/reservas/', self.payload(checkout_id=None),
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn('checkout_id', response.json())
@@ -690,12 +713,15 @@ class ExtrasYTransporteApiTests(ApiTestCase):
 
     def enviar(self, **overrides):
         return self.client.post(
-            '/api/reservas/', self.payload(**overrides), content_type='application/json'
+            f'/api/{self.empresa.slug}/reservas/', self.payload(**overrides),
+            content_type='application/json',
         )
 
     def test_selecciona_extras_sin_precio(self):
-        brunch = ExtrasItem.objects.create(tipo='brunch', nombre='Brunch', precio=Decimal('300'))
-        licencia = ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
+        brunch = ExtrasItem.objects.create(
+            empresa=self.empresa, tipo='brunch', nombre='Brunch', precio=Decimal('300'))
+        licencia = ExtrasItem.objects.create(
+            empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'))
 
         response = self.enviar(extras=[{'id': brunch.pk}, {'id': licencia.pk}])
 
@@ -710,13 +736,15 @@ class ExtrasYTransporteApiTests(ApiTestCase):
 
     def test_un_extra_inactivo_no_se_puede_seleccionar(self):
         inactivo = ExtrasItem.objects.create(
-            tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
+            empresa=self.empresa, tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
         )
         self.assertEqual(self.enviar(extras=[{'id': inactivo.pk}]).status_code, 400)
 
     def test_reenviar_el_checkout_reescribe_la_seleccion_completa(self):
-        brunch = ExtrasItem.objects.create(tipo='brunch', nombre='Brunch', precio=Decimal('300'))
-        licencia = ExtrasItem.objects.create(tipo='licencia', nombre='Licencia', precio=Decimal('450'))
+        brunch = ExtrasItem.objects.create(
+            empresa=self.empresa, tipo='brunch', nombre='Brunch', precio=Decimal('300'))
+        licencia = ExtrasItem.objects.create(
+            empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'))
         creada = self.enviar(extras=[{'id': brunch.pk}])
 
         self.enviar(extras=[{'id': licencia.pk}])
@@ -728,7 +756,8 @@ class ExtrasYTransporteApiTests(ApiTestCase):
 
     def test_manda_cantidad_para_un_extra_con_cantidad_editable(self):
         licencia = ExtrasItem.objects.create(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'), cantidad_editable=True,
+            empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'),
+            cantidad_editable=True,
         )
 
         response = self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 2}])
@@ -745,7 +774,8 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         """Cambiar la cantidad de un extra ya elegido, en un reenvio del
         checkout, debe actualizar la fila — no perderse ni crear una segunda."""
         licencia = ExtrasItem.objects.create(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'), cantidad_editable=True,
+            empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'),
+            cantidad_editable=True,
         )
         creada = self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 2}])
 
@@ -758,7 +788,7 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         )
 
     def test_selecciona_transporte_por_punto_de_encuentro(self):
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
 
         response = self.enviar(transporte={'punto_encuentro': hotel.pk})
 
@@ -779,7 +809,7 @@ class ExtrasYTransporteApiTests(ApiTestCase):
     def test_la_zona_de_un_hotel_no_se_puede_falsificar(self):
         """El cliente elige un hotel de centro pero manda zona=periferia (la
         mas barata): el servidor debe ignorar esa zona y usar la del hotel."""
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
 
         response = self.enviar(transporte={'punto_encuentro': hotel.pk, 'zona': 'periferia'})
 
@@ -788,7 +818,7 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         self.assertEqual(reserva.transporte.zona, 'centro')
 
     def test_quitar_el_transporte_borra_la_fila(self):
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
         creada = self.enviar(transporte={'punto_encuentro': hotel.pk})
 
         self.enviar(transporte=None)
@@ -802,7 +832,7 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         self.assertFalse(hasattr(reserva, 'transporte'))
 
     def test_manda_cantidad_de_personas_para_el_transporte(self):
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
 
         response = self.enviar(
             numero_personas=5, transporte={'punto_encuentro': hotel.pk, 'cantidad': 2},
@@ -814,9 +844,9 @@ class ExtrasYTransporteApiTests(ApiTestCase):
         self.assertIsNone(reserva.transporte.numero_personas)
 
 
-class ReservaTransporteCleanTests(TestCase):
+class ReservaTransporteCleanTests(EmpresaTestCase):
     def setUp(self):
-        self.reserva = crear_reserva()
+        self.reserva = crear_reserva(self.empresa)
 
     def test_rechaza_los_dos_vacios(self):
         transporte = ReservaTransporte(reserva=self.reserva, zona='centro')
@@ -824,7 +854,7 @@ class ReservaTransporteCleanTests(TestCase):
             transporte.clean()
 
     def test_rechaza_los_dos_con_valor(self):
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
         transporte = ReservaTransporte(
             reserva=self.reserva, punto_encuentro=hotel,
             direccion_personalizada='Malecon 123', zona='centro',
@@ -833,13 +863,13 @@ class ReservaTransporteCleanTests(TestCase):
             transporte.clean()
 
     def test_rechaza_zona_que_no_coincide_con_el_punto_de_encuentro(self):
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
         transporte = ReservaTransporte(reserva=self.reserva, punto_encuentro=hotel, zona='periferia')
         with self.assertRaises(ValidationError):
             transporte.clean()
 
     def test_acepta_punto_de_encuentro_con_su_propia_zona(self):
-        hotel = PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro')
+        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
         transporte = ReservaTransporte(reserva=self.reserva, punto_encuentro=hotel, zona='centro')
         transporte.clean()
 
@@ -859,7 +889,7 @@ class AtribucionDeVentaTests(ApiTestCase):
     def setUp(self):
         self.maria = Vendedora.objects.create(
             usuario=User.objects.create_user('maria', password='x', is_staff=True),
-            codigo='maria',
+            empresa=self.empresa, codigo='maria',
         )
 
     def enviar(self, **overrides):
@@ -876,7 +906,9 @@ class AtribucionDeVentaTests(ApiTestCase):
             'deslinde_nombre': 'Ana Ruiz',
         }
         datos.update(overrides)
-        return self.client.post('/api/reservas/', datos, content_type='application/json')
+        return self.client.post(
+            f'/api/{self.empresa.slug}/reservas/', datos, content_type='application/json',
+        )
 
     def test_el_link_de_la_vendedora_le_atribuye_la_venta(self):
         response = self.enviar(ref='maria')
@@ -915,7 +947,7 @@ class AtribucionDeVentaTests(ApiTestCase):
         self.assertEqual(reserva.vendedora, self.maria)
 
     def test_atribuir_a_mano_sella_la_fecha(self):
-        reserva = crear_reserva()
+        reserva = crear_reserva(self.empresa)
         self.assertIsNone(reserva.vendedora_asignada_en)
 
         reserva.vendedora = self.maria
@@ -924,7 +956,7 @@ class AtribucionDeVentaTests(ApiTestCase):
         self.assertIsNotNone(Reserva.objects.get(pk=reserva.pk).vendedora_asignada_en)
 
     def test_quitar_la_atribucion_limpia_la_fecha(self):
-        reserva = crear_reserva(vendedora=self.maria)
+        reserva = crear_reserva(self.empresa, vendedora=self.maria)
         reserva.vendedora = None
         reserva.save()
 
@@ -932,7 +964,7 @@ class AtribucionDeVentaTests(ApiTestCase):
 
     def test_no_se_puede_borrar_una_vendedora_con_ventas(self):
         """Borrarla dejaria ventas sin dueño: para dar de baja se usa `activo`."""
-        crear_reserva(vendedora=self.maria)
+        crear_reserva(self.empresa, vendedora=self.maria)
 
         with self.assertRaises(ProtectedError):
             self.maria.delete()
@@ -960,7 +992,7 @@ class IpDelDeslindeTests(ApiTestCase):
             'deslinde_nombre': 'Ana Ruiz',
         }
         response = self.client.post(
-            '/api/reservas/', datos, content_type='application/json', **extra
+            f'/api/{self.empresa.slug}/reservas/', datos, content_type='application/json', **extra
         )
         self.assertEqual(response.status_code, 201, response.content)
         return Reserva.objects.get(pk=response.json()['id'])
@@ -1004,7 +1036,7 @@ class ThrottleTests(ApiTestCase):
 
     @mock.patch.dict(ScopedRateThrottle.THROTTLE_RATES, {'consulta': '2/min'})
     def test_pasado_el_limite_responde_429(self):
-        url = f'/api/cupo/?fecha={date.today() + timedelta(days=10)}'
+        url = f'/api/{self.empresa.slug}/cupo/?fecha={date.today() + timedelta(days=10)}'
 
         self.assertEqual(self.client.get(url).status_code, 200)
         self.assertEqual(self.client.get(url).status_code, 200)
@@ -1028,7 +1060,8 @@ class ThrottleTests(ApiTestCase):
 
         def enviar(ip):
             return self.client.post(
-                '/api/reservas/', datos, content_type='application/json', REMOTE_ADDR=ip
+                f'/api/{self.empresa.slug}/reservas/', datos,
+                content_type='application/json', REMOTE_ADDR=ip,
             )
 
         self.assertEqual(enviar('198.51.100.1').status_code, 201)
@@ -1045,7 +1078,7 @@ class ThrottleTests(ApiTestCase):
         self.assertEqual(StripeWebhookView.throttle_classes, [])
 
 
-class ValidacionDeContactoTests(TestCase):
+class ValidacionDeContactoTests(EmpresaTestCase):
     """El telefono y el nombre se aprietan distinto a proposito.
 
     El telefono es con lo que la vendedora contacta al cliente: uno invalido es
@@ -1055,34 +1088,35 @@ class ValidacionDeContactoTests(TestCase):
 
     def test_telefono_con_letras_no_pasa(self):
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(telefono_cliente='asdf')).full_clean()
+            Reserva(**datos_reserva(self.empresa, telefono_cliente='asdf')).full_clean()
 
     def test_telefono_incompleto_no_pasa(self):
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(telefono_cliente='612 123')).full_clean()
+            Reserva(**datos_reserva(self.empresa, telefono_cliente='612 123')).full_clean()
 
     def test_acepta_el_telefono_como_lo_escribe_la_gente(self):
         for numero in ('6121234567', '612 123 4567', '(612) 123-4567', '+52 1 612 123 4567'):
             with self.subTest(numero=numero):
-                Reserva(**datos_reserva(telefono_cliente=numero)).full_clean()
+                Reserva(**datos_reserva(self.empresa, telefono_cliente=numero)).full_clean()
 
     def test_nombre_con_numeros_no_pasa(self):
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(nombre_cliente='12345')).full_clean()
+            Reserva(**datos_reserva(self.empresa, nombre_cliente='12345')).full_clean()
 
     def test_nombre_sin_ninguna_letra_no_pasa(self):
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(nombre_cliente='-----')).full_clean()
+            Reserva(**datos_reserva(self.empresa, nombre_cliente='-----')).full_clean()
 
     def test_no_rechaza_nombres_reales(self):
         """El fallo caro aqui no es guardar un nombre raro: es dejar a una
         persona sin poder reservar por llamarse como se llama."""
         for nombre in ("Jose Munoz", "José Muñoz", "O'Brien", "Garcia-Lopez", "Ana de la Torre"):
             with self.subTest(nombre=nombre):
-                Reserva(**datos_reserva(nombre_cliente=nombre, deslinde_nombre=nombre)).full_clean()
+                Reserva(**datos_reserva(
+                    self.empresa, nombre_cliente=nombre, deslinde_nombre=nombre)).full_clean()
 
 
-class ProximaFechaDisponibleTests(TestCase):
+class ProximaFechaDisponibleTests(EmpresaTestCase):
     """La busqueda del siguiente dia con espacio vive en el servidor.
 
     Antes la hacia el navegador con una peticion por dia — hasta 90 seguidas,
@@ -1093,31 +1127,34 @@ class ProximaFechaDisponibleTests(TestCase):
     def setUp(self):
         # Dos de estos tests no crean ninguna reserva, asi que nadie sembraria la
         # flota por ellos y sin pangas no cabria nadie.
-        crear_flota()
+        crear_flota(self.empresa)
 
     def test_si_el_dia_pedido_tiene_espacio_se_devuelve_ese(self):
         fecha = date.today() + timedelta(days=10)
-        self.assertEqual(proxima_fecha_disponible(fecha, 2), fecha)
+        self.assertEqual(proxima_fecha_disponible(fecha, 2, self.empresa), fecha)
 
     def test_salta_los_dias_llenos(self):
         primero = date.today() + timedelta(days=10)
         for _ in range(CUPO_MAXIMO_DEFAULT):
-            crear_reserva(fecha=primero, estado=Reserva.Estado.PAGADA)
+            crear_reserva(self.empresa, fecha=primero, estado=Reserva.Estado.PAGADA)
 
-        self.assertEqual(proxima_fecha_disponible(primero, 2), primero + timedelta(days=1))
+        self.assertEqual(
+            proxima_fecha_disponible(primero, 2, self.empresa), primero + timedelta(days=1))
 
     def test_respeta_el_cupo_cerrado_a_mano(self):
         primero = date.today() + timedelta(days=10)
-        CupoDiario.objects.create(fecha=primero, cupo_maximo=0)
+        CupoDiario.objects.create(empresa=self.empresa, fecha=primero, cupo_maximo=0)
 
-        self.assertEqual(proxima_fecha_disponible(primero, 2), primero + timedelta(days=1))
+        self.assertEqual(
+            proxima_fecha_disponible(primero, 2, self.empresa), primero + timedelta(days=1))
 
     def test_sin_ningun_dia_libre_devuelve_none(self):
         desde = date.today() + timedelta(days=10)
         for i in range(3):
-            CupoDiario.objects.create(fecha=desde + timedelta(days=i), cupo_maximo=0)
+            CupoDiario.objects.create(
+                empresa=self.empresa, fecha=desde + timedelta(days=i), cupo_maximo=0)
 
-        self.assertIsNone(proxima_fecha_disponible(desde, 2, dias=3))
+        self.assertIsNone(proxima_fecha_disponible(desde, 2, self.empresa, dias=3))
 
     def test_no_hace_una_consulta_por_dia(self):
         """El punto entero del cambio: el costo no crece con la ventana.
@@ -1127,25 +1164,26 @@ class ProximaFechaDisponibleTests(TestCase):
         """
         desde = date.today() + timedelta(days=10)
         with self.assertNumQueries(4):
-            proxima_fecha_disponible(desde, 2, dias=90)
+            proxima_fecha_disponible(desde, 2, self.empresa, dias=90)
 
     def test_salta_los_dias_sin_panga_para_ese_grupo(self):
         """El dia tiene lugares libres, pero no para un grupo de 4."""
         primero = date.today() + timedelta(days=10)
-        crear_reserva(fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
-        crear_reserva(fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, fecha=primero, numero_personas=4, estado=Reserva.Estado.PAGADA)
 
-        self.assertEqual(proxima_fecha_disponible(primero, 4), primero + timedelta(days=1))
-        self.assertEqual(proxima_fecha_disponible(primero, 2), primero)
+        self.assertEqual(
+            proxima_fecha_disponible(primero, 4, self.empresa), primero + timedelta(days=1))
+        self.assertEqual(proxima_fecha_disponible(primero, 2, self.empresa), primero)
 
 
 class CupoApiDevuelveProximaTests(ApiTestCase):
     def test_la_respuesta_trae_la_proxima_fecha_disponible(self):
         fecha = date.today() + timedelta(days=10)
         for _ in range(CUPO_MAXIMO_DEFAULT):
-            crear_reserva(fecha=fecha, estado=Reserva.Estado.PAGADA)
+            crear_reserva(self.empresa, fecha=fecha, estado=Reserva.Estado.PAGADA)
 
-        cuerpo = self.client.get(f'/api/cupo/?fecha={fecha}').json()
+        cuerpo = self.client.get(f'/api/{self.empresa.slug}/cupo/?fecha={fecha}').json()
 
         self.assertFalse(cuerpo['disponible'])
         self.assertEqual(cuerpo['proxima_disponible'], str(fecha + timedelta(days=1)))
@@ -1200,24 +1238,24 @@ class MotivoSinLugarTests(TestCase):
         self.assertIsNone(motivo_sin_lugar(2, [4, 4], self.FLOTA, tope=10))
 
 
-class CupoPorTamanoDelGrupoTests(TestCase):
+class CupoPorTamanoDelGrupoTests(EmpresaTestCase):
     """Un dia puede tener lugares libres y aun asi no poder recibir a un grupo de
     4: solo dos pangas de la flota lo llevan."""
 
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
         self.fecha = date.today() + timedelta(days=10)
 
     def _vender(self, personas):
         return crear_reserva(
-            fecha=self.fecha, numero_personas=personas, estado=Reserva.Estado.PAGADA
+            self.empresa, fecha=self.fecha, numero_personas=personas, estado=Reserva.Estado.PAGADA
         )
 
     def test_un_tercer_grupo_de_cuatro_se_rechaza(self):
         self._vender(4)
         self._vender(4)
         with self.assertRaises(ValidationError) as ctx:
-            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+            Reserva(**datos_reserva(self.empresa, fecha=self.fecha, numero_personas=4,
                                     estado=Reserva.Estado.PAGADA)).full_clean()
         self.assertIn('No queda panga', str(ctx.exception))
 
@@ -1225,23 +1263,23 @@ class CupoPorTamanoDelGrupoTests(TestCase):
         """El dia no esta lleno, solo se acabaron las pangas grandes."""
         self._vender(4)
         self._vender(4)
-        Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+        Reserva(**datos_reserva(self.empresa, fecha=self.fecha, numero_personas=2,
                                 estado=Reserva.Estado.PAGADA)).full_clean()
 
     def test_un_dia_lleno_a_secas_da_el_mensaje_del_tope_de_viajes(self):
         for _ in range(CUPO_MAXIMO_DEFAULT):
             self._vender(2)
         with self.assertRaises(ValidationError) as ctx:
-            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+            Reserva(**datos_reserva(self.empresa, fecha=self.fecha, numero_personas=2,
                                     estado=Reserva.Estado.PAGADA)).full_clean()
         self.assertIn('maximo de viajes', str(ctx.exception))
 
     def test_el_cupo_cerrado_a_mano_manda_sobre_la_flota(self):
-        CupoDiario.objects.create(fecha=self.fecha, cupo_maximo=3)
+        CupoDiario.objects.create(empresa=self.empresa, fecha=self.fecha, cupo_maximo=3)
         for _ in range(3):
             self._vender(2)
         with self.assertRaises(ValidationError) as ctx:
-            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=2,
+            Reserva(**datos_reserva(self.empresa, fecha=self.fecha, numero_personas=2,
                                     estado=Reserva.Estado.PAGADA)).full_clean()
         self.assertIn('maximo de viajes', str(ctx.exception))
 
@@ -1257,75 +1295,88 @@ class CupoPorTamanoDelGrupoTests(TestCase):
         cancelada.estado = Reserva.Estado.CANCELADA
         cancelada.save()
 
-        Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+        Reserva(**datos_reserva(self.empresa, fecha=self.fecha, numero_personas=4,
                                 estado=Reserva.Estado.PAGADA)).full_clean()
 
     def test_una_panga_marcada_fuera_reduce_el_cupo_de_ese_dia(self):
-        grande = Embarcacion.objects.filter(capacidad_maxima=5).first()
+        grande = Embarcacion.objects.filter(empresa=self.empresa, capacidad_maxima=5).first()
         EmbarcacionNoDisponible.objects.create(
-            fecha=self.fecha, embarcacion=grande, motivo='Motor'
+            empresa=self.empresa, fecha=self.fecha, embarcacion=grande, motivo='Motor'
         )
         self._vender(4)
         with self.assertRaises(ValidationError):
-            Reserva(**datos_reserva(fecha=self.fecha, numero_personas=4,
+            Reserva(**datos_reserva(self.empresa, fecha=self.fecha, numero_personas=4,
                                     estado=Reserva.Estado.PAGADA)).full_clean()
 
 
 class CupoApiPorTamanoTests(ApiTestCase):
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
         self.fecha = date.today() + timedelta(days=10)
 
     def test_sin_personas_responde_como_antes(self):
         """Compatibilidad: nada que llame a la API vieja se puede romper."""
-        cuerpo = self.client.get(f'/api/cupo/?fecha={self.fecha}').json()
+        cuerpo = self.client.get(f'/api/{self.empresa.slug}/cupo/?fecha={self.fecha}').json()
         self.assertTrue(cuerpo['disponible'])
         self.assertIsNone(cuerpo['motivo_no_disponible'])
         self.assertEqual(cuerpo['cupo_maximo'], CUPO_MAXIMO_DEFAULT)
 
     def test_un_grupo_de_cuatro_sin_pangas_grandes_libres(self):
-        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
-        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
 
-        grande = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=4').json()
+        grande = self.client.get(
+            f'/api/{self.empresa.slug}/cupo/?fecha={self.fecha}&personas=4').json()
         self.assertFalse(grande['disponible'])
         self.assertEqual(grande['motivo_no_disponible'], MOTIVO_SIN_PANGA)
         self.assertEqual(grande['proxima_disponible'], str(self.fecha + timedelta(days=1)))
 
-        chico = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=2').json()
+        chico = self.client.get(
+            f'/api/{self.empresa.slug}/cupo/?fecha={self.fecha}&personas=2').json()
         self.assertTrue(chico['disponible'])
         self.assertIsNone(chico['motivo_no_disponible'])
 
     def test_un_dia_lleno_dice_lleno(self):
         for _ in range(CUPO_MAXIMO_DEFAULT):
-            crear_reserva(fecha=self.fecha, numero_personas=2, estado=Reserva.Estado.PAGADA)
+            crear_reserva(self.empresa, fecha=self.fecha, numero_personas=2, estado=Reserva.Estado.PAGADA)
 
-        cuerpo = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=2').json()
+        cuerpo = self.client.get(
+            f'/api/{self.empresa.slug}/cupo/?fecha={self.fecha}&personas=2').json()
         self.assertEqual(cuerpo['motivo_no_disponible'], MOTIVO_LLENO)
 
     def test_personas_que_no_es_numero_da_400(self):
-        respuesta = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas=cuatro')
+        respuesta = self.client.get(
+            f'/api/{self.empresa.slug}/cupo/?fecha={self.fecha}&personas=cuatro')
         self.assertEqual(respuesta.status_code, 400)
 
     def test_personas_fuera_del_rango_da_400(self):
         for valor in (0, MAX_PERSONAS + 1):
             with self.subTest(personas=valor):
-                respuesta = self.client.get(f'/api/cupo/?fecha={self.fecha}&personas={valor}')
+                respuesta = self.client.get(
+                    f'/api/{self.empresa.slug}/cupo/?fecha={self.fecha}&personas={valor}')
                 self.assertEqual(respuesta.status_code, 400)
 
 
-class RevisarCupoTests(TestCase):
+class RevisarCupoTests(EmpresaTestCase):
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
         self.fecha = date.today() + timedelta(days=10)
 
     def _salida(self, **opciones):
+        # revisar_cupo itera todas las Empresas y abre su propio scope.con_empresa
+        # por cada una -- no es reentrante con el que EmpresaTestCase ya dejo
+        # abierto para self.empresa (ver apps/testing.py y progress.md linea ~133).
         salida = StringIO()
-        call_command('revisar_cupo', stdout=salida, **opciones)
+        self._alcance.__exit__(None, None, None)
+        try:
+            call_command('revisar_cupo', stdout=salida, **opciones)
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
         return salida.getvalue()
 
     def test_no_reporta_nada_cuando_todos_los_dias_cierran(self):
-        crear_reserva(fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA)
         self.assertNotIn(str(self.fecha), self._salida())
 
     def test_encuentra_un_dia_vendido_que_no_es_operable(self):
@@ -1337,7 +1388,7 @@ class RevisarCupoTests(TestCase):
         """
         for _ in range(3):
             Reserva.objects.create(**datos_reserva(
-                fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA
+                self.empresa, fecha=self.fecha, numero_personas=4, estado=Reserva.Estado.PAGADA
             ))
 
         salida = self._salida()
@@ -1345,17 +1396,17 @@ class RevisarCupoTests(TestCase):
         self.assertIn('4, 4, 4', salida)
 
 
-class AgendaListaTests(TestCase):
+class AgendaListaTests(EmpresaTestCase):
     """La agenda reparte lo vendido: solo lo que todavia se puede repartir."""
 
     def setUp(self):
-        crear_flota()
+        crear_flota(self.empresa)
         self.fecha = date.today() + timedelta(days=3)
 
     def test_lista_las_pagadas_y_las_asignadas(self):
-        pagada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
-        asignada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
-        asignada.embarcacion = Embarcacion.objects.first()
+        pagada = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        asignada = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        asignada.embarcacion = Embarcacion.objects.filter(empresa=self.empresa).first()
         asignada.estado = Reserva.Estado.ASIGNADA
         asignada.save()
 
@@ -1366,19 +1417,19 @@ class AgendaListaTests(TestCase):
     def test_no_lista_las_que_no_se_reparten(self):
         """Una cancelada no se reparte, una completada ya salio, y una
         pendiente_pago no es una reserva todavia."""
-        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
+        crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
         Reserva.objects.create(**datos_reserva(
-            fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
+            self.empresa, fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
         Reserva.objects.create(**datos_reserva(
-            fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
+            self.empresa, fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
 
         self.assertEqual(Agenda.por_repartir().count(), 0)
 
     def test_ordena_lo_que_sale_primero_primero(self):
         """Al reves que el listado de Reservas, que es un historial."""
-        tarde = crear_reserva(fecha=self.fecha + timedelta(days=1),
+        tarde = crear_reserva(self.empresa, fecha=self.fecha + timedelta(days=1),
                               estado=Reserva.Estado.PAGADA)
-        temprano = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        temprano = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
 
         self.assertEqual(
             list(Agenda.por_repartir().values_list('pk', flat=True)),
@@ -1386,7 +1437,7 @@ class AgendaListaTests(TestCase):
         )
 
 
-class TransicionDeAsignacionTests(TestCase):
+class TransicionDeAsignacionTests(EmpresaTestCase):
     """Poner la panga da el viaje por asignado; quitarla lo regresa.
 
     El capitan no entra en esto a proposito: se acordo que poner la panga baste,
@@ -1395,13 +1446,14 @@ class TransicionDeAsignacionTests(TestCase):
     """
 
     def setUp(self):
-        crear_flota()
-        self.panga = Embarcacion.objects.first()
-        self.capitan = Capitan.objects.create(nombre='Juan Perez', telefono='+5216121234567')
+        crear_flota(self.empresa)
+        self.panga = Embarcacion.objects.filter(empresa=self.empresa).first()
+        self.capitan = Capitan.objects.create(
+            empresa=self.empresa, nombre='Juan Perez', telefono='+5216121234567')
         self.fecha = date.today() + timedelta(days=3)
 
     def test_ponerle_panga_a_una_pagada_la_deja_asignada(self):
-        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
 
         reserva.embarcacion = self.panga
         reserva.save()
@@ -1410,7 +1462,7 @@ class TransicionDeAsignacionTests(TestCase):
         self.assertEqual(reserva.estado, Reserva.Estado.ASIGNADA)
 
     def test_quitarle_la_panga_a_una_asignada_la_regresa_a_pagada(self):
-        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
         reserva.embarcacion = self.panga
         reserva.save()
 
@@ -1424,7 +1476,7 @@ class TransicionDeAsignacionTests(TestCase):
         """El listado editable del admin puede guardar con update_fields; si
         `estado` no va en esa lista, el UPDATE no lo escribe y la fila queda
         diciendo `pagada` con una panga puesta."""
-        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
 
         reserva.embarcacion = self.panga
         reserva.save(update_fields=['embarcacion'])
@@ -1434,7 +1486,7 @@ class TransicionDeAsignacionTests(TestCase):
 
     def test_el_capitan_solo_no_asigna_el_viaje(self):
         """Sin panga no hay viaje repartido, por mucho capitan que tenga."""
-        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        reserva = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
 
         reserva.capitan = self.capitan
         reserva.save()
@@ -1444,7 +1496,7 @@ class TransicionDeAsignacionTests(TestCase):
 
     def test_una_completada_no_se_mueve(self):
         """Estados finales: los decide una persona, no un efecto secundario."""
-        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
+        reserva = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.COMPLETADA)
 
         reserva.embarcacion = self.panga
         reserva.save()
@@ -1454,7 +1506,7 @@ class TransicionDeAsignacionTests(TestCase):
 
     def test_una_cancelada_no_se_mueve(self):
         reserva = Reserva.objects.create(**datos_reserva(
-            fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
+            self.empresa, fecha=self.fecha, estado=Reserva.Estado.CANCELADA))
 
         reserva.embarcacion = self.panga
         reserva.save()
@@ -1465,7 +1517,7 @@ class TransicionDeAsignacionTests(TestCase):
     def test_una_pendiente_de_pago_no_se_asigna_por_ponerle_panga(self):
         """Un checkout sin pagar no es un viaje que repartir."""
         reserva = Reserva.objects.create(**datos_reserva(
-            fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
+            self.empresa, fecha=self.fecha, estado=Reserva.Estado.PENDIENTE_PAGO))
 
         reserva.embarcacion = self.panga
         reserva.save()
@@ -1474,7 +1526,7 @@ class TransicionDeAsignacionTests(TestCase):
         self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
 
 
-class UnaSalidaPorDiaTests(TestCase):
+class UnaSalidaPorDiaTests(EmpresaTestCase):
     """Una panga hace un solo viaje al dia, y un capitan tambien.
 
     Las salidas son de 5 a 7am y el viaje dura de 6 a 7 horas, asi que escalonar
@@ -1483,16 +1535,17 @@ class UnaSalidaPorDiaTests(TestCase):
     """
 
     def setUp(self):
-        crear_flota()
-        self.panga = Embarcacion.objects.first()
-        self.capitan = Capitan.objects.create(nombre='Juan Perez', telefono='+5216121234567')
+        crear_flota(self.empresa)
+        self.panga = Embarcacion.objects.filter(empresa=self.empresa).first()
+        self.capitan = Capitan.objects.create(
+            empresa=self.empresa, nombre='Juan Perez', telefono='+5216121234567')
         self.fecha = date.today() + timedelta(days=3)
 
     def test_la_misma_panga_dos_veces_el_mismo_dia_se_rechaza(self):
-        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+        crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA,
                       embarcacion=self.panga)
 
-        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra = Reserva(**datos_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA))
         otra.embarcacion = self.panga
         with self.assertRaises(ValidationError) as ctx:
             otra.full_clean()
@@ -1501,10 +1554,10 @@ class UnaSalidaPorDiaTests(TestCase):
         self.assertIn('una sola salida por dia', str(ctx.exception))
 
     def test_el_mismo_capitan_dos_veces_el_mismo_dia_se_rechaza(self):
-        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+        crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA,
                       capitan=self.capitan)
 
-        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra = Reserva(**datos_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA))
         otra.capitan = self.capitan
         with self.assertRaises(ValidationError) as ctx:
             otra.full_clean()
@@ -1512,26 +1565,26 @@ class UnaSalidaPorDiaTests(TestCase):
         self.assertIn('capitan', ctx.exception.message_dict)
 
     def test_la_misma_panga_en_dias_distintos_se_acepta(self):
-        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+        crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA,
                       embarcacion=self.panga)
 
-        otra = Reserva(**datos_reserva(fecha=self.fecha + timedelta(days=1),
+        otra = Reserva(**datos_reserva(self.empresa, fecha=self.fecha + timedelta(days=1),
                                        estado=Reserva.Estado.PAGADA))
         otra.embarcacion = self.panga
         otra.full_clean()
 
     def test_una_cancelada_suelta_su_panga(self):
-        cancelada = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+        cancelada = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA,
                                   embarcacion=self.panga)
         cancelada.estado = Reserva.Estado.CANCELADA
         cancelada.save()
 
-        otra = Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+        otra = Reserva(**datos_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA))
         otra.embarcacion = self.panga
         otra.full_clean()
 
     def test_editar_una_reserva_ya_asignada_no_choca_consigo_misma(self):
-        reserva = crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA,
+        reserva = crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA,
                                 embarcacion=self.panga)
 
         reserva.nombre_cliente = 'Ana Ruiz Corregido'
@@ -1539,6 +1592,7 @@ class UnaSalidaPorDiaTests(TestCase):
 
     def test_una_reserva_sin_panga_no_choca_con_otra_sin_panga(self):
         """Dos viajes sin repartir el mismo dia son lo normal, no un choque."""
-        crear_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)
 
-        Reserva(**datos_reserva(fecha=self.fecha, estado=Reserva.Estado.PAGADA)).full_clean()
+        Reserva(**datos_reserva(
+            self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)).full_clean()
