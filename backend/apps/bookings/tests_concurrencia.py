@@ -14,6 +14,14 @@ El escenario: dos clientes distintos pagan el ultimo lugar del mismo dia al
 mismo tiempo. Sin el lock, las dos transacciones cuentan `cupo - 1` ocupadas,
 las dos pasan la validacion y las dos quedan confirmadas — sobreventa, y alguien
 llega al muelle a las 6 de la manana sin panga.
+
+`TransactionTestCase` no hereda el `setUp` de `EmpresaTestCase` (pensado para
+`TestCase`, transaccional): cada clase crea su propia Sede/Empresa desde cero.
+Y el punto entero de este archivo es que cada hilo abre **su propia conexion**,
+que el `con_empresa` del hilo principal no cubre -- cada `target` de hilo
+resuelve `Empresa` y abre su propio `con_empresa` a partir de un `empresa_id`
+capturado ANTES de lanzar el hilo (no el objeto, que quedo resuelto en la
+conexion principal).
 """
 from datetime import date, time, timedelta
 from decimal import Decimal
@@ -22,6 +30,8 @@ from unittest import mock, skipUnless
 from django.db import connection, connections
 from django.test import TransactionTestCase
 
+from apps.tenancy import scope
+from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
 from .models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, Reserva
@@ -32,8 +42,20 @@ SOLO_POSTGRES = skipUnless(
 )
 
 
-def _datos(**overrides):
+def _crear_empresa_de_prueba():
+    """`TransactionTestCase` trunca las tablas entre casos -- no hereda el `setUp`
+    de `EmpresaTestCase` (pensado para `TestCase`, transaccional). Cada test de este
+    archivo crea su propia Sede/Empresa desde cero, igual que hacia antes con la
+    flota."""
+    sede = Sede.objects.create(
+        nombre='Sede concurrencia', slug='sede-concurrencia', zona_horaria='America/Mazatlan')
+    return Empresa.objects.create(
+        sede=sede, nombre='Empresa concurrencia', slug='empresa-concurrencia', activo=True)
+
+
+def _datos(empresa, **overrides):
     base = {
+        'empresa': empresa,
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -64,29 +86,38 @@ class SobreventaConcurrenteTests(TransactionTestCase):
     """El ultimo lugar del dia solo se puede vender una vez."""
 
     def setUp(self):
-        crear_flota()  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
-        self.fecha = date.today() + timedelta(days=10)
+        self.empresa = _crear_empresa_de_prueba()
+        with scope.con_empresa(self.empresa):
+            crear_flota(self.empresa)  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
+            self.fecha = date.today() + timedelta(days=10)
 
-        # Se llena el dia hasta dejar exactamente un lugar libre.
-        for _ in range(CUPO_MAXIMO_DEFAULT - 1):
-            reserva = Reserva(**_datos(fecha=self.fecha, estado=Reserva.Estado.PAGADA))
-            reserva.full_clean()
-            reserva.save()
+            # Se llena el dia hasta dejar exactamente un lugar libre.
+            for _ in range(CUPO_MAXIMO_DEFAULT - 1):
+                reserva = Reserva(**_datos(self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA))
+                reserva.full_clean()
+                reserva.save()
 
-        # Dos clientes distintos, los dos a punto de pagar ese ultimo lugar.
-        # Sin digitos en el nombre: `validar_nombre_persona` los rechaza (ver
-        # apps/bookings/validators.py).
-        self.pendientes = []
-        for nombre in ('Cliente Uno', 'Cliente Dos'):
-            reserva = Reserva(**_datos(
-                fecha=self.fecha,
-                nombre_cliente=nombre,
-                precio_total=Decimal('4500.00'),
-                forma_pago=Reserva.FormaPago.COMPLETO,
-            ))
-            reserva.full_clean()
-            reserva.save()
-            self.pendientes.append(reserva)
+            # Dos clientes distintos, los dos a punto de pagar ese ultimo lugar.
+            # Sin digitos en el nombre: `validar_nombre_persona` los rechaza (ver
+            # apps/bookings/validators.py).
+            self.pendientes = []
+            for nombre in ('Cliente Uno', 'Cliente Dos'):
+                reserva = Reserva(**_datos(
+                    self.empresa,
+                    fecha=self.fecha,
+                    nombre_cliente=nombre,
+                    precio_total=Decimal('4500.00'),
+                    forma_pago=Reserva.FormaPago.COMPLETO,
+                ))
+                reserva.full_clean()
+                reserva.save()
+                self.pendientes.append(reserva)
+        # `con_empresa` abre `transaction.atomic()` -- al salir del `with` aqui, en
+        # setUp, ese atomic hace COMMIT de verdad (TransactionTestCase no envuelve el
+        # test en una transaccion exterior como TestCase si hace) -- las filas quedan
+        # committeadas y visibles para las conexiones nuevas que abriran los hilos.
+        # Sin este `with` explicito, la carrera seria invisible cross-conexion, justo
+        # la visibilidad que TransactionTestCase existe para dar.
 
     def _pagar_en_paralelo(self):
         """Aplica los dos pagos a la vez, cada uno en su propio hilo y conexion.
@@ -97,6 +128,10 @@ class SobreventaConcurrenteTests(TransactionTestCase):
 
         from apps.payments.services import aplicar_pago_exitoso
 
+        empresa_id = self.empresa.pk  # capturado ANTES de lanzar el hilo: el objeto
+        # `Empresa` resuelto en la conexion principal no debe cruzar al hilo, cada
+        # hilo debe resolver el suyo en su propia conexion (misma regla que un
+        # callback on_commit).
         resultados = [None, None]
         errores = [None, None]
         # Las dos peticiones deben entrar a la vez o no hay carrera que probar.
@@ -105,7 +140,9 @@ class SobreventaConcurrenteTests(TransactionTestCase):
         def pagar(indice):
             try:
                 arrancar.wait(timeout=10)
-                resultados[indice] = aplicar_pago_exitoso(_intent_falso(self.pendientes[indice]))
+                empresa_del_hilo = Empresa.objects.get(pk=empresa_id)
+                with scope.con_empresa(empresa_del_hilo):
+                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(self.pendientes[indice]))
             except Exception as exc:  # noqa: BLE001 — se re-lanza en el hilo principal
                 errores[indice] = exc
             finally:
@@ -129,7 +166,7 @@ class SobreventaConcurrenteTests(TransactionTestCase):
         self._pagar_en_paralelo()
 
         pagadas = Reserva.objects.filter(
-            fecha=self.fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO
+            fecha=self.fecha, empresa=self.empresa, estado__in=ESTADOS_QUE_OCUPAN_CUPO
         ).count()
 
         self.assertEqual(
@@ -168,7 +205,9 @@ class LockDelDiaTests(TransactionTestCase):
         # Sin flota no cabe nadie y los dos pagos salen con `sin_cupo` antes de
         # llegar al lock, que es lo que esta clase dice probar. `TransactionTestCase`
         # trunca las tablas entre casos, asi que la flota de la otra clase no sirve.
-        crear_flota()
+        self.empresa = _crear_empresa_de_prueba()
+        with scope.con_empresa(self.empresa):
+            crear_flota(self.empresa)
 
     @mock.patch('apps.payments.services.stripe.Refund.create')
     def test_dias_distintos_no_se_bloquean_entre_si(self, refund):
@@ -176,16 +215,19 @@ class LockDelDiaTests(TransactionTestCase):
 
         from apps.payments.services import APLICADO, aplicar_pago_exitoso
 
-        reservas = []
-        for i in range(2):
-            reserva = Reserva(**_datos(
-                fecha=date.today() + timedelta(days=10 + i),
-                precio_total=Decimal('4500.00'),
-                forma_pago=Reserva.FormaPago.COMPLETO,
-            ))
-            reserva.full_clean()
-            reserva.save()
-            reservas.append(reserva)
+        empresa_id = self.empresa.pk
+        with scope.con_empresa(self.empresa):
+            reservas = []
+            for i in range(2):
+                reserva = Reserva(**_datos(
+                    self.empresa,
+                    fecha=date.today() + timedelta(days=10 + i),
+                    precio_total=Decimal('4500.00'),
+                    forma_pago=Reserva.FormaPago.COMPLETO,
+                ))
+                reserva.full_clean()
+                reserva.save()
+                reservas.append(reserva)
 
         resultados = [None, None]
         arrancar = threading.Barrier(2)
@@ -193,7 +235,9 @@ class LockDelDiaTests(TransactionTestCase):
         def pagar(indice):
             try:
                 arrancar.wait(timeout=10)
-                resultados[indice] = aplicar_pago_exitoso(_intent_falso(reservas[indice]))
+                empresa_del_hilo = Empresa.objects.get(pk=empresa_id)
+                with scope.con_empresa(empresa_del_hilo):
+                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(reservas[indice]))
             finally:
                 connections.close_all()
 
