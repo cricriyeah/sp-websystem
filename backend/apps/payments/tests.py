@@ -12,6 +12,7 @@ from django.core.management import call_command
 from django.db import connection
 from django.db.utils import DatabaseError
 from django.test import RequestFactory, TestCase, TransactionTestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
@@ -1535,3 +1536,21 @@ class ValidarCodigoPromocionalViewPasaLaEmpresaTests(TestCase):
         ValidarCodigoPromocionalView.as_view()(request, empresa_slug='sal-y-sol')
 
         mock_evaluar.assert_called_once_with('VERANO10', 'a@example.com', empresa)
+
+
+class PaymentsUrlsTests(TestCase):
+    def test_crear_pago_incluye_el_slug(self):
+        url = reverse('crear-pago', kwargs={'empresa_slug': 'sal-y-sol', 'pk': 1})
+        self.assertEqual(url, '/api/sal-y-sol/reservas/1/crear-pago/')
+
+    def test_reserva_estado_incluye_el_slug(self):
+        url = reverse('reserva-estado', kwargs={'empresa_slug': 'sal-y-sol'})
+        self.assertEqual(url, '/api/sal-y-sol/reservas/estado/')
+
+    def test_codigo_promocional_validar_incluye_el_slug(self):
+        url = reverse('codigo-promocional-validar', kwargs={'empresa_slug': 'sal-y-sol'})
+        self.assertEqual(url, '/api/sal-y-sol/codigo-promocional/validar/')
+
+    def test_stripe_webhook_incluye_el_slug(self):
+        url = reverse('stripe-webhook', kwargs={'empresa_slug': 'sal-y-sol'})
+        self.assertEqual(url, '/api/sal-y-sol/stripe/webhook/')
