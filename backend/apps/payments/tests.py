@@ -1554,3 +1554,60 @@ class PaymentsUrlsTests(TestCase):
     def test_stripe_webhook_incluye_el_slug(self):
         url = reverse('stripe-webhook', kwargs={'empresa_slug': 'sal-y-sol'})
         self.assertEqual(url, '/api/sal-y-sol/stripe/webhook/')
+
+
+class ConciliarPagosPorEmpresaTests(TestCase):
+    def setUp(self):
+        self.sede = Sede.objects.create(
+            nombre='Sede conciliar test', slug='sede-conciliar-test', zona_horaria='America/Mazatlan',
+        )
+        self.empresa_con_llave = Empresa.objects.create(
+            sede=self.sede, nombre='Con llave', slug='con-llave',
+            stripe_secret_key='sk_test_x', stripe_webhook_secret='whsec_x',
+            stripe_publishable_key='pk_x',
+        )
+        self.empresa_sin_llave = Empresa.objects.create(
+            sede=self.sede, nombre='Sin llave', slug='sin-llave',
+            stripe_secret_key='', stripe_webhook_secret='', stripe_publishable_key='',
+        )
+
+    @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
+    def test_se_salta_empresas_sin_llave_sin_abortar_el_comando(self, mock_configurar):
+        salida = StringIO()
+        call_command('conciliar_pagos', '--dry-run', stdout=salida)
+
+        mock_configurar.assert_called_once_with(self.empresa_con_llave)
+        texto = salida.getvalue()
+        self.assertIn('sin-llave', texto)
+        self.assertIn('sin llave de Stripe', texto)
+
+    @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
+    def test_itera_tambien_empresas_pausadas(self, mock_configurar):
+        self.empresa_con_llave.activo = False
+        self.empresa_con_llave.save(update_fields=['activo'])
+
+        call_command('conciliar_pagos', '--dry-run', stdout=StringIO())
+
+        mock_configurar.assert_called_once_with(self.empresa_con_llave)
+
+    @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
+    def test_filtra_las_reservas_pendientes_por_empresa(self, mock_configurar):
+        cliente = mock.Mock()
+        mock_configurar.return_value = cliente
+        with scope.con_empresa(self.empresa_con_llave):
+            crear_flota(self.empresa_con_llave)
+            reserva = Reserva(
+                empresa=self.empresa_con_llave, fecha=date.today() + timedelta(days=10),
+                hora=time(6, 0), numero_personas=2, nombre_cliente='Ana',
+                telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+                deslinde_nombre='Ana', checkout_id=uuid.uuid4(), moneda='MXN',
+                stripe_payment_intent_id='pi_pendiente',
+            )
+            reserva.full_clean()
+            reserva.save()
+
+        cliente.payment_intents.retrieve.return_value = mock.Mock(status='requires_payment_method')
+        call_command('conciliar_pagos', '--dry-run', stdout=StringIO())
+
+        cliente.payment_intents.retrieve.assert_called_once_with('pi_pendiente')
