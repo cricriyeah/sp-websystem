@@ -62,6 +62,19 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      # POSTGRES_USER/POSTGRES_PASSWORD del servicio de arriba NO cambian: es el
+      # superusuario de arranque del contenedor postgres:17, renombrarlo no le
+      # quita el superusuario. Este rol nuevo es el que corre `migrate` y los
+      # tests, sin SUPERUSER ni BYPASSRLS, para que tests_rls.py pruebe el
+      # aislamiento de verdad en vez de pasar en verde por estar exento de él.
+      - name: Crear rol de test sin privilegios (para probar RLS de verdad)
+        if: matrix.motor == 'postgres'
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d pescadeportiva_test -v ON_ERROR_STOP=1 -c \
+            "CREATE ROLE ci_rls LOGIN PASSWORD 'ci_rls_password_local' NOSUPERUSER NOBYPASSRLS CREATEDB;"
+
       # Sin llaves de Stripe ni de Resend: las rutas de cobro y de notificacion
       # van con esas APIs simuladas, asi que el CI no necesita credenciales.
       # Se incluye `config` ademas de `apps` — ahi vive la prueba de la sonda de
@@ -70,8 +83,12 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: ${{ matrix.settings }}
           DB_NAME: pescadeportiva_test
-          DB_USER: postgres
-          DB_PASSWORD: postgres
+          # ci_rls, no postgres: el rol sin BYPASSRLS creado arriba. La rama
+          # sqlite (config.settings.local) ignora estas dos variables por
+          # completo — DATABASES ahi esta fijo a sqlite3, no lee el entorno —
+          # asi que no hace falta condicionarlas por matrix.motor.
+          DB_USER: ci_rls
+          DB_PASSWORD: ci_rls_password_local
           DB_HOST: localhost
           DB_PORT: "5432"
         run: python manage.py test apps config --verbosity 2
