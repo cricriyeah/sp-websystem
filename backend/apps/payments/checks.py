@@ -1,41 +1,31 @@
-"""Check de arranque para las llaves de Stripe.
+"""Check de arranque para las llaves de Stripe, una fila de Empresa a la vez.
 
-Existe por un caso real: en Render quedo el signing secret del webhook
-(`whsec_...`) capturado dentro de `STRIPE_SECRET_KEY`. Stripe rechazaba cada
-llamada con `AuthenticationError`, `crear-pago` devolvia 502 y el checkout
-mostraba un error generico. Nada en el sintoma apuntaba a la causa: el sitio
-estaba arriba, la base contestaba, la tarifa se veia y los tests pasaban.
+Con una Empresa por marca (ver apps.tenancy), cada una trae sus propias llaves
+en `Empresa.stripe_secret_key`/`stripe_webhook_secret`. Este check es la red de
+seguridad de ARRANQUE: detecta una llave cruzada que ya haya quedado guardada
+(migracion de datos, fixture, el backfill de `tenancy.0002`) sin hablar con la
+red. La validacion que de verdad importa corre en `Empresa.clean()`
+(apps/tenancy/models.py) — un jefe que teclea una llave cruzada en el admin la
+ve rechazada ahi mismo, en caliente; este check no cubre eso, solo lo que ya
+esta en la base al arrancar.
 
-Las tres llaves de Stripe tienen prefijo fijo, asi que un cruce se detecta sin
-hablar con la red. Es Error y no Warning a proposito: el `buildCommand` de Render
-corre `collectstatic` y `migrate`, los dos pasan por los system checks, asi que
-una llave cruzada se vuelve un deploy que no sale en vez de un checkout roto.
-
-**Lo que este check no puede hacer**: decir si la llave es *valida*, solo si
-tiene la forma que le toca. Una `sk_test_` de otra cuenta pasa igual. Tampoco
-cubre el caso de que las variables no esten disponibles en el build — ahi el
-check no ve nada y no reporta nada. Para confirmar contra Stripe de verdad:
-
-    python manage.py shell -c "
-    import stripe
-    from apps.payments.stripe_client import configurar_stripe
-    configurar_stripe(); print('cuenta:', stripe.Account.retrieve().id)"
+Envuelto en try/except DatabaseError: en el deploy que instala esta pieza, el
+check corre durante `collectstatic`/`migrate` antes de que la tabla
+`tenancy_empresa` exista.
 """
-from django.conf import settings
 from django.core.checks import Error, register
+from django.db.utils import DatabaseError
 
-# (ajuste, prefijo que le pone Stripe, codigo, como se llama en el dashboard).
-# Vacio significa "esta funcion esta apagada" y es comportamiento documentado
-# (sin llave, `crear-pago` responde 503), asi que solo se revisa lo que trae algo.
+# (atributo de Empresa, prefijo que le pone Stripe, codigo, como se llama en el dashboard).
 LLAVES_DE_STRIPE = (
     (
-        'STRIPE_SECRET_KEY',
+        'stripe_secret_key',
         'sk_',
         'payments.E001',
         'la llave secreta (Developers -> API keys)',
     ),
     (
-        'STRIPE_WEBHOOK_SECRET',
+        'stripe_webhook_secret',
         'whsec_',
         'payments.E002',
         'el signing secret del endpoint (Developers -> Webhooks)',
@@ -45,25 +35,31 @@ LLAVES_DE_STRIPE = (
 
 @register()
 def revisar_llaves_de_stripe(app_configs, **kwargs):
-    """Reporta las llaves de Stripe que no tienen el prefijo de su tipo.
-
-    El mensaje **nunca incluye el valor**: un check que imprime la llave la deja
-    escrita en el log del deploy, que es justo lo que no se quiere.
+    """Reporta, por Empresa, las llaves de Stripe que no tienen el prefijo de
+    su tipo. El mensaje **nunca incluye el valor** de la llave, solo el slug
+    de la Empresa y el nombre del campo.
     """
-    errores = []
+    from apps.tenancy.models import Empresa
 
-    for ajuste, prefijo, codigo, de_donde_sale in LLAVES_DE_STRIPE:
-        valor = getattr(settings, ajuste, '')
-        if valor and not valor.startswith(prefijo):
-            errores.append(Error(
-                f'{ajuste} no empieza con "{prefijo}", asi que no es la llave que '
-                f'esta variable espera.',
-                hint=(
-                    f'Parece una llave de Stripe capturada en la variable equivocada. '
-                    f'En {ajuste} va {de_donde_sale}. Corrigela en el environment group '
-                    f'de Render y redespliega. Ver docs/deploy/GO-LIVE.md, Fase 5.'
-                ),
-                id=codigo,
-            ))
+    try:
+        empresas = list(Empresa.objects.all())
+    except DatabaseError:
+        return []
+
+    errores = []
+    for empresa in empresas:
+        for atributo, prefijo, codigo, de_donde_sale in LLAVES_DE_STRIPE:
+            valor = getattr(empresa, atributo, '')
+            if valor and not valor.startswith(prefijo):
+                errores.append(Error(
+                    f'Empresa "{empresa.slug}": {atributo} no empieza con "{prefijo}", '
+                    f'asi que no es la llave que este campo espera.',
+                    hint=(
+                        f'Parece una llave de Stripe capturada en el campo equivocado. '
+                        f'En {atributo} va {de_donde_sale}. Corrigela en el admin '
+                        f'(Empresas -> {empresa.slug}). Ver docs/deploy/GO-LIVE.md, Fase 5.'
+                    ),
+                    id=codigo,
+                ))
 
     return errores

@@ -8,6 +8,7 @@ from unittest import mock
 
 import stripe
 from django.core.management import call_command
+from django.db.utils import DatabaseError
 from django.test import TestCase, override_settings
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
@@ -28,61 +29,77 @@ from .pricing import (
     personas_extra,
 )
 
+# Sigue usado por otras clases de este archivo (CrearPagoTests y hermanas) que
+# todavia leen las llaves de settings, no de Empresa -- las retrofitea P5/P6.
+# No lo consume RevisarLlavesDeStripeTests (ese check ya lee Empresa).
 LLAVES = {'STRIPE_SECRET_KEY': 'sk_test_falsa', 'STRIPE_WEBHOOK_SECRET': 'whsec_falsa'}
 
 
-class LlavesDeStripeCruzadasTests(TestCase):
-    """Check de arranque que detecta una llave de Stripe puesta en la variable
-    equivocada.
+class RevisarLlavesDeStripeTests(TestCase):
+    """Check de arranque que detecta una llave de Stripe puesta en el campo
+    equivocado, ahora por fila de Empresa en vez de por variable de entorno.
 
     Nace de un caso real en produccion: en Render quedo el signing secret del
-    webhook (`whsec_...`) dentro de `STRIPE_SECRET_KEY`. Stripe rechazaba cada
-    llamada con `AuthenticationError`, `crear-pago` devolvia 502 y el checkout
-    mostraba un error generico — el sintoma no apuntaba a la causa por ningun
-    lado. Las dos llaves tienen prefijo fijo, asi que el cruce se puede ver sin
-    hablar con Stripe.
+    webhook (`whsec_...`) dentro de `STRIPE_SECRET_KEY`. Con una Empresa por
+    marca, cada una trae sus propias llaves en su propia fila — el check
+    revisa cada una por separado y el mensaje identifica cual.
     """
 
-    def errores(self, **llaves):
-        with override_settings(**llaves):
-            return [e.id for e in revisar_llaves_de_stripe(None)]
+    def setUp(self):
+        # Slug distinto de 'la-paz' -- ya existe, sembrado por
+        # tenancy.0002_crear_sede_empresa_la_paz (ver apps/testing.py).
+        self.sede = Sede.objects.create(
+            nombre='Sede stripe test', slug='sede-stripe-test', zona_horaria='America/Mazatlan',
+        )
+
+    def _crear_empresa(self, slug, secreta='sk_test_ok', webhook='whsec_ok'):
+        return Empresa.objects.create(
+            sede=self.sede, nombre=slug, slug=slug,
+            stripe_secret_key=secreta, stripe_webhook_secret=webhook,
+            stripe_publishable_key='pk_test_ok',
+        )
 
     def test_llaves_correctas_no_reportan_nada(self):
-        self.assertEqual(self.errores(**LLAVES), [])
+        self._crear_empresa('sal-y-sol-2')
+        self.assertEqual(revisar_llaves_de_stripe(None), [])
 
     def test_llaves_vacias_no_reportan_nada(self):
-        # Vacio significa "esta funcion esta apagada", que es comportamiento
-        # documentado: sin llaves, crear-pago responde 503 a proposito.
-        self.assertEqual(self.errores(STRIPE_SECRET_KEY='', STRIPE_WEBHOOK_SECRET=''), [])
+        # Vacio significa "Stripe apagado para esta Empresa", comportamiento
+        # documentado (crear-pago responde 503), no una llave cruzada.
+        self._crear_empresa('sin-stripe', secreta='', webhook='')
+        self.assertEqual(revisar_llaves_de_stripe(None), [])
 
     def test_el_signing_secret_dentro_de_la_llave_secreta(self):
-        """El caso que de verdad paso."""
-        self.assertEqual(
-            self.errores(STRIPE_SECRET_KEY='whsec_falsa', STRIPE_WEBHOOK_SECRET='whsec_falsa'),
-            ['payments.E001'],
-        )
+        self._crear_empresa('sal-y-sol-2', secreta='whsec_falsa', webhook='whsec_ok')
+        errores = revisar_llaves_de_stripe(None)
+        self.assertEqual([e.id for e in errores], ['payments.E001'])
+        self.assertIn('sal-y-sol-2', errores[0].msg)
 
     def test_la_llave_secreta_dentro_del_signing_secret(self):
-        self.assertEqual(
-            self.errores(STRIPE_SECRET_KEY='sk_test_falsa', STRIPE_WEBHOOK_SECRET='sk_test_falsa'),
-            ['payments.E002'],
-        )
+        self._crear_empresa('sal-y-sol-2', secreta='sk_test_ok', webhook='sk_test_falsa')
+        errores = revisar_llaves_de_stripe(None)
+        self.assertEqual([e.id for e in errores], ['payments.E002'])
 
-    def test_las_dos_cruzadas_reportan_las_dos(self):
-        self.assertEqual(
-            self.errores(STRIPE_SECRET_KEY='whsec_falsa', STRIPE_WEBHOOK_SECRET='sk_test_falsa'),
-            ['payments.E001', 'payments.E002'],
-        )
-
-    def test_la_publicable_en_lugar_de_la_secreta(self):
-        # Otro cruce plausible: las dos salen de la misma pantalla del dashboard.
-        self.assertEqual(self.errores(STRIPE_SECRET_KEY='pk_test_falsa'), ['payments.E001'])
+    def test_dos_empresas_cada_una_reporta_la_suya(self):
+        self._crear_empresa('cruzada', secreta='whsec_falsa')
+        self._crear_empresa('correcta')
+        errores = revisar_llaves_de_stripe(None)
+        self.assertEqual(len(errores), 1)
+        self.assertIn('cruzada', errores[0].msg)
 
     def test_el_mensaje_no_incluye_el_valor_de_la_llave(self):
-        """Un check que imprime la llave la deja en el log del deploy."""
-        with override_settings(STRIPE_SECRET_KEY='whsec_secretisimo'):
-            texto = ' '.join(f'{e.msg} {e.hint}' for e in revisar_llaves_de_stripe(None))
+        self._crear_empresa('sal-y-sol-2', secreta='whsec_secretisimo')
+        texto = ' '.join(f'{e.msg} {e.hint}' for e in revisar_llaves_de_stripe(None))
         self.assertNotIn('secretisimo', texto)
+
+    def test_tabla_inexistente_no_revienta(self):
+        # Ventana entre que corre collectstatic/migrate y que tenancy.0001
+        # crea la tabla — el check debe callar, no tronar el deploy.
+        with mock.patch(
+            'apps.tenancy.models.Empresa.objects.all',
+            side_effect=DatabaseError('relation "tenancy_empresa" does not exist'),
+        ):
+            self.assertEqual(revisar_llaves_de_stripe(None), [])
 
 
 CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
