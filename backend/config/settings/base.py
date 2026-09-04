@@ -133,6 +133,8 @@ WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
 WHATSAPP_TEMPLATE = os.environ.get('WHATSAPP_TEMPLATE', 'reserva_confirmada')
 WHATSAPP_TEMPLATE_LANG = os.environ.get('WHATSAPP_TEMPLATE_LANG', 'es_MX')
 
+from apps.tenancy import scope
+
 # Config visual de unfold. El tema (colores, sidebar) se define aqui en codigo,
 # no es editable en vivo desde el admin como admin_interface.
 UNFOLD = {
@@ -231,7 +233,10 @@ UNFOLD = {
                         'title': 'Finanzas',
                         'icon': 'payments',
                         'link': reverse_lazy('finanzas'),
-                        'permission': lambda request: request.user.is_superuser,
+                        'permission': lambda request: (
+                            scope.es_operador_plataforma(request.user)
+                            or scope.empresa_actual(request) is not None
+                        ),
                     },
                     {
                         'title': 'Tarifa',
@@ -267,6 +272,32 @@ UNFOLD = {
                 'title': 'Sistema',
                 'separator': True,
                 'items': [
+                    {
+                        'title': 'Sedes',
+                        'icon': 'location_on',
+                        'link': reverse_lazy('admin:tenancy_sede_changelist'),
+                        'permission': lambda request: scope.es_operador_plataforma(
+                            request.user
+                        ),
+                    },
+                    {
+                        'title': 'Empresas',
+                        'icon': 'store',
+                        'link': reverse_lazy('admin:tenancy_empresa_changelist'),
+                        'permission': lambda request: scope.es_operador_plataforma(
+                            request.user
+                        ),
+                    },
+                    {
+                        'title': 'Membresias',
+                        'icon': 'badge',
+                        'link': reverse_lazy(
+                            'admin:tenancy_membresiaempresa_changelist'
+                        ),
+                        'permission': lambda request: scope.es_operador_plataforma(
+                            request.user
+                        ),
+                    },
                     {
                         'title': 'Usuarios',
                         'icon': 'person',
@@ -308,6 +339,9 @@ MIDDLEWARE = [
     # Al final y despues de AuthenticationMiddleware, como pide su doc: necesita
     # ver el request ya con usuario para contar los intentos.
     'axes.middleware.AxesMiddleware',
+    # Al final de todo: necesita request.user (AuthenticationMiddleware) y no debe
+    # interferir con el bloqueo de fuerza bruta de Axes.
+    'apps.tenancy.middleware.EmpresaScopeMiddleware',
 ]
 
 # django-axes se engancha como backend de autenticacion: intercepta el login
