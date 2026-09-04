@@ -9,6 +9,7 @@ from unittest import mock
 from django.test import TestCase
 
 from apps.fleet.models import Tarifa
+from apps.tenancy.models import Empresa, Sede
 
 
 class HealthzTests(TestCase):
@@ -25,12 +26,18 @@ class HealthzTests(TestCase):
         self.assertEqual(respuesta.json(), {'status': 'ok', 'database': 'ok'})
 
     def test_la_ruta_de_tarifa_si_falla_sin_datos(self):
-        """Deja constancia de por que /api/tarifa/ no puede ser el health check.
+        """Deja constancia de por que /api/<empresa>/tarifa/ no puede ser el health
+        check.
 
         Si algun dia esta ruta deja de dar 503 sin tarifa, este test falla y
         obliga a releer la decision en vez de asumirla.
         """
-        self.assertEqual(self.client.get('/api/tarifa/').status_code, 503)
+        sede = Sede.objects.create(
+            nombre='Sede health', slug='sede-health', zona_horaria='America/Mazatlan')
+        empresa = Empresa.objects.create(
+            sede=sede, nombre='Empresa health', slug='empresa-health', activo=True)
+
+        self.assertEqual(self.client.get(f'/api/{empresa.slug}/tarifa/').status_code, 503)
 
     def test_reporta_503_si_la_base_no_contesta(self):
         """Un deploy con credenciales mal puestas debe morir en el health check,
