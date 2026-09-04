@@ -19,7 +19,7 @@ from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, Res
 from apps.fleet.models import CodigoPromocional, ExtrasItem, Tarifa, TransportePrecio
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
-from apps.testing import ApiTestCase, crear_flota
+from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
 
 from .checks import revisar_llaves_de_stripe
 from .services import APLICADO, _reserva_del_cargo, aplicar_pago_exitoso, reembolsar
@@ -118,9 +118,10 @@ class RevisarLlavesDeStripeTests(TestCase):
 CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
 
 
-def crear_reserva(**overrides):
-    crear_flota()  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
+def crear_reserva(empresa, **overrides):
+    crear_flota(empresa)  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
     datos = {
+        'empresa': empresa,
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -212,11 +213,12 @@ class PricingTests(TestCase):
 class CrearPagoTests(ApiTestCase):
     def setUp(self):
         Tarifa.objects.create(
+            empresa=self.empresa,
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
             precio_persona_extra=Decimal('500.00'), precio_persona_extra_usd=Decimal('30.00'),
         )
-        self.reserva = crear_reserva()
-        self.url = f'/api/reservas/{self.reserva.pk}/crear-pago/'
+        self.reserva = crear_reserva(self.empresa)
+        self.url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': self.reserva.pk})
 
     def post(self, **body):
         datos = {'forma_pago': 'completo', 'checkout_id': str(self.reserva.checkout_id)}
@@ -228,6 +230,7 @@ class CrearPagoTests(ApiTestCase):
         congelado todavia (eso solo lo escribe `CrearPagoView`). `cantidad_solicitada`
         es de la seleccion (`ReservaExtra`), no del catalogo — se separa aparte."""
         datos = {
+            'empresa': self.empresa,
             'tipo': ExtrasItem.Tipo.BRUNCH, 'nombre': 'Brunch', 'precio': Decimal('300'),
             'precio_usd': Decimal('18'), 'cobrar_por_persona': True,
         }
@@ -240,8 +243,10 @@ class CrearPagoTests(ApiTestCase):
     def seleccionar_transporte(self, reserva=None, zona=TransportePrecio.Zona.CENTRO, **precio_overrides):
         """Idem para transporte: crea el precio de zona vigente y deja la
         SELECCION (sin `numero_personas`/`precio_calculado`) en la reserva."""
-        datos = {'zona': zona, 'precio_base': Decimal('2000'), 'recargo_grupo': Decimal('1500'),
-                  'min_personas_recargo': 4}
+        datos = {
+            'empresa': self.empresa, 'zona': zona, 'precio_base': Decimal('2000'),
+            'recargo_grupo': Decimal('1500'), 'min_personas_recargo': 4,
+        }
         datos.update(precio_overrides)
         TransportePrecio.objects.create(**datos)
         return ReservaTransporte.objects.create(
@@ -405,10 +410,10 @@ class CrearPagoTests(ApiTestCase):
 
     @mock.patch('stripe.PaymentIntent.create')
     def test_sin_precio_de_extra_en_dolares_no_se_cobra_a_medias(self, create):
-        reserva = crear_reserva(moneda='USD')
+        reserva = crear_reserva(self.empresa, moneda='USD')
         self.seleccionar_extra(reserva=reserva, precio=Decimal('300'), precio_usd=None)
         response = self.client.post(
-            f'/api/reservas/{reserva.pk}/crear-pago/',
+            reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
             {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
             content_type='application/json',
         )
@@ -470,12 +475,13 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch('stripe.PaymentIntent.create')
     def test_sin_cargo_en_dolares_no_se_cobra_a_medias(self, create):
         Tarifa.objects.create(
+            empresa=self.empresa,
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
             precio_persona_extra=Decimal('500.00'), precio_persona_extra_usd=None,
         )
-        reserva = crear_reserva(moneda='USD', numero_personas=5)
+        reserva = crear_reserva(self.empresa, moneda='USD', numero_personas=5)
         response = self.client.post(
-            f'/api/reservas/{reserva.pk}/crear-pago/',
+            reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
             {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
             content_type='application/json',
         )
@@ -535,10 +541,10 @@ class CrearPagoTests(ApiTestCase):
 
     @mock.patch('stripe.PaymentIntent.create')
     def test_sin_precio_en_dolares_responde_503(self, create):
-        Tarifa.objects.create(precio=Decimal('4500.00'), precio_usd=None)
-        reserva = crear_reserva(moneda='USD')
+        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'), precio_usd=None)
+        reserva = crear_reserva(self.empresa, moneda='USD')
         response = self.client.post(
-            f'/api/reservas/{reserva.pk}/crear-pago/',
+            reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
             {'amenities': [], 'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
             content_type='application/json',
         )
@@ -593,7 +599,9 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch('stripe.PaymentIntent.create')
     def test_codigo_promocional_valido_aplica_el_descuento(self, create):
         create.return_value = intent_falso()
-        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
 
         response = self.post(codigo_promocional='VERANO10')
 
@@ -607,7 +615,9 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch('stripe.PaymentIntent.create')
     def test_codigo_promocional_no_distingue_mayusculas_ni_espacios(self, create):
         create.return_value = intent_falso()
-        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
 
         response = self.post(codigo_promocional=' verano10 ')
 
@@ -625,7 +635,7 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch('stripe.PaymentIntent.create')
     def test_codigo_promocional_inactivo_responde_400(self, create):
         CodigoPromocional.objects.create(
-            codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
+            empresa=self.empresa, codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
         )
         response = self.post(codigo_promocional='VIEJO')
 
@@ -635,7 +645,8 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch('stripe.PaymentIntent.create')
     def test_codigo_promocional_bajo_el_monto_minimo_responde_400(self, create):
         CodigoPromocional.objects.create(
-            codigo='DESDE10000', porcentaje_descuento=Decimal('10'), monto_minimo=Decimal('10000'),
+            empresa=self.empresa, codigo='DESDE10000', porcentaje_descuento=Decimal('10'),
+            monto_minimo=Decimal('10000'),
         )
         response = self.post(codigo_promocional='DESDE10000')
 
@@ -654,7 +665,9 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch('stripe.PaymentIntent.create')
     def test_el_descuento_se_calcula_sobre_el_subtotal_con_extras_y_transporte(self, create):
         create.return_value = intent_falso()
-        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
         self.seleccionar_extra()  # 2 personas x 300 = 600
         self.seleccionar_transporte()  # 2000, bajo el minimo de recargo
 
@@ -668,15 +681,22 @@ class CrearPagoTests(ApiTestCase):
 
 class ValidarCodigoPromocionalTests(ApiTestCase):
     def get(self, **params):
-        return self.client.get('/api/codigo-promocional/validar/', params)
+        return self.client.get(
+            reverse('codigo-promocional-validar', kwargs={'empresa_slug': self.empresa.slug}),
+            params,
+        )
 
     def test_codigo_valido(self):
-        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
         body = self.get(codigo='VERANO10', correo_cliente='ana@example.com').json()
         self.assertEqual(body, {'valido': True, 'porcentaje_descuento': '10.00'})
 
     def test_codigo_no_distingue_mayusculas_ni_espacios(self):
-        CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
         body = self.get(codigo=' verano10 ', correo_cliente='ana@example.com').json()
         self.assertTrue(body['valido'])
 
@@ -686,7 +706,7 @@ class ValidarCodigoPromocionalTests(ApiTestCase):
 
     def test_codigo_inactivo_da_la_misma_respuesta_generica_que_uno_inexistente(self):
         CodigoPromocional.objects.create(
-            codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
+            empresa=self.empresa, codigo='VIEJO', porcentaje_descuento=Decimal('10'), activo=False,
         )
         self.assertEqual(
             self.get(codigo='VIEJO', correo_cliente='ana@example.com').json(),
@@ -699,9 +719,11 @@ class ValidarCodigoPromocionalTests(ApiTestCase):
 
     def test_agotado_para_este_cliente_no_es_valido(self):
         promo = CodigoPromocional.objects.create(
-            codigo='UNAVEZ', porcentaje_descuento=Decimal('10'), usos_maximos_por_cliente=1,
+            empresa=self.empresa, codigo='UNAVEZ', porcentaje_descuento=Decimal('10'),
+            usos_maximos_por_cliente=1,
         )
         crear_reserva(
+            self.empresa,
             codigo_promocional=promo, estado=Reserva.Estado.PAGADA,
             correo_cliente='repetido@example.com',
         )
@@ -719,10 +741,13 @@ class EstadoReservaTests(ApiTestCase):
     hace falta para reponer esa pantalla, sin volver a golpear a Stripe."""
 
     def setUp(self):
-        self.reserva = crear_reserva()
+        self.reserva = crear_reserva(self.empresa)
 
     def get(self, checkout_id):
-        return self.client.get('/api/reservas/estado/', {'checkout_id': checkout_id})
+        return self.client.get(
+            reverse('reserva-estado', kwargs={'empresa_slug': self.empresa.slug}),
+            {'checkout_id': checkout_id},
+        )
 
     def test_checkout_id_invalido_responde_400(self):
         self.assertEqual(self.get('no-es-un-uuid').status_code, 400)
@@ -751,6 +776,7 @@ class EstadoReservaTests(ApiTestCase):
         que el cliente ya habia elegido para un extra con `cantidad_editable`
         o para el transporte (ver fleet.ExtrasItem.cantidad_editable)."""
         licencia = ExtrasItem.objects.create(
+            empresa=self.empresa,
             tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
             cantidad_editable=True,
         )
@@ -788,6 +814,7 @@ class EstadoReservaTests(ApiTestCase):
         self.reserva.save()
 
         item = ExtrasItem.objects.create(
+            empresa=self.empresa,
             tipo=ExtrasItem.Tipo.BRUNCH, nombre='Brunch', precio=Decimal('300'),
             cobrar_por_persona=True,
         )
@@ -822,7 +849,9 @@ class EstadoReservaTests(ApiTestCase):
         self.assertIsNone(body['transporte'])
 
     def test_pagada_incluye_el_codigo_promocional_y_descuento_ya_congelados(self):
-        promo = CodigoPromocional.objects.create(codigo='VERANO10', porcentaje_descuento=Decimal('10'))
+        promo = CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
         self.reserva.estado = Reserva.Estado.PAGADA
         self.reserva.precio_total = Decimal('4050.00')
         self.reserva.monto_pagado = Decimal('4050.00')
@@ -863,10 +892,10 @@ class EstadoReservaTests(ApiTestCase):
         vieja.save(update_fields=['estado'])
 
         nueva = crear_reserva(
+            self.empresa,
             fecha=date.today() + timedelta(days=20), nombre_cliente='Otro Cliente',
         )
         self.assertEqual(nueva.checkout_id, vieja.checkout_id)
-
         body = self.get(str(vieja.checkout_id)).json()
         self.assertEqual(body['estado'], 'pendiente_pago')
         self.assertEqual(body['reserva_id'], nueva.pk)
@@ -882,10 +911,11 @@ class EstadoReservaTests(ApiTestCase):
 
 
 @override_settings(**LLAVES)
-class WebhookTests(TestCase):
+class WebhookTests(ApiTestCase):
     def setUp(self):
-        Tarifa.objects.create(precio=Decimal('4500.00'))
-        self.reserva = crear_reserva()
+        super().setUp()
+        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
+        self.reserva = crear_reserva(self.empresa)
         self.reserva.precio_total = Decimal('4500.00')
         self.reserva.forma_pago = Reserva.FormaPago.COMPLETO
         self.reserva.stripe_payment_intent_id = 'pi_1'
@@ -894,7 +924,8 @@ class WebhookTests(TestCase):
     def entregar(self, evento):
         with mock.patch('stripe.Webhook.construct_event', return_value=evento):
             return self.client.post(
-                '/api/stripe/webhook/', '{}', content_type='application/json',
+                reverse('stripe-webhook', kwargs={'empresa_slug': self.empresa.slug}),
+                '{}', content_type='application/json',
                 HTTP_STRIPE_SIGNATURE='falsa',
             )
 
@@ -1030,13 +1061,14 @@ class WebhookTests(TestCase):
 
 
 @override_settings(**LLAVES)
-class EventosDeStripeTests(TestCase):
+class EventosDeStripeTests(ApiTestCase):
     """Reembolsos y contracargos. Sin escuchar estos eventos, el dinero se mueve
     en Stripe y la base sigue contando otra historia."""
 
     def setUp(self):
-        Tarifa.objects.create(precio=Decimal('4500.00'))
-        self.reserva = crear_reserva(estado=Reserva.Estado.PAGADA)
+        super().setUp()
+        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
+        self.reserva = crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         self.reserva.precio_total = Decimal('4500.00')
         self.reserva.monto_pagado = Decimal('4500.00')
         self.reserva.stripe_payment_intent_id = 'pi_1'
@@ -1046,7 +1078,8 @@ class EventosDeStripeTests(TestCase):
         evento = {'id': 'evt_x', 'type': tipo, 'data': {'object': objeto}}
         with mock.patch('stripe.Webhook.construct_event', return_value=evento):
             return self.client.post(
-                '/api/stripe/webhook/', '{}', content_type='application/json',
+                reverse('stripe-webhook', kwargs={'empresa_slug': self.empresa.slug}),
+                '{}', content_type='application/json',
                 HTTP_STRIPE_SIGNATURE='falsa',
             )
 
@@ -1109,13 +1142,18 @@ class EventosDeStripeTests(TestCase):
 
 
 @override_settings(**LLAVES)
-class ConciliarPagosTests(TestCase):
+class ConciliarPagosTests(EmpresaTestCase):
     """El webhook puede perderse para siempre. Sin esta red, el cliente pago y
     no tiene reserva, y nadie se entera hasta que reclama."""
 
     def setUp(self):
-        Tarifa.objects.create(precio=Decimal('4500.00'))
-        self.reserva = crear_reserva()
+        # Asegurar que la empresa de prueba tiene llaves para que conciliar_pagos
+        # no la salte (itera Empresa.objects.all(), requiere stripe_secret_key).
+        self.empresa.stripe_secret_key = 'sk_test_falsa'
+        self.empresa.stripe_webhook_secret = 'whsec_falsa'
+        self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
+        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
+        self.reserva = crear_reserva(self.empresa)
         self.reserva.precio_total = Decimal('4500.00')
         self.reserva.forma_pago = Reserva.FormaPago.COMPLETO
         self.reserva.stripe_payment_intent_id = 'pi_1'
