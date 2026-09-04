@@ -11,7 +11,7 @@ import stripe
 from django.core.management import call_command
 from django.db import connection
 from django.db.utils import DatabaseError
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import RequestFactory, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
@@ -23,6 +23,13 @@ from apps.testing import ApiTestCase, crear_flota
 from .checks import revisar_llaves_de_stripe
 from .services import APLICADO, _reserva_del_cargo, aplicar_pago_exitoso, reembolsar
 from .stripe_client import configurar_stripe
+from .views import (
+    CrearPagoView,
+    EstadoReservaView,
+    PagoEnCurso,
+    StripeWebhookView,
+    ValidarCodigoPromocionalView,
+)
 from .pricing import (
     PERSONAS_INCLUIDAS,
     a_centavos,
@@ -1370,3 +1377,161 @@ class ReservaDelCargoAisladaPorEmpresaTests(TestCase):
         with scope.con_empresa(self.empresa_a):
             encontrada = _reserva_del_cargo({'payment_intent': 'pi_compartido'}, self.empresa_a)
         self.assertEqual(encontrada.pk, self.reserva_a.pk)
+
+
+class IntentDeTests(TestCase):
+    """_intent_de habla con el StripeClient explicito (P1), no con el modulo
+    stripe global, y usa la forma real del SDK: update (no modify),
+    idempotency_key en options (no en params)."""
+
+    def setUp(self):
+        self.view = CrearPagoView()
+        self.reserva = mock.Mock(stripe_payment_intent_id='', pk=42, moneda='MXN')
+
+    def test_crea_intent_nuevo_con_idempotency_en_options(self):
+        cliente = mock.Mock()
+        cliente.payment_intents.create.return_value = mock.Mock(id='pi_new')
+
+        self.view._intent_de(cliente, self.reserva, Decimal('100.00'))
+
+        params, options = cliente.payment_intents.create.call_args.args
+        self.assertNotIn('idempotency_key', params)
+        self.assertEqual(params['amount'], 10000)
+        self.assertEqual(params['currency'], 'mxn')
+        self.assertEqual(options, {'idempotency_key': 'reserva-42-mxn-10000'})
+
+    def test_reutiliza_intent_reutilizable_mismo_monto(self):
+        self.reserva.stripe_payment_intent_id = 'pi_1'
+        cliente = mock.Mock()
+        cliente.payment_intents.retrieve.return_value = mock.Mock(
+            status='requires_payment_method', amount=10000, currency='mxn', id='pi_1',
+        )
+
+        resultado = self.view._intent_de(cliente, self.reserva, Decimal('100.00'))
+
+        cliente.payment_intents.update.assert_not_called()
+        self.assertEqual(resultado.id, 'pi_1')
+
+    def test_ajusta_intent_con_update_no_modify(self):
+        self.reserva.stripe_payment_intent_id = 'pi_1'
+        cliente = mock.Mock()
+        cliente.payment_intents.retrieve.return_value = mock.Mock(
+            status='requires_payment_method', amount=5000, currency='mxn', id='pi_1',
+        )
+
+        self.view._intent_de(cliente, self.reserva, Decimal('100.00'))
+
+        cliente.payment_intents.update.assert_called_once_with(
+            'pi_1', {'amount': 10000, 'currency': 'mxn'},
+        )
+
+    def test_intent_ya_cobrando_lanza_pago_en_curso(self):
+        self.reserva.stripe_payment_intent_id = 'pi_1'
+        cliente = mock.Mock()
+        cliente.payment_intents.retrieve.return_value = mock.Mock(status='succeeded')
+
+        with self.assertRaises(PagoEnCurso):
+            self.view._intent_de(cliente, self.reserva, Decimal('100.00'))
+
+
+class ResolverCodigoPromocionalMultipleTests(TestCase):
+    """N6: dos Empresas con el mismo codigo (posible tras quitar unique=True
+    global) no debe reventar el checkout con 500."""
+
+    def setUp(self):
+        self.view = CrearPagoView()
+        self.sede = Sede.objects.create(
+            nombre='Sede codigo test', slug='sede-codigo-test', zona_horaria='America/Mazatlan',
+        )
+        self.empresa_a = Empresa.objects.create(
+            sede=self.sede, nombre='A', slug='empresa-codigo-a',
+            stripe_secret_key='sk_a', stripe_webhook_secret='whsec_a',
+            stripe_publishable_key='pk_a',
+        )
+
+    @mock.patch('apps.payments.views.CodigoPromocional.objects')
+    def test_multiple_objects_returned_da_400_no_500(self, mock_objects):
+        mock_objects.get.side_effect = CodigoPromocional.MultipleObjectsReturned
+        reserva = mock.Mock(correo_cliente='cliente@example.com', moneda='MXN')
+
+        _, descuento, error = self.view._resolver_codigo_promocional(
+            mock.Mock(data={'codigo_promocional': 'VERANO10'}),
+            reserva, Decimal('1000.00'), self.empresa_a,
+        )
+
+        self.assertEqual(descuento, 0)
+        self.assertEqual(error, 'El codigo promocional no es valido.')
+
+
+class StripeWebhookViewUsaLaEmpresaDelSlugTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @mock.patch('apps.payments.views.aplicar_pago_exitoso')
+    @mock.patch('apps.payments.views.scope.con_empresa')
+    @mock.patch('apps.payments.views.scope.resolver_empresa_de_dinero')
+    @mock.patch('apps.payments.views.stripe.Webhook.construct_event')
+    def test_usa_el_webhook_secret_de_la_empresa_aunque_este_pausada(
+        self, mock_construct, mock_resolver, mock_con_empresa, mock_aplicar,
+    ):
+        empresa = mock.Mock(stripe_webhook_secret='whsec_empresa_x', activo=False)
+        mock_resolver.return_value = empresa
+        mock_con_empresa.return_value.__enter__ = mock.Mock()
+        mock_con_empresa.return_value.__exit__ = mock.Mock(return_value=False)
+        mock_construct.return_value = {
+            'id': 'evt_1', 'type': 'payment_intent.succeeded',
+            'data': {'object': {'id': 'pi_1'}},
+        }
+
+        request = self.factory.post(
+            '/api/sal-y-sol/stripe/webhook/', data=b'{}',
+            content_type='application/json', HTTP_STRIPE_SIGNATURE='firma',
+        )
+        response = StripeWebhookView.as_view()(request, empresa_slug='sal-y-sol')
+
+        mock_resolver.assert_called_once_with('sal-y-sol')
+        self.assertEqual(mock_construct.call_args.args[2], 'whsec_empresa_x')
+        mock_aplicar.assert_called_once_with({'id': 'pi_1'}, empresa)
+        self.assertEqual(response.status_code, 200)
+
+
+class EstadoReservaViewFiltraPorEmpresaTests(TestCase):
+    @mock.patch('apps.payments.views.scope.con_empresa')
+    @mock.patch('apps.payments.views.scope.resolver_empresa_publica')
+    @mock.patch('apps.payments.views.Reserva.objects.filter')
+    def test_filtra_la_reserva_por_empresa(self, mock_filter, mock_resolver, mock_con_empresa):
+        empresa = mock.Mock()
+        mock_resolver.return_value = empresa
+        mock_con_empresa.return_value.__enter__ = mock.Mock()
+        mock_con_empresa.return_value.__exit__ = mock.Mock(return_value=False)
+        mock_filter.return_value.order_by.return_value.first.return_value = None
+
+        request = RequestFactory().get(
+            '/api/sal-y-sol/reservas/estado/',
+            {'checkout_id': '11111111-1111-4111-8111-111111111111'},
+        )
+        EstadoReservaView.as_view()(request, empresa_slug='sal-y-sol')
+
+        mock_filter.assert_called_once_with(
+            checkout_id=uuid.UUID('11111111-1111-4111-8111-111111111111'), empresa=empresa,
+        )
+
+
+class ValidarCodigoPromocionalViewPasaLaEmpresaTests(TestCase):
+    @mock.patch('apps.payments.views.evaluar_codigo_promocional')
+    @mock.patch('apps.payments.views.scope.con_empresa')
+    @mock.patch('apps.payments.views.scope.resolver_empresa_publica')
+    def test_pasa_la_empresa_resuelta(self, mock_resolver, mock_con_empresa, mock_evaluar):
+        empresa = mock.Mock()
+        mock_resolver.return_value = empresa
+        mock_con_empresa.return_value.__enter__ = mock.Mock()
+        mock_con_empresa.return_value.__exit__ = mock.Mock(return_value=False)
+        mock_evaluar.return_value = None
+
+        request = RequestFactory().get(
+            '/api/sal-y-sol/codigo-promocional/validar/',
+            {'codigo': 'VERANO10', 'correo_cliente': 'a@example.com'},
+        )
+        ValidarCodigoPromocionalView.as_view()(request, empresa_slug='sal-y-sol')
+
+        mock_evaluar.assert_called_once_with('VERANO10', 'a@example.com', empresa)
