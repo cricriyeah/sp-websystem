@@ -348,20 +348,20 @@ admin y el shell:
 
 ## Roles: Jefes vs Vendedora
 
-- **Jefes** = cuentas Django con `is_superuser=True`. Ven/editan todo, sin restriccion
-  (bypassa el sistema de permisos). No usan un Group.
-- **Vendedora** = cuentas `is_staff=True`, `is_superuser=False`, agregadas al grupo
-  Django `Vendedora`. Correr `python manage.py setup_roles` (idempotente) para
-  crear/sincronizar los permisos del grupo: `Reserva` (add/change/view, sin delete —
-  se cancela, no se borra), `CupoDiario` (add/change/view), `Embarcacion`/`Capitan`
-  (view only), `Vendedora` (view only, para consultar su codigo de link).
-  **`fleet.Tarifa` deliberadamente sin permisos** — informacion financiera, asi el
-  modulo ni aparece en su admin. El panel de finanzas (`/admin/finanzas/`) va por la
-  misma linea: corta con `request.user.is_superuser`, nunca con solo "es staff".
-- Crear cuentas de vendedora: acción "Dar de alta vendedora" en `/admin/auth/user/` (un jefe la ve para su
-  propia Empresa; el operador de plataforma elige la Empresa). Crea el `User`, lo agrega al grupo `Vendedora`,
-  su `MembresiaEmpresa` y su `bookings.Vendedora` en una sola transacción — reemplaza el flujo manual de tres
-  pasos sueltos de antes de la expansión multi-sede.
+- **Jefes** = cuentas `is_staff=True`, `is_superuser=False`, asociadas al grupo Django `Jefe`
+  y con `MembresiaEmpresa(rol=JEFE)`. Ven y operan su propia Empresa, incluyendo la configuracion
+  de catalogo/tarifas y el panel de finanzas (`/admin/finanzas/`).
+- **Vendedora** = cuentas `is_staff=True`, `is_superuser=False`, agregadas al grupo Django `Vendedora`
+  y con `MembresiaEmpresa(rol=VENDEDORA)`. Permisos del grupo: `Reserva` (add/change/view, sin delete —
+  se cancela, no se borra), `CupoDiario` (add/change/view), `Embarcacion`/`Capitan` (view only),
+  `Vendedora` (view only, para consultar su codigo de link). **`fleet.Tarifa` deliberadamente sin permisos**
+  — informacion financiera protegida, el modulo no aparece en su admin.
+- **Operador de plataforma** = cuenta en grupo Django `OperadorPlataforma`, sin `MembresiaEmpresa`.
+  Acceso global multi-tenant (Sedes, Empresas, Membresias y finanzas consolidadas).
+- **Alta de vendedoras**: accion unificada "Dar de alta vendedora" en `/admin/auth/user/` (un jefe la ve
+  para su propia Empresa; el operador de plataforma elige la Empresa). Crea el `User`, lo agrega al grupo
+  `Vendedora`, su `MembresiaEmpresa(rol=VENDEDORA)` y su `bookings.Vendedora` en una sola transaccion atomica
+  — reemplaza el flujo manual de tres pasos sueltos de antes de la expansion multi-sede.
 
 ## Gotchas
 
