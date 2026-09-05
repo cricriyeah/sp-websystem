@@ -1,11 +1,14 @@
 """Registro centralizado de estrategias de cupo por tipo de servicio (ADR-003)."""
 
-from .estrategias import EstrategiaCupo, ModoOcupacion, PorRecursoDia
+from .estrategias import BajoDemanda, EstrategiaCupo, ModoOcupacion, PorNoche, PorRecursoDia
 
 REGISTRO_ESTRATEGIAS: dict[str, EstrategiaCupo] = {
     'pesca': PorRecursoDia(modo=ModoOcupacion.EXCLUSIVO),
     'paseo_exclusivo': PorRecursoDia(modo=ModoOcupacion.EXCLUSIVO),
     'paseo_compartido': PorRecursoDia(modo=ModoOcupacion.COMPARTIDO),
+    'por_noche': PorNoche(),
+    'hospedaje': PorNoche(),
+    'bajo_demanda': BajoDemanda(),
     'default': PorRecursoDia(modo=ModoOcupacion.EXCLUSIVO),
 }
 

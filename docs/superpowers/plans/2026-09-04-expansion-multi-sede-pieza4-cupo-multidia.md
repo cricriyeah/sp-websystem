@@ -46,7 +46,7 @@
 
 ### Bloque 1: Núcleo Puro de Cupo Multidía y Estrategias (`apps/bookings/cupo`)
 
-- [ ] **Task M1: Implementar traslape semi-abierto y estrategias `PorNoche` y `BajoDemanda`**
+- [x] **Task M1: Implementar traslape semi-abierto y estrategias `PorNoche` y `BajoDemanda`**
   - **Archivos:**
     - Modificar `backend/apps/bookings/cupo/nucleo.py`
     - Modificar `backend/apps/bookings/cupo/estrategias.py`

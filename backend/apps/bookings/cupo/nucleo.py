@@ -76,3 +76,32 @@ def ocupacion_por_rango(fechas, grupos_por_fecha, capacidades_por_fecha, topes_p
         tope = topes_por_fecha.get(fecha, 0)
         resultado[fecha] = motivo_sin_lugar(personas, grupos, capacidades, tope, modo=modo)
     return resultado
+
+
+def rango_traslapa(ini1, fin1, ini2, fin2) -> bool:
+    """Verifica si dos intervalos semi-abiertos [ini1, fin1) e [ini2, fin2) se traslapan.
+
+    En semántica de hospedaje:
+    [checkin_1, checkout_1) no colisiona con [checkin_2, checkout_2) si checkout_1 <= checkin_2.
+    Dos rangos válidos traslapan si y solo si max(ini1, ini2) < min(fin1, fin2).
+    """
+    if ini1 >= fin1 or ini2 >= fin2:
+        return False
+    return max(ini1, ini2) < min(fin1, fin2)
+
+
+def recursos_disponibles_en_rango(recursos_con_ocupaciones, fecha_inicio, fecha_fin):
+    """Filtra los recursos que no tienen ninguna ocupación traslapada en [fecha_inicio, fecha_fin).
+
+    `recursos_con_ocupaciones`: lista de (recurso_id, capacidad, [(o_ini, o_fin), ...]).
+    Devuelve lista de (recurso_id, capacidad) de los recursos que están completamente libres.
+    """
+    libres = []
+    for recurso_id, capacidad, ocupaciones in recursos_con_ocupaciones:
+        traslapado = any(
+            rango_traslapa(fecha_inicio, fecha_fin, o_ini, o_fin)
+            for o_ini, o_fin in ocupaciones
+        )
+        if not traslapado:
+            libres.append((recurso_id, capacidad))
+    return libres

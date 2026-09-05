@@ -15,6 +15,7 @@ from .nucleo import (
     MOTIVO_SIN_PANGA,
     motivo_sin_lugar,
     ocupacion_por_rango,
+    recursos_disponibles_en_rango,
 )
 
 
@@ -26,11 +27,26 @@ class ModoOcupacion(StrEnum):
 
 @dataclass(frozen=True)
 class DemandaCupo:
-    """Solicitud de cupo para una fecha y número de personas."""
+    """Solicitud de cupo para una fecha (o rango) y número de personas."""
     fecha: date
     personas: int
     modo: ModoOcupacion = ModoOcupacion.EXCLUSIVO
     excluir_pk: int | None = None
+    fecha_fin: date | None = None
+    cantidad_recursos: int = 1
+
+    @property
+    def noches(self) -> int:
+        if self.fecha_fin and self.fecha_fin > self.fecha:
+            return (self.fecha_fin - self.fecha).days
+        return 1
+
+    @property
+    def fecha_salida(self) -> date:
+        if self.fecha_fin:
+            return self.fecha_fin
+        from datetime import timedelta
+        return self.fecha + timedelta(days=1)
 
 
 @dataclass(frozen=True)
@@ -146,4 +162,104 @@ class PorRecursoDia(EstrategiaCupo):
         return {
             fecha: ResultadoDisponibilidad(disponible=(motivo is None), motivo=motivo)
             for fecha, motivo in motivos.items()
+        }
+
+
+class PorNoche(EstrategiaCupo):
+    """Estrategia de ocupación de recursos por rango de noches (hospedaje).
+
+    Traslape semi-abierto [check-in, check-out) donde el día de salida queda
+    libre para nuevo check-in esa misma tarde.
+    Soporta que una reserva ocupe 1..N habitaciones (cantidad_recursos).
+    """
+
+    def evaluar(
+        self,
+        demanda: DemandaCupo,
+        grupos: list[int],
+        capacidades: list[int],
+        tope: int,
+    ) -> ResultadoDisponibilidad:
+        req_recursos = max(1, demanda.cantidad_recursos)
+        recursos_disponibles = max(0, len(capacidades) - len(grupos))
+        if recursos_disponibles < req_recursos:
+            return ResultadoDisponibilidad(disponible=False, motivo=MOTIVO_SIN_LUGAR)
+
+        caps_libres = sorted(capacidades[len(grupos):], reverse=True)
+        if sum(caps_libres[:req_recursos]) < demanda.personas:
+            return ResultadoDisponibilidad(disponible=False, motivo=MOTIVO_SIN_LUGAR)
+
+        return ResultadoDisponibilidad(disponible=True)
+
+    def evaluar_ocupacion(
+        self,
+        demanda: DemandaCupo,
+        recursos_con_ocupaciones: list[tuple[int, int, list[tuple[date, date]]]],
+        tope: int | None = None,
+    ) -> ResultadoDisponibilidad:
+        """Evalúa disponibilidad contra las ocupaciones exactas por recurso en el rango de fechas."""
+        ini = demanda.fecha
+        fin = demanda.fecha_salida
+        req_recursos = max(1, demanda.cantidad_recursos)
+
+        libres = recursos_disponibles_en_rango(recursos_con_ocupaciones, ini, fin)
+        if len(libres) < req_recursos:
+            return ResultadoDisponibilidad(disponible=False, motivo=MOTIVO_SIN_LUGAR)
+
+        caps_libres = sorted((cap for _, cap in libres), reverse=True)
+        if sum(caps_libres[:req_recursos]) < demanda.personas:
+            return ResultadoDisponibilidad(disponible=False, motivo=MOTIVO_SIN_LUGAR)
+
+        return ResultadoDisponibilidad(disponible=True)
+
+    def evaluar_rango(
+        self,
+        fechas: list[date],
+        grupos_por_fecha: dict[date, list[int]],
+        capacidades_por_fecha: dict[date, list[int]],
+        topes_por_fecha: dict[date, int],
+        personas: int,
+        modo: ModoOcupacion | None = None,
+    ) -> dict[date, ResultadoDisponibilidad]:
+        resultado = {}
+        for fecha in fechas:
+            demanda = DemandaCupo(fecha=fecha, personas=personas)
+            resultado[fecha] = self.evaluar(
+                demanda=demanda,
+                grupos=grupos_por_fecha.get(fecha, []),
+                capacidades=capacidades_por_fecha.get(fecha, []),
+                tope=topes_por_fecha.get(fecha, 0),
+            )
+        return resultado
+
+
+class BajoDemanda(EstrategiaCupo):
+    """Estrategia de cupo para servicios sin inventario rígido que se agote (chef, guías, masajes).
+
+    Siempre disponible, o con tope suave opcional si se configura.
+    """
+
+    def evaluar(
+        self,
+        demanda: DemandaCupo,
+        grupos: list[int],
+        capacidades: list[int],
+        tope: int,
+    ) -> ResultadoDisponibilidad:
+        if tope is not None and tope > 0 and len(grupos) + 1 > tope:
+            return ResultadoDisponibilidad(disponible=False, motivo=MOTIVO_LLENO)
+        return ResultadoDisponibilidad(disponible=True)
+
+    def evaluar_rango(
+        self,
+        fechas: list[date],
+        grupos_por_fecha: dict[date, list[int]],
+        capacidades_por_fecha: dict[date, list[int]],
+        topes_por_fecha: dict[date, int],
+        personas: int,
+        modo: ModoOcupacion | None = None,
+    ) -> dict[date, ResultadoDisponibilidad]:
+        return {
+            fecha: ResultadoDisponibilidad(disponible=True)
+            for fecha in fechas
         }
