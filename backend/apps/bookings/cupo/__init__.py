@@ -1,5 +1,10 @@
 """Módulo de cupo y disponibilidad de reservas."""
 
+from .candado import (
+    bloquear_cupo,
+    bloquear_cupo_del_dia,
+    calcular_clave_candado,
+)
 from .estrategias import (
     DemandaCupo,
     EstrategiaCupo,
@@ -30,6 +35,9 @@ __all__ = [
     'MOTIVO_LLENO',
     'MOTIVO_SIN_PANGA',
     'MOTIVO_SIN_LUGAR',
+    'bloquear_cupo',
+    'bloquear_cupo_del_dia',
+    'calcular_clave_candado',
     'caben',
     'caben_compartido',
     'motivo_sin_lugar',
