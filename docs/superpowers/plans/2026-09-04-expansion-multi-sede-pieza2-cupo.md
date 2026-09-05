@@ -47,7 +47,7 @@
 
 ### Bloque 1: Núcleo Puro de Cupo (Sin Base de Datos)
 
-- [ ] **Task C1: Crear `apps/bookings/cupo/nucleo.py` y tests unitarios de funciones puras**
+- [x] **Task C1: Crear `apps/bookings/cupo/nucleo.py` y tests unitarios de funciones puras**
   - **Archivos:**
     - Crear `backend/apps/bookings/cupo/__init__.py`
     - Crear `backend/apps/bookings/cupo/nucleo.py`
@@ -63,7 +63,7 @@
 
 ### Bloque 2: Abstracción de Estrategias y `PorRecursoDia`
 
-- [ ] **Task C2: Crear `apps/bookings/cupo/estrategias.py` con `EstrategiaCupo` y `PorRecursoDia`**
+- [x] **Task C2: Crear `apps/bookings/cupo/estrategias.py` con `EstrategiaCupo` y `PorRecursoDia`**
   - **Archivos:**
     - Crear `backend/apps/bookings/cupo/estrategias.py`
     - Modificar `backend/apps/bookings/cupo/__init__.py`
@@ -81,7 +81,7 @@
 
 ### Bloque 3: Advisory Lock Re-llaveado por Ámbito
 
-- [ ] **Task C3: Crear `apps/bookings/cupo/candado.py` con locking por ámbito y tests**
+- [x] **Task C3: Crear `apps/bookings/cupo/candado.py` con locking por ámbito y tests**
   - **Archivos:**
     - Crear `backend/apps/bookings/cupo/candado.py`
     - Crear `backend/apps/bookings/tests_cupo_candado.py`
@@ -96,7 +96,7 @@
 
 ### Bloque 4: Adaptador ORM y Registro de Estrategias
 
-- [ ] **Task C4: Crear `apps/bookings/cupo/adaptador.py` y `apps/bookings/cupo/registro.py`**
+- [x] **Task C4: Crear `apps/bookings/cupo/adaptador.py` y `apps/bookings/cupo/registro.py`**
   - **Archivos:**
     - Crear `backend/apps/bookings/cupo/adaptador.py`
     - Crear `backend/apps/bookings/cupo/registro.py`
@@ -114,7 +114,7 @@
 
 ### Bloque 5: Retrofit Transparente de `apps/bookings/models.py` y Consumidores
 
-- [ ] **Task C5: Integrar `apps.bookings.cupo` en `models.py`, `views.py` y comandos**
+- [x] **Task C5: Integrar `apps.bookings.cupo` en `models.py`, `views.py` y comandos**
   - **Archivos:**
     - Modificar `backend/apps/bookings/models.py`
     - Modificar `backend/apps/bookings/views.py`
@@ -136,7 +136,7 @@
 
 ### Bloque 6: Verificación Integral de No-Regresión
 
-- [ ] **Task C6: Suite completa de pruebas de backend (verificación integral)**
+- [x] **Task C6: Suite completa de pruebas de backend (verificación integral)**
   - **Archivos:**
     - Ninguno (solo verificación y documentación).
   - **Descripción:**
