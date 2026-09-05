@@ -137,7 +137,7 @@
 
 ### Bloque 6: Integración con Reservas y Pagos (`Reserva.servicio`)
 
-- [ ] **Task P6: Asociación de `Reserva.servicio` y congelado de precio**
+- [x] **Task P6: Asociación de `Reserva.servicio` y congelado de precio**
   - **Archivos:**
     - Modificar `backend/apps/bookings/models.py`
     - Crear `backend/apps/bookings/migrations/0025_reserva_servicio.py`

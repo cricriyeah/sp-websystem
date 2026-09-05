@@ -565,6 +565,61 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(self.post(checkout_id=str(self.reserva.checkout_id)).status_code, 200)
 
     @mock.patch.object(StripeClient, 'payment_intents')
+    def test_pago_con_servicio_estrategia_por_persona(self, payment_intents):
+        from apps.fleet.models import Servicio
+        payment_intents.create.return_value = intent_falso(amount=340000)
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Paseo Espiritu Santo',
+            slug='paseo-espiritu-santo',
+            estrategia_precio='por_persona',
+            precio_base=Decimal('850.00'),
+        )
+        self.reserva.servicio = servicio
+        self.reserva.numero_personas = 4
+        self.reserva.save(update_fields=['servicio', 'numero_personas'])
+
+        response = self.post()
+        self.assertEqual(response.status_code, 200)
+        # 850 * 4 = 3400.00 -> 340000 centavos
+        self.assertEqual(payment_intents.create.call_args[0][0]['amount'], 340000)
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_pago_con_servicio_tarifa_fija(self, payment_intents):
+        from apps.fleet.models import Servicio
+        payment_intents.create.return_value = intent_falso(amount=1200000)
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Charter Exclusivo',
+            slug='charter-exclusivo',
+            estrategia_precio='tarifa_fija',
+            precio_base=Decimal('12000.00'),
+        )
+        self.reserva.servicio = servicio
+        self.reserva.numero_personas = 5
+        self.reserva.save(update_fields=['servicio', 'numero_personas'])
+
+        response = self.post()
+        self.assertEqual(response.status_code, 200)
+        # 12000.00 fijo -> 1200000 centavos
+        self.assertEqual(payment_intents.create.call_args[0][0]['amount'], 1200000)
+
+    def test_reserva_con_servicio_de_otra_empresa_falla_clean(self):
+        from django.core.exceptions import ValidationError
+        from apps.fleet.models import Servicio
+        from apps.tenancy.models import Empresa
+        empresa_otra = Empresa.objects.create(sede=self.empresa.sede, nombre='Otra', slug='otra-empresa')
+        servicio_otro = Servicio.objects.create(
+            empresa=empresa_otra,
+            nombre='Tour Otro',
+            slug='tour-otro',
+            precio_base=Decimal('1000.00'),
+        )
+        self.reserva.servicio = servicio_otro
+        with self.assertRaises(ValidationError):
+            self.reserva.clean()
+
+    @mock.patch.object(StripeClient, 'payment_intents')
     def test_una_reserva_de_whatsapp_no_se_cobra_por_esta_ruta(self, payment_intents):
         """Las que captura la vendedora no traen checkout_id, asi que no hay
         llave que las acredite: por aqui no se tocan.

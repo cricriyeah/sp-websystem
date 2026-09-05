@@ -11,6 +11,7 @@ from apps.bookings.models import Reserva, codigo_promocional_valido, evaluar_cod
 from apps.fleet.models import CodigoPromocional, Tarifa, TransportePrecio
 from apps.tenancy import scope
 
+from .estrategias_precio import DemandaPrecio, obtener_estrategia_precio
 from .pricing import (
     a_centavos,
     cargo_por_descuento,
@@ -65,20 +66,29 @@ class CrearPagoView(APIView):
         if reserva.estado != Reserva.Estado.PENDIENTE_PAGO:
             return Response({'detail': 'Esta reserva ya no esta pendiente de pago.'}, status=409)
 
-        tarifa = Tarifa.de(empresa)
-        if tarifa is None:
-            return Response({'detail': 'Tarifa no configurada.'}, status=503)
+        if reserva.servicio:
+            estrategia = obtener_estrategia_precio(reserva.servicio.estrategia_precio)
+            demanda = DemandaPrecio(personas=reserva.numero_personas, moneda=reserva.moneda)
+            try:
+                precio_base_servicio = estrategia.calcular_base(reserva.servicio, demanda)
+            except ValueError as e:
+                return Response({'detail': str(e)}, status=503)
+        else:
+            tarifa = Tarifa.de(empresa)
+            if tarifa is None:
+                return Response({'detail': 'Tarifa no configurada.'}, status=503)
 
-        precio_tour = tarifa.precio_en(reserva.moneda)
-        if precio_tour is None:
-            return Response({'detail': f'No hay precio configurado en {reserva.moneda}.'}, status=503)
+            precio_tour = tarifa.precio_en(reserva.moneda)
+            if precio_tour is None:
+                return Response({'detail': f'No hay precio configurado en {reserva.moneda}.'}, status=503)
 
-        precio_persona_extra = tarifa.persona_extra_en(reserva.moneda)
-        if personas_extra(reserva.numero_personas) and precio_persona_extra is None:
-            return Response(
-                {'detail': f'No hay cargo por persona extra configurado en {reserva.moneda}.'},
-                status=503,
-            )
+            precio_persona_extra = tarifa.persona_extra_en(reserva.moneda)
+            if personas_extra(reserva.numero_personas) and precio_persona_extra is None:
+                return Response(
+                    {'detail': f'No hay cargo por persona extra configurado en {reserva.moneda}.'},
+                    status=503,
+                )
+            precio_base_servicio = precio_tour + cargo_por_personas(precio_persona_extra or 0, reserva.numero_personas)
 
         forma_pago = request.data.get('forma_pago', Reserva.FormaPago.COMPLETO)
         if forma_pago not in Reserva.FormaPago.values:
@@ -94,8 +104,7 @@ class CrearPagoView(APIView):
             return Response({'detail': error}, status=503)
 
         subtotal = (
-            precio_tour
-            + cargo_por_personas(precio_persona_extra or 0, reserva.numero_personas)
+            precio_base_servicio
             + cargo_extras
             + cargo_transporte
         )

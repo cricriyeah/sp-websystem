@@ -378,6 +378,10 @@ class Reserva(models.Model):
         validators=[MinValueValidator(MIN_PERSONAS), MaxValueValidator(MAX_PERSONAS)]
     )
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='reservas')
+    servicio = models.ForeignKey(
+        'fleet.Servicio', on_delete=models.PROTECT, null=True, blank=True, related_name='reservas',
+        help_text='Servicio o experiencia que ampara esta reserva. Vacio = pesca deportiva (legacy).'
+    )
 
     # Datos del cliente (no se pide peso ni si sabe nadar, ver docs/contexto-negocio.md)
     nombre_cliente = models.CharField(max_length=150, validators=[validar_nombre_persona])
@@ -618,6 +622,7 @@ class Reserva(models.Model):
             ('capitan', self.capitan),
             ('vendedora', self.vendedora),
             ('codigo_promocional', self.codigo_promocional),
+            ('servicio', self.servicio),
         ):
             if relacionado is not None and relacionado.empresa_id != self.empresa_id:
                 raise ValidationError({
