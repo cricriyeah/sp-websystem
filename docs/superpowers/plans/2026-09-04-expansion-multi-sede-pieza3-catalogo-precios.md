@@ -153,7 +153,7 @@
 
 ### Bloque 7: Verificación Integral de No-Regresión
 
-- [ ] **Task P7: Suite completa de pruebas de backend (verificación integral)**
+- [x] **Task P7: Suite completa de pruebas de backend (verificación integral)**
   - **Archivos:**
     - Ninguno (solo verificación).
   - **Descripción:**

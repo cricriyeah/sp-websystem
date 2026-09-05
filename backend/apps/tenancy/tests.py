@@ -299,6 +299,9 @@ class MigrarLaPazAEmpresaTests(TestCase):
             call_command('migrar_la_paz_a_empresa', operador='admin_sistema', stdout=StringIO())
 
     def test_sin_empresa_sal_y_sol_falla_explicito(self):
+        from apps.fleet.models import Recurso, Servicio
+        Recurso.objects.filter(empresa=self.empresa).delete()
+        Servicio.objects.filter(empresa=self.empresa).delete()
         self.empresa.delete()
         with self.assertRaises(CommandError):
             call_command('migrar_la_paz_a_empresa', operador='admin_sistema', stdout=StringIO())
