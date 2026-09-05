@@ -78,7 +78,7 @@
 
 ### Bloque 3: Row Level Security (RLS) en Postgres para `ReservaOcupacion`
 
-- [ ] **Task M3: Migración RLS de Postgres para `bookings_reservaocupacion`**
+- [x] **Task M3: Migración RLS de Postgres para `bookings_reservaocupacion`**
   - **Archivos:**
     - Crear `backend/apps/bookings/migrations/0027_rls_reservaocupacion.py`
     - Crear `backend/apps/bookings/tests_ocupacion_rls.py`
