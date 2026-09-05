@@ -1,0 +1,197 @@
+"""Pruebas unitarias de las estrategias de precio puras (Pieza 3)."""
+
+from decimal import Decimal
+from django.test import SimpleTestCase
+
+from apps.payments.estrategias_precio import (
+    DemandaPrecio,
+    EstrategiaPrecio,
+    PorGrupo,
+    PorNoche,
+    PorPersona,
+    TarifaFija,
+    TipoEstrategiaPrecio,
+    obtener_estrategia_precio,
+    registrar_estrategia_precio,
+    resolver_precio_base,
+    resolver_precio_persona_extra,
+    resolver_personas_incluidas,
+)
+
+
+class ConfigPrueba:
+    """Mock sencillo de Servicio o Tarifa para pruebas de pricing."""
+    def __init__(
+        self,
+        precio_base=Decimal('4500.00'),
+        precio_base_usd=Decimal('260.00'),
+        precio_persona_extra=Decimal('500.00'),
+        precio_persona_extra_usd=Decimal('30.00'),
+        personas_incluidas=3,
+    ):
+        self.precio_base = precio_base
+        self.precio_base_usd = precio_base_usd
+        self.precio_persona_extra = precio_persona_extra
+        self.precio_persona_extra_usd = precio_persona_extra_usd
+        self.personas_incluidas = personas_incluidas
+
+
+class EstrategiasPrecioTests(SimpleTestCase):
+    """Verifica el cálculo de precios bajo diferentes estrategias y monedas."""
+
+    def setUp(self):
+        self.config = ConfigPrueba()
+
+    def test_por_grupo_mxn_dentro_del_cupo(self):
+        estrategia = PorGrupo()
+        demanda = DemandaPrecio(personas=3, moneda='MXN')
+        total = estrategia.calcular_base(self.config, demanda)
+        self.assertEqual(total, Decimal('4500.00'))
+
+    def test_por_grupo_mxn_con_personas_extra(self):
+        estrategia = PorGrupo()
+        # 5 personas con 3 incluidas = 2 extras ($500 c/u) -> 4500 + 1000 = 5500
+        demanda = DemandaPrecio(personas=5, moneda='MXN')
+        total = estrategia.calcular_base(self.config, demanda)
+        self.assertEqual(total, Decimal('5500.00'))
+
+    def test_por_grupo_usd_con_personas_extra(self):
+        estrategia = PorGrupo()
+        # 4 personas = 1 extra ($30) -> 260 + 30 = 290
+        demanda = DemandaPrecio(personas=4, moneda='USD')
+        total = estrategia.calcular_base(self.config, demanda)
+        self.assertEqual(total, Decimal('290.00'))
+
+    def test_por_grupo_falla_si_falta_precio_persona_extra(self):
+        config_sin_extra = ConfigPrueba(precio_persona_extra_usd=None)
+        estrategia = PorGrupo()
+        demanda = DemandaPrecio(personas=4, moneda='USD')
+        with self.assertRaisesMessage(ValueError, 'No hay cargo por persona extra configurado en USD.'):
+            estrategia.calcular_base(config_sin_extra, demanda)
+
+    def test_por_grupo_con_personas_incluidas_personalizadas(self):
+        config_custom = ConfigPrueba(personas_incluidas=5)
+        estrategia = PorGrupo()
+        # 5 personas = dentro del cupo
+        self.assertEqual(
+            estrategia.calcular_base(config_custom, DemandaPrecio(personas=5, moneda='MXN')),
+            Decimal('4500.00'),
+        )
+        # 6 personas = 1 extra
+        self.assertEqual(
+            estrategia.calcular_base(config_custom, DemandaPrecio(personas=6, moneda='MXN')),
+            Decimal('5000.00'),
+        )
+
+    def test_por_persona_mxn_y_usd(self):
+        config = ConfigPrueba(precio_base=Decimal('800.00'), precio_base_usd=Decimal('45.00'))
+        estrategia = PorPersona()
+
+        demanda_mxn = DemandaPrecio(personas=4, moneda='MXN')
+        self.assertEqual(estrategia.calcular_base(config, demanda_mxn), Decimal('3200.00'))
+
+        demanda_usd = DemandaPrecio(personas=3, moneda='USD')
+        self.assertEqual(estrategia.calcular_base(config, demanda_usd), Decimal('135.00'))
+
+    def test_tarifa_fija_independiente_de_personas(self):
+        config = ConfigPrueba(precio_base=Decimal('12000.00'), precio_base_usd=Decimal('700.00'))
+        estrategia = TarifaFija()
+
+        self.assertEqual(
+            estrategia.calcular_base(config, DemandaPrecio(personas=1, moneda='MXN')),
+            Decimal('12000.00'),
+        )
+        self.assertEqual(
+            estrategia.calcular_base(config, DemandaPrecio(personas=10, moneda='MXN')),
+            Decimal('12000.00'),
+        )
+        self.assertEqual(
+            estrategia.calcular_base(config, DemandaPrecio(personas=8, moneda='USD')),
+            Decimal('700.00'),
+        )
+
+    def test_por_noche_multiplica_noches(self):
+        config = ConfigPrueba(precio_base=Decimal('2500.00'), precio_base_usd=Decimal('150.00'))
+        estrategia = PorNoche()
+
+        # 1 noche
+        self.assertEqual(
+            estrategia.calcular_base(config, DemandaPrecio(personas=2, noches=1, moneda='MXN')),
+            Decimal('2500.00'),
+        )
+        # 3 noches
+        self.assertEqual(
+            estrategia.calcular_base(config, DemandaPrecio(personas=2, noches=3, moneda='MXN')),
+            Decimal('7500.00'),
+        )
+        # 4 noches en USD
+        self.assertEqual(
+            estrategia.calcular_base(config, DemandaPrecio(personas=2, noches=4, moneda='USD')),
+            Decimal('600.00'),
+        )
+
+    def test_falla_si_no_hay_precio_en_moneda(self):
+        config = ConfigPrueba(precio_base_usd=None)
+        estrategia = TarifaFija()
+        with self.assertRaisesMessage(ValueError, 'No hay precio configurado en USD.'):
+            estrategia.calcular_base(config, DemandaPrecio(personas=2, moneda='USD'))
+
+    def test_soporta_diccionario_de_configuracion(self):
+        config_dict = {
+            'precio_base': Decimal('1000.00'),
+            'precio_persona_extra': Decimal('200.00'),
+            'personas_incluidas': 2,
+        }
+        estrategia = PorGrupo()
+        total = estrategia.calcular_base(config_dict, DemandaPrecio(personas=4, moneda='MXN'))
+        # 4 personas, 2 incluidas = 2 extras ($200 c/u) -> 1000 + 400 = 1400
+        self.assertEqual(total, Decimal('1400.00'))
+
+    def test_soporta_nombres_legacy_precio_y_precio_usd(self):
+        # Compatibilidad con el modelo Tarifa que usa 'precio' en vez de 'precio_base'
+        config_legacy = {
+            'precio': Decimal('4500.00'),
+            'precio_usd': Decimal('260.00'),
+            'precio_persona_extra': Decimal('500.00'),
+            'precio_persona_extra_usd': Decimal('30.00'),
+        }
+        estrategia = PorGrupo()
+        self.assertEqual(
+            estrategia.calcular_base(config_legacy, DemandaPrecio(personas=3, moneda='MXN')),
+            Decimal('4500.00'),
+        )
+        self.assertEqual(
+            estrategia.calcular_base(config_legacy, DemandaPrecio(personas=3, moneda='USD')),
+            Decimal('260.00'),
+        )
+
+    def test_registro_de_estrategias(self):
+        grupo = obtener_estrategia_precio('por_grupo')
+        self.assertIsInstance(grupo, PorGrupo)
+
+        persona = obtener_estrategia_precio('por_persona')
+        self.assertIsInstance(persona, PorPersona)
+
+        fija = obtener_estrategia_precio('tarifa_fija')
+        self.assertIsInstance(fija, TarifaFija)
+
+        noche = obtener_estrategia_precio('por_noche')
+        self.assertIsInstance(noche, PorNoche)
+
+        # Fallback para clave desconocida
+        fallback = obtener_estrategia_precio('desconocida')
+        self.assertIsInstance(fallback, PorGrupo)
+
+    def test_registrar_estrategia_personalizada(self):
+        class EstrategiaPrueba(EstrategiaPrecio):
+            clave = 'prueba'
+            def calcular_base(self, config, demanda):
+                return Decimal('999.00')
+
+        registrar_estrategia_precio('prueba', EstrategiaPrueba())
+        obtenida = obtener_estrategia_precio('prueba')
+        self.assertIsInstance(obtenida, EstrategiaPrueba)
+        self.assertEqual(
+            obtenida.calcular_base(self.config, DemandaPrecio(personas=1)),
+            Decimal('999.00'),
+        )

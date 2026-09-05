@@ -55,7 +55,7 @@
 
 ### Bloque 1: Estrategias de Precio Puras (`apps/payments`)
 
-- [ ] **Task P1: Crear `apps/payments/estrategias_precio.py` y tests unitarios**
+- [x] **Task P1: Crear `apps/payments/estrategias_precio.py` y tests unitarios**
   - **Archivos:**
     - Crear `backend/apps/payments/estrategias_precio.py`
     - Modificar `backend/apps/payments/pricing.py`

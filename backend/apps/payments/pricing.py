@@ -40,14 +40,14 @@ ANTICIPO_PORCENTAJE = Decimal('0.30')
 CENTAVOS = Decimal('0.01')
 
 
-def personas_extra(numero_personas):
+def personas_extra(numero_personas, personas_incluidas=PERSONAS_INCLUIDAS):
     """Cuantas personas pasan del cupo incluido en el precio del viaje."""
-    return max(0, numero_personas - PERSONAS_INCLUIDAS)
+    return max(0, numero_personas - personas_incluidas)
 
 
-def cargo_por_personas(precio_persona_extra, numero_personas):
+def cargo_por_personas(precio_persona_extra, numero_personas, personas_incluidas=PERSONAS_INCLUIDAS):
     """Cargo total por las personas adicionales."""
-    return Decimal(precio_persona_extra) * personas_extra(numero_personas)
+    return Decimal(precio_persona_extra) * personas_extra(numero_personas, personas_incluidas)
 
 
 def cargo_por_extra(precio, cobrar_por_persona, numero_personas):
@@ -95,3 +95,4 @@ def a_centavos(monto):
 
 def de_centavos(centavos):
     return (Decimal(centavos) / 100).quantize(CENTAVOS)
+
