@@ -105,7 +105,7 @@
 
 ### Bloque 5: Verificación Integral de No-Regresión
 
-- [ ] **Task M5: Suite completa de pruebas de backend (verificación integral)**
+- [x] **Task M5: Suite completa de pruebas de backend (verificación integral)**
   - **Archivos:**
     - Ninguno (solo verificación).
   - **Descripción:**
