@@ -2,7 +2,16 @@ from rest_framework import serializers
 
 from apps.payments.pricing import PERSONAS_INCLUIDAS, cargo_por_extra, cargo_por_transporte
 
-from .models import ExtrasItem, PuntoEncuentro, Tarifa, TransportePrecio
+from .models import (
+    ExtrasItem,
+    Personalizacion,
+    PuntoEncuentro,
+    Recurso,
+    Servicio,
+    ServicioPersonalizacion,
+    Tarifa,
+    TransportePrecio,
+)
 
 
 class TarifaSerializer(serializers.ModelSerializer):
@@ -73,3 +82,37 @@ class PuntoEncuentroSerializer(serializers.ModelSerializer):
     class Meta:
         model = PuntoEncuentro
         fields = ['id', 'nombre', 'zona']
+
+
+class ServicioPersonalizacionSerializer(serializers.ModelSerializer):
+    nombre = serializers.CharField(source='personalizacion.nombre', read_only=True)
+    tipo = serializers.CharField(source='personalizacion.tipo', read_only=True)
+    cobrar_por_persona = serializers.BooleanField(source='personalizacion.cobrar_por_persona', read_only=True)
+    cantidad_editable = serializers.BooleanField(source='personalizacion.cantidad_editable', read_only=True)
+
+    class Meta:
+        model = ServicioPersonalizacion
+        fields = [
+            'id', 'personalizacion_id', 'nombre', 'tipo',
+            'cobrar_por_persona', 'cantidad_editable',
+            'precio', 'precio_usd', 'obligatorio', 'preseleccionado',
+        ]
+
+
+class ServicioSerializer(serializers.ModelSerializer):
+    personalizaciones = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Servicio
+        fields = [
+            'id', 'nombre', 'slug', 'tipo_servicio',
+            'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion',
+            'precio_base', 'precio_base_usd',
+            'precio_persona_extra', 'precio_persona_extra_usd',
+            'personas_incluidas', 'descripcion', 'activo',
+            'personalizaciones',
+        ]
+
+    def get_personalizaciones(self, obj):
+        qs = obj.servicio_personalizaciones.filter(activo=True, personalizacion__activo=True)
+        return ServicioPersonalizacionSerializer(qs, many=True).data

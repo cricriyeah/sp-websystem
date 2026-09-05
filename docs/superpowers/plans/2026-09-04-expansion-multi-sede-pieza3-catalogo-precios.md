@@ -121,7 +121,7 @@
 
 ### Bloque 5: Vistas de Catálogo y Serializers
 
-- [ ] **Task P5: Endpoints públicos de servicios y serializers**
+- [x] **Task P5: Endpoints públicos de servicios y serializers**
   - **Archivos:**
     - Modificar `backend/apps/fleet/serializers.py`
     - Modificar `backend/apps/fleet/views.py`

@@ -1,12 +1,14 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tenancy import scope
 
-from .models import ExtrasItem, PuntoEncuentro, Tarifa, TransportePrecio
+from .models import ExtrasItem, PuntoEncuentro, Servicio, Tarifa, TransportePrecio
 from .serializers import (
     ExtrasItemSerializer,
     PuntoEncuentroSerializer,
+    ServicioSerializer,
     TarifaSerializer,
     TransportePrecioSerializer,
 )
@@ -69,3 +71,23 @@ class ExtrasPublicosView(APIView):
                     PuntoEncuentro.objects.filter(activo=True, empresa=empresa), many=True
                 ).data,
             })
+
+
+class ServiciosListView(APIView):
+    """Lista publica de servicios activos para una empresa/sede."""
+
+    def get(self, request, empresa_slug):
+        empresa = scope.resolver_empresa_publica(empresa_slug)
+        with scope.con_empresa(empresa):
+            servicios = Servicio.objects.filter(empresa=empresa, activo=True)
+            return Response(ServicioSerializer(servicios, many=True).data)
+
+
+class ServicioDetailView(APIView):
+    """Detalle publico de un servicio por slug para una empresa/sede."""
+
+    def get(self, request, empresa_slug, slug):
+        empresa = scope.resolver_empresa_publica(empresa_slug)
+        with scope.con_empresa(empresa):
+            servicio = get_object_or_404(Servicio, empresa=empresa, slug=slug, activo=True)
+            return Response(ServicioSerializer(servicio).data)
