@@ -1,5 +1,5 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline
 
 from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin
@@ -10,7 +10,11 @@ from .models import (
     Embarcacion,
     EmbarcacionNoDisponible,
     ExtrasItem,
+    Personalizacion,
     PuntoEncuentro,
+    Recurso,
+    Servicio,
+    ServicioPersonalizacion,
     Tarifa,
     TransportePrecio,
 )
@@ -122,3 +126,38 @@ class EmbarcacionNoDisponibleAdmin(EmpresaScopedAdminMixin, ModelAdmin):
         if not change:
             obj.registrado_por = request.user
         super().save_model(request, obj, form, change)
+
+
+class ServicioPersonalizacionInline(TabularInline):
+    model = ServicioPersonalizacion
+    extra = 1
+    fields = ['personalizacion', 'precio', 'precio_usd', 'obligatorio', 'preseleccionado', 'activo']
+
+
+@admin.register(Servicio)
+class ServicioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    list_display = [
+        'nombre', 'tipo_servicio', 'estrategia_cupo', 'estrategia_precio',
+        'modo_ocupacion', 'precio_base', 'precio_base_usd', 'activo',
+    ]
+    list_filter = ['tipo_servicio', 'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion', 'activo']
+    list_editable = ['precio_base', 'precio_base_usd', 'activo']
+    search_fields = ['nombre', 'slug', 'descripcion']
+    prepopulated_fields = {'slug': ('nombre',)}
+    inlines = [ServicioPersonalizacionInline]
+
+
+@admin.register(Recurso)
+class RecursoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    list_display = ['nombre', 'servicio', 'capacidad_maxima', 'activo']
+    list_filter = ['servicio', 'activo']
+    list_editable = ['capacidad_maxima', 'activo']
+    search_fields = ['nombre']
+
+
+@admin.register(Personalizacion)
+class PersonalizacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    list_display = ['nombre', 'tipo', 'cobrar_por_persona', 'cantidad_editable', 'activo']
+    list_filter = ['tipo', 'cobrar_por_persona', 'cantidad_editable', 'activo']
+    list_editable = ['cobrar_por_persona', 'cantidad_editable', 'activo']
+    search_fields = ['nombre']

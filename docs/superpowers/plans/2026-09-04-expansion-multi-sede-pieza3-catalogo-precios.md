@@ -106,7 +106,7 @@
 
 ### Bloque 4: Migración de Datos La Paz y Admin
 
-- [ ] **Task P4: Siembra de Servicio La Paz y configuración del Admin**
+- [x] **Task P4: Siembra de Servicio La Paz y configuración del Admin**
   - **Archivos:**
     - Crear `backend/apps/fleet/migrations/0018_crear_servicio_la_paz.py`
     - Modificar `backend/apps/fleet/admin.py`
