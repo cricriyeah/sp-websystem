@@ -1,5 +1,11 @@
 """Módulo de cupo y disponibilidad de reservas."""
 
+from .adaptador import (
+    ContextoCupo,
+    ContextoCupoRango,
+    obtener_contexto_cupo,
+    obtener_contexto_rango,
+)
 from .candado import (
     bloquear_cupo,
     bloquear_cupo_del_dia,
@@ -23,8 +29,17 @@ from .nucleo import (
     motivo_sin_lugar,
     ocupacion_por_rango,
 )
+from .registro import (
+    REGISTRO_ESTRATEGIAS,
+    obtener_estrategia,
+    registrar_estrategia,
+)
 
 __all__ = [
+    'ContextoCupo',
+    'ContextoCupoRango',
+    'obtener_contexto_cupo',
+    'obtener_contexto_rango',
     'DemandaCupo',
     'EstrategiaCupo',
     'ModoOcupacion',
@@ -42,4 +57,7 @@ __all__ = [
     'caben_compartido',
     'motivo_sin_lugar',
     'ocupacion_por_rango',
+    'REGISTRO_ESTRATEGIAS',
+    'obtener_estrategia',
+    'registrar_estrategia',
 ]
