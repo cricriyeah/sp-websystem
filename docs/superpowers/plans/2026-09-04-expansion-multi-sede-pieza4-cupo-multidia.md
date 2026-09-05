@@ -64,7 +64,7 @@
 
 ### Bloque 2: Modelo `ReservaOcupacion` y extensión de `Reserva` (`apps/bookings`)
 
-- [ ] **Task M2: Crear modelo `ReservaOcupacion` y campo `fecha_salida` en `Reserva`**
+- [x] **Task M2: Crear modelo `ReservaOcupacion` y campo `fecha_salida` en `Reserva`**
   - **Archivos:**
     - Modificar `backend/apps/bookings/models.py`
     - Crear `backend/apps/bookings/migrations/0026_reserva_ocupacion.py`

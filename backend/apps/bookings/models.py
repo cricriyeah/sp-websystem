@@ -373,6 +373,10 @@ class Reserva(models.Model):
 
     # Datos del viaje
     fecha = models.DateField()
+    fecha_salida = models.DateField(
+        null=True, blank=True,
+        help_text='Fecha de check-out / fin de servicio. Vacio en servicios de un solo dia.'
+    )
     hora = models.TimeField(validators=[validar_ventana_salida])
     numero_personas = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(MIN_PERSONAS), MaxValueValidator(MAX_PERSONAS)]
@@ -532,6 +536,16 @@ class Reserva(models.Model):
     def __str__(self):
         return f'{self.nombre_cliente} — {self.fecha} {self.hora}'
 
+    @property
+    def noches(self):
+        if self.fecha_salida and self.fecha_salida > self.fecha:
+            return (self.fecha_salida - self.fecha).days
+        return 1
+
+    @property
+    def fecha_fin_servicio(self):
+        return self.fecha_salida or (self.fecha + timedelta(days=1))
+
     @classmethod
     def from_db(cls, db, field_names, values):
         # Guarda la salida original para poder aplicar la regla de 48 horas en
@@ -594,8 +608,14 @@ class Reserva(models.Model):
             self.estado = self.Estado.PAGADA
 
     def clean(self):
+        if self.fecha_salida and self.fecha_salida <= self.fecha:
+            raise ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de inicio.'})
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            validar_cupo_diario(self.fecha, self.numero_personas, self.empresa, excluir_pk=self.pk)
+            tipo_srv = self.servicio.tipo_servicio if self.servicio_id else 'pesca'
+            validar_cupo_diario(
+                self.fecha, self.numero_personas, self.empresa,
+                excluir_pk=self.pk, tipo_servicio=tipo_srv,
+            )
             if self.codigo_promocional_id:
                 validar_codigo_promocional_en_pago(
                     self.codigo_promocional, self.moneda,
@@ -714,6 +734,99 @@ class Reserva(models.Model):
                 'fecha': f'El cambio de fecha requiere al menos {HORAS_MINIMAS_CAMBIO_FECHA} horas '
                          f'de anticipacion sobre la salida original ({original[0]} {original[1]}).',
             })
+
+
+class ReservaOcupacion(models.Model):
+    """Asignación de un recurso físico a una reserva en un intervalo semi-abierto [fecha_inicio, fecha_fin).
+
+    Permite que una reserva ocupe 1..N recursos (ej. múltiples habitaciones)
+    o recursos a lo largo de un rango multidía de hospedaje.
+    """
+
+    empresa = models.ForeignKey(
+        Empresa, on_delete=models.PROTECT, related_name='ocupaciones'
+    )
+    reserva = models.ForeignKey(
+        Reserva, on_delete=models.CASCADE, related_name='ocupaciones'
+    )
+    recurso = models.ForeignKey(
+        'fleet.Recurso', on_delete=models.PROTECT, related_name='ocupaciones'
+    )
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha_inicio', 'recurso']
+        verbose_name = 'ocupación de recurso'
+        verbose_name_plural = 'ocupaciones de recursos'
+
+    def __str__(self):
+        nombre_recurso = getattr(self.recurso, 'nombre', str(self.recurso_id)) if self.recurso_id else 'Sin recurso'
+        return f'{nombre_recurso} [{self.fecha_inicio} a {self.fecha_fin}) - Reserva #{self.reserva_id}'
+
+    def _reserva_o_ninguna(self):
+        try:
+            return self.reserva
+        except (Reserva.DoesNotExist, AttributeError):
+            return None
+
+    def _recurso_o_ninguno(self):
+        try:
+            return self.recurso
+        except Exception:
+            return None
+
+    def save(self, *args, **kwargs):
+        if self.reserva_id and not self.empresa_id:
+            reserva = self._reserva_o_ninguna()
+            if reserva is not None:
+                self.empresa_id = reserva.empresa_id
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        reserva = self._reserva_o_ninguna()
+        if reserva is not None and not self.empresa_id:
+            self.empresa_id = reserva.empresa_id
+
+        if self.fecha_inicio and self.fecha_fin and self.fecha_fin <= self.fecha_inicio:
+            raise ValidationError({
+                'fecha_fin': 'La fecha de fin debe ser posterior a la fecha de inicio.'
+            })
+
+        if reserva is not None and self.empresa_id and reserva.empresa_id != self.empresa_id:
+            raise ValidationError({
+                'empresa': 'La empresa de la ocupación debe coincidir con la de la reserva.'
+            })
+
+        recurso = self._recurso_o_ninguno()
+        if recurso is not None and self.empresa_id and recurso.empresa_id != self.empresa_id:
+            raise ValidationError({
+                'empresa': 'El recurso debe pertenecer a la misma empresa que la ocupación.'
+            })
+
+        if self.recurso_id and self.fecha_inicio and self.fecha_fin:
+            if reserva is not None and reserva.estado not in ESTADOS_QUE_OCUPAN_CUPO:
+                return
+
+            qs = ReservaOcupacion.objects.filter(
+                recurso_id=self.recurso_id,
+                reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if self.reserva_id:
+                qs = qs.exclude(reserva_id=self.reserva_id)
+
+            from .cupo.nucleo import rango_traslapa
+            nombre = recurso.nombre if recurso is not None else str(self.recurso_id)
+            for ocupacion in qs:
+                if rango_traslapa(self.fecha_inicio, self.fecha_fin, ocupacion.fecha_inicio, ocupacion.fecha_fin):
+                    raise ValidationError(
+                        f'El recurso {nombre} ya está ocupado en el rango '
+                        f'[{ocupacion.fecha_inicio} a {ocupacion.fecha_fin}) por la reserva #{ocupacion.reserva_id}.'
+                    )
 
 
 class ReservaExtra(models.Model):

@@ -12,9 +12,11 @@ from .candado import (
     calcular_clave_candado,
 )
 from .estrategias import (
+    BajoDemanda,
     DemandaCupo,
     EstrategiaCupo,
     ModoOcupacion,
+    PorNoche,
     PorRecursoDia,
     ResultadoDisponibilidad,
 )
@@ -28,6 +30,8 @@ from .nucleo import (
     caben_compartido,
     motivo_sin_lugar,
     ocupacion_por_rango,
+    rango_traslapa,
+    recursos_disponibles_en_rango,
 )
 from .registro import (
     REGISTRO_ESTRATEGIAS,
@@ -43,7 +47,9 @@ __all__ = [
     'DemandaCupo',
     'EstrategiaCupo',
     'ModoOcupacion',
+    'PorNoche',
     'PorRecursoDia',
+    'BajoDemanda',
     'ResultadoDisponibilidad',
     'MODO_EXCLUSIVO',
     'MODO_COMPARTIDO',
@@ -57,6 +63,8 @@ __all__ = [
     'caben_compartido',
     'motivo_sin_lugar',
     'ocupacion_por_rango',
+    'rango_traslapa',
+    'recursos_disponibles_en_rango',
     'REGISTRO_ESTRATEGIAS',
     'obtener_estrategia',
     'registrar_estrategia',

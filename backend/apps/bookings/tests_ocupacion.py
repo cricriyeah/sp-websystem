@@ -1,0 +1,237 @@
+"""Pruebas para el modelo ReservaOcupacion y soporte de estadías en Reserva."""
+
+from datetime import date, time, timedelta
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+
+from apps.fleet.models import Recurso, Servicio
+from apps.tenancy.models import Empresa, Sede
+from apps.bookings.models import Reserva, ReservaOcupacion
+
+
+class ReservaOcupacionModelTests(TestCase):
+    """Pruebas de integridad y validaciones de negocio en ReservaOcupacion."""
+
+    def setUp(self):
+        self.sede = Sede.objects.create(nombre='Sede Baja Sur', slug='sede-baja-sur')
+        self.empresa_a = Empresa.objects.create(sede=self.sede, nombre='Hotel Marino Loreto', slug='loreto-hotel')
+        self.empresa_b = Empresa.objects.create(sede=self.sede, nombre='Cabañas del Cabo', slug='cabo-cabanas')
+
+        self.servicio_hospedaje = Servicio.objects.create(
+            empresa=self.empresa_a,
+            nombre='Suite Frente al Mar',
+            slug='suite-frente-mar',
+            tipo_servicio='por_noche',
+            estrategia_cupo='por_noche',
+            precio_base=3500,
+        )
+
+        self.recurso_1 = Recurso.objects.create(
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            nombre='Cabaña 101',
+            capacidad_maxima=4,
+        )
+        self.recurso_2 = Recurso.objects.create(
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            nombre='Cabaña 102',
+            capacidad_maxima=4,
+        )
+
+        self.reserva = Reserva.objects.create(
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            fecha=date(2026, 10, 10),
+            fecha_salida=date(2026, 10, 15),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='+526121234567',
+            correo_cliente='juan@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+            estado=Reserva.Estado.PAGADA,
+        )
+
+    def test_reserva_propiedades_hospedaje(self):
+        """Verifica que Reserva calcule noches y fecha_fin_servicio correctamente."""
+        self.assertEqual(self.reserva.noches, 5)
+        self.assertEqual(self.reserva.fecha_fin_servicio, date(2026, 10, 15))
+
+    def test_reserva_fecha_salida_invalida_falla_clean(self):
+        """fecha_salida <= fecha debe lanzar ValidationError."""
+        self.reserva.fecha_salida = self.reserva.fecha
+        with self.assertRaises(ValidationError) as ctx:
+            self.reserva.clean()
+        self.assertIn('fecha_salida', ctx.exception.message_dict)
+
+    def test_creacion_ocupacion_exitosa_y_auto_empresa(self):
+        """Crea una ocupación y auto-asigna empresa desde la reserva."""
+        ocupacion = ReservaOcupacion(
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+        ocupacion.clean()
+        ocupacion.save()
+
+        self.assertEqual(ocupacion.empresa, self.empresa_a)
+        self.assertIn('Cabaña 101 [2026-10-10 a 2026-10-15)', str(ocupacion))
+
+    def test_fecha_fin_anterior_a_inicio_falla_clean(self):
+        """fecha_fin <= fecha_inicio debe lanzar ValidationError."""
+        ocupacion = ReservaOcupacion(
+            empresa=self.empresa_a,
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 15),
+            fecha_fin=date(2026, 10, 10),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            ocupacion.clean()
+        self.assertIn('fecha_fin', ctx.exception.message_dict)
+
+    def test_inconsistencia_de_empresa_en_reserva_falla_clean(self):
+        """Ocupación con empresa distinta a la de la reserva debe fallar."""
+        ocupacion = ReservaOcupacion(
+            empresa=self.empresa_b,
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            ocupacion.clean()
+        self.assertIn('empresa', ctx.exception.message_dict)
+
+    def test_inconsistencia_de_empresa_en_recurso_falla_clean(self):
+        """Recurso de otra empresa en la ocupación debe fallar."""
+        recurso_b = Recurso.objects.create(
+            empresa=self.empresa_b,
+            nombre='Cabaña B',
+            capacidad_maxima=2,
+        )
+        ocupacion = ReservaOcupacion(
+            empresa=self.empresa_a,
+            reserva=self.reserva,
+            recurso=recurso_b,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            ocupacion.clean()
+        self.assertIn('empresa', ctx.exception.message_dict)
+
+    def test_traslape_con_ocupacion_existente_del_mismo_recurso_falla(self):
+        """Dos reservas para el mismo recurso en fechas traslapadas no se permiten."""
+        ReservaOcupacion.objects.create(
+            empresa=self.empresa_a,
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+
+        reserva_2 = Reserva.objects.create(
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            fecha=date(2026, 10, 12),
+            fecha_salida=date(2026, 10, 16),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Maria Lopez',
+            telefono_cliente='+526121234568',
+            correo_cliente='maria@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+            estado=Reserva.Estado.PAGADA,
+        )
+
+        colision = ReservaOcupacion(
+            empresa=self.empresa_a,
+            reserva=reserva_2,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 12),
+            fecha_fin=date(2026, 10, 16),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            colision.clean()
+        self.assertIn('ya está ocupado en el rango', str(ctx.exception))
+
+    def test_fechas_contiguas_del_mismo_recurso_no_colisionan(self):
+        """Salida el 15 y entrada el 15 para la misma cabaña NO colisionan (semi-abierto)."""
+        ReservaOcupacion.objects.create(
+            empresa=self.empresa_a,
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+
+        reserva_2 = Reserva.objects.create(
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            fecha=date(2026, 10, 15),
+            fecha_salida=date(2026, 10, 20),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Carlos Ruiz',
+            telefono_cliente='+526121234569',
+            correo_cliente='carlos@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+            estado=Reserva.Estado.PAGADA,
+        )
+
+        contigua = ReservaOcupacion(
+            empresa=self.empresa_a,
+            reserva=reserva_2,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 15),
+            fecha_fin=date(2026, 10, 20),
+        )
+        # No debe lanzar excepción
+        contigua.clean()
+        contigua.save()
+        self.assertTrue(contigua.pk is not None)
+
+    def test_ocupacion_de_reserva_cancelada_no_bloquea_recurso(self):
+        """Una ocupación cuya reserva está cancelada no bloquea el recurso."""
+        self.reserva.estado = Reserva.Estado.CANCELADA
+        self.reserva.save(update_fields=['estado'])
+
+        ReservaOcupacion.objects.create(
+            empresa=self.empresa_a,
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+
+        reserva_2 = Reserva.objects.create(
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            fecha=date(2026, 10, 10),
+            fecha_salida=date(2026, 10, 15),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Ana Torres',
+            telefono_cliente='+526121234570',
+            correo_cliente='ana@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+            estado=Reserva.Estado.PAGADA,
+        )
+
+        nueva_ocupacion = ReservaOcupacion(
+            empresa=self.empresa_a,
+            reserva=reserva_2,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+        nueva_ocupacion.clean()
+        nueva_ocupacion.save()
+        self.assertTrue(nueva_ocupacion.pk is not None)
