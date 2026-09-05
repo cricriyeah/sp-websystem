@@ -89,7 +89,7 @@
 
 ### Bloque 3: Row Level Security (RLS) en Postgres para Catálogo
 
-- [ ] **Task P3: Migración RLS de Postgres para las tablas de catálogo**
+- [x] **Task P3: Migración RLS de Postgres para las tablas de catálogo**
   - **Archivos:**
     - Crear `backend/apps/fleet/migrations/0017_rls_catalogo.py`
     - Crear `backend/apps/fleet/tests_catalogo_rls.py`
