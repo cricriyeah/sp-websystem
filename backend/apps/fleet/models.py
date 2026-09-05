@@ -361,6 +361,150 @@ class EmbarcacionNoDisponible(models.Model):
         return f'{self.embarcacion.nombre} fuera el {self.fecha}'
 
 
+class Servicio(models.Model):
+    """Experiencia vendible en una sede/empresa.
+
+    Define estrategia de cupo, estrategia de precio, modo de ocupación y tarifas base.
+    """
+    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='servicios')
+    nombre = models.CharField(max_length=150)
+    slug = models.SlugField(max_length=150)
+    tipo_servicio = models.CharField(max_length=50, default='pesca')
+    estrategia_cupo = models.CharField(max_length=50, default='por_recurso_dia')
+    estrategia_precio = models.CharField(max_length=50, default='por_grupo')
+    modo_ocupacion = models.CharField(max_length=20, default='exclusivo')
+    precio_base = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0.00'),
+        help_text='Precio base del servicio en MXN.'
+    )
+    precio_base_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Precio base del servicio en USD. Opcional.'
+    )
+    precio_persona_extra = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0.00'),
+        help_text='Cargo por persona adicional arriba del cupo incluido en MXN.'
+    )
+    precio_persona_extra_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Cargo por persona adicional arriba del cupo incluido en USD.'
+    )
+    personas_incluidas = models.PositiveSmallIntegerField(
+        default=3,
+        help_text='Cantidad de personas incluidas en el precio base antes de cobrar recargo.'
+    )
+    descripcion = models.TextField(blank=True, default='')
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'slug'], name='servicio_unico_por_empresa_slug'),
+        ]
+        ordering = ['empresa', 'nombre']
+        verbose_name = 'servicio'
+        verbose_name_plural = 'servicios'
+
+    def __str__(self):
+        return f"{self.nombre} ({self.empresa})"
+
+    def precio_en(self, moneda):
+        """Precio de lista en la moneda pedida, o None si no esta configurado."""
+        return self.precio_base if (moneda or 'MXN').upper() == 'MXN' else self.precio_base_usd
+
+    def persona_extra_en(self, moneda):
+        """Cargo por persona adicional en esa moneda. None = sin configurar."""
+        return self.precio_persona_extra if (moneda or 'MXN').upper() == 'MXN' else self.precio_persona_extra_usd
+
+
+class Recurso(models.Model):
+    """Activo físico asignable a reservas (panga, guía, habitación, etc.)."""
+    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='recursos')
+    servicio = models.ForeignKey(
+        Servicio, on_delete=models.SET_NULL, null=True, blank=True, related_name='recursos'
+    )
+    nombre = models.CharField(max_length=100)
+    capacidad_maxima = models.PositiveSmallIntegerField()
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'nombre'], name='recurso_unico_por_empresa_nombre'),
+        ]
+        ordering = ['empresa', 'nombre']
+        verbose_name = 'recurso'
+        verbose_name_plural = 'recursos'
+
+    def __str__(self):
+        return f"{self.nombre} ({self.capacidad_maxima} pax) - {self.empresa}"
+
+    def clean(self):
+        super().clean()
+        if self.servicio_id and self.servicio.empresa_id != self.empresa_id:
+            raise ValidationError({'servicio': 'El servicio debe pertenecer a la misma empresa que el recurso.'})
+
+
+class Personalizacion(models.Model):
+    """Catálogo de complementos y extras reutilizables."""
+    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='personalizaciones')
+    nombre = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=50, default='otro')
+    cobrar_por_persona = models.BooleanField(default=False)
+    cantidad_editable = models.BooleanField(default=False)
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'nombre'], name='personalizacion_unica_por_empresa_nombre'),
+        ]
+        ordering = ['empresa', 'nombre']
+        verbose_name = 'personalización'
+        verbose_name_plural = 'personalizaciones'
+
+    def __str__(self):
+        return f"{self.nombre} ({self.empresa})"
+
+
+class ServicioPersonalizacion(models.Model):
+    """Asociación de un complemento a un servicio específico con su precio."""
+    servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE, related_name='servicio_personalizaciones')
+    personalizacion = models.ForeignKey(Personalizacion, on_delete=models.PROTECT, related_name='en_servicios')
+    precio = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    precio_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    obligatorio = models.BooleanField(default=False)
+    preseleccionado = models.BooleanField(default=False)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['servicio', 'personalizacion'],
+                name='personalizacion_unica_por_servicio'
+            ),
+        ]
+        ordering = ['servicio', 'personalizacion__nombre']
+        verbose_name = 'personalización de servicio'
+        verbose_name_plural = 'personalizaciones de servicios'
+
+    def __str__(self):
+        return f"{self.servicio.nombre} - {self.personalizacion.nombre} (${self.precio})"
+
+    def clean(self):
+        super().clean()
+        if self.servicio_id and self.personalizacion_id:
+            if self.servicio.empresa_id != self.personalizacion.empresa_id:
+                raise ValidationError({
+                    'personalizacion': 'La personalización debe pertenecer a la misma empresa que el servicio.'
+                })
+
+    def precio_en(self, moneda):
+        """Precio de la personalización en la moneda solicitada."""
+        return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
+
+
 def capacidades_por_fecha(desde, hasta, empresa):
     """Capacidad de cada panga que puede salir, por dia, de mayor a menor, para
     esa Empresa. `empresa` es obligatorio — sin filtro por Empresa, en

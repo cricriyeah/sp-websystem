@@ -74,7 +74,7 @@
 
 ### Bloque 2: Modelos de Catálogo por Capas (`apps/fleet`)
 
-- [ ] **Task P2: Crear modelos `Servicio`, `Recurso`, `Personalizacion`, `ServicioPersonalizacion`**
+- [x] **Task P2: Crear modelos `Servicio`, `Recurso`, `Personalizacion`, `ServicioPersonalizacion`**
   - **Archivos:**
     - Modificar `backend/apps/fleet/models.py`
     - Crear `backend/apps/fleet/migrations/0016_catalogo_capas.py`
