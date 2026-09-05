@@ -19,6 +19,22 @@ from apps.fleet.models import (
 )
 from apps.tenancy.models import Empresa
 
+from .cupo import (
+    DemandaCupo,
+    ModoOcupacion,
+    MOTIVO_LLENO,
+    MOTIVO_SIN_LUGAR,
+    MOTIVO_SIN_PANGA,
+    bloquear_cupo,
+    bloquear_cupo_del_dia,
+    caben,
+    caben_compartido,
+    motivo_sin_lugar,
+    obtener_contexto_cupo,
+    obtener_contexto_rango,
+    obtener_estrategia,
+    ocupacion_por_rango,
+)
 from .validators import validar_nombre_persona, validar_telefono
 
 VENTANA_SALIDA_INICIO = time(5, 0)
@@ -115,174 +131,61 @@ def cupo_maximo_del_dia(fecha, empresa):
     return override.cupo_maximo if override else CUPO_MAXIMO_DEFAULT
 
 
-# Por que no se puede vender un lugar. Viajan al frontend en la respuesta de
-# /api/cupo/, porque "ese dia esta lleno" y "no queda panga para tu grupo" son dos
-# cosas distintas para el cliente que las lee.
-MOTIVO_LLENO = 'lleno'
-MOTIVO_SIN_PANGA = 'sin_panga'
-
-
-def caben(grupos, capacidades):
-    """Hay forma de darle a cada grupo una panga donde quepa?
-
-    Las dos listas llegan ordenadas **de mayor a menor**.
-
-    Se emparejan de mayor a menor: el grupo mas grande con la panga mas grande. Si
-    a algun grupo le toca una panga mas chica que el, no hay reparto posible — y no
-    lo hay con ningun otro orden, porque cualquier reparto valido tendria que darle
-    a ese grupo una panga al menos igual de grande, y todas las de arriba ya estan
-    ocupadas por grupos aun mayores.
-
-    Con 10 pangas el costo es irrelevante, pero importa que el criterio sea exacto
-    y no una heuristica: de esto depende si se cobra o no.
-    """
-    if len(grupos) > len(capacidades):
-        return False
-    return all(g <= c for g, c in zip(grupos, capacidades))
-
-
-def motivo_sin_lugar(personas, grupos, capacidades, tope):
-    """Por que no entra un grupo de `personas` mas, o None si si entra.
-
-    `grupos` son los tamanos ya vendidos de ese dia, sin el nuevo. `capacidades`
-    viene ordenada de mayor a menor. `tope` es el maximo de viajes del dia.
-
-    Es el nucleo puro del cupo: no toca la base. Lo llaman la validacion al
-    guardar, el endpoint /api/cupo/, la busqueda de la proxima fecha y el comando
-    revisar_cupo — los cuatro tienen que decidir igual, y por eso deciden aqui.
-
-    El orden de las dos comprobaciones importa: si el dia esta lleno a secas, ese
-    es el mensaje util, no el de las pangas.
-    """
-    if len(grupos) + 1 > tope:
-        return MOTIVO_LLENO
-    if not caben(sorted([*grupos, personas], reverse=True), capacidades):
-        return MOTIVO_SIN_PANGA
-    return None
-
-
 # Hasta donde se busca un dia con espacio cuando el pedido esta lleno. Tres meses
 # cubre de sobra la ventana en que la gente planea un viaje de pesca.
 DIAS_BUSQUEDA_DISPONIBILIDAD = 90
 
 
-def proxima_fecha_disponible(desde, personas, empresa, dias=DIAS_BUSQUEDA_DISPONIBILIDAD):
+def proxima_fecha_disponible(desde, personas, empresa, dias=DIAS_BUSQUEDA_DISPONIBILIDAD, tipo_servicio='pesca'):
     """Primera fecha donde cabe un grupo de `personas`, o None si no hay en `dias`.
 
-    Se resuelve con **cuatro consultas**, no una por dia: reservas del rango,
-    CupoDiario del rango, y las dos de la flota. Antes esta busqueda vivia en el
-    navegador (`checkout-view.tsx`) y hacia una peticion por cada dia que probaba:
-    hasta 90 seguidas, que con el limite de 60/min por IP terminaban en un 429 que
-    el frontend se tragaba en silencio. La ayuda de "te muevo al siguiente dia con
-    espacio" dejaba de funcionar justo en temporada alta, que es cuando hace falta.
-    El costo no puede volver a crecer con la ventana.
+    Se resuelve con cuatro consultas mediante el adaptador de cupo, no una por dia.
     """
     hasta = desde + timedelta(days=dias - 1)
-
-    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas, empresa).items()):
+    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas, empresa, tipo_servicio=tipo_servicio).items()):
         if motivo is None:
             return fecha
     return None
 
 
-def disponibilidad_por_fecha(desde, hasta, personas, empresa):
+def disponibilidad_por_fecha(desde, hasta, personas, empresa, tipo_servicio='pesca'):
     """Por que no cabe un grupo de `personas` cada dia del rango, o None si cabe.
 
     `{fecha: None | MOTIVO_LLENO | MOTIVO_SIN_PANGA}`, una entrada por dia,
-    extremos incluidos.
-
-    Se resuelve con **cuatro consultas para todo el rango**, no una por dia:
-    reservas, CupoDiario, y las dos de la flota. Esa es la razon de existir de
-    esta funcion. Pintar los dias llenos en gris preguntando dia por dia son 30
-    peticiones por mes, y el limite de `consulta` es 60/min por IP: el segundo mes
-    devuelve 429. Es el mismo error que ya se cometio una vez con la busqueda del
-    siguiente dia disponible, cuando vivia en el navegador.
-
-    El motivo importa y por eso se devuelve en vez de un booleano: 'lleno' es del
-    dia, pero 'sin_panga' depende del tamano del grupo — el mismo dia admite a dos
-    personas y rechaza a cuatro, porque solo dos pangas de la flota pasan de tres.
+    extremos incluidos. Resuelve con cuatro consultas para todo el rango delegando
+    en la estrategia configurada (PorRecursoDia por defecto).
     """
-    grupos_por_fecha = defaultdict(list)
-    for fecha, personas_de_esa in Reserva.objects.filter(
-        fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
-    ).values_list('fecha', 'numero_personas'):
-        grupos_por_fecha[fecha].append(personas_de_esa)
-
-    topes = dict(
-        CupoDiario.objects.filter(fecha__range=(desde, hasta), empresa=empresa)
-        .values_list('fecha', 'cupo_maximo')
+    ctx = obtener_contexto_rango(desde, hasta, empresa)
+    estrategia = obtener_estrategia(tipo_servicio)
+    res_rango = estrategia.evaluar_rango(
+        fechas=ctx.fechas,
+        grupos_por_fecha=ctx.grupos_por_fecha,
+        capacidades_por_fecha=ctx.capacidades_por_fecha,
+        topes_por_fecha=ctx.topes_por_fecha,
+        personas=personas,
     )
-    capacidades = capacidades_por_fecha(desde, hasta, empresa)
-
-    return {
-        fecha: motivo_sin_lugar(
-            personas,
-            grupos_por_fecha[fecha],
-            capacidades[fecha],
-            topes.get(fecha, CUPO_MAXIMO_DEFAULT),
-        )
-        for fecha in (desde + timedelta(days=i) for i in range((hasta - desde).days + 1))
-    }
+    return {fecha: item.motivo for fecha, item in res_rango.items()}
 
 
-def bloquear_cupo_del_dia(empresa_id, fecha):
-    """Serializa la validacion de cupo de una fecha entre transacciones.
-
-    Sin esto hay sobreventa: contar y guardar no son una operacion atomica. Dos
-    clientes distintos pagando el ultimo lugar del mismo dia al mismo tiempo
-    hacen que las dos transacciones cuenten `cupo - 1` ocupadas, las dos pasen la
-    validacion y las dos queden confirmadas. Alguien llega al muelle y no hay
-    panga. `select_for_update` sobre la reserva propia no lo evita: bloquea la
-    fila que se esta pagando, no el conjunto contra el que se cuenta, y una fila
-    que todavia no existe no se puede bloquear.
-
-    Un advisory lock de Postgres si sirve para eso: no necesita una fila, se toma
-    sobre un numero arbitrario — aqui el ordinal de la fecha, unico y estable por
-    dia — y la variante `_xact_` se libera sola al terminar la transaccion, sin
-    riesgo de dejarlo colgado si algo revienta a medias.
-
-    Dos condiciones para que proteja de verdad:
-
-    - **Tiene que haber transaccion.** Fuera de una, Postgres la abre y la cierra
-      con la propia consulta, asi que el lock se suelta antes de guardar y no
-      sirve de nada. Las dos rutas que crean reservas cumplen: el webhook corre
-      en `transaction.atomic` (ver apps/payments/services.py) y el admin de
-      Django envuelve cada guardado en una transaccion.
-    - **Se toma antes de contar**, no despues, o la carrera ya ocurrio.
-
-    En sqlite es un no-op: no tiene advisory locks y no le hacen falta — serializa
-    toda escritura con un solo escritor. Ese es justamente el motivo por el que
-    esta condicion de carrera era invisible en los tests hasta que el CI empezo a
-    correrlos tambien contra Postgres (ver config/settings/ci.py).
-
-    Toma el par `(empresa_id, fecha)`, no solo la fecha: dos Empresas venden el
-    mismo dia sin pisarse el candado, cada una serializa solo contra si misma.
-    """
-    if connection.vendor != 'postgresql':
-        return
-    with connection.cursor() as cursor:
-        cursor.execute('SELECT pg_advisory_xact_lock(%s, %s)', [empresa_id, fecha.toordinal()])
-
-
-def evaluar_cupo(fecha, personas, empresa, excluir_pk=None):
+def evaluar_cupo(fecha, personas, empresa, excluir_pk=None, tipo_servicio='pesca'):
     """Por que no entra un grupo de `personas` ese dia, o None si si entra.
 
     Solo consulta: **no toma el lock**. La usa `/api/cupo/`, que es una lectura
     informativa, y `validar_cupo_diario`, que si lo toma antes de llamar aqui.
     """
-    ocupadas = Reserva.objects.filter(fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa)
-    if excluir_pk is not None:
-        ocupadas = ocupadas.exclude(pk=excluir_pk)
-
-    return motivo_sin_lugar(
-        personas,
-        list(ocupadas.values_list('numero_personas', flat=True)),
-        capacidades_disponibles(fecha, empresa),
-        cupo_maximo_del_dia(fecha, empresa),
+    ctx = obtener_contexto_cupo(fecha, empresa, excluir_pk=excluir_pk)
+    estrategia = obtener_estrategia(tipo_servicio)
+    demanda = DemandaCupo(fecha=fecha, personas=personas, excluir_pk=excluir_pk)
+    resultado = estrategia.evaluar(
+        demanda=demanda,
+        grupos=ctx.grupos,
+        capacidades=ctx.capacidades,
+        tope=ctx.tope,
     )
+    return resultado.motivo
 
 
-def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None):
+def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None, tipo_servicio='pesca'):
     """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
     de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md).
 
@@ -290,20 +193,18 @@ def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None):
     quien los lee: el dia se lleno, o el dia tiene espacio pero ya no hay panga
     donde quepa ese grupo.
     """
-    # Antes de contar, no despues: ver bloquear_cupo_del_dia. Ahora el lock ademas
+    # Antes de contar, no despues: ver bloquear_cupo. Ahora el lock ademas
     # cubre el ultimo lugar *de ese tamano*, no solo el ultimo lugar.
-    bloquear_cupo_del_dia(empresa.pk, fecha)
-
-    motivo = evaluar_cupo(fecha, personas, empresa, excluir_pk=excluir_pk)
-    if motivo == MOTIVO_LLENO:
-        raise ValidationError(
-            f'No hay cupo disponible para el {fecha}: se alcanzo el maximo de viajes del dia.'
-        )
-    if motivo == MOTIVO_SIN_PANGA:
-        raise ValidationError(
-            f'No queda panga para un grupo de {personas} personas el {fecha}. '
-            f'Las de mayor capacidad ya estan comprometidas.'
-        )
+    bloquear_cupo(empresa.pk, fecha, ambito=tipo_servicio)
+    ctx = obtener_contexto_cupo(fecha, empresa, excluir_pk=excluir_pk)
+    estrategia = obtener_estrategia(tipo_servicio)
+    demanda = DemandaCupo(fecha=fecha, personas=personas, excluir_pk=excluir_pk)
+    estrategia.validar(
+        demanda=demanda,
+        grupos=ctx.grupos,
+        capacidades=ctx.capacidades,
+        tope=ctx.tope,
+    )
 
 
 def codigo_promocional_valido(promo, correo_cliente, monto_viaje=None, moneda=None, excluir_pk=None):
