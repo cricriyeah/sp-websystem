@@ -73,3 +73,77 @@ def obtener_contexto_rango(desde: date, hasta: date, empresa) -> ContextoCupoRan
         capacidades_por_fecha=capacidades,
         topes_por_fecha=topes_por_fecha,
     )
+
+
+def obtener_recursos_con_ocupaciones(
+    desde: date,
+    hasta: date,
+    empresa,
+    servicio=None,
+    excluir_pk: int | None = None,
+) -> list[tuple[int, int, list[tuple[date, date]]]]:
+    """Obtiene los recursos activos de la empresa y sus ocupaciones registradas en [desde, hasta).
+
+    Retorna una lista de tuplas: (recurso_id, capacidad_maxima, [(o_ini, o_fin), ...]).
+    """
+    from apps.bookings.models import ESTADOS_QUE_OCUPAN_CUPO, ReservaOcupacion
+    from apps.fleet.models import Recurso
+
+    recursos_qs = Recurso.objects.filter(empresa=empresa, activo=True)
+    if servicio is not None:
+        recursos_qs = recursos_qs.filter(servicio=servicio)
+
+    recursos = list(recursos_qs)
+    if not recursos:
+        return []
+
+    ocupaciones_qs = ReservaOcupacion.objects.filter(
+        empresa=empresa,
+        recurso__in=recursos,
+        reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+        fecha_inicio__lt=hasta,
+        fecha_fin__gt=desde,
+    )
+    if excluir_pk is not None:
+        ocupaciones_qs = ocupaciones_qs.exclude(reserva_id=excluir_pk)
+
+    ocupaciones_por_recurso = defaultdict(list)
+    for r_id, o_ini, o_fin in ocupaciones_qs.values_list('recurso_id', 'fecha_inicio', 'fecha_fin'):
+        ocupaciones_por_recurso[r_id].append((o_ini, o_fin))
+
+    return [
+        (r.id, r.capacidad_maxima, ocupaciones_por_recurso[r.id])
+        for r in recursos
+    ]
+
+
+def evaluar_disponibilidad_hospedaje(
+    check_in: date,
+    check_out: date,
+    personas: int,
+    empresa,
+    servicio=None,
+    cantidad_recursos: int = 1,
+    excluir_pk: int | None = None,
+) -> bool:
+    """Consulta si hay recursos suficientes disponibles para una estadía multidía."""
+    from .estrategias import DemandaCupo, PorNoche
+
+    recursos_con_ocupaciones = obtener_recursos_con_ocupaciones(
+        desde=check_in,
+        hasta=check_out,
+        empresa=empresa,
+        servicio=servicio,
+        excluir_pk=excluir_pk,
+    )
+    demanda = DemandaCupo(
+        fecha=check_in,
+        fecha_fin=check_out,
+        personas=personas,
+        cantidad_recursos=cantidad_recursos,
+        excluir_pk=excluir_pk,
+    )
+    estrategia = PorNoche()
+    resultado = estrategia.evaluar_ocupacion(demanda, recursos_con_ocupaciones)
+    return resultado.disponible
+

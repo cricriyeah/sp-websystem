@@ -3,8 +3,10 @@
 from .adaptador import (
     ContextoCupo,
     ContextoCupoRango,
+    evaluar_disponibilidad_hospedaje,
     obtener_contexto_cupo,
     obtener_contexto_rango,
+    obtener_recursos_con_ocupaciones,
 )
 from .candado import (
     bloquear_cupo,
@@ -42,8 +44,10 @@ from .registro import (
 __all__ = [
     'ContextoCupo',
     'ContextoCupoRango',
+    'evaluar_disponibilidad_hospedaje',
     'obtener_contexto_cupo',
     'obtener_contexto_rango',
+    'obtener_recursos_con_ocupaciones',
     'DemandaCupo',
     'EstrategiaCupo',
     'ModoOcupacion',

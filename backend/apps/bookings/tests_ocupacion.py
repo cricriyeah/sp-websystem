@@ -235,3 +235,53 @@ class ReservaOcupacionModelTests(TestCase):
         nueva_ocupacion.clean()
         nueva_ocupacion.save()
         self.assertTrue(nueva_ocupacion.pk is not None)
+
+    def test_adaptador_evaluar_disponibilidad_hospedaje(self):
+        """El adaptador calcula disponibilidad de hospedaje consultando recursos y ocupaciones."""
+        from apps.bookings.cupo.adaptador import (
+            evaluar_disponibilidad_hospedaje,
+            obtener_recursos_con_ocupaciones,
+        )
+
+        # Cabaña 101 ocupada del 10 al 15
+        ReservaOcupacion.objects.create(
+            empresa=self.empresa_a,
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+
+        # Cabaña 102 está libre. Cliente busca del 10 al 15 para 2 personas (1 habitación): disponible
+        disponible_1_hab = evaluar_disponibilidad_hospedaje(
+            check_in=date(2026, 10, 10),
+            check_out=date(2026, 10, 15),
+            personas=2,
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            cantidad_recursos=1,
+        )
+        self.assertTrue(disponible_1_hab)
+
+        # Cliente busca 2 habitaciones del 10 al 15: NO disponible (solo queda 1 libre)
+        disponible_2_hab = evaluar_disponibilidad_hospedaje(
+            check_in=date(2026, 10, 10),
+            check_out=date(2026, 10, 15),
+            personas=2,
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            cantidad_recursos=2,
+        )
+        self.assertFalse(disponible_2_hab)
+
+        # Del 15 al 20 (check-out del anterior es el 15): ambas habitaciones están disponibles
+        disponible_del_15 = evaluar_disponibilidad_hospedaje(
+            check_in=date(2026, 10, 15),
+            check_out=date(2026, 10, 20),
+            personas=6,
+            empresa=self.empresa_a,
+            servicio=self.servicio_hospedaje,
+            cantidad_recursos=2,
+        )
+        self.assertTrue(disponible_del_15)
+

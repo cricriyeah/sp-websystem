@@ -18,6 +18,7 @@ from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
+from apps.fleet.models import Recurso
 from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from apps.tenancy.models import MembresiaEmpresa
@@ -32,6 +33,7 @@ from .models import (
     CupoDiario,
     Reserva,
     ReservaExtra,
+    ReservaOcupacion,
     ReservaTransporte,
     Vendedora,
 )
@@ -203,6 +205,26 @@ class ReservaTransporteInline(admin.StackedInline):
         return False
 
 
+class ReservaOcupacionInline(admin.TabularInline):
+    model = ReservaOcupacion
+    extra = 0
+    fields = ['recurso', 'fecha_inicio', 'fecha_fin', 'creado_en']
+    readonly_fields = ['creado_en']
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'recurso' and not scope.es_operador_plataforma(request.user):
+            kwargs['queryset'] = Recurso.objects.filter(empresa=scope.empresa_actual(request))
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(ReservaOcupacion)
+class ReservaOcupacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    list_display = ['recurso', 'reserva', 'fecha_inicio', 'fecha_fin', 'creado_en']
+    list_filter = ['recurso', 'fecha_inicio', 'fecha_fin']
+    search_fields = ['recurso__nombre', 'reserva__nombre_cliente']
+    readonly_fields = ['creado_en']
+
+
 @admin.register(Reserva)
 class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
@@ -219,7 +241,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora']
-    inlines = [ReservaExtraInline, ReservaTransporteInline]
+    inlines = [ReservaExtraInline, ReservaTransporteInline, ReservaOcupacionInline]
     # El deslinde es el registro legal de lo que acepto el cliente: se consulta,
     # no se edita (ver docs/contexto-negocio.md, seccion Legal). Las fechas y los
     # montos del cobro los sella el sistema desde Stripe: editarlos a mano

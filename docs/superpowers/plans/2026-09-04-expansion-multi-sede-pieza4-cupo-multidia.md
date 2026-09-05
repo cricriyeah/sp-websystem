@@ -93,7 +93,7 @@
 
 ### Bloque 4: Adaptador y Gestión en Django Admin
 
-- [ ] **Task M4: Adaptador de base de datos para `PorNoche` y Django Admin**
+- [x] **Task M4: Adaptador de base de datos para `PorNoche` y Django Admin**
   - **Archivos:**
     - Modificar `backend/apps/bookings/cupo/adaptador.py`
     - Modificar `backend/apps/bookings/admin.py`
