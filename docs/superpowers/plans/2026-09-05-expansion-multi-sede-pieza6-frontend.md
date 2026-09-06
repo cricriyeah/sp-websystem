@@ -53,7 +53,7 @@
 
 ### Bloque 1: Endpoints Backend para Catálogo Multi-Sede
 
-- [ ] **Task P6.1: Endpoints públicos `GET /api/sedes/` y `GET /api/sedes/<sede_slug>/servicios/`**
+- [x] **Task P6.1: Endpoints públicos `GET /api/sedes/` y `GET /api/sedes/<sede_slug>/servicios/`**
   - **Archivos:**
     - Crear `backend/apps/tenancy/serializers.py`
     - Modificar `backend/apps/fleet/views.py`
@@ -72,7 +72,7 @@
 
 ### Bloque 2: Tipos y Cliente API en Frontend
 
-- [ ] **Task P6.2: Tipos TypeScript y cliente API para catálogo multi-sede y cálculo reactivo de paquete**
+- [x] **Task P6.2: Tipos TypeScript y cliente API para catálogo multi-sede y cálculo reactivo de paquete**
   - **Archivos:**
     - Modificar `frontend/src/lib/api.ts`
     - Crear `frontend/src/lib/pricing-paquete.ts`
@@ -91,7 +91,7 @@
 
 ### Bloque 3: Selector de Sede y Navegación Multi-Tenant
 
-- [ ] **Task P6.3: Componente `SedeSelector` y actualización de navegación**
+- [x] **Task P6.3: Componente `SedeSelector` y actualización de navegación**
   - **Archivos:**
     - Crear `frontend/src/components/sede-selector.tsx`
     - Modificar `frontend/src/components/site-header.tsx`
@@ -107,7 +107,7 @@
 
 ### Bloque 4: Paquetes Dominantes con Perception-First Design
 
-- [ ] **Task P6.4: Componente `PaqueteCard` con desglose interactivo y edición in-place**
+- [x] **Task P6.4: Componente `PaqueteCard` con desglose interactivo y edición in-place**
   - **Archivos:**
     - Crear `frontend/src/components/paquete-card.tsx`
     - Modificar `frontend/src/app/[lang]/dictionaries/es.json`
@@ -126,7 +126,7 @@
 
 ### Bloque 5: Camino Secundario para Servicios Sueltos
 
-- [ ] **Task P6.5: Componente `ServiciosSueltosSection` con menor peso visual y cross-sell**
+- [x] **Task P6.5: Componente `ServiciosSueltosSection` con menor peso visual y cross-sell**
   - **Archivos:**
     - Crear `frontend/src/components/servicios-sueltos-section.tsx`
     - Modificar `frontend/src/app/[lang]/dictionaries/es.json`
@@ -142,7 +142,7 @@
 
 ### Bloque 6: Página de Catálogo Multi-Sede
 
-- [ ] **Task P6.6: Página de catálogo de experiencias (`/[lang]/catalogo`)**
+- [x] **Task P6.6: Página de catálogo de experiencias (`/[lang]/catalogo`)**
   - **Archivos:**
     - Crear `frontend/src/app/[lang]/catalogo/page.tsx`
     - Crear `frontend/src/app/[lang]/catalogo/loading.tsx`
@@ -162,7 +162,7 @@
 
 ### Bloque 7: Integración de Paquete en el Checkout
 
-- [ ] **Task P6.7: Soporte de reserva con paquete en `CheckoutView`**
+- [x] **Task P6.7: Soporte de reserva con paquete en `CheckoutView`**
   - **Archivos:**
     - Modificar `frontend/src/components/checkout-view.tsx`
     - Modificar `frontend/src/app/[lang]/reservar/page.tsx`
@@ -179,7 +179,7 @@
 
 ### Bloque 8: Verificación Integral End-to-End
 
-- [ ] **Task P6.8: Suite integral de verificación para la Pieza 6**
+- [x] **Task P6.8: Suite integral de verificación para la Pieza 6**
   - **Archivos:**
     - Todos los involucrados en Pieza 6.
   - **Descripción:**
