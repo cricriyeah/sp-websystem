@@ -89,6 +89,11 @@ REST_FRAMEWORK = {
         # apps/bookings/models.py, codigo_promocional_valido). Mismo limite que
         # 'pagos' para no dejar barrer el catalogo de codigos a fuerza bruta.
         'codigo_promocional': os.environ.get('THROTTLE_CODIGO_PROMOCIONAL', '20/min'),
+        # Catalogo publico (tarifa, extras, servicios, paquetes, sedes): lo
+        # consultan el checkout server-side y la pagina de catalogo al cambiar de
+        # sede. Las rutas por Sede recorren varias Empresas (una transaccion por
+        # Empresa), asi que conviene un limite propio y no dejarlas sin freno.
+        'catalogo': os.environ.get('THROTTLE_CATALOGO', '120/min'),
     },
 }
 

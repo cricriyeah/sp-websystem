@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 
 from apps.tenancy import scope
 
+from .catalogo import paquetes_de_sede, servicios_de_sede
 from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, Tarifa, TransportePrecio
 from .serializers import (
     ExtrasItemSerializer,
@@ -24,6 +25,8 @@ PERSONAS_MAXIMO_PREVIEW = 50
 class TarifaView(APIView):
     """Precio unico del tour de una Empresa, para que el checkout de la web no lo hardcodee."""
 
+    throttle_scope = 'catalogo'
+
     def get(self, request, empresa_slug):
         empresa = scope.resolver_empresa_publica(empresa_slug)
         with scope.con_empresa(empresa):
@@ -43,6 +46,8 @@ class ExtrasPublicosView(APIView):
     moneda que tenga en pantalla y muestra lo que responde, igual que ya
     hace con `/api/<empresa_slug>/tarifa/`.
     """
+
+    throttle_scope = 'catalogo'
 
     def get(self, request, empresa_slug):
         empresa = scope.resolver_empresa_publica(empresa_slug)
@@ -77,15 +82,23 @@ class ExtrasPublicosView(APIView):
 class ServiciosListView(APIView):
     """Lista publica de servicios activos para una empresa/sede."""
 
+    throttle_scope = 'catalogo'
+
     def get(self, request, empresa_slug):
         empresa = scope.resolver_empresa_publica(empresa_slug)
         with scope.con_empresa(empresa):
-            servicios = Servicio.objects.filter(empresa=empresa, activo=True)
+            servicios = (
+                Servicio.objects.filter(empresa=empresa, activo=True)
+                .prefetch_related('servicio_personalizaciones__personalizacion')
+                .order_by('nombre')
+            )
             return Response(ServicioSerializer(servicios, many=True).data)
 
 
 class ServicioDetailView(APIView):
     """Detalle publico de un servicio por slug para una empresa/sede."""
+
+    throttle_scope = 'catalogo'
 
     def get(self, request, empresa_slug, slug):
         empresa = scope.resolver_empresa_publica(empresa_slug)
@@ -95,22 +108,26 @@ class ServicioDetailView(APIView):
 
 
 class PaquetesPorSedeListView(APIView):
-    """Catalogo publico de experiencias empaquetadas activas por localidad/sede."""
+    """Catalogo publico de experiencias empaquetadas activas por localidad/sede.
+
+    Recorre las Empresas de la Sede cada una en su propio alcance RLS (ver
+    apps.fleet.catalogo) -- nunca `como_operador_plataforma()` en una ruta
+    publica.
+    """
+
+    throttle_scope = 'catalogo'
 
     def get(self, request, sede_slug):
         from apps.tenancy.models import Sede
-        sede = get_object_or_404(Sede, slug=sede_slug)
-        with scope.como_operador_plataforma():
-            paquetes = (
-                Paquete.objects.filter(sede=sede, activo=True, empresa_lider__activo=True)
-                .select_related('sede', 'empresa_lider')
-                .prefetch_related('servicios_asociados__servicio')
-            )
-            return Response(PaqueteSerializer(paquetes, many=True).data)
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+        return Response(paquetes_de_sede(sede))
 
 
 class PaquetesPorEmpresaListView(APIView):
     """Paquetes liderados por una empresa especifica."""
+
+    throttle_scope = 'catalogo'
 
     def get(self, request, empresa_slug):
         empresa = scope.resolver_empresa_publica(empresa_slug)
@@ -126,6 +143,8 @@ class PaquetesPorEmpresaListView(APIView):
 class SedesListView(APIView):
     """Lista publica de localidades/sedes activas para el selector del frontend."""
 
+    throttle_scope = 'catalogo'
+
     def get(self, request):
         from apps.tenancy.models import Sede
         from apps.tenancy.serializers import SedeSerializer
@@ -135,18 +154,16 @@ class SedesListView(APIView):
 
 
 class ServiciosPorSedeListView(APIView):
-    """Catalogo publico de servicios sueltos activos por localidad/sede (camino secundario)."""
+    """Catalogo publico de servicios sueltos activos por localidad/sede (camino secundario).
+
+    Mismo criterio que PaquetesPorSedeListView: una transaccion por Empresa,
+    RLS activa en cada tramo.
+    """
+
+    throttle_scope = 'catalogo'
 
     def get(self, request, sede_slug):
         from apps.tenancy.models import Sede
 
-        sede = get_object_or_404(Sede, slug=sede_slug)
-        with scope.como_operador_plataforma():
-            servicios = (
-                Servicio.objects.filter(empresa__sede=sede, activo=True, empresa__activo=True)
-                .select_related('empresa')
-                .prefetch_related('servicio_personalizaciones__personalizacion')
-                .order_by('nombre')
-            )
-            return Response(ServicioSerializer(servicios, many=True).data)
-
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+        return Response(servicios_de_sede(sede))
