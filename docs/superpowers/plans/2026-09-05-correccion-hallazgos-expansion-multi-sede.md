@@ -51,6 +51,59 @@ Documentos base: `docs/superpowers/specs/2026-08-31-expansion-multi-sede-design.
 
 ---
 
+## Sección 0.8 — Retrofit de la suite de tests para RLS (bloqueante, descubierto en 0.5)
+
+**Hallazgo (2026-09-05):** el baseline en Postgres NO estaba verde. Dos causas:
+
+1. La migración `fleet/0018_crear_servicio_la_paz` reventaba en Postgres bajo un
+   rol `NOBYPASSRLS` (finding M2 — arreglado, ver 8.1 movido aquí como 0.8.1).
+2. **~95 tests de las apps `fleet`/`bookings`/`payments`/`finance`/`tenancy`
+   crean filas tenant-scoped sin abrir `con_empresa`** — pasan en sqlite (sin
+   RLS) y revientan en Postgres con «new row violates row-level security
+   policy». El "Bloque 8" del plan de Pieza 1 (retrofit de tests, ver memoria
+   `plan-pieza1-tenancy-pausado`) nunca se hizo en esta rama; el retrofit de
+   `e8566be` fue parcial y jamás se validó contra Postgres.
+
+Sin esto verde, ningún test de RLS / concurrencia / constraint de las secciones
+siguientes prueba nada. Va antes que todo lo demás.
+
+- [x] **0.8.1** `fleet/0018`: envolver los writes ORM en
+  `apps.tenancy.rls.alcance_operador_migracion(schema_editor.connection)`.
+  (HECHO.)
+- [ ] **0.8.2** `apps/testing.py::crear_flota`: envolver `bulk_create` en
+  `with scope.con_empresa(empresa)`. Es el helper que más setUp usan.
+- [ ] **0.8.3** `apps/testing.py`: revisar `crear_jefe`/`crear_vendedora` y
+  cualquier otro helper que escriba en tablas con RLS.
+- [ ] **0.8.4** `fleet/tests.py`: las clases que crean `Embarcacion`/`Tarifa`/
+  `ExtrasItem`/`TransportePrecio`/`CodigoPromocional` sin scope
+  (`EmbarcacionTests`, `TarifaTests`, `ExtrasItemTests`, `TransportePrecioTests`,
+  `CodigoPromocionalTests`, `CapacidadesDisponiblesTests`, `EmpresaFKTests` no,
+  `UnicidadPorEmpresaTests`, `EmbarcacionNoDisponibleUnicidadTests`, ...) →
+  helper local `crear_en(empresa, Modelo, **kw)` o `with scope.con_empresa`.
+  Las de aislamiento A/B ya lo hacen bien parcialmente — completar.
+- [ ] **0.8.5** `bookings/tests_tenancy.py`: `datos_reserva()` y los `setUp` que
+  llaman `crear_flota` / crean `Reserva` fuera de scope.
+- [ ] **0.8.6** `bookings/tests_ocupacion.py`, `tests_reserva_paquete.py`,
+  `tests_concurrencia.py`: mismo patrón.
+- [ ] **0.8.7** `fleet/tests_paquetes.py`, `tests_paquetes_api.py`,
+  `tests_servicios_api.py`, `tests_catalogo_rls.py`: convertir a
+  `EmpresaTestCase` / `ApiTestCase` o wrapper de scope. Ojo: los tests de las
+  rutas por Sede ahora recorren varias Empresas — el `setUp` debe crear cada
+  Empresa y sus filas en su propio `con_empresa`.
+- [ ] **0.8.8** `payments/tests_pricing_paquete.py`, `payments/tests.py`
+  (`CrearPagoTests.test_reserva_con_servicio_de_otra_empresa_falla_clean`),
+  `finance/tests.py` (`test_sin_empresa_suma_todas`), `tenancy/tests.py`
+  (`EmpresaScopedAdminMixinTests`, `MigrarLaPazAEmpresaTests`).
+- [ ] **0.8.9** Considerar un helper central `apps/testing.py::crear(empresa, Modelo, **kw)`
+  y/o migrar clases a `EmpresaTestCase` en masa donde no prueben aislamiento A/B.
+- [ ] **0.8.10** Suite Postgres completa verde (`test apps config`). Ese es el
+  baseline real. Commit `test: retrofit de la suite para RLS en Postgres (Bloque 8)`.
+- [ ] **0.8.11** Verificar los 2 FAIL (no ERROR) del baseline —
+  `finance.tests.test_sin_empresa_suma_todas` (2000≠3000) y
+  `tests_concurrencia.test_dias_distintos_no_se_bloquean_entre_si`
+  ([None,None]≠[aplicado,aplicado]) — pueden ser cascada de los ERROR de setUp o
+  bugs reales. Diagnosticar una vez el resto esté verde.
+
 ## Sección 1 — CRÍTICO: seguridad del aislamiento (C1, C2)
 
 ### C1 — RLS inerte si el rol de BD tiene BYPASSRLS/superuser
@@ -231,4 +284,8 @@ Documentos base: `docs/superpowers/specs/2026-08-31-expansion-multi-sede-design.
 
 Formato: `<fecha> — <sección.tarea> — <estado> — <nota / SHA>`.
 
-- 2026-09-05 — Plan creado. Rama `fix/expansion-multi-sede-hallazgos` desde `491f337`. Docker instalado pero daemon apagado (falta 0.2). Siguiente: 0.2 → 0.7.
+- 2026-09-05 — Plan creado. Rama `fix/expansion-multi-sede-hallazgos` desde `491f337`.
+- 2026-09-05 — 0.2-0.6: Docker + Postgres 5433 + rol `ci_rls` listos (`docker: psd-pg`). Baseline: **sqlite VERDE (exit 0)**; **Postgres ROJO** — migración `fleet/0018` reventaba (M2) y, tras arreglarla, **671 tests / 2 FAIL / 95 ERROR**, casi todos "test crea fila tenant sin `con_empresa`" (Bloque 8 de Pieza 1 nunca hecho). Frontend `lint`+`tsc` verdes.
+- 2026-09-05 — 0.8.1 HECHO: `fleet/0018` envuelto en `alcance_operador_migracion` (`apps/tenancy/rls.py` nuevo). Migración Postgres pasa.
+- 2026-09-05 — Sección 1 en curso: C1 hecho sin commit (`apps/tenancy/rls.py`, `checks.py`, `tests_checks.py`, registrado en `apps.py`; RUNBOOK §3-4 + memoria actualizados; 5 tests verdes en sqlite). C2 hecho sin commit (`apps/fleet/catalogo.py` nuevo, `fleet/views.py` reescrito sin `como_operador_plataforma()`, `throttle_scope='catalogo'` en las 6 vistas, rate en `base.py`). **Sin commitear todavía — falta Postgres verde (0.8) para verificar.**
+- **Siguiente:** decidir con el dueño si el retrofit de tests (0.8) se hace ahora completo o en bloque aparte. Luego commitear C1/M2/C2 y seguir 0.8 → Sección 2.

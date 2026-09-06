@@ -118,16 +118,20 @@ def crear_flota(empresa, composicion=FLOTA_REAL):
     `empresa` es obligatorio (antes no existia): sin filtrar por ella, en sqlite
     (sin RLS) la flota de una Empresa cuenta como capacidad de otra.
     """
-    existentes = Embarcacion.objects.filter(empresa=empresa)
-    if existentes.exists():
-        return list(existentes)
+    # `con_empresa` para que funcione tambien contra Postgres con RLS: sin
+    # alcance, `bulk_create` viola la politica WITH CHECK de fleet_embarcacion.
+    # En sqlite (sin RLS) es transparente. Idempotente por (empresa, nombre).
+    with scope.con_empresa(empresa):
+        existentes = Embarcacion.objects.filter(empresa=empresa)
+        if existentes.exists():
+            return list(existentes)
 
-    pangas = []
-    for cuantas, capacidad in composicion:
-        clase = Embarcacion.Clase.CHICA if capacidad <= 3 else Embarcacion.Clase.GRANDE
-        for i in range(cuantas):
-            pangas.append(Embarcacion(
-                empresa=empresa, nombre=f'Panga {capacidad}-{i + 1}',
-                clase=clase, capacidad_maxima=capacidad,
-            ))
-    return Embarcacion.objects.bulk_create(pangas)
+        pangas = []
+        for cuantas, capacidad in composicion:
+            clase = Embarcacion.Clase.CHICA if capacidad <= 3 else Embarcacion.Clase.GRANDE
+            for i in range(cuantas):
+                pangas.append(Embarcacion(
+                    empresa=empresa, nombre=f'Panga {capacidad}-{i + 1}',
+                    clase=clase, capacidad_maxima=capacidad,
+                ))
+        return Embarcacion.objects.bulk_create(pangas)
