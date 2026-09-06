@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
-import { getTarifa } from '@/lib/api';
+import { getPaquetesSede, getSedes, getTarifa } from '@/lib/api';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { alternativasDe } from '@/lib/site';
 
@@ -45,6 +45,24 @@ export default async function ReservarPage({
   const time = parsed.time ?? '06:00';
   const people = parsed.people ?? 2;
 
+  // Si se seleccionó un paquete de experiencias desde el catálogo
+  const paqueteSlug = typeof query.paquete === 'string' ? query.paquete : undefined;
+  let paqueteId: number | undefined;
+  let paqueteNombre: string | undefined;
+
+  if (paqueteSlug) {
+    const sedes = await getSedes().catch(() => []);
+    for (const s of sedes) {
+      const paquetes = await getPaquetesSede(s.slug).catch(() => []);
+      const p = paquetes.find((item) => item.slug === paqueteSlug);
+      if (p) {
+        paqueteId = p.id;
+        paqueteNombre = p.nombre;
+        break;
+      }
+    }
+  }
+
   // El booking bar siempre manda los tres juntos: si trae alguno explicito es
   // que el cliente acaba de elegir viaje, no que recargo esta misma pagina.
   // Distingue esa llegada de una recuperacion de checkout a medio pagar (ver
@@ -61,6 +79,8 @@ export default async function ReservarPage({
       minDate={minDate}
       tarifa={tarifa}
       queryOverride={queryOverride}
+      paqueteId={paqueteId}
+      paqueteNombre={paqueteNombre}
     />
   );
 }

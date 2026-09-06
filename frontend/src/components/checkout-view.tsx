@@ -144,6 +144,8 @@ type CheckoutViewProps = {
   // de elegir viaje en el booking bar, no recargo esta pagina. Ver el efecto
   // de recuperacion mas abajo.
   queryOverride: boolean;
+  paqueteId?: number | null;
+  paqueteNombre?: string | null;
 };
 
 // 'recuperando': solo se pasa por aqui si esta pestana ya tenia un checkout_id
@@ -210,6 +212,8 @@ export function CheckoutView({
   minDate,
   tarifa,
   queryOverride,
+  paqueteId,
+  paqueteNombre,
 }: CheckoutViewProps) {
   const { checkout, booking, nav } = dict;
   // null mientras sessionStorage todavia no se ha leido (solo dura hasta el
@@ -1180,6 +1184,7 @@ export function CheckoutView({
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         captcha_token: captchaToken.current,
+        paquete: paqueteId ?? null,
       });
 
       setReservaId(reserva.id);
@@ -1371,6 +1376,15 @@ export function CheckoutView({
           resumen es una columna de cifras y se lee mejor angosta. */}
       <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
         <div className="flex min-w-0 flex-col gap-6">
+          {paqueteNombre && (
+            <div className="rounded-xl border border-accent/30 bg-accent/10 p-4">
+              <span className="text-xs font-semibold uppercase tracking-wider text-accent block">
+                Experiencia amparada por paquete
+              </span>
+              <p className="mt-0.5 text-base font-bold text-foreground">{paqueteNombre}</p>
+            </div>
+          )}
+
           <CheckoutSectionCard
             title={checkout.tripHeadline}
             estado={colapsado1 ? 'completado' : pasoEditando === 1 ? 'editando' : 'activo'}
