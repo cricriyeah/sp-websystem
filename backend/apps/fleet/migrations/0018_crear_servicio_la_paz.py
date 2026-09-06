@@ -3,6 +3,16 @@ from django.db import migrations
 
 
 def crear_servicio_pesca_la_paz(apps, schema_editor):
+    # fleet_servicio / fleet_recurso ya tienen RLS forzada (0017): sin abrir
+    # alcance, estos INSERT los rechaza la politica WITH CHECK bajo un rol
+    # NOBYPASSRLS. Ver apps.tenancy.rls.alcance_operador_migracion.
+    from apps.tenancy.rls import alcance_operador_migracion
+
+    with alcance_operador_migracion(schema_editor.connection):
+        _crear_servicio_pesca_la_paz(apps)
+
+
+def _crear_servicio_pesca_la_paz(apps):
     Empresa = apps.get_model('tenancy', 'Empresa')
     Tarifa = apps.get_model('fleet', 'Tarifa')
     Servicio = apps.get_model('fleet', 'Servicio')
@@ -57,6 +67,13 @@ def crear_servicio_pesca_la_paz(apps, schema_editor):
 
 
 def revertir_servicio_pesca(apps, schema_editor):
+    from apps.tenancy.rls import alcance_operador_migracion
+
+    with alcance_operador_migracion(schema_editor.connection):
+        _revertir_servicio_pesca(apps)
+
+
+def _revertir_servicio_pesca(apps):
     Empresa = apps.get_model('tenancy', 'Empresa')
     Servicio = apps.get_model('fleet', 'Servicio')
     Recurso = apps.get_model('fleet', 'Recurso')

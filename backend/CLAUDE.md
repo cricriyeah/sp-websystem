@@ -20,6 +20,32 @@ venv/Scripts/python.exe manage.py makemigrations
 venv/Scripts/python.exe manage.py migrate
 ```
 
+### Correr la suite contra Postgres en local
+
+sqlite serializa toda escritura con un solo escritor: los tests de RLS, de
+advisory locks y de constraints `EXCLUDE` **no prueban nada real ahí**. Para
+correrlos como en CI hace falta Postgres con un rol sin `BYPASSRLS`:
+
+```
+docker run -d --name psd-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=pescadeportiva_test -p 5433:5432 postgres:17
+docker exec psd-pg psql -U postgres -d pescadeportiva_test -v ON_ERROR_STOP=1 -c \
+  "CREATE ROLE ci_rls LOGIN PASSWORD 'ci_rls_password_local' NOSUPERUSER NOBYPASSRLS CREATEDB;"
+```
+
+Puerto 5433 en el host (el 5432 suele estar ocupado por otro contenedor). Luego:
+
+```
+DJANGO_SETTINGS_MODULE=config.settings.ci DB_NAME=pescadeportiva_test \
+DB_USER=ci_rls DB_PASSWORD=ci_rls_password_local DB_HOST=localhost DB_PORT=5433 \
+venv/Scripts/python.exe manage.py test apps config
+```
+
+`config.settings.ci` hereda de `local` y solo cambia la base (ver el docstring
+de `config/settings/ci.py`). El rol `ci_rls` es `NOSUPERUSER NOBYPASSRLS`, así
+que `tests_rls.py` prueba el aislamiento de verdad en vez de pasar en verde por
+estar exento.
+
 ## Estado de las apps
 
 - `fleet`, `bookings`: modelos + admin implementados. Backoffice basico (item 1 de

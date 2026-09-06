@@ -55,6 +55,13 @@ Push a `main` con el código de esta pieza. `render.yaml` corre `migrate` dentro
 del `buildCommand` del servicio web — desde este punto, RLS está activo y
 `empresa_id` es `NOT NULL`, pero **nadie tiene `MembresiaEmpresa` todavía**.
 
+Si `DB_USER` es superusuario o tiene `BYPASSRLS`, el `migrate` (y cualquier
+`manage.py check`) **falla con `Error tenancy.E001`** y el deploy no sale — el
+system check `apps.tenancy.checks.revisar_rol_rls` lo verifica en cada arranque
+con `DEBUG=False`. Corregir el rol (paso 1) antes de reintentar. Este check
+convierte el "RLS existe pero no protege nada, sin síntoma visible" del paso 4
+en un deploy bloqueado.
+
 ## 4. Verificación post-deploy obligatoria (no opcional)
 
 Con la conexión real de la app (no como `postgres`):
@@ -64,8 +71,14 @@ SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;
 ```
 
 Debe devolver `(false, false)`. Si devuelve cualquier otra cosa, RLS existe en la
-base pero **no protege nada**, sin ningún síntoma visible desde la aplicación —
-no seguir al paso 5 hasta que esto dé `(false, false)`.
+base pero **no protege nada** — no seguir al paso 5 hasta que esto dé
+`(false, false)`.
+
+Esto ya lo verifica automáticamente el system check `tenancy.E001` en cada
+`migrate`/`check` con `DEBUG=False` (paso 3), así que en la práctica un deploy
+con el rol equivocado ni siquiera llega hasta aquí. La consulta manual queda
+como confirmación de que el check corrió contra la conexión real (pooler
+incluido).
 
 ## 5. Migrar cuentas — cierra la ventana de bloqueo del paso 3
 
