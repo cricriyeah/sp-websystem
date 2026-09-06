@@ -122,3 +122,31 @@ class PaquetesPorEmpresaListView(APIView):
             )
             return Response(PaqueteSerializer(paquetes, many=True).data)
 
+
+class SedesListView(APIView):
+    """Lista publica de localidades/sedes activas para el selector del frontend."""
+
+    def get(self, request):
+        from apps.tenancy.models import Sede
+        from apps.tenancy.serializers import SedeSerializer
+
+        sedes = Sede.objects.filter(activo=True).order_by('nombre')
+        return Response(SedeSerializer(sedes, many=True).data)
+
+
+class ServiciosPorSedeListView(APIView):
+    """Catalogo publico de servicios sueltos activos por localidad/sede (camino secundario)."""
+
+    def get(self, request, sede_slug):
+        from apps.tenancy.models import Sede
+
+        sede = get_object_or_404(Sede, slug=sede_slug)
+        with scope.como_operador_plataforma():
+            servicios = (
+                Servicio.objects.filter(empresa__sede=sede, activo=True, empresa__activo=True)
+                .select_related('empresa')
+                .prefetch_related('servicio_personalizaciones__personalizacion')
+                .order_by('nombre')
+            )
+            return Response(ServicioSerializer(servicios, many=True).data)
+

@@ -140,3 +140,24 @@ class PaquetesAPITests(TestCase):
 
         resp_inactiva = self.client.get(f'/api/{self.empresa_inactiva.slug}/paquetes/')
         self.assertEqual(resp_inactiva.status_code, 404)
+
+    def test_sedes_lista_activas(self):
+        resp = self.client.get('/api/sedes/')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        slugs = [item['slug'] for item in data]
+        self.assertIn(self.sede_lp.slug, slugs)
+        self.assertIn(self.sede_cabo.slug, slugs)
+
+    def test_servicios_por_sede_lista_activos(self):
+        url = f'/api/sedes/{self.sede_lp.slug}/servicios/'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        slugs = [s['slug'] for s in data]
+        self.assertIn('pesca-dia-completo', slugs)
+        self.assertIn('estadia-2-noches', slugs)
+
+    def test_servicios_por_sede_inexistente_404(self):
+        resp = self.client.get('/api/sedes/sede-inexistente/servicios/')
+        self.assertEqual(resp.status_code, 404)
