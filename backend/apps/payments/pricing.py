@@ -96,3 +96,37 @@ def a_centavos(monto):
 def de_centavos(centavos):
     return (Decimal(centavos) / 100).quantize(CENTAVOS)
 
+
+def precio_paquete(precio_ancla, ajustes_removidos=None):
+    """Calcula el precio final de un paquete a partir de su precio ancla,
+    descontando los ajustes de los servicios removidos por el cliente
+    (Perception-First Design). Garantiza un piso de 0.00."""
+    if precio_ancla is None:
+        return None
+    ajustes = ajustes_removidos or []
+    suma_ajustes = sum((Decimal(a) for a in ajustes), Decimal('0.00'))
+    total = Decimal(precio_ancla) - suma_ajustes
+    return max(Decimal('0.00'), total).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+
+
+def calcular_precio_paquete(paquete, servicios_removidos_pks=None, moneda='MXN'):
+    """Calcula el precio de un paquete en la moneda pedida, aplicando descuentos
+    únicamente por aquellos servicios que sean efectivamente removibles.
+    Devuelve None si el paquete no tiene precio en esa moneda."""
+    precio_ancla = paquete.precio_en(moneda)
+    if precio_ancla is None:
+        return None
+    if not servicios_removidos_pks:
+        return precio_paquete(precio_ancla, [])
+
+    pks_set = set(servicios_removidos_pks)
+    ajustes = []
+    for ps in paquete.servicios_asociados.all():
+        if ps.servicio_id in pks_set and ps.removible:
+            ajuste = ps.ajuste_en(moneda)
+            if ajuste is not None:
+                ajustes.append(ajuste)
+
+    return precio_paquete(precio_ancla, ajustes)
+
+
