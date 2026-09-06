@@ -386,6 +386,10 @@ class Reserva(models.Model):
         'fleet.Servicio', on_delete=models.PROTECT, null=True, blank=True, related_name='reservas',
         help_text='Servicio o experiencia que ampara esta reserva. Vacio = pesca deportiva (legacy).'
     )
+    paquete = models.ForeignKey(
+        'fleet.Paquete', on_delete=models.SET_NULL, null=True, blank=True, related_name='reservas',
+        help_text='Paquete que ampara esta reserva.'
+    )
 
     # Datos del cliente (no se pide peso ni si sabe nadar, ver docs/contexto-negocio.md)
     nombre_cliente = models.CharField(max_length=150, validators=[validar_nombre_persona])
@@ -648,6 +652,10 @@ class Reserva(models.Model):
                 raise ValidationError({
                     campo: f'{relacionado} pertenece a otra Empresa, no se puede usar aqui.',
                 })
+        if self.paquete_id and self.paquete.empresa_lider_id != self.empresa_id:
+            raise ValidationError({
+                'paquete': f'{self.paquete} tiene como empresa líder a {self.paquete.empresa_lider}, no coincide con la empresa de la reserva.',
+            })
 
     def _validar_capacidad_embarcacion(self):
         if self.embarcacion_id and self.numero_personas > self.embarcacion.capacidad_maxima:
