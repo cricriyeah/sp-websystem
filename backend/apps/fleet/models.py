@@ -505,6 +505,97 @@ class ServicioPersonalizacion(models.Model):
         return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
 
 
+class Paquete(models.Model):
+    """Producto de primera clase vendible y editable in-place (Perception-First Design).
+
+    Agrupa múltiples servicios bajo una experiencia y un precio ancla.
+    Radicado en una Sede geográfica con una empresa_lider titular del cobro.
+    """
+    sede = models.ForeignKey('tenancy.Sede', on_delete=models.PROTECT, related_name='paquetes')
+    empresa_lider = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='paquetes_liderados')
+    nombre = models.CharField(max_length=150)
+    slug = models.SlugField(max_length=150)
+    descripcion = models.TextField(blank=True, default='')
+    precio_ancla = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        help_text='Precio ancla del paquete en pesos (MXN).'
+    )
+    precio_ancla_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Precio ancla del paquete en dólares (USD). Opcional.'
+    )
+    regla_precio = models.CharField(max_length=50, default='precio_ancla')
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['sede', 'slug'], name='paquete_unico_por_sede_slug'),
+        ]
+        ordering = ['sede', 'nombre']
+        verbose_name = 'paquete'
+        verbose_name_plural = 'paquetes'
+
+    def __str__(self):
+        return f"{self.nombre} ({self.sede})"
+
+    def clean(self):
+        super().clean()
+        if self.sede_id and self.empresa_lider_id:
+            if self.empresa_lider.sede_id != self.sede_id:
+                raise ValidationError({
+                    'empresa_lider': 'La empresa líder debe pertenecer a la misma sede que el paquete.'
+                })
+
+    def precio_en(self, moneda):
+        """Precio ancla en la moneda pedida, o None si no está configurado."""
+        return self.precio_ancla if (moneda or 'MXN').upper() == 'MXN' else self.precio_ancla_usd
+
+
+class PaqueteServicio(models.Model):
+    """Asociación entre un Paquete y un Servicio incluido en él.
+
+    Permite definir si el servicio es removible in-place por el cliente y el ajuste
+    (descuento) que se aplica al precio ancla si se retira.
+    """
+    paquete = models.ForeignKey(Paquete, on_delete=models.CASCADE, related_name='servicios_asociados')
+    servicio = models.ForeignKey(Servicio, on_delete=models.PROTECT, related_name='paquetes_incluidos')
+    orden = models.PositiveSmallIntegerField(default=1)
+    removible = models.BooleanField(default=True)
+    ajuste_precio = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0.00'),
+        help_text='Descuento sobre el precio ancla en MXN si el servicio es removido.'
+    )
+    ajuste_precio_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Descuento sobre el precio ancla en USD si el servicio es removido.'
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['paquete', 'servicio'], name='paqueteservicio_unico'),
+        ]
+        ordering = ['paquete', 'orden', 'servicio__nombre']
+        verbose_name = 'servicio de paquete'
+        verbose_name_plural = 'servicios de paquetes'
+
+    def __str__(self):
+        return f"{self.paquete.nombre} -> {self.servicio.nombre}"
+
+    def clean(self):
+        super().clean()
+        if self.paquete_id and self.servicio_id:
+            if self.servicio.empresa.sede_id != self.paquete.sede_id:
+                raise ValidationError({
+                    'servicio': 'El servicio debe pertenecer a una empresa de la misma sede que el paquete.'
+                })
+
+    def ajuste_en(self, moneda):
+        """Ajuste de precio en la moneda solicitada."""
+        return self.ajuste_precio if (moneda or 'MXN').upper() == 'MXN' else self.ajuste_precio_usd
+
+
 def capacidades_por_fecha(desde, hasta, empresa):
     """Capacidad de cada panga que puede salir, por dia, de mayor a menor, para
     esa Empresa. `empresa` es obligatorio — sin filtro por Empresa, en
