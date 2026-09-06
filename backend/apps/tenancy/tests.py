@@ -140,8 +140,10 @@ class EmpresaScopedAdminMixinTests(TestCase):
         self.assertEqual(obj.empresa_id, self.empresa_a.id)
 
     def test_get_queryset_filtra_por_empresa_para_no_operador(self):
-        CupoDiario.objects.create(fecha=date(2026, 12, 1), cupo_maximo=5, empresa=self.empresa_a)
-        CupoDiario.objects.create(fecha=date(2026, 12, 2), cupo_maximo=5, empresa=self.empresa_b)
+        with scope.con_empresa(self.empresa_a):
+            CupoDiario.objects.create(fecha=date(2026, 12, 1), cupo_maximo=5, empresa=self.empresa_a)
+        with scope.con_empresa(self.empresa_b):
+            CupoDiario.objects.create(fecha=date(2026, 12, 2), cupo_maximo=5, empresa=self.empresa_b)
         with scope.con_empresa(self.empresa_a):
             fechas = set(self.admin.get_queryset(self._request(self.jefe)).values_list('fecha', flat=True))
         self.assertEqual(fechas, {date(2026, 12, 1)})
@@ -150,8 +152,10 @@ class EmpresaScopedAdminMixinTests(TestCase):
         grupo, _ = Group.objects.get_or_create(name=scope.NOMBRE_GRUPO_OPERADOR_PLATAFORMA)
         operador = User.objects.create_user(username='op3', password='x', is_staff=True)
         operador.groups.add(grupo)
-        CupoDiario.objects.create(fecha=date(2026, 12, 1), cupo_maximo=5, empresa=self.empresa_a)
-        CupoDiario.objects.create(fecha=date(2026, 12, 2), cupo_maximo=5, empresa=self.empresa_b)
+        with scope.con_empresa(self.empresa_a):
+            CupoDiario.objects.create(fecha=date(2026, 12, 1), cupo_maximo=5, empresa=self.empresa_a)
+        with scope.con_empresa(self.empresa_b):
+            CupoDiario.objects.create(fecha=date(2026, 12, 2), cupo_maximo=5, empresa=self.empresa_b)
         with scope.como_operador_plataforma():
             count = self.admin.get_queryset(self._request(operador)).count()
         self.assertEqual(count, 2)
@@ -300,8 +304,12 @@ class MigrarLaPazAEmpresaTests(TestCase):
 
     def test_sin_empresa_sal_y_sol_falla_explicito(self):
         from apps.fleet.models import Recurso, Servicio
-        Recurso.objects.filter(empresa=self.empresa).delete()
-        Servicio.objects.filter(empresa=self.empresa).delete()
+        # El Servicio/Recurso de sal-y-sol los siembra fleet/0018; borrarlos
+        # requiere alcance (RLS los oculta si no) antes de poder borrar la
+        # Empresa sin violar la FK.
+        with scope.como_operador_plataforma():
+            Recurso.objects.filter(empresa=self.empresa).delete()
+            Servicio.objects.filter(empresa=self.empresa).delete()
         self.empresa.delete()
         with self.assertRaises(CommandError):
             call_command('migrar_la_paz_a_empresa', operador='admin_sistema', stdout=StringIO())

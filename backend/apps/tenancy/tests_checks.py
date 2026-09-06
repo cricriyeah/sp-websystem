@@ -45,6 +45,10 @@ class RevisarRolRlsTests(SimpleTestCase):
 
 
 class RolDeConexionEsSeguroTests(SimpleTestCase):
+    # En Postgres consulta pg_roles; SimpleTestCase bloquea el acceso a la base
+    # salvo que se declare aqui. No escribe nada.
+    databases = {'default'}
+
     def test_backend_no_postgres_se_considera_seguro(self):
         seguro, detalle = rol_de_conexion_es_seguro()
         if connection.vendor == 'postgresql':
