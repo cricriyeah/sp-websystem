@@ -22,6 +22,15 @@ def _con_alcance(valor, sql):
     la misma Empresa encontraria la bandera todavia puesta, tomaria la rama
     no-op, y no emitiria `SET LOCAL` en la transaccion nueva del callback --
     bajo RLS eso es cero filas en silencio (el bug N1 original).
+
+    El `finally` ademas RESETEA las GUC de RLS (`SET LOCAL ... = DEFAULT`), no
+    solo la bandera de Python. `SET LOCAL` dura hasta el COMMIT de la
+    transaccion, no hasta el fin del `with`: si en la misma transaccion hay dos
+    bloques de alcance seguidos (o uno de operador y luego trabajo sin
+    alcance), sin este reset el primero seguiria activo -- en un test (una
+    transaccion por test) eso deja RLS efectivamente apagada tras un
+    `como_operador_plataforma()`. En rollback Postgres deshace el `SET LOCAL`
+    solo, por eso el reset se envuelve en try/except.
     """
     actual = getattr(connection, 'alcance_actual', None)
     ya_puesto = actual == valor
@@ -42,6 +51,15 @@ def _con_alcance(valor, sql):
         finally:
             if not ya_puesto:
                 connection.alcance_actual = actual
+                if connection.vendor == 'postgresql':
+                    try:
+                        with connection.cursor() as cursor:
+                            cursor.execute('SET LOCAL "app.current_empresa_id" = DEFAULT')
+                            cursor.execute('SET LOCAL "app.operador_plataforma" = DEFAULT')
+                    except Exception:
+                        # Transaccion rota o cerrada: el rollback/commit inminente
+                        # limpia la GUC de todos modos.
+                        pass
 
 
 @contextmanager

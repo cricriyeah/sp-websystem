@@ -84,6 +84,31 @@ class EmpresaTestCase(TestCase):
         return vendedora
 
 
+class OperadorTestCase(TestCase):
+    """Para tests de LÓGICA DE MODELO que abarcan varias Empresas o Sedes a la
+    vez (p.ej. composición de paquetes cruza-empresa, cálculo de precio de
+    paquete): abre `scope.como_operador_plataforma()` durante todo el test, así
+    los INSERT/SELECT no chocan con RLS sin tener que abrir y cerrar el alcance
+    de cada Empresa a mano.
+
+    NO usar para tests que verifican el aislamiento RLS en sí (esos van en
+    `tests_*_rls.py` con `con_empresa` explícito), ni para tests que hacen
+    peticiones HTTP con `self.client` (la vista abre su propio `con_empresa` y
+    `con_empresa` no es reentrante sobre el alcance de operador — usar el patrón
+    `with scope.como_operador_plataforma(): ...crear datos...` dentro de `setUp`
+    y salir antes de la petición).
+    """
+
+    def _pre_setup(self):
+        super()._pre_setup()
+        self._alcance_operador = scope.como_operador_plataforma()
+        self._alcance_operador.__enter__()
+
+    def _post_teardown(self):
+        self._alcance_operador.__exit__(None, None, None)
+        super()._post_teardown()
+
+
 class ApiTestCase(EmpresaTestCase):
     """Base para los tests que pegan a la API publica.
 

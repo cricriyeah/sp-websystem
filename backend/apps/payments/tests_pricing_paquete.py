@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 from django.test import TestCase
+from apps.testing import OperadorTestCase
 
 from apps.fleet.models import Paquete, PaqueteServicio, Servicio
 from apps.payments.pricing import calcular_precio_paquete, precio_paquete
@@ -32,7 +33,7 @@ class PricingPaquetePureTests(TestCase):
         self.assertIsNone(precio_paquete(None, [Decimal('500.00')]))
 
 
-class CalcularPrecioPaqueteIntegrationTests(TestCase):
+class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
     def setUp(self):
         self.sede, _ = Sede.objects.get_or_create(slug='la-paz', defaults={'nombre': 'La Paz'})
         self.empresa = Empresa.objects.create(

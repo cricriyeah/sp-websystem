@@ -4,13 +4,14 @@ from datetime import date, time
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from apps.testing import OperadorTestCase
 
 from apps.bookings.models import Reserva
 from apps.fleet.models import Paquete, Servicio
 from apps.tenancy.models import Empresa, Sede
 
 
-class ReservaPaqueteTests(TestCase):
+class ReservaPaqueteTests(OperadorTestCase):
     def setUp(self):
         self.sede, _ = Sede.objects.get_or_create(slug='la-paz', defaults={'nombre': 'La Paz'})
         self.empresa_lider = Empresa.objects.create(

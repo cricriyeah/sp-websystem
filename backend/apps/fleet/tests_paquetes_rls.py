@@ -20,13 +20,14 @@ class PaquetesRLSTests(TransactionTestCase):
         self.empresa_a = Empresa.objects.create(sede=sede, nombre='Empresa A', slug='emp-a-rls-paq')
         self.empresa_b = Empresa.objects.create(sede=sede, nombre='Empresa B', slug='emp-b-rls-paq')
 
-        self.servicio_a = Servicio.objects.create(
-            empresa=self.empresa_a,
-            nombre='Pesca A',
-            slug='pesca-a',
-            tipo_servicio='pesca',
-            precio_base=Decimal('5000.00'),
-        )
+        with scope.con_empresa(self.empresa_a):
+            self.servicio_a = Servicio.objects.create(
+                empresa=self.empresa_a,
+                nombre='Pesca A',
+                slug='pesca-a',
+                tipo_servicio='pesca',
+                precio_base=Decimal('5000.00'),
+            )
 
     def test_aislamiento_paquetes_entre_empresas(self):
         with scope.con_empresa(self.empresa_a):
@@ -60,5 +61,5 @@ class PaquetesRLSTests(TransactionTestCase):
             self.assertEqual(Paquete.objects.first().slug, 'paquete-b')
 
         # Operador de plataforma ve ambos
-        with scope.con_operador_plataforma():
+        with scope.como_operador_plataforma():
             self.assertEqual(Paquete.objects.count(), 2)

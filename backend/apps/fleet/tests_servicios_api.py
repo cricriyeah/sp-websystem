@@ -1,20 +1,31 @@
 """Pruebas de endpoints públicos de servicios y catálogo (Pieza 3)."""
 
 from decimal import Decimal
+from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.fleet.models import Personalizacion, Servicio, ServicioPersonalizacion
+from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 
 
 class ServiciosAPITests(TestCase):
     def setUp(self):
+        # El throttle de DRF cuenta por IP en el cache y no se reinicia entre
+        # clases de test (ver apps.testing.ApiTestCase).
+        cache.clear()
         self.client = APIClient()
         self.sede = Sede.objects.create(nombre='Sede API', slug='sede-api')
         self.empresa_a = Empresa.objects.create(sede=self.sede, nombre='Empresa A', slug='empresa-a')
         self.empresa_b = Empresa.objects.create(sede=self.sede, nombre='Empresa B', slug='empresa-b')
 
+        # Datos sembrados bajo alcance de operador (cross-empresa); las
+        # peticiones de abajo van sin alcance y cada vista abre el suyo.
+        with scope.como_operador_plataforma():
+            self._sembrar()
+
+    def _sembrar(self):
         # Servicio activo en Empresa A
         self.servicio_a = Servicio.objects.create(
             empresa=self.empresa_a,

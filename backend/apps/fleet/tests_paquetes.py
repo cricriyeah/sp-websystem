@@ -3,13 +3,13 @@
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.test import TestCase
 
 from apps.fleet.models import Paquete, PaqueteServicio, Servicio
 from apps.tenancy.models import Empresa, Sede
+from apps.testing import OperadorTestCase
 
 
-class PaquetesModelTests(TestCase):
+class PaquetesModelTests(OperadorTestCase):
     def setUp(self):
         self.sede_lp, _ = Sede.objects.get_or_create(slug='la-paz', defaults={'nombre': 'La Paz'})
         self.sede_csl = Sede.objects.create(nombre='Cabo San Lucas', slug='cabo-san-lucas-test')
