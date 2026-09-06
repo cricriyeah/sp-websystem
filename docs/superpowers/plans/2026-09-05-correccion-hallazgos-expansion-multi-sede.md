@@ -5,12 +5,24 @@ Rama de trabajo: `fix/expansion-multi-sede-hallazgos` (desde `feature/pieza6-fro
 Origen: revisión integral de la implementación del agente de Antigravity de las 6 piezas.
 Documentos base: `docs/superpowers/specs/2026-08-31-expansion-multi-sede-design.md` y `...-ADRs.md`.
 
-## Decisiones del dueño (2026-09-05, antes de arrancar)
+## Decisiones del dueño (2026-09-05)
 
+**Primera ronda (antes de arrancar):**
 1. **Alcance:** todo, incluido el re-cableado del checkout público para servicios / paquetes / hospedaje.
 2. **Hospedaje:** es necesidad de v1. Cablear el flujo multidía completo.
-3. **Paquetes cruza-empresa:** resolver el caso ahora (diseño + código). Se escribe ADR-005.
-4. **Verificación:** Postgres en Docker en local. La suite completa (RLS, locks, constraints) debe correr verde localmente antes de dar por cerrada cada sección.
+3. **Verificación:** Postgres en Docker en local. La suite completa (RLS, locks, constraints) debe correr verde localmente antes de dar por cerrada cada sección.
+4. **Orden:** secciones 2→3→4→5→6→7→8→9 en orden.
+
+**Segunda ronda (tras las preguntas abiertas, 2026-09-05):**
+5. **Tipos de servicio v1:** enum de 4 valores — `PESCA`, `PASEO`, `HOSPEDAJE`, `BAJO_DEMANDA`. Todos los paseos con embarcación (seasafari, ballenas, tiburón ballena, islas, snorkel) son `PASEO` con la misma regla de cupo (1 viaje/recurso/día). El eje exclusivo/compartido va por el campo `modo_ocupacion`, configurable por Servicio.
+6. **Anticipo:** **configurable por Servicio** (campo nuevo, `porcentaje_anticipo` con default 30). Un paquete usa la política de su `empresa_lider` / del servicio dominante — a definir en Sección 4.
+7. **Precio de paquete:** `precio_ancla` (número fijo que pone el negocio) **MÁS las personalizaciones por encima**. El servidor arma: `ancla + Σ(personalizaciones obligatorias/preseleccionadas de los servicios componentes) + (personalizaciones opcionales que agregue el cliente) − (ajustes de servicios removidos)`. NO es "ancla incluye todo". Las "personalizaciones" son `fleet.ServicioPersonalizacion` (licencia, brunch, equipo), no el viejo `fleet.ExtrasItem`.
+8. **Paquetes v1 = UNA sola empresa.** Todos los servicios componentes deben pertenecer a la `empresa_lider`. Un cobro, una cuenta de Stripe. `Paquete.clean` / `PaqueteServicio.clean` **bloquean con error claro** un paquete cruza-empresa.
+9. **Paquetes cruza-empresa = fuera de v1.** El modelo real es: cada empresa cobra a su propia cuenta de Stripe (la empresa de marketing NO tiene cuenta central, a propósito, para no cargar con los impuestos de esas transacciones). Un paquete cruza-empresa implicaría N cobros a N cuentas — Stripe sin Connect no lo permite como "un solo pago percibido". Se dedica un ADR y una tanda propia más adelante. Sección 7 se reduce a: bloquear el caso + escribir el ADR-005 con el planteo del problema.
+10. **Reserva de paquete:** `reserva.paquete` seteado, `reserva.servicio` **vacío**. Los servicios componentes se conocen vía `paquete.servicios_asociados`.
+11. **Cupo de componentes:** al confirmarse el pago de un paquete, el sistema recorre los servicios componentes y crea el artefacto de cupo de **cada uno** (panga + `CupoDiario` para `PESCA`/`PASEO` exclusivo; `ReservaOcupacion` para `HOSPEDAJE`; nada para `BAJO_DEMANDA`). Tabla nueva `ReservaPaqueteComponente` liga cada componente a la reserva. El cupo de cada parte del paquete es real.
+12. **Aviso a empresas componentes:** manual (aplica solo al futuro cruza-empresa; v1 es una sola empresa).
+13. **% de plataforma:** nunca en el sistema, siempre fuera. Ningún campo, ninguna vista.
 
 ## Cómo retomar esto en otra sesión
 
@@ -135,12 +147,13 @@ siguientes prueba nada. Va antes que todo lo demás.
   - `rango_traslapa`: un rango con `ini >= fin` sigue devolviendo `False`, pero añadir helper `validar_rango(ini, fin)` que exige `fin > ini` y lo usan los callers de modelo.
   - `ocupacion_por_rango`: default de `tope` pasa de `0` a `None`; con `tope is None` no aplica límite de conteo (solo capacidad). Ajustar `motivo_sin_lugar` para tratar `tope=None` como "sin tope".
   - Tests en `tests_cupo_nucleo.py`.
-- [ ] **2.2** `Servicio`: convertir los 4 campos string a enums `TextChoices` con las claves reales:
-  - `tipo_servicio`: `PESCA, PASEO, HOSPEDAJE, BAJO_DEMANDA` (o el set que confirme el dueño — ver Preguntas abiertas si aparecen más).
-  - `estrategia_cupo`: `POR_RECURSO_DIA, POR_NOCHE, BAJO_DEMANDA`.
-  - `estrategia_precio`: `POR_GRUPO, POR_PERSONA, TARIFA_FIJA, POR_NOCHE`.
-  - `modo_ocupacion`: `EXCLUSIVO, COMPARTIDO`.
-  - Migración de datos que normaliza lo sembrado por `0018` (`'por_recurso_dia'` etc. ya coincide con las claves nuevas si se eligen esos valores).
+- [ ] **2.2** `Servicio`: convertir los 4 campos string a enums `TextChoices` (Decisión 5, cerrada):
+  - `tipo_servicio`: `PESCA`, `PASEO`, `HOSPEDAJE`, `BAJO_DEMANDA`. Solo etiqueta de presentación (agenda, catálogo); NO decide cupo.
+  - `estrategia_cupo`: `POR_RECURSO_DIA`, `POR_NOCHE`, `BAJO_DEMANDA`. Es lo que decide el cupo.
+  - `estrategia_precio`: `POR_GRUPO`, `POR_PERSONA`, `TARIFA_FIJA`, `POR_NOCHE`.
+  - `modo_ocupacion`: `EXCLUSIVO`, `COMPARTIDO` (eje independiente, por Servicio).
+  - `porcentaje_anticipo`: `PositiveSmallIntegerField(default=30)` (Decisión 6).
+  - Migración de datos: `0018` ya siembra `'por_recurso_dia'`/`'por_grupo'`/`'exclusivo'`/`'pesca'` — alinear los valores del enum a esas cadenas para no tener que reescribir la fila.
 - [ ] **2.3** `bookings/cupo/registro.py`: el registro se llavea por `estrategia_cupo` (no por `tipo_servicio`). Claves alineadas con el enum de 2.2. `obtener_estrategia(clave)` con default explícito y **log de warning** cuando cae al default por clave desconocida (hoy es silencioso).
 - [ ] **2.4** `bookings/models.py::Reserva.clean` y `evaluar_cupo`/`validar_cupo_diario`/`disponibilidad_por_fecha`: resolver la estrategia con `servicio.estrategia_cupo` (default `POR_RECURSO_DIA` cuando `servicio` es None = pesca legacy). `tipo_servicio` deja de decidir cupo; queda como etiqueta de presentación.
 - [ ] **2.5** `bookings/cupo/candado.py`:
@@ -167,84 +180,99 @@ siguientes prueba nada. Va antes que todo lo demás.
 
 ---
 
-## Sección 4 — Precio: paquete y noches (A2, A5, B7)
+## Sección 4 — Precio: paquete, personalizaciones y noches (A2, A5, B7)
 
-- [ ] **4.1** `apps/payments/pricing.py`: `calcular_precio_paquete` ya existe. Añadir tope: nueva función `precio_paquete` valida que `suma_ajustes <= precio_ancla` (ya tiene piso 0; añadir aviso/log si un ajuste individual > ancla o si la suma la supera). Sin cambiar la firma.
-- [ ] **4.2** `fleet/models.py::Paquete.clean()` o `PaqueteServicio.clean()`: validar `Σ ajuste_precio de servicios removibles <= precio_ancla` (y el `_usd` correspondiente). Error de admin claro.
-- [ ] **4.3** `apps/payments/views.py::CrearPagoView._post`: rama nueva **antes** de la de `reserva.servicio` / `Tarifa`:
-  ```
-  if reserva.paquete_id:
-      removidos = list(reserva.servicios_removidos.values_list('servicio_id', flat=True))  # ver 5.x
-      precio_base_servicio = calcular_precio_paquete(reserva.paquete, removidos, reserva.moneda)
-      if precio_base_servicio is None: return 503 (sin precio en esa moneda)
-  ```
-  Extras/transporte/promoción siguen sumándose igual sobre ese `precio_base_servicio` (confirmar con el dueño si un paquete admite extras sueltos — ver Preguntas abiertas).
-- [ ] **4.4** `CrearPagoView`: `DemandaPrecio(personas=..., moneda=..., noches=reserva.noches)` — pasar noches. `reserva.noches` sale de `fecha_salida` (Sección 5).
-- [ ] **4.5** `apps/payments/services.py::_verificar_monto`: recomputar el esperado cubriendo el path paquete (misma función `calcular_precio_paquete`). Sigue sin rebotar, solo registra descuadre.
-- [ ] **4.6** Tests `tests_pricing_paquete.py` + `tests_pricing_estrategias.py`: paquete con 0 / 1 / N servicios removidos; `por_noche` con 1 / 3 noches; el webhook no marca descuadre cuando el precio es correcto.
-- [ ] **4.7** Commit `fix(precio): checkout cobra paquete por ancla y hospedaje por noches`.
+**Modelo de precio del paquete (Decisión 7):** `precio_ancla` + personalizaciones POR ENCIMA.
+```
+total_paquete(moneda) =
+    paquete.precio_ancla_en(moneda)
+  + Σ  precio de cada ServicioPersonalizacion (obligatorio o preseleccionado) de los servicios componentes NO removidos
+  + Σ  precio de las ServicioPersonalizacion OPCIONALES que el cliente marcó
+  − Σ  PaqueteServicio.ajuste_en(moneda) de los servicios removidos (removible=True)
+```
+`cargar_por_persona` de cada personalización se resuelve como en `pricing.py` hoy. Piso 0.
+
+- [ ] **4.1** `apps/payments/pricing.py`: nueva función pura `precio_paquete_total(paquete, servicios_removidos_pks, personalizaciones_extra_pks, personas, moneda)` que implementa la fórmula de arriba. `calcular_precio_paquete` actual (solo ancla − ajustes) queda como pieza interna o se reemplaza. Cada personalización cuantizada a centavos, `_usd` hermano.
+- [ ] **4.2** `fleet/models.py::Paquete.clean()`: validar que `Σ ajuste_precio de servicios removibles <= precio_ancla` (y `_usd`). Error de admin claro. **`PaqueteServicio.clean()`: todos los componentes deben ser de `paquete.empresa_lider`** (Decisión 8 — v1 = una empresa). Un servicio de otra empresa de la sede → `ValidationError` con mensaje que apunta a "paquetes cruza-empresa: fuera de v1, ver ADR-005".
+- [ ] **4.3** Anticipo configurable (Decisión 6): `Servicio.porcentaje_anticipo = PositiveSmallIntegerField(default=30)`. `apps/payments/pricing.py::monto_inicial` gana parámetro `porcentaje` (default 30 = `ANTICIPO_PORCENTAJE`). Migración + campo en admin.
+- [ ] **4.4** `apps/payments/views.py::CrearPagoView._post`: ramas por tipo de reserva, **en este orden**:
+  1. `reserva.paquete_id` → `precio_base = precio_paquete_total(...)`; `porcentaje` = del servicio dominante del paquete o de una regla del paquete (definir: el mínimo de los componentes, o un campo `Paquete.porcentaje_anticipo`). 503 si sin precio en esa moneda.
+  2. `reserva.servicio_id` → estrategia de precio del servicio (ya existe) + `DemandaPrecio(..., noches=reserva.noches)`; `porcentaje` = `reserva.servicio.porcentaje_anticipo`.
+  3. legacy (`Tarifa`) → como hoy, `porcentaje=30`.
+  Extras/transporte/promoción de `ReservaExtra`/`ReservaTransporte` (el sistema viejo) **NO** se suman a un paquete — el paquete usa `ServicioPersonalizacion`. Para servicio suelto: a decidir en 5.x si un servicio no-pesca admite el sistema viejo de extras; por defecto solo pesca legacy lo usa.
+- [ ] **4.5** `CrearPagoView`: pasar `noches=reserva.noches` a `DemandaPrecio` en la rama de servicio. `reserva.noches` sale de `fecha_salida` (Sección 5).
+- [ ] **4.6** `apps/payments/services.py::_verificar_monto`: recomputar el esperado cubriendo las 3 ramas (misma función `precio_paquete_total` / estrategia). Sigue sin rebotar, solo registra descuadre.
+- [ ] **4.7** Tests `tests_pricing_paquete.py`: fórmula con 0 / N removidos, con/sin personalizaciones opcionales, `por_noche` con 1 / 3 noches, anticipo 30/50/100, el webhook no marca descuadre cuando el precio es correcto. `PaqueteServicio.clean` rechaza componente de otra empresa.
+- [ ] **4.8** Commit `fix(precio): paquete = ancla + personalizaciones; anticipo configurable; hospedaje por noches`.
 
 ---
 
 ## Sección 5 — Checkout: serializer + API (A1, A3, B2)
 
-- [ ] **5.1** Modelo para la selección de componentes removidos de un paquete: tabla `ReservaPaqueteServicioRemovido(reserva FK, servicio FK)` con `unique_together`, RLS por `reserva.empresa` (política EXISTS como `bookings_reservaextra`). Migración + política.
-- [ ] **5.2** `ReservaCheckoutSerializer.Meta.fields`: añadir `servicio` (slug, `SlugRelatedField` filtrado por empresa vía `get_fields` como ya se hace con extras), `paquete` (slug, filtrado por sede + `empresa_lider`), `fecha_salida`, `servicios_removidos` (lista de slugs de servicio, write_only).
+- [ ] **5.1** Modelos de selección del checkout de paquete:
+  - `ReservaPaqueteServicioRemovido(reserva FK, servicio FK, unique_together)` — qué servicios removibles quitó el cliente.
+  - `ReservaPaquetePersonalizacion(reserva FK, servicio_personalizacion FK, cantidad, unique_together)` — qué personalizaciones opcionales marcó (las obligatorias/preseleccionadas se dan por incluidas; no hace falta guardarlas salvo para el desglose — decidir).
+  - RLS por `reserva.empresa` (política EXISTS como `bookings_reservaextra`). Migraciones + políticas. **Añadir estas tablas + `ReservaPaqueteComponente` (6.x) a la lista de `tests_rls.py` (8.7).**
+- [ ] **5.2** `ReservaCheckoutSerializer.Meta.fields`: añadir `servicio` (slug, filtrado por empresa vía `get_fields`), `paquete` (slug, filtrado por `empresa_lider == self.context['empresa']`), `fecha_salida`, `servicios_removidos` (lista de slugs), `personalizaciones` (lista de `{id, cantidad}`), todo write_only salvo lo que se necesite de vuelta.
 - [ ] **5.3** `ReservaCheckoutSerializer.validate`:
-  - `fecha_salida` obligatoria y `> fecha` **si** el servicio/paquete es multidía (`estrategia_cupo == POR_NOCHE`); prohibida si no lo es.
-  - `servicio` y `paquete` mutuamente excluyentes (o definir precedencia — ver Preguntas abiertas).
-  - `servicios_removidos ⊆` los `PaqueteServicio` `removible=True` del paquete.
-  - `numero_personas` contra el `personas_incluidas` / capacidad del servicio, no solo `MAX_PERSONAS` de pesca.
-- [ ] **5.4** `ReservaCheckoutSerializer.create/update`: persistir `servicio`, `paquete`, `fecha_salida`, y sincronizar `servicios_removidos` (borra+recrea como extras).
-- [ ] **5.5** `Reserva.clean()`: para servicio/paquete multidía, en vez de `validar_cupo_diario` de un día → `bloquear_recurso` + `evaluar_disponibilidad_hospedaje(check_in, check_out, personas, empresa, servicio, ...)`. Si no cabe → `ValidationError`. **No** crea `ReservaOcupacion` aquí (eso es Sección 6, al confirmar el pago).
-- [ ] **5.6** Endpoint `GET /api/sedes/<sede_slug>/paquetes/<slug>/` (`PaqueteDetailView`) para resolver slug→objeto de una vez. Mismo patrón de scopes sin bypass que 1.7.
-- [ ] **5.7** Frontend `reservar/page.tsx`: reemplazar el waterfall `getSedes()`+loop por `getPaqueteDetalle(sedeSlug, paqueteSlug)`. `sedeSlug` viene en el query (`?sede=`).
-- [ ] **5.8** Frontend `api.ts`: `ReservaInput` gana `servicio?`, `fecha_salida?`, `servicios_removidos?`; `guardarReserva` los manda. `MotivoNoDisponible` += `'sin_lugar'`.
-- [ ] **5.9** Frontend `checkout-view.tsx`: pasar la selección de componentes removidos (de `paquete-card` / query) a `guardarReserva`. El "ahorro" mostrado y el enviado deben coincidir.
-- [ ] **5.10** Tests: serializer acepta/rechaza las combinaciones; `Reserva.clean` multidía valida contra ocupaciones; API de detalle de paquete.
-- [ ] **5.11** Commit `fix(checkout): serializer y API aceptan servicio, paquete, fecha_salida y componentes removidos`.
+  - `servicio` y `paquete` **mutuamente excluyentes** (Decisión 10). Si viene `paquete`, `reserva.servicio` queda `None`.
+  - `paquete.empresa_lider` debe ser `self.context['empresa']` (si no → 400, "ese paquete no lo lidera esta empresa"). Como v1 es una-empresa, todos los componentes también son de ella.
+  - `fecha_salida`: obligatoria y `> fecha` si algún componente (o el servicio) es `HOSPEDAJE` / `estrategia_cupo == POR_NOCHE`; prohibida si ninguno lo es.
+  - `servicios_removidos ⊆` los `PaqueteServicio` con `removible=True` del paquete.
+  - `personalizaciones ⊆` las `ServicioPersonalizacion` de los servicios componentes NO removidos, con `activo=True`.
+  - `numero_personas` contra `personas_incluidas` / capacidad del servicio dominante, no solo `MAX_PERSONAS` de pesca.
+- [ ] **5.4** `ReservaCheckoutSerializer.create/update`: persistir `servicio` XOR `paquete`, `fecha_salida`, sincronizar `servicios_removidos` y `personalizaciones` (borrar+recrear, dentro de `con_empresa`).
+- [ ] **5.5** `Reserva.clean()`: la estrategia de cupo se resuelve así:
+  - reserva de **servicio** → `servicio.estrategia_cupo` (Sección 2). Si `POR_NOCHE` → validar contra ocupaciones (`evaluar_disponibilidad_hospedaje`), si no → `validar_cupo_diario` de un día.
+  - reserva de **paquete** → validar el cupo de CADA componente con su propia estrategia (todos en la misma empresa en v1). Si algún componente no cabe → `ValidationError` nombrando cuál.
+  - **No** crea `ReservaOcupacion` / `ReservaPaqueteComponente` aquí (eso es Sección 6, al confirmar el pago). `clean()` solo valida disponibilidad, sin lock.
+- [ ] **5.6** Endpoint `GET /api/sedes/<sede_slug>/paquetes/<slug>/` (`PaqueteDetailView`) — resuelve slug→objeto de una vez, mismo patrón de scopes que `apps/fleet/catalogo.py`. Mata el N+1 de `reservar/page.tsx` (B2).
+- [ ] **5.7** Frontend `reservar/page.tsx`: reemplazar el waterfall `getSedes()`+loop por `getPaqueteDetalle(sedeSlug, paqueteSlug)` (`?sede=` en el query).
+- [ ] **5.8** Frontend `api.ts`: `ReservaInput` gana `servicio?`, `fecha_salida?`, `servicios_removidos?`, `personalizaciones?`; `guardarReserva` los manda. `MotivoNoDisponible` += `'sin_lugar'` (B3).
+- [ ] **5.9** Frontend `checkout-view.tsx` / `paquete-card.tsx`: la selección de servicios removidos y personalizaciones que ve el cliente es la que se manda; el precio mostrado (`pricing-paquete.ts`) debe coincidir con el que calcula el servidor en `crear-pago`. Ajustar `pricing-paquete.ts` a la fórmula de 4.1.
+- [ ] **5.10** Tests: serializer acepta/rechaza combinaciones; `paquete` de otra `empresa_lider` → 400; `Reserva.clean` de paquete valida cada componente; API de detalle de paquete.
+- [ ] **5.11** Commit `fix(checkout): serializer y API aceptan servicio, paquete, fecha_salida, componentes y personalizaciones`.
 
 ---
 
-## Sección 6 — Confirmación de pago crea la ocupación (A3, A4 wiring)
+## Sección 6 — Confirmación de pago crea el cupo de cada componente (A3, A4 wiring)
 
-- [ ] **6.1** `apps/payments/services.py::aplicar_pago_exitoso`: tras marcar `PAGADA` y antes del `on_commit`, si la reserva es de un servicio/paquete con recurso finito multidía:
-  - `bloquear_recurso(empresa_id, recurso_id)` para cada recurso candidato (o lock por servicio).
-  - Re-evaluar `evaluar_disponibilidad_hospedaje`. Si ya no cabe → `_cancelar_sin_cupo` (reembolso 100%, misma rama que pesca).
-  - Si cabe → elegir recurso(s) concreto(s) y crear las filas `ReservaOcupacion` (`fecha_inicio=fecha`, `fecha_fin=fecha_fin_servicio`, `ocupa_cupo=True`) dentro de la misma transacción. El constraint `EXCLUDE` es la última red.
-- [ ] **6.2** Selección de recurso: función pura en el núcleo `elegir_recursos(libres, personas, cantidad)` — el más chico que cabe, o combinación para `cantidad_recursos > 1`. Determinista y testeable.
-- [ ] **6.3** Cancelación / reembolso (`_cancelar_sin_cupo`, `_cancelar_codigo_promocional_invalido`, acción de admin "Cancelar por mal clima", `charge.refunded`): al pasar a `CANCELADA`, `Reserva.save()` baja `ocupa_cupo` de sus ocupaciones (cubierto por 3.2) — verificar con test explícito.
-- [ ] **6.4** `manage.py revisar_cupo` y `conciliar_pagos`: sin cambio funcional, pero añadir test de que una reserva de hospedaje conciliada crea su ocupación igual que el webhook.
-- [ ] **6.5** Admin: `ReservaOcupacionInline` en `ReservaAdmin` pasa a mayormente solo-lectura para reservas ya pagadas (la ocupación la pone el sistema); dejar editable solo para reservas manuales `pendiente_pago` / WhatsApp.
-- [ ] **6.6** Tests `tests_ocupacion.py` / `tests.py` (payments): `# postgres-only` — dos reservas de hospedaje pagando el último cuarto en paralelo: una queda `PAGADA` con ocupación, la otra `CANCELADA + reembolsada`. Reembolso libera el rango.
-- [ ] **6.7** Commit `fix(hospedaje): el pago confirma y reserva el recurso multidía, con reembolso si se llenó`.
+- [ ] **6.1** Modelo `ReservaPaqueteComponente(reserva FK, servicio FK, empresa FK, estado_cupo, recurso FK null, unique_together(reserva, servicio))` — una fila por servicio del paquete, con el resultado de reservar su cupo. `empresa` = `servicio.empresa` (en v1 = `reserva.empresa`). RLS por `empresa`.
+- [ ] **6.2** `apps/payments/services.py::aplicar_pago_exitoso`: tras marcar `PAGADA`, antes del `on_commit`:
+  - reserva de **servicio suelto**: si `estrategia_cupo == POR_NOCHE` → `bloquear_recurso` + `evaluar_disponibilidad_hospedaje` + crear `ReservaOcupacion`. Si no → como hoy (el `full_clean()` ya valida cupo de pesca; la asignación de panga es manual en la agenda).
+  - reserva de **paquete**: recorrer `paquete.servicios_asociados` NO removidos; por cada componente, según su `estrategia_cupo`:
+    - exclusivo día (`PESCA`/`PASEO`) → contar `CupoDiario` de esa empresa/fecha, tomar lock `(empresa, servicio, fecha)`; si lleno → cae todo. Crear `ReservaPaqueteComponente(estado_cupo=OK)`; la asignación concreta de panga sigue manual en la agenda.
+    - `POR_NOCHE` → `bloquear_recurso` + `evaluar_disponibilidad_hospedaje` + `elegir_recursos` + crear `ReservaOcupacion` ligada + `ReservaPaqueteComponente`.
+    - `BAJO_DEMANDA` → `ReservaPaqueteComponente(estado_cupo=OK)` sin más.
+  - **Todo o nada:** si un componente no tiene cupo → la transacción hace rollback y se va a `_cancelar_sin_cupo` (reembolso 100% con la cuenta de `reserva.empresa` = la única empresa en v1). El mensaje nombra el componente.
+  - En v1 todos los componentes son de `reserva.empresa`, así que **no hay `con_empresa` anidado** — todo corre en el alcance ya abierto por el webhook. (El loop multi-scope es Sección 7.)
+- [ ] **6.3** Núcleo puro `elegir_recursos(libres, personas, cantidad_recursos)` — el/los recurso(s) más chico(s) que caben. Determinista, testeable sin base.
+- [ ] **6.4** Cancelación / reembolso: al pasar a `CANCELADA`, `Reserva.save()` baja `ocupa_cupo` de sus `ReservaOcupacion` (Sección 3.2) y marca `ReservaPaqueteComponente` como liberado. Test explícito para pesca, hospedaje y paquete.
+- [ ] **6.5** `manage.py conciliar_pagos`: test de que una reserva de hospedaje/paquete conciliada crea sus artefactos de cupo igual que el webhook.
+- [ ] **6.6** Admin: `ReservaOcupacionInline` y un `ReservaPaqueteComponenteInline` mayormente solo-lectura para reservas ya pagadas; editables solo para `pendiente_pago` / WhatsApp.
+- [ ] **6.7** Tests `# postgres-only`: dos reservas de hospedaje pagando el último cuarto en paralelo → una `PAGADA` con ocupación, la otra `CANCELADA + reembolsada`; el reembolso libera el rango. Paquete con componente de hospedaje sin cupo → todo el paquete se reembolsa.
+- [ ] **6.8** Commit `fix(hospedaje): el pago reserva el cupo de cada componente/servicio multidía, con reembolso si algo se llenó`.
 
 ---
 
-## Sección 7 — Paquetes cruza-empresa (M6)
+## Sección 7 — Paquetes cruza-empresa: bloquear + documentar (M6)
 
-- [ ] **7.1** Escribir `docs/superpowers/specs/2026-09-05-expansion-multi-sede-ADR-005-paquetes-cruza-empresa.md`:
-  - Cobro: `empresa_lider` cobra el total con su cuenta Stripe (ADR-002/004, sin Connect). El reparto a las otras empresas se liquida **fuera del sistema**, igual que la comisión de vendedora y el % de plataforma. El sistema solo registra la atribución.
-  - Cupo de componentes de otras empresas: al confirmar el paquete, cada componente valida y reserva cupo **en el scope de su propia empresa** (`con_empresa(componente.empresa)`), con su propio lock. Si cualquier componente no tiene cupo → se cae todo el paquete → reembolso 100% desde `empresa_lider`.
-  - Lectura del catálogo cruza-empresa: iteración de scopes (Sección 1), no bypass.
-  - Qué pasa si una empresa componente está `activo=False`: el paquete no se puede vender (se filtra del catálogo).
-- [ ] **7.2** `fleet/models.py::PaqueteServicio`: quitar la regla que obliga misma empresa; mantener "misma **sede**" (ya está). Añadir property `empresa` = `servicio.empresa`. `Paquete.clean`: al menos un componente debe ser de `empresa_lider` (el líder tiene que aportar algo), salvo que el dueño diga lo contrario.
-- [ ] **7.3** `ReservaPaqueteComponente` (tabla nueva) o reutilizar `ReservaOcupacion` + `servicio`: registrar, por reserva de paquete, qué componente pertenece a qué empresa y su cupo/ocupación. Decidir el modelo mínimo. Cada fila con `empresa_id` del componente y RLS por esa empresa.
-- [ ] **7.4** `aplicar_pago_exitoso` para paquete: loop por componente:
-  - `with con_empresa(comp.empresa): bloquear + evaluar + crear ocupación/cupo`.
-  - Todo o nada: si un componente falla, revertir (la transacción externa hace rollback) y `_cancelar_sin_cupo` con reembolso desde `empresa_lider`.
-  - Cuidado con `SET LOCAL` anidado: `con_empresa` no es reentrante con valor distinto — hay que **salir** del scope del líder antes de entrar al del componente. Rediseñar el bloque para abrir cada scope de forma secuencial, no anidada, o usar un helper que haga `SET LOCAL` puntual por consulta.
-- [ ] **7.5** `_notificar` / notificaciones: el cliente recibe un correo; las empresas componentes ¿reciben aviso? (memoria `recordatorios-manuales` dice que los avisos de asignación se mandan a mano — probablemente aplica igual). Confirmar en Preguntas abiertas.
-- [ ] **7.6** Serializers de catálogo: un `PaqueteSerializer` que arma la vista del paquete leyendo cada componente en su scope (o precomputando en la vista con la iteración de 1.7). Sin N+1 cross-scope descontrolado.
-- [ ] **7.7** Campo de atribución: `Paquete` o `PaqueteServicio` con `porcentaje_plataforma` / nota de liquidación, solo visible para el operador de plataforma (como la comisión). Confirmar si hace falta en v1 o es post-lanzamiento.
-- [ ] **7.8** Tests `tests_paquetes.py`: `# postgres-only` — paquete con componentes de empresa A (líder) y B; el pago crea ocupación en ambos scopes; si B no tiene cupo, todo se reembolsa; el catálogo de sede muestra el paquete solo si A y B están activas.
-- [ ] **7.9** Commit `feat(paquetes): soporte cruza-empresa con cobro por líder y cupo por componente (ADR-005)`.
+**Decisión 8/9: fuera de v1.** Esta sección NO construye el multi-cobro. Solo:
+
+- [ ] **7.1** Confirmar que `PaqueteServicio.clean()` (Sección 4.2) rechaza cualquier componente de una empresa distinta a `paquete.empresa_lider`, con mensaje claro. Test.
+- [ ] **7.2** Escribir `docs/superpowers/specs/2026-09-05-expansion-multi-sede-ADR-005-paquetes-cruza-empresa.md` con:
+  - El planteo: cada empresa tiene su cuenta de Stripe, la empresa de marketing NO tiene cuenta central (a propósito, para no cargar impuestos de esas transacciones), y no se usa Connect. Un paquete cruza-empresa implica N cobros a N cuentas.
+  - Por qué el "un solo pago percibido por el cliente" no es trivial sin Connect (Stripe no permite un PaymentElement que confirme N PaymentIntents de N cuentas distintas como un solo cargo).
+  - Opciones a evaluar cuando se retome: (a) N PaymentIntents secuenciales en el checkout con reembolsos parciales; (b) empresa_lider cobra su parte online y las demás mandan link de pago aparte; (c) Stripe Connect (revisar si "direct charges" evita el problema fiscal — el cargo se crea en la cuenta conectada, el dinero nunca toca a la plataforma).
+  - Qué queda preparado hoy: `Paquete` tiene `sede` + `empresa_lider`; `PaqueteServicio` valida misma sede; el cupo por componente y `ReservaPaqueteComponente` ya soportan `empresa` distinta por componente (aunque v1 no lo use).
+  - Estado: PROPUESTO, sin fecha.
+- [ ] **7.3** Commit `docs(adr): ADR-005 paquetes cruza-empresa (fuera de v1, planteo del problema)`.
 
 ---
 
 ## Sección 8 — MEDIO / BAJO restantes
 
-- [ ] **8.1** (M2) `apps/tenancy/migrations/_helpers.py::con_alcance_operador(schema_editor)` — context manager que emite `SET LOCAL app.operador_plataforma='on'` en Postgres, no-op en sqlite. Envolver los writes ORM de `fleet/0018` y cualquier data migration futura. Nota en `backend/CLAUDE.md`.
+- [x] **8.1** (M2) — HECHO en 0.8.1: `apps/tenancy/rls.py::alcance_operador_migracion(connection)` envuelve los writes ORM de `fleet/0018`. Falta: nota en `backend/CLAUDE.md` sobre usarlo en cualquier data migration futura sobre tablas con RLS.
 - [ ] **8.2** (M4) `config/settings/base.py`: sacar `from apps.tenancy import scope` del cuerpo del módulo; los lambdas de `UNFOLD['SIDEBAR']` importan `scope` perezosamente dentro del lambda (`lambda request: __import__('apps.tenancy.scope', fromlist=['es_operador_plataforma']).es_operador_plataforma(request.user)` o un helper en un módulo aparte que sí se pueda importar tarde).
 - [ ] **8.3** (B3) Ya cubierto en 5.8 (frontend `MotivoNoDisponible`). Verificar que `catalogo/page.tsx` y el calendario manejan `'sin_lugar'`.
 - [ ] **8.4** (B4) `fleet/models.py::Tarifa.save`: usar `update_or_create` real o `select_for_update` sobre la fila de esa empresa; evitar el race de dos `create(empresa=X)`.
@@ -269,14 +297,20 @@ siguientes prueba nada. Va antes que todo lo demás.
 
 ---
 
-## Preguntas abiertas (llenar cuando aparezcan; parar y preguntar si bloquean)
+## Preguntas abiertas
 
-- ¿Un paquete admite extras sueltos (brunch, transporte) encima del ancla, o el ancla es todo?
-- ¿`servicio` y `paquete` en la misma reserva: excluyentes, o un paquete "es" un servicio contenedor?
-- Set exacto de `tipo_servicio` de v1 (¿seasafari, ballenas, tiburón ballena, islas, snorkel como valores separados, o todos `PASEO`?).
-- ¿Las empresas componentes de un paquete reciben algún aviso automático, o todo manual como los avisos de asignación?
-- ¿El % de plataforma / atribución de liquidación cruza-empresa se registra en v1 o es post-lanzamiento?
-- ¿Hospedaje cobra anticipo 30% igual que pesca, o 100% por adelantado?
+**Todas resueltas 2026-09-05 (ver "Decisiones del dueño, segunda ronda" arriba):**
+- ✅ Extras encima del ancla → son las `ServicioPersonalizacion` de los componentes, y SÍ suman (Decisión 7).
+- ✅ `servicio` vs `paquete` → excluyentes; paquete deja `reserva.servicio` vacío (Decisión 10).
+- ✅ Tipos de servicio v1 → `PESCA`, `PASEO`, `HOSPEDAJE`, `BAJO_DEMANDA` (Decisión 5).
+- ✅ Aviso a empresas componentes → manual (Decisión 12).
+- ✅ % de plataforma → nunca en el sistema (Decisión 13).
+- ✅ Anticipo hospedaje → configurable por Servicio, default 30% (Decisión 6).
+- ✅ Paquetes cruza-empresa → fuera de v1; v1 = una sola empresa por paquete (Decisiones 8, 9).
+
+**Nueva pendiente menor (no bloquea, decidir en Sección 4.4):**
+- ¿El % de anticipo de un paquete sale del servicio dominante, del mínimo de los componentes, o de un campo propio `Paquete.porcentaje_anticipo`? (Recomendación: campo propio, default 30.)
+- ¿Un servicio suelto que NO es pesca (un `PASEO`) admite el sistema viejo de `ReservaExtra`/`ReservaTransporte`, o solo `ServicioPersonalizacion`? (Recomendación: solo `ServicioPersonalizacion` para servicios nuevos; el sistema viejo queda solo para la pesca legacy.)
 
 ---
 
@@ -308,4 +342,5 @@ Formato: `<fecha> — <sección.tarea> — <estado> — <nota / SHA>`.
 - 2026-09-05 — **Sección 0.8 CERRADA.** `23045f9` commitea el batch final. `test apps config` completo: **sqlite 676 verdes, Postgres 676 verdes (rol `ci_rls`, NOBYPASSRLS)**. Primera vez que la suite de Postgres pasa en esta rama.
   - Falta actualizar CI: el workflow ya corre la matriz sqlite+postgres pero con Postgres 17 y `ci_rls` creado en el step — verificar que sigue coincidiendo (puerto 5432 en CI vs 5433 local; el `render.yaml`/CI usa 5432, sin cambio necesario).
 - **Estado:** Secciones 0, 0.8 y 1 (C1, C2) hechas. `nucleo.py` (tarea 2.1, tope `None` + `validar_rango`) modificado, verificado en ambas suites, SIN commitear — va con el primer commit de Sección 2.
-- **Siguiente sesión:** commitear `nucleo.py` y arrancar Sección 2 (2.2 enums de Servicio, 2.3 registro por `estrategia_cupo`, 2.4 `Reserva.clean` usa `servicio.estrategia_cupo`, 2.5 candado re-llaveado). Recordar: dropear `test_pescadeportiva_test` antes de cada corrida limpia de Postgres; NO `--keepdb` entre iteraciones.
+- 2026-09-05 — Segunda ronda de decisiones del dueño respondida y volcada al plan: Secciones 4-7 reescritas (paquetes v1 = una empresa; cruza-empresa fuera de v1 → Sección 7 se reduce a bloquear + ADR-005; precio = ancla + personalizaciones; anticipo configurable por servicio; `servicio` XOR `paquete`; cupo por componente con `ReservaPaqueteComponente`). Preguntas abiertas todas cerradas salvo 2 menores no bloqueantes (ver esa sección).
+- **Siguiente sesión:** commitear `nucleo.py` (2.1, ya hecho) y arrancar Sección 2 con el plan reescrito. Recordar: dropear `test_pescadeportiva_test` antes de cada corrida limpia de Postgres; NO `--keepdb` entre iteraciones.
