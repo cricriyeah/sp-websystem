@@ -4,9 +4,10 @@ from rest_framework.views import APIView
 
 from apps.tenancy import scope
 
-from .models import ExtrasItem, PuntoEncuentro, Servicio, Tarifa, TransportePrecio
+from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, Tarifa, TransportePrecio
 from .serializers import (
     ExtrasItemSerializer,
+    PaqueteSerializer,
     PuntoEncuentroSerializer,
     ServicioSerializer,
     TarifaSerializer,
@@ -91,3 +92,33 @@ class ServicioDetailView(APIView):
         with scope.con_empresa(empresa):
             servicio = get_object_or_404(Servicio, empresa=empresa, slug=slug, activo=True)
             return Response(ServicioSerializer(servicio).data)
+
+
+class PaquetesPorSedeListView(APIView):
+    """Catalogo publico de experiencias empaquetadas activas por localidad/sede."""
+
+    def get(self, request, sede_slug):
+        from apps.tenancy.models import Sede
+        sede = get_object_or_404(Sede, slug=sede_slug)
+        with scope.como_operador_plataforma():
+            paquetes = (
+                Paquete.objects.filter(sede=sede, activo=True, empresa_lider__activo=True)
+                .select_related('sede', 'empresa_lider')
+                .prefetch_related('servicios_asociados__servicio')
+            )
+            return Response(PaqueteSerializer(paquetes, many=True).data)
+
+
+class PaquetesPorEmpresaListView(APIView):
+    """Paquetes liderados por una empresa especifica."""
+
+    def get(self, request, empresa_slug):
+        empresa = scope.resolver_empresa_publica(empresa_slug)
+        with scope.con_empresa(empresa):
+            paquetes = (
+                Paquete.objects.filter(empresa_lider=empresa, activo=True)
+                .select_related('sede', 'empresa_lider')
+                .prefetch_related('servicios_asociados__servicio')
+            )
+            return Response(PaqueteSerializer(paquetes, many=True).data)
+

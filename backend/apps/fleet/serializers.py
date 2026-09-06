@@ -4,6 +4,8 @@ from apps.payments.pricing import PERSONAS_INCLUIDAS, cargo_por_extra, cargo_por
 
 from .models import (
     ExtrasItem,
+    Paquete,
+    PaqueteServicio,
     Personalizacion,
     PuntoEncuentro,
     Recurso,
@@ -116,3 +118,36 @@ class ServicioSerializer(serializers.ModelSerializer):
     def get_personalizaciones(self, obj):
         qs = obj.servicio_personalizaciones.filter(activo=True, personalizacion__activo=True)
         return ServicioPersonalizacionSerializer(qs, many=True).data
+
+
+class PaqueteServicioSerializer(serializers.ModelSerializer):
+    servicio = ServicioSerializer(read_only=True)
+
+    class Meta:
+        model = PaqueteServicio
+        fields = [
+            'id', 'servicio_id', 'servicio', 'orden',
+            'removible', 'ajuste_precio', 'ajuste_precio_usd',
+        ]
+
+
+class PaqueteSerializer(serializers.ModelSerializer):
+    sede = serializers.CharField(source='sede.nombre', read_only=True)
+    sede_slug = serializers.CharField(source='sede.slug', read_only=True)
+    empresa_lider = serializers.CharField(source='empresa_lider.nombre', read_only=True)
+    empresa_lider_slug = serializers.CharField(source='empresa_lider.slug', read_only=True)
+    servicios_asociados = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Paquete
+        fields = [
+            'id', 'sede', 'sede_slug', 'empresa_lider', 'empresa_lider_slug',
+            'nombre', 'slug', 'descripcion',
+            'precio_ancla', 'precio_ancla_usd', 'regla_precio', 'activo',
+            'servicios_asociados',
+        ]
+
+    def get_servicios_asociados(self, obj):
+        qs = obj.servicios_asociados.filter(servicio__activo=True).order_by('orden')
+        return PaqueteServicioSerializer(qs, many=True).data
+
