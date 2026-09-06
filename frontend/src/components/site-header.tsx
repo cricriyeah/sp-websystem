@@ -8,6 +8,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { LangSwitch } from '@/components/lang-switch';
+import { SedeSelector } from '@/components/sede-selector';
 
 type SiteHeaderProps = {
   lang: Locale;
@@ -31,6 +32,7 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
   // Absolutos y no anclas sueltas: desde el checkout o el deslinde, un `#nosotros`
   // no llevaria a ningun lado porque esas secciones viven en la portada.
   const links = [
+    { href: `/${lang}/catalogo`, label: nav.catalogo },
     { href: `/${lang}#temporadas`, label: nav.temporadas },
     { href: `/${lang}#nosotros`, label: nav.nosotros },
     { href: `/${lang}#galeria`, label: nav.galeria },
@@ -83,6 +85,7 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
         </nav>
 
         <div className="flex items-center gap-3">
+          <SedeSelector lang={lang} label={nav.sedeLabel} variant="header" className="hidden sm:inline-block" />
           <WhatsappContact nav={nav} tone="plain" />
 
           <button
@@ -116,6 +119,10 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
                   {link.label}
                 </Link>
               ))}
+              <div className="flex items-center justify-between border-b border-border-strong py-3.5">
+                <span className="text-[15px] text-muted">{nav.sedeLabel}</span>
+                <SedeSelector lang={lang} label={nav.sedeLabel} variant="header" />
+              </div>
               <div className="flex items-center justify-between border-b border-border-strong py-3.5">
                 <span className="text-[15px] text-muted">{nav.switchLang}</span>
                 <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />

@@ -23,6 +23,10 @@
     "notFound": {
       "title": "Page not found",
       "description": "This page doesn't exist or has moved."
+    },
+    "catalogo": {
+      "title": "Experiences and Packages | Sal y Sol Sportfishing",
+      "description": "Explore curated sportfishing packages and tours across destinations in BCS."
     }
   },
   "notFound": {
@@ -93,6 +97,8 @@
     "galeria": "Gallery",
     "preguntas": "FAQ",
     "contacto": "Contact",
+    "catalogo": "Experiences",
+    "sedeLabel": "Destination",
     "reservar": "Book now",
     "humanContact": "Personalized support",
     "whatsappCta": "Message us on WhatsApp",
@@ -645,5 +651,28 @@
     "helpBody": "We're happy to help! Message us before your trip and we'll guide you step-by-step so everything is set for a wonderful day on the water.",
     "cta": "Ask for assistance on WhatsApp",
     "whatsappMessage": "Hi, I'm going fishing with you and would love some guidance on getting my CONAPESCA licence."
+  },
+  "catalog": {
+    "title": "Experiences & Packages",
+    "subtitle": "Complete adventures curated locally. Choose your destination and customize every service to your preference.",
+    "selectDestination": "Choose your destination",
+    "featuredBadge": "Full Experience",
+    "anchorPrice": "Package price",
+    "adjustedPrice": "Final price",
+    "discountApplied": "Savings from removed services",
+    "customize": "Customize components",
+    "servicesIncluded": "Included services",
+    "removableNotice": "You can remove optional services to tailor the package and adjust the price.",
+    "fixedService": "Core experience service",
+    "removeService": "Remove from package",
+    "keepService": "Include in package",
+    "bookPackage": "Book experience",
+    "standaloneTitle": "Looking for a single service?",
+    "standaloneSubtitle": "Standalone services to craft your own custom itinerary",
+    "bookStandalone": "Book this service",
+    "fromPrice": "From",
+    "crossSellNotice": "Tip: Combine services into a package for greater savings and seamless coordination.",
+    "emptyPackages": "No packages currently available for this destination.",
+    "emptyServices": "No additional standalone services in this destination."
   }
 }

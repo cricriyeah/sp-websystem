@@ -23,6 +23,10 @@
     "notFound": {
       "title": "Página no encontrada",
       "description": "Esta página no existe o cambió de lugar."
+    },
+    "catalogo": {
+      "title": "Experiencias y Paquetes | Sal y Sol Sportfishing",
+      "description": "Descubre nuestros paquetes de aventura y servicios de pesca por destino en BCS."
     }
   },
   "notFound": {
@@ -93,6 +97,8 @@
     "galeria": "Galería",
     "preguntas": "Preguntas",
     "contacto": "Contacto",
+    "catalogo": "Experiencias",
+    "sedeLabel": "Destino",
     "reservar": "Reservar",
     "humanContact": "Atención personalizada",
     "whatsappCta": "Escríbenos por WhatsApp",
@@ -645,5 +651,28 @@
     "helpBody": "¡Con todo gusto! Escríbenos antes de tu viaje y te guiaremos paso a paso para que tengas todo listo y solo te preocupes por disfrutar tu día en el mar.",
     "cta": "Pedir asistencia por WhatsApp",
     "whatsappMessage": "Hola, voy a salir a pescar con ustedes y me gustaría apoyo para tramitar mi licencia de CONAPESCA."
+  },
+  "catalog": {
+    "title": "Experiencias y Paquetes",
+    "subtitle": "Aventuras completas diseñadas localmente. Elige tu destino y personaliza cada servicio a tu medida.",
+    "selectDestination": "Selecciona tu destino",
+    "featuredBadge": "Experiencia completa",
+    "anchorPrice": "Precio del paquete",
+    "adjustedPrice": "Precio final",
+    "discountApplied": "Ahorro por servicios retirados",
+    "customize": "Personalizar componentes",
+    "servicesIncluded": "Servicios incluidos",
+    "removableNotice": "Puedes retirar los servicios opcionales para ajustar el precio a tu preferencia.",
+    "fixedService": "Incluido en la experiencia",
+    "removeService": "Retirar del paquete",
+    "keepService": "Incluir en el paquete",
+    "bookPackage": "Reservar experiencia",
+    "standaloneTitle": "¿Buscas un servicio específico?",
+    "standaloneSubtitle": "Servicios individuales para armar tu propio itinerario en la región",
+    "bookStandalone": "Reservar este servicio",
+    "fromPrice": "Desde",
+    "crossSellNotice": "Tip: Combina servicios en un paquete para mayor ahorro y coordinación garantizada.",
+    "emptyPackages": "No hay paquetes disponibles en este momento para este destino.",
+    "emptyServices": "No hay servicios individuales adicionales en este destino."
   }
 }
