@@ -52,7 +52,7 @@
 
 ### Bloque 1: Modelos de Datos `Paquete` y `PaqueteServicio` (`apps/fleet`)
 
-- [ ] **Task P1: Crear modelos `Paquete` y `PaqueteServicio` con validación geográfica**
+- [x] **Task P1: Crear modelos `Paquete` y `PaqueteServicio` con validación geográfica**
   - **Archivos:**
     - Modificar `backend/apps/fleet/models.py`
     - Crear `backend/apps/fleet/migrations/0019_paquetes.py`
@@ -80,7 +80,7 @@
 
 ### Bloque 2: Vinculación de `Paquete` en `Reserva` (`apps/bookings`)
 
-- [ ] **Task P2: Extender `Reserva` con campo opcional `paquete`**
+- [x] **Task P2: Extender `Reserva` con campo opcional `paquete`**
   - **Archivos:**
     - Modificar `backend/apps/bookings/models.py`
     - Crear `backend/apps/bookings/migrations/0028_reserva_paquete.py`
@@ -95,7 +95,7 @@
 
 ### Bloque 3: Lógica Pura de Precio de Paquete (`apps/payments/pricing.py`)
 
-- [ ] **Task P3: Implementar cálculo de precio ancla con servicios removidos**
+- [x] **Task P3: Implementar cálculo de precio ancla con servicios removidos**
   - **Archivos:**
     - Modificar `backend/apps/payments/pricing.py`
     - Crear `backend/apps/payments/tests_pricing_paquete.py`
@@ -110,7 +110,7 @@
 
 ### Bloque 4: Row Level Security (RLS) en Postgres para Paquetes (`apps/fleet`)
 
-- [ ] **Task P4: Migración RLS de Postgres para `fleet_paquete` y `fleet_paqueteservicio`**
+- [x] **Task P4: Migración RLS de Postgres para `fleet_paquete` y `fleet_paqueteservicio`**
   - **Archivos:**
     - Crear `backend/apps/fleet/migrations/0020_rls_paquetes.py`
     - Crear `backend/apps/fleet/tests_paquetes_rls.py`
@@ -128,7 +128,7 @@
 
 ### Bloque 5: Serializers y Endpoints API de Paquetes (`apps/fleet`)
 
-- [ ] **Task P5: Endpoints de catálogo de paquetes por sede y por empresa**
+- [x] **Task P5: Endpoints de catálogo de paquetes por sede y por empresa**
   - **Archivos:**
     - Modificar `backend/apps/fleet/serializers.py`
     - Modificar `backend/apps/fleet/views.py`
@@ -148,7 +148,7 @@
 
 ### Bloque 6: Django Admin para Paquetes (`apps/fleet/admin.py`)
 
-- [ ] **Task P6: Registro de `PaqueteAdmin` con `PaqueteServicioInline`**
+- [x] **Task P6: Registro de `PaqueteAdmin` con `PaqueteServicioInline`**
   - **Archivos:**
     - Modificar `backend/apps/fleet/admin.py`
     - Modificar `backend/apps/bookings/admin.py`
@@ -164,7 +164,7 @@
 
 ### Bloque 7: Verificación Integral de No-Regresión
 
-- [ ] **Task P7: Suite completa de pruebas de backend (verificación integral)**
+- [x] **Task P7: Suite completa de pruebas de backend (verificación integral)**
   - **Archivos:**
     - Ninguno (solo verificación).
   - **Descripción:**
