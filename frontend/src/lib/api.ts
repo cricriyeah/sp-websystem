@@ -138,6 +138,8 @@ export type ReservaInput = {
   // — el token es de un solo uso y este endpoint es un upsert, asi que corregir
   // la fecha reenvia sin token (ver backend/apps/bookings/views.py).
   captcha_token?: string;
+  // ID del Paquete de experiencias que ampara esta reserva (si aplica).
+  paquete?: number | null;
 };
 
 export type Reserva = ReservaInput & {
@@ -177,7 +179,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // Cada ruta exportada de este archivo empieza con '/api/' (ver getTarifa,
   // getCupo, etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
   // que cada funcion exportada tenga que acordarse del slug.
-  const rutaConEmpresa = path.startsWith('/api/')
+  // Rutas de plataforma multi-sede (/api/sedes/) no se atan a una empresa.
+  const rutaConEmpresa = path.startsWith('/api/sedes')
+    ? path
+    : path.startsWith('/api/')
     ? `/api/${EMPRESA_SLUG}${path.slice(4)}`
     : path;
   let res: Response;
@@ -309,5 +314,81 @@ export const validarCodigoPromocional = (codigo: string, correoCliente: string) 
   request<CodigoPromocionalCheck>(
     `/api/codigo-promocional/validar/?codigo=${encodeURIComponent(codigo)}&correo_cliente=${encodeURIComponent(correoCliente)}`,
   );
+
+/* ==========================================================================
+   Catálogo Multi-Sede y Paquetes de Experiencias
+   ========================================================================== */
+
+export type Sede = {
+  id: number;
+  nombre: string;
+  slug: string;
+  zona_horaria: string;
+};
+
+export type ServicioPersonalizacionCatalogo = {
+  id: number;
+  personalizacion_id: number;
+  nombre: string;
+  tipo: string;
+  cobrar_por_persona: boolean;
+  cantidad_editable: boolean;
+  precio: string;
+  precio_usd: string | null;
+  obligatorio: boolean;
+  preseleccionado: boolean;
+};
+
+export type ServicioCatalogo = {
+  id: number;
+  nombre: string;
+  slug: string;
+  tipo_servicio: string;
+  estrategia_cupo: string;
+  estrategia_precio: string;
+  modo_ocupacion: string;
+  precio_base: string;
+  precio_base_usd: string | null;
+  precio_persona_extra: string;
+  precio_persona_extra_usd: string | null;
+  personas_incluidas: number;
+  descripcion: string;
+  activo: boolean;
+  personalizaciones: ServicioPersonalizacionCatalogo[];
+};
+
+export type PaqueteServicioCatalogo = {
+  id: number;
+  servicio_id: number;
+  servicio: ServicioCatalogo;
+  orden: number;
+  removible: boolean;
+  ajuste_precio: string;
+  ajuste_precio_usd: string | null;
+};
+
+export type PaqueteCatalogo = {
+  id: number;
+  sede: string;
+  sede_slug: string;
+  empresa_lider: string;
+  empresa_lider_slug: string;
+  nombre: string;
+  slug: string;
+  descripcion: string;
+  precio_ancla: string;
+  precio_ancla_usd: string | null;
+  regla_precio: string;
+  activo: boolean;
+  servicios_asociados: PaqueteServicioCatalogo[];
+};
+
+export const getSedes = () => request<Sede[]>('/api/sedes/');
+
+export const getPaquetesSede = (sedeSlug: string) =>
+  request<PaqueteCatalogo[]>(`/api/sedes/${sedeSlug}/paquetes/`);
+
+export const getServiciosSede = (sedeSlug: string) =>
+  request<ServicioCatalogo[]>(`/api/sedes/${sedeSlug}/servicios/`);
 
 export { ApiError };
