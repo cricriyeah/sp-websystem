@@ -236,11 +236,11 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         LlegadaFilter,
         'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago', 'en_disputa',
         'pide_bebidas', 'pide_extras_whatsapp',
-        'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional',
+        'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional', 'paquete',
     ]
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     date_hierarchy = 'fecha'
-    autocomplete_fields = ['embarcacion', 'capitan', 'vendedora']
+    autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
     inlines = [ReservaExtraInline, ReservaTransporteInline, ReservaOcupacionInline]
     # El deslinde es el registro legal de lo que acepto el cliente: se consulta,
     # no se edita (ver docs/contexto-negocio.md, seccion Legal). Las fechas y los

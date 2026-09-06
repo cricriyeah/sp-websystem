@@ -10,6 +10,8 @@ from .models import (
     Embarcacion,
     EmbarcacionNoDisponible,
     ExtrasItem,
+    Paquete,
+    PaqueteServicio,
     Personalizacion,
     PuntoEncuentro,
     Recurso,
@@ -161,3 +163,22 @@ class PersonalizacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_filter = ['tipo', 'cobrar_por_persona', 'cantidad_editable', 'activo']
     list_editable = ['cobrar_por_persona', 'cantidad_editable', 'activo']
     search_fields = ['nombre']
+
+
+class PaqueteServicioInline(TabularInline):
+    model = PaqueteServicio
+    extra = 1
+    fields = ['servicio', 'orden', 'removible', 'ajuste_precio', 'ajuste_precio_usd']
+    autocomplete_fields = ['servicio']
+
+
+@admin.register(Paquete)
+class PaqueteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    empresa_campo = 'empresa_lider'
+    list_display = ['nombre', 'sede', 'empresa_lider', 'precio_ancla', 'precio_ancla_usd', 'activo']
+    list_filter = ['sede', 'activo']
+    list_editable = ['precio_ancla', 'precio_ancla_usd', 'activo']
+    search_fields = ['nombre', 'slug', 'descripcion']
+    prepopulated_fields = {'slug': ('nombre',)}
+    inlines = [PaqueteServicioInline]
+
