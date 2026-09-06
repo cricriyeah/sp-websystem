@@ -8,11 +8,14 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
+
+from apps.tenancy import scope
 
 from apps.fleet.models import (
     Capitan,
@@ -23,7 +26,7 @@ from apps.fleet.models import (
     TransportePrecio,
 )
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
-from apps.testing import crear_flota
+from apps.testing import OperadorTestCase, crear_flota
 
 from .admin import AgendaAdmin, CheckoutAbandonadoAdmin
 from .panorama import armar_panorama
@@ -83,7 +86,7 @@ def crear_empresa(**overrides):
     return Empresa.objects.create(**base)
 
 
-class ReservaEmpresaFKTests(TestCase):
+class ReservaEmpresaFKTests(OperadorTestCase):
     def test_empresa_protegida_contra_borrado_con_cupo_diario(self):
         empresa = crear_empresa()
         CupoDiario.objects.create(empresa=empresa, fecha='2026-12-01', cupo_maximo=5)
@@ -100,13 +103,13 @@ class ReservaEmpresaFKTests(TestCase):
             empresa.delete()
 
 
-class EmpresaObligatoriaTests(TestCase):
+class EmpresaObligatoriaTests(OperadorTestCase):
     def test_cupo_diario_sin_empresa_revienta(self):
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(IntegrityError), transaction.atomic():
             CupoDiario.objects.create(fecha='2026-12-05', cupo_maximo=5)
 
 
-class UnicidadPorEmpresaTests(TestCase):
+class UnicidadPorEmpresaTests(OperadorTestCase):
     def test_dos_empresas_pueden_tener_cupo_diario_la_misma_fecha(self):
         empresa_a = crear_empresa(slug='empresa-a', nombre='A')
         empresa_b = crear_empresa(slug='empresa-b', nombre='B')
@@ -116,7 +119,7 @@ class UnicidadPorEmpresaTests(TestCase):
     def test_misma_empresa_no_puede_repetir_fecha_de_cupo(self):
         empresa = crear_empresa(slug='empresa-c', nombre='C')
         CupoDiario.objects.create(empresa=empresa, fecha='2026-12-11', cupo_maximo=5)
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(IntegrityError), transaction.atomic():
             CupoDiario.objects.create(empresa=empresa, fecha='2026-12-11', cupo_maximo=8)
 
     def test_dos_empresas_pueden_repetir_codigo_de_vendedora(self):
@@ -145,7 +148,15 @@ def datos_reserva(empresa, **overrides):
     return base
 
 
-class CupoEmpresaAisladoTests(TestCase):
+def crear_reserva(empresa, **overrides):
+    """`Reserva` de prueba creada dentro de `con_empresa(empresa)` — para las
+    clases que NO corren bajo `OperadorTestCase` (las que pegan a una vista, un
+    comando que itera Empresas, o un callback on_commit que reabre alcance)."""
+    with scope.con_empresa(empresa):
+        return Reserva.objects.create(**datos_reserva(empresa, **overrides))
+
+
+class CupoEmpresaAisladoTests(OperadorTestCase):
     def test_cupo_de_una_empresa_no_bloquea_a_otra(self):
         empresa_a = crear_empresa(slug='empresa-a3', nombre='A3')
         empresa_b = crear_empresa(slug='empresa-b3', nombre='B3')
@@ -163,7 +174,7 @@ class CupoEmpresaAisladoTests(TestCase):
         self.assertEqual(evaluar_cupo(fecha, 3, empresa_a), MOTIVO_SIN_PANGA)
 
 
-class CodigoPromocionalEmpresaTests(TestCase):
+class CodigoPromocionalEmpresaTests(OperadorTestCase):
     def test_codigo_de_una_empresa_no_valida_en_otra(self):
         empresa_a = crear_empresa(slug='empresa-a4', nombre='A4')
         empresa_b = crear_empresa(slug='empresa-b4', nombre='B4')
@@ -175,7 +186,7 @@ class CodigoPromocionalEmpresaTests(TestCase):
         self.assertIsNone(evaluar_codigo_promocional('VERANO10', 'x@example.com', empresa_b))
 
 
-class ConsistenciaEmpresaReservaTests(TestCase):
+class ConsistenciaEmpresaReservaTests(OperadorTestCase):
     def test_vendedora_de_otra_empresa_no_se_puede_asignar(self):
         empresa_a = crear_empresa(slug='empresa-a5', nombre='A5')
         empresa_b = crear_empresa(slug='empresa-b5', nombre='B5')
@@ -188,7 +199,7 @@ class ConsistenciaEmpresaReservaTests(TestCase):
             reserva.full_clean()
 
 
-class ConsistenciaEmpresaExtrasTransporteTests(TestCase):
+class ConsistenciaEmpresaExtrasTransporteTests(OperadorTestCase):
     def test_extra_de_otra_empresa_no_se_puede_asociar(self):
         empresa_a = crear_empresa(slug='empresa-a6', nombre='A6')
         empresa_b = crear_empresa(slug='empresa-b6', nombre='B6')
@@ -214,7 +225,7 @@ class ConsistenciaEmpresaExtrasTransporteTests(TestCase):
             transporte.full_clean(exclude=['reserva'])
 
 
-class AdminScopingTests(TestCase):
+class AdminScopingTests(OperadorTestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.empresa_a = crear_empresa(slug='empresa-a8', nombre='A8')
@@ -274,7 +285,11 @@ class AltaVendedoraTests(TestCase):
         self.assertTrue(MembresiaEmpresa.objects.filter(
             user=nuevo, empresa=self.empresa, rol=MembresiaEmpresa.Rol.VENDEDORA,
         ).exists())
-        self.assertTrue(Vendedora.objects.filter(usuario=nuevo, empresa=self.empresa, codigo='nueva10').exists())
+        # bookings.Vendedora lleva RLS: para verla desde el test hace falta alcance.
+        with scope.con_empresa(self.empresa):
+            self.assertTrue(
+                Vendedora.objects.filter(usuario=nuevo, empresa=self.empresa, codigo='nueva10').exists()
+            )
 
     def test_username_repetido_da_error_de_formulario_no_500(self):
         get_user_model().objects.create_user('ya_existe', password='x')
@@ -317,7 +332,7 @@ class RutasPublicasEmpresaTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class ArmarPanoramaEmpresaTests(TestCase):
+class ArmarPanoramaEmpresaTests(OperadorTestCase):
     def test_panorama_no_mezcla_pangas_de_otra_empresa(self):
         empresa_a = crear_empresa(slug='empresa-a9', nombre='A9')
         empresa_b = crear_empresa(slug='empresa-b9', nombre='B9')
@@ -328,7 +343,7 @@ class ArmarPanoramaEmpresaTests(TestCase):
         self.assertEqual(len(panorama.renglones), 1)
 
 
-class SerializerEmpresaTests(TestCase):
+class SerializerEmpresaTests(OperadorTestCase):
     def test_extras_de_otra_empresa_no_pasan_el_checkout(self):
         from rest_framework.test import APIRequestFactory
 
@@ -365,8 +380,9 @@ class ComandosEmpresaTests(TestCase):
     def test_limpiar_checkouts_no_cuenta_doble_entre_empresas(self):
         empresa_a = crear_empresa(slug='empresa-a11', nombre='A11')
         crear_empresa(slug='empresa-b11', nombre='B11')  # sin checkouts viejos
-        vieja = Reserva.objects.create(**datos_reserva(empresa_a, estado=Reserva.Estado.PENDIENTE_PAGO))
-        Reserva.objects.filter(pk=vieja.pk).update(creado_en=timezone.now() - timedelta(days=40))
+        vieja = crear_reserva(empresa_a, estado=Reserva.Estado.PENDIENTE_PAGO)
+        with scope.con_empresa(empresa_a):
+            Reserva.objects.filter(pk=vieja.pk).update(creado_en=timezone.now() - timedelta(days=40))
 
         out = StringIO()
         call_command('limpiar_checkouts_abandonados', '--dry-run', stdout=out)
@@ -383,12 +399,8 @@ class ComandosEmpresaTests(TestCase):
         # Dos reservas del mismo dia, cada una en su propia Empresa: cada una
         # cabe sola en su unica panga de 3. Si se mezclaran, "2 viajes
         # vendidos" contra 1 sola panga marcaria un falso problema.
-        Reserva.objects.create(**datos_reserva(
-            empresa_a, fecha=fecha, numero_personas=3, estado=Reserva.Estado.PAGADA,
-        ))
-        Reserva.objects.create(**datos_reserva(
-            empresa_b, fecha=fecha, numero_personas=3, estado=Reserva.Estado.PAGADA,
-        ))
+        crear_reserva(empresa_a, fecha=fecha, numero_personas=3, estado=Reserva.Estado.PAGADA)
+        crear_reserva(empresa_b, fecha=fecha, numero_personas=3, estado=Reserva.Estado.PAGADA)
 
         out = StringIO()
         call_command('revisar_cupo', stdout=out)
@@ -398,16 +410,17 @@ class ComandosEmpresaTests(TestCase):
 class AvisoAsignacionRescopeTests(TestCase):
     def test_avisa_dentro_del_alcance_reabierto(self):
         empresa = crear_empresa(slug='empresa-aviso', nombre='Aviso')
-        crear_flota(empresa)
-        embarcacion = Embarcacion.objects.filter(empresa=empresa).first()
-        capitan = Capitan.objects.create(empresa=empresa, nombre='Cap', telefono='6120000000')
+        with scope.con_empresa(empresa):
+            crear_flota(empresa)
+            embarcacion = Embarcacion.objects.filter(empresa=empresa).first()
+            capitan = Capitan.objects.create(empresa=empresa, nombre='Cap', telefono='6120000000')
 
-        with mock.patch('apps.bookings.signals.enviar_correo_asignacion', return_value=True) as enviar_mock:
-            with self.captureOnCommitCallbacks(execute=True):
-                reserva = Reserva.objects.create(**datos_reserva(
-                    empresa, estado=Reserva.Estado.PAGADA, embarcacion=embarcacion, capitan=capitan,
-                ))
+            with mock.patch('apps.bookings.signals.enviar_correo_asignacion', return_value=True) as enviar_mock:
+                with self.captureOnCommitCallbacks(execute=True):
+                    reserva = Reserva.objects.create(**datos_reserva(
+                        empresa, estado=Reserva.Estado.PAGADA, embarcacion=embarcacion, capitan=capitan,
+                    ))
 
-        enviar_mock.assert_called_once()
-        reserva.refresh_from_db()
-        self.assertIsNotNone(reserva.aviso_asignacion_enviado_en)
+            enviar_mock.assert_called_once()
+            reserva.refresh_from_db()
+            self.assertIsNotNone(reserva.aviso_asignacion_enviado_en)

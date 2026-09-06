@@ -609,12 +609,21 @@ class CrearPagoTests(ApiTestCase):
         from apps.fleet.models import Servicio
         from apps.tenancy.models import Empresa
         empresa_otra = Empresa.objects.create(sede=self.empresa.sede, nombre='Otra', slug='otra-empresa')
-        servicio_otro = Servicio.objects.create(
-            empresa=empresa_otra,
-            nombre='Tour Otro',
-            slug='tour-otro',
-            precio_base=Decimal('1000.00'),
-        )
+        # con_empresa no es reentrante con otro valor: se cierra el alcance de
+        # self.empresa (ApiTestCase) para sembrar en el de empresa_otra y se
+        # reabre para el teardown.
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(empresa_otra):
+                servicio_otro = Servicio.objects.create(
+                    empresa=empresa_otra,
+                    nombre='Tour Otro',
+                    slug='tour-otro',
+                    precio_base=Decimal('1000.00'),
+                )
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
         self.reserva.servicio = servicio_otro
         with self.assertRaises(ValidationError):
             self.reserva.clean()

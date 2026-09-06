@@ -1,8 +1,11 @@
 """Utilidades compartidas por los tests de las apps."""
 
+import contextlib
+
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
 from django.core.management import call_command
+from django.db import connection
 from django.test import TestCase
 
 from apps.fleet.models import Embarcacion
@@ -143,10 +146,18 @@ def crear_flota(empresa, composicion=FLOTA_REAL):
     `empresa` es obligatorio (antes no existia): sin filtrar por ella, en sqlite
     (sin RLS) la flota de una Empresa cuenta como capacidad de otra.
     """
-    # `con_empresa` para que funcione tambien contra Postgres con RLS: sin
-    # alcance, `bulk_create` viola la politica WITH CHECK de fleet_embarcacion.
-    # En sqlite (sin RLS) es transparente. Idempotente por (empresa, nombre).
-    with scope.con_empresa(empresa):
+    # Necesita un alcance para que `bulk_create` no viole la politica WITH CHECK
+    # de fleet_embarcacion en Postgres. Si el caller ya abrio uno (operador, o
+    # `con_empresa` de esta misma Empresa) se respeta; solo se abre `con_empresa`
+    # cuando no hay ninguno. `con_empresa` no es reentrante con un valor
+    # distinto, asi que abrirlo a ciegas rompe los tests que corren bajo
+    # `OperadorTestCase`. En sqlite (sin RLS) todo esto es transparente.
+    cm = (
+        scope.con_empresa(empresa)
+        if getattr(connection, 'alcance_actual', None) is None
+        else contextlib.nullcontext()
+    )
+    with cm:
         existentes = Embarcacion.objects.filter(empresa=empresa)
         if existentes.exists():
             return list(existentes)

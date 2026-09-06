@@ -2,14 +2,14 @@
 
 from datetime import date, time, timedelta
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 
 from apps.fleet.models import Recurso, Servicio
 from apps.tenancy.models import Empresa, Sede
+from apps.testing import OperadorTestCase
 from apps.bookings.models import Reserva, ReservaOcupacion
 
 
-class ReservaOcupacionModelTests(TestCase):
+class ReservaOcupacionModelTests(OperadorTestCase):
     """Pruebas de integridad y validaciones de negocio en ReservaOcupacion."""
 
     def setUp(self):

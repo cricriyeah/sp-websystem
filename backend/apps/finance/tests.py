@@ -478,15 +478,20 @@ class BalancesFiltradosPorEmpresaTests(TestCase):
         return reserva
 
     def test_sin_empresa_suma_todas(self):
-        total = balances()['MXN'].tarjeta
+        # `balances()` no abre alcance por su cuenta (lo hace la vista): el
+        # "consolidado sin filtro" se ejecuta como operador de plataforma.
+        with scope.como_operador_plataforma():
+            total = balances()['MXN'].tarjeta
         self.assertEqual(total, Decimal('3000.00'))
 
     def test_con_empresa_solo_esa(self):
-        total = balances(empresa=self.empresa_a)['MXN'].tarjeta
+        with scope.con_empresa(self.empresa_a):
+            total = balances(empresa=self.empresa_a)['MXN'].tarjeta
         self.assertEqual(total, Decimal('1000.00'))
 
     def test_resumen_respeta_el_filtro(self):
-        acumulado = resumen(self.hoy, empresa=self.empresa_b)['acumulado']['MXN'].tarjeta
+        with scope.con_empresa(self.empresa_b):
+            acumulado = resumen(self.hoy, empresa=self.empresa_b)['acumulado']['MXN'].tarjeta
         self.assertEqual(acumulado, Decimal('2000.00'))
 
 

@@ -34,6 +34,8 @@ from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
+from stripe import StripeClient
+
 from .models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, Reserva
 
 SOLO_POSTGRES = skipUnless(
@@ -142,7 +144,7 @@ class SobreventaConcurrenteTests(TransactionTestCase):
                 arrancar.wait(timeout=10)
                 empresa_del_hilo = Empresa.objects.get(pk=empresa_id)
                 with scope.con_empresa(empresa_del_hilo):
-                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(self.pendientes[indice]))
+                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(self.pendientes[indice]), empresa_del_hilo)
             except Exception as exc:  # noqa: BLE001 — se re-lanza en el hilo principal
                 errores[indice] = exc
             finally:
@@ -161,13 +163,14 @@ class SobreventaConcurrenteTests(TransactionTestCase):
                 raise e
         return resultados
 
-    @mock.patch('apps.payments.services.stripe.Refund.create')
+    @mock.patch.object(StripeClient, 'refunds')
     def test_dos_pagos_simultaneos_no_sobrevenden_el_ultimo_lugar(self, refund):
         self._pagar_en_paralelo()
 
-        pagadas = Reserva.objects.filter(
-            fecha=self.fecha, empresa=self.empresa, estado__in=ESTADOS_QUE_OCUPAN_CUPO
-        ).count()
+        with scope.con_empresa(self.empresa):
+            pagadas = Reserva.objects.filter(
+                fecha=self.fecha, empresa=self.empresa, estado__in=ESTADOS_QUE_OCUPAN_CUPO
+            ).count()
 
         self.assertEqual(
             pagadas, CUPO_MAXIMO_DEFAULT,
@@ -175,26 +178,27 @@ class SobreventaConcurrenteTests(TransactionTestCase):
             f'{CUPO_MAXIMO_DEFAULT}. El lock por fecha no serializo la validacion.',
         )
 
-    @mock.patch('apps.payments.services.stripe.Refund.create')
+    @mock.patch.object(StripeClient, 'refunds')
     def test_al_que_se_quedo_sin_lugar_se_le_devuelve_el_dinero(self, refund):
         """No basta con no sobrevender: el segundo ya pago y hay que reembolsarle
         de inmediato, dejando la reserva cancelada con el motivo real para que la
         vendedora lo vea en su panel."""
         self._pagar_en_paralelo()
 
-        estados = sorted(
-            Reserva.objects.filter(pk__in=[r.pk for r in self.pendientes])
-            .values_list('estado', flat=True)
-        )
+        with scope.con_empresa(self.empresa):
+            estados = sorted(
+                Reserva.objects.filter(pk__in=[r.pk for r in self.pendientes])
+                .values_list('estado', flat=True)
+            )
 
-        self.assertEqual(estados, sorted([Reserva.Estado.PAGADA, Reserva.Estado.CANCELADA]))
-        self.assertEqual(refund.call_count, 1)
+            self.assertEqual(estados, sorted([Reserva.Estado.PAGADA, Reserva.Estado.CANCELADA]))
+            self.assertEqual(refund.create.call_count, 1)
 
-        perdedora = Reserva.objects.get(
-            pk__in=[r.pk for r in self.pendientes], estado=Reserva.Estado.CANCELADA
-        )
-        self.assertTrue(perdedora.reembolsada)
-        self.assertIn('cupo', perdedora.motivo_cancelacion.lower())
+            perdedora = Reserva.objects.get(
+                pk__in=[r.pk for r in self.pendientes], estado=Reserva.Estado.CANCELADA
+            )
+            self.assertTrue(perdedora.reembolsada)
+            self.assertIn('cupo', perdedora.motivo_cancelacion.lower())
 
 
 @SOLO_POSTGRES
@@ -209,7 +213,7 @@ class LockDelDiaTests(TransactionTestCase):
         with scope.con_empresa(self.empresa):
             crear_flota(self.empresa)
 
-    @mock.patch('apps.payments.services.stripe.Refund.create')
+    @mock.patch.object(StripeClient, 'refunds')
     def test_dias_distintos_no_se_bloquean_entre_si(self, refund):
         import threading
 
@@ -237,7 +241,7 @@ class LockDelDiaTests(TransactionTestCase):
                 arrancar.wait(timeout=10)
                 empresa_del_hilo = Empresa.objects.get(pk=empresa_id)
                 with scope.con_empresa(empresa_del_hilo):
-                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(reservas[indice]))
+                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(reservas[indice]), empresa_del_hilo)
             finally:
                 connections.close_all()
 
@@ -248,4 +252,4 @@ class LockDelDiaTests(TransactionTestCase):
             h.join(timeout=30)
 
         self.assertEqual(resultados, [APLICADO, APLICADO])
-        self.assertEqual(refund.call_count, 0)
+        self.assertEqual(refund.create.call_count, 0)

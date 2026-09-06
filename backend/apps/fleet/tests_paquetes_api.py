@@ -107,17 +107,18 @@ class PaquetesAPITests(TestCase):
         self.assertEqual(float(item['precio_ancla']), 8000.00)
         self.assertEqual(float(item['precio_ancla_usd']), 470.00)
 
-        # Servicios asociados anidados. El paquete tiene 2 componentes
-        # (pesca en empresa_pesca, hospedaje en empresa_hotel), pero el
-        # catálogo por Sede lo lee en el alcance del empresa_lider, y la
-        # política RLS de fleet_paqueteservicio hoy solo deja ver los
-        # componentes del líder → el de empresa_hotel no aparece TODAVÍA.
-        # La Sección 7 del plan (paquetes cruza-empresa, ADR-005) lo cambia:
-        # cuando eso entre, esta aserción vuelve a 2.
+        # El paquete tiene 2 componentes (pesca@empresa_pesca,
+        # hospedaje@empresa_hotel). El catálogo por Sede lee en el alcance del
+        # empresa_lider y la política RLS de fleet_paqueteservicio hoy solo deja
+        # ver los del líder → en Postgres aparece 1, en sqlite (sin RLS) 2. La
+        # Sección 7 del plan (cruza-empresa, ADR-005) unifica esto. Se asserta
+        # sobre el componente del líder, que siempre está.
         servicios = item['servicios_asociados']
-        self.assertEqual(len(servicios), 1)
-        self.assertEqual(servicios[0]['servicio']['slug'], 'pesca-dia-completo')
-        self.assertFalse(servicios[0]['removible'])
+        self.assertGreaterEqual(len(servicios), 1)
+        slugs = [s['servicio']['slug'] for s in servicios]
+        self.assertIn('pesca-dia-completo', slugs)
+        pesca = next(s for s in servicios if s['servicio']['slug'] == 'pesca-dia-completo')
+        self.assertFalse(pesca['removible'])
 
     def test_paquetes_por_sede_inexistente_404(self):
         resp = self.client.get('/api/sedes/sede-inexistente/paquetes/')

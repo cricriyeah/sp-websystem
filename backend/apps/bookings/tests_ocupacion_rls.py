@@ -20,43 +20,44 @@ class ReservaOcupacionRLSTests(TransactionTestCase):
         self.empresa_a = Empresa.objects.create(sede=sede, nombre='Empresa Ocup A', slug='empresa-ocup-a')
         self.empresa_b = Empresa.objects.create(sede=sede, nombre='Empresa Ocup B', slug='empresa-ocup-b')
 
-        self.recurso_a = Recurso.objects.create(
-            empresa=self.empresa_a,
-            nombre='Habitacion A',
-            capacidad_maxima=2,
-        )
-        self.recurso_b = Recurso.objects.create(
-            empresa=self.empresa_b,
-            nombre='Habitacion B',
-            capacidad_maxima=2,
-        )
-
-        self.reserva_a = Reserva.objects.create(
-            empresa=self.empresa_a,
-            fecha=date(2026, 11, 1),
-            fecha_salida=date(2026, 11, 5),
-            hora=time(6, 0),
-            numero_personas=2,
-            nombre_cliente='Cliente A',
-            telefono_cliente='+526121111111',
-            correo_cliente='a@example.com',
-            canal_origen=Reserva.CanalOrigen.WEB,
-            deslinde_aceptado=True,
-            estado=Reserva.Estado.PAGADA,
-        )
-        self.reserva_b = Reserva.objects.create(
-            empresa=self.empresa_b,
-            fecha=date(2026, 11, 1),
-            fecha_salida=date(2026, 11, 5),
-            hora=time(6, 0),
-            numero_personas=2,
-            nombre_cliente='Cliente B',
-            telefono_cliente='+526122222222',
-            correo_cliente='b@example.com',
-            canal_origen=Reserva.CanalOrigen.WEB,
-            deslinde_aceptado=True,
-            estado=Reserva.Estado.PAGADA,
-        )
+        with scope.con_empresa(self.empresa_a):
+            self.recurso_a = Recurso.objects.create(
+                empresa=self.empresa_a,
+                nombre='Habitacion A',
+                capacidad_maxima=2,
+            )
+            self.reserva_a = Reserva.objects.create(
+                empresa=self.empresa_a,
+                fecha=date(2026, 11, 1),
+                fecha_salida=date(2026, 11, 5),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente A',
+                telefono_cliente='+526121111111',
+                correo_cliente='a@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                estado=Reserva.Estado.PAGADA,
+            )
+        with scope.con_empresa(self.empresa_b):
+            self.recurso_b = Recurso.objects.create(
+                empresa=self.empresa_b,
+                nombre='Habitacion B',
+                capacidad_maxima=2,
+            )
+            self.reserva_b = Reserva.objects.create(
+                empresa=self.empresa_b,
+                fecha=date(2026, 11, 1),
+                fecha_salida=date(2026, 11, 5),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente B',
+                telefono_cliente='+526122222222',
+                correo_cliente='b@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                estado=Reserva.Estado.PAGADA,
+            )
 
     def test_aislamiento_reserva_ocupacion_entre_empresas(self):
         """Verifica que una empresa no pueda consultar ocupaciones de otra empresa bajo RLS."""
