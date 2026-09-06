@@ -12,6 +12,7 @@ from django.utils import timezone
 from apps.payments.pricing import PERSONAS_INCLUIDAS
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
+from apps.testing import ApiTestCase, EmpresaTestCase
 
 from .models import (
     CodigoPromocional,
@@ -53,60 +54,66 @@ class EmpresaFKTests(TestCase):
 
 
 class TarifaTests(TestCase):
+    """Aislamiento A/B: abre el alcance de cada Empresa a mano (no puede haber
+    un `con_empresa` ambiente porque hay dos Empresas distintas)."""
+
     def setUp(self):
         self.empresa_a = _crear_empresa(slug='empresa-a')
         self.empresa_b = _crear_empresa(slug='empresa-b')
 
     def test_una_tarifa_por_empresa(self):
-        Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
-        Tarifa.objects.create(precio=Decimal('5000.00'), empresa=self.empresa_a)
-        self.assertEqual(Tarifa.objects.filter(empresa=self.empresa_a).count(), 1)
-        self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('5000.00'))
+        with scope.con_empresa(self.empresa_a):
+            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
+            Tarifa.objects.create(precio=Decimal('5000.00'), empresa=self.empresa_a)
+            self.assertEqual(Tarifa.objects.filter(empresa=self.empresa_a).count(), 1)
+            self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('5000.00'))
 
     def test_cada_empresa_tiene_su_propia_tarifa(self):
-        Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
-        Tarifa.objects.create(precio=Decimal('3000.00'), empresa=self.empresa_b)
-        self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('4500.00'))
-        self.assertEqual(Tarifa.de(self.empresa_b).precio, Decimal('3000.00'))
+        with scope.con_empresa(self.empresa_a):
+            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
+            self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('4500.00'))
+        with scope.con_empresa(self.empresa_b):
+            Tarifa.objects.create(precio=Decimal('3000.00'), empresa=self.empresa_b)
+            self.assertEqual(Tarifa.de(self.empresa_b).precio, Decimal('3000.00'))
 
     def test_sin_tarifa_de_devuelve_none(self):
-        self.assertIsNone(Tarifa.de(self.empresa_b))
+        with scope.con_empresa(self.empresa_b):
+            self.assertIsNone(Tarifa.de(self.empresa_b))
 
     def test_precio_por_moneda(self):
-        tarifa = Tarifa.objects.create(
-            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'), empresa=self.empresa_a,
-        )
+        with scope.con_empresa(self.empresa_a):
+            tarifa = Tarifa.objects.create(
+                precio=Decimal('4500.00'), precio_usd=Decimal('260.00'), empresa=self.empresa_a,
+            )
         self.assertEqual(tarifa.precio_en('MXN'), Decimal('4500.00'))
         self.assertEqual(tarifa.precio_en('USD'), Decimal('260.00'))
 
     def test_sin_precio_en_dolares_devuelve_none(self):
-        tarifa = Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
+        with scope.con_empresa(self.empresa_a):
+            tarifa = Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
         self.assertIsNone(tarifa.precio_en('USD'))
 
 
-class TarifaApiTests(TestCase):
-    def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
-
+class TarifaApiTests(ApiTestCase):
     def test_sin_tarifa_responde_503(self):
-        self.assertEqual(self.client.get('/api/empresa-a/tarifa/').status_code, 503)
+        self.assertEqual(
+            self.client.get(f'/api/{self.empresa.slug}/tarifa/').status_code, 503,
+        )
 
     def test_devuelve_todas_las_cifras_del_checkout(self):
-        with scope.con_empresa(self.empresa):
-            Tarifa.objects.create(
-                precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
-                precio_persona_extra=Decimal('500.00'), empresa=self.empresa,
-            )
-        body = self.client.get('/api/empresa-a/tarifa/').json()
+        Tarifa.objects.create(
+            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
+            precio_persona_extra=Decimal('500.00'), empresa=self.empresa,
+        )
+        body = self.client.get(f'/api/{self.empresa.slug}/tarifa/').json()
         self.assertEqual(body['precio'], '4500.00')
         self.assertEqual(body['precio_usd'], '260.00')
         self.assertEqual(body['precio_persona_extra'], '500.00')
         self.assertEqual(body['personas_incluidas'], PERSONAS_INCLUIDAS)
 
     def test_no_publica_precio_de_lo_que_se_cotiza(self):
-        with scope.con_empresa(self.empresa):
-            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa)
-        body = self.client.get('/api/empresa-a/tarifa/').json()
+        Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa)
+        body = self.client.get(f'/api/{self.empresa.slug}/tarifa/').json()
         self.assertNotIn('amenidades', body)
 
     def test_empresa_inexistente_responde_404(self):
@@ -114,15 +121,39 @@ class TarifaApiTests(TestCase):
 
     def test_no_ve_la_tarifa_de_otra_empresa(self):
         otra = _crear_empresa(slug='empresa-b')
-        with scope.con_empresa(otra):
+        with self._alcance_otra(otra):
             Tarifa.objects.create(precio=Decimal('9999.00'), empresa=otra)
-        self.assertEqual(self.client.get('/api/empresa-a/tarifa/').status_code, 503)
+        self.assertEqual(
+            self.client.get(f'/api/{self.empresa.slug}/tarifa/').status_code, 503,
+        )
+
+    def _alcance_otra(self, otra):
+        # con_empresa no es reentrante con un valor distinto: se cierra el
+        # alcance de self.empresa (abierto por EmpresaTestCase), se hace el
+        # trabajo en el de `otra`, y se reabre el propio para el teardown.
+        cm = _AlcanceOtraEmpresa(self, otra)
+        return cm
 
 
-class ExtrasItemTests(TestCase):
-    def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
+class _AlcanceOtraEmpresa:
+    def __init__(self, caso, otra):
+        self.caso = caso
+        self.otra = otra
 
+    def __enter__(self):
+        self.caso._alcance.__exit__(None, None, None)
+        self._cm = scope.con_empresa(self.otra)
+        self._cm.__enter__()
+        return self
+
+    def __exit__(self, *exc):
+        self._cm.__exit__(*exc)
+        self.caso._alcance = scope.con_empresa(self.caso.empresa)
+        self.caso._alcance.__enter__()
+        return False
+
+
+class ExtrasItemTests(EmpresaTestCase):
     def test_precio_por_moneda(self):
         item = ExtrasItem.objects.create(
             tipo='licencia', nombre='Licencia', precio=Decimal('450'), precio_usd=Decimal('25'),
@@ -153,10 +184,7 @@ class ExtrasItemTests(TestCase):
         item.full_clean()
 
 
-class TransportePrecioTests(TestCase):
-    def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
-
+class TransportePrecioTests(EmpresaTestCase):
     def test_precio_y_recargo_por_moneda(self):
         centro = TransportePrecio.objects.create(
             zona='centro', precio_base=Decimal('2000'), precio_base_usd=Decimal('110'),
@@ -169,135 +197,147 @@ class TransportePrecioTests(TestCase):
 
 
 class UnicidadPorEmpresaTests(TransactionTestCase):
+    """Aislamiento A/B con TransactionTestCase (un IntegrityError deja
+    inutilizable la transaccion de un TestCase). Alcance por Empresa a mano."""
+
     def setUp(self):
         self.empresa_a = _crear_empresa(slug='empresa-a')
         self.empresa_b = _crear_empresa(slug='empresa-b')
 
     def test_zona_de_transporte_repetida_en_la_misma_empresa_falla(self):
-        TransportePrecio.objects.create(
-            zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
-        )
-        with self.assertRaises(IntegrityError):
+        with scope.con_empresa(self.empresa_a):
             TransportePrecio.objects.create(
-                zona='centro', precio_base=Decimal('2100'), empresa=self.empresa_a,
+                zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
             )
+            with self.assertRaises(IntegrityError):
+                TransportePrecio.objects.create(
+                    zona='centro', precio_base=Decimal('2100'), empresa=self.empresa_a,
+                )
 
     def test_zona_de_transporte_repetida_entre_empresas_distintas_es_valida(self):
-        TransportePrecio.objects.create(
-            zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
-        )
-        TransportePrecio.objects.create(
-            zona='centro', precio_base=Decimal('1800'), empresa=self.empresa_b,
-        )
-        self.assertEqual(TransportePrecio.objects.count(), 2)
+        with scope.con_empresa(self.empresa_a):
+            TransportePrecio.objects.create(
+                zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
+            )
+        with scope.con_empresa(self.empresa_b):
+            TransportePrecio.objects.create(
+                zona='centro', precio_base=Decimal('1800'), empresa=self.empresa_b,
+            )
+        with scope.como_operador_plataforma():
+            self.assertEqual(TransportePrecio.objects.count(), 2)
 
     def test_codigo_promocional_repetido_en_la_misma_empresa_falla(self):
-        CodigoPromocional.objects.create(
-            codigo='VERANO10', porcentaje_descuento=Decimal('10'), empresa=self.empresa_a,
-        )
-        with self.assertRaises(IntegrityError):
+        with scope.con_empresa(self.empresa_a):
             CodigoPromocional.objects.create(
-                codigo='VERANO10', porcentaje_descuento=Decimal('15'), empresa=self.empresa_a,
+                codigo='VERANO10', porcentaje_descuento=Decimal('10'), empresa=self.empresa_a,
             )
+            with self.assertRaises(IntegrityError):
+                CodigoPromocional.objects.create(
+                    codigo='VERANO10', porcentaje_descuento=Decimal('15'), empresa=self.empresa_a,
+                )
 
     def test_codigo_promocional_repetido_entre_empresas_es_valido(self):
-        CodigoPromocional.objects.create(
-            codigo='VERANO10', porcentaje_descuento=Decimal('10'), empresa=self.empresa_a,
-        )
-        CodigoPromocional.objects.create(
-            codigo='VERANO10', porcentaje_descuento=Decimal('20'), empresa=self.empresa_b,
-        )
-        self.assertEqual(CodigoPromocional.objects.count(), 2)
+        with scope.con_empresa(self.empresa_a):
+            CodigoPromocional.objects.create(
+                codigo='VERANO10', porcentaje_descuento=Decimal('10'), empresa=self.empresa_a,
+            )
+        with scope.con_empresa(self.empresa_b):
+            CodigoPromocional.objects.create(
+                codigo='VERANO10', porcentaje_descuento=Decimal('20'), empresa=self.empresa_b,
+            )
+        with scope.como_operador_plataforma():
+            self.assertEqual(CodigoPromocional.objects.count(), 2)
 
     def test_nombre_de_embarcacion_repetido_en_la_misma_empresa_falla(self):
-        Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
-            empresa=self.empresa_a,
-        )
-        with self.assertRaises(IntegrityError):
+        with scope.con_empresa(self.empresa_a):
             Embarcacion.objects.create(
-                nombre='Lupita', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
+                nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
                 empresa=self.empresa_a,
             )
+            with self.assertRaises(IntegrityError):
+                Embarcacion.objects.create(
+                    nombre='Lupita', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
+                    empresa=self.empresa_a,
+                )
 
     def test_nombre_de_embarcacion_repetido_entre_empresas_es_valido(self):
-        Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
-            empresa=self.empresa_a,
-        )
-        Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
-            empresa=self.empresa_b,
-        )
-        self.assertEqual(Embarcacion.objects.count(), 2)
-
-
-class ExtrasPublicosApiTests(TestCase):
-    def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
-
-    def test_extra_por_persona_multiplica(self):
-        with scope.con_empresa(self.empresa):
-            ExtrasItem.objects.create(
-                tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-                cobrar_por_persona=True, empresa=self.empresa,
+        with scope.con_empresa(self.empresa_a):
+            Embarcacion.objects.create(
+                nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+                empresa=self.empresa_a,
             )
-        body = self.client.get('/api/empresa-a/extras/?personas=3').json()
+        with scope.con_empresa(self.empresa_b):
+            Embarcacion.objects.create(
+                nombre='Lupita', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
+                empresa=self.empresa_b,
+            )
+        with scope.como_operador_plataforma():
+            self.assertEqual(Embarcacion.objects.count(), 2)
+
+
+class ExtrasPublicosApiTests(ApiTestCase):
+    def test_extra_por_persona_multiplica(self):
+        ExtrasItem.objects.create(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
+            cobrar_por_persona=True, empresa=self.empresa,
+        )
+        body = self.client.get(f'/api/{self.empresa.slug}/extras/?personas=3').json()
         self.assertEqual(body['extras'][0]['monto'], '1350.00')
 
     def test_extra_plano_no_multiplica(self):
-        with scope.con_empresa(self.empresa):
-            ExtrasItem.objects.create(
-                tipo='carnada', nombre='Carnada', precio=Decimal('200'),
-                cobrar_por_persona=False, empresa=self.empresa,
-            )
-        body = self.client.get('/api/empresa-a/extras/?personas=5').json()
+        ExtrasItem.objects.create(
+            tipo='carnada', nombre='Carnada', precio=Decimal('200'),
+            cobrar_por_persona=False, empresa=self.empresa,
+        )
+        body = self.client.get(f'/api/{self.empresa.slug}/extras/?personas=5').json()
         self.assertEqual(body['extras'][0]['monto'], '200.00')
 
     def test_item_inactivo_no_aparece(self):
-        with scope.con_empresa(self.empresa):
-            ExtrasItem.objects.create(
-                tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
-                empresa=self.empresa,
-            )
-        body = self.client.get('/api/empresa-a/extras/').json()
+        ExtrasItem.objects.create(
+            tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
+            empresa=self.empresa,
+        )
+        body = self.client.get(f'/api/{self.empresa.slug}/extras/').json()
         self.assertEqual(body['extras'], [])
 
     def test_sin_precio_en_la_moneda_pedida_monto_es_null(self):
-        with scope.con_empresa(self.empresa):
-            ExtrasItem.objects.create(
-                tipo='licencia', nombre='Licencia', precio=Decimal('450'), empresa=self.empresa,
-            )
-        body = self.client.get('/api/empresa-a/extras/?moneda=USD').json()
+        ExtrasItem.objects.create(
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'), empresa=self.empresa,
+        )
+        body = self.client.get(f'/api/{self.empresa.slug}/extras/?moneda=USD').json()
         self.assertIsNone(body['extras'][0]['monto'])
 
     def test_transporte_con_recargo_desde_el_minimo(self):
-        with scope.con_empresa(self.empresa):
-            TransportePrecio.objects.create(
-                zona='centro', precio_base=Decimal('2000'), recargo_grupo=Decimal('1500'),
-                min_personas_recargo=4, empresa=self.empresa,
-            )
-        body = self.client.get('/api/empresa-a/extras/?personas=4').json()
+        TransportePrecio.objects.create(
+            zona='centro', precio_base=Decimal('2000'), recargo_grupo=Decimal('1500'),
+            min_personas_recargo=4, empresa=self.empresa,
+        )
+        body = self.client.get(f'/api/{self.empresa.slug}/extras/?personas=4').json()
         self.assertEqual(body['transporte'][0]['monto'], '3500.00')
 
     def test_puntos_de_encuentro_activos(self):
-        with scope.con_empresa(self.empresa):
-            PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro', empresa=self.empresa)
-            PuntoEncuentro.objects.create(
-                nombre='Fuera de servicio', zona='centro', activo=False, empresa=self.empresa,
-            )
-        body = self.client.get('/api/empresa-a/extras/').json()
+        PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro', empresa=self.empresa)
+        PuntoEncuentro.objects.create(
+            nombre='Fuera de servicio', zona='centro', activo=False, empresa=self.empresa,
+        )
+        body = self.client.get(f'/api/{self.empresa.slug}/extras/').json()
         self.assertEqual([p['nombre'] for p in body['puntos_encuentro']], ['Hotel CostaBaja'])
 
     def test_moneda_invalida_es_400(self):
-        self.assertEqual(self.client.get('/api/empresa-a/extras/?moneda=EUR').status_code, 400)
+        self.assertEqual(
+            self.client.get(f'/api/{self.empresa.slug}/extras/?moneda=EUR').status_code, 400,
+        )
 
     def test_personas_invalida_es_400(self):
-        self.assertEqual(self.client.get('/api/empresa-a/extras/?personas=0').status_code, 400)
-        self.assertEqual(self.client.get('/api/empresa-a/extras/?personas=abc').status_code, 400)
+        self.assertEqual(
+            self.client.get(f'/api/{self.empresa.slug}/extras/?personas=0').status_code, 400,
+        )
+        self.assertEqual(
+            self.client.get(f'/api/{self.empresa.slug}/extras/?personas=abc').status_code, 400,
+        )
 
     def test_defaults_sin_query_params(self):
-        response = self.client.get('/api/empresa-a/extras/')
+        response = self.client.get(f'/api/{self.empresa.slug}/extras/')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'extras': [], 'transporte': [], 'puntos_encuentro': []})
 
@@ -306,19 +346,16 @@ class ExtrasPublicosApiTests(TestCase):
 
     def test_no_mezcla_catalogo_de_otra_empresa(self):
         otra = _crear_empresa(slug='empresa-b')
-        with scope.con_empresa(otra):
+        with _AlcanceOtraEmpresa(self, otra):
             ExtrasItem.objects.create(
                 tipo='carnada', nombre='Carnada de otra empresa', precio=Decimal('999'),
                 empresa=otra,
             )
-        body = self.client.get('/api/empresa-a/extras/').json()
+        body = self.client.get(f'/api/{self.empresa.slug}/extras/').json()
         self.assertEqual(body['extras'], [])
 
 
-class EmbarcacionTests(TestCase):
-    def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
-
+class EmbarcacionTests(EmpresaTestCase):
     def test_nace_activa(self):
         panga = Embarcacion.objects.create(
             nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
@@ -338,9 +375,9 @@ class EmbarcacionTests(TestCase):
         self.assertEqual(str(panga), 'Lupita (Grande, max. 5)')
 
 
-class CapacidadesDisponiblesTests(TestCase):
+class CapacidadesDisponiblesTests(EmpresaTestCase):
     def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
+        super().setUp()
         self.fecha = date.today() + timedelta(days=10)
         self.chica = Embarcacion.objects.create(
             nombre='Chuy', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3,
@@ -380,17 +417,15 @@ class CapacidadesDisponiblesTests(TestCase):
 
     def test_pangas_de_otra_empresa_no_cuentan(self):
         otra_empresa = _crear_empresa(slug='empresa-b')
-        Embarcacion.objects.create(
-            nombre='Otra panga', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=6,
-            empresa=otra_empresa,
-        )
+        with _AlcanceOtraEmpresa(self, otra_empresa):
+            Embarcacion.objects.create(
+                nombre='Otra panga', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=6,
+                empresa=otra_empresa,
+            )
         self.assertEqual(capacidades_disponibles(self.fecha, self.empresa), [5, 3])
 
 
-class CodigoPromocionalTests(TestCase):
-    def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
-
+class CodigoPromocionalTests(EmpresaTestCase):
     def test_normaliza_codigo_a_mayusculas_y_sin_espacios(self):
         promo = CodigoPromocional.objects.create(
             codigo=' verano10 ', porcentaje_descuento=Decimal('10'), empresa=self.empresa,
@@ -443,28 +478,28 @@ class EmbarcacionNoDisponibleUnicidadTests(TransactionTestCase):
     def test_una_panga_no_se_puede_marcar_dos_veces_el_mismo_dia(self):
         empresa = _crear_empresa(slug='empresa-a')
         fecha = date.today() + timedelta(days=10)
-        grande = Embarcacion.objects.create(
-            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
-            empresa=empresa,
-        )
-        EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande, empresa=empresa)
-        with self.assertRaises(IntegrityError):
+        with scope.con_empresa(empresa):
+            grande = Embarcacion.objects.create(
+                nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5,
+                empresa=empresa,
+            )
             EmbarcacionNoDisponible.objects.create(fecha=fecha, embarcacion=grande, empresa=empresa)
+            with self.assertRaises(IntegrityError):
+                EmbarcacionNoDisponible.objects.create(
+                    fecha=fecha, embarcacion=grande, empresa=empresa,
+                )
 
 
-class SeedExtrasTests(TestCase):
-    def setUp(self):
-        self.empresa = _crear_empresa(slug='empresa-a')
-
+class SeedExtrasTests(EmpresaTestCase):
     def test_siembra_el_catalogo_para_la_empresa_dada(self):
-        call_command('seed_extras', empresa='empresa-a', stdout=StringIO())
+        call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
         self.assertEqual(ExtrasItem.objects.filter(empresa=self.empresa).count(), 3)
         self.assertEqual(TransportePrecio.objects.filter(empresa=self.empresa).count(), 2)
         self.assertEqual(PuntoEncuentro.objects.filter(empresa=self.empresa).count(), 1)
 
     def test_es_idempotente(self):
-        call_command('seed_extras', empresa='empresa-a', stdout=StringIO())
-        call_command('seed_extras', empresa='empresa-a', stdout=StringIO())
+        call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
+        call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
         self.assertEqual(ExtrasItem.objects.filter(empresa=self.empresa).count(), 3)
 
     def test_sin_empresa_falla_explicito(self):
