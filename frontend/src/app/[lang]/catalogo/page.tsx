@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from '../dictionaries';
+import { SEDE_STORAGE_KEY } from '@/lib/sede';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { SedeSelector } from '@/components/sede-selector';
@@ -41,9 +43,13 @@ export default async function CatalogoPage({ params, searchParams }: PageProps) 
   // Obtener sedes disponibles
   const sedes = await getSedes().catch(() => []);
 
-  // Resolver la sede seleccionada (default: coincidencia con query o primera sede o 'la-paz')
+  // Resolver la sede seleccionada. Prioridad: `?sede=` de la URL, luego la
+  // preferencia que el cliente dejó en la cookie al usar el selector del navbar,
+  // luego la primera sede, y por último 'la-paz' de emergencia.
+  const sedeCookie = (await cookies()).get(SEDE_STORAGE_KEY)?.value;
+  const sedePreferida = sedeQuery ?? sedeCookie;
   const sedeActual =
-    (sedeQuery ? sedes.find((s) => s.slug === sedeQuery) : null) ??
+    (sedePreferida ? sedes.find((s) => s.slug === sedePreferida) : null) ??
     sedes[0] ?? {
       id: 1,
       nombre: 'La Paz',

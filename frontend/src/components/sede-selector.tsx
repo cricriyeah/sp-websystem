@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { CaretDown, Check, MapPin } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { getSedes, type Sede } from '@/lib/api';
+import { guardarSedePreferida, leerSedePreferidaCliente } from '@/lib/sede';
 
 type SedeSelectorProps = {
   lang: Locale;
@@ -29,8 +30,34 @@ export function SedeSelector({
   const [open, setOpen] = useState(false);
   const [sedesFetched, setSedesFetched] = useState<Sede[]>([]);
   const router = useRouter();
+  const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
   const sinMovimiento = useReducedMotion();
+
+  // Slug de la sede activa. El catálogo lo pasa por prop; en el resto de páginas
+  // (portada, checkout) no hay `?sede=` en la URL, así que se resuelve en el
+  // cliente desde la query o desde la preferencia guardada. `usePathname()` en
+  // las dependencias hace que se recalcule tras cada navegación SPA. Se lee
+  // `window.location.search` y no `useSearchParams()` a propósito: ese hook
+  // saca de la pre-renderización estática a toda página que lo monte (mismo
+  // criterio que `ref-capture.tsx`).
+  const [sedeSlugActiva, setSedeSlugActiva] = useState<string | undefined>(
+    sedeSeleccionadaSlug,
+  );
+
+  /* eslint-disable react-hooks/set-state-in-effect -- sincroniza el estado con
+     dos sistemas externos (la query de la URL y la preferencia guardada) tras
+     cada navegación SPA; no se puede leer `window` en el render sin romper el
+     SSR. Mismo criterio que booking-state.tsx / checkout-view.tsx. */
+  useEffect(() => {
+    if (sedeSeleccionadaSlug) {
+      setSedeSlugActiva(sedeSeleccionadaSlug);
+      return;
+    }
+    const enUrl = new URLSearchParams(window.location.search).get('sede') ?? undefined;
+    setSedeSlugActiva(enUrl ?? leerSedePreferidaCliente());
+  }, [pathname, sedeSeleccionadaSlug]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Si no se proporcionaron sedes desde el servidor, se cargan en cliente
   useEffect(() => {
@@ -55,7 +82,7 @@ export function SedeSelector({
 
   // Sede actualmente activa
   const sedeActiva =
-    sedes.find((s) => s.slug === sedeSeleccionadaSlug) ??
+    sedes.find((s) => s.slug === sedeSlugActiva) ??
     sedes[0] ?? {
       id: 1,
       nombre: 'La Paz',
@@ -89,6 +116,9 @@ export function SedeSelector({
 
   function handleSelect(sede: Sede) {
     setOpen(false);
+    // Optimista: el selector refleja la nueva sede sin esperar a la navegación.
+    setSedeSlugActiva(sede.slug);
+    guardarSedePreferida(sede.slug);
     if (onSelectSede) {
       onSelectSede(sede);
     } else {
