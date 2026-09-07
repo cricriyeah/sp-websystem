@@ -562,6 +562,20 @@ class Paquete(models.Model):
                     'empresa_lider': 'La empresa líder debe pertenecer a la misma sede que el paquete.'
                 })
 
+        if self.pk:
+            removibles = list(self.servicios_asociados.filter(removible=True))
+            errors = {}
+            if self.precio_ancla is not None:
+                total_ajustes = sum((ps.ajuste_precio for ps in removibles if ps.ajuste_precio), Decimal('0.00'))
+                if total_ajustes > self.precio_ancla:
+                    errors['precio_ancla'] = f'La suma de ajustes de servicios removibles ({total_ajustes}) supera el precio ancla ({self.precio_ancla}).'
+            if self.precio_ancla_usd is not None:
+                total_ajustes_usd = sum((ps.ajuste_precio_usd for ps in removibles if ps.ajuste_precio_usd), Decimal('0.00'))
+                if total_ajustes_usd > self.precio_ancla_usd:
+                    errors['precio_ancla_usd'] = f'La suma de ajustes de servicios removibles en USD ({total_ajustes_usd}) supera el precio ancla USD ({self.precio_ancla_usd}).'
+            if errors:
+                raise ValidationError(errors)
+
     def precio_en(self, moneda):
         """Precio ancla en la moneda pedida, o None si no está configurado."""
         return self.precio_ancla if (moneda or 'MXN').upper() == 'MXN' else self.precio_ancla_usd
@@ -600,9 +614,9 @@ class PaqueteServicio(models.Model):
     def clean(self):
         super().clean()
         if self.paquete_id and self.servicio_id:
-            if self.servicio.empresa.sede_id != self.paquete.sede_id:
+            if self.servicio.empresa_id != self.paquete.empresa_lider_id:
                 raise ValidationError({
-                    'servicio': 'El servicio debe pertenecer a una empresa de la misma sede que el paquete.'
+                    'servicio': 'paquetes cruza-empresa: fuera de v1, ver ADR-005'
                 })
 
     def ajuste_en(self, moneda):

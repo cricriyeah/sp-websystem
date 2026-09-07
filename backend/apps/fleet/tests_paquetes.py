@@ -32,6 +32,14 @@ class PaquetesModelTests(OperadorTestCase):
             precio_base=Decimal('5000.00'),
             precio_base_usd=Decimal('290.00'),
         )
+        self.servicio_paseo = Servicio.objects.create(
+            empresa=self.empresa_pesca,
+            nombre='Paseo Costero',
+            slug='paseo-costero',
+            tipo_servicio='paseo',
+            precio_base=Decimal('3500.00'),
+            precio_base_usd=Decimal('200.00'),
+        )
         self.servicio_hotel = Servicio.objects.create(
             empresa=self.empresa_hotel,
             nombre='Estadía 2 Noches',
@@ -102,12 +110,12 @@ class PaquetesModelTests(OperadorTestCase):
         )
         self.assertIsNotNone(paquete_otra_sede.pk)
 
-    def test_asociacion_paquete_servicios_misma_sede(self):
+    def test_asociacion_paquete_servicios_misma_empresa(self):
         paquete = Paquete.objects.create(
             sede=self.sede_lp,
             empresa_lider=self.empresa_pesca,
-            nombre='Pesca y Hotel',
-            slug='pesca-hotel',
+            nombre='Pesca y Paseo',
+            slug='pesca-paseo',
             precio_ancla=Decimal('8000.00'),
             precio_ancla_usd=Decimal('470.00'),
         )
@@ -118,10 +126,9 @@ class PaquetesModelTests(OperadorTestCase):
             removible=False,
             ajuste_precio=Decimal('0.00'),
         )
-        # Servicio de otra empresa (hotel), pero en la misma sede (La Paz): permitido
         ps2 = PaqueteServicio(
             paquete=paquete,
-            servicio=self.servicio_hotel,
+            servicio=self.servicio_paseo,
             orden=2,
             removible=True,
             ajuste_precio=Decimal('3000.00'),
@@ -133,9 +140,9 @@ class PaquetesModelTests(OperadorTestCase):
         self.assertEqual(paquete.servicios_asociados.count(), 2)
         self.assertEqual(ps2.ajuste_en('MXN'), Decimal('3000.00'))
         self.assertEqual(ps2.ajuste_en('USD'), Decimal('175.00'))
-        self.assertEqual(str(ps1), 'Pesca y Hotel -> Pesca Deportiva Día Completo')
+        self.assertEqual(str(ps1), 'Pesca y Paseo -> Pesca Deportiva Día Completo')
 
-    def test_validacion_servicio_distinta_sede_falla(self):
+    def test_validacion_servicio_distinta_empresa_falla(self):
         paquete = Paquete.objects.create(
             sede=self.sede_lp,
             empresa_lider=self.empresa_pesca,
@@ -143,14 +150,43 @@ class PaquetesModelTests(OperadorTestCase):
             slug='paquete-lp',
             precio_ancla=Decimal('5000.00'),
         )
+        # Servicio de otra empresa (hotel), misma sede: fuera de v1
         ps_invalido = PaqueteServicio(
             paquete=paquete,
-            servicio=self.servicio_cabo,  # Servicio de Los Cabos en paquete de La Paz
+            servicio=self.servicio_hotel,
             orden=1,
         )
         with self.assertRaises(ValidationError) as ctx:
             ps_invalido.clean()
         self.assertIn('servicio', ctx.exception.message_dict)
+        self.assertIn('paquetes cruza-empresa: fuera de v1, ver ADR-005', str(ctx.exception.message_dict['servicio']))
+
+    def test_paquete_clean_suma_ajustes_supera_ancla_falla(self):
+        paquete = Paquete.objects.create(
+            sede=self.sede_lp,
+            empresa_lider=self.empresa_pesca,
+            nombre='Paquete Ajuste Excedido',
+            slug='paquete-ajuste-excedido',
+            precio_ancla=Decimal('1000.00'),
+            precio_ancla_usd=Decimal('60.00'),
+        )
+        PaqueteServicio.objects.create(
+            paquete=paquete,
+            servicio=self.servicio_pesca,
+            removible=True,
+            ajuste_precio=Decimal('600.00'),
+            ajuste_precio_usd=Decimal('35.00'),
+        )
+        PaqueteServicio.objects.create(
+            paquete=paquete,
+            servicio=self.servicio_paseo,
+            removible=True,
+            ajuste_precio=Decimal('600.00'),  # 600 + 600 = 1200 > 1000
+            ajuste_precio_usd=Decimal('35.00'),  # 35 + 35 = 70 > 60
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            paquete.clean()
+        self.assertIn('precio_ancla', ctx.exception.message_dict)
 
     def test_unicidad_paquete_servicio(self):
         paquete = Paquete.objects.create(

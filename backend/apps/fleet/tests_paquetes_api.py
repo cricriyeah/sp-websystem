@@ -40,7 +40,7 @@ class PaquetesAPITests(TestCase):
             precio_base_usd=Decimal('290.00'),
         )
         self.servicio_hotel = Servicio.objects.create(
-            empresa=self.empresa_hotel,
+            empresa=self.empresa_pesca,
             nombre='Estadía 2 Noches',
             slug='estadia-2-noches',
             tipo_servicio='hospedaje',
@@ -107,16 +107,11 @@ class PaquetesAPITests(TestCase):
         self.assertEqual(float(item['precio_ancla']), 8000.00)
         self.assertEqual(float(item['precio_ancla_usd']), 470.00)
 
-        # El paquete tiene 2 componentes (pesca@empresa_pesca,
-        # hospedaje@empresa_hotel). El catálogo por Sede lee en el alcance del
-        # empresa_lider y la política RLS de fleet_paqueteservicio hoy solo deja
-        # ver los del líder → en Postgres aparece 1, en sqlite (sin RLS) 2. La
-        # Sección 7 del plan (cruza-empresa, ADR-005) unifica esto. Se asserta
-        # sobre el componente del líder, que siempre está.
         servicios = item['servicios_asociados']
-        self.assertGreaterEqual(len(servicios), 1)
+        self.assertEqual(len(servicios), 2)
         slugs = [s['servicio']['slug'] for s in servicios]
         self.assertIn('pesca-dia-completo', slugs)
+        self.assertIn('estadia-2-noches', slugs)
         pesca = next(s for s in servicios if s['servicio']['slug'] == 'pesca-dia-completo')
         self.assertFalse(pesca['removible'])
 
