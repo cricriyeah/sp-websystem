@@ -253,6 +253,33 @@ class EmpresaScopedUserAdminMixinTests(TestCase):
             usuario_actualizado = form.save(commit=False)
             self.assertFalse(usuario_actualizado.is_superuser)
 
+    def test_jefe_no_puede_editar_password_ni_email_de_otro_usuario(self):
+        vendedora_a = User.objects.create_user(
+            username='vend-a', email='v@a.com', password='x', is_staff=True,
+        )
+        MembresiaEmpresa.objects.create(
+            user=vendedora_a, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        )
+        with scope.con_empresa(self.empresa_a):
+            req_jefe = self._request(self.jefe_a)
+            readonly_otro = self.admin.get_readonly_fields(req_jefe, vendedora_a)
+            self.assertIn('password', readonly_otro)
+            self.assertIn('email', readonly_otro)
+
+            # Sobre sí mismo no se bloquean
+            readonly_propio = self.admin.get_readonly_fields(req_jefe, self.jefe_a)
+            self.assertNotIn('email', readonly_propio)
+            self.assertNotIn('password', readonly_propio)
+
+        # Operador de plataforma puede editar cualquier usuario
+        grupo, _ = Group.objects.get_or_create(name=scope.NOMBRE_GRUPO_OPERADOR_PLATAFORMA)
+        operador = User.objects.create_user(username='op-ro', password='x', is_staff=True)
+        operador.groups.add(grupo)
+        with scope.como_operador_plataforma():
+            readonly_op = self.admin.get_readonly_fields(self._request(operador), vendedora_a)
+            self.assertNotIn('password', readonly_op)
+            self.assertNotIn('email', readonly_op)
+
 
 class MigrarLaPazAEmpresaTests(TestCase):
     """`tenancy.0002_crear_sede_empresa_la_paz` ya siembra la Sede 'la-paz' y la

@@ -97,3 +97,15 @@ class EmpresaScopedUserAdminMixin:
                 opciones = {**opciones, 'fields': CAMPOS_PERMISOS_RESTRINGIDOS}
             nuevos.append((titulo, opciones))
         return nuevos
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        if (
+            not scope.es_operador_plataforma(request.user)
+            and obj is not None
+            and obj.pk != request.user.pk
+        ):
+            for campo in ('password', 'email'):
+                if campo not in readonly_fields:
+                    readonly_fields.append(campo)
+        return tuple(readonly_fields)
