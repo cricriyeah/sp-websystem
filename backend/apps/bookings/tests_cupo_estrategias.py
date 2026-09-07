@@ -4,12 +4,16 @@ from unittest import TestCase
 from django.core.exceptions import ValidationError
 
 from apps.bookings.cupo import (
+    BajoDemanda,
     DemandaCupo,
     ModoOcupacion,
+    PorNoche,
     PorRecursoDia,
     ResultadoDisponibilidad,
+    obtener_estrategia,
 )
 from apps.bookings.cupo.nucleo import MOTIVO_LLENO, MOTIVO_SIN_LUGAR, MOTIVO_SIN_PANGA
+from django.test import SimpleTestCase
 
 
 class CupoEstrategiasTests(TestCase):
@@ -107,3 +111,17 @@ class CupoEstrategiasTests(TestCase):
         self.assertTrue(res_rango[f1].disponible)
         self.assertFalse(res_rango[f2].disponible)
         self.assertEqual(res_rango[f2].motivo, MOTIVO_LLENO)
+
+
+class RegistroEstrategiasTests(SimpleTestCase):
+    def test_obtener_estrategia(self):
+        self.assertIsInstance(obtener_estrategia('por_recurso_dia'), PorRecursoDia)
+        self.assertIsInstance(obtener_estrategia('por_noche'), PorNoche)
+        self.assertIsInstance(obtener_estrategia('bajo_demanda'), BajoDemanda)
+
+    def test_obtener_estrategia_inexistente_warning(self):
+        with self.assertLogs('apps.bookings.cupo.registro', level='WARNING') as cm:
+            est = obtener_estrategia('inexistente')
+            self.assertIsInstance(est, PorRecursoDia)
+        self.assertTrue(any('estrategia_cupo desconocida' in record.message for record in cm.records))
+
