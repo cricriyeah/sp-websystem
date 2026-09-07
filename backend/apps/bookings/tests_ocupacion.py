@@ -1,9 +1,14 @@
 """Pruebas para el modelo ReservaOcupacion y soporte de estadías en Reserva."""
 
 from datetime import date, time, timedelta
+from unittest import skipUnless
+
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, connection, transaction
+from django.test import TransactionTestCase
 
 from apps.fleet.models import Recurso, Servicio
+from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import OperadorTestCase
 from apps.bookings.models import Reserva, ReservaOcupacion
@@ -303,4 +308,132 @@ class ReservaOcupacionModelTests(OperadorTestCase):
             cantidad_recursos=2,
         )
         self.assertTrue(disponible_del_15)
+
+
+@skipUnless(connection.vendor == 'postgresql', 'Constraint EXCLUDE requiere Postgres y btree_gist')
+class ReservaOcupacionExcludeConstraintTests(TransactionTestCase):
+    def setUp(self):
+        sede = Sede.objects.create(nombre='Sede Loreto Exclude', slug='sede-loreto-exclude')
+        self.empresa = Empresa.objects.create(sede=sede, nombre='Hotel Loreto Exclude', slug='hotel-loreto-exclude')
+        with scope.con_empresa(self.empresa):
+            self.servicio = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Suite Vista al Mar',
+                slug='suite-vista-al-mar',
+                tipo_servicio='hospedaje',
+                estrategia_cupo='por_noche',
+                precio_base=3000,
+            )
+            self.recurso = Recurso.objects.create(
+                empresa=self.empresa,
+                servicio=self.servicio,
+                nombre='Habitacion 201',
+                capacidad_maxima=2,
+            )
+            self.reserva_pagada_1 = Reserva.objects.create(
+                empresa=self.empresa,
+                servicio=self.servicio,
+                fecha=date(2026, 1, 10),
+                fecha_salida=date(2026, 1, 15),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente 1',
+                telefono_cliente='+526121111111',
+                correo_cliente='c1@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                estado=Reserva.Estado.PAGADA,
+            )
+            self.reserva_pagada_2 = Reserva.objects.create(
+                empresa=self.empresa,
+                servicio=self.servicio,
+                fecha=date(2026, 1, 12),
+                fecha_salida=date(2026, 1, 18),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente 2',
+                telefono_cliente='+526122222222',
+                correo_cliente='c2@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                estado=Reserva.Estado.PAGADA,
+            )
+            self.reserva_cancelada = Reserva.objects.create(
+                empresa=self.empresa,
+                servicio=self.servicio,
+                fecha=date(2026, 1, 10),
+                fecha_salida=date(2026, 1, 15),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Cancelado',
+                telefono_cliente='+526123333333',
+                correo_cliente='cc@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                estado=Reserva.Estado.CANCELADA,
+            )
+
+    def test_constraint_rechaza_dos_ocupaciones_traslapadas_del_mismo_recurso(self):
+        with scope.con_empresa(self.empresa):
+            ReservaOcupacion.objects.create(
+                empresa=self.empresa,
+                reserva=self.reserva_pagada_1,
+                recurso=self.recurso,
+                fecha_inicio=date(2026, 1, 10),
+                fecha_fin=date(2026, 1, 15),
+                ocupa_cupo=True,
+            )
+            with transaction.atomic():
+                with self.assertRaises(IntegrityError):
+                    ReservaOcupacion.objects.create(
+                        empresa=self.empresa,
+                        reserva=self.reserva_pagada_2,
+                        recurso=self.recurso,
+                        fecha_inicio=date(2026, 1, 12),
+                        fecha_fin=date(2026, 1, 18),
+                        ocupa_cupo=True,
+                    )
+
+    def test_checkout_el_mismo_dia_se_permite(self):
+        with scope.con_empresa(self.empresa):
+            oc1 = ReservaOcupacion.objects.create(
+                empresa=self.empresa,
+                reserva=self.reserva_pagada_1,
+                recurso=self.recurso,
+                fecha_inicio=date(2026, 1, 10),
+                fecha_fin=date(2026, 1, 15),
+                ocupa_cupo=True,
+            )
+            oc2 = ReservaOcupacion.objects.create(
+                empresa=self.empresa,
+                reserva=self.reserva_pagada_2,
+                recurso=self.recurso,
+                fecha_inicio=date(2026, 1, 15),
+                fecha_fin=date(2026, 1, 20),
+                ocupa_cupo=True,
+            )
+            self.assertIsNotNone(oc1.pk)
+            self.assertIsNotNone(oc2.pk)
+
+    def test_ocupacion_de_reserva_cancelada_no_estorba(self):
+        with scope.con_empresa(self.empresa):
+            oc_cancelada = ReservaOcupacion.objects.create(
+                empresa=self.empresa,
+                reserva=self.reserva_cancelada,
+                recurso=self.recurso,
+                fecha_inicio=date(2026, 1, 10),
+                fecha_fin=date(2026, 1, 15),
+                ocupa_cupo=False,
+            )
+            oc_activa = ReservaOcupacion.objects.create(
+                empresa=self.empresa,
+                reserva=self.reserva_pagada_2,
+                recurso=self.recurso,
+                fecha_inicio=date(2026, 1, 12),
+                fecha_fin=date(2026, 1, 18),
+                ocupa_cupo=True,
+            )
+            self.assertIsNotNone(oc_cancelada.pk)
+            self.assertIsNotNone(oc_activa.pk)
+
 
