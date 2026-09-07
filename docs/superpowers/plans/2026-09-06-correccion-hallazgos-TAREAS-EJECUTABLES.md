@@ -859,6 +859,109 @@ sqlite + Postgres `test apps config` → `OK`. Commit `docs(plan): Sección 8 ce
 
 ---
 
+# SECCIÓN 10 — Paquetes: eliminar "servicios removibles" (añadida 2026-09-07)
+
+> **Contexto:** decisión del dueño 2026-09-07 (ADR-004 Revisión 3, ver
+> `docs/superpowers/specs/2026-08-31-expansion-multi-sede-ADRs.md`). Un `Paquete` es
+> un bundle **cerrado** con precio propio; el cliente no quita servicios. Se conservan
+> las **personalizaciones** por servicio.
+>
+> **Por qué aquí y no en su propio plan:** toca el mismo código de paquetes que estas
+> correcciones y aún no hay push. Es **prerrequisito** del SP2 de transporte
+> (`docs/superpowers/plans/2026-09-07-transporte-sp2-orden-cruza-empresa.md`).
+>
+> Corre esta sección con su Gate y **detente** antes de mergear.
+
+### Tarea 10.1 — Quitar `servicios_removidos` del checkout serializer
+
+**Files:**
+- Modify: `backend/apps/bookings/serializers.py` — quitar el `ListField` `servicios_removidos`, sus validaciones (`El servicio X no es removible` / `no pertenece al paquete`), `_sincronizar_servicios_removidos`, y su paso por `_sacar_datos_paquete` / `_guardar`. `_sacar_datos_paquete` pasa a devolver solo `personalizaciones`.
+- Modify: imports (quitar `ReservaPaqueteServicioRemovido`).
+- Test: `backend/apps/bookings/tests.py` — borrar los tests de checkout-con-servicios-removidos; los de personalizaciones de paquete quedan.
+
+- [ ] **Paso 1:** `manage.py test apps.bookings -k removid -v2` para ver qué se borra.
+- [ ] **Paso 2:** quitar el campo y su wiring.
+- [ ] **Paso 3:** `manage.py test apps.bookings` verde.
+- [ ] **Paso 4:** commit `refactor(bookings): el checkout de paquete ya no acepta servicios_removidos`.
+
+### Tarea 10.2 — Quitar el filtro "no removido" del motor de cupo
+
+**Files:**
+- Modify: `backend/apps/bookings/cupo/confirmacion.py` — en `reservar_cupo_al_confirmar` Caso B, quitar `removidos_ids` y el `if ps.servicio_id in removidos_ids: continue`. Todos los componentes del paquete se reservan.
+- Modify: `backend/apps/bookings/models.py` (~línea 225, `_validar_cupo_de_paquete`) — quitar el mismo filtro.
+- Test: `backend/apps/bookings/tests.py` — pagar un paquete reserva cupo de **todos** sus componentes.
+
+- [ ] **Paso 1: test que falla / ajusta.**
+- [ ] **Paso 2:** quitar el filtro en los dos sitios.
+- [ ] **Paso 3:** `manage.py test apps.bookings` verde.
+- [ ] **Paso 4:** commit `refactor(bookings): el cupo de un paquete cubre todos sus componentes`.
+
+### Tarea 10.3 — Precio de paquete sin resta de ajustes
+
+**Files:**
+- Modify: `backend/apps/payments/pricing.py`:
+  - `precio_paquete(precio_ancla, ajustes_removidos=None)` → `precio_paquete(precio)` (identidad + quantize).
+  - `precio_paquete_total` — quitar el bucle que resta `ps.ajuste_en(moneda)` de los removibles. Queda: `precio fijo + Σ personalizaciones obligatorias/preseleccionadas + Σ personalizaciones opcionales marcadas`.
+  - `calcular_precio_paquete(paquete, servicios_removidos_pks=None, moneda=...)` → quitar el parámetro `servicios_removidos_pks`.
+- Modify: los llamadores (`CrearPagoView`, `_verificar_monto`) — quitar el argumento de removidos.
+- Test: `backend/apps/payments/tests.py` — precio de un paquete = fijo + personalizaciones, sin importar nada de "removidos" (que ya no existe).
+
+- [ ] **Paso 1: test que falla / ajusta.**
+- [ ] **Paso 2:** simplificar las 3 funciones + llamadores.
+- [ ] **Paso 3:** `manage.py test apps.payments` verde.
+- [ ] **Paso 4:** commit `refactor(payments): el precio de un paquete es fijo + personalizaciones, sin resta`.
+
+### Tarea 10.4 — Quitar `removible` / `ajuste_precio` de `PaqueteServicio` y la validación de `Paquete.clean()`
+
+**Files:**
+- Modify: `backend/apps/fleet/models.py` — `PaqueteServicio`: quitar `removible`, `ajuste_precio`, `ajuste_precio_usd` (y el método `ajuste_en` si existe). `Paquete.clean()`: quitar el bloque `if self.pk: removibles = ... total_ajustes > precio_ancla`.
+- Modify: `backend/apps/fleet/admin.py` — el inline de `PaqueteServicio` (`list_display` línea ~178): quitar las columnas de `removible`/`ajuste_precio`.
+- Modify: `backend/apps/fleet/management/commands/seed_local_demo.py` — quitar los `ajuste_precio=` de los `PaqueteServicio` sembrados.
+- Create: migración `RemoveField` × 3.
+- Test: `backend/apps/fleet/tests.py` — un `Paquete` con componentes se valida sin la regla de ajustes; el admin del paquete no muestra columnas de removible.
+
+- [ ] **Paso 1: test que falla / ajusta.**
+- [ ] **Paso 2:** quitar campos + validación + admin + seed. `makemigrations fleet`.
+- [ ] **Paso 3:** `manage.py test apps.fleet` verde.
+- [ ] **Paso 4:** commit `refactor(fleet): PaqueteServicio sin removible/ajuste_precio`.
+
+### Tarea 10.5 — Borrar el modelo `ReservaPaqueteServicioRemovido`
+
+**Files:**
+- Modify: `backend/apps/bookings/models.py` — borrar `class ReservaPaqueteServicioRemovido`.
+- Modify: `backend/apps/bookings/admin.py` — si tiene inline/registro, quitarlo.
+- Create: migración `DeleteModel('ReservaPaqueteServicioRemovido')` + `DROP POLICY` de su RLS (está en `bookings/migrations/0032_rls_checkout_paquete.py` — la nueva migración dropea la política).
+- Modify: `backend/apps/tenancy/tests_rls.py` — quitar `bookings_reservapaqueteserviciorem*` de la whitelist del guardarraíl (Tarea 8.6).
+- Modify: `backend/apps/bookings/tests.py` — quitar tests que instancien el modelo.
+- Test: `grep -rn "ReservaPaqueteServicioRemovido\|servicios_removidos\|removible\|ajuste_precio" backend/ frontend/src/` → **cero** (salvo migraciones históricas anteriores a las de borrado).
+
+- [ ] **Paso 1:** `grep` para el mapa completo.
+- [ ] **Paso 2:** borrar modelo + admin + tests; `makemigrations bookings`; añadir el `DROP POLICY` a mano en la migración.
+- [ ] **Paso 3:** `migrate` sqlite; `manage.py test apps.bookings` verde.
+- [ ] **Paso 4:** commit `refactor(bookings): elimina el modelo ReservaPaqueteServicioRemovido`.
+
+### Tarea 10.6 — Frontend: quitar el control de "quitar servicio del paquete"
+
+**Files:**
+- Modify: `frontend/src/components/paquete-card.tsx` y `checkout-view.tsx` — quitar cualquier toggle/checkbox de "incluir/quitar" un servicio del paquete y el envío de `servicios_removidos`. **Dejar** los toggles de personalización.
+- Modify: `frontend/src/lib/api.ts` — quitar `servicios_removidos` del payload.
+- Modify: `dictionaries/{es,en}.json` — quitar las claves de ese control.
+- Test: `cd frontend && npx.cmd tsc --noEmit && npm.cmd run lint && npm.cmd run build` verdes.
+
+- [ ] **Paso 1 → 3:** ciclo. Commit `refactor(frontend): el paquete no deja quitar servicios; solo personalizaciones`.
+
+### Gate Sección 10
+
+- [ ] `manage.py test apps config` verde en **sqlite Y Postgres** (drop antes).
+- [ ] `check --deploy --fail-level WARNING` verde.
+- [ ] Frontend `lint` · `tsc --noEmit` · `build` verdes.
+- [ ] `grep -rn "servicios_removidos\|removible\|ajuste_precio\|ReservaPaqueteServicioRemovido" backend/ frontend/src/` → cero fuera de migraciones históricas.
+- [ ] Actualizar `backend/CLAUDE.md` — sección "Paquetes turísticos": quitar la mención a "componente no removido" y "servicios removidos"; el precio del paquete es fijo + personalizaciones.
+- [ ] Actualizar `docs/superpowers/specs/2026-08-31-...-ADRs.md` — ADR-004 Revisión 3: marcar como ejecutada.
+- [ ] Commit `docs(plan): Sección 10 cerrada (paquetes sin servicios removibles)`. **PARA y reporta.**
+
+---
+
 ## Autorrevisión (para el que ejecuta, al terminar cada sección)
 
 1. **¿El test que escribiste falla ANTES de la implementación?** Si nunca lo viste rojo, no sabes si prueba algo.
