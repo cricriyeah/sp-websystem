@@ -11,7 +11,9 @@ from .adaptador import (
 from .candado import (
     bloquear_cupo,
     bloquear_cupo_del_dia,
+    bloquear_recurso,
     calcular_clave_candado,
+    calcular_clave_recurso,
 )
 from .estrategias import (
     BajoDemanda,
@@ -62,7 +64,9 @@ __all__ = [
     'MOTIVO_SIN_LUGAR',
     'bloquear_cupo',
     'bloquear_cupo_del_dia',
+    'bloquear_recurso',
     'calcular_clave_candado',
+    'calcular_clave_recurso',
     'caben',
     'caben_compartido',
     'motivo_sin_lugar',
