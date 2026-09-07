@@ -61,8 +61,8 @@ export type CatalogoExtras = {
   puntos_encuentro: PuntoEncuentro[];
 };
 
-export const getExtras = (personas: number, moneda: Moneda) =>
-  request<CatalogoExtras>(`/api/extras/?personas=${personas}&moneda=${moneda}`);
+export const getExtras = (personas: number, moneda: Moneda, empresaSlug?: string) =>
+  request<CatalogoExtras>(`/api/extras/?personas=${personas}&moneda=${moneda}`, undefined, empresaSlug);
 
 /**
  * Lo que el cliente eligio para el traslado, si eligio uno. `null` = sin
@@ -181,15 +181,16 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, empresaSlug?: string): Promise<T> {
   // Cada ruta exportada de este archivo empieza con '/api/' (ver getTarifa,
   // getCupo, etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
   // que cada funcion exportada tenga que acordarse del slug.
   // Rutas de plataforma multi-sede (/api/sedes/) no se atan a una empresa.
+  const slug = empresaSlug ?? EMPRESA_SLUG;
   const rutaConEmpresa = path.startsWith('/api/sedes')
     ? path
     : path.startsWith('/api/')
-    ? `/api/${EMPRESA_SLUG}${path.slice(4)}`
+    ? `/api/${slug}${path.slice(4)}`
     : path;
   let res: Response;
   try {
@@ -212,10 +213,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export const getTarifa = () => request<Tarifa>('/api/tarifa/');
+export const getTarifa = (empresaSlug?: string) =>
+  request<Tarifa>('/api/tarifa/', undefined, empresaSlug);
 
-export const getCupo = (fecha: string, personas: number) =>
-  request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`);
+export const getCupo = (fecha: string, personas: number, empresaSlug?: string) =>
+  request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`, undefined, empresaSlug);
 
 /** Por que no cabe el grupo cada dia del rango; null = si cabe. */
 export type DisponibilidadRango = Record<string, MotivoNoDisponible | null>;
@@ -228,20 +230,22 @@ export type DisponibilidadRango = Record<string, MotivoNoDisponible | null>;
  * por IP, y el segundo mes devuelve 429. El backend tampoco pasa de 62 dias por
  * llamada.
  */
-export const getCupoRango = (desde: string, hasta: string, personas: number) =>
+export const getCupoRango = (desde: string, hasta: string, personas: number, empresaSlug?: string) =>
   request<{ dias: DisponibilidadRango }>(
     `/api/cupo/rango/?desde=${desde}&hasta=${hasta}&personas=${personas}`,
+    undefined,
+    empresaSlug,
   ).then((r) => r.dias);
 
 /** Crea la reserva de este checkout, o actualiza la que ya existia. */
-export const guardarReserva = (data: ReservaInput) =>
-  request<Reserva>('/api/reservas/', { method: 'POST', body: JSON.stringify(data) });
+export const guardarReserva = (data: ReservaInput, empresaSlug?: string) =>
+  request<Reserva>('/api/reservas/', { method: 'POST', body: JSON.stringify(data) }, empresaSlug);
 
-export const crearPago = (reservaId: number, data: PagoInput) =>
+export const crearPago = (reservaId: number, data: PagoInput, empresaSlug?: string) =>
   request<Pago>(`/api/reservas/${reservaId}/crear-pago/`, {
     method: 'POST',
     body: JSON.stringify(data),
-  });
+  }, empresaSlug);
 
 /**
  * Estado de la reserva de este `checkout_id`, para reponer un checkout tras un
@@ -303,8 +307,8 @@ export type EstadoReservaCancelada = { estado: 'cancelada' };
 
 export type EstadoReserva = EstadoReservaPendiente | EstadoReservaPagada | EstadoReservaCancelada;
 
-export const getEstadoReserva = (checkoutId: string) =>
-  request<EstadoReserva>(`/api/reservas/estado/?checkout_id=${checkoutId}`);
+export const getEstadoReserva = (checkoutId: string, empresaSlug?: string) =>
+  request<EstadoReserva>(`/api/reservas/estado/?checkout_id=${checkoutId}`, undefined, empresaSlug);
 
 /**
  * Validacion en vivo de un codigo promocional mientras el cliente lo escribe
@@ -315,9 +319,11 @@ export const getEstadoReserva = (checkoutId: string) =>
  */
 export type CodigoPromocionalCheck = { valido: boolean; porcentaje_descuento: string | null };
 
-export const validarCodigoPromocional = (codigo: string, correoCliente: string) =>
+export const validarCodigoPromocional = (codigo: string, correoCliente: string, empresaSlug?: string) =>
   request<CodigoPromocionalCheck>(
     `/api/codigo-promocional/validar/?codigo=${encodeURIComponent(codigo)}&correo_cliente=${encodeURIComponent(correoCliente)}`,
+    undefined,
+    empresaSlug,
   );
 
 /* ==========================================================================
