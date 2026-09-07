@@ -6,23 +6,24 @@ import zlib
 from django.db import connection
 
 
-def calcular_clave_candado(fecha: date, ambito: str | int | None = 'default') -> int:
+def calcular_clave_candado(fecha: date, servicio_id: int | None = None) -> int:
     """Calcula la clave secundaria de 32 bits para el advisory lock.
 
-    Si ambito es 'default' o None, utiliza fecha.toordinal() directamente para
-    conservar compatibilidad exacta con la implementación previa de pesca.
-    Si se especifica un ámbito (ej. tipo de servicio, ID de recurso), calcula un
-    hash CRC32 de 31 bits estable que garantiza no-colisión de locks entre ámbitos.
+    Si servicio_id es None, utiliza fecha.toordinal() directamente para
+    conservar compatibilidad exacta con la implementación previa de pesca legacy.
+    Si servicio_id es un entero, calcula un hash CRC32 acotado con bit 30
+    forzado (0x40000000), lo cual garantiza un entero positivo con signo de 32 bits
+    que nunca colisiona con un toordinal() realista.
     """
-    if ambito is None or ambito == 'default':
-        return fecha.toordinal()
+    ordinal = fecha.toordinal()
+    if servicio_id is None:
+        return ordinal
 
-    cadena = f'{ambito}:{fecha.toordinal()}'
-    # Máscara 0x7FFFFFFF garantiza un entero positivo con signo compatible con int4 de Postgres
-    return zlib.crc32(cadena.encode('utf-8')) & 0x7FFFFFFF
+    cadena = f'{servicio_id}:{ordinal}'
+    return (zlib.crc32(cadena.encode('utf-8')) & 0x3FFFFFFF) | 0x40000000
 
 
-def bloquear_cupo(empresa_id: int, fecha: date, ambito: str | int | None = 'default', servicio_id: int | None = None) -> None:
+def bloquear_cupo(empresa_id: int, fecha: date, servicio_id: int | None = None) -> None:
     """Serializa la validación y confirmación de cupo en Postgres.
 
     Utiliza pg_advisory_xact_lock(empresa_id, clave_secundaria), el cual se libera
@@ -32,11 +33,11 @@ def bloquear_cupo(empresa_id: int, fecha: date, ambito: str | int | None = 'defa
     if connection.vendor != 'postgresql':
         return
 
-    clave_secundaria = calcular_clave_candado(fecha, ambito=servicio_id if servicio_id is not None else ambito)
+    clave_secundaria = calcular_clave_candado(fecha, servicio_id=servicio_id)
     with connection.cursor() as cursor:
         cursor.execute('SELECT pg_advisory_xact_lock(%s, %s)', [empresa_id, clave_secundaria])
 
 
 def bloquear_cupo_del_dia(empresa_id: int, fecha: date) -> None:
     """Función de compatibilidad con la firma anterior de apps/bookings/models.py."""
-    bloquear_cupo(empresa_id, fecha, ambito='default')
+    bloquear_cupo(empresa_id, fecha, servicio_id=None)

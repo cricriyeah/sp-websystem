@@ -10,35 +10,32 @@ from apps.bookings.cupo.candado import (
 
 
 class CupoCandadoTests(TestCase):
-    """Pruebas del advisory lock re-llaveado por empresa y ámbito."""
+    """Pruebas del advisory lock re-llaveado por (empresa, servicio_id, fecha)."""
+
+    def test_calcular_clave_candado_sin_colision_bit30(self):
+        f = date(2026, 9, 25)
+        legacy = f.toordinal()
+        self.assertEqual(calcular_clave_candado(f, servicio_id=None), legacy)
+        for sid in range(1, 501):
+            k = calcular_clave_candado(f, servicio_id=sid)
+            self.assertNotEqual(k, legacy)
+            self.assertGreaterEqual(k, 0x40000000)
+            self.assertLessEqual(k, 0x7FFFFFFF)
+        self.assertNotEqual(
+            calcular_clave_candado(f, servicio_id=1),
+            calcular_clave_candado(f, servicio_id=2),
+        )
 
     def test_calcular_clave_candado_default(self):
         f = date(2026, 9, 25)
         # Modo default o None usa exactamente fecha.toordinal()
         self.assertEqual(calcular_clave_candado(f), f.toordinal())
-        self.assertEqual(calcular_clave_candado(f, ambito=None), f.toordinal())
-        self.assertEqual(calcular_clave_candado(f, ambito='default'), f.toordinal())
-
-    def test_calcular_clave_candado_con_ambitos_distintos(self):
-        f = date(2026, 9, 25)
-        k_pesca = calcular_clave_candado(f, ambito='pesca')
-        k_tour = calcular_clave_candado(f, ambito='tour_playas')
-        k_hotel = calcular_clave_candado(f, ambito='hotel_cabañas')
-
-        # Las claves entre distintos ámbitos son distintas
-        self.assertNotEqual(k_pesca, k_tour)
-        self.assertNotEqual(k_pesca, k_hotel)
-        self.assertNotEqual(k_tour, k_hotel)
-
-        # Todas están acotadas al rango signed 32-bit positivo de Postgres
-        for k in [k_pesca, k_tour, k_hotel]:
-            self.assertGreaterEqual(k, 0)
-            self.assertLessEqual(k, 0x7FFFFFFF)
+        self.assertEqual(calcular_clave_candado(f, servicio_id=None), f.toordinal())
 
     def test_calcular_clave_candado_determinista(self):
         f = date(2026, 9, 25)
-        k1 = calcular_clave_candado(f, ambito='recurso_42')
-        k2 = calcular_clave_candado(f, ambito='recurso_42')
+        k1 = calcular_clave_candado(f, servicio_id=42)
+        k2 = calcular_clave_candado(f, servicio_id=42)
         self.assertEqual(k1, k2)
 
     @patch('apps.bookings.cupo.candado.connection')
@@ -48,9 +45,9 @@ class CupoCandadoTests(TestCase):
         mock_conn.cursor.return_value.__enter__.return_value = cursor_mock
 
         f = date(2026, 9, 25)
-        bloquear_cupo(empresa_id=10, fecha=f, ambito='pesca')
+        bloquear_cupo(empresa_id=10, fecha=f, servicio_id=42)
 
-        clave_esperada = calcular_clave_candado(f, ambito='pesca')
+        clave_esperada = calcular_clave_candado(f, servicio_id=42)
         cursor_mock.execute.assert_called_once_with(
             'SELECT pg_advisory_xact_lock(%s, %s)',
             [10, clave_esperada],
