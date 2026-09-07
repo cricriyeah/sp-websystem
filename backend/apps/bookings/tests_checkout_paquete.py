@@ -10,6 +10,7 @@ from django.test import TransactionTestCase
 from apps.testing import OperadorTestCase
 from apps.bookings.models import (
     Reserva,
+    ReservaPaqueteComponente,
     ReservaPaquetePersonalizacion,
     ReservaPaqueteServicioRemovido,
 )
@@ -96,6 +97,31 @@ class ReservaCheckoutPaqueteModelTests(OperadorTestCase):
                     cantidad=3,
                 )
 
+    def test_crear_componente_paquete(self):
+        comp = ReservaPaqueteComponente.objects.create(
+            reserva=self.reserva,
+            servicio=self.servicio_pesca,
+            empresa=self.empresa,
+        )
+        self.assertEqual(comp.estado_cupo, ReservaPaqueteComponente.EstadoCupo.OK)
+        self.assertEqual(self.reserva.componentes.count(), 1)
+        self.assertEqual(self.reserva.componentes.first(), comp)
+        self.assertIn("Componente", str(comp))
+
+    def test_unicidad_componente_por_reserva_y_servicio(self):
+        ReservaPaqueteComponente.objects.create(
+            reserva=self.reserva,
+            servicio=self.servicio_pesca,
+            empresa=self.empresa,
+        )
+        with transaction.atomic():
+            with self.assertRaises(IntegrityError):
+                ReservaPaqueteComponente.objects.create(
+                    reserva=self.reserva,
+                    servicio=self.servicio_pesca,
+                    empresa=self.empresa,
+                )
+
 
 @skipUnless(connection.vendor == 'postgresql', 'RLS solo aplica en Postgres')
 class ReservaCheckoutPaqueteRLSTests(TransactionTestCase):
@@ -118,6 +144,7 @@ class ReservaCheckoutPaqueteRLSTests(TransactionTestCase):
             )
             self.rem_a = ReservaPaqueteServicioRemovido.objects.create(reserva=self.reserva_a, servicio=srv_a)
             self.pers_a_row = ReservaPaquetePersonalizacion.objects.create(reserva=self.reserva_a, servicio_personalizacion=self.sp_a, cantidad=1)
+            self.comp_a = ReservaPaqueteComponente.objects.create(reserva=self.reserva_a, servicio=srv_a, empresa=self.empresa_a)
 
         with scope.con_empresa(self.empresa_b):
             srv_b = Servicio.objects.create(empresa=self.empresa_b, nombre='Srv B', slug='srv-b', precio_base=Decimal('100'))
@@ -132,15 +159,19 @@ class ReservaCheckoutPaqueteRLSTests(TransactionTestCase):
         with scope.con_empresa(self.empresa_b):
             self.assertEqual(ReservaPaqueteServicioRemovido.objects.count(), 0)
             self.assertEqual(ReservaPaquetePersonalizacion.objects.count(), 0)
+            self.assertEqual(ReservaPaqueteComponente.objects.count(), 0)
 
     def test_empresa_a_ve_sus_propias_filas(self):
         with scope.con_empresa(self.empresa_a):
             self.assertEqual(ReservaPaqueteServicioRemovido.objects.count(), 1)
             self.assertEqual(ReservaPaquetePersonalizacion.objects.count(), 1)
+            self.assertEqual(ReservaPaqueteComponente.objects.count(), 1)
             self.assertEqual(ReservaPaqueteServicioRemovido.objects.first(), self.rem_a)
             self.assertEqual(ReservaPaquetePersonalizacion.objects.first(), self.pers_a_row)
+            self.assertEqual(ReservaPaqueteComponente.objects.first(), self.comp_a)
 
     def test_operador_ve_todas_las_filas(self):
         with scope.como_operador_plataforma():
             self.assertEqual(ReservaPaqueteServicioRemovido.objects.count(), 1)
             self.assertEqual(ReservaPaquetePersonalizacion.objects.count(), 1)
+            self.assertEqual(ReservaPaqueteComponente.objects.count(), 1)

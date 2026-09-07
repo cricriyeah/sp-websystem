@@ -1109,3 +1109,25 @@ class ReservaPaquetePersonalizacion(models.Model):
 
     def __str__(self):
         return f"Personalización #{self.servicio_personalizacion_id} (x{self.cantidad}) en Reserva #{self.reserva_id}"
+
+
+class ReservaPaqueteComponente(models.Model):
+    class EstadoCupo(models.TextChoices):
+        OK = 'ok', 'Cupo reservado'
+        LIBERADO = 'liberado', 'Liberado (reserva cancelada)'
+
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='componentes')
+    servicio = models.ForeignKey('fleet.Servicio', on_delete=models.PROTECT)
+    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT)  # = servicio.empresa
+    estado_cupo = models.CharField(max_length=10, choices=EstadoCupo.choices, default=EstadoCupo.OK)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['reserva', 'servicio'], name='reservapaquetecomponente_unico')
+        ]
+        verbose_name = 'componente de paquete'
+        verbose_name_plural = 'componentes de paquete'
+
+    def __str__(self):
+        return f"Componente {self.servicio} ({self.estado_cupo}) en Reserva #{self.reserva_id}"
