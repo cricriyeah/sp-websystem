@@ -20,6 +20,10 @@ venv/Scripts/python.exe manage.py makemigrations
 venv/Scripts/python.exe manage.py migrate
 ```
 
+### Data migrations y RLS
+
+Toda data migration que haga `Modelo.objects.create/update/delete` sobre una tabla con RLS debe envolverse en `with apps.tenancy.rls.alcance_operador_migracion(schema_editor.connection):` — si no, revienta en Postgres bajo el rol de la app (ej. `ci_rls` o roles sin `BYPASSRLS`).
+
 ### Correr la suite contra Postgres en local
 
 sqlite serializa toda escritura con un solo escritor: los tests de RLS, de
@@ -394,3 +398,4 @@ admin y el shell:
 - `bookings.Reserva.hora` valida ventana 5:00–7:00am (`validar_ventana_salida` en `models.py`).
 - `embarcacion`/`capitan` en `Reserva` son nullable a proposito: quedan vacios hasta que la
   vendedora asigna manualmente.
+- **Reactivación manual CANCELADA -> PAGADA**: si un admin cambia a mano el estado de una reserva de `CANCELADA` a `PAGADA`, `Reserva.save()` reactiva sus `ReservaOcupacion` (`ocupa_cupo=True`) sin re-validar cupo contra otras reservas que se hayan creado mientras estuvo cancelada. Es una deuda técnica conocida; no reactivar sin verificar disponibilidad manualmente.
