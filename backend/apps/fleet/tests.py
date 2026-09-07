@@ -93,6 +93,17 @@ class TarifaTests(TestCase):
             tarifa = Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
         self.assertIsNone(tarifa.precio_en('USD'))
 
+    def test_carrera_creacion_simultanea_actualiza_no_revienta(self):
+        from unittest.mock import patch
+        with scope.con_empresa(self.empresa_a):
+            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
+            t2 = Tarifa(precio=Decimal('6000.00'), empresa=self.empresa_a)
+            # Simulamos que select_for_update no vio la fila existente (carrera de concurrencia)
+            with patch.object(Tarifa.objects, 'select_for_update', return_value=Tarifa.objects.none()):
+                t2.save()
+            self.assertEqual(Tarifa.objects.filter(empresa=self.empresa_a).count(), 1)
+            self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('6000.00'))
+
 
 class TarifaApiTests(ApiTestCase):
     def test_sin_tarifa_responde_503(self):

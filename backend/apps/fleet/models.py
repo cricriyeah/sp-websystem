@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import IntegrityError, models, transaction
 
 from .enums import EstrategiaCupo, EstrategiaPrecio, ModoOcupacion, TipoServicio
 
@@ -52,10 +52,27 @@ class Tarifa(models.Model):
         # Tarifa.objects.create(empresa=X) debe actualizar el precio de X, no
         # reventar con IntegrityError sobre la UniqueConstraint de arriba.
         if not self.pk:
-            existente = Tarifa.objects.filter(empresa=self.empresa).first()
-            if existente:
-                self.pk = existente.pk
-        super().save(*args, **kwargs)
+            try:
+                with transaction.atomic():
+                    existente = (
+                        Tarifa.objects.select_for_update()
+                        .filter(empresa=self.empresa)
+                        .first()
+                    )
+                    if existente:
+                        self.pk = existente.pk
+                    super().save(*args, **kwargs)
+            except IntegrityError:
+                # Carrera: otra transacción insertó la tarifa en paralelo.
+                # Reintentamos asociando el pk de la tarifa existente.
+                existente = Tarifa.objects.filter(empresa=self.empresa).first()
+                if existente:
+                    self.pk = existente.pk
+                    super().save(*args, **kwargs)
+                else:
+                    raise
+        else:
+            super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         raise ValidationError('La tarifa no se puede eliminar, solo editar.')
