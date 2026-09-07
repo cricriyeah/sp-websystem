@@ -1,6 +1,7 @@
 """Pruebas para el modelo ReservaOcupacion y soporte de estadías en Reserva."""
 
 from datetime import date, time, timedelta
+from decimal import Decimal
 from unittest import skipUnless
 
 from django.core.exceptions import ValidationError
@@ -435,5 +436,132 @@ class ReservaOcupacionExcludeConstraintTests(TransactionTestCase):
             )
             self.assertIsNotNone(oc_cancelada.pk)
             self.assertIsNotNone(oc_activa.pk)
+
+
+class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
+    """Pruebas para Reserva.clean() en ramas de hospedaje y paquete (Tarea 5.5)."""
+
+    def setUp(self):
+        from apps.fleet.models import Paquete, PaqueteServicio
+        from apps.bookings.models import ReservaPaqueteServicioRemovido
+
+        self.sede = Sede.objects.create(nombre='Sede Loreto Cupo', slug='loreto-cupo')
+        self.empresa = Empresa.objects.create(sede=self.sede, nombre='Tours & Cabañas', slug='tours-cabanas')
+
+        self.srv_pesca = Servicio.objects.create(
+            empresa=self.empresa, nombre='Pesca', slug='pesca-55', tipo_servicio='pesca',
+            estrategia_cupo='por_recurso_dia', precio_base=Decimal('3000'),
+        )
+        self.srv_hospedaje = Servicio.objects.create(
+            empresa=self.empresa, nombre='Cabaña', slug='cabana-55', tipo_servicio='hospedaje',
+            estrategia_cupo='por_noche', precio_base=Decimal('1500'),
+        )
+        self.recurso = Recurso.objects.create(
+            empresa=self.empresa, servicio=self.srv_hospedaje,
+            nombre='Cabaña Única', capacidad_maxima=4, activo=True,
+        )
+
+        self.paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.empresa,
+            nombre='Pack Pesca Hospedaje', slug='pack-pesca-hospedaje',
+            precio_ancla=Decimal('4500'),
+        )
+        self.ps1 = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.srv_pesca, orden=1, removible=False)
+        self.ps2 = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.srv_hospedaje, orden=2, removible=True)
+
+    def test_reserva_hospedaje_sin_disponibilidad_falla_full_clean(self):
+        # Ocupamos la cabaña en esas fechas con una reserva pagada
+        r_existente = Reserva.objects.create(
+            empresa=self.empresa, servicio=self.srv_hospedaje,
+            fecha=date(2026, 12, 1), fecha_salida=date(2026, 12, 5),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='A', telefono_cliente='+526121234567',
+            correo_cliente='a@a.com', estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        ReservaOcupacion.objects.create(
+            reserva=r_existente, recurso=self.recurso, empresa=self.empresa,
+            fecha_inicio=date(2026, 12, 1), fecha_fin=date(2026, 12, 5), ocupa_cupo=True,
+        )
+
+        # Nueva reserva intentando las mismas fechas en estado PAGADA
+        r_nueva = Reserva(
+            empresa=self.empresa, servicio=self.srv_hospedaje,
+            fecha=date(2026, 12, 2), fecha_salida=date(2026, 12, 4),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='B', telefono_cliente='+526121234567',
+            correo_cliente='b@b.com', estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            r_nueva.full_clean()
+        self.assertIn('fecha', ctx.exception.message_dict)
+
+    def test_reserva_hospedaje_con_disponibilidad_pasa_full_clean(self):
+        r_nueva = Reserva(
+            empresa=self.empresa, servicio=self.srv_hospedaje,
+            fecha=date(2026, 12, 10), fecha_salida=date(2026, 12, 15),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='B', telefono_cliente='+526121234567',
+            correo_cliente='b@b.com', estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        r_nueva.full_clean()  # No debe lanzar ValidationError
+
+    def test_reserva_paquete_con_componente_hospedaje_sin_cupo_falla_full_clean(self):
+        # Cabaña ocupada
+        r_existente = Reserva.objects.create(
+            empresa=self.empresa, servicio=self.srv_hospedaje,
+            fecha=date(2026, 12, 1), fecha_salida=date(2026, 12, 5),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='A', telefono_cliente='+526121234567',
+            correo_cliente='a@a.com', estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        ReservaOcupacion.objects.create(
+            reserva=r_existente, recurso=self.recurso, empresa=self.empresa,
+            fecha_inicio=date(2026, 12, 1), fecha_fin=date(2026, 12, 5), ocupa_cupo=True,
+        )
+        from apps.testing import crear_flota
+        crear_flota(self.empresa)
+
+        r_paquete = Reserva(
+            empresa=self.empresa, paquete=self.paquete,
+            fecha=date(2026, 12, 2), fecha_salida=date(2026, 12, 4),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='C', telefono_cliente='+526121234567',
+            correo_cliente='c@c.com', estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            r_paquete.full_clean()
+        self.assertIn('fecha', ctx.exception.message_dict)
+
+    def test_reserva_paquete_con_hospedaje_removido_ignora_falta_de_cupo(self):
+        # Cabaña ocupada
+        r_existente = Reserva.objects.create(
+            empresa=self.empresa, servicio=self.srv_hospedaje,
+            fecha=date(2026, 12, 1), fecha_salida=date(2026, 12, 5),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='A', telefono_cliente='+526121234567',
+            correo_cliente='a@a.com', estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        ReservaOcupacion.objects.create(
+            reserva=r_existente, recurso=self.recurso, empresa=self.empresa,
+            fecha_inicio=date(2026, 12, 1), fecha_fin=date(2026, 12, 5), ocupa_cupo=True,
+        )
+
+        # Flota para pesca
+        from apps.testing import crear_flota
+        crear_flota(self.empresa)
+
+        # Guardamos en pendiente para asociar el servicio removido
+        r_paquete = Reserva.objects.create(
+            empresa=self.empresa, paquete=self.paquete,
+            fecha=date(2026, 12, 2),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='C', telefono_cliente='+526121234567',
+            correo_cliente='c@c.com', estado=Reserva.Estado.PENDIENTE_PAGO,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        from apps.bookings.models import ReservaPaqueteServicioRemovido
+        ReservaPaqueteServicioRemovido.objects.create(reserva=r_paquete, servicio=self.srv_hospedaje)
+
+        r_paquete.estado = Reserva.Estado.PAGADA
+        r_paquete.full_clean()  # Cabaña removida, no debe fallar por falta de cabaña
 
 

@@ -29,6 +29,7 @@ from .cupo import (
     bloquear_cupo_del_dia,
     caben,
     caben_compartido,
+    evaluar_disponibilidad_hospedaje,
     motivo_sin_lugar,
     obtener_contexto_cupo,
     obtener_contexto_rango,
@@ -205,6 +206,55 @@ def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None, estrategia_cu
         capacidades=ctx.capacidades,
         tope=ctx.tope,
     )
+
+
+def _validar_cupo_hospedaje(reserva):
+    disponible = evaluar_disponibilidad_hospedaje(
+        check_in=reserva.fecha,
+        check_out=reserva.fecha_fin_servicio,
+        personas=reserva.numero_personas,
+        empresa=reserva.empresa,
+        servicio=reserva.servicio,
+        excluir_pk=reserva.pk,
+    )
+    if not disponible:
+        raise ValidationError({'fecha': 'No hay disponibilidad de hospedaje en esas fechas.'})
+
+
+def _validar_cupo_de_paquete(reserva):
+    removidos_ids = set()
+    if reserva.pk:
+        removidos_ids = set(reserva.servicios_removidos.values_list('servicio_id', flat=True))
+
+    for ps in reserva.paquete.servicios_asociados.select_related('servicio').all():
+        if ps.servicio_id in removidos_ids:
+            continue
+        estrategia = ps.servicio.estrategia_cupo
+        if estrategia == 'por_recurso_dia':
+            motivo = evaluar_cupo(
+                reserva.fecha, reserva.numero_personas, reserva.empresa,
+                excluir_pk=reserva.pk, estrategia_cupo='por_recurso_dia',
+                servicio_id=ps.servicio_id,
+            )
+            if motivo:
+                raise ValidationError({
+                    'fecha': f'No hay cupo disponible para el servicio {ps.servicio.nombre} ({motivo}).'
+                })
+        elif estrategia == 'por_noche':
+            disponible = evaluar_disponibilidad_hospedaje(
+                check_in=reserva.fecha,
+                check_out=reserva.fecha_fin_servicio,
+                personas=reserva.numero_personas,
+                empresa=reserva.empresa,
+                servicio=ps.servicio,
+                excluir_pk=reserva.pk,
+            )
+            if not disponible:
+                raise ValidationError({
+                    'fecha': f'No hay disponibilidad de hospedaje para el servicio {ps.servicio.nombre} en esas fechas.'
+                })
+        elif estrategia == 'bajo_demanda':
+            continue
 
 
 def codigo_promocional_valido(promo, correo_cliente, monto_viaje=None, moneda=None, excluir_pk=None):
@@ -624,12 +674,16 @@ class Reserva(models.Model):
         if self.fecha_salida and self.fecha_salida <= self.fecha:
             raise ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de inicio.'})
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            estrategia_cupo = self.servicio.estrategia_cupo if self.servicio_id else 'por_recurso_dia'
-            # TODO Sección 5: rama por_noche (hospedaje) — necesita fecha_salida en el serializer.
-            validar_cupo_diario(
-                self.fecha, self.numero_personas, self.empresa,
-                excluir_pk=self.pk, estrategia_cupo=estrategia_cupo, servicio_id=self.servicio_id,
-            )
+            if self.paquete_id:
+                _validar_cupo_de_paquete(self)
+            elif self.servicio_id and self.servicio.estrategia_cupo == 'por_noche':
+                _validar_cupo_hospedaje(self)
+            else:
+                estrategia_cupo = self.servicio.estrategia_cupo if self.servicio_id else 'por_recurso_dia'
+                validar_cupo_diario(
+                    self.fecha, self.numero_personas, self.empresa,
+                    excluir_pk=self.pk, estrategia_cupo=estrategia_cupo, servicio_id=self.servicio_id,
+                )
             if self.codigo_promocional_id:
                 validar_codigo_promocional_en_pago(
                     self.codigo_promocional, self.moneda,
