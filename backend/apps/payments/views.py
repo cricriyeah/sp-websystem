@@ -69,11 +69,9 @@ class CrearPagoView(APIView):
             return Response({'detail': 'Esta reserva ya no esta pendiente de pago.'}, status=409)
 
         if reserva.paquete_id:
-            removidos = set(reserva.servicios_removidos.values_list('servicio_id', flat=True)) if hasattr(reserva, 'servicios_removidos') else set()
             extras_pers = list(reserva.paquete_personalizaciones.values_list('servicio_personalizacion_id', 'cantidad')) if hasattr(reserva, 'paquete_personalizaciones') else []
             precio_base_servicio = precio_paquete_total(
                 reserva.paquete,
-                servicios_removidos_ids=removidos,
                 personalizaciones_extra=extras_pers,
                 personas=reserva.numero_personas,
                 moneda=reserva.moneda,
