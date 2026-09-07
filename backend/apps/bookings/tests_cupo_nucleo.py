@@ -11,6 +11,7 @@ from apps.bookings.cupo.nucleo import (
     caben_compartido,
     motivo_sin_lugar,
     ocupacion_por_rango,
+    validar_rango,
 )
 
 
@@ -129,3 +130,22 @@ class CupoNucleoPuroTests(TestCase):
         self.assertIsNone(resultado[dia1])
         self.assertEqual(resultado[dia2], MOTIVO_SIN_PANGA)
         self.assertEqual(resultado[dia3], MOTIVO_LLENO)
+
+    def test_ocupacion_por_rango_sin_tope_no_marca_lleno(self):
+        f = date(2026, 9, 10)
+        resultado = ocupacion_por_rango(
+            fechas=[f],
+            grupos_por_fecha={f: [3]},
+            capacidades_por_fecha={f: [5, 3]},
+            topes_por_fecha={},
+            personas=3,
+            modo=MODO_EXCLUSIVO,
+        )
+        self.assertEqual(resultado, {f: None})
+
+    def test_validar_rango(self):
+        self.assertIsNone(validar_rango(date(2026, 1, 1), date(2026, 1, 3)))
+        self.assertIsInstance(validar_rango(date(2026, 1, 3), date(2026, 1, 3)), str)
+        self.assertIsInstance(validar_rango(date(2026, 1, 3), date(2026, 1, 1)), str)
+        self.assertIsNone(validar_rango(None, date(2026, 1, 1)))
+

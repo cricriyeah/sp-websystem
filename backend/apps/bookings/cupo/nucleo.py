@@ -45,7 +45,7 @@ def motivo_sin_lugar(personas, grupos, capacidades, tope, modo=MODO_EXCLUSIVO):
     Es el núcleo puro del cupo: no toca la base de datos.
     """
     if modo == MODO_EXCLUSIVO:
-        if len(grupos) + 1 > tope:
+        if tope is not None and len(grupos) + 1 > tope:
             return MOTIVO_LLENO
         caps = list(capacidades)
         if not caben(sorted([*grupos, personas], reverse=True), caps):
@@ -68,14 +68,30 @@ def ocupacion_por_rango(fechas, grupos_por_fecha, capacidades_por_fecha, topes_p
     """Calcula el motivo de no disponibilidad para cada fecha de un rango dado.
 
     Devuelve un diccionario {fecha: None | MOTIVO_LLENO | MOTIVO_SIN_PANGA | MOTIVO_SIN_LUGAR}.
+
+    Una fecha sin entrada en `topes_por_fecha` se trata como «sin tope de
+    conteo» (`None`), no como tope 0: el default 0 marcaba LLENO cualquier dia
+    que el adaptador no hubiera rellenado explicitamente.
     """
     resultado = {}
     for fecha in fechas:
         grupos = grupos_por_fecha.get(fecha, [])
         capacidades = capacidades_por_fecha.get(fecha, [])
-        tope = topes_por_fecha.get(fecha, 0)
+        tope = topes_por_fecha.get(fecha)
         resultado[fecha] = motivo_sin_lugar(personas, grupos, capacidades, tope, modo=modo)
     return resultado
+
+
+def validar_rango(fecha_inicio, fecha_fin):
+    """Un rango de ocupacion valido tiene `fecha_fin` estrictamente posterior a
+    `fecha_inicio` (intervalo semi-abierto de al menos una noche). Devuelve el
+    mensaje de error o None.
+    """
+    if fecha_fin is None or fecha_inicio is None:
+        return None
+    if fecha_fin <= fecha_inicio:
+        return 'La fecha de fin debe ser posterior a la fecha de inicio.'
+    return None
 
 
 def rango_traslapa(ini1, fin1, ini2, fin2) -> bool:
