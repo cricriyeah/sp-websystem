@@ -1,3 +1,4 @@
+from decimal import Decimal
 import logging
 import uuid
 
@@ -20,6 +21,7 @@ from .pricing import (
     cargo_por_transporte,
     monto_inicial,
     personas_extra,
+    precio_paquete_total,
 )
 from .stripe_client import configurar_stripe
 from .services import aplicar_disputa, aplicar_pago_exitoso, aplicar_reembolso
@@ -66,13 +68,27 @@ class CrearPagoView(APIView):
         if reserva.estado != Reserva.Estado.PENDIENTE_PAGO:
             return Response({'detail': 'Esta reserva ya no esta pendiente de pago.'}, status=409)
 
-        if reserva.servicio:
+        if reserva.paquete_id:
+            removidos = set(reserva.servicios_removidos.values_list('servicio_id', flat=True)) if hasattr(reserva, 'servicios_removidos') else set()
+            extras_pers = list(reserva.paquete_personalizaciones.values_list('servicio_personalizacion_id', 'cantidad')) if hasattr(reserva, 'paquete_personalizaciones') else []
+            precio_base_servicio = precio_paquete_total(
+                reserva.paquete,
+                servicios_removidos_ids=removidos,
+                personalizaciones_extra=extras_pers,
+                personas=reserva.numero_personas,
+                moneda=reserva.moneda,
+            )
+            if precio_base_servicio is None:
+                return Response({'detail': f'El paquete no tiene precio en {reserva.moneda}.'}, status=503)
+            porcentaje = reserva.paquete.porcentaje_anticipo
+        elif reserva.servicio_id:
             estrategia = obtener_estrategia_precio(reserva.servicio.estrategia_precio)
-            demanda = DemandaPrecio(personas=reserva.numero_personas, moneda=reserva.moneda)
+            demanda = DemandaPrecio(personas=reserva.numero_personas, moneda=reserva.moneda, noches=reserva.noches)
             try:
                 precio_base_servicio = estrategia.calcular_base(reserva.servicio, demanda)
             except ValueError as e:
                 return Response({'detail': str(e)}, status=503)
+            porcentaje = reserva.servicio.porcentaje_anticipo
         else:
             tarifa = Tarifa.de(empresa)
             if tarifa is None:
@@ -89,19 +105,24 @@ class CrearPagoView(APIView):
                     status=503,
                 )
             precio_base_servicio = precio_tour + cargo_por_personas(precio_persona_extra or 0, reserva.numero_personas)
+            porcentaje = 30
 
         forma_pago = request.data.get('forma_pago', Reserva.FormaPago.COMPLETO)
         if forma_pago not in Reserva.FormaPago.values:
             return Response({'detail': 'forma_pago invalida.'}, status=400)
 
-        cargo_extras, extras_a_borrar, extras_a_congelar, error = self._resolver_extras(reserva)
-        if error:
-            return Response({'detail': error}, status=503)
-        cargo_transporte, transporte_a_borrar, transporte_congelado, error = self._resolver_transporte(
-            reserva, empresa,
-        )
-        if error:
-            return Response({'detail': error}, status=503)
+        if reserva.paquete_id or (reserva.servicio_id and reserva.servicio.tipo_servicio != 'pesca'):
+            cargo_extras, extras_a_borrar, extras_a_congelar = Decimal('0.00'), [], []
+            cargo_transporte, transporte_a_borrar, transporte_congelado = Decimal('0.00'), None, None
+        else:
+            cargo_extras, extras_a_borrar, extras_a_congelar, error = self._resolver_extras(reserva)
+            if error:
+                return Response({'detail': error}, status=503)
+            cargo_transporte, transporte_a_borrar, transporte_congelado, error = self._resolver_transporte(
+                reserva, empresa,
+            )
+            if error:
+                return Response({'detail': error}, status=503)
 
         subtotal = (
             precio_base_servicio
@@ -116,7 +137,7 @@ class CrearPagoView(APIView):
             return Response({'detail': error}, status=400)
 
         precio_total = subtotal - descuento
-        monto_a_cobrar = monto_inicial(precio_total, forma_pago)
+        monto_a_cobrar = monto_inicial(precio_total, forma_pago, porcentaje=porcentaje)
 
         if not empresa.stripe_secret_key:
             return Response({'detail': 'Stripe no esta configurado todavia.'}, status=503)

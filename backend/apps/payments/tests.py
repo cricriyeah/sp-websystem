@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
-from apps.fleet.models import CodigoPromocional, ExtrasItem, Tarifa, TransportePrecio
+from apps.fleet.models import CodigoPromocional, ExtrasItem, Paquete, Servicio, Tarifa, TransportePrecio
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
@@ -278,6 +278,117 @@ class CrearPagoTests(ApiTestCase):
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.precio_total, Decimal('4500.00'))
         self.assertEqual(self.reserva.saldo_pendiente, Decimal('4500.00'))
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_crear_pago_servicio_por_noche_multiplica_noches(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        servicio_hotel = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Hotel Cabaña',
+            slug='hotel-cabana',
+            tipo_servicio='hospedaje',
+            estrategia_precio='por_noche',
+            precio_base=Decimal('1500.00'),
+            porcentaje_anticipo=50,
+        )
+        reserva_hotel = Reserva.objects.create(
+            empresa=self.empresa,
+            servicio=servicio_hotel,
+            fecha=date(2026, 10, 1),
+            fecha_salida=date(2026, 10, 4),  # 3 noches
+            hora=time(7, 0),
+            numero_personas=2,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='1234567890',
+            correo_cliente='juan@test.com',
+            moneda='MXN',
+            estado=Reserva.Estado.PENDIENTE_PAGO,
+            checkout_id=uuid.uuid4(),
+        )
+        url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva_hotel.pk})
+        # Anticipo: 3 noches * 1500 = 4500. Anticipo 50% = 2250.00
+        resp = self.client.post(url, {
+            'forma_pago': 'anticipo',
+            'checkout_id': str(reserva_hotel.checkout_id),
+        }, content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['monto_a_cobrar'], '2250.00')
+        reserva_hotel.refresh_from_db()
+        self.assertEqual(reserva_hotel.precio_total, Decimal('4500.00'))
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_crear_pago_paquete_con_anticipo_configurable(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        paquete = Paquete.objects.create(
+            sede=self.empresa.sede,
+            empresa_lider=self.empresa,
+            nombre='Super Paquete',
+            slug='super-paquete',
+            precio_ancla=Decimal('10000.00'),
+            porcentaje_anticipo=100,
+        )
+        reserva_paquete = Reserva.objects.create(
+            empresa=self.empresa,
+            paquete=paquete,
+            fecha=date(2026, 10, 1),
+            hora=time(7, 0),
+            numero_personas=2,
+            nombre_cliente='Ana Gomez',
+            telefono_cliente='1234567890',
+            correo_cliente='ana@test.com',
+            moneda='MXN',
+            estado=Reserva.Estado.PENDIENTE_PAGO,
+            checkout_id=uuid.uuid4(),
+        )
+        url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva_paquete.pk})
+        # Anticipo al 100% cobra el total (10000.00)
+        resp = self.client.post(url, {
+            'forma_pago': 'anticipo',
+            'checkout_id': str(reserva_paquete.checkout_id),
+        }, content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['monto_a_cobrar'], '10000.00')
+        reserva_paquete.refresh_from_db()
+        self.assertEqual(reserva_paquete.precio_total, Decimal('10000.00'))
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_crear_pago_paquete_no_suma_extras_ni_transporte_legacy(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        paquete = Paquete.objects.create(
+            sede=self.empresa.sede,
+            empresa_lider=self.empresa,
+            nombre='Paquete Sin Extras Legacy',
+            slug='paquete-sin-extras-legacy',
+            precio_ancla=Decimal('5000.00'),
+            porcentaje_anticipo=30,
+        )
+        reserva_paquete = Reserva.objects.create(
+            empresa=self.empresa,
+            paquete=paquete,
+            fecha=date(2026, 10, 1),
+            hora=time(7, 0),
+            numero_personas=2,
+            nombre_cliente='Carlos',
+            telefono_cliente='1234567890',
+            correo_cliente='carlos@test.com',
+            moneda='MXN',
+            estado=Reserva.Estado.PENDIENTE_PAGO,
+            checkout_id=uuid.uuid4(),
+        )
+        # Asociar extra y transporte legacy
+        self.seleccionar_extra(reserva=reserva_paquete)
+        self.seleccionar_transporte(reserva=reserva_paquete)
+
+        url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva_paquete.pk})
+        resp = self.client.post(url, {
+            'forma_pago': 'completo',
+            'checkout_id': str(reserva_paquete.checkout_id),
+        }, content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        # Solo debe cobrar el ancla del paquete (5000.00), no los extras ni el transporte legacy
+        self.assertEqual(resp.json()['monto_a_cobrar'], '5000.00')
+        reserva_paquete.refresh_from_db()
+        self.assertEqual(reserva_paquete.precio_total, Decimal('5000.00'))
 
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_hasta_3_personas_el_precio_no_cambia(self, payment_intents):
