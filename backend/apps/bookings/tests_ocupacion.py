@@ -443,7 +443,6 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
 
     def setUp(self):
         from apps.fleet.models import Paquete, PaqueteServicio
-        from apps.bookings.models import ReservaPaqueteServicioRemovido
 
         self.sede = Sede.objects.create(nombre='Sede Loreto Cupo', slug='loreto-cupo')
         self.empresa = Empresa.objects.create(sede=self.sede, nombre='Tours & Cabañas', slug='tours-cabanas')
@@ -550,7 +549,7 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
         from apps.testing import crear_flota
         crear_flota(self.empresa)
 
-        # Reserva de paquete intentando saltarse cabaña
+        # Reserva de paquete con componente sin cupo
         r_paquete = Reserva.objects.create(
             empresa=self.empresa, paquete=self.paquete,
             fecha=date(2026, 12, 2),
@@ -558,8 +557,6 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
             correo_cliente='c@c.com', estado=Reserva.Estado.PENDIENTE_PAGO,
             canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
         )
-        from apps.bookings.models import ReservaPaqueteServicioRemovido
-        ReservaPaqueteServicioRemovido.objects.create(reserva=r_paquete, servicio=self.srv_hospedaje)
 
         r_paquete.estado = Reserva.Estado.PAGADA
         with self.assertRaises(ValidationError) as ctx:

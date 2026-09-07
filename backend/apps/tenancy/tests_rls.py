@@ -96,7 +96,6 @@ class RLSTests(TransactionTestCase):
                 'bookings_reservatransporte',
                 'fleet_serviciopersonalizacion',
                 'fleet_paqueteservicio',
-                'bookings_reservapaqueteservicioremovido',
                 'bookings_reservapaquetepersonalizacion',
             }
 

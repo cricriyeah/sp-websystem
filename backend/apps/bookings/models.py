@@ -1080,21 +1080,6 @@ class Agenda(Reserva):
         return cls.objects.filter(estado__in=cls.ESTADOS_EN_AGENDA)
 
 
-class ReservaPaqueteServicioRemovido(models.Model):
-    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='servicios_removidos')
-    servicio = models.ForeignKey('fleet.Servicio', on_delete=models.PROTECT)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['reserva', 'servicio'], name='reservapaqueteserviciorem_unico')
-        ]
-        verbose_name = 'servicio removido de paquete'
-        verbose_name_plural = 'servicios removidos de paquete'
-
-    def __str__(self):
-        return f"Removido: {self.servicio} en Reserva #{self.reserva_id}"
-
-
 class ReservaPaquetePersonalizacion(models.Model):
     reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='paquete_personalizaciones')
     servicio_personalizacion = models.ForeignKey('fleet.ServicioPersonalizacion', on_delete=models.PROTECT)
