@@ -157,9 +157,10 @@ class PaquetesModelTests(OperadorTestCase):
             orden=1,
         )
         with self.assertRaises(ValidationError) as ctx:
-            ps_invalido.clean()
+            ps_invalido.full_clean()
         self.assertIn('servicio', ctx.exception.message_dict)
         self.assertIn('paquetes cruza-empresa: fuera de v1, ver ADR-005', str(ctx.exception.message_dict['servicio']))
+        self.assertIn('ADR-005', str(ctx.exception.message_dict['servicio']))
 
     def test_paquete_clean_suma_ajustes_supera_ancla_falla(self):
         paquete = Paquete.objects.create(
