@@ -150,12 +150,11 @@ class Command(BaseCommand):
             )
             PaqueteServicio.objects.get_or_create(
                 paquete=paq, servicio=pesca,
-                defaults={'orden': 1, 'removible': False, 'ajuste_precio': Decimal('0')},
+                defaults={'orden': 1},
             )
             PaqueteServicio.objects.get_or_create(
                 paquete=paq, servicio=hosp,
-                defaults={'orden': 2, 'removible': True,
-                          'ajuste_precio': Decimal('4500'), 'ajuste_precio_usd': Decimal('260')},
+                defaults={'orden': 2},
             )
 
         # --- Segunda Empresa en La Paz: Hotel Malecón (para aislamiento / marketplace) ---
@@ -238,12 +237,11 @@ class Command(BaseCommand):
             )
             PaqueteServicio.objects.get_or_create(
                 paquete=paq_cabo, servicio=ballenas,
-                defaults={'orden': 1, 'removible': False, 'ajuste_precio': Decimal('0')},
+                defaults={'orden': 1},
             )
             PaqueteServicio.objects.get_or_create(
                 paquete=paq_cabo, servicio=snorkel,
-                defaults={'orden': 2, 'removible': True,
-                          'ajuste_precio': Decimal('900'), 'ajuste_precio_usd': Decimal('55')},
+                defaults={'orden': 2},
             )
 
         self.stdout.write(self.style.SUCCESS(

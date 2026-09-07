@@ -1,4 +1,4 @@
-﻿"""Pruebas unitarias para la lógica pura de precio de paquetes (Pieza 5)."""
+"""Pruebas unitarias para la lógica pura de precio de paquetes (Pieza 5)."""
 
 from decimal import Decimal
 from django.test import TestCase
@@ -51,12 +51,10 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
         )
 
         self.ps_pesca = PaqueteServicio.objects.create(
-            paquete=self.paquete, servicio=self.servicio_pesca, orden=1, removible=False,
-            ajuste_precio=Decimal('0.00'), ajuste_precio_usd=Decimal('0.00')
+            paquete=self.paquete, servicio=self.servicio_pesca, orden=1,
         )
         self.ps_snack = PaqueteServicio.objects.create(
-            paquete=self.paquete, servicio=self.servicio_snack, orden=2, removible=True,
-            ajuste_precio=Decimal('800.00'), ajuste_precio_usd=Decimal('50.00')
+            paquete=self.paquete, servicio=self.servicio_snack, orden=2,
         )
 
     def test_calcular_precio_fijo_mxn_y_usd(self):
@@ -104,12 +102,10 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
         )
 
         self.ps_pesca = PaqueteServicio.objects.create(
-            paquete=self.paquete, servicio=self.servicio_pesca, orden=1, removible=False,
-            ajuste_precio=Decimal('0.00'), ajuste_precio_usd=Decimal('0.00')
+            paquete=self.paquete, servicio=self.servicio_pesca, orden=1,
         )
         self.ps_snack = PaqueteServicio.objects.create(
-            paquete=self.paquete, servicio=self.servicio_snack, orden=2, removible=True,
-            ajuste_precio=Decimal('800.00'), ajuste_precio_usd=Decimal('50.00')
+            paquete=self.paquete, servicio=self.servicio_snack, orden=2,
         )
 
         # Personalizaciones para pesca:

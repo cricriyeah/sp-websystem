@@ -2080,8 +2080,8 @@ class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
                 precio_ancla=Decimal('5000.00'),
                 activo=True,
             )
-            PaqueteServicio.objects.create(paquete=paquete, servicio=s_pesca, orden=1, removible=False)
-            PaqueteServicio.objects.create(paquete=paquete, servicio=s_hotel, orden=2, removible=True)
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_pesca, orden=1)
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_hotel, orden=2)
 
             reserva = Reserva(
                 empresa=self.empresa,
@@ -2173,8 +2173,8 @@ class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
             )
             # El orden: hotel primero (orden 1), luego pesca (orden 2)
             # Hotel se crea primero pero pesca falla en confirmacion, el atomic block debe hacer rollback
-            PaqueteServicio.objects.create(paquete=paquete, servicio=s_hotel, orden=1, removible=False)
-            PaqueteServicio.objects.create(paquete=paquete, servicio=s_pesca, orden=2, removible=False)
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_hotel, orden=1)
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_pesca, orden=2)
 
             reserva = Reserva(
                 empresa=self.empresa,

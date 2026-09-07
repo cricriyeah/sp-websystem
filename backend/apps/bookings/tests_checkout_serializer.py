@@ -95,11 +95,10 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
             precio_ancla=Decimal('7000.00'),
         )
         self.ps_pesca = PaqueteServicio.objects.create(
-            paquete=self.paquete_a, servicio=self.srv_pesca, orden=1, removible=False,
+            paquete=self.paquete_a, servicio=self.srv_pesca, orden=1,
         )
         self.ps_snack = PaqueteServicio.objects.create(
-            paquete=self.paquete_a, servicio=self.srv_snack, orden=2, removible=True,
-            ajuste_precio=Decimal('400.00'),
+            paquete=self.paquete_a, servicio=self.srv_snack, orden=2,
         )
 
         # Paquete con hospedaje en empresa A
@@ -109,10 +108,10 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
             precio_ancla=Decimal('9000.00'),
         )
         PaqueteServicio.objects.create(
-            paquete=self.paquete_hospedaje, servicio=self.srv_pesca, orden=1, removible=False,
+            paquete=self.paquete_hospedaje, servicio=self.srv_pesca, orden=1,
         )
         PaqueteServicio.objects.create(
-            paquete=self.paquete_hospedaje, servicio=self.srv_hospedaje, orden=2, removible=False,
+            paquete=self.paquete_hospedaje, servicio=self.srv_hospedaje, orden=2,
         )
 
         # Paquete empresa B

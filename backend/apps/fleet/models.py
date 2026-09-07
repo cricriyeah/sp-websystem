@@ -580,43 +580,16 @@ class Paquete(models.Model):
                     'empresa_lider': 'La empresa líder debe pertenecer a la misma sede que el paquete.'
                 })
 
-        if self.pk:
-            removibles = list(self.servicios_asociados.filter(removible=True))
-            errors = {}
-            if self.precio_ancla is not None:
-                total_ajustes = sum((ps.ajuste_precio for ps in removibles if ps.ajuste_precio), Decimal('0.00'))
-                if total_ajustes > self.precio_ancla:
-                    errors['precio_ancla'] = f'La suma de ajustes de servicios removibles ({total_ajustes}) supera el precio ancla ({self.precio_ancla}).'
-            if self.precio_ancla_usd is not None:
-                total_ajustes_usd = sum((ps.ajuste_precio_usd for ps in removibles if ps.ajuste_precio_usd), Decimal('0.00'))
-                if total_ajustes_usd > self.precio_ancla_usd:
-                    errors['precio_ancla_usd'] = f'La suma de ajustes de servicios removibles en USD ({total_ajustes_usd}) supera el precio ancla USD ({self.precio_ancla_usd}).'
-            if errors:
-                raise ValidationError(errors)
-
     def precio_en(self, moneda):
         """Precio ancla en la moneda pedida, o None si no está configurado."""
         return self.precio_ancla if (moneda or 'MXN').upper() == 'MXN' else self.precio_ancla_usd
 
 
 class PaqueteServicio(models.Model):
-    """Asociación entre un Paquete y un Servicio incluido en él.
-
-    Permite definir si el servicio es removible in-place por el cliente y el ajuste
-    (descuento) que se aplica al precio ancla si se retira.
-    """
+    """Asociación entre un Paquete y un Servicio incluido en él."""
     paquete = models.ForeignKey(Paquete, on_delete=models.CASCADE, related_name='servicios_asociados')
     servicio = models.ForeignKey(Servicio, on_delete=models.PROTECT, related_name='paquetes_incluidos')
     orden = models.PositiveSmallIntegerField(default=1)
-    removible = models.BooleanField(default=True)
-    ajuste_precio = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal('0.00'),
-        help_text='Descuento sobre el precio ancla en MXN si el servicio es removido.'
-    )
-    ajuste_precio_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Descuento sobre el precio ancla en USD si el servicio es removido.'
-    )
 
     class Meta:
         constraints = [
@@ -636,10 +609,6 @@ class PaqueteServicio(models.Model):
                 raise ValidationError({
                     'servicio': 'paquetes cruza-empresa: fuera de v1, ver ADR-005'
                 })
-
-    def ajuste_en(self, moneda):
-        """Ajuste de precio en la moneda solicitada."""
-        return self.ajuste_precio if (moneda or 'MXN').upper() == 'MXN' else self.ajuste_precio_usd
 
 
 def capacidades_por_fecha(desde, hasta, empresa):

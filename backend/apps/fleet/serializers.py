@@ -128,7 +128,6 @@ class PaqueteServicioSerializer(serializers.ModelSerializer):
         model = PaqueteServicio
         fields = [
             'id', 'servicio_id', 'servicio', 'orden',
-            'removible', 'ajuste_precio', 'ajuste_precio_usd',
         ]
 
 

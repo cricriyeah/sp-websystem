@@ -40,8 +40,8 @@ class ReservaCheckoutPaqueteModelTests(OperadorTestCase):
         self.paquete = Paquete.objects.create(
             sede=self.sede, empresa_lider=self.empresa, nombre='Pack', slug='pack', precio_ancla=Decimal('6000.00'),
         )
-        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_pesca, orden=1, removible=False)
-        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_snack, orden=2, removible=True)
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_pesca, orden=1)
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_snack, orden=2)
 
         self.reserva = Reserva.objects.create(
             empresa=self.empresa,

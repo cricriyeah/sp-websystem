@@ -466,8 +466,8 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
             nombre='Pack Pesca Hospedaje', slug='pack-pesca-hospedaje',
             precio_ancla=Decimal('4500'),
         )
-        self.ps1 = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.srv_pesca, orden=1, removible=False)
-        self.ps2 = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.srv_hospedaje, orden=2, removible=True)
+        self.ps1 = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.srv_pesca, orden=1)
+        self.ps2 = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.srv_hospedaje, orden=2)
 
     def test_reserva_hospedaje_sin_disponibilidad_falla_full_clean(self):
         # Ocupamos la cabaña en esas fechas con una reserva pagada

@@ -123,23 +123,16 @@ class PaquetesModelTests(OperadorTestCase):
             paquete=paquete,
             servicio=self.servicio_pesca,
             orden=1,
-            removible=False,
-            ajuste_precio=Decimal('0.00'),
         )
         ps2 = PaqueteServicio(
             paquete=paquete,
             servicio=self.servicio_paseo,
             orden=2,
-            removible=True,
-            ajuste_precio=Decimal('3000.00'),
-            ajuste_precio_usd=Decimal('175.00'),
         )
         ps2.clean()
         ps2.save()
 
         self.assertEqual(paquete.servicios_asociados.count(), 2)
-        self.assertEqual(ps2.ajuste_en('MXN'), Decimal('3000.00'))
-        self.assertEqual(ps2.ajuste_en('USD'), Decimal('175.00'))
         self.assertEqual(str(ps1), 'Pesca y Paseo -> Pesca Deportiva Día Completo')
 
     def test_validacion_servicio_distinta_empresa_falla(self):
@@ -162,32 +155,25 @@ class PaquetesModelTests(OperadorTestCase):
         self.assertIn('paquetes cruza-empresa: fuera de v1, ver ADR-005', str(ctx.exception.message_dict['servicio']))
         self.assertIn('ADR-005', str(ctx.exception.message_dict['servicio']))
 
-    def test_paquete_clean_suma_ajustes_supera_ancla_falla(self):
+    def test_paquete_clean_con_componentes_no_valida_ajustes(self):
         paquete = Paquete.objects.create(
             sede=self.sede_lp,
             empresa_lider=self.empresa_pesca,
-            nombre='Paquete Ajuste Excedido',
-            slug='paquete-ajuste-excedido',
+            nombre='Paquete Componentes',
+            slug='paquete-componentes',
             precio_ancla=Decimal('1000.00'),
             precio_ancla_usd=Decimal('60.00'),
         )
         PaqueteServicio.objects.create(
             paquete=paquete,
             servicio=self.servicio_pesca,
-            removible=True,
-            ajuste_precio=Decimal('600.00'),
-            ajuste_precio_usd=Decimal('35.00'),
         )
         PaqueteServicio.objects.create(
             paquete=paquete,
             servicio=self.servicio_paseo,
-            removible=True,
-            ajuste_precio=Decimal('600.00'),  # 600 + 600 = 1200 > 1000
-            ajuste_precio_usd=Decimal('35.00'),  # 35 + 35 = 70 > 60
         )
-        with self.assertRaises(ValidationError) as ctx:
-            paquete.clean()
-        self.assertIn('precio_ancla', ctx.exception.message_dict)
+        # La regla de suma de ajustes removibles ya no existe; clean() pasa
+        paquete.clean()
 
     def test_unicidad_paquete_servicio(self):
         paquete = Paquete.objects.create(

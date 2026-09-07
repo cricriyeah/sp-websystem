@@ -168,7 +168,7 @@ class PersonalizacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 class PaqueteServicioInline(TabularInline):
     model = PaqueteServicio
     extra = 1
-    fields = ['servicio', 'orden', 'removible', 'ajuste_precio', 'ajuste_precio_usd']
+    fields = ['servicio', 'orden']
     autocomplete_fields = ['servicio']
 
 

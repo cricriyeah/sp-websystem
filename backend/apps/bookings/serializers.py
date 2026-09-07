@@ -288,7 +288,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             if servicio:
                 servicio_dominante = servicio
             elif paquete:
-                ps_dom = paquete.servicios_asociados.filter(removible=False).order_by('orden').first() or paquete.servicios_asociados.order_by('orden').first()
+                ps_dom = paquete.servicios_asociados.order_by('orden').first()
                 if ps_dom:
                     servicio_dominante = ps_dom.servicio
 

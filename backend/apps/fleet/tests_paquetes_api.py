@@ -63,15 +63,11 @@ class PaquetesAPITests(TestCase):
             paquete=self.paquete_activo,
             servicio=self.servicio_pesca,
             orden=1,
-            removible=False,
         )
         PaqueteServicio.objects.create(
             paquete=self.paquete_activo,
             servicio=self.servicio_hotel,
             orden=2,
-            removible=True,
-            ajuste_precio=Decimal('3000.00'),
-            ajuste_precio_usd=Decimal('175.00'),
         )
 
         # Paquete inactivo
@@ -112,8 +108,6 @@ class PaquetesAPITests(TestCase):
         slugs = [s['servicio']['slug'] for s in servicios]
         self.assertIn('pesca-dia-completo', slugs)
         self.assertIn('estadia-2-noches', slugs)
-        pesca = next(s for s in servicios if s['servicio']['slug'] == 'pesca-dia-completo')
-        self.assertFalse(pesca['removible'])
 
     def test_paquetes_por_sede_inexistente_404(self):
         resp = self.client.get('/api/sedes/sede-inexistente/paquetes/')
