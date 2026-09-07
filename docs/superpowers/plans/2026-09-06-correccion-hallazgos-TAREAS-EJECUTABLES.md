@@ -255,3 +255,489 @@ llavea por `tipo_servicio` (string) en vez de por servicio real.
 1. sqlite: `test apps config` → `OK`. 2. Postgres (drop + `test apps config --noinput`) → `OK`. 3. Actualiza el Registro de avance del plan de alto nivel: "Sección 2 cerrada @ <sha>". Commit `docs(plan): Sección 2 cerrada`.
 
 ---
+
+# SECCIÓN 3 — Hospedaje: modelo de datos (`ReservaOcupacion` con constraint anti-doble-booking)
+
+**Problema:** `ReservaOcupacion` (pieza 4) solo tiene validación de traslape en `.clean()` (que
+solo corre en el admin), **sin lock ni constraint de BD**. Dos reservas concurrentes de la misma
+habitación/rango → doble booking. Además nada del flujo de pago crea filas de ocupación (Sección 6).
+
+---
+
+### Tarea 3.1 — Columna `ocupa_cupo` en `ReservaOcupacion`, mantenida por `Reserva.save()`
+
+**Files:** Modify `backend/apps/bookings/models.py` (`ReservaOcupacion`, `Reserva.save`) · migración `bookings/0029_reservaocupacion_ocupa_cupo` · Test `apps/bookings/tests_ocupacion.py`.
+
+**Por qué:** un `EXCLUDE` de Postgres en `bookings_reservaocupacion` NO puede referenciar
+`bookings_reserva.estado` (tabla distinta). Se denormaliza: `ocupa_cupo` (bool) refleja si la
+reserva de esa ocupación está en `ESTADOS_QUE_OCUPAN_CUPO`.
+
+1. **Test que falla** (`apps.testing.OperadorTestCase` — abarca varias empresas/servicios):
+   - `test_ocupa_cupo_sigue_el_estado_de_la_reserva`: crea `Reserva(estado=PAGADA)` + `ReservaOcupacion` → `ocupa_cupo is True`. Cambia `reserva.estado = CANCELADA`, `reserva.save()` → recarga la ocupación → `ocupa_cupo is False`. Vuelve a `PAGADA`, `save()` → `True`.
+2. Run → FAIL (`ocupa_cupo` no existe).
+3. **Modifica `ReservaOcupacion`:** añade `ocupa_cupo = models.BooleanField(default=True, db_index=True)`.
+4. **Modifica `ReservaOcupacion.save`:** si `self.ocupa_cupo` no fue seteado explícitamente y hay reserva, `self.ocupa_cupo = reserva.estado in ESTADOS_QUE_OCUPAN_CUPO`.
+5. **Modifica `Reserva.save`** (al final, después de `super().save()`): si el estado cambió hacia/desde `ESTADOS_QUE_OCUPAN_CUPO`, propaga:
+   ```python
+   nuevo = self.estado in ESTADOS_QUE_OCUPAN_CUPO
+   self.ocupaciones.exclude(ocupa_cupo=nuevo).update(ocupa_cupo=nuevo)
+   ```
+   (usa `related_name='ocupaciones'`; guarda el estado previo con el mismo patrón `_vendedora_original` que ya usa `save` para no hacer el UPDATE en cada guardado.)
+6. **Modifica `ReservaOcupacion.clean`:** el query de traslape añade `ocupa_cupo=True` en vez de (o además de) el JOIN por `reserva__estado__in`, y acota por fechas: `.filter(recurso_id=..., ocupa_cupo=True, fecha_inicio__lt=self.fecha_fin, fecha_fin__gt=self.fecha_inicio, empresa_id=self.empresa_id)`.
+7. Migración: `makemigrations bookings --name reservaocupacion_ocupa_cupo`. Debe ser `AddField` + un `RunPython` que rellene `ocupa_cupo` de las filas existentes según el estado de su reserva (envuelto en `alcance_operador_migracion` — constraint global #7).
+8. sqlite + Postgres (`test apps.bookings.tests_ocupacion apps.bookings.tests_ocupacion_rls`) → OK.
+9. Commit: `feat(hospedaje): ReservaOcupacion.ocupa_cupo denormalizado, sincronizado por Reserva.save`.
+
+---
+
+### Tarea 3.2 — Constraint `EXCLUDE` anti-traslape + `btree_gist`
+
+**Files:** migración `bookings/0030_reservaocupacion_exclude` · Test `apps/bookings/tests_ocupacion.py` (`# postgres-only`).
+
+1. **Test que falla** (`TransactionTestCase` + `@skipUnless(connection.vendor == 'postgresql', ...)`, con `with scope.con_empresa(e):`):
+   - `test_constraint_rechaza_dos_ocupaciones_traslapadas_del_mismo_recurso`: crea una ocupación `[1/10, 1/15)` `ocupa_cupo=True`; crear otra `[1/12, 1/18)` del mismo recurso → `django.db.utils.IntegrityError`.
+   - `test_checkout_el_mismo_dia_se_permite`: `[1/10, 1/15)` y `[1/15, 1/20)` del mismo recurso → ambas OK (intervalo semi-abierto).
+   - `test_ocupacion_de_reserva_cancelada_no_estorba`: `[1/10, 1/15)` con `ocupa_cupo=False` no bloquea `[1/12, 1/18)`.
+2. **Migración** `RunPython` con guard `vendor == 'postgresql'`:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS btree_gist;
+   ALTER TABLE bookings_reservaocupacion ADD CONSTRAINT ocupacion_sin_traslape
+     EXCLUDE USING gist (
+       recurso_id WITH =,
+       daterange(fecha_inicio, fecha_fin, '[)') WITH &&
+     ) WHERE (ocupa_cupo);
+   ```
+   Reversa: `DROP CONSTRAINT IF EXISTS ocupacion_sin_traslape;` (no dropear la extensión — otros objetos podrían usarla).
+   Índice extra para el query de `clean()`: `CREATE INDEX IF NOT EXISTS idx_ocupacion_recurso_rango ON bookings_reservaocupacion (recurso_id, fecha_inicio, fecha_fin);`
+3. Postgres (`test apps.bookings.tests_ocupacion --noinput`) → OK. sqlite: la migración es no-op → `test apps.bookings.tests_ocupacion` → los tests `# postgres-only` se saltan, el resto verde.
+4. Commit: `feat(hospedaje): constraint EXCLUDE anti-doble-booking en ReservaOcupacion`.
+
+---
+
+### Tarea 3.3 — `bloquear_recurso` (lock por recurso, para hospedaje)
+
+**Files:** Modify `backend/apps/bookings/cupo/candado.py` · Test `apps/bookings/tests_cupo_candado.py`.
+
+**Produce:** `bloquear_recurso(empresa_id: int, recurso_id: int) -> None` — `pg_advisory_xact_lock(empresa_id, (crc32(f'recurso:{recurso_id}') & 0x3FFFFFFF) | 0x40000000)`. Mismo espacio de bit-30 que el lock de servicio (no colisiona con el legacy; puede colisionar con un lock de servicio de otra fecha — aceptable, solo sobre-serializa).
+
+1. **Test:** `calcular_clave_recurso(recurso_id)` distinto por recurso, `>= 0x40000000`, `!= toordinal` de cualquier fecha 2020-2035.
+2. Implementa `calcular_clave_recurso` + `bloquear_recurso` en `candado.py`. Exporta ambos desde `apps/bookings/cupo/__init__.py`.
+3. Postgres `test apps.bookings.tests_cupo_candado --noinput` → OK.
+4. Commit: `feat(hospedaje): bloquear_recurso — advisory lock por (empresa, recurso)`.
+
+---
+
+### Tarea 3.4 — Gate Sección 3
+
+sqlite + Postgres `test apps config` → `OK`. Registro de avance: "Sección 3 cerrada @ <sha>". Commit.
+
+---
+
+# SECCIÓN 4 — Precio: paquete (= ancla + personalizaciones), noches, anticipo configurable
+
+**Fórmula de precio de paquete (Decisión 7, frozen):**
+```
+total_paquete(moneda) =
+    paquete.precio_en(moneda)                                              # el ancla
+  + Σ  sp.precio_en(moneda) de cada ServicioPersonalizacion (obligatorio o preseleccionado)
+       de los servicios componentes NO removidos, con activo=True
+  + Σ  sp.precio_en(moneda) de las ServicioPersonalizacion OPCIONALES que el cliente marcó
+  − Σ  PaqueteServicio.ajuste_en(moneda) de los servicios removidos (removible=True)
+```
+Cada personalización que `cobrar_por_persona` se multiplica por `personas` (mismo criterio que
+`cargo_por_extra` en `pricing.py` hoy). Piso 0. Cuantizado a centavos, `ROUND_HALF_UP`.
+
+---
+
+### Tarea 4.1 — `precio_paquete_total()` en `pricing.py`
+
+**Files:** Modify `backend/apps/payments/pricing.py` · Test `apps/payments/tests_pricing_paquete.py`.
+
+**Produce:**
+```python
+def precio_paquete_total(paquete, *, servicios_removidos_ids: set[int],
+                         personalizaciones_extra: list[tuple[int, int]],  # (servicio_personalizacion_id, cantidad)
+                         personas: int, moneda: str) -> Decimal | None:
+    """Precio final de un paquete. None si el paquete no tiene precio en `moneda`."""
+```
+
+1. **Tests** (`OperadorTestCase` — necesita Paquete + Servicios + ServicioPersonalizacion de una empresa):
+   - sin removidos ni extras → `== paquete.precio_en(moneda) + Σ(obligatorias/preseleccionadas)`.
+   - un servicio removido → resta su `ajuste_en(moneda)` y deja de contar sus personalizaciones.
+   - personalización opcional marcada → suma su precio (× personas si `cobrar_por_persona`).
+   - paquete sin `precio_ancla_usd`, moneda USD → `None`.
+   - piso 0: ajustes que superan el ancla → `Decimal('0.00')`.
+2. Implementa `precio_paquete_total` en `pricing.py` (funciones puras, recibe el objeto `paquete` y traversa `paquete.servicios_asociados` / `servicio.servicio_personalizaciones` — está permitido leer relaciones aquí, es el único lugar donde vive la matemática). Deja `calcular_precio_paquete` viejo como wrapper o bórralo si nadie más lo usa (grep).
+3. sqlite + Postgres `test apps.payments.tests_pricing_paquete` → OK.
+4. Commit: `feat(precio): precio_paquete_total = ancla + personalizaciones − ajustes`.
+
+---
+
+### Tarea 4.2 — `PaqueteServicio.clean` bloquea cruza-empresa; `Paquete.clean` valida Σajustes
+
+**Files:** Modify `backend/apps/fleet/models.py` (`Paquete.clean`, `PaqueteServicio.clean`) · Test `apps/fleet/tests_paquetes.py`.
+
+1. **Tests** (`OperadorTestCase`):
+   - `PaqueteServicio` cuyo `servicio.empresa != paquete.empresa_lider` → `ValidationError({'servicio': ...})` con mensaje "paquetes cruza-empresa: fuera de v1, ver ADR-005".
+   - `PaqueteServicio` de la misma empresa_lider → OK.
+   - `Paquete` con `Σ ajuste_precio de removibles > precio_ancla` → `ValidationError({'precio_ancla': ...})`. (Ojo: el `Paquete.clean` que valida esto necesita los `PaqueteServicio` ya guardados — es una validación de "estado del paquete", corre al guardar el paquete o vía una acción/check; documenta que en el admin se dispara al re-guardar el paquete tras editar sus componentes.)
+2. **Modifica** `PaqueteServicio.clean`: reemplaza la regla actual (misma sede) por **misma empresa_lider**. `Paquete.clean`: suma `ajuste_precio` (y `_usd`) de `self.servicios_asociados.filter(removible=True)` y compara con `precio_ancla` (y `_usd`).
+3. **Actualiza `apps/fleet/tests_paquetes.py`** y `tests_paquetes_api.py`: los tests que hoy crean paquetes con servicios de `empresa_hotel` (otra empresa) deben cambiar a servicios de la misma empresa líder (v1). El test de "componente cruza-empresa" pasa a ser "componente cruza-empresa → ValidationError".
+4. sqlite + Postgres `test apps.fleet` → OK.
+5. Commit: `fix(fleet): paquete v1 = una sola empresa; ajustes ≤ ancla`.
+
+---
+
+### Tarea 4.3 — Anticipo configurable en `monto_inicial`
+
+**Files:** Modify `backend/apps/payments/pricing.py` (`monto_inicial`) · Modify `backend/apps/fleet/models.py` (`Paquete.porcentaje_anticipo`) · migración fleet · Test `apps/payments/tests_pricing_estrategias.py`.
+
+1. `monto_inicial` hoy: `monto_inicial(precio_total, forma_pago)`. Nuevo: `monto_inicial(precio_total, forma_pago, porcentaje=None)`. Si `forma_pago == COMPLETO` → 100%. Si `ANTICIPO` → `porcentaje or 30` (%). Mantén `ANTICIPO_PORCENTAJE` para el default.
+2. **Añade `Paquete.porcentaje_anticipo = models.PositiveSmallIntegerField(default=30)`** (Decisión: campo propio del paquete, no derivado). Migración `fleet/0022`.
+3. **Tests:** `monto_inicial(1000, ANTICIPO, porcentaje=50) == 500`; `monto_inicial(1000, COMPLETO, porcentaje=50) == 1000`; `monto_inicial(1000, ANTICIPO) == 300`.
+4. Grep todos los call sites de `monto_inicial` (`views.py`, `services.py::_verificar_monto`) — no rompas los que no pasan `porcentaje` (default correcto).
+5. sqlite + Postgres `test apps.payments` → OK.
+6. Commit: `feat(precio): monto_inicial acepta porcentaje de anticipo; Paquete.porcentaje_anticipo`.
+
+---
+
+### Tarea 4.4 — `CrearPagoView._post`: 3 ramas de precio
+
+**Files:** Modify `backend/apps/payments/views.py::CrearPagoView._post` · Test `apps/payments/tests.py::CrearPagoTests`.
+
+Estructura (reemplaza el bloque `if reserva.servicio: ... else: tarifa = Tarifa.de(empresa) ...`):
+```python
+if reserva.paquete_id:
+    removidos = set(reserva.servicios_removidos.values_list('servicio_id', flat=True))
+    extras_pers = list(reserva.paquete_personalizaciones.values_list('servicio_personalizacion_id', 'cantidad'))
+    precio_base_servicio = precio_paquete_total(
+        reserva.paquete, servicios_removidos_ids=removidos,
+        personalizaciones_extra=extras_pers, personas=reserva.numero_personas,
+        moneda=reserva.moneda,
+    )
+    if precio_base_servicio is None:
+        return Response({'detail': f'El paquete no tiene precio en {reserva.moneda}.'}, status=503)
+    porcentaje = reserva.paquete.porcentaje_anticipo
+elif reserva.servicio_id:
+    estrategia = obtener_estrategia_precio(reserva.servicio.estrategia_precio)
+    demanda = DemandaPrecio(personas=reserva.numero_personas, moneda=reserva.moneda, noches=reserva.noches)
+    try:
+        precio_base_servicio = estrategia.calcular_base(reserva.servicio, demanda)
+    except ValueError as e:
+        return Response({'detail': str(e)}, status=503)
+    porcentaje = reserva.servicio.porcentaje_anticipo
+else:
+    # ... rama Tarifa legacy actual, sin cambios ...
+    porcentaje = 30
+```
+Y `monto_a_cobrar = monto_inicial(precio_total, forma_pago, porcentaje=porcentaje)`.
+**Los `ReservaExtra`/`ReservaTransporte` (sistema viejo) NO se suman a un paquete** — para un
+paquete, `cargo_extras` y `cargo_transporte` = 0 (o salta `_resolver_extras`/`_resolver_transporte`
+cuando `reserva.paquete_id`). Para servicio suelto no-pesca: por defecto tampoco (solo pesca legacy usa ese sistema — pregunta menor abierta en el plan de alto nivel; si el dueño no dijo otra cosa, asume "solo pesca legacy").
+
+1. **Tests** (`CrearPagoTests`, `ApiTestCase`): crea un `Servicio` `por_noche` + `Paquete` de la empresa; monta reservas de cada tipo; verifica el `monto_a_cobrar` de la respuesta contra el cálculo esperado; verifica que `por_noche` con `fecha_salida` a 3 noches cobra 3×; verifica que un paquete con `porcentaje_anticipo=100` cobra el total.
+   (Estas reservas se crean directo en el test con `Reserva.objects.create(...)` bajo el scope de `ApiTestCase` — el serializer las acepta en Sección 5, aquí se prueba solo el cálculo de `crear-pago`.)
+2. sqlite + Postgres `test apps.payments.tests` → OK.
+3. Commit: `fix(precio): crear-pago cobra paquete por su fórmula y hospedaje por noches`.
+
+---
+
+### Tarea 4.5 — `_verificar_monto` cubre las 3 ramas
+
+**Files:** Modify `backend/apps/payments/services.py::_verificar_monto` · Test `apps/payments/tests.py`.
+
+`_verificar_monto` recomputa `esperado`. Hoy usa `monto_inicial(reserva.precio_total, reserva.forma_pago)`.
+`reserva.precio_total` ya está congelado por `crear-pago`, así que **basta con pasar el `porcentaje` correcto**:
+`porcentaje = reserva.paquete.porcentaje_anticipo if reserva.paquete_id else (reserva.servicio.porcentaje_anticipo if reserva.servicio_id else 30)`.
+No recalcula la fórmula del paquete (el precio ya está congelado). Sigue sin rebotar, solo `logger.error` el descuadre.
+
+1. Test: webhook con el monto correcto para un paquete `porcentaje_anticipo=100` → sin `logger.error` de descuadre.
+2. Commit: `fix(precio): _verificar_monto usa el porcentaje de anticipo correcto por tipo de reserva`.
+
+---
+
+### Tarea 4.6 — Gate Sección 4
+
+sqlite + Postgres `test apps config` → `OK`. Registro: "Sección 4 cerrada @ <sha>". Commit.
+
+---
+
+# SECCIÓN 5 — Checkout: el serializer y la API aceptan servicio / paquete / fecha_salida
+
+**Problema:** `ReservaCheckoutSerializer` no tiene `servicio`, `paquete`, `fecha_salida`,
+`servicios_removidos`, `personalizaciones`. El frontend ya manda `paquete` y **DRF lo descarta en
+silencio** → toda reserva se cobra como pesca legacy.
+
+---
+
+### Tarea 5.1 — Modelos de selección del checkout de paquete
+
+**Files:** Modify `backend/apps/bookings/models.py` (2 modelos nuevos) · migración `bookings/0031_checkout_paquete` + `bookings/0032_rls_checkout_paquete` · Test `apps/bookings/tests_checkout_paquete.py`.
+
+```python
+class ReservaPaqueteServicioRemovido(models.Model):
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='servicios_removidos')
+    servicio = models.ForeignKey('fleet.Servicio', on_delete=models.PROTECT)
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['reserva', 'servicio'], name='reservapaqueteserviciorem_unico')]
+
+class ReservaPaquetePersonalizacion(models.Model):
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='paquete_personalizaciones')
+    servicio_personalizacion = models.ForeignKey('fleet.ServicioPersonalizacion', on_delete=models.PROTECT)
+    cantidad = models.PositiveSmallIntegerField(default=1)
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['reserva', 'servicio_personalizacion'], name='reservapaquetepers_unico')]
+```
+
+- Migración de datos: ninguna. Migración de esquema: `0031`.
+- **RLS** (`0032`, patrón `SQL_POLITICA_EXISTS` de `bookings/0003_rls`): política `EXISTS (SELECT 1 FROM bookings_reserva r WHERE r.id = <tabla>.reserva_id AND (r.empresa_id = NULLIF(current_setting('app.current_empresa_id', true),'')::int OR current_setting('app.operador_plataforma', true) = 'on'))`.
+- Test `# postgres-only`: una empresa no ve las filas de otra.
+- Commit: `feat(checkout): modelos de selección de paquete (servicios removidos, personalizaciones)`.
+
+---
+
+### Tarea 5.2-5.4 — `ReservaCheckoutSerializer`
+
+**Files:** Modify `backend/apps/bookings/serializers.py` · Test `apps/bookings/tests_tenancy.py::SerializerEmpresaTests` (o archivo nuevo `tests_checkout_serializer.py`).
+
+- **5.2 `Meta.fields`** += `servicio` (slug), `paquete` (slug), `fecha_salida`, `servicios_removidos` (lista de slugs, write_only), `personalizaciones` (lista de `{id, cantidad}`, write_only). `servicio`/`paquete` como `SlugRelatedField` filtrados por empresa/`empresa_lider` en `get_fields` (mismo patrón que `ExtraSeleccionSerializer.get_fields`, que ya filtra por `self.context['empresa']`).
+- **5.3 `validate`:**
+  - `servicio` y `paquete` mutuamente excluyentes (400 si ambos).
+  - `paquete.empresa_lider_id == self.context['empresa'].id` (400 si no).
+  - `fecha_salida`: requerida y `> fecha` si algún componente del paquete (o el servicio) tiene `estrategia_cupo == 'por_noche'`; prohibida si ninguno.
+  - `servicios_removidos ⊆ {ps.servicio for ps in paquete.servicios_asociados if ps.removible}`.
+  - `personalizaciones`: cada `id` es una `ServicioPersonalizacion` `activo=True` de un servicio componente NO removido.
+  - `numero_personas` contra `personas_incluidas`/capacidad del servicio dominante, no solo `MAX_PERSONAS`.
+- **5.4 `create`/`update`:** persiste `servicio` XOR `paquete`, `fecha_salida`; sincroniza `servicios_removidos` y `paquete_personalizaciones` (borrar+recrear, dentro del scope de la empresa — el serializer ya corre bajo `con_empresa` desde la vista).
+- Tests: acepta reserva de servicio; acepta reserva de paquete de la empresa; rechaza `paquete` de otra `empresa_lider` (400); rechaza `servicio`+`paquete` juntos; exige `fecha_salida` para hospedaje.
+- Commit: `fix(checkout): serializer acepta servicio, paquete, fecha_salida y selección de paquete`.
+
+---
+
+### Tarea 5.5 — `Reserva.clean`: rama `por_noche` y rama paquete
+
+**Files:** Modify `backend/apps/bookings/models.py::Reserva.clean` · Test `apps/bookings/tests_ocupacion.py`.
+
+Reemplaza el `# TODO Sección 5` que dejaste en 2.4:
+```python
+if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
+    if self.paquete_id:
+        _validar_cupo_de_paquete(self)   # helper nuevo: recorre servicios_asociados NO removidos
+    elif self.servicio_id and self.servicio.estrategia_cupo == 'por_noche':
+        _validar_cupo_hospedaje(self)     # helper nuevo: evaluar_disponibilidad_hospedaje(fecha, fecha_salida, personas, empresa, servicio)
+    else:
+        estrategia_cupo = self.servicio.estrategia_cupo if self.servicio_id else 'por_recurso_dia'
+        validar_cupo_diario(self.fecha, self.numero_personas, self.empresa,
+                            excluir_pk=self.pk, estrategia_cupo=estrategia_cupo, servicio_id=self.servicio_id)
+```
+- `_validar_cupo_hospedaje`: llama `apps.bookings.cupo.evaluar_disponibilidad_hospedaje(self.fecha, self.fecha_fin_servicio, self.numero_personas, self.empresa, servicio=self.servicio, excluir_pk=self.pk)` (ya existe en `cupo/adaptador.py`); si `False` → `ValidationError({'fecha': 'No hay disponibilidad de hospedaje en esas fechas.'})`. **Sin lock aquí** (el lock va en Sección 6, al confirmar el pago).
+- `_validar_cupo_de_paquete`: para cada `PaqueteServicio` NO removido (los `servicios_removidos` de la reserva), según `ps.servicio.estrategia_cupo`: `por_recurso_dia` → `evaluar_cupo(fecha, personas, empresa, servicio_id=ps.servicio_id, estrategia_cupo='por_recurso_dia')`; `por_noche` → `evaluar_disponibilidad_hospedaje(...)`; `bajo_demanda` → siempre OK. Si alguno no cabe → `ValidationError` nombrando el servicio.
+- Tests (`OperadorTestCase`): reserva de servicio hospedaje sin disponibilidad → `full_clean()` revienta; con disponibilidad → OK. Reserva de paquete con un componente hospedaje sin cupo → revienta.
+- Commit: `fix(cupo): Reserva.clean valida hospedaje multidía y cupo por componente de paquete`.
+
+---
+
+### Tarea 5.6 — `PaqueteDetailView`
+
+**Files:** Modify `backend/apps/fleet/views.py` + `apps/fleet/urls.py` + `apps/fleet/catalogo.py` · Test `apps/fleet/tests_paquetes_api.py`.
+
+- `GET /api/sedes/<sede_slug>/paquetes/<slug>/` → `PaqueteDetailView`. Resuelve la sede (`get_object_or_404(Sede, slug=..., activo=True)`), busca el paquete activo por slug **iterando empresas de la sede en su `con_empresa`** (helper nuevo `paquete_de_sede(sede, slug)` en `catalogo.py`, mismo patrón que `paquetes_de_sede`). 404 si no existe. `throttle_scope = 'catalogo'`.
+- Test: devuelve el paquete correcto; 404 para slug inexistente; 404 si la sede está inactiva.
+- Commit: `feat(catálogo): endpoint de detalle de paquete por sede+slug`.
+
+---
+
+### Tarea 5.7-5.9 — Frontend
+
+**Files:** `frontend/src/lib/api.ts`, `frontend/src/lib/pricing-paquete.ts`, `frontend/src/app/[lang]/reservar/page.tsx`, `frontend/src/components/checkout-view.tsx`, `frontend/src/components/paquete-card.tsx`.
+
+- **5.7** `api.ts`: `getPaqueteDetalle(sedeSlug, paqueteSlug)` → `GET /api/sedes/${sedeSlug}/paquetes/${paqueteSlug}/`. `reservar/page.tsx`: reemplaza el `getSedes()` + loop `getPaquetesSede` por `getPaqueteDetalle` (el `?sede=` ya viene en el query; si no viene, cae a `getSedes()` para ubicar la sede del paquete — o pide `?sede=` obligatorio y muestra error si falta).
+- **5.8** `api.ts`: `ReservaInput` += `servicio?: string`, `fecha_salida?: string`, `servicios_removidos?: string[]`, `personalizaciones?: {id: number; cantidad: number}[]`. `guardarReserva` los manda tal cual. `type MotivoNoDisponible = 'lleno' | 'sin_panga' | 'sin_lugar'` (B3); revisa que `checkout-view.tsx` y el calendario del catálogo manejan `'sin_lugar'` (tratarlo igual que `'sin_panga'`).
+- **5.9** `checkout-view.tsx` / `paquete-card.tsx`: la selección de servicios removidos y personalizaciones opcionales que ve el cliente se manda en `guardarReserva`. `pricing-paquete.ts` se reescribe para calcular la fórmula de 4.1 (ancla + personalizaciones − ajustes) — el precio que muestra debe coincidir con el que devuelve `crear-pago`.
+- Verificación: `npm.cmd run lint`, `npx.cmd tsc --noEmit`, `npm.cmd run build` verdes. (No hay tests de frontend; el dueño revisa la UI a mano — ver memoria `verificacion-sin-navegador`.)
+- Commit: `fix(frontend): checkout manda servicio/paquete/fecha_salida/selección; detalle de paquete sin waterfall`.
+
+---
+
+### Tarea 5.10 — Gate Sección 5
+
+sqlite + Postgres `test apps config` → `OK`. Frontend `lint`/`tsc`/`build` → OK. Registro: "Sección 5 cerrada @ <sha>". Commit.
+
+---
+
+# SECCIÓN 6 — El pago confirma y reserva el cupo de cada componente
+
+**Problema:** `aplicar_pago_exitoso` marca la reserva `PAGADA` pero **no crea `ReservaOcupacion`
+ni reserva cupo de los componentes de un paquete**. El hospedaje puede sobrevenderse.
+
+---
+
+### Tarea 6.1 — `ReservaPaqueteComponente`
+
+**Files:** Modify `backend/apps/bookings/models.py` · migración `bookings/0033` + `0034_rls` · Test.
+
+```python
+class ReservaPaqueteComponente(models.Model):
+    class EstadoCupo(models.TextChoices):
+        OK = 'ok', 'Cupo reservado'
+        LIBERADO = 'liberado', 'Liberado (reserva cancelada)'
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='componentes')
+    servicio = models.ForeignKey('fleet.Servicio', on_delete=models.PROTECT)
+    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT)   # = servicio.empresa
+    estado_cupo = models.CharField(max_length=10, choices=EstadoCupo.choices, default=EstadoCupo.OK)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['reserva', 'servicio'], name='reservapaquetecomponente_unico')]
+```
+RLS por `empresa_id` (patrón `SQL_POLITICA` directo, como `bookings_reservaocupacion`). Test `# postgres-only` de aislamiento. Commit.
+
+---
+
+### Tarea 6.2 — `elegir_recursos` (núcleo puro)
+
+**Files:** Modify `backend/apps/bookings/cupo/nucleo.py` · Test `tests_cupo_nucleo.py`.
+
+```python
+def elegir_recursos(libres: list[tuple[int, int]], personas: int, cantidad: int) -> list[int] | None:
+    """`libres` = [(recurso_id, capacidad), ...]. Devuelve los ids de `cantidad`
+    recursos cuyo total de capacidad >= personas, prefiriendo los más chicos que
+    alcanzan (menos desperdicio). None si no se puede."""
+```
+Determinista, testeable sin BD. Tests: 1 recurso que cabe; combinación de 2; imposible → None; prefiere el más chico.
+Commit: `feat(hospedaje): elegir_recursos — selección determinista de recursos para una ocupación`.
+
+---
+
+### Tarea 6.3 — `aplicar_pago_exitoso` crea el cupo al confirmar
+
+**Files:** Modify `backend/apps/payments/services.py::aplicar_pago_exitoso` · Create helper `apps/bookings/cupo/confirmacion.py` (o dentro de `services.py`) · Test `apps/payments/tests.py` + `tests_concurrencia.py`.
+
+**Define `class SinCupoError(Exception)`** en `apps/bookings/cupo/__init__.py` (o `services.py`); su `str()` es el mensaje que verá la vendedora en `Reserva.motivo_cancelacion`.
+Firma del helper: `reservar_cupo_al_confirmar(reserva) -> None` (lanza `SinCupoError`).
+
+Tras `reserva.estado = PAGADA; reserva.full_clean(); reserva.save()` y **antes** de encolar `_notificar`:
+```python
+try:
+    _reservar_cupo_al_confirmar(reserva)   # helper nuevo
+except SinCupoError as e:
+    return _cancelar_sin_cupo(reserva, intent, empresa)   # reembolso 100%, mensaje = str(e)
+```
+`_reservar_cupo_al_confirmar(reserva)`:
+- **servicio hospedaje** (`reserva.servicio.estrategia_cupo == 'por_noche'`): `bloquear_recurso` por cada recurso candidato del servicio → `obtener_recursos_con_ocupaciones` → `elegir_recursos` → crear `ReservaOcupacion(fecha_inicio=reserva.fecha, fecha_fin=reserva.fecha_fin_servicio, ocupa_cupo=True)` por cada recurso elegido. Si `elegir_recursos` devuelve `None` → `raise SinCupoError('No hay habitación disponible en esas fechas.')`.
+- **paquete**: por cada `PaqueteServicio` NO removido:
+  - `por_recurso_dia`: `bloquear_cupo(empresa.pk, reserva.fecha, servicio_id=ps.servicio_id)` + `evaluar_cupo(...)`; si lleno → `SinCupoError`. Crear `ReservaPaqueteComponente(estado_cupo=OK)`. (La asignación concreta de panga sigue siendo manual en la agenda.)
+  - `por_noche`: como el caso hospedaje de arriba, + `ReservaPaqueteComponente`.
+  - `bajo_demanda`: solo `ReservaPaqueteComponente(estado_cupo=OK)`.
+- **servicio pesca/paseo normal, o legacy**: nada nuevo (el `full_clean()` de arriba ya validó; la panga se asigna en la agenda).
+- **v1: todos los componentes son de `reserva.empresa`** → todo corre en el alcance ya abierto por el webhook. NO abras `con_empresa` anidado.
+- Todo dentro de la `@transaction.atomic` de `aplicar_pago_exitoso`: si un `SinCupoError` sale, el rollback deshace las ocupaciones parciales y `_cancelar_sin_cupo` reembolsa.
+
+Tests:
+- Reserva de servicio hospedaje pagada → se crea `ReservaOcupacion` con el rango correcto.
+- `# postgres-only`: dos reservas de hospedaje pagando la última habitación en paralelo → una `PAGADA` con ocupación, la otra `CANCELADA + reembolsada`; `refunds.create` llamado una vez (mock `@mock.patch.object(StripeClient, 'refunds')`).
+- Paquete con componente hospedaje sin cupo → toda la reserva `CANCELADA + reembolsada`, sin `ReservaOcupacion` huérfana.
+Commit: `fix(hospedaje): el pago reserva el cupo de cada servicio/componente multidía; reembolso si algo se llenó`.
+
+---
+
+### Tarea 6.4 — Cancelación libera el cupo
+
+**Files:** Modify `backend/apps/bookings/models.py` · Test.
+
+`Reserva.save()` (Tarea 3.1 Paso 5) ya baja `ocupa_cupo` de las `ReservaOcupacion` al pasar a un estado
+que no ocupa cupo. Extiende: también marca `ReservaPaqueteComponente.estado_cupo = LIBERADO`.
+Tests: acción de admin "Cancelar por mal clima" sobre una reserva de hospedaje → sus `ReservaOcupacion`
+quedan `ocupa_cupo=False` y otra reserva puede tomar el rango. Igual para un paquete.
+Commit: `fix(hospedaje): cancelar una reserva libera sus ocupaciones y componentes`.
+
+---
+
+### Tarea 6.5 — `conciliar_pagos` también crea el cupo
+
+**Files:** Test `apps/payments/tests.py` (el comando ya llama `aplicar_pago_exitoso`, que ahora hace todo).
+
+Solo añade un test: una reserva de hospedaje `pendiente_pago` con PaymentIntent `succeeded` en Stripe → `conciliar_pagos` la marca `PAGADA` **y crea su `ReservaOcupacion`**. Commit `test(hospedaje): conciliar_pagos crea el cupo igual que el webhook`.
+
+---
+
+### Tarea 6.6 — Admin
+
+**Files:** Modify `backend/apps/bookings/admin.py`.
+
+`ReservaOcupacionInline` y un `ReservaPaqueteComponenteInline` nuevo: `has_add_permission`/`has_change_permission`/`has_delete_permission` devuelven `False` cuando `obj` (la reserva) está en un estado pagado — la ocupación la pone el sistema. Editables solo para `pendiente_pago` / reservas de WhatsApp. Commit.
+
+---
+
+### Tarea 6.7 — Gate Sección 6
+
+sqlite + Postgres `test apps config` → `OK`. Registro: "Sección 6 cerrada @ <sha>". Commit.
+
+---
+
+# SECCIÓN 7 — Cruza-empresa: bloquear + ADR-005 (fuera de v1)
+
+### Tarea 7.1 — Confirmar el bloqueo + test
+
+`PaqueteServicio.clean` (Tarea 4.2) ya rechaza componentes de otra empresa. Añade un test explícito
+en `apps/fleet/tests_paquetes.py` si no lo cubriste: `PaqueteServicio(servicio=<de empresa B>, paquete=<líder A>).full_clean()` → `ValidationError` cuyo mensaje menciona "ADR-005". Commit si hubo cambio.
+
+### Tarea 7.2 — Escribir `docs/superpowers/specs/2026-09-06-ADR-005-paquetes-cruza-empresa.md`
+
+Contenido (prosa, no código):
+- **Contexto:** cada empresa proveedora tiene su propia cuenta de Stripe. La empresa de marketing (operador de plataforma) **no tiene cuenta central a propósito** — así no carga con los impuestos de todas esas transacciones. No se usa Stripe Connect.
+- **Problema:** un paquete cruza-empresa (pesca de A + hotel de B) implica que el dinero de cada servicio vaya a la cuenta de su empresa → N cobros a N cuentas. Stripe sin Connect no permite un solo `PaymentElement` que confirme N PaymentIntents de N cuentas distintas como "un solo pago percibido".
+- **Estado v1:** bloqueado (`PaqueteServicio.clean`). Paquetes v1 = una sola empresa (`empresa_lider`).
+- **Lo que ya quedó preparado:** `Paquete` tiene `sede` + `empresa_lider`; `ReservaPaqueteComponente` tiene `empresa` por componente (aunque v1 no lo use); el catálogo por sede itera empresas en su scope.
+- **Opciones a evaluar cuando se retome** (sin recomendación cerrada): (a) N PaymentIntents secuenciales en el checkout con reembolsos parciales si un componente se cae; (b) `empresa_lider` cobra su parte online y las demás mandan link de pago aparte que envía la vendedora; (c) revisar si Stripe Connect con **direct charges** evita el problema fiscal (el cargo se crea en la cuenta conectada, el dinero nunca toca la plataforma).
+- **Estado:** PROPUESTO, sin fecha.
+
+Commit: `docs(adr): ADR-005 paquetes cruza-empresa (fuera de v1)`.
+
+---
+
+# SECCIÓN 8 — Deuda menor
+
+### Tarea 8.1 — Nota en `backend/CLAUDE.md`
+Añade en la sección de comandos/migraciones: "Toda data migration que haga `Modelo.objects.create/update/delete` sobre una tabla con RLS debe envolverse en `with apps.tenancy.rls.alcance_operador_migracion(schema_editor.connection):` — si no, revienta en Postgres bajo el rol de la app." Commit `docs: nota sobre alcance_operador_migracion en data migrations`.
+
+### Tarea 8.2 — Import perezoso de `scope` en settings (M4)
+`backend/config/settings/base.py`: quita `from apps.tenancy import scope` del cuerpo del módulo. Crea `backend/apps/tenancy/permisos_unfold.py` con funciones `puede_ver_finanzas(request)`, `es_operador(request)` que importan `scope` adentro. Los lambdas de `UNFOLD['SIDEBAR']` llaman esas funciones (import perezoso de `apps.tenancy.permisos_unfold` dentro del lambda, o al inicio de `UNFOLD = {...}` que corre después de apps). Verifica `manage.py check` limpio. Commit.
+
+### Tarea 8.3 — `MotivoNoDisponible` frontend (B3)
+Ya cubierto en Tarea 5.8. Si 5.8 no se hizo aún, hazlo aquí: `type MotivoNoDisponible = 'lleno' | 'sin_panga' | 'sin_lugar'` en `api.ts`, manejo en `checkout-view.tsx`. Commit.
+
+### Tarea 8.4 — `Tarifa.save` race (B4)
+`backend/apps/fleet/models.py::Tarifa.save`: reemplaza el `if not self.pk: existente = Tarifa.objects.filter(empresa=self.empresa).first(); if existente: self.pk = existente.pk` por un `select_for_update` dentro de una transacción, o documenta que el `UniqueConstraint(empresa)` + un `try/except IntegrityError` que reintenta como update es aceptable. Test: dos `Tarifa.objects.create(empresa=X)` seguidos → la segunda actualiza, no revienta. Commit.
+
+### Tarea 8.5 — Jefe no edita usuarios ajenos (B5)
+`backend/apps/tenancy/admin_mixins.py::EmpresaScopedUserAdminMixin`: para un jefe (no operador), además de ocultar `is_superuser`/`groups`/`user_permissions`, hacer `password` y `email` de solo lectura sobre usuarios que no sean él mismo (`get_readonly_fields`). Test: jefe intenta cambiar el email de otro usuario de su empresa vía admin → el campo no es editable. Commit.
+
+### Tarea 8.6 — Lista consolidada de RLS (B8)
+`backend/apps/tenancy/tests_rls.py`: añade un test `# postgres-only` que consulta `pg_policies` y verifica que **toda tabla con una columna `empresa_id` o `empresa_lider_id`** tiene una política `tenancy_alcance` (o equivalente vía EXISTS). Query: `SELECT c.relname FROM pg_class c JOIN pg_attribute a ON a.attrelid = c.oid WHERE a.attname IN ('empresa_id','empresa_lider_id') AND c.relkind='r' AND c.relname LIKE ANY(ARRAY['fleet_%','bookings_%','payments_%','finance_%'])` menos las que llegan a empresa vía FK sin columna propia (whitelist explícita: `bookings_reservaextra`, `bookings_reservatransporte`, `fleet_serviciopersonalizacion`, `bookings_reservapaqueteserviciorem*`, `bookings_reservapaquetepers*`). El test falla si aparece una tabla nueva sin política. Commit `test(rls): guardarraíl — toda tabla con empresa_id tiene política`.
+
+### Tarea 8.7 — Gate Sección 8
+sqlite + Postgres `test apps config` → `OK`. Commit `docs(plan): Sección 8 cerrada`.
+
+---
+
+# SECCIÓN 9 — Cierre
+
+- [ ] **9.1** `manage.py test apps config` verde en sqlite Y Postgres (drop antes).
+- [ ] **9.2** `check --deploy --fail-level WARNING` con `config.settings.production` + env de relleno (ver `.github/workflows/ci.yml` para los valores).
+- [ ] **9.3** Frontend `npm.cmd run lint` · `npx.cmd tsc --noEmit` · `npm.cmd run build` verdes.
+- [ ] **9.4** Repasa los diffs de todas las secciones: ningún `como_operador_plataforma()` en vista `AllowAny`; ningún filtro de empresa olvidado; ninguna cifra fuera de `pricing.py`; toda tabla nueva con RLS + en el guardarraíl de 8.6.
+- [ ] **9.5** Actualiza `backend/CLAUDE.md` (cupo por `estrategia_cupo`, hospedaje, paquetes v1 una-empresa, `ReservaPaqueteComponente`), `frontend/CLAUDE.md` (campos nuevos del checkout), `docs/deploy/RUNBOOK-corte-multi-empresa.md` (paso: `CREATE EXTENSION btree_gist` en la BD de producción antes de migrar; sembrar `Servicio`/`Recurso`/`Paquete` reales).
+- [ ] **9.6** Actualiza `docs/superpowers/specs/2026-08-31-...-ADRs.md`: ADR-003/004 pasan a IMPLEMENTADO con nota de las desviaciones; enlaza ADR-005.
+- [ ] **9.7** Memoria (`C:\Users\kkjf\.claude\projects\C--Users-kkjf-desarrollo-sistema-pescadeportiva\memory\`): marca `plan-correccion-hallazgos` como completado; mueve lo que quede a `pendientes-manuales-produccion` (`btree_gist`, rol de BD sin BYPASSRLS, sembrar catálogo real).
+- [ ] **9.8** Resumen para el dueño: qué migraciones corren en producción y en qué orden; qué pasos manuales quedan.
+- [ ] **9.9** Integración de la rama: PR contra `feature/pieza6-frontend-multitenant` o merge, según decida el dueño.
+
+---
+
+## Autorrevisión (para el que ejecuta, al terminar cada sección)
+
+1. **¿El test que escribiste falla ANTES de la implementación?** Si nunca lo viste rojo, no sabes si prueba algo.
+2. **¿Corriste Postgres, no solo sqlite?** sqlite no tiene RLS, ni locks, ni `EXCLUDE`. La mitad de los bugs de este proyecto son invisibles en sqlite.
+3. **¿Dropeaste `test_pescadeportiva_test` antes del run de Postgres?** Si no, los errores que ves pueden ser de un run anterior a medias.
+4. **¿El commit tiene SOLO los archivos de esa tarea?** `git status` antes de `git add`.
+5. **¿Rompiste algún test existente?** El gate de sección corre `test apps config` entero por eso.
