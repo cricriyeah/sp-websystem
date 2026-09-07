@@ -1,38 +1,83 @@
 import type { Moneda, PaqueteCatalogo } from './api';
 
+export type PersonalizacionSeleccionada = {
+  id: number;
+  cantidad?: number;
+};
+
 export type CalculoPrecioPaquete = {
   precioAncla: number;
   totalAjustesDescontados: number;
+  totalPersonalizaciones: number;
   precioFinal: number;
   moneda: Moneda;
   serviciosActivosCount: number;
 };
 
 /**
- * Calcula de forma reactiva en cliente el precio ancla del paquete
- * aplicando los descuentos de los servicios removibles que el usuario desmarcó.
+ * Calcula de forma reactiva en cliente el precio del paquete (fórmula de 4.1).
  *
- * Perception-First Design: El precio ancla no es una suma de partes con descuento;
- * arranca en el valor total de la experiencia empaquetada y descuenta
- * el ajuste individual de cada servicio removido sin perder su anclaje perceptivo.
+ * Fórmula:
+ *     paquete.precio_en(moneda)                                              # el ancla
+ *   + Σ  sp.precio_en(moneda) de cada ServicioPersonalizacion (obligatorio o preseleccionado)
+ *        de los servicios componentes NO removidos, con activo=True
+ *   + Σ  sp.precio_en(moneda) de las ServicioPersonalizacion OPCIONALES que el cliente marcó
+ *   − Σ  PaqueteServicio.ajuste_en(moneda) de los servicios removidos (removible=True)
+ *
+ * Cada personalización que cobrar_por_persona se multiplica por personas.
+ * Piso 0.
  */
 export function calcularPrecioPaquete(
   paquete: PaqueteCatalogo,
-  serviciosExcluidosIds: number[],
-  moneda: Moneda = 'MXN',
+  serviciosExcluidos: (number | string)[],
+  moneda?: Moneda,
+): CalculoPrecioPaquete;
+export function calcularPrecioPaquete(
+  paquete: PaqueteCatalogo,
+  serviciosExcluidos: (number | string)[],
+  personalizacionesOpcionales?: PersonalizacionSeleccionada[],
+  personas?: number,
+  moneda?: Moneda,
+): CalculoPrecioPaquete;
+export function calcularPrecioPaquete(
+  paquete: PaqueteCatalogo,
+  serviciosExcluidos: (number | string)[],
+  personalizacionesOMoneda?: PersonalizacionSeleccionada[] | Moneda,
+  personasArg: number = 1,
+  monedaArg: Moneda = 'MXN',
 ): CalculoPrecioPaquete {
+  let personalizacionesOpcionales: PersonalizacionSeleccionada[] = [];
+  let personas = personasArg;
+  let moneda: Moneda = monedaArg;
+
+  if (typeof personalizacionesOMoneda === 'string') {
+    moneda = personalizacionesOMoneda;
+    personalizacionesOpcionales = [];
+    personas = 1;
+  } else if (Array.isArray(personalizacionesOMoneda)) {
+    personalizacionesOpcionales = personalizacionesOMoneda;
+  }
+
   const anclaRaw =
     moneda === 'USD' && paquete.precio_ancla_usd
       ? paquete.precio_ancla_usd
       : paquete.precio_ancla;
   const precioAncla = parseFloat(anclaRaw) || 0;
 
+  const excluidosSet = new Set(serviciosExcluidos);
+  const opcionalesMap = new Map<number, number>();
+  for (const p of personalizacionesOpcionales) {
+    opcionalesMap.set(p.id, p.cantidad ?? 1);
+  }
+
   let totalAjustesDescontados = 0;
+  let totalPersonalizaciones = 0;
   let serviciosActivosCount = 0;
 
-  for (const item of paquete.servicios_asociados) {
+  for (const item of paquete.servicios_asociados || []) {
     const sId = item.servicio?.id ?? item.servicio_id;
-    const estaExcluido = serviciosExcluidosIds.includes(sId);
+    const sSlug = item.servicio?.slug;
+    const estaExcluido = excluidosSet.has(sId) || (sSlug !== undefined && excluidosSet.has(sSlug));
 
     if (estaExcluido && item.removible) {
       const ajusteRaw =
@@ -41,16 +86,35 @@ export function calcularPrecioPaquete(
           : item.ajuste_precio;
       const ajuste = parseFloat(ajusteRaw) || 0;
       totalAjustesDescontados += ajuste;
-    } else {
-      serviciosActivosCount += 1;
+      continue;
+    }
+
+    serviciosActivosCount += 1;
+
+    for (const sp of item.servicio?.personalizaciones || []) {
+      const esIncluida = sp.obligatorio || sp.preseleccionado;
+      const esExtra = opcionalesMap.has(sp.id);
+
+      if (!esIncluida && !esExtra) continue;
+
+      const precioRaw =
+        moneda === 'USD' && sp.precio_usd ? sp.precio_usd : sp.precio;
+      const precioUnitario = parseFloat(precioRaw) || 0;
+
+      const multPersonas = sp.cobrar_por_persona ? personas : 1;
+      const cant = esExtra ? (opcionalesMap.get(sp.id) ?? 1) : 1;
+
+      totalPersonalizaciones += precioUnitario * multPersonas * cant;
     }
   }
 
-  const precioFinal = Math.max(0, precioAncla - totalAjustesDescontados);
+  const subtotal = precioAncla + totalPersonalizaciones - totalAjustesDescontados;
+  const precioFinal = Math.max(0, Math.round(subtotal * 100) / 100);
 
   return {
     precioAncla,
-    totalAjustesDescontados,
+    totalAjustesDescontados: Math.round(totalAjustesDescontados * 100) / 100,
+    totalPersonalizaciones: Math.round(totalPersonalizaciones * 100) / 100,
     precioFinal,
     moneda,
     serviciosActivosCount,

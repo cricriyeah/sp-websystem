@@ -43,12 +43,14 @@ import {
   type ExtraCatalogo,
   type Moneda,
   type Pago,
+  type PaqueteCatalogo,
   type Tarifa,
   type Zona,
 } from '@/lib/api';
-import { formatHour, fromLocalISODate } from '@/lib/dates';
+import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
+import { calcularPrecioPaquete } from '@/lib/pricing-paquete';
 import { leerRef } from '@/lib/ref';
 
 // Mismas reglas que el backend (apps/bookings/validators.py). Aqui existen para
@@ -146,6 +148,9 @@ type CheckoutViewProps = {
   queryOverride: boolean;
   paqueteId?: number | null;
   paqueteNombre?: string | null;
+  paquete?: PaqueteCatalogo | null;
+  initialServiciosRemovidos?: string[];
+  initialFechaSalida?: string;
 };
 
 // 'recuperando': solo se pasa por aqui si esta pestana ya tenia un checkout_id
@@ -214,6 +219,9 @@ export function CheckoutView({
   queryOverride,
   paqueteId,
   paqueteNombre,
+  paquete,
+  initialServiciosRemovidos,
+  initialFechaSalida,
 }: CheckoutViewProps) {
   const { checkout, booking, nav } = dict;
   // null mientras sessionStorage todavia no se ha leido (solo dura hasta el
@@ -225,6 +233,60 @@ export function CheckoutView({
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
   const [people, setPeople] = useState(initialPeople);
+  const [serviciosRemovidos] = useState<string[]>(initialServiciosRemovidos ?? []);
+  const [personalizaciones, setPersonalizaciones] = useState<Array<{ id: number; cantidad: number }>>([]);
+  const [fechaSalidaManual, setFechaSalidaManual] = useState<string | null>(initialFechaSalida ?? null);
+  const defaultFechaSalida = useMemo(() => {
+    const d = fromLocalISODate(day);
+    d.setDate(d.getDate() + 1);
+    return toLocalISODate(d);
+  }, [day]);
+  const fechaSalida = fechaSalidaManual && fechaSalidaManual > day ? fechaSalidaManual : defaultFechaSalida;
+
+  const tieneHospedaje = useMemo(() => {
+    if (!paquete) return false;
+    const removidosSet = new Set(serviciosRemovidos);
+    return paquete.servicios_asociados.some((ps) => {
+      const slug = ps.servicio?.slug;
+      if (slug && removidosSet.has(slug)) return false;
+      return (
+        ps.servicio?.tipo_servicio === 'hospedaje' ||
+        ps.servicio?.tipo_servicio === 'alojamiento' ||
+        ps.servicio?.modo_ocupacion === 'por_noche'
+      );
+    });
+  }, [paquete, serviciosRemovidos]);
+
+  const personalizacionesDisponibles = useMemo(() => {
+    if (!paquete) return [];
+    const removidosSet = new Set(serviciosRemovidos);
+    const items: Array<{
+      servicioNombre: string;
+      personalizacion: (typeof paquete.servicios_asociados)[0]['servicio']['personalizaciones'][0];
+    }> = [];
+    for (const ps of paquete.servicios_asociados) {
+      if (ps.servicio?.slug && removidosSet.has(ps.servicio.slug)) continue;
+      for (const pers of ps.servicio?.personalizaciones || []) {
+        if (!pers.obligatorio && !pers.preseleccionado) {
+          items.push({
+            servicioNombre: ps.servicio.nombre,
+            personalizacion: pers,
+          });
+        }
+      }
+    }
+    return items;
+  }, [paquete, serviciosRemovidos]);
+
+  const personalizacionesMap = useMemo(() => {
+    return new Map(personalizaciones.map((p) => [p.id, p.cantidad]));
+  }, [personalizaciones]);
+
+  const alternarPersonalizacion = (id: number, checked: boolean) => {
+    setPersonalizaciones((prev) =>
+      checked ? [...prev.filter((p) => p.id !== id), { id, cantidad: 1 }] : prev.filter((p) => p.id !== id),
+    );
+  };
   // Numero de la reserva, para la pantalla de confirmacion (folio, recibo,
   // mensaje de WhatsApp). Se conoce en cuanto se guarda la reserva, antes de
   // que el pago pase.
@@ -393,7 +455,7 @@ export function CheckoutView({
       // 4 personas hay que decirle que el dia si tiene espacio pero no para su
       // grupo — si no, ve lugares libres y no entiende por que no puede.
       const plantilla =
-        cupo.motivo_no_disponible === 'sin_panga'
+        cupo.motivo_no_disponible === 'sin_panga' || cupo.motivo_no_disponible === 'sin_lugar'
           ? checkout.noBoatForGroupNotice
           : checkout.dayFullOffer;
 
@@ -741,8 +803,16 @@ export function CheckoutView({
   const personasExtra = Math.max(0, people - personasIncluidas);
   const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
 
-  const subtotalSinDescuento =
-    tourPrice === null ? null : tourPrice + cargoPersonas + cargoExtras + cargoTransporte;
+  const calculoPaquete = useMemo(() => {
+    if (!paquete) return null;
+    return calcularPrecioPaquete(paquete, serviciosRemovidos, personalizaciones, people, moneda);
+  }, [paquete, serviciosRemovidos, personalizaciones, people, moneda]);
+
+  const subtotalSinDescuento = paquete
+    ? (calculoPaquete?.precioFinal ?? null)
+    : tourPrice === null
+      ? null
+      : tourPrice + cargoPersonas + cargoExtras + cargoTransporte;
 
   // Solo informativo (redondeo igual al de `cargo_por_descuento` en
   // apps/payments/pricing.py): el monto real lo congela `crear-pago` sobre el
@@ -839,8 +909,35 @@ export function CheckoutView({
       : []),
   ];
 
-  const lines =
-    tourPrice === null
+  const lines = paquete
+    ? [
+        { label: paquete.nombre, amount: currency.format(calculoPaquete?.precioAncla ?? 0) },
+        ...(calculoPaquete && calculoPaquete.totalAjustesDescontados > 0
+          ? [
+              {
+                label: 'Descuento por servicios removidos',
+                amount: `-${currency.format(calculoPaquete.totalAjustesDescontados)}`,
+              },
+            ]
+          : []),
+        ...(calculoPaquete && calculoPaquete.totalPersonalizaciones > 0
+          ? [
+              {
+                label: 'Personalizaciones',
+                amount: currency.format(calculoPaquete.totalPersonalizaciones),
+              },
+            ]
+          : []),
+        ...(descuentoPromocional > 0
+          ? [
+              {
+                label: `${checkout.promoCode.discountLabel} (${codigoPromocional.trim().toUpperCase()})`,
+                amount: `-${currency.format(descuentoPromocional)}`,
+              },
+            ]
+          : []),
+      ]
+    : tourPrice === null
       ? []
       : [
           { label: checkout.tourLabel, amount: currency.format(tourPrice) },
@@ -856,8 +953,12 @@ export function CheckoutView({
         ];
 
   const total = subtotalSinDescuento === null ? null : subtotalSinDescuento - descuentoPromocional;
+  const porcentajeAnticipo =
+    paquete && (paquete as { porcentaje_anticipo?: string | number | null }).porcentaje_anticipo != null
+      ? Number((paquete as { porcentaje_anticipo?: string | number | null }).porcentaje_anticipo) / 100
+      : 0.3;
   const amountDueNow =
-    total === null ? null : formaPago === 'completo' ? total : Math.round(total * 0.3 * 100) / 100;
+    total === null ? null : formaPago === 'completo' ? total : Math.round(total * porcentajeAnticipo * 100) / 100;
 
   const dayDate = useMemo(() => fromLocalISODate(day), [day]);
 
@@ -1184,8 +1285,11 @@ export function CheckoutView({
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         captcha_token: captchaToken.current,
-        paquete: paqueteId ?? null,
-      });
+        paquete: paquete ? paquete.slug : (paqueteId ?? null),
+        servicios_removidos: paquete && serviciosRemovidos.length > 0 ? serviciosRemovidos : undefined,
+        personalizaciones: paquete && personalizaciones.length > 0 ? personalizaciones : undefined,
+        fecha_salida: tieneHospedaje ? fechaSalida : undefined,
+      }, paquete?.empresa_lider_slug);
 
       setReservaId(reserva.id);
 
@@ -1242,7 +1346,9 @@ export function CheckoutView({
   const colapsado2 = pasosVisibles > 2 && pasoEditando !== 2;
   const colapsado3 = locked || (extrasConfirmado && pasoEditando !== 3);
 
-  const resumenPaso1 = `${formatDay(dayDate, lang)} · ${formatHour(time)} · ${people} ${checkout.peopleLabel.toLowerCase()}`;
+  const resumenPaso1 = tieneHospedaje
+    ? `${formatDay(dayDate, lang)} → ${formatDay(fromLocalISODate(fechaSalida), lang)} · ${formatHour(time)} · ${people} ${checkout.peopleLabel.toLowerCase()}`
+    : `${formatDay(dayDate, lang)} · ${formatHour(time)} · ${people} ${checkout.peopleLabel.toLowerCase()}`;
   const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
 
   // El stepper de arriba cuenta el pago como paso 4 en cuanto el paso 3 se
@@ -1430,6 +1536,26 @@ export function CheckoutView({
                 disabled={locked}
               />
             </div>
+
+            {tieneHospedaje && (
+              <div className="mt-4 flex flex-col gap-1.5 border-t border-border pt-4">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  {lang === 'en' ? 'Check-out date' : 'Fecha de salida (Check-out)'}
+                </label>
+                <input
+                  type="date"
+                  value={fechaSalida}
+                  min={(() => {
+                    const d = fromLocalISODate(day);
+                    d.setDate(d.getDate() + 1);
+                    return toLocalISODate(d);
+                  })()}
+                  disabled={locked}
+                  onChange={(e) => setFechaSalidaManual(e.target.value)}
+                  className="w-full max-w-xs rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                />
+              </div>
+            )}
 
             {precioPersonaExtra > 0 && (
               <p className="mt-2 px-6 text-xs text-muted">
@@ -1823,6 +1949,48 @@ export function CheckoutView({
                     </div>
                   )}
                 </fieldset>
+
+                {personalizacionesDisponibles.length > 0 && (
+                  <div className="mt-6 flex flex-col gap-2 border-t border-border pt-5">
+                    <p className="text-xs font-semibold tracking-wider text-muted uppercase">
+                      {lang === 'en' ? 'Package Customizations' : 'Personalizaciones del paquete'}
+                    </p>
+                    {personalizacionesDisponibles.map(({ servicioNombre, personalizacion: sp }) => {
+                      const marcada = personalizacionesMap.has(sp.id);
+                      const precioUnitario =
+                        parseFloat(moneda === 'USD' && sp.precio_usd ? sp.precio_usd : sp.precio) || 0;
+                      const totalPers = precioUnitario * (sp.cobrar_por_persona ? people : 1);
+                      return (
+                        <label
+                          key={sp.id}
+                          className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
+                        >
+                          <span className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              checked={marcada}
+                              disabled={locked}
+                              onChange={(e) => alternarPersonalizacion(sp.id, e.target.checked)}
+                              className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                            />
+                            <span>
+                              <span className="font-medium">{sp.nombre}</span>
+                              <span className="ml-2 text-xs text-muted">({servicioNombre})</span>
+                              {sp.cobrar_por_persona && (
+                                <span className="block text-xs text-muted">
+                                  {lang === 'en' ? 'Charged per person' : 'Cobro por persona'}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right font-medium text-muted">
+                            +{currency.format(totalPers)}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {(!extrasConfirmado || pasoEditando === 3) && (
                   <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">

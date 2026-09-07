@@ -92,6 +92,8 @@ export type ExtraSeleccion = {
   cantidad?: number | null;
 };
 
+export type MotivoNoDisponible = 'lleno' | 'sin_panga' | 'sin_lugar';
+
 export type Cupo = {
   fecha: string;
   cupo_maximo: number;
@@ -104,9 +106,9 @@ export type Cupo = {
   // silencioso.
   proxima_disponible: string | null;
   // Por que no se puede. 'lleno' = se acabaron los viajes del dia. 'sin_panga' =
-  // el dia tiene espacio, pero ya no queda embarcacion donde quepa este grupo:
-  // solo dos de la flota llevan mas de 3 personas.
-  motivo_no_disponible: 'lleno' | 'sin_panga' | null;
+  // el dia tiene espacio, pero ya no queda embarcacion donde quepa este grupo.
+  // 'sin_lugar' = mismo significado que sin_panga para servicios/hospedaje.
+  motivo_no_disponible: MotivoNoDisponible | null;
 };
 
 export type ReservaInput = {
@@ -138,8 +140,12 @@ export type ReservaInput = {
   // — el token es de un solo uso y este endpoint es un upsert, asi que corregir
   // la fecha reenvia sin token (ver backend/apps/bookings/views.py).
   captcha_token?: string;
-  // ID del Paquete de experiencias que ampara esta reserva (si aplica).
-  paquete?: number | null;
+  // Slug o ID del Paquete de experiencias que ampara esta reserva (si aplica).
+  paquete?: string | number | null;
+  servicio?: string;
+  fecha_salida?: string;
+  servicios_removidos?: string[];
+  personalizaciones?: { id: number; cantidad: number }[];
 };
 
 export type Reserva = ReservaInput & {
@@ -180,7 +186,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // getCupo, etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
   // que cada funcion exportada tenga que acordarse del slug.
   // Rutas de plataforma multi-sede (/api/sedes/) no se atan a una empresa.
-  const rutaConEmpresa = path.startsWith('/api/sedes')
+  const partes = path.split('/').filter(Boolean);
+  const esRutaSinReescribir =
+    path.startsWith('/api/sedes') ||
+    (partes.length >= 2 && !['tarifa', 'cupo', 'extras', 'reservas', 'codigo-promocional', 'sedes'].includes(partes[1]));
+
+  const rutaConEmpresa = esRutaSinReescribir
     ? path
     : path.startsWith('/api/')
     ? `/api/${EMPRESA_SLUG}${path.slice(4)}`
@@ -212,7 +223,6 @@ export const getCupo = (fecha: string, personas: number) =>
   request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`);
 
 /** Por que no cabe el grupo cada dia del rango; null = si cabe. */
-export type MotivoNoDisponible = 'lleno' | 'sin_panga';
 export type DisponibilidadRango = Record<string, MotivoNoDisponible | null>;
 
 /**
@@ -229,8 +239,10 @@ export const getCupoRango = (desde: string, hasta: string, personas: number) =>
   ).then((r) => r.dias);
 
 /** Crea la reserva de este checkout, o actualiza la que ya existia. */
-export const guardarReserva = (data: ReservaInput) =>
-  request<Reserva>('/api/reservas/', { method: 'POST', body: JSON.stringify(data) });
+export const guardarReserva = (data: ReservaInput, empresaSlug?: string) => {
+  const ruta = empresaSlug ? `/api/${empresaSlug}/reservas/` : '/api/reservas/';
+  return request<Reserva>(ruta, { method: 'POST', body: JSON.stringify(data) });
+};
 
 export const crearPago = (reservaId: number, data: PagoInput) =>
   request<Pago>(`/api/reservas/${reservaId}/crear-pago/`, {
@@ -388,7 +400,11 @@ export const getSedes = () => request<Sede[]>('/api/sedes/');
 export const getPaquetesSede = (sedeSlug: string) =>
   request<PaqueteCatalogo[]>(`/api/sedes/${sedeSlug}/paquetes/`);
 
+export const getPaqueteDetalle = (sedeSlug: string, paqueteSlug: string) =>
+  request<PaqueteCatalogo>(`/api/sedes/${sedeSlug}/paquetes/${paqueteSlug}/`);
+
 export const getServiciosSede = (sedeSlug: string) =>
   request<ServicioCatalogo[]>(`/api/sedes/${sedeSlug}/servicios/`);
 
 export { ApiError };
+

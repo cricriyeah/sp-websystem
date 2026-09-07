@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
-import { getPaquetesSede, getSedes, getTarifa } from '@/lib/api';
+import { getPaqueteDetalle, getSedes, getTarifa, type PaqueteCatalogo } from '@/lib/api';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { alternativasDe } from '@/lib/site';
 
@@ -47,21 +47,48 @@ export default async function ReservarPage({
 
   // Si se seleccionó un paquete de experiencias desde el catálogo
   const paqueteSlug = typeof query.paquete === 'string' ? query.paquete : undefined;
-  let paqueteId: number | undefined;
-  let paqueteNombre: string | undefined;
+  const sedeSlug = typeof query.sede === 'string' ? query.sede : undefined;
+  let paquete: PaqueteCatalogo | null = null;
 
   if (paqueteSlug) {
-    const sedes = await getSedes().catch(() => []);
-    for (const s of sedes) {
-      const paquetes = await getPaquetesSede(s.slug).catch(() => []);
-      const p = paquetes.find((item) => item.slug === paqueteSlug);
-      if (p) {
-        paqueteId = p.id;
-        paqueteNombre = p.nombre;
-        break;
+    if (sedeSlug) {
+      paquete = await getPaqueteDetalle(sedeSlug, paqueteSlug).catch(() => null);
+    } else {
+      const sedes = await getSedes().catch(() => []);
+      for (const s of sedes) {
+        const p = await getPaqueteDetalle(s.slug, paqueteSlug).catch(() => null);
+        if (p) {
+          paquete = p;
+          break;
+        }
       }
     }
   }
+
+  const excluidosParam = typeof query.excluidos === 'string' ? query.excluidos : undefined;
+  const initialServiciosRemovidos = excluidosParam
+    ? excluidosParam
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((token) => {
+          if (/^\d+$/.test(token) && paquete) {
+            const idNum = Number(token);
+            const sa = paquete.servicios_asociados.find(
+              (item) => (item.servicio?.id ?? item.servicio_id) === idNum,
+            );
+            return sa?.servicio?.slug ?? token;
+          }
+          return token;
+        })
+    : [];
+
+  const fechaSalidaParam =
+    typeof query.fecha_salida === 'string'
+      ? query.fecha_salida
+      : typeof query.salida === 'string'
+        ? query.salida
+        : undefined;
 
   // El booking bar siempre manda los tres juntos: si trae alguno explicito es
   // que el cliente acaba de elegir viaje, no que recargo esta misma pagina.
@@ -79,8 +106,11 @@ export default async function ReservarPage({
       minDate={minDate}
       tarifa={tarifa}
       queryOverride={queryOverride}
-      paqueteId={paqueteId}
-      paqueteNombre={paqueteNombre}
+      paqueteId={paquete?.id}
+      paqueteNombre={paquete?.nombre}
+      paquete={paquete}
+      initialServiciosRemovidos={initialServiciosRemovidos}
+      initialFechaSalida={fechaSalidaParam}
     />
   );
 }

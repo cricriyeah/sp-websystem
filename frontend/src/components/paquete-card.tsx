@@ -22,7 +22,7 @@ type PaqueteCardProps = {
   className?: string;
   onSelect?: (
     paquete: PaqueteCatalogo,
-    serviciosExcluidos: number[],
+    serviciosExcluidos: string[],
     precioFinal: number,
   ) => void;
 };
@@ -35,8 +35,8 @@ export function PaqueteCard({
   className = '',
   onSelect,
 }: PaqueteCardProps) {
-  // IDs de servicios que el usuario ha desmarcado in-place
-  const [serviciosExcluidos, setServiciosExcluidos] = useState<number[]>([]);
+  // Slugs de servicios que el usuario ha desmarcado in-place
+  const [serviciosExcluidos, setServiciosExcluidos] = useState<string[]>([]);
 
   // Cálculo reactivo puro del precio ancla ajustado
   const calculo = calcularPrecioPaquete(paquete, serviciosExcluidos, moneda);
@@ -44,19 +44,20 @@ export function PaqueteCard({
   const tieneAjuste = calculo.totalAjustesDescontados > 0;
   const totalServicios = paquete.servicios_asociados.length;
 
-  function toggleServicio(servicioId: number, removible: boolean) {
+  function toggleServicio(servicioSlug: string, removible: boolean) {
     if (!removible) return;
     setServiciosExcluidos((prev) =>
-      prev.includes(servicioId)
-        ? prev.filter((id) => id !== servicioId)
-        : [...prev, servicioId],
+      prev.includes(servicioSlug)
+        ? prev.filter((s) => s !== servicioSlug)
+        : [...prev, servicioSlug],
     );
   }
 
   // URL para continuar hacia el checkout con este paquete y los componentes elegidos
-  const bookingHref = `/${lang}/reservar?paquete=${paquete.slug}${
-    serviciosExcluidos.length > 0 ? `&excluidos=${serviciosExcluidos.join(',')}` : ''
-  }&moneda=${moneda}`;
+  const sedeParam = paquete.sede_slug ? `&sede=${paquete.sede_slug}` : '';
+  const excluidosParam =
+    serviciosExcluidos.length > 0 ? `&excluidos=${serviciosExcluidos.join(',')}` : '';
+  const bookingHref = `/${lang}/reservar?paquete=${paquete.slug}${sedeParam}${excluidosParam}&moneda=${moneda}`;
 
   return (
     <article
@@ -129,8 +130,8 @@ export function PaqueteCard({
 
         <div className="mt-3 space-y-2.5">
           {paquete.servicios_asociados.map((item) => {
-            const sId = item.servicio?.id ?? item.servicio_id;
-            const estaExcluido = serviciosExcluidos.includes(sId);
+            const sSlug = item.servicio?.slug ?? String(item.servicio?.id ?? item.servicio_id);
+            const estaExcluido = serviciosExcluidos.includes(sSlug);
             const servicioNombre = item.servicio?.nombre ?? 'Servicio incluido';
             const servicioDesc = item.servicio?.descripcion;
             const ajusteRaw =
@@ -142,7 +143,7 @@ export function PaqueteCard({
             return (
               <div
                 key={item.id}
-                onClick={() => toggleServicio(sId, item.removible)}
+                onClick={() => toggleServicio(sSlug, item.removible)}
                 className={`flex items-start justify-between gap-3 rounded-xl border p-3.5 transition-colors ${
                   item.removible ? 'cursor-pointer' : 'cursor-default'
                 } ${
