@@ -122,3 +122,17 @@ class ServiciosAPITests(TestCase):
     def test_empresa_inexistente_devuelve_404(self):
         resp = self.client.get('/api/empresa-fantasma/servicios/')
         self.assertEqual(resp.status_code, 404)
+
+    def test_servicios_por_sede_incluyen_empresa_slug(self):
+        resp = self.client.get(f'/api/sedes/{self.sede.slug}/servicios/')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        slug_a_empresa = {s['slug']: s['empresa_slug'] for s in data}
+        self.assertEqual(slug_a_empresa['pesca-la-paz'], 'empresa-a')
+        self.assertEqual(slug_a_empresa['tour-loreto'], 'empresa-b')
+
+    def test_servicios_empresa_incluye_empresa_slug(self):
+        resp = self.client.get('/api/empresa-a/servicios/')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data[0]['empresa_slug'], 'empresa-a')

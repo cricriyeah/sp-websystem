@@ -102,12 +102,13 @@ class ServicioPersonalizacionSerializer(serializers.ModelSerializer):
 
 
 class ServicioSerializer(serializers.ModelSerializer):
+    empresa_slug = serializers.CharField(source='empresa.slug', read_only=True)
     personalizaciones = serializers.SerializerMethodField()
 
     class Meta:
         model = Servicio
         fields = [
-            'id', 'nombre', 'slug', 'tipo_servicio',
+            'id', 'empresa_slug', 'nombre', 'slug', 'tipo_servicio',
             'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion',
             'precio_base', 'precio_base_usd',
             'precio_persona_extra', 'precio_persona_extra_usd',
