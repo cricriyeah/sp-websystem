@@ -79,10 +79,11 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 
 | Archivo | Responsabilidad | Sección |
 |---|---|---|
-| `backend/apps/bookings/models.py` | modelo `Orden` (estados, `checkout_id`, cliente, `empresa_lider`, `sede`); `Reserva.orden` FK | 1 |
-| `backend/apps/bookings/migrations/00XX_*.py` | `Orden` + RLS sede-scoped; `Reserva.orden` | 1 |
+| `backend/apps/bookings/models.py` | modelo `Orden` (estados, `checkout_id`, cliente, `empresa_lider`, `sede`); `Reserva.orden` FK; gate de `orden_id` en `_validar_cupo_de_paquete` y `_validar_consistencia_de_empresa` | 1, 3 |
+| `backend/apps/bookings/migrations/00XX_*.py` | `Orden` + RLS sede-scoped (con `WITH CHECK` que permite el INSERT público); `Reserva.orden`; función `estado_reservas_de_orden(orden_id)` `SECURITY DEFINER` | 1 |
 | `backend/apps/fleet/models.py` | `PaqueteServicio.clean()` acepta componente de otra empresa de la misma sede; `Paquete.clean()` valida `precio_paquete ≥ monto_transporte` | 2 |
-| `backend/apps/payments/pricing.py` | `monto_por_empresa(*, precio_paquete, componentes, moneda) -> {empresa_id: Decimal}` (puro, única fuente del reparto) | 2 |
+| `backend/apps/payments/pricing.py` | `monto_por_empresa(*, precio_paquete, componentes, moneda) -> {empresa_id: Decimal}` (puro, única fuente del reparto). **Sin campo `PaqueteServicio.monto_empresa`.** | 2 |
+| `backend/apps/tenancy/` (migración o `scope.py`) | función Postgres `estado_reservas_de_orden(orden_id)` `SECURITY DEFINER` — lectura cruza-empresa acotada a una orden (la usan cierre de orden, `revertir_orden`, notificación, conciliar, admin) | 1 |
 | `backend/apps/bookings/cupo/confirmacion.py` | separar Caso B mono-empresa del nuevo "confirmar solo mi componente" para reservas con `orden` | 3 |
 | `backend/apps/payments/ordenes.py` (nuevo) | orquestación de la orden: crear N PaymentIntents, `confirmar_captura(orden)`, `revertir_orden(orden, motivo)` | 4, 5 |
 | `backend/apps/payments/services.py` | `aplicar_pago_exitoso` evalúa la orden al pagar la última reserva; llama `revertir_orden` en el camino de compensación | 5 |
@@ -93,18 +94,22 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 | `backend/apps/notifications/services.py` | `notificar_orden_pagada(orden)` — correo combinado; WhatsApp sigue por empresa | 5 |
 | `backend/apps/bookings/admin.py` | `OrdenAdmin` (solo lectura + acción cancelar); enlace orden↔reserva | 7 |
 | `backend/apps/bookings/models.py` (deslinde) | `deslinde_version` nueva; el deslinde de la orden se copia a cada reserva | 9 |
-| `frontend/src/components/paquete-checkout.tsx` (nuevo o extensión de `checkout-view`) | detecta paquete cruza-empresa → modo orden; N `PaymentElement` en secuencia | 8 |
-| `frontend/src/lib/api.ts` | `crearOrden`, `crearPagoOrden`, `confirmarCapturaOrden` | 8 |
+| `frontend/src/components/paquete-checkout.tsx` (nuevo o extensión de `checkout-view`) | detecta paquete cruza-empresa → modo orden; N `PaymentElement` **solo tarjeta** en secuencia; reanuda la orden en curso tras recarga | 8 |
+| `frontend/src/lib/api.ts` | `crearOrden`, `crearPagoOrden`, `confirmarCapturaOrden`, `getOrden` (para reanudar) | 8 |
 | `frontend/src/app/[lang]/deslinde/` + dictionaries | texto del deslinde ampliado a multi-empresa | 9 |
 | `backend/apps/*/tests.py` | tests de cada tarea | todas |
 
-<!-- arch-critic: revisión inline por el orquestador. Puntos verificados:
-(1) `Orden` sin `empresa_id` — RLS sede-scoped explícita, documentada como excepción del guardarraíl igual que `Sede`/`Empresa`.
-(2) Sin ciclo: `payments/ordenes.py` importa de `bookings` y `fleet`; `bookings/confirmacion.py` no importa de `payments/ordenes` (el webhook llama a `ordenes.revertir_orden` desde `services.py`, que ya es el punto de orquestación de pagos).
-(3) La Sección 3 (rework de `confirmacion.py`) va ANTES de la Sección 5 (webhook orden-aware) porque el webhook depende de que "confirmar solo mi componente" ya exista.
-(4) `monto_por_empresa` es puro y vive en `pricing.py` (constraint 2 de SP1) — ninguna vista ni webhook calcula el reparto por su cuenta.
-(5) `revertir_orden` es idempotente y es el único lugar que emite void/refund de una orden; tanto `ConfirmarCapturaOrdenView` como el webhook como `conciliar_pagos` lo llaman.
-(6) Riesgo residual: capture parcial (auth 1 y 2 OK, capture 1 OK, capture 2 falla) deja dinero cobrado a una empresa. Mitigación en Tarea 5.3: reintento de captura acotado y, si agota, refund de lo capturado vía `revertir_orden`. -->
+<!-- arch-critic: REVISIÓN REQUERIDA (inline, 2026-09-07) → CORREGIDA. Hallazgos aplicados:
+(C-12) Contexto RLS: `CrearOrdenView` (AllowAny) escribe N reservas en N empresas — itera `scope.con_empresa(componente.empresa)` por escritura (Tarea 4.1); la política RLS de `Orden` lleva `WITH CHECK` que permite el INSERT público acotado por `sede` (Tarea 1.2).
+(C-13) Lectura cruza-empresa: el webhook de una empresa NO ve las reservas hermanas de otras empresas (RLS las filtra) → "¿todas pagadas?" daría True tras el primer webhook. Se resuelve con la función Postgres `estado_reservas_de_orden(orden_id)` SECURITY DEFINER (Tarea 1.3), acotada a una orden. La usan cierre de orden, `revertir_orden`, `notificar_orden_pagada`, `conciliar_pagos`, `OrdenAdmin`.
+(S-14) `notificar_orden_pagada` usa esa misma función (Tarea 5.4).
+Verificado además:
+(1) Sin ciclo: `services → ordenes`; `conciliar_pagos → {services, ordenes}`; `confirmacion.py` NO importa `ordenes` (lanza `SinCupoError`, `services.py` lo captura y llama `revertir_orden`).
+(2) Sección 3 (rework `confirmacion.py` + gate `_validar_cupo_de_paquete`) va ANTES de la Sección 5.
+(3) `monto_por_empresa` puro en `pricing.py`; el caller resuelve la `TransporteTarifa` y pasa el número — `pricing.py` no importa `fleet`.
+(4) `revertir_orden` idempotente, único emisor de void/refund de orden.
+(5) Capture parcial: reintento acotado inline en `confirmar_captura` (Tarea 4.3/5.3); `conciliar_pagos` NUNCA captura (Tarea 6.1).
+(6) Solo tarjeta en el checkout de orden (`payment_method_types=['card']`, Tarea 4.2). -->
 
 ---
 
@@ -193,21 +198,74 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 - [ ] **Paso 4:** correr → verde.
 - [ ] **Paso 5:** commit `feat(bookings): modelo Orden (agrupa N reservas cruza-empresa)`.
 
-### Tarea 1.2 — RLS de `Orden` (sede-scoped)
+### Tarea 1.2 — RLS de `Orden` (sede-scoped, con INSERT público)
 
 **Files:**
 - Create: migración RLS. `Orden` **no tiene `empresa_id`** — cruza empresas. Política:
-  - Operador de plataforma: ve todo (mismo escape que las demás políticas).
-  - Jefe/vendedora: ve las órdenes de su `sede` (`sede_id = (SELECT sede_id FROM tenancy_empresa WHERE id = current_setting('app.current_empresa_id')::int)`).
-  - `Reserva.orden` no necesita política nueva (la política de `Reserva` por `empresa_id` ya limita qué reservas ve cada quien; una orden se ve entera solo si tu empresa está en la sede).
-- Modify: `backend/apps/tenancy/tests_rls.py` — **excepción documentada**: `bookings_orden` no lleva política `empresa_id` sino `sede`; añadir a la whitelist con comentario (igual que `tenancy_sede` / `tenancy_empresa`).
-- Test: `# postgres-only` — dos sedes, una orden en cada una; el jefe de una empresa de la sede A ve la orden de A, no la de B; el operador de plataforma ve las dos.
+  - **SELECT/UPDATE:** operador de plataforma ve todo (mismo escape que las demás
+    políticas). Jefe/vendedora ve las órdenes de su `sede`
+    (`sede_id = (SELECT sede_id FROM tenancy_empresa WHERE id = current_setting('app.current_empresa_id', true)::int)`).
+  - **INSERT (`WITH CHECK`):** `CrearOrdenView` es `AllowAny` y no fija contexto de
+    empresa. El `WITH CHECK` permite el INSERT cuando el `sede_id` de la fila existe
+    (`EXISTS (SELECT 1 FROM tenancy_sede WHERE id = NEW.sede_id)`) — igual de laxo que
+    lo que ya permite el INSERT público de `Reserva`, acotado aquí por la `sede` del
+    slug. La `Orden` recién creada no se puede volver a leer desde esa misma request
+    sin contexto (no hace falta: la respuesta se arma con los ids que ya tienes).
+  - `Reserva.orden` no necesita política nueva.
+- Modify: `backend/apps/tenancy/tests_rls.py` — **excepción documentada**:
+  `bookings_orden` no lleva política `empresa_id` sino `sede`; añadir a la whitelist
+  con comentario (igual que `tenancy_sede` / `tenancy_empresa`).
+- Test: `# postgres-only` — dos sedes, una orden en cada una; el jefe de una empresa
+  de la sede A ve la orden de A, no la de B; el operador ve las dos; un INSERT sin
+  contexto de empresa (request pública) con `sede_id` válido **pasa**.
 
 - [ ] **Paso 1: test que falla** (postgres).
 - [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** migración RLS sede-scoped.
+- [ ] **Paso 3:** migración RLS sede-scoped con `WITH CHECK` para el INSERT público.
 - [ ] **Paso 4:** correr → verde; el guardarraíl de RLS pasa con la excepción.
-- [ ] **Paso 5:** commit `feat(bookings): política RLS sede-scoped para Orden`.
+- [ ] **Paso 5:** commit `feat(bookings): política RLS sede-scoped para Orden (INSERT público permitido)`.
+
+### Tarea 1.3 — Función `estado_reservas_de_orden(orden_id)` (`SECURITY DEFINER`)
+
+Una orden cruza N contextos RLS. El webhook de una empresa, bajo el RLS de esa
+empresa, **no ve** las reservas hermanas de otras empresas — así que "¿ya se pagaron
+todas?" daría `True` tras el primer webhook. Se resuelve con una función Postgres
+`SECURITY DEFINER` acotada a **una** orden (no es un barrido — es el patrón del escape
+explícito del panel de finanzas consolidado).
+
+**Files:**
+- Create: migración en `backend/apps/bookings/migrations/` (o `tenancy/`) con:
+  ```sql
+  CREATE OR REPLACE FUNCTION estado_reservas_de_orden(p_orden_id int)
+  RETURNS TABLE (
+    reserva_id int, empresa_id int, servicio_id int, estado text,
+    monto_pagado numeric, monto_reembolsado numeric,
+    stripe_payment_intent_id text, correo_cliente text
+  )
+  LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+    SELECT id, empresa_id, servicio_id, estado, monto_pagado, monto_reembolsado,
+           stripe_payment_intent_id, correo_cliente
+    FROM bookings_reserva
+    WHERE orden_id = p_orden_id
+  $$;
+  REVOKE ALL ON FUNCTION estado_reservas_de_orden(int) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION estado_reservas_de_orden(int) TO <rol de la app>;
+  ```
+  (El `<rol de la app>` es el mismo que usan las demás funciones `SECURITY DEFINER`
+  del proyecto — revisar `fleet/migrations/*` de la expansión.)
+- Create: `backend/apps/bookings/orden_lectura.py` — wrapper Python
+  `reservas_de_orden(orden_id) -> list[RowDict]` que hace
+  `connection.cursor().execute('SELECT * FROM estado_reservas_de_orden(%s)', [orden_id])`.
+- Modify: `backend/apps/tenancy/tests_rls.py` — la función está en la whitelist de
+  escapes explícitos permitidos.
+- Test: `# postgres-only` — orden con reservas de 2 empresas; bajo el contexto de la
+  Empresa 1, `orden.reservas.all()` ve 1 fila pero `reservas_de_orden(orden_id)` ve 2.
+
+- [ ] **Paso 1: test que falla** (postgres — hoy la función no existe).
+- [ ] **Paso 2:** correr → falla.
+- [ ] **Paso 3:** migración + wrapper.
+- [ ] **Paso 4:** correr → verde.
+- [ ] **Paso 5:** commit `feat(bookings): estado_reservas_de_orden (lectura cruza-empresa acotada a una orden)`.
 
 ### Gate Sección 1
 
@@ -317,6 +375,51 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 - [ ] **Paso 4:** correr → verde. **Correr toda la suite de bookings** — Caso B no debe cambiar de comportamiento para paquetes mono-empresa.
 - [ ] **Paso 5:** commit `feat(bookings): confirmar cupo por componente para reservas de una orden`.
 
+### Tarea 3.2 — Gate de `orden_id` en `Reserva.clean()`
+
+La reserva **líder** de una orden lleva `paquete` seteado. Sin gate, `Reserva.clean()`
+correría `_validar_cupo_de_paquete` (itera todos los componentes, incluido el de otra
+empresa → validación de cupo cruza-empresa bajo el RLS de la líder). Mismo problema que
+la Tarea 3.1 pero en `clean()`, no en `reservar_cupo_al_confirmar`.
+
+**Files:**
+- Modify: `backend/apps/bookings/models.py::Reserva.clean()` (~línea 683):
+  ```python
+  if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
+      if self.orden_id:
+          # Componente de una orden cruza-empresa: valida SOLO su servicio.
+          # El paquete entero lo cubren los webhooks de cada empresa.
+          if self.servicio_id:
+              estrategia = self.servicio.estrategia_cupo
+              if estrategia != 'bajo_demanda':
+                  validar_cupo_diario(
+                      self.fecha, self.numero_personas, self.empresa,
+                      excluir_pk=self.pk, estrategia_cupo=estrategia, servicio_id=self.servicio_id,
+                  )
+      elif self.paquete_id:
+          _validar_cupo_de_paquete(self)
+      elif self.servicio_id and self.servicio.estrategia_cupo == 'por_noche':
+          _validar_cupo_hospedaje(self)
+      else:
+          ... (rama actual sin cambios)
+  ```
+- Modify: `backend/apps/bookings/models.py::Reserva._validar_consistencia_de_empresa`
+  — el bucle actual ya no incluye `paquete` para las reservas no-líder (solo la líder
+  lo lleva). Confirmar que para la reserva líder (paquete de la sede, empresa_lider ==
+  su empresa) sigue pasando; para las demás, `paquete_id` es None y la validación de
+  paquete se salta sola. **No hace falta relajar nada** si solo la líder lleva
+  `paquete` (ver Tarea 4.1).
+- Test: `backend/apps/bookings/tests.py` — la reserva líder de una orden (con `paquete`
+  **y** `orden`) valida solo su cupo de pesca; una reserva de transporte de la orden
+  (solo `orden`, `bajo_demanda`) no valida cupo; ninguna dispara
+  `_validar_cupo_de_paquete`.
+
+- [ ] **Paso 1: test que falla** (hoy la líder dispara `_validar_cupo_de_paquete`).
+- [ ] **Paso 2:** correr → falla.
+- [ ] **Paso 3:** añadir el gate de `orden_id` en `clean()`.
+- [ ] **Paso 4:** correr toda la suite de bookings → verde (paquetes mono-empresa intactos).
+- [ ] **Paso 5:** commit `fix(bookings): la reserva de una orden valida solo su cupo, no el del paquete`.
+
 ### Gate Sección 3
 
 - [ ] Suite verde sqlite + Postgres.
@@ -332,14 +435,25 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 - Modify: `backend/apps/payments/views.py` — `CrearOrdenView(APIView)` (`AllowAny`). Body: `checkout_id`, `paquete` (slug), datos del cliente, `moneda`, `deslinde_aceptado`, `deslinde_nombre`, `ref` (opcional), y por cada componente los datos que necesite (para el de transporte: `tipo_traslado`, `punto_encuentro`|`direccion_personalizada`, `fecha`, `hora`, `fecha_regreso`; para pesca: `fecha`, `hora`, `numero_personas`).
   - Valida que el paquete sea cruza-empresa (si es mono-empresa, va por el flujo de `Reserva` normal, no por órdenes → 400 con mensaje claro).
   - `forma_pago` forzado a `completo`.
-  - Dentro de `transaction.atomic`: crea la `Orden` (`armando`), y por cada componente una `Reserva` (`pendiente_pago`, `orden=<orden>`, `empresa=<empresa del componente>`, `servicio=<componente>`, `canal_origen='web'`), copiando el deslinde a cada una. Para el componente de transporte, crea también su `DetalleTransporte`.
-  - `full_clean()` en cada reserva antes de `save()`. **No** ocupa cupo (eso es al pagar).
-  - Aplica `ref` solo a la `Reserva` de la `empresa_lider` (§9 del spec).
-  - Reusa la orden por `checkout_id` si ya existe en `armando`/`autorizando`.
-  - Devuelve `{orden_id, estado, reservas: [{empresa_slug, servicio, ...}]}`.
-- Modify: `backend/apps/payments/urls.py` + `config/urls.py` — ruta `<slug:sede_slug>/ordenes/`.
+  - Dentro de **una** `transaction.atomic`:
+    - Crea la `Orden` (`armando`). El INSERT de `Orden` no tiene contexto de empresa
+      (vista `AllowAny`); lo permite el `WITH CHECK` sede-scoped de la Tarea 1.2.
+    - Por cada componente, una `Reserva` (`pendiente_pago`, `orden=<orden>`,
+      `empresa=<empresa del componente>`, `servicio=<componente>`, `canal_origen='web'`),
+      **iterando `scope.con_empresa(componente.empresa)` para cada escritura** — la
+      Constraint 3 prohíbe depender del filtro del ORM. **Solo la reserva de la
+      `empresa_lider` lleva `paquete` seteado** (ponerlo en otra dispara
+      `_validar_consistencia_de_empresa`); las demás llevan solo `orden` + `servicio`.
+      Deslinde copiado a cada una. Para el componente de transporte, crea también su
+      `DetalleTransporte` bajo `scope.con_empresa(empresa_2)`.
+    - `full_clean()` en cada reserva antes de `save()`. **No** ocupa cupo.
+    - `ref` solo a la `Reserva` de la `empresa_lider` (§9 del spec).
+  - Reusa la orden por `checkout_id` si ya existe en `armando`/`autorizando`; una
+    `capturada`/`cancelada` con ese `checkout_id` se ignora (orden nueva).
+  - Devuelve `{orden_id, checkout_id, estado, reservas: [{empresa_slug, servicio, ...}]}`.
+- Modify: `backend/apps/payments/urls.py` + `config/urls.py` — ruta `<slug:sede_slug>/ordenes/`. (`tenancy.Sede.slug` existe, `unique`.)
 - Modify: `frontend/src/lib/api.ts` — `crearOrden(sedeSlug, payload)`.
-- Test: `backend/apps/payments/tests.py::CrearOrdenTest` — crea orden + 2 reservas con sus empresas; paquete mono-empresa → 400; deslinde faltante → 400; reutiliza por `checkout_id`.
+- Test: `backend/apps/payments/tests.py::CrearOrdenTest` — crea orden + 2 reservas con sus empresas (postgres: verifica que las 2 escrituras pasan RLS vía `scope.con_empresa`); solo la líder lleva `paquete`; paquete mono-empresa → 400; deslinde faltante → 400; reutiliza por `checkout_id` en `armando`, ignora uno `capturada`.
 
 - [ ] **Paso 1: test que falla.**
 - [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): POST /api/<sede>/ordenes/`.
@@ -353,35 +467,52 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
   manual capture (uno por empresa), capturarlos todos, o revertir todo.
   El dinero se calcula en pricing.monto_por_empresa; aquí solo se mueve."""
 
-  def crear_pagos_orden(orden) -> list[dict]:
-      """Idempotente. Crea (o reutiliza) un PaymentIntent capture_method='manual'
-      por cada Reserva de la orden, en la cuenta Stripe de su empresa, por el
-      monto del reparto. Devuelve [{empresa_slug, monto, client_secret,
-      publishable_key}]. 409 si la orden ya está capturada/cancelada."""
+  CAPTURA_REINTENTOS = 3
+
+  def crear_pagos_orden(orden, reparto: dict) -> list[dict]:
+      """Idempotente. `reparto` = {empresa_id: Decimal} de pricing.monto_por_empresa.
+      Crea (o reutiliza) un PaymentIntent por cada Reserva de la orden, en la
+      cuenta Stripe de su empresa, por su monto del reparto, con
+      capture_method='manual' y payment_method_types=['card'] (SOLO tarjeta —
+      OXXO/SPEI no soportan auth/capture). metadata {orden_id, reserva_id,
+      empresa_id}. idempotency_key = f'orden-{orden.id}-{empresa_id}-crear'.
+      Devuelve [{empresa_slug, monto, client_secret, publishable_key}].
+      Fallo parcial (creó el de la empresa 1, la llamada de la empresa 2
+      revienta): deja los creados, propaga el error; un reintento crea los que
+      faltan y reutiliza los existentes. 409 si la orden ya está
+      capturada/cancelada."""
       ...
 
   def confirmar_captura(orden) -> None:
-      """Verifica con Stripe que los N PaymentIntents estén 'requires_capture'.
-      Si TODOS lo están → captura los N (idempotency_key por empresa) y
-      orden.transicionar('capturada'). Si alguno no → revertir_orden(orden,
-      'una autorización no se completó')."""
+      """Lee los N PaymentIntents (por estado_reservas_de_orden → stripe_payment_intent_id).
+      Si alguno NO está 'requires_capture' → revertir_orden(orden, 'una autorización
+      no se completó'). Si todos → captura los N; si la captura de alguno falla,
+      reintenta ESA hasta CAPTURA_REINTENTOS con espera corta; si agota →
+      revertir_orden(orden, 'no se pudo capturar <empresa>'). Idempotente a nivel
+      operación: un PI ya 'succeeded' se salta (traga PaymentIntentUnexpectedState),
+      no se re-captura. NO marca orden.capturada — eso lo hace el webhook al
+      recibir cada payment_intent.succeeded."""
       ...
 
   def revertir_orden(orden, motivo: str) -> None:
-      """Compensación idempotente. Por cada PaymentIntent de la orden:
-        - 'requires_capture' → cancel (void)
-        - 'succeeded'        → refund total (idempotency_key)
-        - 'canceled'/'refunded' → nada
-      Marca las reservas afectadas (reembolsada / motivo_cancelacion) y
-      orden.transicionar('cancelada'). Segura para reintentos."""
+      """Compensación idempotente. Por cada PaymentIntent de la orden
+      (vía estado_reservas_de_orden):
+        - 'requires_capture'/'requires_confirmation'/'requires_action' → cancel (void)
+        - 'succeeded' → refund total (idempotency_key = f'orden-{orden.id}-{empresa_id}-refund')
+        - 'canceled'/'refunded'/ya reembolsada → nada
+      Marca las reservas afectadas (reembolsada / motivo_cancelacion / estado
+      cancelada) y orden.transicionar('cancelada'). Segura para reintentos."""
       ...
   ```
-  Usa `configurar_stripe(empresa)` por empresa. `metadata` de cada PaymentIntent:
-  `{orden_id, reserva_id, empresa_id}`.
+  Usa `configurar_stripe(empresa)` por empresa. Lee las reservas hermanas con
+  `estado_reservas_de_orden(orden_id)` (Tarea 1.3) — nunca `orden.reservas.all()` bajo
+  el RLS de una empresa.
 - Test: `backend/apps/payments/tests.py::OrdenesModuloTest` (Stripe mockeado) —
-  `crear_pagos_orden` crea 2 intents en 2 cuentas por los montos del reparto;
-  segunda llamada no crea nuevos; `revertir_orden` hace void de `requires_capture` y
-  refund de `succeeded`, idempotente en segunda llamada.
+  `crear_pagos_orden` crea 2 intents `capture_method=manual` + `card` en 2 cuentas por
+  los montos del reparto; segunda llamada no crea nuevos; fallo en la 2ª cuenta deja la
+  1ª y propaga; `revertir_orden` hace void de `requires_capture` y refund de `succeeded`,
+  idempotente en segunda llamada; `confirmar_captura` con un PI ya `succeeded` no
+  revienta.
 
 - [ ] **Paso 1: test que falla.**
 - [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): módulo de orquestación de órdenes (crear/capturar/revertir)`.
@@ -390,10 +521,27 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 
 **Files:**
 - Modify: `backend/apps/payments/views.py`:
-  - `CrearPagoOrdenView` — resuelve el reparto (`pricing.monto_por_empresa` con la `TransporteTarifa` del componente ya resuelta), llama `ordenes.crear_pagos_orden`, `orden.transicionar('autorizando')`, devuelve la lista de pagos. Idempotente. 409 si `capturada`.
-  - `ConfirmarCapturaOrdenView` — llama `ordenes.confirmar_captura(orden)`. Devuelve `{estado}`. Si quedó `cancelada`, incluye el motivo para que el frontend lo muestre.
-- Modify: `frontend/src/lib/api.ts` — `crearPagoOrden`, `confirmarCapturaOrden`.
-- Test: `backend/apps/payments/tests.py` — flujo feliz (crear-pago → 2 client_secrets → confirmar-captura con ambos `requires_capture` → `capturada`, 2 reservas `pagada`); flujo fallo (uno `requires_confirmation` → `cancelada`, void del otro, 0 reservas pagadas).
+  - `CrearPagoOrdenView` — resuelve el reparto: para cada componente de transporte,
+    resuelve su fila de `TransporteTarifa` (`resolver_tarifa_transporte`, de SP1) →
+    `monto_fijo`; para la líder, `monto_fijo=None`. Llama
+    `pricing.monto_por_empresa(precio_paquete=..., componentes=..., moneda=...)`, luego
+    `ordenes.crear_pagos_orden(orden, reparto)`, `orden.transicionar('autorizando')`,
+    devuelve la lista de pagos. Idempotente. 409 si `capturada`.
+  - `ConfirmarCapturaOrdenView` — llama `ordenes.confirmar_captura(orden)`. Devuelve
+    `{estado}` (el estado real lo pone el webhook; este endpoint puede devolver
+    `autorizada` mientras llega el `succeeded`, o `cancelada` si se revirtió). Si
+    `cancelada`, incluye el motivo.
+  - `GetOrdenView` (`GET /api/<sede_slug>/ordenes/<id>/` o `?checkout_id=`) — para que
+    el frontend **reanude** tras recarga: devuelve `{estado, reservas: [{empresa_slug,
+    servicio, pago: {estado_pi, client_secret, publishable_key, monto}}]}` para que el
+    checkout arranque desde el primer pago que no esté `requires_capture`. Lee con
+    `estado_reservas_de_orden`.
+- Modify: `frontend/src/lib/api.ts` — `crearPagoOrden`, `confirmarCapturaOrden`, `getOrden`.
+- Test: `backend/apps/payments/tests.py` — flujo feliz (crear-pago → 2 client_secrets →
+  confirmar-captura con ambos `requires_capture` → 2 webhooks → `capturada`, 2 reservas
+  `pagada`); flujo fallo (uno `requires_confirmation` → `revertir_orden`, void del otro,
+  `cancelada`, 0 reservas pagadas); `getOrden` tras autorizar solo el 1º devuelve el
+  cursor en el 2º pago.
 
 - [ ] **Paso 1: test que falla.**
 - [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): endpoints crear-pago y confirmar-captura de una orden`.
@@ -416,14 +564,23 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
   ```python
   if reserva.orden_id:
       orden = Orden.objects.select_for_update().get(pk=reserva.orden_id)
-      if orden.reservas.exclude(estado=Reserva.Estado.PAGADA).exclude(estado=Reserva.Estado.ASIGNADA).count() == 0:
+      # NO orden.reservas.all() — bajo el RLS de esta empresa solo vería su
+      # propia reserva. estado_reservas_de_orden salta RLS, acotado a esta orden.
+      filas = reservas_de_orden(orden.pk)  # wrapper de la función SECURITY DEFINER
+      todas_pagadas = all(f['estado'] in ('pagada', 'asignada') for f in filas)
+      if todas_pagadas:
           if orden.estado != Orden.Estado.CAPTURADA:
               orden.transicionar('capturada'); orden.save()
           if orden.notificada_en is None:
-              notificar_orden_pagada(orden)  # nunca lanza (igual que notificar_reserva_pagada)
+              notificar_orden_pagada(orden)   # nunca lanza
+              orden.notificada_en = timezone.now(); orden.save(update_fields=['notificada_en'])
   ```
-  Corre dentro de `transaction.atomic` + `select_for_update` (ya lo hace el webhook).
-- Test: `backend/apps/payments/tests.py` — dos webhooks (uno por empresa) → tras el segundo, `Orden.capturada` + `notificada_en` seteada; un tercer webhook duplicado no re-notifica.
+  Corre dentro de `transaction.atomic` + `select_for_update` sobre la `Orden` (para que
+  dos webhooks simultáneos no dupliquen el cierre/notificación).
+- Test: `backend/apps/payments/tests.py` (postgres — la función `SECURITY DEFINER`
+  necesita Postgres) — dos webhooks bajo el RLS de cada empresa → tras el **segundo**
+  (no el primero), `Orden.capturada` + `notificada_en`; un tercer webhook duplicado no
+  re-notifica.
 
 - [ ] **Paso 1 → 5:** ciclo. Commit `feat(payments): el webhook cierra la orden al pagarse su última reserva`.
 
@@ -447,10 +604,19 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 
 **Files:**
 - Modify: `backend/apps/notifications/services.py` — `notificar_orden_pagada(orden)`:
-  - **Correo:** uno solo al `orden.correo_cliente`, que menciona los N componentes (pesca: fecha/hora; traslado: tipo/punto de encuentro). Plantilla nueva de correo (HTML/text), no de Meta.
-  - **WhatsApp:** por cada `Reserva` de la orden, el mismo `notificar_reserva_pagada` de hoy (plantilla de Meta ya aprobada por empresa). No se abre plantilla nueva en Meta.
-  - **Nunca lanza** (el cobro ya ocurrió; una notificación caída no puede hacer que Stripe reintente).
-- Test: `backend/apps/notifications/tests.py` — un correo combinado con los 2 componentes; 2 llamadas a WhatsApp (una por empresa); si el correo falla, no propaga.
+  - Lee los componentes con `reservas_de_orden(orden.pk)` (función `SECURITY DEFINER`)
+    — desde `aplicar_pago_exitoso` el contexto RLS es de una sola empresa y
+    `orden.reservas` no vería todo.
+  - **Correo:** uno solo al `orden.correo_cliente`, que menciona los N componentes
+    (pesca: fecha/hora; traslado: tipo/punto de encuentro). Plantilla nueva de correo
+    (HTML/text), no de Meta.
+  - **WhatsApp:** por cada reserva de la orden, el mismo `notificar_reserva_pagada` de
+    hoy (plantilla de Meta ya aprobada por empresa). Para leer los datos de cada
+    reserva individual, resolverla bajo `scope.con_empresa(fila['empresa_id'])`.
+  - **Nunca lanza** (el cobro ya ocurrió; una notificación caída no puede hacer que
+    Stripe reintente).
+- Test: `backend/apps/notifications/tests.py` (postgres) — un correo combinado con los
+  2 componentes; 2 llamadas a WhatsApp (una por empresa); si el correo falla, no propaga.
 
 - [ ] **Paso 1 → 5:** ciclo. Commit `feat(notifications): correo combinado de orden + WhatsApp por empresa`.
 
@@ -471,7 +637,8 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
   - Resolver a nivel orden: consultar los N PaymentIntents.
   - Si los N `succeeded` → aplicar los N (idempotente, como el webhook).
   - Si unos `succeeded` y otros no, y pasó `ORDEN_TIMEOUT_AUTORIZACION` (24 h desde `orden.actualizado_en`) → `revertir_orden(orden, 'timeout de autorización')`.
-  - Si los N `requires_capture` y pasó el timeout → también `revertir_orden` (el cliente nunca terminó; no capturamos sin que confirme el frontend... salvo que se decida capturar en conciliación — **decisión de producto: NO capturar en conciliación**, solo revertir; capturar es acción del cliente terminando el checkout).
+  - Si los N `requires_capture`/`requires_confirmation` y pasó el timeout → `revertir_orden`. **`conciliar_pagos` NUNCA captura** — capturar es acción del cliente en `confirmar-captura`; conciliar solo aplica lo ya `succeeded` o revierte.
+  - Lee las reservas hermanas con `reservas_de_orden(orden.pk)` (Tarea 1.3), no con `orden.reservas` (conciliar corre con `scope.como_operador_plataforma()` en un comando, pero la función `SECURITY DEFINER` es el patrón consistente con el webhook).
 - Test: `backend/apps/payments/tests.py::ConciliarOrdenesTest` — webhook perdido de ambas (ambas `succeeded` en Stripe) → conciliar aplica las 2, orden `capturada`; una `succeeded` una `requires_confirmation` + timeout → `revertir_orden`; idempotente en segunda vuelta.
 
 - [ ] **Paso 1 → 5:** ciclo. Commit `feat(payments): conciliar_pagos entiende órdenes`.
@@ -531,15 +698,16 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 **Files:**
 - Create: `frontend/src/components/paquete-checkout.tsx` — client component:
   1. **Un solo** formulario: datos del cliente + los datos de cada componente (fecha/hora de pesca; tipo de traslado + hospedaje + fechas) + **un** deslinde.
-  2. Al enviar: `crearOrden(sedeSlug, payload)` → `crearPagoOrden(ordenId)` → recibe `[{empresa_slug, monto, client_secret, publishable_key}]`.
-  3. Monta **N `<Elements>`/`<PaymentElement>` en secuencia**, cada uno con su `publishable_key` y `client_secret`. Encabezado: *"Paso 1 de 2 — Pesca (Empresa 1): $X"*, *"Paso 2 de 2 — Traslado (Empresa 2): $Y"*. Cada `stripe.confirmPayment` con el PaymentIntent en modo manual deja el intent en `requires_capture` (no cobra aún).
+  2. Al enviar: `crearOrden(sedeSlug, payload)` → guarda `checkout_id` + `ordenId` en `sessionStorage` → `crearPagoOrden(ordenId)` → recibe `[{empresa_slug, monto, client_secret, publishable_key}]`.
+  3. Monta **un `<Elements>`/`<PaymentElement>` a la vez** (no los N juntos), cada uno con su `publishable_key` (`loadStripe(pk)` — se cachea por key) y su `client_secret`. **Solo tarjeta**: el PaymentIntent ya viene con `payment_method_types=['card']`, así que el Element solo muestra tarjeta. Encabezado: *"Paso 1 de 2 — Pesca (Empresa 1): $X"*, *"Paso 2 de 2 — Traslado (Empresa 2): $Y"*. Cada `stripe.confirmPayment({..., redirect: 'if_required'})` con el PaymentIntent en modo manual deja el intent en `requires_capture` (no cobra aún). Al pasar de un paso al siguiente, desmontar el `<Elements>` anterior.
   4. Tras el último paso: `confirmarCapturaOrden(ordenId)`. Pantalla de éxito (con el resumen de los N componentes) o de fallo (*"No se pudo completar el pago del traslado. No se te cobró nada."*).
-  5. Si el cliente cierra a mitad: no se hace nada; la orden queda `autorizando` y `conciliar_pagos`/`revisar_ordenes` la limpia tras el timeout.
+  5. **Reanudar tras recarga/cierre y reapertura:** al montar, si hay `ordenId` en `sessionStorage`, `getOrden(sedeSlug, ordenId)` → si `capturada`/`cancelada`, mostrar esa pantalla; si `autorizando`, saltar el formulario y arrancar la secuencia de pagos desde el primer paso cuyo `pago.estado_pi` no sea `requires_capture`. Los pasos ya autorizados no se repiten.
+  6. Si el cliente nunca vuelve: la orden queda `autorizando` y `conciliar_pagos`/`revisar_ordenes` la limpia tras el timeout.
 - Reutiliza el bloque de datos del cliente, el deslinde y el `PaymentElement` de `checkout-view.tsx` (extraer a compartidos si están inline).
-- Modify: dictionaries — bloque `paqueteCheckout.*` (pasos, textos de éxito/fallo).
+- Modify: dictionaries — bloque `paqueteCheckout.*` (pasos, textos de éxito/fallo/reanudar).
 - Test: `tsc` · `lint` · `build`.
 
-- [ ] **Paso 1 → 3:** ciclo. Commit `feat(frontend): checkout de paquete cruza-empresa (N pagos en secuencia)`.
+- [ ] **Paso 1 → 3:** ciclo. Commit `feat(frontend): checkout de paquete cruza-empresa (tarjeta, N pagos en secuencia, reanudable)`.
 
 ### Gate Sección 8
 
@@ -579,7 +747,10 @@ Tests de Stripe: se mockea `stripe.StripeClient` (patrón ya usado en
 - [ ] **10.6** Actualizar `backend/CLAUDE.md` — sección nueva "Órdenes cruza-empresa": `Orden`, modelo B de cobro, `ordenes.py`, `revertir_orden`, `conciliar_pagos`/`revisar_ordenes` orden-aware, notificación combinada, `forma_pago=completo`. Actualizar `frontend/CLAUDE.md` — checkout de paquete cruza-empresa.
 - [ ] **10.7** Actualizar `docs/superpowers/specs/2026-09-06-ADR-005-...md` — Estado: IMPLEMENTADO, con la fecha y las desviaciones.
 - [ ] **10.8** Sembrar en local el paquete "Pesca + Traslado" (Empresa 1 líder + componente de la Empresa 2) con su `precio_paquete`. Añadir a `seed_local_demo`.
-- [ ] **10.9** Memoria: `plan-transporte-multi-empresa` → SP1 y SP2 hechos; mover a `pendientes-manuales-produccion` los pasos de producción (crear el paquete cruza-empresa real y su precio; verificar `stripe_webhook_secret` de cada empresa; texto final del deslinde aprobado).
+- [ ] **10.9** Memoria: `plan-transporte-multi-empresa` → SP1 y SP2 hechos; mover a `pendientes-manuales-produccion` los pasos de producción:
+  - **Cada empresa** registra su webhook endpoint en SU dashboard de Stripe apuntando a `/api/<empresa_slug>/stripe/webhook/` y guarda el signing secret en `Empresa.stripe_webhook_secret`. Sin esto, el cierre de orden depende solo de `conciliar_pagos` (con retraso).
+  - Crear el `Paquete` "Pesca + Traslado" real (líder Empresa 1 + componente Empresa 2) y su `precio_paquete`; verificar `precio_paquete ≥` tarifa de transporte.
+  - Texto final del deslinde ampliado aprobado por el dueño / abogado.
 - [ ] **10.10** Resumen para el dueño: migraciones y orden; qué se carga a mano; qué quedó pendiente (texto del deslinde, plantilla de correo combinado si quiere ajustarla, decisión de si `redondo_actividad` lleva tramo por tamaño).
 - [ ] **10.11** Commit `docs(plan): SP2 completado`. **PARA.** Integración de la rama (PR a `main` una vez `fix/expansion-multi-sede-hallazgos` esté dentro) la decide el dueño.
 

@@ -393,6 +393,13 @@ cada reserva. El dueño quiere que el cliente pague todo en el checkout ("lo viv
 una compra"), así que se va con el modelo B. Si el volumen de paquetes cruza-empresa
 resulta muy bajo al lanzar, Opción B sigue siendo un repliegue válido.
 
+**Solo tarjeta** (decisión del dueño, 2026-09-07). El modelo B (`capture_method='manual'`)
+solo funciona con tarjeta: OXXO y SPEI son vouchers de notificación diferida, sin
+autorización que se pueda cancelar. Los N PaymentIntents de una orden se crean con
+`payment_method_types=['card']` (y el `PaymentElement` del checkout de orden solo
+muestra tarjeta). Los traslados sueltos (SP1) y la pesca suelta siguen aceptando lo que
+tenga activada cada cuenta de Stripe.
+
 **Límite duro de Stripe:** una autorización de tarjeta expira (típico 7 días, algunas
 2). La captura ocurre segundos después de la última autorización, así que en el camino
 feliz no es problema; pero `ORDEN_TIMEOUT_AUTORIZACION` (§4.5) **debe** ser holgadamente
@@ -422,12 +429,21 @@ Reserva (campo nuevo)
 ```
 
 - Una `Orden` agrupa 2..N `Reserva`, una por empresa proveedora. Cada `Reserva`
-  conserva su `empresa`, su `servicio` (componente del paquete), su
+  conserva su `empresa`, su `servicio` (= su componente del paquete), su
   `stripe_payment_intent_id` propio, su webhook propio.
-- La `Reserva` de la `empresa_lider` lleva `paquete` seteado; las demás llevan
-  `paquete=NULL` y `servicio=<su componente>` (o se decide en el plan que todas
-  lleven `paquete` para el admin — decisión de detalle, no de arquitectura).
-- `checkout_id` en `Orden` para que un checkout reintentado reutilice la misma orden.
+- **`orden` seteado en todas** las reservas. **`paquete` solo en la reserva de la
+  `empresa_lider`** — ponerlo en la de otra empresa dispararía el check existente
+  `_validar_consistencia_de_empresa` (`paquete.empresa_lider_id != empresa_id`). El
+  admin y el cierre de orden llegan al paquete vía `orden.paquete`. Aun así, la
+  reserva líder (que sí lleva `paquete`) necesita el gate de `orden_id` en
+  `_validar_cupo_de_paquete` (§4.4.1) para no validar el cupo del componente ajeno.
+- `forma_pago` en el modelo lleva los mismos choices que `Reserva` (`completo` /
+  `anticipo`), pero `Orden.clean()` rechaza cualquier cosa que no sea `completo`
+  (§4.7.1).
+- `checkout_id` en `Orden` para que un checkout reintentado/recargado reutilice la
+  misma orden (§4.8). `crear-orden` reutiliza una orden con ese `checkout_id` solo si
+  está en `armando`/`autorizando`; una `capturada`/`cancelada` se ignora y se crea una
+  nueva.
 
 ### 4.3 Paquete cruza-empresa (cierra ADR-005)
 
@@ -458,21 +474,39 @@ Reserva (campo nuevo)
 - **`POST /api/<sede_slug>/ordenes/`** — crea la `Orden` (`armando`) + las N `Reserva`
   (`pendiente_pago`), una por empresa, con su componente. Deslinde una vez (se copia a
   cada reserva web). No ocupa cupo.
-- **`POST /api/<sede_slug>/ordenes/<id>/crear-pago/`** — calcula el reparto por empresa
-  (`PaqueteServicio.monto_empresa`), crea N PaymentIntents `capture_method='manual'`,
-  cada uno en la cuenta Stripe de su empresa, con `metadata` `{orden_id, reserva_id,
-  empresa_id}`. Devuelve la lista `[{empresa, monto, client_secret, publishable_key}]`.
-  Idempotente: si la orden ya tiene PaymentIntents sin capturar, los reutiliza /
-  ajusta; si ya está `capturada`, 409.
+- **`POST /api/<sede_slug>/ordenes/<id>/crear-pago/`** — calcula el reparto con
+  `pricing.monto_por_empresa` (§4.3: transporte a su `TransporteTarifa`, líder el
+  residuo — sin campo nuevo), crea N PaymentIntents `capture_method='manual'`,
+  `payment_method_types=['card']`, cada uno en la cuenta Stripe de su empresa, con
+  `metadata` `{orden_id, reserva_id, empresa_id}`. Devuelve la lista
+  `[{empresa, monto, client_secret, publishable_key}]`. Idempotente: si la orden ya
+  tiene PaymentIntents sin capturar, los reutiliza / ajusta; si ya está `capturada`,
+  409. **Fallo parcial** (se creó el PI de la empresa 1 y la llamada a Stripe de la
+  empresa 2 falla): la orden queda `autorizando` con los PIs que sí se crearon; un
+  reintento de `crear-pago` crea los que faltan; si nunca se completa, el timeout
+  (`ORDEN_TIMEOUT_AUTORIZACION`) la revierte (`conciliar_pagos` hace void de lo que
+  haya).
 - **`POST /api/<sede_slug>/ordenes/<id>/confirmar-captura/`** — lo llama el frontend
   cuando el cliente terminó las N autorizaciones. Verifica con Stripe que los N
-  PaymentIntents estén `requires_capture`; si sí, captura los N (`PaymentIntent.capture`),
-  marca `Orden.capturada`. Si alguno no está listo o falla → cancela (void) los que sí
-  y marca `Orden.cancelada`. **La captura y el void llevan `idempotency_key`.**
-- **Webhook** (por empresa, ya scopeado) — en `payment_intent.succeeded` (que para
+  PaymentIntents estén `requires_capture`; si sí, captura los N (`PaymentIntent.capture`).
+  Si la captura de alguno falla, reintenta esa captura hasta `CAPTURA_REINTENTOS` (3)
+  con espera corta; si agota → `revertir_orden(orden, motivo)` (§4.7.1) — que hace
+  `refund` de las ya capturadas y `void` de las autorizadas — y `Orden.cancelada`. Si
+  al entrar alguna no está `requires_capture` → `revertir_orden` directo. **Idempotente
+  a nivel de operación**: un `confirmar-captura` repetido sobre PIs ya capturados no
+  vuelve a capturar (se traga el `PaymentIntentUnexpectedState` de "ya capturado" y lo
+  trata como éxito) — el `idempotency_key` no cubre esto por sí solo.
+  `Orden.capturada` la marca el webhook (abajo), no este endpoint.
+- **Webhook** (por empresa, firma verificada) — en `payment_intent.succeeded` (que para
   manual capture llega tras el `capture`) marca **su** `Reserva` como `pagada`, corre
-  `full_clean()`, `reservar_cupo_al_confirmar`, y **evalúa la orden**: si todas sus
-  reservas están `pagadas` → `Orden.capturada` (idempotente) + **notificación**:
+  `full_clean()`, `reservar_cupo_al_confirmar`. Toda la lógica de aplicar el pago y de
+  **evaluar la orden** vive en `apps/payments/services.py::aplicar_pago_exitoso` (no en
+  la vista del webhook), porque `conciliar_pagos` es la otra entrada y las dos deben
+  decidir igual (`backend/CLAUDE.md`). La evaluación "¿ya se pagaron todas las
+  reservas de la orden?" **no puede** hacerse con `orden.reservas.all()` bajo el
+  contexto RLS de una sola empresa (§4.7.2) — usa la función Postgres
+  `estado_reservas_de_orden(orden_id)` (`SECURITY DEFINER`). Si todas están pagadas →
+  `Orden.capturada` (idempotente) + **notificación**:
   **correo combinado** (pesca + traslado, un solo mensaje disparado una sola vez al
   cerrarse la orden) + **WhatsApp por empresa** (cada empresa manda el suyo con su
   plantilla de Meta ya aprobada, como hoy). Si el cupo de su componente se llenó
@@ -489,28 +523,38 @@ Reserva (campo nuevo)
 Eso es lógica **mono-empresa** y no sirve para una orden cruza-empresa: escribiría
 componentes/ocupaciones de la Empresa 2 bajo el contexto RLS de la Empresa 1.
 
-SP2 lo separa:
+SP2 lo separa **en los dos sitios donde hoy se itera el paquete**:
+
+1. **`reservar_cupo_al_confirmar`** (al pagar): para una reserva con `reserva.orden` no
+   nula, una rama nueva reserva **solo su `servicio`** (según su `estrategia_cupo`) y
+   crea **un** `ReservaPaqueteComponente`, todo bajo su propio contexto de empresa. El
+   Caso B actual (iterar todos los componentes) queda solo para paquetes **mono-empresa**
+   (`reserva.paquete` no nula **y** `reserva.orden` nula).
+2. **`Reserva.clean()` → `_validar_cupo_de_paquete`** (`bookings/models.py` ~línea 224):
+   hoy corre para toda reserva con `paquete_id` e itera todos los componentes. La
+   reserva **líder** de una orden lleva `paquete` seteado, así que sin gate validaría
+   el cupo del componente de transporte (otra empresa) bajo su propio RLS. Gate nuevo:
+   si `self.orden_id` no es nulo, `clean()` valida **solo** el cupo de `self.servicio`,
+   no el del paquete entero.
 
 - Cada `Reserva` de una orden tiene `servicio` = **su** componente y `empresa` = la
   dueña de ese componente.
-- Para una reserva que es "un componente de una orden" (`reserva.orden` no nula), el
-  webhook de esa empresa corre una variante que reserva **solo su `servicio`**
-  (según su `estrategia_cupo`) y crea **un** `ReservaPaqueteComponente` para su
-  componente, todo bajo su propio contexto de empresa.
-- El Caso B actual (iterar todos los componentes desde una reserva) queda solo para
-  paquetes **mono-empresa** (`reserva.paquete` no nula y sin `reserva.orden`).
 - Si el cupo de su componente falla → `SinCupoError` → el webhook reembolsa **su**
-  cargo y dispara la compensación de la orden (§4.4, §4.10).
+  cargo y llama `revertir_orden(orden, motivo)` (§4.7.1).
 
 ### 4.5 `conciliar_pagos` entiende órdenes
 
 - Hoy busca `Reserva` en `pendiente_pago` con PaymentIntent y le pregunta a Stripe.
 - Nuevo: para reservas con `orden`, resuelve a nivel orden — si los N PaymentIntents
-  están `succeeded` aplica las N; si unos sí y otros no y pasó el timeout
-  (`ORDEN_TIMEOUT_AUTORIZACION`, p.ej. 24 h), emite void/refund de los pagados y marca
-  `Orden.cancelada`. Sigue siendo idempotente.
+  están `succeeded` aplica las N (vía `aplicar_pago_exitoso`, igual que el webhook);
+  si unos sí y otros no, o los N siguen `requires_capture`/`requires_confirmation`, y
+  pasó el timeout (`ORDEN_TIMEOUT_AUTORIZACION`, 24 h desde `orden.actualizado_en`) →
+  `revertir_orden(orden, 'timeout de autorización')`. **`conciliar_pagos` nunca
+  captura** — capturar es acción del cliente terminando el checkout
+  (`confirmar-captura`); conciliar solo aplica lo ya `succeeded` o revierte. Sigue
+  siendo idempotente.
 - Comando de apoyo `manage.py revisar_ordenes` — lista órdenes atascadas en
-  `autorizando` / `autorizada` para que la vendedora las vea.
+  `armando` / `autorizando` / `autorizada` para que la vendedora las vea.
 
 ### 4.6 (movido a SP1 §3.6.1)
 
@@ -553,6 +597,36 @@ un `Paquete` cruza-empresa.
   `ReservaTransporte`, y cualquier backfill, se envuelve en
   `apps.tenancy.rls.alcance_operador_migracion(...)` (ver `backend/CLAUDE.md`).
 
+### 4.7.2 Una orden cruza N contextos RLS — cómo se escribe y se lee
+
+Una orden agrupa reservas de empresas distintas; toda la infra RLS del sistema es
+fail-closed y por `empresa_id`. Dos puntos que **hay que diseñar explícitamente**, no
+dejar al filtro del ORM (Constraint 3 del plan):
+
+- **Escritura (`CrearOrdenView`, pública `AllowAny`).** Crea la `Orden` (sede-scoped)
+  y N `Reserva` (una por empresa). La política RLS de `Orden` necesita un `WITH CHECK`
+  que permita el INSERT sin contexto de empresa (como ya lo permiten las rutas
+  públicas de `Reserva`, acotadas por el slug de la URL — aquí el slug es la `sede`).
+  Cada `Reserva` se escribe iterando `scope.con_empresa(componente.empresa)` — nunca
+  `scope.como_operador_plataforma()` en una vista pública. Todo dentro de una sola
+  `transaction.atomic`.
+- **Lectura cruza-empresa (cierre de orden y notificación).** El webhook de la Empresa
+  2 corre bajo el contexto RLS de la Empresa 2: `orden.reservas.all()` devuelve **solo**
+  la reserva de la Empresa 2 — la de la Empresa 1 la filtra RLS. Evaluar "¿ya se
+  pagaron todas las reservas de la orden?" desde ahí daría `True` tras el **primer**
+  webhook, no el último. Se resuelve con una función Postgres `SECURITY DEFINER`
+  registrada por migración, p.ej.:
+  ```
+  estado_reservas_de_orden(orden_id int)
+    -> tabla (reserva_id int, empresa_id int, estado text, monto_pagado numeric,
+              stripe_payment_intent_id text)
+  ```
+  Lee `bookings_reserva WHERE orden_id = $1` saltándose RLS (es una lectura acotada a
+  una orden concreta, no un barrido). La usan: `aplicar_pago_exitoso` (para el cierre
+  de orden), `revertir_orden` (para saber qué PIs revertir), `notificar_orden_pagada`
+  (para armar el correo combinado), `conciliar_pagos` y `OrdenAdmin`. Es el mismo
+  patrón que el escape explícito del panel de finanzas consolidado.
+
 ### 4.8 Frontend de la orden
 
 - El checkout de un `Paquete` cruza-empresa detecta que el paquete tiene componentes
@@ -564,7 +638,13 @@ un `Paquete` cruza-empresa.
      (`stripe.confirmPayment` con `capture_method` manual → queda `requires_capture`).
   4. Tras el último, llama `confirmar-captura`. Pantalla de éxito o de "no se pudo
      completar el segundo pago, no se te cobró nada".
-- Si el cliente cierra a mitad: la orden queda `autorizando`; `conciliar_pagos` /
+- **Reanudar tras recarga/cierre** (decisión del dueño, 2026-09-07): al volver con el
+  mismo `checkout_id`, el frontend re-consulta la orden (`GET /api/<sede>/ordenes/<id>/`
+  o por `checkout_id`), recibe el estado de cada PaymentIntent, y **arranca desde el
+  primer pago que no esté `requires_capture`**. Los que ya están autorizados no se
+  vuelven a cobrar. Si la orden ya está `cancelada` (timeout) o `capturada`, muestra
+  esa pantalla.
+- Si el cliente nunca vuelve: la orden queda `autorizando`; `conciliar_pagos` /
   `revisar_ordenes` la limpia tras el timeout (void de lo autorizado).
 
 ### 4.9 Alcance mínimo de SP2
@@ -572,7 +652,10 @@ un `Paquete` cruza-empresa.
 - Solo **"un componente base de una empresa + un componente de traslado de otra
   empresa"** — orden de 2 cobros. No carrito general de N empresas arbitrarias.
 - Un solo paquete cruza-empresa en producción al lanzar: "Pesca + Traslado" (La Paz).
-- Reparto por empresa configurado a mano por el jefe (`PaqueteServicio.monto_empresa`).
+- **Solo tarjeta** (§4.1). El checkout de orden no ofrece OXXO/SPEI.
+- Solo `forma_pago = completo` (§4.7.1). Sin anticipo.
+- Reparto: `pricing.monto_por_empresa` (§4.3) — transporte a su `TransporteTarifa`, la
+  `empresa_lider` (pesca) el residuo. **Sin campo `PaqueteServicio.monto_empresa`.**
 
 ---
 
@@ -626,7 +709,9 @@ Frontend: `paquete-card.tsx` y `checkout-view.tsx` — se quita cualquier contro
 | Grupo > `capacidad_maxima` del servicio de transporte | Rechazo en `Reserva.clean()` y en el frontend (tope leído del servicio). |
 | SP2: auth 1 OK, auth 2 falla | `confirmar-captura` hace void de auth 1; `Orden.cancelada`; frontend muestra "no se te cobró nada". |
 | SP2: cliente cierra tras auth 1, antes de auth 2 | Orden queda `autorizando`; `conciliar_pagos` / `revisar_ordenes` hace void tras `ORDEN_TIMEOUT_AUTORIZACION`. |
-| SP2: ambas auth OK, capture 2 falla (raro) | Se capturó 1: `conciliar_pagos` reintenta la captura de 2; si sigue fallando tras N intentos, refund de 1 + `Orden.cancelada` + alerta a la vendedora. |
+| SP2: ambas auth OK, capture 2 falla (raro) | `confirmar-captura` reintenta la captura de 2 hasta `CAPTURA_REINTENTOS` (3) con espera corta; si agota → `revertir_orden` (refund de 1, void de lo pendiente) + `Orden.cancelada` + log de error para la vendedora. `conciliar_pagos` NO reintenta capturas. |
+| SP2: `confirmar-captura` llega dos veces (doble clic) | Idempotente a nivel operación: un PI ya `succeeded` se ignora (se traga `PaymentIntentUnexpectedState`), no se re-captura. |
+| SP2: `crear-pago` falla a mitad (PI empresa 1 OK, empresa 2 revienta) | Orden queda `autorizando` con lo creado; reintentar `crear-pago` crea los PIs que faltan (idempotente); si nunca se completa, el timeout la revierte. |
 | SP2: cupo de un componente se llenó mientras el cliente pagaba | El webhook de esa empresa reembolsa su cargo y llama `revertir_orden` (void/refund del resto); `Orden.cancelada`. |
 | SP2: autorización expira antes de capturar (timeout largo) | No debe pasar: `ORDEN_TIMEOUT_AUTORIZACION` (24 h) ≪ 7 días. Si aun así una expira, `conciliar_pagos` la detecta `canceled` y hace `revertir_orden`. |
 | SP2: chargeback sobre un cargo de la orden ya capturada | `Reserva.en_disputa=True` en esa reserva; orden queda `capturada`; lo resuelve una persona. |
@@ -713,6 +798,11 @@ esté mergeada (o se rebasa este trabajo sobre `main` ya con las correcciones de
   final **pendiente de visto bueno del dueño / abogado antes de lanzar**. La estructura
   (una casilla, un `deslinde_*` por reserva copiado de la orden) no espera a eso.
 
+- **Métodos de pago:** el checkout del paquete cruza-empresa acepta **solo tarjeta**
+  (OXXO/SPEI no permiten auth-luego-captura). (§4.1)
+- **Recarga a media secuencia de pagos:** el frontend **reanuda** la orden en curso
+  desde el pago que falte. (§4.8)
+
 **Que quedan (no bloquean los planes):**
 
 1. `redondo_actividad` — ¿algún día tendrá precio por tamaño de grupo (como
@@ -723,3 +813,31 @@ esté mergeada (o se rebasa este trabajo sobre `main` ya con las correcciones de
    aplica solo a la `Reserva` de la `empresa_lider`. (La comisión se calcula fuera del
    sistema; esto solo define qué guarda el registro.)
 3. Texto final del deslinde ampliado (ver arriba).
+
+## 10. Pasos manuales de producción (para `pendientes-manuales-produccion`)
+
+- **Cada empresa** registra su **webhook endpoint** en SU dashboard de Stripe apuntando
+  a `https://<api>/api/<empresa_slug>/stripe/webhook/`, y guarda el signing secret en
+  `Empresa.stripe_webhook_secret`. Sin esto, los pagos de esa empresa no se aplican
+  (los recupera `conciliar_pagos`, pero con retraso).
+- Empresa 2: cargar el `Servicio` de transporte real + las filas de `TransporteTarifa`
+  + los `PuntoEncuentro` reales + `porcentaje_anticipo`.
+- SP2: crear el `Paquete` "Pesca + Traslado" (líder Empresa 1, componente de la
+  Empresa 2) y su `precio_paquete`. Verificar `precio_paquete ≥` tarifa de transporte.
+- Texto del deslinde ampliado aprobado por el dueño / abogado antes de lanzar.
+
+---
+
+## Verificación de críticos
+
+- **spec-critic (inline, 2026-09-07):** REVISIÓN REQUERIDA → corregido. Hallazgos
+  aplicados: reparto sin campo nuevo en §4.4/§4.9, solo-tarjeta §4.1, gate de
+  `orden_id` en las dos iteraciones de paquete §4.4.1, cierre de orden en
+  `aplicar_pago_exitoso` compartido §4.4, reintento de captura inline §4.4/§6,
+  `revertir_orden` en §4.5, reanudar tras recarga §4.8, idempotencia de operación en
+  `confirmar-captura` §4.4, webhook por empresa como paso manual §10, fallo parcial de
+  `crear-pago` §4.4/§6, `Sede.slug` confirmado existente.
+- **arch-critic (inline, 2026-09-07, sobre el file map de SP2):** REVISIÓN REQUERIDA →
+  corregido. Hallazgos aplicados: contexto RLS por escritura en `CrearOrdenView` y
+  lectura cruza-empresa vía función `SECURITY DEFINER` `estado_reservas_de_orden`
+  (§4.7.2); `notificar_orden_pagada` usa esa misma lectura.
