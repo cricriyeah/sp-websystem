@@ -58,3 +58,20 @@ def paquetes_de_sede(sede):
             )
             resultado.extend(PaqueteSerializer(qs, many=True).data)
     return resultado
+
+
+def paquete_de_sede(sede, slug):
+    """Devuelve el dict serializado del paquete activo con ese slug en la Sede,
+    o None si no existe."""
+    for empresa in _empresas_activas_de(sede):
+        with scope.con_empresa(empresa):
+            paquete = (
+                Paquete.objects.filter(empresa_lider=empresa, slug=slug, activo=True)
+                .select_related('sede', 'empresa_lider')
+                .prefetch_related('servicios_asociados__servicio')
+                .first()
+            )
+            if paquete is not None:
+                return PaqueteSerializer(paquete).data
+    return None
+

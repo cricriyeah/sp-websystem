@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 
 from apps.tenancy import scope
 
-from .catalogo import paquetes_de_sede, servicios_de_sede
+from .catalogo import paquete_de_sede, paquetes_de_sede, servicios_de_sede
 from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, Tarifa, TransportePrecio
 from .serializers import (
     ExtrasItemSerializer,
@@ -167,3 +167,19 @@ class ServiciosPorSedeListView(APIView):
 
         sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
         return Response(servicios_de_sede(sede))
+
+
+class PaqueteDetailView(APIView):
+    """Detalle publico de un paquete por sede y slug."""
+
+    throttle_scope = 'catalogo'
+
+    def get(self, request, sede_slug, slug):
+        from apps.tenancy.models import Sede
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+        data = paquete_de_sede(sede, slug)
+        if data is None:
+            return Response({'detail': 'Paquete no encontrado.'}, status=404)
+        return Response(data)
+

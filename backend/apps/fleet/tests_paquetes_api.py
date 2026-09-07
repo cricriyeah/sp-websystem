@@ -167,3 +167,22 @@ class PaquetesAPITests(TestCase):
     def test_servicios_por_sede_inexistente_404(self):
         resp = self.client.get('/api/sedes/sede-inexistente/servicios/')
         self.assertEqual(resp.status_code, 404)
+
+    def test_paquete_detalle_devuelve_el_paquete_correcto(self):
+        url = f'/api/sedes/{self.sede_lp.slug}/paquetes/{self.paquete_activo.slug}/'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['slug'], self.paquete_activo.slug)
+        self.assertEqual(data['nombre'], self.paquete_activo.nombre)
+
+    def test_paquete_detalle_404_para_slug_inexistente(self):
+        url = f'/api/sedes/{self.sede_lp.slug}/paquetes/no-existe/'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_paquete_detalle_404_si_sede_inactiva(self):
+        sede_inactiva = Sede.objects.create(nombre='Sede Inactiva', slug='sede-inactiva', activo=False)
+        url = f'/api/sedes/{sede_inactiva.slug}/paquetes/{self.paquete_activo.slug}/'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 404)
