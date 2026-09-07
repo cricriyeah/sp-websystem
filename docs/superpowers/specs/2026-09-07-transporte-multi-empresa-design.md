@@ -437,10 +437,21 @@ Reserva (campo nuevo)
 - `Paquete` gana (o se confirma que ya sirve) la capacidad de listar sus componentes
   con su empresa. `ReservaPaqueteComponente.empresa` ya existe justo para esto.
 - El precio del paquete cruza-empresa sigue siendo **un precio fijo** (§5): el jefe de
-  la `empresa_lider` lo fija. El **reparto** entre empresas (cuánto va a la cuenta de
-  cada una) es un dato nuevo: `PaqueteServicio.monto_empresa(_usd)` — cuánto de ese
-  precio fijo corresponde a esa empresa. Σ de los repartos = precio del paquete
-  (validado en `Paquete.clean()`).
+  la `empresa_lider` lo fija.
+- **Reparto entre empresas** (decisión del dueño, 2026-09-07): *transporte a su
+  tarifa, pesca se lleva el resto*. No hay campo nuevo. El componente de transporte
+  se cobra al precio de su `TransporteTarifa` resuelto para el
+  `(tipo_traslado, zona, personas)` del paquete; el resto
+  (`precio_paquete − monto_transporte`) va a la `Reserva`/cuenta de la `empresa_lider`
+  (pesca).
+  - `Paquete.clean()` valida `precio_paquete ≥ monto_transporte` en cada moneda
+    configurada (si no, el reparto de pesca sería negativo → error de configuración
+    explícito, mismo criterio que un catálogo incompleto).
+  - Si el paquete llegara a tener >2 componentes cobrables de empresas distintas, cada
+    componente de tipo conocido (transporte) va a su tarifa y solo **una** empresa
+    (la líder) absorbe el residuo. Fuera de v1 igualmente (§4.9).
+- Generaliza a: `monto_por_empresa(orden) -> {empresa_id: Decimal}` en
+  `apps/payments/pricing.py` (función pura, única fuente del reparto).
 
 ### 4.4 Pago de la orden
 
@@ -461,9 +472,11 @@ Reserva (campo nuevo)
 - **Webhook** (por empresa, ya scopeado) — en `payment_intent.succeeded` (que para
   manual capture llega tras el `capture`) marca **su** `Reserva` como `pagada`, corre
   `full_clean()`, `reservar_cupo_al_confirmar`, y **evalúa la orden**: si todas sus
-  reservas están `pagadas` → `Orden.capturada` (idempotente) + **notificación
-  combinada** (correo que menciona pesca + traslado; WhatsApp según §9.3). Si el cupo
-  de su componente se llenó mientras el cliente pagaba → reembolsa **su** cargo y llama
+  reservas están `pagadas` → `Orden.capturada` (idempotente) + **notificación**:
+  **correo combinado** (pesca + traslado, un solo mensaje disparado una sola vez al
+  cerrarse la orden) + **WhatsApp por empresa** (cada empresa manda el suyo con su
+  plantilla de Meta ya aprobada, como hoy). Si el cupo de su componente se llenó
+  mientras el cliente pagaba → reembolsa **su** cargo y llama
   `revertir_orden(orden, motivo)` (§4.7.1) para void/refund del resto, marca
   `Orden.cancelada`. (Este es el camino delicado; el plan lo detalla como sección
   propia con tests de cada rama.)
@@ -528,10 +541,11 @@ un `Paquete` cruza-empresa.
   centraliza esto, con `idempotency_key` por operación y tolerante a reintentos (una
   segunda llamada no vuelve a reembolsar). Vive en `apps/payments/services.py` junto a
   `aplicar_pago_exitoso`.
-- **`forma_pago` en órdenes cruza-empresa.** En v1 se restringe a `completo` (100% en
-  línea). El anticipo 30%/efectivo-70% repartido entre N empresas (¿quién cobra el
-  efectivo el día del viaje? ¿cómo se concilia?) es complejidad que no paga su costo
-  para el primer paquete. El checkout de un paquete cruza-empresa no ofrece "anticipo".
+- **`forma_pago` en órdenes cruza-empresa.** Restringido a `completo` (100% en línea)
+  — decisión del dueño, 2026-09-07. El anticipo repartido entre empresas (quién cobra
+  el efectivo, cómo concilia cada panel de finanzas) no paga su costo. El checkout de
+  un paquete cruza-empresa **no** ofrece "anticipo"; el `Servicio` suelto de transporte
+  (SP1) y la pesca suelta siguen permitiéndolo.
 - **Disputa (chargeback) sobre un cargo de la orden.** `Reserva.en_disputa` por
   reserva, no cambia el estado ni de la reserva ni de la orden — lo resuelve una
   persona, igual que hoy para reservas sueltas.
@@ -681,24 +695,31 @@ esté mergeada (o se rebasa este trabajo sobre `main` ya con las correcciones de
 
 ---
 
-## 9. Preguntas abiertas (para el dueño, no bloquean escribir los planes)
+## 9. Decisiones del dueño (2026-09-07) y preguntas que quedan
 
-1. `redondo_actividad` — ¿algún día tendrá precio distinto por tamaño de grupo (como
-   `redondo_aeropuerto`), o siempre es plano por zona? (El modelo ya lo soporta con
-   otra fila de tarifa; es solo saber si hay que cargarla.)
-2. El **reparto por empresa** del precio del paquete "Pesca + Traslado" — ¿lo fija el
-   jefe de la Empresa 1 (líder) a mano por paquete? ¿o el precio del componente de
-   transporte se toma de su `TransporteTarifa` y la pesca se lleva el resto?
-3. Notificación combinada — la plantilla de WhatsApp la aprueba Meta y tiene tiempo de
-   espera. ¿Se manda **un** mensaje por WhatsApp que requiere plantilla nueva
-   aprobada, o en v1 el WhatsApp sigue siendo por empresa (dos mensajes) y solo el
-   **correo** es combinado? (Recomendado v1: correo combinado, WhatsApp por empresa
-   con las plantillas ya aprobadas — no bloquea el lanzamiento en trámites de Meta.)
-4. Anticipo en un paquete cruza-empresa — el diseño lo restringe a `completo` (100%
-   en línea) en v1 (§4.7.1). ¿De acuerdo, o el dueño necesita anticipo también aquí?
-5. Deslinde — el cliente acepta **un** deslinde en el checkout de la orden. ¿Ese texto
-   cubre legalmente a las dos empresas (pesca y transporte), o cada empresa necesita su
-   propio deslinde con su texto? Afecta cuántas casillas ve el cliente.
-6. Atribución de venta — si el `?ref=` es de una vendedora de la Empresa 1, ¿la venta
-   del traslado (Empresa 2) también cuenta para ella, o solo la parte de pesca? (La
-   comisión se calcula fuera del sistema; esto solo define qué guarda el registro.)
+**Resueltas:**
+
+- **Reparto por empresa:** transporte a su `TransporteTarifa`, pesca (líder) se lleva
+  el residuo. Sin campo nuevo. `Paquete.clean()` valida `precio_paquete ≥
+  monto_transporte`. (§4.3)
+- **Notificación combinada:** correo combinado (menciona pesca + traslado) + WhatsApp
+  **por empresa** con las plantillas de Meta ya aprobadas. No se abre plantilla nueva
+  en Meta para v1. (§4.4)
+- **`forma_pago`:** paquetes cruza-empresa solo `completo` (100% en línea). (§4.7.1)
+- **Deslinde:** **un solo deslinde** ampara a todas las empresas; el cliente marca una
+  sola casilla. El texto actual del deslinde es específico de pesca y nunca se revisó
+  para esto — hay una tarea de redacción (revisar/ampliar el texto para cubrir
+  traslado y cualquier actividad, versión nueva de `deslinde_version`), con el texto
+  final **pendiente de visto bueno del dueño / abogado antes de lanzar**. La estructura
+  (una casilla, un `deslinde_*` por reserva copiado de la orden) no espera a eso.
+
+**Que quedan (no bloquean los planes):**
+
+1. `redondo_actividad` — ¿algún día tendrá precio por tamaño de grupo (como
+   `redondo_aeropuerto`), o siempre plano por zona? El modelo lo soporta con otra fila
+   de `TransporteTarifa`; es solo saber si cargarla.
+2. Atribución de venta — si el `?ref=` es de una vendedora de la Empresa 1, ¿la parte
+   de traslado (Empresa 2) también cuenta para ella? El plan asume que el `ref` se
+   aplica solo a la `Reserva` de la `empresa_lider`. (La comisión se calcula fuera del
+   sistema; esto solo define qué guarda el registro.)
+3. Texto final del deslinde ampliado (ver arriba).
