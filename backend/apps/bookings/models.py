@@ -567,9 +567,12 @@ class Reserva(models.Model):
             instance._salida_original = (instance.fecha, instance.hora)
         if 'vendedora' in field_names or 'vendedora_id' in field_names:
             instance._vendedora_original = instance.vendedora_id
+        if 'estado' in field_names:
+            instance._estado_original = instance.estado
         return instance
 
     def save(self, *args, **kwargs):
+        estado_previo = getattr(self, '_estado_original', None)
         self._derivar_estado_de_asignacion()
 
         # Si la llamada trae `update_fields` y toca la embarcacion, `estado` tiene
@@ -589,6 +592,12 @@ class Reserva(models.Model):
                 kwargs['update_fields'] = [*update_fields, 'vendedora_asignada_en']
         super().save(*args, **kwargs)
         self._vendedora_original = self.vendedora_id
+        if self.pk and estado_previo is not None:
+            era_ocupante = estado_previo in ESTADOS_QUE_OCUPAN_CUPO
+            es_ocupante = self.estado in ESTADOS_QUE_OCUPAN_CUPO
+            if era_ocupante != es_ocupante:
+                self.ocupaciones.exclude(ocupa_cupo=es_ocupante).update(ocupa_cupo=es_ocupante)
+        self._estado_original = self.estado
 
     def _derivar_estado_de_asignacion(self):
         """Poner la panga da el viaje por asignado; quitarla lo regresa a pagada.
@@ -763,12 +772,17 @@ class ReservaOcupacion(models.Model):
     )
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
+    ocupa_cupo = models.BooleanField(default=True, db_index=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['fecha_inicio', 'recurso']
         verbose_name = 'ocupación de recurso'
         verbose_name_plural = 'ocupaciones de recursos'
+
+    def __init__(self, *args, **kwargs):
+        self._ocupa_cupo_explicito = 'ocupa_cupo' in kwargs
+        super().__init__(*args, **kwargs)
 
     def __str__(self):
         nombre_recurso = getattr(self.recurso, 'nombre', str(self.recurso_id)) if self.recurso_id else 'Sin recurso'
@@ -787,10 +801,11 @@ class ReservaOcupacion(models.Model):
             return None
 
     def save(self, *args, **kwargs):
-        if self.reserva_id and not self.empresa_id:
-            reserva = self._reserva_o_ninguna()
-            if reserva is not None:
-                self.empresa_id = reserva.empresa_id
+        reserva = self._reserva_o_ninguna()
+        if self.reserva_id and not self.empresa_id and reserva is not None:
+            self.empresa_id = reserva.empresa_id
+        if not getattr(self, '_ocupa_cupo_explicito', False) and reserva is not None:
+            self.ocupa_cupo = reserva.estado in ESTADOS_QUE_OCUPAN_CUPO
         super().save(*args, **kwargs)
 
     def clean(self):
@@ -821,21 +836,23 @@ class ReservaOcupacion(models.Model):
 
             qs = ReservaOcupacion.objects.filter(
                 recurso_id=self.recurso_id,
-                reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+                ocupa_cupo=True,
+                fecha_inicio__lt=self.fecha_fin,
+                fecha_fin__gt=self.fecha_inicio,
+                empresa_id=self.empresa_id,
             )
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
             if self.reserva_id:
                 qs = qs.exclude(reserva_id=self.reserva_id)
 
-            from .cupo.nucleo import rango_traslapa
             nombre = recurso.nombre if recurso is not None else str(self.recurso_id)
-            for ocupacion in qs:
-                if rango_traslapa(self.fecha_inicio, self.fecha_fin, ocupacion.fecha_inicio, ocupacion.fecha_fin):
-                    raise ValidationError(
-                        f'El recurso {nombre} ya está ocupado en el rango '
-                        f'[{ocupacion.fecha_inicio} a {ocupacion.fecha_fin}) por la reserva #{ocupacion.reserva_id}.'
-                    )
+            ocupacion = qs.first()
+            if ocupacion:
+                raise ValidationError(
+                    f'El recurso {nombre} ya está ocupado en el rango '
+                    f'[{ocupacion.fecha_inicio} a {ocupacion.fecha_fin}) por la reserva #{ocupacion.reserva_id}.'
+                )
 
 
 class ReservaExtra(models.Model):

@@ -21,7 +21,7 @@ class ReservaOcupacionModelTests(OperadorTestCase):
             empresa=self.empresa_a,
             nombre='Suite Frente al Mar',
             slug='suite-frente-mar',
-            tipo_servicio='por_noche',
+            tipo_servicio='hospedaje',
             estrategia_cupo='por_noche',
             precio_base=3500,
         )
@@ -53,6 +53,25 @@ class ReservaOcupacionModelTests(OperadorTestCase):
             deslinde_aceptado=True,
             estado=Reserva.Estado.PAGADA,
         )
+
+    def test_ocupa_cupo_sigue_el_estado_de_la_reserva(self):
+        ocupacion = ReservaOcupacion.objects.create(
+            reserva=self.reserva,
+            recurso=self.recurso_1,
+            fecha_inicio=date(2026, 10, 10),
+            fecha_fin=date(2026, 10, 15),
+        )
+        self.assertTrue(ocupacion.ocupa_cupo)
+
+        self.reserva.estado = Reserva.Estado.CANCELADA
+        self.reserva.save()
+        ocupacion.refresh_from_db()
+        self.assertFalse(ocupacion.ocupa_cupo)
+
+        self.reserva.estado = Reserva.Estado.PAGADA
+        self.reserva.save()
+        ocupacion.refresh_from_db()
+        self.assertTrue(ocupacion.ocupa_cupo)
 
     def test_reserva_propiedades_hospedaje(self):
         """Verifica que Reserva calcule noches y fecha_fin_servicio correctamente."""
