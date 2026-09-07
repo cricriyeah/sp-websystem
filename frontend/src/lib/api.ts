@@ -352,6 +352,7 @@ export type ServicioPersonalizacionCatalogo = {
 
 export type ServicioCatalogo = {
   id: number;
+  empresa_slug: string;
   nombre: string;
   slug: string;
   tipo_servicio: string;

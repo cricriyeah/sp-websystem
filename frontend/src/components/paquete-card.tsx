@@ -55,9 +55,10 @@ export function PaqueteCard({
 
   // URL para continuar hacia el checkout con este paquete y los componentes elegidos
   const sedeParam = paquete.sede_slug ? `&sede=${paquete.sede_slug}` : '';
+  const empresaParam = paquete.empresa_lider_slug ? `&paquete_empresa=${paquete.empresa_lider_slug}` : '';
   const excluidosParam =
     serviciosExcluidos.length > 0 ? `&excluidos=${serviciosExcluidos.join(',')}` : '';
-  const bookingHref = `/${lang}/reservar?paquete=${paquete.slug}${sedeParam}${excluidosParam}&moneda=${moneda}`;
+  const bookingHref = `/${lang}/reservar?paquete=${paquete.slug}${sedeParam}${empresaParam}${excluidosParam}&moneda=${moneda}`;
 
   return (
     <article
