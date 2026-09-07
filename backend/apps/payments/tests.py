@@ -2033,12 +2033,9 @@ class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
 
         with scope.con_empresa(self.empresa):
             resultado = aplicar_pago_exitoso(intent, self.empresa)
-
-        self.assertEqual(resultado, APLICADO)
-        reserva.refresh_from_db()
-        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
-
-        with scope.con_empresa(self.empresa):
+            self.assertEqual(resultado, APLICADO)
+            reserva.refresh_from_db()
+            self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
             ocupaciones = list(reserva.ocupaciones.all())
             self.assertEqual(len(ocupaciones), 1)
             oc = ocupaciones[0]
@@ -2117,12 +2114,10 @@ class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
 
         with scope.con_empresa(self.empresa):
             resultado = aplicar_pago_exitoso(intent, self.empresa)
+            self.assertEqual(resultado, APLICADO)
+            reserva.refresh_from_db()
+            self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
 
-        self.assertEqual(resultado, APLICADO)
-        reserva.refresh_from_db()
-        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
-
-        with scope.con_empresa(self.empresa):
             # Debe haber creado ocupación para el componente hotel
             self.assertEqual(reserva.ocupaciones.count(), 1)
             oc = reserva.ocupaciones.first()
@@ -2212,18 +2207,15 @@ class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
 
         with scope.con_empresa(self.empresa):
             resultado = aplicar_pago_exitoso(intent, self.empresa)
+            self.assertEqual(resultado, SIN_CUPO_REEMBOLSADO)
+            mock_reembolsar.assert_called_once()
 
-        self.assertEqual(resultado, SIN_CUPO_REEMBOLSADO)
-        mock_reembolsar.assert_called_once()
+            reserva.refresh_from_db()
+            self.assertEqual(reserva.estado, Reserva.Estado.CANCELADA)
+            self.assertTrue(reserva.reembolsada)
+            self.assertIn('No hay cupo disponible para el componente', reserva.motivo_cancelacion)
 
-        reserva.refresh_from_db()
-        self.assertEqual(reserva.estado, Reserva.Estado.CANCELADA)
-        self.assertTrue(reserva.reembolsada)
-        self.assertIn('No hay cupo disponible para el componente', reserva.motivo_cancelacion)
-
-        with scope.con_empresa(self.empresa):
             # NO debe quedar ninguna ocupación huérfana
             self.assertEqual(reserva.ocupaciones.count(), 0)
             # NO debe quedar ningún componente huérfano
             self.assertEqual(reserva.componentes.count(), 0)
-
