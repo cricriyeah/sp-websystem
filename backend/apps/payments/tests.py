@@ -1891,6 +1891,80 @@ class ConciliarPagosPorEmpresaTests(TestCase):
 
         cliente.payment_intents.retrieve.assert_called_once_with('pi_pendiente')
 
+    @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
+    def test_conciliar_pagos_hospedaje_crea_ocupacion(self, mock_configurar):
+        cliente = mock.Mock()
+        mock_configurar.return_value = cliente
+
+        with scope.con_empresa(self.empresa_con_llave):
+            servicio = Servicio.objects.create(
+                empresa=self.empresa_con_llave,
+                nombre='Bungalow',
+                slug='bungalow',
+                tipo_servicio='hospedaje',
+                estrategia_cupo='por_noche',
+                precio_base=Decimal('1500.00'),
+                activo=True,
+            )
+            recurso = Recurso.objects.create(
+                empresa=self.empresa_con_llave,
+                servicio=servicio,
+                nombre='Bungalow 1',
+                capacidad_maxima=2,
+                activo=True,
+            )
+            reserva = Reserva(
+                empresa=self.empresa_con_llave,
+                servicio=servicio,
+                fecha=date.today() + timedelta(days=10),
+                fecha_salida=date.today() + timedelta(days=12),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Mario Conciliar',
+                telefono_cliente='+5216121234567',
+                correo_cliente='mario@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                deslinde_nombre='Mario Conciliar',
+                checkout_id=uuid.uuid4(),
+                moneda='MXN',
+                precio_total=Decimal('3000.00'),
+                forma_pago=Reserva.FormaPago.COMPLETO,
+                stripe_payment_intent_id='pi_succeeded_hospedaje',
+            )
+            reserva.full_clean()
+            reserva.save()
+
+        intent_data = {
+            'id': 'pi_succeeded_hospedaje',
+            'status': 'succeeded',
+            'amount_received': 300000,
+            'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+        intent_mock = mock.MagicMock()
+        intent_mock.status = 'succeeded'
+        intent_mock.id = 'pi_succeeded_hospedaje'
+        intent_mock.amount_received = 300000
+        intent_mock.currency = 'mxn'
+        intent_mock.__getitem__.side_effect = lambda k: intent_data[k]
+        cliente.payment_intents.retrieve.return_value = intent_mock
+
+        salida = StringIO()
+        call_command('conciliar_pagos', stdout=salida)
+
+        with scope.con_empresa(self.empresa_con_llave):
+            reserva.refresh_from_db()
+            self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+            self.assertEqual(reserva.ocupaciones.count(), 1)
+            oc = reserva.ocupaciones.first()
+            self.assertEqual(oc.recurso_id, recurso.pk)
+            self.assertEqual(oc.fecha_inicio, reserva.fecha)
+            self.assertEqual(oc.fecha_fin, reserva.fecha_salida)
+            self.assertTrue(oc.ocupa_cupo)
+
+
 
 class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
     """Pruebas de que el pago confirma y crea las ocupaciones y componentes (Tarea 6.3)."""
