@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from .enums import EstrategiaCupo, EstrategiaPrecio, ModoOcupacion, TipoServicio
+
 
 class Tarifa(models.Model):
     """Singleton: precio unico del tour, no varia por clase de embarcacion
@@ -369,10 +371,22 @@ class Servicio(models.Model):
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='servicios')
     nombre = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150)
-    tipo_servicio = models.CharField(max_length=50, default='pesca')
-    estrategia_cupo = models.CharField(max_length=50, default='por_recurso_dia')
-    estrategia_precio = models.CharField(max_length=50, default='por_grupo')
-    modo_ocupacion = models.CharField(max_length=20, default='exclusivo')
+    tipo_servicio = models.CharField(
+        max_length=20, choices=TipoServicio.choices, default=TipoServicio.PESCA,
+    )
+    estrategia_cupo = models.CharField(
+        max_length=20, choices=EstrategiaCupo.choices, default=EstrategiaCupo.POR_RECURSO_DIA,
+    )
+    estrategia_precio = models.CharField(
+        max_length=20, choices=EstrategiaPrecio.choices, default=EstrategiaPrecio.POR_GRUPO,
+    )
+    modo_ocupacion = models.CharField(
+        max_length=20, choices=ModoOcupacion.choices, default=ModoOcupacion.EXCLUSIVO,
+    )
+    porcentaje_anticipo = models.PositiveSmallIntegerField(
+        default=30,
+        help_text='% del total que se cobra en línea. 30=anticipo, 100=completo.',
+    )
     precio_base = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.00'),
         help_text='Precio base del servicio en MXN.'
