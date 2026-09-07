@@ -1,8 +1,11 @@
 # ADRs — Expansión multi-sede
 
 Fecha: 2026-08-31 (Revisión 3 — Secciones 2-8 implementadas)
-Estado global: **ADR-001/002 ACEPTADOS; ADR-003/004 IMPLEMENTADOS; ADR-005 PROPUESTO**.
-Ver también `2026-09-06-ADR-005-paquetes-cruza-empresa.md` para el tratamiento de paquetes multi-empresa.
+Estado global: **ADR-001/002 ACEPTADOS; ADR-003 IMPLEMENTADO; ADR-004 IMPLEMENTADO
+(Revisión 3 pendiente, 2026-09-07); ADR-005 ACEPTADO (Revisión 2, 2026-09-07 — se
+implementa como SP2 de transporte multi-empresa)**.
+Ver también `2026-09-06-ADR-005-paquetes-cruza-empresa.md` y
+`2026-09-07-transporte-multi-empresa-design.md`.
 Documento de diseño que los sustenta: `2026-08-31-expansion-multi-sede-design.md`
 (misma carpeta).
 
@@ -251,14 +254,48 @@ queda **fuera de v1** (mismo patrón de día completo que paseos por ahora).
 
 ## ADR-004: Precio como estrategias tipadas en código, sobre `pricing.py`
 
-Fecha: 2026-08-31 (Implementado: 2026-09-06)
-Estado: **IMPLEMENTADO**
+Fecha: 2026-08-31 (Implementado: 2026-09-06 · **Revisión 3: 2026-09-07**)
+Estado: **IMPLEMENTADO** (con la Revisión 3 pendiente de ejecutar)
 
-**Desviaciones y detalles de implementación:**
+**Revisión 3 (2026-09-07) — el paquete es un bundle fijo, no se quitan servicios.**
+
+Decisión del dueño: un `Paquete` es un bundle **cerrado** con precio propio, pensado
+para venderse un poco más barato que la suma de los servicios sueltos. Si el cliente
+eligió el paquete es porque le convencen los servicios agrupados. Por lo tanto se
+**elimina** todo el mecanismo de "servicios removibles":
+
+- Fuera: modelo `bookings.ReservaPaqueteServicioRemovido`, campos
+  `PaqueteServicio.removible` / `ajuste_precio` / `ajuste_precio_usd`,
+  `servicios_removidos` en el checkout serializer, el filtro "no removido" en
+  `bookings/cupo/confirmacion.py` y `bookings/models.py`, la validación de "suma de
+  ajustes ≤ ancla" en `Paquete.clean()`.
+- El precio del paquete deja de ser "ancla − Σ ajustes de removidos". Pasa a ser:
+  **precio fijo del bundle + Σ(personalizaciones obligatorias/preseleccionadas) +
+  Σ(personalizaciones opcionales marcadas)**. Sin resta. `precio_paquete(precio_ancla,
+  ajustes_removidos)` → `precio_paquete(precio)` (identidad sobre el precio fijo).
+- `Paquete.precio_ancla` se puede renombrar a `precio_paquete` y retirar
+  `regla_precio` (siempre es precio fijo); si el rename añade mucho ruido de migración
+  es aceptable conservar el nombre — lo que importa es que **no se resta nada**.
+- Se conservan intactos `ReservaPaquetePersonalizacion`, `ReservaPaqueteComponente` y
+  el aporte de las personalizaciones por servicio (obligatorias multiplican por
+  personas cuando `cobrar_por_persona`).
+
+Ejecuta: sección nueva del plan de corrección de hallazgos
+(`docs/superpowers/plans/2026-09-06-correccion-hallazgos-TAREAS-EJECUTABLES.md`), y es
+prerrequisito del Sub-proyecto 2 de transporte multi-empresa
+(`docs/superpowers/specs/2026-09-07-transporte-multi-empresa-design.md`).
+
+**Revisión 2 — nueva estrategia `POR_RUTA` (transporte).** Ver el diseño de transporte
+multi-empresa §3.2: `fleet.enums.EstrategiaPrecio` gana `POR_RUTA`, con la clase
+`PorRuta` en `estrategias_precio.py` leyendo de `fleet.TransporteTarifa`. `DemandaPrecio`
+gana `tipo_traslado` y `zona` opcionales. Reemplaza a `cargo_por_transporte` +
+`fleet.TransportePrecio`, que se eliminan.
+
+**Desviaciones y detalles de implementación (Revisión 1, 2026-09-06):**
 - Se implementaron las estrategias tipadas en `apps.payments.estrategias_precio`: `PorPersona`, `PorGrupo`, `PorNoche`, `TarifaFija`.
-- El precio de paquetes se consolidó en `pricing.py::precio_paquete_total`: ancla + Σ(personalizaciones obligatorias/preseleccionadas de servicios no removidos) + Σ(personalizaciones opcionales marcadas) − Σ(ajustes de servicios removidos). Personalizaciones por persona multiplican por el número de personas.
+- El precio de paquetes se consolidó en `pricing.py::precio_paquete_total`: ancla + Σ(personalizaciones obligatorias/preseleccionadas de servicios no removidos) + Σ(personalizaciones opcionales marcadas) − Σ(ajustes de servicios removidos). Personalizaciones por persona multiplican por el número de personas. *(La parte de "servicios removidos" queda revertida por la Revisión 3.)*
 - Anticipo configurable por `Paquete.porcentaje_anticipo` y `Servicio.porcentaje_anticipo`.
-- Paquetes cruza-empresa: formalmente bloqueados en v1 (`PaqueteServicio.clean`), formalizado como decisión arquitectónica en **ADR-005** (`docs/superpowers/specs/2026-09-06-ADR-005-paquetes-cruza-empresa.md`). En v1 todo paquete y sus componentes pertenecen a una sola `empresa_lider`.
+- Paquetes cruza-empresa: bloqueados en v1 (`PaqueteServicio.clean`), ver **ADR-005**. *(Revisión 2 de ADR-005, 2026-09-07: se desbloquean y se implementan como SP2 de transporte multi-empresa.)*
 
 ### Contexto
 

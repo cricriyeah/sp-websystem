@@ -106,7 +106,8 @@ Lo que ya existe y este diseño reutiliza o modifica:
 - **`bookings.ReservaTransporte`** — OneToOne a `Reserva`. `punto_encuentro` |
   `direccion_personalizada`, `zona` (snapshot, la deriva el servidor),
   `personas_solicitadas`, `numero_personas` / `precio_calculado` (congelados por
-  `CrearPagoView`). **Se elimina** (ver §3.4 y §5).
+  `CrearPagoView`). **Se elimina** en la limpieza previa de SP1 (§3.6.1); lo sustituye
+  `DetalleTransporte` (§3.4).
 - **`bookings.Reserva`** — `hora` con validador de campo `validar_ventana_salida`
   (5–7am, hardcodeado); `numero_personas` con `MaxValueValidator(MAX_PERSONAS=5)`;
   `servicio` (nullable, vacío = pesca legacy), `paquete` (nullable), `empresa`,
@@ -296,6 +297,23 @@ sea salida de panga (transporte, y también hospedaje/paseo si se venden por web
   `reservar_cupo_al_confirmar` (Caso C: `bajo_demanda` directo → nada que reservar),
   dispara notificación.
 
+### 3.6.1 Limpieza previa: transporte deja de ser personalización (dentro de SP1)
+
+Como el transporte pasa a ser `Servicio` + (en SP2) `Paquete`, el add-on actual
+sobra. SP1 lo quita **antes** de montar lo nuevo, para no arrastrar dos modelos de
+precio de transporte a la vez:
+
+- `bookings.ReservaTransporte` (OneToOne) → se elimina (migración de borrado con
+  `alcance_operador_migracion`; sin datos en producción).
+- `fleet.TransportePrecio` (dos filas zona) → se elimina; lo reemplaza
+  `TransporteTarifa` (§3.1).
+- `pricing.py::cargo_por_transporte` → se elimina.
+- El fieldset "transporte" dentro de `checkout-view.tsx` (checkout de pesca) y sus
+  claves de diccionario → se eliminan. Quien quiera pesca + traslado esperará al
+  paquete de SP2; mientras tanto el checkout de pesca no ofrece traslado.
+- `fleet.PuntoEncuentro` **se conserva** (lo usa `DetalleTransporte` y
+  `TransporteTarifa`).
+
 ### 3.7 Frontend
 
 - Nueva ruta **`/[lang]/traslados`** (o `/[lang]/traslados/[empresa]` si hay varias
@@ -316,7 +334,8 @@ sea salida de panga (transporte, y también hospedaje/paseo si se venden por web
 - El precio mostrado siempre viene del backend (resolución de tarifa server-side al
   pedir cotización, y congelado en `crear-pago`).
 - El sub-bloque de transporte que hoy vive dentro de `checkout-view.tsx` (fieldset
-  "transporte" del checkout de pesca) **se elimina** en SP2 (§4.6), no aquí.
+  "transporte" del checkout de pesca) ya se eliminó en la limpieza previa de SP1
+  (§3.6.1).
 
 ### 3.8 Admin
 
@@ -480,15 +499,12 @@ SP2 lo separa:
 - Comando de apoyo `manage.py revisar_ordenes` — lista órdenes atascadas en
   `autorizando` / `autorizada` para que la vendedora las vea.
 
-### 4.6 Se elimina: transporte como personalización
+### 4.6 (movido a SP1 §3.6.1)
 
-- `bookings.ReservaTransporte` (ya reemplazado por `DetalleTransporte` en SP1 para el
-  standalone) — se elimina cualquier uso residual como add-on dentro de la reserva de
-  pesca.
-- El fieldset "transporte" dentro de `checkout-view.tsx` (checkout de pesca) — se
-  elimina. Quien quiera pesca + traslado compra el paquete.
-- `cargo_por_transporte` en `pricing.py` — se elimina (el precio de transporte ahora
-  es `PorRuta` sobre `TransporteTarifa`).
+La eliminación de "transporte como personalización" (`ReservaTransporte`,
+`cargo_por_transporte`, `TransportePrecio`, fieldset del checkout de pesca) ocurre en
+la limpieza previa de SP1. SP2 solo **re-introduce** el transporte como componente de
+un `Paquete` cruza-empresa.
 
 ### 4.7 Admin de órdenes
 

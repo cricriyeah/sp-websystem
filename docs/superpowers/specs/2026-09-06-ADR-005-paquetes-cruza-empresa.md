@@ -1,8 +1,54 @@
-# ADR-005: Paquetes Cruza-Empresa (Fuera de v1)
+# ADR-005: Paquetes Cruza-Empresa
 
-- **Fecha:** 2026-09-06
-- **Estado:** PROPUESTO (sin fecha de implementación)
-- **Decisión asociada:** Bloqueado en v1 vía validación de modelo (`PaqueteServicio.clean`)
+- **Fecha:** 2026-09-06 · **Revisión 2:** 2026-09-07
+- **Estado:** ACEPTADO (Revisión 2) — se implementa como Sub-proyecto 2 de
+  `docs/superpowers/specs/2026-09-07-transporte-multi-empresa-design.md`
+- **Estado previo (Revisión 1, 2026-09-06):** PROPUESTO, bloqueado en v1 vía
+  `PaqueteServicio.clean`
+- **Decisión (Revisión 2):** Opción A refinada — "modelo B": N PaymentIntents en
+  `capture_method='manual'`, autorizar todos y luego capturar; `void` si alguno falla.
+
+---
+
+## 0. Revisión 2 (2026-09-07) — se retoma y se decide
+
+El dueño decidió que **juntar pesca (Empresa 1) + transporte (Empresa 2) es un
+paquete**, y que el transporte deja de ser una personalización dentro de la reserva
+de pesca. Eso hace que el primer paquete real de producción ("Pesca + Traslado", La
+Paz) sea cruza-empresa, así que este ADR deja de estar diferido.
+
+**Decisión:** se implementa la **Opción A refinada** (abajo llamada "modelo B" en el
+diseño de SP2):
+
+- El checkout de un paquete cruza-empresa crea una `bookings.Orden` que agrupa N
+  `Reserva`, una por empresa proveedora.
+- `crear-pago` de la orden crea N `PaymentIntent` con `capture_method='manual'`, uno
+  en la cuenta Stripe de cada empresa, por el monto que le toca a esa empresa
+  (`PaqueteServicio.monto_empresa`).
+- El cliente **autoriza** los N (N confirmaciones en el frontend). Si **todas** quedan
+  `requires_capture` → se **capturan** las N. Si alguna falla o el cliente abandona →
+  `PaymentIntent.cancel` (void) de las autorizadas; **nunca hubo cobro**.
+- `revertir_orden(orden, motivo)` centraliza la compensación (void de autorizaciones,
+  refund de capturas) con `idempotency_key` y tolerante a reintentos.
+- `conciliar_pagos` y `manage.py revisar_ordenes` son la red de seguridad; el timeout
+  de una orden incompleta (`ORDEN_TIMEOUT_AUTORIZACION`, 24 h) es ≪ 7 días (expiración
+  de autorización de Stripe).
+
+**Por qué no Opción B (enlaces de pago diferidos):** el dueño quiere que el cliente
+pague todo en el checkout. Opción B mete pago en dos momentos y trabajo manual de la
+vendedora en cada reserva. Sigue siendo un repliegue válido si el volumen resulta muy
+bajo.
+
+**Por qué no Opción C (Stripe Connect):** decisión de negocio/fiscal ya tomada — la
+plataforma no intermedia fondos (ver §1). No se reabre sin asesoría fiscal.
+
+**Alcance v1:** solo "un componente base de una empresa + un componente de traslado
+de otra empresa" (orden de 2 cobros). No carrito general de N empresas. `forma_pago`
+restringido a `completo` (sin anticipo) en órdenes cruza-empresa.
+
+El detalle de modelos, API, webhook, tenancy y pruebas está en el diseño de SP2.
+
+---
 
 ---
 
