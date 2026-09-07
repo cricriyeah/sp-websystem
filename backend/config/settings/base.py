@@ -138,7 +138,17 @@ WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
 WHATSAPP_TEMPLATE = os.environ.get('WHATSAPP_TEMPLATE', 'reserva_confirmada')
 WHATSAPP_TEMPLATE_LANG = os.environ.get('WHATSAPP_TEMPLATE_LANG', 'es_MX')
 
-from apps.tenancy import scope
+def _perm_puede_ver_finanzas(request):
+    from apps.tenancy.permisos_unfold import puede_ver_finanzas
+
+    return puede_ver_finanzas(request)
+
+
+def _perm_es_operador(request):
+    from apps.tenancy.permisos_unfold import es_operador
+
+    return es_operador(request)
+
 
 # Config visual de unfold. El tema (colores, sidebar) se define aqui en codigo,
 # no es editable en vivo desde el admin como admin_interface.
@@ -238,10 +248,7 @@ UNFOLD = {
                         'title': 'Finanzas',
                         'icon': 'payments',
                         'link': reverse_lazy('finanzas'),
-                        'permission': lambda request: (
-                            scope.es_operador_plataforma(request.user)
-                            or scope.empresa_actual(request) is not None
-                        ),
+                        'permission': _perm_puede_ver_finanzas,
                     },
                     {
                         'title': 'Tarifa',
@@ -281,17 +288,13 @@ UNFOLD = {
                         'title': 'Sedes',
                         'icon': 'location_on',
                         'link': reverse_lazy('admin:tenancy_sede_changelist'),
-                        'permission': lambda request: scope.es_operador_plataforma(
-                            request.user
-                        ),
+                        'permission': _perm_es_operador,
                     },
                     {
                         'title': 'Empresas',
                         'icon': 'store',
                         'link': reverse_lazy('admin:tenancy_empresa_changelist'),
-                        'permission': lambda request: scope.es_operador_plataforma(
-                            request.user
-                        ),
+                        'permission': _perm_es_operador,
                     },
                     {
                         'title': 'Membresias',
@@ -299,9 +302,7 @@ UNFOLD = {
                         'link': reverse_lazy(
                             'admin:tenancy_membresiaempresa_changelist'
                         ),
-                        'permission': lambda request: scope.es_operador_plataforma(
-                            request.user
-                        ),
+                        'permission': _perm_es_operador,
                     },
                     {
                         'title': 'Usuarios',
