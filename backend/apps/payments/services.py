@@ -15,6 +15,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.bookings.cupo import SinCupoError
+from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
 from apps.bookings.models import Reserva
 from apps.notifications.services import notificar_reserva_pagada
 from apps.tenancy import scope
@@ -95,8 +97,10 @@ def aplicar_pago_exitoso(intent, empresa):
     reserva.stripe_payment_intent_id = intent['id']
     reserva.estado = Reserva.Estado.PAGADA
     try:
-        reserva.full_clean()
-        reserva.save()
+        with transaction.atomic():
+            reserva.full_clean()
+            reserva.save()
+            reservar_cupo_al_confirmar(reserva)
     except DjangoValidationError as exc:
         # `codigo_promocional` es la unica clave que Reserva.clean() usa para
         # este rechazo (ver validar_codigo_promocional_en_pago) — cualquier
@@ -104,6 +108,8 @@ def aplicar_pago_exitoso(intent, empresa):
         if 'codigo_promocional' in getattr(exc, 'error_dict', {}):
             return _cancelar_codigo_promocional_invalido(reserva, intent, empresa)
         return _cancelar_sin_cupo(reserva, intent, empresa)
+    except SinCupoError as exc:
+        return _cancelar_sin_cupo(reserva, intent, empresa, motivo=str(exc))
 
     # Revision 4 (N1): SET LOCAL muere al COMMIT — un callback de on_commit
     # corre FUERA del `with scope.con_empresa(...)` que encolo esta
@@ -171,7 +177,7 @@ def _verificar_monto(reserva, intent):
         )
 
 
-def _cancelar_sin_cupo(reserva, intent, empresa):
+def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None):
     """El dia se lleno mientras el cliente pagaba. Se devuelve el 100% y la
     reserva queda cancelada con el motivo real, para que la vendedora la vea en
     su panel en vez de que desaparezca como 'pendiente de pago'."""
@@ -179,7 +185,7 @@ def _cancelar_sin_cupo(reserva, intent, empresa):
         return FALLO_REEMBOLSO
 
     reserva.estado = Reserva.Estado.CANCELADA
-    reserva.motivo_cancelacion = 'Sin cupo disponible al confirmar el pago. Reembolso automatico.'
+    reserva.motivo_cancelacion = motivo or 'Sin cupo disponible al confirmar el pago. Reembolso automatico.'
     reserva.cancelada_en = timezone.now()
     reserva.reembolsada = True
     reserva.monto_reembolsado = de_centavos(intent['amount_received'])

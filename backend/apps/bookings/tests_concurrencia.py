@@ -30,13 +30,14 @@ from unittest import mock, skipUnless
 from django.db import connection, connections
 from django.test import TransactionTestCase
 
+from apps.fleet.models import Recurso, Servicio
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota
 
 from stripe import StripeClient
 
-from .models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, Reserva
+from .models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, Reserva, ReservaOcupacion
 
 SOLO_POSTGRES = skipUnless(
     connection.vendor == 'postgresql',
@@ -253,3 +254,105 @@ class LockDelDiaTests(TransactionTestCase):
 
         self.assertEqual(resultados, [APLICADO, APLICADO])
         self.assertEqual(refund.create.call_count, 0)
+
+
+@SOLO_POSTGRES
+class SobreventaHospedajeConcurrenteTests(TransactionTestCase):
+    """Dos clientes intentan pagar la última habitación en paralelo.
+    Uno queda PAGADA con ReservaOcupacion, el otro CANCELADA y reembolsado."""
+
+    def setUp(self):
+        self.empresa = _crear_empresa_de_prueba()
+        with scope.con_empresa(self.empresa):
+            self.servicio = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Cabaña frente al mar',
+                slug='cabana-mar',
+                tipo_servicio='hospedaje',
+                estrategia_cupo='por_noche',
+                precio_base=Decimal('2000.00'),
+                activo=True,
+            )
+            self.recurso = Recurso.objects.create(
+                empresa=self.empresa,
+                servicio=self.servicio,
+                nombre='Cabaña 1',
+                capacidad_maxima=2,
+                activo=True,
+            )
+            self.fecha = date.today() + timedelta(days=10)
+            self.fecha_salida = date.today() + timedelta(days=12)
+
+            self.pendientes = []
+            for nombre in ('Cliente Hospedaje Uno', 'Cliente Hospedaje Dos'):
+                reserva = Reserva(**_datos(
+                    self.empresa,
+                    servicio=self.servicio,
+                    fecha=self.fecha,
+                    fecha_salida=self.fecha_salida,
+                    numero_personas=2,
+                    nombre_cliente=nombre,
+                    precio_total=Decimal('4000.00'),
+                    forma_pago=Reserva.FormaPago.COMPLETO,
+                ))
+                reserva.full_clean()
+                reserva.save()
+                self.pendientes.append(reserva)
+
+    def _pagar_en_paralelo(self):
+        import threading
+        from apps.payments.services import aplicar_pago_exitoso
+
+        empresa_id = self.empresa.pk
+        resultados = [None, None]
+        errores = [None, None]
+        arrancar = threading.Barrier(2)
+
+        def pagar(indice):
+            try:
+                arrancar.wait(timeout=10)
+                empresa_del_hilo = Empresa.objects.get(pk=empresa_id)
+                with scope.con_empresa(empresa_del_hilo):
+                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(self.pendientes[indice]), empresa_del_hilo)
+            except Exception as exc:  # noqa: BLE001
+                errores[indice] = exc
+            finally:
+                connections.close_all()
+
+        hilos = [threading.Thread(target=pagar, args=(i,)) for i in range(2)]
+        for h in hilos:
+            h.start()
+        for h in hilos:
+            h.join(timeout=30)
+
+        for e in errores:
+            if e is not None:
+                raise e
+        return resultados
+
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_dos_pagos_simultaneos_no_sobrevenden_habitacion(self, refund):
+        self._pagar_en_paralelo()
+
+        with scope.con_empresa(self.empresa):
+            estados = sorted(
+                Reserva.objects.filter(pk__in=[r.pk for r in self.pendientes])
+                .values_list('estado', flat=True)
+            )
+            self.assertEqual(estados, sorted([Reserva.Estado.PAGADA, Reserva.Estado.CANCELADA]))
+
+            # Exactamente una ocupación creada
+            self.assertEqual(
+                ReservaOcupacion.objects.filter(reserva__in=self.pendientes, ocupa_cupo=True).count(),
+                1,
+            )
+
+            # Reembolso llamado 1 sola vez
+            self.assertEqual(refund.create.call_count, 1)
+
+            perdedora = Reserva.objects.get(
+                pk__in=[r.pk for r in self.pendientes], estado=Reserva.Estado.CANCELADA
+            )
+            self.assertTrue(perdedora.reembolsada)
+            self.assertIn('habitación', perdedora.motivo_cancelacion.lower())
+

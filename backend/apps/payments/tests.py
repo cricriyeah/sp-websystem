@@ -16,14 +16,36 @@ from django.test import RequestFactory, TestCase, TransactionTestCase, override_
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.bookings.models import CUPO_MAXIMO_DEFAULT, Reserva, ReservaExtra, ReservaTransporte
-from apps.fleet.models import CodigoPromocional, ExtrasItem, Paquete, Servicio, Tarifa, TransportePrecio
+from apps.bookings.models import (
+    CUPO_MAXIMO_DEFAULT,
+    Reserva,
+    ReservaExtra,
+    ReservaOcupacion,
+    ReservaPaqueteComponente,
+    ReservaTransporte,
+)
+from apps.fleet.models import (
+    CodigoPromocional,
+    ExtrasItem,
+    Paquete,
+    PaqueteServicio,
+    Recurso,
+    Servicio,
+    Tarifa,
+    TransportePrecio,
+)
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
 
 from .checks import revisar_llaves_de_stripe
-from .services import APLICADO, _reserva_del_cargo, aplicar_pago_exitoso, reembolsar
+from .services import (
+    APLICADO,
+    SIN_CUPO_REEMBOLSADO,
+    _reserva_del_cargo,
+    aplicar_pago_exitoso,
+    reembolsar,
+)
 from .stripe_client import configurar_stripe
 from .views import (
     CrearPagoView,
@@ -1868,3 +1890,266 @@ class ConciliarPagosPorEmpresaTests(TestCase):
         call_command('conciliar_pagos', '--dry-run', stdout=StringIO())
 
         cliente.payment_intents.retrieve.assert_called_once_with('pi_pendiente')
+
+
+class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
+    """Pruebas de que el pago confirma y crea las ocupaciones y componentes (Tarea 6.3)."""
+
+    def setUp(self):
+        self.sede = Sede.objects.create(
+            nombre='Sede Pago Cupo', slug='sede-pago-cupo', zona_horaria='America/Mazatlan',
+        )
+        self.empresa = Empresa.objects.create(
+            sede=self.sede, nombre='Empresa Pago Cupo', slug='empresa-pago-cupo',
+            stripe_secret_key='sk_test_pago_cupo', stripe_webhook_secret='whsec_pago_cupo',
+            stripe_publishable_key='pk_test_pago_cupo',
+        )
+
+    def _crear_reserva_hospedaje(self, servicio):
+        reserva = Reserva(
+            empresa=self.empresa,
+            servicio=servicio,
+            fecha=date.today() + timedelta(days=10),
+            fecha_salida=date.today() + timedelta(days=12),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Carlos Hotel',
+            telefono_cliente='+5216121234567',
+            correo_cliente='carlos@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+            deslinde_nombre='Carlos Hotel',
+            checkout_id=uuid.uuid4(),
+            moneda='MXN',
+            precio_total=Decimal('2000.00'),
+            forma_pago=Reserva.FormaPago.COMPLETO,
+        )
+        with scope.con_empresa(self.empresa):
+            reserva.full_clean()
+            reserva.save()
+        return reserva
+
+    def test_servicio_hospedaje_pagado_crea_reserva_ocupacion_con_rango_correcto(self):
+        with scope.con_empresa(self.empresa):
+            servicio = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Habitación Doble',
+                slug='hab-doble',
+                tipo_servicio='hospedaje',
+                estrategia_cupo='por_noche',
+                precio_base=Decimal('1000.00'),
+                activo=True,
+            )
+            recurso = Recurso.objects.create(
+                empresa=self.empresa,
+                servicio=servicio,
+                nombre='Habitación 101',
+                capacidad_maxima=2,
+                activo=True,
+            )
+            reserva = self._crear_reserva_hospedaje(servicio)
+
+        intent = {
+            'id': 'pi_hospedaje_1',
+            'amount_received': 200000,
+            'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+
+        with scope.con_empresa(self.empresa):
+            resultado = aplicar_pago_exitoso(intent, self.empresa)
+
+        self.assertEqual(resultado, APLICADO)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+
+        with scope.con_empresa(self.empresa):
+            ocupaciones = list(reserva.ocupaciones.all())
+            self.assertEqual(len(ocupaciones), 1)
+            oc = ocupaciones[0]
+            self.assertEqual(oc.recurso_id, recurso.pk)
+            self.assertEqual(oc.fecha_inicio, reserva.fecha)
+            self.assertEqual(oc.fecha_fin, reserva.fecha_salida)
+            self.assertTrue(oc.ocupa_cupo)
+
+    def test_paquete_con_componente_hospedaje_crea_ocupacion_y_componentes(self):
+        with scope.con_empresa(self.empresa):
+            crear_flota(self.empresa)
+            s_pesca = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Pesca en Panga',
+                slug='pesca-panga',
+                tipo_servicio='pesca',
+                estrategia_cupo='por_recurso_dia',
+                precio_base=Decimal('3000.00'),
+                activo=True,
+            )
+            s_hotel = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Hotel Boutique',
+                slug='hotel-boutique',
+                tipo_servicio='hospedaje',
+                estrategia_cupo='por_noche',
+                precio_base=Decimal('2000.00'),
+                activo=True,
+            )
+            recurso_hab = Recurso.objects.create(
+                empresa=self.empresa,
+                servicio=s_hotel,
+                nombre='Habitación 201',
+                capacidad_maxima=2,
+                activo=True,
+            )
+            paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa,
+                nombre='Pesca y Hotel',
+                slug='pesca-hotel',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_pesca, orden=1, removible=False)
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_hotel, orden=2, removible=True)
+
+            reserva = Reserva(
+                empresa=self.empresa,
+                paquete=paquete,
+                fecha=date.today() + timedelta(days=10),
+                fecha_salida=date.today() + timedelta(days=12),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Laura Paquete',
+                telefono_cliente='+5216121234567',
+                correo_cliente='laura@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                deslinde_nombre='Laura Paquete',
+                checkout_id=uuid.uuid4(),
+                moneda='MXN',
+                precio_total=Decimal('5000.00'),
+                forma_pago=Reserva.FormaPago.COMPLETO,
+            )
+            reserva.full_clean()
+            reserva.save()
+
+        intent = {
+            'id': 'pi_paquete_1',
+            'amount_received': 500000,
+            'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+
+        with scope.con_empresa(self.empresa):
+            resultado = aplicar_pago_exitoso(intent, self.empresa)
+
+        self.assertEqual(resultado, APLICADO)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+
+        with scope.con_empresa(self.empresa):
+            # Debe haber creado ocupación para el componente hotel
+            self.assertEqual(reserva.ocupaciones.count(), 1)
+            oc = reserva.ocupaciones.first()
+            self.assertEqual(oc.recurso_id, recurso_hab.pk)
+            self.assertTrue(oc.ocupa_cupo)
+
+            # Debe haber creado ReservaPaqueteComponente para ambos componentes
+            componentes = list(reserva.componentes.order_by('servicio__nombre'))
+            self.assertEqual(len(componentes), 2)
+            for comp in componentes:
+                self.assertEqual(comp.estado_cupo, ReservaPaqueteComponente.EstadoCupo.OK)
+
+    @mock.patch('apps.bookings.cupo.confirmacion.evaluar_cupo')
+    @mock.patch('apps.payments.services.reembolsar')
+    def test_paquete_con_componente_sin_cupo_cancela_reembolsa_y_no_deja_huerfanos(self, mock_reembolsar, mock_evaluar):
+        mock_reembolsar.return_value = True
+        mock_evaluar.return_value = 'sin_panga'
+
+        with scope.con_empresa(self.empresa):
+            crear_flota(self.empresa)
+            s_hotel = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Hotel Boutique',
+                slug='hotel-boutique',
+                tipo_servicio='hospedaje',
+                estrategia_cupo='por_noche',
+                precio_base=Decimal('2000.00'),
+                activo=True,
+            )
+            recurso_hab = Recurso.objects.create(
+                empresa=self.empresa,
+                servicio=s_hotel,
+                nombre='Habitación 201',
+                capacidad_maxima=2,
+                activo=True,
+            )
+            s_pesca = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Pesca en Panga',
+                slug='pesca-panga',
+                tipo_servicio='pesca',
+                estrategia_cupo='por_recurso_dia',
+                precio_base=Decimal('3000.00'),
+                activo=True,
+            )
+            paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa,
+                nombre='Pesca y Hotel',
+                slug='pesca-hotel',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            # El orden: hotel primero (orden 1), luego pesca (orden 2)
+            # Hotel se crea primero pero pesca falla en confirmacion, el atomic block debe hacer rollback
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_hotel, orden=1, removible=False)
+            PaqueteServicio.objects.create(paquete=paquete, servicio=s_pesca, orden=2, removible=False)
+
+            reserva = Reserva(
+                empresa=self.empresa,
+                paquete=paquete,
+                fecha=date.today() + timedelta(days=10),
+                fecha_salida=date.today() + timedelta(days=12),
+                hora=time(6, 0),
+                numero_personas=2,
+                nombre_cliente='Pedro Sin Cupo',
+                telefono_cliente='+5216121234567',
+                correo_cliente='pedro@example.com',
+                canal_origen=Reserva.CanalOrigen.WEB,
+                deslinde_aceptado=True,
+                deslinde_nombre='Pedro Sin Cupo',
+                checkout_id=uuid.uuid4(),
+                moneda='MXN',
+                precio_total=Decimal('5000.00'),
+                forma_pago=Reserva.FormaPago.COMPLETO,
+            )
+            reserva.full_clean()
+            reserva.save()
+
+        intent = {
+            'id': 'pi_sin_cupo_1',
+            'amount_received': 500000,
+            'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+
+        with scope.con_empresa(self.empresa):
+            resultado = aplicar_pago_exitoso(intent, self.empresa)
+
+        self.assertEqual(resultado, SIN_CUPO_REEMBOLSADO)
+        mock_reembolsar.assert_called_once()
+
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.CANCELADA)
+        self.assertTrue(reserva.reembolsada)
+        self.assertIn('No hay cupo disponible para el componente', reserva.motivo_cancelacion)
+
+        with scope.con_empresa(self.empresa):
+            # NO debe quedar ninguna ocupación huérfana
+            self.assertEqual(reserva.ocupaciones.count(), 0)
+            # NO debe quedar ningún componente huérfano
+            self.assertEqual(reserva.componentes.count(), 0)
+

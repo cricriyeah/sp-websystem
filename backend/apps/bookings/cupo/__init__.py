@@ -32,6 +32,7 @@ from .nucleo import (
     MOTIVO_SIN_PANGA,
     caben,
     caben_compartido,
+    elegir_recursos,
     motivo_sin_lugar,
     ocupacion_por_rango,
     rango_traslapa,
@@ -42,6 +43,12 @@ from .registro import (
     obtener_estrategia,
     registrar_estrategia,
 )
+
+
+class SinCupoError(Exception):
+    """Lanzada cuando no hay cupo o recursos disponibles al confirmar un pago."""
+    pass
+
 
 __all__ = [
     'ContextoCupo',
@@ -67,8 +74,10 @@ __all__ = [
     'bloquear_recurso',
     'calcular_clave_candado',
     'calcular_clave_recurso',
+    'SinCupoError',
     'caben',
     'caben_compartido',
+    'elegir_recursos',
     'motivo_sin_lugar',
     'ocupacion_por_rango',
     'rango_traslapa',
@@ -77,3 +86,4 @@ __all__ = [
     'obtener_estrategia',
     'registrar_estrategia',
 ]
+
