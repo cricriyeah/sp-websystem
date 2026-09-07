@@ -39,6 +39,18 @@ PERMISOS_JEFE = PERMISOS_VENDEDORA + [
     ('fleet', 'transporteprecio', ['add', 'change', 'delete', 'view']),
     ('fleet', 'codigopromocional', ['add', 'change', 'delete', 'view']),
     ('fleet', 'tarifa', ['add', 'change', 'view']),
+    # Catalogo multi-sede: el jefe configura sus propios servicios, recursos,
+    # personalizaciones y paquetes (RLS los acota a su Empresa).
+    ('fleet', 'servicio', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'recurso', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'personalizacion', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'serviciopersonalizacion', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'paquete', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'paqueteservicio', ['add', 'change', 'delete', 'view']),
+    # Ocupaciones y componentes: los pone el sistema al confirmar el pago; el
+    # jefe solo los consulta.
+    ('bookings', 'reservaocupacion', ['view']),
+    ('bookings', 'reservapaquetecomponente', ['view']),
     # H5: solo view+change sobre auth.user -- el alta pasa por la accion
     # "Dar de alta vendedora" (apps/bookings/admin.py), cuyo has_add_permission
     # bloquea el "Agregar usuario" directo del UserAdmin. Cero permisos sobre

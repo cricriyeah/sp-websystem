@@ -239,6 +239,42 @@ UNFOLD = {
                 ],
             },
             {
+                'title': 'Catalogo multi-sede',
+                'separator': True,
+                'items': [
+                    {
+                        'title': 'Servicios',
+                        'icon': 'category',
+                        'link': reverse_lazy('admin:fleet_servicio_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_servicio'),
+                    },
+                    {
+                        'title': 'Recursos',
+                        'icon': 'meeting_room',
+                        'link': reverse_lazy('admin:fleet_recurso_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_recurso'),
+                    },
+                    {
+                        'title': 'Personalizaciones',
+                        'icon': 'tune',
+                        'link': reverse_lazy('admin:fleet_personalizacion_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_personalizacion'),
+                    },
+                    {
+                        'title': 'Paquetes',
+                        'icon': 'inventory_2',
+                        'link': reverse_lazy('admin:fleet_paquete_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_paquete'),
+                    },
+                    {
+                        'title': 'Ocupaciones de hospedaje',
+                        'icon': 'nights_stay',
+                        'link': reverse_lazy('admin:bookings_reservaocupacion_changelist'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_reservaocupacion'),
+                    },
+                ],
+            },
+            {
                 # Solo jefes. La vendedora no ve este bloque completo, igual que
                 # hoy no ve `fleet.Tarifa` (ver docs/contexto-negocio.md, Roles).
                 'title': 'Dinero',
