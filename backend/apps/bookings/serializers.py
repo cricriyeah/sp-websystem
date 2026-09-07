@@ -19,7 +19,6 @@ from .models import (
     Reserva,
     ReservaExtra,
     ReservaPaquetePersonalizacion,
-    ReservaPaqueteServicioRemovido,
     ReservaTransporte,
     Vendedora,
 )
@@ -152,9 +151,6 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         slug_field='slug', queryset=Paquete.objects.filter(activo=True), required=False, allow_null=True,
     )
     fecha_salida = serializers.DateField(required=False, allow_null=True)
-    servicios_removidos = serializers.ListField(
-        child=serializers.SlugField(), required=False, default=list, write_only=True,
-    )
     personalizaciones = PersonalizacionSeleccionSerializer(
         many=True, required=False, default=list, write_only=True,
     )
@@ -176,7 +172,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'moneda', 'deslinde_aceptado', 'deslinde_nombre',
             'pide_bebidas',
             'servicio', 'paquete', 'fecha_salida',
-            'servicios_removidos', 'personalizaciones',
+            'personalizaciones',
             'extras', 'transporte',
             'ref', 'estado',
         ]
@@ -234,30 +230,14 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         if servicio and empresa and servicio.empresa_id != empresa.id:
             raise serializers.ValidationError({'servicio': 'El servicio no pertenece a esta empresa.'})
 
-        servicios_removidos = attrs.get('servicios_removidos', [])
         personalizaciones = attrs.get('personalizaciones', [])
-
-        if servicios_removidos and not paquete:
-            raise serializers.ValidationError({'servicios_removidos': 'Los servicios removidos solo aplican para paquetes.'})
 
         if personalizaciones and not paquete:
             raise serializers.ValidationError({'personalizaciones': 'Las personalizaciones solo aplican para paquetes.'})
 
         componentes_activos = []
         if paquete:
-            servicios_asociados = list(paquete.servicios_asociados.select_related('servicio').all())
-            removibles_map = {ps.servicio.slug: ps for ps in servicios_asociados if ps.removible}
-            todos_servicios_map = {ps.servicio.slug: ps for ps in servicios_asociados}
-
-            for slug in servicios_removidos:
-                if slug not in removibles_map:
-                    if slug in todos_servicios_map:
-                        raise serializers.ValidationError({'servicios_removidos': f'El servicio {slug} no es removible.'})
-                    else:
-                        raise serializers.ValidationError({'servicios_removidos': f'El servicio {slug} no pertenece al paquete.'})
-
-            removidos_set = set(servicios_removidos)
-            componentes_activos = [ps for ps in servicios_asociados if ps.servicio.slug not in removidos_set]
+            componentes_activos = list(paquete.servicios_asociados.select_related('servicio').all())
 
             if personalizaciones:
                 activos_ids = {ps.servicio_id for ps in componentes_activos}
@@ -347,19 +327,19 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         extras, transporte = self._sacar_extras_y_transporte(validated_data)
-        servicios_removidos, personalizaciones = self._sacar_datos_paquete(validated_data)
+        personalizaciones = self._sacar_datos_paquete(validated_data)
         # La Empresa la fija la vista (slug de la URL), nunca el payload del
         # cliente. `update()` no la toca: recuperar un checkout conserva su
         # Empresa (y seria la misma, resuelta del mismo slug).
         validated_data['empresa'] = self.context['empresa']
-        return self._guardar(Reserva(**validated_data), extras, transporte, servicios_removidos, personalizaciones)
+        return self._guardar(Reserva(**validated_data), extras, transporte, personalizaciones)
 
     def update(self, instance, validated_data):
         extras, transporte = self._sacar_extras_y_transporte(validated_data)
-        servicios_removidos, personalizaciones = self._sacar_datos_paquete(validated_data)
+        personalizaciones = self._sacar_datos_paquete(validated_data)
         for campo, valor in validated_data.items():
             setattr(instance, campo, valor)
-        return self._guardar(instance, extras, transporte, servicios_removidos, personalizaciones)
+        return self._guardar(instance, extras, transporte, personalizaciones)
 
     def _sacar_extras_y_transporte(self, validated_data):
         # No son campos del modelo Reserva: hay que sacarlos antes de construirla
@@ -368,9 +348,9 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         return validated_data.pop('extras'), validated_data.pop('transporte')
 
     def _sacar_datos_paquete(self, validated_data):
-        return validated_data.pop('servicios_removidos', []), validated_data.pop('personalizaciones', [])
+        return validated_data.pop('personalizaciones', [])
 
-    def _guardar(self, reserva, extras, transporte, servicios_removidos=None, personalizaciones=None):
+    def _guardar(self, reserva, extras, transporte, personalizaciones=None):
         # full_clean corre el motor unico de validacion (ventana de salida, cupo,
         # deslinde, capacidad), ver apps/bookings/models.py y backend/CLAUDE.md.
         # `transporte` puede llegar como `{}` (el cliente manda siempre la forma
@@ -407,8 +387,6 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
                 self._construir_transporte(reserva, transporte).save()
             else:
                 ReservaTransporte.objects.filter(reserva=reserva).delete()
-            if servicios_removidos is not None:
-                self._sincronizar_servicios_removidos(reserva, servicios_removidos)
             if personalizaciones is not None:
                 self._sincronizar_personalizaciones(reserva, personalizaciones)
         except DjangoValidationError as exc:
@@ -417,19 +395,6 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             )
 
         return reserva
-
-    def _sincronizar_servicios_removidos(self, reserva, slugs_removidos):
-        reserva.servicios_removidos.all().delete()
-        if not reserva.paquete_id or not slugs_removidos:
-            return
-        servicios = {
-            ps.servicio.slug: ps.servicio
-            for ps in reserva.paquete.servicios_asociados.select_related('servicio').all()
-        }
-        for slug in slugs_removidos:
-            srv = servicios.get(slug)
-            if srv:
-                ReservaPaqueteServicioRemovido.objects.create(reserva=reserva, servicio=srv)
 
     def _sincronizar_personalizaciones(self, reserva, items_elegidos):
         reserva.paquete_personalizaciones.all().delete()

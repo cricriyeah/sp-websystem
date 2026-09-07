@@ -11,7 +11,6 @@ from rest_framework.test import APIRequestFactory
 from apps.bookings.models import (
     Reserva,
     ReservaPaquetePersonalizacion,
-    ReservaPaqueteServicioRemovido,
 )
 from apps.bookings.serializers import ReservaCheckoutSerializer
 from apps.fleet.models import (
@@ -151,7 +150,6 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
     def test_acepta_reserva_de_paquete_de_la_empresa(self):
         datos = self._datos_base(
             paquete=self.paquete_a.slug,
-            servicios_removidos=[self.srv_snack.slug],
             personalizaciones=[{'id': self.sp_opcional.id, 'cantidad': 2}],
         )
         serializer = ReservaCheckoutSerializer(
@@ -161,8 +159,6 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         reserva = serializer.save()
         self.assertEqual(reserva.paquete, self.paquete_a)
         self.assertIsNone(reserva.servicio)
-        self.assertEqual(reserva.servicios_removidos.count(), 1)
-        self.assertEqual(reserva.servicios_removidos.first().servicio, self.srv_snack)
         self.assertEqual(reserva.paquete_personalizaciones.count(), 1)
         self.assertEqual(reserva.paquete_personalizaciones.first().servicio_personalizacion, self.sp_opcional)
         self.assertEqual(reserva.paquete_personalizaciones.first().cantidad, 2)
@@ -247,17 +243,6 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('fecha_salida', serializer.errors)
 
-    def test_rechaza_remover_servicio_no_removible(self):
-        datos = self._datos_base(
-            paquete=self.paquete_a.slug,
-            servicios_removidos=[self.srv_pesca.slug],
-        )
-        serializer = ReservaCheckoutSerializer(
-            data=datos, context={'request': self.request, 'empresa': self.empresa_a},
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('servicios_removidos', serializer.errors)
-
     def test_personalizaciones_solo_acepta_opcionales(self):
         # Obligatoria -> rechazada
         datos = self._datos_base(
@@ -281,28 +266,9 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('personalizaciones', serializer.errors)
 
-    def test_personalizacion_de_componente_removido_se_rechaza(self):
-        # Crear personalización para snack
-        pers_snack = Personalizacion.objects.create(empresa=self.empresa_a, nombre='Extra Papas')
-        sp_snack = ServicioPersonalizacion.objects.create(
-            servicio=self.srv_snack, personalizacion=pers_snack,
-            precio=Decimal('50.00'), activo=True,
-        )
-        datos = self._datos_base(
-            paquete=self.paquete_a.slug,
-            servicios_removidos=[self.srv_snack.slug],
-            personalizaciones=[{'id': sp_snack.id, 'cantidad': 1}],
-        )
-        serializer = ReservaCheckoutSerializer(
-            data=datos, context={'request': self.request, 'empresa': self.empresa_a},
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('personalizaciones', serializer.errors)
-
-    def test_actualizacion_reenvio_sincroniza_removidos_y_personalizaciones(self):
+    def test_actualizacion_reenvio_sincroniza_personalizaciones(self):
         datos1 = self._datos_base(
             paquete=self.paquete_a.slug,
-            servicios_removidos=[self.srv_snack.slug],
             personalizaciones=[{'id': self.sp_opcional.id, 'cantidad': 1}],
         )
         serializer1 = ReservaCheckoutSerializer(
@@ -311,14 +277,12 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         self.assertTrue(serializer1.is_valid(), serializer1.errors)
         reserva = serializer1.save()
 
-        self.assertEqual(reserva.servicios_removidos.count(), 1)
         self.assertEqual(reserva.paquete_personalizaciones.first().cantidad, 1)
 
-        # Reenvío: quita el servicio removido (restaura snack) y cambia cantidad de personalización
+        # Reenvío: cambia cantidad de personalización
         datos2 = self._datos_base(
             checkout_id=str(reserva.checkout_id),
             paquete=self.paquete_a.slug,
-            servicios_removidos=[],
             personalizaciones=[{'id': self.sp_opcional.id, 'cantidad': 3}],
         )
         serializer2 = ReservaCheckoutSerializer(
@@ -327,6 +291,5 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         self.assertTrue(serializer2.is_valid(), serializer2.errors)
         reserva_act = serializer2.save()
 
-        self.assertEqual(reserva_act.servicios_removidos.count(), 0)
         self.assertEqual(reserva_act.paquete_personalizaciones.count(), 1)
         self.assertEqual(reserva_act.paquete_personalizaciones.first().cantidad, 3)
