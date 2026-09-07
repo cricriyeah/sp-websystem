@@ -406,5 +406,8 @@ export const getPaqueteDetalle = (sedeSlug: string, paqueteSlug: string) =>
 export const getServiciosSede = (sedeSlug: string) =>
   request<ServicioCatalogo[]>(`/api/sedes/${sedeSlug}/servicios/`);
 
+export const getServicioDetalle = (servicioSlug: string, empresaSlug?: string) =>
+  request<ServicioCatalogo>(`/api/servicios/${servicioSlug}/`, undefined, empresaSlug);
+
 export { ApiError };
 

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
-import { getPaqueteDetalle, getSedes, getTarifa, type PaqueteCatalogo } from '@/lib/api';
+import { getPaqueteDetalle, getSedes, getServicioDetalle, getTarifa, type PaqueteCatalogo, type ServicioCatalogo } from '@/lib/api';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { alternativasDe } from '@/lib/site';
 
@@ -65,14 +65,20 @@ export default async function ReservarPage({
   // - paquete -> paquete.empresa_lider_slug
   // - servicio suelto -> servicio.empresa_slug (query.empresa)
   // - pesca legacy -> NEXT_PUBLIC_EMPRESA_SLUG
+  const servicioSlug = typeof query.servicio === 'string' ? query.servicio : undefined;
   const servicioEmpresa = typeof query.empresa === 'string' ? query.empresa : undefined;
   const paqueteEmpresa = typeof query.paquete_empresa === 'string' ? query.paquete_empresa : undefined;
   const defaultEmpresaSlug = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol';
 
   const empresaSlug = paquete?.empresa_lider_slug ?? paqueteEmpresa ?? servicioEmpresa ?? defaultEmpresaSlug;
 
-  // Sin tarifa del backend no hay precio que mostrar: el checkout se pinta en
-  // modo "pagos no disponibles" en vez de inventar una cifra.
+  // Si se seleccionó un servicio suelto desde el catálogo
+  let servicio: ServicioCatalogo | null = null;
+  if (servicioSlug) {
+    servicio = await getServicioDetalle(servicioSlug, empresaSlug).catch(() => null);
+  }
+
+  // Tarifa legacy del tour de pesca: opcional cuando hay paquete o servicio
   const tarifa = await getTarifa(empresaSlug).catch(() => null);
 
   const excluidosParam = typeof query.excluidos === 'string' ? query.excluidos : undefined;
@@ -120,6 +126,9 @@ export default async function ReservarPage({
       paqueteId={paquete?.id}
       paqueteNombre={paquete?.nombre}
       paquete={paquete}
+      servicioId={servicio?.slug ?? servicioSlug ?? null}
+      servicioNombre={servicio?.nombre ?? null}
+      servicio={servicio}
       initialServiciosRemovidos={initialServiciosRemovidos}
       initialFechaSalida={fechaSalidaParam}
     />

@@ -44,6 +44,7 @@ import {
   type Moneda,
   type Pago,
   type PaqueteCatalogo,
+  type ServicioCatalogo,
   type Tarifa,
   type Zona,
 } from '@/lib/api';
@@ -150,6 +151,9 @@ type CheckoutViewProps = {
   paqueteId?: number | null;
   paqueteNombre?: string | null;
   paquete?: PaqueteCatalogo | null;
+  servicioId?: number | string | null;
+  servicioNombre?: string | null;
+  servicio?: ServicioCatalogo | null;
   initialServiciosRemovidos?: string[];
   initialFechaSalida?: string;
 };
@@ -222,6 +226,9 @@ export function CheckoutView({
   paqueteId,
   paqueteNombre,
   paquete,
+  servicioId,
+  servicioNombre,
+  servicio,
   initialServiciosRemovidos,
   initialFechaSalida,
 }: CheckoutViewProps) {
@@ -302,9 +309,12 @@ export function CheckoutView({
   // Sin precio en USD configurado no hay selector que ofrecer (ver
   // `usdDisponible` en StripePanel, que lo oculta entero): forzar USD aqui
   // dejaria al cliente sin forma de volver a MXN, con un total en $0.
-  const [moneda, setMoneda] = useState<Moneda>(
-    lang === 'en' && tarifa?.precio_usd != null ? 'USD' : 'MXN',
-  );
+  const [moneda, setMoneda] = useState<Moneda>(() => {
+    if (lang !== 'en') return 'MXN';
+    if (paquete) return paquete.precio_ancla_usd != null ? 'USD' : 'MXN';
+    if (servicio) return servicio.precio_base_usd != null ? 'USD' : 'MXN';
+    return tarifa?.precio_usd != null ? 'USD' : 'MXN';
+  });
   // Catalogo de extras (brunch, licencia, carnada, transporte, puntos de
   // encuentro) con el monto ya resuelto para `people`/`moneda` — ver el efecto
   // de abajo. null hasta la primera respuesta del backend.
@@ -385,14 +395,15 @@ export function CheckoutView({
   // sin comprometer nada hasta saber si hay sessionStorage que recuperar.
   const [phase, setPhase] = useState<Phase>('recuperando');
   const phaseInicializada = useRef(false);
+  const tieneProducto = Boolean(tarifa || paquete || servicioId || servicio);
   useLayoutEffect(() => {
     // Solo se ejecuta una vez, cuando checkoutIdValue pasa de null a un valor
     // real. A partir de ahi la logica de recuperacion toma el control.
     if (checkoutIdValue === null || phaseInicializada.current) return;
     phaseInicializada.current = true;
-    setPhase(recuperable ? 'recuperando' : tarifa ? 'form' : 'unavailable');
+    setPhase(recuperable ? 'recuperando' : tieneProducto ? 'form' : 'unavailable');
     setRecuperacion(recuperable ? 'pendiente' : 'sin-reserva');
-  }, [checkoutIdValue, recuperable, tarifa]);
+  }, [checkoutIdValue, recuperable, tieneProducto]);
   const [error, setError] = useState('');
   // Monto real cobrado, cuando la confirmacion viene de una reserva recuperada
   // (ver el efecto de abajo) en vez de un pago recien hecho en esta misma
@@ -575,8 +586,18 @@ export function CheckoutView({
   };
 
   // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
-  const usdDisponible = tarifa?.precio_usd != null;
-  const tourPrice = tarifa ? Number(moneda === 'MXN' ? tarifa.precio : tarifa.precio_usd) : null;
+  const usdDisponible = paquete
+    ? paquete.precio_ancla_usd != null
+    : servicio
+    ? servicio.precio_base_usd != null
+    : tarifa?.precio_usd != null;
+  const tourPrice = paquete
+    ? null
+    : servicio
+    ? Number(moneda === 'MXN' ? servicio.precio_base : servicio.precio_base_usd)
+    : tarifa
+    ? Number(moneda === 'MXN' ? tarifa.precio : tarifa.precio_usd)
+    : null;
 
   const currency = useMemo(
     () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
@@ -798,9 +819,17 @@ export function CheckoutView({
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
   // recalcula esto mismo al crear el pago: aqui solo se muestra.
-  const personasIncluidas = tarifa?.personas_incluidas ?? 0;
-  const precioPersonaExtra = tarifa
-    ? Number(moneda === 'MXN' ? tarifa.precio_persona_extra : tarifa.precio_persona_extra_usd)
+  const personasIncluidas = paquete
+    ? 0
+    : servicio
+    ? servicio.personas_incluidas
+    : tarifa?.personas_incluidas ?? 0;
+  const precioPersonaExtra = paquete
+    ? 0
+    : servicio
+    ? Number(moneda === 'MXN' ? servicio.precio_persona_extra : servicio.precio_persona_extra_usd) || 0
+    : tarifa
+    ? Number(moneda === 'MXN' ? tarifa.precio_persona_extra : tarifa.precio_persona_extra_usd) || 0
     : 0;
   const personasExtra = Math.max(0, people - personasIncluidas);
   const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
@@ -942,7 +971,7 @@ export function CheckoutView({
     : tourPrice === null
       ? []
       : [
-          { label: checkout.tourLabel, amount: currency.format(tourPrice) },
+          { label: servicio?.nombre || checkout.tourLabel, amount: currency.format(tourPrice) },
           ...(cargoPersonas > 0
             ? [
                 {
@@ -1016,7 +1045,7 @@ export function CheckoutView({
         // pestana no tuviera nada guardado. Nunca debe trabar el checkout.
         if (!cancelado) {
           setRecuperacion('sin-reserva');
-          setPhase(tarifa ? 'form' : 'unavailable');
+          setPhase(tieneProducto ? 'form' : 'unavailable');
         }
         return;
       }
@@ -1100,14 +1129,14 @@ export function CheckoutView({
         if (estado.forma_pago) setFormaPago(estado.forma_pago);
         setPasosVisibles(3);
         setExtrasConfirmado(true);
-        setPhase(tarifa ? 'form' : 'unavailable');
+        setPhase(tieneProducto ? 'form' : 'unavailable');
         return;
       }
 
       // 'cancelada': nada que reponer — esta reserva ya no sirve. Se sigue con
       // el formulario vacio normal, como si no hubiera nada guardado.
       setRecuperacion('sin-reserva');
-      setPhase(tarifa ? 'form' : 'unavailable');
+      setPhase(tieneProducto ? 'form' : 'unavailable');
     })();
 
     return () => {
@@ -1288,6 +1317,7 @@ export function CheckoutView({
         ref: leerRef(),
         captcha_token: captchaToken.current,
         paquete: paquete ? paquete.slug : (paqueteId ?? null),
+        servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
         servicios_removidos: paquete && serviciosRemovidos.length > 0 ? serviciosRemovidos : undefined,
         personalizaciones: paquete && personalizaciones.length > 0 ? personalizaciones : undefined,
         fecha_salida: tieneHospedaje ? fechaSalida : undefined,
@@ -1490,6 +1520,15 @@ export function CheckoutView({
                 Experiencia amparada por paquete
               </span>
               <p className="mt-0.5 text-base font-bold text-foreground">{paqueteNombre}</p>
+            </div>
+          )}
+
+          {!paqueteNombre && (servicioNombre || servicio?.nombre) && (
+            <div className="rounded-xl border border-accent/30 bg-accent/10 p-4">
+              <span className="text-xs font-semibold uppercase tracking-wider text-accent block">
+                Servicio seleccionado
+              </span>
+              <p className="mt-0.5 text-base font-bold text-foreground">{servicioNombre || servicio?.nombre}</p>
             </div>
           )}
 
