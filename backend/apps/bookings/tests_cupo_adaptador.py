@@ -3,6 +3,7 @@ from datetime import date, time
 from apps.bookings.cupo import (
     ContextoCupo,
     ModoOcupacion,
+    PorNoche,
     PorRecursoDia,
     obtener_contexto_cupo,
     obtener_contexto_rango,
@@ -92,19 +93,18 @@ class CupoAdaptadorYRegistroTests(EmpresaTestCase):
         self.assertEqual(ctx_rango.capacidades_por_fecha[f_desde], [5, 4])
 
     def test_registro_estrategias(self):
-        # 'pesca' y 'default' devuelven PorRecursoDia exclusivo
-        est_pesca = obtener_estrategia('pesca')
-        self.assertIsInstance(est_pesca, PorRecursoDia)
-        self.assertEqual(est_pesca.modo_predeterminado, ModoOcupacion.EXCLUSIVO)
+        # 'por_recurso_dia' devuelve PorRecursoDia exclusivo
+        est_recurso = obtener_estrategia('por_recurso_dia')
+        self.assertIsInstance(est_recurso, PorRecursoDia)
+        self.assertEqual(est_recurso.modo_predeterminado, ModoOcupacion.EXCLUSIVO)
 
-        # 'paseo_compartido' devuelve PorRecursoDia compartido
-        est_compartida = obtener_estrategia('paseo_compartido')
-        self.assertIsInstance(est_compartida, PorRecursoDia)
-        self.assertEqual(est_compartida.modo_predeterminado, ModoOcupacion.COMPARTIDO)
+        # 'por_noche' devuelve PorNoche
+        est_noche = obtener_estrategia('por_noche')
+        self.assertIsInstance(est_noche, PorNoche)
 
-        # Servicio desconocido cae al default
+        # Servicio desconocido cae al default ('por_recurso_dia')
         est_desconocido = obtener_estrategia('servicio_fantasma')
-        self.assertEqual(est_desconocido, obtener_estrategia('default'))
+        self.assertEqual(est_desconocido, obtener_estrategia('por_recurso_dia'))
 
         # Registro dinámico
         nueva_est = PorRecursoDia(modo=ModoOcupacion.COMPARTIDO)

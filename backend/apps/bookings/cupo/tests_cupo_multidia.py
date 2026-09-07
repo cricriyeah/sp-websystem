@@ -9,6 +9,7 @@ from .estrategias import (
     DemandaCupo,
     ModoOcupacion,
     PorNoche,
+    PorRecursoDia,
 )
 from .nucleo import (
     MOTIVO_LLENO,
@@ -225,9 +226,9 @@ class RegistroEstrategiasTests(SimpleTestCase):
         estrategia = obtener_estrategia('por_noche')
         self.assertIsInstance(estrategia, PorNoche)
 
-    def test_obtener_estrategia_hospedaje(self):
-        estrategia = obtener_estrategia('hospedaje')
-        self.assertIsInstance(estrategia, PorNoche)
+    def test_obtener_estrategia_por_recurso_dia(self):
+        estrategia = obtener_estrategia('por_recurso_dia')
+        self.assertIsInstance(estrategia, PorRecursoDia)
 
     def test_obtener_estrategia_bajo_demanda(self):
         estrategia = obtener_estrategia('bajo_demanda')

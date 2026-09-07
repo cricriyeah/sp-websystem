@@ -22,7 +22,7 @@ def calcular_clave_candado(fecha: date, ambito: str | int | None = 'default') ->
     return zlib.crc32(cadena.encode('utf-8')) & 0x7FFFFFFF
 
 
-def bloquear_cupo(empresa_id: int, fecha: date, ambito: str | int | None = 'default') -> None:
+def bloquear_cupo(empresa_id: int, fecha: date, ambito: str | int | None = 'default', servicio_id: int | None = None) -> None:
     """Serializa la validación y confirmación de cupo en Postgres.
 
     Utiliza pg_advisory_xact_lock(empresa_id, clave_secundaria), el cual se libera
@@ -32,7 +32,7 @@ def bloquear_cupo(empresa_id: int, fecha: date, ambito: str | int | None = 'defa
     if connection.vendor != 'postgresql':
         return
 
-    clave_secundaria = calcular_clave_candado(fecha, ambito)
+    clave_secundaria = calcular_clave_candado(fecha, ambito=servicio_id if servicio_id is not None else ambito)
     with connection.cursor() as cursor:
         cursor.execute('SELECT pg_advisory_xact_lock(%s, %s)', [empresa_id, clave_secundaria])
 

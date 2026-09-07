@@ -136,19 +136,19 @@ def cupo_maximo_del_dia(fecha, empresa):
 DIAS_BUSQUEDA_DISPONIBILIDAD = 90
 
 
-def proxima_fecha_disponible(desde, personas, empresa, dias=DIAS_BUSQUEDA_DISPONIBILIDAD, tipo_servicio='pesca'):
+def proxima_fecha_disponible(desde, personas, empresa, dias=DIAS_BUSQUEDA_DISPONIBILIDAD, estrategia_cupo='por_recurso_dia'):
     """Primera fecha donde cabe un grupo de `personas`, o None si no hay en `dias`.
 
     Se resuelve con cuatro consultas mediante el adaptador de cupo, no una por dia.
     """
     hasta = desde + timedelta(days=dias - 1)
-    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas, empresa, tipo_servicio=tipo_servicio).items()):
+    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas, empresa, estrategia_cupo=estrategia_cupo).items()):
         if motivo is None:
             return fecha
     return None
 
 
-def disponibilidad_por_fecha(desde, hasta, personas, empresa, tipo_servicio='pesca'):
+def disponibilidad_por_fecha(desde, hasta, personas, empresa, estrategia_cupo='por_recurso_dia'):
     """Por que no cabe un grupo de `personas` cada dia del rango, o None si cabe.
 
     `{fecha: None | MOTIVO_LLENO | MOTIVO_SIN_PANGA}`, una entrada por dia,
@@ -156,7 +156,7 @@ def disponibilidad_por_fecha(desde, hasta, personas, empresa, tipo_servicio='pes
     en la estrategia configurada (PorRecursoDia por defecto).
     """
     ctx = obtener_contexto_rango(desde, hasta, empresa)
-    estrategia = obtener_estrategia(tipo_servicio)
+    estrategia = obtener_estrategia(estrategia_cupo)
     res_rango = estrategia.evaluar_rango(
         fechas=ctx.fechas,
         grupos_por_fecha=ctx.grupos_por_fecha,
@@ -167,14 +167,14 @@ def disponibilidad_por_fecha(desde, hasta, personas, empresa, tipo_servicio='pes
     return {fecha: item.motivo for fecha, item in res_rango.items()}
 
 
-def evaluar_cupo(fecha, personas, empresa, excluir_pk=None, tipo_servicio='pesca'):
+def evaluar_cupo(fecha, personas, empresa, excluir_pk=None, estrategia_cupo='por_recurso_dia', servicio_id=None):
     """Por que no entra un grupo de `personas` ese dia, o None si si entra.
 
     Solo consulta: **no toma el lock**. La usa `/api/cupo/`, que es una lectura
     informativa, y `validar_cupo_diario`, que si lo toma antes de llamar aqui.
     """
     ctx = obtener_contexto_cupo(fecha, empresa, excluir_pk=excluir_pk)
-    estrategia = obtener_estrategia(tipo_servicio)
+    estrategia = obtener_estrategia(estrategia_cupo)
     demanda = DemandaCupo(fecha=fecha, personas=personas, excluir_pk=excluir_pk)
     resultado = estrategia.evaluar(
         demanda=demanda,
@@ -185,7 +185,7 @@ def evaluar_cupo(fecha, personas, empresa, excluir_pk=None, tipo_servicio='pesca
     return resultado.motivo
 
 
-def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None, tipo_servicio='pesca'):
+def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None, estrategia_cupo='por_recurso_dia', servicio_id=None):
     """Motor unico de validacion de cupo. Debe usarse tanto para el flujo de pago
     de la web como para la creacion/edicion manual de Reserva (ver backend/CLAUDE.md).
 
@@ -195,9 +195,9 @@ def validar_cupo_diario(fecha, personas, empresa, excluir_pk=None, tipo_servicio
     """
     # Antes de contar, no despues: ver bloquear_cupo. Ahora el lock ademas
     # cubre el ultimo lugar *de ese tamano*, no solo el ultimo lugar.
-    bloquear_cupo(empresa.pk, fecha, ambito=tipo_servicio)
+    bloquear_cupo(empresa.pk, fecha, servicio_id=servicio_id)
     ctx = obtener_contexto_cupo(fecha, empresa, excluir_pk=excluir_pk)
-    estrategia = obtener_estrategia(tipo_servicio)
+    estrategia = obtener_estrategia(estrategia_cupo)
     demanda = DemandaCupo(fecha=fecha, personas=personas, excluir_pk=excluir_pk)
     estrategia.validar(
         demanda=demanda,
@@ -615,10 +615,11 @@ class Reserva(models.Model):
         if self.fecha_salida and self.fecha_salida <= self.fecha:
             raise ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de inicio.'})
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            tipo_srv = self.servicio.tipo_servicio if self.servicio_id else 'pesca'
+            estrategia_cupo = self.servicio.estrategia_cupo if self.servicio_id else 'por_recurso_dia'
+            # TODO Sección 5: rama por_noche (hospedaje) — necesita fecha_salida en el serializer.
             validar_cupo_diario(
                 self.fecha, self.numero_personas, self.empresa,
-                excluir_pk=self.pk, tipo_servicio=tipo_srv,
+                excluir_pk=self.pk, estrategia_cupo=estrategia_cupo, servicio_id=self.servicio_id,
             )
             if self.codigo_promocional_id:
                 validar_codigo_promocional_en_pago(

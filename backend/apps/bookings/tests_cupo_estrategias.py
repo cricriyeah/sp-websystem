@@ -1,7 +1,9 @@
-from datetime import date
+from datetime import date, time, timedelta
+from decimal import Decimal
 from unittest import TestCase
 
 from django.core.exceptions import ValidationError
+from django.test import SimpleTestCase
 
 from apps.bookings.cupo import (
     BajoDemanda,
@@ -13,7 +15,9 @@ from apps.bookings.cupo import (
     obtener_estrategia,
 )
 from apps.bookings.cupo.nucleo import MOTIVO_LLENO, MOTIVO_SIN_LUGAR, MOTIVO_SIN_PANGA
-from django.test import SimpleTestCase
+from apps.bookings.models import Reserva
+from apps.fleet.models import Servicio
+from apps.testing import EmpresaTestCase, crear_flota
 
 
 class CupoEstrategiasTests(TestCase):
@@ -124,4 +128,53 @@ class RegistroEstrategiasTests(SimpleTestCase):
             est = obtener_estrategia('inexistente')
             self.assertIsInstance(est, PorRecursoDia)
         self.assertTrue(any('estrategia_cupo desconocida' in record.message for record in cm.records))
+
+
+class ReservaCleanEstrategiaCupoTests(EmpresaTestCase):
+    def setUp(self):
+        super().setUp()
+        crear_flota(self.empresa)
+        self.servicio_pesca = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Pesca en Panga',
+            slug='pesca-en-panga',
+            tipo_servicio='pesca',
+            estrategia_cupo='por_recurso_dia',
+            precio_base=Decimal('5000.00'),
+        )
+
+    def test_reserva_de_servicio_pesca_valida_cupo(self):
+        reserva = Reserva(
+            empresa=self.empresa,
+            servicio=self.servicio_pesca,
+            fecha=date.today() + timedelta(days=10),
+            hora=time(7, 0),
+            numero_personas=3,
+            estado=Reserva.Estado.PAGADA,
+            moneda='MXN',
+            precio_total=Decimal('5000.00'),
+            nombre_cliente='Juan Perez',
+            correo_cliente='juan@example.com',
+            telefono_cliente='1234567890',
+            canal_origen=Reserva.CanalOrigen.WHATSAPP,
+        )
+        reserva.full_clean()
+
+    def test_reserva_legacy_sin_servicio_sigue_validando(self):
+        reserva = Reserva(
+            empresa=self.empresa,
+            servicio=None,
+            fecha=date.today() + timedelta(days=10),
+            hora=time(7, 0),
+            numero_personas=3,
+            estado=Reserva.Estado.PAGADA,
+            moneda='MXN',
+            precio_total=Decimal('5000.00'),
+            nombre_cliente='Juan Perez',
+            correo_cliente='juan@example.com',
+            telefono_cliente='1234567890',
+            canal_origen=Reserva.CanalOrigen.WHATSAPP,
+        )
+        reserva.full_clean()
+
 
