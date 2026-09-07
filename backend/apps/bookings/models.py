@@ -222,13 +222,7 @@ def _validar_cupo_hospedaje(reserva):
 
 
 def _validar_cupo_de_paquete(reserva):
-    removidos_ids = set()
-    if reserva.pk:
-        removidos_ids = set(reserva.servicios_removidos.values_list('servicio_id', flat=True))
-
     for ps in reserva.paquete.servicios_asociados.select_related('servicio').all():
-        if ps.servicio_id in removidos_ids:
-            continue
         estrategia = ps.servicio.estrategia_cupo
         if estrategia == 'por_recurso_dia':
             motivo = evaluar_cupo(

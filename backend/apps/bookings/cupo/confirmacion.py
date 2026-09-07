@@ -70,14 +70,7 @@ def reservar_cupo_al_confirmar(reserva) -> None:
 
     # Caso B: paquete con componentes
     if reserva.paquete is not None:
-        removidos_ids = set()
-        if reserva.pk:
-            removidos_ids = set(reserva.servicios_removidos.values_list('servicio_id', flat=True))
-
         for ps in reserva.paquete.servicios_asociados.select_related('servicio').order_by('orden'):
-            if ps.servicio_id in removidos_ids:
-                continue
-
             servicio = ps.servicio
             estrategia = servicio.estrategia_cupo
 

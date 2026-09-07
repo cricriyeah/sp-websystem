@@ -532,7 +532,7 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
             r_paquete.full_clean()
         self.assertIn('fecha', ctx.exception.message_dict)
 
-    def test_reserva_paquete_con_hospedaje_removido_ignora_falta_de_cupo(self):
+    def test_reserva_paquete_valida_cupo_de_todos_sus_componentes(self):
         # Cabaña ocupada
         r_existente = Reserva.objects.create(
             empresa=self.empresa, servicio=self.srv_hospedaje,
@@ -550,7 +550,7 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
         from apps.testing import crear_flota
         crear_flota(self.empresa)
 
-        # Guardamos en pendiente para asociar el servicio removido
+        # Reserva de paquete intentando saltarse cabaña
         r_paquete = Reserva.objects.create(
             empresa=self.empresa, paquete=self.paquete,
             fecha=date(2026, 12, 2),
@@ -562,7 +562,27 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
         ReservaPaqueteServicioRemovido.objects.create(reserva=r_paquete, servicio=self.srv_hospedaje)
 
         r_paquete.estado = Reserva.Estado.PAGADA
-        r_paquete.full_clean()  # Cabaña removida, no debe fallar por falta de cabaña
+        with self.assertRaises(ValidationError) as ctx:
+            r_paquete.full_clean()
+        self.assertIn('fecha', ctx.exception.message_dict)
+
+    def test_reservar_cupo_al_confirmar_reserva_todos_los_componentes(self):
+        from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
+        from apps.testing import crear_flota
+        crear_flota(self.empresa)
+        r_paquete = Reserva.objects.create(
+            empresa=self.empresa, paquete=self.paquete,
+            fecha=date(2026, 12, 10), fecha_salida=date(2026, 12, 12),
+            hora=time(6, 0), numero_personas=2, nombre_cliente='C', telefono_cliente='+526121234567',
+            correo_cliente='c@c.com', estado=Reserva.Estado.PENDIENTE_PAGO,
+            canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
+        )
+        reservar_cupo_al_confirmar(r_paquete)
+        componentes = set(r_paquete.componentes.values_list('servicio_id', flat=True))
+        self.assertEqual(len(componentes), 2)
+        self.assertIn(self.srv_pesca.pk, componentes)
+        self.assertIn(self.srv_hospedaje.pk, componentes)
+
 
 
 class CancelacionLiberaCupoTests(OperadorTestCase):
