@@ -168,7 +168,9 @@ Verificado además:
 
       TRANSICIONES = {
           'armando': {'autorizando', 'cancelada'},
-          'autorizando': {'autorizada', 'cancelada'},
+          # 'autorizando' → 'capturada' directo también: un webhook puede llegar
+          # antes de que confirmar_captura alcance a marcar 'autorizada'.
+          'autorizando': {'autorizada', 'capturada', 'cancelada'},
           'autorizada': {'capturada', 'cancelada'},
           'capturada': set(),
           'cancelada': set(),
@@ -190,7 +192,7 @@ Verificado además:
   orden = models.ForeignKey('bookings.Orden', on_delete=models.SET_NULL, null=True, blank=True, related_name='reservas')
   ```
 - Create: migración `CreateModel('Orden')` + `AddField('Reserva', 'orden')`.
-- Test: `backend/apps/bookings/tests.py::OrdenModelTest` — `forma_pago='anticipo'` → `ValidationError`; `transicionar` acepta `armando→autorizando`, rechaza `armando→capturada`; `empresa_lider` distinta al paquete → error.
+- Test: `backend/apps/bookings/tests.py::OrdenModelTest` — `forma_pago='anticipo'` → `ValidationError`; `transicionar` acepta `armando→autorizando` y `autorizando→capturada`, rechaza `armando→capturada` y cualquier salida de `capturada`/`cancelada`; `empresa_lider` distinta al paquete → error.
 
 - [ ] **Paso 1: test que falla.**
 - [ ] **Paso 2:** correr → falla.
