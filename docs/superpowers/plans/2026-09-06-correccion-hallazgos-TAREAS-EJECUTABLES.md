@@ -5,6 +5,16 @@
 > completo (test que falla → código → test verde → commit). Cada tarea termina
 > con un commit. Si una tarea te obliga a tomar una decisión de producto que
 > este documento no contempla: **para y pregunta**, no adivines.
+>
+> **RITMO — PARA AL FINAL DE CADA SECCIÓN.** Haz TODAS las tareas de una sección
+> (2, luego 3, luego 4...), corre el **Gate** de esa sección (suite completa en
+> sqlite Y en Postgres), y **DETENTE**. Reporta: `git log --oneline` de la
+> sección, resultado de ambos gates, y cualquier decisión que hayas tomado o
+> duda que tengas. **No arranques la siguiente sección** hasta que te den luz
+> verde. Los errores que no se revisan se acumulan sección tras sección.
+>
+> **Empieza por la Tarea 2.1.** Estado actual: Secciones 0, 0.8 y 1 ya hechas y
+> commiteadas; `manage.py test apps config` = 676 verdes en sqlite y Postgres.
 
 **Objetivo:** conectar las piezas 3-6 de la expansión multi-sede (servicios por
 capas, precios tipados, cupo multidía/hospedaje, paquetes) al flujo real de
@@ -252,7 +262,7 @@ llavea por `tipo_servicio` (string) en vez de por servicio real.
 
 ### Tarea 2.6 — Gate: suite completa verde
 
-1. sqlite: `test apps config` → `OK`. 2. Postgres (drop + `test apps config --noinput`) → `OK`. 3. Actualiza el Registro de avance del plan de alto nivel: "Sección 2 cerrada @ <sha>". Commit `docs(plan): Sección 2 cerrada`.
+1. sqlite: `test apps config` → `OK`. 2. Postgres (drop + `test apps config --noinput`) → `OK`. 3. Actualiza el Registro de avance: "Sección 2 cerrada @ <sha>". Commit `docs(plan): Sección 2 cerrada`. **DETENTE y reporta: git log de la sección + resultado de ambos gates.**
 
 ---
 
@@ -329,7 +339,7 @@ reserva de esa ocupación está en `ESTADOS_QUE_OCUPAN_CUPO`.
 
 ### Tarea 3.4 — Gate Sección 3
 
-sqlite + Postgres `test apps config` → `OK`. Registro de avance: "Sección 3 cerrada @ <sha>". Commit.
+sqlite + Postgres `test apps config` → `OK`. Registro de avance: "Sección 3 cerrada @ <sha>". Commit. **DETENTE y reporta.**
 
 ---
 
@@ -458,7 +468,7 @@ No recalcula la fórmula del paquete (el precio ya está congelado). Sigue sin r
 
 ### Tarea 4.6 — Gate Sección 4
 
-sqlite + Postgres `test apps config` → `OK`. Registro: "Sección 4 cerrada @ <sha>". Commit.
+sqlite + Postgres `test apps config` → `OK`. Registro: "Sección 4 cerrada @ <sha>". Commit. **DETENTE y reporta.**
 
 ---
 
@@ -561,7 +571,7 @@ if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
 
 ### Tarea 5.10 — Gate Sección 5
 
-sqlite + Postgres `test apps config` → `OK`. Frontend `lint`/`tsc`/`build` → OK. Registro: "Sección 5 cerrada @ <sha>". Commit.
+sqlite + Postgres `test apps config` → `OK`. Frontend `lint`/`tsc`/`build` → OK. Registro: "Sección 5 cerrada @ <sha>". Commit. **DETENTE y reporta.**
 
 ---
 
@@ -670,7 +680,7 @@ Solo añade un test: una reserva de hospedaje `pendiente_pago` con PaymentIntent
 
 ### Tarea 6.7 — Gate Sección 6
 
-sqlite + Postgres `test apps config` → `OK`. Registro: "Sección 6 cerrada @ <sha>". Commit.
+sqlite + Postgres `test apps config` → `OK`. Registro: "Sección 6 cerrada @ <sha>". Commit. **DETENTE y reporta.**
 
 ---
 
