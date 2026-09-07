@@ -18,7 +18,7 @@ from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from apps.fleet.models import Recurso
+from apps.fleet.models import Recurso, Servicio
 from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from apps.tenancy.models import MembresiaEmpresa
@@ -34,6 +34,7 @@ from .models import (
     Reserva,
     ReservaExtra,
     ReservaOcupacion,
+    ReservaPaqueteComponente,
     ReservaTransporte,
     Vendedora,
 )
@@ -216,12 +217,62 @@ class ReservaOcupacionInline(admin.TabularInline):
             kwargs['queryset'] = Recurso.objects.filter(empresa=scope.empresa_actual(request))
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    def has_add_permission(self, request, obj=None):
+        if obj is not None and obj.estado in ESTADOS_QUE_OCUPAN_CUPO:
+            return False
+        return super().has_add_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.estado in ESTADOS_QUE_OCUPAN_CUPO:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.estado in ESTADOS_QUE_OCUPAN_CUPO:
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+class ReservaPaqueteComponenteInline(admin.TabularInline):
+    model = ReservaPaqueteComponente
+    extra = 0
+    fields = ['servicio', 'estado_cupo', 'creado_en']
+    readonly_fields = ['creado_en']
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'servicio' and not scope.es_operador_plataforma(request.user):
+            kwargs['queryset'] = Servicio.objects.filter(empresa=scope.empresa_actual(request))
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def has_add_permission(self, request, obj=None):
+        if obj is not None and obj.estado in ESTADOS_QUE_OCUPAN_CUPO:
+            return False
+        return super().has_add_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.estado in ESTADOS_QUE_OCUPAN_CUPO:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.estado in ESTADOS_QUE_OCUPAN_CUPO:
+            return False
+        return super().has_delete_permission(request, obj)
+
 
 @admin.register(ReservaOcupacion)
 class ReservaOcupacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = ['recurso', 'reserva', 'fecha_inicio', 'fecha_fin', 'creado_en']
     list_filter = ['recurso', 'fecha_inicio', 'fecha_fin']
     search_fields = ['recurso__nombre', 'reserva__nombre_cliente']
+    readonly_fields = ['creado_en']
+
+
+@admin.register(ReservaPaqueteComponente)
+class ReservaPaqueteComponenteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    list_display = ['reserva', 'servicio', 'estado_cupo', 'creado_en']
+    list_filter = ['estado_cupo', 'servicio']
+    search_fields = ['reserva__nombre_cliente', 'servicio__nombre']
     readonly_fields = ['creado_en']
 
 
@@ -241,7 +292,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
-    inlines = [ReservaExtraInline, ReservaTransporteInline, ReservaOcupacionInline]
+    inlines = [ReservaExtraInline, ReservaTransporteInline, ReservaOcupacionInline, ReservaPaqueteComponenteInline]
     # El deslinde es el registro legal de lo que acepto el cliente: se consulta,
     # no se edita (ver docs/contexto-negocio.md, seccion Legal). Las fechas y los
     # montos del cobro los sella el sistema desde Stripe: editarlos a mano

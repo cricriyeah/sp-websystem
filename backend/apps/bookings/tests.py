@@ -1596,3 +1596,38 @@ class UnaSalidaPorDiaTests(EmpresaTestCase):
 
         Reserva(**datos_reserva(
             self.empresa, fecha=self.fecha, estado=Reserva.Estado.PAGADA)).full_clean()
+
+
+class InlinesAdminOcupacionYComponentesTests(EmpresaTestCase):
+    """Pruebas de permisos de los inlines ReservaOcupacionInline y ReservaPaqueteComponenteInline (Tarea 6.6)."""
+
+    def setUp(self):
+        super().setUp()
+        from django.contrib.admin.sites import AdminSite
+        from apps.bookings.admin import ReservaOcupacionInline, ReservaPaqueteComponenteInline
+        self.site = AdminSite()
+        self.ocupacion_inline = ReservaOcupacionInline(Reserva, self.site)
+        self.componente_inline = ReservaPaqueteComponenteInline(Reserva, self.site)
+        self.request = mock.Mock()
+
+    def test_inlines_bloqueados_en_estado_pagado(self):
+        r_pagada = crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
+        for inline in (self.ocupacion_inline, self.componente_inline):
+            self.assertFalse(inline.has_add_permission(self.request, r_pagada))
+            self.assertFalse(inline.has_change_permission(self.request, r_pagada))
+            self.assertFalse(inline.has_delete_permission(self.request, r_pagada))
+
+    def test_inlines_bloqueados_en_estado_asignada(self):
+        r_asignada = crear_reserva(self.empresa, estado=Reserva.Estado.ASIGNADA)
+        for inline in (self.ocupacion_inline, self.componente_inline):
+            self.assertFalse(inline.has_add_permission(self.request, r_asignada))
+            self.assertFalse(inline.has_change_permission(self.request, r_asignada))
+            self.assertFalse(inline.has_delete_permission(self.request, r_asignada))
+
+    def test_inlines_editables_en_pendiente_pago(self):
+        r_pendiente = crear_reserva(self.empresa, estado=Reserva.Estado.PENDIENTE_PAGO)
+        for inline in (self.ocupacion_inline, self.componente_inline):
+            self.assertTrue(inline.has_add_permission(self.request, r_pendiente))
+            self.assertTrue(inline.has_change_permission(self.request, r_pendiente))
+            self.assertTrue(inline.has_delete_permission(self.request, r_pendiente))
+
