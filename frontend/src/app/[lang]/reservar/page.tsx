@@ -33,10 +33,6 @@ export default async function ReservarPage({
   const query = await searchParams;
   const minDate = getMinBookableDate();
 
-  // Sin tarifa del backend no hay precio que mostrar: el checkout se pinta en
-  // modo "pagos no disponibles" en vez de inventar una cifra.
-  const tarifa = await getTarifa().catch(() => null);
-
   const parsed = parseBookingQuery(
     (key) => (typeof query[key] === 'string' ? query[key] : undefined),
     minDate,
@@ -64,6 +60,20 @@ export default async function ReservarPage({
       }
     }
   }
+
+  // Resolución de empresa dinámicamente según el ítem seleccionado:
+  // - paquete -> paquete.empresa_lider_slug
+  // - servicio suelto -> servicio.empresa_slug (query.empresa)
+  // - pesca legacy -> NEXT_PUBLIC_EMPRESA_SLUG
+  const servicioEmpresa = typeof query.empresa === 'string' ? query.empresa : undefined;
+  const paqueteEmpresa = typeof query.paquete_empresa === 'string' ? query.paquete_empresa : undefined;
+  const defaultEmpresaSlug = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol';
+
+  const empresaSlug = paquete?.empresa_lider_slug ?? paqueteEmpresa ?? servicioEmpresa ?? defaultEmpresaSlug;
+
+  // Sin tarifa del backend no hay precio que mostrar: el checkout se pinta en
+  // modo "pagos no disponibles" en vez de inventar una cifra.
+  const tarifa = await getTarifa(empresaSlug).catch(() => null);
 
   const excluidosParam = typeof query.excluidos === 'string' ? query.excluidos : undefined;
   const initialServiciosRemovidos = excluidosParam
@@ -106,6 +116,7 @@ export default async function ReservarPage({
       minDate={minDate}
       tarifa={tarifa}
       queryOverride={queryOverride}
+      empresaSlug={empresaSlug}
       paqueteId={paquete?.id}
       paqueteNombre={paquete?.nombre}
       paquete={paquete}

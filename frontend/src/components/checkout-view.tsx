@@ -146,6 +146,7 @@ type CheckoutViewProps = {
   // de elegir viaje en el booking bar, no recargo esta pagina. Ver el efecto
   // de recuperacion mas abajo.
   queryOverride: boolean;
+  empresaSlug?: string;
   paqueteId?: number | null;
   paqueteNombre?: string | null;
   paquete?: PaqueteCatalogo | null;
@@ -217,6 +218,7 @@ export function CheckoutView({
   minDate,
   tarifa,
   queryOverride,
+  empresaSlug,
   paqueteId,
   paqueteNombre,
   paquete,
@@ -438,7 +440,7 @@ export function CheckoutView({
     (async () => {
       let cupo;
       try {
-        cupo = await getCupo(day, people);
+        cupo = await getCupo(day, people, empresaSlug);
       } catch {
         // Sin respuesta no se avisa nada: es ayuda adelantada, el cupo real lo
         // valida el backend al cobrar. Nunca debe trabar el checkout.
@@ -466,7 +468,7 @@ export function CheckoutView({
         alternativa: cupo.proxima_disponible,
       });
     })();
-  }, [day, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice]);
+  }, [day, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice, empresaSlug]);
 
   const promoCheckId = useRef(0);
 
@@ -494,7 +496,7 @@ export function CheckoutView({
     const timer = setTimeout(async () => {
       let resultado;
       try {
-        resultado = await validarCodigoPromocional(codigo, contact.email);
+        resultado = await validarCodigoPromocional(codigo, contact.email, empresaSlug);
       } catch {
         if (promoCheckId.current === checkId) setPromoEstado('idle');
         return;
@@ -511,7 +513,7 @@ export function CheckoutView({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [codigoPromocional, contact.email]);
+  }, [codigoPromocional, contact.email, empresaSlug]);
 
   /**
    * Catalogo de extras con el monto ya resuelto por el servidor para
@@ -526,7 +528,7 @@ export function CheckoutView({
     (async () => {
       let datos: CatalogoExtras;
       try {
-        datos = await getExtras(people, moneda);
+        datos = await getExtras(people, moneda, empresaSlug);
       } catch {
         // Igual que getCupo: es ayuda adelantada, nunca debe trabar el checkout.
         return;
@@ -537,7 +539,7 @@ export function CheckoutView({
     return () => {
       cancelado = true;
     };
-  }, [people, moneda]);
+  }, [people, moneda, empresaSlug]);
 
   /**
    * Que extras van marcados ahora mismo.
@@ -1008,7 +1010,7 @@ export function CheckoutView({
     (async () => {
       let estado;
       try {
-        estado = await getEstadoReserva(checkoutId);
+        estado = await getEstadoReserva(checkoutId, empresaSlug);
       } catch {
         // 404 (nada que recuperar), sin red, lo que sea: seguir como si esta
         // pestana no tuviera nada guardado. Nunca debe trabar el checkout.
@@ -1289,7 +1291,7 @@ export function CheckoutView({
         servicios_removidos: paquete && serviciosRemovidos.length > 0 ? serviciosRemovidos : undefined,
         personalizaciones: paquete && personalizaciones.length > 0 ? personalizaciones : undefined,
         fecha_salida: tieneHospedaje ? fechaSalida : undefined,
-      });
+      }, empresaSlug);
 
       setReservaId(reserva.id);
 
@@ -1301,7 +1303,7 @@ export function CheckoutView({
         // apps/payments/views.py, `_resolver_codigo_promocional`).
         codigo_promocional:
           promoEstado === 'valido' ? codigoPromocional.trim().toUpperCase() : undefined,
-      });
+      }, empresaSlug);
 
       setPago(pagoResponse);
       setRecordatorioAbierto(false);
