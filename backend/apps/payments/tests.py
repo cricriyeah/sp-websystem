@@ -1235,6 +1235,29 @@ class WebhookTests(ApiTestCase):
         self.assertEqual(self.reserva.monto_pagado, Decimal('1000.00'))
         self.assertEqual(self.reserva.saldo_pendiente, Decimal('3500.00'))
 
+    def test_webhook_paquete_anticipo_100_no_registra_descuadre(self):
+        paquete = Paquete.objects.create(
+            sede=self.empresa.sede,
+            empresa_lider=self.empresa,
+            nombre='Paquete Total',
+            slug='paquete-total',
+            precio_ancla=Decimal('8000.00'),
+            porcentaje_anticipo=100,
+        )
+        reserva = crear_reserva(self.empresa)
+        reserva.paquete = paquete
+        reserva.precio_total = Decimal('8000.00')
+        reserva.forma_pago = Reserva.FormaPago.ANTICIPO
+        reserva.stripe_payment_intent_id = 'pi_paquete_100'
+        reserva.save()
+
+        with self.assertNoLogs('apps.payments.services', level='ERROR'):
+            resp = self.entregar(evento_pagado(reserva.pk, amount=800000, intent_id='pi_paquete_100'))
+        self.assertEqual(resp.status_code, 200)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+        self.assertEqual(reserva.monto_pagado, Decimal('8000.00'))
+
     def test_firma_invalida_responde_400(self):
         with mock.patch('stripe.Webhook.construct_event', side_effect=ValueError):
             response = self.client.post(

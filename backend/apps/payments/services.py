@@ -158,7 +158,12 @@ def _verificar_monto(reserva, intent):
         logger.error('Reserva %s sin precio_total al recibir el pago', reserva.pk)
         return
 
-    esperado = a_centavos(monto_inicial(reserva.precio_total, reserva.forma_pago))
+    porcentaje = (
+        reserva.paquete.porcentaje_anticipo
+        if reserva.paquete_id
+        else (reserva.servicio.porcentaje_anticipo if reserva.servicio_id else 30)
+    )
+    esperado = a_centavos(monto_inicial(reserva.precio_total, reserva.forma_pago, porcentaje=porcentaje))
     if intent['amount_received'] != esperado:
         logger.error(
             'Descuadre en la reserva %s: se esperaban %s centavos y llegaron %s',
