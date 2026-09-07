@@ -154,7 +154,6 @@ type CheckoutViewProps = {
   servicioId?: number | string | null;
   servicioNombre?: string | null;
   servicio?: ServicioCatalogo | null;
-  initialServiciosRemovidos?: string[];
   initialFechaSalida?: string;
 };
 
@@ -229,7 +228,6 @@ export function CheckoutView({
   servicioId,
   servicioNombre,
   servicio,
-  initialServiciosRemovidos,
   initialFechaSalida,
 }: CheckoutViewProps) {
   const { checkout, booking, nav } = dict;
@@ -242,7 +240,6 @@ export function CheckoutView({
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
   const [people, setPeople] = useState(initialPeople);
-  const [serviciosRemovidos] = useState<string[]>(initialServiciosRemovidos ?? []);
   const [personalizaciones, setPersonalizaciones] = useState<Array<{ id: number; cantidad: number }>>([]);
   const [fechaSalidaManual, setFechaSalidaManual] = useState<string | null>(initialFechaSalida ?? null);
   const defaultFechaSalida = useMemo(() => {
@@ -254,27 +251,22 @@ export function CheckoutView({
 
   const tieneHospedaje = useMemo(() => {
     if (!paquete) return false;
-    const removidosSet = new Set(serviciosRemovidos);
     return paquete.servicios_asociados.some((ps) => {
-      const slug = ps.servicio?.slug;
-      if (slug && removidosSet.has(slug)) return false;
       return (
         ps.servicio?.tipo_servicio === 'hospedaje' ||
         ps.servicio?.tipo_servicio === 'alojamiento' ||
         ps.servicio?.modo_ocupacion === 'por_noche'
       );
     });
-  }, [paquete, serviciosRemovidos]);
+  }, [paquete]);
 
   const personalizacionesDisponibles = useMemo(() => {
     if (!paquete) return [];
-    const removidosSet = new Set(serviciosRemovidos);
     const items: Array<{
       servicioNombre: string;
       personalizacion: (typeof paquete.servicios_asociados)[0]['servicio']['personalizaciones'][0];
     }> = [];
     for (const ps of paquete.servicios_asociados) {
-      if (ps.servicio?.slug && removidosSet.has(ps.servicio.slug)) continue;
       for (const pers of ps.servicio?.personalizaciones || []) {
         if (!pers.obligatorio && !pers.preseleccionado) {
           items.push({
@@ -285,7 +277,7 @@ export function CheckoutView({
       }
     }
     return items;
-  }, [paquete, serviciosRemovidos]);
+  }, [paquete]);
 
   const personalizacionesMap = useMemo(() => {
     return new Map(personalizaciones.map((p) => [p.id, p.cantidad]));
@@ -836,8 +828,8 @@ export function CheckoutView({
 
   const calculoPaquete = useMemo(() => {
     if (!paquete) return null;
-    return calcularPrecioPaquete(paquete, serviciosRemovidos, personalizaciones, people, moneda);
-  }, [paquete, serviciosRemovidos, personalizaciones, people, moneda]);
+    return calcularPrecioPaquete(paquete, personalizaciones, people, moneda);
+  }, [paquete, personalizaciones, people, moneda]);
 
   const subtotalSinDescuento = paquete
     ? (calculoPaquete?.precioFinal ?? null)
@@ -943,14 +935,6 @@ export function CheckoutView({
   const lines = paquete
     ? [
         { label: paquete.nombre, amount: currency.format(calculoPaquete?.precioAncla ?? 0) },
-        ...(calculoPaquete && calculoPaquete.totalAjustesDescontados > 0
-          ? [
-              {
-                label: 'Descuento por servicios removidos',
-                amount: `-${currency.format(calculoPaquete.totalAjustesDescontados)}`,
-              },
-            ]
-          : []),
         ...(calculoPaquete && calculoPaquete.totalPersonalizaciones > 0
           ? [
               {
@@ -1318,7 +1302,6 @@ export function CheckoutView({
         captcha_token: captchaToken.current,
         paquete: paquete ? paquete.slug : (paqueteId ?? null),
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
-        servicios_removidos: paquete && serviciosRemovidos.length > 0 ? serviciosRemovidos : undefined,
         personalizaciones: paquete && personalizaciones.length > 0 ? personalizaciones : undefined,
         fecha_salida: tieneHospedaje ? fechaSalida : undefined,
       }, empresaSlug);

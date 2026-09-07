@@ -144,7 +144,6 @@ export type ReservaInput = {
   paquete?: string | number | null;
   servicio?: string;
   fecha_salida?: string;
-  servicios_removidos?: string[];
   personalizaciones?: { id: number; cantidad: number }[];
 };
 
@@ -374,9 +373,6 @@ export type PaqueteServicioCatalogo = {
   servicio_id: number;
   servicio: ServicioCatalogo;
   orden: number;
-  removible: boolean;
-  ajuste_precio: string;
-  ajuste_precio_usd: string | null;
 };
 
 export type PaqueteCatalogo = {

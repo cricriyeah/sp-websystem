@@ -81,24 +81,6 @@ export default async function ReservarPage({
   // Tarifa legacy del tour de pesca: opcional cuando hay paquete o servicio
   const tarifa = await getTarifa(empresaSlug).catch(() => null);
 
-  const excluidosParam = typeof query.excluidos === 'string' ? query.excluidos : undefined;
-  const initialServiciosRemovidos = excluidosParam
-    ? excluidosParam
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((token) => {
-          if (/^\d+$/.test(token) && paquete) {
-            const idNum = Number(token);
-            const sa = paquete.servicios_asociados.find(
-              (item) => (item.servicio?.id ?? item.servicio_id) === idNum,
-            );
-            return sa?.servicio?.slug ?? token;
-          }
-          return token;
-        })
-    : [];
-
   const fechaSalidaParam =
     typeof query.fecha_salida === 'string'
       ? query.fecha_salida
@@ -129,7 +111,6 @@ export default async function ReservarPage({
       servicioId={servicio?.slug ?? servicioSlug ?? null}
       servicioNombre={servicio?.nombre ?? null}
       servicio={servicio}
-      initialServiciosRemovidos={initialServiciosRemovidos}
       initialFechaSalida={fechaSalidaParam}
     />
   );
