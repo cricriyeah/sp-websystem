@@ -684,6 +684,121 @@ sqlite + Postgres `test apps config` → `OK`. Registro: "Sección 6 cerrada @ <
 
 ---
 
+# SECCIÓN 6.5 — Marketplace real en el checkout (empresa dinámica en el frontend)
+
+**Problema:** el frontend tiene un solo `NEXT_PUBLIC_EMPRESA_SLUG` fijo. El catálogo
+(`/api/sedes/...`) muestra paquetes y servicios de **todas** las empresas de una sede, pero el
+checkout siempre postea a esa empresa fija → comprar un ítem de otra empresa da 400
+("el paquete no pertenece a esta empresa") o crea la reserva en la empresa equivocada. Es la razón
+de ser de toda la expansión multi-sede; tiene que quedar en v1.
+
+**El backend ya está listo:** todos los endpoints son `/api/<empresa_slug>/...`, `crear-pago`
+devuelve la `publishable_key` **de esa empresa** en su respuesta, y `stripe-panel.tsx` ya monta
+Stripe con `pago.publishable_key` (verificado). **NO se toca el backend salvo un campo en un
+serializer.** Todo el trabajo es de frontend + threading de un string.
+
+**Regla:** el checkout resuelve la empresa **del ítem que el cliente eligió**, no del deploy:
+- reserva de **paquete** → `paquete.empresa_lider_slug`
+- reserva de **servicio suelto** → `servicio.empresa_slug` (campo nuevo, Tarea 6.5.1)
+- **pesca legacy** (sin servicio ni paquete) → `NEXT_PUBLIC_EMPRESA_SLUG` (el propio del deploy)
+
+---
+
+### Tarea 6.5.1 — `empresa_slug` en el catálogo de servicios
+
+**Files:** Modify `backend/apps/fleet/serializers.py::ServicioSerializer` · Test `apps/fleet/tests_servicios_api.py` / `tests_paquetes_api.py`.
+
+1. `ServicioSerializer.Meta.fields` += `'empresa_slug'`; añade `empresa_slug = serializers.CharField(source='empresa.slug', read_only=True)`.
+2. Test: `GET /api/sedes/<sede>/servicios/` — cada ítem trae `empresa_slug` correcto (distinto por empresa cuando la sede tiene varias). El `ServicioSerializer` anidado en `PaqueteServicioSerializer` también lo trae (no molesta).
+3. Verifica que `ServicioSerializer` cuando lo usa `ServiciosListView` (ruta `/api/<empresa>/servicios/`) sigue funcionando — `obj.empresa.slug` está disponible.
+4. Commit: `feat(catálogo): ServicioSerializer expone empresa_slug`.
+
+---
+
+### Tarea 6.5.2 — `request()` y las funciones de `api.ts` aceptan `empresaSlug`
+
+**Files:** Modify `frontend/src/lib/api.ts` · (no hay tests de frontend — verifica con `tsc`/`build` y razonando las URLs).
+
+1. **`request()`** gana un 3er parámetro:
+   ```ts
+   async function request<T>(path: string, init?: RequestInit, empresaSlug?: string): Promise<T> {
+     const slug = empresaSlug ?? EMPRESA_SLUG;
+     const rutaConEmpresa = path.startsWith('/api/sedes')
+       ? path
+       : path.startsWith('/api/')
+       ? `/api/${slug}${path.slice(4)}`
+       : path;
+     // ...resto igual...
+   }
+   ```
+2. Estas 8 funciones ganan un parámetro `empresaSlug?: string` (opcional, **al final**, para no romper llamadas existentes) y lo pasan como 3er arg a `request()`:
+   - `getTarifa(empresaSlug?)`
+   - `getExtras(personas, moneda, empresaSlug?)`
+   - `getCupo(fecha, personas, empresaSlug?)`
+   - `getCupoRango(desde, hasta, personas, empresaSlug?)`
+   - `guardarReserva(data, empresaSlug?)`
+   - `crearPago(reservaId, data, empresaSlug?)`
+   - `getEstadoReserva(checkoutId, empresaSlug?)`
+   - `validarCodigoPromocional(codigo, correoCliente, empresaSlug?)`
+   Ejemplo: `export const getTarifa = (empresaSlug?: string) => request<Tarifa>('/api/tarifa/', undefined, empresaSlug);`
+3. Omitir el parámetro = comportamiento actual (usa `EMPRESA_SLUG`). Nada existente se rompe.
+4. `tsc --noEmit` limpio.
+5. Commit: `feat(frontend): api.ts acepta empresaSlug por llamada para checkout multi-empresa`.
+
+---
+
+### Tarea 6.5.3 — Los enlaces de servicios sueltos llevan la empresa
+
+**Files:** Modify `frontend/src/components/servicios-sueltos-section.tsx` (y donde salga `ServicioCatalogo`) · Modify `frontend/src/lib/api.ts` (`type ServicioCatalogo` += `empresa_slug: string`).
+
+1. `type ServicioCatalogo` += `empresa_slug: string`.
+2. `servicios-sueltos-section.tsx:103`: el `href` pasa de `/${lang}/reservar?servicio=${servicio.slug}&moneda=${moneda}` a `.../reservar?servicio=${servicio.slug}&empresa=${servicio.empresa_slug}&moneda=${moneda}`.
+3. `paquete-card.tsx`: verifica que el enlace de paquete ya incluye algo que identifique la empresa; si solo tiene `&sede=`, añade `&paquete_empresa=${paquete.empresa_lider_slug}` (o usa `getPaqueteDetalle` en `page.tsx` que ya devuelve `empresa_lider_slug`).
+4. `tsc`/`build` limpios.
+5. Commit: `feat(frontend): enlaces de servicios sueltos llevan la empresa del servicio`.
+
+---
+
+### Tarea 6.5.4 — `reservar/page.tsx` resuelve la empresa y la pasa a `CheckoutView`
+
+**Files:** Modify `frontend/src/app/[lang]/reservar/page.tsx` · Modify `frontend/src/components/checkout-view.tsx`.
+
+1. **`reservar/page.tsx`** (server component). Lee los query params y calcula `empresaSlug`:
+   - `?paquete=<slug>&sede=<sede>` → ya resuelve el paquete con `getPaqueteDetalle(sede, slug)` → `empresaSlug = paquete.empresa_lider_slug`.
+   - `?servicio=<slug>&empresa=<empresa>` → `empresaSlug = empresa` (del query). (Opcional: validar que el servicio existe llamando `getServiciosSede` y buscando el slug; si no, confiar en el query.)
+   - Ninguno → `empresaSlug = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol'` (pesca legacy).
+   - **`getTarifa()` en esta página**: si `empresaSlug` != el del deploy y NO hay servicio/paquete → es raro (pesca legacy de otra empresa); para v1 basta `getTarifa(empresaSlug)`.
+   - Pasa `empresaSlug` (string) como prop nueva a `<CheckoutView empresaSlug={empresaSlug} ... />`.
+2. **`checkout-view.tsx`**:
+   - Nueva prop `empresaSlug: string`.
+   - Cada llamada a las 6 funciones de `api.ts` pasa `empresaSlug` como último arg:
+     `getCupo(day, people, empresaSlug)`, `validarCodigoPromocional(codigo, contact.email, empresaSlug)`, `getExtras(people, moneda, empresaSlug)`, `getEstadoReserva(checkoutId, empresaSlug)`, `guardarReserva({...}, empresaSlug)`, `crearPago(reserva.id, {...}, empresaSlug)`.
+   - **Stripe:** NO cambia. `crear-pago` devuelve `pago.publishable_key` de la empresa correcta y `stripe-panel.tsx` ya la usa. Solo confirma que sigue así.
+3. `tsc --noEmit` + `npm.cmd run build` limpios.
+4. Commit: `feat(frontend): el checkout usa la empresa del ítem elegido, no la del deploy`.
+
+---
+
+### Tarea 6.5.5 — Verificación manual (no hay tests de frontend)
+
+Razona y anota en el reporte, para cada flujo, la URL final de `guardarReserva` y `crearPago`:
+- **Pesca legacy** (`/reservar` sin params): `/api/<EMPRESA_SLUG>/reservas/` y `/api/<EMPRESA_SLUG>/reservas/<id>/crear-pago/`.
+- **Servicio suelto de la misma empresa**: igual.
+- **Paquete de la misma empresa**: `/api/<empresa_lider_slug>/reservas/` (== EMPRESA_SLUG en v1 si el deploy es de esa empresa).
+- **Paquete/servicio de OTRA empresa de la sede**: `/api/<otra_empresa>/reservas/` — la reserva se crea en la otra empresa, el cobro usa SU cuenta de Stripe (`pago.publishable_key`), el webhook de esa empresa la confirma.
+
+Si algún flujo no da la URL esperada, arréglalo antes de cerrar.
+
+---
+
+### Tarea 6.5.6 — Gate Sección 6.5
+
+1. Backend: `test apps.fleet` sqlite + Postgres → OK (solo cambió `ServicioSerializer`).
+2. Frontend: `npm.cmd run lint` · `npx.cmd tsc --noEmit` · `npm.cmd run build` → todo verde.
+3. Registro de avance: "Sección 6.5 cerrada @ <sha>". Commit `docs(plan): Sección 6.5 cerrada`. **DETENTE y reporta** (incluye la tabla de URLs de la Tarea 6.5.5).
+
+---
+
 # SECCIÓN 7 — Cruza-empresa: bloquear + ADR-005 (fuera de v1)
 
 ### Tarea 7.1 — Confirmar el bloqueo + test
