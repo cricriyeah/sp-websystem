@@ -1,9 +1,8 @@
 # ADRs — Expansión multi-sede
 
-Fecha: 2026-08-31 (Revisión 2 — incorpora 5 correcciones del dueño)
-Estado global: **ADR-002 ACEPTADO; ADR-001/003/004 PROPUESTOS** (frontera Empresa y
-enfoque de estrategias confirmados; falta ratificar el mecanismo de BD y cerrar el
-cobro de paquetes cruza-empresa).
+Fecha: 2026-08-31 (Revisión 3 — Secciones 2-8 implementadas)
+Estado global: **ADR-001/002 ACEPTADOS; ADR-003/004 IMPLEMENTADOS; ADR-005 PROPUESTO**.
+Ver también `2026-09-06-ADR-005-paquetes-cruza-empresa.md` para el tratamiento de paquetes multi-empresa.
 Documento de diseño que los sustenta: `2026-08-31-expansion-multi-sede-design.md`
 (misma carpeta).
 
@@ -162,9 +161,15 @@ separado y real, no un simple "admin técnico".
 
 ## ADR-003: Cupo/disponibilidad como estrategias tipadas en código
 
-Fecha: 2026-08-31
-Estado: PROPUESTO (enfoque de estrategias confirmado por la vía de los hechos; cupo
-simplificado por corrección 5)
+Fecha: 2026-08-31 (Implementado: 2026-09-06)
+Estado: **IMPLEMENTADO**
+
+**Desviaciones y detalles de implementación:**
+- Se implementaron 3 estrategias de cupo concretas en `apps.fleet.models`: `por_recurso_dia`, `por_noche` y `bajo_demanda`.
+- `por_noche` (hospedaje) implementa `ReservaOcupacion` multi-día sobre `[fecha, fecha_fin_servicio)` serializado con `bloquear_recurso(empresa_id, recurso_id)` y protegido a nivel PostgreSQL mediante constraint `EXCLUDE USING gist` sobre `(recurso_id WITH =, daterange(fecha_inicio, fecha_fin, '[)') WITH &&) WHERE (ocupa_cupo)`.
+- La selección de recursos para hospedaje es determinista vía `elegir_recursos(libres, personas, cantidad)`.
+- `Reserva.save()` sincroniza `ocupa_cupo` solo al cruzar frontera de estados de ocupación.
+- El campo `modo_ocupacion` se mantuvo como enum extensible en el modelo `Servicio`, operando en modo exclusivo en v1.
 
 ### Contexto
 
@@ -246,8 +251,14 @@ queda **fuera de v1** (mismo patrón de día completo que paseos por ahora).
 
 ## ADR-004: Precio como estrategias tipadas en código, sobre `pricing.py`
 
-Fecha: 2026-08-31
-Estado: PROPUESTO
+Fecha: 2026-08-31 (Implementado: 2026-09-06)
+Estado: **IMPLEMENTADO**
+
+**Desviaciones y detalles de implementación:**
+- Se implementaron las estrategias tipadas en `apps.payments.estrategias_precio`: `PorPersona`, `PorGrupo`, `PorNoche`, `TarifaFija`.
+- El precio de paquetes se consolidó en `pricing.py::precio_paquete_total`: ancla + Σ(personalizaciones obligatorias/preseleccionadas de servicios no removidos) + Σ(personalizaciones opcionales marcadas) − Σ(ajustes de servicios removidos). Personalizaciones por persona multiplican por el número de personas.
+- Anticipo configurable por `Paquete.porcentaje_anticipo` y `Servicio.porcentaje_anticipo`.
+- Paquetes cruza-empresa: formalmente bloqueados en v1 (`PaqueteServicio.clean`), formalizado como decisión arquitectónica en **ADR-005** (`docs/superpowers/specs/2026-09-06-ADR-005-paquetes-cruza-empresa.md`). En v1 todo paquete y sus componentes pertenecen a una sola `empresa_lider`.
 
 ### Contexto
 
@@ -305,12 +316,6 @@ Ver §4 del documento de diseño. Resumen:
 - ✅ **ADR-002**: de-superuser a los jefes + operador de plataforma (empresa de
   marketing) = **ACEPTADO**; Stripe estándar sin Connect **confirmado** a escala de
   plataforma (el % se cobra fuera del sistema).
-- ✅ **ADR-003/004**: enfoque de estrategias (híbrido) confirmado por la vía de los
-  hechos (correcciones 4 y 5, que deciden por tipo de servicio); cupo simplificado a
-  `por_recurso_dia` para todos los paseos.
-
-**Genuinamente abierta (no bloquea la arquitectura; bloquea implementar paquetes
-cruza-empresa):**
-- Cómo se cobra un Paquete que combina Empresas distintas (cada una su Stripe, sin
-  Connect). Default recomendado: `empresa_lider` cobra y liquida fuera del sistema.
-  Se cierra en la fase de planeación.
+- ✅ **ADR-003**: **IMPLEMENTADO** (estrategias tipadas `por_recurso_dia`, `por_noche` con `ReservaOcupacion` y `EXCLUDE USING gist`, y `bajo_demanda`).
+- ✅ **ADR-004**: **IMPLEMENTADO** (estrategias tipadas `PorPersona`, `PorGrupo`, `PorNoche`, `TarifaFija`, fórmula de paquetes y anticipo configurable).
+- 📋 **ADR-005**: **PROPUESTO** — Paquetes cruza-empresa (fuera de v1). Bloqueados formalmente en v1 (`PaqueteServicio.clean`). Ver `docs/superpowers/specs/2026-09-06-ADR-005-paquetes-cruza-empresa.md`.

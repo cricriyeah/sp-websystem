@@ -13,6 +13,9 @@ En el SQL editor de Supabase, conectado como `postgres`, en este orden exacto
 otorga `CREATE` sobre el esquema `public`, que ya no es de acceso libre):
 
 ```sql
+-- 0. Extension btree_gist requerida para constraints EXCLUDE de hospedaje (bookings_reservaocupacion)
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 -- 1. El rol de aplicacion (DB_USER actual de Render) debe poder recibir el
 --    ALTER TABLE de mas abajo.
 GRANT <rol_app> TO postgres;
@@ -118,6 +121,18 @@ leyó una sola vez, al crear la fila de "Sal y Sol" — de ahí en adelante las
 llaves se rotan en el admin, por Empresa). Dejarlas en Render solo mientras haya
 riesgo de rollback de esta pieza; después borrarlas o renombrarlas a
 `STRIPE_*_BOOTSTRAP` para que quede evidente que ya no las lee nadie.
+
+## 9. Sembrar catálogo real de servicios y paquetes
+
+Para habilitar tours alternativos, experiencias o empresas de hospedaje:
+
+1. Crear la `Empresa` en `/admin/tenancy/empresa/` vinculada a la `Sede` correspondiente.
+2. Configurar las credenciales de Stripe de esa empresa (`stripe_publishable_key`, `stripe_secret_key`, `stripe_webhook_secret`).
+3. Registrar sus servicios en `/admin/fleet/servicio/`:
+   - Configurar `tipo_servicio`, `estrategia_cupo` (`por_recurso_dia`, `por_noche`, `bajo_demanda`) y `estrategia_precio`.
+   - Si es hospedaje (`por_noche`): dar de alta las habitaciones o unidades en `/admin/fleet/recurso/` vinculadas al servicio.
+4. Si se ofrecen paquetes: crear el `Paquete` en `/admin/fleet/paquete/` con su `precio_ancla` y asociar los servicios componentes en `/admin/fleet/paqueteservicio/` (todos deben pertenecer a la misma `empresa_lider`).
+5. **Importante:** Las empresas nuevas **no requieren `Tarifa` legacy**. El modelo `Tarifa` singleton por empresa aplica únicamente a empresas con flujo clásico de pesca deportiva mono-tarifa (`sal-y-sol`). Las empresas nuevas operan al 100% mediante `Servicio` y `Paquete`.
 
 ## Trade-off aceptado, declarado (no un descuido)
 

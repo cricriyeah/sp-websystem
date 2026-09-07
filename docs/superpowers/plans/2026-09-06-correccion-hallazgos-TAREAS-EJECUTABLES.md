@@ -847,15 +847,15 @@ sqlite + Postgres `test apps config` → `OK`. Commit `docs(plan): Sección 8 ce
 
 # SECCIÓN 9 — Cierre
 
-- [ ] **9.1** `manage.py test apps config` verde en sqlite Y Postgres (drop antes).
-- [ ] **9.2** `check --deploy --fail-level WARNING` con `config.settings.production` + env de relleno (ver `.github/workflows/ci.yml` para los valores).
-- [ ] **9.3** Frontend `npm.cmd run lint` · `npx.cmd tsc --noEmit` · `npm.cmd run build` verdes.
-- [ ] **9.4** Repasa los diffs de todas las secciones: ningún `como_operador_plataforma()` en vista `AllowAny`; ningún filtro de empresa olvidado; ninguna cifra fuera de `pricing.py`; toda tabla nueva con RLS + en el guardarraíl de 8.6.
-- [ ] **9.5** Actualiza `backend/CLAUDE.md` (cupo por `estrategia_cupo`, hospedaje, paquetes v1 una-empresa, `ReservaPaqueteComponente`), `frontend/CLAUDE.md` (campos nuevos del checkout), `docs/deploy/RUNBOOK-corte-multi-empresa.md` (paso: `CREATE EXTENSION btree_gist` en la BD de producción antes de migrar; sembrar `Servicio`/`Recurso`/`Paquete` reales).
-- [ ] **9.6** Actualiza `docs/superpowers/specs/2026-08-31-...-ADRs.md`: ADR-003/004 pasan a IMPLEMENTADO con nota de las desviaciones; enlaza ADR-005.
-- [ ] **9.7** Memoria (`C:\Users\kkjf\.claude\projects\C--Users-kkjf-desarrollo-sistema-pescadeportiva\memory\`): marca `plan-correccion-hallazgos` como completado; mueve lo que quede a `pendientes-manuales-produccion` (`btree_gist`, rol de BD sin BYPASSRLS, sembrar catálogo real).
-- [ ] **9.8** Resumen para el dueño: qué migraciones corren en producción y en qué orden; qué pasos manuales quedan.
-- [ ] **9.9** Integración de la rama: PR contra `feature/pieza6-frontend-multitenant` o merge, según decida el dueño.
+- [x] **9.1** `manage.py test apps config` verde en sqlite Y Postgres (drop antes).
+- [x] **9.2** `check --deploy --fail-level WARNING` con `config.settings.production` + env de relleno (ver `.github/workflows/ci.yml` para los valores).
+- [x] **9.3** Frontend `npm.cmd run lint` · `npx.cmd tsc --noEmit` · `npm.cmd run build` verdes.
+- [x] **9.4** Repasa los diffs de todas las secciones: ningún `como_operador_plataforma()` en vista `AllowAny`; ningún filtro de empresa olvidado; ninguna cifra fuera de `pricing.py`; toda tabla nueva con RLS + en el guardarraíl de 8.6.
+- [x] **9.5** Actualiza `backend/CLAUDE.md` (cupo por `estrategia_cupo`, hospedaje, paquetes v1 una-empresa, `ReservaPaqueteComponente`), `frontend/CLAUDE.md` (campos nuevos del checkout), `docs/deploy/RUNBOOK-corte-multi-empresa.md` (paso: `CREATE EXTENSION btree_gist` en la BD de producción antes de migrar; sembrar `Servicio`/`Recurso`/`Paquete` reales).
+- [x] **9.6** Actualiza `docs/superpowers/specs/2026-08-31-...-ADRs.md`: ADR-003/004 pasan a IMPLEMENTADO con nota de las desviaciones; enlaza ADR-005.
+- [x] **9.7** Memoria (`C:\Users\kkjf\.claude\projects\C--Users-kkjf-desarrollo-sistema-pescadeportiva\memory\`): marca `plan-correccion-hallazgos` como completado; mueve lo que quede a `pendientes-manuales-produccion` (`btree_gist`, rol de BD sin BYPASSRLS, sembrar catálogo real).
+- [x] **9.8** Resumen para el dueño: qué migraciones corren en producción y en qué orden; qué pasos manuales quedan.
+- [ ] **9.9** Integración de la rama: PR contra `feature/pieza6-frontend-multitenant` o merge, según decida el dueño. (Pendiente decisión del dueño).
 
 ---
 

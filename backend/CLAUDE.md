@@ -278,6 +278,25 @@ fallo seguro y no silencioso, pero fallo.
   real no puede operar. La validacion corre al guardar, asi que las reservas anteriores a
   este motor sobrevivieron intactas.
 
+## Cupo multidimensional, hospedaje y paquetes turísticos
+
+Con la expansión multi-servicio y paquetes turísticos:
+
+- **Estrategias de cupo (`Servicio.estrategia_cupo`)**:
+  1. `por_recurso_dia` (pesca deportiva / embarcaciones): aplica `validar_cupo_diario` y toma advisory lock `bloquear_cupo(empresa_id, fecha, servicio_id)`.
+  2. `por_noche` (hospedaje): multi-día sobre rango `[fecha, fecha_fin_servicio)`. Se crean registros `ReservaOcupacion` por habitación/recurso asignado. La base de datos protege contra sobreventa mediante constraint PostgreSQL `EXCLUDE USING gist` sobre `(recurso_id WITH =, daterange(fecha_inicio, fecha_fin, '[)') WITH &&) WHERE (ocupa_cupo)`. Lock de serialización: `bloquear_recurso(empresa_id, recurso_id)`.
+  3. `bajo_demanda` (tours/experiencias sin límite físico estricto): no bloquea inventario previo.
+- **Sincronización de `ReservaOcupacion.ocupa_cupo`**:
+  `Reserva.save()` propaga automáticamente `ocupa_cupo = (estado in ESTADOS_QUE_OCUPAN_CUPO)` a sus `ocupaciones` únicamente cuando la reserva cruza la frontera de ocupación (usando `_estado_original`).
+- **Paquetes turísticos (v1 mono-empresa)**:
+  - Todo `Paquete` pertenece a una `sede` y a una `empresa_lider`.
+  - En v1, todos los `PaqueteServicio` deben pertenecer a la misma `empresa_lider` (`PaqueteServicio.clean()`). Paquetes cruza-empresa quedan expresamente diferidos a futuro (ver `docs/superpowers/specs/2026-09-06-ADR-005-paquetes-cruza-empresa.md`).
+  - Al pagar la reserva de un paquete, `reservar_cupo_al_confirmar()` dentro de `aplicar_pago_exitoso` valida y crea un `ReservaPaqueteComponente(estado_cupo=OK)` por cada componente no removido, y crea las `ReservaOcupacion` correspondientes para hospedaje. Si algún componente no tiene cupo, lanza `SinCupoError`, la transacción hace rollback y se emite reembolso automático 100%.
+  - Al cancelar la reserva, `Reserva.save()` sincroniza `componentes` a `LIBERADO` y libera las ocupaciones.
+- **Marketplace dinámico en el checkout**:
+  - Rutas de API operan bajo `/api/<empresa_slug>/...`.
+  - El frontend resuelve dinámicamente la empresa del producto (`paquete.empresa_lider_slug` o `servicio.empresa_slug`), de modo que `crear-pago` cobra directo en la cuenta de Stripe de dicha empresa proveedora (`pago.publishable_key`).
+
 ## Agenda operativa
 
 `bookings.Agenda`, proxy de `Reserva` (mismo patron que `CheckoutAbandonado`). Es donde

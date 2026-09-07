@@ -43,12 +43,26 @@ siendo un placeholder.
 
 Reglas del checkout que conviene no romper:
 
-- **Ninguna cifra hardcodeada.** Precio del tour y precios de amenidades salen los dos
-  de `GET /api/tarifa/`. Si esa llamada falla, `tarifa` llega `null` y la vista arranca
-  en fase `unavailable` — antes habia un `FALLBACK_TOUR_PRICE` que mostraba un precio
-  inventado cuando el backend estaba caido.
+- **Ninguna cifra hardcodeada.** Precio del tour y precios de amenidades salen de
+  `GET /api/tarifa/` en pesca legacy, o bien de `precio_ancla`/`pricing-paquete.ts` cuando hay
+  paquete, o `servicio.precio_base` para servicios sueltos. Si no hay paquete ni servicio y la tarifa falla,
+  la vista arranca en fase `unavailable`. Las empresas nuevas sin Tarifa legacy funcionan correctamente
+  con paquetes y servicios.
+- **Multi-empresa y resolución dinámica (`empresaSlug`)**:
+  El checkout resuelve la empresa responsable del cobro según el producto seleccionado:
+  1. Paquete: `paquete.empresa_lider_slug`.
+  2. Servicio suelto: `servicio.empresa_slug` (parámetro `&empresa=` en URL).
+  3. Pesca legacy: `process.env.NEXT_PUBLIC_EMPRESA_SLUG` (por defecto `sal-y-sol`).
+  `api.ts` acepta `empresaSlug?: string` opcional en `request()` y en las funciones de API (`guardarReserva`, `crearPago`, `getCupo`, etc.).
+  Stripe se inicializa dinámicamente con `pago.publishable_key` retornado por `crear-pago` para la empresa correspondiente.
+- **Campos del checkout para paquetes y hospedaje**:
+  - `paquete` / `servicio`: slug del paquete o servicio a reservar.
+  - `fecha_salida`: fecha de check-out para reservas multi-día (`por_noche`).
+  - `servicios_removidos`: IDs de componentes del paquete excluidos por el usuario.
+  - `personalizaciones`: IDs de personalizaciones opcionales añadidas al paquete.
+  - `motivo_no_disponible`: maneja `'lleno'`, `'sin_panga'` y `'sin_lugar'` para feedback específico al usuario.
 - **Moneda**: pesos o dolares (paso 6, dentro del resumen). El selector solo aparece si
-  el backend mando `precio_usd`. La moneda elegida viaja en la `Reserva` y es la que usa
+  el backend mando `precio_usd` o el paquete/servicio cuenta con precio en USD. La moneda elegida viaja en la `Reserva` y es la que usa
   el servidor para cobrar.
 - **Deslinde**: una casilla discreta arriba del boton de pagar, con enlace a
   `/[lang]/deslinde` (texto completo, abre en otra pestaña para no tirar lo que el
