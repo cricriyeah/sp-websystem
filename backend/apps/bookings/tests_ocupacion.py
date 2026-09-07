@@ -2,17 +2,17 @@
 
 from datetime import date, time, timedelta
 from decimal import Decimal
-from unittest import skipUnless
+from unittest import mock, skipUnless
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection, transaction
 from django.test import TransactionTestCase
 
-from apps.fleet.models import Recurso, Servicio
+from apps.fleet.models import Paquete, PaqueteServicio, Recurso, Servicio
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import OperadorTestCase
-from apps.bookings.models import Reserva, ReservaOcupacion
+from apps.bookings.models import Reserva, ReservaOcupacion, ReservaPaqueteComponente
 
 
 class ReservaOcupacionModelTests(OperadorTestCase):
@@ -563,5 +563,155 @@ class ReservaCleanHospedajeYPaqueteTests(OperadorTestCase):
 
         r_paquete.estado = Reserva.Estado.PAGADA
         r_paquete.full_clean()  # Cabaña removida, no debe fallar por falta de cabaña
+
+
+class CancelacionLiberaCupoTests(OperadorTestCase):
+    """Pruebas de que cancelar una reserva libera ocupaciones y componentes (Tarea 6.4)."""
+
+    def setUp(self):
+        super().setUp()
+        self.sede = Sede.objects.create(nombre='Sede Loreto', slug='sede-loreto')
+        self.empresa = Empresa.objects.create(sede=self.sede, nombre='Hotel y Pesca Loreto', slug='loreto-hotel-pesca')
+        self.srv_hospedaje = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Habitación Vista Mar',
+            slug='hab-vista-mar',
+            tipo_servicio='hospedaje',
+            estrategia_cupo='por_noche',
+            precio_base=Decimal('2000.00'),
+        )
+        self.recurso = Recurso.objects.create(
+            empresa=self.empresa,
+            servicio=self.srv_hospedaje,
+            nombre='Habitación 1',
+            capacidad_maxima=2,
+        )
+
+    def test_cancelar_hospedaje_libera_ocupacion_y_permite_otra_reserva(self):
+        r1 = Reserva.objects.create(
+            empresa=self.empresa,
+            servicio=self.srv_hospedaje,
+            fecha=date(2026, 11, 1),
+            fecha_salida=date(2026, 11, 5),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Cliente Uno',
+            telefono_cliente='+526121234567',
+            correo_cliente='uno@example.com',
+            estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+        )
+        oc1 = ReservaOcupacion.objects.create(
+            reserva=r1,
+            recurso=self.recurso,
+            empresa=self.empresa,
+            fecha_inicio=r1.fecha,
+            fecha_fin=r1.fecha_salida,
+            ocupa_cupo=True,
+        )
+
+        # Una segunda reserva en las mismas fechas falla validación de disponibilidad
+        r2 = Reserva(
+            empresa=self.empresa,
+            servicio=self.srv_hospedaje,
+            fecha=date(2026, 11, 2),
+            fecha_salida=date(2026, 11, 4),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Cliente Dos',
+            telefono_cliente='+526121234568',
+            correo_cliente='dos@example.com',
+            estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+        )
+        with self.assertRaises(ValidationError):
+            r2.full_clean()
+
+        # Acción de cancelar (simulando cancelar_por_mal_clima en admin)
+        from django.contrib.auth import get_user_model
+        from apps.bookings.admin import ReservaAdmin
+        from django.contrib.admin.sites import AdminSite
+        admin = ReservaAdmin(Reserva, AdminSite())
+        request = mock.Mock()
+        request.user = get_user_model().objects.create_user(username='admin_test')
+        admin.cancelar_por_mal_clima(request, Reserva.objects.filter(pk=r1.pk))
+
+        oc1.refresh_from_db()
+        self.assertFalse(oc1.ocupa_cupo)
+
+        # Ahora r2 pasa validación y puede crearse
+        r2.full_clean()
+        r2.save()
+        self.assertEqual(r2.estado, Reserva.Estado.PAGADA)
+
+    def test_cancelar_paquete_libera_ocupacion_y_marca_componentes_liberados(self):
+        s_pesca = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Pesca en Panga',
+            slug='pesca-panga',
+            tipo_servicio='pesca',
+            estrategia_cupo='por_recurso_dia',
+            precio_base=Decimal('3000.00'),
+        )
+        paquete = Paquete.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            nombre='Paquete Pesca y Cabaña',
+            slug='pesca-cabana',
+            precio_ancla=Decimal('5000.00'),
+        )
+        PaqueteServicio.objects.create(paquete=paquete, servicio=self.srv_hospedaje, orden=1)
+        PaqueteServicio.objects.create(paquete=paquete, servicio=s_pesca, orden=2)
+
+        r = Reserva.objects.create(
+            empresa=self.empresa,
+            paquete=paquete,
+            fecha=date(2026, 11, 10),
+            fecha_salida=date(2026, 11, 12),
+            hora=time(6, 0),
+            numero_personas=2,
+            nombre_cliente='Cliente Paquete',
+            telefono_cliente='+526121234569',
+            correo_cliente='paq@example.com',
+            estado=Reserva.Estado.PAGADA,
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+        )
+        oc = ReservaOcupacion.objects.create(
+            reserva=r,
+            recurso=self.recurso,
+            empresa=self.empresa,
+            fecha_inicio=r.fecha,
+            fecha_fin=r.fecha_salida,
+            ocupa_cupo=True,
+        )
+        comp_hotel = ReservaPaqueteComponente.objects.create(
+            reserva=r,
+            servicio=self.srv_hospedaje,
+            empresa=self.empresa,
+            estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
+        )
+        comp_pesca = ReservaPaqueteComponente.objects.create(
+            reserva=r,
+            servicio=s_pesca,
+            empresa=self.empresa,
+            estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
+        )
+
+        r.estado = Reserva.Estado.CANCELADA
+        r.motivo_cancelacion = 'Mal clima'
+        r.full_clean()
+        r.save()
+
+        oc.refresh_from_db()
+        comp_hotel.refresh_from_db()
+        comp_pesca.refresh_from_db()
+
+        self.assertFalse(oc.ocupa_cupo)
+        self.assertEqual(comp_hotel.estado_cupo, ReservaPaqueteComponente.EstadoCupo.LIBERADO)
+        self.assertEqual(comp_pesca.estado_cupo, ReservaPaqueteComponente.EstadoCupo.LIBERADO)
+
 
 

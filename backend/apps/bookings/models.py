@@ -647,6 +647,12 @@ class Reserva(models.Model):
             es_ocupante = self.estado in ESTADOS_QUE_OCUPAN_CUPO
             if era_ocupante != es_ocupante:
                 self.ocupaciones.exclude(ocupa_cupo=es_ocupante).update(ocupa_cupo=es_ocupante)
+                nuevo_estado_cupo = (
+                    ReservaPaqueteComponente.EstadoCupo.OK
+                    if es_ocupante
+                    else ReservaPaqueteComponente.EstadoCupo.LIBERADO
+                )
+                self.componentes.exclude(estado_cupo=nuevo_estado_cupo).update(estado_cupo=nuevo_estado_cupo)
         self._estado_original = self.estado
 
     def _derivar_estado_de_asignacion(self):
