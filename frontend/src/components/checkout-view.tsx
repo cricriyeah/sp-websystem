@@ -1289,7 +1289,7 @@ export function CheckoutView({
         servicios_removidos: paquete && serviciosRemovidos.length > 0 ? serviciosRemovidos : undefined,
         personalizaciones: paquete && personalizaciones.length > 0 ? personalizaciones : undefined,
         fecha_salida: tieneHospedaje ? fechaSalida : undefined,
-      }, paquete?.empresa_lider_slug);
+      });
 
       setReservaId(reserva.id);
 

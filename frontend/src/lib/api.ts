@@ -186,12 +186,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // getCupo, etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
   // que cada funcion exportada tenga que acordarse del slug.
   // Rutas de plataforma multi-sede (/api/sedes/) no se atan a una empresa.
-  const partes = path.split('/').filter(Boolean);
-  const esRutaSinReescribir =
-    path.startsWith('/api/sedes') ||
-    (partes.length >= 2 && !['tarifa', 'cupo', 'extras', 'reservas', 'codigo-promocional', 'sedes'].includes(partes[1]));
-
-  const rutaConEmpresa = esRutaSinReescribir
+  const rutaConEmpresa = path.startsWith('/api/sedes')
     ? path
     : path.startsWith('/api/')
     ? `/api/${EMPRESA_SLUG}${path.slice(4)}`
@@ -239,10 +234,8 @@ export const getCupoRango = (desde: string, hasta: string, personas: number) =>
   ).then((r) => r.dias);
 
 /** Crea la reserva de este checkout, o actualiza la que ya existia. */
-export const guardarReserva = (data: ReservaInput, empresaSlug?: string) => {
-  const ruta = empresaSlug ? `/api/${empresaSlug}/reservas/` : '/api/reservas/';
-  return request<Reserva>(ruta, { method: 'POST', body: JSON.stringify(data) });
-};
+export const guardarReserva = (data: ReservaInput) =>
+  request<Reserva>('/api/reservas/', { method: 'POST', body: JSON.stringify(data) });
 
 export const crearPago = (reservaId: number, data: PagoInput) =>
   request<Pago>(`/api/reservas/${reservaId}/crear-pago/`, {
