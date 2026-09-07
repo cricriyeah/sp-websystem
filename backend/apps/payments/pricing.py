@@ -109,24 +109,84 @@ def precio_paquete(precio_ancla, ajustes_removidos=None):
     return max(Decimal('0.00'), total).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 
+def precio_paquete_total(
+    paquete,
+    *,
+    servicios_removidos_ids: set[int] | list[int] | None = None,
+    personalizaciones_extra: list[tuple[int, int]] | list[int] | dict[int, int] | None = None,
+    personas: int = 1,
+    moneda: str = 'MXN',
+) -> Decimal | None:
+    """Precio final de un paquete. None si el paquete no tiene precio en `moneda`.
+
+    Fórmula:
+        paquete.precio_en(moneda)                                              # el ancla
+      + Σ  sp.precio_en(moneda) de cada ServicioPersonalizacion (obligatorio o preseleccionado)
+           de los servicios componentes NO removidos, con activo=True
+      + Σ  sp.precio_en(moneda) de las ServicioPersonalizacion OPCIONALES que el cliente marcó
+      − Σ  PaqueteServicio.ajuste_en(moneda) de los servicios removidos (removible=True)
+
+    Cada personalización que cobrar_por_persona se multiplica por personas.
+    Piso 0. Cuantizado a centavos, ROUND_HALF_UP.
+    """
+    precio_ancla = paquete.precio_en(moneda)
+    if precio_ancla is None:
+        return None
+
+    removidos = set(servicios_removidos_ids or ())
+    extras_map: dict[int, int] = {}
+    if personalizaciones_extra:
+        if isinstance(personalizaciones_extra, dict):
+            extras_map = dict(personalizaciones_extra)
+        else:
+            for item in personalizaciones_extra:
+                if isinstance(item, (tuple, list)):
+                    extras_map[item[0]] = item[1]
+                else:
+                    extras_map[item] = 1
+
+    total = Decimal(precio_ancla)
+
+    for ps in paquete.servicios_asociados.select_related('servicio').all():
+        esta_removido = (ps.servicio_id in removidos) and ps.removible
+        if esta_removido:
+            ajuste = ps.ajuste_en(moneda)
+            if ajuste is not None:
+                total -= Decimal(ajuste)
+            continue
+
+        for sp in ps.servicio.servicio_personalizaciones.select_related('personalizacion').all():
+            if not sp.activo or not sp.personalizacion.activo:
+                continue
+
+            es_incluida = sp.obligatorio or sp.preseleccionado
+            es_extra = sp.id in extras_map
+
+            if not es_incluida and not es_extra:
+                continue
+
+            sp_precio = sp.precio_en(moneda)
+            if sp_precio is None:
+                continue
+
+            mult = Decimal(personas) if sp.personalizacion.cobrar_por_persona else Decimal('1')
+            cant = Decimal(extras_map[sp.id]) if es_extra else Decimal('1')
+            total += Decimal(sp_precio) * mult * cant
+
+    return max(Decimal('0.00'), total).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+
+
 def calcular_precio_paquete(paquete, servicios_removidos_pks=None, moneda='MXN'):
     """Calcula el precio de un paquete en la moneda pedida, aplicando descuentos
     únicamente por aquellos servicios que sean efectivamente removibles.
     Devuelve None si el paquete no tiene precio en esa moneda."""
-    precio_ancla = paquete.precio_en(moneda)
-    if precio_ancla is None:
-        return None
-    if not servicios_removidos_pks:
-        return precio_paquete(precio_ancla, [])
-
-    pks_set = set(servicios_removidos_pks)
-    ajustes = []
-    for ps in paquete.servicios_asociados.all():
-        if ps.servicio_id in pks_set and ps.removible:
-            ajuste = ps.ajuste_en(moneda)
-            if ajuste is not None:
-                ajustes.append(ajuste)
-
-    return precio_paquete(precio_ancla, ajustes)
+    removidos = set(servicios_removidos_pks or ())
+    return precio_paquete_total(
+        paquete,
+        servicios_removidos_ids=removidos,
+        personalizaciones_extra=[],
+        personas=1,
+        moneda=moneda,
+    )
 
 
