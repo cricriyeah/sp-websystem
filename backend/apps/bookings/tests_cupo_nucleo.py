@@ -9,6 +9,7 @@ from apps.bookings.cupo.nucleo import (
     MOTIVO_SIN_PANGA,
     caben,
     caben_compartido,
+    elegir_recursos,
     motivo_sin_lugar,
     ocupacion_por_rango,
     validar_rango,
@@ -148,4 +149,39 @@ class CupoNucleoPuroTests(TestCase):
         self.assertIsInstance(validar_rango(date(2026, 1, 3), date(2026, 1, 3)), str)
         self.assertIsInstance(validar_rango(date(2026, 1, 3), date(2026, 1, 1)), str)
         self.assertIsNone(validar_rango(None, date(2026, 1, 1)))
+
+    def test_elegir_recursos_un_recurso_que_cabe(self):
+        # 1 recurso con capacidad suficiente
+        libres = [(10, 2), (20, 4), (30, 6)]
+        # Para 3 personas y cantidad 1, debe elegir 20 (capacidad 4, menos desperdicio que 30)
+        self.assertEqual(elegir_recursos(libres, personas=3, cantidad=1), [20])
+
+    def test_elegir_recursos_prefiere_mas_chico_que_alcanza(self):
+        # Prefiere el que minimiza desperdicio
+        libres = [(1, 2), (2, 5), (3, 3)]
+        # Para 2 personas, elige 1 (capacidad 2, desperdicio 0)
+        self.assertEqual(elegir_recursos(libres, personas=2, cantidad=1), [1])
+        # Para 3 personas, elige 3 (capacidad 3, desperdicio 0)
+        self.assertEqual(elegir_recursos(libres, personas=3, cantidad=1), [3])
+
+    def test_elegir_recursos_combinacion_de_dos(self):
+        # 2 recursos necesarios
+        libres = [(1, 2), (2, 2), (3, 5)]
+        # Para 4 personas con 2 habitaciones, elige [1, 2] (2+2=4, desperdicio 0)
+        self.assertEqual(elegir_recursos(libres, personas=4, cantidad=2), [1, 2])
+        # Para 6 personas con 2 habitaciones, elige [1, 3] (2+5=7, desperdicio 1 frente a 2+5=7)
+        resultado = elegir_recursos(libres, personas=6, cantidad=2)
+        self.assertIn(resultado, ([1, 3], [2, 3]))
+
+    def test_elegir_recursos_imposible_retorna_none(self):
+        libres = [(1, 2), (2, 2)]
+        # Excede capacidad total
+        self.assertIsNone(elegir_recursos(libres, personas=5, cantidad=2))
+        # Recursos disponibles insuficientes para la cantidad pedida
+        self.assertIsNone(elegir_recursos(libres, personas=1, cantidad=3))
+
+    def test_elegir_recursos_tie_breaker_determinista(self):
+        # Dos recursos con misma capacidad y mismo desperdicio
+        libres = [(5, 4), (2, 4)]
+        self.assertEqual(elegir_recursos(libres, personas=3, cantidad=1), [2])
 

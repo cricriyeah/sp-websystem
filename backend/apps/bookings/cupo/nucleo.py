@@ -1,4 +1,5 @@
 """Núcleo de funciones puras de cupo y disponibilidad (sin dependencias de base de datos)."""
+import itertools
 
 MOTIVO_LLENO = 'lleno'
 MOTIVO_SIN_PANGA = 'sin_panga'
@@ -121,3 +122,26 @@ def recursos_disponibles_en_rango(recursos_con_ocupaciones, fecha_inicio, fecha_
         if not traslapado:
             libres.append((recurso_id, capacidad))
     return libres
+
+
+def elegir_recursos(libres: list[tuple[int, int]], personas: int, cantidad: int = 1) -> list[int] | None:
+    """`libres` = [(recurso_id, capacidad), ...]. Devuelve los ids de `cantidad`
+    recursos cuyo total de capacidad >= personas, prefiriendo los más chicos que
+    alcanzan (menos desperdicio). None si no se puede.
+    """
+    if len(libres) < cantidad:
+        return None
+
+    candidatos = []
+    for combo in itertools.combinations(libres, cantidad):
+        cap_total = sum(c for _, c in combo)
+        if cap_total >= personas:
+            ids = sorted(r_id for r_id, _ in combo)
+            desperdicio = cap_total - personas
+            candidatos.append((desperdicio, ids))
+
+    if not candidatos:
+        return None
+
+    candidatos.sort(key=lambda item: (item[0], item[1]))
+    return candidatos[0][1]
