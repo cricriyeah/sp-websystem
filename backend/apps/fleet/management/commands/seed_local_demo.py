@@ -184,7 +184,71 @@ class Command(BaseCommand):
                     defaults={'servicio': hs, 'capacidad_maxima': 2},
                 )
 
+        # --- Segunda SEDE: Los Cabos, con su propia empresa ---
+        cabos, _ = Sede.objects.get_or_create(
+            slug='los-cabos',
+            defaults={'nombre': 'Los Cabos', 'zona_horaria': 'America/Mazatlan', 'activo': True},
+        )
+        tours, _ = Empresa.objects.get_or_create(
+            slug='tours-cabo',
+            defaults=dict(sede=cabos, nombre='Tours Cabo', activo=True,
+                          stripe_secret_key='sk_test_CABO_CAMBIAME',
+                          stripe_publishable_key='pk_test_CABO_CAMBIAME',
+                          stripe_webhook_secret='whsec_CABO_CAMBIAME'),
+        )
+        with scope.con_empresa(tours):
+            snorkel, _ = Servicio.objects.get_or_create(
+                empresa=tours, slug='snorkel-arco',
+                defaults=dict(
+                    nombre='Snorkel en el Arco', tipo_servicio='paseo',
+                    estrategia_cupo='por_recurso_dia', estrategia_precio='por_persona',
+                    modo_ocupacion='exclusivo', precio_base=Decimal('900'),
+                    precio_base_usd=Decimal('55'), personas_incluidas=1,
+                    porcentaje_anticipo=30, activo=True,
+                    descripcion='Tour de snorkel al Arco de Cabo San Lucas.',
+                ),
+            )
+            Recurso.objects.get_or_create(
+                empresa=tours, nombre='Panga Arco 1',
+                defaults={'servicio': snorkel, 'capacidad_maxima': 10},
+            )
+            ballenas, _ = Servicio.objects.get_or_create(
+                empresa=tours, slug='avistamiento-ballenas',
+                defaults=dict(
+                    nombre='Avistamiento de Ballenas', tipo_servicio='paseo',
+                    estrategia_cupo='por_recurso_dia', estrategia_precio='por_grupo',
+                    modo_ocupacion='exclusivo', precio_base=Decimal('4200'),
+                    precio_base_usd=Decimal('240'), personas_incluidas=4,
+                    porcentaje_anticipo=30, activo=True,
+                    descripcion='Salida a avistar ballena gris (temporada dic-abr).',
+                ),
+            )
+            Recurso.objects.get_or_create(
+                empresa=tours, nombre='Yate Ballenas 1',
+                defaults={'servicio': ballenas, 'capacidad_maxima': 12},
+            )
+            paq_cabo, _ = Paquete.objects.get_or_create(
+                sede=cabos, slug='dia-completo-cabo',
+                defaults=dict(
+                    empresa_lider=tours, nombre='Día Completo en Cabo',
+                    descripcion='Snorkel en el Arco + avistamiento de ballenas.',
+                    precio_ancla=Decimal('6500'), precio_ancla_usd=Decimal('375'),
+                    porcentaje_anticipo=30, activo=True,
+                ),
+            )
+            PaqueteServicio.objects.get_or_create(
+                paquete=paq_cabo, servicio=ballenas,
+                defaults={'orden': 1, 'removible': False, 'ajuste_precio': Decimal('0')},
+            )
+            PaqueteServicio.objects.get_or_create(
+                paquete=paq_cabo, servicio=snorkel,
+                defaults={'orden': 2, 'removible': True,
+                          'ajuste_precio': Decimal('900'), 'ajuste_precio_usd': Decimal('55')},
+            )
+
         self.stdout.write(self.style.SUCCESS(
-            'Demo sembrada. Empresas: sal-y-sol, hotel-malecon (Sede: la-paz).\n'
-            'Sigue: pon llaves de Stripe TEST reales en /admin/tenancy/empresa/ para cada una.'
+            'Demo sembrada.\n'
+            '  Sede la-paz    -> sal-y-sol (pesca/paseo/hospedaje + paquete), hotel-malecon (suite)\n'
+            '  Sede los-cabos -> tours-cabo (snorkel/ballenas + paquete)\n'
+            'Sigue: pon llaves de Stripe TEST reales en /admin/tenancy/empresa/ para las 3 empresas.'
         ))
