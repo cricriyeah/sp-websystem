@@ -3,6 +3,7 @@
 from decimal import Decimal
 from django.test import SimpleTestCase
 
+from apps.payments.pricing import monto_inicial
 from apps.payments.estrategias_precio import (
     DemandaPrecio,
     EstrategiaPrecio,
@@ -195,3 +196,14 @@ class EstrategiasPrecioTests(SimpleTestCase):
             obtenida.calcular_base(self.config, DemandaPrecio(personas=1)),
             Decimal('999.00'),
         )
+
+
+class MontoInicialTests(SimpleTestCase):
+    def test_monto_inicial_con_porcentaje_anticipo(self):
+        self.assertEqual(monto_inicial(Decimal('1000.00'), 'anticipo', porcentaje=50), Decimal('500.00'))
+
+    def test_monto_inicial_completo_ignora_porcentaje(self):
+        self.assertEqual(monto_inicial(Decimal('1000.00'), 'completo', porcentaje=50), Decimal('1000.00'))
+
+    def test_monto_inicial_anticipo_default_30(self):
+        self.assertEqual(monto_inicial(Decimal('1000.00'), 'anticipo'), Decimal('300.00'))

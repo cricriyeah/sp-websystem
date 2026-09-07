@@ -80,10 +80,11 @@ def cargo_por_descuento(precio_total, porcentaje_descuento):
     return descuento.quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 
-def monto_inicial(precio_total, forma_pago):
-    """Lo que se cobra en linea: el total, o el 30% si eligio anticipo."""
+def monto_inicial(precio_total, forma_pago, porcentaje=None):
+    """Lo que se cobra en linea: el total, o el % si eligio anticipo."""
     if forma_pago == 'anticipo':
-        return (precio_total * ANTICIPO_PORCENTAJE).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+        pct = (Decimal(porcentaje) / Decimal('100')) if porcentaje is not None else ANTICIPO_PORCENTAJE
+        return (Decimal(precio_total) * pct).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
     return Decimal(precio_total).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 

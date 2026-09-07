@@ -539,6 +539,7 @@ class Paquete(models.Model):
         help_text='Precio ancla del paquete en dólares (USD). Opcional.'
     )
     regla_precio = models.CharField(max_length=50, default='precio_ancla')
+    porcentaje_anticipo = models.PositiveSmallIntegerField(default=30)
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
