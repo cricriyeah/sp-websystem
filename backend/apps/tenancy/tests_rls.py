@@ -72,3 +72,64 @@ class RLSTests(TransactionTestCase):
             Embarcacion.objects.create(
                 nombre='Sin alcance', clase='chica', capacidad_maxima=3, empresa=self.empresa_a,
             )
+
+    def test_guardarrail_toda_tabla_con_empresa_tiene_politica(self):
+        """Guardarraíl RLS (# postgres-only): verifica en Postgres que toda tabla con
+        empresa_id o empresa_lider_id tenga su política tenancy_alcance en pg_policies,
+        y que las tablas secundarias en la whitelist (vía FK EXISTS) también la tengan."""
+        with connection.cursor() as cursor:
+            # 1. Tablas de las apps de negocio con columna empresa_id o empresa_lider_id
+            cursor.execute("""
+                SELECT DISTINCT c.relname
+                FROM pg_class c
+                JOIN pg_attribute a ON a.attrelid = c.oid
+                WHERE a.attname IN ('empresa_id', 'empresa_lider_id')
+                  AND c.relkind = 'r'
+                  AND c.relname LIKE ANY(ARRAY['fleet_%', 'bookings_%', 'payments_%', 'finance_%'])
+                ORDER BY c.relname;
+            """)
+            tablas_con_columna = {row[0] for row in cursor.fetchall()}
+
+            # 2. Tablas secundarias que llegan a empresa vía FK (sin columna empresa_id propia)
+            whitelist_via_fk = {
+                'bookings_reservaextra',
+                'bookings_reservatransporte',
+                'fleet_serviciopersonalizacion',
+                'fleet_paqueteservicio',
+                'bookings_reservapaqueteservicioremovido',
+                'bookings_reservapaquetepersonalizacion',
+            }
+
+            # 3. Consultar pg_policies
+            cursor.execute("""
+                SELECT tablename, policyname
+                FROM pg_policies
+                WHERE policyname = 'tenancy_alcance'
+                  AND tablename LIKE ANY(ARRAY['fleet_%', 'bookings_%', 'payments_%', 'finance_%']);
+            """)
+            politicas_por_tabla = {row[0]: row[1] for row in cursor.fetchall()}
+
+            # Aserción 1: Toda tabla con empresa_id / empresa_lider_id debe tener política tenancy_alcance
+            sin_politica = tablas_con_columna - set(politicas_por_tabla.keys())
+            self.assertEqual(
+                sin_politica,
+                set(),
+                f"Tablas con columna de empresa que no tienen política RLS 'tenancy_alcance': {sin_politica}",
+            )
+
+            # Aserción 2: Todas las tablas de la whitelist vía FK deben tener política tenancy_alcance
+            whitelist_sin_politica = whitelist_via_fk - set(politicas_por_tabla.keys())
+            self.assertEqual(
+                whitelist_sin_politica,
+                set(),
+                f"Tablas en whitelist vía FK que no tienen política RLS 'tenancy_alcance': {whitelist_sin_politica}",
+            )
+
+            # Aserción 3: Toda tabla protegida en las apps debe estar en tablas_con_columna o en whitelist
+            todas_esperadas = tablas_con_columna | whitelist_via_fk
+            politicas_inesperadas = set(politicas_por_tabla.keys()) - todas_esperadas
+            self.assertEqual(
+                politicas_inesperadas,
+                set(),
+                f"Tablas con política RLS que no están catalogadas ni en columnas ni en whitelist: {politicas_inesperadas}",
+            )
