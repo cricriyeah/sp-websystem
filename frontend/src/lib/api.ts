@@ -65,11 +65,9 @@ export const getExtras = (personas: number, moneda: Moneda, empresaSlug?: string
   request<CatalogoExtras>(`/api/extras/?personas=${personas}&moneda=${moneda}`, undefined, empresaSlug);
 
 /**
+ * @deprecated SP1: El transporte deja de ser personalización/selección en checkout.
  * Lo que el cliente eligio para el traslado, si eligio uno. `null` = sin
- * transporte. `zona` solo cuenta cuando se manda `direccion_personalizada`:
- * si viene `punto_encuentro`, el backend la ignora y usa la del hotel elegido
- * (ver apps/bookings/serializers.py, evita que se pague el precio de otra
- * zona mandando una `zona` que no corresponde).
+ * transporte.
  */
 export type TransporteSeleccion = {
   punto_encuentro?: number | null;
@@ -131,7 +129,6 @@ export type ReservaInput = {
   // unico que lo congela es `crear-pago`, con el catalogo vigente en ese
   // momento (ver backend/apps/bookings/serializers.py).
   extras?: ExtraSeleccion[];
-  transporte?: TransporteSeleccion | null;
   // Codigo de la vendedora que trajo al cliente (ver src/lib/ref.ts). El backend
   // ignora en silencio el que no resuelva: un link viejo no puede impedir una
   // reserva.

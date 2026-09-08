@@ -428,25 +428,6 @@
     "licenseQuantity": {
       "question": "¿A cuántos de tu grupo les tramitamos la licencia?"
     },
-    "transporte": {
-      "headline": "Transporte",
-      "none": "Sin transporte",
-      "hotelOption": "Recogida en tu hotel",
-      "customOption": "Otra dirección",
-      "selectHotelPlaceholder": "Elige tu hotel",
-      "addressPlaceholder": "Escribe la dirección donde te recogemos",
-      "customAddressNote": "Cubre la recogida en cualquier punto de La Paz. Si tu ubicación está en la zona centro, la tarifa se ajusta al confirmar.",
-      "fromPrice": "Desde {price}",
-      "hotelRequired": "Elige el hotel donde te recogemos.",
-      "choose": "Elegir",
-      "zoneLabel": "Zona de la dirección",
-      "zoneCentro": "Centro",
-      "zonePeriferia": "Periferia"
-    },
-    "transportQuantity": {
-      "question": "¿Cuántos de tu grupo usan el transporte?",
-      "finalPriceNote": "El precio final se confirma al pagar."
-    },
     "waiver": {
       "accept": "He leído y acepto el",
       "linkLabel": "deslinde de responsabilidad",

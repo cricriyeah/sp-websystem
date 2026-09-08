@@ -22,13 +22,6 @@ type AmenitiesReminderProps = {
   /** Extras del catalogo que el cliente no lleva. */
   pendientes: ExtraPendiente[];
   onSeleccionarExtra: (id: number) => void;
-  /**
-   * El traslado, cuando no eligio ninguno. Va aparte de `pendientes` porque no
-   * se puede resolver con una casilla: hace falta decir desde donde recogen al
-   * cliente, y eso solo se contesta en el paso de Extras. Por eso es un boton
-   * que lleva de vuelta ahi, no un check.
-   */
-  transportePendiente?: { etiqueta: string; monto: string | null; onElegir: () => void } | null;
   onContinuar: () => void;
   onCerrar: () => void;
   /** Bloquea los botones mientras se esta creando el pago. */
@@ -48,7 +41,6 @@ export function AmenitiesReminder({
   feedback,
   pendientes,
   onSeleccionarExtra,
-  transportePendiente,
   onContinuar,
   onCerrar,
   enviando,
@@ -115,9 +107,9 @@ export function AmenitiesReminder({
           // mismo criterio en el paso 3 del checkout (`extrasOrdenados`).
           const necesarios = pendientes.filter((e) => e.tipo === 'licencia');
           const opcionales = pendientes.filter((e) => e.tipo !== 'licencia');
-          const hayNecesario = necesarios.length > 0 || Boolean(transportePendiente);
+          const hayNecesario = necesarios.length > 0;
 
-          if (necesarios.length === 0 && opcionales.length === 0 && !transportePendiente) return null;
+          if (necesarios.length === 0 && opcionales.length === 0) return null;
 
           const item = (extra: ExtraPendiente) => (
             <label
@@ -151,24 +143,6 @@ export function AmenitiesReminder({
                     {checkout.amenitiesModal.necesarioLabel}
                   </p>
                   {necesarios.map(item)}
-                  {transportePendiente && (
-                    <div className="flex items-center justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground">
-                      <span className="min-w-0">
-                        {transportePendiente.etiqueta}
-                        {transportePendiente.monto && (
-                          <span className="block text-xs text-muted">{transportePendiente.monto}</span>
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={transportePendiente.onElegir}
-                        disabled={enviando}
-                        className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-40"
-                      >
-                        {checkout.transporte.choose}
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
 

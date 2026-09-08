@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
-  CaretDown,
   EnvelopeSimple,
   Lock,
   Minus,
@@ -46,7 +45,6 @@ import {
   type PaqueteCatalogo,
   type ServicioCatalogo,
   type Tarifa,
-  type Zona,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeFallo } from '@/lib/errores';
@@ -307,9 +305,8 @@ export function CheckoutView({
     if (servicio) return servicio.precio_base_usd != null ? 'USD' : 'MXN';
     return tarifa?.precio_usd != null ? 'USD' : 'MXN';
   });
-  // Catalogo de extras (brunch, licencia, carnada, transporte, puntos de
-  // encuentro) con el monto ya resuelto para `people`/`moneda` — ver el efecto
-  // de abajo. null hasta la primera respuesta del backend.
+  // Catalogo de extras (brunch, licencia, carnada) con el monto ya resuelto para
+  // `people`/`moneda` — ver el efecto de abajo. null hasta la primera respuesta del backend.
   const [catalogo, setCatalogo] = useState<CatalogoExtras | null>(null);
   /**
    * `null` = el cliente no ha tocado el paso de Extras todavia, asi que vale
@@ -323,22 +320,10 @@ export function CheckoutView({
    * desalinearse.
    */
   const [extrasElegidos, setExtrasElegidos] = useState<number[] | null>(null);
-  const [transporteModo, setTransporteModo] = useState<'ninguno' | 'punto' | 'direccion'>('ninguno');
-  const [puntoEncuentroId, setPuntoEncuentroId] = useState<number | null>(null);
-  const [direccionPersonalizada, setDireccionPersonalizada] = useState('');
-  // 'punto' con `puntoEncuentroId` en null no es "sin transporte": el backend
-  // (`_guardar` en serializers.py) trata esa combinacion exactamente igual que
-  // el toggle en 'ninguno' — el traslado se descarta en silencio, sin error,
-  // porque no puede distinguir "no quiere" de "quiso pero no eligio hotel".
-  // Por eso el bloqueo tiene que vivir aqui, antes de que salga la peticion.
-  const [errorTransporte, setErrorTransporte] = useState(false);
-  const refPuntoEncuentro = useRef<HTMLLabelElement>(null);
   // Cuantas personas eligio el cliente para un extra con `cantidad_editable`
   // (ver ExtraCatalogo) — solo importa para esos, id de ExtrasItem -> cantidad.
   // Ausente = todo el grupo, mismo comportamiento que un extra sin este control.
   const [cantidadesExtras, setCantidadesExtras] = useState<Record<number, number>>({});
-  // Cuantas personas usan el transporte. `null` = todo el grupo (de siempre).
-  const [personasTransporte, setPersonasTransporte] = useState<number | null>(null);
   /**
    * En que quedo el efecto de recuperacion, para que los extras
    * preseleccionados del catalogo (licencia, carnada) no compitan con una
@@ -406,12 +391,11 @@ export function CheckoutView({
   // lo que la tarifa de hoy recalcularia.
   const [recuperadoPagado, setRecuperadoPagado] = useState<number | null>(null);
   const [recuperadoSaldo, setRecuperadoSaldo] = useState<number | null>(null);
-  // Desglose de extras/transporte ya congelado al pagar, para una reserva
+  // Desglose de extras ya congelado al pagar, para una reserva
   // recuperada. Se guarda crudo (no formateado) porque `currency` depende de
   // `moneda`, y `moneda` recien se esta fijando en el mismo efecto que llena
   // esto — el formateo real ocurre despues, al construir `lineasExtrasRecuperadas`.
   const [recuperadoExtras, setRecuperadoExtras] = useState<EstadoReservaPagada['extras']>([]);
-  const [recuperadoTransporteMonto, setRecuperadoTransporteMonto] = useState<number | null>(null);
   const [recuperadoCodigoPromocional, setRecuperadoCodigoPromocional] = useState<string | null>(null);
   const [recuperadoDescuento, setRecuperadoDescuento] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
@@ -521,7 +505,7 @@ export function CheckoutView({
   /**
    * Catalogo de extras con el monto ya resuelto por el servidor para
    * `people`/`moneda` — la web nunca reimplementa si un extra cobra por
-   * persona ni el umbral del recargo de transporte (ver apps/fleet/views.py).
+   * persona (ver apps/fleet/views.py).
    * Se vuelve a pedir con cada cambio de grupo o moneda, porque los montos
    * dependen de los dos.
    */
@@ -597,8 +581,6 @@ export function CheckoutView({
   );
 
   const extrasCatalogo = catalogo?.extras ?? [];
-  const transporteCatalogo = catalogo?.transporte ?? [];
-  const puntosEncuentro = catalogo?.puntos_encuentro ?? [];
 
   /**
    * La licencia va primero y separada del resto: es el unico item del catalogo
@@ -623,8 +605,7 @@ export function CheckoutView({
 
   const extrasSeleccionadosItems = extrasCatalogo.filter((e) => extrasSeleccionados.includes(e.id));
 
-  // "2 de 5": misma leyenda para el extra con cantidad editable y para el
-  // transporte, para que las dos digan la cantidad elegida de la misma forma.
+  // "2 de 5": leyenda para el extra con cantidad editable para decir la cantidad elegida.
   const deLabel = (cantidad: number, total: number) =>
     checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(total));
 
@@ -652,115 +633,6 @@ export function CheckoutView({
     return acc + (monto / people) * cantidadDeExtra(e);
   }, 0);
 
-  // La zona del traslado: la del hotel elegido, o siempre 'periferia' si el cliente escribio
-  // a mano con "otra direccion" (para cubrir toda la zona de La Paz con tarifa fija clara).
-  const zonaTransporteActual: Zona | null =
-    transporteModo === 'punto'
-      ? (puntosEncuentro.find((p) => p.id === puntoEncuentroId)?.zona ?? null)
-      : transporteModo === 'direccion'
-        ? 'periferia'
-        : null;
-  const transportePrecio = zonaTransporteActual
-    ? (transporteCatalogo.find((t) => t.zona === zonaTransporteActual) ?? null)
-    : null;
-  const cargoTransporte = transportePrecio?.monto != null ? Number(transportePrecio.monto) : 0;
-  // Acotado al grupo actual, igual que `cantidadDeExtra`. El precio mostrado
-  // arriba sigue siendo el del catalogo para el grupo completo a proposito
-  // (el recargo de transporte no escala linealmente, ver
-  // apps/payments/pricing.py) — esto solo es lo que se manda al elegir.
-  const personasTransporteEfectivo = Math.min(personasTransporte ?? people, people);
-
-  const ajustarPersonasTransporte = (delta: number) =>
-    setPersonasTransporte((actual) => {
-      const actualCantidad = Math.min(actual ?? people, people);
-      return Math.min(people, Math.max(1, actualCantidad + delta));
-    });
-
-  /**
-   * Las tres formas de resolver el traslado, cada una con el control que le
-   * toca. Se arma como lista y no como tres bloques sueltos de JSX porque el
-   * control de cada opcion se pinta DENTRO de su propia tarjeta: la unica
-   * forma de garantizar que el select no se vuelva a separar de la opcion que
-   * lo revela es que ni siquiera exista un lugar fuera donde ponerlo.
-   *
-   * Ninguno lleva `disabled`: el `<fieldset disabled>` que los envuelve ya
-   * apaga todo lo que tiene adentro.
-   */
-  const opcionesTransporte: {
-    valor: 'ninguno' | 'punto' | 'direccion';
-    etiqueta: string;
-    panel?: React.ReactNode;
-  }[] = [
-    { valor: 'ninguno', etiqueta: checkout.transporte.none },
-    ...(puntosEncuentro.length > 0
-      ? [
-          {
-            valor: 'punto' as const,
-            etiqueta: checkout.transporte.hotelOption,
-            panel: (
-              <label className="flex flex-col gap-1.5 text-sm" ref={refPuntoEncuentro}>
-                <span className="text-muted">{checkout.transporte.selectHotelPlaceholder}</span>
-                <span className="relative">
-                  <select
-                    value={puntoEncuentroId ?? ''}
-                    onChange={(e) => {
-                      setPuntoEncuentroId(e.target.value ? Number(e.target.value) : null);
-                      setErrorTransporte(false);
-                    }}
-                    {...propsDeError('error-punto-encuentro', errorTransporte)}
-                    // `appearance-none` + caret propio: con la flecha nativa,
-                    // el control se ve de otro sistema operativo en cada
-                    // maquina y rompe con el resto del checkout.
-                    className={`w-full appearance-none border bg-background py-3 pr-11 pl-4 text-sm text-foreground outline-none transition-colors focus:border-accent disabled:opacity-60 ${
-                      errorTransporte ? CLASES_CAMPO_CON_ERROR : 'border-border'
-                    }`}
-                  >
-                    <option value="" disabled>
-                      {checkout.transporte.selectHotelPlaceholder}
-                    </option>
-                    {puntosEncuentro.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <CaretDown
-                    size={14}
-                    weight="bold"
-                    className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted"
-                  />
-                </span>
-                {errorTransporte && (
-                  <FieldError id="error-punto-encuentro" mensaje={checkout.transporte.hotelRequired} />
-                )}
-              </label>
-            ),
-          },
-        ]
-      : []),
-    {
-      valor: 'direccion',
-      etiqueta: checkout.transporte.customOption,
-      panel: (
-        <div className="flex flex-col gap-2.5">
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-muted">{checkout.transporte.addressPlaceholder}</span>
-            <input
-              type="text"
-              value={direccionPersonalizada}
-              onChange={(e) => setDireccionPersonalizada(e.target.value)}
-              placeholder={checkout.transporte.addressPlaceholder}
-              className="w-full border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent disabled:opacity-60"
-            />
-          </label>
-          <p className="text-xs leading-relaxed text-muted">
-            {checkout.transporte.customAddressNote}
-          </p>
-        </div>
-      ),
-    },
-  ];
-
   /**
    * Todo lo del catalogo que el cliente NO lleva: es lo que el recordatorio
    * de antes de pagar puede ofrecerle.
@@ -782,31 +654,6 @@ export function CheckoutView({
       monto: currency.format(Number(e.monto)),
       hint: checkout.extrasHints[e.tipo] || null,
     }));
-
-  /**
-   * El traslado tambien cuenta como algo que le falta al cliente, pero no
-   * cabe en `extrasPendientes`: elegirlo exige decir desde donde lo recogen,
-   * y eso no se contesta con una casilla dentro de un modal. Se ofrece con el
-   * precio de la zona mas barata ("Desde X") y un boton que devuelve al paso.
-   */
-  const montosTransporte = transporteCatalogo
-    .map((t) => (t.monto === null ? null : Number(t.monto)))
-    .filter((m): m is number => m !== null);
-  const transportePendiente =
-    transporteModo === 'ninguno' && montosTransporte.length > 0
-      ? {
-          etiqueta: checkout.transporte.headline,
-          monto: checkout.transporte.fromPrice.replace(
-            '{price}',
-            currency.format(Math.min(...montosTransporte)),
-          ),
-          onElegir: () => {
-            setRecordatorioAbierto(false);
-            setExtrasConfirmado(false);
-            setPasoEditando(3);
-          },
-        }
-      : null;
 
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
@@ -835,7 +682,7 @@ export function CheckoutView({
     ? (calculoPaquete?.precioFinal ?? null)
     : tourPrice === null
       ? null
-      : tourPrice + cargoPersonas + cargoExtras + cargoTransporte;
+      : tourPrice + cargoPersonas + cargoExtras;
 
   // Solo informativo (redondeo igual al de `cargo_por_descuento` en
   // apps/payments/pricing.py): el monto real lo congela `crear-pago` sobre el
@@ -874,14 +721,6 @@ export function CheckoutView({
           amount: currency.format(totalExtra),
         };
       }),
-    ...(transportePrecio?.monto != null
-      ? [
-          {
-            label: checkout.transporte.headline,
-            amount: currency.format(Number(transportePrecio.monto)),
-          },
-        ]
-      : []),
     ...(descuentoPromocional > 0
       ? [
           {
@@ -919,9 +758,6 @@ export function CheckoutView({
           amount: currency.format(totalExtra),
         };
       }),
-    ...(recuperadoTransporteMonto !== null
-      ? [{ label: checkout.transporte.headline, amount: currency.format(recuperadoTransporteMonto) }]
-      : []),
     ...(recuperadoDescuento !== null
       ? [
           {
@@ -1051,9 +887,6 @@ export function CheckoutView({
             : null,
         );
         setRecuperadoExtras(estado.extras);
-        setRecuperadoTransporteMonto(
-          estado.transporte?.monto != null ? Number(estado.transporte.monto) : null,
-        );
         setRecuperadoCodigoPromocional(estado.codigo_promocional);
         setRecuperadoDescuento(
           estado.descuento_aplicado !== null ? Number(estado.descuento_aplicado) : null,
@@ -1099,17 +932,6 @@ export function CheckoutView({
         // Lo que el cliente ya habia elegido gana sobre los recomendados del
         // catalogo (ver el efecto de los defaults, mas arriba).
         setRecuperacion('repuesta');
-        if (estado.transporte?.punto_encuentro) {
-          setTransporteModo('punto');
-          setPuntoEncuentroId(estado.transporte.punto_encuentro);
-          setPersonasTransporte(estado.transporte.cantidad);
-        } else if (estado.transporte) {
-          setTransporteModo('direccion');
-          setDireccionPersonalizada(estado.transporte.direccion_personalizada);
-          setPersonasTransporte(estado.transporte.cantidad);
-        } else {
-          setTransporteModo('ninguno');
-        }
         if (estado.forma_pago) setFormaPago(estado.forma_pago);
         setPasosVisibles(3);
         setExtrasConfirmado(true);
@@ -1226,27 +1048,13 @@ export function CheckoutView({
       return;
     }
 
-    // 'punto' sin hotel elegido no lo rechaza el backend — lo trata como "sin
-    // transporte" (ver la nota junto a `errorTransporte` mas arriba) y la
-    // reserva sigue de largo sin traslado. Tiene que frenar aqui. El paso 3
-    // pudo haberse colapsado ya (`extrasConfirmado`), asi que hay que
-    // reabrirlo o el select del hotel ni siquiera esta montado para enfocarlo.
-    if (transporteModo === 'punto' && puntoEncuentroId === null) {
-      setErrorTransporte(true);
-      setPasoEditando(3);
-      setTimeout(() => {
-        refPuntoEncuentro.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 80);
-      return;
-    }
-
     // Sin deslinde aceptado no hay reserva; el backend lo rechaza igual.
     if (!waiverAccepted) {
       setErrorWaiver(true);
       return;
     }
 
-    if (extrasPendientes.length > 0 || transportePendiente) {
+    if (extrasPendientes.length > 0) {
       setRecordatorioAbierto(true);
       return;
     }
@@ -1287,16 +1095,6 @@ export function CheckoutView({
           const item = extrasCatalogo.find((e) => e.id === id);
           return { id, cantidad: item?.cantidad_editable ? cantidadDeExtra(item) : undefined };
         }),
-        transporte:
-          transporteModo === 'ninguno'
-            ? null
-            : transporteModo === 'punto'
-              ? { punto_encuentro: puntoEncuentroId, cantidad: personasTransporteEfectivo }
-              : {
-                  direccion_personalizada: direccionPersonalizada.trim(),
-                  zona: 'periferia',
-                  cantidad: personasTransporteEfectivo,
-                },
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         captcha_token: captchaToken.current,
@@ -1751,7 +1549,7 @@ export function CheckoutView({
                 title={checkout.extrasStepHeadline}
                 estado={colapsado3 ? 'completado' : pasoEditando === 3 ? 'editando' : 'activo'}
                 resumen={
-                  [...extrasSeleccionadosItems.map((e) => getNombreExtra(e)), ...(transporteModo !== 'ninguno' ? [checkout.transporte.headline] : [])].join(', ') ||
+                  extrasSeleccionadosItems.map((e) => getNombreExtra(e)).join(', ') ||
                   checkout.noExtrasSelected
                 }
                 actionLabel={
@@ -1865,114 +1663,6 @@ export function CheckoutView({
                     </div>
                   ))}
                 </div>
-
-                {/* Divulgacion progresiva en linea: el control de cada opcion
-                    vive DENTRO de su propia tarjeta y se abre ahi mismo. Antes
-                    el select se pintaba despues del grupo entero, asi que
-                    aparecia al fondo, separado de la opcion que lo habia
-                    revelado — no habia forma de ver a cual pertenecia. */}
-                <fieldset className="mt-5 border-t border-border pt-5" disabled={locked}>
-                  <legend className="sr-only">{checkout.transporte.headline}</legend>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-sm font-medium text-foreground">
-                      {checkout.transporte.headline}
-                    </p>
-                    {/* El precio del traslado elegido, arriba y a la derecha:
-                        alineado con el patron del resto del checkout, donde el
-                        monto siempre va del lado del renglon al que pertenece. */}
-                    {transportePrecio?.monto != null && (
-                      <span className="shrink-0 text-sm text-foreground">
-                        {currency.format(Number(transportePrecio.monto))}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-3 flex flex-col gap-2">
-                    {opcionesTransporte.map((opcion) => {
-                      const activa = transporteModo === opcion.valor;
-                      return (
-                        <div
-                          key={opcion.valor}
-                          className={`border transition-colors duration-200 ${
-                            activa ? 'border-accent bg-surface' : 'border-border'
-                          }`}
-                        >
-                          <label className="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm text-foreground">
-                            <input
-                              type="radio"
-                              name="transporte-modo"
-                              checked={activa}
-                              onChange={() => {
-                                setTransporteModo(opcion.valor);
-                                setErrorTransporte(false);
-                              }}
-                              className="h-4 w-4 shrink-0 accent-accent"
-                            />
-                            <span className="flex-1">{opcion.etiqueta}</span>
-                          </label>
-
-                          {/* `initial={false}`: la tarjeta ya abierta al reponer
-                              un checkout no debe animarse como si el cliente
-                              acabara de elegirla. */}
-                          <AnimatePresence initial={false}>
-                            {activa && opcion.panel && (
-                              <motion.div
-                                key="panel"
-                                initial={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                                animate={
-                                  sinMovimiento ? { opacity: 1 } : { height: 'auto', opacity: 1 }
-                                }
-                                exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                                className="overflow-hidden"
-                              >
-                                <div className="border-t border-border px-4 py-3">{opcion.panel}</div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Solo importa para el recargo de grupo (el precio base no
-                      escala por persona, ver apps/payments/pricing.py): quien
-                      no sube a la camioneta no debe contarse para alcanzarlo.
-                      El precio de arriba sigue siendo el del catalogo para el
-                      grupo completo — la nota de abajo evita que se lea como
-                      definitivo. */}
-                  {transporteModo !== 'ninguno' && people > 1 && (
-                    <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3">
-                      <div className="flex items-center justify-between gap-3 text-sm text-foreground">
-                        <span className="text-muted">{checkout.transportQuantity.question}</span>
-                        <span className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => ajustarPersonasTransporte(-1)}
-                            disabled={locked || personasTransporteEfectivo <= 1}
-                            aria-label="-"
-                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span className="min-w-[5.5rem] text-center whitespace-nowrap">
-                            {deLabel(personasTransporteEfectivo, people)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => ajustarPersonasTransporte(1)}
-                            disabled={locked || personasTransporteEfectivo >= people}
-                            aria-label="+"
-                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted">{checkout.transportQuantity.finalPriceNote}</p>
-                    </div>
-                  )}
-                </fieldset>
 
                 {personalizacionesDisponibles.length > 0 && (
                   <div className="mt-6 flex flex-col gap-2 border-t border-border pt-5">
@@ -2137,7 +1827,6 @@ export function CheckoutView({
             feedback={dict.feedback}
             pendientes={extrasPendientes}
             onSeleccionarExtra={(id) => alternarExtra(id, true)}
-            transportePendiente={transportePendiente}
             onContinuar={enviar}
             onCerrar={() => setRecordatorioAbierto(false)}
             enviando={enviando}
