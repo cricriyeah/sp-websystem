@@ -8,10 +8,8 @@ from apps.fleet.models import (
     Paquete,
     PaqueteServicio,
     Personalizacion,
-    PuntoEncuentro,
     Servicio,
     ServicioPersonalizacion,
-    TransportePrecio,
 )
 
 from .models import (
@@ -19,7 +17,6 @@ from .models import (
     Reserva,
     ReservaExtra,
     ReservaPaquetePersonalizacion,
-    ReservaTransporte,
     Vendedora,
 )
 from .validators import validar_nombre_persona
@@ -62,40 +59,6 @@ def ip_del_cliente(request):
     return request.META.get('REMOTE_ADDR')
 
 
-class TransporteSeleccionSerializer(serializers.Serializer):
-    """Lo que el cliente elige en el paso de Extras, sin precio: el precio lo
-    congela `CrearPagoView` al pagar, con el catalogo vigente en ese momento.
-
-    `zona` es lo que manda el cliente solo cuando eligio "otra direccion" —
-    si viene `punto_encuentro`, `ReservaCheckoutSerializer` la ignora y usa
-    `punto_encuentro.zona`, para que nadie pueda pagar el precio de una zona
-    mas barata mandando una `zona` que no corresponde al hotel elegido.
-    """
-
-    punto_encuentro = serializers.PrimaryKeyRelatedField(
-        queryset=PuntoEncuentro.objects.filter(activo=True), required=False, allow_null=True, default=None,
-    )
-    direccion_personalizada = serializers.CharField(required=False, allow_blank=True, default='')
-
-    def get_fields(self):
-        # El queryset del PrimaryKeyRelatedField se evalua al importar el modulo
-        # (cuerpo de clase del serializer padre), sin contexto. `get_fields()` es
-        # el unico gancho de DRF que corre por-peticion con `self.context` puesto
-        # (`__init__` no vuelve a correr tras el `deepcopy` del padre).
-        fields = super().get_fields()
-        fields['punto_encuentro'].queryset = PuntoEncuentro.objects.filter(
-            activo=True, empresa=self.context['empresa'],
-        )
-        return fields
-    zona = serializers.ChoiceField(
-        choices=TransportePrecio.Zona.choices, required=False, allow_blank=True, default='',
-    )
-    # Cuantas personas del grupo usan el transporte. None = todo el grupo (de
-    # siempre). El cargo real (y si aplica el recargo de grupo) lo decide
-    # CrearPagoView con el numero de personas ya acotado a la reserva.
-    cantidad = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=1)
-
-
 class ExtraSeleccionSerializer(serializers.Serializer):
     """Un item del catalogo que el cliente marco, con cuantas personas lo
     necesitan si el item tiene `cantidad_editable` (ver fleet.ExtrasItem) —
@@ -105,7 +68,10 @@ class ExtraSeleccionSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=1)
 
     def get_fields(self):
-        # Ver la nota en TransporteSeleccionSerializer.get_fields.
+        # El queryset del PrimaryKeyRelatedField se evalua al importar el modulo
+        # (cuerpo de clase del serializer padre), sin contexto. `get_fields()` es
+        # el unico gancho de DRF que corre por-peticion con `self.context` puesto
+        # (`__init__` no vuelve a correr tras el `deepcopy` del padre).
         fields = super().get_fields()
         fields['id'].queryset = ExtrasItem.objects.filter(activo=True, empresa=self.context['empresa'])
         return fields
@@ -130,9 +96,9 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     `pendiente_pago`, cada envio del checkout reescribe la misma fila. Asi
     corregir la fecha o reintentar tras un error no deja reservas duplicadas.
 
-    `extras`/`transporte` solo escriben la SELECCION (que items, que punto de
-    encuentro): el precio queda `null` hasta que se paga. El unico que lo
-    congela es `CrearPagoView`, con el catalogo vigente en ese momento — ver
+    `extras` solo escribe la SELECCION (que items): el precio queda `null`
+    hasta que se paga. El unico que lo congela es `CrearPagoView`, con el
+    catalogo vigente en ese momento — ver
     docs/superpowers/specs/2026-08-28-extras-checkout-design.md.
     """
 
@@ -160,9 +126,6 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     # reescribe la seleccion completa, y sin el default, omitir la clave (en
     # vez de mandarla vacia) dejaria viva una seleccion vieja que ya no aplica.
     extras = ExtraSeleccionSerializer(many=True, required=False, default=list, write_only=True)
-    transporte = TransporteSeleccionSerializer(
-        required=False, allow_null=True, default=None, write_only=True,
-    )
 
     class Meta:
         model = Reserva
@@ -173,7 +136,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'pide_bebidas',
             'servicio', 'paquete', 'fecha_salida',
             'personalizaciones',
-            'extras', 'transporte',
+            'extras',
             'ref', 'estado',
         ]
         read_only_fields = ['id', 'estado']
@@ -326,48 +289,35 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
-        extras, transporte = self._sacar_extras_y_transporte(validated_data)
+        extras = self._sacar_extras(validated_data)
         personalizaciones = self._sacar_datos_paquete(validated_data)
         # La Empresa la fija la vista (slug de la URL), nunca el payload del
         # cliente. `update()` no la toca: recuperar un checkout conserva su
         # Empresa (y seria la misma, resuelta del mismo slug).
         validated_data['empresa'] = self.context['empresa']
-        return self._guardar(Reserva(**validated_data), extras, transporte, personalizaciones)
+        return self._guardar(Reserva(**validated_data), extras, personalizaciones)
 
     def update(self, instance, validated_data):
-        extras, transporte = self._sacar_extras_y_transporte(validated_data)
+        extras = self._sacar_extras(validated_data)
         personalizaciones = self._sacar_datos_paquete(validated_data)
         for campo, valor in validated_data.items():
             setattr(instance, campo, valor)
-        return self._guardar(instance, extras, transporte, personalizaciones)
+        return self._guardar(instance, extras, personalizaciones)
 
-    def _sacar_extras_y_transporte(self, validated_data):
-        # No son campos del modelo Reserva: hay que sacarlos antes de construirla
-        # o de asignarlos con setattr, o revientan contra un atributo que no existe.
-        # Con default= en los dos campos (ver arriba) siempre estan presentes.
-        return validated_data.pop('extras'), validated_data.pop('transporte')
+    def _sacar_extras(self, validated_data):
+        # No es campo del modelo Reserva: hay que sacarlo antes de construirla
+        # o de asignarlo con setattr, o revienta contra un atributo que no existe.
+        # Con default= en el campo (ver arriba) siempre esta presente.
+        return validated_data.pop('extras')
 
     def _sacar_datos_paquete(self, validated_data):
         return validated_data.pop('personalizaciones', [])
 
-    def _guardar(self, reserva, extras, transporte, personalizaciones=None):
+    def _guardar(self, reserva, extras, personalizaciones=None):
         # full_clean corre el motor unico de validacion (ventana de salida, cupo,
         # deslinde, capacidad), ver apps/bookings/models.py y backend/CLAUDE.md.
-        # `transporte` puede llegar como `{}` (el cliente manda siempre la forma
-        # completa, con el toggle apagado) o como `None`/ausente — los dos
-        # significan "sin transporte", ninguno de los dos alcanza a construir
-        # una fila valida (punto_encuentro y direccion_personalizada vacios).
-        quiere_transporte = bool(transporte and (
-            transporte.get('punto_encuentro') or transporte.get('direccion_personalizada')
-        ))
-
         try:
             reserva.full_clean()
-            if quiere_transporte:
-                # exclude=['reserva']: al crear, la Reserva todavia no tiene pk
-                # (se guarda mas abajo) y el FK saldria vacio en esta validacion
-                # previa — no es dato que el cliente mande, no hace falta validarlo.
-                self._construir_transporte(reserva, transporte).full_clean(exclude=['reserva'])
         except DjangoValidationError as exc:
             raise serializers.ValidationError(
                 exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
@@ -376,17 +326,13 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         reserva.save()
 
         # Cada envio reescribe la seleccion completa, sin excepciones: una lista
-        # vacia borra lo que hubiera, sin transporte borra el traslado.
+        # vacia borra lo que hubiera.
         # `_sincronizar_extras` corre despues de `reserva.save()` (necesita el pk),
         # asi que no entra al `try` de arriba; se envuelve aparte para que un
         # ValidationError de `ReservaExtra.clean()` (red de seguridad cross-empresa)
         # salga como 400 y no como 500 en una ruta publica.
         try:
             self._sincronizar_extras(reserva, extras)
-            if quiere_transporte:
-                self._construir_transporte(reserva, transporte).save()
-            else:
-                ReservaTransporte.objects.filter(reserva=reserva).delete()
             if personalizaciones is not None:
                 self._sincronizar_personalizaciones(reserva, personalizaciones)
         except DjangoValidationError as exc:
@@ -441,27 +387,3 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
                 extra.cantidad_solicitada = cantidad
                 extra.save(update_fields=['cantidad_solicitada'])
 
-    def _construir_transporte(self, reserva, datos):
-        """No guarda: full_clean() se llama antes de tocar la base (junto al
-        de la Reserva), guardar es responsabilidad de quien llama despues."""
-        transporte = None
-        if reserva.pk:
-            # Sin pk (reserva nueva, aun no guardada) no hay relacion que
-            # consultar: el descriptor de Django exige un pk para buscarla.
-            try:
-                transporte = reserva.transporte
-            except ReservaTransporte.DoesNotExist:
-                transporte = None
-        if transporte is None:
-            transporte = ReservaTransporte(reserva=reserva)
-
-        punto_encuentro = datos.get('punto_encuentro')
-        transporte.punto_encuentro = punto_encuentro
-        transporte.direccion_personalizada = '' if punto_encuentro else datos.get('direccion_personalizada', '')
-        # Nunca la que mande el cliente si eligio un hotel del catalogo: se
-        # deriva de ahi, o alguien podria pagar el precio de otra zona.
-        transporte.zona = punto_encuentro.zona if punto_encuentro else datos.get('zona', '')
-        # Cuantas personas del grupo lo usan. None = todo el grupo (de siempre);
-        # CrearPagoView es quien la acota al numero de personas real y la congela.
-        transporte.personas_solicitadas = datos.get('cantidad')
-        return transporte
