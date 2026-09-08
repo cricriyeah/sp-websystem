@@ -18,6 +18,7 @@ from apps.tenancy.models import Empresa, Sede
 from apps.testing import ApiTestCase, EmpresaTestCase
 
 from .enums import TipoTraslado
+from .tarifa_transporte import TarifaTransporteNoConfigurada, resolver_tarifa_transporte
 from .models import (
     CodigoPromocional,
     Embarcacion,
@@ -564,4 +565,105 @@ class TransporteTarifaRLSTests(TransactionTestCase):
         with scope.con_empresa(self.empresa_a):
             self.assertEqual(TransporteTarifa.objects.count(), 1)
             self.assertEqual(TransporteTarifa.objects.first().precio, Decimal('4500.00'))
+
+
+class ResolverTarifaTransporteTest(EmpresaTestCase):
+    def setUp(self):
+        super().setUp()
+        self.tarifas = [
+            # 1. Redondo aeropuerto 1-4 personas
+            TransporteTarifa.objects.create(
+                empresa=self.empresa,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                zona='',
+                personas_min=1,
+                personas_max=4,
+                precio=Decimal('4500.00'),
+            ),
+            # 2. Redondo aeropuerto 5-14 personas
+            TransporteTarifa.objects.create(
+                empresa=self.empresa,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                zona='',
+                personas_min=5,
+                personas_max=14,
+                precio=Decimal('6000.00'),
+            ),
+            # 3. Redondo actividad - centro
+            TransporteTarifa.objects.create(
+                empresa=self.empresa,
+                tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+                zona='centro',
+                personas_min=1,
+                personas_max=None,
+                precio=Decimal('1500.00'),
+            ),
+            # 4. Redondo actividad - periferia
+            TransporteTarifa.objects.create(
+                empresa=self.empresa,
+                tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+                zona='periferia',
+                personas_min=1,
+                personas_max=None,
+                precio=Decimal('1800.00'),
+            ),
+            # 5. Recepción aeropuerto
+            TransporteTarifa.objects.create(
+                empresa=self.empresa,
+                tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO,
+                zona='',
+                personas_min=1,
+                personas_max=None,
+                precio=Decimal('2700.00'),
+            ),
+        ]
+
+    def test_resuelve_redondo_aeropuerto_segun_personas(self):
+        t4 = resolver_tarifa_transporte(
+            self.tarifas, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO, zona='', personas=4
+        )
+        self.assertEqual(t4.precio, Decimal('4500.00'))
+
+        t5 = resolver_tarifa_transporte(
+            self.tarifas, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO, zona='', personas=5
+        )
+        self.assertEqual(t5.precio, Decimal('6000.00'))
+
+        t14 = resolver_tarifa_transporte(
+            self.tarifas, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO, zona='', personas=14
+        )
+        self.assertEqual(t14.precio, Decimal('6000.00'))
+
+    def test_resuelve_redondo_actividad_por_zona(self):
+        tc = resolver_tarifa_transporte(
+            self.tarifas, tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD, zona='centro', personas=2
+        )
+        self.assertEqual(tc.precio, Decimal('1500.00'))
+
+        tp = resolver_tarifa_transporte(
+            self.tarifas, tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD, zona='periferia', personas=2
+        )
+        self.assertEqual(tp.precio, Decimal('1800.00'))
+
+    def test_resuelve_recepcion_aeropuerto_cualquier_tamano(self):
+        t1 = resolver_tarifa_transporte(
+            self.tarifas, tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO, zona='', personas=1
+        )
+        self.assertEqual(t1.precio, Decimal('2700.00'))
+
+        t14 = resolver_tarifa_transporte(
+            self.tarifas, tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO, zona='', personas=14
+        )
+        self.assertEqual(t14.precio, Decimal('2700.00'))
+
+    def test_tipo_o_rango_sin_tarifa_lanza_excepcion(self):
+        with self.assertRaises(TarifaTransporteNoConfigurada):
+            resolver_tarifa_transporte(
+                self.tarifas, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO, zona='', personas=15
+            )
+        with self.assertRaises(TarifaTransporteNoConfigurada):
+            resolver_tarifa_transporte(
+                self.tarifas, tipo_traslado='tipo_inexistente', zona='', personas=2
+            )
+
 
