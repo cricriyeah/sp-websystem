@@ -14,6 +14,7 @@ from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import ApiTestCase, EmpresaTestCase
 
+from .enums import TipoTraslado
 from .models import (
     CodigoPromocional,
     Embarcacion,
@@ -21,6 +22,7 @@ from .models import (
     ExtrasItem,
     PuntoEncuentro,
     Tarifa,
+    TransporteTarifa,
     capacidades_disponibles,
     capacidades_por_fecha,
 )
@@ -476,3 +478,55 @@ class SeedExtrasTests(EmpresaTestCase):
     def test_empresa_inexistente_falla_explicito(self):
         with self.assertRaises(CommandError):
             call_command('seed_extras', empresa='no-existe', stdout=StringIO())
+
+
+class TransporteTarifaTest(EmpresaTestCase):
+    def test_redondo_actividad_sin_zona_falla_validacion(self):
+        tarifa = TransporteTarifa(
+            empresa=self.empresa,
+            tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+            zona='',
+            personas_min=1,
+            personas_max=4,
+            precio=Decimal('1500.00'),
+        )
+        with self.assertRaises(ValidationError):
+            tarifa.full_clean()
+
+    def test_recepcion_aeropuerto_con_zona_falla_validacion(self):
+        tarifa = TransporteTarifa(
+            empresa=self.empresa,
+            tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO,
+            zona='centro',
+            personas_min=1,
+            personas_max=4,
+            precio=Decimal('2700.00'),
+        )
+        with self.assertRaises(ValidationError):
+            tarifa.full_clean()
+
+    def test_personas_max_menor_que_personas_min_falla(self):
+        tarifa = TransporteTarifa(
+            empresa=self.empresa,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            zona='',
+            personas_min=5,
+            personas_max=3,
+            precio=Decimal('4500.00'),
+        )
+        with self.assertRaises(ValidationError):
+            tarifa.full_clean()
+
+    def test_precio_en_usd_con_precio_usd_none_devuelve_none(self):
+        tarifa = TransporteTarifa(
+            empresa=self.empresa,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            zona='',
+            personas_min=1,
+            personas_max=4,
+            precio=Decimal('4500.00'),
+            precio_usd=None,
+        )
+        tarifa.full_clean()
+        self.assertEqual(tarifa.precio_en('MXN'), Decimal('4500.00'))
+        self.assertIsNone(tarifa.precio_en('USD'))

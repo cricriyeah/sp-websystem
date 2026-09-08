@@ -12,6 +12,7 @@ from .enums import (
     EstrategiaPrecio,
     ModoOcupacion,
     TipoServicio,
+    TipoTraslado,
     Zona,
 )
 
@@ -160,6 +161,46 @@ class ExtrasItem(models.Model):
 
     def precio_en(self, moneda):
         return self.precio if moneda == 'MXN' else self.precio_usd
+
+
+class TransporteTarifa(models.Model):
+    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='tarifas_transporte')
+    tipo_traslado = models.CharField(max_length=25, choices=TipoTraslado.choices)
+    zona = models.CharField(max_length=10, choices=Zona.choices, blank=True, default='')  # '' salvo redondo_actividad
+    personas_min = models.PositiveSmallIntegerField(default=1)
+    personas_max = models.PositiveSmallIntegerField(null=True, blank=True)  # None = sin tope superior
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['empresa', 'tipo_traslado', 'zona', 'personas_min']
+        verbose_name = 'tarifa de transporte'
+        verbose_name_plural = 'tarifas de transporte'
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'tipo_traslado', 'zona', 'personas_min'],
+                                    name='transportetarifa_unica'),
+            models.CheckConstraint(
+                name='transportetarifa_zona_solo_actividad',
+                condition=(models.Q(tipo_traslado='redondo_actividad') & ~models.Q(zona='')) |
+                          (~models.Q(tipo_traslado='redondo_actividad') & models.Q(zona='')),
+            ),
+        ]
+
+    def __str__(self):
+        zona_str = f' ({self.get_zona_display()})' if self.zona else ''
+        return f'{self.get_tipo_traslado_display()}{zona_str} [{self.personas_min}-{self.personas_max or "∞"}p]: ${self.precio} MXN'
+
+    def clean(self):
+        if self.tipo_traslado == TipoTraslado.REDONDO_ACTIVIDAD and not self.zona:
+            raise ValidationError({'zona': 'Redondo actividad requiere zona.'})
+        if self.tipo_traslado != TipoTraslado.REDONDO_ACTIVIDAD and self.zona:
+            raise ValidationError({'zona': 'Solo redondo actividad lleva zona.'})
+        if self.personas_max is not None and self.personas_max < self.personas_min:
+            raise ValidationError({'personas_max': 'Debe ser ≥ personas_min.'})
+
+    def precio_en(self, moneda):
+        return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
 
 
 class PuntoEncuentro(models.Model):

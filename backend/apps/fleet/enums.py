@@ -30,3 +30,9 @@ class Zona(models.TextChoices):
     CENTRO = 'centro', 'Centro'
     PERIFERIA = 'periferia', 'Periferia'
 
+
+class TipoTraslado(models.TextChoices):
+    REDONDO_AEROPUERTO = 'redondo_aeropuerto', 'Redondo con aeropuerto'
+    REDONDO_ACTIVIDAD = 'redondo_actividad', 'Redondo actividad'
+    RECEPCION_AEROPUERTO = 'recepcion_aeropuerto', 'Recepción aeropuerto'
+
