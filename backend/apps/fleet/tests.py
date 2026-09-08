@@ -4,17 +4,19 @@ from io import StringIO
 
 from unittest import skipUnless
 
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import connection
 from django.db.utils import IntegrityError
 from django.test import TestCase, TransactionTestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.payments.pricing import PERSONAS_INCLUIDAS
 from apps.tenancy import scope
-from apps.tenancy.models import Empresa, Sede
+from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
 from apps.testing import ApiTestCase, EmpresaTestCase
 
 from .enums import TipoTraslado
@@ -665,5 +667,55 @@ class ResolverTarifaTransporteTest(EmpresaTestCase):
             resolver_tarifa_transporte(
                 self.tarifas, tipo_traslado='tipo_inexistente', zona='', personas=2
             )
+
+
+class TransporteTarifaAdminTest(EmpresaTestCase):
+    def test_vendedora_recibe_403_en_changelist(self):
+        vendedora = self.crear_vendedora()
+        self.client.force_login(vendedora)
+        url = reverse('admin:fleet_transportetarifa_changelist')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_jefe_ve_sus_tarifas_y_no_las_de_otra_empresa(self):
+        empresa_2 = _crear_empresa(slug='empresa-dos')
+        t1 = TransporteTarifa.objects.create(
+            empresa=self.empresa,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            personas_min=1,
+            personas_max=4,
+            precio=Decimal('4500.00'),
+        )
+        with _AlcanceOtraEmpresa(self, empresa_2):
+            t2 = TransporteTarifa.objects.create(
+                empresa=empresa_2,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                personas_min=1,
+                personas_max=4,
+                precio=Decimal('5000.00'),
+            )
+
+        jefe_1 = self.crear_jefe(username='jefe1')
+        self.client.force_login(jefe_1)
+        url = reverse('admin:fleet_transportetarifa_changelist')
+        response_1 = self.client.get(url)
+        self.assertEqual(response_1.status_code, 200)
+        self.assertContains(response_1, '4500.00')
+        self.assertNotContains(response_1, '5000.00')
+
+        jefe_2 = User.objects.create_user('jefe2', is_staff=True, password='x')
+        jefe_2.groups.add(Group.objects.get(name='Jefe'))
+        MembresiaEmpresa.objects.create(user=jefe_2, empresa=empresa_2, rol=MembresiaEmpresa.Rol.JEFE)
+        self.client.force_login(jefe_2)
+        self._alcance.__exit__(None, None, None)
+        try:
+            response_2 = self.client.get(url)
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+        self.assertEqual(response_2.status_code, 200)
+        self.assertContains(response_2, '5000.00')
+        self.assertNotContains(response_2, '4500.00')
+
 
 

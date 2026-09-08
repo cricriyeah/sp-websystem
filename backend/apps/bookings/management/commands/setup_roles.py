@@ -35,6 +35,7 @@ PERMISOS_JEFE = PERMISOS_VENDEDORA + [
     ('fleet', 'capitan', ['add', 'change', 'delete']),
     ('fleet', 'puntoencuentro', ['add', 'change', 'delete']),
     ('fleet', 'extrasitem', ['add', 'change', 'delete', 'view']),
+    ('fleet', 'transportetarifa', ['add', 'change', 'delete', 'view']),
     ('fleet', 'codigopromocional', ['add', 'change', 'delete', 'view']),
     ('fleet', 'tarifa', ['add', 'change', 'view']),
     # Catalogo multi-sede: el jefe configura sus propios servicios, recursos,

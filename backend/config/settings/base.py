@@ -299,6 +299,14 @@ UNFOLD = {
                         'permission': lambda request: request.user.has_perm('fleet.view_extrasitem'),
                     },
                     {
+                        'title': 'Transporte',
+                        'icon': 'local_shipping',
+                        'link': reverse_lazy('admin:fleet_transportetarifa_changelist'),
+                        'permission': lambda request: request.user.has_perm(
+                            'fleet.view_transportetarifa'
+                        ),
+                    },
+                    {
                         'title': 'Codigos promocionales',
                         'icon': 'confirmation_number',
                         'link': reverse_lazy('admin:fleet_codigopromocional_changelist'),
