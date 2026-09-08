@@ -143,11 +143,11 @@ en producción (prelanzamiento), el borrado es limpio.
 - Modify: `frontend/src/lib/api.ts` (payload de `guardarReserva`: quitar el objeto `transporte`)
 - Modify: `frontend/src/app/[lang]/dictionaries/{es,en}.json` (bloque `checkout.transporte.*`)
 
-- [ ] **Paso 1:** localizar todo lo que renderiza o envía transporte en `checkout-view.tsx` (`grep -n "transporte\|Transporte" frontend/src/components/checkout-view.tsx`).
-- [ ] **Paso 2:** quitar el `<fieldset>` de transporte, el estado asociado, y el campo `transporte` del cuerpo que se manda a `guardarReserva`.
-- [ ] **Paso 3:** quitar `checkout.transporte` de las dos dictionaries (y cualquier `checkout.*` que solo use ese bloque). Reiniciar `npm run dev` (Turbopack cachea las dictionaries).
-- [ ] **Paso 4:** `cd frontend && npx.cmd tsc --noEmit && npm.cmd run lint && npm.cmd run build` → verde.
-- [ ] **Paso 5:** commit `refactor(checkout): el checkout de pesca deja de ofrecer traslado`.
+- [x] **Paso 1:** localizar todo lo que renderiza o envía transporte en `checkout-view.tsx` (`grep -n "transporte\|Transporte" frontend/src/components/checkout-view.tsx`).
+- [x] **Paso 2:** quitar el `<fieldset>` de transporte, el estado asociado, y el campo `transporte` del cuerpo que se manda a `guardarReserva`.
+- [x] **Paso 3:** quitar `checkout.transporte` de las dos dictionaries (y cualquier `checkout.*` que solo use ese bloque). Reiniciar `npm run dev` (Turbopack cachea las dictionaries).
+- [x] **Paso 4:** `cd frontend && npx.cmd tsc --noEmit && npm.cmd run lint && npm.cmd run build` → verde.
+- [x] **Paso 5:** commit `refactor(checkout): el checkout de pesca deja de ofrecer traslado`.
 
 ### Tarea 0.2 — Quitar `TransporteSeleccionSerializer` del checkout serializer
 
@@ -156,11 +156,11 @@ en producción (prelanzamiento), el borrado es limpio.
 - Modify: `backend/apps/bookings/serializers.py` imports (quitar `TransportePrecio`, `ReservaTransporte`, `PuntoEncuentro` si ya no se usan)
 - Test: `backend/apps/bookings/tests.py` (borrar/ajustar los tests de `ReservaCheckoutSerializer` que ejercen `transporte`)
 
-- [ ] **Paso 1:** correr los tests actuales de checkout con transporte para ver cuáles vas a borrar: `manage.py test apps.bookings -k transporte -v2`.
-- [ ] **Paso 2:** quitar el serializer anidado y todo su wiring. `_sacar_extras_y_transporte` pasa a devolver solo extras.
-- [ ] **Paso 3:** borrar los tests de checkout-de-pesca-con-transporte (el flujo ya no existe). Dejar los de extras intactos.
-- [ ] **Paso 4:** `manage.py test apps.bookings` → verde.
-- [ ] **Paso 5:** commit `refactor(bookings): quita transporte del serializer de checkout de pesca`.
+- [x] **Paso 1:** correr los tests actuales de checkout con transporte para ver cuáles vas a borrar: `manage.py test apps.bookings -k transporte -v2`.
+- [x] **Paso 2:** quitar el serializer anidado y todo su wiring. `_sacar_extras_y_transporte` pasa a devolver solo extras.
+- [x] **Paso 3:** borrar los tests de checkout-de-pesca-con-transporte (el flujo ya no existe). Dejar los de extras intactos.
+- [x] **Paso 4:** `manage.py test apps.bookings` → verde.
+- [x] **Paso 5:** commit `refactor(bookings): quita transporte del serializer de checkout de pesca`.
 
 ### Tarea 0.3 — Quitar `cargo_por_transporte` de `pricing.py`
 
@@ -169,11 +169,11 @@ en producción (prelanzamiento), el borrado es limpio.
 - Modify: `backend/apps/payments/views.py` / donde `CrearPagoView` sume el transporte (quitar esa rama)
 - Test: `backend/apps/payments/tests.py` (quitar tests de `cargo_por_transporte` y del total-con-transporte)
 
-- [ ] **Paso 1:** `grep -rn "cargo_por_transporte\|\.transporte\b\|ReservaTransporte" backend/apps/payments/`.
-- [ ] **Paso 2:** quitar la función y su uso en el cálculo del total. El total de una reserva de pesca ya no incluye transporte.
-- [ ] **Paso 3:** ajustar `_verificar_monto` si menciona transporte.
-- [ ] **Paso 4:** `manage.py test apps.payments` → verde.
-- [ ] **Paso 5:** commit `refactor(payments): quita cargo_por_transporte`.
+- [x] **Paso 1:** `grep -rn "cargo_por_transporte\|\.transporte\b\|ReservaTransporte" backend/apps/payments/`.
+- [x] **Paso 2:** quitar la función y su uso en el cálculo del total. El total de una reserva de pesca ya no incluye transporte.
+- [x] **Paso 3:** ajustar `_verificar_monto` si menciona transporte.
+- [x] **Paso 4:** `manage.py test apps.payments` → verde.
+- [x] **Paso 5:** commit `refactor(payments): quita cargo_por_transporte`.
 
 ### Tarea 0.4 — Borrar el inline de admin y el modelo `ReservaTransporte`
 
@@ -184,11 +184,11 @@ en producción (prelanzamiento), el borrado es limpio.
 - Modify: `backend/apps/bookings/tests.py` (quitar tests que instancien `ReservaTransporte`)
 - Modify: `backend/apps/tenancy/tests_rls.py` (quitar `bookings_reservatransporte` de la whitelist del guardarraíl)
 
-- [ ] **Paso 1:** `grep -rn "ReservaTransporte" backend/` — confirmar que solo quedan admin, models, migración vieja, tests.
-- [ ] **Paso 2:** quitar del admin, borrar el modelo, `makemigrations bookings`.
-- [ ] **Paso 3:** revisar la migración generada: que sea `DeleteModel` limpio; añadir a mano el `DROP POLICY` si aplica.
-- [ ] **Paso 4:** `migrate` en sqlite; Gate de sección lo prueba en Postgres.
-- [ ] **Paso 5:** commit `refactor(bookings): elimina el modelo ReservaTransporte`.
+- [x] **Paso 1:** `grep -rn "ReservaTransporte" backend/` — confirmar que solo quedan admin, models, migración vieja, tests.
+- [x] **Paso 2:** quitar del admin, borrar el modelo, `makemigrations bookings`.
+- [x] **Paso 3:** revisar la migración generada: que sea `DeleteModel` limpio; añadir a mano el `DROP POLICY` si aplica.
+- [x] **Paso 4:** `migrate` en sqlite; Gate de sección lo prueba en Postgres.
+- [x] **Paso 5:** commit `refactor(bookings): elimina el modelo ReservaTransporte`.
 
 ### Tarea 0.5 — Borrar `TransportePrecio`
 
@@ -200,19 +200,19 @@ en producción (prelanzamiento), el borrado es limpio.
 - Modify: `backend/config/settings/base.py` (`UNFOLD['SIDEBAR']` — quitar el link a `TransportePrecio`; **cuidado**: un link mal escrito tumba el admin entero)
 - Modify: `backend/apps/fleet/tests.py`, `backend/apps/tenancy/tests_rls.py` (whitelist)
 
-- [ ] **Paso 1:** `grep -rn "TransportePrecio" backend/`.
-- [ ] **Paso 2:** reubicar `Zona` (queda como `class Zona(models.TextChoices)` a nivel de módulo en `fleet/models.py` o en `fleet/enums.py`).
-- [ ] **Paso 3:** borrar modelo + admin + link del SIDEBAR. `makemigrations fleet`.
-- [ ] **Paso 4:** `migrate` sqlite.
-- [ ] **Paso 5:** commit `refactor(fleet): elimina TransportePrecio (lo reemplaza TransporteTarifa)`.
+- [x] **Paso 1:** `grep -rn "TransportePrecio" backend/`.
+- [x] **Paso 2:** reubicar `Zona` (queda como `class Zona(models.TextChoices)` a nivel de módulo en `fleet/models.py` o en `fleet/enums.py`).
+- [x] **Paso 3:** borrar modelo + admin + link del SIDEBAR. `makemigrations fleet`.
+- [x] **Paso 4:** `migrate` sqlite.
+- [x] **Paso 5:** commit `refactor(fleet): elimina TransportePrecio (lo reemplaza TransporteTarifa)`.
 
 ### Gate Sección 0
 
-- [ ] `manage.py test apps config` verde en **sqlite Y Postgres** (drop antes).
-- [ ] `check --deploy --fail-level WARNING` con `config.settings.production` + env de relleno.
-- [ ] Frontend `lint` · `tsc --noEmit` · `build` verdes.
-- [ ] `grep -rn "ReservaTransporte\|TransportePrecio\|cargo_por_transporte" backend/ frontend/src/` → **cero** (salvo migraciones históricas anteriores a las de borrado).
-- [ ] Commit `docs(plan): SP1 Sección 0 cerrada`. **PARA y reporta.**
+- [x] `manage.py test apps config` verde en **sqlite Y Postgres** (drop antes).
+- [x] `check --deploy --fail-level WARNING` con `config.settings.production` + env de relleno.
+- [x] Frontend `lint` · `tsc --noEmit` · `build` verdes.
+- [x] `grep -rn "ReservaTransporte\|TransportePrecio\|cargo_por_transporte" backend/ frontend/src/` → **cero** (salvo migraciones históricas anteriores a las de borrado).
+- [x] Commit `docs(plan): SP1 Sección 0 cerrada`. **PARA y reporta.**
 
 ---
 
