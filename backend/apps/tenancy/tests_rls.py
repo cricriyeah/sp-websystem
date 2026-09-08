@@ -93,7 +93,6 @@ class RLSTests(TransactionTestCase):
             # 2. Tablas secundarias que llegan a empresa vía FK (sin columna empresa_id propia)
             whitelist_via_fk = {
                 'bookings_reservaextra',
-                'bookings_reservatransporte',
                 'fleet_serviciopersonalizacion',
                 'fleet_paqueteservicio',
                 'bookings_reservapaquetepersonalizacion',

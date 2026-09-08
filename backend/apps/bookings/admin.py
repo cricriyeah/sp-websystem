@@ -35,7 +35,6 @@ from .models import (
     ReservaExtra,
     ReservaOcupacion,
     ReservaPaqueteComponente,
-    ReservaTransporte,
     Vendedora,
 )
 from .panorama import armar_panorama
@@ -190,22 +189,6 @@ class ReservaExtraInline(admin.TabularInline):
         return obj.subtotal if obj.subtotal is not None else '—'
 
 
-class ReservaTransporteInline(admin.StackedInline):
-    model = ReservaTransporte
-    extra = 0
-    fields = [
-        'punto_encuentro', 'direccion_personalizada', 'zona',
-        'personas_solicitadas', 'numero_personas', 'precio_calculado',
-    ]
-    readonly_fields = fields
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
 class ReservaOcupacionInline(admin.TabularInline):
     model = ReservaOcupacion
     extra = 0
@@ -292,7 +275,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
-    inlines = [ReservaExtraInline, ReservaTransporteInline, ReservaOcupacionInline, ReservaPaqueteComponenteInline]
+    inlines = [ReservaExtraInline, ReservaOcupacionInline, ReservaPaqueteComponenteInline]
     # El deslinde es el registro legal de lo que acepto el cliente: se consulta,
     # no se edita (ver docs/contexto-negocio.md, seccion Legal). Las fechas y los
     # montos del cobro los sella el sistema desde Stripe: editarlos a mano
@@ -314,9 +297,9 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
 
     def get_queryset(self, request):
         # `vendedora` sale en el listado: sin esto es una consulta por fila.
-        # `extras_seleccionados`/`transporte` los lee la columna `extras()`, mismo motivo.
+        # `extras_seleccionados` los lee la columna `extras()`, mismo motivo.
         return super().get_queryset(request).select_related('vendedora__usuario').prefetch_related(
-            'extras_seleccionados__extras_item', 'transporte'
+            'extras_seleccionados__extras_item'
         )
 
     class Media:
@@ -331,8 +314,6 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         agente se marca en naranja: son las que le faltan por resolver antes
         del viaje."""
         partes = [item.extras_item.nombre for item in obj.extras_seleccionados.all()]
-        if hasattr(obj, 'transporte'):
-            partes.append('transporte')
         if not obj.tiene_cotizaciones_pendientes:
             return ', '.join(partes) or '—'
 

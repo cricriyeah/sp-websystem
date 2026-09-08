@@ -22,7 +22,6 @@ from apps.bookings.models import (
     ReservaExtra,
     ReservaOcupacion,
     ReservaPaqueteComponente,
-    ReservaTransporte,
 )
 from apps.fleet.models import (
     CodigoPromocional,

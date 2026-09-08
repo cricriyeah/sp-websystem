@@ -61,13 +61,7 @@ def _cuerpo_html(reserva):
         for extra in (reserva.extras_seleccionados.select_related('extras_item') if reserva.pk else [])
     )
 
-    # El punto de encuentro real si compro traslado; si no, el general.
-    transporte = reserva.transporte if reserva.pk and hasattr(reserva, 'transporte') else None
-    if transporte:
-        lugar = transporte.punto_encuentro.nombre if transporte.punto_encuentro else transporte.direccion_personalizada
-        punto_de_encuentro = f'{_html(lugar)} (incluye tu traslado, ya pagado)'
-    else:
-        punto_de_encuentro = PUNTO_DE_ENCUENTRO
+    punto_de_encuentro = PUNTO_DE_ENCUENTRO
 
     # Aviso explicito: si el cliente cree que algo ya esta pagado sin estarlo,
     # el problema aparece el dia del viaje.

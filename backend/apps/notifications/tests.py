@@ -11,7 +11,7 @@ from unittest import mock
 import requests
 from django.test import override_settings
 
-from apps.bookings.models import Reserva, ReservaExtra, ReservaTransporte
+from apps.bookings.models import Reserva, ReservaExtra
 from apps.fleet.models import Capitan, Embarcacion, ExtrasItem, PuntoEncuentro
 from apps.testing import EmpresaTestCase, crear_flota
 
@@ -43,7 +43,7 @@ def crear_reserva(empresa):
 
 def crear_reserva_guardada(empresa, **overrides):
     """A diferencia de `crear_reserva()`, esta si queda en la base: hace falta
-    tener `pk` para poder colgarle `ReservaExtra`/`ReservaTransporte`."""
+    tener `pk` para poder colgarle `ReservaExtra`."""
     crear_flota(empresa)
     datos = dict(
         empresa=empresa, fecha=date.today() + timedelta(days=10), hora=time(6, 0), numero_personas=2,
@@ -275,7 +275,7 @@ class ExtrasEnElCorreoTests(EmpresaTestCase):
     porque el guard de llaves vacias corta antes de llegar a ella."""
 
     @mock.patch('apps.notifications.services.requests.post')
-    def test_lista_brunch_licencia_carnada_y_transporte_pagado(self, post):
+    def test_lista_brunch_licencia_y_carnada_pagados(self, post):
         reserva = crear_reserva_guardada(self.empresa)
         for tipo, nombre in (('brunch', 'Brunch'), ('licencia', 'Licencia'), ('carnada', 'Carnada')):
             item = ExtrasItem.objects.create(
@@ -283,11 +283,6 @@ class ExtrasEnElCorreoTests(EmpresaTestCase):
             ReservaExtra.objects.create(
                 reserva=reserva, extras_item=item, precio_unitario=Decimal('300'), cantidad=2,
             )
-        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
-        ReservaTransporte.objects.create(
-            reserva=reserva, punto_encuentro=hotel, zona='centro',
-            numero_personas=2, precio_calculado=Decimal('2000'),
-        )
 
         self.assertTrue(enviar_correo_confirmacion(reserva))
 
@@ -295,8 +290,6 @@ class ExtrasEnElCorreoTests(EmpresaTestCase):
         self.assertIn('Brunch', html)
         self.assertIn('Licencia', html)
         self.assertIn('Carnada', html)
-        self.assertIn('Hotel CostaBaja', html)
-        self.assertIn('ya pagado', html)
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_reserva_sin_extras_no_muestra_nada_de_mas(self, post):

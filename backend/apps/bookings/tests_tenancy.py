@@ -37,7 +37,6 @@ from .models import (
     CupoDiario,
     Reserva,
     ReservaExtra,
-    ReservaTransporte,
     Vendedora,
     evaluar_codigo_promocional,
     evaluar_cupo,
@@ -199,7 +198,7 @@ class ConsistenciaEmpresaReservaTests(OperadorTestCase):
             reserva.full_clean()
 
 
-class ConsistenciaEmpresaExtrasTransporteTests(OperadorTestCase):
+class ConsistenciaEmpresaExtrasTests(OperadorTestCase):
     def test_extra_de_otra_empresa_no_se_puede_asociar(self):
         empresa_a = crear_empresa(slug='empresa-a6', nombre='A6')
         empresa_b = crear_empresa(slug='empresa-b6', nombre='B6')
@@ -211,18 +210,6 @@ class ConsistenciaEmpresaExtrasTransporteTests(OperadorTestCase):
         extra = ReservaExtra(reserva=reserva, extras_item=extra_b)
         with self.assertRaises(ValidationError):
             extra.full_clean()
-
-    def test_punto_encuentro_de_otra_empresa_no_se_puede_asociar(self):
-        empresa_a = crear_empresa(slug='empresa-a7', nombre='A7')
-        empresa_b = crear_empresa(slug='empresa-b7', nombre='B7')
-        punto_b = PuntoEncuentro.objects.create(
-            empresa=empresa_b, nombre='Hotel X', zona=TransportePrecio.Zona.CENTRO, activo=True,
-        )
-        reserva = Reserva.objects.create(**datos_reserva(empresa_a))
-
-        transporte = ReservaTransporte(reserva=reserva, punto_encuentro=punto_b, zona=punto_b.zona)
-        with self.assertRaises(ValidationError):
-            transporte.full_clean(exclude=['reserva'])
 
 
 class AdminScopingTests(OperadorTestCase):

@@ -41,7 +41,6 @@ from .models import (
     CheckoutAbandonado,
     CupoDiario,
     Reserva,
-    ReservaTransporte,
     Vendedora,
 )
 
@@ -786,42 +785,6 @@ class ExtrasApiTests(ApiTestCase):
         self.assertEqual(
             reserva.extras_seleccionados.get(extras_item=licencia).cantidad_solicitada, 4,
         )
-
-
-class ReservaTransporteCleanTests(EmpresaTestCase):
-    def setUp(self):
-        self.reserva = crear_reserva(self.empresa)
-
-    def test_rechaza_los_dos_vacios(self):
-        transporte = ReservaTransporte(reserva=self.reserva, zona='centro')
-        with self.assertRaises(ValidationError):
-            transporte.clean()
-
-    def test_rechaza_los_dos_con_valor(self):
-        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
-        transporte = ReservaTransporte(
-            reserva=self.reserva, punto_encuentro=hotel,
-            direccion_personalizada='Malecon 123', zona='centro',
-        )
-        with self.assertRaises(ValidationError):
-            transporte.clean()
-
-    def test_rechaza_zona_que_no_coincide_con_el_punto_de_encuentro(self):
-        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
-        transporte = ReservaTransporte(reserva=self.reserva, punto_encuentro=hotel, zona='periferia')
-        with self.assertRaises(ValidationError):
-            transporte.clean()
-
-    def test_acepta_punto_de_encuentro_con_su_propia_zona(self):
-        hotel = PuntoEncuentro.objects.create(empresa=self.empresa, nombre='Hotel CostaBaja', zona='centro')
-        transporte = ReservaTransporte(reserva=self.reserva, punto_encuentro=hotel, zona='centro')
-        transporte.clean()
-
-    def test_acepta_direccion_personalizada_con_zona_elegida(self):
-        transporte = ReservaTransporte(
-            reserva=self.reserva, direccion_personalizada='Malecon 123', zona='periferia',
-        )
-        transporte.clean()
 
 
 class AtribucionDeVentaTests(ApiTestCase):

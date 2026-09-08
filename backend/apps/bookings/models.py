@@ -12,8 +12,6 @@ from apps.fleet.models import (
     CodigoPromocional,
     Embarcacion,
     ExtrasItem,
-    PuntoEncuentro,
-    TransportePrecio,
     capacidades_disponibles,
     capacidades_por_fecha,
 )
@@ -530,8 +528,8 @@ class Reserva(models.Model):
     # verlo: una reserva en disputa no se toca hasta que Stripe resuelva.
     en_disputa = models.BooleanField(default=False, verbose_name='en disputa')
 
-    # Brunch, licencia, carnada y transporte se venden con precio congelado
-    # solo por el checkout web (ver ReservaExtra/ReservaTransporte mas abajo,
+    # Brunch, licencia y carnada se venden con precio congelado
+    # solo por el checkout web (ver ReservaExtra mas abajo,
     # y CrearPagoView, que es quien los escribe). Bebidas sigue sin precio en
     # linea: depende del tipo de bebida, no de algo que el catalogo resuelva.
     pide_bebidas = models.BooleanField(default=False, verbose_name='bebidas (a cotizar)')
@@ -954,68 +952,6 @@ class ReservaExtra(models.Model):
                 })
 
     def _reserva_o_ninguna(self):
-        try:
-            return self.reserva
-        except Reserva.DoesNotExist:
-            return None
-
-
-class ReservaTransporte(models.Model):
-    """El traslado que el cliente eligio para esta reserva, si eligio uno.
-
-    `zona` es un snapshot explicito (viene del `punto_encuentro` o la elige
-    el cliente en "otra direccion"), pero cuando viene de un hotel del
-    catalogo NUNCA se confia la que mande el cliente: se deriva de
-    `punto_encuentro.zona` en el serializer, y `clean()` lo hace cumplir
-    tambien aqui — si no, alguien podria elegir un hotel de centro y mandar
-    `zona=periferia` para pagar el precio de la zona mas barata.
-
-    `numero_personas`/`precio_calculado` quedan en null hasta que se paga,
-    igual que en `ReservaExtra` — mismo dueno unico del precio, `CrearPagoView`.
-    """
-
-    reserva = models.OneToOneField(Reserva, on_delete=models.CASCADE, related_name='transporte')
-    punto_encuentro = models.ForeignKey(
-        PuntoEncuentro, on_delete=models.PROTECT, null=True, blank=True,
-    )
-    direccion_personalizada = models.CharField(max_length=255, blank=True)
-    zona = models.CharField(max_length=10, choices=TransportePrecio.Zona.choices)
-    # Cuantas personas del grupo eligio el cliente que usan el transporte. Null =
-    # todo el grupo (comportamiento de siempre). El congelado real, `numero_personas`,
-    # lo sigue poniendo solo CrearPagoView.
-    personas_solicitadas = models.PositiveSmallIntegerField(null=True, blank=True)
-    numero_personas = models.PositiveSmallIntegerField(null=True, blank=True)
-    precio_calculado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    class Meta:
-        verbose_name = 'transporte de la reserva'
-        verbose_name_plural = 'transportes de reserva'
-
-    def __str__(self):
-        return f'Transporte de la reserva {self.reserva_id} ({self.get_zona_display()})'
-
-    def clean(self):
-        if bool(self.punto_encuentro_id) == bool(self.direccion_personalizada):
-            raise ValidationError(
-                'Elige un punto de encuentro del catalogo o escribe una direccion, no los dos ni ninguno.'
-            )
-        if self.punto_encuentro_id and self.zona != self.punto_encuentro.zona:
-            raise ValidationError({
-                'zona': 'La zona no coincide con la del punto de encuentro elegido.',
-            })
-        if self.punto_encuentro_id:
-            reserva = self._reserva_o_ninguna()
-            if reserva is not None and self.punto_encuentro.empresa_id != reserva.empresa_id:
-                raise ValidationError({
-                    'punto_encuentro': 'Ese punto de encuentro pertenece a otra Empresa.',
-                })
-
-    def _reserva_o_ninguna(self):
-        """`self.reserva` puede no ser resoluble todavia: en el checkout,
-        clean() corre con `exclude=['reserva']` ANTES de que la Reserva tenga
-        pk (ver ReservaCheckoutSerializer._guardar). El objeto sigue
-        disponible via el descriptor cacheado del FK — no se re-resuelve por
-        self.reserva_id, que en ese momento es None."""
         try:
             return self.reserva
         except Reserva.DoesNotExist:
