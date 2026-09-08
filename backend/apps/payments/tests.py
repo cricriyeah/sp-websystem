@@ -31,7 +31,6 @@ from apps.fleet.models import (
     Recurso,
     Servicio,
     Tarifa,
-    TransportePrecio,
 )
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede

@@ -24,3 +24,9 @@ class EstrategiaPrecio(models.TextChoices):
 class ModoOcupacion(models.TextChoices):
     EXCLUSIVO = 'exclusivo', 'Exclusivo'
     COMPARTIDO = 'compartido', 'Compartido'
+
+
+class Zona(models.TextChoices):
+    CENTRO = 'centro', 'Centro'
+    PERIFERIA = 'periferia', 'Periferia'
+

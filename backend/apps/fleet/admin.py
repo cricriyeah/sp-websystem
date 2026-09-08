@@ -18,7 +18,6 @@ from .models import (
     Servicio,
     ServicioPersonalizacion,
     Tarifa,
-    TransportePrecio,
 )
 
 
@@ -59,15 +58,6 @@ class ExtrasItemAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_filter = ['tipo', 'activo']
     list_editable = ['precio', 'precio_usd', 'cantidad_editable', 'activo']
     search_fields = ['nombre']
-
-
-@admin.register(TransportePrecio)
-class TransportePrecioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
-    list_display = [
-        'zona', 'precio_base', 'precio_base_usd', 'recargo_grupo', 'recargo_grupo_usd',
-        'min_personas_recargo', 'activo',
-    ]
-    list_editable = ['precio_base', 'precio_base_usd', 'recargo_grupo', 'recargo_grupo_usd', 'activo']
 
 
 @admin.register(PuntoEncuentro)

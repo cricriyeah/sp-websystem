@@ -13,7 +13,6 @@ from .models import (
     Servicio,
     ServicioPersonalizacion,
     Tarifa,
-    TransportePrecio,
 )
 
 
@@ -62,26 +61,6 @@ class ExtrasItemSerializer(serializers.ModelSerializer):
         return str(monto) if monto is not None else None
 
 
-class TransportePrecioSerializer(serializers.ModelSerializer):
-    """Igual que ExtrasItemSerializer: `monto` ya trae base + recargo (si
-    aplica) resuelto para `(personas, moneda)`."""
-
-    monto = serializers.SerializerMethodField()
-
-    class Meta:
-        model = TransportePrecio
-        fields = ['zona', 'min_personas_recargo', 'monto']
-
-    def get_monto(self, obj):
-        moneda = self.context['moneda']
-        precio_base = obj.precio_en(moneda)
-        if precio_base is None:
-            return None
-        recargo = obj.recargo_en(moneda)
-        cargo = Decimal(precio_base)
-        if self.context['personas'] >= obj.min_personas_recargo:
-            cargo += Decimal(recargo or 0)
-        return str(cargo)
 
 
 class PuntoEncuentroSerializer(serializers.ModelSerializer):

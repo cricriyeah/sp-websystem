@@ -20,21 +20,16 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.fleet.models import ExtrasItem, PuntoEncuentro, TransportePrecio
+from apps.fleet.models import ExtrasItem, PuntoEncuentro
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa
 
-# Precios reales que dio el usuario (28 de agosto de 2026), de la persona
-# encargada de los transportes. Brunch, licencia y carnada quedan como
-# placeholder — el usuario los edita en el admin cuando tenga los precios
+# Precios reales que dio el usuario (28 de agosto de 2026). Brunch, licencia y carnada
+# quedan como placeholder — el usuario los edita en el admin cuando tenga los precios
 # reales (el de brunch era el que ya vivia en Tarifa.precio_lunch).
 PLACEHOLDER_BRUNCH = Decimal('300.00')
 PLACEHOLDER_LICENCIA = Decimal('450.00')
 PLACEHOLDER_CARNADA = Decimal('200.00')
-PRECIO_CENTRO = Decimal('2000.00')
-PRECIO_PERIFERIA = Decimal('1800.00')
-RECARGO_GRUPO = Decimal('1500.00')
-MIN_PERSONAS_RECARGO = 4
 
 
 class Command(BaseCommand):
@@ -83,26 +78,6 @@ class Command(BaseCommand):
                 defaults={
                     'precio': PLACEHOLDER_CARNADA, 'precio_usd': None,
                     'cobrar_por_persona': False, 'preseleccionado': True, 'activo': True,
-                },
-            )
-            creados += nuevo
-
-            _, nuevo = TransportePrecio.objects.get_or_create(
-                zona='centro', empresa=empresa,
-                defaults={
-                    'precio_base': PRECIO_CENTRO, 'precio_base_usd': None,
-                    'recargo_grupo': RECARGO_GRUPO, 'recargo_grupo_usd': None,
-                    'min_personas_recargo': MIN_PERSONAS_RECARGO, 'activo': True,
-                },
-            )
-            creados += nuevo
-
-            _, nuevo = TransportePrecio.objects.get_or_create(
-                zona='periferia', empresa=empresa,
-                defaults={
-                    'precio_base': PRECIO_PERIFERIA, 'precio_base_usd': None,
-                    'recargo_grupo': RECARGO_GRUPO, 'recargo_grupo_usd': None,
-                    'min_personas_recargo': MIN_PERSONAS_RECARGO, 'activo': True,
                 },
             )
             creados += nuevo

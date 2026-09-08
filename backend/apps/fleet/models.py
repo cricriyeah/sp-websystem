@@ -7,7 +7,13 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import IntegrityError, models, transaction
 
-from .enums import EstrategiaCupo, EstrategiaPrecio, ModoOcupacion, TipoServicio
+from .enums import (
+    EstrategiaCupo,
+    EstrategiaPrecio,
+    ModoOcupacion,
+    TipoServicio,
+    Zona,
+)
 
 
 class Tarifa(models.Model):
@@ -156,52 +162,12 @@ class ExtrasItem(models.Model):
         return self.precio if moneda == 'MXN' else self.precio_usd
 
 
-class TransportePrecio(models.Model):
-    """Precio de traslado por zona. Dos filas fijas: centro y periferia."""
-
-    class Zona(models.TextChoices):
-        CENTRO = 'centro', 'Centro'
-        PERIFERIA = 'periferia', 'Periferia'
-
-    zona = models.CharField(max_length=10, choices=Zona.choices)
-    precio_base = models.DecimalField(max_digits=10, decimal_places=2, help_text='Precio en pesos (MXN).')
-    precio_base_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Precio en dolares. Vacio = no se ofrece en USD.',
-    )
-    recargo_grupo = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0,
-        help_text='Se suma al precio base desde `min_personas_recargo` personas.',
-    )
-    recargo_grupo_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    min_personas_recargo = models.PositiveSmallIntegerField(default=4)
-    activo = models.BooleanField(default=True)
-    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='precios_transporte')
-
-    class Meta:
-        ordering = ['zona']
-        verbose_name = 'precio de transporte'
-        verbose_name_plural = 'precios de transporte'
-        constraints = [
-            models.UniqueConstraint(fields=['zona', 'empresa'], name='transporteprecio_zona_unica_por_empresa'),
-        ]
-
-    def __str__(self):
-        return f'Transporte {self.get_zona_display()}: ${self.precio_base} MXN'
-
-    def precio_en(self, moneda):
-        return self.precio_base if moneda == 'MXN' else self.precio_base_usd
-
-    def recargo_en(self, moneda):
-        return self.recargo_grupo if moneda == 'MXN' else self.recargo_grupo_usd
-
-
 class PuntoEncuentro(models.Model):
     """Catalogo de hoteles/hospedajes conocidos en La Paz, con su zona ya
     clasificada — evita depender de geocoding para una direccion libre."""
 
     nombre = models.CharField(max_length=150)
-    zona = models.CharField(max_length=10, choices=TransportePrecio.Zona.choices)
+    zona = models.CharField(max_length=10, choices=Zona.choices)
     activo = models.BooleanField(default=True)
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='puntos_encuentro')
 

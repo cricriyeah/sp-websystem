@@ -23,7 +23,6 @@ from apps.fleet.models import (
     Embarcacion,
     ExtrasItem,
     PuntoEncuentro,
-    TransportePrecio,
 )
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
 from apps.testing import OperadorTestCase, crear_flota

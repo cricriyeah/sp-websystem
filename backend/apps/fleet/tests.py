@@ -21,7 +21,6 @@ from .models import (
     ExtrasItem,
     PuntoEncuentro,
     Tarifa,
-    TransportePrecio,
     capacidades_disponibles,
     capacidades_por_fecha,
 )
@@ -195,18 +194,6 @@ class ExtrasItemTests(EmpresaTestCase):
         item.full_clean()
 
 
-class TransportePrecioTests(EmpresaTestCase):
-    def test_precio_y_recargo_por_moneda(self):
-        centro = TransportePrecio.objects.create(
-            zona='centro', precio_base=Decimal('2000'), precio_base_usd=Decimal('110'),
-            recargo_grupo=Decimal('1500'), recargo_grupo_usd=Decimal('85'), empresa=self.empresa,
-        )
-        self.assertEqual(centro.precio_en('MXN'), Decimal('2000'))
-        self.assertEqual(centro.precio_en('USD'), Decimal('110'))
-        self.assertEqual(centro.recargo_en('MXN'), Decimal('1500'))
-        self.assertEqual(centro.recargo_en('USD'), Decimal('85'))
-
-
 class UnicidadPorEmpresaTests(TransactionTestCase):
     """Aislamiento A/B con TransactionTestCase (un IntegrityError deja
     inutilizable la transaccion de un TestCase). Alcance por Empresa a mano."""
@@ -214,28 +201,6 @@ class UnicidadPorEmpresaTests(TransactionTestCase):
     def setUp(self):
         self.empresa_a = _crear_empresa(slug='empresa-a')
         self.empresa_b = _crear_empresa(slug='empresa-b')
-
-    def test_zona_de_transporte_repetida_en_la_misma_empresa_falla(self):
-        with scope.con_empresa(self.empresa_a):
-            TransportePrecio.objects.create(
-                zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
-            )
-            with self.assertRaises(IntegrityError):
-                TransportePrecio.objects.create(
-                    zona='centro', precio_base=Decimal('2100'), empresa=self.empresa_a,
-                )
-
-    def test_zona_de_transporte_repetida_entre_empresas_distintas_es_valida(self):
-        with scope.con_empresa(self.empresa_a):
-            TransportePrecio.objects.create(
-                zona='centro', precio_base=Decimal('2000'), empresa=self.empresa_a,
-            )
-        with scope.con_empresa(self.empresa_b):
-            TransportePrecio.objects.create(
-                zona='centro', precio_base=Decimal('1800'), empresa=self.empresa_b,
-            )
-        with scope.como_operador_plataforma():
-            self.assertEqual(TransportePrecio.objects.count(), 2)
 
     def test_codigo_promocional_repetido_en_la_misma_empresa_falla(self):
         with scope.con_empresa(self.empresa_a):
@@ -318,14 +283,6 @@ class ExtrasPublicosApiTests(ApiTestCase):
         body = self.client.get(f'/api/{self.empresa.slug}/extras/?moneda=USD').json()
         self.assertIsNone(body['extras'][0]['monto'])
 
-    def test_transporte_con_recargo_desde_el_minimo(self):
-        TransportePrecio.objects.create(
-            zona='centro', precio_base=Decimal('2000'), recargo_grupo=Decimal('1500'),
-            min_personas_recargo=4, empresa=self.empresa,
-        )
-        body = self.client.get(f'/api/{self.empresa.slug}/extras/?personas=4').json()
-        self.assertEqual(body['transporte'][0]['monto'], '3500.00')
-
     def test_puntos_de_encuentro_activos(self):
         PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro', empresa=self.empresa)
         PuntoEncuentro.objects.create(
@@ -350,7 +307,7 @@ class ExtrasPublicosApiTests(ApiTestCase):
     def test_defaults_sin_query_params(self):
         response = self.client.get(f'/api/{self.empresa.slug}/extras/')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'extras': [], 'transporte': [], 'puntos_encuentro': []})
+        self.assertEqual(response.json(), {'extras': [], 'puntos_encuentro': []})
 
     def test_empresa_inexistente_responde_404(self):
         self.assertEqual(self.client.get('/api/no-existe/extras/').status_code, 404)
@@ -505,7 +462,6 @@ class SeedExtrasTests(EmpresaTestCase):
     def test_siembra_el_catalogo_para_la_empresa_dada(self):
         call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
         self.assertEqual(ExtrasItem.objects.filter(empresa=self.empresa).count(), 3)
-        self.assertEqual(TransportePrecio.objects.filter(empresa=self.empresa).count(), 2)
         self.assertEqual(PuntoEncuentro.objects.filter(empresa=self.empresa).count(), 1)
 
     def test_es_idempotente(self):

@@ -43,12 +43,6 @@ export type ExtraCatalogo = {
 
 export type Zona = 'centro' | 'periferia';
 
-export type TransportePrecioCatalogo = {
-  zona: Zona;
-  min_personas_recargo: number;
-  monto: string | null;
-};
-
 export type PuntoEncuentro = {
   id: number;
   nombre: string;
@@ -57,7 +51,6 @@ export type PuntoEncuentro = {
 
 export type CatalogoExtras = {
   extras: ExtraCatalogo[];
-  transporte: TransportePrecioCatalogo[];
   puntos_encuentro: PuntoEncuentro[];
 };
 

@@ -5,14 +5,13 @@ from rest_framework.views import APIView
 from apps.tenancy import scope
 
 from .catalogo import paquete_de_sede, paquetes_de_sede, servicios_de_sede
-from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, Tarifa, TransportePrecio
+from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, Tarifa
 from .serializers import (
     ExtrasItemSerializer,
     PaqueteSerializer,
     PuntoEncuentroSerializer,
     ServicioSerializer,
     TarifaSerializer,
-    TransportePrecioSerializer,
 )
 
 # Tope defensivo del preview de precio, no una regla de negocio: el limite real
@@ -69,9 +68,6 @@ class ExtrasPublicosView(APIView):
             return Response({
                 'extras': ExtrasItemSerializer(
                     ExtrasItem.objects.filter(activo=True, empresa=empresa), many=True, context=contexto
-                ).data,
-                'transporte': TransportePrecioSerializer(
-                    TransportePrecio.objects.filter(activo=True, empresa=empresa), many=True, context=contexto
                 ).data,
                 'puntos_encuentro': PuntoEncuentroSerializer(
                     PuntoEncuentro.objects.filter(activo=True, empresa=empresa), many=True
