@@ -172,7 +172,7 @@ class PaquetesModelTests(OperadorTestCase):
             paquete=paquete,
             servicio=self.servicio_paseo,
         )
-        # La regla de suma de ajustes removibles ya no existe; clean() pasa
+        # Paquete cerrado: clean() pasa sin validar ajustes de componentes
         paquete.clean()
 
     def test_unicidad_paquete_servicio(self):

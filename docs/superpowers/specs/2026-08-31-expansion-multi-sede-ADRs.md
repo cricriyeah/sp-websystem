@@ -2,7 +2,7 @@
 
 Fecha: 2026-08-31 (Revisión 3 — Secciones 2-8 implementadas)
 Estado global: **ADR-001/002 ACEPTADOS; ADR-003 IMPLEMENTADO; ADR-004 IMPLEMENTADO
-(Revisión 3 pendiente, 2026-09-07); ADR-005 ACEPTADO (Revisión 2, 2026-09-07 — se
+(Revisión 3 ejecutada, 2026-09-07); ADR-005 ACEPTADO (Revisión 2, 2026-09-07 — se
 implementa como SP2 de transporte multi-empresa)**.
 Ver también `2026-09-06-ADR-005-paquetes-cruza-empresa.md` y
 `2026-09-07-transporte-multi-empresa-design.md`.
@@ -255,7 +255,7 @@ queda **fuera de v1** (mismo patrón de día completo que paseos por ahora).
 ## ADR-004: Precio como estrategias tipadas en código, sobre `pricing.py`
 
 Fecha: 2026-08-31 (Implementado: 2026-09-06 · **Revisión 3: 2026-09-07**)
-Estado: **IMPLEMENTADO** (con la Revisión 3 pendiente de ejecutar)
+Estado: **IMPLEMENTADO** (Revisión 3 ejecutada el 2026-09-07 — bundle cerrado sin servicios removibles)
 
 **Revisión 3 (2026-09-07) — el paquete es un bundle fijo, no se quitan servicios.**
 

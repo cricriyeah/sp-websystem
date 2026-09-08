@@ -418,3 +418,5 @@ admin y el shell:
 - `embarcacion`/`capitan` en `Reserva` son nullable a proposito: quedan vacios hasta que la
   vendedora asigna manualmente.
 - **Reactivación manual CANCELADA -> PAGADA**: si un admin cambia a mano el estado de una reserva de `CANCELADA` a `PAGADA`, `Reserva.save()` reactiva sus `ReservaOcupacion` (`ocupa_cupo=True`) sin re-validar cupo contra otras reservas que se hayan creado mientras estuvo cancelada. Es una deuda técnica conocida; no reactivar sin verificar disponibilidad manualmente.
+- **Paquetes turísticos**: en v1 (`ADR-004 Revisión 3`), un paquete agrupa servicios de una sola empresa (`empresa_lider`). Es un bundle cerrado con precio fijo: el cliente no puede retirar servicios (no existen "servicios removibles" ni resta de ajustes). El precio total vive en `pricing.py` (`precio_paquete_total`) y se calcula como `precio_ancla` fijo + Σ personalizaciones (preseleccionadas/obligatorias + opcionales marcadas). Al confirmar el pago, se reserva cupo para todos los servicios componentes del paquete y se generan sus `ReservaPaqueteComponente`.
+
