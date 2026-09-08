@@ -13,14 +13,11 @@ Que se cobra en linea y que no:
   por persona o plano segun `cobrar_por_persona`. El precio que se congela es
   siempre el vigente del catalogo al momento de pagar, nunca el que trae la
   reserva desde que se armo el checkout (ver `CrearPagoView`).
-- Transporte: precio de `fleet.TransportePrecio` por zona, mas recargo desde
-  `min_personas_recargo`. Se resuelve por zona (no por distancia real) porque
-  eso es lo unico que se sabe al reservar sin depender de geocoding.
 - Bebidas: **no se cobra en linea**. El precio depende del tipo de bebida, dato
   que no se sabe al reservar. Se registra como solicitud y el agente de ventas
   la cotiza aparte.
 - Codigo promocional: descuento porcentual sobre el subtotal de arriba (tour +
-  personas + extras + transporte), nunca sobre uno inventado por el cliente.
+  personas + extras), nunca sobre uno inventado por el cliente.
   El checkout solo manda el string del codigo; que exista, siga vigente y
   tenga usos disponibles se valida en `fleet.CodigoPromocional`/
   `apps.bookings.models.codigo_promocional_valido`, no aqui.
@@ -59,17 +56,6 @@ def cargo_por_extra(precio, cobrar_por_persona, numero_personas):
         return None
     cantidad = numero_personas if cobrar_por_persona else 1
     return Decimal(precio) * cantidad
-
-
-def cargo_por_transporte(precio_base, recargo_grupo, min_personas_recargo, numero_personas):
-    """precio_base/recargo_grupo ya resueltos en la moneda que toque (ver
-    TransportePrecio.precio_en/recargo_en). None si no hay precio base ahi."""
-    if precio_base is None:
-        return None
-    cargo = Decimal(precio_base)
-    if numero_personas >= min_personas_recargo:
-        cargo += Decimal(recargo_grupo or 0)
-    return cargo
 
 
 def cargo_por_descuento(precio_total, porcentaje_descuento):

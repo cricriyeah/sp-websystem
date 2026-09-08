@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.bookings.models import Reserva, codigo_promocional_valido, evaluar_codigo_promocional
-from apps.fleet.models import CodigoPromocional, Tarifa, TransportePrecio
+from apps.fleet.models import CodigoPromocional, Tarifa
 from apps.tenancy import scope
 
 from .estrategias_precio import DemandaPrecio, obtener_estrategia_precio
@@ -18,7 +18,6 @@ from .pricing import (
     cargo_por_descuento,
     cargo_por_extra,
     cargo_por_personas,
-    cargo_por_transporte,
     monto_inicial,
     personas_extra,
     precio_paquete_total,
@@ -111,21 +110,14 @@ class CrearPagoView(APIView):
 
         if reserva.paquete_id or (reserva.servicio_id and reserva.servicio.tipo_servicio != 'pesca'):
             cargo_extras, extras_a_borrar, extras_a_congelar = Decimal('0.00'), [], []
-            cargo_transporte, transporte_a_borrar, transporte_congelado = Decimal('0.00'), None, None
         else:
             cargo_extras, extras_a_borrar, extras_a_congelar, error = self._resolver_extras(reserva)
-            if error:
-                return Response({'detail': error}, status=503)
-            cargo_transporte, transporte_a_borrar, transporte_congelado, error = self._resolver_transporte(
-                reserva, empresa,
-            )
             if error:
                 return Response({'detail': error}, status=503)
 
         subtotal = (
             precio_base_servicio
             + cargo_extras
-            + cargo_transporte
         )
 
         codigo_promocional, descuento, error = self._resolver_codigo_promocional(
@@ -158,14 +150,6 @@ class CrearPagoView(APIView):
                 extra.precio_unitario = precio_unitario
                 extra.cantidad = cantidad
                 extra.save(update_fields=['precio_unitario', 'cantidad'])
-
-            if transporte_a_borrar is not None:
-                transporte_a_borrar.delete()
-            if transporte_congelado is not None:
-                transporte, precio_calculado, personas_congeladas = transporte_congelado
-                transporte.numero_personas = personas_congeladas
-                transporte.precio_calculado = precio_calculado
-                transporte.save(update_fields=['numero_personas', 'precio_calculado'])
 
             reserva.precio_total = precio_total
             reserva.forma_pago = forma_pago
@@ -209,39 +193,9 @@ class CrearPagoView(APIView):
             a_congelar.append((extra, precio, cantidad))
         return cargo_total, a_borrar, a_congelar, None
 
-    def _resolver_transporte(self, reserva, empresa):
-        """Mismo criterio que `_resolver_extras`, para el traslado (a lo mas
-        una fila por reserva). Devuelve (cargo, a_borrar_o_None,
-        congelado_o_None, error). `empresa=empresa` explicito: sin RLS
-        (sqlite/tests) nada mas evita que una zona con el mismo nombre de
-        otra Empresa congele el precio equivocado (N5)."""
-        if not hasattr(reserva, 'transporte'):
-            return 0, None, None, None
-
-        transporte = reserva.transporte
-        precio_zona = TransportePrecio.objects.filter(
-            zona=transporte.zona, activo=True, empresa=empresa,
-        ).first()
-        if precio_zona is None:
-            return 0, transporte, None, None
-
-        precio_base = precio_zona.precio_en(reserva.moneda)
-        recargo = precio_zona.recargo_en(reserva.moneda)
-        if precio_base is None:
-            return 0, None, None, f'No hay precio de transporte configurado en {reserva.moneda}.'
-
-        personas = reserva.numero_personas
-        if transporte.personas_solicitadas is not None:
-            personas = max(1, min(transporte.personas_solicitadas, reserva.numero_personas))
-
-        cargo = cargo_por_transporte(
-            precio_base, recargo, precio_zona.min_personas_recargo, personas
-        )
-        return cargo, None, (transporte, cargo, personas), None
-
     def _resolver_codigo_promocional(self, request, reserva, subtotal, empresa):
         """Resuelve el codigo (si vino uno) contra el SUBTOTAL real, con extras
-        y transporte ya incluidos. `empresa=empresa` explicito (N6): con
+        ya incluidos. `empresa=empresa` explicito (N6): con
         `codigo` ya no unico global, dos Empresas con el mismo codigo sin este
         filtro lanzarian `MultipleObjectsReturned` -> 500 en el checkout, no
         un 400 manejado; se captura explicitamente y se traduce igual que
@@ -365,7 +319,6 @@ class EstadoReservaView(APIView):
             return Response({'estado': 'cancelada'})
 
         if reserva.estado in self.ESTADOS_PAGADA:
-            transporte = getattr(reserva, 'transporte', None)
             return Response({
                 'estado': 'pagada',
                 'reserva_id': reserva.id,
@@ -387,11 +340,6 @@ class EstadoReservaView(APIView):
                     }
                     for extra in reserva.extras_seleccionados.select_related('extras_item').all()
                 ],
-                'transporte': (
-                    {'monto': str(transporte.precio_calculado), 'numero_personas': transporte.numero_personas}
-                    if transporte is not None and transporte.precio_calculado is not None
-                    else None
-                ),
                 'codigo_promocional': (
                     reserva.codigo_promocional.codigo if reserva.codigo_promocional_id else None
                 ),
@@ -400,7 +348,6 @@ class EstadoReservaView(APIView):
                 ),
             })
 
-        transporte = getattr(reserva, 'transporte', None)
         return Response({
             'estado': 'pendiente_pago',
             'reserva_id': reserva.id,
@@ -416,12 +363,6 @@ class EstadoReservaView(APIView):
                 {'id': extra.extras_item_id, 'cantidad': extra.cantidad_solicitada}
                 for extra in reserva.extras_seleccionados.all()
             ],
-            'transporte': {
-                'punto_encuentro': transporte.punto_encuentro_id,
-                'direccion_personalizada': transporte.direccion_personalizada,
-                'zona': transporte.zona,
-                'cantidad': transporte.personas_solicitadas,
-            } if transporte else None,
         })
 
 

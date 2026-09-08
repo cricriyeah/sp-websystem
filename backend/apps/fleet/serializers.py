@@ -1,6 +1,7 @@
+from decimal import Decimal
 from rest_framework import serializers
 
-from apps.payments.pricing import PERSONAS_INCLUIDAS, cargo_por_extra, cargo_por_transporte
+from apps.payments.pricing import PERSONAS_INCLUIDAS, cargo_por_extra
 
 from .models import (
     ExtrasItem,
@@ -73,11 +74,14 @@ class TransportePrecioSerializer(serializers.ModelSerializer):
 
     def get_monto(self, obj):
         moneda = self.context['moneda']
-        monto = cargo_por_transporte(
-            obj.precio_en(moneda), obj.recargo_en(moneda), obj.min_personas_recargo,
-            self.context['personas'],
-        )
-        return str(monto) if monto is not None else None
+        precio_base = obj.precio_en(moneda)
+        if precio_base is None:
+            return None
+        recargo = obj.recargo_en(moneda)
+        cargo = Decimal(precio_base)
+        if self.context['personas'] >= obj.min_personas_recargo:
+            cargo += Decimal(recargo or 0)
+        return str(cargo)
 
 
 class PuntoEncuentroSerializer(serializers.ModelSerializer):
