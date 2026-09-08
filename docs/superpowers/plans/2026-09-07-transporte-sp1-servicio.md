@@ -261,11 +261,11 @@ en producción (prelanzamiento), el borrado es limpio.
   ```
 - Test: `backend/apps/fleet/tests.py::TransporteTarifaTest`
 
-- [ ] **Paso 1: test que falla** — crear tarifa `redondo_actividad` sin zona → `ValidationError` (CheckConstraint); `recepcion_aeropuerto` con zona → `ValidationError`; `personas_max < personas_min` → `ValidationError`; `precio_en('USD')` con `precio_usd=None` → `None`.
-- [ ] **Paso 2:** correr → falla (modelo no existe).
-- [ ] **Paso 3:** añadir enum + modelo. `makemigrations fleet`.
-- [ ] **Paso 4:** correr → verde (sqlite; el CheckConstraint real se prueba en Postgres en el Gate).
-- [ ] **Paso 5:** commit `feat(fleet): modelo TransporteTarifa (catálogo de precios de traslado)`.
+- [x] **Paso 1: test que falla** — crear tarifa `redondo_actividad` sin zona → `ValidationError` (CheckConstraint); `recepcion_aeropuerto` con zona → `ValidationError`; `personas_max < personas_min` → `ValidationError`; `precio_en('USD')` con `precio_usd=None` → `None`.
+- [x] **Paso 2:** correr → falla (modelo no existe).
+- [x] **Paso 3:** añadir enum + modelo. `makemigrations fleet`.
+- [x] **Paso 4:** correr → verde (sqlite; el CheckConstraint real se prueba en Postgres en el Gate).
+- [x] **Paso 5:** commit `feat(fleet): modelo TransporteTarifa (catálogo de precios de traslado)`.
 
 ### Tarea 1.2 — Migración RLS de `TransporteTarifa`
 
@@ -274,11 +274,11 @@ en producción (prelanzamiento), el borrado es limpio.
 - Modify: `backend/apps/tenancy/tests_rls.py` — añadir `fleet_transportetarifa` a la query/whitelist del guardarraíl (Tarea 8.6 del plan de corrección).
 - Test: `backend/apps/fleet/tests.py` — test `# postgres-only`: crear 2 empresas, una tarifa cada una, `scope.con_empresa(e1)` solo ve la suya.
 
-- [ ] **Paso 1: test que falla** (postgres-only) — aislamiento de `TransporteTarifa` por empresa.
-- [ ] **Paso 2:** correr contra Postgres → falla (sin política).
-- [ ] **Paso 3:** escribir la migración RLS.
-- [ ] **Paso 4:** correr contra Postgres → verde.
-- [ ] **Paso 5:** commit `feat(fleet): política RLS para TransporteTarifa`.
+- [x] **Paso 1: test que falla** (postgres-only) — aislamiento de `TransporteTarifa` por empresa.
+- [x] **Paso 2:** correr contra Postgres → falla (sin política).
+- [x] **Paso 3:** escribir la migración RLS.
+- [x] **Paso 4:** correr contra Postgres → verde.
+- [x] **Paso 5:** commit `feat(fleet): política RLS para TransporteTarifa`.
 
 ### Tarea 1.3 — `resolver_tarifa_transporte` (función pura)
 
@@ -314,11 +314,11 @@ en producción (prelanzamiento), el borrado es limpio.
   ```
 - Test: `backend/apps/fleet/tests.py::ResolverTarifaTransporteTest`
 
-- [ ] **Paso 1: test que falla** — con las 5 filas de ejemplo del spec §3.1: `redondo_aeropuerto`+4 personas → fila $4500; +5 → $6000; +14 → $6000; `redondo_actividad`+centro → $1500; +periferia → $1800; `recepcion_aeropuerto` → $2700 para cualquier tamaño; tipo sin fila → `TarifaTransporteNoConfigurada`.
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** escribir la función.
-- [ ] **Paso 4:** correr → verde.
-- [ ] **Paso 5:** commit `feat(fleet): resolver_tarifa_transporte (elige la fila de tarifa)`.
+- [x] **Paso 1: test que falla** — con las 5 filas de ejemplo del spec §3.1: `redondo_aeropuerto`+4 personas → fila $4500; +5 → $6000; +14 → $6000; `redondo_actividad`+centro → $1500; +periferia → $1800; `recepcion_aeropuerto` → $2700 para cualquier tamaño; tipo sin fila → `TarifaTransporteNoConfigurada`.
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** escribir la función.
+- [x] **Paso 4:** correr → verde.
+- [x] **Paso 5:** commit `feat(fleet): resolver_tarifa_transporte (elige la fila de tarifa)`.
 
 ### Tarea 1.4 — `TransporteTarifaAdmin` + SIDEBAR
 
@@ -328,18 +328,18 @@ en producción (prelanzamiento), el borrado es limpio.
 - Modify: `backend/config/settings/base.py` — `UNFOLD['SIDEBAR']`: añadir `TransporteTarifa` en el grupo del catálogo. **Verificar el string exacto del modelo** (`fleet.transportetarifa`) para no tumbar el admin.
 - Test: `backend/apps/fleet/tests.py` — la vendedora recibe 403 en `/admin/fleet/transportetarifa/`; el jefe de la Empresa 2 la ve; el jefe de la Empresa 1 no ve filas de la Empresa 2.
 
-- [ ] **Paso 1: test que falla** — permisos del admin de `TransporteTarifa`.
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** registrar el admin, ajustar SIDEBAR, `setup_roles`.
-- [ ] **Paso 4:** correr → verde; abrir `/admin/` con runserver y confirmar que no reventó (revisión rápida del propio agente, no del dueño).
-- [ ] **Paso 5:** commit `feat(fleet): admin de TransporteTarifa (solo jefes)`.
+- [x] **Paso 1: test que falla** — permisos del admin de `TransporteTarifa`.
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** registrar el admin, ajustar SIDEBAR, `setup_roles`.
+- [x] **Paso 4:** correr → verde; abrir `/admin/` con runserver y confirmar que no reventó (revisión rápida del propio agente, no del dueño).
+- [x] **Paso 5:** commit `feat(fleet): admin de TransporteTarifa (solo jefes)`.
 
 ### Gate Sección 1
 
-- [ ] Suite verde sqlite + Postgres (drop antes).
-- [ ] `check --deploy` verde.
-- [ ] El guardarraíl de RLS (`tenancy/tests_rls.py`) pasa con `TransporteTarifa` dentro.
-- [ ] Commit `docs(plan): SP1 Sección 1 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres (drop antes).
+- [x] `check --deploy` verde.
+- [x] El guardarraíl de RLS (`tenancy/tests_rls.py`) pasa con `TransporteTarifa` dentro.
+- [x] Commit `docs(plan): SP1 Sección 1 cerrada`. **PARA y reporta.**
 
 ---
 
