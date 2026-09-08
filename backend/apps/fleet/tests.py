@@ -2,9 +2,12 @@ from datetime import date, timedelta
 from decimal import Decimal
 from io import StringIO
 
+from unittest import skipUnless
+
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 from django.db.utils import IntegrityError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
@@ -530,3 +533,35 @@ class TransporteTarifaTest(EmpresaTestCase):
         tarifa.full_clean()
         self.assertEqual(tarifa.precio_en('MXN'), Decimal('4500.00'))
         self.assertIsNone(tarifa.precio_en('USD'))
+
+
+@skipUnless(connection.vendor == 'postgresql', 'RLS solo aplica en Postgres')
+class TransporteTarifaRLSTests(TransactionTestCase):
+    def setUp(self):
+        self.empresa_a = _crear_empresa(slug='rls-transporte-a')
+        self.empresa_b = _crear_empresa(slug='rls-transporte-b')
+
+    def test_aislamiento_de_transportetarifa_por_empresa(self):
+        with scope.con_empresa(self.empresa_a):
+            TransporteTarifa.objects.create(
+                empresa=self.empresa_a,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                personas_min=1,
+                personas_max=4,
+                precio=Decimal('4500.00'),
+            )
+        with scope.con_empresa(self.empresa_b):
+            TransporteTarifa.objects.create(
+                empresa=self.empresa_b,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                personas_min=1,
+                personas_max=4,
+                precio=Decimal('5000.00'),
+            )
+            self.assertEqual(TransporteTarifa.objects.count(), 1)
+            self.assertEqual(TransporteTarifa.objects.first().precio, Decimal('5000.00'))
+
+        with scope.con_empresa(self.empresa_a):
+            self.assertEqual(TransporteTarifa.objects.count(), 1)
+            self.assertEqual(TransporteTarifa.objects.first().precio, Decimal('4500.00'))
+
