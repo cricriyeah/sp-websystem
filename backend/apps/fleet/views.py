@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -5,7 +6,8 @@ from rest_framework.views import APIView
 from apps.tenancy import scope
 
 from .catalogo import paquete_de_sede, paquetes_de_sede, servicios_de_sede
-from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, Tarifa
+from .enums import TipoServicio
+from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, Tarifa, TransporteTarifa
 from .serializers import (
     ExtrasItemSerializer,
     PaqueteSerializer,
@@ -179,3 +181,43 @@ class PaqueteDetailView(APIView):
             return Response({'detail': 'Paquete no encontrado.'}, status=404)
         return Response(data)
 
+
+class TrasladosView(APIView):
+    """Catalogo de traslados de una empresa, consultado bajo su alcance RLS."""
+
+    permission_classes = []
+    throttle_scope = 'catalogo'
+
+    def get(self, request, empresa_slug):
+        empresa = scope.resolver_empresa_publica(empresa_slug)
+        with scope.con_empresa(empresa):
+            servicio = Servicio.objects.filter(
+                empresa=empresa, activo=True, tipo_servicio=TipoServicio.TRANSPORTE,
+            ).order_by('pk').first()
+            if servicio is None:
+                raise Http404('Servicio de transporte no encontrado.')
+            if not empresa.stripe_secret_key or not empresa.stripe_publishable_key:
+                return Response({'detail': 'Stripe no configurado.'}, status=503)
+            return Response({
+                'servicio': {
+                    'slug': servicio.slug,
+                    'nombre': servicio.nombre,
+                    'capacidad_maxima': servicio.capacidad_maxima,
+                    'porcentaje_anticipo': servicio.porcentaje_anticipo,
+                    'empresa_slug': empresa.slug,
+                    'hora_apertura': servicio.hora_apertura.isoformat() if servicio.hora_apertura else None,
+                    'hora_cierre': servicio.hora_cierre.isoformat() if servicio.hora_cierre else None,
+                },
+                'tarifas': [{
+                    'tipo_traslado': tarifa.tipo_traslado,
+                    'zona': tarifa.zona,
+                    'personas_min': tarifa.personas_min,
+                    'personas_max': tarifa.personas_max,
+                    'precio': str(tarifa.precio),
+                    'precio_usd': str(tarifa.precio_usd) if tarifa.precio_usd is not None else None,
+                } for tarifa in TransporteTarifa.objects.filter(empresa=empresa, activo=True)],
+                'puntos_encuentro': PuntoEncuentroSerializer(
+                    PuntoEncuentro.objects.filter(empresa=empresa, activo=True), many=True,
+                ).data,
+                'publishable_key': empresa.stripe_publishable_key,
+            })

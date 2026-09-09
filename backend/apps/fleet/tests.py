@@ -5,6 +5,7 @@ from io import StringIO
 from unittest import skipUnless
 
 from django.contrib.auth.models import Group, User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -719,3 +720,99 @@ class TransporteTarifaAdminTest(EmpresaTestCase):
 
 
 
+
+
+class TrasladosViewTest(TestCase):
+    """Cada empresa abre su propio alcance; no hay un tenant ambiente."""
+
+    def setUp(self):
+        from .models import Servicio
+
+        cache.clear()
+        self.empresa_a = _crear_empresa('traslados-a')
+        self.empresa_b = _crear_empresa('traslados-b')
+        self.catalogos = {}
+        for empresa in (self.empresa_a, self.empresa_b):
+            empresa.stripe_secret_key = f'sk_test_{empresa.slug}'
+            empresa.stripe_publishable_key = f'pk_test_{empresa.slug}'
+            empresa.save()
+            with scope.con_empresa(empresa):
+                servicio = Servicio.objects.create(
+                    empresa=empresa, nombre=f'Traslados {empresa.slug}', slug='traslado',
+                    tipo_servicio='transporte', estrategia_cupo='bajo_demanda',
+                    estrategia_precio='por_ruta', capacidad_maxima=14, porcentaje_anticipo=100,
+                )
+                tarifa = TransporteTarifa.objects.create(
+                    empresa=empresa, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                    personas_min=1, personas_max=4, precio='4500.00',
+                )
+                punto = PuntoEncuentro.objects.create(empresa=empresa, nombre=empresa.slug, zona='centro')
+                self.catalogos[empresa.pk] = (servicio, tarifa, punto)
+
+    def catalogo(self, empresa):
+        return self.client.get(f'/api/{empresa.slug}/traslados/')
+
+    def test_empresa_dos_devuelve_catalogo_completo(self):
+        servicio, tarifa, punto = self.catalogos[self.empresa_b.pk]
+        respuesta = self.catalogo(self.empresa_b)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json(), {
+            'servicio': {'slug': servicio.slug, 'nombre': servicio.nombre,
+                         'capacidad_maxima': 14, 'porcentaje_anticipo': 100,
+                         'empresa_slug': self.empresa_b.slug, 'hora_apertura': None, 'hora_cierre': None},
+            'tarifas': [{'tipo_traslado': tarifa.tipo_traslado, 'zona': '', 'personas_min': 1,
+                         'personas_max': 4, 'precio': '4500.00', 'precio_usd': None}],
+            'puntos_encuentro': [{'id': punto.pk, 'nombre': punto.nombre, 'zona': 'centro'}],
+            'publishable_key': self.empresa_b.stripe_publishable_key,
+        })
+
+    def test_solo_tarifas_y_puntos_activos(self):
+        with scope.con_empresa(self.empresa_b):
+            TransporteTarifa.objects.create(
+                empresa=self.empresa_b, tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO,
+                precio='1800.00', activo=False,
+            )
+            PuntoEncuentro.objects.create(empresa=self.empresa_b, nombre='Cerrado', zona='centro', activo=False)
+        respuesta = self.catalogo(self.empresa_b)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(len(respuesta.json()['tarifas']), 1)
+        self.assertEqual(len(respuesta.json()['puntos_encuentro']), 1)
+
+    def test_sin_servicio_activo_responde_404(self):
+        with scope.con_empresa(self.empresa_b):
+            servicio = self.catalogos[self.empresa_b.pk][0]
+            servicio.activo = False
+            servicio.save()
+        self.assertEqual(self.catalogo(self.empresa_b).status_code, 404)
+        self.assertEqual(self.catalogo(_crear_empresa('sin-transporte')).status_code, 404)
+
+    def test_empresa_inactiva_o_inexistente_responde_404(self):
+        self.empresa_b.activo = False
+        self.empresa_b.save()
+        self.assertEqual(self.catalogo(self.empresa_b).status_code, 404)
+        self.assertEqual(self.client.get('/api/desconocida/traslados/').status_code, 404)
+
+    def test_stripe_sin_configurar_responde_503(self):
+        for campo in ('stripe_secret_key', 'stripe_publishable_key'):
+            with self.subTest(campo=campo):
+                anterior = getattr(self.empresa_b, campo)
+                setattr(self.empresa_b, campo, '')
+                self.empresa_b.save()
+                self.assertEqual(self.catalogo(self.empresa_b).status_code, 503)
+                setattr(self.empresa_b, campo, anterior)
+                self.empresa_b.save()
+
+    @skipUnless(connection.vendor == 'postgresql', 'RLS requiere PostgreSQL')
+    def test_rls_real_aisla_catalogos_y_cierra_alcance(self):
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user')
+            self.assertEqual(cursor.fetchone(), (False, False))
+        for empresa in (self.empresa_b, self.empresa_a):
+            with scope.con_empresa(empresa):
+                self.assertEqual(set(TransporteTarifa.objects.values_list('empresa_id', flat=True)), {empresa.pk})
+                self.assertEqual(set(PuntoEncuentro.objects.values_list('empresa_id', flat=True)), {empresa.pk})
+            respuesta = self.catalogo(empresa)
+            self.assertEqual(respuesta.status_code, 200)
+            self.assertEqual(respuesta.json()['puntos_encuentro'][0]['id'], self.catalogos[empresa.pk][2].pk)
+            self.assertFalse(TransporteTarifa.objects.exists())
+            self.assertFalse(PuntoEncuentro.objects.exists())

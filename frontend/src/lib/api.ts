@@ -397,3 +397,29 @@ export const getServicioDetalle = (servicioSlug: string, empresaSlug?: string) =
 
 export { ApiError };
 
+export type TipoTraslado = 'redondo_aeropuerto' | 'redondo_actividad' | 'recepcion_aeropuerto';
+
+export type TrasladosCatalogo = {
+  servicio: {
+    slug: string;
+    nombre: string;
+    capacidad_maxima: number | null;
+    porcentaje_anticipo: number;
+    empresa_slug: string;
+    hora_apertura: string | null;
+    hora_cierre: string | null;
+  };
+  tarifas: {
+    tipo_traslado: TipoTraslado;
+    zona: Zona | '';
+    personas_min: number;
+    personas_max: number | null;
+    precio: string;
+    precio_usd: string | null;
+  }[];
+  puntos_encuentro: PuntoEncuentro[];
+  publishable_key: string;
+};
+
+export const getTraslados = (empresaSlug: string): Promise<TrasladosCatalogo> =>
+  request<TrasladosCatalogo>('/api/traslados/', undefined, empresaSlug);

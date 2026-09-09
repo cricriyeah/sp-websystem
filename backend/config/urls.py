@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from apps.finance.views import panel_financiero
+from apps.fleet.views import TrasladosView
 
 from .health import healthz
 
@@ -36,6 +37,7 @@ urlpatterns = [
     # decide la vista (ver apps/finance/views.py).
     path('admin/finanzas/', admin.site.admin_view(panel_financiero), name='finanzas'),
     path('admin/', admin.site.urls),
+    path('api/<slug:empresa_slug>/traslados/', TrasladosView.as_view(), name='traslados'),
     path('api/', include('apps.fleet.urls')),
     path('api/', include('apps.bookings.urls')),
     path('api/', include('apps.payments.urls')),
