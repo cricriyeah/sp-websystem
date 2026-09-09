@@ -96,6 +96,7 @@ class RLSTests(TransactionTestCase):
                 'fleet_serviciopersonalizacion',
                 'fleet_paqueteservicio',
                 'bookings_reservapaquetepersonalizacion',
+                'bookings_detalletransporte',
             }
 
             # 3. Consultar pg_policies
@@ -131,3 +132,78 @@ class RLSTests(TransactionTestCase):
                 set(),
                 f"Tablas con política RLS que no están catalogadas ni en columnas ni en whitelist: {politicas_inesperadas}",
             )
+
+    def test_detalle_transporte_aislamiento(self):
+        from datetime import date, time
+        from apps.bookings.models import DetalleTransporte, Reserva
+        from apps.fleet.enums import TipoTraslado, Zona
+        from apps.fleet.models import PuntoEncuentro, Servicio
+
+        with scope.con_empresa(self.empresa_a):
+            s_a = Servicio.objects.create(
+                empresa=self.empresa_a,
+                nombre='Traslado A',
+                slug='traslado-a',
+                tipo_servicio='transporte',
+                estrategia_cupo='bajo_demanda',
+                estrategia_precio='por_ruta',
+            )
+            r_a = Reserva.objects.create(
+                empresa=self.empresa_a,
+                servicio=s_a,
+                fecha=date(2026, 10, 1),
+                hora=time(10, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente A',
+                canal_origen='web',
+                deslinde_aceptado=True,
+            )
+            p_a = PuntoEncuentro.objects.create(
+                empresa=self.empresa_a,
+                nombre='Hotel A',
+                zona=Zona.CENTRO,
+            )
+            DetalleTransporte.objects.create(
+                reserva=r_a,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                punto_encuentro=p_a,
+                fecha_regreso=date(2026, 10, 5),
+            )
+
+        with scope.con_empresa(self.empresa_b):
+            s_b = Servicio.objects.create(
+                empresa=self.empresa_b,
+                nombre='Traslado B',
+                slug='traslado-b',
+                tipo_servicio='transporte',
+                estrategia_cupo='bajo_demanda',
+                estrategia_precio='por_ruta',
+            )
+            r_b = Reserva.objects.create(
+                empresa=self.empresa_b,
+                servicio=s_b,
+                fecha=date(2026, 10, 1),
+                hora=time(10, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente B',
+                canal_origen='web',
+                deslinde_aceptado=True,
+            )
+            p_b = PuntoEncuentro.objects.create(
+                empresa=self.empresa_b,
+                nombre='Hotel B',
+                zona=Zona.CENTRO,
+            )
+            DetalleTransporte.objects.create(
+                reserva=r_b,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                punto_encuentro=p_b,
+                fecha_regreso=date(2026, 10, 5),
+            )
+
+            # Bajo empresa_b, solo debe ver el DetalleTransporte de empresa_b
+            self.assertEqual(DetalleTransporte.objects.count(), 1)
+            self.assertEqual(DetalleTransporte.objects.first().reserva.empresa_id, self.empresa_b.id)
+
+        # Sin empresa activa, no ve nada
+        self.assertEqual(DetalleTransporte.objects.count(), 0)
