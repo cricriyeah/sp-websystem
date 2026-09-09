@@ -1846,11 +1846,18 @@ class DetalleTransporteTest(EmpresaTestCase):
     def test_punto_encuentro_otra_empresa_falla(self):
         from apps.tenancy.models import Empresa
         otra_empresa = Empresa.objects.create(sede=self.empresa.sede, nombre='Otra', slug='otra')
-        punto_ajeno = PuntoEncuentro.objects.create(
-            empresa=otra_empresa,
-            nombre='Hotel Ajeno',
-            zona=Zona.CENTRO,
-        )
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(otra_empresa):
+                punto_ajeno = PuntoEncuentro.objects.create(
+                    empresa=otra_empresa,
+                    nombre='Hotel Ajeno',
+                    zona=Zona.CENTRO,
+                )
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+
         dt = DetalleTransporte(
             reserva=self.reserva,
             tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
