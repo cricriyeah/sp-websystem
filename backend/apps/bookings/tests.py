@@ -19,6 +19,7 @@ from apps.fleet.models import (
     EmbarcacionNoDisponible,
     ExtrasItem,
     PuntoEncuentro,
+    Servicio,
 )
 from apps.tenancy import scope
 from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
@@ -1537,4 +1538,50 @@ class InlinesAdminOcupacionYComponentesTests(EmpresaTestCase):
             self.assertTrue(inline.has_add_permission(self.request, r_pendiente))
             self.assertTrue(inline.has_change_permission(self.request, r_pendiente))
             self.assertTrue(inline.has_delete_permission(self.request, r_pendiente))
+
+
+class VentanaHorariaTest(EmpresaTestCase):
+    def test_pesca_legacy_sin_servicio_valida_ventana_5_a_7(self):
+        # 06:00 pasa
+        r_ok = Reserva(**datos_reserva(self.empresa, hora=time(6, 0)))
+        r_ok.full_clean()
+
+        # 09:00 falla
+        r_fail = Reserva(**datos_reserva(self.empresa, hora=time(9, 0)))
+        with self.assertRaises(ValidationError) as ctx:
+            r_fail.full_clean()
+        self.assertIn('hora', ctx.exception.message_dict)
+
+    def test_servicio_con_ventana_propia(self):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Tour Tarde',
+            slug='tour-tarde',
+            tipo_servicio='paseo',
+            hora_apertura=time(14, 0),
+            hora_cierre=time(18, 0),
+        )
+        # 15:00 pasa
+        r_ok = Reserva(**datos_reserva(self.empresa, servicio=servicio, hora=time(15, 0)))
+        r_ok.full_clean()
+
+        # 06:00 falla
+        r_fail = Reserva(**datos_reserva(self.empresa, servicio=servicio, hora=time(6, 0)))
+        with self.assertRaises(ValidationError) as ctx:
+            r_fail.full_clean()
+        self.assertIn('hora', ctx.exception.message_dict)
+
+    def test_servicio_sin_ventana_permite_cualquier_hora(self):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Traslado Libre',
+            slug='traslado-libre',
+            tipo_servicio='transporte',
+            hora_apertura=None,
+            hora_cierre=None,
+        )
+        # 22:00 pasa
+        r_ok = Reserva(**datos_reserva(self.empresa, servicio=servicio, hora=time(22, 0)))
+        r_ok.full_clean()
+
 

@@ -74,6 +74,7 @@ ESTADOS_QUE_OCUPAN_CUPO = ['pagada', 'asignada', 'completada']
 
 
 def validar_ventana_salida(value):
+    """Valida la ventana horaria legacy de pesca (5:00 a 7:00 am). Conservado como helper."""
     if not (VENTANA_SALIDA_INICIO <= value <= VENTANA_SALIDA_FIN):
         raise ValidationError('La hora de salida debe estar entre las 5:00 y las 7:00 am.')
 
@@ -419,7 +420,7 @@ class Reserva(models.Model):
         null=True, blank=True,
         help_text='Fecha de check-out / fin de servicio. Vacio en servicios de un solo dia.'
     )
-    hora = models.TimeField(validators=[validar_ventana_salida])
+    hora = models.TimeField()
     numero_personas = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(MIN_PERSONAS), MaxValueValidator(MAX_PERSONAS)]
     )
@@ -694,10 +695,20 @@ class Reserva(models.Model):
             raise ValidationError(
                 {'deslinde_aceptado': 'La reserva web requiere aceptar el deslinde de responsabilidad.'}
             )
+        self._validar_ventana_horaria()
         self._validar_capacidad_embarcacion()
         self._validar_una_salida_por_dia()
         self._validar_cambio_de_fecha()
         self._validar_consistencia_de_empresa()
+
+    def _validar_ventana_horaria(self):
+        if self.servicio_id:
+            ventana = self.servicio.ventana_horaria()
+        else:
+            ventana = (VENTANA_SALIDA_INICIO, VENTANA_SALIDA_FIN)  # pesca legacy
+        if self.hora and ventana and not (ventana[0] <= self.hora <= ventana[1]):
+            raise ValidationError({'hora': f'La hora debe estar entre {ventana[0]:%H:%M} y {ventana[1]:%H:%M}.'})
+
 
     def _validar_consistencia_de_empresa(self):
         """Ninguna FK puede pertenecer a otra Empresa. RLS filtra filas por
