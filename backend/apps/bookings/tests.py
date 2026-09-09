@@ -1346,6 +1346,62 @@ class AgendaListaTests(EmpresaTestCase):
             [temprano.pk, tarde.pk],
         )
 
+    def test_no_lista_reservas_de_transporte_ni_bajo_demanda(self):
+        servicio_transporte = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Traslado Aeropuerto',
+            slug='traslado-aeropuerto',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+        )
+        reserva_transporte = Reserva.objects.create(
+            empresa=self.empresa,
+            servicio=servicio_transporte,
+            fecha=self.fecha,
+            hora=time(10, 0),
+            numero_personas=2,
+            nombre_cliente='Ana Pasajera',
+            canal_origen='web',
+            deslinde_aceptado=True,
+            estado=Reserva.Estado.PAGADA,
+        )
+        self.assertNotIn(reserva_transporte.pk, Agenda.por_repartir().values_list('pk', flat=True))
+
+    def test_detalle_transporte_inline_en_reserva_admin(self):
+        from apps.bookings.admin import DetalleTransporteInline, ReservaAdmin
+        self.assertIn(DetalleTransporteInline, ReservaAdmin.inlines)
+
+    def test_agenda_admin_queryset_excluye_transporte(self):
+        from django.test import RequestFactory
+        from apps.bookings.admin import AgendaAdmin
+        from apps.bookings.models import Agenda
+        factory = RequestFactory()
+        request = factory.get('/admin/bookings/agenda/')
+        request.user = self.crear_jefe()
+        servicio_transporte = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Traslado',
+            slug='traslado-admin',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+        )
+        reserva_transporte = Reserva.objects.create(
+            empresa=self.empresa,
+            servicio=servicio_transporte,
+            fecha=self.fecha,
+            hora=time(10, 0),
+            numero_personas=2,
+            nombre_cliente='Ana Pasajera',
+            canal_origen='web',
+            deslinde_aceptado=True,
+            estado=Reserva.Estado.PAGADA,
+        )
+        admin_obj = AgendaAdmin(Agenda, None)
+        qs = admin_obj.get_queryset(request)
+        self.assertNotIn(reserva_transporte.pk, qs.values_list('pk', flat=True))
+
 
 class TransicionDeAsignacionTests(EmpresaTestCase):
     """Poner la panga da el viaje por asignado; quitarla lo regresa.

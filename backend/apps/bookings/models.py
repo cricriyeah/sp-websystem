@@ -1038,7 +1038,12 @@ class Agenda(Reserva):
 
     @classmethod
     def por_repartir(cls):
-        return cls.objects.filter(estado__in=cls.ESTADOS_EN_AGENDA)
+        return cls.objects.filter(
+            estado__in=cls.ESTADOS_EN_AGENDA
+        ).exclude(
+            models.Q(servicio__estrategia_cupo='bajo_demanda') |
+            models.Q(servicio__tipo_servicio='transporte')
+        )
 
 
 class ReservaPaquetePersonalizacion(models.Model):
