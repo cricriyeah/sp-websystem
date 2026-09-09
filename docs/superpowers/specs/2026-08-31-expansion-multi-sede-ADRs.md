@@ -254,8 +254,8 @@ queda **fuera de v1** (mismo patrón de día completo que paseos por ahora).
 
 ## ADR-004: Precio como estrategias tipadas en código, sobre `pricing.py`
 
-Fecha: 2026-08-31 (Implementado: 2026-09-06 · **Revisión 3: 2026-09-07**)
-Estado: **IMPLEMENTADO** (Revisión 3 ejecutada el 2026-09-07 — bundle cerrado sin servicios removibles)
+Fecha: 2026-08-31 (Implementado: 2026-09-06 · **Revisión 2: 2026-09-09** · **Revisión 3: 2026-09-07**)
+Estado: **IMPLEMENTADO** (Revisión 2 ejecutada en SP1 — estrategia POR_RUTA implementada; Revisión 3 ejecutada el 2026-09-07 — bundle cerrado sin servicios removibles)
 
 **Revisión 3 (2026-09-07) — el paquete es un bundle fijo, no se quitan servicios.**
 
@@ -285,11 +285,11 @@ Ejecuta: sección nueva del plan de corrección de hallazgos
 prerrequisito del Sub-proyecto 2 de transporte multi-empresa
 (`docs/superpowers/specs/2026-09-07-transporte-multi-empresa-design.md`).
 
-**Revisión 2 — nueva estrategia `POR_RUTA` (transporte).** Ver el diseño de transporte
-multi-empresa §3.2: `fleet.enums.EstrategiaPrecio` gana `POR_RUTA`, con la clase
-`PorRuta` en `estrategias_precio.py` leyendo de `fleet.TransporteTarifa`. `DemandaPrecio`
-gana `tipo_traslado` y `zona` opcionales. Reemplaza a `cargo_por_transporte` +
-`fleet.TransportePrecio`, que se eliminan.
+**Revisión 2 (2026-09-09) — nueva estrategia `POR_RUTA` (transporte) [IMPLEMENTADA].**
+Ver el diseño de transporte multi-empresa §3.2 (ejecutado en SP1): `fleet.enums.EstrategiaPrecio` incluye `POR_RUTA`,
+con la clase `PorRuta` en `apps.payments.strategies.por_ruta` leyendo de `fleet.TransporteTarifa` mediante
+`resolver_tarifa_transporte`. `DemandaPrecio` incluye `tipo_traslado` y `zona` opcionales. Reemplaza a
+`cargo_por_transporte` + `fleet.TransportePrecio`, que se eliminaron.
 
 **Desviaciones y detalles de implementación (Revisión 1, 2026-09-06):**
 - Se implementaron las estrategias tipadas en `apps.payments.estrategias_precio`: `PorPersona`, `PorGrupo`, `PorNoche`, `TarifaFija`.
@@ -354,5 +354,5 @@ Ver §4 del documento de diseño. Resumen:
   marketing) = **ACEPTADO**; Stripe estándar sin Connect **confirmado** a escala de
   plataforma (el % se cobra fuera del sistema).
 - ✅ **ADR-003**: **IMPLEMENTADO** (estrategias tipadas `por_recurso_dia`, `por_noche` con `ReservaOcupacion` y `EXCLUDE USING gist`, y `bajo_demanda`).
-- ✅ **ADR-004**: **IMPLEMENTADO** (estrategias tipadas `PorPersona`, `PorGrupo`, `PorNoche`, `TarifaFija`, fórmula de paquetes y anticipo configurable).
+- ✅ **ADR-004**: **IMPLEMENTADO** (estrategias tipadas `PorPersona`, `PorGrupo`, `PorNoche`, `TarifaFija`, `PorRuta` en Revisión 2, fórmula de paquetes y anticipo configurable).
 - 📋 **ADR-005**: **PROPUESTO** — Paquetes cruza-empresa (fuera de v1). Bloqueados formalmente en v1 (`PaqueteServicio.clean`). Ver `docs/superpowers/specs/2026-09-06-ADR-005-paquetes-cruza-empresa.md`.
