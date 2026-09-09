@@ -27,6 +27,10 @@
     "catalogo": {
       "title": "Experiences and Packages | Sal y Sol Sportfishing",
       "description": "Explore curated sportfishing packages and tours across destinations in BCS."
+    },
+    "traslados": {
+      "title": "Private Transportation & Transfers | Sal y Sol",
+      "description": "Book your private transfer in La Paz, BCS. Airport, hotels, and marina connections."
     }
   },
   "notFound": {
@@ -651,5 +655,70 @@
     "crossSellNotice": "Tip: Combine services into a package for greater savings and seamless coordination.",
     "emptyPackages": "No packages currently available for this destination.",
     "emptyServices": "No additional standalone services in this destination."
+  },
+  "traslados": {
+    "title": "Private Transfers & Transportation",
+    "subtitle": "Private transfers in La Paz, BCS. Airport, hotels, and meeting points.",
+    "unavailableTitle": "Service currently unavailable",
+    "unavailableMessage": "Transfer booking is currently unavailable online. Please contact us via WhatsApp to arrange your private transportation.",
+    "unavailableCta": "Contact via WhatsApp",
+    "back": "Back to catalog",
+    "step1Title": "Transfer type",
+    "step1Description": "Choose the route you need for your trip.",
+    "step2Title": "Meeting point or lodging",
+    "step2Description": "Choose your hotel or enter a custom address.",
+    "step3Title": "Dates and schedule",
+    "step3Description": "Specify date, pickup time, and return date if applicable.",
+    "step4Title": "Number of passengers",
+    "step4Description": "Maximum capacity for the assigned vehicle.",
+    "step5Title": "Contact details & payment",
+    "types": {
+      "redondo_aeropuerto": {
+        "title": "Airport round trip",
+        "description": "Pickup from airport to your lodging upon arrival, and return to airport at the end of your stay."
+      },
+      "redondo_actividad": {
+        "title": "Activity round trip",
+        "description": "Pickup from your lodging to the activity/departure point, and return when finished."
+      },
+      "recepcion_aeropuerto": {
+        "title": "Airport pickup (one-way)",
+        "description": "Meet and greet at the airport and direct transfer to your hotel or address in La Paz."
+      }
+    },
+    "fields": {
+      "puntoEncuentro": "Hotel or meeting point",
+      "puntoEncuentroPlaceholder": "Select a hotel or known meeting point",
+      "otraDireccion": "Or enter a custom address",
+      "direccionPlaceholder": "Street, number, neighborhood, or details",
+      "zona": "Transfer zone",
+      "zonaCentro": "Downtown / Malecón Area",
+      "zonaPeriferia": "Suburban / Outer Area",
+      "zonaRequiredNotice": "Activity transfers to custom addresses require selecting a zone.",
+      "fecha": "Arrival / activity date",
+      "fechaRegreso": "Airport return date",
+      "hora": "Estimated pickup time",
+      "pasajeros": "Number of guests",
+      "maxPasajerosNotice": "Maximum {max} passengers for this vehicle.",
+      "fechaRegresoInvalida": "Return date must be after arrival date."
+    },
+    "errors": {
+      "seleccionaTipo": "Please select a transfer type.",
+      "seleccionaHospedaje": "Select a meeting point from the list or enter a custom address.",
+      "seleccionaZona": "Please select the appropriate zone.",
+      "seleccionaFecha": "Please select the transfer date.",
+      "seleccionaFechaRegreso": "Airport round-trip transfers require a return date.",
+      "fechaRegresoPosterior": "Return date must be after arrival date.",
+      "seleccionaHora": "Please specify the pickup time."
+    },
+    "summary": {
+      "transfer": "Transfer",
+      "pickup": "Pickup",
+      "returnDate": "Return",
+      "passengers": "Passengers",
+      "total": "Total",
+      "advancePayment": "Required deposit (100%)",
+      "included": "Private chauffeur service in an air-conditioned vehicle."
+    }
   }
 }

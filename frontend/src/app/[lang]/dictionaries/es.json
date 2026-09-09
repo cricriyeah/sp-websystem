@@ -27,6 +27,10 @@
     "catalogo": {
       "title": "Experiencias y Paquetes | Sal y Sol Sportfishing",
       "description": "Descubre nuestros paquetes de aventura y servicios de pesca por destino en BCS."
+    },
+    "traslados": {
+      "title": "Traslados y Transporte Privado | Sal y Sol",
+      "description": "Reserva tu traslado privado en La Paz, BCS. Conexión aeropuerto, hoteles y marina."
     }
   },
   "notFound": {
@@ -651,5 +655,70 @@
     "crossSellNotice": "Tip: Combina servicios en un paquete para mayor ahorro y coordinación garantizada.",
     "emptyPackages": "No hay paquetes disponibles en este momento para este destino.",
     "emptyServices": "No hay servicios individuales adicionales en este destino."
+  },
+  "traslados": {
+    "title": "Servicio de Traslados y Transporte",
+    "subtitle": "Traslados privados en La Paz, BCS. Aeropuerto, hoteles y puntos de encuentro.",
+    "unavailableTitle": "Servicio no disponible",
+    "unavailableMessage": "El servicio de traslados no está disponible en este momento. Por favor contáctanos por WhatsApp para coordinar tu transporte.",
+    "unavailableCta": "Contactar por WhatsApp",
+    "back": "Volver al catálogo",
+    "step1Title": "Tipo de traslado",
+    "step1Description": "Selecciona el recorrido que necesitas para tu viaje.",
+    "step2Title": "Punto de encuentro u hospedaje",
+    "step2Description": "Elige tu hotel o ingresa una dirección particular.",
+    "step3Title": "Fechas y horario",
+    "step3Description": "Indica la fecha, hora de recogida y fecha de regreso si aplica.",
+    "step4Title": "Número de pasajeros",
+    "step4Description": "Capacidad máxima según el vehículo asignado.",
+    "step5Title": "Datos de contacto y pago",
+    "types": {
+      "redondo_aeropuerto": {
+        "title": "Redondo con aeropuerto",
+        "description": "Traslado desde el aeropuerto a tu hospedaje a la llegada, y de regreso al aeropuerto al finalizar tu estancia."
+      },
+      "redondo_actividad": {
+        "title": "Redondo de actividad",
+        "description": "Recogida en tu hospedaje hacia el punto de embarque/actividad, y regreso a tu hospedaje al concluir."
+      },
+      "recepcion_aeropuerto": {
+        "title": "Recepción en aeropuerto (sencillo)",
+        "description": "Bienvenida en el aeropuerto y traslado directo a tu hotel o domicilio en La Paz."
+      }
+    },
+    "fields": {
+      "puntoEncuentro": "Hotel o punto de encuentro",
+      "puntoEncuentroPlaceholder": "Selecciona un hotel o punto conocido",
+      "otraDireccion": "O escribe una dirección personalizada",
+      "direccionPlaceholder": "Calle, número, colonia o referencias",
+      "zona": "Zona del traslado",
+      "zonaCentro": "Zona Centro / Malecón",
+      "zonaPeriferia": "Zona Periferia",
+      "zonaRequiredNotice": "Para traslados de actividad a direcciones particulares se requiere indicar la zona.",
+      "fecha": "Fecha de llegada / actividad",
+      "fechaRegreso": "Fecha de regreso al aeropuerto",
+      "hora": "Hora estimada de recogida",
+      "pasajeros": "Número de personas",
+      "maxPasajerosNotice": "Máximo {max} personas para esta unidad.",
+      "fechaRegresoInvalida": "La fecha de regreso debe ser posterior a la fecha de llegada."
+    },
+    "errors": {
+      "seleccionaTipo": "Por favor selecciona un tipo de traslado.",
+      "seleccionaHospedaje": "Elige un punto de encuentro del catálogo o escribe una dirección.",
+      "seleccionaZona": "Selecciona la zona correspondiente.",
+      "seleccionaFecha": "Indica la fecha del traslado.",
+      "seleccionaFechaRegreso": "El traslado redondo con aeropuerto requiere fecha de regreso.",
+      "fechaRegresoPosterior": "La fecha de regreso debe ser posterior a la fecha de llegada.",
+      "seleccionaHora": "Indica la hora del traslado."
+    },
+    "summary": {
+      "transfer": "Traslado",
+      "pickup": "Recogida",
+      "returnDate": "Regreso",
+      "passengers": "Pasajeros",
+      "total": "Total",
+      "advancePayment": "Anticipo requerido (100%)",
+      "included": "Servicio privado con chofer y vehículo con aire acondicionado."
+    }
   }
 }
