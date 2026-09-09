@@ -659,6 +659,7 @@
   "traslados": {
     "title": "Servicio de Traslados y Transporte",
     "subtitle": "Traslados privados en La Paz, BCS. Aeropuerto, hoteles y puntos de encuentro.",
+    "cta": "Reservar traslado",
     "unavailableTitle": "Servicio no disponible",
     "unavailableMessage": "El servicio de traslados no está disponible en este momento. Por favor contáctanos por WhatsApp para coordinar tu transporte.",
     "unavailableCta": "Contactar por WhatsApp",

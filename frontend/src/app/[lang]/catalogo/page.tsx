@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowRight, Car } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { SEDE_STORAGE_KEY } from '@/lib/sede';
 import { SiteHeader } from '@/components/site-header';
@@ -133,6 +135,34 @@ export default async function CatalogoPage({ params, searchParams }: PageProps) 
           dict={dict.catalog}
           moneda={monedaQuery}
         />
+
+        {/* Enlace a Traslados Privados para La Paz (Secundario / Perception-First) */}
+        {sedeActual.slug === 'la-paz' && (
+          <section className="mt-12 rounded-2xl border border-border bg-card/60 p-6 sm:p-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                  <Car size={24} weight="duotone" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-foreground sm:text-lg">
+                    {dict.traslados.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted leading-relaxed sm:text-sm">
+                    {dict.traslados.subtitle}
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={`/${lang}/traslados`}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 py-2.5 text-xs font-semibold text-foreground transition-colors hover:border-accent hover:text-accent sm:self-auto"
+              >
+                <span>{dict.traslados.cta}</span>
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          </section>
+        )}
       </main>
 
       <SiteFooter
