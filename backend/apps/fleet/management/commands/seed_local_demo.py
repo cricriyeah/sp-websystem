@@ -28,9 +28,11 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             raise CommandError('Solo para local (DEBUG=True).')
 
+        from apps.fleet.enums import TipoServicio, TipoTraslado, Zona
         from apps.fleet.models import (
             Embarcacion, Paquete, PaqueteServicio, Personalizacion,
-            Recurso, Servicio, ServicioPersonalizacion, Tarifa,
+            PuntoEncuentro, Recurso, Servicio, ServicioPersonalizacion,
+            Tarifa, TransporteTarifa,
         )
 
         sede = Sede.objects.get(slug='la-paz')
@@ -244,9 +246,69 @@ class Command(BaseCommand):
                 defaults={'orden': 2},
             )
 
+        # --- Tercera Empresa en La Paz: Transporte La Paz (SP1 de transporte) ---
+        transporte, _ = Empresa.objects.get_or_create(
+            slug='transporte-la-paz',
+            defaults=dict(
+                sede=sede, nombre='Transportes La Paz', activo=True,
+                stripe_secret_key='sk_test_TRANSPORTE_CAMBIAME',
+                stripe_publishable_key='pk_test_TRANSPORTE_CAMBIAME',
+                stripe_webhook_secret='whsec_TRANSPORTE_CAMBIAME',
+            ),
+        )
+        with scope.como_operador_plataforma():
+            Servicio.objects.get_or_create(
+                empresa=transporte, slug='traslados-la-paz',
+                defaults=dict(
+                    nombre='Traslados Privados La Paz',
+                    tipo_servicio=TipoServicio.TRANSPORTE,
+                    estrategia_cupo='bajo_demanda',
+                    estrategia_precio='por_ruta',
+                    modo_ocupacion='exclusivo',
+                    capacidad_maxima=14,
+                    porcentaje_anticipo=100,
+                    activo=True,
+                    descripcion='Servicio de transporte privado en La Paz y aeropuerto.',
+                ),
+            )
+        with scope.con_empresa(transporte):
+            for nombre_pe, zona_pe in [
+                ('Hotel CostaBaja / Puerta Cortés', Zona.CENTRO),
+                ('Hotel Catedral La Paz', Zona.CENTRO),
+                ('Hyatt Place La Paz', Zona.PERIFERIA),
+            ]:
+                PuntoEncuentro.objects.get_or_create(
+                    empresa=transporte, nombre=nombre_pe,
+                    defaults={'zona': zona_pe, 'activo': True},
+                )
+
+            # Las 5 filas de tarifas del spec §3.1
+            tarifas_demo = [
+                (TipoTraslado.REDONDO_AEROPUERTO, '', 1, 4, Decimal('4500.00'), Decimal('265.00')),
+                (TipoTraslado.REDONDO_AEROPUERTO, '', 5, None, Decimal('6000.00'), Decimal('355.00')),
+                (TipoTraslado.REDONDO_ACTIVIDAD, Zona.CENTRO, 1, None, Decimal('1500.00'), Decimal('90.00')),
+                (TipoTraslado.REDONDO_ACTIVIDAD, Zona.PERIFERIA, 1, None, Decimal('2200.00'), Decimal('130.00')),
+                (TipoTraslado.RECEPCION_AEROPUERTO, '', 1, None, Decimal('2700.00'), Decimal('160.00')),
+            ]
+            for tipo_t, zona_t, p_min, p_max, precio_mxn, precio_usd in tarifas_demo:
+                tarifa_obj, created = TransporteTarifa.objects.get_or_create(
+                    empresa=transporte, tipo_traslado=tipo_t, zona=zona_t, personas_min=p_min,
+                    defaults={
+                        'personas_max': p_max,
+                        'precio': precio_mxn,
+                        'precio_usd': precio_usd,
+                        'activo': True,
+                    },
+                )
+                if not created:
+                    tarifa_obj.personas_max = p_max
+                    tarifa_obj.precio = precio_mxn
+                    tarifa_obj.precio_usd = precio_usd
+                    tarifa_obj.save(update_fields=['personas_max', 'precio', 'precio_usd'])
+
         self.stdout.write(self.style.SUCCESS(
             'Demo sembrada.\n'
-            '  Sede la-paz    -> sal-y-sol (pesca/paseo/hospedaje + paquete), hotel-malecon (suite)\n'
+            '  Sede la-paz    -> sal-y-sol (pesca/paseo/hospedaje + paquete), hotel-malecon (suite), transporte-la-paz (traslados)\n'
             '  Sede los-cabos -> tours-cabo (snorkel/ballenas + paquete)\n'
-            'Sigue: pon llaves de Stripe TEST reales en /admin/tenancy/empresa/ para las 3 empresas.'
+            'Sigue: pon llaves de Stripe TEST reales en /admin/tenancy/empresa/ para las empresas.'
         ))
