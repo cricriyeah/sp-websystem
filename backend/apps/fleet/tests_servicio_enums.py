@@ -46,3 +46,19 @@ class ServicioEnumsTests(EmpresaTestCase):
         servicio.save()
         self.assertEqual(servicio.tipo_servicio, 'transporte')
 
+    def test_capacidad_maxima(self):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Servicio Sin Capacidad',
+            slug='servicio-sin-capacidad',
+            precio_base=Decimal('100.00'),
+        )
+        self.assertIsNone(servicio.capacidad_maxima)
+
+        servicio.capacidad_maxima = 14
+        servicio.full_clean()
+        servicio.save()
+        servicio.refresh_from_db()
+        self.assertEqual(servicio.capacidad_maxima, 14)
+
+

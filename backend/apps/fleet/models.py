@@ -431,6 +431,10 @@ class Servicio(models.Model):
         default=3,
         help_text='Cantidad de personas incluidas en el precio base antes de cobrar recargo.'
     )
+    capacidad_maxima = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Tope de personas por reserva de este servicio. Vacío = usa MAX_PERSONAS (5).',
+    )
     descripcion = models.TextField(blank=True, default='')
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
