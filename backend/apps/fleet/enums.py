@@ -6,6 +6,7 @@ class TipoServicio(models.TextChoices):
     PASEO = 'paseo', 'Paseo / Tour'
     HOSPEDAJE = 'hospedaje', 'Hospedaje'
     BAJO_DEMANDA = 'bajo_demanda', 'Bajo demanda'
+    TRANSPORTE = 'transporte', 'Transporte / Traslado'
 
 
 class EstrategiaCupo(models.TextChoices):

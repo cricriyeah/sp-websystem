@@ -31,3 +31,18 @@ class ServicioEnumsTests(EmpresaTestCase):
             precio_base=Decimal('100'),
         )
         self.assertEqual(servicio.porcentaje_anticipo, 30)
+
+    def test_servicio_transporte_valido(self):
+        servicio = Servicio(
+            empresa=self.empresa,
+            nombre='Traslado Aeropuerto',
+            slug='traslado-aeropuerto',
+            tipo_servicio=TipoServicio.TRANSPORTE,
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+            precio_base=Decimal('0.00'),
+        )
+        servicio.full_clean()
+        servicio.save()
+        self.assertEqual(servicio.tipo_servicio, 'transporte')
+
