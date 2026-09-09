@@ -1585,3 +1585,53 @@ class VentanaHorariaTest(EmpresaTestCase):
         r_ok.full_clean()
 
 
+class TopePersonasTest(EmpresaTestCase):
+    def test_pesca_legacy_tope_5(self):
+        # 5 pasa
+        r_5 = Reserva(**datos_reserva(self.empresa, numero_personas=5))
+        r_5.full_clean()
+
+        # 6 falla
+        r_6 = Reserva(**datos_reserva(self.empresa, numero_personas=6))
+        with self.assertRaises(ValidationError) as ctx:
+            r_6.full_clean()
+        self.assertIn('numero_personas', ctx.exception.message_dict)
+
+    def test_servicio_con_capacidad_maxima_14(self):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Van Grande',
+            slug='van-grande',
+            tipo_servicio='transporte',
+            capacidad_maxima=14,
+        )
+        # 14 pasa
+        r_14 = Reserva(**datos_reserva(self.empresa, servicio=servicio, numero_personas=14))
+        r_14.full_clean()
+
+        # 15 falla
+        r_15 = Reserva(**datos_reserva(self.empresa, servicio=servicio, numero_personas=15))
+        with self.assertRaises(ValidationError) as ctx:
+            r_15.full_clean()
+        self.assertIn('numero_personas', ctx.exception.message_dict)
+
+    def test_servicio_sin_capacidad_maxima_cae_en_default(self):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Servicio Sin Tope',
+            slug='servicio-sin-tope',
+            tipo_servicio='paseo',
+            capacidad_maxima=None,
+        )
+        # 5 pasa
+        r_5 = Reserva(**datos_reserva(self.empresa, servicio=servicio, numero_personas=5))
+        r_5.full_clean()
+
+        # 6 falla
+        r_6 = Reserva(**datos_reserva(self.empresa, servicio=servicio, numero_personas=6))
+        with self.assertRaises(ValidationError) as ctx:
+            r_6.full_clean()
+        self.assertIn('numero_personas', ctx.exception.message_dict)
+
+
+

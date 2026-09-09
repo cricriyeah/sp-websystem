@@ -422,7 +422,7 @@ class Reserva(models.Model):
     )
     hora = models.TimeField()
     numero_personas = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(MIN_PERSONAS), MaxValueValidator(MAX_PERSONAS)]
+        validators=[MinValueValidator(MIN_PERSONAS)]
     )
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='reservas')
     servicio = models.ForeignKey(
@@ -696,6 +696,7 @@ class Reserva(models.Model):
                 {'deslinde_aceptado': 'La reserva web requiere aceptar el deslinde de responsabilidad.'}
             )
         self._validar_ventana_horaria()
+        self._validar_tope_personas()
         self._validar_capacidad_embarcacion()
         self._validar_una_salida_por_dia()
         self._validar_cambio_de_fecha()
@@ -708,6 +709,13 @@ class Reserva(models.Model):
             ventana = (VENTANA_SALIDA_INICIO, VENTANA_SALIDA_FIN)  # pesca legacy
         if self.hora and ventana and not (ventana[0] <= self.hora <= ventana[1]):
             raise ValidationError({'hora': f'La hora debe estar entre {ventana[0]:%H:%M} y {ventana[1]:%H:%M}.'})
+
+    def _validar_tope_personas(self):
+        tope = MAX_PERSONAS
+        if self.servicio_id and self.servicio.capacidad_maxima:
+            tope = self.servicio.capacidad_maxima
+        if self.numero_personas and self.numero_personas > tope:
+            raise ValidationError({'numero_personas': f'Máximo {tope} personas para este servicio.'})
 
 
     def _validar_consistencia_de_empresa(self):
