@@ -360,11 +360,11 @@ en producción (prelanzamiento), el borrado es limpio.
   ```
 - Test: `backend/apps/payments/tests.py` — las estrategias existentes (`PorGrupo`, etc.) siguen funcionando sin pasar los campos nuevos.
 
-- [ ] **Paso 1: test que falla** — construir `DemandaPrecio(personas=2, tipo_traslado='recepcion_aeropuerto')` y que `PorGrupo` la ignore sin romper.
-- [ ] **Paso 2:** correr → falla (campo no existe).
-- [ ] **Paso 3:** añadir los dos campos opcionales.
-- [ ] **Paso 4:** correr toda la suite de `payments` → verde (nada más se rompe).
-- [ ] **Paso 5:** commit `feat(payments): DemandaPrecio acepta tipo_traslado y zona`.
+- [x] **Paso 1: test que falla** — construir `DemandaPrecio(personas=2, tipo_traslado='recepcion_aeropuerto')` y que `PorGrupo` la ignore sin romper.
+- [x] **Paso 2:** correr → falla (campo no existe).
+- [x] **Paso 3:** añadir los dos campos opcionales.
+- [x] **Paso 4:** correr toda la suite de `payments` → verde (nada más se rompe).
+- [x] **Paso 5:** commit `feat(payments): DemandaPrecio acepta tipo_traslado y zona`.
 
 ### Tarea 2.2 — `EstrategiaPrecio.POR_RUTA` + clase `PorRuta`
 
@@ -408,16 +408,16 @@ en producción (prelanzamiento), el borrado es limpio.
   importa de `payments`. Sin ciclo.
 - Test: `backend/apps/payments/tests.py::PorRutaTest`
 
-- [ ] **Paso 1: test que falla** — `PorRuta().calcular_base(config, demanda)` con una lista de tarifas de prueba: precio correcto por tipo/zona/tamaño en MXN y USD; moneda sin precio → `ValueError`; `tipo_traslado` faltante → `ValueError`; sin fila → `ValueError`.
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** añadir enum + clase + registro.
-- [ ] **Paso 4:** correr → verde. `obtener_estrategia_precio('por_ruta')` devuelve `PorRuta`.
-- [ ] **Paso 5:** commit `feat(payments): estrategia de precio PorRuta para traslados`.
+- [x] **Paso 1: test que falla** — `PorRuta().calcular_base(config, demanda)` con una lista de tarifas de prueba: precio correcto por tipo/zona/tamaño en MXN y USD; moneda sin precio → `ValueError`; `tipo_traslado` faltante → `ValueError`; sin fila → `ValueError`.
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** añadir enum + clase + registro.
+- [x] **Paso 4:** correr → verde. `obtener_estrategia_precio('por_ruta')` devuelve `PorRuta`.
+- [x] **Paso 5:** commit `feat(payments): estrategia de precio PorRuta para traslados`.
 
 ### Gate Sección 2
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Commit `docs(plan): SP1 Sección 2 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] Commit `docs(plan): SP1 Sección 2 cerrada`. **PARA y reporta.**
 
 ---
 
@@ -430,11 +430,11 @@ en producción (prelanzamiento), el borrado es limpio.
 - Create: migración de fleet (solo `AlterField` de `choices`, no cambia datos)
 - Test: `backend/apps/fleet/tests.py` — crear un `Servicio(tipo_servicio='transporte', estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta')` válido.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** añadir el choice, `makemigrations`.
-- [ ] **Paso 4:** correr → verde.
-- [ ] **Paso 5:** commit `feat(fleet): TipoServicio.TRANSPORTE`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** añadir el choice, `makemigrations`.
+- [x] **Paso 4:** correr → verde.
+- [x] **Paso 5:** commit `feat(fleet): TipoServicio.TRANSPORTE`.
 
 ### Tarea 3.2 — `Servicio.capacidad_maxima`
 
@@ -449,8 +449,8 @@ en producción (prelanzamiento), el borrado es limpio.
 - Create: migración `AddField`
 - Test: `backend/apps/fleet/tests.py` — default `None`; se puede poner `14`.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(fleet): Servicio.capacidad_maxima`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(fleet): Servicio.capacidad_maxima`.
 
 ### Tarea 3.3 — `Servicio.hora_apertura` / `hora_cierre` + data-migration de pesca La Paz
 
@@ -481,16 +481,16 @@ en producción (prelanzamiento), el borrado es limpio.
   `backward` limpia los dos campos en los de pesca.
 - Test: `backend/apps/fleet/tests.py` — `ventana_horaria()` devuelve `None` sin config, `(5:00, 7:00)` con; `clean()` rechaza una sola hora.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** añadir campos + `clean` + `ventana_horaria` + migración con data-migration.
-- [ ] **Paso 4:** correr → verde; `migrate` y verificar que los `Servicio` de pesca quedaron con la ventana (test de la data-migration con `django-test-migrations` o un test que corra `migrate` y consulte).
-- [ ] **Paso 5:** commit `feat(fleet): ventana horaria configurable por Servicio`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** añadir campos + `clean` + `ventana_horaria` + migración con data-migration.
+- [x] **Paso 4:** correr → verde; `migrate` y verificar que los `Servicio` de pesca quedaron con la ventana (test de la data-migration con `django-test-migrations` o un test que corra `migrate` y consulte).
+- [x] **Paso 5:** commit `feat(fleet): ventana horaria configurable por Servicio`.
 
 ### Gate Sección 3
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Commit `docs(plan): SP1 Sección 3 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] Commit `docs(plan): SP1 Sección 3 cerrada`. **PARA y reporta.**
 
 ---
 
