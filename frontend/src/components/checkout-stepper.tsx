@@ -3,11 +3,11 @@ import type { Dictionary } from '@/app/[lang]/dictionaries';
 
 type CheckoutStepperProps = {
   stepper: Dictionary['checkout']['stepper'];
-  /** 1-4. Cual paso esta activo ahora mismo. */
+  /** 1-N. Cual paso esta activo ahora mismo. */
   actual: number;
+  /** Pasos personalizados. Si no se especifican, se usan los 4 por omisión. */
+  steps?: string[];
 };
-
-const TOTAL_PASOS = 4;
 
 /**
  * Responde "cuanto me falta" en el primer cuadro, sin tener que hacer scroll
@@ -15,14 +15,15 @@ const TOTAL_PASOS = 4;
  * `CheckoutSectionCard` — las dos cosas diciendo lo mismo (progreso) sumaban
  * ruido, no claridad.
  *
- * Version de escritorio: los 4 pasos a la vista, con la linea entre ellos
+ * Version de escritorio: los pasos a la vista, con la linea entre ellos
  * rellenandose segun avanza. Version de movil: puntos + una sola etiqueta,
  * fija justo debajo del `SiteHeader` (`--nav-alto`, ver globals.css) porque
  * sin ella fuera de cuadro el cliente pierde la unica senal de "cuanto falta"
  * que tiene.
  */
-export function CheckoutStepper({ stepper, actual }: CheckoutStepperProps) {
-  const pasos = [stepper.trip, stepper.contact, stepper.extras, stepper.payment];
+export function CheckoutStepper({ stepper, actual, steps }: CheckoutStepperProps) {
+  const pasos = steps ?? [stepper.trip, stepper.contact, stepper.extras, stepper.payment];
+  const totalPasos = pasos.length;
 
   return (
     <>
@@ -45,7 +46,7 @@ export function CheckoutStepper({ stepper, actual }: CheckoutStepperProps) {
           <p className="text-xs font-medium text-muted">
             {stepper.stepOf
               .replace('{current}', String(actual))
-              .replace('{total}', String(TOTAL_PASOS))}{' '}
+              .replace('{total}', String(totalPasos))}{' '}
             <span className="text-foreground">· {pasos[actual - 1]}</span>
           </p>
         </div>
@@ -82,7 +83,7 @@ export function CheckoutStepper({ stepper, actual }: CheckoutStepperProps) {
                   </span>
                 </div>
 
-                {numero < TOTAL_PASOS && (
+                {numero < totalPasos && (
                   <span
                     aria-hidden
                     className={`mx-4 h-px flex-1 transition-colors ${

@@ -24,6 +24,7 @@ type DateFieldProps = {
   /** Pregunta grande mientras no hay respuesta. */
   placeholder?: string;
   solicitarApertura?: number;
+  sinCupo?: boolean;
 };
 
 const inicioDeMes = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
@@ -53,6 +54,7 @@ export function DateField({
   fullLabel,
   placeholder,
   solicitarApertura,
+  sinCupo = false,
 }: DateFieldProps) {
   const locale = intlLocale(lang);
 
@@ -84,6 +86,7 @@ export function DateField({
           fullLabel={fullLabel}
           prevMonthLabel={prevMonthLabel}
           nextMonthLabel={nextMonthLabel}
+          sinCupo={sinCupo}
           cerrar={cerrar}
         />
       )}
@@ -107,6 +110,7 @@ function PanelCalendario({
   fullLabel,
   prevMonthLabel,
   nextMonthLabel,
+  sinCupo,
   cerrar,
 }: {
   locale: string;
@@ -121,6 +125,7 @@ function PanelCalendario({
   fullLabel: string;
   prevMonthLabel: string;
   nextMonthLabel: string;
+  sinCupo?: boolean;
   cerrar: () => void;
 }) {
   const [mesVisible, setMesVisible] = useState(() => inicioDeMes(fromLocalISODate(value)));
@@ -132,7 +137,7 @@ function PanelCalendario({
   const ultimoDia = toLocalISODate(
     new Date(mesVisible.getFullYear(), mesVisible.getMonth(), diasDelMes),
   );
-  const { dias: disponibilidad, cargando } = useDisponibilidad(primerDia, ultimoDia, personas);
+  const { dias: disponibilidad, cargando } = useDisponibilidad(primerDia, ultimoDia, personas, !sinCupo);
 
   const etiquetaMes = new Intl.DateTimeFormat(locale, {
     month: 'long',

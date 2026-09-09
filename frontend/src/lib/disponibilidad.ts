@@ -16,15 +16,16 @@ import { getCupoRango, type DisponibilidadRango, type MotivoNoDisponible } from 
  * valida el backend al cobrar, y un calendario que no carga nunca debe impedir
  * que alguien intente reservar.
  */
-export function useDisponibilidad(desde: string, hasta: string, personas: number) {
+export function useDisponibilidad(desde: string, hasta: string, personas: number, activo = true) {
   // Se guarda junto con la consulta que lo produjo. Asi `cargando` se DERIVA de
   // comparar la clave pedida con la cargada, en vez de ponerse a mano al entrar
   // al efecto: un `setState` al inicio de un efecto provoca un render de mas y
   // React 19 lo marca como error.
-  const clave = `${desde}|${hasta}|${personas}`;
+  const clave = activo ? `${desde}|${hasta}|${personas}` : '';
   const [cargado, setCargado] = useState<{ clave: string; dias: DisponibilidadRango } | null>(null);
 
   useEffect(() => {
+    if (!activo) return;
     let cancelado = false;
 
     getCupoRango(desde, hasta, personas)
@@ -40,11 +41,11 @@ export function useDisponibilidad(desde: string, hasta: string, personas: number
     return () => {
       cancelado = true;
     };
-  }, [desde, hasta, personas]);
+  }, [desde, hasta, personas, activo]);
 
   return {
     dias: cargado?.clave === clave ? cargado.dias : {},
-    cargando: cargado?.clave !== clave,
+    cargando: activo ? cargado?.clave !== clave : false,
   };
 }
 

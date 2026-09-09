@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Warning, ArrowLeft, WhatsappLogo } from '@phosphor-icons/react/ssr';
@@ -8,6 +8,8 @@ import { alternativasDe } from '@/lib/site';
 import { whatsappHref, tieneWhatsapp } from '@/lib/contacto';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+
+import { TrasladoView } from '@/components/traslado-view';
 
 type PageProps = {
   params: Promise<{ lang: string }>;
@@ -92,35 +94,11 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
   }
 
   return (
-    <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={dict.nav} />
-      <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
-        <Link
-          href={`/${lang}/catalogo`}
-          className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft size={16} />
-          {dict.traslados.back}
-        </Link>
-      </div>
-
-      <main className="mx-auto max-w-6xl px-6 pt-6 pb-24 sm:px-8 lg:px-12">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            {dict.traslados.title}
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            {dict.traslados.subtitle}
-          </p>
-        </div>
-      </main>
-
-      <SiteFooter
-        lang={lang}
-        footer={dict.footer}
-        nav={dict.nav}
-        bookLabel={dict.booking.submit}
-      />
-    </div>
+    <TrasladoView
+      lang={lang}
+      dict={dict}
+      catalogo={catalogo}
+      empresaSlug={empresaSlug}
+    />
   );
 }
