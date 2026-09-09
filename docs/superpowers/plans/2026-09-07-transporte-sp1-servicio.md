@@ -703,8 +703,8 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Modify: `frontend/src/lib/api.ts` — `getTraslados(empresaSlug): Promise<TrasladosCatalogo>`.
 - Test: `backend/apps/fleet/tests.py::TrasladosViewTest` — la Empresa 2 devuelve su catálogo; una empresa sin servicio de transporte → 404; RLS: no se filtran tarifas de otra empresa.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(fleet): endpoint GET /api/<empresa>/traslados/`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(fleet): endpoint GET /api/<empresa>/traslados/`.
 
 ### Tarea 6.2 — `TrasladoCheckoutSerializer` + `POST /api/<empresa_slug>/reservas/` para transporte
 
@@ -716,8 +716,8 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Modify: `frontend/src/lib/api.ts` — `crearReservaTraslado(empresaSlug, payload)`.
 - Test: `backend/apps/bookings/tests.py::TrasladoCheckoutTest` — crea reserva + detalle; zona derivada del hotel ignora la que mande el cliente; deslinde obligatorio; `numero_personas` > `capacidad_maxima` → 400.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(bookings): checkout de reserva de traslado`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(bookings): checkout de reserva de traslado`.
 
 ### Tarea 6.3 — `CrearPagoView` calcula el precio de un traslado con `PorRuta`
 
@@ -731,8 +731,8 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
   - `_verificar_monto` en el webhook recalcula con la misma demanda (lee del `DetalleTransporte` congelado).
 - Test: `backend/apps/payments/tests.py::CrearPagoTrasladoTest` — total correcto por tipo/zona/tamaño; congela detalle; anticipo 100% del servicio de transporte; idempotencia (segunda llamada no crea intent nuevo); `_verificar_monto` cuadra.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): CrearPagoView cotiza traslados (PorRuta)`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(payments): CrearPagoView cotiza traslados (PorRuta)`.
 
 ### Tarea 6.4 — Webhook: una reserva de traslado pagada no reserva cupo
 
@@ -741,15 +741,21 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Modify: `backend/apps/notifications/services.py` — que la notificación de una reserva de transporte diga lo correcto (punto de encuentro / tipo de traslado, no "capitán/panga"). Si la plantilla de WhatsApp no aplica, el correo alcanza.
 - Test: `backend/apps/payments/tests.py` — webhook de una reserva de traslado → `pagada`, sin `ReservaOcupacion` ni `ReservaPaqueteComponente`, notificación disparada sin romper.
 
-- [ ] **Paso 1: test que falla / confirma.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(notifications): aviso de reserva de traslado`.
+- [x] **Paso 1: test que falla / confirma.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(notifications): aviso de reserva de traslado`.
 
 ### Gate Sección 6
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] `check --deploy` verde.
-- [ ] Prueba manual del agente (runserver + curl): `GET /api/<empresa2>/traslados/` devuelve catálogo; `POST` crea reserva; `crear-pago` cotiza. (Sin navegador.)
-- [ ] Commit `docs(plan): SP1 Sección 6 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] `check --deploy` verde.
+- [x] Prueba manual del agente (runserver + curl): `GET /api/<empresa2>/traslados/` devuelve catálogo; `POST` crea reserva; `crear-pago` cotiza. (Sin navegador.)
+- [x] Commit `docs(plan): SP1 Sección 6 cerrada`. **PARA y reporta.**
+
+Verificación del 2026-09-09:
+- `manage.py test apps config`: SQLite **800 tests OK (23 skips)**; PostgreSQL **800 tests OK**, con `ci_rls` sin superusuario/BYPASSRLS y `DROP DATABASE IF EXISTS test_pescadeportiva_test` previo.
+- `check --deploy --fail-level WARNING` con settings de producción: sin incidencias (1 check silenciado por la configuración existente). Frontend `lint`, `tsc --noEmit` y `build`: verdes.
+- `runserver` + `curl`, en base temporal aislada y **Stripe simulado**: catálogo HTTP 200; reserva HTTP 201 para 12 personas, zona derivada del hotel (`centro`, aunque el cliente envió `periferia`); pago HTTP 200, anticipo del 100%, `1500.00 MXN`. Reintento con el mismo intent y monto. Sin navegador ni cobros reales.
+- Commits de tareas: `813a47c` (6.1), `1f47725` (6.2), `50d2252` (6.3), `3041698` (6.4). Cada tarea tuvo prueba roja observada antes de implementar y pruebas verdes antes del commit. Sección 7 sin iniciar.
 
 ---
 
