@@ -423,3 +423,28 @@ export type TrasladosCatalogo = {
 
 export const getTraslados = (empresaSlug: string): Promise<TrasladosCatalogo> =>
   request<TrasladosCatalogo>('/api/traslados/', undefined, empresaSlug);
+
+export type ReservaTrasladoInput = Pick<ReservaInput,
+  | 'checkout_id' | 'fecha' | 'hora' | 'numero_personas'
+  | 'nombre_cliente' | 'telefono_cliente' | 'correo_cliente'
+  | 'moneda' | 'deslinde_aceptado' | 'deslinde_nombre' | 'ref' | 'captcha_token'
+> & {
+  servicio: string;
+  tipo_traslado: TipoTraslado;
+  punto_encuentro?: number | null;
+  direccion_personalizada?: string;
+  zona?: Zona | '';
+  fecha_regreso?: string | null;
+  forma_pago: PagoInput['forma_pago'];
+};
+
+export type ReservaTraslado = Omit<ReservaTrasladoInput, 'ref' | 'captcha_token'> & {
+  id: number;
+  estado: string;
+};
+
+export const crearReservaTraslado = (empresaSlug: string, payload: ReservaTrasladoInput) =>
+  request<ReservaTraslado>('/api/reservas/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }, empresaSlug);

@@ -1970,3 +1970,154 @@ class DetalleTransporteTest(EmpresaTestCase):
 
 
 
+class TrasladoCheckoutTest(ApiTestCase):
+    def setUp(self):
+        import uuid
+        self.servicio = Servicio.objects.create(
+            empresa=self.empresa, nombre='Traslado', slug='traslado',
+            tipo_servicio='transporte', estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta', capacidad_maxima=14,
+        )
+        self.punto = PuntoEncuentro.objects.create(
+            empresa=self.empresa, nombre='Hotel Sol', zona=Zona.CENTRO,
+        )
+        self.payload = {
+            'checkout_id': str(uuid.uuid4()), 'servicio': self.servicio.slug,
+            'tipo_traslado': TipoTraslado.REDONDO_ACTIVIDAD,
+            'punto_encuentro': self.punto.pk, 'zona': Zona.PERIFERIA,
+            'fecha': (date.today() + timedelta(days=10)).isoformat(), 'hora': '14:00',
+            'numero_personas': 12, 'nombre_cliente': 'Ana Ruiz',
+            'telefono_cliente': '+5216121234567', 'correo_cliente': 'ana@example.com',
+            'deslinde_aceptado': True, 'deslinde_nombre': 'Ana Ruiz',
+            'moneda': 'MXN', 'forma_pago': 'completo',
+        }
+
+    def post(self, **changes):
+        return self.client.post(f'/api/{self.empresa.slug}/reservas/',
+                                {**self.payload, **changes}, content_type='application/json')
+
+    def test_crea_reserva_y_detalle_con_zona_del_catalogo(self):
+        response = self.post(precio_total='0.01', precio_calculado='0.01')
+        self.assertEqual(response.status_code, 201, response.data)
+        reserva = Reserva.objects.get(pk=response.data['id'])
+        self.assertEqual(reserva.servicio, self.servicio)
+        self.assertEqual(reserva.empresa, self.empresa)
+        self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
+        self.assertEqual(reserva.canal_origen, 'web')
+        self.assertEqual(reserva.forma_pago, 'completo')
+        self.assertEqual(reserva.deslinde_version, DESLINDE_VERSION)
+        self.assertIsNotNone(reserva.deslinde_aceptado_en)
+        self.assertEqual(reserva.detalle_transporte.zona, Zona.CENTRO)
+        self.assertIsNone(reserva.detalle_transporte.precio_calculado)
+        self.assertIsNone(reserva.detalle_transporte.numero_personas)
+        self.assertIsNone(reserva.precio_total)
+        self.assertFalse(reserva.ocupaciones.exists())
+
+    def test_direccion_propia_y_zona(self):
+        response = self.post(punto_encuentro=None, direccion_personalizada='Casa 123')
+        self.assertEqual(response.status_code, 201, response.data)
+        detalle = DetalleTransporte.objects.get(reserva_id=response.data['id'])
+        self.assertEqual(detalle.direccion_personalizada, 'Casa 123')
+        self.assertEqual(detalle.zona, Zona.PERIFERIA)
+
+    def test_xor_y_zona_requerida_sin_reserva_parcial(self):
+        for cambios in ({'direccion_personalizada': 'Casa 123'},
+                        {'punto_encuentro': None},
+                        {'punto_encuentro': None, 'direccion_personalizada': 'Casa 123', 'zona': ''}):
+            with self.subTest(cambios=cambios):
+                self.assertEqual(self.post(**cambios).status_code, 400)
+                self.assertFalse(Reserva.objects.exists())
+
+    def test_deslinde_y_capacidad(self):
+        for changes in ({'deslinde_aceptado': False}, {'deslinde_nombre': ''},
+                        {'numero_personas': 15}):
+            with self.subTest(changes=changes):
+                self.assertEqual(self.post(**changes).status_code, 400)
+        for field in ('deslinde_nombre', 'deslinde_aceptado'):
+            value = self.payload.pop(field)
+            self.assertEqual(self.post().status_code, 400)
+            self.payload[field] = value
+        self.assertFalse(Reserva.objects.exists())
+
+    def test_fecha_regreso_segun_tipo(self):
+        for changes in (
+            {'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO},
+            {'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO, 'fecha_regreso': self.payload['fecha']},
+            {'fecha_regreso': (date.today() + timedelta(days=11)).isoformat()},
+        ):
+            with self.subTest(changes=changes):
+                self.assertEqual(self.post(**changes).status_code, 400)
+                self.assertFalse(Reserva.objects.exists())
+        response = self.post(tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                             fecha_regreso=(date.today() + timedelta(days=11)).isoformat())
+        self.assertEqual(response.status_code, 201, response.data)
+
+    def test_upsert_actualiza_detalle_y_revierte_cambios_invalidos(self):
+        first = self.post()
+        self.assertEqual(first.status_code, 201, first.data)
+        response = self.post(punto_encuentro=None, direccion_personalizada='Casa nueva', numero_personas=8)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['id'], first.data['id'])
+        self.assertEqual(self.post(direccion_personalizada='Ambos', numero_personas=4).status_code, 400)
+        reserva = Reserva.objects.get()
+        self.assertEqual(reserva.numero_personas, 8)
+        self.assertEqual(DetalleTransporte.objects.count(), 1)
+        self.assertEqual(reserva.detalle_transporte.direccion_personalizada, 'Casa nueva')
+
+    def test_catalogo_inactivo_rechazado(self):
+        self.punto.activo = False
+        self.punto.save()
+        self.assertEqual(self.post().status_code, 400)
+        self.servicio.activo = False
+        self.servicio.save()
+        self.assertEqual(self.post().status_code, 400)
+        self.assertFalse(Reserva.objects.exists())
+
+    def test_catalogo_empresa_ajena_rechazado(self):
+        from apps.tenancy.models import Empresa
+        otra = Empresa.objects.create(sede=self.sede, nombre='Otra', slug='otra')
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(otra):
+                punto = PuntoEncuentro.objects.create(empresa=otra, nombre='Otro hotel', zona=Zona.CENTRO)
+                servicio = Servicio.objects.create(
+                    empresa=otra, nombre='Ajeno', slug='ajeno', tipo_servicio='transporte',
+                    estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta',
+                )
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+        self.assertEqual(self.post(punto_encuentro=punto.pk).status_code, 400)
+        self.assertEqual(self.post(servicio=servicio.slug).status_code, 400)
+        self.assertFalse(Reserva.objects.exists())
+
+    @mock.patch('apps.bookings.views.verificar_turnstile')
+    def test_captcha_solo_al_crear(self, verificar):
+        verificar.return_value = False
+        self.assertEqual(self.post(captcha_token='invalido').status_code, 403)
+        verificar.return_value = True
+        self.assertEqual(self.post(captcha_token='valido').status_code, 201)
+        verificar.reset_mock()
+        self.assertEqual(self.post(numero_personas=8).status_code, 200)
+        verificar.assert_not_called()
+
+    def test_reenvio_sin_servicio_o_con_pesca_no_omite_validacion_del_traslado(self):
+        self.assertEqual(self.post().status_code, 201)
+        self.payload.pop('servicio')
+        self.assertEqual(self.post().status_code, 400)
+        pesca = Servicio.objects.create(empresa=self.empresa, nombre='Pesca', slug='pesca')
+        self.assertEqual(self.post(servicio=pesca.slug).status_code, 400)
+        reserva = Reserva.objects.get()
+        self.assertEqual(reserva.servicio, self.servicio)
+        self.assertEqual(DetalleTransporte.objects.count(), 1)
+
+    def test_ref_se_conserva_al_reenviar(self):
+        vendedora = Vendedora.objects.create(
+            usuario=User.objects.create_user('maria'), empresa=self.empresa, codigo='maria',
+        )
+        response = self.post(ref='maria')
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(self.post().status_code, 200)
+        reserva = Reserva.objects.get()
+        self.assertEqual(reserva.vendedora, vendedora)
+        self.assertIsNotNone(reserva.vendedora_asignada_en)

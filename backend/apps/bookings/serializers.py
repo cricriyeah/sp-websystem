@@ -1,19 +1,23 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.fleet.enums import TipoServicio, TipoTraslado
 from apps.fleet.models import (
     ExtrasItem,
     Paquete,
     PaqueteServicio,
     Personalizacion,
+    PuntoEncuentro,
     Servicio,
     ServicioPersonalizacion,
 )
 
 from .models import (
     DESLINDE_VERSION,
+    DetalleTransporte,
     Reserva,
     ReservaExtra,
     ReservaPaquetePersonalizacion,
@@ -387,3 +391,79 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
                 extra.cantidad_solicitada = cantidad
                 extra.save(update_fields=['cantidad_solicitada'])
 
+
+class TrasladoCheckoutSerializer(ReservaCheckoutSerializer):
+    """Checkout de transporte; comparte atribucion y constancia legal del checkout."""
+
+    servicio = serializers.SlugRelatedField(slug_field='slug', queryset=Servicio.objects.none())
+    deslinde_aceptado = serializers.BooleanField(required=True)
+    deslinde_nombre = serializers.CharField(required=True, max_length=150)
+    forma_pago = serializers.ChoiceField(choices=Reserva.FormaPago.choices)
+    tipo_traslado = serializers.ChoiceField(
+        choices=TipoTraslado.choices, source='detalle_transporte.tipo_traslado',
+    )
+    punto_encuentro = serializers.PrimaryKeyRelatedField(
+        queryset=PuntoEncuentro.objects.none(), required=False, allow_null=True,
+        default=None, source='detalle_transporte.punto_encuentro',
+    )
+    direccion_personalizada = serializers.CharField(
+        required=False, allow_blank=True, default='', max_length=255,
+        source='detalle_transporte.direccion_personalizada',
+    )
+    zona = serializers.CharField(
+        required=False, allow_blank=True, default='', source='detalle_transporte.zona',
+    )
+    fecha_regreso = serializers.DateField(
+        required=False, allow_null=True, default=None, source='detalle_transporte.fecha_regreso',
+    )
+
+    class Meta(ReservaCheckoutSerializer.Meta):
+        fields = [
+            'id', 'checkout_id', 'servicio', 'tipo_traslado', 'punto_encuentro',
+            'direccion_personalizada', 'zona', 'fecha', 'hora', 'fecha_regreso',
+            'numero_personas', 'nombre_cliente', 'telefono_cliente', 'correo_cliente',
+            'deslinde_aceptado', 'deslinde_nombre', 'moneda', 'forma_pago', 'ref', 'estado',
+        ]
+
+    def get_fields(self):
+        fields = serializers.ModelSerializer.get_fields(self)
+        empresa = self.context['empresa']
+        fields['servicio'].queryset = Servicio.objects.filter(
+            empresa=empresa, activo=True, tipo_servicio=TipoServicio.TRANSPORTE,
+        )
+        fields['punto_encuentro'].queryset = PuntoEncuentro.objects.filter(empresa=empresa, activo=True)
+        return fields
+
+    def create(self, validated_data):
+        detalle_data = validated_data.pop('detalle_transporte')
+        reserva = Reserva(empresa=self.context['empresa'], **validated_data)
+        return self._guardar_traslado(reserva, detalle_data)
+
+    def update(self, instance, validated_data):
+        detalle_data = validated_data.pop('detalle_transporte')
+        for campo, valor in validated_data.items():
+            setattr(instance, campo, valor)
+        return self._guardar_traslado(instance, detalle_data)
+
+    @transaction.atomic
+    def _guardar_traslado(self, reserva, detalle_data):
+        punto = detalle_data['punto_encuentro']
+        if punto:
+            detalle_data['zona'] = punto.zona
+        detalle = DetalleTransporte.objects.filter(reserva=reserva).first() if reserva.pk else None
+        if detalle is None:
+            detalle = DetalleTransporte(reserva=reserva)
+        for campo, valor in detalle_data.items():
+            setattr(detalle, campo, valor)
+        try:
+            reserva.full_clean()
+            reserva.save()
+            # La FK requiere una reserva persistida; atomic revierte ambas si falla.
+            detalle.reserva = reserva
+            detalle.full_clean()
+            detalle.save()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
+            )
+        return reserva

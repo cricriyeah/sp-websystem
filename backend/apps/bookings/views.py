@@ -4,6 +4,8 @@ from datetime import date
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.fleet.enums import TipoServicio
+from apps.fleet.models import Servicio
 from apps.tenancy import scope
 
 from .models import (
@@ -17,7 +19,7 @@ from .models import (
     proxima_fecha_disponible,
 )
 from .captcha import verificar_turnstile
-from .serializers import CupoSerializer, ReservaCheckoutSerializer, ip_del_cliente
+from .serializers import CupoSerializer, ReservaCheckoutSerializer, TrasladoCheckoutSerializer, ip_del_cliente
 
 
 class CupoDisponibleView(APIView):
@@ -168,7 +170,18 @@ class ReservaCheckoutView(APIView):
                     status=403,
                 )
 
-            serializer = ReservaCheckoutSerializer(
+            servicio_slug = request.data.get('servicio')
+            es_traslado = (
+                existente is not None and existente.servicio_id
+                and existente.servicio.tipo_servicio == TipoServicio.TRANSPORTE
+            ) or (
+                isinstance(servicio_slug, str) and Servicio.objects.filter(
+                    empresa=empresa, activo=True, slug=servicio_slug,
+                    tipo_servicio=TipoServicio.TRANSPORTE,
+                ).exists()
+            )
+            serializer_class = TrasladoCheckoutSerializer if es_traslado else ReservaCheckoutSerializer
+            serializer = serializer_class(
                 existente, data=request.data, context={'request': request, 'empresa': empresa},
             )
             serializer.is_valid(raise_exception=True)
