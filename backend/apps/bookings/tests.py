@@ -1634,4 +1634,96 @@ class TopePersonasTest(EmpresaTestCase):
         self.assertIn('numero_personas', ctx.exception.message_dict)
 
 
+class BajoDemandaCleanTest(EmpresaTestCase):
+    def test_reserva_bajo_demanda_sin_panga_ni_cupo_pasa_con_deslinde(self):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Traslado Aeropuerto',
+            slug='traslado-aeropuerto',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+        )
+        # Nota: self.empresa no tiene pangas ni CupoDiario creados
+        # Estado PAGADA (que ocupa cupo si estuviera activo)
+        reserva = Reserva(
+            empresa=self.empresa,
+            servicio=servicio,
+            fecha=date.today() + timedelta(days=5),
+            hora=time(10, 0),
+            numero_personas=4,
+            nombre_cliente='Carlos Mora',
+            telefono_cliente='+5216121112233',
+            correo_cliente='carlos@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+            deslinde_nombre='Carlos Mora',
+            estado=Reserva.Estado.PAGADA,
+        )
+        reserva.full_clean()
+        reserva.save()
+        self.assertIsNotNone(reserva.pk)
+
+    def test_reserva_bajo_demanda_web_exige_deslinde(self):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Traslado Aeropuerto',
+            slug='traslado-aeropuerto',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+        )
+        reserva = Reserva(
+            empresa=self.empresa,
+            servicio=servicio,
+            fecha=date.today() + timedelta(days=5),
+            hora=time(10, 0),
+            numero_personas=4,
+            nombre_cliente='Carlos Mora',
+            telefono_cliente='+5216121112233',
+            correo_cliente='carlos@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=False,
+            estado=Reserva.Estado.PAGADA,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            reserva.full_clean()
+        self.assertIn('deslinde_aceptado', ctx.exception.message_dict)
+
+    def test_reserva_bajo_demanda_ignora_cupo_diario_lleno(self):
+        fecha = date.today() + timedelta(days=5)
+        # Cerramos el cupo diario para esa fecha
+        CupoDiario.objects.create(empresa=self.empresa, fecha=fecha, cupo_maximo=1)
+        crear_reserva(self.empresa, fecha=fecha, estado=Reserva.Estado.PAGADA)
+
+        servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Traslado Aeropuerto',
+            slug='traslado-aeropuerto',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+        )
+        reserva = Reserva(
+            empresa=self.empresa,
+            servicio=servicio,
+            fecha=fecha,
+            hora=time(10, 0),
+            numero_personas=4,
+            nombre_cliente='Carlos Mora',
+            telefono_cliente='+5216121112233',
+            correo_cliente='carlos@example.com',
+            canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True,
+            deslinde_nombre='Carlos Mora',
+            estado=Reserva.Estado.PAGADA,
+        )
+        # Debe pasar sin lanzar ValidationError de cupo
+        reserva.full_clean()
+        reserva.save()
+        self.assertIsNotNone(reserva.pk)
+
+
+
+
 

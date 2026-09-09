@@ -677,6 +677,8 @@ class Reserva(models.Model):
                 _validar_cupo_de_paquete(self)
             elif self.servicio_id and self.servicio.estrategia_cupo == 'por_noche':
                 _validar_cupo_hospedaje(self)
+            elif self.servicio_id and self.servicio.estrategia_cupo == 'bajo_demanda':
+                pass
             else:
                 estrategia_cupo = self.servicio.estrategia_cupo if self.servicio_id else 'por_recurso_dia'
                 validar_cupo_diario(
@@ -761,6 +763,9 @@ class Reserva(models.Model):
         vende como si cada panga hiciera una sola salida diaria. Esto la hace
         cumplir del otro lado, al repartir.
         """
+        if self.servicio_id is not None and self.servicio.estrategia_cupo != 'por_recurso_dia':
+            return
+
         del_dia = Reserva.objects.filter(
             fecha=self.fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa_id=self.empresa_id,
         )
