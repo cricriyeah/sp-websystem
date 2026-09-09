@@ -649,11 +649,11 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Create: migración `CreateModel`.
 - Test: `backend/apps/bookings/tests.py::DetalleTransporteTest` — cada rama de `clean()`; `zona_efectiva()` para los 3 tipos.
 
-- [ ] **Paso 1: test que falla** — XOR punto/dirección; zona vs hotel; empresa cruzada; `fecha_regreso` según tipo; `zona_efectiva()`.
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** añadir modelo + migración.
-- [ ] **Paso 4:** correr → verde.
-- [ ] **Paso 5:** commit `feat(bookings): modelo DetalleTransporte`.
+- [x] **Paso 1: test que falla** — XOR punto/dirección; zona vs hotel; empresa cruzada; `fecha_regreso` según tipo; `zona_efectiva()`.
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** añadir modelo + migración.
+- [x] **Paso 4:** correr → verde.
+- [x] **Paso 5:** commit `feat(bookings): modelo DetalleTransporte`.
 
 ### Tarea 5.2 — RLS de `DetalleTransporte`
 
@@ -662,7 +662,7 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Modify: `backend/apps/tenancy/tests_rls.py` — añadir `bookings_detalletransporte` a la whitelist de "llega a empresa vía FK".
 - Test: `# postgres-only` — dos empresas, una reserva de transporte cada una, aislamiento.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(bookings): política RLS para DetalleTransporte`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(bookings): política RLS para DetalleTransporte`.
 
 ### Tarea 5.3 — `DetalleTransporteInline` en el admin; `Agenda` no lista transporte
 
@@ -671,13 +671,13 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Modify: `backend/apps/bookings/admin.py` — `Agenda.por_repartir()` / el queryset del proxy: excluir reservas cuyo `servicio.estrategia_cupo == 'bajo_demanda'` o `servicio.tipo_servicio == 'transporte'` (no llevan panga/capitán). Confirmar que `Agenda` filtra por `estado in [PAGADA, ASIGNADA]` y añadir el filtro de tipo.
 - Test: `backend/apps/bookings/tests.py` — una reserva de transporte `pagada` NO aparece en `Agenda.por_repartir()`.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(bookings): admin de DetalleTransporte; la agenda ignora traslados`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(bookings): admin de DetalleTransporte; la agenda ignora traslados`.
 
 ### Gate Sección 5
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Guardarraíl RLS pasa con `DetalleTransporte`.
-- [ ] Commit `docs(plan): SP1 Sección 5 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] Guardarraíl RLS pasa con `DetalleTransporte`.
+- [x] Commit `docs(plan): SP1 Sección 5 cerrada`. **PARA y reporta.**
 
 ---
 
