@@ -27,6 +27,8 @@ class DemandaPrecio:
     personas: int
     moneda: str = 'MXN'
     noches: int = 1
+    tipo_traslado: str | None = None
+    zona: str | None = None
 
     @property
     def moneda_normalizada(self) -> str:

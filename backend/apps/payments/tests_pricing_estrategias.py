@@ -49,6 +49,15 @@ class EstrategiasPrecioTests(SimpleTestCase):
         total = estrategia.calcular_base(self.config, demanda)
         self.assertEqual(total, Decimal('4500.00'))
 
+    def test_demanda_precio_campos_opcionales_traslado_y_compatibilidad(self):
+        estrategia = PorGrupo()
+        demanda = DemandaPrecio(personas=2, tipo_traslado='recepcion_aeropuerto', zona='centro')
+        self.assertEqual(demanda.tipo_traslado, 'recepcion_aeropuerto')
+        self.assertEqual(demanda.zona, 'centro')
+        # PorGrupo ignora tipo_traslado y zona sin romperse
+        total = estrategia.calcular_base(self.config, demanda)
+        self.assertEqual(total, Decimal('4500.00'))
+
     def test_por_grupo_mxn_con_personas_extra(self):
         estrategia = PorGrupo()
         # 5 personas con 3 incluidas = 2 extras ($500 c/u) -> 4500 + 1000 = 5500
