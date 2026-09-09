@@ -90,3 +90,18 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
   renderizar — solo se escribe en localStorage.
 - El codigo vive 30 dias en localStorage (`src/lib/ref.ts`) y viaja como `ref` en
   `guardarReserva`. El backend ignora en silencio el que no resuelva.
+
+## Ruta /traslados (checkout de transporte)
+
+`[lang]/traslados/page.tsx` es el punto de entrada server-side para cotizar y reservar traslados terrestres privados:
+
+- **Server Component + SSR**: obtiene el diccionario con `getDictionary(lang)` y el catálogo con `getTraslados(empresaSlug)` (vía `GET /api/<empresa>/traslados/`). El slug se toma de `searchParams.empresa` o `NEXT_PUBLIC_TRANSPORTE_EMPRESA_SLUG` (por defecto `'transporte-la-paz'`).
+- **Resiliencia**: si la API de traslados devuelve 404 o 503 (ej. Stripe no configurado en esa empresa), la página muestra un estado accesible de servicio no disponible sin reventar. Cuenta con `loading.tsx` con esqueletos visuales durante la carga.
+- **Componente `traslado-view.tsx`**:
+  1. Paso 1 — Tipo de traslado: 3 modalidades (`redondo_aeropuerto`, `redondo_actividad`, `recepcion_aeropuerto`) con precios base calculados desde las tarifas del catálogo.
+  2. Paso 2 — Hospedaje: selector `<FieldPopover>` con `puntos_encuentro` predefinidos u opción de ingresar dirección libre (con selector de zona solo si el tipo de traslado es `redondo_actividad`).
+  3. Paso 3 — Fechas y horario: `DateField` para fecha de inicio y fecha de regreso (solo si aplica), y `TimeField` sin ventanas fijas restrictivas (el transporte opera en cualquier horario).
+  4. Paso 4 — Personas: selector numérico con tope dado por `servicio.capacidad_maxima`.
+  5. Paso 5 — Checkout: datos del cliente, captura de `?ref=`, checkbox de deslinde obligatorio y panel de pago seguro vía Stripe Elements (`PaymentElement`).
+- **Catálogo general**: `[lang]/catalogo/page.tsx` expone un banner secundario Perception-First para traslados cuando la sede seleccionada es La Paz.
+

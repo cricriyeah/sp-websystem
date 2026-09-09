@@ -386,14 +386,22 @@ admin y el shell:
   Los 4 campos (`deslinde_aceptado`, `deslinde_nombre`, `deslinde_aceptado_en`,
   `deslinde_ip`) son readonly en el admin: son constancia legal, no datos editables.
   Las reservas por WhatsApp no lo requieren (el cliente no firma en el sistema).
-- **Personas**: 1 a `MAX_PERSONAS = 5` (la embarcacion mas grande), y si ya hay
-  embarcacion asignada tampoco puede exceder su `capacidad_maxima`. El mismo tope vive
-  en `frontend/src/lib/dates.ts` (`MAX_PEOPLE`) y en la copia de las dos dictionaries:
-  se mueven juntos o el cliente llena todo el checkout para toparse con un 400 al final.
+- **Personas**: 1 a `servicio.capacidad_maxima` si el servicio la define (con fallback a `MAX_PERSONAS = 5` para pesca legacy), y si ya hay
+  embarcacion asignada tampoco puede exceder su `capacidad_maxima`.
 - **Cambio de fecha**: minimo `HORAS_MINIMAS_CAMBIO_FECHA = 48` de anticipacion sobre la
   salida original. `from_db()` guarda la salida original en `_salida_original` para poder
   compararla. No aplica a canceladas (mal clima no avisa con 48 horas) ni a reservas que
   todavia no ocupan cupo.
+
+## Transporte como servicio
+
+Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra ad-hoc y pasan a ser un servicio formal de catálogo (`TipoServicio.TRANSPORTE`):
+
+- **`fleet.TransporteTarifa`**: catálogo de precios escalonado por ruta y capacidad (`tipo_traslado`, `zona`, `personas_min`, `personas_max`, `precio` en MXN y `precio_usd`). Tabla protegida por política RLS `tenancy_alcance` bajo `empresa_id`. Admin administrable únicamente por jefes (permisos en `setup_roles`).
+- **Estrategia de precio `PorRuta`** (`apps/payments/strategies/por_ruta.py`): resuelve el monto mediante `apps.fleet.tarifa_transporte.resolver_tarifa_transporte(empresa, demanda)` según `tipo_traslado`, `zona` y `numero_personas`. La cotización ocurre siempre en el servidor; `CrearPagoView` congela el `precio_calculado` en `DetalleTransporte`.
+- **`bookings.DetalleTransporte`**: detalle operativo asociado `OneToOne` a `Reserva`. Guarda `tipo_traslado`, `punto_encuentro` (FK a `PuntoEncuentro`), `direccion_personalizada`, `zona`, `fecha_regreso` (para `redondo_aeropuerto`), `numero_personas` y `precio_calculado`. Su política RLS de Postgres se aplica vía FK referida a `reserva.empresa_id` y está verificada en el guardarraíl de `apps/tenancy/tests_rls.py`. Visible como `DetalleTransporteInline` en `ReservaAdmin`. La `Agenda` operativa de pangas filtra y omite traslados.
+- **Ventana horaria y capacidad por Servicio**: `Servicio.hora_apertura` y `Servicio.hora_cierre` permiten ventanas horarias por servicio (pesca 5:00–7:00am, transporte sin ventana fija). `Servicio.capacidad_maxima` fija el tope de personas (ej. 14 para transporte).
+- **Ruta pública `GET /api/<empresa_slug>/traslados/`**: (`apps/fleet/views.py::TrasladosView`), throttled, entrega el catálogo (`servicio`, `tarifas`, `puntos_encuentro`, `publishable_key`) bajo el alcance RLS de la empresa proveedora de transporte.
 
 ## Roles: Jefes vs Vendedora
 
@@ -414,9 +422,10 @@ admin y el shell:
 
 ## Gotchas
 
-- `bookings.Reserva.hora` valida ventana 5:00–7:00am (`validar_ventana_salida` en `models.py`).
+- `bookings.Reserva.hora` ya no tiene `validar_ventana_salida` como validador de campo fijo. La ventana horaria se valida en `Reserva.clean()` vía `_validar_ventana_horaria()` gateado por `self.servicio.ventana_horaria()`; servicios como transporte no restringen a 5:00–7:00am. El helper `validar_ventana_salida` se conserva como helper utilitario.
 - `embarcacion`/`capitan` en `Reserva` son nullable a proposito: quedan vacios hasta que la
   vendedora asigna manualmente.
 - **Reactivación manual CANCELADA -> PAGADA**: si un admin cambia a mano el estado de una reserva de `CANCELADA` a `PAGADA`, `Reserva.save()` reactiva sus `ReservaOcupacion` (`ocupa_cupo=True`) sin re-validar cupo contra otras reservas que se hayan creado mientras estuvo cancelada. Es una deuda técnica conocida; no reactivar sin verificar disponibilidad manualmente.
 - **Paquetes turísticos**: en v1 (`ADR-004 Revisión 3`), un paquete agrupa servicios de una sola empresa (`empresa_lider`). Es un bundle cerrado con precio fijo: el cliente no puede retirar servicios (no existen "servicios removibles" ni resta de ajustes). El precio total vive en `pricing.py` (`precio_paquete_total`) y se calcula como `precio_ancla` fijo + Σ personalizaciones (preseleccionadas/obligatorias + opcionales marcadas). Al confirmar el pago, se reserva cupo para todos los servicios componentes del paquete y se generan sus `ReservaPaqueteComponente`.
+
 
