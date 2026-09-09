@@ -2133,7 +2133,7 @@ class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
             self.assertEqual(reserva.componentes.count(), 0)
 
 
-class CrearPagoTrasladoTest(ApiTestCase):
+class TrasladoPagoFixture:
     def setUp(self):
         from apps.fleet.models import PuntoEncuentro, TransporteTarifa
 
@@ -2192,6 +2192,8 @@ class CrearPagoTrasladoTest(ApiTestCase):
             content_type='application/json',
         )
 
+
+class CrearPagoTrasladoTest(TrasladoPagoFixture, ApiTestCase):
     def test_total_por_tipo_zona_tamano_y_moneda(self):
         for tipo, personas, zona, moneda, esperado in (
             ('redondo_aeropuerto', 1, 'centro', 'MXN', '4500.00'),
@@ -2328,3 +2330,92 @@ class CrearPagoTrasladoTest(ApiTestCase):
         reserva.precio_total = Decimal('4000.00')
         with self.assertLogs('apps.payments.services', level='ERROR'):
             _verificar_monto(reserva, {'currency': 'mxn', 'amount_received': 400000})
+
+
+@override_settings(
+    RESEND_API_KEY='resend_test', RESEND_FROM='reservas@example.com', RESEND_BCC=[],
+    WHATSAPP_TOKEN='whatsapp_test', WHATSAPP_PHONE_NUMBER_ID='12345',
+)
+class WebhookTrasladoTest(TrasladoPagoFixture, ApiTestCase):
+    def confirmar(self, reserva):
+        evento = evento_pagado(reserva.pk)
+        with mock.patch('apps.payments.views.stripe.Webhook.construct_event', return_value=evento):
+            with self.captureOnCommitCallbacks(execute=True):
+                return self.client.post(
+                    f'/api/{self.empresa.slug}/stripe/webhook/', data='{}',
+                    content_type='application/json', HTTP_STRIPE_SIGNATURE='firma_simulada',
+                )
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_webhook_pagada_sin_cupo_y_correo_de_traslado_una_sola_vez(self, post):
+        reserva = self.reserva()
+        detalle = reserva.detalle_transporte
+        detalle.punto_encuentro = self.punto
+        detalle.direccion_personalizada = ''
+        detalle.full_clean()
+        detalle.save()
+        self.assertEqual(self.post(reserva).status_code, 200)
+        with mock.patch('apps.bookings.models.validar_cupo_diario') as cupo:
+            with mock.patch('apps.bookings.cupo.confirmacion.bloquear_cupo') as candado:
+                self.assertEqual(self.confirmar(reserva).status_code, 200)
+                self.assertEqual(self.confirmar(reserva).status_code, 200)
+        cupo.assert_not_called()
+        candado.assert_not_called()
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+        self.assertEqual(reserva.monto_pagado, Decimal('4500.00'))
+        self.assertFalse(ReservaOcupacion.objects.filter(reserva=reserva).exists())
+        self.assertFalse(ReservaPaqueteComponente.objects.filter(reserva=reserva).exists())
+        self.assertIsNone(reserva.embarcacion_id)
+        self.assertIsNone(reserva.capitan_id)
+        post.assert_called_once()
+        self.assertEqual(post.call_args.args[0], 'https://api.resend.com/emails')
+        cuerpo = post.call_args.kwargs['json']['html']
+        self.assertIn('Hotel del centro', cuerpo)
+        self.assertIn(detalle.get_tipo_traslado_display(), cuerpo)
+        self.assertIn(str(detalle.fecha_regreso), cuerpo)
+        self.assertNotIn('capitan', cuerpo.lower())
+        self.assertNotIn('panga', cuerpo.lower())
+        self.assertNotIn('Marina La Costa', cuerpo)
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_correo_escapa_direccion_personalizada(self, post):
+        from apps.notifications.services import notificar_reserva_pagada
+
+        reserva = self.reserva('redondo_actividad')
+        detalle = reserva.detalle_transporte
+        detalle.direccion_personalizada = 'Casa <b>Azul</b> & patio'
+        detalle.save()
+        resultado = notificar_reserva_pagada(reserva)
+        self.assertEqual(resultado, {'email': True, 'whatsapp': False})
+        cuerpo = post.call_args.kwargs['json']['html']
+        self.assertIn('Casa &lt;b&gt;Azul&lt;/b&gt; &amp; patio', cuerpo)
+        self.assertNotIn('<b>Azul</b>', cuerpo)
+        self.assertNotIn('capitan', cuerpo.lower())
+        post.assert_called_once()
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_fallo_de_correo_no_revierte_pago_ni_ocupa_cupo(self, post):
+        import requests
+
+        post.side_effect = requests.RequestException('correo no disponible')
+        reserva = self.reserva()
+        self.assertEqual(self.post(reserva).status_code, 200)
+        self.assertEqual(self.confirmar(reserva).status_code, 200)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+        self.assertFalse(reserva.ocupaciones.exists())
+        self.assertFalse(reserva.componentes.exists())
+        self.assertFalse(reserva.reembolsada)
+        post.assert_called_once()
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_descuadre_se_registra_pero_webhook_confirma(self, post):
+        reserva = self.reserva()
+        self.assertEqual(self.post(reserva).status_code, 200)
+        Reserva.objects.filter(pk=reserva.pk).update(precio_total='1.00')
+        with self.assertLogs('apps.payments.services', level='ERROR'):
+            self.assertEqual(self.confirmar(reserva).status_code, 200)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+        self.assertFalse(reserva.ocupaciones.exists())

@@ -12,6 +12,8 @@ from html import escape
 import requests
 from django.conf import settings
 
+from apps.fleet.enums import TipoServicio
+
 logger = logging.getLogger(__name__)
 
 TIMEOUT_SEGUNDOS = 10
@@ -39,7 +41,35 @@ def _asunto(reserva):
     return f'Reserva confirmada — {reserva.fecha} {reserva.hora:%H:%M}'
 
 
+def _es_traslado(reserva):
+    return bool(reserva.servicio_id and reserva.servicio.tipo_servicio == TipoServicio.TRANSPORTE)
+
+
+def _cuerpo_traslado_html(reserva):
+    detalle = reserva.detalle_transporte
+    punto = detalle.punto_encuentro.nombre if detalle.punto_encuentro_id else detalle.direccion_personalizada
+    regreso = (
+        f'<li><strong>Fecha de regreso al aeropuerto:</strong> {detalle.fecha_regreso}</li>'
+        if detalle.fecha_regreso else ''
+    )
+    personas = detalle.numero_personas if detalle.numero_personas is not None else reserva.numero_personas
+    return (
+        f'<p>Hola {_html(reserva.nombre_cliente)}, tu traslado quedo confirmado.</p>'
+        f'<ul>'
+        f'<li><strong>Tipo de traslado:</strong> {_html(detalle.get_tipo_traslado_display())}</li>'
+        f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
+        f'<li><strong>Hora:</strong> {reserva.hora:%H:%M}</li>'
+        f'{regreso}'
+        f'<li><strong>Personas:</strong> {personas}</li>'
+        f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>'
+        f'</ul>'
+    )
+
+
 def _cuerpo_html(reserva):
+    if _es_traslado(reserva):
+        return _cuerpo_traslado_html(reserva)
+
     pendiente = ''
     if reserva.forma_pago == reserva.FormaPago.ANTICIPO and reserva.precio_total and reserva.monto_pagado:
         restante = reserva.precio_total - reserva.monto_pagado
@@ -203,6 +233,10 @@ def enviar_whatsapp_confirmacion(reserva):
     """Confirmacion por WhatsApp Business API. Manda una plantilla aprobada
     (`WHATSAPP_TEMPLATE`) con fecha, hora y personas como parametros, porque
     fuera de la ventana de 24 horas Meta no acepta texto libre."""
+    # La plantilla vigente describe pesca. Transporte se confirma por correo
+    # hasta contar con una plantilla de Meta propia, fuera del alcance de SP1.
+    if _es_traslado(reserva):
+        return False
     if not (settings.WHATSAPP_TOKEN and settings.WHATSAPP_PHONE_NUMBER_ID):
         logger.info('WhatsApp sin configurar, no se mando mensaje de la reserva %s', reserva.pk)
         return False

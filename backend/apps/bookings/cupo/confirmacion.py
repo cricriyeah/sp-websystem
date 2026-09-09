@@ -109,4 +109,5 @@ def reservar_cupo_al_confirmar(reserva) -> None:
                 )
         return
 
-    # Caso C: servicio normal de pesca/paseo o legacy -> nada nuevo que reservar
+    # Caso C: servicio directo bajo_demanda (incluido transporte), pesca/paseo
+    # o legacy: nada nuevo que reservar. Transporte no crea ocupaciones ni componentes.
