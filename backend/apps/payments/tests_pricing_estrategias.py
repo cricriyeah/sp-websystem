@@ -10,6 +10,7 @@ from apps.payments.estrategias_precio import (
     PorGrupo,
     PorNoche,
     PorPersona,
+    PorRuta,
     TarifaFija,
     TipoEstrategiaPrecio,
     obtener_estrategia_precio,
@@ -216,3 +217,63 @@ class MontoInicialTests(SimpleTestCase):
 
     def test_monto_inicial_anticipo_default_30(self):
         self.assertEqual(monto_inicial(Decimal('1000.00'), 'anticipo'), Decimal('300.00'))
+
+
+class TarifaFalsa:
+    def __init__(self, tipo_traslado, zona='', personas_min=1, personas_max=None, precio=Decimal('1000.00'), precio_usd=None):
+        self.tipo_traslado = tipo_traslado
+        self.zona = zona
+        self.personas_min = personas_min
+        self.personas_max = personas_max
+        self.precio = precio
+        self.precio_usd = precio_usd
+
+    def precio_en(self, moneda):
+        return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
+
+
+class PorRutaTest(SimpleTestCase):
+    def setUp(self):
+        self.tarifas = [
+            TarifaFalsa('redondo_aeropuerto', '', 1, 4, Decimal('4500.00'), Decimal('260.00')),
+            TarifaFalsa('redondo_aeropuerto', '', 5, None, Decimal('6000.00'), Decimal('350.00')),
+            TarifaFalsa('redondo_actividad', 'centro', 1, None, Decimal('1500.00'), None),
+        ]
+        self.config = {'tarifas_transporte_activas': self.tarifas}
+        self.estrategia = PorRuta()
+
+    def test_calcular_base_mxn_y_usd(self):
+        demanda_mxn = DemandaPrecio(personas=3, moneda='MXN', tipo_traslado='redondo_aeropuerto')
+        self.assertEqual(self.estrategia.calcular_base(self.config, demanda_mxn), Decimal('4500.00'))
+
+        demanda_usd = DemandaPrecio(personas=6, moneda='USD', tipo_traslado='redondo_aeropuerto')
+        self.assertEqual(self.estrategia.calcular_base(self.config, demanda_usd), Decimal('350.00'))
+
+    def test_calcular_base_con_zona(self):
+        demanda = DemandaPrecio(personas=2, tipo_traslado='redondo_actividad', zona='centro')
+        self.assertEqual(self.estrategia.calcular_base(self.config, demanda), Decimal('1500.00'))
+
+    def test_falla_si_falta_tarifas_en_config(self):
+        demanda = DemandaPrecio(personas=2, tipo_traslado='redondo_aeropuerto')
+        with self.assertRaisesMessage(ValueError, 'PorRuta necesita servicio_config.tarifas_transporte_activas'):
+            self.estrategia.calcular_base({}, demanda)
+
+    def test_falla_si_falta_tipo_traslado(self):
+        demanda = DemandaPrecio(personas=2)
+        with self.assertRaisesMessage(ValueError, 'PorRuta necesita demanda.tipo_traslado'):
+            self.estrategia.calcular_base(self.config, demanda)
+
+    def test_falla_si_no_hay_tarifa_para_la_demanda(self):
+        demanda = DemandaPrecio(personas=2, tipo_traslado='recepcion_aeropuerto')
+        with self.assertRaisesMessage(ValueError, 'No hay tarifa de transporte'):
+            self.estrategia.calcular_base(self.config, demanda)
+
+    def test_falla_si_moneda_no_tiene_precio(self):
+        demanda = DemandaPrecio(personas=2, moneda='USD', tipo_traslado='redondo_actividad', zona='centro')
+        with self.assertRaisesMessage(ValueError, 'La tarifa no tiene precio en USD.'):
+            self.estrategia.calcular_base(self.config, demanda)
+
+    def test_registro_contiene_por_ruta(self):
+        obtenida = obtener_estrategia_precio('por_ruta')
+        self.assertIsInstance(obtenida, PorRuta)
+

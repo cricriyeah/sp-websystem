@@ -19,6 +19,7 @@ class EstrategiaPrecio(models.TextChoices):
     POR_PERSONA = 'por_persona', 'Por persona'
     TARIFA_FIJA = 'tarifa_fija', 'Tarifa fija'
     POR_NOCHE = 'por_noche', 'Por noche'
+    POR_RUTA = 'por_ruta', 'Por ruta (transporte)'
 
 
 class ModoOcupacion(models.TextChoices):

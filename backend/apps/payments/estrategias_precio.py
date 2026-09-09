@@ -11,6 +11,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 from typing import Any
 
+from apps.fleet.tarifa_transporte import TarifaTransporteNoConfigurada, resolver_tarifa_transporte
 from .pricing import CENTAVOS, PERSONAS_INCLUIDAS, cargo_por_personas, personas_extra
 
 
@@ -19,6 +20,7 @@ class TipoEstrategiaPrecio(StrEnum):
     POR_PERSONA = 'por_persona'
     TARIFA_FIJA = 'tarifa_fija'
     POR_NOCHE = 'por_noche'
+    POR_RUTA = 'por_ruta'
 
 
 @dataclass(frozen=True)
@@ -150,11 +152,37 @@ class PorNoche(EstrategiaPrecio):
         return total
 
 
+class PorRuta(EstrategiaPrecio):
+    """Precio de un traslado: la fila de TransporteTarifa que aplica a
+    (tipo_traslado, zona, personas). El precio sale entero de la tabla —
+    no usa precio_base ni personas_incluidas del Servicio."""
+    clave = TipoEstrategiaPrecio.POR_RUTA
+
+    def calcular_base(self, servicio_config: Any, demanda: DemandaPrecio) -> Decimal:
+        tarifas = _obtener_campo(servicio_config, ['tarifas_transporte_activas'])
+        if tarifas is None:
+            raise ValueError('PorRuta necesita servicio_config.tarifas_transporte_activas')
+        if not demanda.tipo_traslado:
+            raise ValueError('PorRuta necesita demanda.tipo_traslado')
+        try:
+            fila = resolver_tarifa_transporte(
+                tarifas, tipo_traslado=demanda.tipo_traslado,
+                zona=demanda.zona, personas=demanda.personas,
+            )
+        except TarifaTransporteNoConfigurada as e:
+            raise ValueError(str(e)) from e
+        precio = fila.precio_en(demanda.moneda_normalizada)
+        if precio is None:
+            raise ValueError(f'La tarifa no tiene precio en {demanda.moneda_normalizada}.')
+        return Decimal(precio).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+
+
 REGISTRO_ESTRATEGIAS_PRECIO: dict[str, EstrategiaPrecio] = {
     TipoEstrategiaPrecio.POR_GRUPO: PorGrupo(),
     TipoEstrategiaPrecio.POR_PERSONA: PorPersona(),
     TipoEstrategiaPrecio.TARIFA_FIJA: TarifaFija(),
     TipoEstrategiaPrecio.POR_NOCHE: PorNoche(),
+    TipoEstrategiaPrecio.POR_RUTA: PorRuta(),
 }
 
 
