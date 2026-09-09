@@ -13,6 +13,8 @@ type TimeFieldProps = {
   /** Pregunta grande mientras no hay respuesta. */
   placeholder?: string;
   solicitarApertura?: number;
+  /** Lista de horas disponibles (default: TOUR_HOURS 5:00-7:00 am). */
+  availableHours?: string[];
 };
 
 export function TimeField({
@@ -22,7 +24,9 @@ export function TimeField({
   onChange,
   placeholder,
   solicitarApertura,
+  availableHours,
 }: TimeFieldProps) {
+  const horas = availableHours ?? TOUR_HOURS;
   return (
     <FieldPopover
       label={label}
@@ -35,10 +39,8 @@ export function TimeField({
       {(cerrar) => (
         <div className="w-full sm:w-56">
           <p className="px-1 pb-2 text-xs text-muted">{help}</p>
-          {/* La ventana de salida es de 5 a 7 am en pasos de 15 minutos: caben
-              las 9 opciones sin scroll, no hace falta virtualizar nada. */}
           <ul className="flex flex-col gap-0.5">
-            {TOUR_HOURS.map((hora) => {
+            {horas.map((hora) => {
               const seleccionada = hora === value;
               return (
                 <li key={hora}>

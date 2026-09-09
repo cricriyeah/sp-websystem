@@ -18,7 +18,37 @@ export function getMinBookableDate(): string {
   return toLocalISODate(date);
 }
 
+// Constantes de ventana horaria por omisión (pesca deportiva)
+export const PESCA_HORA_APERTURA = '05:00';
+export const PESCA_HORA_CIERRE = '07:00';
 export const TOUR_HOURS = ['05:00', '05:15', '05:30', '05:45', '06:00', '06:15', '06:30', '06:45', '07:00'];
+
+/**
+ * Genera las horas seleccionables para una ventana horaria (apertura y cierre en 'HH:MM'),
+ * con saltos de pasoMinutos (default 15). Si no se proveen horas, retorna TOUR_HOURS.
+ */
+export function generarHorasVentana(
+  apertura?: string | null,
+  cierre?: string | null,
+  pasoMinutos = 15
+): string[] {
+  if (!apertura || !cierre) {
+    return TOUR_HOURS;
+  }
+  const [hIni, mIni] = apertura.split(':').map(Number);
+  const [hFin, mFin] = cierre.split(':').map(Number);
+  const totalIni = hIni * 60 + mIni;
+  const totalFin = hFin * 60 + mFin;
+  if (totalIni > totalFin) return [];
+
+  const horas: string[] = [];
+  for (let m = totalIni; m <= totalFin; m += pasoMinutos) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    horas.push(`${hh}:${mm}`);
+  }
+  return horas;
+}
 
 // 'HH:MM' de 24 horas a '6:30 am'. Las salidas son todas de madrugada, pero el
 // periodo se calcula igual para no depender de eso.
@@ -36,15 +66,19 @@ export function fromLocalISODate(iso: string): Date {
 }
 
 /**
- * Tope de personas por viaje: la panga mas grande de la flota lleva 5.
- *
- * Tiene que coincidir con `MAX_PERSONAS` en backend/apps/bookings/models.py. El
- * servidor rechaza lo que se pase, asi que un valor mas alto aqui no vende de
- * mas — deja al cliente llenar todo el checkout para toparse con un 400 al
- * final, que es la peor forma de enterarse.
+ * Tope de personas por viaje: la panga mas grande de la flota lleva 5 (pesca default).
+ * Otros servicios (e.g. transporte, hospedaje) configuran su propio tope vía `capacidad_maxima`.
  */
-export const MAX_PEOPLE = 5;
+export const PESCA_MAX_PEOPLE = 5;
+export const MAX_PEOPLE = PESCA_MAX_PEOPLE;
 export const MIN_PEOPLE = 1;
+
+/**
+ * Retorna el tope de personas efectivo para un servicio o experiencia.
+ */
+export function getTopePersonas(capacidadMaxima?: number | null): number {
+  return capacidadMaxima && capacidadMaxima > 0 ? capacidadMaxima : MAX_PEOPLE;
+}
 
 /**
  * Lee dia/hora/personas de un parametro de la URL, validando cada uno por su
@@ -54,27 +88,33 @@ export const MIN_PEOPLE = 1;
  * necesita uno (ahi no hay campo vacio posible), la portada no — un campo sin
  * responder se queda vacio a proposito.
  *
- * `get` es indireccion a proposito: `/[lang]/reservar` lee del `searchParams`
- * que le da el servidor, y la portada del `URLSearchParams` de
- * `window.location.search` en el cliente (ver el comentario largo en
- * `booking-state.tsx` sobre por que ahi no puede ser server-side).
+ * Acepta opciones para sobreescribir las horas válidas o el rango de personas.
  */
 export function parseBookingQuery(
   get: (key: string) => string | undefined,
   minDate: string,
+  options?: {
+    validHours?: string[];
+    maxPeople?: number;
+    minPeople?: number;
+  }
 ): { day?: string; time?: string; people?: number } {
   const dayParam = get('day');
   const day =
     dayParam && /^\d{4}-\d{2}-\d{2}$/.test(dayParam) && dayParam >= minDate ? dayParam : undefined;
 
+  const validHours = options?.validHours ?? TOUR_HOURS;
   const timeParam = get('time');
-  const time = timeParam && TOUR_HOURS.includes(timeParam) ? timeParam : undefined;
+  const time = timeParam && validHours.includes(timeParam) ? timeParam : undefined;
 
+  const max = options?.maxPeople ?? MAX_PEOPLE;
+  const min = options?.minPeople ?? MIN_PEOPLE;
   const peopleParam = get('people');
   const peopleNum = peopleParam ? Number(peopleParam) : NaN;
   const people = Number.isInteger(peopleNum)
-    ? Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, peopleNum))
+    ? Math.min(max, Math.max(min, peopleNum))
     : undefined;
 
   return { day, time, people };
 }
+

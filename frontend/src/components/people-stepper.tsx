@@ -17,12 +17,14 @@ type PeopleStepperProps = {
   placeholder?: string;
   /** Cuantas personas se asumen al pulsar + desde vacio. */
   valorInicial?: number;
+  /** Tope configurable de personas. Vacio = MAX_PEOPLE (5). */
+  maxPeople?: number;
+  minPeople?: number;
 };
 
 /**
- * Contador de personas, compartido por el booking bar y el checkout. El tope
- * son 6 (la embarcacion mas grande) y el backend lo valida igual, ver
- * `MAX_PERSONAS` en apps/bookings/models.py.
+ * Contador de personas, compartido por el booking bar y el checkout.
+ * El tope por omisión es MAX_PEOPLE (5) de pesca o el que indique el servicio.
  */
 export function PeopleStepper({
   label,
@@ -32,11 +34,15 @@ export function PeopleStepper({
   disabled,
   placeholder,
   valorInicial = 2,
+  maxPeople,
+  minPeople,
 }: PeopleStepperProps) {
   const vacio = value === null;
   const [showMaxNotice, setShowMaxNotice] = useState(false);
   const noticeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sinMovimiento = useReducedMotion();
+  const max = maxPeople ?? MAX_PEOPLE;
+  const min = minPeople ?? MIN_PEOPLE;
 
   useEffect(() => () => {
     if (noticeTimeout.current) clearTimeout(noticeTimeout.current);
@@ -46,18 +52,18 @@ export function PeopleStepper({
     // Desde vacio, cualquiera de los dos botones contesta la pregunta con el
     // grupo mas comun en vez de obligar a subir de uno en uno desde cero.
     if (value === null) {
-      onChange(valorInicial);
+      onChange(Math.min(max, Math.max(min, valorInicial)));
       return;
     }
     const siguiente = value + delta;
-    if (siguiente > MAX_PEOPLE) {
+    if (siguiente > max) {
       setShowMaxNotice(true);
       if (noticeTimeout.current) clearTimeout(noticeTimeout.current);
       noticeTimeout.current = setTimeout(() => setShowMaxNotice(false), 2500);
-      onChange(MAX_PEOPLE);
+      onChange(max);
       return;
     }
-    onChange(Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, siguiente)));
+    onChange(Math.min(max, Math.max(min, siguiente)));
   };
 
   return (
