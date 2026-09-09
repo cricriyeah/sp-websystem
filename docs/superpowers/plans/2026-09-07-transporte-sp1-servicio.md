@@ -769,9 +769,9 @@ Verificación del 2026-09-09:
 - Modify: `frontend/src/app/[lang]/dictionaries/{es,en}.json` — bloque `traslados.*` (títulos, descripción de cada tipo de recorrido, labels, textos de error). Reiniciar `npm run dev`.
 - Test: `tsc --noEmit` · `lint` · `build`.
 
-- [ ] **Paso 1:** crear ruta + loading + claves de diccionario.
-- [ ] **Paso 2:** `tsc` · `lint` · `build` verdes.
-- [ ] **Paso 3:** commit `feat(frontend): ruta /traslados con catálogo server-side`.
+- [x] **Paso 1:** crear ruta + loading + claves de diccionario.
+- [x] **Paso 2:** `tsc` · `lint` · `build` verdes.
+- [x] **Paso 3:** commit `feat(frontend): ruta /traslados con catálogo server-side`.
 
 ### Tarea 7.2 — `traslado-view.tsx` (checkout recortado)
 
@@ -787,9 +787,9 @@ Verificación del 2026-09-09:
 - Modify: `frontend/src/lib/ref.ts` usage — el `?ref=` ya se captura global (`RefCapture` en el layout); solo hay que mandarlo en `crearReservaTraslado`.
 - Test: `tsc` · `lint` · `build`.
 
-- [ ] **Paso 1:** construir el componente reutilizando lo que ya existe.
-- [ ] **Paso 2:** `tsc` · `lint` · `build` verdes.
-- [ ] **Paso 3:** commit `feat(frontend): checkout de traslados`.
+- [x] **Paso 1:** construir el componente reutilizando lo que ya existe.
+- [x] **Paso 2:** `tsc` · `lint` · `build` verdes.
+- [x] **Paso 3:** commit `feat(frontend): checkout de traslados`.
 
 ### Tarea 7.3 — Enlace a `/traslados` desde el catálogo / navegación
 
@@ -798,13 +798,24 @@ Verificación del 2026-09-09:
 - Modify: dictionaries si hace falta el label.
 - Test: `tsc` · `lint` · `build`.
 
-- [ ] **Paso 1 → 3:** ciclo. Commit `feat(frontend): enlace a /traslados en el catálogo`.
+- [x] **Paso 1 → 3:** ciclo. Commit `feat(frontend): enlace a /traslados en el catálogo`.
 
 ### Gate Sección 7
 
-- [ ] Frontend `lint` · `tsc --noEmit` · `build` verdes.
-- [ ] El agente arranca `npm run dev` + backend y confirma que `/es/traslados` renderiza el catálogo real (revisión propia, no del dueño). El dueño hace la verificación visual final.
-- [ ] Commit `docs(plan): SP1 Sección 7 cerrada`. **PARA y reporta.**
+- [x] Frontend `lint` · `tsc --noEmit` · `build` verdes.
+- [x] El agente arranca `npm run dev` + backend y confirma que `/es/traslados` renderiza el catálogo real (revisión propia, no del dueño). El dueño hace la verificación visual final.
+- [x] Commit `docs(plan): SP1 Sección 7 cerrada`. **PARA y reporta.**
+
+Verificación del 2026-09-09:
+- Frontend `lint`, `tsc --noEmit`, `build`: verdes sin errores. Next.js 16.3.0 compiló correctamente `/[lang]/traslados` como ruta dinámica de SSR.
+- Backend + Frontend verificados en local (sin navegador, constraint 9):
+  - Backend `manage.py runserver` respondió `GET /api/transporte-la-paz/traslados/` con catálogo completo (`servicio`, 5 `tarifas`, 3 `puntos_encuentro`, `publishable_key`).
+  - Frontend `npm start` respondió en `http://localhost:3000/es/traslados` con SSR íntegro (render de tipos de traslado, precios base `$1,500.00`, `$2,500.00`, `$4,500.00`, stepper de checkout y resumen lateral).
+  - Enlace secundario en `/es/catalogo` para sede La Paz verificado con curl.
+- Commits de tareas:
+  - `b558083` — `feat(frontend): ruta /traslados con catálogo server-side`
+  - `c4d1af5` — `feat(frontend): checkout de traslados`
+  - `35385dc` — `feat(frontend): enlace a /traslados en el catálogo`
 
 ---
 
