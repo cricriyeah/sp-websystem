@@ -15,6 +15,7 @@ from apps.fleet.models import (
     capacidades_disponibles,
     capacidades_por_fecha,
 )
+from apps.fleet.enums import TipoTraslado, Zona
 from apps.tenancy.models import Empresa
 
 from .cupo import (
@@ -1076,3 +1077,63 @@ class ReservaPaqueteComponente(models.Model):
 
     def __str__(self):
         return f"Componente {self.servicio} ({self.estado_cupo}) en Reserva #{self.reserva_id}"
+
+
+class DetalleTransporte(models.Model):
+    """El traslado que ampara una Reserva de servicio de transporte.
+    El recorrido lo define `tipo_traslado`; no hay armador de tramos libre
+    (los viajes a medida están fuera del sistema)."""
+    reserva = models.OneToOneField(Reserva, on_delete=models.CASCADE, related_name='detalle_transporte')
+    tipo_traslado = models.CharField(max_length=25, choices=TipoTraslado.choices)
+    punto_encuentro = models.ForeignKey('fleet.PuntoEncuentro', on_delete=models.PROTECT, null=True, blank=True)
+    direccion_personalizada = models.CharField(max_length=255, blank=True, default='')
+    zona = models.CharField(max_length=10, choices=Zona.choices, blank=True, default='')
+    fecha_regreso = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Solo redondo_aeropuerto: día de salida al aeropuerto.',
+    )
+    numero_personas = models.PositiveSmallIntegerField(null=True, blank=True)  # congela CrearPagoView
+    precio_calculado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'detalle de transporte'
+        verbose_name_plural = 'detalles de transporte'
+
+    def __str__(self):
+        return f"Detalle de transporte ({self.get_tipo_traslado_display()}) para Reserva #{self.reserva_id}"
+
+    def clean(self):
+        if bool(self.punto_encuentro_id) == bool(self.direccion_personalizada):
+            raise ValidationError('Elige un punto de encuentro del catálogo o escribe una dirección, no ambos ni ninguno.')
+        if self.punto_encuentro_id and self.zona and self.zona != self.punto_encuentro.zona:
+            raise ValidationError({'zona': 'La zona no coincide con la del punto de encuentro.'})
+        reserva = self._reserva_o_ninguna()
+        if self.punto_encuentro_id and reserva is not None and self.punto_encuentro.empresa_id != reserva.empresa_id:
+            raise ValidationError({'punto_encuentro': 'Ese punto de encuentro pertenece a otra Empresa.'})
+        es_actividad = self.tipo_traslado == TipoTraslado.REDONDO_ACTIVIDAD
+        if es_actividad and not (self.zona or self.punto_encuentro_id):
+            raise ValidationError({'zona': 'El redondo de actividad necesita zona (del hotel o elegida).'})
+        es_aeropuerto = self.tipo_traslado == TipoTraslado.REDONDO_AEROPUERTO
+        if es_aeropuerto and not self.fecha_regreso:
+            raise ValidationError({'fecha_regreso': 'El redondo con aeropuerto necesita fecha de regreso.'})
+        if not es_aeropuerto and self.fecha_regreso:
+            raise ValidationError({'fecha_regreso': 'Solo aplica al redondo con aeropuerto.'})
+        if self.fecha_regreso and reserva is not None and self.fecha_regreso <= reserva.fecha:
+            raise ValidationError({'fecha_regreso': 'Debe ser posterior a la fecha de llegada.'})
+
+    def _reserva_o_ninguna(self):
+        try:
+            return self.reserva
+        except Reserva.DoesNotExist:
+            return None
+
+    def zona_efectiva(self):
+        """La zona que manda al precio: la del hotel si hay hotel, si no la elegida.
+        Para tipos que no son redondo_actividad, '' (el precio no depende de zona)."""
+        if self.tipo_traslado != TipoTraslado.REDONDO_ACTIVIDAD:
+            return ''
+        if self.punto_encuentro_id:
+            return self.punto_encuentro.zona
+        return self.zona
+

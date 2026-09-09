@@ -41,9 +41,11 @@ from .models import (
     Agenda,
     CheckoutAbandonado,
     CupoDiario,
+    DetalleTransporte,
     Reserva,
     Vendedora,
 )
+from apps.fleet.enums import TipoTraslado, Zona
 
 
 def envejecer(reserva, **delta):
@@ -1722,6 +1724,184 @@ class BajoDemandaCleanTest(EmpresaTestCase):
         reserva.full_clean()
         reserva.save()
         self.assertIsNotNone(reserva.pk)
+
+
+class DetalleTransporteTest(EmpresaTestCase):
+    def setUp(self):
+        super().setUp()
+        self.servicio_transporte = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Traslado',
+            slug='traslado',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+        )
+        self.reserva = Reserva.objects.create(
+            **datos_reserva(
+                self.empresa,
+                servicio=self.servicio_transporte,
+                fecha=date(2026, 10, 1),
+                hora=time(10, 0),
+            )
+        )
+        self.punto = PuntoEncuentro.objects.create(
+            empresa=self.empresa,
+            nombre='Hotel Sol',
+            zona=Zona.CENTRO,
+        )
+
+    def test_xor_punto_y_direccion_ambos_falla(self):
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=self.punto,
+            direccion_personalizada='Av. Principal 123',
+            fecha_regreso=date(2026, 10, 5),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('Elige un punto de encuentro del catálogo o escribe una dirección, no ambos ni ninguno.', str(ctx.exception))
+
+    def test_xor_punto_y_direccion_ninguno_falla(self):
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=None,
+            direccion_personalizada='',
+            fecha_regreso=date(2026, 10, 5),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('Elige un punto de encuentro del catálogo o escribe una dirección, no ambos ni ninguno.', str(ctx.exception))
+
+    def test_zona_distinta_a_la_del_punto_encuentro_falla(self):
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=self.punto,
+            zona=Zona.PERIFERIA,
+            fecha_regreso=date(2026, 10, 5),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('zona', ctx.exception.message_dict)
+
+    def test_punto_encuentro_otra_empresa_falla(self):
+        from apps.tenancy.models import Empresa
+        otra_empresa = Empresa.objects.create(sede=self.empresa.sede, nombre='Otra', slug='otra')
+        punto_ajeno = PuntoEncuentro.objects.create(
+            empresa=otra_empresa,
+            nombre='Hotel Ajeno',
+            zona=Zona.CENTRO,
+        )
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=punto_ajeno,
+            fecha_regreso=date(2026, 10, 5),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('punto_encuentro', ctx.exception.message_dict)
+
+    def test_redondo_actividad_sin_zona_ni_punto_falla(self):
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+            direccion_personalizada='Calle 5 #10',
+            zona='',
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('zona', ctx.exception.message_dict)
+
+    def test_redondo_aeropuerto_sin_fecha_regreso_falla(self):
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=self.punto,
+            fecha_regreso=None,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('fecha_regreso', ctx.exception.message_dict)
+
+    def test_no_aeropuerto_con_fecha_regreso_falla(self):
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO,
+            punto_encuentro=self.punto,
+            fecha_regreso=date(2026, 10, 5),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('fecha_regreso', ctx.exception.message_dict)
+
+    def test_fecha_regreso_anterior_o_igual_a_llegada_falla(self):
+        # Misma fecha que reserva.fecha (2026-10-01)
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=self.punto,
+            fecha_regreso=date(2026, 10, 1),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('fecha_regreso', ctx.exception.message_dict)
+
+        # Fecha anterior
+        dt.fecha_regreso = date(2026, 9, 30)
+        with self.assertRaises(ValidationError) as ctx:
+            dt.clean()
+        self.assertIn('fecha_regreso', ctx.exception.message_dict)
+
+    def test_redondo_aeropuerto_valido_pasa(self):
+        dt = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=self.punto,
+            fecha_regreso=date(2026, 10, 5),
+        )
+        dt.full_clean()
+        dt.save()
+        self.assertIsNotNone(dt.pk)
+
+    def test_zona_efectiva(self):
+        # 1. Redondo actividad con punto de encuentro (hotel en Zona.CENTRO)
+        dt1 = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+            punto_encuentro=self.punto,
+        )
+        self.assertEqual(dt1.zona_efectiva(), Zona.CENTRO)
+
+        # 2. Redondo actividad con direccion personalizada y zona periferia
+        dt2 = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+            direccion_personalizada='Casa particular #44',
+            zona=Zona.PERIFERIA,
+        )
+        self.assertEqual(dt2.zona_efectiva(), Zona.PERIFERIA)
+
+        # 3. Redondo aeropuerto -> ''
+        dt3 = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            punto_encuentro=self.punto,
+            fecha_regreso=date(2026, 10, 5),
+        )
+        self.assertEqual(dt3.zona_efectiva(), '')
+
+        # 4. Recepcion aeropuerto -> ''
+        dt4 = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO,
+            punto_encuentro=self.punto,
+        )
+        self.assertEqual(dt4.zona_efectiva(), '')
+
 
 
 
