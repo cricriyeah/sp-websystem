@@ -521,11 +521,11 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Create: migración `AlterField` de `Reserva.hora` (quitar el validador — Django genera la migración por el cambio de `validators`).
 - Test: `backend/apps/bookings/tests.py::VentanaHorariaTest` — reserva de pesca legacy (sin servicio) a las 06:00 pasa, a las 09:00 falla; reserva con servicio `ventana (14:00, 18:00)` a las 15:00 pasa, a las 06:00 falla; reserva con servicio sin ventana a cualquier hora pasa.
 
-- [ ] **Paso 1: test que falla** — los 3 casos de arriba (el de "servicio sin ventana a las 22:00" falla hoy por el validador de campo).
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** quitar el validador de campo, añadir `_validar_ventana_horaria` a `clean()`, migración.
-- [ ] **Paso 4:** correr → verde. **Correr toda la suite de bookings** — hay ~30 tests que crean reservas; los que asumían el 400 por hora fuera de 5–7am sin llamar `full_clean` podrían cambiar. Ajustar los que rompan (deben seguir probando lo mismo vía `clean()`).
-- [ ] **Paso 5:** commit `fix(bookings): la ventana horaria de salida es por Servicio, no global`.
+- [x] **Paso 1: test que falla** — los 3 casos de arriba (el de "servicio sin ventana a las 22:00" falla hoy por el validador de campo).
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** quitar el validador de campo, añadir `_validar_ventana_horaria` a `clean()`, migración.
+- [x] **Paso 4:** correr → verde. **Correr toda la suite de bookings** — hay ~30 tests que crean reservas; los que asumían el 400 por hora fuera de 5–7am sin llamar `full_clean` podrían cambiar. Ajustar los que rompan (deben seguir probando lo mismo vía `clean()`).
+- [x] **Paso 5:** commit `fix(bookings): la ventana horaria de salida es por Servicio, no global`.
 
 ### Tarea 4.2 — Tope de personas por servicio
 
@@ -547,11 +547,11 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Create: migración `AlterField` de `numero_personas`.
 - Test: `backend/apps/bookings/tests.py` — pesca legacy: 5 pasa, 6 falla; servicio con `capacidad_maxima=14`: 14 pasa, 15 falla; servicio sin `capacidad_maxima`: cae en `MAX_PERSONAS`.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** quitar validador de campo, añadir `_validar_tope_personas`, migración.
-- [ ] **Paso 4:** correr suite de bookings → verde (ajustar tests que dependían del `MaxValueValidator` de campo).
-- [ ] **Paso 5:** commit `fix(bookings): el tope de personas es por Servicio (capacidad_maxima)`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** quitar validador de campo, añadir `_validar_tope_personas`, migración.
+- [x] **Paso 4:** correr suite de bookings → verde (ajustar tests que dependían del `MaxValueValidator` de campo).
+- [x] **Paso 5:** commit `fix(bookings): el tope de personas es por Servicio (capacidad_maxima)`.
 
 ### Tarea 4.3 — Auditar que `bajo_demanda` salta panga/capitán/cupo pero exige deslinde
 
@@ -563,11 +563,11 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
   - Deslinde web (`canal_origen == WEB and not deslinde_aceptado`) — **se conserva** para transporte.
 - Test: `backend/apps/bookings/tests.py::BajoDemandaCleanTest` — reserva de un `Servicio` `bajo_demanda` sin `embarcacion` ni `CupoDiario`: `full_clean()` pasa; la misma sin `deslinde_aceptado` y `canal_origen='web'`: falla.
 
-- [ ] **Paso 1: test que falla** (si `_validar_una_salida_por_dia` hoy tira para `bajo_demanda`).
-- [ ] **Paso 2:** correr → ver el estado real.
-- [ ] **Paso 3:** añadir el gate de `estrategia_cupo` donde haga falta.
-- [ ] **Paso 4:** correr → verde.
-- [ ] **Paso 5:** commit `fix(bookings): clean() de una reserva bajo_demanda no exige panga ni cupo`.
+- [x] **Paso 1: test que falla** (si `_validar_una_salida_por_dia` hoy tira para `bajo_demanda`).
+- [x] **Paso 2:** correr → ver el estado real.
+- [x] **Paso 3:** añadir el gate de `estrategia_cupo` donde haga falta.
+- [x] **Paso 4:** correr → verde.
+- [x] **Paso 5:** commit `fix(bookings): clean() de una reserva bajo_demanda no exige panga ni cupo`.
 
 ### Tarea 4.4 — Frontend: `dates.ts` deja de asumir 5–7am y MAX 5 universales
 
@@ -576,18 +576,18 @@ vendido por web se topa con un 400 al pagar por la validación de campo de `hora
 - Modify: las dos dictionaries si algún texto menciona "5 a 7 am" o "hasta 5 personas" de forma que no aplique a otros servicios (el checkout de pesca puede seguir diciéndolo).
 - Test: no hay test de unidad de frontend en el repo; `tsc`/`lint`/`build`.
 
-- [ ] **Paso 1:** identificar los usos de `MAX_PEOPLE` y de la ventana horaria en el frontend.
-- [ ] **Paso 2:** parametrizar (el checkout de pesca pasa los valores de pesca; `/traslados` pasará los del servicio en la Sección 7).
-- [ ] **Paso 3:** `tsc --noEmit` · `lint` · `build` verdes.
-- [ ] **Paso 4:** commit `refactor(frontend): el tope de personas y la ventana horaria salen del servicio`.
+- [x] **Paso 1:** identificar los usos de `MAX_PEOPLE` y de la ventana horaria en el frontend.
+- [x] **Paso 2:** parametrizar (el checkout de pesca pasa los valores de pesca; `/traslados` pasará los del servicio en la Sección 7).
+- [x] **Paso 3:** `tsc --noEmit` · `lint` · `build` verdes.
+- [x] **Paso 4:** commit `refactor(frontend): el tope de personas y la ventana horaria salen del servicio`.
 
 ### Gate Sección 4
 
-- [ ] Suite verde sqlite + Postgres (esta sección toca `Reserva.clean()`, corre TODA la suite).
-- [ ] `check --deploy` verde.
-- [ ] Frontend `lint` · `tsc` · `build` verdes.
-- [ ] Repaso: ningún test de reserva quedó probando "menos" que antes (la ventana y el tope siguen validándose, solo que parametrizados).
-- [ ] Commit `docs(plan): SP1 Sección 4 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres (esta sección toca `Reserva.clean()`, corre TODA la suite).
+- [x] `check --deploy` verde.
+- [x] Frontend `lint` · `tsc` · `build` verdes.
+- [x] Repaso: ningún test de reserva quedó probando "menos" que antes (la ventana y el tope siguen validándose, solo que parametrizados).
+- [x] Commit `docs(plan): SP1 Sección 4 cerrada`. **PARA y reporta.**
 
 ---
 
