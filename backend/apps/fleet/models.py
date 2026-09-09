@@ -435,6 +435,14 @@ class Servicio(models.Model):
         null=True, blank=True,
         help_text='Tope de personas por reserva de este servicio. Vacío = usa MAX_PERSONAS (5).',
     )
+    hora_apertura = models.TimeField(
+        null=True, blank=True,
+        help_text='Inicio de la ventana horaria de salida. Vacío = sin restricción.',
+    )
+    hora_cierre = models.TimeField(
+        null=True, blank=True,
+        help_text='Fin de la ventana horaria de salida. Vacío = sin restricción.',
+    )
     descripcion = models.TextField(blank=True, default='')
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -458,6 +466,20 @@ class Servicio(models.Model):
     def persona_extra_en(self, moneda):
         """Cargo por persona adicional en esa moneda. None = sin configurar."""
         return self.precio_persona_extra if (moneda or 'MXN').upper() == 'MXN' else self.precio_persona_extra_usd
+
+    def clean(self):
+        super().clean()
+        if bool(self.hora_apertura) != bool(self.hora_cierre):
+            raise ValidationError('Configura las dos horas de la ventana o ninguna.')
+        if self.hora_apertura and self.hora_cierre and self.hora_apertura > self.hora_cierre:
+            raise ValidationError({'hora_cierre': 'Debe ser ≥ hora_apertura.'})
+
+    def ventana_horaria(self):
+        """(apertura, cierre) o None si el servicio no restringe la hora."""
+        if self.hora_apertura and self.hora_cierre:
+            return (self.hora_apertura, self.hora_cierre)
+        return None
+
 
 
 class Recurso(models.Model):

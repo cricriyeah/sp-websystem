@@ -1,4 +1,7 @@
+from datetime import time
 from decimal import Decimal
+
+from django.core.exceptions import ValidationError
 
 from apps.fleet.enums import EstrategiaCupo, EstrategiaPrecio, ModoOcupacion, TipoServicio
 from apps.fleet.models import Servicio
@@ -60,5 +63,81 @@ class ServicioEnumsTests(EmpresaTestCase):
         servicio.save()
         servicio.refresh_from_db()
         self.assertEqual(servicio.capacidad_maxima, 14)
+
+    def test_ventana_horaria(self):
+        servicio = Servicio(
+            empresa=self.empresa,
+            nombre='Servicio Sin Ventana',
+            slug='servicio-sin-ventana',
+            precio_base=Decimal('100.00'),
+        )
+        self.assertIsNone(servicio.ventana_horaria())
+
+        servicio.hora_apertura = time(5, 0)
+        servicio.hora_cierre = time(7, 0)
+        self.assertEqual(servicio.ventana_horaria(), (time(5, 0), time(7, 0)))
+
+    def test_ventana_horaria_clean_rechaza_inconsistencias(self):
+        servicio = Servicio(
+            empresa=self.empresa,
+            nombre='Servicio Invalido',
+            slug='servicio-invalido',
+            precio_base=Decimal('100.00'),
+            hora_apertura=time(5, 0),
+        )
+        with self.assertRaises(ValidationError):
+            servicio.clean()
+
+        servicio.hora_apertura = time(8, 0)
+        servicio.hora_cierre = time(6, 0)
+        with self.assertRaises(ValidationError):
+            servicio.clean()
+
+    def test_data_migration_ventana_pesca(self):
+        import importlib
+        from django.apps import apps as django_apps
+        from django.db import connection
+
+        mig = importlib.import_module('apps.fleet.migrations.0029_servicio_hora_apertura_servicio_hora_cierre')
+
+        class FakeSchemaEditor:
+            def __init__(self, conn):
+                self.connection = conn
+
+        schema_editor = FakeSchemaEditor(connection)
+
+        pesca = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Pesca Test Migracion',
+            slug='pesca-test-migracion',
+            tipo_servicio='pesca',
+            precio_base=Decimal('100.00'),
+            hora_apertura=None,
+            hora_cierre=None,
+        )
+        paseo = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Paseo Test Migracion',
+            slug='paseo-test-migracion',
+            tipo_servicio='paseo',
+            precio_base=Decimal('100.00'),
+            hora_apertura=None,
+            hora_cierre=None,
+        )
+
+        mig.set_ventana_pesca(django_apps, schema_editor)
+        pesca.refresh_from_db()
+        paseo.refresh_from_db()
+        self.assertEqual(pesca.hora_apertura, time(5, 0))
+        self.assertEqual(pesca.hora_cierre, time(7, 0))
+        self.assertIsNone(paseo.hora_apertura)
+        self.assertIsNone(paseo.hora_cierre)
+
+        mig.unset_ventana_pesca(django_apps, schema_editor)
+        pesca.refresh_from_db()
+        self.assertIsNone(pesca.hora_apertura)
+        self.assertIsNone(pesca.hora_cierre)
+
+
 
 
