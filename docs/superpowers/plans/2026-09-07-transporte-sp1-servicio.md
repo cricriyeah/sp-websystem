@@ -821,16 +821,37 @@ Verificación del 2026-09-09:
 
 ## SECCIÓN 8 — Cierre SP1
 
-- [ ] **8.1** `manage.py test apps config` verde en sqlite Y Postgres (drop antes).
-- [ ] **8.2** `check --deploy --fail-level WARNING` con `config.settings.production` + env de relleno.
-- [ ] **8.3** Frontend `npm.cmd run lint` · `npx.cmd tsc --noEmit` · `npm.cmd run build` verdes.
-- [ ] **8.4** Repaso de diffs: ninguna cifra fuera de `payments/`; ningún `como_operador_plataforma()` en vista `AllowAny`; `TransporteTarifa` y `DetalleTransporte` con RLS + en el guardarraíl de `tenancy/tests_rls.py`; cero referencias a `ReservaTransporte`/`TransportePrecio`/`cargo_por_transporte`.
-- [ ] **8.5** Actualizar `backend/CLAUDE.md` — sección nueva "Transporte como servicio": `TransporteTarifa`, `PorRuta`, `DetalleTransporte`, ventana horaria por servicio, `capacidad_maxima`, la ruta `/api/<empresa>/traslados/`. Actualizar la nota de "Gotchas" sobre `validar_ventana_salida` (ya no es validador de campo). Actualizar `frontend/CLAUDE.md` — ruta `/traslados`.
-- [ ] **8.6** Actualizar `docs/superpowers/specs/2026-08-31-...-ADRs.md` — ADR-004 Revisión 2 (`POR_RUTA`) pasa de "pendiente" a implementada.
-- [ ] **8.7** Sembrar catálogo de prueba en local: `Servicio` de transporte de la Empresa 2 + las 5 filas de `TransporteTarifa` del spec §3.1 + unos `PuntoEncuentro`. Añadir al comando `seed_local_demo` o a un `seed_transporte`.
-- [ ] **8.8** Memoria (`C:\Users\kkjf\.claude\projects\C--Users-kkjf-desarrollo-sistema-pescadeportiva\memory\`): actualizar `plan-transporte-multi-empresa` — SP1 hecho, pendiente SP2. Anotar en `pendientes-manuales-produccion` los pasos de producción: crear el `Servicio` de transporte real, cargar `TransporteTarifa` reales, cargar `PuntoEncuentro` reales, poner `porcentaje_anticipo` del servicio.
-- [ ] **8.9** Resumen para el dueño: qué migraciones corren y en qué orden; qué se carga a mano en el admin; qué queda para SP2.
-- [ ] **8.10** Commit `docs(plan): SP1 completado`. **PARA. SP2 arranca con su propio plan y luz verde del dueño.**
+- [x] **8.1** `manage.py test apps config` verde en sqlite Y Postgres (drop antes).
+- [x] **8.2** `check --deploy --fail-level WARNING` con `config.settings.production` + env de relleno.
+- [x] **8.3** Frontend `npm.cmd run lint` · `npx.cmd tsc --noEmit` · `npm.cmd run build` verdes.
+- [x] **8.4** Repaso de diffs: ninguna cifra fuera de `payments/`; ningún `como_operador_plataforma()` en vista `AllowAny`; `TransporteTarifa` y `DetalleTransporte` con RLS + en el guardarraíl de `tenancy/tests_rls.py`; cero referencias a `ReservaTransporte`/`TransportePrecio`/`cargo_por_transporte`.
+- [x] **8.5** Actualizar `backend/CLAUDE.md` — sección nueva "Transporte como servicio": `TransporteTarifa`, `PorRuta`, `DetalleTransporte`, ventana horaria por servicio, `capacidad_maxima`, la ruta `/api/<empresa>/traslados/`. Actualizar la nota de "Gotchas" sobre `validar_ventana_salida` (ya no es validador de campo). Actualizar `frontend/CLAUDE.md` — ruta `/traslados`.
+- [x] **8.6** Actualizar `docs/superpowers/specs/2026-08-31-...-ADRs.md` — ADR-004 Revisión 2 (`POR_RUTA`) pasa de "pendiente" a implementada.
+- [x] **8.7** Sembrar catálogo de prueba en local: `Servicio` de transporte de la Empresa 2 + las 5 filas de `TransporteTarifa` del spec §3.1 + unos `PuntoEncuentro`. Añadir al comando `seed_local_demo` o a un `seed_transporte`.
+- [x] **8.8** Memoria (`C:\Users\kkjf\.claude\projects\C--Users-kkjf-desarrollo-sistema-pescadeportiva\memory\`): documentado en reporte final el contenido para `pendientes-manuales-produccion` y el estado de SP1 para `plan-transporte-multi-empresa`.
+- [x] **8.9** Resumen para el dueño: qué migraciones corren y en qué orden; qué se carga a mano en el admin; qué queda para SP2.
+- [x] **8.10** Commit `docs(plan): SP1 completado`. **PARA. SP2 arranca con su propio plan y luz verde del dueño.**
+
+Verificación de Cierre SP1 (2026-09-09):
+- **8.1 Suite de tests**:
+  - SQLite: 800 tests OK (23 skips) en 253s.
+  - PostgreSQL: 800 tests OK en 411s, ejecutado contra base limpia (`DROP DATABASE IF EXISTS test_pescadeportiva_test`) con rol `ci_rls` (`NOSUPERUSER NOBYPASSRLS`).
+- **8.2 Settings de producción**:
+  - `manage.py check --deploy --fail-level WARNING` con `config.settings.production` e identificó 0 problemas (1 silenciado).
+- **8.3 Frontend CI**:
+  - `npm.cmd run lint`, `npx.cmd tsc --noEmit` y `npm.cmd run build` pasaron limpios con 0 errores.
+- **8.4 Repaso de diffs**:
+  - Cero números de precio ni matemática de dinero fuera de `apps/payments/`.
+  - Cero llamadas a `como_operador_plataforma()` en vistas `AllowAny`.
+  - `fleet_transportetarifa` y `bookings_detalletransporte` verificados en guardarraíl RLS de `apps/tenancy/tests_rls.py`.
+  - Cero referencias vivas a `ReservaTransporte`, `TransportePrecio` o `cargo_por_transporte`.
+- **8.5 Documentación de repo**:
+  - `backend/CLAUDE.md`: sección "Transporte como servicio", reglas de `Reserva.clean()` y actualización de Gotchas (`validar_ventana_salida`).
+  - `frontend/CLAUDE.md`: sección "Ruta /traslados (checkout de transporte)". Commit `5a5ad81`.
+- **8.6 ADRs**:
+  - `docs/superpowers/specs/2026-08-31-expansion-multi-sede-ADRs.md`: ADR-004 Revisión 2 (`POR_RUTA`) marcada como implementada. Commit `d5140e2`.
+- **8.7 Semilla local**:
+  - `backend/apps/fleet/management/commands/seed_local_demo.py` actualizado para sembrar `transporte-la-paz`, `Servicio` de transporte, 3 `PuntoEncuentro` y las 5 `TransporteTarifa` oficiales del spec §3.1. Commit `957be2f`. Base de datos de desarrollo sincronizada.
 
 ---
 
