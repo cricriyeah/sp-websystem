@@ -9,10 +9,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.bookings.models import Reserva, codigo_promocional_valido, evaluar_codigo_promocional
+from apps.fleet.enums import EstrategiaPrecio
 from apps.fleet.models import CodigoPromocional, Tarifa
 from apps.tenancy import scope
 
-from .estrategias_precio import DemandaPrecio, obtener_estrategia_precio
+from .estrategias_precio import DemandaPrecio, demanda_traslado, obtener_estrategia_precio
 from .pricing import (
     a_centavos,
     cargo_por_descuento,
@@ -67,6 +68,7 @@ class CrearPagoView(APIView):
         if reserva.estado != Reserva.Estado.PENDIENTE_PAGO:
             return Response({'detail': 'Esta reserva ya no esta pendiente de pago.'}, status=409)
 
+        detalle_a_congelar = None
         if reserva.paquete_id:
             extras_pers = list(reserva.paquete_personalizaciones.values_list('servicio_personalizacion_id', 'cantidad')) if hasattr(reserva, 'paquete_personalizaciones') else []
             precio_base_servicio = precio_paquete_total(
@@ -81,8 +83,19 @@ class CrearPagoView(APIView):
         elif reserva.servicio_id:
             estrategia = obtener_estrategia_precio(reserva.servicio.estrategia_precio)
             demanda = DemandaPrecio(personas=reserva.numero_personas, moneda=reserva.moneda, noches=reserva.noches)
+            servicio_config = reserva.servicio
+            if reserva.servicio.estrategia_precio == EstrategiaPrecio.POR_RUTA:
+                detalle_a_congelar = getattr(reserva, 'detalle_transporte', None)
+                if detalle_a_congelar is None:
+                    return Response({'detail': 'El traslado no tiene detalle configurado.'}, status=503)
+                servicio_config = {
+                    'tarifas_transporte_activas': list(
+                        reserva.servicio.empresa.tarifas_transporte.filter(activo=True)
+                    ),
+                }
+                demanda = demanda_traslado(detalle_a_congelar, reserva.numero_personas, reserva.moneda)
             try:
-                precio_base_servicio = estrategia.calcular_base(reserva.servicio, demanda)
+                precio_base_servicio = estrategia.calcular_base(servicio_config, demanda)
             except ValueError as e:
                 return Response({'detail': str(e)}, status=503)
             porcentaje = reserva.servicio.porcentaje_anticipo
@@ -144,6 +157,10 @@ class CrearPagoView(APIView):
             return Response({'detail': 'No se pudo iniciar el pago. Intenta de nuevo.'}, status=502)
 
         with transaction.atomic():
+            if detalle_a_congelar is not None:
+                detalle_a_congelar.numero_personas = reserva.numero_personas
+                detalle_a_congelar.precio_calculado = precio_base_servicio
+                detalle_a_congelar.save(update_fields=['numero_personas', 'precio_calculado'])
             for extra in extras_a_borrar:
                 extra.delete()
             for extra, precio_unitario, cantidad in extras_a_congelar:

@@ -2131,3 +2131,200 @@ class AplicarPagoCupoHospedajeYPaquetesTests(TestCase):
             self.assertEqual(reserva.ocupaciones.count(), 0)
             # NO debe quedar ningún componente huérfano
             self.assertEqual(reserva.componentes.count(), 0)
+
+
+class CrearPagoTrasladoTest(ApiTestCase):
+    def setUp(self):
+        from apps.fleet.models import PuntoEncuentro, TransporteTarifa
+
+        self.empresa.stripe_secret_key = 'sk_test_traslados'
+        self.empresa.stripe_publishable_key = 'pk_test_traslados'
+        self.empresa.save()
+        self.servicio = Servicio.objects.create(
+            empresa=self.empresa, nombre='Traslados', slug='traslados',
+            tipo_servicio='transporte', estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta', capacidad_maxima=14, porcentaje_anticipo=100,
+        )
+        self.punto = PuntoEncuentro.objects.create(
+            empresa=self.empresa, nombre='Hotel del centro', zona='centro',
+        )
+        for tipo, zona, minimo, maximo, mxn, usd in (
+            ('redondo_aeropuerto', '', 1, 4, '4500.00', '250.00'),
+            ('redondo_aeropuerto', '', 5, None, '6000.00', '340.00'),
+            ('redondo_actividad', 'centro', 1, None, '1500.00', '90.00'),
+            ('redondo_actividad', 'periferia', 1, None, '1800.00', None),
+            ('recepcion_aeropuerto', '', 1, None, '2700.00', '150.00'),
+        ):
+            TransporteTarifa.objects.create(
+                empresa=self.empresa, tipo_traslado=tipo, zona=zona,
+                personas_min=minimo, personas_max=maximo, precio=mxn, precio_usd=usd,
+            )
+        self.stripe_mock = self.enterContext(mock.patch('apps.payments.views.configurar_stripe'))
+        self.cliente = self.stripe_mock.return_value
+        self.cliente.payment_intents.create.side_effect = lambda params, options: intent_falso(
+            amount=params['amount'], currency=params['currency'],
+        )
+
+    def reserva(self, tipo='redondo_aeropuerto', personas=4, zona='centro', moneda='MXN'):
+        from apps.bookings.models import DetalleTransporte
+
+        reserva = Reserva(
+            empresa=self.empresa, servicio=self.servicio, checkout_id=uuid.uuid4(),
+            fecha=date.today() + timedelta(days=10), hora=time(14), numero_personas=personas,
+            nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567',
+            correo_cliente='ana@example.com', moneda=moneda, canal_origen='web',
+            deslinde_aceptado=True, deslinde_nombre='Ana Ruiz',
+        )
+        reserva.full_clean()
+        reserva.save()
+        detalle = DetalleTransporte(
+            reserva=reserva, tipo_traslado=tipo, direccion_personalizada='Casa de prueba', zona=zona,
+            fecha_regreso=reserva.fecha + timedelta(days=3) if tipo == 'redondo_aeropuerto' else None,
+        )
+        detalle.full_clean()
+        detalle.save()
+        return reserva
+
+    def post(self, reserva, **cambios):
+        return self.client.post(
+            reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
+            {'checkout_id': str(reserva.checkout_id), 'forma_pago': 'completo', **cambios},
+            content_type='application/json',
+        )
+
+    def test_total_por_tipo_zona_tamano_y_moneda(self):
+        for tipo, personas, zona, moneda, esperado in (
+            ('redondo_aeropuerto', 1, 'centro', 'MXN', '4500.00'),
+            ('redondo_aeropuerto', 4, 'periferia', 'MXN', '4500.00'),
+            ('redondo_aeropuerto', 5, 'centro', 'MXN', '6000.00'),
+            ('redondo_aeropuerto', 14, 'periferia', 'USD', '340.00'),
+            ('redondo_actividad', 14, 'centro', 'MXN', '1500.00'),
+            ('redondo_actividad', 2, 'periferia', 'MXN', '1800.00'),
+            ('redondo_actividad', 3, 'centro', 'USD', '90.00'),
+            ('recepcion_aeropuerto', 14, 'periferia', 'MXN', '2700.00'),
+        ):
+            with self.subTest(tipo=tipo, personas=personas, zona=zona, moneda=moneda):
+                reserva = self.reserva(tipo, personas, zona, moneda)
+                response = self.post(reserva, precio_total='0.01')
+                self.assertEqual(response.status_code, 200, response.data)
+                self.assertEqual(response.data['monto_a_cobrar'], esperado)
+                self.assertEqual(response.data['moneda'], moneda)
+                self.assertEqual(response.data['publishable_key'], self.empresa.stripe_publishable_key)
+                self.stripe_mock.assert_called_with(self.empresa)
+                params, options = self.cliente.payment_intents.create.call_args.args
+                self.assertEqual(params['amount'], a_centavos(Decimal(esperado)))
+                self.assertEqual(params['currency'], moneda.lower())
+                self.assertIn('idempotency_key', options)
+
+    def test_congela_detalle_y_anticipo_cobra_cien_por_ciento(self):
+        reserva = self.reserva()
+        response = self.post(reserva, forma_pago='anticipo')
+        self.assertEqual(response.status_code, 200, response.data)
+        reserva.refresh_from_db()
+        self.assertEqual(response.data['monto_a_cobrar'], '4500.00')
+        self.assertEqual(reserva.detalle_transporte.numero_personas, 4)
+        self.assertEqual(reserva.detalle_transporte.precio_calculado, Decimal('4500.00'))
+        self.assertEqual(reserva.precio_total, Decimal('4500.00'))
+        self.assertEqual(reserva.forma_pago, 'anticipo')
+        self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
+
+    def test_zona_efectiva_del_punto(self):
+        reserva = self.reserva('redondo_actividad')
+        detalle = reserva.detalle_transporte
+        detalle.punto_encuentro = self.punto
+        detalle.direccion_personalizada = ''
+        detalle.zona = 'centro'
+        detalle.full_clean()
+        detalle.save()
+        response = self.post(reserva)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['monto_a_cobrar'], '1500.00')
+
+    def test_reintento_reutiliza_intent_y_cambio_de_tamano_lo_actualiza(self):
+        reserva = self.reserva()
+        first = self.post(reserva)
+        self.assertEqual(first.status_code, 200, first.data)
+        self.cliente.payment_intents.retrieve.return_value = intent_falso()
+        self.assertEqual(self.post(reserva).status_code, 200)
+        self.cliente.payment_intents.create.assert_called_once()
+        self.cliente.payment_intents.update.assert_not_called()
+        reserva.refresh_from_db()
+        reserva.numero_personas = 5
+        reserva.save()
+        self.cliente.payment_intents.update.return_value = intent_falso(amount=600000)
+        self.assertEqual(self.post(reserva).status_code, 200)
+        self.cliente.payment_intents.update.assert_called_once_with('pi_1', {'amount': 600000, 'currency': 'mxn'})
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.detalle_transporte.numero_personas, 5)
+        self.assertEqual(reserva.detalle_transporte.precio_calculado, Decimal('6000.00'))
+
+    def test_intent_cobrando_no_recongela_ni_crea_otro(self):
+        reserva = self.reserva()
+        self.assertEqual(self.post(reserva).status_code, 200)
+        reserva.refresh_from_db()
+        reserva.numero_personas = 5
+        reserva.save()
+        for estado in ('succeeded', 'processing'):
+            self.cliente.payment_intents.retrieve.return_value = intent_falso(status=estado)
+            self.assertEqual(self.post(reserva).status_code, 409)
+        self.cliente.payment_intents.create.assert_called_once()
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.detalle_transporte.numero_personas, 4)
+        self.assertEqual(reserva.precio_total, Decimal('4500.00'))
+
+    def test_tarifa_inactiva_usd_ausente_y_detalle_ausente_no_cobran(self):
+        from apps.fleet.models import TransporteTarifa
+
+        sin_usd = self.reserva('redondo_actividad', zona='periferia', moneda='USD')
+        self.assertEqual(self.post(sin_usd).status_code, 503)
+        reserva = self.reserva()
+        TransporteTarifa.objects.filter(tipo_traslado='redondo_aeropuerto').update(activo=False)
+        self.assertEqual(self.post(reserva).status_code, 503)
+        reserva.detalle_transporte.delete()
+        self.assertEqual(self.post(reserva).status_code, 503)
+        self.cliente.payment_intents.create.assert_not_called()
+
+    def test_fallo_stripe_no_congela(self):
+        reserva = self.reserva()
+        self.cliente.payment_intents.create.side_effect = stripe.APIConnectionError('sin red')
+        self.assertEqual(self.post(reserva).status_code, 502)
+        reserva.refresh_from_db()
+        self.assertIsNone(reserva.detalle_transporte.precio_calculado)
+        self.assertIsNone(reserva.detalle_transporte.numero_personas)
+        self.assertIsNone(reserva.precio_total)
+
+    def test_verificar_monto_usa_demanda_y_precio_congelados(self):
+        from apps.fleet.models import TransporteTarifa
+        from .estrategias_precio import obtener_estrategia_precio
+        from .services import _verificar_monto
+
+        reserva = self.reserva()
+        self.assertEqual(self.post(reserva).status_code, 200)
+        reserva.refresh_from_db()
+        # El catalogo y el grupo operativo pueden cambiar tras preparar el cobro.
+        TransporteTarifa.objects.update(precio='9999.00', activo=False)
+        reserva.numero_personas = 14
+        estrategia = obtener_estrategia_precio('por_ruta')
+        with mock.patch.object(estrategia, 'calcular_base', wraps=estrategia.calcular_base) as calcular:
+            with self.assertNoLogs('apps.payments.services', level='ERROR'):
+                _verificar_monto(reserva, {'currency': 'mxn', 'amount_received': 450000})
+            self.assertEqual(calcular.call_args.args[1].personas, 4)
+            self.assertEqual(calcular.call_args.args[1].tipo_traslado, 'redondo_aeropuerto')
+            self.assertEqual(calcular.call_args.args[1].zona, '')
+        with self.assertLogs('apps.payments.services', level='ERROR') as logs:
+            _verificar_monto(reserva, {'currency': 'mxn', 'amount_received': 449999})
+        self.assertIn('Descuadre', ' '.join(logs.output))
+
+    def test_verificar_total_descontado_del_precio_congelado(self):
+        from .services import _verificar_monto
+
+        reserva = self.reserva()
+        self.assertEqual(self.post(reserva).status_code, 200)
+        reserva.refresh_from_db()
+        reserva.descuento_aplicado = Decimal('450.00')
+        reserva.precio_total = Decimal('4050.00')
+        with self.assertNoLogs('apps.payments.services', level='ERROR'):
+            _verificar_monto(reserva, {'currency': 'mxn', 'amount_received': 405000})
+        reserva.precio_total = Decimal('4000.00')
+        with self.assertLogs('apps.payments.services', level='ERROR'):
+            _verificar_monto(reserva, {'currency': 'mxn', 'amount_received': 400000})

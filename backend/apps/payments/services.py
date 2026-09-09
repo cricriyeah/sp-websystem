@@ -18,10 +18,12 @@ from django.utils import timezone
 from apps.bookings.cupo import SinCupoError
 from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
 from apps.bookings.models import Reserva
+from apps.fleet.enums import EstrategiaPrecio
 from apps.notifications.services import notificar_reserva_pagada
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa
 
+from .estrategias_precio import precio_traslado_congelado
 from .pricing import a_centavos, de_centavos, monto_inicial
 from .stripe_client import configurar_stripe
 
@@ -164,12 +166,27 @@ def _verificar_monto(reserva, intent):
         logger.error('Reserva %s sin precio_total al recibir el pago', reserva.pk)
         return
 
+    precio_total = reserva.precio_total
+    if reserva.servicio_id and reserva.servicio.estrategia_precio == EstrategiaPrecio.POR_RUTA:
+        try:
+            precio_total = precio_traslado_congelado(
+                getattr(reserva, 'detalle_transporte', None), reserva.moneda,
+            ) - (reserva.descuento_aplicado or 0)
+        except ValueError as exc:
+            logger.error('Reserva %s: %s', reserva.pk, exc)
+            return
+        if precio_total != reserva.precio_total:
+            logger.error(
+                'Descuadre en el total de la reserva %s: detalle congelado %s, precio_total %s',
+                reserva.pk, precio_total, reserva.precio_total,
+            )
+
     porcentaje = (
         reserva.paquete.porcentaje_anticipo
         if reserva.paquete_id
         else (reserva.servicio.porcentaje_anticipo if reserva.servicio_id else 30)
     )
-    esperado = a_centavos(monto_inicial(reserva.precio_total, reserva.forma_pago, porcentaje=porcentaje))
+    esperado = a_centavos(monto_inicial(precio_total, reserva.forma_pago, porcentaje=porcentaje))
     if intent['amount_received'] != esperado:
         logger.error(
             'Descuadre en la reserva %s: se esperaban %s centavos y llegaron %s',

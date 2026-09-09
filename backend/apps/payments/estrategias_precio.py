@@ -177,6 +177,46 @@ class PorRuta(EstrategiaPrecio):
         return Decimal(precio).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 
+def demanda_traslado(detalle, personas, moneda):
+    """La misma demanda para preparar el cobro y verificar su snapshot."""
+    return DemandaPrecio(
+        personas=personas, moneda=moneda,
+        tipo_traslado=detalle.tipo_traslado, zona=detalle.zona_efectiva(),
+    )
+
+
+@dataclass(frozen=True)
+class _TarifaRutaCongelada:
+    """Fila en memoria del precio aceptado, independiente del catalogo actual."""
+    tipo_traslado: str
+    zona: str
+    personas_min: int
+    personas_max: int
+    precio: Decimal
+    moneda: str
+
+    def precio_en(self, moneda):
+        return self.precio if moneda == self.moneda else None
+
+
+def precio_traslado_congelado(detalle, moneda):
+    """Verifica con PorRuta y las personas/precio congelados, sin volver a cotizar.
+
+    La fila temporal reproduce la seleccion que ampara el PaymentIntent. Una
+    tarifa editada o desactivada despues no cambia lo que el cliente acepto.
+    """
+    if detalle is None or detalle.numero_personas is None or detalle.precio_calculado is None:
+        raise ValueError('El traslado no tiene detalle de precio congelado.')
+    demanda = demanda_traslado(detalle, detalle.numero_personas, moneda)
+    fila = _TarifaRutaCongelada(
+        demanda.tipo_traslado, demanda.zona, demanda.personas, demanda.personas,
+        detalle.precio_calculado, demanda.moneda_normalizada,
+    )
+    return obtener_estrategia_precio('por_ruta').calcular_base(
+        {'tarifas_transporte_activas': [fila]}, demanda,
+    )
+
+
 REGISTRO_ESTRATEGIAS_PRECIO: dict[str, EstrategiaPrecio] = {
     TipoEstrategiaPrecio.POR_GRUPO: PorGrupo(),
     TipoEstrategiaPrecio.POR_PERSONA: PorPersona(),
