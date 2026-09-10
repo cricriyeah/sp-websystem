@@ -2121,3 +2121,120 @@ class TrasladoCheckoutTest(ApiTestCase):
         reserva = Reserva.objects.get()
         self.assertEqual(reserva.vendedora, vendedora)
         self.assertIsNotNone(reserva.vendedora_asignada_en)
+
+
+class OrdenModelTest(EmpresaTestCase):
+    def setUp(self):
+        super().setUp()
+        from apps.fleet.models import Paquete
+        from apps.tenancy.models import Empresa
+        self.sede = self.empresa.sede
+        self.otra_empresa = Empresa.objects.create(
+            sede=self.sede, nombre='Otra', slug='otra-empresa',
+        )
+        self.paquete = Paquete.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            nombre='Paquete Test',
+            slug='paquete-test',
+            precio_ancla=Decimal('5000.00'),
+        )
+
+    def test_orden_creacion_valida(self):
+        from apps.bookings.models import Orden
+        orden = Orden.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            paquete=self.paquete,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='1234567890',
+            correo_cliente='juan@example.com',
+            forma_pago=Reserva.FormaPago.COMPLETO,
+        )
+        self.assertEqual(orden.estado, Orden.Estado.ARMANDO)
+        self.assertEqual(orden.moneda, Reserva.Moneda.MXN)
+
+    def test_forma_pago_anticipo_falla(self):
+        from apps.bookings.models import Orden
+        orden = Orden(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            paquete=self.paquete,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='1234567890',
+            correo_cliente='juan@example.com',
+            forma_pago=Reserva.FormaPago.ANTICIPO,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            orden.clean()
+        self.assertIn('forma_pago', ctx.exception.message_dict)
+
+    def test_empresa_lider_distinta_al_paquete_falla(self):
+        from apps.bookings.models import Orden
+        orden = Orden(
+            sede=self.sede,
+            empresa_lider=self.otra_empresa,
+            paquete=self.paquete,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='1234567890',
+            correo_cliente='juan@example.com',
+            forma_pago=Reserva.FormaPago.COMPLETO,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            orden.clean()
+        self.assertIn('empresa_lider', ctx.exception.message_dict)
+
+    def test_transiciones_validas_e_invalidas(self):
+        from apps.bookings.models import Orden
+        orden = Orden.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            paquete=self.paquete,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='1234567890',
+            correo_cliente='juan@example.com',
+        )
+        with self.assertRaises(ValidationError):
+            orden.transicionar(Orden.Estado.CAPTURADA)
+
+        orden.transicionar(Orden.Estado.AUTORIZANDO)
+        self.assertEqual(orden.estado, Orden.Estado.AUTORIZANDO)
+
+        orden.transicionar(Orden.Estado.CAPTURADA)
+        self.assertEqual(orden.estado, Orden.Estado.CAPTURADA)
+
+        with self.assertRaises(ValidationError):
+            orden.transicionar(Orden.Estado.CANCELADA)
+
+        orden_cancelada = Orden.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            paquete=self.paquete,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='1234567890',
+            correo_cliente='juan@example.com',
+        )
+        orden_cancelada.transicionar(Orden.Estado.CANCELADA)
+        with self.assertRaises(ValidationError):
+            orden_cancelada.transicionar(Orden.Estado.ARMANDO)
+
+    def test_reserva_orden_fk(self):
+        from apps.bookings.models import Orden
+        orden = Orden.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            paquete=self.paquete,
+            nombre_cliente='Juan Perez',
+            telefono_cliente='1234567890',
+            correo_cliente='juan@example.com',
+        )
+        reserva = Reserva.objects.create(
+            **datos_reserva(
+                self.empresa,
+                orden=orden,
+                paquete=self.paquete,
+            )
+        )
+        self.assertEqual(reserva.orden, orden)
+        self.assertIn(reserva, orden.reservas.all())
+

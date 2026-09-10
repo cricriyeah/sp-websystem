@@ -16,7 +16,7 @@ from apps.fleet.models import (
     capacidades_por_fecha,
 )
 from apps.fleet.enums import TipoTraslado, Zona
-from apps.tenancy.models import Empresa
+from apps.tenancy.models import Empresa, Sede
 
 from .cupo import (
     DemandaCupo,
@@ -433,6 +433,10 @@ class Reserva(models.Model):
     paquete = models.ForeignKey(
         'fleet.Paquete', on_delete=models.SET_NULL, null=True, blank=True, related_name='reservas',
         help_text='Paquete que ampara esta reserva.'
+    )
+    orden = models.ForeignKey(
+        'bookings.Orden', on_delete=models.SET_NULL, null=True, blank=True, related_name='reservas',
+        help_text='Orden cruza-empresa que agrupa esta reserva.'
     )
 
     # Datos del cliente (no se pide peso ni si sabe nadar, ver docs/contexto-negocio.md)
@@ -1141,4 +1145,62 @@ class DetalleTransporte(models.Model):
         if self.punto_encuentro_id:
             return self.punto_encuentro.zona
         return self.zona
+
+
+class Orden(models.Model):
+    class Estado(models.TextChoices):
+        ARMANDO = 'armando', 'Armando (reservas creadas)'
+        AUTORIZANDO = 'autorizando', 'Autorizando (esperando confirmaciones del cliente)'
+        AUTORIZADA = 'autorizada', 'Autorizada (lista para capturar)'
+        CAPTURADA = 'capturada', 'Capturada (pagada)'
+        CANCELADA = 'cancelada', 'Cancelada'
+
+    sede = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='ordenes')
+    empresa_lider = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='ordenes_lideradas')
+    paquete = models.ForeignKey('fleet.Paquete', on_delete=models.PROTECT, related_name='ordenes')
+    checkout_id = models.UUIDField(null=True, blank=True, db_index=True)
+
+    nombre_cliente = models.CharField(max_length=150, validators=[validar_nombre_persona])
+    telefono_cliente = models.CharField(max_length=20, validators=[validar_telefono])
+    correo_cliente = models.EmailField()
+
+    moneda = models.CharField(max_length=3, choices=Reserva.Moneda.choices, default=Reserva.Moneda.MXN)
+    forma_pago = models.CharField(max_length=10, choices=Reserva.FormaPago.choices, default=Reserva.FormaPago.COMPLETO)
+
+    estado = models.CharField(max_length=15, choices=Estado.choices, default=Estado.ARMANDO)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    # Notificación combinada: se manda una sola vez
+    notificada_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+        verbose_name = 'orden'
+        verbose_name_plural = 'órdenes'
+
+    TRANSICIONES = {
+        'armando': {'autorizando', 'cancelada'},
+        # 'autorizando' → 'capturada' directo también: un webhook puede llegar
+        # antes de que confirmar_captura alcance a marcar 'autorizada'.
+        'autorizando': {'autorizada', 'capturada', 'cancelada'},
+        'autorizada': {'capturada', 'cancelada'},
+        'capturada': set(),
+        'cancelada': set(),
+    }
+
+    def __str__(self):
+        return f"Orden #{self.pk} ({self.estado}) — {self.nombre_cliente}"
+
+    def clean(self):
+        if self.forma_pago != Reserva.FormaPago.COMPLETO:
+            raise ValidationError({'forma_pago': 'Las órdenes cruza-empresa solo admiten pago completo.'})
+        if self.paquete_id and self.empresa_lider_id and self.paquete.empresa_lider_id != self.empresa_lider_id:
+            raise ValidationError({'empresa_lider': 'Debe coincidir con la empresa líder del paquete.'})
+
+    def transicionar(self, nuevo_estado):
+        if nuevo_estado not in self.TRANSICIONES.get(self.estado, set()):
+            raise ValidationError(f'Transición inválida: {self.estado} → {nuevo_estado}.')
+        self.estado = nuevo_estado
+
 
