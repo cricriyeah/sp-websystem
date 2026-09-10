@@ -89,6 +89,9 @@ class RLSTests(TransactionTestCase):
                 ORDER BY c.relname;
             """)
             tablas_con_columna = {row[0] for row in cursor.fetchall()}
+            # Nota: bookings_orden tiene empresa_lider_id y su política tenancy_alcance es
+            # sede-scoped (las órdenes cruzan empresas de la misma sede, permitiendo lectura
+            # a empresas de la misma sede e INSERT público vía WITH CHECK).
 
             # 2. Tablas secundarias que llegan a empresa vía FK (sin columna empresa_id propia)
             whitelist_via_fk = {
@@ -207,3 +210,66 @@ class RLSTests(TransactionTestCase):
 
         # Sin empresa activa, no ve nada
         self.assertEqual(DetalleTransporte.objects.count(), 0)
+
+    def test_orden_sede_scoped_rls(self):
+        from decimal import Decimal
+        from apps.bookings.models import Orden
+        from apps.fleet.models import Paquete
+
+        # Dos sedes
+        sede_b = Sede.objects.create(nombre='Sede B', slug='sede-b')
+        empresa_b2 = Empresa.objects.create(sede=sede_b, nombre='B2', slug='empresa-b2')
+
+        with scope.como_operador_plataforma():
+            paq_a = Paquete.objects.create(
+                sede=self.empresa_a.sede,
+                empresa_lider=self.empresa_a,
+                nombre='Paquete A',
+                slug='paquete-a',
+                precio_ancla=Decimal('1000.00'),
+            )
+            paq_b = Paquete.objects.create(
+                sede=sede_b,
+                empresa_lider=empresa_b2,
+                nombre='Paquete B',
+                slug='paquete-b',
+                precio_ancla=Decimal('1000.00'),
+            )
+
+        # 1. INSERT público sin contexto de empresa: debe pasar si sede_id es válida
+        orden_a = Orden.objects.create(
+            sede=self.empresa_a.sede,
+            empresa_lider=self.empresa_a,
+            paquete=paq_a,
+            nombre_cliente='Cliente A',
+            telefono_cliente='1234567890',
+            correo_cliente='a@example.com',
+        )
+        orden_b = Orden.objects.create(
+            sede=sede_b,
+            empresa_lider=empresa_b2,
+            paquete=paq_b,
+            nombre_cliente='Cliente B',
+            telefono_cliente='1234567890',
+            correo_cliente='b@example.com',
+        )
+
+        # 2. Jefe / vendedora de empresa_a (sede_a): ve orden_a, NO ve orden_b
+        with scope.con_empresa(self.empresa_a):
+            ordenes_a = list(Orden.objects.all())
+            self.assertEqual(len(ordenes_a), 1)
+            self.assertEqual(ordenes_a[0].id, orden_a.id)
+
+        # 3. Jefe / vendedora de empresa_b2 (sede_b): ve orden_b, NO ve orden_a
+        with scope.con_empresa(empresa_b2):
+            ordenes_b = list(Orden.objects.all())
+            self.assertEqual(len(ordenes_b), 1)
+            self.assertEqual(ordenes_b[0].id, orden_b.id)
+
+        # 4. Operador de plataforma: ve ambas
+        with scope.como_operador_plataforma():
+            self.assertEqual(Orden.objects.count(), 2)
+
+        # 5. Sin contexto de empresa (público): no ve ninguna (0 filas)
+        self.assertEqual(Orden.objects.count(), 0)
+
