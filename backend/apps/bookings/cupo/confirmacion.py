@@ -63,13 +63,43 @@ def reservar_cupo_al_confirmar(reserva) -> None:
     o habitación. Todo debe ejecutarse dentro de la transacción del webhook
     o conciliar_pagos.
     """
+    # Caso D: esta reserva es un unico componente de una orden cruza-empresa.
+    # Cada webhook confirma solo el servicio de su propia empresa.
+    if reserva.orden_id is not None:
+        servicio = reserva.servicio
+        estrategia = servicio.estrategia_cupo
+
+        if estrategia == 'por_recurso_dia':
+            bloquear_cupo(reserva.empresa_id, reserva.fecha, servicio_id=servicio.pk)
+            motivo = evaluar_cupo(
+                reserva.fecha,
+                reserva.numero_personas,
+                reserva.empresa,
+                excluir_pk=reserva.pk,
+                estrategia_cupo='por_recurso_dia',
+                servicio_id=servicio.pk,
+            )
+            if motivo:
+                raise SinCupoError(f'No hay cupo para {servicio.nombre} ({motivo}).')
+        elif estrategia == 'por_noche':
+            _asignar_cupo_hospedaje(reserva, servicio, es_componente=True)
+        # bajo_demanda (transporte): no reserva inventario.
+
+        ReservaPaqueteComponente.objects.create(
+            reserva=reserva,
+            servicio=servicio,
+            empresa=reserva.empresa,
+            estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
+        )
+        return
+
     # Caso A: servicio hospedaje directo
     if reserva.servicio and reserva.servicio.estrategia_cupo == 'por_noche':
         _asignar_cupo_hospedaje(reserva, reserva.servicio, es_componente=False)
         return
 
     # Caso B: paquete con componentes
-    if reserva.paquete is not None:
+    if reserva.paquete is not None and reserva.orden_id is None:
         for ps in reserva.paquete.servicios_asociados.select_related('servicio').order_by('orden'):
             servicio = ps.servicio
             estrategia = servicio.estrategia_cupo

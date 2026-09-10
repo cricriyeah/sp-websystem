@@ -22,7 +22,7 @@ from apps.fleet.models import (
     Servicio,
 )
 from apps.tenancy import scope
-from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
+from apps.testing import ApiTestCase, EmpresaTestCase, OperadorTestCase, crear_flota
 
 from .admin import telefono_marcable
 from .models import (
@@ -2237,4 +2237,112 @@ class OrdenModelTest(EmpresaTestCase):
         )
         self.assertEqual(reserva.orden, orden)
         self.assertIn(reserva, orden.reservas.all())
+
+
+class ConfirmacionComponenteOrdenTest(OperadorTestCase):
+    def setUp(self):
+        from apps.bookings.models import Orden
+        from apps.fleet.models import Paquete, PaqueteServicio, Recurso
+        from apps.tenancy.models import Empresa, Sede
+
+        self.fecha = date.today() + timedelta(days=30)
+        self.sede = Sede.objects.create(nombre='Sede Orden Cupo', slug='sede-orden-cupo')
+        self.empresa_pesca = Empresa.objects.create(
+            sede=self.sede, nombre='Empresa Pesca', slug='empresa-pesca-orden',
+        )
+        self.empresa_transporte = Empresa.objects.create(
+            sede=self.sede, nombre='Empresa Transporte', slug='empresa-transporte-orden',
+        )
+        self.pesca = Servicio.objects.create(
+            empresa=self.empresa_pesca, nombre='Pesca Orden', slug='pesca-orden',
+            tipo_servicio='pesca', estrategia_cupo='por_recurso_dia',
+        )
+        self.transporte = Servicio.objects.create(
+            empresa=self.empresa_transporte, nombre='Transporte Orden', slug='transporte-orden',
+            tipo_servicio='transporte', estrategia_cupo='bajo_demanda',
+        )
+        self.hospedaje = Servicio.objects.create(
+            empresa=self.empresa_pesca, nombre='Hospedaje Orden', slug='hospedaje-orden',
+            tipo_servicio='hospedaje', estrategia_cupo='por_noche',
+        )
+        self.habitacion = Recurso.objects.create(
+            empresa=self.empresa_pesca, servicio=self.hospedaje,
+            nombre='Habitacion Orden', capacidad_maxima=4,
+        )
+        self.paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.empresa_pesca,
+            nombre='Paquete Orden Cupo', slug='paquete-orden-cupo',
+            precio_ancla=Decimal('5000.00'),
+        )
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.pesca, orden=1)
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.transporte, orden=2)
+        self.orden = Orden.objects.create(
+            sede=self.sede, empresa_lider=self.empresa_pesca, paquete=self.paquete,
+            nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567',
+            correo_cliente='ana@example.com',
+        )
+        crear_flota(self.empresa_pesca)
+
+    def _reserva(self, empresa, servicio, **extra):
+        return Reserva.objects.create(
+            empresa=empresa, servicio=servicio, orden=self.orden,
+            fecha=self.fecha, hora=time(6, 0), numero_personas=2,
+            nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567',
+            correo_cliente='ana@example.com', canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True, **extra,
+        )
+
+    def _confirmar_bajo_empresa(self, reserva):
+        from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
+
+        self._alcance_operador.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(reserva.empresa):
+                reservar_cupo_al_confirmar(reserva)
+        finally:
+            self._alcance_operador = scope.como_operador_plataforma()
+            self._alcance_operador.__enter__()
+
+    def test_pesca_lider_reserva_solo_su_servicio(self):
+        reserva = self._reserva(self.empresa_pesca, self.pesca, paquete=self.paquete)
+        self._confirmar_bajo_empresa(reserva)
+
+        componente = reserva.componentes.get()
+        self.assertEqual(componente.servicio, self.pesca)
+        self.assertEqual(componente.empresa, self.empresa_pesca)
+        self.assertEqual(componente.estado_cupo, componente.EstadoCupo.OK)
+
+    def test_transporte_no_toca_inventario_y_crea_componente(self):
+        reserva = self._reserva(self.empresa_transporte, self.transporte)
+        self._confirmar_bajo_empresa(reserva)
+
+        self.assertFalse(reserva.ocupaciones.exists())
+        componente = reserva.componentes.get()
+        self.assertEqual(componente.servicio, self.transporte)
+        self.assertEqual(componente.empresa, self.empresa_transporte)
+        self.assertEqual(componente.estado_cupo, componente.EstadoCupo.OK)
+
+    def test_pesca_llena_lanza_sin_cupo(self):
+        from apps.bookings.cupo import SinCupoError
+        CupoDiario.objects.create(
+            empresa=self.empresa_pesca, fecha=self.fecha, cupo_maximo=0,
+        )
+        reserva = self._reserva(self.empresa_pesca, self.pesca, paquete=self.paquete)
+
+        with self.assertRaises(SinCupoError):
+            self._confirmar_bajo_empresa(reserva)
+        self.assertFalse(reserva.componentes.exists())
+
+    def test_hospedaje_de_orden_crea_ocupacion_y_componente(self):
+        reserva = self._reserva(
+            self.empresa_pesca, self.hospedaje,
+            fecha_salida=self.fecha + timedelta(days=2),
+        )
+        self._confirmar_bajo_empresa(reserva)
+
+        self.assertTrue(reserva.ocupaciones.filter(recurso=self.habitacion).exists())
+        componente = reserva.componentes.get()
+        self.assertEqual(componente.servicio, self.hospedaje)
+        self.assertEqual(componente.empresa, self.empresa_pesca)
+        self.assertEqual(componente.estado_cupo, componente.EstadoCupo.OK)
 
