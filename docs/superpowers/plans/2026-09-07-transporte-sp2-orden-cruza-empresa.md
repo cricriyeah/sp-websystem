@@ -438,8 +438,11 @@ la Tarea 3.1 pero en `clean()`, no en `reservar_cupo_al_confirmar`.
   - Valida que el paquete sea cruza-empresa (si es mono-empresa, va por el flujo de `Reserva` normal, no por órdenes → 400 con mensaje claro).
   - `forma_pago` forzado a `completo`.
   - Dentro de **una** `transaction.atomic`:
-    - Crea la `Orden` (`armando`). El INSERT de `Orden` no tiene contexto de empresa
-      (vista `AllowAny`); lo permite el `WITH CHECK` sede-scoped de la Tarea 1.2.
+    - Crea la `Orden` (`armando`) dentro de `with scope.con_empresa(paquete.empresa_lider):`
+      (la `empresa_lider` pertenece a la sede del slug, así el camino
+      `sede_id = (SELECT sede_id FROM tenancy_empresa WHERE id = ...)` del `USING`
+      matchea el `RETURNING` del INSERT del ORM). Es el mismo patrón que se usa
+      para escribir cada `Reserva` bajo `scope.con_empresa(componente.empresa)`.
     - Por cada componente, una `Reserva` (`pendiente_pago`, `orden=<orden>`,
       `empresa=<empresa del componente>`, `servicio=<componente>`, `canal_origen='web'`),
       **iterando `scope.con_empresa(componente.empresa)` para cada escritura** — la
