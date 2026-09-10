@@ -135,7 +135,7 @@ class PaquetesModelTests(OperadorTestCase):
         self.assertEqual(paquete.servicios_asociados.count(), 2)
         self.assertEqual(str(ps1), 'Pesca y Paseo -> Pesca Deportiva Día Completo')
 
-    def test_validacion_servicio_distinta_empresa_falla(self):
+    def test_paquete_servicio_acepta_componente_otra_empresa_misma_sede(self):
         paquete = Paquete.objects.create(
             sede=self.sede_lp,
             empresa_lider=self.empresa_pesca,
@@ -143,17 +143,52 @@ class PaquetesModelTests(OperadorTestCase):
             slug='paquete-lp',
             precio_ancla=Decimal('5000.00'),
         )
-        # Servicio de otra empresa (hotel), misma sede: fuera de v1
-        ps_invalido = PaqueteServicio(
+        # Servicio de otra empresa (hotel), misma sede (La Paz): debe aceptarse (cierra ADR-005)
+        ps_valido = PaqueteServicio(
             paquete=paquete,
             servicio=self.servicio_hotel,
             orden=1,
         )
+        # full_clean no debe lanzar ValidationError
+        ps_valido.full_clean()
+        ps_valido.save()
+        self.assertEqual(ps_valido.servicio.empresa, self.empresa_hotel)
+        self.assertEqual(ps_valido.paquete.empresa_lider, self.empresa_pesca)
+
+    def test_paquete_servicio_rechaza_componente_otra_sede(self):
+        paquete = Paquete.objects.create(
+            sede=self.sede_lp,
+            empresa_lider=self.empresa_pesca,
+            nombre='Paquete La Paz',
+            slug='paquete-lp-otra-sede',
+            precio_ancla=Decimal('5000.00'),
+        )
+        # Servicio de empresa en otra sede (Cabo San Lucas): debe rechazarse
+        ps_otra_sede = PaqueteServicio(
+            paquete=paquete,
+            servicio=self.servicio_cabo,
+            orden=1,
+        )
         with self.assertRaises(ValidationError) as ctx:
-            ps_invalido.full_clean()
+            ps_otra_sede.full_clean()
         self.assertIn('servicio', ctx.exception.message_dict)
-        self.assertIn('paquetes cruza-empresa: fuera de v1, ver ADR-005', str(ctx.exception.message_dict['servicio']))
-        self.assertIn('ADR-005', str(ctx.exception.message_dict['servicio']))
+        self.assertIn('El servicio debe pertenecer a una empresa de la misma sede que el paquete.', ctx.exception.message_dict['servicio'])
+
+    def test_paquete_servicio_mono_empresa_sigue_siendo_valido(self):
+        paquete = Paquete.objects.create(
+            sede=self.sede_lp,
+            empresa_lider=self.empresa_pesca,
+            nombre='Paquete Mono',
+            slug='paquete-mono',
+            precio_ancla=Decimal('5000.00'),
+        )
+        ps_mono = PaqueteServicio(
+            paquete=paquete,
+            servicio=self.servicio_pesca,
+            orden=1,
+        )
+        ps_mono.full_clean()
+        ps_mono.save()
 
     def test_paquete_clean_con_componentes_no_valida_ajustes(self):
         paquete = Paquete.objects.create(

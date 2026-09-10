@@ -68,13 +68,13 @@ En la infraestructura de Stripe estándar (sin Stripe Connect), no es posible mo
 
 ---
 
-## 3. Estado en v1
+## 3. Estado en v1 (Levantado en SP2 — Revisión 2)
 
-En la versión v1 del sistema, los paquetes cruza-empresa quedan **explícitamente bloqueados**:
+En la versión v1 del sistema, los paquetes cruza-empresa quedaban **explícitamente bloqueados**:
 
 - Todo `Paquete` pertenece a una única empresa proveedora (`empresa_lider`), asociada a una localidad (`sede`).
-- La validación en el modelo `PaqueteServicio.clean()` rechaza cualquier intento de asociar a un paquete un componente o servicio que no pertenezca a la misma `empresa_lider` del paquete (emitiendo un error de validación que referencia expresamente este ADR).
-- Por lo tanto, en v1 todos los componentes incluidos en un paquete son provistos por la misma empresa líder del paquete.
+- La validación previa en el modelo `PaqueteServicio.clean()` rechazaba cualquier intento de asociar a un paquete un componente o servicio que no pertenezca a la misma `empresa_lider` del paquete.
+- **Levantado en SP2:** `PaqueteServicio.clean()` ahora valida que el componente pertenezca a una empresa de la **misma sede** que el paquete (`self.servicio.empresa.sede_id == self.paquete.sede_id`), permitiendo componentes cruza-empresa dentro de la misma sede.
 
 ---
 

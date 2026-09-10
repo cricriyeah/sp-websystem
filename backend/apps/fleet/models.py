@@ -638,10 +638,11 @@ class PaqueteServicio(models.Model):
     def clean(self):
         super().clean()
         if self.paquete_id and self.servicio_id:
-            if self.servicio.empresa_id != self.paquete.empresa_lider_id:
+            if self.servicio.empresa.sede_id != self.paquete.sede_id:
                 raise ValidationError({
-                    'servicio': 'paquetes cruza-empresa: fuera de v1, ver ADR-005'
+                    'servicio': 'El servicio debe pertenecer a una empresa de la misma sede que el paquete.'
                 })
+        # (ADR-005 Revisión 2: se elimina la regla de "misma empresa_lider").
 
 
 def capacidades_por_fecha(desde, hasta, empresa):
