@@ -273,3 +273,92 @@ class RLSTests(TransactionTestCase):
         # 5. Sin contexto de empresa (público): no ve ninguna (0 filas)
         self.assertEqual(Orden.objects.count(), 0)
 
+    def test_escape_explicito_funcion_estado_reservas_en_pg_proc(self):
+        """Verifica que la función SECURITY DEFINER estado_reservas_de_orden exista
+        y pertenezca a la whitelist de escapes explícitos de RLS."""
+        WHITELIST_FUNCIONES_ESCAPE = {'estado_reservas_de_orden'}
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT proname FROM pg_proc
+                JOIN pg_namespace n ON pg_proc.pronamespace = n.oid
+                WHERE n.nspname = 'public' AND prosecdef = true;
+            """)
+            funciones_secdef = {row[0] for row in cursor.fetchall()}
+            self.assertTrue(
+                WHITELIST_FUNCIONES_ESCAPE.issubset(funciones_secdef),
+                f"Funciones SECURITY DEFINER esperadas no encontradas: {WHITELIST_FUNCIONES_ESCAPE - funciones_secdef}",
+            )
+
+    def test_estado_reservas_de_orden_security_definer(self):
+        from decimal import Decimal
+        from datetime import date, time
+        from apps.bookings.models import Orden, Reserva
+        from apps.bookings.orden_lectura import reservas_de_orden
+        from apps.fleet.models import Paquete, Servicio
+
+        with scope.como_operador_plataforma():
+            paq = Paquete.objects.create(
+                sede=self.empresa_a.sede,
+                empresa_lider=self.empresa_a,
+                nombre='Paquete Mixto',
+                slug='paquete-mixto',
+                precio_ancla=Decimal('1000.00'),
+            )
+            s_a = Servicio.objects.create(
+                empresa=self.empresa_a,
+                nombre='Pesca A',
+                slug='pesca-a',
+            )
+            s_b = Servicio.objects.create(
+                empresa=self.empresa_b,
+                nombre='Traslado B',
+                slug='traslado-b',
+            )
+
+        orden = Orden.objects.create(
+            sede=self.empresa_a.sede,
+            empresa_lider=self.empresa_a,
+            paquete=paq,
+            nombre_cliente='Cliente Cruzado',
+            telefono_cliente='1234567890',
+            correo_cliente='cruzado@example.com',
+        )
+
+        with scope.con_empresa(self.empresa_a):
+            r_a = Reserva.objects.create(
+                empresa=self.empresa_a,
+                servicio=s_a,
+                orden=orden,
+                fecha=date(2026, 10, 1),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Cruzado',
+                canal_origen='web',
+                deslinde_aceptado=True,
+            )
+
+        with scope.con_empresa(self.empresa_b):
+            r_b = Reserva.objects.create(
+                empresa=self.empresa_b,
+                servicio=s_b,
+                orden=orden,
+                fecha=date(2026, 10, 1),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Cruzado',
+                canal_origen='web',
+                deslinde_aceptado=True,
+            )
+
+        # Bajo el contexto de la Empresa A:
+        with scope.con_empresa(self.empresa_a):
+            # El ORM normal solo ve la reserva de Empresa A (1 fila)
+            self.assertEqual(orden.reservas.count(), 1)
+            self.assertEqual(orden.reservas.first().id, r_a.id)
+
+            # La función SECURITY DEFINER ve las 2 reservas de la orden
+            filas = reservas_de_orden(orden.id)
+            self.assertEqual(len(filas), 2)
+            ids = {f['reserva_id'] for f in filas}
+            self.assertEqual(ids, {r_a.id, r_b.id})
+
