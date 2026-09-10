@@ -294,11 +294,11 @@ explícito del panel de finanzas consolidado).
 - Modify: `docs/superpowers/specs/2026-09-06-ADR-005-...md` — marcar la parte de "bloqueado por `PaqueteServicio.clean`" como levantada (si no lo hizo ya la Revisión 2; verificar).
 - Test: `backend/apps/fleet/tests.py` — paquete de la sede La Paz con `empresa_lider`=Empresa 1 acepta un componente de la Empresa 2 (misma sede); rechaza un componente de una empresa de otra sede.
 
-- [ ] **Paso 1: test que falla** (hoy `clean()` rechaza el componente de otra empresa).
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** cambiar la regla.
-- [ ] **Paso 4:** correr → verde. Confirmar que un paquete mono-empresa sigue siendo válido.
-- [ ] **Paso 5:** commit `feat(fleet): paquetes cruza-empresa dentro de una sede (cierra ADR-005)`.
+- [x] **Paso 1: test que falla** (hoy `clean()` rechaza el componente de otra empresa).
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** cambiar la regla.
+- [x] **Paso 4:** correr → verde. Confirmar que un paquete mono-empresa sigue siendo válido.
+- [x] **Paso 5:** commit `feat(fleet): paquetes cruza-empresa dentro de una sede (cierra ADR-005)`.
 
 ### Tarea 2.2 — `monto_por_empresa` (reparto puro)
 
@@ -330,13 +330,13 @@ explícito del panel de finanzas consolidado).
 - Modify: `backend/apps/fleet/models.py::Paquete.clean()` — para un paquete cruza-empresa, validar `precio_en(moneda) ≥ (tarifa de transporte del componente en esa moneda)` en cada moneda configurada. (Necesita resolver la `TransporteTarifa`; si eso complica `clean()`, mover la validación a un `full_clean` del admin o a `PaqueteServicio.clean` con acceso al paquete.)
 - Test: `backend/apps/payments/tests.py::MontoPorEmpresaTest` — paquete $5000, transporte $2700 → `{empresa1: 2300, empresa2: 2700}`; precio $2000 < transporte $2700 → `ValueError`; dos componentes sin `monto_fijo` → `ValueError`.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): monto_por_empresa (reparto transporte-a-tarifa, pesca-el-resto)`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(payments): monto_por_empresa (reparto transporte-a-tarifa, pesca-el-resto)`.
 
 ### Gate Sección 2
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Commit `docs(plan): SP2 Sección 2 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] Commit `docs(plan): SP2 Sección 2 cerrada`. **PARA y reporta.**
 
 ---
 
