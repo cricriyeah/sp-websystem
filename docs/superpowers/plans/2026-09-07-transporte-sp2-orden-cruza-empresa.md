@@ -371,11 +371,11 @@ explícito del panel de finanzas consolidado).
     ```
 - Test: `backend/apps/bookings/tests.py::ConfirmacionComponenteOrdenTest` — reserva de pesca con `orden` reserva solo su cupo de pesca y crea un `ReservaPaqueteComponente`; reserva de transporte con `orden` no toca inventario y crea el componente; si el cupo de pesca está lleno → `SinCupoError`.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** añadir Caso D; ajustar el gate del Caso B.
-- [ ] **Paso 4:** correr → verde. **Correr toda la suite de bookings** — Caso B no debe cambiar de comportamiento para paquetes mono-empresa.
-- [ ] **Paso 5:** commit `feat(bookings): confirmar cupo por componente para reservas de una orden`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** añadir Caso D; ajustar el gate del Caso B.
+- [x] **Paso 4:** correr → verde. **Correr toda la suite de bookings** — Caso B no debe cambiar de comportamiento para paquetes mono-empresa.
+- [x] **Paso 5:** commit `feat(bookings): confirmar cupo por componente para reservas de una orden`.
 
 ### Tarea 3.2 — Gate de `orden_id` en `Reserva.clean()`
 
@@ -416,17 +416,26 @@ la Tarea 3.1 pero en `clean()`, no en `reservar_cupo_al_confirmar`.
   (solo `orden`, `bajo_demanda`) no valida cupo; ninguna dispara
   `_validar_cupo_de_paquete`.
 
-- [ ] **Paso 1: test que falla** (hoy la líder dispara `_validar_cupo_de_paquete`).
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** añadir el gate de `orden_id` en `clean()`.
-- [ ] **Paso 4:** correr toda la suite de bookings → verde (paquetes mono-empresa intactos).
-- [ ] **Paso 5:** commit `fix(bookings): la reserva de una orden valida solo su cupo, no el del paquete`.
+- [x] **Paso 1: test que falla** (hoy la líder dispara `_validar_cupo_de_paquete`).
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** añadir el gate de `orden_id` en `clean()`.
+- [x] **Paso 4:** correr toda la suite de bookings → verde (paquetes mono-empresa intactos).
+- [x] **Paso 5:** commit `fix(bookings): la reserva de una orden valida solo su cupo, no el del paquete`.
 
 ### Gate Sección 3
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Commit `docs(plan): SP2 Sección 3 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] Commit `docs(plan): SP2 Sección 3 cerrada`. **PARA y reporta.**
 
+Verificación (2026-09-09): `manage.py test apps config --noinput` — sqlite:
+824 tests, `OK (skipped=26)`; Postgres con rol `ci_rls` sin bypass RLS:
+824 tests, `OK`, tras limpiar `test_pescadeportiva_test`. Revisiones de ambas
+tareas y revisión conjunta aprobadas. Commits: `9da898c` (3.1), `eb7e554` (3.2).
+
+Ajuste al pseudocódigo de 3.2: las reservas de orden con estrategia `por_noche`
+conservan `_validar_cupo_hospedaje(self)` para validar el rango de noches de su
+propio servicio. `validar_cupo_diario` no recibe el rango. La consistencia de
+empresa permanece intacta. No se requieren migraciones.
 ---
 
 ## SECCIÓN 4 — API de órdenes
