@@ -1,8 +1,18 @@
 from django.urls import path
 
-from .views import CrearPagoView, EstadoReservaView, StripeWebhookView, ValidarCodigoPromocionalView
+from .views import (
+    CrearOrdenView,
+    CrearPagoView,
+    EstadoReservaView,
+    StripeWebhookView,
+    ValidarCodigoPromocionalView,
+)
 
 urlpatterns = [
+    path(
+        '<slug:sede_slug>/ordenes/', CrearOrdenView.as_view(),
+        name='crear-orden',
+    ),
     path(
         '<slug:empresa_slug>/reservas/<int:pk>/crear-pago/', CrearPagoView.as_view(),
         name='crear-pago',

@@ -426,3 +426,196 @@ class StripeWebhookView(APIView):
             logger.exception('Fallo procesando %s (%s)', evento['id'], evento['type'])
 
         return Response(status=200)
+
+
+class CrearOrdenView(APIView):
+    """Crea o reanuda una Orden cruza-empresa en estado 'armando' con sus N Reservas.
+
+    Endpoint público (AllowAny). Cada escritura se ejecuta bajo el contexto RLS
+    de la empresa correspondiente vía `scope.con_empresa(empresa)`:
+    - La Orden se escribe bajo `scope.con_empresa(paquete.empresa_lider)`
+    - Cada Reserva bajo `scope.con_empresa(componente.empresa)`
+    - Solo la Reserva líder lleva `paquete` seteado; las demás solo llevan `orden` + `servicio`
+    - Para el componente de transporte se crea `DetalleTransporte`
+    """
+
+    throttle_scope = 'reservas'
+    permission_classes = []
+
+    def post(self, request, sede_slug):
+        from apps.bookings.models import DetalleTransporte, Orden, Reserva, Vendedora
+        from apps.fleet.models import Paquete, PuntoEncuentro
+        from apps.tenancy.models import Sede
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+
+        checkout_id_raw = request.data.get('checkout_id')
+        checkout_id = None
+        if checkout_id_raw:
+            try:
+                checkout_id = uuid.UUID(str(checkout_id_raw))
+            except (ValueError, TypeError):
+                return Response({'checkout_id': 'checkout_id debe ser un UUID válido.'}, status=400)
+
+        paquete_slug = request.data.get('paquete')
+        if not paquete_slug:
+            return Response({'paquete': 'Falta el parámetro paquete.'}, status=400)
+
+        paquete = get_object_or_404(Paquete, sede=sede, slug=paquete_slug, activo=True)
+
+        servicios_asociados = list(paquete.servicios_asociados.select_related('servicio', 'servicio__empresa').all())
+        empresas_ids = {paquete.empresa_lider_id} | {ps.servicio.empresa_id for ps in servicios_asociados}
+        if len(empresas_ids) <= 1:
+            return Response(
+                {'detail': 'Este paquete no es cruza-empresa. Debe reservarse mediante el flujo habitual de reservas.'},
+                status=400,
+            )
+
+        deslinde_aceptado = request.data.get('deslinde_aceptado')
+        deslinde_nombre = request.data.get('deslinde_nombre')
+        if not deslinde_aceptado or not deslinde_nombre:
+            return Response(
+                {'deslinde_aceptado': 'Debe aceptar el deslinde de responsabilidad indicando su nombre.'},
+                status=400,
+            )
+
+        nombre_cliente = request.data.get('nombre_cliente', '').strip()
+        telefono_cliente = request.data.get('telefono_cliente', '').strip()
+        correo_cliente = request.data.get('correo_cliente', '').strip()
+        moneda = (request.data.get('moneda') or Reserva.Moneda.MXN).upper()
+        ref = request.data.get('ref', '').strip()
+
+        componentes_data = request.data.get('componentes', [])
+
+        def _buscar_datos_comp(servicio):
+            if isinstance(componentes_data, list):
+                for item in componentes_data:
+                    if isinstance(item, dict) and item.get('servicio') in (servicio.slug, servicio.id, str(servicio.id)):
+                        return item
+            elif isinstance(componentes_data, dict):
+                if servicio.slug in componentes_data:
+                    return componentes_data[servicio.slug]
+                if servicio.tipo_servicio in componentes_data:
+                    return componentes_data[servicio.tipo_servicio]
+            return {}
+
+        try:
+            with transaction.atomic():
+                orden_existente = None
+                if checkout_id:
+                    orden_existente = Orden.objects.filter(
+                        checkout_id=checkout_id,
+                        estado__in=[Orden.Estado.ARMANDO, Orden.Estado.AUTORIZANDO],
+                    ).first()
+
+                if orden_existente:
+                    orden = orden_existente
+                    orden.nombre_cliente = nombre_cliente
+                    orden.telefono_cliente = telefono_cliente
+                    orden.correo_cliente = correo_cliente
+                    orden.moneda = moneda
+                    orden.forma_pago = Reserva.FormaPago.COMPLETO
+                    with scope.con_empresa(paquete.empresa_lider):
+                        orden.full_clean()
+                        orden.save()
+                else:
+                    orden = Orden(
+                        sede=sede,
+                        empresa_lider=paquete.empresa_lider,
+                        paquete=paquete,
+                        checkout_id=checkout_id,
+                        nombre_cliente=nombre_cliente,
+                        telefono_cliente=telefono_cliente,
+                        correo_cliente=correo_cliente,
+                        moneda=moneda,
+                        forma_pago=Reserva.FormaPago.COMPLETO,
+                        estado=Orden.Estado.ARMANDO,
+                    )
+                    with scope.con_empresa(paquete.empresa_lider):
+                        orden.full_clean()
+                        orden.save()
+
+                reservas_resultado = []
+                for ps in servicios_asociados:
+                    servicio = ps.servicio
+                    empresa = servicio.empresa
+                    es_lider = (empresa.id == paquete.empresa_lider_id)
+                    comp_d = _buscar_datos_comp(servicio)
+
+                    fecha = comp_d.get('fecha') or request.data.get('fecha')
+                    hora = comp_d.get('hora') or request.data.get('hora', '07:00:00')
+                    personas = comp_d.get('numero_personas') or request.data.get('numero_personas', 1)
+
+                    with scope.con_empresa(empresa):
+                        reserva = None
+                        if orden_existente:
+                            reserva = Reserva.objects.filter(orden=orden, empresa=empresa, servicio=servicio).first()
+
+                        if reserva is None:
+                            reserva = Reserva(
+                                empresa=empresa,
+                                servicio=servicio,
+                                paquete=paquete if es_lider else None,
+                                orden=orden,
+                                canal_origen='web',
+                                estado=Reserva.Estado.PENDIENTE_PAGO,
+                            )
+                        reserva.fecha = fecha
+                        reserva.hora = hora
+                        reserva.numero_personas = personas
+                        reserva.nombre_cliente = nombre_cliente
+                        reserva.telefono_cliente = telefono_cliente
+                        reserva.correo_cliente = correo_cliente
+                        reserva.moneda = moneda
+                        reserva.forma_pago = Reserva.FormaPago.COMPLETO
+                        reserva.deslinde_aceptado = True
+                        reserva.deslinde_nombre = deslinde_nombre
+                        if es_lider and ref:
+                            vendedora = Vendedora.por_codigo(ref, empresa)
+                            if vendedora:
+                                reserva.vendedora = vendedora
+                        reserva.full_clean()
+                        reserva.save()
+
+                        if servicio.tipo_servicio == 'transporte':
+                            tipo_traslado = comp_d.get('tipo_traslado') or request.data.get('tipo_traslado')
+                            pe_id = comp_d.get('punto_encuentro') or request.data.get('punto_encuentro')
+                            dir_pers = comp_d.get('direccion_personalizada') or request.data.get('direccion_personalizada', '')
+                            zona = comp_d.get('zona') or request.data.get('zona', '')
+                            fecha_regreso = comp_d.get('fecha_regreso') or request.data.get('fecha_regreso')
+
+                            punto_encuentro = None
+                            if pe_id:
+                                punto_encuentro = PuntoEncuentro.objects.filter(empresa=empresa, id=pe_id).first()
+                                if punto_encuentro:
+                                    zona = punto_encuentro.zona
+
+                            detalle = DetalleTransporte.objects.filter(reserva=reserva).first()
+                            if detalle is None:
+                                detalle = DetalleTransporte(reserva=reserva)
+                            detalle.tipo_traslado = tipo_traslado
+                            detalle.punto_encuentro = punto_encuentro
+                            detalle.direccion_personalizada = dir_pers
+                            detalle.zona = zona
+                            detalle.fecha_regreso = fecha_regreso
+                            detalle.full_clean()
+                            detalle.save()
+
+                        reservas_resultado.append({
+                            'id': reserva.id,
+                            'empresa_slug': empresa.slug,
+                            'servicio': servicio.slug,
+                        })
+
+            return Response(
+                {
+                    'orden_id': orden.id,
+                    'checkout_id': str(orden.checkout_id) if orden.checkout_id else None,
+                    'estado': orden.estado,
+                    'reservas': reservas_resultado,
+                },
+                status=200 if orden_existente else 201,
+            )
+        except DjangoValidationError as exc:
+            return Response(exc.message_dict if hasattr(exc, 'message_dict') else {'detail': str(exc)}, status=400)

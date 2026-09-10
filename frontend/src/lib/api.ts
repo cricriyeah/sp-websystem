@@ -448,3 +448,53 @@ export const crearReservaTraslado = (empresaSlug: string, payload: ReservaTrasla
     method: 'POST',
     body: JSON.stringify(payload),
   }, empresaSlug);
+
+export type ComponenteOrdenInput = {
+  servicio: string | number;
+  fecha?: string;
+  hora?: string;
+  numero_personas?: number;
+  tipo_traslado?: TipoTraslado;
+  punto_encuentro?: number | null;
+  direccion_personalizada?: string;
+  zona?: Zona | '';
+  fecha_regreso?: string | null;
+};
+
+export type CrearOrdenInput = {
+  checkout_id?: string;
+  paquete: string;
+  deslinde_aceptado: boolean;
+  deslinde_nombre: string;
+  nombre_cliente: string;
+  telefono_cliente: string;
+  correo_cliente: string;
+  moneda?: Moneda;
+  ref?: string;
+  componentes?: ComponenteOrdenInput[];
+  fecha?: string;
+  hora?: string;
+  numero_personas?: number;
+  tipo_traslado?: TipoTraslado;
+  punto_encuentro?: number | null;
+  direccion_personalizada?: string;
+  zona?: Zona | '';
+  fecha_regreso?: string | null;
+};
+
+export type OrdenCreada = {
+  orden_id: number;
+  checkout_id: string | null;
+  estado: string;
+  reservas: {
+    id: number;
+    empresa_slug: string;
+    servicio: string;
+  }[];
+};
+
+export const crearOrden = (sedeSlug: string, payload: CrearOrdenInput): Promise<OrdenCreada> =>
+  request<OrdenCreada>('/api/ordenes/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }, sedeSlug);

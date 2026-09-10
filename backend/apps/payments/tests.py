@@ -2457,3 +2457,225 @@ class MontoPorEmpresaTest(TestCase):
         ]
         with self.assertRaises(ValueError):
             monto_por_empresa(precio_paquete=Decimal('5000.00'), componentes=componentes, moneda='MXN')
+
+
+class CrearOrdenTest(TestCase):
+    def setUp(self):
+        super().setUp()
+        from apps.bookings.models import DetalleTransporte, Orden, Reserva
+        from apps.fleet.enums import TipoTraslado
+        from apps.fleet.models import Paquete, PaqueteServicio, Servicio, TransporteTarifa
+        from apps.tenancy.models import Empresa, Sede
+
+        self.sede = Sede.objects.create(nombre='Sede Test', slug='sede-test', activo=True)
+        self.empresa_lider = Empresa.objects.create(
+            sede=self.sede, nombre='Empresa Pesca', slug='empresa-pesca', activo=True
+        )
+        self.empresa_transporte = Empresa.objects.create(
+            sede=self.sede, nombre='Empresa Transporte', slug='empresa-transporte', activo=True
+        )
+
+        with scope.como_operador_plataforma():
+            self.servicio_pesca = Servicio.objects.create(
+                empresa=self.empresa_lider,
+                nombre='Pesca Mayor',
+                slug='pesca-mayor',
+                tipo_servicio='pesca',
+                estrategia_cupo='por_recurso_dia',
+                precio_base=Decimal('4000.00'),
+            )
+            self.servicio_transporte = Servicio.objects.create(
+                empresa=self.empresa_transporte,
+                nombre='Traslado Aeropuerto',
+                slug='traslado-aeropuerto',
+                tipo_servicio='transporte',
+                estrategia_cupo='bajo_demanda',
+                estrategia_precio='por_ruta',
+            )
+            self.tarifa_transporte = TransporteTarifa.objects.create(
+                empresa=self.empresa_transporte,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                personas_min=1,
+                personas_max=4,
+                precio=Decimal('2000.00'),
+                precio_usd=Decimal('120.00'),
+            )
+            self.paquete_cruza = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_lider,
+                nombre='Pesca y Traslado',
+                slug='pesca-y-traslado',
+                precio_ancla=Decimal('5000.00'),
+                precio_ancla_usd=Decimal('300.00'),
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete_cruza, servicio=self.servicio_pesca, orden=1)
+            PaqueteServicio.objects.create(paquete=self.paquete_cruza, servicio=self.servicio_transporte, orden=2)
+
+            self.paquete_mono = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_lider,
+                nombre='Solo Pesca Paquete',
+                slug='solo-pesca-paquete',
+                precio_ancla=Decimal('4000.00'),
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete_mono, servicio=self.servicio_pesca, orden=1)
+
+        from django.contrib.auth.models import User
+        from apps.bookings.models import Vendedora
+        u = User.objects.create_user('vendedora_test', 'v@test.com', 'pass')
+        self.vendedora = Vendedora.objects.create(usuario=u, empresa=self.empresa_lider, codigo='amigo')
+
+    def test_crear_orden_exitosa(self):
+        from apps.bookings.models import DetalleTransporte, Orden, Reserva
+        from apps.fleet.enums import TipoTraslado
+
+        payload = {
+            'checkout_id': str(uuid.uuid4()),
+            'paquete': self.paquete_cruza.slug,
+            'nombre_cliente': 'Carlos Lopez',
+            'telefono_cliente': '1234567890',
+            'correo_cliente': 'carlos@example.com',
+            'moneda': 'MXN',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Carlos Lopez',
+            'ref': 'amigo',
+            'fecha': '2026-10-15',
+            'hora': '07:00:00',
+            'numero_personas': 2,
+            'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
+            'direccion_personalizada': 'Calle Marina 123',
+            'fecha_regreso': '2026-10-17',
+        }
+        url = f'/api/{self.sede.slug}/ordenes/'
+        res = self.client.post(url, payload, content_type='application/json')
+        self.assertEqual(res.status_code, 201)
+        data = res.json()
+        self.assertIn('orden_id', data)
+        self.assertEqual(data['estado'], 'armando')
+        self.assertEqual(len(data['reservas']), 2)
+
+        orden = Orden.objects.get(pk=data['orden_id'])
+        self.assertEqual(orden.estado, Orden.Estado.ARMANDO)
+        self.assertEqual(orden.empresa_lider, self.empresa_lider)
+        self.assertEqual(orden.paquete, self.paquete_cruza)
+
+        reservas = list(Reserva.objects.filter(orden=orden).order_by('id'))
+        self.assertEqual(len(reservas), 2)
+        r_lider = next(r for r in reservas if r.empresa_id == self.empresa_lider.id)
+        r_trans = next(r for r in reservas if r.empresa_id == self.empresa_transporte.id)
+
+        self.assertEqual(r_lider.paquete, self.paquete_cruza)
+        self.assertEqual(r_lider.servicio, self.servicio_pesca)
+        self.assertEqual(r_lider.vendedora, self.vendedora)
+        self.assertTrue(r_lider.deslinde_aceptado)
+
+        self.assertIsNone(r_trans.paquete)
+        self.assertEqual(r_trans.servicio, self.servicio_transporte)
+        self.assertIsNone(r_trans.vendedora)
+        self.assertTrue(r_trans.deslinde_aceptado)
+
+        detalle = DetalleTransporte.objects.get(reserva=r_trans)
+        self.assertEqual(detalle.tipo_traslado, TipoTraslado.REDONDO_AEROPUERTO)
+        self.assertEqual(detalle.direccion_personalizada, 'Calle Marina 123')
+        self.assertEqual(str(detalle.fecha_regreso), '2026-10-17')
+
+    def test_paquete_mono_empresa_retorna_400(self):
+        payload = {
+            'checkout_id': str(uuid.uuid4()),
+            'paquete': self.paquete_mono.slug,
+            'nombre_cliente': 'Carlos Lopez',
+            'telefono_cliente': '1234567890',
+            'correo_cliente': 'carlos@example.com',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Carlos Lopez',
+            'fecha': '2026-10-15',
+            'hora': '07:00:00',
+            'numero_personas': 2,
+        }
+        res = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('cruza-empresa', str(res.json()))
+
+    def test_deslinde_faltante_o_no_aceptado_retorna_400(self):
+        payload = {
+            'checkout_id': str(uuid.uuid4()),
+            'paquete': self.paquete_cruza.slug,
+            'nombre_cliente': 'Carlos Lopez',
+            'telefono_cliente': '1234567890',
+            'correo_cliente': 'carlos@example.com',
+            'deslinde_aceptado': False,
+            'fecha': '2026-10-15',
+            'hora': '07:00:00',
+            'numero_personas': 2,
+        }
+        res = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
+        self.assertEqual(res.status_code, 400)
+
+    def test_reutiliza_orden_por_checkout_id_en_armando_o_autorizando(self):
+        from apps.bookings.models import Orden
+        from apps.fleet.enums import TipoTraslado
+
+        cid = str(uuid.uuid4())
+        payload = {
+            'checkout_id': cid,
+            'paquete': self.paquete_cruza.slug,
+            'nombre_cliente': 'Carlos Lopez',
+            'telefono_cliente': '1234567890',
+            'correo_cliente': 'carlos@example.com',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Carlos Lopez',
+            'fecha': '2026-10-15',
+            'hora': '07:00:00',
+            'numero_personas': 2,
+            'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
+            'direccion_personalizada': 'Calle Marina 123',
+            'fecha_regreso': '2026-10-17',
+        }
+        res1 = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
+        self.assertEqual(res1.status_code, 201)
+        orden_id_1 = res1.json()['orden_id']
+
+        payload['nombre_cliente'] = 'Carlos Lopez Actualizado'
+        res2 = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
+        self.assertEqual(res2.status_code, 200)
+        self.assertEqual(res2.json()['orden_id'], orden_id_1)
+
+        orden = Orden.objects.get(pk=orden_id_1)
+        self.assertEqual(orden.nombre_cliente, 'Carlos Lopez Actualizado')
+
+    def test_ignora_orden_capturada_con_mismo_checkout_id(self):
+        from apps.bookings.models import Orden
+        from apps.fleet.enums import TipoTraslado
+
+        cid = str(uuid.uuid4())
+        with scope.con_empresa(self.empresa_lider):
+            Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_lider,
+                paquete=self.paquete_cruza,
+                checkout_id=cid,
+                nombre_cliente='Antiguo',
+                telefono_cliente='1234567890',
+                correo_cliente='antiguo@example.com',
+                estado=Orden.Estado.CAPTURADA,
+            )
+        payload = {
+            'checkout_id': cid,
+            'paquete': self.paquete_cruza.slug,
+            'nombre_cliente': 'Nuevo Cliente',
+            'telefono_cliente': '1234567890',
+            'correo_cliente': 'nuevo@example.com',
+            'deslinde_aceptado': True,
+            'deslinde_nombre': 'Nuevo Cliente',
+            'fecha': '2026-10-15',
+            'hora': '07:00:00',
+            'numero_personas': 2,
+            'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
+            'direccion_personalizada': 'Calle Marina 123',
+            'fecha_regreso': '2026-10-17',
+        }
+        res = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
+        self.assertEqual(res.status_code, 201)
+        nueva_orden = Orden.objects.get(pk=res.json()['orden_id'])
+        self.assertEqual(nueva_orden.estado, Orden.Estado.ARMANDO)
+        self.assertEqual(nueva_orden.nombre_cliente, 'Nuevo Cliente')
