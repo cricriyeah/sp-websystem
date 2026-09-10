@@ -469,8 +469,8 @@ empresa permanece intacta. No se requieren migraciones.
 - Modify: `frontend/src/lib/api.ts` — `crearOrden(sedeSlug, payload)`.
 - Test: `backend/apps/payments/tests.py::CrearOrdenTest` — crea orden + 2 reservas con sus empresas (postgres: verifica que las 2 escrituras pasan RLS vía `scope.con_empresa`); solo la líder lleva `paquete`; paquete mono-empresa → 400; deslinde faltante → 400; reutiliza por `checkout_id` en `armando`, ignora uno `capturada`.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): POST /api/<sede>/ordenes/`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(payments): POST /api/<sede>/ordenes/`.
 
 ### Tarea 4.2 — `apps/payments/ordenes.py` — crear N PaymentIntents
 
@@ -511,7 +511,7 @@ empresa permanece intacta. No se requieren migraciones.
   def revertir_orden(orden, motivo: str) -> None:
       """Compensación idempotente. Por cada PaymentIntent de la orden
       (vía estado_reservas_de_orden):
-        - 'requires_capture'/'requires_confirmation'/'requires_action' → cancel (void)
+        - 'requires_capture'/'requires_confirmation'/'requires_action'/'requires_payment_method' → cancel (void)
         - 'succeeded' → refund total (idempotency_key = f'orden-{orden.id}-{empresa_id}-refund')
         - 'canceled'/'refunded'/ya reembolsada → nada
       Marca las reservas afectadas (reembolsada / motivo_cancelacion / estado
@@ -528,8 +528,8 @@ empresa permanece intacta. No se requieren migraciones.
   idempotente en segunda llamada; `confirmar_captura` con un PI ya `succeeded` no
   revienta.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): módulo de orquestación de órdenes (crear/capturar/revertir)`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(payments): módulo de orquestación de órdenes (crear/capturar/revertir)`.
 
 ### Tarea 4.3 — `POST /api/<sede_slug>/ordenes/<id>/crear-pago/` y `.../confirmar-captura/`
 
@@ -557,15 +557,25 @@ empresa permanece intacta. No se requieren migraciones.
   `cancelada`, 0 reservas pagadas); `getOrden` tras autorizar solo el 1º devuelve el
   cursor en el 2º pago.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2 → 5:** ciclo. Commit `feat(payments): endpoints crear-pago y confirmar-captura de una orden`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2 → 5:** ciclo. Commit `feat(payments): endpoints crear-pago y confirmar-captura de una orden`.
 
 ### Gate Sección 4
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] `check --deploy` verde.
-- [ ] Prueba manual (runserver + curl, Stripe en modo test si hay llaves; si no, los tests con mock bastan).
-- [ ] Commit `docs(plan): SP2 Sección 4 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] `check --deploy` verde.
+- [x] Prueba manual (runserver + curl, Stripe en modo test si hay llaves; si no, los tests con mock bastan).
+- [x] Commit `docs(plan): SP2 Sección 4 cerrada`. **PARA y reporta.**
+
+Verificación (2026-09-10):
+- SQLite: suite completa `manage.py test apps config` 100% OK.
+- Postgres con RLS (`ci_rls`): suite completa `manage.py test apps config` 100% OK tras DROP DATABASE previo.
+- `manage.py check --deploy`: 0 errores.
+- Commits de la sección:
+  - 4.1: `9200d80` `feat(payments): POST /api/<sede>/ordenes/`
+  - 4.2: `60b9e7d` `feat(payments): módulo de orquestación de órdenes (crear/capturar/revertir)`
+  - 4.3: `e524201` `feat(payments): endpoints crear-pago y confirmar-captura de una orden`
+  - Fix RLS: `77ca7ee` `fix(payments): resolver paquete y orden bajo RLS en endpoints de órdenes`
 
 ---
 
