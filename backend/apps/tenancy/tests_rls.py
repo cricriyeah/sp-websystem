@@ -236,41 +236,74 @@ class RLSTests(TransactionTestCase):
                 precio_ancla=Decimal('1000.00'),
             )
 
-        # 1. INSERT público sin contexto de empresa: debe pasar si sede_id es válida
-        orden_a = Orden.objects.create(
-            sede=self.empresa_a.sede,
-            empresa_lider=self.empresa_a,
-            paquete=paq_a,
-            nombre_cliente='Cliente A',
-            telefono_cliente='1234567890',
-            correo_cliente='a@example.com',
-        )
-        orden_b = Orden.objects.create(
-            sede=sede_b,
-            empresa_lider=empresa_b2,
-            paquete=paq_b,
-            nombre_cliente='Cliente B',
-            telefono_cliente='1234567890',
-            correo_cliente='b@example.com',
-        )
+        # 1. INSERT con scope.con_empresa(<empresa de esa sede>): funciona (INSERT + RETURNING)
+        with scope.con_empresa(self.empresa_a):
+            orden_a = Orden.objects.create(
+                sede=self.empresa_a.sede,
+                empresa_lider=self.empresa_a,
+                paquete=paq_a,
+                nombre_cliente='Cliente A',
+                telefono_cliente='1234567890',
+                correo_cliente='a@example.com',
+            )
+        with scope.con_empresa(empresa_b2):
+            orden_b = Orden.objects.create(
+                sede=sede_b,
+                empresa_lider=empresa_b2,
+                paquete=paq_b,
+                nombre_cliente='Cliente B',
+                telefono_cliente='1234567890',
+                correo_cliente='b@example.com',
+            )
 
-        # 2. Jefe / vendedora de empresa_a (sede_a): ve orden_a, NO ve orden_b
+        # 2. INSERT crudo sin RETURNING y sin contexto: sigue pasando por WITH CHECK
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO bookings_orden (
+                    sede_id, empresa_lider_id, paquete_id, nombre_cliente,
+                    telefono_cliente, correo_cliente, moneda, forma_pago,
+                    estado, creado_en, actualizado_en
+                ) VALUES (
+                    %s, %s, %s, 'Cliente Crudo', '1234567890', 'crudo@example.com',
+                    'MXN', 'completo', 'armando', NOW(), NOW()
+                );
+            """, [self.empresa_a.sede_id, self.empresa_a.id, paq_a.id])
+
+        # 3. Jefe / vendedora de empresa_a (sede_a): ve orden_a + orden cruda, NO ve orden_b
         with scope.con_empresa(self.empresa_a):
             ordenes_a = list(Orden.objects.all())
-            self.assertEqual(len(ordenes_a), 1)
-            self.assertEqual(ordenes_a[0].id, orden_a.id)
+            self.assertEqual(len(ordenes_a), 2)
+            for o in ordenes_a:
+                self.assertEqual(o.sede_id, self.empresa_a.sede_id)
 
-        # 3. Jefe / vendedora de empresa_b2 (sede_b): ve orden_b, NO ve orden_a
+        # 4. Jefe / vendedora de empresa_b2 (sede_b): ve orden_b, NO ve órdenes de sede_a
         with scope.con_empresa(empresa_b2):
             ordenes_b = list(Orden.objects.all())
             self.assertEqual(len(ordenes_b), 1)
             self.assertEqual(ordenes_b[0].id, orden_b.id)
 
-        # 4. Operador de plataforma: ve ambas
-        with scope.como_operador_plataforma():
-            self.assertEqual(Orden.objects.count(), 2)
+            # Prueba de que no hay bypass por current_query() ~* '^\s*INSERT':
+            # Un INSERT INTO ... SELECT ... desde empresa_b2 NO debe poder leer órdenes de sede_a
+            with connection.cursor() as cursor:
+                cursor.execute("CREATE TEMP TABLE tmp_ordenes_leidas (orden_id bigint);")
+                cursor.execute(
+                    "INSERT INTO tmp_ordenes_leidas SELECT id FROM bookings_orden WHERE sede_id = %s;",
+                    [self.empresa_a.sede_id],
+                )
+                cursor.execute("SELECT COUNT(*) FROM tmp_ordenes_leidas;")
+                leidas_sede_a = cursor.fetchone()[0]
+                cursor.execute("DROP TABLE tmp_ordenes_leidas;")
+                self.assertEqual(
+                    leidas_sede_a,
+                    0,
+                    f"Vulnerabilidad RLS detectada: se leyeron {leidas_sede_a} órdenes de otra sede vía INSERT INTO ... SELECT",
+                )
 
-        # 5. Sin contexto de empresa (público): no ve ninguna (0 filas)
+        # 5. Operador de plataforma: ve todas (orden_a + orden_b + orden cruda = 3)
+        with scope.como_operador_plataforma():
+            self.assertEqual(Orden.objects.count(), 3)
+
+        # 6. Sin contexto de empresa (público): no ve ninguna (0 filas)
         self.assertEqual(Orden.objects.count(), 0)
 
     def test_escape_explicito_funcion_estado_reservas_en_pg_proc(self):
@@ -315,16 +348,15 @@ class RLSTests(TransactionTestCase):
                 slug='traslado-b',
             )
 
-        orden = Orden.objects.create(
-            sede=self.empresa_a.sede,
-            empresa_lider=self.empresa_a,
-            paquete=paq,
-            nombre_cliente='Cliente Cruzado',
-            telefono_cliente='1234567890',
-            correo_cliente='cruzado@example.com',
-        )
-
         with scope.con_empresa(self.empresa_a):
+            orden = Orden.objects.create(
+                sede=self.empresa_a.sede,
+                empresa_lider=self.empresa_a,
+                paquete=paq,
+                nombre_cliente='Cliente Cruzado',
+                telefono_cliente='1234567890',
+                correo_cliente='cruzado@example.com',
+            )
             r_a = Reserva.objects.create(
                 empresa=self.empresa_a,
                 servicio=s_a,
