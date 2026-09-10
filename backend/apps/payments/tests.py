@@ -18,6 +18,7 @@ from django.utils import timezone
 
 from apps.bookings.models import (
     CUPO_MAXIMO_DEFAULT,
+    Orden,
     Reserva,
     ReservaExtra,
     ReservaOcupacion,
@@ -2679,3 +2680,339 @@ class CrearOrdenTest(TestCase):
         nueva_orden = Orden.objects.get(pk=res.json()['orden_id'])
         self.assertEqual(nueva_orden.estado, Orden.Estado.ARMANDO)
         self.assertEqual(nueva_orden.nombre_cliente, 'Nuevo Cliente')
+
+
+class OrdenesModuloTest(TestCase):
+    def setUp(self):
+        from apps.bookings.models import Orden, Reserva
+        from apps.fleet.models import Paquete, PaqueteServicio, Servicio
+        from apps.tenancy.models import Empresa, Sede
+
+        self.sede = Sede.objects.create(nombre='Sede Modulo', slug='sede-modulo-test', activo=True)
+        self.empresa_1 = Empresa.objects.create(
+            nombre='Empresa Pesca Mod',
+            slug='emp-mod-pesca',
+            sede=self.sede,
+            stripe_secret_key='sk_test_1',
+            stripe_publishable_key='pk_test_1',
+        )
+        self.empresa_2 = Empresa.objects.create(
+            nombre='Empresa Transporte Mod',
+            slug='emp-mod-transporte',
+            sede=self.sede,
+            stripe_secret_key='sk_test_2',
+            stripe_publishable_key='pk_test_2',
+        )
+        self.servicio_1 = Servicio.objects.create(
+            empresa=self.empresa_1,
+            nombre='Pesca Mod',
+            slug='pesca-mod',
+            tipo_servicio='pesca',
+        )
+        self.servicio_2 = Servicio.objects.create(
+            empresa=self.empresa_2,
+            nombre='Transporte Mod',
+            slug='transporte-mod',
+            tipo_servicio='transporte',
+        )
+        self.paquete = Paquete.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa_1,
+            nombre='Paquete Modulo',
+            slug='paquete-modulo',
+            precio_ancla=Decimal('10000.00'),
+            activo=True,
+        )
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                paquete=self.paquete,
+                nombre_cliente='Cliente Prueba',
+                telefono_cliente='1234567890',
+                correo_cliente='cliente@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.ARMANDO,
+            )
+            self.reserva_1 = Reserva.objects.create(
+                empresa=self.empresa_1,
+                servicio=self.servicio_1,
+                paquete=self.paquete,
+                orden=self.orden,
+                fecha=date(2026, 10, 15),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Prueba',
+                telefono_cliente='1234567890',
+                correo_cliente='cliente@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+            )
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2 = Reserva.objects.create(
+                empresa=self.empresa_2,
+                servicio=self.servicio_2,
+                paquete=None,
+                orden=self.orden,
+                fecha=date(2026, 10, 15),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Prueba',
+                telefono_cliente='1234567890',
+                correo_cliente='cliente@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+            )
+
+        self.reparto = {
+            self.empresa_1.id: Decimal('7000.00'),
+            self.empresa_2.id: Decimal('3000.00'),
+        }
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_crear_pagos_orden_crea_intents_correctos(self, mock_configurar_stripe):
+        from apps.payments.ordenes import crear_pagos_orden
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+
+        def _get_client(empresa):
+            return cliente_1 if empresa.id == self.empresa_1.id else cliente_2
+
+        mock_configurar_stripe.side_effect = _get_client
+
+        intent_1 = mock.Mock(id='pi_1', client_secret='pi_1_sec', status='requires_capture')
+        intent_2 = mock.Mock(id='pi_2', client_secret='pi_2_sec', status='requires_capture')
+        cliente_1.payment_intents.create.return_value = intent_1
+        cliente_2.payment_intents.create.return_value = intent_2
+
+        resultado = crear_pagos_orden(self.orden, self.reparto)
+
+        self.assertEqual(len(resultado), 2)
+        # Check client_1 call
+        c1_call = cliente_1.payment_intents.create.call_args
+        self.assertEqual(c1_call.args[0]['amount'], 700000)
+        self.assertEqual(c1_call.args[0]['capture_method'], 'manual')
+        self.assertEqual(c1_call.args[0]['payment_method_types'], ['card'])
+        self.assertEqual(c1_call.args[1]['idempotency_key'], f'orden-{self.orden.id}-{self.empresa_1.id}-crear')
+
+        # Check client_2 call
+        c2_call = cliente_2.payment_intents.create.call_args
+        self.assertEqual(c2_call.args[0]['amount'], 300000)
+        self.assertEqual(c2_call.args[0]['capture_method'], 'manual')
+        self.assertEqual(c2_call.args[0]['payment_method_types'], ['card'])
+        self.assertEqual(c2_call.args[1]['idempotency_key'], f'orden-{self.orden.id}-{self.empresa_2.id}-crear')
+
+        self.reserva_1.refresh_from_db()
+        self.reserva_2.refresh_from_db()
+        self.assertEqual(self.reserva_1.stripe_payment_intent_id, 'pi_1')
+        self.assertEqual(self.reserva_2.stripe_payment_intent_id, 'pi_2')
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_crear_pagos_orden_idempotente(self, mock_configurar_stripe):
+        from apps.payments.ordenes import crear_pagos_orden
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        intent_1 = mock.Mock(id='pi_1', client_secret='pi_1_sec', status='requires_capture', amount=700000, currency='mxn')
+        intent_2 = mock.Mock(id='pi_2', client_secret='pi_2_sec', status='requires_capture', amount=300000, currency='mxn')
+        cliente_1.payment_intents.create.return_value = intent_1
+        cliente_2.payment_intents.create.return_value = intent_2
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        # 1st call
+        res_1 = crear_pagos_orden(self.orden, self.reparto)
+        self.assertEqual(cliente_1.payment_intents.create.call_count, 1)
+        self.assertEqual(cliente_2.payment_intents.create.call_count, 1)
+
+        # 2nd call
+        res_2 = crear_pagos_orden(self.orden, self.reparto)
+        # Create should not be called again
+        self.assertEqual(cliente_1.payment_intents.create.call_count, 1)
+        self.assertEqual(cliente_2.payment_intents.create.call_count, 1)
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_crear_pagos_orden_fallo_parcial_propaga_y_conserva_primero(self, mock_configurar_stripe):
+        from apps.payments.ordenes import crear_pagos_orden
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        intent_1 = mock.Mock(id='pi_1', client_secret='pi_1_sec', status='requires_capture')
+        cliente_1.payment_intents.create.return_value = intent_1
+        cliente_2.payment_intents.create.side_effect = stripe.StripeError('Error simulado en empresa 2')
+
+        with self.assertRaises(stripe.StripeError):
+            crear_pagos_orden(self.orden, self.reparto)
+
+        self.reserva_1.refresh_from_db()
+        self.reserva_2.refresh_from_db()
+        # Reserva 1 conservó su PI
+        self.assertEqual(self.reserva_1.stripe_payment_intent_id, 'pi_1')
+        # Reserva 2 quedó vacía
+        self.assertEqual(self.reserva_2.stripe_payment_intent_id, '')
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_crear_pagos_orden_rechaza_si_orden_cerrada(self, mock_configurar_stripe):
+        from apps.payments.ordenes import OrdenCerradaError, crear_pagos_orden
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden.estado = Orden.Estado.CAPTURADA
+            self.orden.save(update_fields=['estado'])
+
+        with self.assertRaises(OrdenCerradaError):
+            crear_pagos_orden(self.orden, self.reparto)
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_confirmar_captura_exitoso(self, mock_configurar_stripe):
+        from apps.payments.ordenes import confirmar_captura
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_1', status='requires_capture')
+        intent_2 = mock.Mock(id='pi_2', status='requires_capture')
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        confirmar_captura(self.orden)
+
+        cliente_1.payment_intents.capture.assert_called_once_with('pi_1')
+        cliente_2.payment_intents.capture.assert_called_once_with('pi_2')
+
+        self.orden.refresh_from_db()
+        # No marca capturada: eso lo hace el webhook
+        self.assertNotEqual(self.orden.estado, Orden.Estado.CAPTURADA)
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_confirmar_captura_con_pi_ya_succeeded_se_salta(self, mock_configurar_stripe):
+        from apps.payments.ordenes import confirmar_captura
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_1', status='succeeded')
+        intent_2 = mock.Mock(id='pi_2', status='requires_capture')
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        confirmar_captura(self.orden)
+
+        cliente_1.payment_intents.capture.assert_not_called()
+        cliente_2.payment_intents.capture.assert_called_once_with('pi_2')
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_confirmar_captura_revierte_si_uno_no_esta_requires_capture(self, mock_configurar_stripe):
+        from apps.payments.ordenes import confirmar_captura
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_1', status='requires_confirmation')
+        intent_2 = mock.Mock(id='pi_2', status='requires_capture')
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        confirmar_captura(self.orden)
+
+        # Никакой capture не должен вызываться
+        cliente_1.payment_intents.capture.assert_not_called()
+        cliente_2.payment_intents.capture.assert_not_called()
+
+        # Debe haberse revertido la orden
+        self.orden.refresh_from_db()
+        self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+        # pi_2 (requires_capture) debe haberse cancelado
+        cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_revertir_orden_cancela_pendientes_y_reembolsa_succeeded(self, mock_configurar_stripe):
+        from apps.payments.ordenes import revertir_orden
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_1', status='succeeded')
+        intent_2 = mock.Mock(id='pi_2', status='requires_capture')
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        revertir_orden(self.orden, 'motivo de prueba')
+
+        # intent_1 (succeeded) -> refund
+        cliente_1.refunds.create.assert_called_once_with(
+            {'payment_intent': 'pi_1'},
+            {'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-refund'},
+        )
+        # intent_2 (requires_capture) -> cancel
+        cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
+
+        self.orden.refresh_from_db()
+        self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+        self.reserva_1.refresh_from_db()
+        self.reserva_2.refresh_from_db()
+        self.assertEqual(self.reserva_1.estado, Reserva.Estado.CANCELADA)
+        self.assertEqual(self.reserva_1.motivo_cancelacion, 'motivo de prueba')
+        self.assertTrue(self.reserva_1.reembolsada)
+        self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
+        self.assertEqual(self.reserva_2.motivo_cancelacion, 'motivo de prueba')
+        self.assertFalse(self.reserva_2.reembolsada)
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_revertir_orden_idempotente(self, mock_configurar_stripe):
+        from apps.payments.ordenes import revertir_orden
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_1', status='succeeded')
+        intent_2 = mock.Mock(id='pi_2', status='requires_capture')
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        revertir_orden(self.orden, 'motivo')
+        # Segunda llamada con intents ya canceled/refunded
+        intent_1.status = 'refunded'
+        intent_2.status = 'canceled'
+        # No debe lanzar error ni intentar re-cancelar/re-reembolsar
+        revertir_orden(self.orden, 'motivo')
+        self.assertEqual(cliente_1.refunds.create.call_count, 1)
+        self.assertEqual(cliente_2.payment_intents.cancel.call_count, 1)
