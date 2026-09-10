@@ -2123,6 +2123,136 @@ class TrasladoCheckoutTest(ApiTestCase):
         self.assertIsNotNone(reserva.vendedora_asignada_en)
 
 
+class ValidacionReservaOrdenTest(OperadorTestCase):
+    def setUp(self):
+        from apps.bookings.models import Orden
+        from apps.fleet.models import Paquete
+        from apps.tenancy.models import Empresa, Sede
+
+        self.fecha = date.today() + timedelta(days=30)
+        self.sede = Sede.objects.create(nombre='Sede Clean Orden', slug='sede-clean-orden')
+        self.empresa_pesca = Empresa.objects.create(
+            sede=self.sede, nombre='Pesca Clean Orden', slug='pesca-clean-orden',
+        )
+        self.empresa_transporte = Empresa.objects.create(
+            sede=self.sede, nombre='Transporte Clean Orden', slug='transporte-clean-orden',
+        )
+        self.pesca = Servicio.objects.create(
+            empresa=self.empresa_pesca, nombre='Pesca Clean', slug='pesca-clean',
+            tipo_servicio='pesca', estrategia_cupo='por_recurso_dia',
+        )
+        self.transporte = Servicio.objects.create(
+            empresa=self.empresa_transporte, nombre='Transporte Clean', slug='transporte-clean',
+            tipo_servicio='transporte', estrategia_cupo='bajo_demanda', capacidad_maxima=14,
+        )
+        self.hospedaje = Servicio.objects.create(
+            empresa=self.empresa_pesca, nombre='Hospedaje Clean', slug='hospedaje-clean',
+            tipo_servicio='hospedaje', estrategia_cupo='por_noche', capacidad_maxima=4,
+        )
+        self.paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.empresa_pesca,
+            nombre='Paquete Clean Orden', slug='paquete-clean-orden',
+            precio_ancla=Decimal('5000.00'),
+        )
+        self.paquete_ajeno = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.empresa_transporte,
+            nombre='Paquete Ajeno Clean', slug='paquete-ajeno-clean',
+            precio_ancla=Decimal('5000.00'),
+        )
+        self.orden = Orden.objects.create(
+            sede=self.sede, empresa_lider=self.empresa_pesca, paquete=self.paquete,
+            nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567',
+            correo_cliente='ana@example.com',
+        )
+
+    def _reserva(self, empresa, servicio, **extra):
+        return Reserva(
+            empresa=empresa, servicio=servicio, orden=self.orden,
+            fecha=self.fecha, hora=time(6, 0), numero_personas=2,
+            nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567',
+            correo_cliente='ana@example.com', canal_origen=Reserva.CanalOrigen.WEB,
+            deslinde_aceptado=True, estado=Reserva.Estado.PAGADA, **extra,
+        )
+
+    def _clean_bajo_empresa(self, reserva):
+        self._alcance_operador.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(reserva.empresa):
+                reserva.clean()
+        finally:
+            self._alcance_operador = scope.como_operador_plataforma()
+            self._alcance_operador.__enter__()
+
+    @mock.patch('apps.bookings.models._validar_cupo_hospedaje')
+    @mock.patch('apps.bookings.models._validar_cupo_de_paquete')
+    @mock.patch('apps.bookings.models.validar_cupo_diario')
+    def test_lider_con_paquete_valida_solo_cupo_de_pesca(
+        self, validar_diario, validar_paquete, validar_hospedaje,
+    ):
+        reserva = self._reserva(self.empresa_pesca, self.pesca, paquete=self.paquete)
+
+        self._clean_bajo_empresa(reserva)
+
+        validar_diario.assert_called_once_with(
+            self.fecha, 2, self.empresa_pesca,
+            excluir_pk=None, estrategia_cupo='por_recurso_dia', servicio_id=self.pesca.pk,
+        )
+        validar_paquete.assert_not_called()
+        validar_hospedaje.assert_not_called()
+
+    @mock.patch('apps.bookings.models._validar_cupo_hospedaje')
+    @mock.patch('apps.bookings.models._validar_cupo_de_paquete')
+    @mock.patch('apps.bookings.models.validar_cupo_diario')
+    def test_transporte_bajo_demanda_no_valida_cupo(
+        self, validar_diario, validar_paquete, validar_hospedaje,
+    ):
+        reserva = self._reserva(self.empresa_transporte, self.transporte)
+
+        self._clean_bajo_empresa(reserva)
+
+        validar_diario.assert_not_called()
+        validar_paquete.assert_not_called()
+        validar_hospedaje.assert_not_called()
+
+    @mock.patch('apps.bookings.models._validar_cupo_hospedaje')
+    @mock.patch('apps.bookings.models._validar_cupo_de_paquete')
+    @mock.patch('apps.bookings.models.validar_cupo_diario')
+    def test_hospedaje_conserva_validacion_del_rango_de_noches(
+        self, validar_diario, validar_paquete, validar_hospedaje,
+    ):
+        reserva = self._reserva(
+            self.empresa_pesca, self.hospedaje,
+            fecha_salida=self.fecha + timedelta(days=3),
+        )
+
+        self._clean_bajo_empresa(reserva)
+
+        validar_hospedaje.assert_called_once_with(reserva)
+        validar_diario.assert_not_called()
+        validar_paquete.assert_not_called()
+
+    @mock.patch('apps.bookings.models.validar_cupo_diario')
+    def test_orden_no_relaja_consistencia_del_servicio(self, validar_diario):
+        reserva = self._reserva(self.empresa_pesca, self.transporte)
+
+        with self.assertRaises(ValidationError) as ctx:
+            self._clean_bajo_empresa(reserva)
+
+        self.assertIn('servicio', ctx.exception.message_dict)
+
+    @mock.patch('apps.bookings.models._validar_cupo_de_paquete')
+    @mock.patch('apps.bookings.models.validar_cupo_diario')
+    def test_orden_no_relaja_consistencia_del_paquete(self, validar_diario, validar_paquete):
+        reserva = self._reserva(
+            self.empresa_pesca, self.pesca, paquete=self.paquete_ajeno,
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            self._clean_bajo_empresa(reserva)
+
+        self.assertIn('paquete', ctx.exception.message_dict)
+
+
 class OrdenModelTest(EmpresaTestCase):
     def setUp(self):
         super().setUp()

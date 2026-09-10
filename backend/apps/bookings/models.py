@@ -678,7 +678,18 @@ class Reserva(models.Model):
         if self.fecha_salida and self.fecha_salida <= self.fecha:
             raise ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de inicio.'})
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            if self.paquete_id:
+            if self.orden_id:
+                # Cada reserva de una orden valida unicamente el inventario de
+                # su servicio bajo el alcance de su empresa.
+                if self.servicio_id and self.servicio.estrategia_cupo == 'por_noche':
+                    _validar_cupo_hospedaje(self)
+                elif self.servicio_id and self.servicio.estrategia_cupo != 'bajo_demanda':
+                    validar_cupo_diario(
+                        self.fecha, self.numero_personas, self.empresa,
+                        excluir_pk=self.pk, estrategia_cupo=self.servicio.estrategia_cupo,
+                        servicio_id=self.servicio_id,
+                    )
+            elif self.paquete_id:
                 _validar_cupo_de_paquete(self)
             elif self.servicio_id and self.servicio.estrategia_cupo == 'por_noche':
                 _validar_cupo_hospedaje(self)
