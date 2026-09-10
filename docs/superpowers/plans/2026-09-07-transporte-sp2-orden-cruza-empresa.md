@@ -117,11 +117,11 @@ Verificado además:
 
 ### Tarea 0.1 — Verificar que el terreno está listo
 
-- [ ] **Paso 1:** `git log --oneline | grep -i "servicios removibles\|SP1 completado"` — confirmar que SP1 está mergeado en esta rama y que la sección de "paquete sin servicios removibles" también.
-- [ ] **Paso 2:** `grep -rn "servicios_removidos\|removible\|ajuste_precio\|ReservaPaqueteServicioRemovido" backend/ frontend/src/` → **cero** (salvo migraciones históricas).
-- [ ] **Paso 3:** `grep -rn "ReservaTransporte\|cargo_por_transporte" backend/` → **cero**. `DetalleTransporte` y `TransporteTarifa` existen.
-- [ ] **Paso 4:** Gate completo (sqlite + Postgres) → verde antes de tocar nada.
-- [ ] **Paso 5:** si algo falta, **para y reporta**. No arranques SP2 sobre terreno incompleto.
+- [x] **Paso 1:** `git log --oneline | grep -i "servicios removibles\|SP1 completado"` — confirmar que SP1 está mergeado en esta rama y que la sección de "paquete sin servicios removibles" también.
+- [x] **Paso 2:** `grep -rn "servicios_removidos\|removible\|ajuste_precio\|ReservaPaqueteServicioRemovido" backend/ frontend/src/` → **cero** (salvo migraciones históricas).
+- [x] **Paso 3:** `grep -rn "ReservaTransporte\|cargo_por_transporte" backend/` → **cero**. `DetalleTransporte` y `TransporteTarifa` existen.
+- [x] **Paso 4:** Gate completo (sqlite + Postgres) → verde antes de tocar nada.
+- [x] **Paso 5:** si algo falta, **para y reporta**. No arranques SP2 sobre terreno incompleto.
 
 *(Sin commit — es una verificación.)*
 
@@ -194,11 +194,11 @@ Verificado además:
 - Create: migración `CreateModel('Orden')` + `AddField('Reserva', 'orden')`.
 - Test: `backend/apps/bookings/tests.py::OrdenModelTest` — `forma_pago='anticipo'` → `ValidationError`; `transicionar` acepta `armando→autorizando` y `autorizando→capturada`, rechaza `armando→capturada` y cualquier salida de `capturada`/`cancelada`; `empresa_lider` distinta al paquete → error.
 
-- [ ] **Paso 1: test que falla.**
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** modelos + migración.
-- [ ] **Paso 4:** correr → verde.
-- [ ] **Paso 5:** commit `feat(bookings): modelo Orden (agrupa N reservas cruza-empresa)`.
+- [x] **Paso 1: test que falla.**
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** modelos + migración.
+- [x] **Paso 4:** correr → verde.
+- [x] **Paso 5:** commit `feat(bookings): modelo Orden (agrupa N reservas cruza-empresa)`.
 
 ### Tarea 1.2 — RLS de `Orden` (sede-scoped, con INSERT público)
 
@@ -221,11 +221,11 @@ Verificado además:
   de la sede A ve la orden de A, no la de B; el operador ve las dos; un INSERT sin
   contexto de empresa (request pública) con `sede_id` válido **pasa**.
 
-- [ ] **Paso 1: test que falla** (postgres).
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** migración RLS sede-scoped con `WITH CHECK` para el INSERT público.
-- [ ] **Paso 4:** correr → verde; el guardarraíl de RLS pasa con la excepción.
-- [ ] **Paso 5:** commit `feat(bookings): política RLS sede-scoped para Orden (INSERT público permitido)`.
+- [x] **Paso 1: test que falla** (postgres).
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** migración RLS sede-scoped con `WITH CHECK` para el INSERT público.
+- [x] **Paso 4:** correr → verde; el guardarraíl de RLS pasa con la excepción.
+- [x] **Paso 5:** commit `feat(bookings): política RLS sede-scoped para Orden (INSERT público permitido)`.
 
 ### Tarea 1.3 — Función `estado_reservas_de_orden(orden_id)` (`SECURITY DEFINER`)
 
@@ -263,17 +263,17 @@ explícito del panel de finanzas consolidado).
 - Test: `# postgres-only` — orden con reservas de 2 empresas; bajo el contexto de la
   Empresa 1, `orden.reservas.all()` ve 1 fila pero `reservas_de_orden(orden_id)` ve 2.
 
-- [ ] **Paso 1: test que falla** (postgres — hoy la función no existe).
-- [ ] **Paso 2:** correr → falla.
-- [ ] **Paso 3:** migración + wrapper.
-- [ ] **Paso 4:** correr → verde.
-- [ ] **Paso 5:** commit `feat(bookings): estado_reservas_de_orden (lectura cruza-empresa acotada a una orden)`.
+- [x] **Paso 1: test que falla** (postgres — hoy la función no existe).
+- [x] **Paso 2:** correr → falla.
+- [x] **Paso 3:** migración + wrapper.
+- [x] **Paso 4:** correr → verde.
+- [x] **Paso 5:** commit `feat(bookings): estado_reservas_de_orden (lectura cruza-empresa acotada a una orden)`.
 
 ### Gate Sección 1
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Guardarraíl RLS verde (con la excepción de `Orden` documentada).
-- [ ] Commit `docs(plan): SP2 Sección 1 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] Guardarraíl RLS verde (con la excepción de `Orden` documentada).
+- [x] Commit `docs(plan): SP2 Sección 1 cerrada`. **PARA y reporta.**
 
 ---
 
