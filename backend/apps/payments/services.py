@@ -17,9 +17,16 @@ from django.utils import timezone
 
 from apps.bookings.cupo import SinCupoError
 from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
-from apps.bookings.models import Reserva
+from apps.bookings.models import Orden, Reserva
+from apps.bookings.orden_lectura import reservas_de_orden
 from apps.fleet.enums import EstrategiaPrecio
 from apps.notifications.services import notificar_reserva_pagada
+
+try:
+    from apps.notifications.services import notificar_orden_pagada
+except ImportError:
+    def notificar_orden_pagada(orden):
+        pass
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa
 
@@ -113,19 +120,34 @@ def aplicar_pago_exitoso(intent, empresa):
     except SinCupoError as exc:
         return _cancelar_sin_cupo(reserva, intent, empresa, motivo=str(exc))
 
-    # Revision 4 (N1): SET LOCAL muere al COMMIT — un callback de on_commit
-    # corre FUERA del `with scope.con_empresa(...)` que encolo esta
-    # transaccion. Bajo RLS eso es cero filas, no un error: el bug mas
-    # peligroso porque no truena, solo calla. Se captura el entero (no el
-    # objeto Empresa, con FKs perezosos) antes de encolar, y el callback
-    # reabre su propio alcance al ejecutarse.
-    empresa_id = empresa.pk
+    if reserva.orden_id:
+        orden = Orden.objects.select_for_update().get(pk=reserva.orden_id)
+        # NO orden.reservas.all() — bajo el RLS de esta empresa solo vería su
+        # propia reserva. estado_reservas_de_orden salta RLS, acotado a esta orden.
+        filas = reservas_de_orden(orden.pk)  # wrapper de la función SECURITY DEFINER
+        todas_pagadas = all(f['estado'] in ('pagada', 'asignada') for f in filas)
+        if todas_pagadas:
+            if orden.estado != Orden.Estado.CAPTURADA:
+                orden.transicionar('capturada')
+                orden.save()
+            if orden.notificada_en is None:
+                notificar_orden_pagada(orden)   # nunca lanza
+                orden.notificada_en = timezone.now()
+                orden.save(update_fields=['notificada_en'])
+    else:
+        # Revision 4 (N1): SET LOCAL muere al COMMIT — un callback de on_commit
+        # corre FUERA del `with scope.con_empresa(...)` que encolo esta
+        # transaccion. Bajo RLS eso es cero filas, no un error: el bug mas
+        # peligroso porque no truena, solo calla. Se captura el entero (no el
+        # objeto Empresa, con FKs perezosos) antes de encolar, y el callback
+        # reabre su propio alcance al ejecutarse.
+        empresa_id = empresa.pk
 
-    def _notificar():
-        with scope.con_empresa(Empresa.objects.get(pk=empresa_id)):
-            notificar_reserva_pagada(reserva)
+        def _notificar():
+            with scope.con_empresa(Empresa.objects.get(pk=empresa_id)):
+                notificar_reserva_pagada(reserva)
 
-    transaction.on_commit(_notificar)
+        transaction.on_commit(_notificar)
     return APLICADO
 
 

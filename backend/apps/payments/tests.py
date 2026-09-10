@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from io import StringIO
-from unittest import mock
+from unittest import mock, skipUnless
 
 import stripe
 from stripe import StripeClient
@@ -3274,3 +3274,160 @@ class OrdenesApiTest(TestCase):
         url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/crear-pago/'
         res = self.client.post(url, content_type='application/json')
         self.assertEqual(res.status_code, 409)
+
+
+# postgres-only
+@skipUnless(connection.vendor == 'postgresql', 'Requiere PostgreSQL y RLS')
+class WebhookOrdenTest(TransactionTestCase):
+    def setUp(self):
+        from apps.fleet.enums import TipoTraslado
+        from apps.bookings.models import DetalleTransporte
+
+        self.sede = Sede.objects.create(
+            nombre='Sede Webhook Orden', slug='sede-webhook-orden', zona_horaria='America/Mazatlan',
+        )
+        self.empresa_1 = Empresa.objects.create(
+            nombre='Empresa Pesca Webhook',
+            slug='emp-wh-pesca',
+            sede=self.sede,
+            stripe_secret_key='sk_test_wh_1',
+            stripe_webhook_secret='whsec_wh_1',
+            stripe_publishable_key='pk_test_wh_1',
+        )
+        self.empresa_2 = Empresa.objects.create(
+            nombre='Empresa Transporte Webhook',
+            slug='emp-wh-transporte',
+            sede=self.sede,
+            stripe_secret_key='sk_test_wh_2',
+            stripe_webhook_secret='whsec_wh_2',
+            stripe_publishable_key='pk_test_wh_2',
+        )
+        with scope.como_operador_plataforma():
+            self.servicio_1 = Servicio.objects.create(
+                empresa=self.empresa_1,
+                nombre='Pesca Webhook',
+                slug='pesca-webhook',
+                tipo_servicio='pesca',
+                estrategia_cupo='bajo_demanda',
+            )
+            self.servicio_2 = Servicio.objects.create(
+                empresa=self.empresa_2,
+                nombre='Transporte Webhook',
+                slug='transporte-webhook',
+                tipo_servicio='transporte',
+                estrategia_cupo='bajo_demanda',
+            )
+            self.paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                nombre='Paquete Webhook',
+                slug='paquete-webhook',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                paquete=self.paquete,
+                nombre_cliente='Cliente Webhook',
+                telefono_cliente='1234567890',
+                correo_cliente='webhook@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.AUTORIZADA,
+            )
+            self.reserva_1 = Reserva.objects.create(
+                empresa=self.empresa_1,
+                servicio=self.servicio_1,
+                paquete=self.paquete,
+                orden=self.orden,
+                fecha=date(2026, 11, 20),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Webhook',
+                telefono_cliente='1234567890',
+                correo_cliente='webhook@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+                stripe_payment_intent_id='pi_wh_1',
+                precio_total=Decimal('3000.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2 = Reserva.objects.create(
+                empresa=self.empresa_2,
+                servicio=self.servicio_2,
+                paquete=None,
+                orden=self.orden,
+                fecha=date(2026, 11, 20),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Webhook',
+                telefono_cliente='1234567890',
+                correo_cliente='webhook@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+                stripe_payment_intent_id='pi_wh_2',
+                precio_total=Decimal('2000.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+            DetalleTransporte.objects.create(
+                reserva=self.reserva_2,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                direccion_personalizada='Hotel Webhook',
+                fecha_regreso=date(2026, 11, 22),
+            )
+
+    @mock.patch('apps.payments.services.notificar_orden_pagada')
+    def test_dos_webhooks_cierran_orden_y_tercero_no_renotifica(self, mock_notificar):
+        intent_1 = {
+            'id': 'pi_wh_1',
+            'amount_received': 300000,
+            'currency': 'mxn',
+            'created': int(timezone.now().timestamp()),
+            'metadata': {'reserva_id': str(self.reserva_1.id)},
+        }
+        intent_2 = {
+            'id': 'pi_wh_2',
+            'amount_received': 200000,
+            'currency': 'mxn',
+            'created': int(timezone.now().timestamp()),
+            'metadata': {'reserva_id': str(self.reserva_2.id)},
+        }
+
+        # 1. Primer webhook bajo RLS de empresa_1
+        with scope.con_empresa(self.empresa_1):
+            res_1 = aplicar_pago_exitoso(intent_1, self.empresa_1)
+            self.assertEqual(res_1, APLICADO)
+            self.reserva_1.refresh_from_db()
+            self.assertEqual(self.reserva_1.estado, Reserva.Estado.PAGADA)
+            self.orden.refresh_from_db()
+            # No se cierra la orden aún ni se notifica
+            self.assertEqual(self.orden.estado, Orden.Estado.AUTORIZADA)
+            self.assertIsNone(self.orden.notificada_en)
+            mock_notificar.assert_not_called()
+
+        # 2. Segundo webhook bajo RLS de empresa_2
+        with scope.con_empresa(self.empresa_2):
+            res_2 = aplicar_pago_exitoso(intent_2, self.empresa_2)
+            self.assertEqual(res_2, APLICADO)
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_2.estado, Reserva.Estado.PAGADA)
+            self.orden.refresh_from_db()
+            # Ahora la orden debe estar capturada y con notificada_en sellado
+            self.assertEqual(self.orden.estado, Orden.Estado.CAPTURADA)
+            self.assertIsNotNone(self.orden.notificada_en)
+            mock_notificar.assert_called_once_with(self.orden)
+
+        # 3. Tercer webhook duplicado (reintento de Stripe) bajo RLS de empresa_2
+        with scope.con_empresa(self.empresa_2):
+            res_3 = aplicar_pago_exitoso(intent_2, self.empresa_2)
+            self.assertEqual(res_3, 'ya_aplicado')
+
+        # No re-notifica ni altera notificada_en
+        mock_notificar.assert_called_once()
