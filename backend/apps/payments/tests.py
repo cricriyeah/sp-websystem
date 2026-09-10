@@ -3016,3 +3016,233 @@ class OrdenesModuloTest(TestCase):
         revertir_orden(self.orden, 'motivo')
         self.assertEqual(cliente_1.refunds.create.call_count, 1)
         self.assertEqual(cliente_2.payment_intents.cancel.call_count, 1)
+
+
+class OrdenesApiTest(TestCase):
+    def setUp(self):
+        from apps.bookings.models import DetalleTransporte, Orden, Reserva
+        from apps.fleet.enums import TipoTraslado
+        from apps.fleet.models import Paquete, PaqueteServicio, Servicio, TransporteTarifa
+        from apps.tenancy.models import Empresa, Sede
+
+        self.sede = Sede.objects.create(nombre='Sede API', slug='sede-api-ordenes', activo=True)
+        self.empresa_1 = Empresa.objects.create(
+            nombre='Empresa Pesca API',
+            slug='emp-api-pesca',
+            sede=self.sede,
+            stripe_secret_key='sk_test_api_1',
+            stripe_publishable_key='pk_test_api_1',
+        )
+        self.empresa_2 = Empresa.objects.create(
+            nombre='Empresa Transporte API',
+            slug='emp-api-transporte',
+            sede=self.sede,
+            stripe_secret_key='sk_test_api_2',
+            stripe_publishable_key='pk_test_api_2',
+        )
+        self.servicio_1 = Servicio.objects.create(
+            empresa=self.empresa_1,
+            nombre='Pesca API',
+            slug='pesca-api',
+            tipo_servicio='pesca',
+        )
+        self.servicio_2 = Servicio.objects.create(
+            empresa=self.empresa_2,
+            nombre='Transporte API',
+            slug='transporte-api',
+            tipo_servicio='transporte',
+        )
+        self.tarifa_transporte = TransporteTarifa.objects.create(
+            empresa=self.empresa_2,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            personas_min=1,
+            personas_max=4,
+            precio=Decimal('2000.00'),
+            precio_usd=Decimal('120.00'),
+            activo=True,
+        )
+        self.paquete = Paquete.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa_1,
+            nombre='Paquete API',
+            slug='paquete-api',
+            precio_ancla=Decimal('5000.00'),
+            activo=True,
+        )
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+
+        self.checkout_id = uuid.uuid4()
+        with scope.con_empresa(self.empresa_1):
+            self.orden = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                paquete=self.paquete,
+                checkout_id=self.checkout_id,
+                nombre_cliente='Cliente API',
+                telefono_cliente='1234567890',
+                correo_cliente='api@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.ARMANDO,
+            )
+            self.reserva_1 = Reserva.objects.create(
+                empresa=self.empresa_1,
+                servicio=self.servicio_1,
+                paquete=self.paquete,
+                orden=self.orden,
+                fecha=date(2026, 10, 15),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente API',
+                telefono_cliente='1234567890',
+                correo_cliente='api@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+            )
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2 = Reserva.objects.create(
+                empresa=self.empresa_2,
+                servicio=self.servicio_2,
+                paquete=None,
+                orden=self.orden,
+                fecha=date(2026, 10, 15),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente API',
+                telefono_cliente='1234567890',
+                correo_cliente='api@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+            )
+            DetalleTransporte.objects.create(
+                reserva=self.reserva_2,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                direccion_personalizada='Hotel Marina',
+                fecha_regreso=date(2026, 10, 17),
+            )
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_crear_pago_orden_flujo_exitoso(self, mock_configurar_stripe):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        intent_1 = mock.Mock(id='pi_api_1', client_secret='sec_1', status='requires_capture')
+        intent_2 = mock.Mock(id='pi_api_2', client_secret='sec_2', status='requires_capture')
+        cliente_1.payment_intents.create.return_value = intent_1
+        cliente_2.payment_intents.create.return_value = intent_2
+
+        url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/crear-pago/'
+        res = self.client.post(url, content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        pagos = res.json()
+        self.assertEqual(len(pagos), 2)
+        # Líder absorbe residuo (5000 - 2000 = 3000)
+        pago_lider = next(p for p in pagos if p['empresa_slug'] == self.empresa_1.slug)
+        self.assertEqual(pago_lider['monto'], '3000.00')
+        self.assertEqual(pago_lider['client_secret'], 'sec_1')
+
+        # Transporte toma su tarifa (2000)
+        pago_trans = next(p for p in pagos if p['empresa_slug'] == self.empresa_2.slug)
+        self.assertEqual(pago_trans['monto'], '2000.00')
+        self.assertEqual(pago_trans['client_secret'], 'sec_2')
+
+        self.orden.refresh_from_db()
+        self.assertEqual(self.orden.estado, Orden.Estado.AUTORIZANDO)
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_confirmar_captura_flujo_exitoso(self, mock_configurar_stripe):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_api_1', status='requires_capture')
+        intent_2 = mock.Mock(id='pi_api_2', status='requires_capture')
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden.estado = Orden.Estado.AUTORIZANDO
+            self.orden.save(update_fields=['estado'])
+
+        url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/confirmar-captura/'
+        res = self.client.post(url, content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['estado'], 'autorizada')
+
+        cliente_1.payment_intents.capture.assert_called_once_with('pi_api_1')
+        cliente_2.payment_intents.capture.assert_called_once_with('pi_api_2')
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_confirmar_captura_flujo_fallo_revierte(self, mock_configurar_stripe):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        # Un intent no completó autorización
+        intent_1 = mock.Mock(id='pi_api_1', status='requires_confirmation')
+        intent_2 = mock.Mock(id='pi_api_2', status='requires_capture')
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/confirmar-captura/'
+        res = self.client.post(url, content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['estado'], 'cancelada')
+        self.assertIn('motivo', res.json())
+
+        cliente_2.payment_intents.cancel.assert_called_once_with('pi_api_2')
+
+    @mock.patch('apps.payments.views.configurar_stripe')
+    def test_get_orden_reanudar(self, mock_configurar_stripe):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
+        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
+        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        # 1er pago ya autorizado (requires_capture), 2do pago pendiente (requires_payment_method)
+        intent_1 = mock.Mock(id='pi_api_1', status='requires_capture', client_secret='sec_1', amount=300000)
+        intent_2 = mock.Mock(id='pi_api_2', status='requires_payment_method', client_secret='sec_2', amount=200000)
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        # Vía ID
+        url_id = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/'
+        res = self.client.get(url_id)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data['id'], self.orden.id)
+        self.assertEqual(len(data['reservas']), 2)
+        r1 = next(r for r in data['reservas'] if r['empresa_slug'] == self.empresa_1.slug)
+        self.assertEqual(r1['pago']['estado_pi'], 'requires_capture')
+        r2 = next(r for r in data['reservas'] if r['empresa_slug'] == self.empresa_2.slug)
+        self.assertEqual(r2['pago']['estado_pi'], 'requires_payment_method')
+
+        # Vía checkout_id
+        url_cid = f'/api/{self.sede.slug}/ordenes/?checkout_id={self.checkout_id}'
+        res_cid = self.client.get(url_cid)
+        self.assertEqual(res_cid.status_code, 200)
+        self.assertEqual(res_cid.json()['id'], self.orden.id)
+
+    def test_crear_pago_orden_capturada_409(self):
+        with scope.con_empresa(self.empresa_1):
+            self.orden.estado = Orden.Estado.CAPTURADA
+            self.orden.save(update_fields=['estado'])
+
+        url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/crear-pago/'
+        res = self.client.post(url, content_type='application/json')
+        self.assertEqual(res.status_code, 409)

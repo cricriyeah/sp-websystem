@@ -498,3 +498,49 @@ export const crearOrden = (sedeSlug: string, payload: CrearOrdenInput): Promise<
     method: 'POST',
     body: JSON.stringify(payload),
   }, sedeSlug);
+
+export type PagoOrdenItem = {
+  empresa_slug: string;
+  monto: string;
+  client_secret: string;
+  publishable_key: string;
+};
+
+export const crearPagoOrden = (sedeSlug: string, ordenId: number): Promise<PagoOrdenItem[]> =>
+  request<PagoOrdenItem[]>(`/api/ordenes/${ordenId}/crear-pago/`, {
+    method: 'POST',
+  }, sedeSlug);
+
+export type ConfirmarCapturaRespuesta = {
+  estado: string;
+  motivo?: string;
+};
+
+export const confirmarCapturaOrden = (sedeSlug: string, ordenId: number): Promise<ConfirmarCapturaRespuesta> =>
+  request<ConfirmarCapturaRespuesta>(`/api/ordenes/${ordenId}/confirmar-captura/`, {
+    method: 'POST',
+  }, sedeSlug);
+
+export type OrdenDetalle = {
+  id: number;
+  checkout_id: string | null;
+  estado: string;
+  reservas: {
+    reserva_id: number;
+    empresa_slug: string;
+    servicio: string;
+    pago: {
+      estado_pi: string | null;
+      client_secret: string | null;
+      publishable_key: string;
+      monto: string | null;
+    };
+  }[];
+};
+
+export const getOrden = (sedeSlug: string, idOCheckoutId: number | string): Promise<OrdenDetalle> => {
+  const path = typeof idOCheckoutId === 'number'
+    ? `/api/ordenes/${idOCheckoutId}/`
+    : `/api/ordenes/?checkout_id=${encodeURIComponent(idOCheckoutId)}`;
+  return request<OrdenDetalle>(path, undefined, sedeSlug);
+};

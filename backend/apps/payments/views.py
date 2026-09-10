@@ -619,3 +619,199 @@ class CrearOrdenView(APIView):
             )
         except DjangoValidationError as exc:
             return Response(exc.message_dict if hasattr(exc, 'message_dict') else {'detail': str(exc)}, status=400)
+
+    def get(self, request, sede_slug):
+        return GetOrdenView().get(request, sede_slug=sede_slug)
+
+
+class CrearPagoOrdenView(APIView):
+    """Resuelve el reparto del paquete de la orden y crea (o reutiliza) los N
+    PaymentIntents con captura manual en Stripe, uno por empresa.
+    Transiciona la orden a 'autorizando'.
+    Devuelve la lista de pagos. Idempotente. 409 si la orden ya está capturada o cancelada.
+    """
+
+    throttle_scope = 'pagos'
+    permission_classes = []
+
+    def post(self, request, sede_slug, pk):
+        from apps.bookings.models import DetalleTransporte, Orden, Reserva
+        from apps.bookings.orden_lectura import reservas_de_orden
+        from apps.fleet.models import TransporteTarifa
+        from apps.fleet.tarifa_transporte import resolver_tarifa_transporte
+        from apps.tenancy.models import Empresa, Sede
+        from .ordenes import OrdenCerradaError, crear_pagos_orden
+        from .pricing import monto_por_empresa
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+        orden = get_object_or_404(Orden, pk=pk, sede=sede)
+
+        if orden.estado in (Orden.Estado.CAPTURADA, Orden.Estado.CANCELADA):
+            return Response({'detail': f'La orden ya está {orden.estado}.'}, status=409)
+
+        filas = reservas_de_orden(orden.id)
+        componentes = []
+
+        for fila in filas:
+            empresa_id = fila['empresa_id']
+            reserva_id = fila['reserva_id']
+            es_lider = (empresa_id == orden.empresa_lider_id)
+
+            if es_lider:
+                componentes.append({
+                    'empresa_id': empresa_id,
+                    'es_lider': True,
+                    'monto_fijo': None,
+                })
+            else:
+                empresa = Empresa.objects.get(pk=empresa_id)
+                with scope.con_empresa(empresa):
+                    reserva = Reserva.objects.select_related('servicio').get(pk=reserva_id)
+                    monto_fijo = None
+                    if reserva.servicio and reserva.servicio.tipo_servicio == 'transporte':
+                        detalle = DetalleTransporte.objects.filter(reserva=reserva).first()
+                        if detalle:
+                            tarifas = TransporteTarifa.objects.filter(empresa=empresa, activo=True)
+                            tarifa = resolver_tarifa_transporte(
+                                tarifas,
+                                tipo_traslado=detalle.tipo_traslado,
+                                zona=detalle.zona,
+                                personas=reserva.numero_personas,
+                            )
+                            monto_fijo = tarifa.precio_en(orden.moneda)
+                    componentes.append({
+                        'empresa_id': empresa_id,
+                        'es_lider': False,
+                        'monto_fijo': monto_fijo,
+                    })
+
+        try:
+            precio_paquete = orden.paquete.precio_en(orden.moneda)
+            reparto = monto_por_empresa(
+                precio_paquete=precio_paquete,
+                componentes=componentes,
+                moneda=orden.moneda,
+            )
+            pagos = crear_pagos_orden(orden, reparto)
+        except OrdenCerradaError as exc:
+            return Response({'detail': str(exc)}, status=409)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=400)
+        except stripe.StripeError as exc:
+            logger.exception('Fallo al crear pagos para la orden %s: %s', orden.id, exc)
+            return Response({'detail': 'No se pudo iniciar el cobro con Stripe. Intenta de nuevo.'}, status=502)
+
+        if orden.estado == Orden.Estado.ARMANDO:
+            with scope.con_empresa(orden.empresa_lider):
+                orden.transicionar(Orden.Estado.AUTORIZANDO)
+                orden.save(update_fields=['estado'])
+
+        return Response(pagos, status=200)
+
+
+class ConfirmarCapturaOrdenView(APIView):
+    """Confirma y captura los N PaymentIntents de la orden en Stripe.
+    Si todos están 'requires_capture', los captura y devuelve {'estado': 'autorizada'}.
+    Si alguno falló autorización o captura, revierte la orden completa y devuelve {'estado': 'cancelada', 'motivo': ...}.
+    """
+
+    throttle_scope = 'pagos'
+    permission_classes = []
+
+    def post(self, request, sede_slug, pk):
+        from apps.bookings.models import Orden, Reserva
+        from apps.tenancy.models import Sede
+        from .ordenes import confirmar_captura
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+        orden = get_object_or_404(Orden, pk=pk, sede=sede)
+
+        if orden.estado == Orden.Estado.CAPTURADA:
+            return Response({'estado': orden.estado}, status=200)
+
+        confirmar_captura(orden)
+        orden.refresh_from_db()
+
+        if orden.estado == Orden.Estado.CANCELADA:
+            r_canc = Reserva.objects.filter(orden=orden).exclude(motivo_cancelacion='').first()
+            motivo = r_canc.motivo_cancelacion if r_canc else 'Cancelada'
+            return Response({'estado': orden.estado, 'motivo': motivo}, status=200)
+
+        if orden.estado == Orden.Estado.AUTORIZANDO:
+            with scope.con_empresa(orden.empresa_lider):
+                orden.transicionar(Orden.Estado.AUTORIZADA)
+                orden.save(update_fields=['estado'])
+
+        return Response({'estado': orden.estado}, status=200)
+
+
+class GetOrdenView(APIView):
+    """Devuelve el estado de una Orden y el detalle de sus pagos para que el
+    frontend reanude el checkout desde el primer pago pendiente.
+    Permite consultar por pk en la URL (`.../ordenes/<id>/`) o por query param (`.../ordenes/?checkout_id=...`).
+    """
+
+    throttle_scope = 'estado_reserva'
+    permission_classes = []
+
+    def get(self, request, sede_slug, pk=None):
+        from apps.bookings.models import Orden
+        from apps.bookings.orden_lectura import reservas_de_orden
+        from apps.fleet.models import Servicio
+        from apps.tenancy.models import Empresa, Sede
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+
+        if pk is not None:
+            orden = get_object_or_404(Orden, pk=pk, sede=sede)
+        else:
+            checkout_id = request.query_params.get('checkout_id')
+            if not checkout_id:
+                return Response({'checkout_id': 'Se requiere el parámetro checkout_id o id en la ruta.'}, status=400)
+            try:
+                cid = uuid.UUID(str(checkout_id))
+            except (ValueError, TypeError):
+                return Response({'checkout_id': 'UUID inválido.'}, status=400)
+            orden = get_object_or_404(Orden, checkout_id=cid, sede=sede)
+
+        filas = reservas_de_orden(orden.id)
+        reservas_info = []
+
+        for fila in filas:
+            empresa = Empresa.objects.get(pk=fila['empresa_id'])
+            servicio = Servicio.objects.get(pk=fila['servicio_id']) if fila.get('servicio_id') else None
+            pi_id = fila.get('stripe_payment_intent_id')
+
+            estado_pi = None
+            client_secret = None
+            monto = None
+
+            if pi_id and empresa.stripe_secret_key:
+                try:
+                    cliente = configurar_stripe(empresa)
+                    intent = cliente.payment_intents.retrieve(pi_id)
+                    estado_pi = getattr(intent, 'status', None)
+                    client_secret = getattr(intent, 'client_secret', None)
+                    if hasattr(intent, 'amount') and intent.amount is not None:
+                        monto = str(Decimal(intent.amount) / Decimal(100))
+                except stripe.StripeError:
+                    pass
+
+            reservas_info.append({
+                'reserva_id': fila['reserva_id'],
+                'empresa_slug': empresa.slug,
+                'servicio': servicio.slug if servicio else '',
+                'pago': {
+                    'estado_pi': estado_pi,
+                    'client_secret': client_secret,
+                    'publishable_key': empresa.stripe_publishable_key,
+                    'monto': monto,
+                },
+            })
+
+        return Response({
+            'id': orden.id,
+            'checkout_id': str(orden.checkout_id) if orden.checkout_id else None,
+            'estado': orden.estado,
+            'reservas': reservas_info,
+        }, status=200)
