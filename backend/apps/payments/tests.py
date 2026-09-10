@@ -59,6 +59,7 @@ from .pricing import (
     cargo_por_personas,
     de_centavos,
     monto_inicial,
+    monto_por_empresa,
     personas_extra,
 )
 
@@ -2419,3 +2420,40 @@ class WebhookTrasladoTest(TrasladoPagoFixture, ApiTestCase):
         reserva.refresh_from_db()
         self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
         self.assertFalse(reserva.ocupaciones.exists())
+
+
+class MontoPorEmpresaTest(TestCase):
+    def test_reparto_exitoso(self):
+        # paquete $5000, transporte $2700 -> {empresa1: 2300, empresa2: 2700}
+        componentes = [
+            {'empresa_id': 1, 'es_lider': True, 'monto_fijo': None},
+            {'empresa_id': 2, 'es_lider': False, 'monto_fijo': Decimal('2700.00')},
+        ]
+        reparto = monto_por_empresa(precio_paquete=Decimal('5000.00'), componentes=componentes, moneda='MXN')
+        self.assertEqual(reparto, {1: Decimal('2300.00'), 2: Decimal('2700.00')})
+
+    def test_precio_menor_a_transporte_lanza_value_error(self):
+        # precio $2000 < transporte $2700 -> ValueError
+        componentes = [
+            {'empresa_id': 1, 'es_lider': True, 'monto_fijo': None},
+            {'empresa_id': 2, 'es_lider': False, 'monto_fijo': Decimal('2700.00')},
+        ]
+        with self.assertRaises(ValueError):
+            monto_por_empresa(precio_paquete=Decimal('2000.00'), componentes=componentes, moneda='MXN')
+
+    def test_dos_componentes_sin_monto_fijo_lanza_value_error(self):
+        # dos componentes sin monto_fijo -> ValueError
+        componentes = [
+            {'empresa_id': 1, 'es_lider': True, 'monto_fijo': None},
+            {'empresa_id': 2, 'es_lider': False, 'monto_fijo': None},
+        ]
+        with self.assertRaises(ValueError):
+            monto_por_empresa(precio_paquete=Decimal('5000.00'), componentes=componentes, moneda='MXN')
+
+    def test_cero_componentes_lider_lanza_value_error(self):
+        componentes = [
+            {'empresa_id': 1, 'es_lider': False, 'monto_fijo': Decimal('2000.00')},
+            {'empresa_id': 2, 'es_lider': False, 'monto_fijo': Decimal('2700.00')},
+        ]
+        with self.assertRaises(ValueError):
+            monto_por_empresa(precio_paquete=Decimal('5000.00'), componentes=componentes, moneda='MXN')

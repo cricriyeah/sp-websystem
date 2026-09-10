@@ -228,3 +228,52 @@ class PaquetesModelTests(OperadorTestCase):
                     paquete=paquete,
                     servicio=self.servicio_pesca,
                 )
+
+    def test_paquete_cruza_empresa_clean_valida_precio_cubre_transporte(self):
+        from apps.fleet.models import TransporteTarifa
+        from apps.fleet.enums import TipoTraslado
+        empresa_transporte = Empresa.objects.create(
+            sede=self.sede_lp, nombre='Transporte LP Test', slug='transporte-lp-test'
+        )
+        servicio_transporte = Servicio.objects.create(
+            empresa=empresa_transporte,
+            nombre='Traslado Aeropuerto',
+            slug='traslado-aero',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            estrategia_precio='por_ruta',
+        )
+        TransporteTarifa.objects.create(
+            empresa=empresa_transporte,
+            tipo_traslado=TipoTraslado.RECEPCION_AEROPUERTO,
+            personas_min=1,
+            personas_max=4,
+            precio=Decimal('2700.00'),
+            precio_usd=Decimal('160.00'),
+        )
+        paquete_invalido = Paquete.objects.create(
+            sede=self.sede_lp,
+            empresa_lider=self.empresa_pesca,
+            nombre='Paquete Barato Invalido',
+            slug='paquete-barato-invalido',
+            precio_ancla=Decimal('2000.00'),  # 2000 < 2700
+            precio_ancla_usd=Decimal('100.00'),
+        )
+        PaqueteServicio.objects.create(
+            paquete=paquete_invalido,
+            servicio=self.servicio_pesca,
+            orden=1,
+        )
+        ps_transporte = PaqueteServicio(
+            paquete=paquete_invalido,
+            servicio=servicio_transporte,
+            orden=2,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            ps_transporte.clean()
+        self.assertIn('servicio', ctx.exception.message_dict)
+
+        ps_transporte.save()
+        with self.assertRaises(ValidationError) as ctx2:
+            paquete_invalido.clean()
+        self.assertIn('precio_ancla', ctx2.exception.message_dict)

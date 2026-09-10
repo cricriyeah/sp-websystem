@@ -612,6 +612,23 @@ class Paquete(models.Model):
                 raise ValidationError({
                     'empresa_lider': 'La empresa líder debe pertenecer a la misma sede que el paquete.'
                 })
+        if self.pk:
+            for ps in self.servicios_asociados.select_related('servicio', 'servicio__empresa').all():
+                if ps.servicio.tipo_servicio == 'transporte':
+                    tarifas = ps.servicio.empresa.tarifas_transporte.filter(activo=True)
+                    if tarifas.exists():
+                        tarifa_min_mxn = min(t.precio for t in tarifas)
+                        if self.precio_ancla is not None and self.precio_ancla < tarifa_min_mxn:
+                            raise ValidationError({
+                                'precio_ancla': f'El precio del paquete ({self.precio_ancla}) no puede ser menor que la tarifa de transporte ({tarifa_min_mxn}).'
+                            })
+                        tarifas_usd = [t.precio_usd for t in tarifas if t.precio_usd is not None]
+                        if tarifas_usd and self.precio_ancla_usd is not None:
+                            tarifa_min_usd = min(tarifas_usd)
+                            if self.precio_ancla_usd < tarifa_min_usd:
+                                raise ValidationError({
+                                    'precio_ancla_usd': f'El precio en USD del paquete ({self.precio_ancla_usd}) no puede ser menor que la tarifa de transporte en USD ({tarifa_min_usd}).'
+                                })
 
     def precio_en(self, moneda):
         """Precio ancla en la moneda pedida, o None si no está configurado."""
@@ -642,7 +659,22 @@ class PaqueteServicio(models.Model):
                 raise ValidationError({
                     'servicio': 'El servicio debe pertenecer a una empresa de la misma sede que el paquete.'
                 })
-        # (ADR-005 Revisión 2: se elimina la regla de "misma empresa_lider").
+            # (ADR-005 Revisión 2: se elimina la regla de "misma empresa_lider").
+            if self.servicio.tipo_servicio == 'transporte':
+                tarifas = self.servicio.empresa.tarifas_transporte.filter(activo=True)
+                if tarifas.exists():
+                    tarifa_min_mxn = min(t.precio for t in tarifas)
+                    if self.paquete.precio_ancla is not None and self.paquete.precio_ancla < tarifa_min_mxn:
+                        raise ValidationError({
+                            'servicio': f'El precio del paquete ({self.paquete.precio_ancla}) no puede ser menor que la tarifa de transporte ({tarifa_min_mxn}).'
+                        })
+                    tarifas_usd = [t.precio_usd for t in tarifas if t.precio_usd is not None]
+                    if tarifas_usd and self.paquete.precio_ancla_usd is not None:
+                        tarifa_min_usd = min(tarifas_usd)
+                        if self.paquete.precio_ancla_usd < tarifa_min_usd:
+                            raise ValidationError({
+                                'servicio': f'El precio en USD del paquete ({self.paquete.precio_ancla_usd}) no puede ser menor que la tarifa de transporte en USD ({tarifa_min_usd}).'
+                            })
 
 
 def capacidades_por_fecha(desde, hasta, empresa):

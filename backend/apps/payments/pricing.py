@@ -160,3 +160,26 @@ def calcular_precio_paquete(paquete, moneda='MXN'):
     )
 
 
+def monto_por_empresa(*, precio_paquete, componentes, moneda):
+    """Reparte el precio fijo del paquete entre las cuentas de cada empresa.
+    Regla (decisión del dueño 2026-09-07): cada componente de tipo conocido
+    (transporte) va a su tarifa; la empresa líder (pesca) absorbe el residuo.
+
+    `componentes`: lista de dicts
+      {'empresa_id': int, 'es_lider': bool, 'monto_fijo': Decimal | None}
+    donde `monto_fijo` es el precio de TransporteTarifa ya resuelto para los
+    componentes de transporte, y None para el/los que absorben el residuo.
+    Devuelve {empresa_id: Decimal}. Lanza ValueError si el residuo es negativo
+    o si no hay exactamente un componente con monto_fijo=None (el líder)."""
+    fijos = {c['empresa_id']: Decimal(c['monto_fijo']).quantize(CENTAVOS, rounding=ROUND_HALF_UP) for c in componentes if c.get('monto_fijo') is not None}
+    lideres = [c for c in componentes if c.get('monto_fijo') is None]
+    if len(lideres) != 1:
+        raise ValueError('Debe haber exactamente un componente que absorba el residuo (la empresa líder).')
+    residuo = Decimal(precio_paquete) - sum(fijos.values(), Decimal('0'))
+    if residuo < 0:
+        raise ValueError(f'El precio del paquete ({precio_paquete}) es menor que la suma de los montos fijos ({sum(fijos.values())}).')
+    reparto = dict(fijos)
+    reparto[lideres[0]['empresa_id']] = residuo.quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+    return reparto
+
+
