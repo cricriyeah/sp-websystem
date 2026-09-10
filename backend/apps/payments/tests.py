@@ -2523,8 +2523,9 @@ class CrearOrdenTest(TestCase):
 
         from django.contrib.auth.models import User
         from apps.bookings.models import Vendedora
-        u = User.objects.create_user('vendedora_test', 'v@test.com', 'pass')
-        self.vendedora = Vendedora.objects.create(usuario=u, empresa=self.empresa_lider, codigo='amigo')
+        with scope.como_operador_plataforma():
+            u = User.objects.create_user('vendedora_test', 'v@test.com', 'pass')
+            self.vendedora = Vendedora.objects.create(usuario=u, empresa=self.empresa_lider, codigo='amigo')
 
     def test_crear_orden_exitosa(self):
         from apps.bookings.models import DetalleTransporte, Orden, Reserva
@@ -2555,30 +2556,31 @@ class CrearOrdenTest(TestCase):
         self.assertEqual(data['estado'], 'armando')
         self.assertEqual(len(data['reservas']), 2)
 
-        orden = Orden.objects.get(pk=data['orden_id'])
-        self.assertEqual(orden.estado, Orden.Estado.ARMANDO)
-        self.assertEqual(orden.empresa_lider, self.empresa_lider)
-        self.assertEqual(orden.paquete, self.paquete_cruza)
+        with scope.como_operador_plataforma():
+            orden = Orden.objects.get(pk=data['orden_id'])
+            self.assertEqual(orden.estado, Orden.Estado.ARMANDO)
+            self.assertEqual(orden.empresa_lider, self.empresa_lider)
+            self.assertEqual(orden.paquete, self.paquete_cruza)
 
-        reservas = list(Reserva.objects.filter(orden=orden).order_by('id'))
-        self.assertEqual(len(reservas), 2)
-        r_lider = next(r for r in reservas if r.empresa_id == self.empresa_lider.id)
-        r_trans = next(r for r in reservas if r.empresa_id == self.empresa_transporte.id)
+            reservas = list(Reserva.objects.filter(orden=orden).order_by('id'))
+            self.assertEqual(len(reservas), 2)
+            r_lider = next(r for r in reservas if r.empresa_id == self.empresa_lider.id)
+            r_trans = next(r for r in reservas if r.empresa_id == self.empresa_transporte.id)
 
-        self.assertEqual(r_lider.paquete, self.paquete_cruza)
-        self.assertEqual(r_lider.servicio, self.servicio_pesca)
-        self.assertEqual(r_lider.vendedora, self.vendedora)
-        self.assertTrue(r_lider.deslinde_aceptado)
+            self.assertEqual(r_lider.paquete, self.paquete_cruza)
+            self.assertEqual(r_lider.servicio, self.servicio_pesca)
+            self.assertEqual(r_lider.vendedora, self.vendedora)
+            self.assertTrue(r_lider.deslinde_aceptado)
 
-        self.assertIsNone(r_trans.paquete)
-        self.assertEqual(r_trans.servicio, self.servicio_transporte)
-        self.assertIsNone(r_trans.vendedora)
-        self.assertTrue(r_trans.deslinde_aceptado)
+            self.assertIsNone(r_trans.paquete)
+            self.assertEqual(r_trans.servicio, self.servicio_transporte)
+            self.assertIsNone(r_trans.vendedora)
+            self.assertTrue(r_trans.deslinde_aceptado)
 
-        detalle = DetalleTransporte.objects.get(reserva=r_trans)
-        self.assertEqual(detalle.tipo_traslado, TipoTraslado.REDONDO_AEROPUERTO)
-        self.assertEqual(detalle.direccion_personalizada, 'Calle Marina 123')
-        self.assertEqual(str(detalle.fecha_regreso), '2026-10-17')
+            detalle = DetalleTransporte.objects.get(reserva=r_trans)
+            self.assertEqual(detalle.tipo_traslado, TipoTraslado.REDONDO_AEROPUERTO)
+            self.assertEqual(detalle.direccion_personalizada, 'Calle Marina 123')
+            self.assertEqual(str(detalle.fecha_regreso), '2026-10-17')
 
     def test_paquete_mono_empresa_retorna_400(self):
         payload = {
@@ -2641,8 +2643,9 @@ class CrearOrdenTest(TestCase):
         self.assertEqual(res2.status_code, 200)
         self.assertEqual(res2.json()['orden_id'], orden_id_1)
 
-        orden = Orden.objects.get(pk=orden_id_1)
-        self.assertEqual(orden.nombre_cliente, 'Carlos Lopez Actualizado')
+        with scope.como_operador_plataforma():
+            orden = Orden.objects.get(pk=orden_id_1)
+            self.assertEqual(orden.nombre_cliente, 'Carlos Lopez Actualizado')
 
     def test_ignora_orden_capturada_con_mismo_checkout_id(self):
         from apps.bookings.models import Orden
@@ -2677,9 +2680,10 @@ class CrearOrdenTest(TestCase):
         }
         res = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
         self.assertEqual(res.status_code, 201)
-        nueva_orden = Orden.objects.get(pk=res.json()['orden_id'])
-        self.assertEqual(nueva_orden.estado, Orden.Estado.ARMANDO)
-        self.assertEqual(nueva_orden.nombre_cliente, 'Nuevo Cliente')
+        with scope.como_operador_plataforma():
+            nueva_orden = Orden.objects.get(pk=res.json()['orden_id'])
+            self.assertEqual(nueva_orden.estado, Orden.Estado.ARMANDO)
+            self.assertEqual(nueva_orden.nombre_cliente, 'Nuevo Cliente')
 
 
 class OrdenesModuloTest(TestCase):
@@ -2703,28 +2707,29 @@ class OrdenesModuloTest(TestCase):
             stripe_secret_key='sk_test_2',
             stripe_publishable_key='pk_test_2',
         )
-        self.servicio_1 = Servicio.objects.create(
-            empresa=self.empresa_1,
-            nombre='Pesca Mod',
-            slug='pesca-mod',
-            tipo_servicio='pesca',
-        )
-        self.servicio_2 = Servicio.objects.create(
-            empresa=self.empresa_2,
-            nombre='Transporte Mod',
-            slug='transporte-mod',
-            tipo_servicio='transporte',
-        )
-        self.paquete = Paquete.objects.create(
-            sede=self.sede,
-            empresa_lider=self.empresa_1,
-            nombre='Paquete Modulo',
-            slug='paquete-modulo',
-            precio_ancla=Decimal('10000.00'),
-            activo=True,
-        )
-        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
-        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+        with scope.como_operador_plataforma():
+            self.servicio_1 = Servicio.objects.create(
+                empresa=self.empresa_1,
+                nombre='Pesca Mod',
+                slug='pesca-mod',
+                tipo_servicio='pesca',
+            )
+            self.servicio_2 = Servicio.objects.create(
+                empresa=self.empresa_2,
+                nombre='Transporte Mod',
+                slug='transporte-mod',
+                tipo_servicio='transporte',
+            )
+            self.paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                nombre='Paquete Modulo',
+                slug='paquete-modulo',
+                precio_ancla=Decimal('10000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
 
         with scope.con_empresa(self.empresa_1):
             self.orden = Orden.objects.create(
@@ -2806,10 +2811,11 @@ class OrdenesModuloTest(TestCase):
         self.assertEqual(c2_call.args[0]['payment_method_types'], ['card'])
         self.assertEqual(c2_call.args[1]['idempotency_key'], f'orden-{self.orden.id}-{self.empresa_2.id}-crear')
 
-        self.reserva_1.refresh_from_db()
-        self.reserva_2.refresh_from_db()
-        self.assertEqual(self.reserva_1.stripe_payment_intent_id, 'pi_1')
-        self.assertEqual(self.reserva_2.stripe_payment_intent_id, 'pi_2')
+        with scope.como_operador_plataforma():
+            self.reserva_1.refresh_from_db()
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_1.stripe_payment_intent_id, 'pi_1')
+            self.assertEqual(self.reserva_2.stripe_payment_intent_id, 'pi_2')
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_crear_pagos_orden_idempotente(self, mock_configurar_stripe):
@@ -2852,12 +2858,13 @@ class OrdenesModuloTest(TestCase):
         with self.assertRaises(stripe.StripeError):
             crear_pagos_orden(self.orden, self.reparto)
 
-        self.reserva_1.refresh_from_db()
-        self.reserva_2.refresh_from_db()
-        # Reserva 1 conservó su PI
-        self.assertEqual(self.reserva_1.stripe_payment_intent_id, 'pi_1')
-        # Reserva 2 quedó vacía
-        self.assertEqual(self.reserva_2.stripe_payment_intent_id, '')
+        with scope.como_operador_plataforma():
+            self.reserva_1.refresh_from_db()
+            self.reserva_2.refresh_from_db()
+            # Reserva 1 conservó su PI
+            self.assertEqual(self.reserva_1.stripe_payment_intent_id, 'pi_1')
+            # Reserva 2 quedó vacía
+            self.assertEqual(self.reserva_2.stripe_payment_intent_id, '')
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_crear_pagos_orden_rechaza_si_orden_cerrada(self, mock_configurar_stripe):
@@ -2878,10 +2885,12 @@ class OrdenesModuloTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         intent_1 = mock.Mock(id='pi_1', status='requires_capture')
         intent_2 = mock.Mock(id='pi_2', status='requires_capture')
@@ -2893,9 +2902,10 @@ class OrdenesModuloTest(TestCase):
         cliente_1.payment_intents.capture.assert_called_once_with('pi_1')
         cliente_2.payment_intents.capture.assert_called_once_with('pi_2')
 
-        self.orden.refresh_from_db()
-        # No marca capturada: eso lo hace el webhook
-        self.assertNotEqual(self.orden.estado, Orden.Estado.CAPTURADA)
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            # No marca capturada: eso lo hace el webhook
+            self.assertNotEqual(self.orden.estado, Orden.Estado.CAPTURADA)
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_confirmar_captura_con_pi_ya_succeeded_se_salta(self, mock_configurar_stripe):
@@ -2905,10 +2915,12 @@ class OrdenesModuloTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         intent_1 = mock.Mock(id='pi_1', status='succeeded')
         intent_2 = mock.Mock(id='pi_2', status='requires_capture')
@@ -2928,10 +2940,12 @@ class OrdenesModuloTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         intent_1 = mock.Mock(id='pi_1', status='requires_confirmation')
         intent_2 = mock.Mock(id='pi_2', status='requires_capture')
@@ -2945,8 +2959,9 @@ class OrdenesModuloTest(TestCase):
         cliente_2.payment_intents.capture.assert_not_called()
 
         # Debe haberse revertido la orden
-        self.orden.refresh_from_db()
-        self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
         # pi_2 (requires_capture) debe haberse cancelado
         cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
 
@@ -2958,10 +2973,12 @@ class OrdenesModuloTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         intent_1 = mock.Mock(id='pi_1', status='succeeded')
         intent_2 = mock.Mock(id='pi_2', status='requires_capture')
@@ -2978,17 +2995,18 @@ class OrdenesModuloTest(TestCase):
         # intent_2 (requires_capture) -> cancel
         cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
 
-        self.orden.refresh_from_db()
-        self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
 
-        self.reserva_1.refresh_from_db()
-        self.reserva_2.refresh_from_db()
-        self.assertEqual(self.reserva_1.estado, Reserva.Estado.CANCELADA)
-        self.assertEqual(self.reserva_1.motivo_cancelacion, 'motivo de prueba')
-        self.assertTrue(self.reserva_1.reembolsada)
-        self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
-        self.assertEqual(self.reserva_2.motivo_cancelacion, 'motivo de prueba')
-        self.assertFalse(self.reserva_2.reembolsada)
+            self.reserva_1.refresh_from_db()
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_1.estado, Reserva.Estado.CANCELADA)
+            self.assertEqual(self.reserva_1.motivo_cancelacion, 'motivo de prueba')
+            self.assertTrue(self.reserva_1.reembolsada)
+            self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
+            self.assertEqual(self.reserva_2.motivo_cancelacion, 'motivo de prueba')
+            self.assertFalse(self.reserva_2.reembolsada)
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_revertir_orden_idempotente(self, mock_configurar_stripe):
@@ -2998,10 +3016,12 @@ class OrdenesModuloTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         intent_1 = mock.Mock(id='pi_1', status='succeeded')
         intent_2 = mock.Mock(id='pi_2', status='requires_capture')
@@ -3040,37 +3060,38 @@ class OrdenesApiTest(TestCase):
             stripe_secret_key='sk_test_api_2',
             stripe_publishable_key='pk_test_api_2',
         )
-        self.servicio_1 = Servicio.objects.create(
-            empresa=self.empresa_1,
-            nombre='Pesca API',
-            slug='pesca-api',
-            tipo_servicio='pesca',
-        )
-        self.servicio_2 = Servicio.objects.create(
-            empresa=self.empresa_2,
-            nombre='Transporte API',
-            slug='transporte-api',
-            tipo_servicio='transporte',
-        )
-        self.tarifa_transporte = TransporteTarifa.objects.create(
-            empresa=self.empresa_2,
-            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
-            personas_min=1,
-            personas_max=4,
-            precio=Decimal('2000.00'),
-            precio_usd=Decimal('120.00'),
-            activo=True,
-        )
-        self.paquete = Paquete.objects.create(
-            sede=self.sede,
-            empresa_lider=self.empresa_1,
-            nombre='Paquete API',
-            slug='paquete-api',
-            precio_ancla=Decimal('5000.00'),
-            activo=True,
-        )
-        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
-        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+        with scope.como_operador_plataforma():
+            self.servicio_1 = Servicio.objects.create(
+                empresa=self.empresa_1,
+                nombre='Pesca API',
+                slug='pesca-api',
+                tipo_servicio='pesca',
+            )
+            self.servicio_2 = Servicio.objects.create(
+                empresa=self.empresa_2,
+                nombre='Transporte API',
+                slug='transporte-api',
+                tipo_servicio='transporte',
+            )
+            self.tarifa_transporte = TransporteTarifa.objects.create(
+                empresa=self.empresa_2,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                personas_min=1,
+                personas_max=4,
+                precio=Decimal('2000.00'),
+                precio_usd=Decimal('120.00'),
+                activo=True,
+            )
+            self.paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                nombre='Paquete API',
+                slug='paquete-api',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
 
         self.checkout_id = uuid.uuid4()
         with scope.con_empresa(self.empresa_1):
@@ -3147,8 +3168,9 @@ class OrdenesApiTest(TestCase):
         self.assertEqual(pago_trans['monto'], '2000.00')
         self.assertEqual(pago_trans['client_secret'], 'sec_2')
 
-        self.orden.refresh_from_db()
-        self.assertEqual(self.orden.estado, Orden.Estado.AUTORIZANDO)
+        with scope.con_empresa(self.empresa_1):
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.AUTORIZANDO)
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_confirmar_captura_flujo_exitoso(self, mock_configurar_stripe):
@@ -3156,10 +3178,12 @@ class OrdenesApiTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         intent_1 = mock.Mock(id='pi_api_1', status='requires_capture')
         intent_2 = mock.Mock(id='pi_api_2', status='requires_capture')
@@ -3184,10 +3208,12 @@ class OrdenesApiTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         # Un intent no completó autorización
         intent_1 = mock.Mock(id='pi_api_1', status='requires_confirmation')
@@ -3209,10 +3235,12 @@ class OrdenesApiTest(TestCase):
         cliente_2 = mock.Mock()
         mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
 
-        self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
-        self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
-        self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
-        self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_api_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_api_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
 
         # 1er pago ya autorizado (requires_capture), 2do pago pendiente (requires_payment_method)
         intent_1 = mock.Mock(id='pi_api_1', status='requires_capture', client_secret='sec_1', amount=300000)

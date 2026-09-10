@@ -4,6 +4,7 @@ import uuid
 
 import stripe
 from django.db import transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -428,6 +429,68 @@ class StripeWebhookView(APIView):
         return Response(status=200)
 
 
+def _buscar_paquete_en_sede(sede, paquete_slug):
+    """Busca un paquete activo en la sede iterando sobre las empresas activas,
+    respetando la política RLS de fleet_paquete."""
+    from apps.fleet.models import Paquete
+    from apps.tenancy.models import Empresa
+
+    for emp in Empresa.objects.filter(sede=sede, activo=True):
+        with scope.con_empresa(emp):
+            p = Paquete.objects.filter(empresa_lider=emp, sede=sede, slug=paquete_slug, activo=True).first()
+            if p:
+                return p
+    return None
+
+
+def _buscar_servicios_de_paquete(sede, paquete):
+    """Resuelve los servicios asociados a un paquete cruza-empresa.
+    Lee los PaqueteServicio bajo el scope de la empresa líder, y luego
+    obtiene cada Servicio bajo el scope de su propia empresa."""
+    from apps.fleet.models import PaqueteServicio, Servicio
+    from apps.tenancy.models import Empresa
+
+    empresa_lider = Empresa.objects.get(pk=paquete.empresa_lider_id)
+    with scope.con_empresa(empresa_lider):
+        servicio_ids = list(
+            PaqueteServicio.objects.filter(paquete_id=paquete.id)
+            .order_by('orden')
+            .values_list('servicio_id', flat=True)
+        )
+
+    empresas_sede = list(Empresa.objects.filter(sede=sede, activo=True))
+    servicios = []
+    for s_id in servicio_ids:
+        srv = None
+        for emp in empresas_sede:
+            with scope.con_empresa(emp):
+                s = Servicio.objects.filter(id=s_id, empresa=emp).select_related('empresa').first()
+                if s:
+                    srv = s
+                    break
+        if srv:
+            servicios.append(srv)
+    return servicios
+
+
+def _buscar_orden(sede, pk=None, checkout_id=None):
+    """Busca una orden de la sede bajo el contexto RLS de las empresas de la sede."""
+    from apps.bookings.models import Orden
+    from apps.tenancy.models import Empresa
+
+    for emp in Empresa.objects.filter(sede=sede, activo=True):
+        with scope.con_empresa(emp):
+            qs = Orden.objects.filter(sede=sede)
+            if pk is not None:
+                qs = qs.filter(pk=pk)
+            if checkout_id is not None:
+                qs = qs.filter(checkout_id=checkout_id)
+            orden = qs.first()
+            if orden:
+                return orden
+    return None
+
+
 class CrearOrdenView(APIView):
     """Crea o reanuda una Orden cruza-empresa en estado 'armando' con sus N Reservas.
 
@@ -444,7 +507,7 @@ class CrearOrdenView(APIView):
 
     def post(self, request, sede_slug):
         from apps.bookings.models import DetalleTransporte, Orden, Reserva, Vendedora
-        from apps.fleet.models import Paquete, PuntoEncuentro
+        from apps.fleet.models import PuntoEncuentro
         from apps.tenancy.models import Sede
         from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -462,10 +525,12 @@ class CrearOrdenView(APIView):
         if not paquete_slug:
             return Response({'paquete': 'Falta el parámetro paquete.'}, status=400)
 
-        paquete = get_object_or_404(Paquete, sede=sede, slug=paquete_slug, activo=True)
+        paquete = _buscar_paquete_en_sede(sede, paquete_slug)
+        if not paquete:
+            raise Http404('No se encontró el paquete solicitado.')
 
-        servicios_asociados = list(paquete.servicios_asociados.select_related('servicio', 'servicio__empresa').all())
-        empresas_ids = {paquete.empresa_lider_id} | {ps.servicio.empresa_id for ps in servicios_asociados}
+        servicios = _buscar_servicios_de_paquete(sede, paquete)
+        empresas_ids = {paquete.empresa_lider_id} | {s.empresa_id for s in servicios}
         if len(empresas_ids) <= 1:
             return Response(
                 {'detail': 'Este paquete no es cruza-empresa. Debe reservarse mediante el flujo habitual de reservas.'},
@@ -504,10 +569,9 @@ class CrearOrdenView(APIView):
             with transaction.atomic():
                 orden_existente = None
                 if checkout_id:
-                    orden_existente = Orden.objects.filter(
-                        checkout_id=checkout_id,
-                        estado__in=[Orden.Estado.ARMANDO, Orden.Estado.AUTORIZANDO],
-                    ).first()
+                    orden_existente = _buscar_orden(sede, checkout_id=checkout_id)
+                    if orden_existente and orden_existente.estado not in [Orden.Estado.ARMANDO, Orden.Estado.AUTORIZANDO]:
+                        orden_existente = None
 
                 if orden_existente:
                     orden = orden_existente
@@ -537,8 +601,7 @@ class CrearOrdenView(APIView):
                         orden.save()
 
                 reservas_resultado = []
-                for ps in servicios_asociados:
-                    servicio = ps.servicio
+                for servicio in servicios:
                     empresa = servicio.empresa
                     es_lider = (empresa.id == paquete.empresa_lider_id)
                     comp_d = _buscar_datos_comp(servicio)
@@ -644,7 +707,9 @@ class CrearPagoOrdenView(APIView):
         from .pricing import monto_por_empresa
 
         sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
-        orden = get_object_or_404(Orden, pk=pk, sede=sede)
+        orden = _buscar_orden(sede, pk=pk)
+        if not orden:
+            raise Http404('No se encontró la orden solicitada.')
 
         if orden.estado in (Orden.Estado.CAPTURADA, Orden.Estado.CANCELADA):
             return Response({'detail': f'La orden ya está {orden.estado}.'}, status=409)
@@ -686,7 +751,8 @@ class CrearPagoOrdenView(APIView):
                     })
 
         try:
-            precio_paquete = orden.paquete.precio_en(orden.moneda)
+            with scope.con_empresa(orden.empresa_lider):
+                precio_paquete = orden.paquete.precio_en(orden.moneda)
             reparto = monto_por_empresa(
                 precio_paquete=precio_paquete,
                 componentes=componentes,
@@ -720,21 +786,32 @@ class ConfirmarCapturaOrdenView(APIView):
 
     def post(self, request, sede_slug, pk):
         from apps.bookings.models import Orden, Reserva
-        from apps.tenancy.models import Sede
+        from apps.bookings.orden_lectura import reservas_de_orden
+        from apps.tenancy.models import Empresa, Sede
         from .ordenes import confirmar_captura
 
         sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
-        orden = get_object_or_404(Orden, pk=pk, sede=sede)
+        orden = _buscar_orden(sede, pk=pk)
+        if not orden:
+            raise Http404('No se encontró la orden solicitada.')
 
         if orden.estado == Orden.Estado.CAPTURADA:
             return Response({'estado': orden.estado}, status=200)
 
         confirmar_captura(orden)
-        orden.refresh_from_db()
+        with scope.con_empresa(orden.empresa_lider):
+            orden.refresh_from_db()
 
         if orden.estado == Orden.Estado.CANCELADA:
-            r_canc = Reserva.objects.filter(orden=orden).exclude(motivo_cancelacion='').first()
-            motivo = r_canc.motivo_cancelacion if r_canc else 'Cancelada'
+            motivo = 'Cancelada'
+            filas = reservas_de_orden(orden.id)
+            for f in filas:
+                empresa = Empresa.objects.get(pk=f['empresa_id'])
+                with scope.con_empresa(empresa):
+                    r_canc = Reserva.objects.filter(pk=f['reserva_id']).exclude(motivo_cancelacion='').first()
+                    if r_canc and r_canc.motivo_cancelacion:
+                        motivo = r_canc.motivo_cancelacion
+                        break
             return Response({'estado': orden.estado, 'motivo': motivo}, status=200)
 
         if orden.estado == Orden.Estado.AUTORIZANDO:
@@ -763,7 +840,7 @@ class GetOrdenView(APIView):
         sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
 
         if pk is not None:
-            orden = get_object_or_404(Orden, pk=pk, sede=sede)
+            orden = _buscar_orden(sede, pk=pk)
         else:
             checkout_id = request.query_params.get('checkout_id')
             if not checkout_id:
@@ -772,14 +849,20 @@ class GetOrdenView(APIView):
                 cid = uuid.UUID(str(checkout_id))
             except (ValueError, TypeError):
                 return Response({'checkout_id': 'UUID inválido.'}, status=400)
-            orden = get_object_or_404(Orden, checkout_id=cid, sede=sede)
+            orden = _buscar_orden(sede, checkout_id=cid)
+
+        if not orden:
+            raise Http404('No se encontró la orden solicitada.')
 
         filas = reservas_de_orden(orden.id)
         reservas_info = []
 
         for fila in filas:
             empresa = Empresa.objects.get(pk=fila['empresa_id'])
-            servicio = Servicio.objects.get(pk=fila['servicio_id']) if fila.get('servicio_id') else None
+            servicio = None
+            if fila.get('servicio_id'):
+                with scope.con_empresa(empresa):
+                    servicio = Servicio.objects.filter(pk=fila['servicio_id']).first()
             pi_id = fila.get('stripe_payment_intent_id')
 
             estado_pi = None
@@ -815,3 +898,4 @@ class GetOrdenView(APIView):
             'estado': orden.estado,
             'reservas': reservas_info,
         }, status=200)
+
