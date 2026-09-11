@@ -3875,7 +3875,8 @@ class ConciliarOrdenesTest(TransactionTestCase):
 
         # Simulamos que pasaron más de 24 horas
         hace_25h = timezone.now() - timedelta(hours=25)
-        Orden.objects.filter(pk=self.orden.pk).update(actualizado_en=hace_25h)
+        with scope.como_operador_plataforma():
+            Orden.objects.filter(pk=self.orden.pk).update(actualizado_en=hace_25h)
 
         call_command('conciliar_pagos')
 
@@ -3944,5 +3945,142 @@ class ConciliarOrdenesTest(TransactionTestCase):
         with scope.con_empresa(self.empresa_2):
             self.reserva_2.refresh_from_db()
             self.assertEqual(self.reserva_2.estado, Reserva.Estado.PAGADA)
+
+
+class RevisarOrdenesTest(TransactionTestCase):
+    def setUp(self):
+        from apps.fleet.enums import TipoTraslado
+        from apps.bookings.models import DetalleTransporte
+
+        self.sede = Sede.objects.create(
+            nombre='Sede Revisar', slug='sede-revisar', zona_horaria='America/Mazatlan',
+        )
+        self.empresa = Empresa.objects.create(
+            nombre='Empresa Revisar',
+            slug='emp-revisar',
+            sede=self.sede,
+            stripe_secret_key='sk_test_revisar',
+            stripe_webhook_secret='whsec_revisar',
+            stripe_publishable_key='pk_test_revisar',
+        )
+        with scope.como_operador_plataforma():
+            self.servicio = Servicio.objects.create(
+                empresa=self.empresa,
+                nombre='Pesca Revisar',
+                slug='pesca-revisar',
+                tipo_servicio='pesca',
+                estrategia_cupo='bajo_demanda',
+            )
+            self.paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa,
+                nombre='Paquete Revisar',
+                slug='paquete-revisar',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio, orden=1)
+
+        with scope.con_empresa(self.empresa):
+            # Orden 1: Atascada (hace 3 horas, estado AUTORIZANDO)
+            self.orden_atascada = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa,
+                paquete=self.paquete,
+                nombre_cliente='Cliente Atascado',
+                telefono_cliente='1234567890',
+                correo_cliente='atascado@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.AUTORIZANDO,
+            )
+            hace_3h = timezone.now() - timedelta(hours=3)
+            Orden.objects.filter(pk=self.orden_atascada.pk).update(actualizado_en=hace_3h)
+
+            self.reserva_atascada = Reserva.objects.create(
+                empresa=self.empresa,
+                servicio=self.servicio,
+                paquete=self.paquete,
+                orden=self.orden_atascada,
+                fecha=date(2026, 11, 20),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Atascado',
+                telefono_cliente='1234567890',
+                correo_cliente='atascado@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+                stripe_payment_intent_id='pi_atascado',
+                precio_total=Decimal('5000.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+
+            # Orden 2: Capturada (hace 3 horas, pero ya pagada)
+            self.orden_capturada = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa,
+                paquete=self.paquete,
+                nombre_cliente='Cliente Capturado',
+                telefono_cliente='1234567890',
+                correo_cliente='capturado@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.CAPTURADA,
+            )
+            Orden.objects.filter(pk=self.orden_capturada.pk).update(actualizado_en=hace_3h)
+
+            # Orden 3: Reciente (hace 10 minutos, estado AUTORIZANDO)
+            self.orden_reciente = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa,
+                paquete=self.paquete,
+                nombre_cliente='Cliente Reciente',
+                telefono_cliente='1234567890',
+                correo_cliente='reciente@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.AUTORIZANDO,
+            )
+
+    @mock.patch('apps.payments.management.commands.revisar_ordenes.configurar_stripe')
+    def test_revisar_ordenes_lista_atascada_y_no_capturada_ni_reciente(self, mock_configurar):
+        cliente = mock.Mock()
+        mock_configurar.return_value = cliente
+        cliente.payment_intents.retrieve.return_value = mock.Mock(status='requires_action')
+
+        salida = StringIO()
+        call_command('revisar_ordenes', stdout=salida)
+        texto = salida.getvalue()
+
+        self.assertIn(f'Orden #{self.orden_atascada.pk}', texto)
+        self.assertIn('Cliente Atascado', texto)
+        self.assertIn('requires_action', texto)
+
+        self.assertNotIn(f'Orden #{self.orden_capturada.pk}', texto)
+        self.assertNotIn('Cliente Capturado', texto)
+
+        self.assertNotIn(f'Orden #{self.orden_reciente.pk}', texto)
+        self.assertNotIn('Cliente Reciente', texto)
+
+        # Verificar que nada fue alterado en la base de datos
+        with scope.como_operador_plataforma():
+            self.orden_atascada.refresh_from_db()
+            self.assertEqual(self.orden_atascada.estado, Orden.Estado.AUTORIZANDO)
+        with scope.con_empresa(self.empresa):
+            self.reserva_atascada.refresh_from_db()
+            self.assertEqual(self.reserva_atascada.estado, Reserva.Estado.PENDIENTE_PAGO)
+
+    @mock.patch('apps.payments.management.commands.revisar_ordenes.configurar_stripe')
+    def test_revisar_ordenes_con_flag_horas_filtra_correctamente(self, mock_configurar):
+        cliente = mock.Mock()
+        mock_configurar.return_value = cliente
+
+        salida = StringIO()
+        # Si filtramos con --horas 4, la orden de 3 horas no debe salir
+        call_command('revisar_ordenes', '--horas', '4', stdout=salida)
+        texto = salida.getvalue()
+
+        self.assertIn('No se encontraron órdenes atascadas (> 4h)', texto)
+        self.assertNotIn(f'Orden #{self.orden_atascada.pk}', texto)
+
+
 
 
