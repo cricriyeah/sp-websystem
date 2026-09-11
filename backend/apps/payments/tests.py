@@ -3709,3 +3709,240 @@ class CompensacionOrdenTest(TransactionTestCase):
         cliente_1.refunds.create.assert_called_once()
         cliente_2.refunds.create.assert_called_once()
 
+
+class ConciliarOrdenesTest(TransactionTestCase):
+    def setUp(self):
+        from apps.fleet.enums import TipoTraslado
+        from apps.bookings.models import DetalleTransporte
+
+        self.sede = Sede.objects.create(
+            nombre='Sede Conciliar', slug='sede-conciliar', zona_horaria='America/Mazatlan',
+        )
+        self.empresa_1 = Empresa.objects.create(
+            nombre='Empresa Pesca Conciliar',
+            slug='emp-conc-pesca',
+            sede=self.sede,
+            stripe_secret_key='sk_test_conc_1',
+            stripe_webhook_secret='whsec_conc_1',
+            stripe_publishable_key='pk_test_conc_1',
+        )
+        self.empresa_2 = Empresa.objects.create(
+            nombre='Empresa Transporte Conciliar',
+            slug='emp-conc-transporte',
+            sede=self.sede,
+            stripe_secret_key='sk_test_conc_2',
+            stripe_webhook_secret='whsec_conc_2',
+            stripe_publishable_key='pk_test_conc_2',
+        )
+        with scope.como_operador_plataforma():
+            self.servicio_1 = Servicio.objects.create(
+                empresa=self.empresa_1,
+                nombre='Pesca Conciliar',
+                slug='pesca-conciliar',
+                tipo_servicio='pesca',
+                estrategia_cupo='bajo_demanda',
+            )
+            self.servicio_2 = Servicio.objects.create(
+                empresa=self.empresa_2,
+                nombre='Transporte Conciliar',
+                slug='transporte-conciliar',
+                tipo_servicio='transporte',
+                estrategia_cupo='bajo_demanda',
+            )
+            self.paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                nombre='Paquete Conciliar',
+                slug='paquete-conciliar',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                paquete=self.paquete,
+                nombre_cliente='Cliente Conciliar',
+                telefono_cliente='1234567890',
+                correo_cliente='conciliar@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.AUTORIZANDO,
+            )
+            self.reserva_1 = Reserva.objects.create(
+                empresa=self.empresa_1,
+                servicio=self.servicio_1,
+                paquete=self.paquete,
+                orden=self.orden,
+                fecha=date(2026, 11, 20),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Conciliar',
+                telefono_cliente='1234567890',
+                correo_cliente='conciliar@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+                stripe_payment_intent_id='pi_conc_1',
+                precio_total=Decimal('3000.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2 = Reserva.objects.create(
+                empresa=self.empresa_2,
+                servicio=self.servicio_2,
+                paquete=None,
+                orden=self.orden,
+                fecha=date(2026, 11, 20),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Conciliar',
+                telefono_cliente='1234567890',
+                correo_cliente='conciliar@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+                stripe_payment_intent_id='pi_conc_2',
+                precio_total=Decimal('2000.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+            DetalleTransporte.objects.create(
+                reserva=self.reserva_2,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                direccion_personalizada='Hotel Conciliar',
+                fecha_regreso=date(2026, 11, 22),
+            )
+
+    @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
+    def test_webhook_perdido_ambas_empresas_aplica_y_captura_orden(self, mock_configurar):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        intent_1_dict = {
+            'id': 'pi_conc_1',
+            'status': 'succeeded',
+            'amount_received': 300000,
+            'currency': 'mxn',
+            'created': int(timezone.now().timestamp()),
+            'metadata': {'reserva_id': str(self.reserva_1.id)},
+        }
+        intent_1_mock = mock.MagicMock(id='pi_conc_1', status='succeeded', amount_received=300000, currency='mxn')
+        intent_1_mock.__getitem__.side_effect = lambda k: intent_1_dict[k]
+        cliente_1.payment_intents.retrieve.return_value = intent_1_mock
+
+        intent_2_dict = {
+            'id': 'pi_conc_2',
+            'status': 'succeeded',
+            'amount_received': 200000,
+            'currency': 'mxn',
+            'created': int(timezone.now().timestamp()),
+            'metadata': {'reserva_id': str(self.reserva_2.id)},
+        }
+        intent_2_mock = mock.MagicMock(id='pi_conc_2', status='succeeded', amount_received=200000, currency='mxn')
+        intent_2_mock.__getitem__.side_effect = lambda k: intent_2_dict[k]
+        cliente_2.payment_intents.retrieve.return_value = intent_2_mock
+
+        call_command('conciliar_pagos')
+
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.refresh_from_db()
+            self.assertEqual(self.reserva_1.estado, Reserva.Estado.PAGADA)
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_2.estado, Reserva.Estado.PAGADA)
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CAPTURADA)
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
+    def test_una_succeeded_otra_requires_confirmation_con_timeout_revierte_orden(
+        self, mock_configurar_conciliar, mock_configurar_ordenes,
+    ):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_conciliar.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+        mock_configurar_ordenes.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        intent_1_mock = mock.Mock(id='pi_conc_1', status='succeeded', amount=300000)
+        cliente_1.payment_intents.retrieve.return_value = intent_1_mock
+
+        intent_2_mock = mock.Mock(id='pi_conc_2', status='requires_confirmation', amount=200000)
+        cliente_2.payment_intents.retrieve.return_value = intent_2_mock
+
+        # Simulamos que pasaron más de 24 horas
+        hace_25h = timezone.now() - timedelta(hours=25)
+        Orden.objects.filter(pk=self.orden.pk).update(actualizado_en=hace_25h)
+
+        call_command('conciliar_pagos')
+
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.refresh_from_db()
+            self.assertEqual(self.reserva_1.estado, Reserva.Estado.CANCELADA)
+            self.assertTrue(self.reserva_1.reembolsada)
+
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
+
+        cliente_1.refunds.create.assert_called_once()
+        cliente_2.payment_intents.cancel.assert_called_once_with('pi_conc_2')
+
+    @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
+    def test_conciliar_dos_veces_seguidas_es_idempotente(self, mock_configurar):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        intent_1_dict = {
+            'id': 'pi_conc_1',
+            'status': 'succeeded',
+            'amount_received': 300000,
+            'currency': 'mxn',
+            'created': int(timezone.now().timestamp()),
+            'metadata': {'reserva_id': str(self.reserva_1.id)},
+        }
+        intent_1_mock = mock.MagicMock(id='pi_conc_1', status='succeeded', amount_received=300000, currency='mxn')
+        intent_1_mock.__getitem__.side_effect = lambda k: intent_1_dict[k]
+        cliente_1.payment_intents.retrieve.return_value = intent_1_mock
+
+        intent_2_dict = {
+            'id': 'pi_conc_2',
+            'status': 'succeeded',
+            'amount_received': 200000,
+            'currency': 'mxn',
+            'created': int(timezone.now().timestamp()),
+            'metadata': {'reserva_id': str(self.reserva_2.id)},
+        }
+        intent_2_mock = mock.MagicMock(id='pi_conc_2', status='succeeded', amount_received=200000, currency='mxn')
+        intent_2_mock.__getitem__.side_effect = lambda k: intent_2_dict[k]
+        cliente_2.payment_intents.retrieve.return_value = intent_2_mock
+
+        # Primera corrida
+        call_command('conciliar_pagos')
+
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CAPTURADA)
+
+        # Segunda corrida
+        call_command('conciliar_pagos')
+
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CAPTURADA)
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.refresh_from_db()
+            self.assertEqual(self.reserva_1.estado, Reserva.Estado.PAGADA)
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_2.estado, Reserva.Estado.PAGADA)
+
+

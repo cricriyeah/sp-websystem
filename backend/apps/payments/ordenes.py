@@ -3,6 +3,7 @@ manual capture (uno por empresa), capturarlos todos, o revertir todo.
 El dinero se calcula en pricing.monto_por_empresa; aquí solo se mueve."""
 import logging
 import time
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -19,6 +20,7 @@ from apps.tenancy.models import Empresa
 logger = logging.getLogger(__name__)
 
 CAPTURA_REINTENTOS = 3
+ORDEN_TIMEOUT_AUTORIZACION = timedelta(hours=24)
 
 INTENT_REUTILIZABLE = {'requires_payment_method', 'requires_confirmation', 'requires_action', 'requires_capture'}
 INTENTS_PENDIENTES_VOID = {'requires_capture', 'requires_confirmation', 'requires_action', 'requires_payment_method'}
