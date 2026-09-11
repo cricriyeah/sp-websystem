@@ -665,7 +665,7 @@ Verificación (2026-09-10):
   - Lee las reservas hermanas con `reservas_de_orden(orden.pk)` (Tarea 1.3), no con `orden.reservas` (conciliar corre con `scope.como_operador_plataforma()` en un comando, pero la función `SECURITY DEFINER` es el patrón consistente con el webhook).
 - Test: `backend/apps/payments/tests.py::ConciliarOrdenesTest` — webhook perdido de ambas (ambas `succeeded` en Stripe) → conciliar aplica las 2, orden `capturada`; una `succeeded` una `requires_confirmation` + timeout → `revertir_orden`; idempotente en segunda vuelta.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(payments): conciliar_pagos entiende órdenes`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(payments): conciliar_pagos entiende órdenes`.
 
 ### Tarea 6.2 — `manage.py revisar_ordenes`
 
@@ -673,12 +673,12 @@ Verificación (2026-09-10):
 - Create: `backend/apps/payments/management/commands/revisar_ordenes.py` — lista órdenes en `armando`/`autorizando`/`autorizada` más viejas que N horas (default 2), con el estado de cada PaymentIntent, para que la vendedora las vea. `--dry-run` por defecto informativo; sin flags no cambia nada (solo `conciliar_pagos` actúa).
 - Test: `backend/apps/payments/tests.py` — lista una orden atascada, no toca una `capturada`.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(payments): comando revisar_ordenes`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(payments): comando revisar_ordenes`.
 
 ### Gate Sección 6
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Commit `docs(plan): SP2 Sección 6 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres. (SQLite: 855 tests OK 256s; Postgres: 855 tests OK completo apps+config 484s, rol `ci_rls` sin `BYPASSRLS`.)
+- [x] Commit `docs(plan): SP2 Sección 6 cerrada`. **PARA y reporta.**
 
 ---
 
