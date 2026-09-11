@@ -696,13 +696,15 @@ Verificación (2026-09-10):
 - Modify: `backend/apps/bookings/setup_roles.py` — `Orden` view-only para `Vendedora`.
 - Test: `backend/apps/bookings/tests.py` — la vendedora ve la lista de órdenes (solo lectura); la acción "cancelar" no está para la vendedora; el jefe puede cancelar.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(bookings): admin de Orden (solo lectura + cancelar)`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(bookings): admin de Orden (solo lectura + cancelar)` (`3143896`).
 
 ### Gate Sección 7
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] `/admin/` abre sin romperse (revisión del agente).
-- [ ] Commit `docs(plan): SP2 Sección 7 cerrada`. **PARA y reporta.**
+Incidencia del gate: el test existente de captura parcial suponia orden SQL sin `ORDER BY`; se fijo el orden solo en ese escenario, conservando la lectura real y sin modificar pagos (`919c6ba`).
+
+- [x] Suite verde sqlite + Postgres. (SQLite: 860 tests OK completo apps+config en 297.298s, 27 omitidos por motor; Postgres: 860 tests OK completo apps+config en 521.929s, rol `ci_rls` confirmado `NOSUPERUSER NOBYPASSRLS`.)
+- [x] `/admin/` abre sin romperse (revisión del agente). `manage.py check` sin incidencias; Django `Client` autenticado como Vendedora, Jefe y OperadorPlataforma: `/admin/` y `/admin/bookings/orden/` HTTP 200, sidebar correcto y sin traceback. Detalle readonly, alta/cambio/borrado denegados a Vendedora, cancelación oculta y protegida ante llamada forzada; Jefe/Operador invocan el servicio real y dejan la orden cancelada. Empresa B ve la orden de A de su sede y ambos componentes/total; otra sede queda fuera. Sin navegador. Se evita el JOIN automático a Paquete (RLS por empresa líder); si el nombre no es visible se muestra su ID.
+- [x] Commit `docs(plan): SP2 Sección 7 cerrada`. **PARA y reporta.**
 
 ---
 
