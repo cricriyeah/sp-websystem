@@ -717,7 +717,7 @@ Incidencia del gate: el test existente de captura parcial suponia orden SQL sin 
 - Modify: `frontend/src/components/paquete-card.tsx` / `checkout-view.tsx` — si el paquete es cruza-empresa, el "Reservar" lleva al checkout de orden (`paquete-checkout.tsx`), no al de reserva normal.
 - Test: `tsc` · `lint` · `build`.
 
-- [ ] **Paso 1 → 3:** ciclo. Commit `feat(frontend): detecta paquete cruza-empresa`.
+- [x] **Paso 1 → 3:** ciclo. Commit `feat(frontend): detecta paquete cruza-empresa`.
 
 ### Tarea 8.2 — `paquete-checkout.tsx` — un formulario, N pagos en secuencia
 
@@ -733,13 +733,21 @@ Incidencia del gate: el test existente de captura parcial suponia orden SQL sin 
 - Modify: dictionaries — bloque `paqueteCheckout.*` (pasos, textos de éxito/fallo/reanudar).
 - Test: `tsc` · `lint` · `build`.
 
-- [ ] **Paso 1 → 3:** ciclo. Commit `feat(frontend): checkout de paquete cruza-empresa (tarjeta, N pagos en secuencia, reanudable)`.
+- [x] **Paso 1 → 3:** ciclo. Commit `feat(frontend): checkout de paquete cruza-empresa (tarjeta, N pagos en secuencia, reanudable)`.
 
 ### Gate Sección 8
 
-- [ ] Frontend `lint` · `tsc --noEmit` · `build` verdes.
-- [ ] El agente arranca dev + backend con llaves de Stripe test y hace **una** compra completa del paquete Pesca + Traslado de prueba (2 confirmaciones → captura → éxito). Si no hay llaves test, deja documentado el paso para que el dueño lo pruebe.
-- [ ] Commit `docs(plan): SP2 Sección 8 cerrada`. **PARA y reporta.**
+- [x] Frontend `lint` · `tsc --noEmit` · `build` verdes.
+- [x] Smoke test end-to-end sin navegador (regla del proyecto, ver `verificacion-sin-navegador`): con backend+frontend dev levantados y un paquete cruza-empresa real (`prueba-cruza-empresa-s8`, pesca de Sal y Sol + traslado de Transportes La Paz, sede La Paz), por `curl` se verificó: `/es/reservar-paquete?paquete=prueba-cruza-empresa-s8&sede=la-paz` responde 200 y renderiza las dos secciones de componente; un paquete de una sola empresa en esa misma ruta responde 404 (guardián correcto); `/es/catalogo` enlaza el paquete cruza-empresa a `/reservar-paquete` y uno normal sigue a `/reservar`. De paso se detectó que la BD local (sqlite, `config.settings.local`) tenía pendientes las migraciones `0041_orden`→`0044_rls_orden_sin_current_query` (nunca corridas ahí) — se aplicaron.
+- [ ] **Pendiente manual (dueño):** la compra completa con tarjeta (2 confirmaciones → captura → éxito) requiere un navegador real con Stripe Elements — no se automatizó por la regla del proyecto de no abrir Chrome para esto. Llaves de Stripe test ya configuradas en ambas empresas locales. Pasos:
+  1. `cd backend && venv/Scripts/python.exe manage.py runserver 8000` y en otra terminal `cd frontend && npm run dev`.
+  2. Abre `http://localhost:3000/es/reservar-paquete?paquete=prueba-cruza-empresa-s8&sede=la-paz`.
+  3. Llena datos de contacto, fecha/hora de pesca, datos del traslado, acepta el deslinde, "Continuar al pago".
+  4. Paso 1 de 2 (Pesca): tarjeta de prueba Stripe `4242 4242 4242 4242`, cualquier fecha futura/CVC/código postal.
+  5. Paso 2 de 2 (Traslado): misma tarjeta de prueba.
+  6. Debe mostrar la pantalla de éxito con los 2 componentes listados. Verifica en el admin (`/admin/bookings/orden/`) que la orden quedó `capturada`.
+  7. El paquete de prueba `prueba-cruza-empresa-s8` se dejó creado en la BD local para esto — bórralo después si no lo quieres ahí (`Paquete.objects.filter(slug='prueba-cruza-empresa-s8').delete()`).
+- [x] Commit `docs(plan): SP2 Sección 8 cerrada`. **PARA y reporta.**
 
 ---
 
