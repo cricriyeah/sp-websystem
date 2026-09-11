@@ -503,10 +503,10 @@ class CrearOrdenView(APIView):
     """
 
     throttle_scope = 'reservas'
-    permission_classes = []
-
     def post(self, request, sede_slug):
-        from apps.bookings.models import DetalleTransporte, Orden, Reserva, Vendedora
+        from django.utils import timezone
+        from apps.bookings.models import DESLINDE_VERSION, DetalleTransporte, Orden, Reserva, Vendedora
+        from apps.bookings.serializers import ip_del_cliente
         from apps.fleet.models import PuntoEncuentro
         from apps.tenancy.models import Sede
         from django.core.exceptions import ValidationError as DjangoValidationError
@@ -544,6 +544,8 @@ class CrearOrdenView(APIView):
                 {'deslinde_aceptado': 'Debe aceptar el deslinde de responsabilidad indicando su nombre.'},
                 status=400,
             )
+        deslinde_aceptado_en = timezone.now()
+        deslinde_ip = ip_del_cliente(request)
 
         nombre_cliente = request.data.get('nombre_cliente', '').strip()
         telefono_cliente = request.data.get('telefono_cliente', '').strip()
@@ -634,6 +636,9 @@ class CrearOrdenView(APIView):
                         reserva.forma_pago = Reserva.FormaPago.COMPLETO
                         reserva.deslinde_aceptado = True
                         reserva.deslinde_nombre = deslinde_nombre
+                        reserva.deslinde_aceptado_en = deslinde_aceptado_en
+                        reserva.deslinde_ip = deslinde_ip
+                        reserva.deslinde_version = DESLINDE_VERSION
                         if es_lider and ref:
                             vendedora = Vendedora.por_codigo(ref, empresa)
                             if vendedora:

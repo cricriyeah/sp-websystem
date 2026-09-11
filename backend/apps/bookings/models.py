@@ -67,7 +67,7 @@ CUPO_MAXIMO_DEFAULT = 10
 # Version del deslinde que el sitio muestra hoy. Al cambiar el texto de
 # `checkout.waiver.page` en los diccionarios del frontend hay que subir esta
 # fecha, o las constancias nuevas quedaran selladas contra un texto viejo.
-DESLINDE_VERSION = '2026-08-21'
+DESLINDE_VERSION = '2026-09-11'
 
 # Solo estas cuentan contra el cupo: una reserva pendiente_pago (checkout iniciado
 # pero no pagado) no debe bloquear el cupo de otro cliente.

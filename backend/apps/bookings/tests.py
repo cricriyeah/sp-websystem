@@ -2368,6 +2368,86 @@ class OrdenModelTest(EmpresaTestCase):
         self.assertEqual(reserva.orden, orden)
         self.assertIn(reserva, orden.reservas.all())
 
+    def test_orden_crea_n_reservas_mismo_deslinde_y_full_clean_pasa(self):
+        import uuid
+        from apps.bookings.models import DESLINDE_VERSION, Orden
+        from apps.fleet.enums import TipoTraslado
+        from apps.fleet.models import PaqueteServicio, Servicio, TransporteTarifa
+
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.como_operador_plataforma():
+                servicio_transporte = Servicio.objects.create(
+                    empresa=self.otra_empresa,
+                    nombre='Traslado Orden',
+                    slug='traslado-orden',
+                    tipo_servicio='transporte',
+                    estrategia_cupo='bajo_demanda',
+                    estrategia_precio='por_ruta',
+                )
+                TransporteTarifa.objects.create(
+                    empresa=self.otra_empresa,
+                    tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                    personas_min=1,
+                    personas_max=4,
+                    precio=Decimal('2000.00'),
+                )
+                servicio_pesca = Servicio.objects.create(
+                    empresa=self.empresa,
+                    nombre='Pesca Orden Test',
+                    slug='pesca-orden-test',
+                    tipo_servicio='pesca',
+                    estrategia_cupo='por_recurso_dia',
+                    precio_base=Decimal('3000.00'),
+                )
+                PaqueteServicio.objects.create(paquete=self.paquete, servicio=servicio_pesca, orden=1)
+                PaqueteServicio.objects.create(paquete=self.paquete, servicio=servicio_transporte, orden=2)
+
+            payload = {
+                'checkout_id': str(uuid.uuid4()),
+                'paquete': self.paquete.slug,
+                'nombre_cliente': 'Juan Perez',
+                'telefono_cliente': '1234567890',
+                'correo_cliente': 'juan@example.com',
+                'deslinde_aceptado': True,
+                'deslinde_nombre': 'Juan Perez',
+                'fecha': (date.today() + timedelta(days=15)).isoformat(),
+                'hora': '07:00:00',
+                'numero_personas': 2,
+                'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
+                'direccion_personalizada': 'Calle Marina 123',
+                'fecha_regreso': (date.today() + timedelta(days=17)).isoformat(),
+            }
+            res = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
+            self.assertEqual(res.status_code, 201)
+            data = res.json()
+            self.assertIn('orden_id', data)
+
+            with scope.como_operador_plataforma():
+                orden_creada = Orden.objects.get(pk=data['orden_id'])
+                reservas = list(orden_creada.reservas.all().order_by('id'))
+                self.assertGreaterEqual(len(reservas), 2)
+
+                timestamp_base = reservas[0].deslinde_aceptado_en
+                ip_base = reservas[0].deslinde_ip
+                for r in reservas:
+                    self.assertTrue(r.deslinde_aceptado)
+                    self.assertEqual(r.deslinde_nombre, 'Juan Perez')
+                    self.assertEqual(r.deslinde_version, DESLINDE_VERSION)
+                    self.assertEqual(r.deslinde_version, '2026-09-11')
+                    self.assertIsNotNone(r.deslinde_aceptado_en)
+                    self.assertEqual(r.deslinde_aceptado_en, timestamp_base)
+                    self.assertIsNotNone(r.deslinde_ip)
+                    self.assertEqual(r.deslinde_ip, ip_base)
+
+            # full_clean() pasa en cada reserva bajo su propia empresa
+            for r in reservas:
+                with scope.con_empresa(r.empresa):
+                    r.full_clean()
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+
 
 class ConfirmacionComponenteOrdenTest(OperadorTestCase):
     def setUp(self):
