@@ -3431,3 +3431,179 @@ class WebhookOrdenTest(TransactionTestCase):
 
         # No re-notifica ni altera notificada_en
         mock_notificar.assert_called_once()
+
+
+class CompensacionOrdenTest(TransactionTestCase):
+    def setUp(self):
+        from apps.fleet.enums import TipoTraslado
+        from apps.bookings.models import DetalleTransporte
+
+        self.sede = Sede.objects.create(
+            nombre='Sede Comp Orden', slug='sede-comp-orden', zona_horaria='America/Mazatlan',
+        )
+        self.empresa_1 = Empresa.objects.create(
+            nombre='Empresa Pesca Comp',
+            slug='emp-comp-pesca',
+            sede=self.sede,
+            stripe_secret_key='sk_test_comp_1',
+            stripe_webhook_secret='whsec_comp_1',
+            stripe_publishable_key='pk_test_comp_1',
+        )
+        self.empresa_2 = Empresa.objects.create(
+            nombre='Empresa Transporte Comp',
+            slug='emp-comp-transporte',
+            sede=self.sede,
+            stripe_secret_key='sk_test_comp_2',
+            stripe_webhook_secret='whsec_comp_2',
+            stripe_publishable_key='pk_test_comp_2',
+        )
+        with scope.como_operador_plataforma():
+            # Pesca sin recursos: forzará SinCupoError en Caso D
+            self.servicio_1 = Servicio.objects.create(
+                empresa=self.empresa_1,
+                nombre='Pesca Comp',
+                slug='pesca-comp',
+                tipo_servicio='pesca',
+                estrategia_cupo='por_recurso_dia',
+            )
+            self.servicio_2 = Servicio.objects.create(
+                empresa=self.empresa_2,
+                nombre='Transporte Comp',
+                slug='transporte-comp',
+                tipo_servicio='transporte',
+                estrategia_cupo='bajo_demanda',
+            )
+            self.paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                nombre='Paquete Comp',
+                slug='paquete-comp',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                paquete=self.paquete,
+                nombre_cliente='Cliente Comp',
+                telefono_cliente='1234567890',
+                correo_cliente='comp@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.AUTORIZADA,
+            )
+            self.reserva_1 = Reserva.objects.create(
+                empresa=self.empresa_1,
+                servicio=self.servicio_1,
+                paquete=self.paquete,
+                orden=self.orden,
+                fecha=date(2026, 11, 20),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Comp',
+                telefono_cliente='1234567890',
+                correo_cliente='comp@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+                stripe_payment_intent_id='pi_comp_1',
+                precio_total=Decimal('3000.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2 = Reserva.objects.create(
+                empresa=self.empresa_2,
+                servicio=self.servicio_2,
+                paquete=None,
+                orden=self.orden,
+                fecha=date(2026, 11, 20),
+                hora=time(7, 0),
+                numero_personas=2,
+                nombre_cliente='Cliente Comp',
+                telefono_cliente='1234567890',
+                correo_cliente='comp@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PENDIENTE_PAGO,
+                stripe_payment_intent_id='pi_comp_2',
+                precio_total=Decimal('2000.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+            DetalleTransporte.objects.create(
+                reserva=self.reserva_2,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                direccion_personalizada='Hotel Comp',
+                fecha_regreso=date(2026, 11, 22),
+            )
+
+    @mock.patch('apps.payments.services.configurar_stripe')
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_compensacion_orden_cuando_falla_cupo(self, mock_stripe_ordenes, mock_stripe_services):
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+
+        def resolver_cliente(emp):
+            return cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        mock_stripe_services.side_effect = resolver_cliente
+        mock_stripe_ordenes.side_effect = resolver_cliente
+
+        intent_1_obj = mock.Mock(id='pi_comp_1', status='succeeded', amount=300000)
+        intent_2_obj = mock.Mock(id='pi_comp_2', status='succeeded', amount=200000)
+        cliente_1.payment_intents.retrieve.return_value = intent_1_obj
+        cliente_2.payment_intents.retrieve.return_value = intent_2_obj
+
+        # Cuando se reembolsa intent_1 en services.reembolsar, su status pasa a refunded
+        def refund_1(params, options=None):
+            intent_1_obj.status = 'refunded'
+            return mock.Mock()
+
+        def refund_2(params, options=None):
+            intent_2_obj.status = 'refunded'
+            return mock.Mock()
+
+        cliente_1.refunds.create.side_effect = refund_1
+        cliente_2.refunds.create.side_effect = refund_2
+
+        intent_data_1 = {
+            'id': 'pi_comp_1',
+            'amount_received': 300000,
+            'currency': 'mxn',
+            'created': int(timezone.now().timestamp()),
+            'metadata': {'reserva_id': str(self.reserva_1.id)},
+        }
+
+        with scope.con_empresa(self.empresa_1):
+            res = aplicar_pago_exitoso(intent_data_1, self.empresa_1)
+            self.assertEqual(res, SIN_CUPO_REEMBOLSADO)
+
+        # 1. Ambas reservas quedan canceladas y reembolsadas
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.refresh_from_db()
+            self.assertEqual(self.reserva_1.estado, Reserva.Estado.CANCELADA)
+            self.assertTrue(self.reserva_1.reembolsada)
+            self.assertIn('sin cupo', self.reserva_1.motivo_cancelacion.lower())
+
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
+            self.assertTrue(self.reserva_2.reembolsada)
+
+        # 2. La orden queda cancelada
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+        # 3. Refund de ambas en Stripe
+        cliente_1.refunds.create.assert_called_once()
+        cliente_2.refunds.create.assert_called_once()
+
+        # 4. Idempotencia: llamar revertir_orden de nuevo no re-reembolsa
+        from apps.payments.ordenes import revertir_orden
+        revertir_orden(self.orden, 'segunda llamada')
+        cliente_1.refunds.create.assert_called_once()
+        cliente_2.refunds.create.assert_called_once()
+

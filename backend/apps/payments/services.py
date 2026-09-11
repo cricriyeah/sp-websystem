@@ -116,8 +116,13 @@ def aplicar_pago_exitoso(intent, empresa):
         # otra cosa (cupo, deslinde, etc.) cae en el motivo generico de abajo.
         if 'codigo_promocional' in getattr(exc, 'error_dict', {}):
             return _cancelar_codigo_promocional_invalido(reserva, intent, empresa)
+        if reserva.orden_id:
+            return _cancelar_orden_sin_cupo(reserva, intent, empresa)
         return _cancelar_sin_cupo(reserva, intent, empresa)
     except SinCupoError as exc:
+        if reserva.orden_id:
+            nombre_servicio = reserva.servicio.nombre if reserva.servicio else 'servicio'
+            return _cancelar_orden_sin_cupo(reserva, intent, empresa, motivo=f'sin cupo en {nombre_servicio}')
         return _cancelar_sin_cupo(reserva, intent, empresa, motivo=str(exc))
 
     if reserva.orden_id:
@@ -214,6 +219,31 @@ def _verificar_monto(reserva, intent):
             'Descuadre en la reserva %s: se esperaban %s centavos y llegaron %s',
             reserva.pk, esperado, intent['amount_received'],
         )
+
+
+def _cancelar_orden_sin_cupo(reserva, intent, empresa, motivo=None):
+    """Compensación de orden: el componente se quedó sin cupo al confirmar.
+    Se reembolsa el cargo de esta reserva y se llama revertir_orden para
+    hacer void/refund del resto de componentes y cancelar la orden."""
+    from apps.payments.ordenes import revertir_orden
+
+    nombre_servicio = reserva.servicio.nombre if reserva.servicio else 'servicio'
+    motivo_real = motivo or f'sin cupo en {nombre_servicio}'
+
+    if not reembolsar(intent, motivo_real, empresa):
+        return FALLO_REEMBOLSO
+
+    reserva.estado = Reserva.Estado.CANCELADA
+    reserva.motivo_cancelacion = motivo_real
+    reserva.cancelada_en = timezone.now()
+    reserva.reembolsada = True
+    reserva.monto_reembolsado = de_centavos(intent['amount_received'])
+    reserva.reembolsada_en = timezone.now()
+    reserva.save()
+
+    orden = Orden.objects.select_for_update().get(pk=reserva.orden_id)
+    revertir_orden(orden, motivo_real)
+    return SIN_CUPO_REEMBOLSADO
 
 
 def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None):
