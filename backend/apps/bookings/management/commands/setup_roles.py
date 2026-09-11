@@ -11,6 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
 PERMISOS_VENDEDORA = [
+    ('bookings', 'orden', ['view']),
     ('bookings', 'reserva', ['add', 'change', 'view']),
     ('bookings', 'agenda', ['change', 'view']),
     ('bookings', 'cupodiario', ['add', 'change', 'view']),

@@ -2476,3 +2476,130 @@ class ConfirmacionComponenteOrdenTest(OperadorTestCase):
         self.assertEqual(componente.empresa, self.empresa_pesca)
         self.assertEqual(componente.estado_cupo, componente.EstadoCupo.OK)
 
+
+
+class OrdenAdminTests(TestCase):
+    def setUp(self):
+        from apps.bookings.models import Orden
+        from apps.fleet.models import Paquete
+        from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
+
+        call_command('setup_roles', stdout=StringIO())
+        with scope.como_operador_plataforma():
+            sede = Sede.objects.create(nombre='Admin Orden', slug='admin-orden')
+            self.a = Empresa.objects.create(sede=sede, nombre='A', slug='admin-a')
+            self.b = Empresa.objects.create(sede=sede, nombre='B', slug='admin-b')
+            otra_sede = Sede.objects.create(nombre='Otra sede', slug='admin-otra')
+            otra = Empresa.objects.create(sede=otra_sede, nombre='C', slug='admin-c')
+            self.ordenes = []
+            for empresa in (self.a, otra):
+                paquete = Paquete.objects.create(
+                    sede=empresa.sede, empresa_lider=empresa, nombre='Paquete admin',
+                    slug=f'paquete-{empresa.slug}', precio_ancla=Decimal('350.00'),
+                )
+                self.ordenes.append(Orden.objects.create(
+                    sede=empresa.sede, empresa_lider=empresa, paquete=paquete,
+                    nombre_cliente=f'Cliente {empresa.slug}', telefono_cliente='+5216121234567',
+                    correo_cliente='cliente@example.com',
+                ))
+            self.orden = self.ordenes[0]
+            self.reservas = [Reserva.objects.create(**datos_reserva(
+                empresa, orden=self.orden, monto_pagado=monto,
+            )) for empresa, monto in ((self.a, Decimal('100.00')), (self.b, Decimal('250.00')))]
+        self.usuarios = {}
+        for grupo in ('Vendedora', 'Jefe', 'OperadorPlataforma'):
+            user = User.objects.create_user(username=f'orden-{grupo}', is_staff=True)
+            user.groups.add(Group.objects.get(name=grupo))
+            if grupo != 'OperadorPlataforma':
+                MembresiaEmpresa.objects.create(user=user, empresa=self.b, rol=(
+                    MembresiaEmpresa.Rol.JEFE if grupo == 'Jefe' else MembresiaEmpresa.Rol.VENDEDORA
+                ))
+            self.usuarios[grupo] = user
+
+    def test_admin_y_sidebar_abren_para_los_tres_roles(self):
+        for rol, user in self.usuarios.items():
+            with self.subTest(rol=rol):
+                self.client.force_login(user)
+                for url in ('/admin/', '/admin/bookings/orden/'):
+                    response = self.client.get(url)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertNotContains(response, 'Traceback')
+                    self.assertContains(response, '/admin/bookings/orden/')
+                self.assertContains(response, self.orden.nombre_cliente)
+                if rol != 'OperadorPlataforma':
+                    self.assertNotContains(response, self.ordenes[1].nombre_cliente)
+                else:
+                    self.assertContains(response, self.ordenes[1].nombre_cliente)
+                self.assertEqual('cancelar_orden' in response.context['cl'].model_admin.get_actions(
+                    response.wsgi_request), rol != 'Vendedora')
+
+    def test_vendedora_detalle_total_y_componentes_cruzan_empresas(self):
+        from django.db import connection
+        self.client.force_login(self.usuarios['Vendedora'])
+        response = self.client.get(f'/admin/bookings/orden/{self.orden.pk}/change/')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['has_change_permission'])
+        self.assertFalse(response.context['has_add_permission'])
+        self.assertFalse(response.context['has_delete_permission'])
+        for reserva in self.reservas:
+            self.assertContains(response, reverse('admin:bookings_reserva_change', args=[reserva.pk]))
+        self.assertContains(response, '100.00')
+        self.assertContains(response, '250.00')
+        with scope.con_empresa(self.b):
+            if connection.vendor == 'postgresql':
+                self.assertEqual(self.orden.reservas.count(), 1)
+            self.assertEqual(response.context['adminform'].model_admin.total(self.orden), Decimal('350.00'))
+        self.assertEqual(self.client.post(
+            f'/admin/bookings/orden/{self.orden.pk}/change/', {'estado': 'cancelada'},
+        ).status_code, 403)
+        self.assertEqual(self.client.get('/admin/bookings/orden/add/').status_code, 403)
+        self.assertEqual(self.client.get(
+            f'/admin/bookings/orden/{self.orden.pk}/delete/',
+        ).status_code, 403)
+        self.assertEqual(self.client.get(
+            f'/admin/bookings/orden/{self.ordenes[1].pk}/change/',
+        ).status_code, 302)
+
+    def test_vendedora_no_puede_forzar_cancelacion(self):
+        from django.contrib import admin
+        from django.core.exceptions import PermissionDenied
+        from django.test import RequestFactory
+        from apps.bookings.models import Orden
+        self.client.force_login(self.usuarios['Vendedora'])
+        with mock.patch('apps.payments.ordenes.revertir_orden') as revertir:
+            self.client.post('/admin/bookings/orden/', {
+                'action': 'cancelar_orden', '_selected_action': [self.orden.pk],
+            })
+            request = RequestFactory().post('/admin/bookings/orden/')
+            request.user = self.usuarios['Vendedora']
+            with self.assertRaises(PermissionDenied):
+                admin.site._registry[Orden].cancelar_orden(request, Orden.objects.none())
+            revertir.assert_not_called()
+
+    def test_jefe_y_operador_cancelan_con_servicio_real(self):
+        from apps.bookings.models import Orden
+        from apps.payments import ordenes
+        for rol in ('Jefe', 'OperadorPlataforma'):
+            with self.subTest(rol=rol):
+                with scope.como_operador_plataforma():
+                    Orden.objects.filter(pk=self.orden.pk).update(estado=Orden.Estado.ARMANDO)
+                self.client.force_login(self.usuarios[rol])
+                with mock.patch('apps.payments.ordenes.configurar_stripe'), mock.patch(
+                    'apps.payments.ordenes.revertir_orden', wraps=ordenes.revertir_orden,
+                ) as revertir:
+                    response = self.client.post('/admin/bookings/orden/', {
+                        'action': 'cancelar_orden', '_selected_action': [self.orden.pk],
+                    })
+                self.assertEqual(response.status_code, 302)
+                revertir.assert_called_once_with(self.orden, 'cancelada desde el admin')
+                with scope.con_empresa(self.b):
+                    self.orden.refresh_from_db()
+                    self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+    def test_reserva_enlaza_a_orden_y_admite_reserva_suelta(self):
+        from django.contrib import admin
+        model_admin = admin.site._registry[Reserva]
+        self.assertIn('orden_link', model_admin.list_display)
+        self.assertIn(reverse('admin:bookings_orden_change', args=[self.orden.pk]),
+                      model_admin.orden_link(self.reservas[1]))
+        self.assertEqual(model_admin.orden_link(Reserva()), '—')

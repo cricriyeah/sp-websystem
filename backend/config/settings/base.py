@@ -177,6 +177,12 @@ UNFOLD = {
                         'permission': lambda request: request.user.has_perm('bookings.view_reserva'),
                     },
                     {
+                        'title': 'Ordenes',
+                        'icon': 'receipt_long',
+                        'link': reverse_lazy('admin:bookings_orden_changelist'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_orden'),
+                    },
+                    {
                         'title': 'Agenda',
                         'icon': 'assignment_turned_in',
                         'link': reverse_lazy('admin:bookings_agenda_changelist'),

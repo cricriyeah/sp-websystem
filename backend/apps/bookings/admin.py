@@ -1,5 +1,6 @@
 import re
 from datetime import timedelta
+from decimal import Decimal
 from urllib.parse import quote
 
 from django.contrib import admin
@@ -13,12 +14,12 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from apps.fleet.models import PuntoEncuentro, Recurso, Servicio
+from apps.fleet.models import Paquete, PuntoEncuentro, Recurso, Servicio
 from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from apps.tenancy.models import MembresiaEmpresa
@@ -32,6 +33,7 @@ from .models import (
     CheckoutAbandonado,
     CupoDiario,
     DetalleTransporte,
+    Orden,
     Reserva,
     ReservaExtra,
     ReservaOcupacion,
@@ -39,6 +41,7 @@ from .models import (
     Vendedora,
 )
 from .panorama import armar_panorama
+from .orden_lectura import reservas_de_orden
 
 # Que tan atras llega "recien llegadas". 48 horas cubre un fin de semana y lo que
 # entro mientras nadie miraba, sin que la lista deje de ser corta.
@@ -275,12 +278,92 @@ class ReservaPaqueteComponenteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     readonly_fields = ['creado_en']
 
 
+@admin.register(Orden)
+class OrdenAdmin(ModelAdmin):
+    # Paquete tiene RLS por empresa lider: un JOIN lo ocultaria junto con
+    # la orden. Solo sede se puede unir sin perder ordenes compartidas.
+    list_select_related = ('sede',)
+    list_display = ['nombre_cliente', 'paquete_mostrado', 'sede', 'estado', 'creado_en', 'total']
+    exclude = ['paquete']
+    readonly_fields = [field.name for field in Orden._meta.fields if field.name != 'paquete'] + [
+        'paquete_mostrado', 'total', 'reservas_componentes',
+    ]
+    actions = ['cancelar_orden']
+
+    def get_queryset(self, request):
+        # Orden se comparte por sede, no por empresa_lider. Replica RLS tambien
+        # en SQLite; EmpresaScopedAdminMixin requiere un FK empresa inexistente.
+        queryset = super().get_queryset(request)
+        if scope.es_operador_plataforma(request.user):
+            return queryset
+        empresa = scope.empresa_actual(request)
+        return queryset.filter(sede_id=empresa.sede_id) if empresa else queryset.none()
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not (scope.es_operador_plataforma(request.user) or request.user.groups.filter(name='Jefe').exists()):
+            actions.pop('cancelar_orden', None)
+        return actions
+
+    @admin.action(description='Cancelar orden (revertir pagos pendientes)')
+    def cancelar_orden(self, request, queryset):
+        if not (scope.es_operador_plataforma(request.user) or request.user.groups.filter(name='Jefe').exists()):
+            raise PermissionDenied
+        from apps.payments import ordenes
+
+        for orden in queryset:
+            ordenes.revertir_orden(orden, 'cancelada desde el admin')
+        self.message_user(request, 'Cancelacion de ordenes procesada.')
+
+    @admin.display(description='Paquete')
+    def paquete_mostrado(self, obj):
+        try:
+            return str(obj.paquete)
+        except Paquete.DoesNotExist:
+            # El identificador pertenece a la orden visible; el catalogo de
+            # la empresa hermana sigue protegido por su propia politica RLS.
+            return f'Paquete #{obj.paquete_id}'
+
+    @admin.display(description='Total')
+    def total(self, obj):
+        return sum((fila['monto_pagado'] or Decimal('0.00')
+                    for fila in reservas_de_orden(obj.pk)), Decimal('0.00'))
+
+    @admin.display(description='Reservas de la orden')
+    def reservas_componentes(self, obj):
+        # El related manager solo ve la reserva propia bajo RLS. La lectura
+        # SECURITY DEFINER incluye los componentes de las empresas hermanas.
+        filas = reservas_de_orden(obj.pk)
+        if not filas:
+            return '—'
+        return format_html(
+            '<table><thead><tr><th>Reserva</th><th>Estado</th><th>Cargo ({})</th>'
+            '</tr></thead><tbody>{}</tbody></table>',
+            obj.moneda,
+            format_html_join('', '<tr><td><a href="{}">#{}</a></td><td>{}</td><td>{}</td></tr>', (
+                (reverse('admin:bookings_reserva_change', args=[fila['reserva_id']]),
+                 fila['reserva_id'], dict(Reserva.Estado.choices).get(fila['estado'], fila['estado']),
+                 format(fila['monto_pagado'] or Decimal('0.00'), '.2f'))
+                for fila in filas
+            )),
+        )
+
+
 @admin.register(Reserva)
 class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
         'fecha', 'hora', 'nombre_cliente', 'numero_personas',
         'estado', 'canal_origen', 'vendedora', 'cobro', 'extras',
-        'embarcacion', 'capitan', 'reembolsada',
+        'embarcacion', 'capitan', 'reembolsada', 'orden_link',
     ]
     list_filter = [
         LlegadaFilter,
@@ -328,6 +411,13 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         js = ['bookings/reservas-nuevas.js']
         # Ancho de las columnas de asignacion, ver el propio archivo.
         css = {'all': ['bookings/admin-columnas.css']}
+
+    @admin.display(description='Orden')
+    def orden_link(self, obj):
+        if obj.orden_id is None:
+            return '—'
+        return format_html('<a href="{}">Orden #{}</a>',
+                           reverse('admin:bookings_orden_change', args=[obj.orden_id]), obj.orden_id)
 
     @admin.display(description='Extras')
     def extras(self, obj):
