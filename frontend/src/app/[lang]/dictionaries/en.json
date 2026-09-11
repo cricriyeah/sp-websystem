@@ -31,6 +31,10 @@
     "traslados": {
       "title": "Private Transportation & Transfers | Sal y Sol",
       "description": "Book your private transfer in La Paz, BCS. Airport, hotels, and marina connections."
+    },
+    "reservarPaquete": {
+      "title": "Book your experience package",
+      "description": "Book your multi-company package in a single step."
     }
   },
   "notFound": {
@@ -720,6 +724,32 @@
       "total": "Total",
       "advancePayment": "Required deposit (100%)",
       "included": "Private chauffeur service in an air-conditioned vehicle."
+    }
+  },
+  "paqueteCheckout": {
+    "back": "Back to catalog",
+    "headline": "Book your package",
+    "subtitle": "One form. Payment happens in {total} steps, one for each company involved in your package.",
+    "contactTitle": "Your details",
+    "componentPescaTitle": "Fishing date and time",
+    "componentTrasladoTitle": "Transfer details",
+    "componentGenericTitle": "Date and time",
+    "submit": "Continue to payment",
+    "submitting": "Saving your booking…",
+    "stepOf": "Step {n} of {total} — {label}: {amount}",
+    "resumingNotice": "You already have a booking in progress. Resuming where you left off…",
+    "errorGeneric": "A temporary issue occurred while saving your booking. Please try again.",
+    "errorPaymentProvider": "Could not connect to the payment provider. Please try again in a moment.",
+    "success": {
+      "title": "Your package is confirmed!",
+      "body": "We've processed payment for the {total} components of your package. A member of our team will contact you within 24 hours with your trip details.",
+      "componentsHeadline": "Your package summary"
+    },
+    "fail": {
+      "title": "Payment could not be completed",
+      "body": "We couldn't complete the payment for your package. You were not charged — you can try again.",
+      "motivoPrefix": "Detail: ",
+      "retry": "Try again"
     }
   }
 }

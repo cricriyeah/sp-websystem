@@ -31,6 +31,10 @@
     "traslados": {
       "title": "Traslados y Transporte Privado | Sal y Sol",
       "description": "Reserva tu traslado privado en La Paz, BCS. Conexión aeropuerto, hoteles y marina."
+    },
+    "reservarPaquete": {
+      "title": "Reserva tu paquete de experiencias",
+      "description": "Reserva en un solo paso tu paquete con actividades de distintas empresas de la sede."
     }
   },
   "notFound": {
@@ -720,6 +724,32 @@
       "total": "Total",
       "advancePayment": "Anticipo requerido (100%)",
       "included": "Servicio privado con chofer y vehículo con aire acondicionado."
+    }
+  },
+  "paqueteCheckout": {
+    "back": "Volver al catálogo",
+    "headline": "Reserva tu paquete",
+    "subtitle": "Un solo formulario. El cobro se hace en {total} pasos, uno por cada empresa que participa en tu paquete.",
+    "contactTitle": "Tus datos",
+    "componentPescaTitle": "Fecha y hora de pesca",
+    "componentTrasladoTitle": "Datos del traslado",
+    "componentGenericTitle": "Fecha y hora",
+    "submit": "Continuar al pago",
+    "submitting": "Guardando tu reserva…",
+    "stepOf": "Paso {n} de {total} — {label}: {amount}",
+    "resumingNotice": "Ya tienes una reserva en proceso. Retomando donde te quedaste…",
+    "errorGeneric": "Ocurrió un detalle temporal al guardar tu reserva. Por favor intenta de nuevo.",
+    "errorPaymentProvider": "No se pudo conectar con el proveedor de pago. Intenta de nuevo en un momento.",
+    "success": {
+      "title": "¡Tu paquete está confirmado!",
+      "body": "Ya procesamos el pago de los {total} componentes de tu paquete. Un asesor de nuestro equipo te contactará en las próximas 24 horas con todos los detalles de tu viaje.",
+      "componentsHeadline": "Resumen de tu paquete"
+    },
+    "fail": {
+      "title": "No se pudo completar el pago",
+      "body": "No se pudo completar el pago de tu paquete. No se te cobró nada — puedes intentar de nuevo.",
+      "motivoPrefix": "Detalle: ",
+      "retry": "Intentar de nuevo"
     }
   }
 }
