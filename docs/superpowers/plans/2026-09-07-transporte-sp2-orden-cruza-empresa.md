@@ -606,7 +606,7 @@ Verificación (2026-09-10):
   (no el primero), `Orden.capturada` + `notificada_en`; un tercer webhook duplicado no
   re-notifica.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(payments): el webhook cierra la orden al pagarse su última reserva`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(payments): el webhook cierra la orden al pagarse su última reserva`.
 
 ### Tarea 5.2 — Camino de compensación: cupo lleno mientras el cliente pagaba
 
@@ -614,7 +614,7 @@ Verificación (2026-09-10):
 - Modify: `backend/apps/payments/services.py` — cuando `reservar_cupo_al_confirmar` lanza `SinCupoError` para una reserva **con `orden`**: en vez del reembolso simple de hoy, reembolsar **su** cargo y llamar `ordenes.revertir_orden(orden, 'sin cupo en <servicio>')` (que hace void/refund del resto). La reserva queda `cancelada` + `reembolsada`; la orden `cancelada`.
 - Test: `backend/apps/payments/tests.py::CompensacionOrdenTest` — 2 auths OK, capture de ambas; al confirmar cupo de pesca falla → refund de las 2, orden `cancelada`, las 2 reservas `cancelada`+`reembolsada`.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(payments): compensación de orden cuando un componente se queda sin cupo`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(payments): compensación de orden cuando un componente se queda sin cupo`.
 
 ### Tarea 5.3 — Captura parcial (una captura falla tras la otra)
 
@@ -622,7 +622,7 @@ Verificación (2026-09-10):
 - Modify: `backend/apps/payments/ordenes.py::confirmar_captura` — si al capturar la empresa k falla (`CardError` u otro) tras haber capturado 1..k-1: reintentar la captura de k hasta `CAPTURA_REINTENTOS` (p.ej. 3, con espera corta). Si agota → `revertir_orden` (que ahora hace refund de las ya capturadas) + alerta a la vendedora (log de error claro + la orden queda `cancelada` visible en `revisar_ordenes`).
 - Test: `backend/apps/payments/tests.py` — mock: captura 1 OK, captura 2 falla 3 veces → refund de 1, orden `cancelada`.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(payments): reintento acotado de captura y refund si agota`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(payments): reintento acotado de captura y refund si agota`.
 
 ### Tarea 5.4 — `notificar_orden_pagada` (correo combinado)
 
@@ -642,13 +642,13 @@ Verificación (2026-09-10):
 - Test: `backend/apps/notifications/tests.py` (postgres) — un correo combinado con los
   2 componentes; 2 llamadas a WhatsApp (una por empresa); si el correo falla, no propaga.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(notifications): correo combinado de orden + WhatsApp por empresa`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(notifications): correo combinado de orden + WhatsApp por empresa`.
 
 ### Gate Sección 5
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Repaso: cada rama de la tabla de errores del spec §6 tiene test.
-- [ ] Commit `docs(plan): SP2 Sección 5 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres. (Postgres: 593 tests OK acotado payments+bookings 226s; 850 tests OK completo apps+config 422s, rol `ci_rls` sin `BYPASSRLS`.)
+- [x] Repaso: cada rama de la tabla de errores del spec §6 tiene test. Filas SP2 1,3,4,5,6,10,11 cubiertas (Secciones 4-5). Fila 8 (chargeback) no requiere test nuevo — el mecanismo es por-reserva, no toca `Orden`. Filas 2,7,9 (timeout de autorización, `conciliar_pagos` orden-aware) son explícitamente Sección 6, pendientes.
+- [x] Commit `docs(plan): SP2 Sección 5 cerrada`. **PARA y reporta.**
 
 ---
 
