@@ -3042,6 +3042,7 @@ class OrdenesModuloTest(TestCase):
     def test_confirmar_captura_parcial_reintenta_y_revierte_con_refund(self, mock_configurar_stripe, mock_sleep):
         """Tarea 5.3: mock: captura 1 OK, captura 2 falla 3 veces -> refund de 1, cancel de 2, orden cancelada."""
         from apps.payments.ordenes import confirmar_captura
+        from apps.bookings.orden_lectura import reservas_de_orden
 
         cliente_1 = mock.Mock()
         cliente_2 = mock.Mock()
@@ -3068,8 +3069,15 @@ class OrdenesModuloTest(TestCase):
             message='Tarjeta rechazada', param='card', code='card_declined'
         )
 
-        with self.assertLogs('apps.payments.ordenes', level='ERROR') as cm:
-            confirmar_captura(self.orden)
+        # Este escenario necesita una captura exitosa ANTES de la fallida.
+        # SECURITY DEFINER no promete orden SQL; conserva la lectura real y
+        # fija solo el orden de las filas para construir esa captura parcial.
+        def filas_captura_parcial(orden_id):
+            return sorted(reservas_de_orden(orden_id), key=lambda fila: fila['reserva_id'])
+
+        with mock.patch('apps.payments.ordenes.reservas_de_orden', side_effect=filas_captura_parcial):
+            with self.assertLogs('apps.payments.ordenes', level='ERROR') as cm:
+                confirmar_captura(self.orden)
 
         cliente_1.payment_intents.capture.assert_called_once_with('pi_1')
         self.assertEqual(cliente_2.payment_intents.capture.call_count, 3)
