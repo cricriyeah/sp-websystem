@@ -9,7 +9,7 @@ from decimal import Decimal
 from unittest import mock
 
 import requests
-from django.test import override_settings
+from django.test import override_settings, TransactionTestCase
 
 from apps.bookings.models import Reserva, ReservaExtra
 from apps.fleet.models import Capitan, Embarcacion, ExtrasItem, PuntoEncuentro
@@ -310,3 +310,184 @@ class ExtrasEnElCorreoTests(EmpresaTestCase):
         html = _cuerpo_enviado(post)['html']
         self.assertIn('Pediste bebidas', html)
         self.assertNotIn('Pediste bebidas y extras', html)
+
+
+@override_settings(
+    RESEND_API_KEY='test-resend-key',
+    RESEND_FROM='reservas@ejemplo.com',
+    RESEND_BCC=['operacion@ejemplo.com'],
+    WHATSAPP_TOKEN='test-wa-token',
+    WHATSAPP_PHONE_NUMBER_ID='test-wa-phone-id',
+    WHATSAPP_TEMPLATE='confirmacion_v1',
+    WHATSAPP_TEMPLATE_LANG='es_MX',
+)
+class NotificarOrdenPagadaTest(TransactionTestCase):
+    def setUp(self):
+        from apps.bookings.models import DetalleTransporte, Orden, Reserva
+        from apps.fleet.enums import TipoTraslado
+        from apps.fleet.models import Paquete, PaqueteServicio, Servicio
+        from apps.tenancy import scope
+        from apps.tenancy.models import Empresa, Sede
+
+        self.sede = Sede.objects.create(nombre='Sede Notif', slug='sede-notif', zona_horaria='America/Mazatlan')
+        self.empresa_1 = Empresa.objects.create(
+            nombre='Empresa Pesca Notif',
+            slug='emp-notif-pesca',
+            sede=self.sede,
+            stripe_secret_key='sk_test_n1',
+            stripe_publishable_key='pk_test_n1',
+        )
+        self.empresa_2 = Empresa.objects.create(
+            nombre='Empresa Transporte Notif',
+            slug='emp-notif-transporte',
+            sede=self.sede,
+            stripe_secret_key='sk_test_n2',
+            stripe_publishable_key='pk_test_n2',
+        )
+        with scope.como_operador_plataforma():
+            self.servicio_1 = Servicio.objects.create(
+                empresa=self.empresa_1,
+                nombre='Pesca en Panga',
+                slug='pesca-notif',
+                tipo_servicio='pesca',
+                estrategia_cupo='por_recurso_dia',
+            )
+            self.servicio_2 = Servicio.objects.create(
+                empresa=self.empresa_2,
+                nombre='Traslado Aeropuerto',
+                slug='transporte-notif',
+                tipo_servicio='transporte',
+                estrategia_cupo='bajo_demanda',
+            )
+            self.paquete = Paquete.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                nombre='Paquete Pesca y Traslado',
+                slug='paquete-notif',
+                precio_ancla=Decimal('5000.00'),
+                activo=True,
+            )
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_1, orden=1)
+            PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.servicio_2, orden=2)
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden = Orden.objects.create(
+                sede=self.sede,
+                empresa_lider=self.empresa_1,
+                paquete=self.paquete,
+                nombre_cliente='Carlos Mendoza',
+                telefono_cliente='+5216129876543',
+                correo_cliente='carlos@example.com',
+                moneda='MXN',
+                estado=Orden.Estado.CAPTURADA,
+            )
+            self.reserva_1 = Reserva.objects.create(
+                empresa=self.empresa_1,
+                servicio=self.servicio_1,
+                paquete=self.paquete,
+                orden=self.orden,
+                fecha=date(2026, 12, 1),
+                hora=time(6, 30),
+                numero_personas=3,
+                nombre_cliente='Carlos Mendoza',
+                telefono_cliente='+5216129876543',
+                correo_cliente='carlos@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PAGADA,
+                monto_pagado=Decimal('3500.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2 = Reserva.objects.create(
+                empresa=self.empresa_2,
+                servicio=self.servicio_2,
+                paquete=None,
+                orden=self.orden,
+                fecha=date(2026, 11, 30),
+                hora=time(15, 0),
+                numero_personas=3,
+                nombre_cliente='Carlos Mendoza',
+                telefono_cliente='+5216129876543',
+                correo_cliente='carlos@example.com',
+                canal_origen='web',
+                estado=Reserva.Estado.PAGADA,
+                monto_pagado=Decimal('1500.00'),
+                moneda='MXN',
+                deslinde_aceptado=True,
+            )
+            DetalleTransporte.objects.create(
+                reserva=self.reserva_2,
+                tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+                direccion_personalizada='Hotel Gran Baja',
+                fecha_regreso=date(2026, 12, 3),
+            )
+
+    @mock.patch('apps.notifications.services.enviar_whatsapp_confirmacion')
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_notificar_orden_pagada_correo_combinado_y_whatsapp_por_empresa(self, mock_post, mock_wa):
+        """Tarea 5.4: Un correo combinado con 2 componentes + 2 llamadas a WhatsApp (una por empresa)."""
+        from apps.notifications.services import notificar_orden_pagada
+
+        mock_post.return_value.raise_for_status.return_value = None
+
+        notificar_orden_pagada(self.orden)
+
+        # 1. Un solo correo enviado via Resend al correo del cliente
+        mock_post.assert_called_once()
+        cuerpo = mock_post.call_args.kwargs['json']
+        self.assertEqual(cuerpo['to'], ['carlos@example.com'])
+        self.assertEqual(cuerpo['bcc'], ['operacion@ejemplo.com'])
+        self.assertIn('Paquete Pesca y Traslado', cuerpo['subject'])
+
+        html = cuerpo['html']
+        self.assertIn('Carlos Mendoza', html)
+        self.assertIn('Paquete Pesca y Traslado', html)
+        # Componente pesca
+        self.assertIn('Pesca en Panga', html)
+        self.assertIn('2026-12-01', html)
+        self.assertIn('06:30', html)
+        self.assertIn(PUNTO_DE_ENCUENTRO, html)
+        # Componente traslado
+        self.assertIn('Hotel Gran Baja', html)
+        self.assertIn('2026-11-30', html)
+        self.assertIn('15:00', html)
+        self.assertIn('2026-12-03', html)
+
+        # 2. Dos llamadas a WhatsApp: una por cada reserva/empresa
+        self.assertEqual(mock_wa.call_count, 2)
+        reservas_llamadas = {call.args[0].id for call in mock_wa.call_args_list}
+        self.assertEqual(reservas_llamadas, {self.reserva_1.id, self.reserva_2.id})
+
+    @mock.patch('apps.notifications.services.enviar_whatsapp_confirmacion')
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_notificar_orden_pagada_fallo_correo_no_propaga_y_manda_whatsapp(self, mock_post, mock_wa):
+        """Si el correo falla, no propaga el error y aun asi se intenta WhatsApp."""
+        from apps.notifications.services import notificar_orden_pagada
+
+        mock_post.side_effect = requests.RequestException('Resend error')
+
+        # No debe lanzar excepción
+        notificar_orden_pagada(self.orden)
+
+        # Se intentó el correo
+        mock_post.assert_called_once()
+        # Se llamó a WhatsApp para ambas empresas a pesar del fallo de correo
+        self.assertEqual(mock_wa.call_count, 2)
+
+    @mock.patch('apps.notifications.services.enviar_whatsapp_confirmacion')
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_notificar_orden_pagada_llamada_bajo_rls_de_una_empresa(self, mock_post, mock_wa):
+        """Desde aplicar_pago_exitoso se llama dentro de scope.con_empresa(empresa_1).
+        No debe colisionar con el tenancy ni dejar de ver la reserva de la empresa 2."""
+        from apps.notifications.services import notificar_orden_pagada
+        from apps.tenancy import scope
+
+        mock_post.return_value.raise_for_status.return_value = None
+
+        with scope.con_empresa(self.empresa_1):
+            notificar_orden_pagada(self.orden)
+
+        mock_post.assert_called_once()
+        self.assertEqual(mock_wa.call_count, 2)
+

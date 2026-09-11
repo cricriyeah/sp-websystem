@@ -280,3 +280,161 @@ def notificar_reserva_pagada(reserva):
         'email': enviar_correo_confirmacion(reserva),
         'whatsapp': enviar_whatsapp_confirmacion(reserva),
     }
+
+
+def _cuerpo_orden_html(orden, reservas):
+    componentes_html = []
+    for r in reservas:
+        if _es_traslado(r):
+            detalle = getattr(r, 'detalle_transporte', None)
+            tipo = detalle.get_tipo_traslado_display() if detalle else 'Traslado'
+            punto = (
+                detalle.punto_encuentro.nombre if (detalle and detalle.punto_encuentro_id)
+                else (detalle.direccion_personalizada if detalle else PUNTO_DE_ENCUENTRO)
+            )
+            regreso = (
+                f'<li><strong>Fecha de regreso al aeropuerto:</strong> {detalle.fecha_regreso}</li>'
+                if (detalle and detalle.fecha_regreso) else ''
+            )
+            personas = (
+                detalle.numero_personas if (detalle and detalle.numero_personas is not None)
+                else r.numero_personas
+            )
+            comp = (
+                f'<li><strong>Traslado ({_html(tipo)}):</strong>'
+                f'<ul>'
+                f'<li><strong>Fecha:</strong> {r.fecha}</li>'
+                f'<li><strong>Hora:</strong> {r.hora:%H:%M}</li>'
+                f'{regreso}'
+                f'<li><strong>Personas:</strong> {personas}</li>'
+                f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>'
+                f'</ul></li>'
+            )
+        else:
+            nombre_servicio = r.servicio.nombre if r.servicio else 'Pesca'
+            comp = (
+                f'<li><strong>{_html(nombre_servicio)}:</strong>'
+                f'<ul>'
+                f'<li><strong>Fecha:</strong> {r.fecha}</li>'
+                f'<li><strong>Hora:</strong> {r.hora:%H:%M}</li>'
+                f'<li><strong>Personas:</strong> {r.numero_personas}</li>'
+                f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'
+                f'</ul></li>'
+            )
+        componentes_html.append(comp)
+
+    paquete_nombre = orden.paquete.nombre if orden.paquete_id else 'Paquete'
+    return (
+        f'<p>Hola {_html(orden.nombre_cliente)}, tu paquete {_html(paquete_nombre)} quedo confirmado.</p>'
+        f'<p>Detalle de tus servicios:</p>'
+        f'<ul>{"".join(componentes_html)}</ul>'
+        f'<p>Te esperamos para vivir una gran experiencia.</p>'
+    )
+
+
+def enviar_correo_orden(orden, reservas):
+    """Correo combinado de orden vía Resend. Devuelve True si se mandó."""
+    if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
+        logger.info('Resend sin configurar, no se mando correo de la orden %s', orden.pk)
+        return False
+
+    paquete_nombre = orden.paquete.nombre if orden.paquete_id else 'Paquete'
+    cuerpo = {
+        'from': settings.RESEND_FROM,
+        'to': [orden.correo_cliente],
+        'subject': f'Reserva confirmada — {paquete_nombre}',
+        'html': _cuerpo_orden_html(orden, reservas),
+    }
+    if settings.RESEND_BCC:
+        cuerpo['bcc'] = settings.RESEND_BCC
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json=cuerpo,
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        logger.exception('Fallo el correo de confirmacion de la orden %s', orden.pk)
+        return False
+    return True
+
+
+def notificar_orden_pagada(orden):
+    """Punto de entrada único desde el webhook al cerrarse una Orden cruza-empresa. Nunca lanza."""
+    try:
+        from django.db import connection
+        from apps.bookings.models import Reserva
+        from apps.bookings.orden_lectura import reservas_de_orden
+        from apps.tenancy import scope
+        from apps.tenancy.models import Empresa
+
+        filas = reservas_de_orden(orden.pk)
+        if not filas:
+            return {'email': False, 'whatsapp': []}
+
+        prev_alcance = getattr(connection, 'alcance_actual', None)
+        connection.alcance_actual = None
+        reservas = []
+        try:
+            for fila in filas:
+                empresa = Empresa.objects.get(pk=fila['empresa_id'])
+                with scope.con_empresa(empresa):
+                    reserva = (
+                        Reserva.objects.select_related(
+                            'servicio',
+                            'detalle_transporte',
+                            'detalle_transporte__punto_encuentro',
+                            'empresa',
+                        )
+                        .get(pk=fila['reserva_id'])
+                    )
+                    reservas.append(reserva)
+        finally:
+            connection.alcance_actual = prev_alcance
+            if connection.vendor == 'postgresql' and prev_alcance:
+                with connection.cursor() as cursor:
+                    if prev_alcance[0] == 'empresa':
+                        cursor.execute(f'SET LOCAL app.current_empresa_id = {int(prev_alcance[1])}')
+                    elif prev_alcance[0] == 'operador':
+                        cursor.execute("SET LOCAL app.operador_plataforma = 'on'")
+
+        # 1. Correo combinado
+        email_enviado = False
+        try:
+            email_enviado = enviar_correo_orden(orden, reservas)
+        except Exception:
+            logger.exception('Fallo inesperado al enviar correo de la orden %s', orden.pk)
+
+        # 2. WhatsApp por empresa (una llamada por reserva)
+        wa_resultados = []
+        prev_alcance = getattr(connection, 'alcance_actual', None)
+        connection.alcance_actual = None
+        try:
+            for r in reservas:
+                try:
+                    with scope.con_empresa(r.empresa):
+                        wa_enviado = enviar_whatsapp_confirmacion(r)
+                        wa_resultados.append(wa_enviado)
+                except Exception:
+                    logger.exception(
+                        'Fallo inesperado al enviar whatsapp de reserva %s de orden %s',
+                        r.pk,
+                        orden.pk,
+                    )
+                    wa_resultados.append(False)
+        finally:
+            connection.alcance_actual = prev_alcance
+            if connection.vendor == 'postgresql' and prev_alcance:
+                with connection.cursor() as cursor:
+                    if prev_alcance[0] == 'empresa':
+                        cursor.execute(f'SET LOCAL app.current_empresa_id = {int(prev_alcance[1])}')
+                    elif prev_alcance[0] == 'operador':
+                        cursor.execute("SET LOCAL app.operador_plataforma = 'on'")
+
+        return {'email': email_enviado, 'whatsapp': wa_resultados}
+    except Exception:
+        logger.exception('Error no controlado en notificar_orden_pagada para orden %s', getattr(orden, 'pk', None))
+        return {'email': False, 'whatsapp': []}
