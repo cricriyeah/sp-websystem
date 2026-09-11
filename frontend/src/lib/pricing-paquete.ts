@@ -98,6 +98,17 @@ export function calcularPrecioPaquete(
 }
 
 /**
+ * Un paquete es cruza-empresa cuando sus componentes pertenecen a mas de una
+ * empresa (ej. pesca + traslado, cada uno de una empresa distinta de la
+ * misma sede). Ese caso usa el checkout de orden (N pagos en secuencia), no
+ * el checkout de reserva sencilla.
+ */
+export function esPaqueteCruzaEmpresa(paquete: PaqueteCatalogo): boolean {
+  const empresas = new Set(paquete.servicios_asociados.map((s) => s.servicio.empresa_slug));
+  return empresas.size > 1;
+}
+
+/**
  * Formatea un número como moneda (MXN o USD).
  */
 export function formatearPrecio(monto: number, moneda: Moneda = 'MXN'): string {

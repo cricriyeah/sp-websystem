@@ -8,7 +8,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
-import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
+import { calcularPrecioPaquete, esPaqueteCruzaEmpresa, formatearPrecio } from '@/lib/pricing-paquete';
 
 type PaqueteCardProps = {
   paquete: PaqueteCatalogo;
@@ -34,10 +34,16 @@ export function PaqueteCard({
   const calculo = calcularPrecioPaquete(paquete, moneda);
   const totalServicios = paquete.servicios_asociados.length;
 
-  // URL para continuar hacia el checkout con este paquete
+  // URL para continuar hacia el checkout con este paquete. Los paquetes
+  // cruza-empresa (componentes de mas de una Empresa, ej. pesca + traslado)
+  // van al checkout de orden: el de reserva sencilla solo cobra a una
+  // Empresa a la vez.
   const sedeParam = paquete.sede_slug ? `&sede=${paquete.sede_slug}` : '';
   const empresaParam = paquete.empresa_lider_slug ? `&paquete_empresa=${paquete.empresa_lider_slug}` : '';
-  const bookingHref = `/${lang}/reservar?paquete=${paquete.slug}${sedeParam}${empresaParam}&moneda=${moneda}`;
+  const cruzaEmpresa = esPaqueteCruzaEmpresa(paquete);
+  const bookingHref = cruzaEmpresa
+    ? `/${lang}/reservar-paquete?paquete=${paquete.slug}${sedeParam}&moneda=${moneda}`
+    : `/${lang}/reservar?paquete=${paquete.slug}${sedeParam}${empresaParam}&moneda=${moneda}`;
 
   return (
     <article
