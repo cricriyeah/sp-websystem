@@ -761,13 +761,13 @@ Incidencia del gate: el test existente de captura parcial suponia orden SQL sin 
 - Test: `backend/apps/bookings/tests.py` — una orden crea N reservas todas con el mismo `deslinde_version` y los mismos campos de deslinde; `full_clean` de cada una pasa.
 - **Texto final pendiente de visto bueno del dueño / abogado** — dejar el texto redactado y marcado en el PR para que el dueño lo apruebe antes de lanzar. La estructura (una casilla, copia a N reservas) no espera.
 
-- [ ] **Paso 1 → 5:** ciclo. Commit `feat(deslinde): un solo deslinde ampara a todas las empresas de la sede`.
+- [x] **Paso 1 → 5:** ciclo. Commit `feat(deslinde): un solo deslinde ampara a todas las empresas de la sede`.
 
 ### Gate Sección 9
 
-- [ ] Suite verde sqlite + Postgres.
-- [ ] Frontend verde.
-- [ ] Commit `docs(plan): SP2 Sección 9 cerrada`. **PARA y reporta.**
+- [x] Suite verde sqlite + Postgres.
+- [x] Frontend verde.
+- [x] Commit `docs(plan): SP2 Sección 9 cerrada`. **PARA y reporta.**
 
 ---
 
