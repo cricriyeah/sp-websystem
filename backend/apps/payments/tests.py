@@ -3037,6 +3037,108 @@ class OrdenesModuloTest(TestCase):
         self.assertEqual(cliente_1.refunds.create.call_count, 1)
         self.assertEqual(cliente_2.payment_intents.cancel.call_count, 1)
 
+    @mock.patch('apps.payments.ordenes.time.sleep')
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_confirmar_captura_parcial_reintenta_y_revierte_con_refund(self, mock_configurar_stripe, mock_sleep):
+        """Tarea 5.3: mock: captura 1 OK, captura 2 falla 3 veces -> refund de 1, cancel de 2, orden cancelada."""
+        from apps.payments.ordenes import confirmar_captura
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_1', status='requires_capture', amount=700000)
+        intent_2 = mock.Mock(id='pi_2', status='requires_capture', amount=300000)
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        def capture_1(pi_id):
+            intent_1.status = 'succeeded'
+            return mock.Mock()
+
+        cliente_1.payment_intents.capture.side_effect = capture_1
+        cliente_2.payment_intents.capture.side_effect = stripe.CardError(
+            message='Tarjeta rechazada', param='card', code='card_declined'
+        )
+
+        with self.assertLogs('apps.payments.ordenes', level='ERROR') as cm:
+            confirmar_captura(self.orden)
+
+        cliente_1.payment_intents.capture.assert_called_once_with('pi_1')
+        self.assertEqual(cliente_2.payment_intents.capture.call_count, 3)
+        self.assertEqual(mock_sleep.call_count, 2)
+        self.assertTrue(any('no se pudo capturar' in m.lower() for m in cm.output))
+
+        cliente_1.refunds.create.assert_called_once_with(
+            {'payment_intent': 'pi_1'},
+            {'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-refund'},
+        )
+        cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
+
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+            self.reserva_1.refresh_from_db()
+            self.reserva_2.refresh_from_db()
+            self.assertEqual(self.reserva_1.estado, Reserva.Estado.CANCELADA)
+            self.assertTrue(self.reserva_1.reembolsada)
+            self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
+            self.assertFalse(self.reserva_2.reembolsada)
+
+    @mock.patch('apps.payments.ordenes.time.sleep')
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_confirmar_captura_reintenta_y_logra_capturar(self, mock_configurar_stripe, mock_sleep):
+        """Si un intento falla pero el reintento tiene éxito, la orden no se revierte."""
+        from apps.payments.ordenes import confirmar_captura
+
+        cliente_1 = mock.Mock()
+        cliente_2 = mock.Mock()
+        mock_configurar_stripe.side_effect = lambda emp: cliente_1 if emp.id == self.empresa_1.id else cliente_2
+
+        with scope.con_empresa(self.empresa_1):
+            self.reserva_1.stripe_payment_intent_id = 'pi_1'
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+        with scope.con_empresa(self.empresa_2):
+            self.reserva_2.stripe_payment_intent_id = 'pi_2'
+            self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
+
+        intent_1 = mock.Mock(id='pi_1', status='requires_capture', amount=700000)
+        intent_2 = mock.Mock(id='pi_2', status='requires_capture', amount=300000)
+        cliente_1.payment_intents.retrieve.return_value = intent_1
+        cliente_2.payment_intents.retrieve.return_value = intent_2
+
+        # Empresa 1 captura a la primera
+        cliente_1.payment_intents.capture.return_value = mock.Mock()
+        # Empresa 2 falla el primer intento, tiene éxito en el segundo
+        intent_2_captured = mock.Mock(id='pi_2', status='succeeded')
+        cliente_2.payment_intents.capture.side_effect = [
+            stripe.StripeError('Network glitch'),
+            intent_2_captured,
+        ]
+
+        confirmar_captura(self.orden)
+
+        self.assertEqual(cliente_1.payment_intents.capture.call_count, 1)
+        self.assertEqual(cliente_2.payment_intents.capture.call_count, 2)
+        self.assertEqual(mock_sleep.call_count, 1)
+
+        # No debe haberse revertido
+        cliente_1.refunds.create.assert_not_called()
+        cliente_2.payment_intents.cancel.assert_not_called()
+        with scope.como_operador_plataforma():
+            self.orden.refresh_from_db()
+            self.assertNotEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+
+
 
 class OrdenesApiTest(TestCase):
     def setUp(self):
