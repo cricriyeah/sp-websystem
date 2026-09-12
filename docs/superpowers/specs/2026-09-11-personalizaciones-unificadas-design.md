@@ -160,16 +160,26 @@ drop+recreate. Postgres ata las políticas RLS al OID de la tabla, no a su nombr
 que la política `tenancy_alcance` ya aplicada en
 `apps/bookings/migrations/0032_rls_checkout_paquete.py` (sobre
 `bookings_reservapaquetepersonalizacion`, vía `EXISTS` contra `reserva_id`) sigue
-vigente después del rename sin necesidad de una migración RLS nueva — se agrega un
-test en `tests_rls.py` que lo confirme explícitamente después del rename, cubriendo
-también el caso nuevo de servicio suelto (antes esa tabla solo se ejercitaba desde
-paquetes). Al dropear `ExtrasItem`/`ReservaExtra`, Postgres elimina sus políticas RLS
-junto con las tablas — no hace falta una migración de limpieza aparte.
+vigente después del rename sin necesidad de una migración RLS nueva. **La cobertura
+RLS real de esta tabla hoy no vive en `tests_rls.py`**, sino en
+`apps/bookings/tests_checkout_paquete.py` (clase `ReservaCheckoutPaqueteRLSTests`:
+`test_empresa_b_no_ve_personalizaciones_de_empresa_a`,
+`test_empresa_a_ve_sus_propias_filas`) — esos tests se renombran/actualizan al nuevo
+nombre de modelo y related_name, y se les agrega el caso nuevo de servicio suelto
+(antes solo se ejercitaba desde paquetes). Al dropear `ExtrasItem`/`ReservaExtra`,
+Postgres elimina sus políticas RLS junto con las tablas — no hace falta una migración
+de limpieza aparte, pero **`apps/tenancy/tests_rls.py:98-103`
+(`test_guardarrail_toda_tabla_con_empresa_tiene_politica`) tiene una whitelist
+hardcodeada por nombre de tabla que incluye literalmente `'bookings_reservaextra'` y
+`'bookings_reservapaquetepersonalizacion'`** — se actualiza esa whitelist para
+reflejar el rename y el drop, o el guardarraíl falla en CI señalando tablas que ya no
+existen con ese nombre.
 
 `clean()` nuevo:
 
 ```
-if servicio_personalizacion.personalizacion.tipo_interaccion == 'check':
+tipo_interaccion = servicio_personalizacion.personalizacion.tipo_interaccion
+if tipo_interaccion == 'check':
     if respuesta: error: "Un check no lleva respuesta."
 else:
     if cantidad != 1: error: "La cantidad no aplica a un input."
@@ -209,7 +219,17 @@ arriba de `personas_incluidas`) leyendo esos mismos campos, que `Servicio` ya ti
 1. **Migración de datos** (patrón igual al de `0018`, generalizado a *todas* las
    Empresas que hoy tengan una `Tarifa`, no solo `sal-y-sol`): por cada Empresa con
    `Tarifa`, `get_or_create` un `Servicio(slug='pesca-deportiva', ...)` con esos
-   valores, si no existe ya uno con ese slug para esa Empresa.
+   valores, si no existe ya uno con ese slug para esa Empresa. **La migración también
+   fija `hora_apertura=VENTANA_SALIDA_INICIO` / `hora_cierre=VENTANA_SALIDA_FIN`**
+   (las constantes legacy de `apps/bookings/models.py`, hoy 5:00-7:00am) — sin esto,
+   `Servicio.ventana_horaria()` devuelve `None` (sin restricción) y
+   `_validar_ventana_horaria` deja de aplicar el candado horario a pesca simple en
+   cuanto `servicio_id` deja de ser `None`, una regresión silenciosa en el checkout más
+   usado. **El `Servicio` "pesca-deportiva" de `sal-y-sol` ya existe** (creado por
+   `0018_crear_servicio_la_paz.py`, sin estos campos) — `get_or_create` no actualiza un
+   registro existente vía `defaults`, así que para esa Empresa la migración nueva debe
+   hacer un `update()` explícito de `hora_apertura`/`hora_cierre` sobre el `Servicio` ya
+   creado, no solo `get_or_create` con `defaults`.
 2. **`reservar/page.tsx`**: cuando no hay `?servicio=` ni `?paquete=` en la URL, en
    vez de llamar a `getTarifa(empresaSlug)` resuelve
    `getServicioDetalle('pesca-deportiva', empresaSlug)` — el mismo camino que ya usa
@@ -268,6 +288,16 @@ arriba de `personas_incluidas`) leyendo esos mismos campos, que `Servicio` ya ti
 No hay usuarios reales de `/reservar` sin parámetros que perder: es exactamente el
 mismo Servicio de pesca que ya se ofrece explícitamente por catálogo, solo que ahora
 también es el default cuando no se especifica nada.
+
+**Orden de despliegue**: backend (Render) y frontend (Vercel) se despliegan por
+separado. La regla nueva de `Reserva.clean()` (punto 4: servicio o paquete, al menos
+uno) y el cambio de `reservar/page.tsx` (punto 2: deja de mandar los dos vacíos) son
+un solo cambio atómico de negocio aunque vivan en repos/servicios distintos — si el
+backend llega a producción antes que el frontend, todo `POST /api/reservas/` de pesca
+simple (el checkout más usado) devuelve 400 hasta que el segundo deploy alcance. Se
+despliega primero el frontend (que ya deja de mandar la combinación vacía) y se
+verifica un ciclo de reservas real antes de desplegar el backend con la regla de
+`clean()` activa — nunca al revés.
 
 ## Precio y congelado (corrige una inconsistencia existente)
 
@@ -459,6 +489,22 @@ se agrega `ReservaPersonalizacionInline` (solo lectura, mismo criterio que
 `servicio_personalizacion`, `cantidad`, `respuesta`, `precio_unitario`. Reemplaza a
 `ReservaExtraInline` (que se elimina junto con `ExtrasItem`/`ReservaExtra`).
 
+## Migración de datos: catálogo real de `ExtrasItem`
+
+`seed_extras.py` no es solo un script de demo: su docstring dice explícitamente que
+corre una vez por Empresa **en producción**, sembrando brunch/licencia/carnada con
+precios *placeholder* que el dueño reemplaza a mano en el admin. Esos precios reales
+ya capturados no se pierden: la migración que dropea `ExtrasItem`/`ReservaExtra`
+incluye un paso previo de **migración de datos** (no solo de esquema) que, por cada
+`ExtrasItem` existente, crea su `Personalizacion`/`ServicioPersonalizacion`
+equivalente preservando `nombre`, `precio`/`precio_usd`, `tipo`,
+`cobrar_por_persona`, `cantidad_editable`, y fijando `preseleccionado=True` +
+`aviso_reforzado=True` para el que tenga `tipo == 'licencia'` (mismo criterio que la
+decisión 2). Se corre y se verifica **antes** de dropear las tablas viejas en el mismo
+despliegue. `seed_extras.py` se reescribe para el caso de una Empresa nueva sin
+`ExtrasItem` previos (demo o alta real); no vuelve a correr sobre una Empresa que ya
+tuvo su migración de datos.
+
 ## Semilla (`seed_extras.py`)
 
 Se reescribe para crear, sobre el Servicio de pesca de la Empresa demo:
@@ -486,6 +532,24 @@ Confirmado por esa segunda búsqueda: **`apps/payments/views.py`** (contiene
 `CrearPagoView._resolver_extras`, que esta spec requiere reescribir en la sección
 "Precio y congelado") no aparece en la lista original y debe añadirse explícitamente.
 
+Esa misma búsqueda encuentra un segundo archivo fuera de la lista original, más grave
+porque no es un test: **`apps/notifications/services.py:91`** —
+`_cuerpo_html()` itera `reserva.extras_seleccionados.select_related('extras_item')`
+para armar el desglose de brunch/licencia/carnada del correo de confirmación. Esa
+llamada queda **fuera** del único `try/except` de la función (que solo atrapa el POST
+a Resend), y `notificar_reserva_pagada()` documenta "nunca lanza" pero evalúa
+`enviar_correo_confirmacion` antes que `enviar_whatsapp_confirmacion` — si el primero
+lanza `AttributeError` en cuanto `ReservaExtra` se elimine, el segundo nunca se
+ejecuta. El webhook de pago atrapa la excepción con un `except Exception` genérico y
+responde 200 igual, así que la falla es silenciosa: **toda reserva pagada con éxito
+dejaría de mandar correo Y WhatsApp de confirmación**, sin que ningún test lo
+detecte. Se reescribe `_cuerpo_html` contra `reserva.personalizaciones_seleccionadas`
+(el nuevo `related_name`), filtrando a las filas de tipo `check` (las de tipo `input_*`
+no tienen precio ni pertenecen al desglose de cobro); se agrega un test en
+`apps/notifications/tests.py` que cubra explícitamente una reserva con
+personalizaciones tipo check para el correo de confirmación (hoy ese archivo solo
+aparece en la lista base por referenciar la clase, no por tener este escenario).
+
 Lista base (17, por nombre de clase): `apps/bookings/admin.py`,
 `apps/notifications/tests.py`, `apps/payments/tests.py`, `apps/bookings/tests.py`,
 `apps/bookings/models.py`, `apps/fleet/models.py`, `apps/payments/pricing.py`,
@@ -496,7 +560,18 @@ Lista base (17, por nombre de clase): `apps/bookings/admin.py`,
 migraciones viejas se quedan, la eliminación es una migración nueva),
 `apps/fleet/migrations/0008_extrasitem_puntoencuentro_transporteprecio.py` (ídem,
 histórico), `apps/bookings/migrations/0018_remove_reserva_lleva_lunch_and_more.py`
-(ídem, histórico). Más `apps/payments/views.py` (confirmado arriba).
+(ídem, histórico). Más `apps/payments/views.py` y `apps/notifications/services.py`
+(confirmados arriba).
+
+**Inventario del rename `ReservaPaquetePersonalizacion` → `ReservaPersonalizacion`**
+(búsqueda por nombre de clase, aparte de la anterior): además de los archivos ya
+tocados por el retiro de `ExtrasItem`, el rename afecta a
+`apps/bookings/tests_checkout_paquete.py` (import + ~9 usos directos de
+`ReservaPaquetePersonalizacion.objects.create/count` y de
+`reserva.paquete_personalizaciones`, incluida la clase RLS mencionada arriba),
+`apps/bookings/tests_checkout_serializer.py` (import + usos de
+`reserva.paquete_personalizaciones`), y `apps/tenancy/tests_rls.py` (whitelist
+hardcodeada, ver sección "RLS" arriba).
 
 Los tests que hoy cubren `ExtrasItem`/`ReservaExtra` se reescriben contra el catálogo
 unificado (mismos escenarios de negocio: brunch por persona, licencia recomendada,
@@ -525,9 +600,13 @@ TDD de siempre, en el orden natural de las capas:
    "pesca-deportiva" por Empresa con los valores de `Tarifa`; `CrearPagoView` sin la
    rama `Tarifa` cobra igual que antes para una reserva de pesca simple (incluida la
    fórmula unificada de `cobrar_por_persona`/`cantidad_editable`);
-   `Reserva.clean()` rechaza una reserva sin `servicio` ni `paquete`; los helpers
-   `datos_reserva`/`crear_reserva` de los siete archivos listados arriba pasan a usar
-   una fixture compartida de `Servicio` pesca en vez de dejarlo implícito;
+   `Reserva.clean()` rechaza una reserva sin `servicio` ni `paquete`; los helpers de
+   construcción de Reserva en los siete archivos listados arriba (`datos_reserva`/
+   `crear_reserva` en la mayoría; `_datos` en `apps/bookings/tests_concurrencia.py`,
+   que no sigue ese mismo nombre) pasan a usar una fixture compartida de `Servicio`
+   pesca en vez de dejarlo implícito, incluyendo fijar una ventana horaria explícita
+   en esa fixture para no perder cobertura de `VentanaSalidaTests` (ver la migración
+   de `hora_apertura`/`hora_cierre` más arriba);
    `ReservaAdmin` sigue permitiendo alta manual sin fricción con el default nuevo.
 6. **Recuperación de checkout**: `EstadoReservaView` en `pendiente_pago` y en
    `pagada` reporta `personalizaciones` (checks y respuestas de input) en vez de
