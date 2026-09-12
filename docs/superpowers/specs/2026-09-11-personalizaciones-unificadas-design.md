@@ -509,8 +509,14 @@ tuvo su migración de datos.
 
 Se reescribe para crear, sobre el Servicio de pesca de la Empresa demo:
 
-- `Personalizacion` "Brunch" (`tipo=brunch`, `tipo_interaccion=check`,
-  `cobrar_por_persona=True`), `ServicioPersonalizacion(preseleccionado=False)`.
+- `Personalizacion` "Paquete de Brunch" (mismo `nombre` que el `ExtrasItem` real de
+  hoy — `apps/fleet/management/commands/seed_extras.py:53` — para que el
+  `get_or_create` por nombre/empresa de este comando siga siendo una red de
+  seguridad real si alguien lo corre de nuevo después de la migración de datos de
+  `ExtrasItem`; si el nombre no coincidiera, un re-run crearía una segunda
+  `Personalizacion` duplicada con precio placeholder en vez de no-opear)
+  (`tipo=brunch`, `tipo_interaccion=check`, `cobrar_por_persona=True`),
+  `ServicioPersonalizacion(preseleccionado=False)`.
 - `Personalizacion` "Licencia de pesca" (`tipo=licencia`, `tipo_interaccion=check`,
   `aviso_reforzado=True`), `ServicioPersonalizacion(preseleccionado=True)` —
   recomendada con aviso reforzado, ya no forzada.
