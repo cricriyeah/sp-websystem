@@ -108,6 +108,8 @@ if tipo_interaccion != 'input_seleccion' and opciones_seleccion:
     error: "Las opciones de selección solo aplican al tipo 'selección'."
 if tipo_interaccion != 'check' and (cobrar_por_persona or cantidad_editable or aviso_reforzado):
     error: "'Cobrar por persona', 'cantidad editable' y 'aviso reforzado' solo aplican a personalizaciones tipo check."
+if cantidad_editable and not cobrar_por_persona:
+    error: "'Cantidad editable' requiere 'cobrar por persona' — no hay grupo completo del que recortar si no cobra por persona."
 ```
 
 ### `fleet.ServicioPersonalizacion` (precio + comportamiento por Servicio)
@@ -213,6 +215,20 @@ arriba de `personas_incluidas`) leyendo esos mismos campos, que `Servicio` ya ti
    `getServicioDetalle('pesca-deportiva', empresaSlug)` — el mismo camino que ya usa
    un servicio suelto explícito, con el slug fijo como default. Se retira `getTarifa`
    de `frontend/src/lib/api.ts` y el tipo que lo acompaña.
+2.1. **`checkout-view.tsx` deja de recibir/usar `tarifa`** (ya no hay caso en que
+   `paquete`/`servicio` estén los dos vacíos, así que el tercer eslabón de cada
+   cadena `paquete ? ... : servicio ? ... : tarifa ? ...` se elimina, no se rellena):
+   - `tieneProducto` (línea 375, hoy `Boolean(tarifa || paquete || servicioId ||
+     servicio)`) pasa a `Boolean(paquete || servicioId || servicio)`.
+   - `usdDisponible` (568-569) y `tourPrice` (570-576) pierden su rama `tarifa` final
+     (`: tarifa?.precio_usd != null` / `: tarifa ? Number(...) : null`), quedando en
+     `: null` cuando no hay ni `paquete` ni `servicio` — caso que, con el punto 4 de
+     abajo, ya no debería ocurrir en producción, pero el `null` de cierre se conserva
+     como guardia defensiva, no se retira.
+   - La misma poda aplica a cualquier otro punto de `checkout-view.tsx` que lea
+     `tarifa.precio_persona_extra`/`tarifa.precio_persona_extra_usd` (línea ~671) —
+     se reemplaza por `servicio.precio_persona_extra`/`precio_persona_extra_usd`
+     (campos que `ServicioCatalogo` ya expone, ver `fleet.Servicio`).
 3. **`CrearPagoView`**: se retira la rama `else` que resuelve `Tarifa.de(empresa)`
    (líneas ~103-119) — con el paso 2, `reserva.servicio_id` siempre viene resuelto
    para una reserva de pesca simple, así que solo queda la rama `elif
@@ -228,6 +244,26 @@ arriba de `personas_incluidas`) leyendo esos mismos campos, que `Servicio` ya ti
    cualquier otro de los ~33 archivos que hoy referencian `Tarifa`/`getTarifa` (correr
    `rg -n "Tarifa|getTarifa" ` antes de dar el retiro por completo — mismo caveat de
    metodología que con `ExtrasItem`).
+6. **`Reserva.clean()` — efecto colateral en toda prueba/flujo que crea una Reserva
+   sin `servicio`.** La regla "servicio o paquete, al menos uno" no es solo un
+   candado nuevo para el checkout web: `servicio=None` es hoy la convención activa
+   que usan los helpers de prueba `datos_reserva`/`crear_reserva` en
+   `apps/bookings/tests.py`, `apps/bookings/tests_tenancy.py`,
+   `apps/bookings/tests_cupo_rango.py`, `apps/bookings/tests_concurrencia.py`,
+   `apps/payments/tests.py`, `apps/finance/tests.py` y `apps/notifications/tests.py`
+   — ninguno de ellos sobre personalizaciones, todos con `.full_clean()`. Esta
+   búsqueda **no** la cubre el grep de `Tarifa|getTarifa` ni el de
+   `extras_seleccionados|...`: es un efecto transversal de la nueva regla de
+   `clean()`, no del retiro de un modelo. Antes de aplicar la regla, cada uno de
+   esos helpers debe pasar un `servicio` (una fixture compartida al `Servicio`
+   "pesca-deportiva" de la Empresa de prueba, creada una vez por `setUp`/`TestCase`).
+7. **`ReservaAdmin` no restringe `servicio`** — hoy una vendedora puede crear a mano
+   una reserva de pesca por WhatsApp dejando `servicio` en blanco (confía en el
+   default legacy). Con la regla nueva, eso empieza a fallar con un error de
+   validación. Se agrega un default al formulario del admin (`servicio` inicializado
+   al `Servicio` "pesca-deportiva" de la Empresa activa al abrir el formulario de
+   alta) para que el flujo manual siga funcionando sin que la vendedora tenga que
+   aprender a elegirlo.
 
 No hay usuarios reales de `/reservar` sin parámetros que perder: es exactamente el
 mismo Servicio de pesca que ya se ofrece explícitamente por catálogo, solo que ahora
@@ -250,6 +286,10 @@ Cambios en `ReservaPersonalizacion`:
   con `ReservaExtra`. `null` mientras la reserva sigue `pendiente_pago`; solo
   `CrearPagoView` lo llena, con el precio vigente de `ServicioPersonalizacion` en ese
   momento.
+- Se agrega la property `subtotal` (`precio_unitario * cantidad`, `None` si
+  `precio_unitario` es `None`), igual que `ReservaExtra.subtotal` hoy — la usa
+  `EstadoReservaView` y el admin para mostrar el monto real cobrado, no el precio
+  unitario suelto.
 
 Cambios en `pricing.py`:
 
@@ -258,11 +298,35 @@ Cambios en `pricing.py`:
   `ReservaPersonalizacion` que existen para la Reserva — recomendada y opcional pesan
   igual en el cálculo; la única diferencia entre ambas es el estado inicial del
   checkbox en el frontend (ver más abajo) y el aviso al desmarcar.
+- **Se unifica también la fórmula de cantidad, porque hoy los dos catálogos calculan
+  distinto y combinarlos tal cual cobraría doble.** `precio_paquete_total` hoy
+  multiplica `mult` (personas, si `cobrar_por_persona`) **por** `cant` (la cantidad
+  elegida por el cliente, si el ítem viene en el payload) — dos factores
+  independientes. `cargo_por_extra`/`_resolver_extras` (el catálogo legacy) usa **una
+  sola** cantidad: el grupo completo, o el valor recortado que el cliente eligió si
+  `cantidad_editable` (`min(cantidad_solicitada, numero_personas)`) — nunca los dos
+  multiplicados. La fórmula unificada adopta la semántica legacy (una sola cantidad,
+  no dos factores):
+
+  ```
+  cantidad_efectiva =
+      cantidad_editable
+          ? max(1, min(cantidad_solicitada_del_cliente, numero_personas))
+          : (cobrar_por_persona ? numero_personas : 1)
+
+  cargo = sp.precio_en(moneda) * cantidad_efectiva
+  ```
+
+  `cantidad_editable=True` sin `cobrar_por_persona=True` no tiene sentido de negocio
+  (no hay "grupo completo" del que recortar) y ya lo prohíbe la relación entre esos
+  dos campos tal como se usan hoy (ver `ExtrasItem.cantidad_editable`, mismo supuesto).
+  Se agrega esa combinación a las validaciones de `clean()` de `Personalizacion`:
+  `cantidad_editable` requiere `cobrar_por_persona=True`.
 - Se generaliza `precio_paquete_total` (o se agrega una función hermana) para que
   funcione también sobre una Reserva de servicio suelto, no solo de paquete: el total
-  es `precio_base_del_servicio_o_paquete + Σ precio de las ServicioPersonalizacion tipo
-  check seleccionadas` (los `input_*` nunca suman, siempre validado en `clean()` a
-  precio 0).
+  es `precio_base_del_servicio_o_paquete + Σ cargo (fórmula de arriba) de las
+  ServicioPersonalizacion tipo check seleccionadas` (los `input_*` nunca suman,
+  siempre validado en `clean()` a precio 0).
 - `CrearPagoView` deja de tener una rama separada `_resolver_extras` para
   `ExtrasItem`; usa el mismo camino para paquete y para servicio suelto, congelando
   `precio_unitario` en cada `ReservaPersonalizacion` de tipo `check` de la reserva.
@@ -368,8 +432,14 @@ Ambas se reescriben contra `reserva.personalizaciones_seleccionadas` (el nuevo
 `related_name`), cambiando la clave de la respuesta de `extras` a
 `personalizaciones`:
 
-- `pagada`: por cada `ReservaPersonalizacion`, `{ nombre, tipo_interaccion, monto
-  (desde precio_unitario ya congelado, null en input), cantidad, respuesta }`.
+- `pagada`: por cada `ReservaPersonalizacion`, `{ nombre, tipo_interaccion, monto,
+  cantidad, respuesta }`, donde `monto = precio_unitario * cantidad` (igual que
+  `ReservaExtra.subtotal` hoy — `apps/bookings/models.py`, no el precio unitario
+  suelto: reportar solo `precio_unitario` subestima el cobro real de un check
+  `cobrar_por_persona` con `cantidad > 1`). Se agrega una property `subtotal` a
+  `ReservaPersonalizacion` que replique `ReservaExtra.subtotal` (`None` si
+  `precio_unitario` es `None`, o si la fila es de tipo input). `null` para filas de
+  tipo input.
 - `pendiente_pago`: por cada `ReservaPersonalizacion`, `{ id (del
   ServicioPersonalizacion), cantidad, respuesta }` — sin precio, porque aún no se
   congela.
@@ -453,8 +523,12 @@ TDD de siempre, en el orden natural de las capas:
 4. **Admin**: `ReservaPersonalizacionInline` muestra lo esperado.
 5. **Migración pesca→Servicio**: la migración de datos crea/reutiliza el `Servicio`
    "pesca-deportiva" por Empresa con los valores de `Tarifa`; `CrearPagoView` sin la
-   rama `Tarifa` cobra igual que antes para una reserva de pesca simple;
-   `Reserva.clean()` rechaza una reserva sin `servicio` ni `paquete`.
+   rama `Tarifa` cobra igual que antes para una reserva de pesca simple (incluida la
+   fórmula unificada de `cobrar_por_persona`/`cantidad_editable`);
+   `Reserva.clean()` rechaza una reserva sin `servicio` ni `paquete`; los helpers
+   `datos_reserva`/`crear_reserva` de los siete archivos listados arriba pasan a usar
+   una fixture compartida de `Servicio` pesca en vez de dejarlo implícito;
+   `ReservaAdmin` sigue permitiendo alta manual sin fricción con el default nuevo.
 6. **Recuperación de checkout**: `EstadoReservaView` en `pendiente_pago` y en
    `pagada` reporta `personalizaciones` (checks y respuestas de input) en vez de
    `extras`, para pesca simple y para paquete.
