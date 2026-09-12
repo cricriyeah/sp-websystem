@@ -563,7 +563,8 @@ class Personalizacion(models.Model):
                     errores[campo] = 'Solo aplica a personalizaciones tipo check.'
             if self.pk:
                 asociaciones_activas = self.en_servicios.exclude(
-                    precio=Decimal('0.00'), precio_usd__in=[None, Decimal('0.00')], preseleccionado=False
+                    models.Q(precio=Decimal('0.00'), preseleccionado=False)
+                    & (models.Q(precio_usd__isnull=True) | models.Q(precio_usd=Decimal('0.00')))
                 )
                 if asociaciones_activas.exists():
                     errores['tipo_interaccion'] = (

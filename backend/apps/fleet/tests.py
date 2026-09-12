@@ -885,13 +885,28 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
         with self.assertRaises(ValidationError):
             p_opts_texto.full_clean()
 
-        # 6. asociacion de otra Empresa sigue fallando
+        # 6. asociacion de otra Empresa con PKs reales bajo su propio alcance falla con mensaje específico
         otra_empresa = _crear_empresa('otra-empresa-test')
-        p_otra = Personalizacion(empresa=otra_empresa, nombre='Otra Empresa',
-                                 tipo_interaccion='check')
+        # Salir temporalmente del alcance de self.empresa para entrar al de otra_empresa
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(otra_empresa):
+                p_otra = Personalizacion.objects.create(empresa=otra_empresa, nombre='Otra Empresa',
+                                                       tipo_interaccion='check')
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+
+        self.assertIsNotNone(p_otra.pk)
+        self.assertIsNotNone(s.pk)
         sp_cruzada = ServicioPersonalizacion(servicio=s, personalizacion=p_otra)
-        with self.assertRaises(ValidationError):
-            sp_cruzada.full_clean()
+        with self.assertRaises(ValidationError) as ctx:
+            sp_cruzada.clean()
+        self.assertIn('personalizacion', ctx.exception.message_dict)
+        self.assertEqual(
+            ctx.exception.message_dict['personalizacion'],
+            ['La personalización debe pertenecer a la misma empresa que el servicio.']
+        )
 
     def test_cambiar_catalogo_a_input_rechaza_si_asociaciones_tienen_precio_o_preseleccionado(self):
         s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Cat', slug='scat')
@@ -905,6 +920,31 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
         with self.assertRaises(ValidationError) as ctx:
             p.full_clean()
         self.assertIn('tipo_interaccion', ctx.exception.message_dict)
+
+    def test_cambiar_catalogo_a_input_permite_asociaciones_gratuitas_no_preseleccionadas(self):
+        s1 = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Cat 1', slug='scat1')
+        s2 = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Cat 2', slug='scat2')
+        p = Personalizacion.objects.create(empresa=self.empresa, nombre='Check a Input Valido',
+                                           tipo_interaccion='check')
+        # Asociación 1: precio=0, precio_usd=None, preseleccionado=False
+        ServicioPersonalizacion.objects.create(servicio=s1, personalizacion=p,
+                                              precio=Decimal('0.00'), precio_usd=None,
+                                              preseleccionado=False)
+        # Asociación 2: precio=0, precio_usd=0, preseleccionado=False
+        ServicioPersonalizacion.objects.create(servicio=s2, personalizacion=p,
+                                              precio=Decimal('0.00'), precio_usd=Decimal('0.00'),
+                                              preseleccionado=False)
+
+        # Cambiar p a input_texto o input_numero o input_seleccion debe permitirse sin error
+        for nuevo_tipo in ('input_texto', 'input_numero'):
+            with self.subTest(tipo=nuevo_tipo):
+                p.tipo_interaccion = nuevo_tipo
+                p.full_clean()
+
+        # Para input_seleccion requiere opciones
+        p.tipo_interaccion = 'input_seleccion'
+        p.opciones_seleccion = ['Opción A', 'Opción B']
+        p.full_clean()
 
     def test_input_rechaza_precios_distintos_de_cero_incluyendo_negativos(self):
         s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Precios', slug='sprec')
