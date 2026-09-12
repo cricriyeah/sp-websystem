@@ -9,6 +9,7 @@ from typing import Any
 
 import stripe
 from django.db import connection
+from django.utils import timezone
 
 from apps.bookings.models import Orden, Reserva
 from apps.bookings.orden_lectura import reservas_de_orden
@@ -72,6 +73,7 @@ def crear_pagos_orden(orden: Orden, reparto: dict[int, Decimal]) -> list[dict[st
                         intent = cliente.payment_intents.update(
                             pi_id,
                             {'amount': centavos, 'currency': moneda},
+                            {'idempotency_key': f'orden-{orden.id}-{empresa.id}-update-{moneda}-{intent_existente.amount}-{centavos}'},
                         )
                 else:
                     intent = intent_existente
@@ -153,7 +155,10 @@ def confirmar_captura(orden: Orden) -> None:
         captured = False
         for attempt in range(CAPTURA_REINTENTOS):
             try:
-                cliente.payment_intents.capture(intent.id)
+                cliente.payment_intents.capture(
+                    intent.id,
+                    options={'idempotency_key': f'orden-{orden.id}-{empresa.id}-capture'},
+                )
                 captured = True
                 break
             except stripe.StripeError:
@@ -200,7 +205,10 @@ def revertir_orden(orden: Orden, motivo: str) -> None:
                 try:
                     intent = cliente.payment_intents.retrieve(pi_id)
                     if intent.status in INTENTS_PENDIENTES_VOID:
-                        cliente.payment_intents.cancel(intent.id)
+                        cliente.payment_intents.cancel(
+                            intent.id,
+                            options={'idempotency_key': f'orden-{orden.id}-{empresa.id}-cancel'},
+                        )
                     elif intent.status == 'succeeded':
                         cliente.refunds.create(
                             {'payment_intent': intent.id},
@@ -217,13 +225,19 @@ def revertir_orden(orden: Orden, motivo: str) -> None:
                     'estado': Reserva.Estado.CANCELADA,
                     'motivo_cancelacion': motivo,
                     'reembolsada': reembolsada,
+                    'cancelada_en': timezone.now(),
                 }
                 if reembolsada and not (fila.get('monto_reembolsado') and fila['monto_reembolsado'] > 0):
                     intent_amount = getattr(intent, 'amount', None) if (pi_id and intent) else None
                     monto_intent = de_centavos(intent_amount) if isinstance(intent_amount, int) and not isinstance(intent_amount, bool) else Decimal('0.00')
                     monto = fila.get('monto_pagado') or monto_intent
                     campos['monto_reembolsado'] = monto
-                Reserva.objects.filter(pk=fila['reserva_id']).update(**campos)
+                    campos['reembolsada_en'] = timezone.now()
+                reserva = Reserva.objects.get(pk=fila['reserva_id'])
+                for campo, valor in campos.items():
+                    setattr(reserva, campo, valor)
+                # save propaga la liberación de ocupaciones y componentes.
+                reserva.save(update_fields=list(campos))
 
         with scope.con_empresa(orden.empresa_lider):
             orden.refresh_from_db()

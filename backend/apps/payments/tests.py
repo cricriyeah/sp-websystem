@@ -2844,6 +2844,34 @@ class OrdenesModuloTest(TestCase):
         self.assertEqual(cliente_2.payment_intents.create.call_count, 1)
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_actualizar_intent_reintenta_con_la_misma_clave(self, configurar):
+        from apps.payments.ordenes import crear_pagos_orden
+
+        clientes = {e.id: mock.Mock() for e in (self.empresa_1, self.empresa_2)}
+        configurar.side_effect = lambda empresa: clientes[empresa.id]
+        for empresa, reserva in ((self.empresa_1, self.reserva_1), (self.empresa_2, self.reserva_2)):
+            pi_id = f'pi_{empresa.id}'
+            with scope.con_empresa(empresa):
+                Reserva.objects.filter(pk=reserva.pk).update(stripe_payment_intent_id=pi_id)
+            clientes[empresa.id].payment_intents.retrieve.return_value = mock.Mock(
+                id=pi_id, status='requires_payment_method', amount=100, currency='mxn',
+            )
+            clientes[empresa.id].payment_intents.update.return_value = mock.Mock(
+                id=pi_id, client_secret='secret',
+            )
+        crear_pagos_orden(self.orden, self.reparto)
+        crear_pagos_orden(self.orden, self.reparto)
+        for empresa_id, monto in self.reparto.items():
+            centavos = a_centavos(monto)
+            self.assertEqual(clientes[empresa_id].payment_intents.update.call_args_list, [
+                mock.call(
+                    f'pi_{empresa_id}', {'amount': centavos, 'currency': 'mxn'},
+                    {'idempotency_key': f'orden-{self.orden.id}-{empresa_id}-update-mxn-100-{centavos}'},
+                ),
+            ] * 2)
+            clientes[empresa_id].payment_intents.create.assert_not_called()
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_crear_pagos_orden_fallo_parcial_propaga_y_conserva_primero(self, mock_configurar_stripe):
         from apps.payments.ordenes import crear_pagos_orden
 
@@ -2899,8 +2927,12 @@ class OrdenesModuloTest(TestCase):
 
         confirmar_captura(self.orden)
 
-        cliente_1.payment_intents.capture.assert_called_once_with('pi_1')
-        cliente_2.payment_intents.capture.assert_called_once_with('pi_2')
+        cliente_1.payment_intents.capture.assert_called_once_with(
+            'pi_1', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-capture'},
+        )
+        cliente_2.payment_intents.capture.assert_called_once_with(
+            'pi_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-capture'},
+        )
 
         with scope.como_operador_plataforma():
             self.orden.refresh_from_db()
@@ -2930,7 +2962,9 @@ class OrdenesModuloTest(TestCase):
         confirmar_captura(self.orden)
 
         cliente_1.payment_intents.capture.assert_not_called()
-        cliente_2.payment_intents.capture.assert_called_once_with('pi_2')
+        cliente_2.payment_intents.capture.assert_called_once_with(
+            'pi_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-capture'},
+        )
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_confirmar_captura_revierte_si_uno_no_esta_requires_capture(self, mock_configurar_stripe):
@@ -2963,11 +2997,14 @@ class OrdenesModuloTest(TestCase):
             self.orden.refresh_from_db()
             self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
         # pi_2 (requires_capture) debe haberse cancelado
-        cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
+        cliente_2.payment_intents.cancel.assert_called_once_with(
+            'pi_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-cancel'},
+        )
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_revertir_orden_cancela_pendientes_y_reembolsa_succeeded(self, mock_configurar_stripe):
         from apps.payments.ordenes import revertir_orden
+        from apps.bookings.models import ReservaPaqueteComponente
 
         cliente_1 = mock.Mock()
         cliente_2 = mock.Mock()
@@ -2975,7 +3012,12 @@ class OrdenesModuloTest(TestCase):
 
         with scope.con_empresa(self.empresa_1):
             self.reserva_1.stripe_payment_intent_id = 'pi_1'
-            self.reserva_1.save(update_fields=['stripe_payment_intent_id'])
+            self.reserva_1.estado = Reserva.Estado.PAGADA
+            self.reserva_1.save(update_fields=['stripe_payment_intent_id', 'estado'])
+            componente = ReservaPaqueteComponente.objects.create(
+                reserva=self.reserva_1, servicio=self.reserva_1.servicio,
+                empresa=self.empresa_1, estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
+            )
         with scope.con_empresa(self.empresa_2):
             self.reserva_2.stripe_payment_intent_id = 'pi_2'
             self.reserva_2.save(update_fields=['stripe_payment_intent_id'])
@@ -2993,7 +3035,9 @@ class OrdenesModuloTest(TestCase):
             {'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-refund'},
         )
         # intent_2 (requires_capture) -> cancel
-        cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
+        cliente_2.payment_intents.cancel.assert_called_once_with(
+            'pi_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-cancel'},
+        )
 
         with scope.como_operador_plataforma():
             self.orden.refresh_from_db()
@@ -3007,6 +3051,8 @@ class OrdenesModuloTest(TestCase):
             self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
             self.assertEqual(self.reserva_2.motivo_cancelacion, 'motivo de prueba')
             self.assertFalse(self.reserva_2.reembolsada)
+            componente.refresh_from_db()
+            self.assertEqual(componente.estado_cupo, ReservaPaqueteComponente.EstadoCupo.LIBERADO)
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_revertir_orden_idempotente(self, mock_configurar_stripe):
@@ -3060,7 +3106,7 @@ class OrdenesModuloTest(TestCase):
         cliente_1.payment_intents.retrieve.return_value = intent_1
         cliente_2.payment_intents.retrieve.return_value = intent_2
 
-        def capture_1(pi_id):
+        def capture_1(pi_id, *, options):
             intent_1.status = 'succeeded'
             return mock.Mock()
 
@@ -3079,8 +3125,12 @@ class OrdenesModuloTest(TestCase):
             with self.assertLogs('apps.payments.ordenes', level='ERROR') as cm:
                 confirmar_captura(self.orden)
 
-        cliente_1.payment_intents.capture.assert_called_once_with('pi_1')
-        self.assertEqual(cliente_2.payment_intents.capture.call_count, 3)
+        cliente_1.payment_intents.capture.assert_called_once_with(
+            'pi_1', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-capture'},
+        )
+        self.assertEqual(cliente_2.payment_intents.capture.call_args_list, [
+            mock.call('pi_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-capture'})
+        ] * 3)
         self.assertEqual(mock_sleep.call_count, 2)
         self.assertTrue(any('no se pudo capturar' in m.lower() for m in cm.output))
 
@@ -3088,7 +3138,9 @@ class OrdenesModuloTest(TestCase):
             {'payment_intent': 'pi_1'},
             {'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-refund'},
         )
-        cliente_2.payment_intents.cancel.assert_called_once_with('pi_2')
+        cliente_2.payment_intents.cancel.assert_called_once_with(
+            'pi_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-cancel'},
+        )
 
         with scope.como_operador_plataforma():
             self.orden.refresh_from_db()
@@ -3309,8 +3361,12 @@ class OrdenesApiTest(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()['estado'], 'autorizada')
 
-        cliente_1.payment_intents.capture.assert_called_once_with('pi_api_1')
-        cliente_2.payment_intents.capture.assert_called_once_with('pi_api_2')
+        cliente_1.payment_intents.capture.assert_called_once_with(
+            'pi_api_1', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-capture'},
+        )
+        cliente_2.payment_intents.capture.assert_called_once_with(
+            'pi_api_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-capture'},
+        )
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_confirmar_captura_flujo_fallo_revierte(self, mock_configurar_stripe):
@@ -3337,7 +3393,9 @@ class OrdenesApiTest(TestCase):
         self.assertEqual(res.json()['estado'], 'cancelada')
         self.assertIn('motivo', res.json())
 
-        cliente_2.payment_intents.cancel.assert_called_once_with('pi_api_2')
+        cliente_2.payment_intents.cancel.assert_called_once_with(
+            'pi_api_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-cancel'},
+        )
 
     @mock.patch('apps.payments.views.configurar_stripe')
     def test_get_orden_reanudar(self, mock_configurar_stripe):
@@ -3666,7 +3724,7 @@ class CompensacionOrdenTest(TransactionTestCase):
         cliente_1.payment_intents.retrieve.return_value = intent_1_obj
         cliente_2.payment_intents.retrieve.return_value = intent_2_obj
 
-        # Cuando se reembolsa intent_1 en services.reembolsar, su status pasa a refunded
+        # La compensación completa debe usar exclusivamente ordenes.revertir_orden.
         def refund_1(params, options=None):
             intent_1_obj.status = 'refunded'
             return mock.Mock()
@@ -3708,8 +3766,15 @@ class CompensacionOrdenTest(TransactionTestCase):
             self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
 
         # 3. Refund de ambas en Stripe
-        cliente_1.refunds.create.assert_called_once()
-        cliente_2.refunds.create.assert_called_once()
+        mock_stripe_services.assert_not_called()
+        cliente_1.refunds.create.assert_called_once_with(
+            {'payment_intent': 'pi_comp_1'},
+            {'idempotency_key': f'orden-{self.orden.id}-{self.empresa_1.id}-refund'},
+        )
+        cliente_2.refunds.create.assert_called_once_with(
+            {'payment_intent': 'pi_comp_2'},
+            {'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-refund'},
+        )
 
         # 4. Idempotencia: llamar revertir_orden de nuevo no re-reembolsa
         from apps.payments.ordenes import revertir_orden
@@ -3902,7 +3967,9 @@ class ConciliarOrdenesTest(TransactionTestCase):
             self.assertEqual(self.reserva_2.estado, Reserva.Estado.CANCELADA)
 
         cliente_1.refunds.create.assert_called_once()
-        cliente_2.payment_intents.cancel.assert_called_once_with('pi_conc_2')
+        cliente_2.payment_intents.cancel.assert_called_once_with(
+            'pi_conc_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-cancel'},
+        )
 
     @mock.patch('apps.payments.management.commands.conciliar_pagos.configurar_stripe')
     def test_conciliar_dos_veces_seguidas_es_idempotente(self, mock_configurar):
