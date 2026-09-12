@@ -206,7 +206,9 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
             publishable_key: r.pago.publishable_key,
           }));
           setPagos(pagosResumidos);
-          const primerPendiente = detalle.reservas.findIndex((r) => r.pago.estado_pi !== 'requires_capture');
+          const primerPendiente = detalle.reservas.findIndex(
+            (r) => !['requires_capture', 'succeeded'].includes(r.pago.estado_pi ?? ''),
+          );
           if (primerPendiente === -1) {
             setPhase('capturing');
           } else {
@@ -241,23 +243,39 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
   useEffect(() => {
     if (phase !== 'capturing' || ordenId === null) return;
     let cancelado = false;
-
+    let timer: ReturnType<typeof setTimeout>;
+    const aplicarEstado = (resultado: { estado: string; motivo?: string }) => {
+      if (cancelado) return true;
+      if (resultado.estado === 'capturada') {
+        setPhase('success');
+        return true;
+      }
+      if (resultado.estado === 'cancelada') {
+        setFailMotivo(resultado.motivo ?? '');
+        setPhase('fail');
+        return true;
+      }
+      return false;
+    };
+    const consultar = async () => {
+      try {
+        if (aplicarEstado(await getOrden(sedeSlug, ordenId))) return;
+      } catch {
+        // Una respuesta perdida no prueba que el cobro falló. Conservar la orden.
+      }
+      if (!cancelado) timer = setTimeout(consultar, 5000);
+    };
     confirmarCapturaOrden(sedeSlug, ordenId)
       .then((resultado) => {
-        if (cancelado) return;
-        if (resultado.estado === 'capturada') {
-          setPhase('success');
-        } else {
-          setFailMotivo(resultado.motivo ?? '');
-          setPhase('fail');
-        }
+        if (!aplicarEstado(resultado)) timer = setTimeout(consultar, 5000);
       })
       .catch(() => {
-        if (!cancelado) setPhase('fail');
+        if (!cancelado) timer = setTimeout(consultar, 5000);
       });
 
     return () => {
       cancelado = true;
+      clearTimeout(timer);
     };
   }, [phase, ordenId, sedeSlug]);
 
@@ -466,6 +484,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
         <SiteHeader lang={lang} nav={nav} />
         <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
           <p className="text-sm text-muted">{checkout.submitting}</p>
+          <p className="mt-3 text-sm text-muted">{feedback.paySlow}</p>
         </div>
       </div>
     );
@@ -514,6 +533,10 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
             ayudaMensaje={ayudaMensaje}
             onSubmit={() => {}}
             onPagoConfirmado={onPagoConfirmado}
+            onPagoRechazado={(mensaje) => {
+              setFailMotivo(mensaje);
+              setPhase('capturing');
+            }}
             onCaptchaToken={() => {}}
           />
         </div>
