@@ -193,6 +193,12 @@ def revertir_orden(orden: Orden, motivo: str) -> None:
     prev_alcance = getattr(connection, 'alcance_actual', None)
     connection.alcance_actual = None
     try:
+        with scope.con_empresa(orden.empresa_lider):
+            orden.refresh_from_db()
+        if orden.estado == Orden.Estado.CAPTURADA:
+            # SP2 define capturada como terminal. Rechazar antes de mover dinero,
+            # no después de reembolsar y descubrir la transición inválida.
+            raise OrdenCerradaError('Una orden capturada no admite cancelación en este flujo.')
         for fila in filas:
             empresa = Empresa.objects.get(pk=fila['empresa_id'])
             cliente = configurar_stripe(empresa)

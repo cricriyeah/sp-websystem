@@ -2687,6 +2687,17 @@ class CrearOrdenTest(TestCase):
 
 
 class OrdenesModuloTest(TestCase):
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_revertir_capturada_rechaza_antes_de_tocar_stripe(self, configurar):
+        from apps.payments.ordenes import OrdenCerradaError, revertir_orden
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden.estado = Orden.Estado.CAPTURADA
+            self.orden.save(update_fields=['estado'])
+        with self.assertRaises(OrdenCerradaError):
+            revertir_orden(self.orden, 'cancelación tardía')
+        configurar.assert_not_called()
+
     def setUp(self):
         from apps.bookings.models import Orden, Reserva
         from apps.fleet.models import Paquete, PaqueteServicio, Servicio

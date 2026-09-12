@@ -105,3 +105,25 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
   5. Paso 5 — Checkout: datos del cliente, captura de `?ref=`, checkbox de deslinde obligatorio y panel de pago seguro vía Stripe Elements (`PaymentElement`).
 - **Catálogo general**: `[lang]/catalogo/page.tsx` expone un banner secundario Perception-First para traslados cuando la sede seleccionada es La Paz.
 
+
+## Checkout de paquete cruza-empresa
+
+`/[lang]/reservar-paquete?paquete=<slug>&sede=<slug>` usa `paquete-checkout.tsx`.
+El catálogo dirige aquí los paquetes con componentes de empresas distintas;
+los paquetes mono-empresa siguen en `/reservar`.
+
+- Un formulario de contacto, datos por componente y un solo deslinde. Crea una
+  `Orden` y sus reservas con `forma_pago=completo`. Esta UI ofrece MXN; la API y el
+  catálogo conservan precios independientes MXN/USD.
+- Un `StripePanel`/`Elements` a la vez, desmontado por empresa, con la publishable
+  key y el client secret devueltos para esa cuenta. Solo tarjeta y captura manual.
+- `sessionStorage` conserva el ID de orden/checkout para reanudar. No repite pasos
+  `requires_capture` ni `succeeded`.
+- Tras autorizar todos solicita `confirmar-captura`. `autorizada` es intermedio:
+  consulta el estado cada 5 segundos y solo muestra éxito con `capturada` y fracaso
+  con `cancelada`. Un error de red conserva la orden y continúa consultando.
+- Un `card_error` en el checkout de paquete solicita confirmar el conjunto incompleto;
+  el servidor detecta la autorización fallida y ejecuta `revertir_orden` (void del
+  primer pago). El callback opcional no cambia el checkout mono-empresa.
+- La confirmación efectiva viene del webhook o de `conciliar_pagos`, nunca de una
+  inferencia del navegador. El texto final del deslinde requiere aprobación del dueño.

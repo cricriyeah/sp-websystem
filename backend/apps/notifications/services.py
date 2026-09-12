@@ -379,6 +379,12 @@ def notificar_orden_pagada(orden):
         connection.alcance_actual = None
         reservas = []
         try:
+            # El último webhook puede pertenecer al proveedor de transporte;
+            # el paquete solo es visible bajo la empresa líder.
+            from apps.fleet.models import Paquete
+            lider = Empresa.objects.get(pk=orden.empresa_lider_id)
+            with scope.con_empresa(lider):
+                orden.paquete = Paquete.objects.get(pk=orden.paquete_id)
             for fila in filas:
                 empresa = Empresa.objects.get(pk=fila['empresa_id'])
                 with scope.con_empresa(empresa):

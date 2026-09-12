@@ -321,7 +321,10 @@ class OrdenAdmin(ModelAdmin):
         from apps.payments import ordenes
 
         for orden in queryset:
-            ordenes.revertir_orden(orden, 'cancelada desde el admin')
+            try:
+                ordenes.revertir_orden(orden, 'cancelada desde el admin')
+            except ordenes.OrdenCerradaError as exc:
+                self.message_user(request, f'Orden #{orden.pk}: {exc}', level='warning')
         self.message_user(request, 'Cancelacion de ordenes procesada.')
 
     @admin.display(description='Paquete')

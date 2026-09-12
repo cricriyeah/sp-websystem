@@ -1,7 +1,7 @@
 # ADR-005: Paquetes Cruza-Empresa
 
 - **Fecha:** 2026-09-06 · **Revisión 2:** 2026-09-07
-- **Estado:** ACEPTADO (Revisión 2) — se implementa como Sub-proyecto 2 de
+- **Estado:** IMPLEMENTADO — 2026-09-11, Sub-proyecto 2 de
   `docs/superpowers/specs/2026-09-07-transporte-multi-empresa-design.md`
 - **Estado previo (Revisión 1, 2026-09-06):** PROPUESTO, bloqueado en v1 vía
   `PaqueteServicio.clean`
@@ -24,7 +24,7 @@ diseño de SP2):
   `Reserva`, una por empresa proveedora.
 - `crear-pago` de la orden crea N `PaymentIntent` con `capture_method='manual'`, uno
   en la cuenta Stripe de cada empresa, por el monto que le toca a esa empresa
-  (`PaqueteServicio.monto_empresa`).
+  (calculado por `pricing.monto_por_empresa`).
 - El cliente **autoriza** los N (N confirmaciones en el frontend). Si **todas** quedan
   `requires_capture` → se **capturan** las N. Si alguna falla o el cliente abandona →
   `PaymentIntent.cancel` (void) de las autorizadas; **nunca hubo cobro**.
@@ -78,9 +78,9 @@ En la versión v1 del sistema, los paquetes cruza-empresa quedaban **explícitam
 
 ---
 
-## 4. Lo que ya quedó preparado en la arquitectura
+## 4. Lo que quedó preparado en la arquitectura original
 
-Aunque los paquetes cruza-empresa no están habilitados en v1, la arquitectura de datos y dominio fue diseñada para facilitar su habilitación en fases posteriores sin rediseños destructivos:
+Antes de SP2, la arquitectura de datos y dominio se diseñó para permitir esta habilitación sin rediseños destructivos:
 
 1. **Jerarquía en Catálogo:** El modelo `Paquete` pertenece a una `sede` y cuenta con un campo explícito `empresa_lider`.
 2. **Componentes con Tenancy:** El modelo `ReservaPaqueteComponente` posee una clave foránea `empresa` por cada componente reservado, permitiendo que en el futuro los componentes pertenezcan a diferentes empresas sin alterar el esquema de base de datos.
@@ -88,10 +88,34 @@ Aunque los paquetes cruza-empresa no están habilitados en v1, la arquitectura d
 
 ---
 
-## 5. Opciones a Evaluar cuando se retome
+## 5. Alternativas evaluadas (histórico anterior a Revisión 2)
 
-Cuando se decida habilitar la venta de paquetes cruza-empresa, se deberán evaluar las siguientes alternativas (sin recomendación cerrada por el momento):
+La Revisión 2 eligió la opción A refinada descrita arriba; se conservan las alternativas originales como contexto:
 
 - **Opción A — Múltiples PaymentIntents secuenciales en el checkout:** El cliente autoriza los cobros secuencialmente en el flujo de checkout hacia cada cuenta de Stripe. Requiere lógica robusta de compensación y reembolsos parciales automáticos en caso de que alguno de los cobros o cupos falle a mitad del proceso.
 - **Opción B — Cobro online de empresa líder + enlaces de pago diferidos:** La `empresa_lider` cobra su parte online al momento de la reserva en el sitio web, y las empresas colaboradoras envían enlaces de pago adicionales coordinados por la vendedora antes de la fecha de llegada.
 - **Opción C — Stripe Connect con Direct Charges:** Evaluar la implementación de Stripe Connect utilizando cargos directos (`direct charges`), donde el cargo se genera directamente en la cuenta conectada del proveedor y los fondos nunca tocan la cuenta de la plataforma, evaluando previamente con asesores fiscales si esto evita responsabilidades tributarias para la plataforma.
+
+## 6. Implementación y desviaciones verificadas — 2026-09-11
+
+- Precio fijo conservado en `Paquete.precio_ancla` / `precio_ancla_usd` (el cambio de
+  nombre era opcional). No se agregó `PaqueteServicio.monto_empresa`: transporte
+  recibe la tarifa resuelta y la líder absorbe el residuo, solo en
+  `pricing.monto_por_empresa`.
+- La UI de paquete ofrece MXN; backend y catálogo admiten precios MXN/USD.
+- RLS de `Orden` por sede, reservas por empresa; lectura transversal acotada por
+  `estado_reservas_de_orden`. Migraciones SP2: `bookings.0041` a `0044`.
+- `revisar_ordenes` solo informa; `conciliar_pagos` recupera pagos cuyo webhook se
+  perdió y revierte autorizaciones incompletas vencidas. Ambos son orden-aware.
+- El seed local usa `redondo_actividad/periferia` = **2200 MXN / 130 USD**, mientras
+  el diseño §3.1 indica **1800 MXN**. Centro = 1500 MXN. La diferencia es de datos
+  demo, no una tarifa real aprobada. La decisión de tramos por grupo sigue pendiente.
+- Demo `pesca-traslado`: precio inicial **7500 MXN / 450 USD**, Sal y Sol líder y
+  Transportes La Paz como segundo proveedor; no trasladar estos precios a producción.
+- Se cerró la deuda de claves idempotentes en `update`, `capture` y `cancel`.
+  Se centralizó el reembolso por fallo de cupo en `revertir_orden` y se corrigió la
+  liberación de componentes al cancelar. El checkout espera la confirmación del
+  servidor y solicita compensación al rechazar una tarjeta.
+- IMPLEMENTADO describe el código, no autorización de lanzamiento: la prueba manual
+  con dos cuentas Stripe test y los pendientes operativos se registran en
+  `../reports/2026-09-11-sp2-cierre.md`. Integración/PR a main: decisión del dueño.

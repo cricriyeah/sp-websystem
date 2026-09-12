@@ -773,20 +773,29 @@ Incidencia del gate: el test existente de captura parcial suponia orden SQL sin 
 
 ## SECCIÓN 10 — Cierre SP2
 
-- [ ] **10.1** `manage.py test apps config` verde en sqlite Y Postgres (drop antes).
-- [ ] **10.2** `check --deploy --fail-level WARNING` (production settings + env relleno).
-- [ ] **10.3** Frontend `lint` · `tsc --noEmit` · `build` verdes.
-- [ ] **10.4** Repaso de diffs: reparto solo en `pricing.monto_por_empresa`; void/refund de orden solo en `ordenes.revertir_orden`; el webhook es la única fuente de verdad; `Orden` con RLS sede-scoped + excepción documentada en el guardarraíl; idempotency_key en toda operación de Stripe de SP2.
+Registro 2026-09-11: [reporte de cierre](../reports/2026-09-11-sp2-cierre.md).
+La rama de hallazgos ya está integrada. No se integra ni abre PR a main.
+**10.5 pendiente de credenciales Stripe test reales de la líder: no dar por
+validado el cierre end-to-end ni autorizar producción con pruebas mock.**
+
+- [x] **10.1** `manage.py test apps config` verde en sqlite Y Postgres. SQLite: 863
+  tests, OK (skipped=27, los de RLS), 260s. Postgres (psd-pg puerto 5433, rol
+  `ci_rls` NOSUPERUSER NOBYPASSRLS): 863 tests, OK, 0 skips, 527s. Incluye los dos
+  tests del repaso final (correo bajo scope líder, rechazo de cancelación sobre
+  orden capturada).
+- [x] **10.2** `check --deploy --fail-level WARNING` (production settings + env relleno). Exit 0, 0 problemas, 1 silenciado.
+- [x] **10.3** Frontend `lint` · `tsc --noEmit` · `build` verdes. Exit 0 en los tres, después de corregir el checkout.
+- [x] **10.4** Repaso de diffs: reparto solo en `pricing.monto_por_empresa`; void/refund de orden solo en `ordenes.revertir_orden`; el webhook es la única fuente de verdad (conciliación reutiliza su servicio); `Orden` con RLS sede-scoped + excepción documentada en el guardarraíl; idempotency_key en toda escritura Stripe de SP2. Deuda update/capture/cancel cerrada; corregidas compensación por cupo, liberación de componentes y espera de cierre en checkout. Repaso final encontró y corrigió dos casos sin cubrir: (a) `notificar_orden_pagada` podía leer `orden.paquete` bajo el RLS de la empresa del último webhook en vez de la líder — ahora lo relee bajo scope líder; (b) `revertir_orden` podía reembolsar/cancelar reservas antes de descubrir que la orden ya estaba `CAPTURADA` (terminal) — ahora refresca y rechaza con `OrdenCerradaError` antes de tocar Stripe; `OrdenAdmin` atrapa el error y avisa sin tumbar la acción. Detalle y límites en el reporte.
 - [ ] **10.5** Prueba end-to-end manual (llaves Stripe test): compra del paquete Pesca + Traslado con éxito; compra donde el 2º pago se rechaza (tarjeta `4000000000000002`) → void del 1º, nada cobrado; webhook perdido → `conciliar_pagos` cierra la orden.
-- [ ] **10.6** Actualizar `backend/CLAUDE.md` — sección nueva "Órdenes cruza-empresa": `Orden`, modelo B de cobro, `ordenes.py`, `revertir_orden`, `conciliar_pagos`/`revisar_ordenes` orden-aware, notificación combinada, `forma_pago=completo`. Actualizar `frontend/CLAUDE.md` — checkout de paquete cruza-empresa.
-- [ ] **10.7** Actualizar `docs/superpowers/specs/2026-09-06-ADR-005-...md` — Estado: IMPLEMENTADO, con la fecha y las desviaciones.
-- [ ] **10.8** Sembrar en local el paquete "Pesca + Traslado" (Empresa 1 líder + componente de la Empresa 2) con su `precio_paquete`. Añadir a `seed_local_demo`.
-- [ ] **10.9** Memoria: `plan-transporte-multi-empresa` → SP1 y SP2 hechos; mover a `pendientes-manuales-produccion` los pasos de producción:
+- [x] **10.6** Actualizar `backend/CLAUDE.md` — sección nueva "Órdenes cruza-empresa": `Orden`, modelo B de cobro, `ordenes.py`, `revertir_orden`, `conciliar_pagos`/`revisar_ordenes` orden-aware, notificación combinada, `forma_pago=completo`. Actualizar `frontend/CLAUDE.md` — checkout de paquete cruza-empresa.
+- [x] **10.7** Actualizar `docs/superpowers/specs/2026-09-06-ADR-005-...md` — Estado: IMPLEMENTADO, con la fecha y las desviaciones. Implementación no equivale a lanzamiento aprobado; 10.5 sigue pendiente.
+- [x] **10.8** Sembrar en local el paquete "Pesca + Traslado" (Empresa 1 líder + componente de la Empresa 2) con su `precio_paquete`. Añadido a `seed_local_demo`, ejecutado dos veces: ID local 5, slug `pesca-traslado`, 7500 MXN / 450 USD en `precio_ancla`/`precio_ancla_usd`.
+- [x] **10.9** Por instrucción del dueño: **no tocar memoria**. Lista entregada en el reporte para trasladar a `pendientes-manuales-produccion`:
   - **Cada empresa** registra su webhook endpoint en SU dashboard de Stripe apuntando a `/api/<empresa_slug>/stripe/webhook/` y guarda el signing secret en `Empresa.stripe_webhook_secret`. Sin esto, el cierre de orden depende solo de `conciliar_pagos` (con retraso).
   - Crear el `Paquete` "Pesca + Traslado" real (líder Empresa 1 + componente Empresa 2) y su `precio_paquete`; verificar `precio_paquete ≥` tarifa de transporte.
   - Texto final del deslinde ampliado aprobado por el dueño / abogado.
-- [ ] **10.10** Resumen para el dueño: migraciones y orden; qué se carga a mano; qué quedó pendiente (texto del deslinde, plantilla de correo combinado si quiere ajustarla, decisión de si `redondo_actividad` lleva tramo por tamaño).
-- [ ] **10.11** Commit `docs(plan): SP2 completado`. **PARA.** Integración de la rama (PR a `main` una vez `fix/expansion-multi-sede-hallazgos` esté dentro) la decide el dueño.
+- [x] **10.10** Resumen para el dueño: migraciones y orden; qué se carga a mano; qué quedó pendiente (texto del deslinde, plantilla de correo combinado si quiere ajustarla, decisión de si `redondo_actividad` lleva tramo por tamaño). Entregado en el reporte.
+- [x] **10.11** Commit `docs(plan): SP2 completado`. **10.5 sigue pendiente** (credenciales Stripe test reales de la líder) — no se declara cierre end-to-end. **PARA.** Integración de la rama (PR a `main` una vez `fix/expansion-multi-sede-hallazgos` esté dentro) la decide el dueño.
 
 ---
 

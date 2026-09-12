@@ -428,10 +428,18 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
     def test_notificar_orden_pagada_correo_combinado_y_whatsapp_por_empresa(self, mock_post, mock_wa):
         """Tarea 5.4: Un correo combinado con 2 componentes + 2 llamadas a WhatsApp (una por empresa)."""
         from apps.notifications.services import notificar_orden_pagada
+        from apps.bookings.models import Orden
+        from apps.tenancy import scope
+        from django.db import connection
 
         mock_post.return_value.raise_for_status.return_value = None
 
-        notificar_orden_pagada(self.orden)
+        # Como el webhook del último proveedor: sin relaciones de la líder en caché.
+        with scope.con_empresa(self.empresa_2):
+            orden = Orden.objects.get(pk=self.orden.pk)
+            notificar_orden_pagada(orden)
+            if connection.vendor == 'postgresql':
+                self.assertEqual(list(Reserva.objects.values_list('id', flat=True)), [self.reserva_2.pk])
 
         # 1. Un solo correo enviado via Resend al correo del cliente
         mock_post.assert_called_once()

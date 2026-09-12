@@ -290,7 +290,7 @@ Con la expansión multi-servicio y paquetes turísticos:
   `Reserva.save()` propaga automáticamente `ocupa_cupo = (estado in ESTADOS_QUE_OCUPAN_CUPO)` a sus `ocupaciones` únicamente cuando la reserva cruza la frontera de ocupación (usando `_estado_original`).
 - **Paquetes turísticos (v1 mono-empresa)**:
   - Todo `Paquete` pertenece a una `sede` y a una `empresa_lider`.
-  - En v1, todos los `PaqueteServicio` deben pertenecer a la misma `empresa_lider` (`PaqueteServicio.clean()`). Paquetes cruza-empresa quedan expresamente diferidos a futuro (ver `docs/superpowers/specs/2026-09-06-ADR-005-paquetes-cruza-empresa.md`).
+  - `PaqueteServicio.clean()` permite empresas distintas dentro de la misma sede. Los paquetes cruza-empresa usan `Orden` (ver abajo); los mono-empresa conservan su flujo de reserva.
   - Al pagar la reserva de un paquete, `reservar_cupo_al_confirmar()` dentro de `aplicar_pago_exitoso` valida y crea un `ReservaPaqueteComponente(estado_cupo=OK)` por cada componente no removido, y crea las `ReservaOcupacion` correspondientes para hospedaje. Si algún componente no tiene cupo, lanza `SinCupoError`, la transacción hace rollback y se emite reembolso automático 100%.
   - Al cancelar la reserva, `Reserva.save()` sincroniza `componentes` a `LIBERADO` y libera las ocupaciones.
 - **Marketplace dinámico en el checkout**:
@@ -429,3 +429,50 @@ Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra
 - **Paquetes turísticos**: en v1 (`ADR-004 Revisión 3`), un paquete agrupa servicios de una sola empresa (`empresa_lider`). Es un bundle cerrado con precio fijo: el cliente no puede retirar servicios (no existen "servicios removibles" ni resta de ajustes). El precio total vive en `pricing.py` (`precio_paquete_total`) y se calcula como `precio_ancla` fijo + Σ personalizaciones (preseleccionadas/obligatorias + opcionales marcadas). Al confirmar el pago, se reserva cupo para todos los servicios componentes del paquete y se generan sus `ReservaPaqueteComponente`.
 
 
+
+## Órdenes cruza-empresa
+
+SP2 implementa ADR-005: `bookings.Orden` agrupa una `Reserva` por empresa; v1 admite
+un servicio base de la líder y un traslado de otra empresa de la misma sede.
+Solo `forma_pago=completo`, sin anticipo. El precio fijo sigue almacenado en
+`Paquete.precio_ancla` / `precio_ancla_usd`; no existe un campo `precio_paquete`.
+
+- Modelo B: `apps/payments/ordenes.py` crea un PaymentIntent de tarjeta con captura
+  manual por cuenta Stripe. Se autorizan todos antes de capturarlos. El reparto
+  vive exclusivamente en `pricing.monto_por_empresa`: transporte recibe su tarifa
+  y la líder recibe el residuo. No se usa Stripe Connect.
+- Las escrituras Stripe (`create`, `update`, `capture`, `cancel`, `refunds.create`)
+  llevan claves idempotentes. Las consultas `retrieve` no modifican dinero.
+- `ordenes.revertir_orden` centraliza void/refund de los componentes, incluido el
+  fallo de cupo del webhook. Guarda la cancelación mediante `Reserva.save()` para
+  liberar ocupaciones y componentes; no sustituirlo por `QuerySet.update()`.
+- El navegador solicita la captura, pero no marca la orden pagada.
+  `services.aplicar_pago_exitoso` aplica cada `payment_intent.succeeded` y cierra
+  la orden cuando todos sus componentes están pagados/asignados. El cierre usa
+  locks y la misma función sirve al webhook y a la conciliación.
+- `Orden` tiene RLS por **sede**, excepción documentada en el guardarraíl de
+  `tenancy/tests_rls.py`. Sus reservas siguen aisladas por empresa. Para inspeccionar
+  componentes se usa `bookings.orden_lectura.reservas_de_orden`, que invoca la
+  función PostgreSQL `estado_reservas_de_orden` de lectura acotada por ID.
+  `0044` elimina el antiguo bypass de lectura basado en `current_query()`;
+  `WITH CHECK` conserva la excepción de inserción pública para sedes existentes.
+- `conciliar_pagos` es orden-aware: si todos los intents están `succeeded`, llama
+  al mismo servicio del webhook; si la autorización incompleta venció (24 horas)
+  o hay un intent cancelado, revierte la orden. Ejecutarlo cada hora.
+  `revisar_ordenes --horas 2` diagnostica estados intermedios sin modificar datos.
+- Una notificación combinada por orden: email con componentes y WhatsApp según
+  empresa; `notificada_en` evita repetirla. Un único deslinde se copia a las reservas.
+- Cada empresa necesita su webhook en `/api/<empresa_slug>/stripe/webhook/` y su
+  propio `Empresa.stripe_webhook_secret`. Configurar las credenciales por empresa.
+- `seed_local_demo` crea `pesca-traslado` (Sal y Sol + Transportes La Paz), con
+  precio inicial demo 7500 MXN / 450 USD. Es solo local y no reemplaza credenciales
+  existentes. No ejecutar el seed demo en producción.
+- **`Orden.estado=CAPTURADA` es terminal.** `revertir_orden` refresca la orden bajo
+  el scope de la líder y rechaza con `OrdenCerradaError` antes de tocar Stripe si ya
+  está capturada — nunca reembolsa y luego falla la transición de estado. El admin
+  de `OrdenAdmin` atrapa ese error y avisa con `message_user`, sin tumbar la acción
+  para el resto del queryset.
+- **El correo combinado de `notificar_orden_pagada` puede llegar por el webhook de
+  cualquier empresa del paquete**, no solo la líder — la orden en memoria puede no
+  traer `paquete` cacheado, o traerlo bajo RLS de la empresa equivocada. El servicio
+  relee `orden.paquete` bajo el scope de `empresa_lider` antes de armar el correo.
