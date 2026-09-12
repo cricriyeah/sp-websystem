@@ -37,6 +37,11 @@ Ninguno de los dos resuelve lo que pide el negocio:
 - Un input (pregunta) que puede ser de texto libre, número o selección de una lista,
   marcado como obligatorio (bloquea el pago si queda vacío) o no obligatorio.
 
+Una revisión adversarial de esta spec encontró que resolver esto bien para pesca
+simple (el checkout más usado) obliga a retirar también `fleet.Tarifa` — ver la
+sección dedicada más abajo. No es alcance añadido por gusto: sin eso, unificar los
+catálogos le quita brunch/licencia/carnada al checkout de pesca sin paquete.
+
 ## Decisiones ya tomadas con el dueño
 
 1. **Unificar los dos catálogos en uno solo** (`Personalizacion`/`ServicioPersonalizacion`).
@@ -61,6 +66,12 @@ Ninguno de los dos resuelve lo que pide el negocio:
    No aplican a ningún subtipo de input.
 8. **La respuesta de un input se ve solo en el detalle de la Reserva en el admin**, no
    en la Agenda.
+9. **Pesca deportiva "legado" (sin paquete ni servicio explícito) deja de existir como
+   caso especial: pasa a resolverse siempre contra un `Servicio` real**, igual que ya
+   se hizo con transporte. Es la única forma de que brunch/licencia/carnada le
+   apliquen: `ServicioPersonalizacion` requiere un `Servicio`, y hoy ese camino no
+   tiene ninguno (usa `fleet.Tarifa` directo). `fleet.Tarifa` se retira junto con
+   `ExtrasItem`/`ReservaExtra`.
 
 ## Modelo de datos
 
@@ -171,6 +182,57 @@ que preservar). Todo lo que hoy lee/escribe estos modelos se reescribe contra
 `Personalizacion`/`ServicioPersonalizacion`/`ReservaPersonalizacion` (ver más abajo el
 inventario completo de los 17 archivos backend afectados).
 
+## Retiro de `fleet.Tarifa`: pesca simple pasa a ser un `Servicio` real
+
+**Este es el hallazgo más importante de la revisión adversarial y cambia el alcance
+de la spec.** `Reserva.servicio` es `null=True` con el comentario "Vacío = pesca
+deportiva (legacy)" (`apps/bookings/models.py:429-432`). El flujo real de
+`/reservar` **sin** `?servicio=` ni `?paquete=` (el booking bar de la portada, el
+camino más usado hoy) deja `servicio=None` y resuelve el precio contra
+`fleet.Tarifa` (`CrearPagoView._post`, rama `else` en torno a la línea 103). Sin
+arreglar esto, la unificación **le quita brunch/licencia/carnada al checkout de
+pesca simple**, que es exactamente donde más se usan hoy — una regresión
+silenciosa, no una mejora.
+
+La buena noticia: **ya existe** el `Servicio` que necesitamos. La migración
+`apps/fleet/migrations/0018_crear_servicio_la_paz.py` ya creó, para la Empresa
+`sal-y-sol`, un `Servicio(slug='pesca-deportiva', tipo_servicio='pesca',
+estrategia_precio='por_grupo', precio_base=<el de Tarifa>, precio_persona_extra=<el
+de Tarifa>, personas_incluidas=3)` — con los mismos números que tenía `Tarifa` en
+ese momento. La estrategia `PorGrupo` (`apps/payments/estrategias_precio.py:99-118`)
+reproduce exactamente la fórmula de `Tarifa` (precio base + recargo por persona
+arriba de `personas_incluidas`) leyendo esos mismos campos, que `Servicio` ya tiene.
+**No hace falta código de precio nuevo**, solo:
+
+1. **Migración de datos** (patrón igual al de `0018`, generalizado a *todas* las
+   Empresas que hoy tengan una `Tarifa`, no solo `sal-y-sol`): por cada Empresa con
+   `Tarifa`, `get_or_create` un `Servicio(slug='pesca-deportiva', ...)` con esos
+   valores, si no existe ya uno con ese slug para esa Empresa.
+2. **`reservar/page.tsx`**: cuando no hay `?servicio=` ni `?paquete=` en la URL, en
+   vez de llamar a `getTarifa(empresaSlug)` resuelve
+   `getServicioDetalle('pesca-deportiva', empresaSlug)` — el mismo camino que ya usa
+   un servicio suelto explícito, con el slug fijo como default. Se retira `getTarifa`
+   de `frontend/src/lib/api.ts` y el tipo que lo acompaña.
+3. **`CrearPagoView`**: se retira la rama `else` que resuelve `Tarifa.de(empresa)`
+   (líneas ~103-119) — con el paso 2, `reserva.servicio_id` siempre viene resuelto
+   para una reserva de pesca simple, así que solo queda la rama `elif
+   reserva.servicio_id`.
+4. **`Reserva.clean()`**: nueva regla — una Reserva debe tener `servicio_id` o
+   `paquete_id` (al menos uno). Ya no es válido dejar los dos vacíos. (Una reserva de
+   paquete sigue con `servicio=None` + `paquete` seteado, sin cambio ahí.)
+5. Se retiran `fleet.Tarifa`, `fleet.TarifaView` (`GET /api/<empresa>/tarifa/`),
+   `TarifaSerializer`, y sus usos en `apps/fleet/admin.py`,
+   `apps/fleet/management/commands/seed_local_demo.py` (se reemplaza por la creación
+   directa del `Servicio` "pesca-deportiva" con esos datos), `config/health.py` (si el
+   health check consulta `Tarifa`, pasa a consultar el `Servicio` canónico), y
+   cualquier otro de los ~33 archivos que hoy referencian `Tarifa`/`getTarifa` (correr
+   `rg -n "Tarifa|getTarifa" ` antes de dar el retiro por completo — mismo caveat de
+   metodología que con `ExtrasItem`).
+
+No hay usuarios reales de `/reservar` sin parámetros que perder: es exactamente el
+mismo Servicio de pesca que ya se ofrece explícitamente por catálogo, solo que ahora
+también es el default cuando no se especifica nada.
+
 ## Precio y congelado (corrige una inconsistencia existente)
 
 Hoy `ExtrasItem` congela precio al pagar (`CrearPagoView._resolver_extras` escribe
@@ -271,12 +333,53 @@ campo `respuesta` opcional (string, default `''`).
   `ORDEN_CAMPOS`, pero sobre un arreglo dinámico), y el submit no sale mientras existan
   entradas en ese estado.
 - Este bloque deja de estar condicionado a `paquete`: aparece también cuando
-  `servicio` está seteado directamente (pesca legacy, transporte, cualquier servicio
-  suelto con `ServicioPersonalizacion` asociadas).
+  `servicio` está seteado directamente — pesca (ahora siempre vía el `Servicio`
+  "pesca-deportiva", ver más arriba) y cualquier otro servicio suelto con
+  `ServicioPersonalizacion` asociadas. **Transporte no es un caso especial**: es un
+  `Servicio` como cualquier otro (`tipo_servicio='transporte'`) y el mecanismo le
+  aplica igual de forma genérica. Lo que sí queda fuera de esta pasada es cablear su
+  checkout concreto: `TrasladoCheckoutSerializer`
+  (`apps/bookings/serializers.py:395-469`, subclase con su propio `Meta.fields` sin
+  `personalizaciones` y su propio `create`/`_guardar_traslado`) y
+  `frontend/src/components/traslado-view.tsx` no se tocan aquí porque nadie pidió
+  personalizaciones para traslados todavía y hoy no tienen ninguna — no hay
+  regresión al dejarlos fuera. Cuando se pida, es el mismo mecanismo genérico, no uno
+  nuevo.
 - `AmenitiesReminder` (y su tipo `ExtraPendiente`) se generaliza para trabajar sobre
   `ServicioPersonalizacion`/`Personalizacion` en vez de `ExtrasItem` — mismo
   componente, nueva fuente de datos, con `aviso_reforzado` reemplazando la comparación
   `tipo === 'licencia'` que separa sus dos secciones.
+
+## Recuperación de checkout (`EstadoReservaView`)
+
+`GET /api/<empresa>/estado-reserva/` (`apps/payments/views.py`, clase
+`EstadoReservaView`) tiene dos ramas que leen `reserva.extras_seleccionados` y se
+rompen (`AttributeError`) en cuanto `ReservaExtra` desaparece — no es un dato que
+quede desactualizado, es un endpoint que revienta:
+
+- Rama `pagada` (línea ~352): expone `extras` con `nombre`, `cobrar_por_persona`,
+  `monto` (usa `extra.subtotal`, ya congelado) y `cantidad`, para la pantalla de
+  confirmación tras el pago.
+- Rama `pendiente_pago` (línea ~380): expone `extras` con `id`/`cantidad` (usa
+  `cantidad_solicitada`, sin congelar todavía), para reanudar un checkout abandonado
+  a medio llenar.
+
+Ambas se reescriben contra `reserva.personalizaciones_seleccionadas` (el nuevo
+`related_name`), cambiando la clave de la respuesta de `extras` a
+`personalizaciones`:
+
+- `pagada`: por cada `ReservaPersonalizacion`, `{ nombre, tipo_interaccion, monto
+  (desde precio_unitario ya congelado, null en input), cantidad, respuesta }`.
+- `pendiente_pago`: por cada `ReservaPersonalizacion`, `{ id (del
+  ServicioPersonalizacion), cantidad, respuesta }` — sin precio, porque aún no se
+  congela.
+
+En el frontend, `frontend/src/lib/api.ts` (tipos `EstadoReservaPendiente.extras` /
+`EstadoReservaPagada.extras`) y `checkout-view.tsx` (`recuperadoExtras`,
+`lineasExtrasRecuperadas`, y la restauración de `extrasSeleccionados`/
+`cantidadesExtras` al reanudar un checkout) se actualizan para leer
+`personalizaciones` con esta forma nueva, incluyendo restaurar la `respuesta` de
+cualquier input que el cliente ya había llenado antes de abandonar el checkout.
 
 ## Admin
 
@@ -348,9 +451,17 @@ TDD de siempre, en el orden natural de las capas:
    obligatorio vacío, formato de `input_numero`/`input_seleccion`, aceptación de
    recomendada explícitamente desmarcada.
 4. **Admin**: `ReservaPersonalizacionInline` muestra lo esperado.
-5. **Frontend**: estado inicial de recomendada/opcional, aviso al desmarcar
-   (reutilizando `AmenitiesReminder`), bloqueo de submit con input obligatorio vacío,
-   render de los tres subtipos de input.
+5. **Migración pesca→Servicio**: la migración de datos crea/reutiliza el `Servicio`
+   "pesca-deportiva" por Empresa con los valores de `Tarifa`; `CrearPagoView` sin la
+   rama `Tarifa` cobra igual que antes para una reserva de pesca simple;
+   `Reserva.clean()` rechaza una reserva sin `servicio` ni `paquete`.
+6. **Recuperación de checkout**: `EstadoReservaView` en `pendiente_pago` y en
+   `pagada` reporta `personalizaciones` (checks y respuestas de input) en vez de
+   `extras`, para pesca simple y para paquete.
+7. **Frontend**: estado inicial de recomendada/opcional, aviso al desmarcar
+   (reutilizando `AmenitiesReminder`, con la sección de `aviso_reforzado`), stepper de
+   cantidad, bloqueo de submit con input obligatorio vacío, render de los tres
+   subtipos de input, reanudación de checkout restaurando `respuesta`.
 
 Suite completa (`manage.py test apps config`) en SQLite y Postgres antes de cerrar,
 como en el cierre de SP2. Frontend: `lint`, `tsc --noEmit`, `build`.
@@ -363,5 +474,11 @@ como en el cierre de SP2. Frontend: `lint`, `tsc --noEmit`, `build`.
 - No se toca el checkout cruza-empresa (`paquete-checkout.tsx`/`Orden`) — hoy no tiene
   personalizaciones y esto no se lo agrega; es un checkout distinto (ver
   `2026-09-07-transporte-multi-empresa-design.md`).
-- No hay migración de datos reales (nada lanzado): la migración que retira
-  `ExtrasItem`/`ReservaExtra` simplemente dropea las tablas.
+- No se cablea `TrasladoCheckoutSerializer`/`traslado-view.tsx` — transporte es un
+  `Servicio` genérico y el mecanismo ya le aplica, pero nadie pidió personalizaciones
+  ahí todavía y hoy no tiene ninguna (no es una limitación de diseño, es que no se
+  pidió).
+- No hay migración de datos reales de negocio (nada lanzado): las migraciones que
+  retiran `ExtrasItem`/`ReservaExtra`/`Tarifa` dropean tablas o mueven configuración
+  de precio ya existente a `Servicio` — no hay reservas ni pagos reales que
+  preservar.
