@@ -6,6 +6,7 @@ NO usar en producción. Idempotente (get_or_create). Crea:
   - Servicio suelto de paseo (Sal y Sol)
   - Servicio de hospedaje + 3 habitaciones (Sal y Sol) con personalizaciones
   - Un Paquete de Sal y Sol (pesca + hospedaje + brunch)
+  - Paquete cruza-empresa "Pesca + Traslado" (Sal y Sol + Transportes La Paz)
   - Una segunda Empresa en La Paz ("Hotel Malecón") con su propio hospedaje,
     para probar aislamiento RLS y el marketplace multi-empresa
   - Llaves de Stripe PLACEHOLDER (cámbialas por llaves de test reales en /admin/)
@@ -257,7 +258,7 @@ class Command(BaseCommand):
             ),
         )
         with scope.como_operador_plataforma():
-            Servicio.objects.get_or_create(
+            traslado, _ = Servicio.objects.get_or_create(
                 empresa=transporte, slug='traslados-la-paz',
                 defaults=dict(
                     nombre='Traslados Privados La Paz',
@@ -282,7 +283,7 @@ class Command(BaseCommand):
                     defaults={'zona': zona_pe, 'activo': True},
                 )
 
-            # Las 5 filas de tarifas del spec §3.1
+            # Demo: periferia usa 2200 MXN (spec §3.1: 1800); validar precio real antes del deploy.
             tarifas_demo = [
                 (TipoTraslado.REDONDO_AEROPUERTO, '', 1, 4, Decimal('4500.00'), Decimal('265.00')),
                 (TipoTraslado.REDONDO_AEROPUERTO, '', 5, None, Decimal('6000.00'), Decimal('355.00')),
@@ -306,9 +307,27 @@ class Command(BaseCommand):
                     tarifa_obj.precio_usd = precio_usd
                     tarifa_obj.save(update_fields=['personas_max', 'precio', 'precio_usd'])
 
+        with scope.como_operador_plataforma():
+            paquete_cruza, _ = Paquete.objects.get_or_create(
+                sede=sede, slug='pesca-traslado',
+                defaults=dict(
+                    empresa_lider=sal, nombre='Pesca + Traslado',
+                    descripcion='Pesca deportiva y traslado privado en La Paz. Dos cobros, uno por empresa.',
+                    precio_ancla=Decimal('7500.00'), precio_ancla_usd=Decimal('450.00'),
+                    porcentaje_anticipo=100, activo=True,
+                ),
+            )
+            for posicion, servicio in enumerate((pesca, traslado), start=1):
+                componente, _ = PaqueteServicio.objects.get_or_create(
+                    paquete=paquete_cruza, servicio=servicio, defaults={'orden': posicion},
+                )
+                componente.full_clean()
+            paquete_cruza.full_clean()
+
         self.stdout.write(self.style.SUCCESS(
             'Demo sembrada.\n'
             '  Sede la-paz    -> sal-y-sol (pesca/paseo/hospedaje + paquete), hotel-malecon (suite), transporte-la-paz (traslados)\n'
             '  Sede los-cabos -> tours-cabo (snorkel/ballenas + paquete)\n'
+            '  Paquete pesca-traslado -> Pesca + Traslado (precio demo inicial: 7500 MXN / 450 USD)\n'
             'Sigue: pon llaves de Stripe TEST reales en /admin/tenancy/empresa/ para las empresas.'
         ))
