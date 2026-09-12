@@ -43,8 +43,11 @@ Ninguno de los dos resuelve lo que pide el negocio:
    Se retiran `fleet.ExtrasItem` y `bookings.ReservaExtra` por completo. Nada que
    migrar: el proyecto no ha lanzado.
 2. **No existe más un check 100% forzado.** El caso legal (licencia de pesca) pasa a
-   ser "recomendada" (preseleccionada, con aviso reforzado al desmarcar). El riesgo de
-   que alguien la quite es una decisión de negocio ya aceptada por el dueño.
+   ser "recomendada" (preseleccionada), con un aviso **reforzado** al desmarcar: texto
+   e icono de advertencia distintos al de una recomendada normal, no solo el mismo
+   modal genérico. El riesgo de que alguien la quite es una decisión de negocio ya
+   aceptada por el dueño — pero el aviso reforzado necesita un mecanismo explícito
+   para no depender de comparar un string libre (ver `aviso_reforzado` en el modelo).
 3. **Los inputs siempre son gratis.** Nunca cobran; solo recolectan un dato.
 4. **El input tiene tres subtipos**: `texto`, `numero`, `seleccion` (con lista de
    opciones que el jefe define en el admin, por `Personalizacion`).
@@ -69,12 +72,20 @@ Campos que se agregan:
   `input_seleccion`. Default `check`.
 - `opciones_seleccion` — `JSONField(default=list, blank=True)`. Lista de strings.
   Solo tiene sentido si `tipo_interaccion == input_seleccion`.
+- `aviso_reforzado` — `BooleanField(default=False)`. Solo tiene sentido si
+  `tipo_interaccion == check`. Marca que, al desmarcar esta personalización cuando es
+  recomendada, el modal de aviso usa la variante reforzada (texto/ícono de advertencia
+  distinto), en vez de la genérica. Reemplaza el `tipo == 'licencia'` hardcodeado que
+  usa hoy `AmenitiesReminder` para decidir esto — un campo explícito y validado, no un
+  string libre que puede escribirse mal sin que nada lo detecte.
 
 Campos que se conservan sin cambio de forma, pero con validación nueva:
 
 - `tipo` (bebida/licencia/carnada/otro) sigue siendo una etiqueta libre de
-  agrupación visual — **eje independiente** de `tipo_interaccion**. No se tocan sus
-  choices ni su uso en el modal de aviso.
+  agrupación visual — **eje independiente** de `tipo_interaccion` y de
+  `aviso_reforzado`. Sigue sin `TextChoices` (es y seguirá siendo texto libre); no se
+  usa para decidir ningún comportamiento del checkout, solo para agrupar visualmente
+  si el frontend lo necesita.
 - `cobrar_por_persona`, `cantidad_editable`: válidos solo si `tipo_interaccion == check`.
 
 `clean()` nuevo:
@@ -84,8 +95,8 @@ if tipo_interaccion == 'input_seleccion' and not opciones_seleccion:
     error: "Las personalizaciones de selección necesitan al menos una opción."
 if tipo_interaccion != 'input_seleccion' and opciones_seleccion:
     error: "Las opciones de selección solo aplican al tipo 'selección'."
-if tipo_interaccion != 'check' and (cobrar_por_persona or cantidad_editable):
-    error: "'Cobrar por persona' y 'cantidad editable' solo aplican a personalizaciones tipo check."
+if tipo_interaccion != 'check' and (cobrar_por_persona or cantidad_editable or aviso_reforzado):
+    error: "'Cobrar por persona', 'cantidad editable' y 'aviso reforzado' solo aplican a personalizaciones tipo check."
 ```
 
 ### `fleet.ServicioPersonalizacion` (precio + comportamiento por Servicio)
@@ -130,6 +141,18 @@ el Servicio directo de una reserva suelta.
 - `related_name` de la FK a `Reserva` cambia de `paquete_personalizaciones` a
   `personalizaciones_seleccionadas` (refleja que ya no es exclusivo de paquete).
 
+**RLS**: el rename se hace con `migrations.RenameModel` (que en Django también
+renombra la tabla física vía `ALTER TABLE ... RENAME TO ...`), nunca como
+drop+recreate. Postgres ata las políticas RLS al OID de la tabla, no a su nombre, así
+que la política `tenancy_alcance` ya aplicada en
+`apps/bookings/migrations/0032_rls_checkout_paquete.py` (sobre
+`bookings_reservapaquetepersonalizacion`, vía `EXISTS` contra `reserva_id`) sigue
+vigente después del rename sin necesidad de una migración RLS nueva — se agrega un
+test en `tests_rls.py` que lo confirme explícitamente después del rename, cubriendo
+también el caso nuevo de servicio suelto (antes esa tabla solo se ejercitaba desde
+paquetes). Al dropear `ExtrasItem`/`ReservaExtra`, Postgres elimina sus políticas RLS
+junto con las tablas — no hace falta una migración de limpieza aparte.
+
 `clean()` nuevo:
 
 ```
@@ -159,10 +182,11 @@ pagar**, con el mismo patrón que ya usa `ExtrasItem` hoy.
 
 Cambios en `ReservaPersonalizacion`:
 
-- Se agregan `precio_unitario` y `precio_unitario_moneda` (o reutilizar un único campo
-  ya que `Reserva.moneda` es fija por reserva) — `null=True, blank=True` mientras la
-  reserva sigue `pendiente_pago`, igual que `ReservaExtra.precio_unitario` hoy. Solo
-  `CrearPagoView` los llena, con el precio vigente de `ServicioPersonalizacion` en ese
+- Se agrega un único campo `precio_unitario` (`DecimalField(null=True, blank=True)`),
+  mismo patrón exacto que `ReservaExtra.precio_unitario` hoy — sin campo de moneda
+  propio, porque `Reserva.moneda` ya fija la moneda del cobro completo, igual que pasa
+  con `ReservaExtra`. `null` mientras la reserva sigue `pendiente_pago`; solo
+  `CrearPagoView` lo llena, con el precio vigente de `ServicioPersonalizacion` en ese
   momento.
 
 Cambios en `pricing.py`:
@@ -219,19 +243,40 @@ campo `respuesta` opcional (string, default `''`).
 - Al desmarcar una recomendada, mismo patrón de aviso que `AmenitiesReminder` (se
   reutiliza/generaliza ese componente en vez de crear uno nuevo): antes de dejar
   avanzar al pago, un modal muestra qué recomendadas quedaron sin marcar, con opción
-  de volver a marcarlas o continuar sin ellas.
+  de volver a marcarlas o continuar sin ellas. Las que tienen `aviso_reforzado=true`
+  van en su propia sección del modal (mismo lugar donde hoy `AmenitiesReminder` separa
+  "necesarios" de "opcionales", pero la condición deja de ser `tipo === 'licencia'` y
+  pasa a ser el campo `aviso_reforzado` que trae cada `ServicioPersonalizacion`), con
+  copy y estilo de advertencia más fuertes que las demás recomendadas.
+- Un `check` con `cantidad_editable=true` (ej. "¿cuántos del grupo ya traen su propia
+  licencia?") muestra un stepper numérico junto al checkbox, de 1 a `numero_personas`,
+  con el mismo control +/- que ya existe hoy para extras (`ajustarCantidadExtra`/
+  `cantidadDeExtra` en `checkout-view.tsx`) — se porta esa lógica al nuevo bloque
+  unificado, generalizada a operar por `ServicioPersonalizacion.id` en vez de por
+  `ExtrasItem.id`. Un `check` sin `cantidad_editable` no muestra stepper (aplica a todo
+  el grupo, como hoy).
 - Los `input_texto`/`input_numero`/`input_seleccion` se pintan como campo de texto,
   `<input type="number">`, o `<select>` con `opciones_seleccion`, en el mismo bloque de
-  "Personalizaciones". Los obligatorios muestran un asterisco; si el cliente intenta
-  avanzar/pagar con uno vacío, error inline junto al campo (usa el mismo mecanismo de
-  validación que ya existe para otros campos requeridos del checkout) — el submit no
-  sale hasta llenarlo.
+  "Personalizaciones". Los obligatorios muestran un asterisco.
+- **Validación de inputs obligatorios**: esto es plomería nueva, no una reutilización
+  del mecanismo de contacto existente. Hoy `erroresCampo`/`CampoContacto`/
+  `ORDEN_CAMPOS` son una unión cerrada de tres campos fijos (`fullName`, `phone`,
+  `email`) con un arreglo de foco fijo — no sirve tal cual para una lista de
+  personalizaciones cuyo tamaño y contenido dependen del Paquete/Servicio en tiempo de
+  ejecución. Se agrega un estado de errores propio, indexado por
+  `ServicioPersonalizacion.id` (p. ej. `erroresPersonalizacion: Record<number,
+  string>`), calculado al intentar avanzar/pagar: cualquier input obligatorio sin
+  `respuesta` no vacía se marca ahí, se hace scroll/foco al primero en orden de
+  aparición en el bloque de personalizaciones (mismo patrón de "primero en foco" que
+  `ORDEN_CAMPOS`, pero sobre un arreglo dinámico), y el submit no sale mientras existan
+  entradas en ese estado.
 - Este bloque deja de estar condicionado a `paquete`: aparece también cuando
   `servicio` está seteado directamente (pesca legacy, transporte, cualquier servicio
   suelto con `ServicioPersonalizacion` asociadas).
 - `AmenitiesReminder` (y su tipo `ExtraPendiente`) se generaliza para trabajar sobre
   `ServicioPersonalizacion`/`Personalizacion` en vez de `ExtrasItem` — mismo
-  componente, nueva fuente de datos.
+  componente, nueva fuente de datos, con `aviso_reforzado` reemplazando la comparación
+  `tipo === 'licencia'` que separa sus dos secciones.
 
 ## Admin
 
@@ -247,25 +292,38 @@ Se reescribe para crear, sobre el Servicio de pesca de la Empresa demo:
 
 - `Personalizacion` "Brunch" (`tipo=brunch`, `tipo_interaccion=check`,
   `cobrar_por_persona=True`), `ServicioPersonalizacion(preseleccionado=False)`.
-- `Personalizacion` "Licencia de pesca" (`tipo=licencia`, `tipo_interaccion=check`),
-  `ServicioPersonalizacion(preseleccionado=True)` — recomendada, ya no forzada.
+- `Personalizacion` "Licencia de pesca" (`tipo=licencia`, `tipo_interaccion=check`,
+  `aviso_reforzado=True`), `ServicioPersonalizacion(preseleccionado=True)` —
+  recomendada con aviso reforzado, ya no forzada.
 - `Personalizacion` "Carnada" (`tipo=carnada`, `tipo_interaccion=check`),
   `ServicioPersonalizacion(preseleccionado=True)`.
 
 Mismo criterio de idempotencia que tiene hoy (`get_or_create` por nombre/empresa).
 
-## Inventario de archivos backend afectados (17, de la búsqueda de `ReservaExtra`/`ExtrasItem`)
+## Inventario de archivos backend afectados
 
-`apps/bookings/admin.py`, `apps/notifications/tests.py`, `apps/payments/tests.py`,
-`apps/bookings/tests.py`, `apps/bookings/models.py`, `apps/fleet/models.py`,
-`apps/payments/pricing.py`, `apps/bookings/serializers.py`, `apps/fleet/tests.py`,
-`apps/fleet/views.py`, `apps/fleet/admin.py`, `apps/bookings/tests_tenancy.py`,
+La búsqueda por nombre de clase (`ReservaExtra`/`ExtrasItem`) da 17 archivos, pero esa
+búsqueda **subcuenta** los archivos que solo acceden a los datos por el nombre del
+manager relacionado (`extras_seleccionados`, `paquete_personalizaciones`) o por
+función auxiliar (`_resolver_extras`), sin mencionar la clase. Antes de dar el
+inventario por cerrado en la fase de implementación, correr también:
+`rg -n "extras_seleccionados|paquete_personalizaciones|_resolver_extras|cargo_por_extra"`.
+
+Confirmado por esa segunda búsqueda: **`apps/payments/views.py`** (contiene
+`CrearPagoView._resolver_extras`, que esta spec requiere reescribir en la sección
+"Precio y congelado") no aparece en la lista original y debe añadirse explícitamente.
+
+Lista base (17, por nombre de clase): `apps/bookings/admin.py`,
+`apps/notifications/tests.py`, `apps/payments/tests.py`, `apps/bookings/tests.py`,
+`apps/bookings/models.py`, `apps/fleet/models.py`, `apps/payments/pricing.py`,
+`apps/bookings/serializers.py`, `apps/fleet/tests.py`, `apps/fleet/views.py`,
+`apps/fleet/admin.py`, `apps/bookings/tests_tenancy.py`,
 `apps/fleet/management/commands/seed_extras.py`, `apps/fleet/serializers.py`,
 `apps/fleet/migrations/0013_backfill_empresa.py` (histórico, no se toca — las
 migraciones viejas se quedan, la eliminación es una migración nueva),
 `apps/fleet/migrations/0008_extrasitem_puntoencuentro_transporteprecio.py` (ídem,
 histórico), `apps/bookings/migrations/0018_remove_reserva_lleva_lunch_and_more.py`
-(ídem, histórico).
+(ídem, histórico). Más `apps/payments/views.py` (confirmado arriba).
 
 Los tests que hoy cubren `ExtrasItem`/`ReservaExtra` se reescriben contra el catálogo
 unificado (mismos escenarios de negocio: brunch por persona, licencia recomendada,
@@ -276,10 +334,14 @@ carnada, cantidad editable, congelado de precio al pagar).
 TDD de siempre, en el orden natural de las capas:
 
 1. **Modelo**: `clean()` de `Personalizacion` (input_seleccion necesita opciones,
-   cobrar_por_persona/cantidad_editable solo en check), `clean()` de
+   cobrar_por_persona/cantidad_editable/aviso_reforzado solo en check), `clean()` de
    `ServicioPersonalizacion` (obligatorio solo en input, preseleccionado solo en
    check, precio 0 en input), `clean()` de `ReservaPersonalizacion` (respuesta vacía
    en check, formato numero/seleccion en input).
+1.5. **RLS** (`tests_rls.py`, Postgres): la política `tenancy_alcance` de
+   `bookings_reservapersonalizacion` (renombrada) sigue aislando por empresa después
+   del rename, para el caso paquete (como ya se probaba) y para el caso servicio
+   suelto (nuevo).
 2. **Pricing**: fórmula sin auto-inclusión, congelado de precio al pagar (paquete y
    servicio suelto), `cobrar_por_persona` multiplicando bien.
 3. **Serializer**: personalizaciones en servicio suelto (nuevo), bloqueo por input
