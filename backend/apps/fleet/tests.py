@@ -27,7 +27,10 @@ from .models import (
     Embarcacion,
     EmbarcacionNoDisponible,
     ExtrasItem,
+    Personalizacion,
     PuntoEncuentro,
+    Servicio,
+    ServicioPersonalizacion,
     Tarifa,
     TransporteTarifa,
     capacidades_disponibles,
@@ -816,3 +819,89 @@ class TrasladosViewTest(TestCase):
             self.assertEqual(respuesta.json()['puntos_encuentro'][0]['id'], self.catalogos[empresa.pk][2].pk)
             self.assertFalse(TransporteTarifa.objects.exists())
             self.assertFalse(PuntoEncuentro.objects.exists())
+
+
+class PersonalizacionInteraccionTests(EmpresaTestCase):
+    def test_input_no_puede_cobrar_por_persona(self):
+        p = Personalizacion(empresa=self.empresa, nombre='Nombre pasajero',
+                            tipo_interaccion='input_texto', cobrar_por_persona=True)
+        with self.assertRaises(ValidationError):
+            p.full_clean()
+
+    def test_opciones_son_lista_no_vacia_de_strings_no_vacios(self):
+        for opciones in ([], 'A', [1], ['  '], ['A', 'A']):
+            with self.subTest(opciones=opciones):
+                p = Personalizacion(empresa=self.empresa, nombre='Menú',
+                    tipo_interaccion='input_seleccion', opciones_seleccion=opciones)
+                with self.assertRaises(ValidationError):
+                    p.full_clean()
+
+    def test_input_gratis_y_check_opcional(self):
+        s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio', slug='s')
+        p = Personalizacion.objects.create(empresa=self.empresa, nombre='Pregunta',
+                                           tipo_interaccion='input_texto')
+        sp = ServicioPersonalizacion(servicio=s, personalizacion=p, obligatorio=True,
+                                     precio=Decimal('0.00'), precio_usd=None)
+        sp.full_clean()
+        sp.precio = Decimal('1.00')
+        with self.assertRaises(ValidationError):
+            sp.full_clean()
+
+    def test_combinaciones_invalidas_personalizacion_y_servicio(self):
+        # 1. check con obligatorio=True falla
+        s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio 2', slug='s2')
+        p_check = Personalizacion.objects.create(empresa=self.empresa, nombre='Check',
+                                                 tipo_interaccion='check')
+        sp_check = ServicioPersonalizacion(servicio=s, personalizacion=p_check,
+                                           obligatorio=True, preseleccionado=False)
+        with self.assertRaises(ValidationError):
+            sp_check.full_clean()
+
+        # 2. input con preseleccionado=True falla
+        p_input = Personalizacion.objects.create(empresa=self.empresa, nombre='Input',
+                                                 tipo_interaccion='input_texto')
+        sp_input = ServicioPersonalizacion(servicio=s, personalizacion=p_input,
+                                           preseleccionado=True, precio=Decimal('0.00'))
+        with self.assertRaises(ValidationError):
+            sp_input.full_clean()
+
+        # 3. cantidad_editable sin cobrar_por_persona falla
+        p_edit = Personalizacion(empresa=self.empresa, nombre='Editable',
+                                 tipo_interaccion='check', cantidad_editable=True,
+                                 cobrar_por_persona=False)
+        with self.assertRaises(ValidationError):
+            p_edit.full_clean()
+
+        # 4. input con aviso_reforzado falla
+        p_reforzado = Personalizacion(empresa=self.empresa, nombre='Input Reforzado',
+                                      tipo_interaccion='input_texto', aviso_reforzado=True)
+        with self.assertRaises(ValidationError):
+            p_reforzado.full_clean()
+
+        # 5. opciones en texto (tipo no seleccion) falla
+        p_opts_texto = Personalizacion(empresa=self.empresa, nombre='Texto con opciones',
+                                       tipo_interaccion='input_texto',
+                                       opciones_seleccion=['Opcion 1'])
+        with self.assertRaises(ValidationError):
+            p_opts_texto.full_clean()
+
+        # 6. asociacion de otra Empresa sigue fallando
+        otra_empresa = _crear_empresa('otra-empresa-test')
+        p_otra = Personalizacion.objects.create(empresa=otra_empresa, nombre='Otra Empresa',
+                                               tipo_interaccion='check')
+        sp_cruzada = ServicioPersonalizacion(servicio=s, personalizacion=p_otra)
+        with self.assertRaises(ValidationError):
+            sp_cruzada.full_clean()
+
+    def test_cambiar_catalogo_a_input_rechaza_si_asociaciones_tienen_precio_o_preseleccionado(self):
+        s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Cat', slug='scat')
+        p = Personalizacion.objects.create(empresa=self.empresa, nombre='Check con precio',
+                                           tipo_interaccion='check')
+        sp = ServicioPersonalizacion.objects.create(servicio=s, personalizacion=p,
+                                                   precio=Decimal('150.00'),
+                                                   preseleccionado=True)
+        # Cambiar p a input_texto sin haber limpiado sp debe fallar en clean()
+        p.tipo_interaccion = 'input_texto'
+        with self.assertRaises(ValidationError) as ctx:
+            p.full_clean()
+        self.assertIn('tipo_interaccion', ctx.exception.message_dict)

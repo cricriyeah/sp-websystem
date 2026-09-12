@@ -159,9 +159,9 @@ class RecursoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 @admin.register(Personalizacion)
 class PersonalizacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
-    list_display = ['nombre', 'tipo', 'cobrar_por_persona', 'cantidad_editable', 'activo']
-    list_filter = ['tipo', 'cobrar_por_persona', 'cantidad_editable', 'activo']
-    list_editable = ['cobrar_por_persona', 'cantidad_editable', 'activo']
+    list_display = ['nombre', 'tipo', 'tipo_interaccion', 'cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
+    list_filter = ['tipo', 'tipo_interaccion', 'cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
+    list_editable = ['cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
     search_fields = ['nombre']
 
 

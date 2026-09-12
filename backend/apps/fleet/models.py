@@ -512,9 +512,22 @@ class Recurso(models.Model):
 
 class Personalizacion(models.Model):
     """Catálogo de complementos y extras reutilizables."""
+    class TipoInteraccion(models.TextChoices):
+        CHECK = 'check', 'Casilla'
+        TEXTO = 'input_texto', 'Texto'
+        NUMERO = 'input_numero', 'Número'
+        SELECCION = 'input_seleccion', 'Selección'
+
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='personalizaciones')
     nombre = models.CharField(max_length=100)
     tipo = models.CharField(max_length=50, default='otro')
+    tipo_interaccion = models.CharField(
+        max_length=20,
+        choices=TipoInteraccion.choices,
+        default=TipoInteraccion.CHECK,
+    )
+    opciones_seleccion = models.JSONField(default=list, blank=True)
+    aviso_reforzado = models.BooleanField(default=False)
     cobrar_por_persona = models.BooleanField(default=False)
     cantidad_editable = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
@@ -530,6 +543,39 @@ class Personalizacion(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.empresa})"
+
+    def clean(self):
+        super().clean()
+        errores = {}
+        opciones = self.opciones_seleccion
+        if self.tipo_interaccion == self.TipoInteraccion.SELECCION:
+            if (not isinstance(opciones, list) or not opciones
+                    or any(not isinstance(o, str) or not o.strip() for o in opciones)):
+                errores['opciones_seleccion'] = 'Usa una lista de opciones de texto no vacías.'
+            elif len(set(opciones)) != len(opciones):
+                errores['opciones_seleccion'] = 'No repitas opciones de selección.'
+        elif opciones:
+            errores['opciones_seleccion'] = 'Las opciones solo aplican a selección.'
+
+        if self.tipo_interaccion != self.TipoInteraccion.CHECK:
+            for campo in ('cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado'):
+                if getattr(self, campo):
+                    errores[campo] = 'Solo aplica a personalizaciones tipo check.'
+            if self.pk:
+                asociaciones_activas = self.en_servicios.filter(
+                    models.Q(precio__gt=0) | models.Q(precio_usd__gt=0) | models.Q(preseleccionado=True)
+                )
+                if asociaciones_activas.exists():
+                    errores['tipo_interaccion'] = (
+                        'No puedes cambiar a input mientras existan asociaciones en servicios con precio '
+                        'o marcadas como preseleccionadas. Ajusta primero las asociaciones.'
+                    )
+
+        if self.cantidad_editable and not self.cobrar_por_persona:
+            errores['cantidad_editable'] = 'Cantidad editable requiere cobrar por persona.'
+
+        if errores:
+            raise ValidationError(errores)
 
 
 class ServicioPersonalizacion(models.Model):
@@ -563,6 +609,18 @@ class ServicioPersonalizacion(models.Model):
                 raise ValidationError({
                     'personalizacion': 'La personalización debe pertenecer a la misma empresa que el servicio.'
                 })
+
+            p = self.personalizacion
+            if p.tipo_interaccion == Personalizacion.TipoInteraccion.CHECK and self.obligatorio:
+                raise ValidationError({'obligatorio': 'Para un check usa preseleccionado.'})
+            if p.tipo_interaccion != Personalizacion.TipoInteraccion.CHECK:
+                errores = {}
+                if self.preseleccionado:
+                    errores['preseleccionado'] = 'Solo aplica a checks.'
+                if (self.precio and self.precio > 0) or (self.precio_usd and self.precio_usd > 0):
+                    errores['precio'] = 'Los inputs no pueden tener precio.'
+                if errores:
+                    raise ValidationError(errores)
 
     def precio_en(self, moneda):
         """Precio de la personalización en la moneda solicitada."""
