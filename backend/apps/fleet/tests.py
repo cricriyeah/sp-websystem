@@ -887,8 +887,8 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
 
         # 6. asociacion de otra Empresa sigue fallando
         otra_empresa = _crear_empresa('otra-empresa-test')
-        p_otra = Personalizacion.objects.create(empresa=otra_empresa, nombre='Otra Empresa',
-                                               tipo_interaccion='check')
+        p_otra = Personalizacion(empresa=otra_empresa, nombre='Otra Empresa',
+                                 tipo_interaccion='check')
         sp_cruzada = ServicioPersonalizacion(servicio=s, personalizacion=p_otra)
         with self.assertRaises(ValidationError):
             sp_cruzada.full_clean()
@@ -901,6 +901,47 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
                                                    precio=Decimal('150.00'),
                                                    preseleccionado=True)
         # Cambiar p a input_texto sin haber limpiado sp debe fallar en clean()
+        p.tipo_interaccion = 'input_texto'
+        with self.assertRaises(ValidationError) as ctx:
+            p.full_clean()
+        self.assertIn('tipo_interaccion', ctx.exception.message_dict)
+
+    def test_input_rechaza_precios_distintos_de_cero_incluyendo_negativos(self):
+        s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Precios', slug='sprec')
+        p = Personalizacion.objects.create(empresa=self.empresa, nombre='Input Pregunta',
+                                           tipo_interaccion='input_texto')
+        # precio_usd=None y precio=0 es válido
+        sp = ServicioPersonalizacion(servicio=s, personalizacion=p,
+                                     precio=Decimal('0.00'), precio_usd=None)
+        sp.full_clean()
+
+        # precio_usd=0 y precio=0 es válido
+        sp.precio_usd = Decimal('0.00')
+        sp.full_clean()
+
+        # Valores distintos de cero (positivos y negativos) deben fallar
+        precios_invalidos = [
+            (Decimal('-10.00'), None),
+            (Decimal('10.00'), None),
+            (Decimal('0.00'), Decimal('-5.00')),
+            (Decimal('0.00'), Decimal('5.00')),
+            (Decimal('-1.00'), Decimal('-1.00')),
+        ]
+        for mxn, usd in precios_invalidos:
+            with self.subTest(precio_mxn=mxn, precio_usd=usd):
+                sp.precio = mxn
+                sp.precio_usd = usd
+                with self.assertRaises(ValidationError) as ctx:
+                    sp.full_clean()
+                self.assertIn('precio', ctx.exception.message_dict)
+
+    def test_cambiar_catalogo_a_input_rechaza_asociaciones_con_precio_negativo(self):
+        s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Negativo', slug='sneg')
+        p = Personalizacion.objects.create(empresa=self.empresa, nombre='Check Negativo',
+                                           tipo_interaccion='check')
+        sp = ServicioPersonalizacion.objects.create(servicio=s, personalizacion=p,
+                                                   precio=Decimal('-50.00'),
+                                                   preseleccionado=False)
         p.tipo_interaccion = 'input_texto'
         with self.assertRaises(ValidationError) as ctx:
             p.full_clean()

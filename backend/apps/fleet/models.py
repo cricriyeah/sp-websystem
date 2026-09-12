@@ -562,8 +562,8 @@ class Personalizacion(models.Model):
                 if getattr(self, campo):
                     errores[campo] = 'Solo aplica a personalizaciones tipo check.'
             if self.pk:
-                asociaciones_activas = self.en_servicios.filter(
-                    models.Q(precio__gt=0) | models.Q(precio_usd__gt=0) | models.Q(preseleccionado=True)
+                asociaciones_activas = self.en_servicios.exclude(
+                    precio=Decimal('0.00'), precio_usd__in=[None, Decimal('0.00')], preseleccionado=False
                 )
                 if asociaciones_activas.exists():
                     errores['tipo_interaccion'] = (
@@ -617,7 +617,7 @@ class ServicioPersonalizacion(models.Model):
                 errores = {}
                 if self.preseleccionado:
                     errores['preseleccionado'] = 'Solo aplica a checks.'
-                if (self.precio and self.precio > 0) or (self.precio_usd and self.precio_usd > 0):
+                if (self.precio is not None and self.precio != Decimal('0.00')) or (self.precio_usd is not None and self.precio_usd != Decimal('0.00')):
                     errores['precio'] = 'Los inputs no pueden tener precio.'
                 if errores:
                     raise ValidationError(errores)
