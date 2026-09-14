@@ -611,7 +611,7 @@ Añadir subtotal nuevo al resumen de servicio no-pesca; `null` deshabilita pago 
 
 **Consume:** tabla `bookings_reservapersonalizacion` tras RenameModel, política `tenancy_alcance` conservada. **Produce:** evidencia de aislamiento real del caso paquete existente y servicio suelto nuevo. No agregar un bypass RLS ni políticas duplicadas.
 
-- [ ] **1. Agregar caso de servicio suelto** a las pruebas RLS existentes de `tests_checkout_paquete.py` (TransactionTestCase con skipUnless PostgreSQL; crear datos dentro de scope de operador solo en setUp). Usar dos empresas, dos servicios y dos SP; la empresa B no ve filas A. El cuerpo de lectura bajo B debe ser:
+- [x] **1. Agregar caso de servicio suelto** a las pruebas RLS existentes de `tests_checkout_paquete.py` (TransactionTestCase con skipUnless PostgreSQL; crear datos dentro de scope de operador solo en setUp). Usar dos empresas, dos servicios y dos SP; la empresa B no ve filas A. El cuerpo de lectura bajo B debe ser:
 
 ```python
 with scope.con_empresa(self.empresa_b):
@@ -627,9 +627,9 @@ with connection.cursor() as cursor:
 
 Crear `fila_a`/`fila_b` con el modelo nuevo y reservas con servicio directo de su empresa; en el otro caso conservar reservas de paquete de la clase existente. Agregar intento INSERT bajo B con `reserva_id` A y `sp_id` A mediante `.objects.create` (sin full_clean): debe lanzar DatabaseError, capturado fuera de un `transaction.atomic()` anidado para no dejar transacción rota. Así la prueba demuestra RLS, no únicamente validación Python.
 
-- [ ] **2. Ejecutar caso en Postgres antes de modificar políticas.** En esta tarea de cobertura puede pasar desde el inicio: el RenameModel debe conservar RLS. No introducir deliberadamente un bug para obtener rojo. La prueba es la regresión que protege cambios posteriores. Si falla la policy o tabla, corregir únicamente migración de rename/whitelist; no ampliar alcance del rol.
-- [ ] **3. Verificar migración real conserva la política:** MigrationExecutor de bookings.0044 a bookings.0045, comparar existencia de política después y comprobar misma fila. `apps/tenancy/tests_rls.py` debe incluir nombre nuevo en whitelist, y seguir incluyendo `bookings_reservaextra` hasta tarea 11.
-- [ ] **4. Correr:** `manage.py test apps.bookings.tests_checkout_paquete apps.tenancy.tests_rls --settings=config.settings.ci` con DB local y rol indicado; todos los tests RLS ejecutados, sin skips PostgreSQL. Commit `test: proteger aislamiento de personalizaciones por empresa`.
+- [x] **2. Ejecutar caso en Postgres antes de modificar políticas.** En esta tarea de cobertura puede pasar desde el inicio: el RenameModel debe conservar RLS. No introducir deliberadamente un bug para obtener rojo. La prueba es la regresión que protege cambios posteriores. Si falla la policy o tabla, corregir únicamente migración de rename/whitelist; no ampliar alcance del rol.
+- [x] **3. Verificar migración real conserva la política:** MigrationExecutor de bookings.0044 a bookings.0045, comparar existencia de política después y comprobar misma fila. `apps/tenancy/tests_rls.py` debe incluir nombre nuevo en whitelist, y seguir incluyendo `bookings_reservaextra` hasta tarea 11.
+- [x] **4. Correr:** `manage.py test apps.bookings.tests_checkout_paquete apps.tenancy.tests_rls --settings=config.settings.ci` con DB local y rol indicado; todos los tests RLS ejecutados, sin skips PostgreSQL. Commit `test: proteger aislamiento de personalizaciones por empresa`.
 
 ### Tarea 5: Corte atómico del contrato de paquete
 
