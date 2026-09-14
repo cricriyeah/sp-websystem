@@ -1,4 +1,7 @@
+from datetime import date, time
 from decimal import Decimal
+from unittest import skipUnless
+
 from django.db import connection, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
@@ -120,3 +123,104 @@ class PersonalizacionMigration0030Tests(TransactionTestCase):
             with alcance_operador_migracion(connection):
                 self.assertEqual(SPModel.objects.using(connection.alias).count(), 0)
                 self.assertEqual(PersonalizacionModel.objects.using(connection.alias).count(), 0)
+
+
+@skipUnless(connection.vendor == 'postgresql', 'La conservación de RLS requiere Postgres')
+class ReservaPersonalizacionPolicyRenameMigrationTests(TransactionTestCase):
+    migrate_from = [
+        ('bookings', '0044_rls_orden_sin_current_query'),
+        ('fleet', '0030_personalizacion_tipo_interaccion'),
+    ]
+    migrate_to = [('bookings', '0045_rename_reservapersonalizacion')]
+
+    def _restaurar_esquema(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def setUp(self):
+        super().setUp()
+        self.addCleanup(self._restaurar_esquema)
+        self.executor = MigrationExecutor(connection)
+        self.executor.migrate(self.migrate_from)
+        old_apps = self.executor.loader.project_state(self.migrate_from).apps
+
+        Sede = old_apps.get_model('tenancy', 'Sede')
+        Empresa = old_apps.get_model('tenancy', 'Empresa')
+        Servicio = old_apps.get_model('fleet', 'Servicio')
+        Personalizacion = old_apps.get_model('fleet', 'Personalizacion')
+        ServicioPersonalizacion = old_apps.get_model('fleet', 'ServicioPersonalizacion')
+        Reserva = old_apps.get_model('bookings', 'Reserva')
+        ReservaPaquetePersonalizacion = old_apps.get_model(
+            'bookings', 'ReservaPaquetePersonalizacion',
+        )
+
+        with transaction.atomic(using=connection.alias):
+            with alcance_operador_migracion(connection):
+                sede = Sede.objects.using(connection.alias).create(
+                    nombre='Sede policy rename', slug='sede-policy-rename',
+                )
+                empresa = Empresa.objects.using(connection.alias).create(
+                    sede=sede, nombre='Empresa policy rename',
+                    slug='empresa-policy-rename', activo=True,
+                )
+                servicio = Servicio.objects.using(connection.alias).create(
+                    empresa=empresa, nombre='Servicio policy rename',
+                    slug='servicio-policy-rename',
+                )
+                personalizacion = Personalizacion.objects.using(connection.alias).create(
+                    empresa=empresa, nombre='Personalización policy rename',
+                )
+                sp = ServicioPersonalizacion.objects.using(connection.alias).create(
+                    servicio=servicio, personalizacion=personalizacion,
+                    precio=Decimal('75.00'),
+                )
+                reserva = Reserva.objects.using(connection.alias).create(
+                    empresa=empresa, servicio=servicio,
+                    fecha=date(2026, 12, 10), hora=time(9), numero_personas=2,
+                    nombre_cliente='Cliente policy', telefono_cliente='6121234567',
+                    correo_cliente='policy@example.com', moneda='MXN',
+                    deslinde_aceptado=True,
+                )
+                fila = ReservaPaquetePersonalizacion.objects.using(connection.alias).create(
+                    reserva=reserva, servicio_personalizacion=sp, cantidad=2,
+                )
+                self.fila_pk = fila.pk
+                self.reserva_pk = reserva.pk
+                self.sp_pk = sp.pk
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT policyname FROM pg_policies WHERE tablename=%s ORDER BY policyname',
+                ['bookings_reservapaquetepersonalizacion'],
+            )
+            self.politicas_antes = cursor.fetchall()
+        self.assertEqual(self.politicas_antes, [('tenancy_alcance',)])
+
+    def test_rename_preserva_fila_y_policy_en_la_tabla_nueva(self):
+        self.executor.loader.build_graph()
+        self.executor.migrate(self.migrate_to)
+        new_apps = self.executor.loader.project_state(self.migrate_to).apps
+        ReservaPersonalizacion = new_apps.get_model('bookings', 'ReservaPersonalizacion')
+
+        with transaction.atomic(using=connection.alias):
+            with alcance_operador_migracion(connection):
+                fila = ReservaPersonalizacion.objects.using(connection.alias).get(pk=self.fila_pk)
+        self.assertEqual(fila.reserva_id, self.reserva_pk)
+        self.assertEqual(fila.servicio_personalizacion_id, self.sp_pk)
+        self.assertEqual(fila.cantidad, 2)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT policyname FROM pg_policies WHERE tablename=%s ORDER BY policyname',
+                ['bookings_reservapersonalizacion'],
+            )
+            politicas_despues = cursor.fetchall()
+            cursor.execute(
+                'SELECT policyname FROM pg_policies WHERE tablename=%s',
+                ['bookings_reservapaquetepersonalizacion'],
+            )
+            politicas_nombre_viejo = cursor.fetchall()
+
+        self.assertEqual(politicas_despues, self.politicas_antes)
+        self.assertEqual(politicas_nombre_viejo, [])

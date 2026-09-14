@@ -12,6 +12,17 @@ from . import scope
 from .models import Empresa, Sede
 
 
+# Tablas secundarias que llegan a empresa vía FK. ReservaExtra permanece hasta
+# la Tarea 11; el rename de Tarea 2 ya usa el nombre físico nuevo.
+WHITELIST_VIA_FK = {
+    'bookings_reservaextra',
+    'fleet_serviciopersonalizacion',
+    'fleet_paqueteservicio',
+    'bookings_reservapersonalizacion',
+    'bookings_detalletransporte',
+}
+
+
 @skipUnless(connection.vendor == 'postgresql', 'RLS solo aplica en Postgres')
 class RLSTests(TransactionTestCase):
     def setUp(self):
@@ -94,13 +105,7 @@ class RLSTests(TransactionTestCase):
             # a empresas de la misma sede e INSERT público vía WITH CHECK).
 
             # 2. Tablas secundarias que llegan a empresa vía FK (sin columna empresa_id propia)
-            whitelist_via_fk = {
-                'bookings_reservaextra',
-                'fleet_serviciopersonalizacion',
-                'fleet_paqueteservicio',
-                'bookings_reservapersonalizacion',
-                'bookings_detalletransporte',
-            }
+            whitelist_via_fk = WHITELIST_VIA_FK
 
             # 3. Consultar pg_policies
             cursor.execute("""
@@ -135,6 +140,10 @@ class RLSTests(TransactionTestCase):
                 set(),
                 f"Tablas con política RLS que no están catalogadas ni en columnas ni en whitelist: {politicas_inesperadas}",
             )
+
+    def test_whitelist_conserva_nombre_nuevo_y_extra_legacy(self):
+        self.assertIn('bookings_reservapersonalizacion', WHITELIST_VIA_FK)
+        self.assertIn('bookings_reservaextra', WHITELIST_VIA_FK)
 
     def test_detalle_transporte_aislamiento(self):
         from datetime import date, time
