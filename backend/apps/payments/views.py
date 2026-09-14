@@ -71,7 +71,7 @@ class CrearPagoView(APIView):
 
         detalle_a_congelar = None
         if reserva.paquete_id:
-            extras_pers = list(reserva.paquete_personalizaciones.values_list('servicio_personalizacion_id', 'cantidad')) if hasattr(reserva, 'paquete_personalizaciones') else []
+            extras_pers = list(reserva.personalizaciones_seleccionadas.values_list('servicio_personalizacion_id', 'cantidad'))
             precio_base_servicio = precio_paquete_total(
                 reserva.paquete,
                 personalizaciones_extra=extras_pers,

@@ -226,7 +226,7 @@ Usar `RunPython(normalizar_checks, migrations.RunPython.noop)`: no es posible di
 
 **Interfaces:** `ReservaPersonalizacion(reserva, servicio_personalizacion, cantidad=1, respuesta='', precio_unitario=None)`; manager `Reserva.personalizaciones_seleccionadas`; `subtotal: Decimal | None`. La selección no cobra hasta tarea 3/5. `full_clean()` valida tipos; `.objects.create` no lo invoca automáticamente.
 
-- [ ] **1. Escribir test del nuevo modelo:** comenzar archivo de pruebas con imports y fixture explícita; se reutiliza esta base en las tareas siguientes.
+- [x] **1. Escribir test del nuevo modelo:** comenzar archivo de pruebas con imports y fixture explícita; se reutiliza esta base en las tareas siguientes.
 
 ```python
 import uuid
@@ -276,8 +276,8 @@ class PersonalizacionesModelTests(EmpresaTestCase):
         self.assertEqual(fila.subtotal, Decimal('900'))
 ```
 
-- [ ] **2. Ejecutar rojo:** `manage.py test apps.bookings.tests_personalizaciones` (nuevo import todavía no existe).
-- [ ] **3. Renombrar modelo y referencias en una sola edición**, excepto migraciones históricas. Conservar nombre de constraint `reservapaquetepers_unico` para no hacer cambios innecesarios. Agregar:
+- [x] **2. Ejecutar rojo:** `manage.py test apps.bookings.tests_personalizaciones` (nuevo import todavía no existe).
+- [x] **3. Renombrar modelo y referencias en una sola edición**, excepto migraciones históricas. Conservar nombre de constraint `reservapaquetepers_unico` para no hacer cambios innecesarios. Agregar:
 
 ```python
 respuesta = models.TextField(blank=True, default='')
@@ -326,7 +326,7 @@ def clean(self):
 
 Importar `InvalidOperation` con `Decimal`. No validar aquí cantidades máximas de check contra snapshot: se recortan al resolver cobro. Validar pertenencia al Servicio/Paquete en el serializer (tarea 3), no permitir IDs solo porque son de la misma Empresa.
 
-- [ ] **4. Crear migración explícita**, verificar que Django NO proponga DeleteModel/CreateModel:
+- [x] **4. Crear migración explícita**, verificar que Django NO proponga DeleteModel/CreateModel:
 
 ```python
 from django.db import migrations, models
@@ -352,7 +352,7 @@ class Migration(migrations.Migration):
 
 Actualizar verbose_name del modelo con los mismos textos. Agregar prueba MigrationExecutor que cree fila en estado anterior y verifique mismo PK/reserva/SP/cantidad tras rename. Mantener `precio_unitario=None`, no inventar snapshots históricos.
 
-- [ ] **5. Verde:** suite backend y búsqueda `rg -n "ReservaPaquetePersonalizacion|paquete_personalizaciones|bookings_reservapaquetepersonalizacion" backend/apps -g '!**/migrations/**'`. Solo pueden quedar nombres antiguos en pruebas explícitas de migración histórica, no en consumidores runtime. Commit `refactor: generalizar modelo de seleccion de personalizaciones` limitado a paths de tarea 2.
+- [x] **5. Verde:** suite backend y búsqueda `rg -n "ReservaPaquetePersonalizacion|paquete_personalizaciones|bookings_reservapaquetepersonalizacion" backend/apps -g '!**/migrations/**'`. Solo pueden quedar nombres antiguos en pruebas explícitas de migración histórica, no en consumidores runtime. Commit `refactor: generalizar modelo de seleccion de personalizaciones` limitado a paths de tarea 2.
 
 ### Tarea 3: Servicio suelto no-pesca de extremo a extremo
 

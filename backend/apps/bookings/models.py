@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, time, timedelta
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -1061,17 +1062,73 @@ class Agenda(Reserva):
         )
 
 
-class ReservaPaquetePersonalizacion(models.Model):
-    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='paquete_personalizaciones')
+class ReservaPersonalizacion(models.Model):
+    reserva = models.ForeignKey(
+        Reserva,
+        on_delete=models.CASCADE,
+        related_name='personalizaciones_seleccionadas',
+    )
     servicio_personalizacion = models.ForeignKey('fleet.ServicioPersonalizacion', on_delete=models.PROTECT)
     cantidad = models.PositiveSmallIntegerField(default=1)
+    respuesta = models.TextField(blank=True, default='')
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['reserva', 'servicio_personalizacion'], name='reservapaquetepers_unico')
         ]
-        verbose_name = 'personalización de paquete'
-        verbose_name_plural = 'personalizaciones de paquete'
+        verbose_name = 'personalización de reserva'
+        verbose_name_plural = 'personalizaciones de reserva'
+
+    @property
+    def subtotal(self):
+        if (
+            self.precio_unitario is None
+            or self.servicio_personalizacion.personalizacion.tipo_interaccion != 'check'
+        ):
+            return None
+        return self.precio_unitario * self.cantidad
+
+    def clean(self):
+        super().clean()
+        if not self.servicio_personalizacion_id:
+            return
+
+        sp = self.servicio_personalizacion
+        personalizacion = sp.personalizacion
+        if self.reserva_id and (
+            sp.servicio.empresa_id != self.reserva.empresa_id
+            or personalizacion.empresa_id != self.reserva.empresa_id
+        ):
+            raise ValidationError({
+                'servicio_personalizacion': 'La personalización pertenece a otra empresa.',
+            })
+        if self.cantidad < 1:
+            raise ValidationError({'cantidad': 'La cantidad mínima es 1.'})
+        if personalizacion.tipo_interaccion == 'check':
+            if self.respuesta:
+                raise ValidationError({'respuesta': 'Un check no lleva respuesta.'})
+            return
+        if self.cantidad != 1:
+            raise ValidationError({'cantidad': 'La cantidad no aplica a un input.'})
+        if self.precio_unitario not in (None, Decimal('0')):
+            raise ValidationError({'precio_unitario': 'Los inputs no cobran.'})
+        if not self.respuesta.strip():
+            if sp.obligatorio:
+                raise ValidationError({'respuesta': 'Esta respuesta es obligatoria.'})
+            return
+        if personalizacion.tipo_interaccion == 'input_numero':
+            try:
+                valido = Decimal(self.respuesta).is_finite()
+            except InvalidOperation:
+                valido = False
+            if not valido:
+                raise ValidationError({'respuesta': 'Escribe un número válido.'})
+        if (
+            personalizacion.tipo_interaccion == 'input_seleccion'
+            and self.respuesta not in personalizacion.opciones_seleccion
+        ):
+            raise ValidationError({'respuesta': 'Selecciona una opción válida.'})
 
     def __str__(self):
         return f"Personalización #{self.servicio_personalizacion_id} (x{self.cantidad}) en Reserva #{self.reserva_id}"

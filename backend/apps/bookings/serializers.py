@@ -20,7 +20,7 @@ from .models import (
     DetalleTransporte,
     Reserva,
     ReservaExtra,
-    ReservaPaquetePersonalizacion,
+    ReservaPersonalizacion,
     Vendedora,
 )
 from .validators import validar_nombre_persona
@@ -347,11 +347,11 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         return reserva
 
     def _sincronizar_personalizaciones(self, reserva, items_elegidos):
-        reserva.paquete_personalizaciones.all().delete()
+        reserva.personalizaciones_seleccionadas.all().delete()
         if not reserva.paquete_id or not items_elegidos:
             return
         for item in items_elegidos:
-            ReservaPaquetePersonalizacion.objects.create(
+            ReservaPersonalizacion.objects.create(
                 reserva=reserva,
                 servicio_personalizacion_id=item['id'],
                 cantidad=item.get('cantidad', 1),

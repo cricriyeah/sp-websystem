@@ -10,7 +10,7 @@ from rest_framework.test import APIRequestFactory
 
 from apps.bookings.models import (
     Reserva,
-    ReservaPaquetePersonalizacion,
+    ReservaPersonalizacion,
 )
 from apps.bookings.serializers import ReservaCheckoutSerializer
 from apps.fleet.models import (
@@ -158,9 +158,9 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         reserva = serializer.save()
         self.assertEqual(reserva.paquete, self.paquete_a)
         self.assertIsNone(reserva.servicio)
-        self.assertEqual(reserva.paquete_personalizaciones.count(), 1)
-        self.assertEqual(reserva.paquete_personalizaciones.first().servicio_personalizacion, self.sp_opcional)
-        self.assertEqual(reserva.paquete_personalizaciones.first().cantidad, 2)
+        self.assertEqual(reserva.personalizaciones_seleccionadas.count(), 1)
+        self.assertEqual(reserva.personalizaciones_seleccionadas.first().servicio_personalizacion, self.sp_opcional)
+        self.assertEqual(reserva.personalizaciones_seleccionadas.first().cantidad, 2)
 
     def test_rechaza_paquete_de_otra_empresa(self):
         datos = self._datos_base(paquete=self.paquete_b.slug)
@@ -276,7 +276,7 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         self.assertTrue(serializer1.is_valid(), serializer1.errors)
         reserva = serializer1.save()
 
-        self.assertEqual(reserva.paquete_personalizaciones.first().cantidad, 1)
+        self.assertEqual(reserva.personalizaciones_seleccionadas.first().cantidad, 1)
 
         # Reenvío: cambia cantidad de personalización
         datos2 = self._datos_base(
@@ -290,5 +290,5 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         self.assertTrue(serializer2.is_valid(), serializer2.errors)
         reserva_act = serializer2.save()
 
-        self.assertEqual(reserva_act.paquete_personalizaciones.count(), 1)
-        self.assertEqual(reserva_act.paquete_personalizaciones.first().cantidad, 3)
+        self.assertEqual(reserva_act.personalizaciones_seleccionadas.count(), 1)
+        self.assertEqual(reserva_act.personalizaciones_seleccionadas.first().cantidad, 3)
