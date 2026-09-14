@@ -84,6 +84,12 @@ class ExtraSeleccionSerializer(serializers.Serializer):
 class PersonalizacionSeleccionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     cantidad = serializers.IntegerField(required=False, default=1, min_value=1)
+    respuesta = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default='',
+        trim_whitespace=False,
+    )
 
 
 class SlugOrNullRelatedField(serializers.SlugRelatedField):
@@ -199,8 +205,43 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
         personalizaciones = attrs.get('personalizaciones', [])
 
-        if personalizaciones and not paquete:
-            raise serializers.ValidationError({'personalizaciones': 'Las personalizaciones solo aplican para paquetes.'})
+        es_servicio_personalizable = bool(
+            servicio and servicio.tipo_servicio != TipoServicio.PESCA and not paquete
+        )
+        if personalizaciones and not paquete and not es_servicio_personalizable:
+            raise serializers.ValidationError({
+                'personalizaciones': 'Las personalizaciones todavía no aplican a este servicio.',
+            })
+
+        if es_servicio_personalizable:
+            disponibles = {
+                sp.pk: sp
+                for sp in ServicioPersonalizacion.objects.filter(
+                    servicio=servicio,
+                    servicio__empresa=empresa,
+                    personalizacion__empresa=empresa,
+                    activo=True,
+                    personalizacion__activo=True,
+                ).select_related('personalizacion', 'servicio')
+            }
+            vistos = set()
+            for item in personalizaciones:
+                sp = disponibles.get(item['id'])
+                if sp is None or item['id'] in vistos:
+                    raise serializers.ValidationError({
+                        'personalizaciones': 'Selección inválida o repetida.',
+                    })
+                vistos.add(sp.pk)
+                self._validar_respuesta_personalizacion(sp, item)
+            for sp in disponibles.values():
+                if (
+                    sp.personalizacion.tipo_interaccion != 'check'
+                    and sp.obligatorio
+                    and sp.pk not in vistos
+                ):
+                    raise serializers.ValidationError({
+                        'personalizaciones': f'Falta responder: {sp.personalizacion.nombre}.',
+                    })
 
         componentes_activos = []
         if paquete:
@@ -270,6 +311,17 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def _validar_respuesta_personalizacion(self, sp, item):
+        fila = ReservaPersonalizacion(
+            servicio_personalizacion=sp,
+            cantidad=item.get('cantidad', 1),
+            respuesta=item.get('respuesta', ''),
+        )
+        try:
+            fila.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({'personalizaciones': exc.messages})
+
     def save(self, **kwargs):
         # La fecha/hora e IP del deslinde se sellan aqui, en el servidor, con cada
         # envio: valen como constancia de la ultima version aceptada.
@@ -321,24 +373,15 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         # full_clean corre el motor unico de validacion (ventana de salida, cupo,
         # deslinde, capacidad), ver apps/bookings/models.py y backend/CLAUDE.md.
         try:
-            reserva.full_clean()
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError(
-                exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
-            )
+            with transaction.atomic():
+                reserva.full_clean()
+                reserva.save()
 
-        reserva.save()
-
-        # Cada envio reescribe la seleccion completa, sin excepciones: una lista
-        # vacia borra lo que hubiera.
-        # `_sincronizar_extras` corre despues de `reserva.save()` (necesita el pk),
-        # asi que no entra al `try` de arriba; se envuelve aparte para que un
-        # ValidationError de `ReservaExtra.clean()` (red de seguridad cross-empresa)
-        # salga como 400 y no como 500 en una ruta publica.
-        try:
-            self._sincronizar_extras(reserva, extras)
-            if personalizaciones is not None:
-                self._sincronizar_personalizaciones(reserva, personalizaciones)
+                # Cada envio reescribe la seleccion completa, sin excepciones:
+                # una lista vacia borra lo que hubiera.
+                self._sincronizar_extras(reserva, extras)
+                if personalizaciones is not None:
+                    self._sincronizar_personalizaciones(reserva, personalizaciones)
         except DjangoValidationError as exc:
             raise serializers.ValidationError(
                 exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
@@ -348,14 +391,26 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
     def _sincronizar_personalizaciones(self, reserva, items_elegidos):
         reserva.personalizaciones_seleccionadas.all().delete()
-        if not reserva.paquete_id or not items_elegidos:
+        aplica = reserva.paquete_id or (
+            reserva.servicio_id and reserva.servicio.tipo_servicio != TipoServicio.PESCA
+        )
+        if not aplica or not items_elegidos:
             return
         for item in items_elegidos:
-            ReservaPersonalizacion.objects.create(
-                reserva=reserva,
-                servicio_personalizacion_id=item['id'],
-                cantidad=item.get('cantidad', 1),
+            respuesta = item.get('respuesta', '')
+            sp = ServicioPersonalizacion.objects.select_related('personalizacion').get(
+                pk=item['id'],
             )
+            if sp.personalizacion.tipo_interaccion != 'check' and not respuesta.strip():
+                continue
+            fila = ReservaPersonalizacion(
+                reserva=reserva,
+                servicio_personalizacion=sp,
+                cantidad=item.get('cantidad', 1),
+                respuesta=respuesta,
+            )
+            fila.full_clean()
+            fila.save()
 
     def _sincronizar_extras(self, reserva, items_elegidos):
         """Reescribe la seleccion completa: borra lo que ya no viene, crea lo

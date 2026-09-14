@@ -488,16 +488,22 @@
       "mxn": "Pesos (MXN)",
       "usd": "Dólares (USD)"
     },
-    "amenitiesModal": {
-      "headline": "¿Deseas personalizar tu salida con algún extra?",
-      "body": "Puedes complementar tu día en el mar con estas opciones adicionales. Se integran fácilmente a tu reserva para tu total comodidad.",
+      "amenitiesModal": {
+        "headline": "¿Deseas personalizar tu salida con algún extra?",
+        "body": "Puedes complementar tu día en el mar con estas opciones adicionales. Se integran fácilmente a tu reserva para tu total comodidad.",
+        "reinforcedWarning": "Has quitado una opción con una advertencia importante. Revisa sus condiciones antes de continuar.",
       "necesarioLabel": "Necesario para tu salida",
       "optionalLabel": "Extras",
       "confirm": "Continuar al pago",
       "back": "Volver al resumen",
       "close": "Cerrar"
-    },
-    "orderSummaryHeadline": "Resumen de tu reserva",
+      },
+      "personalizacionErrors": {
+        "required": "Esta respuesta es obligatoria",
+        "number": "Escribe un número válido",
+        "selection": "Selecciona una opción válida"
+      },
+      "orderSummaryHeadline": "Resumen de tu reserva",
     "tourLabel": "Tour de pesca privado",
     "extraPeopleLabel": "Personas adicionales",
     "extraPeopleHint": "El viaje base incluye hasta {included} personas. A partir de esa cantidad aplica {price} por persona adicional.",

@@ -134,7 +134,7 @@ export type ReservaInput = {
   paquete?: string | number | null;
   servicio?: string;
   fecha_salida?: string;
-  personalizaciones?: { id: number; cantidad: number }[];
+  personalizaciones?: { id: number; cantidad?: number; respuesta?: string }[];
 };
 
 export type Reserva = ReservaInput & {
@@ -257,6 +257,7 @@ export type EstadoReservaPendiente = {
   // apps/payments/views.py, EstadoReservaView). `cantidad` es la que el
   // cliente ya habia elegido (solo importa en items `cantidad_editable`).
   extras: ExtraSeleccion[];
+  personalizaciones: { id: number; cantidad: number; respuesta: string }[];
   transporte: {
     punto_encuentro: number | null;
     direccion_personalizada: string;
@@ -286,6 +287,13 @@ export type EstadoReservaPagada = {
     // Cuantas personas del grupo lo tenian, ya congelado: con
     // `cantidad_editable` puede ser menor que `numero_personas`.
     cantidad: number | null;
+  }[];
+  personalizaciones: {
+    nombre: string;
+    tipo_interaccion: string;
+    cantidad: number;
+    respuesta: string;
+    monto: string | null;
   }[];
   transporte: { monto: string; numero_personas: number | null } | null;
   codigo_promocional: string | null;
@@ -331,6 +339,9 @@ export type ServicioPersonalizacionCatalogo = {
   personalizacion_id: number;
   nombre: string;
   tipo: string;
+  tipo_interaccion: 'check' | 'input_texto' | 'input_numero' | 'input_seleccion';
+  opciones_seleccion: string[];
+  aviso_reforzado: boolean;
   cobrar_por_persona: boolean;
   cantidad_editable: boolean;
   precio: string;

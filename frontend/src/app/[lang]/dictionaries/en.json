@@ -488,16 +488,22 @@
       "mxn": "Pesos (MXN)",
       "usd": "Dollars (USD)"
     },
-    "amenitiesModal": {
-      "headline": "Would you like to customize your trip with extras?",
-      "body": "You can complement your day on the water with these convenient add-ons. They'll be seamlessly added to your reservation for your comfort.",
+      "amenitiesModal": {
+        "headline": "Would you like to customize your trip with extras?",
+        "body": "You can complement your day on the water with these convenient add-ons. They'll be seamlessly added to your reservation for your comfort.",
+        "reinforcedWarning": "You removed an option with an important warning. Review its conditions before continuing.",
       "necesarioLabel": "Required for your trip",
       "optionalLabel": "Extras",
       "confirm": "Continue to payment",
       "back": "Back to summary",
       "close": "Close"
-    },
-    "orderSummaryHeadline": "Reservation summary",
+      },
+      "personalizacionErrors": {
+        "required": "This answer is required",
+        "number": "Enter a valid number",
+        "selection": "Select a valid option"
+      },
+      "orderSummaryHeadline": "Reservation summary",
     "tourLabel": "Private fishing charter",
     "extraPeopleLabel": "Additional guests",
     "extraPeopleHint": "The base trip covers up to {included} guests. Beyond that it is {price} per additional guest.",

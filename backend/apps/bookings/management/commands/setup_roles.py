@@ -21,6 +21,7 @@ PERMISOS_VENDEDORA = [
     ('fleet', 'capitan', ['view']),
     ('fleet', 'puntoencuentro', ['view']),
     ('bookings', 'reservaextra', ['view']),
+    ('bookings', 'reservapersonalizacion', ['view']),
     ('fleet', 'embarcacionnodisponible', ['add', 'change', 'delete', 'view']),
 ]
 

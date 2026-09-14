@@ -58,6 +58,32 @@ def cargo_por_extra(precio, cobrar_por_persona, numero_personas):
     return Decimal(precio) * cantidad
 
 
+def cantidad_efectiva(*, cobrar_por_persona, cantidad_editable, personas, cantidad=1):
+    if not cobrar_por_persona:
+        return 1
+    if not cantidad_editable:
+        return personas
+    return max(1, min(cantidad, personas))
+
+
+def cargo_personalizacion(
+    precio,
+    *,
+    cobrar_por_persona,
+    cantidad_editable,
+    personas,
+    cantidad=1,
+):
+    if precio is None:
+        return None
+    return Decimal(precio) * cantidad_efectiva(
+        cobrar_por_persona=cobrar_por_persona,
+        cantidad_editable=cantidad_editable,
+        personas=personas,
+        cantidad=cantidad,
+    )
+
+
 def cargo_por_descuento(precio_total, porcentaje_descuento):
     """Cuanto se resta del subtotal por un codigo promocional ya validado
     (ver apps/bookings/models.py, codigo_promocional_valido). Redondeado a

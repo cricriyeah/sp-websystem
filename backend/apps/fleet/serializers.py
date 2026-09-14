@@ -72,6 +72,9 @@ class PuntoEncuentroSerializer(serializers.ModelSerializer):
 class ServicioPersonalizacionSerializer(serializers.ModelSerializer):
     nombre = serializers.CharField(source='personalizacion.nombre', read_only=True)
     tipo = serializers.CharField(source='personalizacion.tipo', read_only=True)
+    tipo_interaccion = serializers.CharField(source='personalizacion.tipo_interaccion', read_only=True)
+    opciones_seleccion = serializers.JSONField(source='personalizacion.opciones_seleccion', read_only=True)
+    aviso_reforzado = serializers.BooleanField(source='personalizacion.aviso_reforzado', read_only=True)
     cobrar_por_persona = serializers.BooleanField(source='personalizacion.cobrar_por_persona', read_only=True)
     cantidad_editable = serializers.BooleanField(source='personalizacion.cantidad_editable', read_only=True)
 
@@ -79,6 +82,7 @@ class ServicioPersonalizacionSerializer(serializers.ModelSerializer):
         model = ServicioPersonalizacion
         fields = [
             'id', 'personalizacion_id', 'nombre', 'tipo',
+            'tipo_interaccion', 'opciones_seleccion', 'aviso_reforzado',
             'cobrar_por_persona', 'cantidad_editable',
             'precio', 'precio_usd', 'obligatorio', 'preseleccionado',
         ]

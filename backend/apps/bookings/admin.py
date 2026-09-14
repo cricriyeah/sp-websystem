@@ -36,6 +36,7 @@ from .models import (
     Orden,
     Reserva,
     ReservaExtra,
+    ReservaPersonalizacion,
     ReservaOcupacion,
     ReservaPaqueteComponente,
     Vendedora,
@@ -180,6 +181,26 @@ class ReservaExtraInline(admin.TabularInline):
     model = ReservaExtra
     extra = 0
     fields = ['extras_item', 'cantidad_solicitada', 'precio_unitario', 'cantidad', 'subtotal_mostrado']
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description='Subtotal')
+    def subtotal_mostrado(self, obj):
+        return obj.subtotal if obj.subtotal is not None else '—'
+
+
+class ReservaPersonalizacionInline(admin.TabularInline):
+    model = ReservaPersonalizacion
+    extra = 0
+    fields = [
+        'servicio_personalizacion', 'cantidad', 'respuesta',
+        'precio_unitario', 'subtotal_mostrado',
+    ]
     readonly_fields = fields
 
     def has_add_permission(self, request, obj=None):
@@ -379,6 +400,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
     inlines = [
         ReservaExtraInline,
+        ReservaPersonalizacionInline,
         ReservaOcupacionInline,
         ReservaPaqueteComponenteInline,
         DetalleTransporteInline,

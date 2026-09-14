@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
-import { X } from '@phosphor-icons/react';
+import { Warning, X } from '@phosphor-icons/react';
 import { motion, useReducedMotion } from 'motion/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { WaitNotice } from '@/components/wait-notice';
 
 export type ExtraPendiente = {
   id: number;
-  tipo: 'brunch' | 'licencia' | 'carnada' | 'otro';
+  avisoReforzado: boolean;
   nombre: string;
   /** Ya formateado en la moneda del checkout; null = sin precio en esa moneda. */
   monto: string | null;
@@ -105,8 +105,8 @@ export function AmenitiesReminder({
           // propio bloque: mezclados sin distincion con brunch/carnada, el
           // cliente les da el mismo peso a un tramite que a un antojo. Ver el
           // mismo criterio en el paso 3 del checkout (`extrasOrdenados`).
-          const necesarios = pendientes.filter((e) => e.tipo === 'licencia');
-          const opcionales = pendientes.filter((e) => e.tipo !== 'licencia');
+          const necesarios = pendientes.filter((e) => e.avisoReforzado);
+          const opcionales = pendientes.filter((e) => !e.avisoReforzado);
           const hayNecesario = necesarios.length > 0;
 
           if (necesarios.length === 0 && opcionales.length === 0) return null;
@@ -137,6 +137,12 @@ export function AmenitiesReminder({
 
           return (
             <div className="mt-6 flex flex-col gap-4">
+              {hayNecesario && (
+                <div className="flex items-start gap-2 border border-action/40 bg-action/10 px-4 py-3 text-xs text-foreground">
+                  <Warning size={16} className="mt-0.5 shrink-0 text-action" />
+                  <p>{checkout.amenitiesModal.reinforcedWarning}</p>
+                </div>
+              )}
               {hayNecesario && (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-medium tracking-wide text-muted uppercase">

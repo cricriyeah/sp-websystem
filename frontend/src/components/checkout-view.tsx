@@ -50,6 +50,13 @@ import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import { calcularPrecioPaquete } from '@/lib/pricing-paquete';
+import {
+  cantidadEfectiva,
+  erroresPersonalizaciones,
+  seleccionInicial,
+  totalPersonalizaciones,
+  type SeleccionPersonalizacion,
+} from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
 
 // Mismas reglas que el backend (apps/bookings/validators.py). Aqui existen para
@@ -234,11 +241,23 @@ export function CheckoutView({
   const checkoutIdValue = useCheckoutId();
   const checkoutId = checkoutIdValue?.id ?? '';
   const recuperable = checkoutIdValue?.recuperable ?? false;
+  const usaPersonalizacionesServicio = Boolean(
+    servicio && servicio.tipo_servicio !== 'pesca' && !paquete,
+  );
+  const catalogoUnificado = usaPersonalizacionesServicio ? servicio?.personalizaciones ?? [] : [];
 
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
   const [people, setPeople] = useState(initialPeople);
-  const [personalizaciones, setPersonalizaciones] = useState<Array<{ id: number; cantidad: number }>>([]);
+  const [personalizaciones, setPersonalizaciones] = useState<SeleccionPersonalizacion[]>(() =>
+    seleccionInicial(catalogoUnificado).map((seleccion) => {
+      const item = catalogoUnificado.find((p) => p.id === seleccion.id);
+      return {
+        ...seleccion,
+        cantidad: item?.cantidad_editable ? initialPeople : seleccion.cantidad,
+      };
+    }),
+  );
   const [fechaSalidaManual, setFechaSalidaManual] = useState<string | null>(initialFechaSalida ?? null);
   const defaultFechaSalida = useMemo(() => {
     const d = fromLocalISODate(day);
@@ -278,12 +297,56 @@ export function CheckoutView({
   }, [paquete]);
 
   const personalizacionesMap = useMemo(() => {
-    return new Map(personalizaciones.map((p) => [p.id, p.cantidad]));
+    return new Map(personalizaciones.map((p) => [p.id, p]));
   }, [personalizaciones]);
 
   const alternarPersonalizacion = (id: number, checked: boolean) => {
+    const item = catalogoUnificado.find((p) => p.id === id);
     setPersonalizaciones((prev) =>
-      checked ? [...prev.filter((p) => p.id !== id), { id, cantidad: 1 }] : prev.filter((p) => p.id !== id),
+      checked
+        ? [
+            ...prev.filter((p) => p.id !== id),
+            { id, cantidad: item?.cantidad_editable ? people : 1 },
+          ]
+        : prev.filter((p) => p.id !== id),
+    );
+  };
+
+  const actualizarRespuestaPersonalizacion = (id: number, respuesta: string) => {
+    setPersonalizaciones((prev) => [
+      ...prev.filter((p) => p.id !== id),
+      { id, cantidad: 1, respuesta },
+    ]);
+    setErroresPersonalizacion((prev) => {
+      if (!(id in prev)) return prev;
+      const siguiente = { ...prev };
+      delete siguiente[id];
+      return siguiente;
+    });
+  };
+
+  const ajustarCantidadPersonalizacion = (id: number, delta: number) => {
+    setPersonalizaciones((prev) =>
+      prev.map((seleccion) =>
+        seleccion.id === id
+          ? {
+              ...seleccion,
+              cantidad: Math.min(people, Math.max(1, (seleccion.cantidad ?? people) + delta)),
+            }
+          : seleccion,
+      ),
+    );
+  };
+
+  const cambiarPersonas = (cantidad: number) => {
+    setPeople(cantidad);
+    setPersonalizaciones((prev) =>
+      prev.map((seleccion) => {
+        const item = catalogoUnificado.find((p) => p.id === seleccion.id);
+        return item?.cantidad_editable
+          ? { ...seleccion, cantidad: Math.min(seleccion.cantidad ?? cantidad, cantidad) }
+          : seleccion;
+      }),
     );
   };
   // Numero de la reserva, para la pantalla de confirmacion (folio, recibo,
@@ -396,6 +459,9 @@ export function CheckoutView({
   // `moneda`, y `moneda` recien se esta fijando en el mismo efecto que llena
   // esto — el formateo real ocurre despues, al construir `lineasExtrasRecuperadas`.
   const [recuperadoExtras, setRecuperadoExtras] = useState<EstadoReservaPagada['extras']>([]);
+  const [recuperadoPersonalizaciones, setRecuperadoPersonalizaciones] = useState<
+    EstadoReservaPagada['personalizaciones']
+  >([]);
   const [recuperadoCodigoPromocional, setRecuperadoCodigoPromocional] = useState<string | null>(null);
   const [recuperadoDescuento, setRecuperadoDescuento] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
@@ -580,7 +646,7 @@ export function CheckoutView({
     [lang, moneda],
   );
 
-  const extrasCatalogo = catalogo?.extras ?? [];
+  const extrasCatalogo = usaPersonalizacionesServicio ? [] : catalogo?.extras ?? [];
 
   /**
    * La licencia va primero y separada del resto: es el unico item del catalogo
@@ -649,11 +715,37 @@ export function CheckoutView({
     .filter((e) => !extrasSeleccionados.includes(e.id) && e.monto !== null)
     .map((e) => ({
       id: e.id,
-      tipo: e.tipo,
+      avisoReforzado: e.tipo === 'licencia',
       nombre: getNombreExtra(e),
       monto: currency.format(Number(e.monto)),
       hint: checkout.extrasHints[e.tipo] || null,
     }));
+
+  const personalizacionesPendientes: ExtraPendiente[] = catalogoUnificado
+    .filter(
+      (p) =>
+        p.tipo_interaccion === 'check' &&
+        p.preseleccionado &&
+        !personalizacionesMap.has(p.id),
+    )
+    .map((p) => {
+      const precio = moneda === 'USD' ? p.precio_usd : p.precio;
+      return {
+        id: p.id,
+        avisoReforzado: p.aviso_reforzado,
+        nombre: p.nombre,
+        monto:
+          precio === null
+            ? null
+            : currency.format(
+                Number(precio) * cantidadEfectiva(p, people, people),
+              ),
+        hint: null,
+      };
+    });
+  const opcionesPendientes = usaPersonalizacionesServicio
+    ? personalizacionesPendientes
+    : extrasPendientes;
 
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
@@ -678,11 +770,17 @@ export function CheckoutView({
     return calcularPrecioPaquete(paquete, personalizaciones, people, moneda);
   }, [paquete, personalizaciones, people, moneda]);
 
+  const cargoPersonalizacionesServicio = usaPersonalizacionesServicio
+    ? totalPersonalizaciones(catalogoUnificado, personalizaciones, people, moneda)
+    : 0;
+
   const subtotalSinDescuento = paquete
     ? (calculoPaquete?.precioFinal ?? null)
     : tourPrice === null
       ? null
-      : tourPrice + cargoPersonas + cargoExtras;
+      : cargoPersonalizacionesServicio === null
+        ? null
+        : tourPrice + cargoPersonas + cargoExtras + cargoPersonalizacionesServicio;
 
   // Solo informativo (redondeo igual al de `cargo_por_descuento` en
   // apps/payments/pricing.py): el monto real lo congela `crear-pago` sobre el
@@ -719,6 +817,20 @@ export function CheckoutView({
             ? `${nombreTraducido} (${people} × ${currency.format(totalExtra / people)})`
             : nombreTraducido,
           amount: currency.format(totalExtra),
+        };
+      }),
+    ...catalogoUnificado
+      .filter((p) => p.tipo_interaccion === 'check' && personalizacionesMap.has(p.id))
+      .map((p) => {
+        const seleccion = personalizacionesMap.get(p.id);
+        const precioCrudo = moneda === 'USD' ? p.precio_usd : p.precio;
+        const cantidad = cantidadEfectiva(p, people, seleccion?.cantidad);
+        return {
+          label: cantidad > 1 ? `${p.nombre} (${cantidad})` : p.nombre,
+          amount:
+            precioCrudo === null
+              ? checkout.extrasUnavailableInCurrency
+              : currency.format(Number(precioCrudo) * cantidad),
         };
       }),
     ...(descuentoPromocional > 0
@@ -758,6 +870,12 @@ export function CheckoutView({
           amount: currency.format(totalExtra),
         };
       }),
+    ...recuperadoPersonalizaciones
+      .filter((p) => p.tipo_interaccion === 'check' && p.monto !== null)
+      .map((p) => ({
+        label: p.cantidad > 1 ? `${p.nombre} (${p.cantidad})` : p.nombre,
+        amount: currency.format(Number(p.monto)),
+      })),
     ...(recuperadoDescuento !== null
       ? [
           {
@@ -815,6 +933,7 @@ export function CheckoutView({
 
   /** Que campo esta mal y por que. Vacio = ninguno. */
   const [erroresCampo, setErroresCampo] = useState<Partial<Record<CampoContacto, string>>>({});
+  const [erroresPersonalizacion, setErroresPersonalizacion] = useState<Record<number, string>>({});
 
   // Cuantos de los tres pasos ya se ven. Empieza en 1: dia/hora/personas llegan
   // precargados desde la barra de reserva, asi que el primer paso no tiene un
@@ -887,6 +1006,7 @@ export function CheckoutView({
             : null,
         );
         setRecuperadoExtras(estado.extras);
+        setRecuperadoPersonalizaciones(estado.personalizaciones);
         setRecuperadoCodigoPromocional(estado.codigo_promocional);
         setRecuperadoDescuento(
           estado.descuento_aplicado !== null ? Number(estado.descuento_aplicado) : null,
@@ -929,6 +1049,9 @@ export function CheckoutView({
             estado.extras.filter((e) => e.cantidad != null).map((e) => [e.id, e.cantidad as number]),
           ),
         );
+        // Un arreglo vacío también es una decisión restaurada: no aplicar de
+        // nuevo los checks recomendados después de una recarga.
+        setPersonalizaciones(estado.personalizaciones);
         // Lo que el cliente ya habia elegido gana sobre los recomendados del
         // catalogo (ver el efecto de los defaults, mas arriba).
         setRecuperacion('repuesta');
@@ -1054,7 +1177,21 @@ export function CheckoutView({
       return;
     }
 
-    if (extrasPendientes.length > 0) {
+    const erroresDePersonalizacion = usaPersonalizacionesServicio
+      ? erroresPersonalizaciones(catalogoUnificado, personalizaciones)
+      : {};
+    setErroresPersonalizacion(erroresDePersonalizacion);
+    const primeraPersonalizacion = catalogoUnificado.find(
+      (p) => erroresDePersonalizacion[p.id],
+    );
+    if (primeraPersonalizacion) {
+      const campo = document.getElementById(`personalizacion-${primeraPersonalizacion.id}`);
+      campo?.focus();
+      campo?.scrollIntoView({ block: 'center' });
+      return;
+    }
+
+    if (opcionesPendientes.length > 0) {
       setRecordatorioAbierto(true);
       return;
     }
@@ -1100,7 +1237,19 @@ export function CheckoutView({
         captcha_token: captchaToken.current,
         paquete: paquete ? paquete.slug : (paqueteId ?? null),
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
-        personalizaciones: paquete && personalizaciones.length > 0 ? personalizaciones : undefined,
+        personalizaciones: usaPersonalizacionesServicio
+          ? personalizaciones.map((seleccion) => {
+              const item = catalogoUnificado.find((p) => p.id === seleccion.id);
+              return {
+                ...seleccion,
+                cantidad: item
+                  ? cantidadEfectiva(item, people, seleccion.cantidad)
+                  : seleccion.cantidad,
+              };
+            })
+          : paquete && personalizaciones.length > 0
+            ? personalizaciones
+            : undefined,
         fecha_salida: tieneHospedaje ? fechaSalida : undefined,
       }, empresaSlug);
 
@@ -1354,7 +1503,7 @@ export function CheckoutView({
                 label={checkout.peopleLabel}
                 maxNotice={booking.maxPeopleNotice}
                 value={people}
-                onChange={setPeople}
+                onChange={cambiarPersonas}
                 disabled={locked}
               />
             </div>
@@ -1549,7 +1698,12 @@ export function CheckoutView({
                 title={checkout.extrasStepHeadline}
                 estado={colapsado3 ? 'completado' : pasoEditando === 3 ? 'editando' : 'activo'}
                 resumen={
-                  extrasSeleccionadosItems.map((e) => getNombreExtra(e)).join(', ') ||
+                  [
+                    ...extrasSeleccionadosItems.map((e) => getNombreExtra(e)),
+                    ...catalogoUnificado
+                      .filter((p) => personalizacionesMap.has(p.id))
+                      .map((p) => p.nombre),
+                  ].join(', ') ||
                   checkout.noExtrasSelected
                 }
                 actionLabel={
@@ -1663,6 +1817,142 @@ export function CheckoutView({
                     </div>
                   ))}
                 </div>
+
+                {catalogoUnificado.length > 0 && (
+                  <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5">
+                    {catalogoUnificado.map((sp) => {
+                      const seleccion = personalizacionesMap.get(sp.id);
+                      const marcada = Boolean(seleccion);
+                      const errorCodigo = erroresPersonalizacion[sp.id] as
+                        | 'required'
+                        | 'number'
+                        | 'selection'
+                        | undefined;
+                      const errorId = `error-personalizacion-${sp.id}`;
+                      const precio = moneda === 'USD' ? sp.precio_usd : sp.precio;
+
+                      if (sp.tipo_interaccion === 'check') {
+                        const cantidad = cantidadEfectiva(sp, people, seleccion?.cantidad);
+                        return (
+                          <div key={sp.id}>
+                            <label
+                              htmlFor={`personalizacion-${sp.id}`}
+                              className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
+                            >
+                              <span className="flex items-start gap-3">
+                                <input
+                                  id={`personalizacion-${sp.id}`}
+                                  type="checkbox"
+                                  checked={marcada}
+                                  disabled={locked}
+                                  onChange={(e) => alternarPersonalizacion(sp.id, e.target.checked)}
+                                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                                />
+                                <span>
+                                  <span className="font-medium">{sp.nombre}</span>
+                                  {sp.preseleccionado && (
+                                    <span className="ml-2 text-xs font-medium text-accent">
+                                      {checkout.recommendedBadge}
+                                    </span>
+                                  )}
+                                </span>
+                              </span>
+                              <span className="shrink-0 text-right text-muted">
+                                {precio === null
+                                  ? checkout.extrasUnavailableInCurrency
+                                  : currency.format(Number(precio) * cantidad)}
+                              </span>
+                            </label>
+                            {!marcada && sp.aviso_reforzado && (
+                              <div className="flex items-start gap-2 border border-t-0 border-action/40 bg-action/10 px-4 py-2.5 text-xs text-foreground">
+                                <Warning size={14} className="mt-0.5 shrink-0 text-action" />
+                                <p>{checkout.amenitiesModal.reinforcedWarning}</p>
+                              </div>
+                            )}
+                            {marcada && sp.cantidad_editable && people > 1 && (
+                              <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
+                                <span className="text-muted">{checkout.licenseQuantity.question}</span>
+                                <span className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => ajustarCantidadPersonalizacion(sp.id, -1)}
+                                    disabled={locked || cantidad <= 1}
+                                    aria-label="-"
+                                    className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30"
+                                  >
+                                    <Minus size={12} />
+                                  </button>
+                                  <span>{deLabel(cantidad, people)}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => ajustarCantidadPersonalizacion(sp.id, 1)}
+                                    disabled={locked || cantidad >= people}
+                                    aria-label="+"
+                                    className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30"
+                                  >
+                                    <Plus size={12} />
+                                  </button>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      const valor = seleccion?.respuesta ?? '';
+                      return (
+                        <label
+                          key={sp.id}
+                          htmlFor={`personalizacion-${sp.id}`}
+                          className="flex flex-col gap-2 text-sm text-foreground"
+                        >
+                          <span className="font-medium">
+                            {sp.nombre}
+                            {sp.obligatorio ? ' *' : ''}
+                          </span>
+                          {sp.tipo_interaccion === 'input_seleccion' ? (
+                            <select
+                              id={`personalizacion-${sp.id}`}
+                              value={valor}
+                              disabled={locked}
+                              aria-invalid={Boolean(errorCodigo)}
+                              aria-describedby={errorCodigo ? errorId : undefined}
+                              onChange={(e) => actualizarRespuestaPersonalizacion(sp.id, e.target.value)}
+                              className={`border bg-surface px-4 py-3 outline-none ${
+                                errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
+                              }`}
+                            >
+                              <option value="">—</option>
+                              {sp.opciones_seleccion.map((opcion) => (
+                                <option key={opcion} value={opcion}>{opcion}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              id={`personalizacion-${sp.id}`}
+                              type={sp.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
+                              step={sp.tipo_interaccion === 'input_numero' ? 'any' : undefined}
+                              value={valor}
+                              disabled={locked}
+                              aria-invalid={Boolean(errorCodigo)}
+                              aria-describedby={errorCodigo ? errorId : undefined}
+                              onChange={(e) => actualizarRespuestaPersonalizacion(sp.id, e.target.value)}
+                              className={`border bg-surface px-4 py-3 outline-none ${
+                                errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
+                              }`}
+                            />
+                          )}
+                          {errorCodigo && (
+                            <FieldError
+                              id={errorId}
+                              mensaje={checkout.personalizacionErrors[errorCodigo]}
+                            />
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {personalizacionesDisponibles.length > 0 && (
                   <div className="mt-6 flex flex-col gap-2 border-t border-border pt-5">
@@ -1825,8 +2115,12 @@ export function CheckoutView({
             key="amenities-reminder"
             checkout={checkout}
             feedback={dict.feedback}
-            pendientes={extrasPendientes}
-            onSeleccionarExtra={(id) => alternarExtra(id, true)}
+            pendientes={opcionesPendientes}
+            onSeleccionarExtra={(id) =>
+              usaPersonalizacionesServicio
+                ? alternarPersonalizacion(id, true)
+                : alternarExtra(id, true)
+            }
             onContinuar={enviar}
             onCerrar={() => setRecordatorioAbierto(false)}
             enviando={enviando}
