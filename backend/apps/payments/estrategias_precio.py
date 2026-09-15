@@ -1,7 +1,7 @@
 """Estrategias de precio puras y tipadas (ADR-003).
 
-Desacopla el calculo del precio base de una experiencia de la tabla Tarifa
-singleton. Cada estrategia recibe la configuracion del servicio y la demanda del
+Resuelve el calculo del precio base de una experiencia desde Servicio.
+Cada estrategia recibe la configuracion del servicio y la demanda del
 cliente (personas, moneda, noches), calculando el monto en Decimal cuantizado a centavos.
 """
 

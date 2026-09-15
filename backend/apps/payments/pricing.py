@@ -1,7 +1,7 @@
 """Todo el calculo de dinero vive aqui, en un solo lugar.
 
 El frontend nunca manda totales ni cantidades: manda que quiere, y el servidor
-arma la cifra a partir de la `Reserva` y de la `Tarifa`. Ese mismo calculo se
+arma la cifra a partir de la `Reserva` y del `Servicio`. Ese mismo calculo se
 repite al confirmar el pago para verificar que lo que cobro Stripe es lo que se
 debia cobrar.
 
@@ -25,7 +25,7 @@ Que se cobra en linea y que no:
 from decimal import ROUND_HALF_UP, Decimal
 
 # El precio del tour es por viaje, no por persona. Hasta esta cantidad de
-# personas no cambia nada; de ahi en adelante se suma `Tarifa.precio_persona_extra`
+# personas no cambia nada; de ahi en adelante se suma `Servicio.precio_persona_extra`
 # por cada una. El corte es 3 porque es la capacidad de la embarcacion chica:
 # pasando de ahi hace falta una grande (ver docs/contexto-negocio.md).
 PERSONAS_INCLUIDAS = 3

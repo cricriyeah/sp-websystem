@@ -7,7 +7,7 @@ from django.http import Http404, HttpResponse
 from django.template import engines
 from django.template.response import TemplateResponse
 from django.test import RequestFactory, TransactionTestCase
-from django.urls import path
+from django.urls import path, resolve
 
 from . import scope
 from .middleware import EmpresaScopeMiddleware
@@ -156,7 +156,8 @@ class MiddlewareTests(TransactionTestCase):
             self.assertIsNone(getattr(connection, 'alcance_actual', None))
             return HttpResponse('ok')
 
-        request = RequestFactory().get('/api/empresa-a/tarifa/')
+        request = RequestFactory().get('/api/empresa-a/servicios/pesca-deportiva/')
+        self.assertEqual(resolve(request.path_info).kwargs['empresa_slug'], 'empresa-a')
         request.user = AnonymousUser()
         middleware = self._middleware(get_response)
         middleware(request)

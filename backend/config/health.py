@@ -1,14 +1,8 @@
 """Sonda de salud para el balanceador de Render.
 
-Existe porque `render.yaml` apuntaba su `healthCheckPath` a `/api/tarifa/`, y esa
-ruta responde 503 mientras no exista la fila de `Tarifa`. En una base recien
-migrada no existe, asi que el primer deploy nunca pasaba el health check y Render
-lo cancelaba — pero la Tarifa no se puede crear hasta que el servicio este
-arriba. Circulo cerrado.
-
-La leccion es la distincion que faltaba: **el health check responde "¿puede este
-proceso atender peticiones?", no "¿esta el negocio configurado?"**. Un dia sin
-tarifa cargada es un problema de operacion, no un motivo para tumbar el deploy.
+El health check verifica que el proceso puede atender peticiones aunque el
+catálogo de servicios aún no esté configurado. Una instalación recién migrada
+debe poder arrancar para permitir la captura de datos de negocio.
 
 Por eso aqui se verifica solo la infraestructura: que el proceso responde y que
 la base contesta. Nada de filas de negocio. Si alguna vez hace falta una sonda

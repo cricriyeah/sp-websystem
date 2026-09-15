@@ -31,7 +31,6 @@ from apps.fleet.models import (
     PaqueteServicio,
     Recurso,
     Servicio,
-    Tarifa,
 )
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
@@ -228,18 +227,58 @@ class CrearPagoTests(ApiTestCase):
         self.empresa.stripe_secret_key = 'sk_test_falsa'
         self.empresa.stripe_publishable_key = 'pk_test_falsa'
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_publishable_key'])
-        Tarifa.objects.create(
-            empresa=self.empresa,
-            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
+        self.servicio = crear_servicio_pesca(
+            self.empresa,
+            precio_base=Decimal('4500.00'), precio_base_usd=Decimal('260.00'),
             precio_persona_extra=Decimal('500.00'), precio_persona_extra_usd=Decimal('30.00'),
         )
-        self.reserva = crear_reserva(self.empresa)
+        self.reserva = crear_reserva(self.empresa, servicio=self.servicio)
         self.url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': self.reserva.pk})
 
     def post(self, **body):
         datos = {'forma_pago': 'completo', 'checkout_id': str(self.reserva.checkout_id)}
         datos.update(body)
         return self.client.post(self.url, datos, content_type='application/json')
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_reserva_sin_producto_rechaza_pago_sin_llamar_stripe(self, payment_intents):
+        # Simula una fila inválida creada sin full_clean por una integración.
+        Reserva.objects.filter(pk=self.reserva.pk).update(servicio=None, paquete=None)
+        response = self.post()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['detail'],
+                         'La reserva no tiene servicio ni paquete configurado.')
+        payment_intents.create.assert_not_called()
+        payment_intents.update.assert_not_called()
+        self.reserva.refresh_from_db()
+        self.assertFalse(self.reserva.stripe_payment_intent_id)
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_precio_base_y_recargo_vigentes_del_servicio_en_ambas_monedas(self, payment_intents):
+        self.servicio.precio_base = Decimal('5100')
+        self.servicio.precio_base_usd = Decimal('300')
+        self.servicio.precio_persona_extra = Decimal('600')
+        self.servicio.precio_persona_extra_usd = Decimal('35')
+        self.servicio.save()
+        for moneda, personas, esperado in (
+            ('MXN', 3, '5100.00'), ('MXN', 5, '6300.00'),
+            ('USD', 3, '300.00'), ('USD', 5, '370.00'),
+        ):
+            with self.subTest(moneda=moneda, personas=personas):
+                reserva = crear_reserva(self.empresa, servicio=self.servicio,
+                                        moneda=moneda, numero_personas=personas,
+                                        checkout_id=uuid.uuid4())
+                payment_intents.create.return_value = intent_falso(
+                    id=f'pi_{reserva.pk}', amount=a_centavos(Decimal(esperado)),
+                    currency=moneda.lower())
+                response = self.client.post(
+                    reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
+                    {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
+                    content_type='application/json')
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()['monto_a_cobrar'], esperado)
+                self.assertEqual(payment_intents.create.call_args.args[0]['amount'],
+                                 a_centavos(Decimal(esperado)))
 
     def seleccionar_extra(self, reserva=None, cantidad_solicitada=None, **overrides):
         """Simula lo que deja el checkout: la SELECCION de un extra, sin precio
@@ -547,11 +586,6 @@ class CrearPagoTests(ApiTestCase):
         servicio = crear_servicio_pesca(self.empresa)
         servicio.precio_persona_extra_usd = None
         servicio.save(update_fields=['precio_persona_extra_usd'])
-        Tarifa.objects.create(
-            empresa=self.empresa,
-            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
-            precio_persona_extra=Decimal('500.00'), precio_persona_extra_usd=None,
-        )
         reserva = crear_reserva(self.empresa, moneda='USD', numero_personas=5)
         response = self.client.post(
             reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
@@ -613,7 +647,6 @@ class CrearPagoTests(ApiTestCase):
         servicio = crear_servicio_pesca(self.empresa)
         servicio.precio_base_usd = None
         servicio.save(update_fields=['precio_base_usd'])
-        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'), precio_usd=None)
         reserva = crear_reserva(self.empresa, moneda='USD')
         response = self.client.post(
             reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
@@ -1037,7 +1070,10 @@ class WebhookTests(ApiTestCase):
         self.empresa.stripe_secret_key = 'sk_test_falsa'
         self.empresa.stripe_webhook_secret = 'whsec_falsa'
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
-        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
+        crear_servicio_pesca(
+            self.empresa, precio_base=Decimal('4500.00'), precio_base_usd=None,
+            precio_persona_extra=Decimal('0'), precio_persona_extra_usd=None,
+        )
         self.reserva = crear_reserva(self.empresa)
         self.reserva.precio_total = Decimal('4500.00')
         self.reserva.forma_pago = Reserva.FormaPago.COMPLETO
@@ -1231,7 +1267,10 @@ class EventosDeStripeTests(ApiTestCase):
         self.empresa.stripe_secret_key = 'sk_test_falsa'
         self.empresa.stripe_webhook_secret = 'whsec_falsa'
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
-        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
+        crear_servicio_pesca(
+            self.empresa, precio_base=Decimal('4500.00'), precio_base_usd=None,
+            precio_persona_extra=Decimal('0'), precio_persona_extra_usd=None,
+        )
         self.reserva = crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         self.reserva.precio_total = Decimal('4500.00')
         self.reserva.monto_pagado = Decimal('4500.00')
@@ -1316,7 +1355,10 @@ class ConciliarPagosTests(EmpresaTestCase):
         self.empresa.stripe_secret_key = 'sk_test_falsa'
         self.empresa.stripe_webhook_secret = 'whsec_falsa'
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
-        Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'))
+        crear_servicio_pesca(
+            self.empresa, precio_base=Decimal('4500.00'), precio_base_usd=None,
+            precio_persona_extra=Decimal('0'), precio_persona_extra_usd=None,
+        )
         self.reserva = crear_reserva(self.empresa)
         self.reserva.precio_total = Decimal('4500.00')
         self.reserva.forma_pago = Reserva.FormaPago.COMPLETO

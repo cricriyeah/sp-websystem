@@ -2,7 +2,7 @@
 
 NO usar en producción. Idempotente (get_or_create). Crea:
   - Flota de pesca de Sal y Sol (10 pangas)
-  - Tarifa legacy de Sal y Sol (para el /reservar clásico)
+  - Servicio de pesca de Sal y Sol (precio base y recargos MXN/USD)
   - Servicio suelto de paseo (Sal y Sol)
   - Servicio de hospedaje + 3 habitaciones (Sal y Sol) con personalizaciones
   - Un Paquete de Sal y Sol (pesca + hospedaje + brunch)
@@ -13,6 +13,7 @@ NO usar en producción. Idempotente (get_or_create). Crea:
 
 Uso:  venv/Scripts/python.exe manage.py seed_local_demo
 """
+from datetime import time
 from decimal import Decimal
 
 from django.conf import settings
@@ -33,7 +34,7 @@ class Command(BaseCommand):
         from apps.fleet.models import (
             Embarcacion, Paquete, PaqueteServicio, Personalizacion,
             PuntoEncuentro, Recurso, Servicio, ServicioPersonalizacion,
-            Tarifa, TransporteTarifa,
+            TransporteTarifa,
         )
 
         sede = Sede.objects.get(slug='la-paz')
@@ -62,13 +63,6 @@ class Command(BaseCommand):
                     defaults={'clase': 'grande', 'capacidad_maxima': 5},
                 )
 
-            # --- Tarifa legacy (para /reservar sin params) ---
-            if Tarifa.de(sal) is None:
-                Tarifa.objects.create(
-                    empresa=sal, precio=Decimal('4500'), precio_usd=Decimal('260'),
-                    precio_persona_extra=Decimal('500'), precio_persona_extra_usd=Decimal('30'),
-                )
-
             # --- Servicio de pesca (ya lo siembra fleet/0018, lo tomamos) ---
             pesca = Servicio.objects.filter(empresa=sal, slug='pesca-deportiva').first()
             if pesca is None:
@@ -77,6 +71,8 @@ class Command(BaseCommand):
                     tipo_servicio='pesca', estrategia_cupo='por_recurso_dia',
                     estrategia_precio='por_grupo', modo_ocupacion='exclusivo',
                     precio_base=Decimal('4500'), precio_base_usd=Decimal('260'),
+                    precio_persona_extra=Decimal('500'), precio_persona_extra_usd=Decimal('30'),
+                    hora_apertura=time(5), hora_cierre=time(7),
                     personas_incluidas=3, porcentaje_anticipo=30, activo=True,
                 )
             # Recursos de pesca = las pangas (para el cupo por servicio)

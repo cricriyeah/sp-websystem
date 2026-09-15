@@ -4,21 +4,6 @@ const EMPRESA_SLUG = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol';
 
 export type Moneda = 'MXN' | 'USD';
 
-// Precios de lista del backend. `precio` es en pesos y los `*_usd` vienen null
-// mientras el negocio no fije ese precio en dolares. Todas las cifras llegan de
-// aqui a proposito: la web no debe tener ninguna hardcodeada
-// (ver backend/apps/payments/pricing.py). Los extras del checkout (brunch,
-// licencia, carnada, transporte) ya no viven aqui: vienen de `/api/extras/`,
-// ver `getExtras` mas abajo.
-export type Tarifa = {
-  precio: string;
-  precio_usd: string | null;
-  /** Cargo por cada persona arriba de `personas_incluidas`. */
-  precio_persona_extra: string;
-  precio_persona_extra_usd: string | null;
-  personas_incluidas: number;
-};
-
 /**
  * Catalogo de extras del checkout (`GET /api/extras/?personas=N&moneda=M`).
  *
@@ -171,7 +156,7 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit, empresaSlug?: string): Promise<T> {
-  // Cada ruta exportada de este archivo empieza con '/api/' (ver getTarifa,
+  // Cada ruta exportada de este archivo empieza con '/api/' (ver getExtras,
   // getCupo, etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
   // que cada funcion exportada tenga que acordarse del slug.
   // Rutas de plataforma multi-sede (/api/sedes/) no se atan a una empresa.
@@ -201,9 +186,6 @@ async function request<T>(path: string, init?: RequestInit, empresaSlug?: string
   if (!res.ok) throw new ApiError(res.status, body ?? res.statusText);
   return body as T;
 }
-
-export const getTarifa = (empresaSlug?: string) =>
-  request<Tarifa>('/api/tarifa/', undefined, empresaSlug);
 
 export const getCupo = (fecha: string, personas: number, empresaSlug?: string) =>
   request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`, undefined, empresaSlug);

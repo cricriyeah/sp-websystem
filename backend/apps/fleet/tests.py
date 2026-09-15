@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from decimal import Decimal
 from io import StringIO
 
@@ -11,14 +11,13 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import connection
 from django.db.utils import IntegrityError
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.payments.pricing import PERSONAS_INCLUIDAS
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
-from apps.testing import ApiTestCase, EmpresaTestCase
+from apps.testing import ApiTestCase, EmpresaTestCase, crear_servicio_pesca
 
 from .enums import TipoTraslado
 from .tarifa_transporte import TarifaTransporteNoConfigurada, resolver_tarifa_transporte
@@ -31,7 +30,6 @@ from .models import (
     PuntoEncuentro,
     Servicio,
     ServicioPersonalizacion,
-    Tarifa,
     TransporteTarifa,
     capacidades_disponibles,
     capacidades_por_fecha,
@@ -47,107 +45,50 @@ def _crear_empresa(slug):
 
 
 class EmpresaFKTests(TestCase):
-    # F1 dejo estos dos en null=True (paso transitorio); F3 los cerro a
-    # obligatorios para los 8 modelos -- no queda un estado "nullable" real
-    # en ningun punto del historial final.
-    def test_tarifa_tiene_campo_empresa(self):
-        campo = Tarifa._meta.get_field('empresa')
-        self.assertFalse(campo.null)
-        self.assertEqual(campo.remote_field.on_delete.__name__, 'PROTECT')
-
+    # El vínculo a Empresa es obligatorio desde F3.
     def test_embarcacionnodisponible_tiene_campo_empresa(self):
         campo = EmbarcacionNoDisponible._meta.get_field('empresa')
         self.assertFalse(campo.null)
 
-    def test_empresa_es_obligatoria_en_tarifa(self):
-        campo = Tarifa._meta.get_field('empresa')
-        self.assertFalse(campo.null)
 
-
-class TarifaTests(TestCase):
-    """Aislamiento A/B: abre el alcance de cada Empresa a mano (no puede haber
-    un `con_empresa` ambiente porque hay dos Empresas distintas)."""
-
-    def setUp(self):
-        self.empresa_a = _crear_empresa(slug='empresa-a')
-        self.empresa_b = _crear_empresa(slug='empresa-b')
-
-    def test_una_tarifa_por_empresa(self):
-        with scope.con_empresa(self.empresa_a):
-            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
-            Tarifa.objects.create(precio=Decimal('5000.00'), empresa=self.empresa_a)
-            self.assertEqual(Tarifa.objects.filter(empresa=self.empresa_a).count(), 1)
-            self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('5000.00'))
-
-    def test_cada_empresa_tiene_su_propia_tarifa(self):
-        with scope.con_empresa(self.empresa_a):
-            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
-            self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('4500.00'))
-        with scope.con_empresa(self.empresa_b):
-            Tarifa.objects.create(precio=Decimal('3000.00'), empresa=self.empresa_b)
-            self.assertEqual(Tarifa.de(self.empresa_b).precio, Decimal('3000.00'))
-
-    def test_sin_tarifa_de_devuelve_none(self):
-        with scope.con_empresa(self.empresa_b):
-            self.assertIsNone(Tarifa.de(self.empresa_b))
-
-    def test_precio_por_moneda(self):
-        with scope.con_empresa(self.empresa_a):
-            tarifa = Tarifa.objects.create(
-                precio=Decimal('4500.00'), precio_usd=Decimal('260.00'), empresa=self.empresa_a,
-            )
-        self.assertEqual(tarifa.precio_en('MXN'), Decimal('4500.00'))
-        self.assertEqual(tarifa.precio_en('USD'), Decimal('260.00'))
-
-    def test_sin_precio_en_dolares_devuelve_none(self):
-        with scope.con_empresa(self.empresa_a):
-            tarifa = Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
-        self.assertIsNone(tarifa.precio_en('USD'))
-
-    def test_carrera_creacion_simultanea_actualiza_no_revienta(self):
-        from unittest.mock import patch
-        with scope.con_empresa(self.empresa_a):
-            Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa_a)
-            t2 = Tarifa(precio=Decimal('6000.00'), empresa=self.empresa_a)
-            # Simulamos que select_for_update no vio la fila existente (carrera de concurrencia)
-            with patch.object(Tarifa.objects, 'select_for_update', return_value=Tarifa.objects.none()):
-                t2.save()
-            self.assertEqual(Tarifa.objects.filter(empresa=self.empresa_a).count(), 1)
-            self.assertEqual(Tarifa.de(self.empresa_a).precio, Decimal('6000.00'))
-
-
-class TarifaApiTests(ApiTestCase):
-    def test_sin_tarifa_responde_503(self):
-        self.assertEqual(
-            self.client.get(f'/api/{self.empresa.slug}/tarifa/').status_code, 503,
-        )
-
-    def test_devuelve_todas_las_cifras_del_checkout(self):
-        Tarifa.objects.create(
-            precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
-            precio_persona_extra=Decimal('500.00'), empresa=self.empresa,
-        )
-        body = self.client.get(f'/api/{self.empresa.slug}/tarifa/').json()
-        self.assertEqual(body['precio'], '4500.00')
-        self.assertEqual(body['precio_usd'], '260.00')
-        self.assertEqual(body['precio_persona_extra'], '500.00')
-        self.assertEqual(body['personas_incluidas'], PERSONAS_INCLUIDAS)
-
-    def test_no_publica_precio_de_lo_que_se_cotiza(self):
-        Tarifa.objects.create(precio=Decimal('4500.00'), empresa=self.empresa)
-        body = self.client.get(f'/api/{self.empresa.slug}/tarifa/').json()
+class PescaServicioApiTests(ApiTestCase):
+    def test_devuelve_los_cuatro_precios_y_personas_incluidas(self):
+        crear_servicio_pesca(self.empresa, precio_base=Decimal('5100'),
+                            precio_base_usd=Decimal('300'),
+                            precio_persona_extra=Decimal('600'),
+                            precio_persona_extra_usd=Decimal('35'))
+        response = self.client.get(f'/api/{self.empresa.slug}/servicios/pesca-deportiva/')
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        for campo, valor in {'precio_base': '5100.00', 'precio_base_usd': '300.00',
+                             'precio_persona_extra': '600.00',
+                             'precio_persona_extra_usd': '35.00',
+                             'personas_incluidas': 3}.items():
+            self.assertEqual(body[campo], valor)
         self.assertNotIn('amenidades', body)
 
-    def test_empresa_inexistente_responde_404(self):
-        self.assertEqual(self.client.get('/api/no-existe/tarifa/').status_code, 404)
+    def test_precio_usd_no_configurado_se_publica_como_null(self):
+        crear_servicio_pesca(self.empresa, precio_base_usd=None,
+                            precio_persona_extra_usd=None)
+        body = self.client.get(f'/api/{self.empresa.slug}/servicios/pesca-deportiva/').json()
+        self.assertIsNone(body['precio_base_usd'])
+        self.assertIsNone(body['precio_persona_extra_usd'])
 
-    def test_no_ve_la_tarifa_de_otra_empresa(self):
+    def test_servicio_ausente_responde_404(self):
+        self.assertEqual(self.client.get(
+            f'/api/{self.empresa.slug}/servicios/pesca-deportiva/').status_code, 404)
+
+    def test_empresa_inexistente_responde_404(self):
+        self.assertEqual(self.client.get(
+            '/api/no-existe/servicios/pesca-deportiva/').status_code, 404)
+
+    def test_no_ve_precios_de_otra_empresa(self):
+        crear_servicio_pesca(self.empresa, precio_base=Decimal('5100'))
         otra = _crear_empresa(slug='empresa-b')
         with self._alcance_otra(otra):
-            Tarifa.objects.create(precio=Decimal('9999.00'), empresa=otra)
-        self.assertEqual(
-            self.client.get(f'/api/{self.empresa.slug}/tarifa/').status_code, 503,
-        )
+            crear_servicio_pesca(otra, precio_base=Decimal('9999'))
+        body = self.client.get(f'/api/{self.empresa.slug}/servicios/pesca-deportiva/').json()
+        self.assertEqual(body['precio_base'], '5100.00')
 
     def _alcance_otra(self, otra):
         # con_empresa no es reentrante con un valor distinto: se cierra el
@@ -155,6 +96,43 @@ class TarifaApiTests(ApiTestCase):
         # trabajo en el de `otra`, y se reabre el propio para el teardown.
         cm = _AlcanceOtraEmpresa(self, otra)
         return cm
+
+
+@override_settings(DEBUG=True)
+class SeedLocalDemoPescaTests(TestCase):
+    def test_crea_pesca_con_precios_y_ventana_y_respeta_configuracion_existente(self):
+        empresa = Empresa.objects.get(slug='sal-y-sol')
+        with scope.con_empresa(empresa):
+            Servicio.objects.filter(empresa=empresa, slug='pesca-deportiva').delete()
+        call_command('seed_local_demo', stdout=StringIO())
+        with scope.con_empresa(empresa):
+            pesca = Servicio.objects.get(empresa=empresa, slug='pesca-deportiva')
+            self.assertEqual((pesca.precio_base, pesca.precio_base_usd,
+                              pesca.precio_persona_extra, pesca.precio_persona_extra_usd),
+                             (Decimal('4500'), Decimal('260'), Decimal('500'), Decimal('30')))
+            self.assertEqual((pesca.hora_apertura, pesca.hora_cierre), (time(5), time(7)))
+            pesca.precio_base = Decimal('5100')
+            pesca.precio_base_usd = None
+            pesca.precio_persona_extra = Decimal('600')
+            pesca.precio_persona_extra_usd = None
+            pesca.hora_cierre = time(6, 30)
+            pesca.save()
+        empresa.stripe_secret_key = 'sk_test_personalizada'
+        empresa.stripe_publishable_key = 'pk_test_personalizada'
+        empresa.stripe_webhook_secret = 'whsec_personalizada'
+        empresa.save()
+        call_command('seed_local_demo', stdout=StringIO())
+        with scope.con_empresa(empresa):
+            pesca.refresh_from_db()
+            self.assertEqual(Servicio.objects.filter(empresa=empresa, slug='pesca-deportiva').count(), 1)
+            self.assertEqual((pesca.precio_base, pesca.precio_base_usd,
+                              pesca.precio_persona_extra, pesca.precio_persona_extra_usd),
+                             (Decimal('5100'), None, Decimal('600'), None))
+            self.assertEqual(pesca.hora_cierre, time(6, 30))
+        empresa.refresh_from_db()
+        self.assertEqual((empresa.stripe_secret_key, empresa.stripe_publishable_key,
+                          empresa.stripe_webhook_secret),
+                         ('sk_test_personalizada', 'pk_test_personalizada', 'whsec_personalizada'))
 
 
 class _AlcanceOtraEmpresa:

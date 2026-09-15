@@ -39,7 +39,6 @@ PERMISOS_JEFE = PERMISOS_VENDEDORA + [
     ('fleet', 'extrasitem', ['add', 'change', 'delete', 'view']),
     ('fleet', 'transportetarifa', ['add', 'change', 'delete', 'view']),
     ('fleet', 'codigopromocional', ['add', 'change', 'delete', 'view']),
-    ('fleet', 'tarifa', ['add', 'change', 'view']),
     # Catalogo multi-sede: el jefe configura sus propios servicios, recursos,
     # personalizaciones y paquetes (RLS los acota a su Empresa).
     ('fleet', 'servicio', ['add', 'change', 'delete', 'view']),

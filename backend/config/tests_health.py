@@ -8,36 +8,20 @@ from unittest import mock
 
 from django.test import TestCase
 
-from apps.fleet.models import Tarifa
-from apps.tenancy.models import Empresa, Sede
+from apps.fleet.models import Servicio
+from apps.tenancy import scope
 
 
 class HealthzTests(TestCase):
     def test_responde_200_con_la_base_vacia(self):
-        """El caso que rompia el deploy: base recien migrada, cero filas.
-
-        /api/tarifa/ contesta 503 aqui — por eso no sirve como health check.
-        """
-        self.assertFalse(Tarifa.objects.exists())
-
-        respuesta = self.client.get('/healthz')
-
+        """Una instalación sin catálogo también debe estar saludable."""
+        with scope.como_operador_plataforma():
+            Servicio.objects.all().delete()
+            self.assertFalse(Servicio.objects.exists())
+        with self.assertNumQueries(1):
+            respuesta = self.client.get('/healthz')
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json(), {'status': 'ok', 'database': 'ok'})
-
-    def test_la_ruta_de_tarifa_si_falla_sin_datos(self):
-        """Deja constancia de por que /api/<empresa>/tarifa/ no puede ser el health
-        check.
-
-        Si algun dia esta ruta deja de dar 503 sin tarifa, este test falla y
-        obliga a releer la decision en vez de asumirla.
-        """
-        sede = Sede.objects.create(
-            nombre='Sede health', slug='sede-health', zona_horaria='America/Mazatlan')
-        empresa = Empresa.objects.create(
-            sede=sede, nombre='Empresa health', slug='empresa-health', activo=True)
-
-        self.assertEqual(self.client.get(f'/api/{empresa.slug}/tarifa/').status_code, 503)
 
     def test_reporta_503_si_la_base_no_contesta(self):
         """Un deploy con credenciales mal puestas debe morir en el health check,

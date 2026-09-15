@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import IntegrityError, models, transaction
+from django.db import models
 
 from .enums import (
     EstrategiaCupo,
@@ -17,95 +17,12 @@ from .enums import (
 )
 
 
-class Tarifa(models.Model):
-    """Singleton: precio unico del tour, no varia por clase de embarcacion
-    (ver docs/contexto-negocio.md, seccion Embarcaciones). Editable solo por jefes.
-
-    Se cobra en pesos o dolares (doc: "Monedas: pesos y dolares"). Son dos precios
-    de lista independientes, no una conversion: el negocio fija cada uno a mano y
-    el sistema nunca aplica un tipo de cambio. Sin `precio_usd` el checkout solo
-    ofrece pesos."""
-
-    precio = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text='Precio del tour en pesos (MXN).'
-    )
-    precio_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Precio del tour en dolares. Vacio = no se ofrece pago en USD.',
-    )
-    precio_persona_extra = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0,
-        help_text='Cargo en pesos por cada persona arriba de las incluidas en el '
-                  'precio del viaje. 0 = el precio no cambia con el numero de personas.',
-    )
-    precio_persona_extra_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='El mismo cargo en dolares. Vacio = no se puede cobrar en USD un '
-                  'viaje que lleve personas extra.',
-    )
-    actualizado_en = models.DateTimeField(auto_now=True)
-    actualizado_por = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
-    )
-    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='tarifa')
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['empresa'], name='tarifa_unica_por_empresa'),
-        ]
-
-    def save(self, *args, force_insert=False, **kwargs):
-        # Una tarifa por Empresa, no una tarifa por sistema: un segundo
-        # Tarifa.objects.create(empresa=X) debe actualizar el precio de X, no
-        # reventar con IntegrityError sobre la UniqueConstraint de arriba.
-        if not self.pk:
-            try:
-                with transaction.atomic():
-                    existente = (
-                        Tarifa.objects.select_for_update()
-                        .filter(empresa=self.empresa)
-                        .first()
-                    )
-                    if existente:
-                        self.pk = existente.pk
-                    super().save(*args, **kwargs)
-            except IntegrityError:
-                # Carrera: otra transacción insertó la tarifa en paralelo.
-                # Reintentamos asociando el pk de la tarifa existente.
-                existente = Tarifa.objects.filter(empresa=self.empresa).first()
-                if existente:
-                    self.pk = existente.pk
-                    super().save(*args, **kwargs)
-                else:
-                    raise
-        else:
-            super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        raise ValidationError('La tarifa no se puede eliminar, solo editar.')
-
-    def __str__(self):
-        return f'Tarifa de {self.empresa}: ${self.precio} MXN'
-
-    @classmethod
-    def de(cls, empresa):
-        return cls.objects.filter(empresa=empresa).first()
-
-    def precio_en(self, moneda):
-        """Precio de lista en la moneda pedida, o None si no esta configurado."""
-        return self.precio if moneda == 'MXN' else self.precio_usd
-
-    def persona_extra_en(self, moneda):
-        """Cargo por persona adicional en esa moneda. None = sin configurar."""
-        return self.precio_persona_extra if moneda == 'MXN' else self.precio_persona_extra_usd
-
-
 class ExtrasItem(models.Model):
     """Catalogo de extras del checkout: brunch, licencia, carnada. Editable solo
-    por jefes, igual que `Tarifa` (es precio, informacion financiera).
+    por jefes, igual que `Servicio` (es precio, informacion financiera).
 
     Sin fechas de vigencia a proposito: el precio vigente se edita a mano,
-    igual que ya se hace con `Tarifa`, y cada reserva congela su propio precio
+    igual que ya se hace con `Servicio`, y cada reserva congela su propio precio
     al pagar (`bookings.ReservaExtra.precio_unitario`) — eso ya resuelve lo que
     una tabla de historico resolveria, sin la tabla.
     """
@@ -223,7 +140,7 @@ class PuntoEncuentro(models.Model):
 
 class CodigoPromocional(models.Model):
     """Codigo de descuento aplicable en el checkout. Editable solo por jefes —
-    es dato financiero, igual que `Tarifa` y `ExtrasItem`: la vendedora no
+    es dato financiero, igual que `Servicio` y `ExtrasItem`: la vendedora no
     tiene permisos sobre este modelo (ver `setup_roles`).
 
     El descuento se calcula y se aplica siempre en el servidor
@@ -252,8 +169,8 @@ class CodigoPromocional(models.Model):
     usos_maximos_por_cliente = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text='Por correo del cliente. Vacio = sin limite.',
     )
-    # Dos campos, no uno con tipo de cambio: mismo patron que Tarifa.precio/
-    # precio_usd — el negocio fija cada minimo a mano, sin conversion (ver
+    # Dos campos, no uno con tipo de cambio: mismo patron que Servicio.precio_base/
+    # precio_base_usd — el negocio fija cada minimo a mano, sin conversion (ver
     # docs/contexto-negocio.md, pesos y dolares nunca se suman).
     monto_minimo = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,

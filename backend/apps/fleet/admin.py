@@ -17,40 +17,14 @@ from .models import (
     Recurso,
     Servicio,
     ServicioPersonalizacion,
-    Tarifa,
     TransporteTarifa,
 )
-
-
-@admin.register(Tarifa)
-class TarifaAdmin(EmpresaScopedAdminMixin, ModelAdmin):
-    list_display = [
-        'precio', 'precio_usd', 'precio_persona_extra', 'precio_persona_extra_usd',
-        'actualizado_en', 'actualizado_por',
-    ]
-    readonly_fields = ['actualizado_en', 'actualizado_por']
-
-    def has_add_permission(self, request):
-        empresa = scope.empresa_actual(request)
-        if empresa is None:
-            # Operador de plataforma: sin empresa_actual, no hay singleton que
-            # guardar — el formulario exige elegir Empresa explicitamente
-            # (ver EmpresaScopedAdminMixin.get_fields).
-            return True
-        return not Tarifa.objects.filter(empresa=empresa).exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-    def save_model(self, request, obj, form, change):
-        obj.actualizado_por = request.user
-        super().save_model(request, obj, form, change)
 
 
 @admin.register(ExtrasItem)
 class ExtrasItemAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     """Precios editables sin deploy. Sin permisos para Vendedora, mismo trato
-    que Tarifa: es informacion financiera."""
+    que Servicio: es informacion financiera."""
 
     list_display = [
         'nombre', 'tipo', 'precio', 'precio_usd', 'cobrar_por_persona',
@@ -80,7 +54,7 @@ class PuntoEncuentroAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 @admin.register(CodigoPromocional)
 class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, ModelAdmin):
-    """Sin permisos para Vendedora, mismo trato que Tarifa/ExtrasItem: es
+    """Sin permisos para Vendedora, mismo trato que Servicio/ExtrasItem: es
     informacion financiera. El uso de cada codigo no se audita aqui — se ve
     en la lista de Reservas (columna/filtro `codigo_promocional`), la misma
     fuente que ya cuenta contra `usos_maximos`."""

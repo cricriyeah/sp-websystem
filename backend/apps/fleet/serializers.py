@@ -1,7 +1,7 @@
 from decimal import Decimal
 from rest_framework import serializers
 
-from apps.payments.pricing import PERSONAS_INCLUIDAS, cargo_por_extra
+from apps.payments.pricing import cargo_por_extra
 
 from .models import (
     ExtrasItem,
@@ -12,32 +12,7 @@ from .models import (
     Recurso,
     Servicio,
     ServicioPersonalizacion,
-    Tarifa,
 )
-
-
-class TarifaSerializer(serializers.ModelSerializer):
-    """Cifras del tour, para que la web no las duplique: precio del viaje y
-    cargo por persona adicional. Los extras del checkout (brunch, licencia,
-    carnada, transporte) ya no viven aqui, vienen de `/api/extras/` — ver
-    ExtrasPublicosView.
-
-    `precio` es el de pesos; los `*_usd` vienen en null cuando el negocio
-    todavia no fijo ese precio en dolares. Bebidas no aparece: no tiene
-    precio en linea, la cotiza el agente (ver apps/payments/pricing.py).
-    """
-
-    personas_incluidas = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Tarifa
-        fields = [
-            'precio', 'precio_usd',
-            'precio_persona_extra', 'precio_persona_extra_usd', 'personas_incluidas',
-        ]
-
-    def get_personas_incluidas(self, obj):
-        return PERSONAS_INCLUIDAS
 
 
 class ExtrasItemSerializer(serializers.ModelSerializer):

@@ -22,7 +22,7 @@ from apps.payments.estrategias_precio import (
 
 
 class ConfigPrueba:
-    """Mock sencillo de Servicio o Tarifa para pruebas de pricing."""
+    """Configuración de Servicio para pruebas de pricing sin base de datos."""
     def __init__(
         self,
         precio_base=Decimal('4500.00'),
@@ -159,7 +159,7 @@ class EstrategiasPrecioTests(SimpleTestCase):
         self.assertEqual(total, Decimal('1400.00'))
 
     def test_soporta_nombres_legacy_precio_y_precio_usd(self):
-        # Compatibilidad con el modelo Tarifa que usa 'precio' en vez de 'precio_base'
+        # Contrato histórico de Tarifa: el helper aún acepta diccionarios con 'precio'.
         config_legacy = {
             'precio': Decimal('4500.00'),
             'precio_usd': Decimal('260.00'),

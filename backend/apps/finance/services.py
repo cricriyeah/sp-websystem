@@ -15,7 +15,7 @@ Tres movimientos posibles por reserva, cada uno con su monto y su fecha:
 Dos reglas que no hay que romper:
 
 - **Cada moneda se lleva por separado.** El negocio fija el precio en pesos y en
-  dolares a mano, sin tipo de cambio (ver `fleet.Tarifa`), asi que sumar MXN con
+  dolares a mano, sin tipo de cambio (ver `fleet.Servicio`), asi que sumar MXN con
   USD daria una cifra que no significa nada.
 - **Solo cuenta el dinero que se movio.** `Reserva.reembolsada` es la decision de
   devolver; la salida se registra hasta que Stripe confirma que salio.

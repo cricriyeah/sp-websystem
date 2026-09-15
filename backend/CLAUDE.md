@@ -61,10 +61,10 @@ estar exento.
   despues de guardar la reserva como `pagada`. Cada canal se activa solo si sus env
   vars estan puestas y **nunca lanza**: el cobro ya ocurrio, una notificacion caida no
   debe hacer que Stripe reintente el webhook.
-- `fleet.Tarifa`: singleton (`pk` forzado a 1 en `save()`, que ignora `force_insert`
-  para que un segundo `create()` actualice en vez de reventar). Dos precios de lista
-  independientes: `precio` (MXN) y `precio_usd` (nullable, sin el la web solo ofrece
-  pesos). No hay tipo de cambio en ningun lado, el negocio fija cada precio a mano.
+- `fleet.Servicio`: pesca usa el servicio `pesca-deportiva` de cada Empresa y la
+  estrategia `por_grupo`. `precio_base`/`precio_base_usd` y los dos recargos por
+  persona son precios de lista independientes; sin precio USD no se cobra en esa
+  moneda. El negocio fija cada precio a mano, sin tipo de cambio.
 - `finance`: solo lectura, sin modelos. El panel de dinero para jefes, ver seccion
   "Panel de finanzas" abajo.
 - Tests: `apps/bookings/tests.py`, `apps/fleet/tests.py`, `apps/payments/tests.py` y
@@ -79,9 +79,9 @@ reservas/pagos. CORS restringido a los origenes del frontend
 (`CORS_ALLOWED_ORIGINS` en `settings/local.py` y `settings/production.py`, esta ultima
 via env var). Rutas montadas bajo `/api/` en `config/urls.py`:
 
-- `GET /api/tarifa/` — `{precio, precio_usd, amenidades}` (`apps/fleet`). Las amenidades
-  vienen de aqui a proposito: la web no tiene ninguna cifra hardcodeada. 503 si no hay
-  `Tarifa` creada.
+- `GET /api/<empresa>/servicios/pesca-deportiva/` — catálogo de pesca, con los cuatro
+  precios y personas incluidas (`apps/fleet`). 404 si el servicio no existe o está
+  inactivo. Los extras legacy de pesca conservan su endpoint hasta su unificación.
 - `GET /api/cupo/?fecha=YYYY-MM-DD&personas=N` — si cabe un grupo de N ese dia, solo
   informativo (`apps/bookings`); la validacion definitiva ocurre al confirmar el pago.
   `personas` es opcional (default 1), asi que una peticion sin el responde lo mismo que
@@ -183,7 +183,7 @@ posibles por reserva, cada uno con monto y fecha propios:
 Reglas que no hay que romper:
 
 - **Cada moneda por separado, nunca sumadas.** No hay tipo de cambio en el sistema
-  (ver `fleet.Tarifa`); sumar MXN con USD daria una cifra sin significado.
+  (ver precios de `fleet.Servicio`); sumar MXN con USD daria una cifra sin significado.
 - **`reembolsada` (bool) no es una salida.** Es la decision de devolver, que toma la
   vendedora al cancelar por mal clima. La salida se registra cuando el dinero sale de
   verdad y llega `charge.refunded`. Por eso una reserva cancelada puede aparecer
@@ -411,8 +411,8 @@ Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra
 - **Vendedora** = cuentas `is_staff=True`, `is_superuser=False`, agregadas al grupo Django `Vendedora`
   y con `MembresiaEmpresa(rol=VENDEDORA)`. Permisos del grupo: `Reserva` (add/change/view, sin delete —
   se cancela, no se borra), `CupoDiario` (add/change/view), `Embarcacion`/`Capitan` (view only),
-  `Vendedora` (view only, para consultar su codigo de link). **`fleet.Tarifa` deliberadamente sin permisos**
-  — informacion financiera protegida, el modulo no aparece en su admin.
+  `Vendedora` (view only, para consultar su codigo de link). El catálogo financiero
+  de `fleet.Servicio` queda reservado a jefes y operadores.
 - **Operador de plataforma** = cuenta en grupo Django `OperadorPlataforma`, sin `MembresiaEmpresa`.
   Acceso global multi-tenant (Sedes, Empresas, Membresias y finanzas consolidadas).
 - **Alta de vendedoras**: accion unificada "Dar de alta vendedora" en `/admin/auth/user/` (un jefe la ve

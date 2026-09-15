@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 from apps.bookings.models import Reserva, codigo_promocional_valido, evaluar_codigo_promocional
 from apps.fleet.enums import EstrategiaPrecio
-from apps.fleet.models import CodigoPromocional, Personalizacion, ServicioPersonalizacion, Tarifa
+from apps.fleet.models import CodigoPromocional, Personalizacion, ServicioPersonalizacion
 from apps.tenancy import scope
 
 from .estrategias_precio import DemandaPrecio, demanda_traslado, obtener_estrategia_precio
@@ -22,9 +22,7 @@ from .pricing import (
     cargo_por_descuento,
     cargo_por_extra,
     cargo_personalizacion,
-    cargo_por_personas,
     monto_inicial,
-    personas_extra,
     precio_paquete_total,
 )
 from .stripe_client import configurar_stripe
@@ -98,22 +96,9 @@ class CrearPagoView(APIView):
                 return Response({'detail': str(e)}, status=503)
             porcentaje = reserva.servicio.porcentaje_anticipo
         else:
-            tarifa = Tarifa.de(empresa)
-            if tarifa is None:
-                return Response({'detail': 'Tarifa no configurada.'}, status=503)
-
-            precio_tour = tarifa.precio_en(reserva.moneda)
-            if precio_tour is None:
-                return Response({'detail': f'No hay precio configurado en {reserva.moneda}.'}, status=503)
-
-            precio_persona_extra = tarifa.persona_extra_en(reserva.moneda)
-            if personas_extra(reserva.numero_personas) and precio_persona_extra is None:
-                return Response(
-                    {'detail': f'No hay cargo por persona extra configurado en {reserva.moneda}.'},
-                    status=503,
-                )
-            precio_base_servicio = precio_tour + cargo_por_personas(precio_persona_extra or 0, reserva.numero_personas)
-            porcentaje = 30
+            return Response(
+                {'detail': 'La reserva no tiene servicio ni paquete configurado.'}, status=400,
+            )
 
         forma_pago = request.data.get('forma_pago', Reserva.FormaPago.COMPLETO)
         if forma_pago not in Reserva.FormaPago.values:

@@ -905,8 +905,8 @@ Importar Servicio si no está; usar scope existente, no operador para saltar RLS
 
 **Consume:** todas las reservas runtime tienen producto, Tarifa copiada en tarea 6. **Produce:** único precio base de pesca desde Servicio y estrategia PorGrupo. `TransporteTarifa`, `TarifaFija`, `tarifa_transporte.py` son otros conceptos y permanecen.
 
-- [ ] **1. Cambiar pruebas de precio base antes de borrar:** donde `payments/tests.py` construya Tarifa, usar `crear_servicio_pesca` con exactamente los mismos cuatro precios y asociarlo a reserva. Mantener casos sin precio USD y sin recargo USD con más de 3 personas. Eliminar únicamente tests de CRUD/API del modelo retirado, reemplazando la cobertura negocio por endpoints de Servicio. Test health: `/healthz` debe seguir respondiendo 200 aunque no haya catálogo; NO introducir dependencia del Servicio en health. La función actual `config/health.py` ya es independiente de Tarifa, solo necesita limpiar comentario histórico.
-- [ ] **2. Retirar consumidores y modelo juntos:** borrar import/clase Tarifa, TarifaView/TarifaSerializer/TarifaAdmin, ruta tarifa, menú Unfold y permiso `('fleet','tarifa',...)`. En CrearPagoView reemplazar rama fallback por guardia defensiva:
+- [x] **1. Cambiar pruebas de precio base antes de borrar:** donde `payments/tests.py` construya Tarifa, usar `crear_servicio_pesca` con exactamente los mismos cuatro precios y asociarlo a reserva. Mantener casos sin precio USD y sin recargo USD con más de 3 personas. Eliminar únicamente tests de CRUD/API del modelo retirado, reemplazando la cobertura negocio por endpoints de Servicio. Test health: `/healthz` debe seguir respondiendo 200 aunque no haya catálogo; NO introducir dependencia del Servicio en health. La función actual `config/health.py` ya es independiente de Tarifa, solo necesita limpiar comentario histórico.
+- [x] **2. Retirar consumidores y modelo juntos:** borrar import/clase Tarifa, TarifaView/TarifaSerializer/TarifaAdmin, ruta tarifa, menú Unfold y permiso `('fleet','tarifa',...)`. En CrearPagoView reemplazar rama fallback por guardia defensiva:
 
 ```python
 # Cuerpo de la rama else de _post, que antes consultaba Tarifa:
@@ -915,7 +915,7 @@ return Response({'detail': 'La reserva no tiene servicio ni paquete configurado.
 
 Eliminar imports de `personas_extra`/`cargo_por_personas` de views si ya no se usan allí; los helpers siguen vivos en estrategias de precio. seed_local_demo crea Servicio directamente; conservar sus precios de demo y la regla de no sobreescribir credenciales/configuración existente. Eliminar `Tarifa`/`getTarifa` de api.ts; corregir comentarios en loading/CLAUDE.
 
-- [ ] **3. Crear migración fleet.0032:**
+- [x] **3. Crear migración fleet.0032:**
 
 ```python
 from django.db import migrations
@@ -926,7 +926,7 @@ class Migration(migrations.Migration):
 ```
 
 Quitar también `fleet_tarifa` del guardarraíl RLS si aparece como nombre explícito (la parte introspectiva ya no la encuentra). Las migraciones históricas de Tarifa permanecen intactas.
-- [ ] **4. Verde y búsqueda:** `rg -n "\bTarifa\b|getTarifa|fleet_tarifa|['\"]tarifa['\"]" backend/apps backend/config frontend/src -g '!**/migrations/**'`. Las únicas referencias aceptables son pruebas de migración histórica/comentarios históricos deliberados; ningún import runtime/ruta/admin/permisos. Ejecutar instalación limpia + suite backend, lint/tsc/build, `manage.py setup_roles` en DB local y abrir admin para detectar reverse de menú inexistente. Commit `refactor: retirar tarifa legacy de pesca`.
+- [x] **4. Verde y búsqueda:** `rg -n "\bTarifa\b|getTarifa|fleet_tarifa|['\"]tarifa['\"]" backend/apps backend/config frontend/src -g '!**/migrations/**'`. Las únicas referencias aceptables son pruebas de migración histórica/comentarios históricos deliberados; ningún import runtime/ruta/admin/permisos. Ejecutar instalación limpia + suite backend, lint/tsc/build, `manage.py setup_roles` en DB local y abrir admin para detectar reverse de menú inexistente. Commit `refactor: retirar tarifa legacy de pesca`.
 
 ### Tarea 11: Migrar extras, cortar pesca y cerrar catálogo único
 
@@ -1081,3 +1081,15 @@ git diff --check
 - 11 tareas numeradas, 29 bloques Python analizados con `ast.parse` sin errores sintácticos; fences balanceados, sin marcadores de tareas por definir ni whitespace al final de línea. Los bloques son ejemplos de integración, no módulos completos verificados contra Django.
 - Helper TypeScript y sus dos pruebas Node extraídos literalmente del documento a un directorio temporal: compilación TypeScript estricta exitosa y 2/2 pruebas exitosas (recomendada removible/cantidad efectiva y validación de cero/vacío/no finito).
 - Esta evidencia solo valida el documento y esos ejemplos aislados. No se implementaron tareas, no se ejecutó la suite de la aplicación y no se modificaron bases de datos, migraciones runtime, despliegues ni cambios previos del worktree.
+
+### Evidencia de Tarea 10 — 2026-09-14
+
+- Base de trabajo: `b5264a8`, rama `feat/transporte-multi-empresa`. Alcance: retiro de `fleet.Tarifa`; extras legacy y flujos de Orden/traslado conservados.
+- Baseline SQLite: `manage.py test apps config --settings=config.settings.local`, 924 pruebas, OK, 30 skips; `check` y `makemigrations --check --dry-run` sin incidencias.
+- Rojo: `CrearPagoTests` mostró 503 en la reserva sin producto donde se exige 400 (40 de 41 pruebas pasaban). La prueba nueva del seed mostró recargo MXN 0/USD None al crear pesca; los precios de demo esperados son 500/30.
+- Verde focalizado: 51 pruebas de pagos, catálogo, seed y health, sin skips. Suite completa SQLite: 918 pruebas en 311.920 s, OK, 30 skips. Se retiraron ocho pruebas exclusivas del modelo y una del endpoint usado como health; se agregaron dos de pagos y una del seed. Los escenarios de API de precios se trasladaron a Servicio.
+- `check` sin incidencias; `makemigrations --check --dry-run`: `No changes detected`. Frontend: `npm.cmd run lint`, `tsc.cmd --noEmit` y `npm.cmd run build`, todos verdes. `frontend/next-env.d.ts` sin cambios.
+- Instalación SQLite desde cero en una base temporal local: `migrate`, `setup_roles`, `check` y `seed_local_demo` correctos. Confirmada ausencia de tabla y ContentType de Tarifa, con `fleet_extrasitem` y `bookings_reservaextra` presentes. Los grupos quedaron con 20/74/92 permisos (Vendedora/Jefe/Operador).
+- Admin: páginas completas de inicio, listado y alta de reserva respondieron 200 para los tres roles; catálogo Servicio respondió 200 para Jefe y Operador. Todos los enlaces de Unfold resolvieron y el menú retirado estuvo ausente. Verificación mediante cliente Django; la herramienta informó que no había navegador disponible, por lo que no se afirma smoke visual.
+- La búsqueda ampliada encontró una URL antigua en `tenancy/tests_scope.py`: se cambió a detalle de Servicio y se añadió una aserción del slug resuelto, evitando un verde por URL inexistente. Pruebas de scope y estrategias: 41, OK. No se encontró otra excepción de producto similar a servicio+paquete de Órdenes.
+- `rg` dejó únicamente pruebas/comentarios históricos de Tarifa y los conceptos vigentes TarifaFija/TransporteTarifa. La whitelist RLS no contenía `fleet_tarifa`; no requirió cambios. No se ejecutó PostgreSQL en esta tarea ni se presenta SQLite como evidencia RLS. Tarea 11 queda pendiente.

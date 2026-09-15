@@ -1,9 +1,9 @@
 import { Skeleton } from '@/components/skeleton';
 
 /**
- * Lo que se ve mientras el servidor busca la tarifa.
+ * Lo que se ve mientras el servidor busca el producto.
  *
- * La pagina de reserva es un componente de servidor que espera a `getTarifa()`
+ * La pagina de reserva espera el catálogo de servicios o paquetes
  * antes de pintar nada. Sin esto, el cliente que toca "Agendar" en la portada se
  * queda en la portada, sin senal de que algo pasa, hasta que la respuesta
  * llega: en un telefono con red de marina eso son varios segundos donde lo

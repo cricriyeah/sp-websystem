@@ -89,7 +89,7 @@ REST_FRAMEWORK = {
         # apps/bookings/models.py, codigo_promocional_valido). Mismo limite que
         # 'pagos' para no dejar barrer el catalogo de codigos a fuerza bruta.
         'codigo_promocional': os.environ.get('THROTTLE_CODIGO_PROMOCIONAL', '20/min'),
-        # Catalogo publico (tarifa, extras, servicios, paquetes, sedes): lo
+        # Catalogo publico (extras, servicios, paquetes, sedes): lo
         # consultan el checkout server-side y la pagina de catalogo al cambiar de
         # sede. Las rutas por Sede recorren varias Empresas (una transaccion por
         # Empresa), asi que conviene un limite propio y no dejarlas sin freno.
@@ -281,8 +281,7 @@ UNFOLD = {
                 ],
             },
             {
-                # Solo jefes. La vendedora no ve este bloque completo, igual que
-                # hoy no ve `fleet.Tarifa` (ver docs/contexto-negocio.md, Roles).
+                # Solo jefes: precios y finanzas (ver docs/contexto-negocio.md, Roles).
                 'title': 'Dinero',
                 'separator': True,
                 'items': [
@@ -291,12 +290,6 @@ UNFOLD = {
                         'icon': 'payments',
                         'link': reverse_lazy('finanzas'),
                         'permission': _perm_puede_ver_finanzas,
-                    },
-                    {
-                        'title': 'Tarifa',
-                        'icon': 'sell',
-                        'link': reverse_lazy('admin:fleet_tarifa_changelist'),
-                        'permission': lambda request: request.user.has_perm('fleet.view_tarifa'),
                     },
                     {
                         'title': 'Extras',
