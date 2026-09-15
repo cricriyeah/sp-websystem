@@ -13,7 +13,7 @@ from django.test import override_settings, TransactionTestCase
 
 from apps.bookings.models import Reserva, ReservaExtra
 from apps.fleet.models import Capitan, Embarcacion, ExtrasItem, PuntoEncuentro
-from apps.testing import EmpresaTestCase, crear_flota
+from apps.testing import EmpresaTestCase, crear_flota, crear_servicio_pesca
 
 from .services import (
     PUNTO_DE_ENCUENTRO,
@@ -29,6 +29,7 @@ LLAVES = {'RESEND_API_KEY': 'test-key', 'RESEND_FROM': 'reservas@ejemplo.com'}
 def crear_reserva(empresa):
     return Reserva(
         empresa=empresa,
+        servicio=crear_servicio_pesca(empresa),
         fecha=date.today() + timedelta(days=10),
         hora=time(6, 0),
         numero_personas=2,
@@ -44,18 +45,22 @@ def crear_reserva(empresa):
 def crear_reserva_guardada(empresa, **overrides):
     """A diferencia de `crear_reserva()`, esta si queda en la base: hace falta
     tener `pk` para poder colgarle `ReservaExtra`."""
-    crear_flota(empresa)
+    empresa_real = overrides.get('empresa', empresa)
+    crear_flota(empresa_real)
     datos = dict(
-        empresa=empresa, fecha=date.today() + timedelta(days=10), hora=time(6, 0), numero_personas=2,
+        empresa=empresa_real, fecha=date.today() + timedelta(days=10), hora=time(6, 0), numero_personas=2,
         nombre_cliente='Ana Ruiz', telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
         canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True, deslinde_nombre='Ana Ruiz',
         moneda='MXN',
     )
+    if 'servicio' not in overrides and 'paquete' not in overrides:
+        datos['servicio'] = crear_servicio_pesca(empresa_real)
     datos.update(overrides)
     reserva = Reserva(**datos)
     reserva.full_clean()
     reserva.save()
     return reserva
+
 
 
 def _cuerpo_enviado(post):

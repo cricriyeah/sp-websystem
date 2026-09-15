@@ -171,3 +171,44 @@ def crear_flota(empresa, composicion=FLOTA_REAL):
                     clase=clase, capacidad_maxima=capacidad,
                 ))
         return Embarcacion.objects.bulk_create(pangas)
+
+
+def crear_servicio_pesca(empresa, **overrides):
+    """Crea o recupera el servicio canónico de pesca deportiva para `empresa`.
+
+    Usa `get_or_create` con defaults canónicos. No auto-actualiza precios si ya
+    existe: si una prueba necesita otros precios, debe asignarlos y guardarlos
+    explícitamente.
+    """
+    from datetime import time
+    from decimal import Decimal
+    from apps.fleet.models import Servicio
+
+    defaults = dict(
+        nombre='Pesca Deportiva',
+        tipo_servicio='pesca',
+        estrategia_cupo='por_recurso_dia',
+        estrategia_precio='por_grupo',
+        modo_ocupacion='exclusivo',
+        precio_base=Decimal('4500'),
+        precio_base_usd=Decimal('260'),
+        precio_persona_extra=Decimal('500'),
+        precio_persona_extra_usd=Decimal('30'),
+        personas_incluidas=3,
+        hora_apertura=time(5),
+        hora_cierre=time(7),
+        activo=True,
+    )
+    defaults.update(overrides)
+    slug = defaults.pop('slug', 'pesca-deportiva')
+    cm = (
+        scope.con_empresa(empresa)
+        if getattr(connection, 'alcance_actual', None) is None
+        else contextlib.nullcontext()
+    )
+    with cm:
+        servicio, _ = Servicio.objects.get_or_create(
+            empresa=empresa, slug=slug, defaults=defaults,
+        )
+    return servicio
+

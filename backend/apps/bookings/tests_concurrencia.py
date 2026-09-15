@@ -33,7 +33,7 @@ from django.test import TransactionTestCase
 from apps.fleet.models import Recurso, Servicio
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
-from apps.testing import crear_flota
+from apps.testing import crear_flota, crear_servicio_pesca
 
 from stripe import StripeClient
 
@@ -69,8 +69,12 @@ def _datos(empresa, **overrides):
         'deslinde_aceptado': True,
         'deslinde_nombre': 'Ana Ruiz',
     }
+    if 'servicio' not in overrides and 'paquete' not in overrides:
+        empresa_real = overrides.get('empresa', empresa)
+        base['servicio'] = crear_servicio_pesca(empresa_real)
     base.update(overrides)
     return base
+
 
 
 def _intent_falso(reserva):

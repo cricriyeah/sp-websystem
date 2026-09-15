@@ -986,3 +986,31 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
         with self.assertRaises(ValidationError) as ctx:
             p.full_clean()
         self.assertIn('tipo_interaccion', ctx.exception.message_dict)
+
+
+class CrearServicioPescaHelperTests(EmpresaTestCase):
+    def test_crear_servicio_pesca_defaults_y_no_duplica(self):
+        from datetime import time
+        from decimal import Decimal
+        from apps.testing import crear_servicio_pesca
+
+        s1 = crear_servicio_pesca(self.empresa)
+        self.assertEqual(s1.slug, 'pesca-deportiva')
+        self.assertEqual(s1.tipo_servicio, 'pesca')
+        self.assertEqual(s1.estrategia_cupo, 'por_recurso_dia')
+        self.assertEqual(s1.estrategia_precio, 'por_grupo')
+        self.assertEqual(s1.modo_ocupacion, 'exclusivo')
+        self.assertEqual(s1.precio_base, Decimal('4500'))
+        self.assertEqual(s1.precio_base_usd, Decimal('260'))
+        self.assertEqual(s1.precio_persona_extra, Decimal('500'))
+        self.assertEqual(s1.precio_persona_extra_usd, Decimal('30'))
+        self.assertEqual(s1.personas_incluidas, 3)
+        self.assertEqual(s1.hora_apertura, time(5))
+        self.assertEqual(s1.hora_cierre, time(7))
+        self.assertTrue(s1.activo)
+
+        # Llamarlo dos veces no duplica y devuelve la misma instancia
+        s2 = crear_servicio_pesca(self.empresa)
+        self.assertEqual(s1.pk, s2.pk)
+        self.assertEqual(Servicio.objects.filter(empresa=self.empresa, slug='pesca-deportiva').count(), 1)
+

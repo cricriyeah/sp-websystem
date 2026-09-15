@@ -22,7 +22,7 @@ from django.utils import formats, timezone
 from apps.bookings.models import Reserva
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
-from apps.testing import EmpresaTestCase, crear_flota
+from apps.testing import EmpresaTestCase, crear_flota, crear_servicio_pesca
 
 from .services import balances, balances_por_dia, resumen
 from .views import PERIODO_DEFAULT, PERIODOS, panel_financiero, rango_del_periodo
@@ -33,9 +33,10 @@ def momento(anio, mes, dia, hora=12):
 
 
 def crear_reserva(empresa, **overrides):
-    crear_flota(empresa)  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
+    empresa_real = overrides.get('empresa', empresa)
+    crear_flota(empresa_real)  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
     datos = {
-        'empresa': empresa,
+        'empresa': empresa_real,
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -47,11 +48,14 @@ def crear_reserva(empresa, **overrides):
         'deslinde_nombre': 'Ana Ruiz',
         'estado': Reserva.Estado.PAGADA,
     }
+    if 'servicio' not in overrides and 'paquete' not in overrides:
+        datos['servicio'] = crear_servicio_pesca(empresa_real)
     datos.update(overrides)
     reserva = Reserva(**datos)
     reserva.full_clean()
     reserva.save()
     return reserva
+
 
 
 class BalancesTests(EmpresaTestCase):
@@ -466,7 +470,8 @@ class BalancesFiltradosPorEmpresaTests(TestCase):
 
     def _crear_reserva_pagada(self, empresa, monto):
         reserva = Reserva(
-            empresa=empresa, fecha=self.hoy + timedelta(days=10), hora=time(6, 0),
+            empresa=empresa, servicio=crear_servicio_pesca(empresa),
+            fecha=self.hoy + timedelta(days=10), hora=time(6, 0),
             numero_personas=2, nombre_cliente='Cliente', telefono_cliente='+5216121234567',
             correo_cliente='cliente@example.com', canal_origen=Reserva.CanalOrigen.WEB,
             deslinde_aceptado=True, deslinde_nombre='Cliente', checkout_id=uuid.uuid4(),

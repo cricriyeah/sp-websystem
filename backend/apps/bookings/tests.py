@@ -22,7 +22,7 @@ from apps.fleet.models import (
     Servicio,
 )
 from apps.tenancy import scope
-from apps.testing import ApiTestCase, EmpresaTestCase, OperadorTestCase, crear_flota
+from apps.testing import ApiTestCase, EmpresaTestCase, OperadorTestCase, crear_flota, crear_servicio_pesca
 
 from .admin import telefono_marcable
 from .models import (
@@ -57,9 +57,10 @@ def envejecer(reserva, **delta):
 def datos_reserva(empresa, **overrides):
     # Hay tests que llaman Reserva(**datos_reserva(empresa)).full_clean() directo, y el
     # motor de cupo le pregunta a la flota: sin pangas no cabe nadie.
-    crear_flota(empresa)
+    empresa_real = overrides.get('empresa', empresa)
+    crear_flota(empresa_real)
     base = {
-        'empresa': empresa,
+        'empresa': empresa_real,
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -70,6 +71,8 @@ def datos_reserva(empresa, **overrides):
         'deslinde_aceptado': True,
         'deslinde_nombre': 'Ana Ruiz',
     }
+    if 'servicio' not in overrides and 'paquete' not in overrides:
+        base['servicio'] = crear_servicio_pesca(empresa_real)
     base.update(overrides)
     return base
 
@@ -85,6 +88,18 @@ class VentanaSalidaTests(EmpresaTestCase):
     def test_hora_fuera_de_la_ventana_es_invalida(self):
         with self.assertRaises(ValidationError):
             Reserva(**datos_reserva(self.empresa, hora=time(8, 0))).full_clean()
+
+    def test_ventana_pesca_limites(self):
+        # 04:59 inválida
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(self.empresa, hora=time(4, 59))).full_clean()
+        # 05:00 válida
+        Reserva(**datos_reserva(self.empresa, hora=time(5, 0))).full_clean()
+        # 07:00 válida
+        Reserva(**datos_reserva(self.empresa, hora=time(7, 0))).full_clean()
+        # 07:01 inválida
+        with self.assertRaises(ValidationError):
+            Reserva(**datos_reserva(self.empresa, hora=time(7, 1))).full_clean()
 
 
 class NumeroPersonasTests(EmpresaTestCase):
@@ -1601,11 +1616,11 @@ class InlinesAdminOcupacionYComponentesTests(EmpresaTestCase):
 class VentanaHorariaTest(EmpresaTestCase):
     def test_pesca_legacy_sin_servicio_valida_ventana_5_a_7(self):
         # 06:00 pasa
-        r_ok = Reserva(**datos_reserva(self.empresa, hora=time(6, 0)))
+        r_ok = Reserva(**datos_reserva(self.empresa, servicio=None, hora=time(6, 0)))
         r_ok.full_clean()
 
         # 09:00 falla
-        r_fail = Reserva(**datos_reserva(self.empresa, hora=time(9, 0)))
+        r_fail = Reserva(**datos_reserva(self.empresa, servicio=None, hora=time(9, 0)))
         with self.assertRaises(ValidationError) as ctx:
             r_fail.full_clean()
         self.assertIn('hora', ctx.exception.message_dict)
@@ -1646,11 +1661,11 @@ class VentanaHorariaTest(EmpresaTestCase):
 class TopePersonasTest(EmpresaTestCase):
     def test_pesca_legacy_tope_5(self):
         # 5 pasa
-        r_5 = Reserva(**datos_reserva(self.empresa, numero_personas=5))
+        r_5 = Reserva(**datos_reserva(self.empresa, servicio=None, numero_personas=5))
         r_5.full_clean()
 
         # 6 falla
-        r_6 = Reserva(**datos_reserva(self.empresa, numero_personas=6))
+        r_6 = Reserva(**datos_reserva(self.empresa, servicio=None, numero_personas=6))
         with self.assertRaises(ValidationError) as ctx:
             r_6.full_clean()
         self.assertIn('numero_personas', ctx.exception.message_dict)

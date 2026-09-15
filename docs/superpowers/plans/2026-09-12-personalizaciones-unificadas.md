@@ -793,8 +793,8 @@ Conservar nombre/descripcion/activo del Servicio existente y sus asociaciones; n
 
 **Consume:** Servicio. **Produce:** `crear_servicio_pesca(empresa, **overrides) -> Servicio`, solo lo invocan los tests que lo necesitan, no siembra automáticamente en EmpresaTestCase. No usar una Empresa global para fixtures multiempresa.
 
-- [ ] **1. Conservar y ejecutar tests horarios/cupo antes de editar:** `manage.py test apps.bookings.tests apps.bookings.tests_cupo_rango apps.bookings.tests_concurrencia`. Tomar baseline de ventanas 04:59 inválida, 05:00 válida, 07:00 válida, 07:01 inválida.
-- [ ] **2. Agregar helper** en `apps/testing.py` (imports locales evitan modificar import graph innecesariamente):
+- [x] **1. Conservar y ejecutar tests horarios/cupo antes de editar:** `manage.py test apps.bookings.tests apps.bookings.tests_cupo_rango apps.bookings.tests_concurrencia`. Tomar baseline de ventanas 04:59 inválida, 05:00 válida, 07:00 válida, 07:01 inválida.
+- [x] **2. Agregar helper** en `apps/testing.py` (imports locales evitan modificar import graph innecesariamente):
 
 ```python
 def crear_servicio_pesca(empresa, **overrides):
@@ -815,8 +815,9 @@ def crear_servicio_pesca(empresa, **overrides):
 
 Los precios por defecto del helper no sustituyen los montos explícitos de cada prueba. Si un escenario reutiliza Servicio con otros precios, asignar y guardar campos explícitamente (get_or_create no actualiza). En pruebas de cupo/finanzas crear una vez por setUp y pasar `servicio=self.servicio` a helpers `datos_reserva`/`crear_reserva`/`_datos`; cuando kwargs tenga `empresa`, usar el servicio de **esa** Empresa. En pruebas de API, `servicio` en payload es slug, no instancia. En pruebas paquete no enviar servicio simultáneamente. Añadir test del helper que conserva ventana y no duplica al llamarlo dos veces.
 
-- [ ] **3. Buscar construcciones restantes:** `rg -n "Reserva\(|Reserva.objects.create|datos_reserva|crear_reserva|def _datos" backend/apps -g 'tests*.py'`. Clasificar cada ocurrencia sin producto: caso negativo explícito queda; resto recibe fixture propia. Las pruebas de migración usan modelos históricos y mantienen casos sin producto intencionales. No retirar asserts de cupo ni rebajar fechas válidas para hacer pasar suite.
-- [ ] **4. Verde:** suite backend completa y concurrencia en Postgres. Commit `test: usar servicios explicitos en fixtures de pesca`.
+- [x] **3. Buscar construcciones restantes:** `rg -n "Reserva\(|Reserva.objects.create|datos_reserva|crear_reserva|def _datos" backend/apps -g 'tests*.py'`. Clasificar cada ocurrencia sin producto: caso negativo explícito queda; resto recibe fixture propia. Las pruebas de migración usan modelos históricos y mantienen casos sin producto intencionales. No retirar asserts de cupo ni rebajar fechas válidas para hacer pasar suite.
+- [x] **4. Verde:** suite backend completa y concurrencia en Postgres. Commit `test: usar servicios explicitos en fixtures de pesca`.
+
 
 ### Tarea 8: Default de /reservar sobre Servicio
 

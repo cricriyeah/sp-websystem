@@ -35,7 +35,8 @@ from apps.fleet.models import (
 )
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
-from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
+from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota, crear_servicio_pesca
+
 
 from .checks import revisar_llaves_de_stripe
 from .services import (
@@ -141,9 +142,10 @@ CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
 
 
 def crear_reserva(empresa, **overrides):
-    crear_flota(empresa)  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
+    empresa_real = overrides.get('empresa', empresa)
+    crear_flota(empresa_real)  # el motor de cupo le pregunta a la flota; sin pangas no cabe nadie
     datos = {
-        'empresa': empresa,
+        'empresa': empresa_real,
         'fecha': date.today() + timedelta(days=10),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -159,6 +161,8 @@ def crear_reserva(empresa, **overrides):
         # real no usa.
         'checkout_id': CHECKOUT_ID,
     }
+    if 'servicio' not in overrides and 'paquete' not in overrides:
+        datos['servicio'] = crear_servicio_pesca(empresa_real)
     datos.update(overrides)
     reserva = Reserva(**datos)
     reserva.full_clean()
@@ -540,6 +544,9 @@ class CrearPagoTests(ApiTestCase):
 
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_sin_cargo_en_dolares_no_se_cobra_a_medias(self, payment_intents):
+        servicio = crear_servicio_pesca(self.empresa)
+        servicio.precio_persona_extra_usd = None
+        servicio.save(update_fields=['precio_persona_extra_usd'])
         Tarifa.objects.create(
             empresa=self.empresa,
             precio=Decimal('4500.00'), precio_usd=Decimal('260.00'),
@@ -603,6 +610,9 @@ class CrearPagoTests(ApiTestCase):
 
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_sin_precio_en_dolares_responde_503(self, payment_intents):
+        servicio = crear_servicio_pesca(self.empresa)
+        servicio.precio_base_usd = None
+        servicio.save(update_fields=['precio_base_usd'])
         Tarifa.objects.create(empresa=self.empresa, precio=Decimal('4500.00'), precio_usd=None)
         reserva = crear_reserva(self.empresa, moneda='USD')
         response = self.client.post(
@@ -1462,7 +1472,8 @@ class NotificarReservaPagadaOnCommitTests(TransactionTestCase):
 
     def _crear_reserva(self):
         reserva = Reserva(
-            empresa=self.empresa, fecha=date.today() + timedelta(days=10),
+            empresa=self.empresa, servicio=crear_servicio_pesca(self.empresa),
+            fecha=date.today() + timedelta(days=10),
             hora=time(6, 0), numero_personas=2, nombre_cliente='Ana Ruiz',
             telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
             canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
@@ -1551,7 +1562,8 @@ class ReservaDelCargoAisladaPorEmpresaTests(TestCase):
         with scope.con_empresa(self.empresa_a):
             crear_flota(self.empresa_a)
             self.reserva_a = Reserva(
-                empresa=self.empresa_a, fecha=date.today() + timedelta(days=10),
+                empresa=self.empresa_a, servicio=crear_servicio_pesca(self.empresa_a),
+                fecha=date.today() + timedelta(days=10),
                 hora=time(6, 0), numero_personas=2, nombre_cliente='Ana',
                 telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
                 canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,
@@ -1790,7 +1802,9 @@ class ConciliarPagosPorEmpresaTests(TestCase):
         with scope.con_empresa(self.empresa_con_llave):
             crear_flota(self.empresa_con_llave)
             reserva = Reserva(
-                empresa=self.empresa_con_llave, fecha=date.today() + timedelta(days=10),
+                empresa=self.empresa_con_llave,
+                servicio=crear_servicio_pesca(self.empresa_con_llave),
+                fecha=date.today() + timedelta(days=10),
                 hora=time(6, 0), numero_personas=2, nombre_cliente='Ana',
                 telefono_cliente='+5216121234567', correo_cliente='ana@example.com',
                 canal_origen=Reserva.CanalOrigen.WEB, deslinde_aceptado=True,

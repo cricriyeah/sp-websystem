@@ -25,7 +25,7 @@ from apps.fleet.models import (
     PuntoEncuentro,
 )
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
-from apps.testing import OperadorTestCase, crear_flota
+from apps.testing import OperadorTestCase, crear_flota, crear_servicio_pesca
 
 from .admin import AgendaAdmin, CheckoutAbandonadoAdmin
 from .panorama import armar_panorama
@@ -129,9 +129,10 @@ class UnicidadPorEmpresaTests(OperadorTestCase):
 
 
 def datos_reserva(empresa, **overrides):
-    crear_flota(empresa)
+    empresa_real = overrides.get('empresa', empresa)
+    crear_flota(empresa_real)
     base = {
-        'empresa': empresa,
+        'empresa': empresa_real,
         'fecha': date.today() + timedelta(days=15),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -142,6 +143,8 @@ def datos_reserva(empresa, **overrides):
         'deslinde_aceptado': True,
         'deslinde_nombre': 'Ana Ruiz',
     }
+    if 'servicio' not in overrides and 'paquete' not in overrides:
+        base['servicio'] = crear_servicio_pesca(empresa_real)
     base.update(overrides)
     return base
 

@@ -12,15 +12,16 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible
-from apps.testing import EmpresaTestCase, crear_flota
+from apps.testing import EmpresaTestCase, crear_flota, crear_servicio_pesca
 
 from .models import Reserva
 from .panorama import armar_panorama
 
 
 def datos(empresa, **overrides):
+    empresa_real = overrides.get('empresa', empresa)
     base = {
-        'empresa': empresa,
+        'empresa': empresa_real,
         'fecha': date.today() + timedelta(days=3),
         'hora': time(6, 0),
         'numero_personas': 2,
@@ -32,8 +33,11 @@ def datos(empresa, **overrides):
         'deslinde_nombre': 'Ana Ruiz',
         'estado': Reserva.Estado.PAGADA,
     }
+    if 'servicio' not in overrides and 'paquete' not in overrides:
+        base['servicio'] = crear_servicio_pesca(empresa_real)
     base.update(overrides)
     return base
+
 
 
 def viaje(empresa, **overrides):

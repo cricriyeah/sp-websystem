@@ -12,7 +12,7 @@ from datetime import date, time, timedelta
 from unittest import mock
 
 from apps.fleet.models import Capitan, Embarcacion
-from apps.testing import EmpresaTestCase
+from apps.testing import EmpresaTestCase, crear_servicio_pesca
 
 from .models import Reserva
 
@@ -30,6 +30,7 @@ class AvisoDeAsignacionTests(EmpresaTestCase):
         )
         self.reserva = Reserva.objects.create(
             empresa=self.empresa,
+            servicio=crear_servicio_pesca(self.empresa),
             fecha=date.today() + timedelta(days=10),
             hora=time(6, 0),
             numero_personas=2,

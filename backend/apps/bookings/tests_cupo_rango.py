@@ -8,7 +8,7 @@ mes son 30 peticiones y dos meses un 429 silencioso.
 from datetime import date, time, timedelta
 
 from apps.fleet.models import EmbarcacionNoDisponible
-from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota
+from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota, crear_servicio_pesca
 
 from .models import (
     MOTIVO_LLENO,
@@ -23,6 +23,7 @@ def crear_reserva(empresa, fecha, personas):
     """Reserva que ocupa cupo, sin pasar por la validacion del checkout."""
     return Reserva.objects.create(
         empresa=empresa,
+        servicio=crear_servicio_pesca(empresa),
         fecha=fecha,
         hora=time(6, 0),
         numero_personas=personas,
@@ -33,6 +34,7 @@ def crear_reserva(empresa, fecha, personas):
         canal_origen=Reserva.CanalOrigen.WHATSAPP,
         estado=Reserva.Estado.PAGADA,
     )
+
 
 
 class DisponibilidadPorFechaTests(EmpresaTestCase):

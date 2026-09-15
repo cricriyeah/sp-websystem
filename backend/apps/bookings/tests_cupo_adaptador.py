@@ -16,7 +16,7 @@ from apps.bookings.models import (
     Reserva,
 )
 from apps.fleet.models import Embarcacion
-from apps.testing import EmpresaTestCase
+from apps.testing import EmpresaTestCase, crear_servicio_pesca
 
 
 class CupoAdaptadorYRegistroTests(EmpresaTestCase):
@@ -61,6 +61,7 @@ class CupoAdaptadorYRegistroTests(EmpresaTestCase):
             telefono_cliente='1234567890',
             estado='pagada',
             empresa=self.empresa,
+            servicio=crear_servicio_pesca(self.empresa),
         )
 
         ctx = obtener_contexto_cupo(self.fecha, self.empresa)
@@ -84,6 +85,7 @@ class CupoAdaptadorYRegistroTests(EmpresaTestCase):
             telefono_cliente='1234567890',
             estado='pagada',
             empresa=self.empresa,
+            servicio=crear_servicio_pesca(self.empresa),
         )
 
         ctx_rango = obtener_contexto_rango(f_desde, f_hasta, self.empresa)
