@@ -692,7 +692,7 @@ En `CrearPagoView` evitar sumar personalizaciones dos veces: rama paquete toma *
 
 **Consume:** Tarifa por Empresa, Servicio existente o ausente, Reserva legacy. **Produce:** Servicio canónico con precios actuales MXN/USD, incluidas=3, ventana 05:00–07:00, estrategia por_grupo y referencias de reservas resueltas. Tarifa todavía existe. Las constantes se copian como valores históricos en migración (no imports de modelos runtime).
 
-- [ ] **1. Preparar test MigrationExecutor** en `TransactionTestCase`. Migrar primero al estado `fleet.0030`/`bookings.0044`, crear con `project_state(...).apps` una Empresa con Tarifa=5100, USD=300, recargo=600/USD=35 y Servicio previo con precio 1/ventana None; otra Empresa con Tarifa y sin Servicio. Ejecutar fleet.0031 y comprobar **también** actualización de precio de servicio existente, no solo defaults. Crear Reserva histórica sin producto y comprobar backfill; reserva de paquete no cambia. No importar Tarifa del modelo runtime en este test (se elimina en tarea 10).
+- [x] **1. Preparar test MigrationExecutor** en `TransactionTestCase`. Migrar primero al estado `fleet.0030`/`bookings.0044`, crear con `project_state(...).apps` una Empresa con Tarifa=5100, USD=300, recargo=600/USD=35 y Servicio previo con precio 1/ventana None; otra Empresa con Tarifa y sin Servicio. Ejecutar fleet.0031 y comprobar **también** actualización de precio de servicio existente, no solo defaults. Crear Reserva histórica sin producto y comprobar backfill; reserva de paquete no cambia. No importar Tarifa del modelo runtime en este test (se elimina en tarea 10).
 
 Patrón del ejecutor y restauración (usar alias de connection y `alcance_operador_migracion` para fixtures históricas; restaurar incluso si una aserción falla):
 
@@ -735,8 +735,8 @@ finally:
 
 `empresa_id` se obtiene de la Empresa histórica de la fixture; todos los modelos históricos se crean dentro del scope. No correr estos tests en paralelo contra la misma base. Agregar caso de empresa sin Tarifa con Reserva sin producto: falla explícitamente antes de inventar precio; ese dato de pruebas se corrige antes del drop, no se asigna a otra Empresa.
 
-- [ ] **2. Ejecutar rojo:** `manage.py test apps.fleet.tests_migrations_personalizaciones`; el target de migración todavía no existe.
-- [ ] **3. Crear migración aditiva** con dependencias `fleet.0030` y `bookings.0044` (no bookings.0045, ver despliegue):
+- [x] **2. Ejecutar rojo:** `manage.py test apps.fleet.tests_migrations_personalizaciones`; el target de migración todavía no existe.
+- [x] **3. Crear migración aditiva** con dependencias `fleet.0030` y `bookings.0044` (no bookings.0045, ver despliegue):
 
 ```python
 from datetime import time
@@ -785,7 +785,7 @@ class Migration(migrations.Migration):
 
 Conservar nombre/descripcion/activo del Servicio existente y sus asociaciones; no crear recursos duplicados ni alterar flota. La Tarifa es fuente actual de precio para pesca legacy, por eso se actualizan valores aunque Servicio exista desde 0018. No asignar todo `Reserva.servicio=None` a pesca: solo donde **también** paquete=None. No tocar reservas con servicio explícito ni componentes de Orden.
 
-- [ ] **4. Verde:** tests de migración en SQLite/Postgres, instalación limpia, suite backend. Verificar `migrate --plan` no exige bookings.0045 para aplicar fleet.0031 desde HEAD antiguo. Commit `feat: migrar tarifas de pesca a servicio canonico`.
+- [x] **4. Verde:** tests de migración en SQLite/Postgres, instalación limpia, suite backend. Verificar `migrate --plan` no exige bookings.0045 para aplicar fleet.0031 desde HEAD antiguo. Commit `feat: migrar tarifas de pesca a servicio canonico`.
 
 ### Tarea 7: Fixtures explícitas de pesca con ventana horaria
 

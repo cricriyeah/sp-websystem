@@ -224,3 +224,176 @@ class ReservaPersonalizacionPolicyRenameMigrationTests(TransactionTestCase):
 
         self.assertEqual(politicas_despues, self.politicas_antes)
         self.assertEqual(politicas_nombre_viejo, [])
+
+
+class TarifaAServicioMigration0031Tests(TransactionTestCase):
+    """Prueba la migracion de datos 0031_tarifa_a_servicio.
+
+    Verifica que:
+    1. Empresa con Tarifa y Servicio previo: actualiza precios y ventana horaria
+       en el Servicio existente (conservando nombre/slug/activo).
+    2. Empresa con Tarifa y sin Servicio: crea un nuevo Servicio canónico 'pesca-deportiva'.
+    3. Reserva histórica sin producto (servicio=None, paquete=None) se backfillea al servicio correspondiente.
+    4. Reserva de paquete (paquete!=None, servicio=None) no se modifica.
+    5. Empresa sin Tarifa con Reserva huérfana (sin producto): falla explícitamente antes de inventar precio.
+    """
+    migrate_from = [
+        ('fleet', '0030_personalizacion_tipo_interaccion'),
+        ('bookings', '0044_rls_orden_sin_current_query'),
+    ]
+    migrate_to = [
+        ('fleet', '0031_tarifa_a_servicio'),
+    ]
+
+    def _restaurar_esquema(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def setUp(self):
+        super().setUp()
+        self.addCleanup(self._restaurar_esquema)
+        self.executor = MigrationExecutor(connection)
+        self.executor.migrate(self.migrate_from)
+
+    def test_migracion_actualiza_servicio_existente_y_crea_nuevo_con_backfill(self):
+        old_apps = self.executor.loader.project_state(self.migrate_from).apps
+        SedeH = old_apps.get_model('tenancy', 'Sede')
+        EmpresaH = old_apps.get_model('tenancy', 'Empresa')
+        TarifaH = old_apps.get_model('fleet', 'Tarifa')
+        ServicioH = old_apps.get_model('fleet', 'Servicio')
+        PaqueteH = old_apps.get_model('fleet', 'Paquete')
+        ReservaH = old_apps.get_model('bookings', 'Reserva')
+
+        with transaction.atomic(using=connection.alias):
+            with alcance_operador_migracion(connection):
+                sede = SedeH.objects.using(connection.alias).create(
+                    nombre='Sede Mig 0031', slug='sede-mig-0031',
+                )
+                # Empresa 1: con Tarifa y Servicio previo
+                empresa1 = EmpresaH.objects.using(connection.alias).create(
+                    sede_id=sede.pk, nombre='Empresa Previa', slug='empresa-previa', activo=True,
+                )
+                TarifaH.objects.using(connection.alias).create(
+                    empresa_id=empresa1.pk, precio=Decimal('5100'),
+                    precio_usd=Decimal('300'), precio_persona_extra=Decimal('600'),
+                    precio_persona_extra_usd=Decimal('35'),
+                )
+                s_previo = ServicioH.objects.using(connection.alias).create(
+                    empresa_id=empresa1.pk, nombre='Pesca Existente',
+                    slug='pesca-deportiva', tipo_servicio='pesca', precio_base=Decimal('1'),
+                    hora_apertura=None, hora_cierre=None, activo=True,
+                )
+                reserva_pesca1 = ReservaH.objects.using(connection.alias).create(
+                    empresa_id=empresa1.pk, fecha=date(2026, 12, 1), hora=time(6),
+                    numero_personas=3, nombre_cliente='Cliente 1', telefono_cliente='6121111111',
+                    correo_cliente='c1@example.com', moneda='MXN', deslinde_aceptado=True,
+                )
+                paquete1 = PaqueteH.objects.using(connection.alias).create(
+                    nombre='Paquete Mig', slug='paquete-mig',
+                    empresa_lider_id=empresa1.pk, sede_id=sede.pk, precio_ancla=Decimal('7000'),
+                )
+                reserva_paquete1 = ReservaH.objects.using(connection.alias).create(
+                    empresa_id=empresa1.pk, paquete_id=paquete1.pk, fecha=date(2026, 12, 2),
+                    hora=time(6), numero_personas=3, nombre_cliente='Cliente Paquete',
+                    telefono_cliente='6121111112', correo_cliente='cp@example.com',
+                    moneda='MXN', deslinde_aceptado=True,
+                )
+
+                # Empresa 2: con Tarifa y sin Servicio
+                empresa2 = EmpresaH.objects.using(connection.alias).create(
+                    sede_id=sede.pk, nombre='Empresa Nueva', slug='empresa-nueva', activo=True,
+                )
+                TarifaH.objects.using(connection.alias).create(
+                    empresa_id=empresa2.pk, precio=Decimal('4200'),
+                    precio_usd=None, precio_persona_extra=Decimal('500'),
+                    precio_persona_extra_usd=None,
+                )
+                reserva_pesca2 = ReservaH.objects.using(connection.alias).create(
+                    empresa_id=empresa2.pk, fecha=date(2026, 12, 3), hora=time(6),
+                    numero_personas=4, nombre_cliente='Cliente 2', telefono_cliente='6121111113',
+                    correo_cliente='c2@example.com', moneda='MXN', deslinde_aceptado=True,
+                )
+
+        self.executor.loader.build_graph()
+        self.executor.migrate(self.migrate_to)
+        actual = self.executor.loader.project_state(self.migrate_to).apps
+        ServicioHistorico = actual.get_model('fleet', 'Servicio')
+        ReservaHistorica = actual.get_model('bookings', 'Reserva')
+
+        with transaction.atomic(using=connection.alias):
+            with alcance_operador_migracion(connection):
+                # Comprobar Empresa 1 (actualización de precios y ventana horaria, preserva nombre)
+                s1 = ServicioHistorico.objects.using(connection.alias).get(
+                    empresa_id=empresa1.pk, slug='pesca-deportiva',
+                )
+                self.assertEqual(s1.pk, s_previo.pk)
+                self.assertEqual(s1.nombre, 'Pesca Existente')
+                self.assertEqual(s1.tipo_servicio, 'pesca')
+                self.assertEqual(s1.precio_base, Decimal('5100'))
+                self.assertEqual(s1.precio_base_usd, Decimal('300'))
+                self.assertEqual(s1.precio_persona_extra, Decimal('600'))
+                self.assertEqual(s1.precio_persona_extra_usd, Decimal('35'))
+                self.assertEqual(s1.personas_incluidas, 3)
+                self.assertEqual((s1.hora_apertura, s1.hora_cierre), (time(5), time(7)))
+                self.assertEqual(s1.estrategia_cupo, 'por_recurso_dia')
+                self.assertEqual(s1.estrategia_precio, 'por_grupo')
+                self.assertEqual(s1.modo_ocupacion, 'exclusivo')
+
+                r1 = ReservaHistorica.objects.using(connection.alias).get(pk=reserva_pesca1.pk)
+                self.assertEqual(r1.servicio_id, s1.pk)
+
+                rp = ReservaHistorica.objects.using(connection.alias).get(pk=reserva_paquete1.pk)
+                self.assertIsNone(rp.servicio_id)
+                self.assertEqual(rp.paquete_id, paquete1.pk)
+
+                # Comprobar Empresa 2 (creación con defaults)
+                s2 = ServicioHistorico.objects.using(connection.alias).get(
+                    empresa_id=empresa2.pk, slug='pesca-deportiva',
+                )
+                self.assertEqual(s2.nombre, 'Pesca Deportiva')
+                self.assertTrue(s2.activo)
+                self.assertEqual(s2.tipo_servicio, 'pesca')
+                self.assertEqual(s2.precio_base, Decimal('4200'))
+                self.assertIsNone(s2.precio_base_usd)
+                self.assertEqual(s2.precio_persona_extra, Decimal('500'))
+                self.assertIsNone(s2.precio_persona_extra_usd)
+                self.assertEqual(s2.personas_incluidas, 3)
+                self.assertEqual((s2.hora_apertura, s2.hora_cierre), (time(5), time(7)))
+
+                r2 = ReservaHistorica.objects.using(connection.alias).get(pk=reserva_pesca2.pk)
+                self.assertEqual(r2.servicio_id, s2.pk)
+
+    def test_empresa_sin_tarifa_con_reserva_huerfana_falla_explicito(self):
+        old_apps = self.executor.loader.project_state(self.migrate_from).apps
+        SedeH = old_apps.get_model('tenancy', 'Sede')
+        EmpresaH = old_apps.get_model('tenancy', 'Empresa')
+        ReservaH = old_apps.get_model('bookings', 'Reserva')
+
+        with transaction.atomic(using=connection.alias):
+            with alcance_operador_migracion(connection):
+                sede = SedeH.objects.using(connection.alias).create(
+                    nombre='Sede Mig Huerfana', slug='sede-mig-huerfana',
+                )
+                empresa3 = EmpresaH.objects.using(connection.alias).create(
+                    sede_id=sede.pk, nombre='Empresa Sin Tarifa', slug='empresa-sin-tarifa', activo=True,
+                )
+                reserva_huerfana = ReservaH.objects.using(connection.alias).create(
+                    empresa_id=empresa3.pk, fecha=date(2026, 12, 4), hora=time(6),
+                    numero_personas=2, nombre_cliente='Cliente Huerfano',
+                    telefono_cliente='6121111114', correo_cliente='ch@example.com',
+                    moneda='MXN', deslinde_aceptado=True,
+                )
+
+        try:
+            self.executor.loader.build_graph()
+            with self.assertRaisesRegex(
+                RuntimeError,
+                rf'Falta configurar Servicio de pesca para empresa {empresa3.pk}',
+            ):
+                self.executor.migrate(self.migrate_to)
+        finally:
+            with transaction.atomic(using=connection.alias):
+                with alcance_operador_migracion(connection):
+                    ReservaH.objects.using(connection.alias).filter(pk=reserva_huerfana.pk).delete()
+
