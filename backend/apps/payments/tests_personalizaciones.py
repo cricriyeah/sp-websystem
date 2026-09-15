@@ -233,3 +233,90 @@ class CrearPagoPersonalizacionesTests(ApiTestCase):
         self.assertEqual(respuesta.status_code, 503)
         self.assertIn('Falta responder', respuesta.json()['detail'])
         configurar.assert_not_called()
+
+
+class CrearPagoPaquetePersonalizacionesTests(ApiTestCase):
+    def setUp(self):
+        from apps.fleet.models import Paquete, PaqueteServicio
+
+        self.empresa.stripe_secret_key = 'sk_test_falsa'
+        self.empresa.stripe_publishable_key = 'pk_test_falsa'
+        self.empresa.save(update_fields=['stripe_secret_key', 'stripe_publishable_key'])
+
+        self.servicio = Servicio.objects.create(
+            empresa=self.empresa, nombre='Pesca Paquete', slug='pesca-paquete',
+            tipo_servicio='pesca', estrategia_cupo='cupo_diario',
+            precio_base=Decimal('5000.00'),
+        )
+        self.paquete = Paquete.objects.create(
+            sede=self.empresa.sede, empresa_lider=self.empresa,
+            nombre='Pack Pesca VIP', slug='pack-pesca-vip',
+            precio_ancla=Decimal('6000.00'), precio_ancla_usd=Decimal('350.00'),
+        )
+        self.ps = PaqueteServicio.objects.create(
+            paquete=self.paquete, servicio=self.servicio, orden=1,
+        )
+
+        pers_licencia = Personalizacion.objects.create(
+            empresa=self.empresa, nombre='Licencia VIP', tipo_interaccion='check',
+            cobrar_por_persona=True, cantidad_editable=True,
+        )
+        self.sp_licencia = ServicioPersonalizacion.objects.create(
+            servicio=self.servicio, personalizacion=pers_licencia,
+            precio=Decimal('450.00'), precio_usd=Decimal('25.00'),
+            preseleccionado=True, activo=True,
+        )
+
+        self.reserva = Reserva.objects.create(
+            empresa=self.empresa, paquete=self.paquete, servicio=None,
+            fecha=date(2026, 11, 1), hora=time(6), numero_personas=2,
+            nombre_cliente='Carlos', telefono_cliente='1234567890',
+            correo_cliente='carlos@example.com', moneda='MXN',
+            estado=Reserva.Estado.PENDIENTE_PAGO, checkout_id=uuid.uuid4(),
+        )
+        self.check = ReservaPersonalizacion.objects.create(
+            reserva=self.reserva, servicio_personalizacion=self.sp_licencia, cantidad=2,
+        )
+        self.url = reverse(
+            'crear-pago',
+            kwargs={'empresa_slug': self.empresa.slug, 'pk': self.reserva.pk},
+        )
+
+    def post(self, **extra):
+        datos = {
+            'checkout_id': str(self.reserva.checkout_id), 'forma_pago': 'completo',
+        }
+        datos.update(extra)
+        return self.client.post(self.url, datos, content_type='application/json')
+
+    @mock.patch('apps.payments.views.configurar_stripe')
+    def test_pago_paquete_cobra_ancla_mas_seleccion_y_congela_snapshot(self, configurar):
+        configurar.return_value.payment_intents.create.return_value = intent_falso(amount=690000)
+
+        # Ancla 6000 + licencia (450 * 2 = 900) = 6900.00 (no doble cobro ni 7800 ni 10500)
+        respuesta = self.post()
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json()['monto_a_cobrar'], '6900.00')
+
+        self.check.refresh_from_db()
+        self.assertEqual(self.check.precio_unitario, Decimal('450.00'))
+        self.assertEqual(self.check.cantidad, 2)
+
+        # Cambio posterior de catálogo no altera estado ni snapshot
+        self.sp_licencia.precio = Decimal('999.00')
+        self.sp_licencia.save(update_fields=['precio'])
+        self.reserva.estado = Reserva.Estado.PAGADA
+        self.reserva.save(update_fields=['estado'])
+
+        url_estado = reverse('reserva-estado', kwargs={'empresa_slug': self.empresa.slug})
+        resp_pagada = self.client.get(url_estado, {'checkout_id': str(self.reserva.checkout_id)})
+        self.assertEqual(resp_pagada.json()['estado'], 'pagada')
+        self.assertEqual(resp_pagada.json()['personalizaciones'][0]['monto'], '900.00')
+
+    def test_recuperacion_lista_vacia_permanece_vacia(self):
+        self.check.delete()
+        url_estado = reverse('reserva-estado', kwargs={'empresa_slug': self.empresa.slug})
+        resp = self.client.get(url_estado, {'checkout_id': str(self.reserva.checkout_id)})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['personalizaciones'], [])

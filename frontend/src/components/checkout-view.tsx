@@ -55,6 +55,7 @@ import {
   erroresPersonalizaciones,
   seleccionInicial,
   totalPersonalizaciones,
+  type PersonalizacionUI,
   type SeleccionPersonalizacion,
 } from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
@@ -241,10 +242,26 @@ export function CheckoutView({
   const checkoutIdValue = useCheckoutId();
   const checkoutId = checkoutIdValue?.id ?? '';
   const recuperable = checkoutIdValue?.recuperable ?? false;
-  const usaPersonalizacionesServicio = Boolean(
-    servicio && servicio.tipo_servicio !== 'pesca' && !paquete,
+  const usaPersonalizaciones = Boolean(
+    paquete || (servicio && servicio.tipo_servicio !== 'pesca'),
   );
-  const catalogoUnificado = usaPersonalizacionesServicio ? servicio?.personalizaciones ?? [] : [];
+  const catalogoUnificado = useMemo(() => {
+    if (paquete) {
+      const mapa = new Map<number, PersonalizacionUI>();
+      for (const ps of paquete.servicios_asociados || []) {
+        for (const sp of ps.servicio?.personalizaciones || []) {
+          if (!mapa.has(sp.id)) {
+            mapa.set(sp.id, sp);
+          }
+        }
+      }
+      return Array.from(mapa.values());
+    }
+    if (servicio && servicio.tipo_servicio !== 'pesca') {
+      return servicio.personalizaciones ?? [];
+    }
+    return [];
+  }, [paquete, servicio]);
 
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
@@ -275,25 +292,6 @@ export function CheckoutView({
         ps.servicio?.modo_ocupacion === 'por_noche'
       );
     });
-  }, [paquete]);
-
-  const personalizacionesDisponibles = useMemo(() => {
-    if (!paquete) return [];
-    const items: Array<{
-      servicioNombre: string;
-      personalizacion: (typeof paquete.servicios_asociados)[0]['servicio']['personalizaciones'][0];
-    }> = [];
-    for (const ps of paquete.servicios_asociados) {
-      for (const pers of ps.servicio?.personalizaciones || []) {
-        if (!pers.obligatorio && !pers.preseleccionado) {
-          items.push({
-            servicioNombre: ps.servicio.nombre,
-            personalizacion: pers,
-          });
-        }
-      }
-    }
-    return items;
   }, [paquete]);
 
   const personalizacionesMap = useMemo(() => {
@@ -646,7 +644,7 @@ export function CheckoutView({
     [lang, moneda],
   );
 
-  const extrasCatalogo = usaPersonalizacionesServicio ? [] : catalogo?.extras ?? [];
+  const extrasCatalogo = usaPersonalizaciones ? [] : catalogo?.extras ?? [];
 
   /**
    * La licencia va primero y separada del resto: es el unico item del catalogo
@@ -743,7 +741,7 @@ export function CheckoutView({
         hint: null,
       };
     });
-  const opcionesPendientes = usaPersonalizacionesServicio
+  const opcionesPendientes = usaPersonalizaciones
     ? personalizacionesPendientes
     : extrasPendientes;
 
@@ -770,7 +768,7 @@ export function CheckoutView({
     return calcularPrecioPaquete(paquete, personalizaciones, people, moneda);
   }, [paquete, personalizaciones, people, moneda]);
 
-  const cargoPersonalizacionesServicio = usaPersonalizacionesServicio
+  const cargoPersonalizacionesServicio = usaPersonalizaciones
     ? totalPersonalizaciones(catalogoUnificado, personalizaciones, people, moneda)
     : 0;
 
@@ -888,15 +886,28 @@ export function CheckoutView({
 
   const lines = paquete
     ? [
-        { label: paquete.nombre, amount: currency.format(calculoPaquete?.precioAncla ?? 0) },
-        ...(calculoPaquete && calculoPaquete.totalPersonalizaciones > 0
+        {
+          label: paquete.nombre,
+          amount:
+            calculoPaquete?.precioAncla === null || calculoPaquete?.precioAncla === undefined
+              ? '—'
+              : currency.format(calculoPaquete.precioAncla),
+        },
+        ...(calculoPaquete?.totalPersonalizaciones === null
           ? [
               {
                 label: 'Personalizaciones',
-                amount: currency.format(calculoPaquete.totalPersonalizaciones),
+                amount: checkout.extrasUnavailableInCurrency ?? '—',
               },
             ]
-          : []),
+          : calculoPaquete && calculoPaquete.totalPersonalizaciones > 0
+            ? [
+                {
+                  label: 'Personalizaciones',
+                  amount: currency.format(calculoPaquete.totalPersonalizaciones),
+                },
+              ]
+            : []),
         ...(descuentoPromocional > 0
           ? [
               {
@@ -1177,7 +1188,11 @@ export function CheckoutView({
       return;
     }
 
-    const erroresDePersonalizacion = usaPersonalizacionesServicio
+    if (total === null || amountDueNow === null) {
+      return;
+    }
+
+    const erroresDePersonalizacion = usaPersonalizaciones
       ? erroresPersonalizaciones(catalogoUnificado, personalizaciones)
       : {};
     setErroresPersonalizacion(erroresDePersonalizacion);
@@ -1237,7 +1252,7 @@ export function CheckoutView({
         captcha_token: captchaToken.current,
         paquete: paquete ? paquete.slug : (paqueteId ?? null),
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
-        personalizaciones: usaPersonalizacionesServicio
+        personalizaciones: usaPersonalizaciones
           ? personalizaciones.map((seleccion) => {
               const item = catalogoUnificado.find((p) => p.id === seleccion.id);
               return {
@@ -1247,9 +1262,7 @@ export function CheckoutView({
                   : seleccion.cantidad,
               };
             })
-          : paquete && personalizaciones.length > 0
-            ? personalizaciones
-            : undefined,
+          : undefined,
         fecha_salida: tieneHospedaje ? fechaSalida : undefined,
       }, empresaSlug);
 
@@ -1954,48 +1967,6 @@ export function CheckoutView({
                   </div>
                 )}
 
-                {personalizacionesDisponibles.length > 0 && (
-                  <div className="mt-6 flex flex-col gap-2 border-t border-border pt-5">
-                    <p className="text-xs font-semibold tracking-wider text-muted uppercase">
-                      {lang === 'en' ? 'Package Customizations' : 'Personalizaciones del paquete'}
-                    </p>
-                    {personalizacionesDisponibles.map(({ servicioNombre, personalizacion: sp }) => {
-                      const marcada = personalizacionesMap.has(sp.id);
-                      const precioUnitario =
-                        parseFloat(moneda === 'USD' && sp.precio_usd ? sp.precio_usd : sp.precio) || 0;
-                      const totalPers = precioUnitario * (sp.cobrar_por_persona ? people : 1);
-                      return (
-                        <label
-                          key={sp.id}
-                          className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
-                        >
-                          <span className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              checked={marcada}
-                              disabled={locked}
-                              onChange={(e) => alternarPersonalizacion(sp.id, e.target.checked)}
-                              className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                            />
-                            <span>
-                              <span className="font-medium">{sp.nombre}</span>
-                              <span className="ml-2 text-xs text-muted">({servicioNombre})</span>
-                              {sp.cobrar_por_persona && (
-                                <span className="block text-xs text-muted">
-                                  {lang === 'en' ? 'Charged per person' : 'Cobro por persona'}
-                                </span>
-                              )}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-right font-medium text-muted">
-                            +{currency.format(totalPers)}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-
                 {(!extrasConfirmado || pasoEditando === 3) && (
                   <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm font-medium text-foreground">{checkout.extrasConfirmQuestion}</p>
@@ -2117,7 +2088,7 @@ export function CheckoutView({
             feedback={dict.feedback}
             pendientes={opcionesPendientes}
             onSeleccionarExtra={(id) =>
-              usaPersonalizacionesServicio
+              usaPersonalizaciones
                 ? alternarPersonalizacion(id, true)
                 : alternarExtra(id, true)
             }

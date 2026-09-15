@@ -18,7 +18,7 @@ type PaqueteCardProps = {
   className?: string;
   onSelect?: (
     paquete: PaqueteCatalogo,
-    precioFinal: number,
+    precioFinal: number | null,
   ) => void;
 };
 
@@ -132,11 +132,20 @@ export function PaqueteCard({
         {onSelect ? (
           <button
             type="button"
-            onClick={() => onSelect(paquete, calculo.precioFinal)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-md transition-transform hover:brightness-105 active:scale-[0.99]"
+            onClick={() => calculo.precioFinal !== null && onSelect(paquete, calculo.precioFinal)}
+            disabled={calculo.precioFinal === null}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-md transition-transform hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>{dict.bookPackage}</span>
             <ArrowRight size={16} weight="bold" />
+          </button>
+        ) : calculo.precioFinal === null ? (
+          <button
+            type="button"
+            disabled
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent/50 px-5 py-3.5 text-sm font-semibold text-white shadow-md cursor-not-allowed"
+          >
+            <span>{dict.bookPackage}</span>
           </button>
         ) : (
           <Link

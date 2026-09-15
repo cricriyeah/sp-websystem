@@ -637,7 +637,7 @@ Crear `fila_a`/`fila_b` con el modelo nuevo y reservas con servicio directo de s
 
 **Consume:** selección completa y cargo/snapshot de tarea 3. **Produce:** `precio_paquete_total(paquete, *, personalizaciones_extra=None, personas=1, moneda='MXN') -> Decimal|None` conserva firma, pero `None`/`[]` significa ancla sin checks. `calcular_precio_paquete(paquete, moneda='MXN')` devuelve ancla. El precio del checkout incorpora únicamente selección explícita; la card sin selección muestra ancla. Orden cruza-empresa conserva precio_ancla fijo y reparto actual.
 
-- [ ] **1. Escribir pruebas rojas** en `tests_pricing_paquete.py` usando la fixture existente `CalcularPrecioPaqueteIntegrationTests` (crear p/sp específico en el test para no depender de nombres de fixtures antiguos):
+- [x] **1. Escribir pruebas rojas** en `tests_pricing_paquete.py` usando la fixture existente `CalcularPrecioPaqueteIntegrationTests` (crear p/sp específico en el test para no depender de nombres de fixtures antiguos):
 
 ```python
 def test_recomendada_se_cobra_solo_si_viene_explicita(self):
@@ -654,8 +654,8 @@ def test_recomendada_se_cobra_solo_si_viene_explicita(self):
 
 Convertir los tests viejos que exigían auto-inclusión a selección explícita y agregar caso desmarcada. No borrar escenarios de base/moneda/activo. Serializer de paquete: obligatorio input ausente falla, preseleccionado check explícito acepta y omitido acepta; SP de componente inactivo/otra empresa/repetido rechaza. Pago paquete ancla 6000 + licencia 900 = 6900, no 7800 ni 10500; snapshot 450×2; posterior cambio de catálogo no cambia estado pagado. Lista vacía recuperada sigue vacía tras recarga.
 
-- [ ] **2. Rojo:** `manage.py test apps.payments.tests_pricing_paquete apps.bookings.tests_checkout_serializer apps.payments.tests_personalizaciones`.
-- [ ] **3. Cambiar los tres consumidores juntos.** En `precio_paquete_total`, conservar normalización de `personalizaciones_extra` a dict y `precio_paquete` para cuantización. Cambiar bucle:
+- [x] **2. Rojo:** `manage.py test apps.payments.tests_pricing_paquete apps.bookings.tests_checkout_serializer apps.payments.tests_personalizaciones`.
+- [x] **3. Cambiar los tres consumidores juntos.** En `precio_paquete_total`, conservar normalización de `personalizaciones_extra` a dict y `precio_paquete` para cuantización. Cambiar bucle:
 
 ```python
 total = Decimal(precio_ancla)
@@ -682,9 +682,9 @@ En serializer usar el mismo conjunto activo para validación obligatorios y pers
 
 En `CrearPagoView` evitar sumar personalizaciones dos veces: rama paquete toma **solo** `reserva.paquete.precio_en(reserva.moneda)` como base (validar None), resolver `_resolver_personalizaciones` agrega cargo una sola vez al subtotal común. Extender pertenencia del resolver a componentes activos de paquete. Ya no llamar `precio_paquete_total` con selección y luego volver a sumar resolver. Mantener helper para otros consumidores y pruebas de cotización. Recuperación e inline de tarea 3 sirven sin segunda implementación.
 
-- [ ] **4. Unificar frontend de paquete.** `personalizacionesDisponibles` ya no filtra flags; `catalogoUnificado` se construye con `flatMap` de servicios y deduplicación por id SP. Inicialización/restauración de tarea 3 ahora aplica a paquete. Payload siempre manda lista completa, incluida `[]`. Reutilizar controls, modal, errores y stepper. Reemplazar cálculo interno de `calcularPrecioPaquete` por `totalPersonalizaciones` y ancla; conservar sus overloads y `esPaqueteCruzaEmpresa`/`formatearPrecio`. Cambiar `CalculoPrecioPaquete.totalPersonalizaciones` y `precioFinal` a `number|null` si moneda ausente; actualizar checkout/card para mostrar indisponibilidad y bloquear pago, no hacer fallback MXN. `paquete-card` sin selección usa ancla. Agregar test Node para input gratis aunque payload traiga cantidad y precio USD ausente; probar ancla + selección con helper compilado o prueba backend espejo. No cambiar el checkout de Orden.
+- [x] **4. Unificar frontend de paquete.** `personalizacionesDisponibles` ya no filtra flags; `catalogoUnificado` se construye con `flatMap` de servicios y deduplicación por id SP. Inicialización/restauración de tarea 3 ahora aplica a paquete. Payload siempre manda lista completa, incluida `[]`. Reutilizar controls, modal, errores y stepper. Reemplazar cálculo interno de `calcularPrecioPaquete` por `totalPersonalizaciones` y ancla; conservar sus overloads y `esPaqueteCruzaEmpresa`/`formatearPrecio`. Cambiar `CalculoPrecioPaquete.totalPersonalizaciones` y `precioFinal` a `number|null` si moneda ausente; actualizar checkout/card para mostrar indisponibilidad y bloquear pago, no hacer fallback MXN. `paquete-card` sin selección usa ancla. Agregar test Node para input gratis aunque payload traiga cantidad y precio USD ausente; probar ancla + selección con helper compilado o prueba backend espejo. No cambiar el checkout de Orden.
 
-- [ ] **5. Verde:** suite backend completa (incluidos tests de Orden y traslado), helpers Node, lint/tsc/build. Smoke paquete: recomendado se puede quitar sin cargo, opcional inicialmente apagado, input requerido bloquea únicamente pago, recarga restaura texto y check desmarcado. Commit `feat: cobrar personalizaciones de paquete solo por seleccion explicita`.
+- [x] **5. Verde:** suite backend completa (incluidos tests de Orden y traslado), helpers Node, lint/tsc/build. Smoke paquete: recomendado se puede quitar sin cargo, opcional inicialmente apagado, input requerido bloquea únicamente pago, recarga restaura texto y check desmarcado. Commit `feat: cobrar personalizaciones de paquete solo por seleccion explicita`.
 
 ### Tarea 6: Migrar configuración de pesca a Servicio sin perder precios
 

@@ -242,19 +242,8 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('fecha_salida', serializer.errors)
 
-    def test_personalizaciones_solo_acepta_opcionales(self):
-        # Obligatoria -> rechazada
-        datos = self._datos_base(
-            paquete=self.paquete_a.slug,
-            personalizaciones=[{'id': self.sp_obligatoria.id, 'cantidad': 1}],
-        )
-        serializer = ReservaCheckoutSerializer(
-            data=datos, context={'request': self.request, 'empresa': self.empresa_a},
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('personalizaciones', serializer.errors)
-
-        # Preseleccionada -> rechazada (v1 ya las incluye)
+    def test_personalizaciones_preseleccionado_check_acepta_explicito_y_omitido(self):
+        # Preseleccionada explícita -> aceptada
         datos = self._datos_base(
             paquete=self.paquete_a.slug,
             personalizaciones=[{'id': self.sp_preseleccionada.id, 'cantidad': 1}],
@@ -262,8 +251,99 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         serializer = ReservaCheckoutSerializer(
             data=datos, context={'request': self.request, 'empresa': self.empresa_a},
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('personalizaciones', serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        reserva = serializer.save()
+        self.assertEqual(reserva.personalizaciones_seleccionadas.count(), 1)
+        self.assertEqual(
+            reserva.personalizaciones_seleccionadas.first().servicio_personalizacion,
+            self.sp_preseleccionada,
+        )
+
+        # Preseleccionada omitida -> aceptada sin crear la fila
+        datos_omitido = self._datos_base(
+            paquete=self.paquete_a.slug,
+            personalizaciones=[],
+        )
+        serializer_omitido = ReservaCheckoutSerializer(
+            data=datos_omitido, context={'request': self.request, 'empresa': self.empresa_a},
+        )
+        self.assertTrue(serializer_omitido.is_valid(), serializer_omitido.errors)
+        reserva_omitida = serializer_omitido.save()
+        self.assertEqual(reserva_omitida.personalizaciones_seleccionadas.count(), 0)
+
+    def test_personalizacion_input_obligatorio_valida_en_paquete(self):
+        pers_input = Personalizacion.objects.create(
+            empresa=self.empresa_a, nombre='Talla chaleco',
+            tipo_interaccion='input_texto',
+        )
+        sp_input = ServicioPersonalizacion.objects.create(
+            servicio=self.srv_pesca, personalizacion=pers_input,
+            obligatorio=True, activo=True,
+        )
+
+        # Ausente -> falla
+        datos_sin_input = self._datos_base(
+            paquete=self.paquete_a.slug,
+            personalizaciones=[],
+        )
+        serializer_sin = ReservaCheckoutSerializer(
+            data=datos_sin_input, context={'request': self.request, 'empresa': self.empresa_a},
+        )
+        self.assertFalse(serializer_sin.is_valid())
+        self.assertIn('personalizaciones', serializer_sin.errors)
+
+        # Con respuesta -> pasa
+        datos_con_input = self._datos_base(
+            paquete=self.paquete_a.slug,
+            personalizaciones=[{'id': sp_input.id, 'respuesta': 'G'}],
+        )
+        serializer_con = ReservaCheckoutSerializer(
+            data=datos_con_input, context={'request': self.request, 'empresa': self.empresa_a},
+        )
+        self.assertTrue(serializer_con.is_valid(), serializer_con.errors)
+
+    def test_personalizacion_rechaza_repetida_otra_empresa_o_inactiva(self):
+        # Repetida
+        datos_rep = self._datos_base(
+            paquete=self.paquete_a.slug,
+            personalizaciones=[
+                {'id': self.sp_opcional.id, 'cantidad': 1},
+                {'id': self.sp_opcional.id, 'cantidad': 1},
+            ],
+        )
+        s_rep = ReservaCheckoutSerializer(
+            data=datos_rep, context={'request': self.request, 'empresa': self.empresa_a},
+        )
+        self.assertFalse(s_rep.is_valid())
+        self.assertIn('personalizaciones', s_rep.errors)
+
+        # Otra empresa
+        pers_b = Personalizacion.objects.create(empresa=self.empresa_b, nombre='Pers B')
+        sp_b = ServicioPersonalizacion.objects.create(
+            servicio=self.srv_b, personalizacion=pers_b, precio=Decimal('10'), activo=True,
+        )
+        datos_b = self._datos_base(
+            paquete=self.paquete_a.slug,
+            personalizaciones=[{'id': sp_b.id, 'cantidad': 1}],
+        )
+        s_b = ReservaCheckoutSerializer(
+            data=datos_b, context={'request': self.request, 'empresa': self.empresa_a},
+        )
+        self.assertFalse(s_b.is_valid())
+        self.assertIn('personalizaciones', s_b.errors)
+
+        # Componente inactivo
+        self.sp_opcional.activo = False
+        self.sp_opcional.save(update_fields=['activo'])
+        datos_inactiva = self._datos_base(
+            paquete=self.paquete_a.slug,
+            personalizaciones=[{'id': self.sp_opcional.id, 'cantidad': 1}],
+        )
+        s_inactiva = ReservaCheckoutSerializer(
+            data=datos_inactiva, context={'request': self.request, 'empresa': self.empresa_a},
+        )
+        self.assertFalse(s_inactiva.is_valid())
+        self.assertIn('personalizaciones', s_inactiva.errors)
 
     def test_actualizacion_reenvio_sincroniza_personalizaciones(self):
         datos1 = self._datos_base(

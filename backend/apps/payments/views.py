@@ -74,13 +74,7 @@ class CrearPagoView(APIView):
 
         detalle_a_congelar = None
         if reserva.paquete_id:
-            extras_pers = list(reserva.personalizaciones_seleccionadas.values_list('servicio_personalizacion_id', 'cantidad'))
-            precio_base_servicio = precio_paquete_total(
-                reserva.paquete,
-                personalizaciones_extra=extras_pers,
-                personas=reserva.numero_personas,
-                moneda=reserva.moneda,
-            )
+            precio_base_servicio = reserva.paquete.precio_en(reserva.moneda)
             if precio_base_servicio is None:
                 return Response({'detail': f'El paquete no tiene precio en {reserva.moneda}.'}, status=503)
             porcentaje = reserva.paquete.porcentaje_anticipo
@@ -125,14 +119,16 @@ class CrearPagoView(APIView):
         if forma_pago not in Reserva.FormaPago.values:
             return Response({'detail': 'forma_pago invalida.'}, status=400)
 
-        if reserva.servicio_id and not reserva.paquete_id and reserva.servicio.tipo_servicio != 'pesca':
+        if (
+            reserva.servicio_id
+            and not reserva.paquete_id
+            and reserva.servicio.tipo_servicio != 'pesca'
+        ) or reserva.paquete_id:
             cargo_extras, extras_a_borrar, extras_a_congelar, error = (
                 self._resolver_personalizaciones(reserva)
             )
             if error:
                 return Response({'detail': error}, status=503)
-        elif reserva.paquete_id:
-            cargo_extras, extras_a_borrar, extras_a_congelar = Decimal('0.00'), [], []
         else:
             cargo_extras, extras_a_borrar, extras_a_congelar, error = self._resolver_extras(reserva)
             if error:
@@ -227,14 +223,31 @@ class CrearPagoView(APIView):
         congelan únicamente después de que Stripe acepte crear o actualizar el
         PaymentIntent.
         """
-        disponibles = {
-            sp.pk: sp
-            for sp in ServicioPersonalizacion.objects.filter(
-                servicio=reserva.servicio,
-                activo=True,
-                personalizacion__activo=True,
-            ).select_related('servicio', 'personalizacion')
-        }
+        if reserva.paquete_id:
+            activos_ids = list(
+                reserva.paquete.servicios_asociados.filter(
+                    servicio__activo=True
+                ).values_list('servicio_id', flat=True)
+            )
+            disponibles = {
+                sp.pk: sp
+                for sp in ServicioPersonalizacion.objects.filter(
+                    servicio_id__in=activos_ids,
+                    servicio__empresa=reserva.empresa,
+                    personalizacion__empresa=reserva.empresa,
+                    activo=True,
+                    personalizacion__activo=True,
+                ).select_related('servicio', 'personalizacion')
+            }
+        else:
+            disponibles = {
+                sp.pk: sp
+                for sp in ServicioPersonalizacion.objects.filter(
+                    servicio=reserva.servicio,
+                    activo=True,
+                    personalizacion__activo=True,
+                ).select_related('servicio', 'personalizacion')
+            }
         seleccionadas = list(
             reserva.personalizaciones_seleccionadas.select_related(
                 'servicio_personalizacion__servicio',

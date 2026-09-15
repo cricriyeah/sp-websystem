@@ -245,34 +245,38 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
         componentes_activos = []
         if paquete:
-            componentes_activos = list(paquete.servicios_asociados.select_related('servicio').all())
-
-            if personalizaciones:
-                activos_ids = {ps.servicio_id for ps in componentes_activos}
-                vistos_ids = set()
-                for item in personalizaciones:
-                    sp_id = item['id']
-                    if sp_id in vistos_ids:
-                        raise serializers.ValidationError({'personalizaciones': 'No se puede repetir la misma personalización.'})
-                    vistos_ids.add(sp_id)
-
-                    try:
-                        sp = ServicioPersonalizacion.objects.select_related('personalizacion', 'servicio').get(id=sp_id)
-                    except ServicioPersonalizacion.DoesNotExist:
-                        raise serializers.ValidationError({'personalizaciones': f'La personalización {sp_id} no existe.'})
-
-                    if not sp.activo or not sp.personalizacion.activo:
-                        raise serializers.ValidationError({'personalizaciones': f'La personalización {sp_id} no está activa.'})
-
-                    if sp.servicio_id not in activos_ids:
-                        raise serializers.ValidationError(
-                            {'personalizaciones': f'La personalización {sp_id} no pertenece a un componente activo del paquete.'}
-                        )
-
-                    if sp.obligatorio or sp.preseleccionado:
-                        raise serializers.ValidationError(
-                            {'personalizaciones': f'La personalización {sp_id} no es opcional (las obligatorias y preseleccionadas van incluidas).'}
-                        )
+            componentes_activos = list(
+                paquete.servicios_asociados.filter(servicio__activo=True).select_related('servicio')
+            )
+            activos_ids = {ps.servicio_id for ps in componentes_activos}
+            disponibles = {
+                sp.pk: sp
+                for sp in ServicioPersonalizacion.objects.filter(
+                    servicio_id__in=activos_ids,
+                    servicio__empresa=empresa,
+                    personalizacion__empresa=empresa,
+                    activo=True,
+                    personalizacion__activo=True,
+                ).select_related('personalizacion', 'servicio')
+            }
+            vistos = set()
+            for item in personalizaciones:
+                sp = disponibles.get(item['id'])
+                if sp is None or item['id'] in vistos:
+                    raise serializers.ValidationError({
+                        'personalizaciones': 'Selección inválida o repetida.',
+                    })
+                vistos.add(sp.pk)
+                self._validar_respuesta_personalizacion(sp, item)
+            for sp in disponibles.values():
+                if (
+                    sp.personalizacion.tipo_interaccion != 'check'
+                    and sp.obligatorio
+                    and sp.pk not in vistos
+                ):
+                    raise serializers.ValidationError({
+                        'personalizaciones': f'Falta responder: {sp.personalizacion.nombre}.',
+                    })
 
         es_hospedaje = bool((servicio and servicio.estrategia_cupo == 'por_noche') or any(
             ps.servicio.estrategia_cupo == 'por_noche' for ps in componentes_activos

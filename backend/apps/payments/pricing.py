@@ -152,27 +152,28 @@ def precio_paquete_total(
                     extras_map[item] = 1
 
     total = Decimal(precio_ancla)
-
-    for ps in paquete.servicios_asociados.select_related('servicio').all():
-        for sp in ps.servicio.servicio_personalizaciones.select_related('personalizacion').all():
-            if not sp.activo or not sp.personalizacion.activo:
+    vistos = set()
+    for ps in paquete.servicios_asociados.filter(servicio__activo=True).select_related('servicio'):
+        for sp in ps.servicio.servicio_personalizaciones.filter(
+            activo=True, personalizacion__activo=True
+        ).select_related('personalizacion'):
+            if sp.pk in vistos or sp.pk not in extras_map:
                 continue
-
-            es_incluida = sp.obligatorio or sp.preseleccionado
-            es_extra = sp.id in extras_map
-
-            if not es_incluida and not es_extra:
+            vistos.add(sp.pk)
+            p = sp.personalizacion
+            if p.tipo_interaccion != 'check':
                 continue
-
-            sp_precio = sp.precio_en(moneda)
-            if sp_precio is None:
-                continue
-
-            mult = Decimal(personas) if sp.personalizacion.cobrar_por_persona else Decimal('1')
-            cant = Decimal(extras_map[sp.id]) if es_extra else Decimal('1')
-            total += Decimal(sp_precio) * mult * cant
-
-    return max(Decimal('0.00'), total).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+            cargo = cargo_personalizacion(
+                sp.precio_en(moneda),
+                cobrar_por_persona=p.cobrar_por_persona,
+                cantidad_editable=p.cantidad_editable,
+                personas=personas,
+                cantidad=extras_map[sp.pk],
+            )
+            if cargo is None:
+                return None
+            total += cargo
+    return precio_paquete(total)
 
 
 def calcular_precio_paquete(paquete, moneda='MXN'):

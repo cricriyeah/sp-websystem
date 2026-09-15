@@ -1,14 +1,16 @@
 import type { Moneda, PaqueteCatalogo } from './api';
+import {
+  totalPersonalizaciones,
+  type PersonalizacionUI,
+  type SeleccionPersonalizacion,
+} from './personalizaciones';
 
-export type PersonalizacionSeleccionada = {
-  id: number;
-  cantidad?: number;
-};
+export type PersonalizacionSeleccionada = SeleccionPersonalizacion;
 
 export type CalculoPrecioPaquete = {
-  precioAncla: number;
-  totalPersonalizaciones: number;
-  precioFinal: number;
+  precioAncla: number | null;
+  totalPersonalizaciones: number | null;
+  precioFinal: number | null;
   moneda: Moneda;
   serviciosActivosCount: number;
 };
@@ -18,12 +20,11 @@ export type CalculoPrecioPaquete = {
  *
  * Fórmula:
  *     paquete.precio_en(moneda)                                              # el ancla
- *   + Σ  sp.precio_en(moneda) de cada ServicioPersonalizacion (obligatorio o preseleccionado)
- *        de los servicios componentes, con activo=True
- *   + Σ  sp.precio_en(moneda) de las ServicioPersonalizacion OPCIONALES que el cliente marcó
+ *   + Σ  sp.precio_en(moneda) de las personalizaciones explícitamente seleccionadas
  *
- * Cada personalización que cobrar_por_persona se multiplica por personas.
- * Piso 0.
+ * Cada personalización check que cobrar_por_persona se multiplica por personas.
+ * Los inputs son siempre gratis. Si la moneda no está disponible en ancla o
+ * en alguna personalización seleccionada, devuelve null.
  */
 export function calcularPrecioPaquete(
   paquete: PaqueteCatalogo,
@@ -54,46 +55,40 @@ export function calcularPrecioPaquete(
   }
 
   const anclaRaw =
-    moneda === 'USD' && paquete.precio_ancla_usd
-      ? paquete.precio_ancla_usd
-      : paquete.precio_ancla;
-  const precioAncla = parseFloat(anclaRaw) || 0;
+    moneda === 'USD' ? paquete.precio_ancla_usd : paquete.precio_ancla;
+  const precioAncla =
+    anclaRaw !== null && anclaRaw !== undefined && anclaRaw !== '' && Number.isFinite(Number(anclaRaw))
+      ? Number(anclaRaw)
+      : null;
 
-  const opcionalesMap = new Map<number, number>();
-  for (const p of personalizacionesOpcionales) {
-    opcionalesMap.set(p.id, p.cantidad ?? 1);
-  }
-
-  let totalPersonalizaciones = 0;
-  const serviciosActivosCount = paquete.servicios_asociados?.length ?? 0;
-
+  const catalogoMap = new Map<number, PersonalizacionUI>();
   for (const item of paquete.servicios_asociados || []) {
     for (const sp of item.servicio?.personalizaciones || []) {
-      const esIncluida = sp.obligatorio || sp.preseleccionado;
-      const esExtra = opcionalesMap.has(sp.id);
-
-      if (!esIncluida && !esExtra) continue;
-
-      const precioRaw =
-        moneda === 'USD' && sp.precio_usd ? sp.precio_usd : sp.precio;
-      const precioUnitario = parseFloat(precioRaw) || 0;
-
-      const multPersonas = sp.cobrar_por_persona ? personas : 1;
-      const cant = esExtra ? (opcionalesMap.get(sp.id) ?? 1) : 1;
-
-      totalPersonalizaciones += precioUnitario * multPersonas * cant;
+      if (!catalogoMap.has(sp.id)) {
+        catalogoMap.set(sp.id, sp);
+      }
     }
   }
+  const catalogo = Array.from(catalogoMap.values());
 
-  const subtotal = precioAncla + totalPersonalizaciones;
-  const precioFinal = Math.max(0, Math.round(subtotal * 100) / 100);
+  const totalPers = totalPersonalizaciones(
+    catalogo,
+    personalizacionesOpcionales,
+    personas,
+    moneda,
+  );
+
+  const precioFinal =
+    precioAncla === null || totalPers === null
+      ? null
+      : Math.max(0, Math.round((precioAncla + totalPers) * 100) / 100);
 
   return {
     precioAncla,
-    totalPersonalizaciones: Math.round(totalPersonalizaciones * 100) / 100,
+    totalPersonalizaciones: totalPers,
     precioFinal,
     moneda,
-    serviciosActivosCount,
+    serviciosActivosCount: paquete.servicios_asociados?.length ?? 0,
   };
 }
 
@@ -111,7 +106,8 @@ export function esPaqueteCruzaEmpresa(paquete: PaqueteCatalogo): boolean {
 /**
  * Formatea un número como moneda (MXN o USD).
  */
-export function formatearPrecio(monto: number, moneda: Moneda = 'MXN'): string {
+export function formatearPrecio(monto: number | null, moneda: Moneda = 'MXN'): string {
+  if (monto === null || !Number.isFinite(monto)) return '—';
   return new Intl.NumberFormat(moneda === 'USD' ? 'en-US' : 'es-MX', {
     style: 'currency',
     currency: moneda,

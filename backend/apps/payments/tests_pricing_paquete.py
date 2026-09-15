@@ -75,6 +75,23 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
         )
         self.assertIsNone(calcular_precio_paquete(paquete_solo_mxn, moneda='USD'))
 
+    def test_recomendada_se_cobra_solo_si_viene_explicita(self):
+        p = Personalizacion.objects.create(
+            empresa=self.empresa, nombre='Licencia nueva',
+            cobrar_por_persona=True, cantidad_editable=True,
+        )
+        sp = ServicioPersonalizacion.objects.create(
+            servicio=self.servicio_pesca,
+            personalizacion=p, precio=Decimal('450'), preseleccionado=True,
+        )
+        ancla = self.paquete.precio_ancla
+        self.assertEqual(precio_paquete_total(self.paquete, personalizaciones_extra=[], personas=5), ancla)
+        self.assertEqual(
+            precio_paquete_total(self.paquete, personalizaciones_extra=[(sp.pk, 2)], personas=5),
+            ancla + Decimal('900'),
+        )
+        self.assertEqual(calcular_precio_paquete(self.paquete), ancla)
+
 
 class PrecioPaqueteTotalTests(OperadorTestCase):
     def setUp(self):
@@ -146,34 +163,31 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
             obligatorio=False, preseleccionado=False, activo=True
         )
 
-    def test_sin_extras_suma_ancla_mas_obligatorias_y_preseleccionadas(self):
+    def test_sin_extras_devuelve_solo_ancla(self):
         # personas=2
-        # ancla = 6500 MXN
-        # obligatoria: licencia $250 * 2 personas = $500
-        # preseleccionada: bebidas $100 * 1 = $100
-        # total esperado = 6500 + 500 + 100 = 7100 MXN
+        # ancla = 6500 MXN (obligatorias y preseleccionadas NO se auto-incluyen)
         total = precio_paquete_total(
             self.paquete,
             personalizaciones_extra=[],
             personas=2,
             moneda='MXN'
         )
-        self.assertEqual(total, Decimal('7100.00'))
+        self.assertEqual(total, Decimal('6500.00'))
 
-        # En USD: ancla=380, licencia=15*2=30, bebidas=5*1=5 -> 415 USD
+        # En USD: ancla=380.00
         total_usd = precio_paquete_total(
             self.paquete,
             personalizaciones_extra=[],
             personas=2,
             moneda='USD'
         )
-        self.assertEqual(total_usd, Decimal('415.00'))
+        self.assertEqual(total_usd, Decimal('380.00'))
 
-    def test_personalizacion_opcional_marcada_suma_su_precio(self):
+    def test_personalizacion_marcada_suma_su_precio(self):
         # personas=2
-        # extras: carnada (plana $300) y álbum ($200 * 2 personas = $400)
-        # base: 7100 MXN (ancla + obligatoria + preseleccionada)
-        # total esperado: 7100 + 300 + 400 = 7800 MXN
+        # extras explícitos: carnada (plana $300) y álbum ($200 * 2 personas = $400)
+        # ancla: 6500 MXN
+        # total esperado: 6500 + 300 + 400 = 7200 MXN
         total = precio_paquete_total(
             self.paquete,
             personalizaciones_extra=[
@@ -183,7 +197,48 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
             personas=2,
             moneda='MXN'
         )
-        self.assertEqual(total, Decimal('7800.00'))
+        self.assertEqual(total, Decimal('7200.00'))
+
+    def test_personalizaciones_preseleccionadas_u_obligatorias_solo_se_cobran_si_vienen_explicitas(self):
+        # Si vienen explícitas: licencia ($250 * 2 = $500) y bebidas ($100)
+        total = precio_paquete_total(
+            self.paquete,
+            personalizaciones_extra=[
+                (self.sp_licencia.pk, 1),
+                (self.sp_bebidas.pk, 1),
+            ],
+            personas=2,
+            moneda='MXN'
+        )
+        self.assertEqual(total, Decimal('7100.00'))
+
+    def test_input_no_check_no_agrega_cargo(self):
+        pers_input = Personalizacion.objects.create(
+            empresa=self.empresa, nombre='Nota especial',
+            tipo_interaccion='input_texto',
+        )
+        sp_input = ServicioPersonalizacion.objects.create(
+            servicio=self.servicio_pesca, personalizacion=pers_input,
+            precio=Decimal('100.00'), activo=True,
+        )
+        total = precio_paquete_total(
+            self.paquete,
+            personalizaciones_extra=[(sp_input.pk, 1)],
+            personas=2,
+            moneda='MXN',
+        )
+        self.assertEqual(total, Decimal('6500.00'))
+
+    def test_componente_inactivo_o_personalizacion_inactiva_se_ignora(self):
+        self.sp_carnada.activo = False
+        self.sp_carnada.save(update_fields=['activo'])
+        total = precio_paquete_total(
+            self.paquete,
+            personalizaciones_extra=[(self.sp_carnada.pk, 1)],
+            personas=2,
+            moneda='MXN',
+        )
+        self.assertEqual(total, Decimal('6500.00'))
 
     def test_paquete_sin_precio_ancla_usd_moneda_usd_retorna_none(self):
         paquete_solo_mxn = Paquete.objects.create(
