@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
-import { getPaqueteDetalle, getSedes, getServicioDetalle, getTarifa, type PaqueteCatalogo, type ServicioCatalogo } from '@/lib/api';
+import { getPaqueteDetalle, getSedes, getServicioDetalle, type PaqueteCatalogo, type ServicioCatalogo } from '@/lib/api';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { alternativasDe } from '@/lib/site';
 
@@ -72,14 +72,11 @@ export default async function ReservarPage({
 
   const empresaSlug = paquete?.empresa_lider_slug ?? paqueteEmpresa ?? servicioEmpresa ?? defaultEmpresaSlug;
 
-  // Si se seleccionó un servicio suelto desde el catálogo
   let servicio: ServicioCatalogo | null = null;
-  if (servicioSlug) {
-    servicio = await getServicioDetalle(servicioSlug, empresaSlug).catch(() => null);
+  if (!paqueteSlug) {
+    const slug = servicioSlug ?? 'pesca-deportiva';
+    servicio = await getServicioDetalle(slug, empresaSlug).catch(() => null);
   }
-
-  // Tarifa legacy del tour de pesca: opcional cuando hay paquete o servicio
-  const tarifa = await getTarifa(empresaSlug).catch(() => null);
 
   const fechaSalidaParam =
     typeof query.fecha_salida === 'string'
@@ -102,13 +99,12 @@ export default async function ReservarPage({
       initialTime={time}
       initialPeople={people}
       minDate={minDate}
-      tarifa={tarifa}
       queryOverride={queryOverride}
       empresaSlug={empresaSlug}
       paqueteId={paquete?.id}
       paqueteNombre={paquete?.nombre}
       paquete={paquete}
-      servicioId={servicio?.slug ?? servicioSlug ?? null}
+      servicioId={servicio?.slug ?? null}
       servicioNombre={servicio?.nombre ?? null}
       servicio={servicio}
       initialFechaSalida={fechaSalidaParam}

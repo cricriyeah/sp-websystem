@@ -44,7 +44,6 @@ import {
   type Pago,
   type PaqueteCatalogo,
   type ServicioCatalogo,
-  type Tarifa,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeFallo } from '@/lib/errores';
@@ -147,8 +146,6 @@ type CheckoutViewProps = {
   initialTime: string;
   initialPeople: number;
   minDate: string;
-  // null = el backend no dio precio (sin tarifa configurada o caido).
-  tarifa: Tarifa | null;
   // `true` si day/time/people vinieron explicitos en la URL: el cliente acaba
   // de elegir viaje en el booking bar, no recargo esta pagina. Ver el efecto
   // de recuperacion mas abajo.
@@ -225,7 +222,6 @@ export function CheckoutView({
   initialTime,
   initialPeople,
   minDate,
-  tarifa,
   queryOverride,
   empresaSlug,
   paqueteId,
@@ -364,7 +360,7 @@ export function CheckoutView({
     if (lang !== 'en') return 'MXN';
     if (paquete) return paquete.precio_ancla_usd != null ? 'USD' : 'MXN';
     if (servicio) return servicio.precio_base_usd != null ? 'USD' : 'MXN';
-    return tarifa?.precio_usd != null ? 'USD' : 'MXN';
+    return 'MXN';
   });
   // Catalogo de extras (brunch, licencia, carnada) con el monto ya resuelto para
   // `people`/`moneda` — ver el efecto de abajo. null hasta la primera respuesta del backend.
@@ -433,7 +429,7 @@ export function CheckoutView({
   // sin comprometer nada hasta saber si hay sessionStorage que recuperar.
   const [phase, setPhase] = useState<Phase>('recuperando');
   const phaseInicializada = useRef(false);
-  const tieneProducto = Boolean(tarifa || paquete || servicioId || servicio);
+  const tieneProducto = Boolean(paquete || servicio);
   useLayoutEffect(() => {
     // Solo se ejecuta una vez, cuando checkoutIdValue pasa de null a un valor
     // real. A partir de ahi la logica de recuperacion toma el control.
@@ -447,9 +443,9 @@ export function CheckoutView({
   // (ver el efecto de abajo) en vez de un pago recien hecho en esta misma
   // visita. `null` = mostrar lo que ya calcula el resto del checkout
   // (`amountDueNow`/`total`), que es lo correcto para un pago fresco: la
-  // reserva recuperada puede llevar otra tarifa o amenidades que ya no estan
+  // reserva recuperada puede llevar otro precio o amenidades que ya no estan
   // en el estado local, asi que aqui se confia lo que de verdad se cobro y no
-  // lo que la tarifa de hoy recalcularia.
+  // lo que el precio de hoy recalcularia.
   const [recuperadoPagado, setRecuperadoPagado] = useState<number | null>(null);
   const [recuperadoSaldo, setRecuperadoSaldo] = useState<number | null>(null);
   // Desglose de extras ya congelado al pagar, para una reserva
@@ -630,14 +626,13 @@ export function CheckoutView({
     ? paquete.precio_ancla_usd != null
     : servicio
     ? servicio.precio_base_usd != null
-    : tarifa?.precio_usd != null;
-  const tourPrice = paquete
-    ? null
-    : servicio
-    ? Number(moneda === 'MXN' ? servicio.precio_base : servicio.precio_base_usd)
-    : tarifa
-    ? Number(moneda === 'MXN' ? tarifa.precio : tarifa.precio_usd)
+    : false;
+  const precioServicioRaw = servicio
+    ? (moneda === 'USD' ? servicio.precio_base_usd : servicio.precio_base)
     : null;
+  const tourPrice = paquete || precioServicioRaw === null
+    ? null
+    : Number(precioServicioRaw);
 
   const currency = useMemo(
     () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
@@ -752,13 +747,11 @@ export function CheckoutView({
     ? 0
     : servicio
     ? servicio.personas_incluidas
-    : tarifa?.personas_incluidas ?? 0;
+    : 0;
   const precioPersonaExtra = paquete
     ? 0
     : servicio
     ? Number(moneda === 'MXN' ? servicio.precio_persona_extra : servicio.precio_persona_extra_usd) || 0
-    : tarifa
-    ? Number(moneda === 'MXN' ? tarifa.precio_persona_extra : tarifa.precio_persona_extra_usd) || 0
     : 0;
   const personasExtra = Math.max(0, people - personasIncluidas);
   const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
@@ -1372,7 +1365,7 @@ export function CheckoutView({
         // el catalogo de hoy podria enseñar un precio distinto del pagado.
         extras={recuperadoPagado !== null ? lineasExtrasRecuperadas : lineasExtras}
         // Un pago recuperado manda su propio monto (lo que Stripe cobro de
-        // verdad): la tarifa de hoy o las amenidades en el estado local pueden
+        // verdad): el precio de hoy o las amenidades en el estado local pueden
         // no ser ya las mismas con las que se pago.
         pagado={
           recuperadoPagado !== null

@@ -825,8 +825,8 @@ Los precios por defecto del helper no sustituyen los montos explícitos de cada 
 
 **Consume:** endpoint existente `getServicioDetalle(slug, empresaSlug)` y datos migrados tarea 6. **Produce:** `/reservar` sin producto envía `servicio:'pesca-deportiva'`; una URL de producto inválida muestra indisponibilidad, nunca cambia silenciosamente a pesca. UI legacy de extras permanece en pesca hasta tarea 11.
 
-- [ ] **1. Comprobar comportamiento previo y caso esperado:** abrir `/es/reservar` y observar payload actual sin servicio. Preparar verificación de `/es/reservar?servicio=ausente&empresa=sal-y-sol` y `?paquete=ausente`: deben quedar sin producto, no ofrecer pesca por fallback. Verificar ES/EN.
-- [ ] **2. Cambiar resolución del servidor:** quitar llamada/import de getTarifa y prop `tarifa` a CheckoutView. Sustituir bloque de resolución de servicio por:
+- [x] **1. Comprobar comportamiento previo y caso esperado:** abrir `/es/reservar` y observar payload actual sin servicio. Preparar verificación de `/es/reservar?servicio=ausente&empresa=sal-y-sol` y `?paquete=ausente`: deben quedar sin producto, no ofrecer pesca por fallback. Verificar ES/EN.
+- [x] **2. Cambiar resolución del servidor:** quitar llamada/import de getTarifa y prop `tarifa` a CheckoutView. Sustituir bloque de resolución de servicio por:
 
 ```tsx
 let servicio: ServicioCatalogo | null = null;
@@ -838,7 +838,7 @@ if (!paqueteSlug) {
 
 En props pasar `servicioId={servicio?.slug ?? null}` para no fingir producto resuelto con un slug inexistente; paquete inválido no provoca default. Quitar tarifa del tipo Props y destructuring de CheckoutView; `tieneProducto = Boolean(paquete || servicio)`. Mantener guardia de indisponibilidad si no hay producto resuelto.
 
-- [ ] **3. Podar cálculos legacy de precio:** `usdDisponible` y `tourPrice` resuelven paquete/servicio, cierre defensivo null; recargo usa Servicio.precio_persona_extra/_usd y personas_incluidas, no constante cuando Servicio lo expone. Ejemplo de selección de moneda:
+- [x] **3. Podar cálculos legacy de precio:** `usdDisponible` y `tourPrice` resuelven paquete/servicio, cierre defensivo null; recargo usa Servicio.precio_persona_extra/_usd y personas_incluidas, no constante cuando Servicio lo expone. Ejemplo de selección de moneda:
 
 ```tsx
 const precioServicioRaw = servicio
@@ -849,7 +849,7 @@ const precioServicio = precioServicioRaw === null ? null : Number(precioServicio
 
 No reemplazar la estrategia de hospedaje ni el precio de paquetes con esta expresión: integrarla en la rama existente de servicio y conservar cálculo de noches/estrategia. Mantener getExtras, selección/cantidad/modal legacy de pesca. `rg -n "tarifa" frontend/src/components/checkout-view.tsx` no debe dejar referencias a prop retirada.
 
-- [ ] **4. Verde:** lint/tsc/build; smoke pesca sin parámetros y explícita con 3 y 5 personas, MXN/USD, brunch/licencia/carnada, recarga, servicio inválido y paquete inválido. Comparar total anterior con Tarifa de tarea 6 y actual con Servicio. Commit `refactor: resolver pesca predeterminada desde servicio`.
+- [x] **4. Verde:** lint/tsc/build; smoke pesca sin parámetros y explícita con 3 y 5 personas, MXN/USD, brunch/licencia/carnada, recarga, servicio inválido y paquete inválido. Comparar total anterior con Tarifa de tarea 6 y actual con Servicio. Commit `refactor: resolver pesca predeterminada desde servicio`.
 
 **Artefacto de despliegue puente:** este cambio de página/props/precio, aplicado sobre la UI anterior a tareas 3/5, es el frontend puente descrito en despliegue. No desplegar el HEAD final como si fuera ese puente; preparar un commit/release explícito con únicamente estos cambios compatibles si se ejecuta despliegue. El trabajo de este plan no publica nada.
 
