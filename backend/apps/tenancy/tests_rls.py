@@ -15,7 +15,6 @@ from .models import Empresa, Sede
 # Tablas secundarias que llegan a empresa vía FK. ReservaExtra permanece hasta
 # la Tarea 11; el rename de Tarea 2 ya usa el nombre físico nuevo.
 WHITELIST_VIA_FK = {
-    'bookings_reservaextra',
     'fleet_serviciopersonalizacion',
     'fleet_paqueteservicio',
     'bookings_reservapersonalizacion',
@@ -143,7 +142,6 @@ class RLSTests(TransactionTestCase):
 
     def test_whitelist_conserva_nombre_nuevo_y_extra_legacy(self):
         self.assertIn('bookings_reservapersonalizacion', WHITELIST_VIA_FK)
-        self.assertIn('bookings_reservaextra', WHITELIST_VIA_FK)
 
     def test_detalle_transporte_aislamiento(self):
         from datetime import date, time

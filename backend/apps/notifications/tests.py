@@ -11,9 +11,9 @@ from unittest import mock
 import requests
 from django.test import override_settings, TransactionTestCase
 
-from apps.bookings.models import Reserva, ReservaExtra
-from apps.fleet.models import Capitan, Embarcacion, ExtrasItem, PuntoEncuentro
-from apps.testing import EmpresaTestCase, crear_flota, crear_servicio_pesca
+from apps.bookings.models import Reserva, ReservaPersonalizacion
+from apps.fleet.models import Capitan, Embarcacion, PuntoEncuentro
+from apps.testing import crear_personalizacion_pesca, EmpresaTestCase, crear_flota, crear_servicio_pesca
 
 from .services import (
     PUNTO_DE_ENCUENTRO,
@@ -44,7 +44,7 @@ def crear_reserva(empresa):
 
 def crear_reserva_guardada(empresa, **overrides):
     """A diferencia de `crear_reserva()`, esta si queda en la base: hace falta
-    tener `pk` para poder colgarle `ReservaExtra`."""
+    tener `pk` para poder colgarle `ReservaPersonalizacion`."""
     empresa_real = overrides.get('empresa', empresa)
     crear_flota(empresa_real)
     datos = dict(
@@ -283,10 +283,10 @@ class ExtrasEnElCorreoTests(EmpresaTestCase):
     def test_lista_brunch_licencia_y_carnada_pagados(self, post):
         reserva = crear_reserva_guardada(self.empresa)
         for tipo, nombre in (('brunch', 'Brunch'), ('licencia', 'Licencia'), ('carnada', 'Carnada')):
-            item = ExtrasItem.objects.create(
+            item = crear_personalizacion_pesca(
                 empresa=self.empresa, tipo=tipo, nombre=nombre, precio=Decimal('300'))
-            ReservaExtra.objects.create(
-                reserva=reserva, extras_item=item, precio_unitario=Decimal('300'), cantidad=2,
+            ReservaPersonalizacion.objects.create(
+                reserva=reserva, servicio_personalizacion=item, precio_unitario=Decimal('300'), cantidad=2,
             )
 
         self.assertTrue(enviar_correo_confirmacion(reserva))

@@ -1,10 +1,7 @@
 from decimal import Decimal
 from rest_framework import serializers
 
-from apps.payments.pricing import cargo_por_extra
-
 from .models import (
-    ExtrasItem,
     Paquete,
     PaqueteServicio,
     Personalizacion,
@@ -13,29 +10,6 @@ from .models import (
     Servicio,
     ServicioPersonalizacion,
 )
-
-
-class ExtrasItemSerializer(serializers.ModelSerializer):
-    """El monto ya viene resuelto para `(personas, moneda)` — la web nunca
-    reimplementa si un extra cobra por persona ni ninguna otra regla de
-    dinero, eso vive solo en apps/payments/pricing.py (ver ExtrasPublicosView)."""
-
-    monto = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ExtrasItem
-        fields = [
-            'id', 'tipo', 'nombre', 'descripcion', 'cobrar_por_persona',
-            'cantidad_editable', 'preseleccionado', 'monto',
-        ]
-
-    def get_monto(self, obj):
-        monto = cargo_por_extra(
-            obj.precio_en(self.context['moneda']), obj.cobrar_por_persona, self.context['personas']
-        )
-        return str(monto) if monto is not None else None
-
-
 
 
 class PuntoEncuentroSerializer(serializers.ModelSerializer):

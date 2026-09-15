@@ -21,11 +21,10 @@ from apps.fleet.models import (
     Capitan,
     CodigoPromocional,
     Embarcacion,
-    ExtrasItem,
     PuntoEncuentro,
 )
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
-from apps.testing import OperadorTestCase, crear_flota, crear_servicio_pesca
+from apps.testing import crear_personalizacion_pesca, OperadorTestCase, crear_flota, crear_servicio_pesca
 
 from .admin import AgendaAdmin, CheckoutAbandonadoAdmin
 from .panorama import armar_panorama
@@ -35,7 +34,7 @@ from .models import (
     CheckoutAbandonado,
     CupoDiario,
     Reserva,
-    ReservaExtra,
+    ReservaPersonalizacion,
     Vendedora,
     evaluar_codigo_promocional,
     evaluar_cupo,
@@ -204,12 +203,12 @@ class ConsistenciaEmpresaExtrasTests(OperadorTestCase):
     def test_extra_de_otra_empresa_no_se_puede_asociar(self):
         empresa_a = crear_empresa(slug='empresa-a6', nombre='A6')
         empresa_b = crear_empresa(slug='empresa-b6', nombre='B6')
-        extra_b = ExtrasItem.objects.create(
-            empresa=empresa_b, tipo=ExtrasItem.Tipo.BRUNCH, nombre='Brunch', precio=Decimal('100'), activo=True,
+        extra_b = crear_personalizacion_pesca(
+            empresa=empresa_b, tipo='brunch', nombre='Brunch', precio=Decimal('100'), activo=True,
         )
         reserva = Reserva.objects.create(**datos_reserva(empresa_a))
 
-        extra = ReservaExtra(reserva=reserva, extras_item=extra_b)
+        extra = ReservaPersonalizacion(reserva=reserva, servicio_personalizacion=extra_b)
         with self.assertRaises(ValidationError):
             extra.full_clean()
 
@@ -341,8 +340,8 @@ class SerializerEmpresaTests(OperadorTestCase):
         empresa_a = crear_empresa(slug='empresa-a10', nombre='A10')
         empresa_b = crear_empresa(slug='empresa-b10', nombre='B10')
         crear_flota(empresa_a)
-        extra_b = ExtrasItem.objects.create(
-            empresa=empresa_b, tipo=ExtrasItem.Tipo.BRUNCH, nombre='Brunch', precio=Decimal('100'), activo=True,
+        extra_b = crear_personalizacion_pesca(
+            empresa=empresa_b, tipo='brunch', nombre='Brunch', precio=Decimal('100'), activo=True,
         )
 
         factory = APIRequestFactory()
@@ -358,11 +357,12 @@ class SerializerEmpresaTests(OperadorTestCase):
             'moneda': 'MXN',
             'deslinde_aceptado': True,
             'deslinde_nombre': 'Ana Ruiz',
-            'extras': [{'id': extra_b.pk}],
+            'personalizaciones': [{'id': extra_b.pk}],
+            'servicio': crear_servicio_pesca(empresa_a).slug,
         }, context={'request': request, 'empresa': empresa_a})
 
         self.assertFalse(serializer.is_valid())
-        self.assertIn('extras', serializer.errors)
+        self.assertIn('personalizaciones', serializer.errors)
 
 
 class ComandosEmpresaTests(TestCase):

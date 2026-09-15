@@ -9,7 +9,6 @@ from .models import (
     CodigoPromocional,
     Embarcacion,
     EmbarcacionNoDisponible,
-    ExtrasItem,
     Paquete,
     PaqueteServicio,
     Personalizacion,
@@ -19,20 +18,6 @@ from .models import (
     ServicioPersonalizacion,
     TransporteTarifa,
 )
-
-
-@admin.register(ExtrasItem)
-class ExtrasItemAdmin(EmpresaScopedAdminMixin, ModelAdmin):
-    """Precios editables sin deploy. Sin permisos para Vendedora, mismo trato
-    que Servicio: es informacion financiera."""
-
-    list_display = [
-        'nombre', 'tipo', 'precio', 'precio_usd', 'cobrar_por_persona',
-        'cantidad_editable', 'preseleccionado', 'activo',
-    ]
-    list_filter = ['tipo', 'activo']
-    list_editable = ['precio', 'precio_usd', 'cantidad_editable', 'activo']
-    search_fields = ['nombre']
 
 
 @admin.register(TransporteTarifa)
@@ -54,7 +39,7 @@ class PuntoEncuentroAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 @admin.register(CodigoPromocional)
 class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, ModelAdmin):
-    """Sin permisos para Vendedora, mismo trato que Servicio/ExtrasItem: es
+    """Sin permisos para Vendedora, mismo trato que Servicio/ServicioPersonalizacion: es
     informacion financiera. El uso de cada codigo no se audita aqui — se ve
     en la lista de Reservas (columna/filtro `codigo_promocional`), la misma
     fuente que ya cuenta contra `usos_maximos`."""

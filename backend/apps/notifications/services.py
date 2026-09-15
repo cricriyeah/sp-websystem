@@ -85,11 +85,17 @@ def _cuerpo_html(reserva):
     # renderizado del correo usan una `Reserva` en memoria sin guardar, y
     # consultar una relacion inversa sin pk revienta con ValueError, no con
     # AttributeError — `getattr(..., None)` no lo atrapa.
-    extras = ''.join(
-        f'<li><strong>{_html(extra.extras_item.nombre)}:</strong> {extra.cantidad} '
-        f'(incluido en tu pago)</li>'
-        for extra in (reserva.extras_seleccionados.select_related('extras_item') if reserva.pk else [])
-    )
+    lineas_personalizaciones = []
+    filas = (reserva.personalizaciones_seleccionadas.select_related(
+        'servicio_personalizacion__personalizacion') if reserva.pk else [])
+    for fila in filas:
+        personalizacion = fila.servicio_personalizacion.personalizacion
+        if personalizacion.tipo_interaccion != 'check' or fila.subtotal is None:
+            continue
+        lineas_personalizaciones.append(
+            f'<li><strong>{_html(personalizacion.nombre)}:</strong> {fila.cantidad} '
+            f'— {fila.subtotal:.2f} {_html(reserva.moneda)} (incluido en tu pago)</li>')
+    extras = ''.join(lineas_personalizaciones)
 
     punto_de_encuentro = PUNTO_DE_ENCUENTRO
 

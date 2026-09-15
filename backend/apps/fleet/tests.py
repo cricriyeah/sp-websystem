@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
-from apps.testing import ApiTestCase, EmpresaTestCase, crear_servicio_pesca
+from apps.testing import crear_personalizacion_pesca, ApiTestCase, EmpresaTestCase, crear_servicio_pesca
 
 from .enums import TipoTraslado
 from .tarifa_transporte import TarifaTransporteNoConfigurada, resolver_tarifa_transporte
@@ -25,7 +25,6 @@ from .models import (
     CodigoPromocional,
     Embarcacion,
     EmbarcacionNoDisponible,
-    ExtrasItem,
     Personalizacion,
     PuntoEncuentro,
     Servicio,
@@ -153,35 +152,27 @@ class _AlcanceOtraEmpresa:
         return False
 
 
-class ExtrasItemTests(EmpresaTestCase):
+class PersonalizacionesPescaTests(EmpresaTestCase):
     def test_precio_por_moneda(self):
-        item = ExtrasItem.objects.create(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'), precio_usd=Decimal('25'),
-            empresa=self.empresa,
-        )
-        self.assertEqual(item.precio_en('MXN'), Decimal('450'))
-        self.assertEqual(item.precio_en('USD'), Decimal('25'))
+        sp = crear_personalizacion_pesca(
+            self.empresa, nombre='Licencia', tipo='licencia', precio=Decimal('450'), precio_usd=Decimal('25'))
+        self.assertEqual(sp.precio_en('MXN'), Decimal('450'))
+        self.assertEqual(sp.precio_en('USD'), Decimal('25'))
 
     def test_sin_precio_en_dolares_devuelve_none(self):
-        item = ExtrasItem.objects.create(
-            tipo='carnada', nombre='Carnada', precio=Decimal('200'), empresa=self.empresa,
-        )
-        self.assertIsNone(item.precio_en('USD'))
+        sp = crear_personalizacion_pesca(self.empresa, nombre='Carnada', tipo='carnada', precio=Decimal('200'))
+        self.assertIsNone(sp.precio_en('USD'))
 
     def test_cantidad_editable_sin_cobrar_por_persona_no_es_valido(self):
-        item = ExtrasItem(
-            tipo='carnada', nombre='Carnada', precio=Decimal('200'),
-            cobrar_por_persona=False, cantidad_editable=True, empresa=self.empresa,
-        )
+        p = Personalizacion(empresa=self.empresa, nombre='Carnada', tipo='carnada',
+                            cobrar_por_persona=False, cantidad_editable=True)
         with self.assertRaises(ValidationError):
-            item.full_clean()
+            p.full_clean()
 
     def test_cantidad_editable_con_cobrar_por_persona_es_valido(self):
-        item = ExtrasItem(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-            cobrar_por_persona=True, cantidad_editable=True, empresa=self.empresa,
-        )
-        item.full_clean()
+        p = Personalizacion(empresa=self.empresa, nombre='Licencia', tipo='licencia',
+                            cobrar_por_persona=True, cantidad_editable=True)
+        p.full_clean()
 
 
 class UnicidadPorEmpresaTests(TransactionTestCase):
@@ -241,76 +232,50 @@ class UnicidadPorEmpresaTests(TransactionTestCase):
             self.assertEqual(Embarcacion.objects.count(), 2)
 
 
-class ExtrasPublicosApiTests(ApiTestCase):
-    def test_extra_por_persona_multiplica(self):
-        ExtrasItem.objects.create(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-            cobrar_por_persona=True, empresa=self.empresa,
-        )
-        body = self.client.get(f'/api/{self.empresa.slug}/extras/?personas=3').json()
-        self.assertEqual(body['extras'][0]['monto'], '1350.00')
+class PersonalizacionesPescaApiTests(ApiTestCase):
+    def catalogo(self):
+        crear_servicio_pesca(self.empresa)
+        return self.client.get(f'/api/{self.empresa.slug}/servicios/pesca-deportiva/').json()['personalizaciones']
 
-    def test_extra_plano_no_multiplica(self):
-        ExtrasItem.objects.create(
-            tipo='carnada', nombre='Carnada', precio=Decimal('200'),
-            cobrar_por_persona=False, empresa=self.empresa,
-        )
-        body = self.client.get(f'/api/{self.empresa.slug}/extras/?personas=5').json()
-        self.assertEqual(body['extras'][0]['monto'], '200.00')
+    def test_precio_unitario_por_persona_y_flags(self):
+        sp = crear_personalizacion_pesca(self.empresa, nombre='Licencia', tipo='licencia',
+            precio=Decimal('450'), cobrar_por_persona=True, cantidad_editable=True, preseleccionado=True)
+        item = self.catalogo()[0]
+        self.assertEqual(item['id'], sp.pk)
+        self.assertEqual(item['precio'], '450.00')
+        self.assertTrue(item['cobrar_por_persona'])
+        self.assertTrue(item['cantidad_editable'])
+        self.assertTrue(item['preseleccionado'])
+
+    def test_precio_plano(self):
+        crear_personalizacion_pesca(self.empresa, nombre='Carnada', tipo='carnada',
+                                  precio=Decimal('200'), cobrar_por_persona=False)
+        item = self.catalogo()[0]
+        self.assertEqual(item['precio'], '200.00')
+        self.assertFalse(item['cobrar_por_persona'])
 
     def test_item_inactivo_no_aparece(self):
-        ExtrasItem.objects.create(
-            tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
-            empresa=self.empresa,
-        )
-        body = self.client.get(f'/api/{self.empresa.slug}/extras/').json()
-        self.assertEqual(body['extras'], [])
+        crear_personalizacion_pesca(self.empresa, nombre='Carnada', tipo='carnada', activo=False)
+        self.assertEqual(self.catalogo(), [])
 
-    def test_sin_precio_en_la_moneda_pedida_monto_es_null(self):
-        ExtrasItem.objects.create(
-            tipo='licencia', nombre='Licencia', precio=Decimal('450'), empresa=self.empresa,
-        )
-        body = self.client.get(f'/api/{self.empresa.slug}/extras/?moneda=USD').json()
-        self.assertIsNone(body['extras'][0]['monto'])
+    def test_sin_precio_usd_es_null(self):
+        crear_personalizacion_pesca(self.empresa, nombre='Licencia', tipo='licencia', precio=Decimal('450'))
+        self.assertIsNone(self.catalogo()[0]['precio_usd'])
 
-    def test_puntos_de_encuentro_activos(self):
-        PuntoEncuentro.objects.create(nombre='Hotel CostaBaja', zona='centro', empresa=self.empresa)
-        PuntoEncuentro.objects.create(
-            nombre='Fuera de servicio', zona='centro', activo=False, empresa=self.empresa,
-        )
-        body = self.client.get(f'/api/{self.empresa.slug}/extras/').json()
-        self.assertEqual([p['nombre'] for p in body['puntos_encuentro']], ['Hotel CostaBaja'])
+    def test_catalogo_vacio(self):
+        self.assertEqual(self.catalogo(), [])
 
-    def test_moneda_invalida_es_400(self):
-        self.assertEqual(
-            self.client.get(f'/api/{self.empresa.slug}/extras/?moneda=EUR').status_code, 400,
-        )
-
-    def test_personas_invalida_es_400(self):
-        self.assertEqual(
-            self.client.get(f'/api/{self.empresa.slug}/extras/?personas=0').status_code, 400,
-        )
-        self.assertEqual(
-            self.client.get(f'/api/{self.empresa.slug}/extras/?personas=abc').status_code, 400,
-        )
-
-    def test_defaults_sin_query_params(self):
-        response = self.client.get(f'/api/{self.empresa.slug}/extras/')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'extras': [], 'puntos_encuentro': []})
+    def test_endpoint_retirado(self):
+        self.assertEqual(self.client.get(f'/api/{self.empresa.slug}/extras/').status_code, 404)
 
     def test_empresa_inexistente_responde_404(self):
-        self.assertEqual(self.client.get('/api/no-existe/extras/').status_code, 404)
+        self.assertEqual(self.client.get('/api/no-existe/servicios/pesca-deportiva/').status_code, 404)
 
     def test_no_mezcla_catalogo_de_otra_empresa(self):
         otra = _crear_empresa(slug='empresa-b')
         with _AlcanceOtraEmpresa(self, otra):
-            ExtrasItem.objects.create(
-                tipo='carnada', nombre='Carnada de otra empresa', precio=Decimal('999'),
-                empresa=otra,
-            )
-        body = self.client.get(f'/api/{self.empresa.slug}/extras/').json()
-        self.assertEqual(body['extras'], [])
+            crear_personalizacion_pesca(otra, nombre='Carnada ajena', tipo='carnada', precio=Decimal('999'))
+        self.assertEqual(self.catalogo(), [])
 
 
 class EmbarcacionTests(EmpresaTestCase):
@@ -449,15 +414,38 @@ class EmbarcacionNoDisponibleUnicidadTests(TransactionTestCase):
 
 
 class SeedExtrasTests(EmpresaTestCase):
+    def setUp(self):
+        super().setUp()
+        crear_servicio_pesca(self.empresa)
+
+    def test_reejecutar_preserva_precio_capturado_y_flags(self):
+        call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
+        sp = ServicioPersonalizacion.objects.get(personalizacion__nombre='Licencia de pesca')
+        sp.precio = Decimal('777')
+        sp.save(update_fields=['precio'])
+        call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
+        sp.refresh_from_db()
+        self.assertEqual(sp.precio, Decimal('777'))
+        self.assertTrue(sp.preseleccionado)
+        self.assertTrue(sp.personalizacion.aviso_reforzado)
+        self.assertTrue(sp.personalizacion.cantidad_editable)
+        self.assertTrue(sp.personalizacion.cobrar_por_persona)
+
+    def test_servicio_faltante_falla_sin_sembrar(self):
+        Servicio.objects.filter(empresa=self.empresa).delete()
+        with self.assertRaisesRegex(CommandError, 'Falta pesca-deportiva'):
+            call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
+        self.assertEqual(Personalizacion.objects.count(), 0)
+
     def test_siembra_el_catalogo_para_la_empresa_dada(self):
         call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
-        self.assertEqual(ExtrasItem.objects.filter(empresa=self.empresa).count(), 3)
+        self.assertEqual(Personalizacion.objects.filter(empresa=self.empresa).count(), 3)
         self.assertEqual(PuntoEncuentro.objects.filter(empresa=self.empresa).count(), 1)
 
     def test_es_idempotente(self):
         call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
         call_command('seed_extras', empresa=self.empresa.slug, stdout=StringIO())
-        self.assertEqual(ExtrasItem.objects.filter(empresa=self.empresa).count(), 3)
+        self.assertEqual(Personalizacion.objects.filter(empresa=self.empresa).count(), 3)
 
     def test_sin_empresa_falla_explicito(self):
         with self.assertRaises(Exception):

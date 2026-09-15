@@ -212,3 +212,22 @@ def crear_servicio_pesca(empresa, **overrides):
         )
     return servicio
 
+
+def crear_personalizacion_pesca(empresa, *, servicio=None, precio=0, precio_usd=None,
+                               preseleccionado=False, obligatorio=False, **campos):
+    """Fixture de catálogo: devuelve la asociación cuyo ID recibe el checkout."""
+    from apps.fleet.models import Personalizacion, ServicioPersonalizacion
+
+    cm = (scope.con_empresa(empresa) if getattr(connection, 'alcance_actual', None) is None
+          else contextlib.nullcontext())
+    with cm:
+        servicio = servicio or crear_servicio_pesca(empresa)
+        campos.setdefault('cobrar_por_persona', True)
+        personalizacion = Personalizacion.objects.create(empresa=empresa, **campos)
+        return ServicioPersonalizacion.objects.create(
+            servicio=servicio, personalizacion=personalizacion,
+            precio=precio, precio_usd=precio_usd,
+            preseleccionado=preseleccionado, obligatorio=obligatorio,
+            activo=campos.get('activo', True),
+        )
+

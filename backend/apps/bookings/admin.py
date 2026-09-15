@@ -35,7 +35,6 @@ from .models import (
     DetalleTransporte,
     Orden,
     Reserva,
-    ReservaExtra,
     ReservaPersonalizacion,
     ReservaOcupacion,
     ReservaPaqueteComponente,
@@ -171,27 +170,6 @@ class AvisoDeReservasNuevasMixin:
             empresa=scope.empresa_actual(request),
         ).count()
         return JsonResponse({'desde': desde.isoformat(), 'nuevas': nuevas})
-
-
-class ReservaExtraInline(admin.TabularInline):
-    """Solo lectura: es historial de lo que se vendio en el checkout web, el
-    unico que congela precio (ver CrearPagoView). No se edita desde aqui
-    porque no hay un segundo mecanismo que congele precio."""
-
-    model = ReservaExtra
-    extra = 0
-    fields = ['extras_item', 'cantidad_solicitada', 'precio_unitario', 'cantidad', 'subtotal_mostrado']
-    readonly_fields = fields
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-    @admin.display(description='Subtotal')
-    def subtotal_mostrado(self, obj):
-        return obj.subtotal if obj.subtotal is not None else '—'
 
 
 class ReservaPersonalizacionInline(admin.TabularInline):
@@ -399,7 +377,6 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
     inlines = [
-        ReservaExtraInline,
         ReservaPersonalizacionInline,
         ReservaOcupacionInline,
         ReservaPaqueteComponenteInline,
@@ -426,9 +403,9 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
 
     def get_queryset(self, request):
         # `vendedora` sale en el listado: sin esto es una consulta por fila.
-        # `extras_seleccionados` los lee la columna `extras()`, mismo motivo.
+        # El desglose operativo muestra solo checks, sin respuestas de inputs.
         return super().get_queryset(request).select_related('vendedora__usuario').prefetch_related(
-            'extras_seleccionados__extras_item'
+            'personalizaciones_seleccionadas__servicio_personalizacion__personalizacion'
         )
 
     def get_changeform_initial_data(self, request):
@@ -461,7 +438,11 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         """Que compro el cliente en el checkout web. Lo que va a cotizar el
         agente se marca en naranja: son las que le faltan por resolver antes
         del viaje."""
-        partes = [item.extras_item.nombre for item in obj.extras_seleccionados.all()]
+        partes = [
+            fila.servicio_personalizacion.personalizacion.nombre
+            for fila in obj.personalizaciones_seleccionadas.all()
+            if fila.servicio_personalizacion.personalizacion.tipo_interaccion == 'check'
+        ]
         if not obj.tiene_cotizaciones_pendientes:
             return ', '.join(partes) or '—'
 

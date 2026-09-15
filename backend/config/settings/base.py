@@ -292,12 +292,6 @@ UNFOLD = {
                         'permission': _perm_puede_ver_finanzas,
                     },
                     {
-                        'title': 'Extras',
-                        'icon': 'add_shopping_cart',
-                        'link': reverse_lazy('admin:fleet_extrasitem_changelist'),
-                        'permission': lambda request: request.user.has_perm('fleet.view_extrasitem'),
-                    },
-                    {
                         'title': 'Transporte',
                         'icon': 'local_shipping',
                         'link': reverse_lazy('admin:fleet_transportetarifa_changelist'),

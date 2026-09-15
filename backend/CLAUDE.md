@@ -81,7 +81,9 @@ via env var). Rutas montadas bajo `/api/` en `config/urls.py`:
 
 - `GET /api/<empresa>/servicios/pesca-deportiva/` — catálogo de pesca, con los cuatro
   precios y personas incluidas (`apps/fleet`). 404 si el servicio no existe o está
-  inactivo. Los extras legacy de pesca conservan su endpoint hasta su unificación.
+  inactivo. Sus amenidades (brunch, licencia, carnada) viven en `personalizaciones`,
+  el mismo catálogo unificado de cualquier otro servicio o paquete — no hay endpoint
+  de extras aparte.
 - `GET /api/cupo/?fecha=YYYY-MM-DD&personas=N` — si cabe un grupo de N ese dia, solo
   informativo (`apps/bookings`); la validacion definitiva ocurre al confirmar el pago.
   `personas` es opcional (default 1), asi que una peticion sin el responde lo mismo que

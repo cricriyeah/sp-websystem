@@ -12,7 +12,6 @@ from apps.fleet.models import (
     Capitan,
     CodigoPromocional,
     Embarcacion,
-    ExtrasItem,
     capacidades_disponibles,
     capacidades_por_fecha,
 )
@@ -429,7 +428,7 @@ class Reserva(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='reservas')
     servicio = models.ForeignKey(
         'fleet.Servicio', on_delete=models.PROTECT, null=True, blank=True, related_name='reservas',
-        help_text='Servicio o experiencia que ampara esta reserva. Vacio = pesca deportiva (legacy).'
+        help_text='Servicio o experiencia que ampara esta reserva. Vacío solo cuando hay paquete.'
     )
     paquete = models.ForeignKey(
         'fleet.Paquete', on_delete=models.SET_NULL, null=True, blank=True, related_name='reservas',
@@ -536,7 +535,7 @@ class Reserva(models.Model):
     en_disputa = models.BooleanField(default=False, verbose_name='en disputa')
 
     # Brunch, licencia y carnada se venden con precio congelado
-    # solo por el checkout web (ver ReservaExtra mas abajo,
+    # solo por el checkout web (ver ReservaPersonalizacion mas abajo,
     # y CrearPagoView, que es quien los escribe). Bebidas sigue sin precio en
     # linea: depende del tipo de bebida, no de algo que el catalogo resuelva.
     pide_bebidas = models.BooleanField(default=False, verbose_name='bebidas (a cotizar)')
@@ -951,57 +950,6 @@ class ReservaOcupacion(models.Model):
                     f'El recurso {nombre} ya está ocupado en el rango '
                     f'[{ocupacion.fecha_inicio} a {ocupacion.fecha_fin}) por la reserva #{ocupacion.reserva_id}.'
                 )
-
-
-class ReservaExtra(models.Model):
-    """Un extra del catalogo (brunch, licencia, carnada) que el cliente eligio
-    en el checkout, para esta reserva.
-
-    `precio_unitario`/`cantidad` quedan en null mientras la reserva sigue
-    `pendiente_pago`: esta fila es solo la SELECCION. El unico que congela el
-    precio es `CrearPagoView` (apps/payments/views.py), con el precio vigente
-    del catalogo al momento de pagar — asi hay un solo lugar que decide
-    cuanto cuesta algo, igual que ya pasa con `precio_total`.
-    """
-
-    reserva = models.ForeignKey(
-        Reserva, on_delete=models.CASCADE, related_name='extras_seleccionados',
-    )
-    extras_item = models.ForeignKey(ExtrasItem, on_delete=models.PROTECT)
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    cantidad = models.PositiveSmallIntegerField(null=True, blank=True)
-    # Lo que el cliente eligio en el checkout para un extra con `cantidad_editable`
-    # (ver fleet.ExtrasItem). Null = todo el grupo (comportamiento de siempre). El
-    # congelado real, `cantidad`, lo sigue poniendo solo CrearPagoView.
-    cantidad_solicitada = models.PositiveSmallIntegerField(null=True, blank=True)
-
-    class Meta:
-        unique_together = ('reserva', 'extras_item')
-        verbose_name = 'extra seleccionado'
-        verbose_name_plural = 'extras seleccionados'
-
-    def __str__(self):
-        return f'{self.extras_item.nombre} — reserva {self.reserva_id}'
-
-    @property
-    def subtotal(self):
-        if self.precio_unitario is None or self.cantidad is None:
-            return None
-        return self.precio_unitario * self.cantidad
-
-    def clean(self):
-        if self.extras_item_id:
-            reserva = self._reserva_o_ninguna()
-            if reserva is not None and self.extras_item.empresa_id != reserva.empresa_id:
-                raise ValidationError({
-                    'extras_item': 'Ese extra pertenece a otra Empresa.',
-                })
-
-    def _reserva_o_ninguna(self):
-        try:
-            return self.reserva
-        except Reserva.DoesNotExist:
-            return None
 
 
 class CheckoutAbandonado(Reserva):

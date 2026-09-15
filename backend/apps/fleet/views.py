@@ -7,60 +7,12 @@ from apps.tenancy import scope
 
 from .catalogo import paquete_de_sede, paquetes_de_sede, servicios_de_sede
 from .enums import TipoServicio
-from .models import ExtrasItem, Paquete, PuntoEncuentro, Servicio, TransporteTarifa
+from .models import Paquete, PuntoEncuentro, Servicio, TransporteTarifa
 from .serializers import (
-    ExtrasItemSerializer,
     PaqueteSerializer,
     PuntoEncuentroSerializer,
     ServicioSerializer,
 )
-
-# Tope defensivo del preview de precio, no una regla de negocio: el limite real
-# de personas por viaje (MAX_PERSONAS) vive en apps.bookings y este endpoint no
-# depende de esa app a proposito, para no crear un ciclo fleet<->bookings. Solo
-# evita una multiplicacion absurda si alguien manda `personas` gigante.
-PERSONAS_MAXIMO_PREVIEW = 50
-
-
-class ExtrasPublicosView(APIView):
-    """Catalogo de extras del checkout de una Empresa (brunch, licencia, carnada,
-    transporte, puntos de encuentro) con el monto ya resuelto para
-    `personas`/`moneda`.
-
-    La web nunca calcula si un extra cobra por persona ni si aplica el
-    recargo de grupo: pide este endpoint con el numero de personas y la
-    moneda que tenga en pantalla y muestra lo que responde, igual que ya
-    hace con el detalle de Servicio.
-    """
-
-    throttle_scope = 'catalogo'
-
-    def get(self, request, empresa_slug):
-        empresa = scope.resolver_empresa_publica(empresa_slug)
-
-        moneda = request.query_params.get('moneda', 'MXN')
-        if moneda not in ('MXN', 'USD'):
-            return Response({'detail': 'moneda invalida.'}, status=400)
-
-        crudo = request.query_params.get('personas', '1')
-        try:
-            personas = int(crudo)
-        except ValueError:
-            return Response({'detail': 'personas invalida.'}, status=400)
-        if not (1 <= personas <= PERSONAS_MAXIMO_PREVIEW):
-            return Response({'detail': 'personas invalida.'}, status=400)
-
-        contexto = {'personas': personas, 'moneda': moneda}
-        with scope.con_empresa(empresa):
-            return Response({
-                'extras': ExtrasItemSerializer(
-                    ExtrasItem.objects.filter(activo=True, empresa=empresa), many=True, context=contexto
-                ).data,
-                'puntos_encuentro': PuntoEncuentroSerializer(
-                    PuntoEncuentro.objects.filter(activo=True, empresa=empresa), many=True
-                ).data,
-            })
-
 
 class ServiciosListView(APIView):
     """Lista publica de servicios activos para una empresa/sede."""

@@ -9,7 +9,7 @@ Que se cobra en linea y que no:
 
 - Tour: precio por viaje (la reserva es de la embarcacion completa).
 - Personas extra: cargo por cada una arriba de `PERSONAS_INCLUIDAS`.
-- Extras del catalogo (brunch, licencia, carnada): precio de `fleet.ExtrasItem`,
+- Extras del catalogo (brunch, licencia, carnada): precio de `fleet.ServicioPersonalizacion`,
   por persona o plano segun `cobrar_por_persona`. El precio que se congela es
   siempre el vigente del catalogo al momento de pagar, nunca el que trae la
   reserva desde que se armo el checkout (ver `CrearPagoView`).
@@ -45,17 +45,6 @@ def personas_extra(numero_personas, personas_incluidas=PERSONAS_INCLUIDAS):
 def cargo_por_personas(precio_persona_extra, numero_personas, personas_incluidas=PERSONAS_INCLUIDAS):
     """Cargo total por las personas adicionales."""
     return Decimal(precio_persona_extra) * personas_extra(numero_personas, personas_incluidas)
-
-
-def cargo_por_extra(precio, cobrar_por_persona, numero_personas):
-    """Cuanto cobra un extra del catalogo (brunch, licencia, carnada) ya
-    resuelto en una moneda. `precio` es lo que ya devolvio
-    `ExtrasItem.precio_en(moneda)`: esta funcion no sabe que es un ExtrasItem,
-    solo suma. None si no hay precio en esa moneda."""
-    if precio is None:
-        return None
-    cantidad = numero_personas if cobrar_por_persona else 1
-    return Decimal(precio) * cantidad
 
 
 def cantidad_efectiva(*, cobrar_por_persona, cantidad_editable, personas, cantidad=1):

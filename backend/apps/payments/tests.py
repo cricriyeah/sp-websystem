@@ -20,13 +20,12 @@ from apps.bookings.models import (
     CUPO_MAXIMO_DEFAULT,
     Orden,
     Reserva,
-    ReservaExtra,
+    ReservaPersonalizacion,
     ReservaOcupacion,
     ReservaPaqueteComponente,
 )
 from apps.fleet.models import (
     CodigoPromocional,
-    ExtrasItem,
     Paquete,
     PaqueteServicio,
     Recurso,
@@ -34,7 +33,7 @@ from apps.fleet.models import (
 )
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
-from apps.testing import ApiTestCase, EmpresaTestCase, crear_flota, crear_servicio_pesca
+from apps.testing import crear_personalizacion_pesca, ApiTestCase, EmpresaTestCase, crear_flota, crear_servicio_pesca
 
 
 from .checks import revisar_llaves_de_stripe
@@ -56,7 +55,7 @@ from .views import (
 from .pricing import (
     PERSONAS_INCLUIDAS,
     a_centavos,
-    cargo_por_extra,
+    cargo_personalizacion,
     cargo_por_personas,
     de_centavos,
     monto_inicial,
@@ -211,14 +210,14 @@ class PricingTests(TestCase):
         self.assertEqual(cargo_por_personas(Decimal('500'), 6), Decimal('1500'))
 
     def test_extra_por_persona_cobra_segun_cuantos_van(self):
-        self.assertEqual(cargo_por_extra(Decimal('150'), True, 1), Decimal('150'))
-        self.assertEqual(cargo_por_extra(Decimal('150'), True, 4), Decimal('600'))
+        self.assertEqual(cargo_personalizacion(Decimal('150'), cobrar_por_persona=True, cantidad_editable=False, personas=1), Decimal('150'))
+        self.assertEqual(cargo_personalizacion(Decimal('150'), cobrar_por_persona=True, cantidad_editable=False, personas=4), Decimal('600'))
 
     def test_extra_plano_no_multiplica_por_personas(self):
-        self.assertEqual(cargo_por_extra(Decimal('400'), False, 5), Decimal('400'))
+        self.assertEqual(cargo_personalizacion(Decimal('400'), cobrar_por_persona=False, cantidad_editable=False, personas=5), Decimal('400'))
 
     def test_extra_sin_precio_en_la_moneda_es_none(self):
-        self.assertIsNone(cargo_por_extra(None, True, 3))
+        self.assertIsNone(cargo_personalizacion(None, cobrar_por_persona=True, cantidad_editable=False, personas=3))
 
 
 @override_settings(**LLAVES)
@@ -283,16 +282,19 @@ class CrearPagoTests(ApiTestCase):
     def seleccionar_extra(self, reserva=None, cantidad_solicitada=None, **overrides):
         """Simula lo que deja el checkout: la SELECCION de un extra, sin precio
         congelado todavia (eso solo lo escribe `CrearPagoView`). `cantidad_solicitada`
-        es de la seleccion (`ReservaExtra`), no del catalogo — se separa aparte."""
+        es de la seleccion (`ReservaPersonalizacion`), no del catalogo — se separa aparte."""
         datos = {
             'empresa': self.empresa,
-            'tipo': ExtrasItem.Tipo.BRUNCH, 'nombre': 'Brunch', 'precio': Decimal('300'),
+            'tipo': 'brunch', 'nombre': 'Brunch', 'precio': Decimal('300'),
             'precio_usd': Decimal('18'), 'cobrar_por_persona': True,
         }
         datos.update(overrides)
-        item = ExtrasItem.objects.create(**datos)
-        return ReservaExtra.objects.create(
-            reserva=reserva or self.reserva, extras_item=item, cantidad_solicitada=cantidad_solicitada,
+        reserva = reserva or self.reserva
+        reserva.refresh_from_db()
+        item = crear_personalizacion_pesca(servicio=reserva.servicio, **datos)
+        return ReservaPersonalizacion.objects.create(
+            reserva=reserva, servicio_personalizacion=item,
+            cantidad=cantidad_solicitada if cantidad_solicitada is not None else reserva.numero_personas,
         )
 
     @mock.patch.object(StripeClient, 'payment_intents')
@@ -473,14 +475,14 @@ class CrearPagoTests(ApiTestCase):
         payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         self.seleccionar_extra(
-            tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
             precio_usd=Decimal('25'), cantidad_editable=True, cantidad_solicitada=2,
         )
         # 4500 + 2 personas extra x 500 + 2 licencias x 450 (no 5).
         response = self.post()
 
         self.assertEqual(response.json()['monto_a_cobrar'], '6400.00')
-        extra = ReservaExtra.objects.get(reserva=self.reserva)
+        extra = ReservaPersonalizacion.objects.get(reserva=self.reserva)
         self.assertEqual(extra.cantidad, 2)
 
     @mock.patch.object(StripeClient, 'payment_intents')
@@ -489,14 +491,14 @@ class CrearPagoTests(ApiTestCase):
         # El cliente eligio "5" antes de bajar el grupo a 2: nunca debe cobrar
         # licencia para mas personas de las que trae la reserva.
         self.seleccionar_extra(
-            tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
             precio_usd=Decimal('25'), cantidad_editable=True, cantidad_solicitada=5,
         )
         response = self.post()
 
         # 4500 + 2 licencias x 450 (acotado a numero_personas=2, no 5).
         self.assertEqual(response.json()['monto_a_cobrar'], '5400.00')
-        extra = ReservaExtra.objects.get(reserva=self.reserva)
+        extra = ReservaPersonalizacion.objects.get(reserva=self.reserva)
         self.assertEqual(extra.cantidad, 2)
 
     @mock.patch.object(StripeClient, 'payment_intents')
@@ -504,7 +506,7 @@ class CrearPagoTests(ApiTestCase):
         payment_intents.create.return_value = intent_falso()
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=4)
         self.seleccionar_extra(
-            tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
             precio_usd=Decimal('25'), cantidad_editable=True,
         )
         # Sin cantidad_solicitada (None): mismo comportamiento de siempre, todo el grupo.
@@ -535,8 +537,8 @@ class CrearPagoTests(ApiTestCase):
         payment_intents.create.return_value = intent_falso()
         seleccion = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
         # El precio de lista cambia despues de que el cliente eligio, antes de pagar.
-        seleccion.extras_item.precio = Decimal('500')
-        seleccion.extras_item.save(update_fields=['precio'])
+        seleccion.servicio_personalizacion.precio = Decimal('500')
+        seleccion.servicio_personalizacion.save(update_fields=['precio'])
 
         response = self.post()
 
@@ -550,19 +552,19 @@ class CrearPagoTests(ApiTestCase):
     def test_un_extra_desactivado_se_cae_sin_bloquear_los_demas(self, payment_intents):
         payment_intents.create.return_value = intent_falso()
         activo = self.seleccionar_extra(
-            tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
             precio_usd=Decimal('25'), cobrar_por_persona=False,
         )
         a_caer = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
-        a_caer.extras_item.activo = False
-        a_caer.extras_item.save(update_fields=['activo'])
+        a_caer.servicio_personalizacion.activo = False
+        a_caer.servicio_personalizacion.save(update_fields=['activo'])
 
         response = self.post()
 
         self.assertEqual(response.status_code, 200)
         # Solo la licencia entra al cobro: 4500 + 450.
         self.assertEqual(response.json()['monto_a_cobrar'], '4950.00')
-        self.assertFalse(ReservaExtra.objects.filter(pk=a_caer.pk).exists())
+        self.assertFalse(ReservaPersonalizacion.objects.filter(pk=a_caer.pk).exists())
         activo.refresh_from_db()
         self.assertEqual(activo.precio_unitario, Decimal('450'))
 
@@ -579,7 +581,6 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(response.status_code, 409)
         extra.refresh_from_db()
         self.assertIsNone(extra.precio_unitario)
-        self.assertIsNone(extra.cantidad)
 
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_sin_cargo_en_dolares_no_se_cobra_a_medias(self, payment_intents):
@@ -942,19 +943,19 @@ class EstadoReservaTests(ApiTestCase):
     def test_pendiente_de_pago_repone_la_cantidad_elegida_de_extras(self):
         """Sin esto, recargar la pagina a medio checkout perderia la cantidad
         que el cliente ya habia elegido para un extra con `cantidad_editable`
-        (ver fleet.ExtrasItem.cantidad_editable)."""
-        licencia = ExtrasItem.objects.create(
+        (ver fleet.Personalizacion.cantidad_editable)."""
+        licencia = crear_personalizacion_pesca(
             empresa=self.empresa,
-            tipo=ExtrasItem.Tipo.LICENCIA, nombre='Licencia', precio=Decimal('450'),
+            tipo='licencia', nombre='Licencia', precio=Decimal('450'),
             cantidad_editable=True,
         )
-        ReservaExtra.objects.create(
-            reserva=self.reserva, extras_item=licencia, cantidad_solicitada=2,
+        ReservaPersonalizacion.objects.create(
+            reserva=self.reserva, servicio_personalizacion=licencia, cantidad=2,
         )
 
         body = self.get(str(self.reserva.checkout_id)).json()
 
-        self.assertEqual(body['extras'], [{'id': licencia.pk, 'cantidad': 2}])
+        self.assertEqual(body['personalizaciones'], [{'id': licencia.pk, 'cantidad': 2, 'respuesta': ''}])
 
     def test_pagada_repone_lo_necesario_para_la_confirmacion_sin_telefono(self):
         self.reserva.estado = Reserva.Estado.PAGADA
@@ -976,20 +977,20 @@ class EstadoReservaTests(ApiTestCase):
         self.reserva.forma_pago = Reserva.FormaPago.COMPLETO
         self.reserva.save()
 
-        item = ExtrasItem.objects.create(
+        item = crear_personalizacion_pesca(
             empresa=self.empresa,
-            tipo=ExtrasItem.Tipo.BRUNCH, nombre='Brunch', precio=Decimal('300'),
+            tipo='brunch', nombre='Brunch', precio=Decimal('300'),
             cobrar_por_persona=True,
         )
-        ReservaExtra.objects.create(
-            reserva=self.reserva, extras_item=item,
+        ReservaPersonalizacion.objects.create(
+            reserva=self.reserva, servicio_personalizacion=item,
             precio_unitario=Decimal('300'), cantidad=self.reserva.numero_personas,
         )
 
         body = self.get(str(self.reserva.checkout_id)).json()
-        self.assertEqual(body['extras'], [
+        self.assertEqual(body['personalizaciones'], [
             {
-                'nombre': 'Brunch', 'cobrar_por_persona': True, 'monto': '600.00',
+                'nombre': 'Brunch', 'tipo_interaccion': 'check', 'respuesta': '', 'monto': '600.00',
                 'cantidad': self.reserva.numero_personas,
             },
         ])
@@ -999,7 +1000,7 @@ class EstadoReservaTests(ApiTestCase):
         self.reserva.save(update_fields=['estado'])
 
         body = self.get(str(self.reserva.checkout_id)).json()
-        self.assertEqual(body['extras'], [])
+        self.assertEqual(body['personalizaciones'], [])
 
     def test_pagada_incluye_el_codigo_promocional_y_descuento_ya_congelados(self):
         promo = CodigoPromocional.objects.create(

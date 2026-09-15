@@ -17,69 +17,6 @@ from .enums import (
 )
 
 
-class ExtrasItem(models.Model):
-    """Catalogo de extras del checkout: brunch, licencia, carnada. Editable solo
-    por jefes, igual que `Servicio` (es precio, informacion financiera).
-
-    Sin fechas de vigencia a proposito: el precio vigente se edita a mano,
-    igual que ya se hace con `Servicio`, y cada reserva congela su propio precio
-    al pagar (`bookings.ReservaExtra.precio_unitario`) — eso ya resuelve lo que
-    una tabla de historico resolveria, sin la tabla.
-    """
-
-    class Tipo(models.TextChoices):
-        BRUNCH = 'brunch', 'Brunch'
-        LICENCIA = 'licencia', 'Licencia de pesca'
-        CARNADA = 'carnada', 'Carnada'
-        OTRO = 'otro', 'Otro'
-
-    tipo = models.CharField(max_length=10, choices=Tipo.choices)
-    nombre = models.CharField(max_length=150)
-    descripcion = models.TextField(blank=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2, help_text='Precio en pesos (MXN).')
-    precio_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Precio en dolares. Vacio = no se ofrece en USD.',
-    )
-    cobrar_por_persona = models.BooleanField(
-        default=True,
-        help_text='Marcado: el precio se multiplica por el numero de personas de '
-                  'la reserva (igual que el brunch). Sin marcar: precio plano, se '
-                  'cobra una sola vez por reserva.',
-    )
-    preseleccionado = models.BooleanField(
-        default=False,
-        help_text='Viene marcado por defecto en el checkout (licencia y carnada).',
-    )
-    cantidad_editable = models.BooleanField(
-        default=False,
-        help_text='Si esta marcado, el checkout deja elegir cuantas personas del '
-                  'grupo lo necesitan (ej. licencia: alguien puede ya traer la suya '
-                  'tramitada aparte), en vez de aplicarlo a todo el grupo. Solo tiene '
-                  'sentido junto con "Cobrar por persona".',
-    )
-    activo = models.BooleanField(default=True)
-    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='extras_items')
-
-    class Meta:
-        ordering = ['tipo', 'nombre']
-        verbose_name = 'extra del checkout'
-        verbose_name_plural = 'extras del checkout'
-
-    def __str__(self):
-        return self.nombre
-
-    def clean(self):
-        if self.cantidad_editable and not self.cobrar_por_persona:
-            raise ValidationError({
-                'cantidad_editable': 'No tiene sentido sin "Cobrar por persona": un '
-                                     'precio plano no se reparte por cantidad de gente.',
-            })
-
-    def precio_en(self, moneda):
-        return self.precio if moneda == 'MXN' else self.precio_usd
-
-
 class TransporteTarifa(models.Model):
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='tarifas_transporte')
     tipo_traslado = models.CharField(max_length=25, choices=TipoTraslado.choices)
@@ -140,7 +77,7 @@ class PuntoEncuentro(models.Model):
 
 class CodigoPromocional(models.Model):
     """Codigo de descuento aplicable en el checkout. Editable solo por jefes —
-    es dato financiero, igual que `Servicio` y `ExtrasItem`: la vendedora no
+    es dato financiero, igual que `Servicio` y `ServicioPersonalizacion`: la vendedora no
     tiene permisos sobre este modelo (ver `setup_roles`).
 
     El descuento se calcula y se aplica siempre en el servidor
@@ -436,7 +373,7 @@ class Personalizacion(models.Model):
         SELECCION = 'input_seleccion', 'Selección'
 
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='personalizaciones')
-    nombre = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=150)
     tipo = models.CharField(max_length=50, default='otro')
     tipo_interaccion = models.CharField(
         max_length=20,

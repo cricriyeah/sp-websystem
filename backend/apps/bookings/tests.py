@@ -17,12 +17,11 @@ from apps.fleet.models import (
     CodigoPromocional,
     Embarcacion,
     EmbarcacionNoDisponible,
-    ExtrasItem,
     PuntoEncuentro,
     Servicio,
 )
 from apps.tenancy import scope
-from apps.testing import ApiTestCase, EmpresaTestCase, OperadorTestCase, crear_flota, crear_servicio_pesca
+from apps.testing import crear_personalizacion_pesca, ApiTestCase, EmpresaTestCase, OperadorTestCase, crear_flota, crear_servicio_pesca
 
 from .admin import telefono_marcable
 from .models import (
@@ -739,73 +738,72 @@ class ExtrasApiTests(ApiTestCase):
         )
 
     def test_selecciona_extras_sin_precio(self):
-        brunch = ExtrasItem.objects.create(
+        brunch = crear_personalizacion_pesca(
             empresa=self.empresa, tipo='brunch', nombre='Brunch', precio=Decimal('300'))
-        licencia = ExtrasItem.objects.create(
+        licencia = crear_personalizacion_pesca(
             empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'))
 
-        response = self.enviar(extras=[{'id': brunch.pk}, {'id': licencia.pk}])
+        response = self.enviar(personalizaciones=[{'id': brunch.pk}, {'id': licencia.pk}])
 
         self.assertEqual(response.status_code, 201)
         reserva = Reserva.objects.get(pk=response.json()['id'])
-        seleccionados = set(reserva.extras_seleccionados.values_list('extras_item_id', flat=True))
+        seleccionados = set(reserva.personalizaciones_seleccionadas.values_list('servicio_personalizacion_id', flat=True))
         self.assertEqual(seleccionados, {brunch.pk, licencia.pk})
-        for extra in reserva.extras_seleccionados.all():
+        for extra in reserva.personalizaciones_seleccionadas.all():
             self.assertIsNone(extra.precio_unitario)
-            self.assertIsNone(extra.cantidad)
-            self.assertIsNone(extra.cantidad_solicitada)
+            self.assertEqual(extra.cantidad, 1)
 
     def test_un_extra_inactivo_no_se_puede_seleccionar(self):
-        inactivo = ExtrasItem.objects.create(
+        inactivo = crear_personalizacion_pesca(
             empresa=self.empresa, tipo='carnada', nombre='Carnada', precio=Decimal('200'), activo=False,
         )
-        self.assertEqual(self.enviar(extras=[{'id': inactivo.pk}]).status_code, 400)
+        self.assertEqual(self.enviar(personalizaciones=[{'id': inactivo.pk}]).status_code, 400)
 
     def test_reenviar_el_checkout_reescribe_la_seleccion_completa(self):
-        brunch = ExtrasItem.objects.create(
+        brunch = crear_personalizacion_pesca(
             empresa=self.empresa, tipo='brunch', nombre='Brunch', precio=Decimal('300'))
-        licencia = ExtrasItem.objects.create(
+        licencia = crear_personalizacion_pesca(
             empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'))
-        creada = self.enviar(extras=[{'id': brunch.pk}])
+        creada = self.enviar(personalizaciones=[{'id': brunch.pk}])
 
-        self.enviar(extras=[{'id': licencia.pk}])
+        self.enviar(personalizaciones=[{'id': licencia.pk}])
 
         reserva = Reserva.objects.get(pk=creada.json()['id'])
         self.assertEqual(
-            set(reserva.extras_seleccionados.values_list('extras_item_id', flat=True)), {licencia.pk}
+            set(reserva.personalizaciones_seleccionadas.values_list('servicio_personalizacion_id', flat=True)), {licencia.pk}
         )
 
     def test_manda_cantidad_para_un_extra_con_cantidad_editable(self):
-        licencia = ExtrasItem.objects.create(
+        licencia = crear_personalizacion_pesca(
             empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'),
             cantidad_editable=True,
         )
 
-        response = self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 2}])
+        response = self.enviar(numero_personas=5, personalizaciones=[{'id': licencia.pk, 'cantidad': 2}])
 
         self.assertEqual(response.status_code, 201)
         reserva = Reserva.objects.get(pk=response.json()['id'])
-        extra = reserva.extras_seleccionados.get(extras_item=licencia)
-        self.assertEqual(extra.cantidad_solicitada, 2)
+        extra = reserva.personalizaciones_seleccionadas.get(servicio_personalizacion=licencia)
+        self.assertEqual(extra.cantidad, 2)
         # Sin precio ni cantidad congelados: eso sigue siendo trabajo exclusivo
         # de CrearPagoView, la seleccion no lo adelanta.
-        self.assertIsNone(extra.cantidad)
+        self.assertIsNone(extra.precio_unitario)
 
     def test_reenviar_con_otra_cantidad_actualiza_la_fila_existente(self):
         """Cambiar la cantidad de un extra ya elegido, en un reenvio del
         checkout, debe actualizar la fila — no perderse ni crear una segunda."""
-        licencia = ExtrasItem.objects.create(
+        licencia = crear_personalizacion_pesca(
             empresa=self.empresa, tipo='licencia', nombre='Licencia', precio=Decimal('450'),
             cantidad_editable=True,
         )
-        creada = self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 2}])
+        creada = self.enviar(numero_personas=5, personalizaciones=[{'id': licencia.pk, 'cantidad': 2}])
 
-        self.enviar(numero_personas=5, extras=[{'id': licencia.pk, 'cantidad': 4}])
+        self.enviar(numero_personas=5, personalizaciones=[{'id': licencia.pk, 'cantidad': 4}])
 
         reserva = Reserva.objects.get(pk=creada.json()['id'])
-        self.assertEqual(reserva.extras_seleccionados.count(), 1)
+        self.assertEqual(reserva.personalizaciones_seleccionadas.count(), 1)
         self.assertEqual(
-            reserva.extras_seleccionados.get(extras_item=licencia).cantidad_solicitada, 4,
+            reserva.personalizaciones_seleccionadas.get(servicio_personalizacion=licencia).cantidad, 4,
         )
 
 

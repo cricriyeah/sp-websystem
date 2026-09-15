@@ -20,7 +20,6 @@ from .pricing import (
     a_centavos,
     cantidad_efectiva,
     cargo_por_descuento,
-    cargo_por_extra,
     cargo_personalizacion,
     monto_inicial,
     precio_paquete_total,
@@ -104,20 +103,11 @@ class CrearPagoView(APIView):
         if forma_pago not in Reserva.FormaPago.values:
             return Response({'detail': 'forma_pago invalida.'}, status=400)
 
-        if (
-            reserva.servicio_id
-            and not reserva.paquete_id
-            and reserva.servicio.tipo_servicio != 'pesca'
-        ) or reserva.paquete_id:
-            cargo_extras, extras_a_borrar, extras_a_congelar, error = (
-                self._resolver_personalizaciones(reserva)
-            )
-            if error:
-                return Response({'detail': error}, status=503)
-        else:
-            cargo_extras, extras_a_borrar, extras_a_congelar, error = self._resolver_extras(reserva)
-            if error:
-                return Response({'detail': error}, status=503)
+        cargo_extras, extras_a_borrar, extras_a_congelar, error = (
+            self._resolver_personalizaciones(reserva)
+        )
+        if error:
+            return Response({'detail': error}, status=503)
 
         subtotal = (
             precio_base_servicio
@@ -175,31 +165,6 @@ class CrearPagoView(APIView):
             'monto_a_cobrar': str(monto_a_cobrar),
             'moneda': reserva.moneda,
         })
-
-    def _resolver_extras(self, reserva):
-        """Recorre lo que el cliente selecciono en el checkout y decide, sin
-        tocar la base: que se cae (item desactivado desde que se eligio) y que
-        se congela con el precio VIGENTE del catalogo. Devuelve (cargo_total,
-        a_borrar, a_congelar, error). Sin filtro `empresa=` propio: opera sobre
-        `reserva.extras_seleccionados`, ya acotado por la reserva misma."""
-        cargo_total = 0
-        a_borrar = []
-        a_congelar = []
-        for extra in reserva.extras_seleccionados.select_related('extras_item'):
-            item = extra.extras_item
-            if not item.activo:
-                a_borrar.append(extra)
-                continue
-            precio = item.precio_en(reserva.moneda)
-            if precio is None:
-                return 0, [], [], f'No hay precio de "{item.nombre}" configurado en {reserva.moneda}.'
-            cantidad = reserva.numero_personas if item.cobrar_por_persona else 1
-            if item.cantidad_editable and extra.cantidad_solicitada is not None:
-                cantidad = max(1, min(extra.cantidad_solicitada, reserva.numero_personas))
-            cargo = cargo_por_extra(precio, item.cobrar_por_persona, cantidad)
-            cargo_total += cargo
-            a_congelar.append((extra, precio, cantidad))
-        return cargo_total, a_borrar, a_congelar, None
 
     def _resolver_personalizaciones(self, reserva):
         """Valida y cotiza el catálogo vigente de un servicio suelto.
@@ -453,15 +418,6 @@ class EstadoReservaView(APIView):
                 'forma_pago': reserva.forma_pago,
                 'monto_pagado': str(reserva.monto_pagado) if reserva.monto_pagado is not None else None,
                 'precio_total': str(reserva.precio_total) if reserva.precio_total is not None else None,
-                'extras': [
-                    {
-                        'nombre': extra.extras_item.nombre,
-                        'cobrar_por_persona': extra.extras_item.cobrar_por_persona,
-                        'monto': str(extra.subtotal) if extra.subtotal is not None else None,
-                        'cantidad': extra.cantidad,
-                    }
-                    for extra in reserva.extras_seleccionados.select_related('extras_item').all()
-                ],
                 'personalizaciones': personalizaciones,
                 'codigo_promocional': (
                     reserva.codigo_promocional.codigo if reserva.codigo_promocional_id else None
@@ -490,10 +446,6 @@ class EstadoReservaView(APIView):
             'correo_cliente': reserva.correo_cliente,
             'moneda': reserva.moneda,
             'forma_pago': reserva.forma_pago,
-            'extras': [
-                {'id': extra.extras_item_id, 'cantidad': extra.cantidad_solicitada}
-                for extra in reserva.extras_seleccionados.all()
-            ],
             'personalizaciones': personalizaciones,
         })
 

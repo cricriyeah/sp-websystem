@@ -4,28 +4,6 @@ const EMPRESA_SLUG = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol';
 
 export type Moneda = 'MXN' | 'USD';
 
-/**
- * Catalogo de extras del checkout (`GET /api/extras/?personas=N&moneda=M`).
- *
- * `monto` ya viene resuelto por el servidor para ese `(personas, moneda)` —
- * la web nunca reimplementa si un extra cobra por persona ni el umbral del
- * recargo de transporte, esas reglas viven solo en
- * apps/payments/pricing.py. `null` = sin precio configurado en esa moneda.
- */
-export type ExtraCatalogo = {
-  id: number;
-  tipo: 'brunch' | 'licencia' | 'carnada' | 'otro';
-  nombre: string;
-  descripcion: string;
-  cobrar_por_persona: boolean;
-  // Si el checkout deja elegir cuantas personas del grupo lo necesitan (ej.
-  // licencia: alguien puede ya traer la suya tramitada aparte) en vez de
-  // aplicarlo a todo el grupo. Ver fleet.ExtrasItem.
-  cantidad_editable: boolean;
-  preseleccionado: boolean;
-  monto: string | null;
-};
-
 export type Zona = 'centro' | 'periferia';
 
 export type PuntoEncuentro = {
@@ -33,14 +11,6 @@ export type PuntoEncuentro = {
   nombre: string;
   zona: Zona;
 };
-
-export type CatalogoExtras = {
-  extras: ExtraCatalogo[];
-  puntos_encuentro: PuntoEncuentro[];
-};
-
-export const getExtras = (personas: number, moneda: Moneda, empresaSlug?: string) =>
-  request<CatalogoExtras>(`/api/extras/?personas=${personas}&moneda=${moneda}`, undefined, empresaSlug);
 
 /**
  * @deprecated SP1: El transporte deja de ser personalización/selección en checkout.
@@ -55,16 +25,6 @@ export type TransporteSeleccion = {
   // grupo. Solo afecta si aplica el recargo de grupo (ver
   // apps/payments/views.py, `_resolver_transporte`) — el precio base no
   // escala por persona.
-  cantidad?: number | null;
-};
-
-/**
- * Un item del catalogo que el cliente marco en el checkout. `cantidad` solo
- * importa si el item tiene `cantidad_editable` (ver `ExtraCatalogo`) — el
- * backend la ignora en los demas. `null`/ausente = todo el grupo.
- */
-export type ExtraSeleccion = {
-  id: number;
   cantidad?: number | null;
 };
 
@@ -102,11 +62,6 @@ export type ReservaInput = {
   // Deslinde de responsabilidad. El servidor sella la fecha/hora y la IP.
   deslinde_aceptado: boolean;
   deslinde_nombre: string;
-  // `ExtrasItem` elegidos (brunch, licencia, carnada), con cuantas personas si
-  // el item tiene `cantidad_editable` (ver `ExtraCatalogo`). Sin precio: el
-  // unico que lo congela es `crear-pago`, con el catalogo vigente en ese
-  // momento (ver backend/apps/bookings/serializers.py).
-  extras?: ExtraSeleccion[];
   // Codigo de la vendedora que trajo al cliente (ver src/lib/ref.ts). El backend
   // ignora en silencio el que no resuelva: un link viejo no puede impedir una
   // reserva.
@@ -119,7 +74,12 @@ export type ReservaInput = {
   paquete?: string | number | null;
   servicio?: string;
   fecha_salida?: string;
-  personalizaciones?: { id: number; cantidad?: number; respuesta?: string }[];
+  // Seleccion de personalizaciones (brunch, licencia, carnada, etc.), sin
+  // precio: el unico que lo congela es `crear-pago`, con el catalogo vigente
+  // en ese momento (ver backend/apps/bookings/serializers.py). Se manda
+  // siempre, incluido `[]`, para que reenviar el checkout borre una seleccion
+  // vieja en vez de conservarla.
+  personalizaciones: { id: number; cantidad?: number; respuesta?: string }[];
 };
 
 export type Reserva = ReservaInput & {
@@ -156,8 +116,8 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit, empresaSlug?: string): Promise<T> {
-  // Cada ruta exportada de este archivo empieza con '/api/' (ver getExtras,
-  // getCupo, etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
+  // Cada ruta exportada de este archivo empieza con '/api/' (ver getCupo,
+  // etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
   // que cada funcion exportada tenga que acordarse del slug.
   // Rutas de plataforma multi-sede (/api/sedes/) no se atan a una empresa.
   const slug = empresaSlug ?? EMPRESA_SLUG;
@@ -238,7 +198,6 @@ export type EstadoReservaPendiente = {
   // Solo seleccion, sin precio: eso solo existe desde que se paga (ver
   // apps/payments/views.py, EstadoReservaView). `cantidad` es la que el
   // cliente ya habia elegido (solo importa en items `cantidad_editable`).
-  extras: ExtraSeleccion[];
   personalizaciones: { id: number; cantidad: number; respuesta: string }[];
   transporte: {
     punto_encuentro: number | null;
@@ -262,14 +221,6 @@ export type EstadoReservaPagada = {
   precio_total: string | null;
   // Desglose ya congelado al pagar (mismo precio cobrado, no el vigente del
   // catalogo hoy) — ver apps/payments/views.py, EstadoReservaView.
-  extras: {
-    nombre: string;
-    cobrar_por_persona: boolean;
-    monto: string | null;
-    // Cuantas personas del grupo lo tenian, ya congelado: con
-    // `cantidad_editable` puede ser menor que `numero_personas`.
-    cantidad: number | null;
-  }[];
   personalizaciones: {
     nombre: string;
     tipo_interaccion: string;

@@ -6,7 +6,6 @@ from rest_framework import serializers
 
 from apps.fleet.enums import TipoServicio, TipoTraslado
 from apps.fleet.models import (
-    ExtrasItem,
     Paquete,
     PaqueteServicio,
     Personalizacion,
@@ -19,7 +18,6 @@ from .models import (
     DESLINDE_VERSION,
     DetalleTransporte,
     Reserva,
-    ReservaExtra,
     ReservaPersonalizacion,
     Vendedora,
 )
@@ -63,24 +61,6 @@ def ip_del_cliente(request):
     return request.META.get('REMOTE_ADDR')
 
 
-class ExtraSeleccionSerializer(serializers.Serializer):
-    """Un item del catalogo que el cliente marco, con cuantas personas lo
-    necesitan si el item tiene `cantidad_editable` (ver fleet.ExtrasItem) —
-    el backend ignora `cantidad` en los demas. None = todo el grupo."""
-
-    id = serializers.PrimaryKeyRelatedField(queryset=ExtrasItem.objects.filter(activo=True))
-    cantidad = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=1)
-
-    def get_fields(self):
-        # El queryset del PrimaryKeyRelatedField se evalua al importar el modulo
-        # (cuerpo de clase del serializer padre), sin contexto. `get_fields()` es
-        # el unico gancho de DRF que corre por-peticion con `self.context` puesto
-        # (`__init__` no vuelve a correr tras el `deepcopy` del padre).
-        fields = super().get_fields()
-        fields['id'].queryset = ExtrasItem.objects.filter(activo=True, empresa=self.context['empresa'])
-        return fields
-
-
 class PersonalizacionSeleccionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     cantidad = serializers.IntegerField(required=False, default=1, min_value=1)
@@ -106,7 +86,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     `pendiente_pago`, cada envio del checkout reescribe la misma fila. Asi
     corregir la fecha o reintentar tras un error no deja reservas duplicadas.
 
-    `extras` solo escribe la SELECCION (que items): el precio queda `null`
+    `personalizaciones` escribe la selección completa: el precio queda `null`
     hasta que se paga. El unico que lo congela es `CrearPagoView`, con el
     catalogo vigente en ese momento — ver
     docs/superpowers/specs/2026-08-28-extras-checkout-design.md.
@@ -131,12 +111,6 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         many=True, required=False, default=list, write_only=True,
     )
 
-    # `default=` (no solo `required=False`) para que la clave siempre llegue a
-    # validated_data aunque el cliente no la mande — cada envio del checkout
-    # reescribe la seleccion completa, y sin el default, omitir la clave (en
-    # vez de mandarla vacia) dejaria viva una seleccion vieja que ya no aplica.
-    extras = ExtraSeleccionSerializer(many=True, required=False, default=list, write_only=True)
-
     class Meta:
         model = Reserva
         fields = [
@@ -146,7 +120,6 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'pide_bebidas',
             'servicio', 'paquete', 'fecha_salida',
             'personalizaciones',
-            'extras',
             'ref', 'estado',
         ]
         read_only_fields = ['id', 'estado']
@@ -206,7 +179,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         personalizaciones = attrs.get('personalizaciones', [])
 
         es_servicio_personalizable = bool(
-            servicio and servicio.tipo_servicio != TipoServicio.PESCA and not paquete
+            servicio and not paquete
         )
         if personalizaciones and not paquete and not es_servicio_personalizable:
             raise serializers.ValidationError({
@@ -349,31 +322,23 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
-        extras = self._sacar_extras(validated_data)
         personalizaciones = self._sacar_datos_paquete(validated_data)
         # La Empresa la fija la vista (slug de la URL), nunca el payload del
         # cliente. `update()` no la toca: recuperar un checkout conserva su
         # Empresa (y seria la misma, resuelta del mismo slug).
         validated_data['empresa'] = self.context['empresa']
-        return self._guardar(Reserva(**validated_data), extras, personalizaciones)
+        return self._guardar(Reserva(**validated_data), personalizaciones)
 
     def update(self, instance, validated_data):
-        extras = self._sacar_extras(validated_data)
         personalizaciones = self._sacar_datos_paquete(validated_data)
         for campo, valor in validated_data.items():
             setattr(instance, campo, valor)
-        return self._guardar(instance, extras, personalizaciones)
-
-    def _sacar_extras(self, validated_data):
-        # No es campo del modelo Reserva: hay que sacarlo antes de construirla
-        # o de asignarlo con setattr, o revienta contra un atributo que no existe.
-        # Con default= en el campo (ver arriba) siempre esta presente.
-        return validated_data.pop('extras')
+        return self._guardar(instance, personalizaciones)
 
     def _sacar_datos_paquete(self, validated_data):
         return validated_data.pop('personalizaciones', [])
 
-    def _guardar(self, reserva, extras, personalizaciones=None):
+    def _guardar(self, reserva, personalizaciones):
         # full_clean corre el motor unico de validacion (ventana de salida, cupo,
         # deslinde, capacidad), ver apps/bookings/models.py y backend/CLAUDE.md.
         try:
@@ -383,9 +348,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
                 # Cada envio reescribe la seleccion completa, sin excepciones:
                 # una lista vacia borra lo que hubiera.
-                self._sincronizar_extras(reserva, extras)
-                if personalizaciones is not None:
-                    self._sincronizar_personalizaciones(reserva, personalizaciones)
+                self._sincronizar_personalizaciones(reserva, personalizaciones)
         except DjangoValidationError as exc:
             raise serializers.ValidationError(
                 exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
@@ -395,9 +358,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
     def _sincronizar_personalizaciones(self, reserva, items_elegidos):
         reserva.personalizaciones_seleccionadas.all().delete()
-        aplica = reserva.paquete_id or (
-            reserva.servicio_id and reserva.servicio.tipo_servicio != TipoServicio.PESCA
-        )
+        aplica = reserva.paquete_id or reserva.servicio_id
         if not aplica or not items_elegidos:
             return
         for item in items_elegidos:
@@ -415,41 +376,6 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             )
             fila.full_clean()
             fila.save()
-
-    def _sincronizar_extras(self, reserva, items_elegidos):
-        """Reescribe la seleccion completa: borra lo que ya no viene, crea lo
-        que falta. Mismo criterio que el resto del checkout (cada envio
-        reescribe la fila), sin precio — eso lo pone CrearPagoView al pagar.
-
-        `items_elegidos` es una lista de `{'id': ExtrasItem, 'cantidad': int|None}`
-        (ver `ExtraSeleccionSerializer`). `cantidad` se guarda en
-        `cantidad_solicitada` incluso si el item no es `cantidad_editable` — no
-        hace daño guardarla, CrearPagoView solo la lee cuando el catalogo la
-        habilita — pero nunca se toca `precio_unitario`/`cantidad`, esos son
-        exclusivos de CrearPagoView.
-
-        No basta con crear lo que falta: si el cliente ya habia marcado un
-        extra y solo cambia la cantidad en un reenvio del checkout, la fila
-        existente debe actualizarse tambien, o el cambio se perderia en
-        silencio."""
-        ids_elegidos = {dato['id'].pk for dato in items_elegidos}
-        reserva.extras_seleccionados.exclude(extras_item_id__in=ids_elegidos).delete()
-
-        existentes = {
-            extra.extras_item_id: extra
-            for extra in reserva.extras_seleccionados.all()
-        }
-        for dato in items_elegidos:
-            item, cantidad = dato['id'], dato['cantidad']
-            extra = existentes.get(item.pk)
-            if extra is None:
-                nuevo = ReservaExtra(reserva=reserva, extras_item=item, cantidad_solicitada=cantidad)
-                nuevo.full_clean()
-                nuevo.save()
-            elif extra.cantidad_solicitada != cantidad:
-                extra.cantidad_solicitada = cantidad
-                extra.save(update_fields=['cantidad_solicitada'])
-
 
 class TrasladoCheckoutSerializer(ReservaCheckoutSerializer):
     """Checkout de transporte; comparte atribucion y constancia legal del checkout."""

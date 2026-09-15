@@ -34,12 +34,9 @@ import {
   crearPago,
   getCupo,
   getEstadoReserva,
-  getExtras,
   guardarReserva,
   validarCodigoPromocional,
-  type CatalogoExtras,
   type EstadoReservaPagada,
-  type ExtraCatalogo,
   type Moneda,
   type Pago,
   type PaqueteCatalogo,
@@ -238,9 +235,6 @@ export function CheckoutView({
   const checkoutIdValue = useCheckoutId();
   const checkoutId = checkoutIdValue?.id ?? '';
   const recuperable = checkoutIdValue?.recuperable ?? false;
-  const usaPersonalizaciones = Boolean(
-    paquete || (servicio && servicio.tipo_servicio !== 'pesca'),
-  );
   const catalogoUnificado = useMemo(() => {
     if (paquete) {
       const mapa = new Map<number, PersonalizacionUI>();
@@ -253,10 +247,7 @@ export function CheckoutView({
       }
       return Array.from(mapa.values());
     }
-    if (servicio && servicio.tipo_servicio !== 'pesca') {
-      return servicio.personalizaciones ?? [];
-    }
-    return [];
+    return servicio?.personalizaciones ?? [];
   }, [paquete, servicio]);
 
   const [day, setDay] = useState(initialDay);
@@ -362,44 +353,6 @@ export function CheckoutView({
     if (servicio) return servicio.precio_base_usd != null ? 'USD' : 'MXN';
     return 'MXN';
   });
-  // Catalogo de extras (brunch, licencia, carnada) con el monto ya resuelto para
-  // `people`/`moneda` — ver el efecto de abajo. null hasta la primera respuesta del backend.
-  const [catalogo, setCatalogo] = useState<CatalogoExtras | null>(null);
-  /**
-   * `null` = el cliente no ha tocado el paso de Extras todavia, asi que vale
-   * lo que el catalogo recomienda. Cualquier arreglo (incluido el vacio) es
-   * una decision suya y gana sobre la recomendacion.
-   *
-   * Se guarda "no ha elegido" en vez de copiar los recomendados a estado
-   * apenas llega el catalogo: copiarlos obliga a un efecto que sincroniza un
-   * estado con otro, y ese efecto es justo el que se equivocaba de condicion
-   * y dejaba el paso vacio. Aqui la seleccion efectiva se deriva y no puede
-   * desalinearse.
-   */
-  const [extrasElegidos, setExtrasElegidos] = useState<number[] | null>(null);
-  // Cuantas personas eligio el cliente para un extra con `cantidad_editable`
-  // (ver ExtraCatalogo) — solo importa para esos, id de ExtrasItem -> cantidad.
-  // Ausente = todo el grupo, mismo comportamiento que un extra sin este control.
-  const [cantidadesExtras, setCantidadesExtras] = useState<Record<number, number>>({});
-  /**
-   * En que quedo el efecto de recuperacion, para que los extras
-   * preseleccionados del catalogo (licencia, carnada) no compitan con una
-   * seleccion repuesta de una reserva a medio pagar.
-   *
-   * Antes esto era solo `recuperable`, y ahi estaba el bug: `recuperable` dice
-   * que esta pestana TRAE un checkout_id guardado, no que exista una reserva
-   * detras. Cualquier pestana ya usada (todas, despues del primer checkout)
-   * entraba con `recuperable` en true, y si el backend contestaba 404 —el caso
-   * normal: la reserva vieja ya se pago o nunca existio— nadie aplicaba los
-   * defaults y el paso de Extras arrancaba vacio para siempre.
-   */
-  // 'pendiente' como estado inicial es conservador: si el useLayoutEffect
-  // descubre que no hay sessionStorage, lo cambia a 'sin-reserva' de inmediato.
-  // Esto evita que el codigo de extras asuma defaults antes de saber si hay
-  // una reserva que recuperar.
-  const [recuperacion, setRecuperacion] = useState<'pendiente' | 'sin-reserva' | 'repuesta'>(
-    'pendiente',
-  );
   const [formaPago, setFormaPago] = useState<'completo' | 'anticipo'>('completo');
   const { mostrar: avisar } = useToast();
 
@@ -436,7 +389,6 @@ export function CheckoutView({
     if (checkoutIdValue === null || phaseInicializada.current) return;
     phaseInicializada.current = true;
     setPhase(recuperable ? 'recuperando' : tieneProducto ? 'form' : 'unavailable');
-    setRecuperacion(recuperable ? 'pendiente' : 'sin-reserva');
   }, [checkoutIdValue, recuperable, tieneProducto]);
   const [error, setError] = useState('');
   // Monto real cobrado, cuando la confirmacion viene de una reserva recuperada
@@ -448,11 +400,10 @@ export function CheckoutView({
   // lo que el precio de hoy recalcularia.
   const [recuperadoPagado, setRecuperadoPagado] = useState<number | null>(null);
   const [recuperadoSaldo, setRecuperadoSaldo] = useState<number | null>(null);
-  // Desglose de extras ya congelado al pagar, para una reserva
+  // Desglose de personalizaciones ya congelado al pagar, para una reserva
   // recuperada. Se guarda crudo (no formateado) porque `currency` depende de
   // `moneda`, y `moneda` recien se esta fijando en el mismo efecto que llena
   // esto — el formateo real ocurre despues, al construir `lineasExtrasRecuperadas`.
-  const [recuperadoExtras, setRecuperadoExtras] = useState<EstadoReservaPagada['extras']>([]);
   const [recuperadoPersonalizaciones, setRecuperadoPersonalizaciones] = useState<
     EstadoReservaPagada['personalizaciones']
   >([]);
@@ -562,65 +513,6 @@ export function CheckoutView({
     return () => clearTimeout(timer);
   }, [codigoPromocional, contact.email, empresaSlug]);
 
-  /**
-   * Catalogo de extras con el monto ya resuelto por el servidor para
-   * `people`/`moneda` — la web nunca reimplementa si un extra cobra por
-   * persona (ver apps/fleet/views.py).
-   * Se vuelve a pedir con cada cambio de grupo o moneda, porque los montos
-   * dependen de los dos.
-   */
-  useEffect(() => {
-    let cancelado = false;
-
-    (async () => {
-      let datos: CatalogoExtras;
-      try {
-        datos = await getExtras(people, moneda, empresaSlug);
-      } catch {
-        // Igual que getCupo: es ayuda adelantada, nunca debe trabar el checkout.
-        return;
-      }
-      if (!cancelado) setCatalogo(datos);
-    })();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [people, moneda, empresaSlug]);
-
-  /**
-   * Que extras van marcados ahora mismo.
-   *
-   * Mientras el cliente no toque el paso, valen los que el catalogo marca como
-   * recomendados (licencia y carnada). Deriva en vez de sincronizar, asi que
-   * da igual el orden en que lleguen el catalogo y el veredicto de la
-   * recuperacion — antes eso era un efecto condicionado a `recuperable`, que
-   * es "esta pestana trae un checkout_id guardado" y no "hay una reserva
-   * detras": cualquier pestana ya usada dejaba el paso vacio.
-   */
-  const extrasSeleccionados =
-    extrasElegidos ??
-    (recuperacion === 'sin-reserva' && catalogo
-      ? catalogo.extras.filter((e) => e.preseleccionado).map((e) => e.id)
-      : []);
-
-  const alternarExtra = (id: number, marcado: boolean) => {
-    setExtrasElegidos(
-      marcado ? [...extrasSeleccionados, id] : extrasSeleccionados.filter((x) => x !== id),
-    );
-    // Sin cantidad elegida no pasa nada (se deriva "todo el grupo" por
-    // default), pero al desmarcar se limpia para no arrastrar un numero de
-    // una eleccion anterior si el cliente lo vuelve a marcar despues.
-    if (!marcado) {
-      setCantidadesExtras((actual) => {
-        if (!(id in actual)) return actual;
-        const resto = { ...actual };
-        delete resto[id];
-        return resto;
-      });
-    }
-  };
-
   // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
   const usdDisponible = paquete
     ? paquete.precio_ancla_usd != null
@@ -639,64 +531,15 @@ export function CheckoutView({
     [lang, moneda],
   );
 
-  const extrasCatalogo = usaPersonalizaciones ? [] : catalogo?.extras ?? [];
-
-  /**
-   * La licencia va primero y separada del resto: es el unico item del catalogo
-   * que no es un antojo (obligatoria por ley para pescar, ver
-   * `extrasHints.licencia`), y mezclada sin distincion con brunch/carnada el
-   * cliente la trata igual de opcional que un postre. `primerOpcionalIndice`
-   * marca donde insertar el segundo encabezado dentro del mismo `.map` — evita
-   * duplicar el markup de la tarjeta en dos listas separadas.
-   */
-  const extrasOrdenados = [
-    ...extrasCatalogo.filter((e) => e.tipo === 'licencia'),
-    ...extrasCatalogo.filter((e) => e.tipo !== 'licencia'),
-  ];
-  const hayNecesario = extrasOrdenados.some((e) => e.tipo === 'licencia');
-  const primerOpcionalIndice = extrasOrdenados.findIndex((e) => e.tipo !== 'licencia');
-
-  const getNombreExtra = (e: { tipo?: string; nombre: string }) =>
-    (e.tipo && (checkout.extrasNames as Record<string, string>)?.[e.tipo]) || e.nombre;
-
-  const getDescripcionExtra = (e: { tipo?: string; descripcion?: string }) =>
-    (e.tipo && (checkout.extrasDescriptions as Record<string, string>)?.[e.tipo]) || e.descripcion;
-
-  const extrasSeleccionadosItems = extrasCatalogo.filter((e) => extrasSeleccionados.includes(e.id));
-
   // "2 de 5": leyenda para el extra con cantidad editable para decir la cantidad elegida.
   const deLabel = (cantidad: number, total: number) =>
     checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(total));
-
-  // Cuantas personas lleva ESTE extra. Solo se aparta de `people` (todo el
-  // grupo, el comportamiento de siempre) si el item es `cantidad_editable`
-  // (ej. licencia: alguien puede ya traer la suya tramitada aparte) y el
-  // cliente eligio menos — acotado por si `people` bajo despues de elegirla.
-  const cantidadDeExtra = (item: ExtraCatalogo) =>
-    item.cantidad_editable ? Math.min(cantidadesExtras[item.id] ?? people, people) : people;
-
-  const ajustarCantidadExtra = (item: ExtraCatalogo, delta: number) =>
-    setCantidadesExtras((actual) => {
-      const actualCantidad = Math.min(actual[item.id] ?? people, people);
-      return { ...actual, [item.id]: Math.min(people, Math.max(1, actualCantidad + delta)) };
-    });
-
-  // `monto` viene TOTAL para el grupo completo (ver apps/fleet/serializers.py,
-  // ExtrasItemSerializer.get_monto). Para uno `cantidad_editable` se
-  // reescala al precio unitario (monto/people) por la cantidad elegida, que
-  // puede ser menor al grupo — para los demas se suma tal cual, como siempre.
-  const cargoExtras = extrasSeleccionadosItems.reduce((acc, e) => {
-    if (e.monto == null) return acc;
-    const monto = Number(e.monto);
-    if (!e.cantidad_editable) return acc + monto;
-    return acc + (monto / people) * cantidadDeExtra(e);
-  }, 0);
 
   /**
    * Todo lo del catalogo que el cliente NO lleva: es lo que el recordatorio
    * de antes de pagar puede ofrecerle.
    *
-   * Cuenta cualquier extra sin marcar, no solo los recomendados. Filtrarlo a
+   * Cuenta cualquier item sin marcar, no solo los recomendados. Filtrarlo a
    * `preseleccionado` dejaba el recordatorio muerto desde que los
    * recomendados empezaron a venir marcados —la lista salia siempre vacia— y
    * de paso nunca ofrecia el brunch, que es el unico que no viene marcado y
@@ -704,16 +547,6 @@ export function CheckoutView({
    *
    * Sin precio en la moneda elegida no se ofrece: no se puede cobrar.
    */
-  const extrasPendientes: ExtraPendiente[] = extrasCatalogo
-    .filter((e) => !extrasSeleccionados.includes(e.id) && e.monto !== null)
-    .map((e) => ({
-      id: e.id,
-      avisoReforzado: e.tipo === 'licencia',
-      nombre: getNombreExtra(e),
-      monto: currency.format(Number(e.monto)),
-      hint: checkout.extrasHints[e.tipo] || null,
-    }));
-
   const personalizacionesPendientes: ExtraPendiente[] = catalogoUnificado
     .filter(
       (p) =>
@@ -736,9 +569,7 @@ export function CheckoutView({
         hint: null,
       };
     });
-  const opcionesPendientes = usaPersonalizaciones
-    ? personalizacionesPendientes
-    : extrasPendientes;
+  const opcionesPendientes = personalizacionesPendientes;
 
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
@@ -761,9 +592,7 @@ export function CheckoutView({
     return calcularPrecioPaquete(paquete, personalizaciones, people, moneda);
   }, [paquete, personalizaciones, people, moneda]);
 
-  const cargoPersonalizacionesServicio = usaPersonalizaciones
-    ? totalPersonalizaciones(catalogoUnificado, personalizaciones, people, moneda)
-    : 0;
+  const cargoPersonalizacionesServicio = totalPersonalizaciones(catalogoUnificado, personalizaciones, people, moneda);
 
   const subtotalSinDescuento = paquete
     ? (calculoPaquete?.precioFinal ?? null)
@@ -771,7 +600,7 @@ export function CheckoutView({
       ? null
       : cargoPersonalizacionesServicio === null
         ? null
-        : tourPrice + cargoPersonas + cargoExtras + cargoPersonalizacionesServicio;
+        : tourPrice + cargoPersonas + cargoPersonalizacionesServicio;
 
   // Solo informativo (redondeo igual al de `cargo_por_descuento` en
   // apps/payments/pricing.py): el monto real lo congela `crear-pago` sobre el
@@ -791,25 +620,6 @@ export function CheckoutView({
    * no puedan decir cosas distintas.
    */
   const lineasExtras = [
-    ...extrasSeleccionadosItems
-      .filter((e) => e.monto != null)
-      .map((e) => {
-        const totalExtra = Number(e.monto);
-        const nombreTraducido = getNombreExtra(e);
-        if (e.cantidad_editable) {
-          const cantidad = cantidadDeExtra(e);
-          return {
-            label: `${nombreTraducido} (${deLabel(cantidad, people)})`,
-            amount: currency.format((totalExtra / people) * cantidad),
-          };
-        }
-        return {
-          label: e.cobrar_por_persona
-            ? `${nombreTraducido} (${people} × ${currency.format(totalExtra / people)})`
-            : nombreTraducido,
-          amount: currency.format(totalExtra),
-        };
-      }),
     ...catalogoUnificado
       .filter((p) => p.tipo_interaccion === 'check' && personalizacionesMap.has(p.id))
       .map((p) => {
@@ -842,25 +652,6 @@ export function CheckoutView({
    * ser otro.
    */
   const lineasExtrasRecuperadas = [
-    ...recuperadoExtras
-      .filter((e) => e.monto != null)
-      .map((e) => {
-        const totalExtra = Number(e.monto);
-        // `cantidad` ya es la congelada real: si vino menor al grupo, este
-        // extra tenia `cantidad_editable` y el cliente pidio menos.
-        if (e.cantidad !== null && e.cantidad !== people) {
-          return {
-            label: `${e.nombre} (${deLabel(e.cantidad, people)})`,
-            amount: currency.format(totalExtra),
-          };
-        }
-        return {
-          label: e.cobrar_por_persona
-            ? `${e.nombre} (${people} × ${currency.format(totalExtra / people)})`
-            : e.nombre,
-          amount: currency.format(totalExtra),
-        };
-      }),
     ...recuperadoPersonalizaciones
       .filter((p) => p.tipo_interaccion === 'check' && p.monto !== null)
       .map((p) => ({
@@ -987,7 +778,6 @@ export function CheckoutView({
         // 404 (nada que recuperar), sin red, lo que sea: seguir como si esta
         // pestana no tuviera nada guardado. Nunca debe trabar el checkout.
         if (!cancelado) {
-          setRecuperacion('sin-reserva');
           setPhase(tieneProducto ? 'form' : 'unavailable');
         }
         return;
@@ -1009,17 +799,11 @@ export function CheckoutView({
             ? (centavosDe(estado.precio_total) - centavosDe(estado.monto_pagado)) / 100
             : null,
         );
-        setRecuperadoExtras(estado.extras);
         setRecuperadoPersonalizaciones(estado.personalizaciones);
         setRecuperadoCodigoPromocional(estado.codigo_promocional);
         setRecuperadoDescuento(
           estado.descuento_aplicado !== null ? Number(estado.descuento_aplicado) : null,
         );
-        // Esta pantalla no tiene paso de Extras que precargar, pero el efecto
-        // de los defaults no puede quedarse esperando un veredicto que nunca
-        // llega: si el cliente vuelve a reservar en esta misma pestana, el
-        // paso arrancaria vacio otra vez.
-        setRecuperacion('sin-reserva');
         setPhase('confirmed');
         return;
       }
@@ -1045,20 +829,9 @@ export function CheckoutView({
           email: estado.correo_cliente,
         });
         setMoneda(estado.moneda);
-        setExtrasElegidos(estado.extras.map((e) => e.id));
-        // Cantidad ya elegida para un extra con `cantidad_editable` (ver
-        // ExtraCatalogo) — sin esto, recargar la pagina la borraria en silencio.
-        setCantidadesExtras(
-          Object.fromEntries(
-            estado.extras.filter((e) => e.cantidad != null).map((e) => [e.id, e.cantidad as number]),
-          ),
-        );
         // Un arreglo vacío también es una decisión restaurada: no aplicar de
         // nuevo los checks recomendados después de una recarga.
         setPersonalizaciones(estado.personalizaciones);
-        // Lo que el cliente ya habia elegido gana sobre los recomendados del
-        // catalogo (ver el efecto de los defaults, mas arriba).
-        setRecuperacion('repuesta');
         if (estado.forma_pago) setFormaPago(estado.forma_pago);
         setPasosVisibles(3);
         setExtrasConfirmado(true);
@@ -1068,7 +841,6 @@ export function CheckoutView({
 
       // 'cancelada': nada que reponer — esta reserva ya no sirve. Se sigue con
       // el formulario vacio normal, como si no hubiera nada guardado.
-      setRecuperacion('sin-reserva');
       setPhase(tieneProducto ? 'form' : 'unavailable');
     })();
 
@@ -1185,9 +957,7 @@ export function CheckoutView({
       return;
     }
 
-    const erroresDePersonalizacion = usaPersonalizaciones
-      ? erroresPersonalizaciones(catalogoUnificado, personalizaciones)
-      : {};
+    const erroresDePersonalizacion = erroresPersonalizaciones(catalogoUnificado, personalizaciones);
     setErroresPersonalizacion(erroresDePersonalizacion);
     const primeraPersonalizacion = catalogoUnificado.find(
       (p) => erroresDePersonalizacion[p.id],
@@ -1233,29 +1003,24 @@ export function CheckoutView({
         // El nombre del deslinde es el que el cliente ya escribio en sus datos:
         // pedirlo dos veces no aporta nada y estorba el checkout.
         deslinde_nombre: contact.fullName.trim(),
-        // La seleccion viaja con la reserva, sin precio: crear-pago la congela
-        // con el catalogo vigente al pagar (ver backend/apps/bookings/serializers.py).
-        // `cantidad` solo se manda si el item la deja elegir (ver ExtraCatalogo).
-        extras: extrasSeleccionados.map((id) => {
-          const item = extrasCatalogo.find((e) => e.id === id);
-          return { id, cantidad: item?.cantidad_editable ? cantidadDeExtra(item) : undefined };
-        }),
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         captcha_token: captchaToken.current,
         paquete: paquete ? paquete.slug : (paqueteId ?? null),
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
-        personalizaciones: usaPersonalizaciones
-          ? personalizaciones.map((seleccion) => {
-              const item = catalogoUnificado.find((p) => p.id === seleccion.id);
-              return {
-                ...seleccion,
-                cantidad: item
-                  ? cantidadEfectiva(item, people, seleccion.cantidad)
-                  : seleccion.cantidad,
-              };
-            })
-          : undefined,
+        // La seleccion viaja con la reserva, sin precio: crear-pago la congela
+        // con el catalogo vigente al pagar (ver backend/apps/bookings/serializers.py).
+        // Se manda siempre, incluido `[]`, para que reenviar el checkout borre
+        // una seleccion vieja en vez de conservarla.
+        personalizaciones: personalizaciones.map((seleccion) => {
+          const item = catalogoUnificado.find((p) => p.id === seleccion.id);
+          return {
+            ...seleccion,
+            cantidad: item
+              ? cantidadEfectiva(item, people, seleccion.cantidad)
+              : seleccion.cantidad,
+          };
+        }),
         fecha_salida: tieneHospedaje ? fechaSalida : undefined,
       }, empresaSlug);
 
@@ -1704,12 +1469,10 @@ export function CheckoutView({
                 title={checkout.extrasStepHeadline}
                 estado={colapsado3 ? 'completado' : pasoEditando === 3 ? 'editando' : 'activo'}
                 resumen={
-                  [
-                    ...extrasSeleccionadosItems.map((e) => getNombreExtra(e)),
-                    ...catalogoUnificado
-                      .filter((p) => personalizacionesMap.has(p.id))
-                      .map((p) => p.nombre),
-                  ].join(', ') ||
+                  catalogoUnificado
+                    .filter((p) => personalizacionesMap.has(p.id))
+                    .map((p) => p.nombre)
+                    .join(', ') ||
                   checkout.noExtrasSelected
                 }
                 actionLabel={
@@ -1721,109 +1484,6 @@ export function CheckoutView({
                 }
                 onAction={locked ? undefined : () => setPasoEditando(colapsado3 ? 3 : null)}
               >
-                <div className="flex flex-col gap-2">
-                  {extrasOrdenados.map((item, indice) => (
-                    <div key={item.id}>
-                      {hayNecesario && indice === 0 && (
-                        <p className="mb-2 text-xs font-medium tracking-wide text-muted uppercase">
-                          {checkout.extrasRequiredLabel}
-                        </p>
-                      )}
-                      {hayNecesario && indice === primerOpcionalIndice && (
-                        <p className="mt-3 mb-2 text-xs font-medium tracking-wide text-muted uppercase">
-                          {checkout.extrasOptionalLabel}
-                        </p>
-                      )}
-                      <label className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface">
-                        <span className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={extrasSeleccionados.includes(item.id)}
-                            disabled={locked}
-                            onChange={(e) => alternarExtra(item.id, e.target.checked)}
-                            className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                          />
-                          <span>
-                            {getNombreExtra(item)}
-                            {item.preseleccionado && (
-                              <span className="ml-2 text-xs font-medium text-accent">
-                                {checkout.recommendedBadge}
-                              </span>
-                            )}
-                            {getDescripcionExtra(item) && (
-                              <span className="block text-xs text-muted">{getDescripcionExtra(item)}</span>
-                            )}
-                            {item.preseleccionado &&
-                              extrasSeleccionados.includes(item.id) &&
-                              checkout.extrasHints[item.tipo] && (
-                                <span className="block text-xs text-muted">
-                                  {checkout.extrasHints[item.tipo]}
-                                </span>
-                              )}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-right text-muted">
-                          {item.monto === null
-                            ? checkout.extrasUnavailableInCurrency
-                            : currency.format(Number(item.monto))}
-                          {item.cobrar_por_persona && item.monto !== null && (
-                            <span className="block text-xs">{checkout.extrasPerPerson}</span>
-                          )}
-                        </span>
-                      </label>
-
-                      {/* Al desmarcarla, el mismo aviso ambar que usa `sinLugar`
-                          mas arriba: sin licencia el cliente no puede pescar, y
-                          esperar hasta el recordatorio de antes de pagar
-                          (`AmenitiesReminder`) era tarde para algo que se decide
-                          aqui mismo, al quitarle el check. Solo `extrasWarnings`
-                          trae texto para 'licencia' — los demas tipos no tienen
-                          esta urgencia y se quedan con el hint gris de arriba. */}
-                      {!extrasSeleccionados.includes(item.id) && checkout.extrasWarnings[item.tipo] && (
-                        <div className="flex items-start gap-2 border border-t-0 border-action/40 bg-action/10 px-4 py-2.5 text-xs text-foreground">
-                          <Warning size={14} className="mt-0.5 shrink-0 text-action" />
-                          <p>{checkout.extrasWarnings[item.tipo]}</p>
-                        </div>
-                      )}
-
-                      {/* Solo si el item lo permite (ej. licencia: alguien puede
-                          ya traer la suya tramitada aparte) y hay mas de una
-                          persona entre quien repartir. Pegado a la tarjeta que
-                          lo revela, no suelto al fondo del grupo. */}
-                      {item.cantidad_editable &&
-                        extrasSeleccionados.includes(item.id) &&
-                        people > 1 && (
-                          <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
-                            <span className="text-muted">{checkout.licenseQuantity.question}</span>
-                            <span className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => ajustarCantidadExtra(item, -1)}
-                                disabled={locked || cantidadDeExtra(item) <= 1}
-                                aria-label="-"
-                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
-                              >
-                                <Minus size={12} />
-                              </button>
-                              <span className="min-w-[5.5rem] text-center whitespace-nowrap">
-                                {deLabel(cantidadDeExtra(item), people)}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => ajustarCantidadExtra(item, 1)}
-                                disabled={locked || cantidadDeExtra(item) >= people}
-                                aria-label="+"
-                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
-                              >
-                                <Plus size={12} />
-                              </button>
-                            </span>
-                          </div>
-                        )}
-                    </div>
-                  ))}
-                </div>
-
                 {catalogoUnificado.length > 0 && (
                   <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5">
                     {catalogoUnificado.map((sp) => {
@@ -2080,11 +1740,7 @@ export function CheckoutView({
             checkout={checkout}
             feedback={dict.feedback}
             pendientes={opcionesPendientes}
-            onSeleccionarExtra={(id) =>
-              usaPersonalizaciones
-                ? alternarPersonalizacion(id, true)
-                : alternarExtra(id, true)
-            }
+            onSeleccionarExtra={(id) => alternarPersonalizacion(id, true)}
             onContinuar={enviar}
             onCerrar={() => setRecordatorioAbierto(false)}
             enviando={enviando}

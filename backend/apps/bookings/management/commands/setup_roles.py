@@ -20,7 +20,6 @@ PERMISOS_VENDEDORA = [
     ('fleet', 'embarcacion', ['view']),
     ('fleet', 'capitan', ['view']),
     ('fleet', 'puntoencuentro', ['view']),
-    ('bookings', 'reservaextra', ['view']),
     ('bookings', 'reservapersonalizacion', ['view']),
     ('fleet', 'embarcacionnodisponible', ['add', 'change', 'delete', 'view']),
 ]
@@ -36,7 +35,6 @@ PERMISOS_JEFE = PERMISOS_VENDEDORA + [
     ('fleet', 'embarcacion', ['add', 'change', 'delete']),
     ('fleet', 'capitan', ['add', 'change', 'delete']),
     ('fleet', 'puntoencuentro', ['add', 'change', 'delete']),
-    ('fleet', 'extrasitem', ['add', 'change', 'delete', 'view']),
     ('fleet', 'transportetarifa', ['add', 'change', 'delete', 'view']),
     ('fleet', 'codigopromocional', ['add', 'change', 'delete', 'view']),
     # Catalogo multi-sede: el jefe configura sus propios servicios, recursos,

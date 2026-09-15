@@ -9,6 +9,131 @@ from django.test import TransactionTestCase
 from apps.tenancy.rls import alcance_operador_migracion
 
 
+class ExtrasAPersonalizacionMigration0033Tests(TransactionTestCase):
+    migrate_from = [('fleet', '0032_retirar_tarifa'), ('bookings', '0045_rename_reservapersonalizacion')]
+    migrate_to = [('fleet', '0033_extrasitem_a_personalizacion')]
+
+    def setUp(self):
+        super().setUp()
+        self.executor = MigrationExecutor(connection)
+        self.executor.migrate(self.migrate_from)
+        self.executor.loader.build_graph()
+        self.old = self.executor.loader.project_state(self.migrate_from).apps
+        self.addCleanup(self._restaurar)
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            sede = self.old.get_model('tenancy', 'Sede').objects.create(nombre='Extras', slug='extras-mig')
+            self.empresas = []
+            for i in range(2):
+                empresa = self.old.get_model('tenancy', 'Empresa').objects.create(
+                    sede=sede, nombre=f'Extras {i}', slug=f'extras-{i}', activo=True)
+                self.old.get_model('fleet', 'Servicio').objects.create(
+                    empresa=empresa, nombre='Pesca', slug='pesca-deportiva', tipo_servicio='pesca')
+                self.empresas.append(empresa)
+
+    def _restaurar(self):
+        # Conflicting fixtures must not poison the subsequent schema restoration.
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            if 'fleet_extrasitem' in connection.introspection.table_names():
+                self.old.get_model('fleet', 'ExtrasItem').objects.all().delete()
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def _extra(self, empresa=None, **kwargs):
+        datos = dict(empresa=empresa or self.empresas[0], nombre='Paquete de Brunch',
+                     tipo='brunch', precio=Decimal('321.50'), precio_usd=Decimal('19.25'),
+                     cobrar_por_persona=True, cantidad_editable=False, preseleccionado=False)
+        datos.update(kwargs)
+        return self.old.get_model('fleet', 'ExtrasItem').objects.create(**datos)
+
+    def test_copia_precios_flags_nombres_largos_y_empresas_y_seed_idempotente(self):
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            originales = []
+            for i, empresa in enumerate(self.empresas):
+                originales.extend([
+                    self._extra(empresa, precio=Decimal('321.50') + i),
+                    self._extra(empresa, nombre='Licencia de pesca', tipo='licencia',
+                                cantidad_editable=True, precio=Decimal('478'), precio_usd=None),
+                    self._extra(empresa, nombre='Carnada', tipo='carnada', cobrar_por_persona=False,
+                                preseleccionado=True, precio=Decimal('218')),
+                    self._extra(empresa, nombre='X' * 125, tipo='otro', activo=False),
+                ])
+        self.executor.migrate(self.migrate_to)
+        actual = self.executor.loader.project_state(self.migrate_to).apps
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            for extra in originales:
+                p = actual.get_model('fleet', 'Personalizacion').objects.get(
+                    empresa_id=extra.empresa_id, nombre=extra.nombre)
+                sp = actual.get_model('fleet', 'ServicioPersonalizacion').objects.get(personalizacion=p)
+                self.assertEqual(p.tipo, extra.tipo)
+                self.assertEqual(p.tipo_interaccion, 'check')
+                self.assertEqual(p.opciones_seleccion, [])
+                self.assertEqual(p.cobrar_por_persona, extra.cobrar_por_persona)
+                self.assertEqual(p.cantidad_editable, extra.cantidad_editable)
+                self.assertEqual(p.aviso_reforzado, extra.tipo == 'licencia')
+                self.assertEqual(p.activo, extra.activo)
+                self.assertEqual(sp.precio, extra.precio)
+                self.assertEqual(sp.precio_usd, extra.precio_usd)
+                self.assertEqual(sp.preseleccionado, extra.tipo == 'licencia' or extra.preseleccionado)
+                self.assertEqual(sp.activo, extra.activo)
+                self.assertFalse(sp.obligatorio)
+                self.assertEqual(sp.servicio.empresa_id, extra.empresa_id)
+            self.assertEqual(actual.get_model('fleet', 'Personalizacion')._meta.get_field('nombre').max_length, 150)
+        from django.core.management import call_command
+        for empresa in self.empresas:
+            call_command('seed_extras', empresa=empresa.slug, verbosity=0)
+            call_command('seed_extras', empresa=empresa.slug, verbosity=0)
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            self.assertEqual(actual.get_model('fleet', 'Personalizacion').objects.count(), 8)
+            for extra in originales:
+                sp = actual.get_model('fleet', 'ServicioPersonalizacion').objects.get(
+                    personalizacion__empresa_id=extra.empresa_id, personalizacion__nombre=extra.nombre)
+                self.assertEqual((sp.precio, sp.precio_usd), (extra.precio, extra.precio_usd))
+
+    def test_reutiliza_catalogo_y_asociacion_compatibles(self):
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            extra = self._extra()
+            p = self.old.get_model('fleet', 'Personalizacion').objects.create(
+                empresa_id=extra.empresa_id, nombre=extra.nombre, tipo=extra.tipo,
+                cobrar_por_persona=True)
+            servicio = self.old.get_model('fleet', 'Servicio').objects.get(empresa_id=extra.empresa_id)
+            sp = self.old.get_model('fleet', 'ServicioPersonalizacion').objects.create(
+                servicio=servicio, personalizacion=p, precio=extra.precio, precio_usd=extra.precio_usd)
+        self.executor.migrate(self.migrate_to)
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            self.assertEqual(self.old.get_model('fleet', 'Personalizacion').objects.count(), 1)
+            self.assertEqual(self.old.get_model('fleet', 'ServicioPersonalizacion').objects.get().pk, sp.pk)
+
+    def test_conflicto_catalogo_revierte_toda_copia(self):
+        self._probar_conflicto(precio=False)
+
+    def test_conflicto_precio_revierte_toda_copia(self):
+        self._probar_conflicto(precio=True)
+
+    def _probar_conflicto(self, precio):
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            self._extra(nombre='Primero')
+            extra = self._extra(nombre='Conflicto', tipo='otro')
+            p = self.old.get_model('fleet', 'Personalizacion').objects.create(
+                empresa_id=extra.empresa_id, nombre=extra.nombre, tipo=extra.tipo,
+                cobrar_por_persona=precio)
+            if precio:
+                servicio = self.old.get_model('fleet', 'Servicio').objects.get(empresa_id=extra.empresa_id)
+                self.old.get_model('fleet', 'ServicioPersonalizacion').objects.create(
+                    servicio=servicio, personalizacion=p, precio=Decimal('999'))
+        with self.assertRaisesRegex(RuntimeError, f'empresa {extra.empresa_id}.*Conflicto'):
+            self.executor.migrate(self.migrate_to)
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            self.assertEqual(self.old.get_model('fleet', 'Personalizacion').objects.count(), 1)
+            self.assertEqual(self.old.get_model('fleet', 'ExtrasItem').objects.count(), 2)
+
+    def test_falta_servicio_aborta_sin_inventarlo(self):
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            self._extra()
+            self.old.get_model('fleet', 'Servicio').objects.filter(empresa=self.empresas[0]).delete()
+        with self.assertRaisesRegex(RuntimeError, f'Falta pesca-deportiva en empresa {self.empresas[0].pk}'):
+            self.executor.migrate(self.migrate_to)
+
+
 class PersonalizacionMigration0030Tests(TransactionTestCase):
     """Prueba la migracion de datos 0030_personalizacion_tipo_interaccion.
 
@@ -396,4 +521,3 @@ class TarifaAServicioMigration0031Tests(TransactionTestCase):
             with transaction.atomic(using=connection.alias):
                 with alcance_operador_migracion(connection):
                     ReservaH.objects.using(connection.alias).filter(pk=reserva_huerfana.pk).delete()
-
