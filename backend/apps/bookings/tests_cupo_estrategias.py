@@ -175,6 +175,7 @@ class ReservaCleanEstrategiaCupoTests(EmpresaTestCase):
             telefono_cliente='1234567890',
             canal_origen=Reserva.CanalOrigen.WHATSAPP,
         )
-        reserva.full_clean()
+        with self.assertRaisesMessage(ValidationError, 'Selecciona un servicio o paquete'):
+            reserva.full_clean()
 
 

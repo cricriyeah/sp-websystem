@@ -2,19 +2,23 @@ import uuid
 from datetime import time, timedelta
 from decimal import Decimal
 
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 from django.db import connection, transaction
 from django.db.migrations.executor import MigrationExecutor
-from django.test import TransactionTestCase
+from django.test import RequestFactory, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory
 
+from apps.bookings.admin import ReservaAdmin
 from apps.bookings.models import Reserva, ReservaPersonalizacion
 from apps.bookings.serializers import ReservaCheckoutSerializer
-from apps.fleet.models import Personalizacion, Servicio, ServicioPersonalizacion
+from apps.fleet.models import Paquete, Personalizacion, Servicio, ServicioPersonalizacion
 from apps.fleet.serializers import ServicioSerializer
-from apps.testing import EmpresaTestCase, OperadorTestCase
+from apps.testing import EmpresaTestCase, OperadorTestCase, crear_servicio_pesca
+from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.tenancy.rls import alcance_operador_migracion
 
@@ -52,7 +56,26 @@ class PersonalizacionesModelTests(EmpresaTestCase):
             correo_cliente='juan@example.com',
             moneda='MXN',
             deslinde_aceptado=True,
+            canal_origen=Reserva.CanalOrigen.WEB,
         )
+
+    def test_reserva_necesita_producto(self):
+        self.reserva.servicio = None
+        self.reserva.paquete = None
+        with self.assertRaisesMessage(ValidationError, 'Selecciona un servicio o paquete'):
+            self.reserva.full_clean()
+
+    def test_reserva_no_acepta_servicio_y_paquete_a_la_vez(self):
+        paquete = Paquete.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            nombre='Paquete Exclusividad',
+            slug='paquete-exclusividad',
+            precio_ancla=Decimal('5000'),
+        )
+        self.reserva.paquete = paquete
+        with self.assertRaisesMessage(ValidationError, 'No puedes seleccionar servicio y paquete a la vez'):
+            self.reserva.full_clean()
 
     def test_numero_cero_es_valido_e_input_no_tiene_subtotal(self):
         fila = ReservaPersonalizacion(
@@ -490,3 +513,112 @@ class ReservaPersonalizacionMigration0045Tests(TransactionTestCase):
                 self.assertEqual(fila.cantidad, 2)
                 self.assertEqual(fila.respuesta, '')
                 self.assertIsNone(fila.precio_unitario)
+
+
+class ReservaAdminInitialDataTests(EmpresaTestCase):
+    def setUp(self):
+        super().setUp()
+        self.site = AdminSite()
+        self.admin = ReservaAdmin(Reserva, self.site)
+        self.rf = RequestFactory()
+        self.servicio_pesca = crear_servicio_pesca(self.empresa)
+        self.jefe = self.crear_jefe()
+        self.vendedora = self.crear_vendedora()
+
+    def test_get_add_inicializa_pesca_para_jefe_y_vendedora(self):
+        for user in (self.jefe, self.vendedora):
+            with self.subTest(user=user.username):
+                request = self.rf.get('/admin/bookings/reserva/add/')
+                request.user = user
+                initial = self.admin.get_changeform_initial_data(request)
+                self.assertEqual(initial.get('servicio'), self.servicio_pesca.pk)
+
+    def test_formulario_real_admin_bajo_vendedora_y_jefe(self):
+        for user in (self.jefe, self.vendedora):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                response = self.client.get(reverse('admin:bookings_reserva_add'))
+                self.assertEqual(response.status_code, 200)
+                form = response.context_data['adminform'].form
+                self.assertEqual(form.initial.get('servicio'), self.servicio_pesca.pk)
+
+    def test_empresa_b_con_mismo_slug_nunca_se_usa(self):
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.como_operador_plataforma():
+                empresa_b = Empresa.objects.create(
+                    sede=self.sede,
+                    nombre='Empresa B',
+                    slug='empresa-b',
+                    activo=True,
+                )
+                servicio_b = Servicio.objects.create(
+                    empresa=empresa_b,
+                    nombre='Pesca B',
+                    slug='pesca-deportiva',
+                    tipo_servicio='pesca',
+                    activo=True,
+                    precio_base=Decimal('6000'),
+                )
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+
+        request = self.rf.get('/admin/bookings/reserva/add/')
+        request.user = self.jefe
+        initial = self.admin.get_changeform_initial_data(request)
+        self.assertEqual(initial.get('servicio'), self.servicio_pesca.pk)
+        self.assertNotEqual(initial.get('servicio'), servicio_b.pk)
+
+    def test_formulario_de_edicion_no_reemplaza_servicio(self):
+        otro_servicio = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Paseo Especial',
+            slug='paseo-especial',
+            tipo_servicio='otro',
+            precio_base=Decimal('2000'),
+        )
+        reserva = Reserva.objects.create(
+            empresa=self.empresa,
+            servicio=otro_servicio,
+            fecha=timezone.localdate() + timedelta(days=5),
+            hora=time(8),
+            numero_personas=2,
+            nombre_cliente='Cliente Edicion',
+            deslinde_aceptado=True,
+            canal_origen=Reserva.CanalOrigen.WEB,
+        )
+        request = self.rf.get(f'/admin/bookings/reserva/{reserva.pk}/change/')
+        request.user = self.jefe
+        response = self.admin.changeform_view(request, object_id=str(reserva.pk))
+        form = response.context_data['adminform'].form
+        self.assertEqual(form.instance.servicio_id, otro_servicio.pk)
+
+    def test_paquete_explicito_en_initial_no_se_combina_con_pesca(self):
+        paquete = Paquete.objects.create(
+            sede=self.sede,
+            empresa_lider=self.empresa,
+            nombre='Paquete Combinado',
+            slug='paquete-comb',
+            precio_ancla=Decimal('7000'),
+        )
+        request = self.rf.get(f'/admin/bookings/reserva/add/?paquete={paquete.pk}')
+        request.user = self.jefe
+        initial = self.admin.get_changeform_initial_data(request)
+        self.assertEqual(str(initial.get('paquete')), str(paquete.pk))
+        self.assertNotIn('servicio', initial)
+
+    def test_operador_sin_empresa_no_recibe_default(self):
+        operador = User.objects.create_user('operador_admin', is_staff=True, password='x')
+        operador.groups.add(Group.objects.get(name='OperadorPlataforma'))
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.como_operador_plataforma():
+                request = self.rf.get('/admin/bookings/reserva/add/')
+                request.user = operador
+                initial = self.admin.get_changeform_initial_data(request)
+                self.assertNotIn('servicio', initial)
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+

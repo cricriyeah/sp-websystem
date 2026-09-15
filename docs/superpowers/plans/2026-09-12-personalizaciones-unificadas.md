@@ -859,7 +859,7 @@ No reemplazar la estrategia de hospedaje ni el precio de paquetes con esta expre
 
 **Consume:** fixtures tarea 7, resolución tarea 8. **Produce:** `Reserva.clean()` rechaza ambos campos vacíos; servicio/paquete siguen mutuamente excluyentes. Admin inicializa únicamente alta nueva sin producto y Empresa activa conocida.
 
-- [ ] **1. Escribir rojo** sobre fixture de `PersonalizacionesModelTests`:
+- [x] **1. Escribir rojo** sobre fixture de `PersonalizacionesModelTests`:
 
 ```python
 def test_reserva_necesita_producto(self):
@@ -871,8 +871,8 @@ def test_reserva_necesita_producto(self):
 
 Tests admin con RequestFactory y jefe/vendedora de EmpresaTestCase: GET add inicializa su pesca; Empresa B con mismo slug nunca se usa; formulario de edición no reemplaza servicio; paquete explícito en initial no se combina con pesca; operador sin Empresa no recibe default arbitrario.
 
-- [ ] **2. Ejecutar rojo:** `manage.py test apps.bookings.tests_personalizaciones`.
-- [ ] **3. Agregar al inicio de Reserva.clean después de super:**
+- [x] **2. Ejecutar rojo:** `manage.py test apps.bookings.tests_personalizaciones`.
+- [x] **3. Agregar al inicio de Reserva.clean después de super:**
 
 ```python
 if not self.servicio_id and not self.paquete_id:
@@ -897,7 +897,7 @@ def get_changeform_initial_data(self, request):
 
 Importar Servicio si no está; usar scope existente, no operador para saltar RLS. No rellenar servidor silenciosamente un POST inválido: el default pertenece al formulario de alta. La limpieza del help_text de Reserva.servicio se hace con AlterField en tarea 11, para mantener modelo/estado de migraciones iguales en cada gate.
 
-- [ ] **4. Verde:** suite backend completa y formulario real de admin bajo vendedora/jefe. Commit `feat: exigir producto en reserva y facilitar alta de pesca`.
+- [x] **4. Verde:** suite backend completa y formulario real de admin bajo vendedora/jefe. Commit `feat: exigir producto en reserva y facilitar alta de pesca`.
 
 ### Tarea 10: Retirar Tarifa y sus consumidores en un solo cambio
 

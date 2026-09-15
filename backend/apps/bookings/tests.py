@@ -588,6 +588,7 @@ class ReservaApiTests(ApiTestCase):
     CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
 
     def payload(self, **overrides):
+        servicio = crear_servicio_pesca(self.empresa)
         datos = {
             'checkout_id': self.CHECKOUT_ID,
             'fecha': str(date.today() + timedelta(days=10)),
@@ -599,6 +600,7 @@ class ReservaApiTests(ApiTestCase):
             'moneda': 'USD',
             'deslinde_aceptado': True,
             'deslinde_nombre': 'Ana Ruiz',
+            'servicio': servicio.slug,
         }
         datos.update(overrides)
         return datos
@@ -713,6 +715,7 @@ class ExtrasApiTests(ApiTestCase):
     CHECKOUT_ID = '11111111-1111-4111-8111-111111111111'
 
     def payload(self, **overrides):
+        servicio = crear_servicio_pesca(self.empresa)
         datos = {
             'checkout_id': self.CHECKOUT_ID,
             'fecha': str(date.today() + timedelta(days=10)),
@@ -724,6 +727,7 @@ class ExtrasApiTests(ApiTestCase):
             'moneda': 'MXN',
             'deslinde_aceptado': True,
             'deslinde_nombre': 'Ana Ruiz',
+            'servicio': servicio.slug,
         }
         datos.update(overrides)
         return datos
@@ -818,6 +822,7 @@ class AtribucionDeVentaTests(ApiTestCase):
         )
 
     def enviar(self, **overrides):
+        servicio = crear_servicio_pesca(self.empresa)
         datos = {
             'checkout_id': self.CHECKOUT_ID,
             'fecha': str(date.today() + timedelta(days=10)),
@@ -829,6 +834,7 @@ class AtribucionDeVentaTests(ApiTestCase):
             'moneda': 'MXN',
             'deslinde_aceptado': True,
             'deslinde_nombre': 'Ana Ruiz',
+            'servicio': servicio.slug,
         }
         datos.update(overrides)
         return self.client.post(
@@ -904,6 +910,7 @@ class IpDelDeslindeTests(ApiTestCase):
     CHECKOUT_ID = '44444444-4444-4444-8444-444444444444'
 
     def enviar(self, **extra):
+        servicio = crear_servicio_pesca(self.empresa)
         datos = {
             'checkout_id': self.CHECKOUT_ID,
             'fecha': str(date.today() + timedelta(days=10)),
@@ -915,6 +922,7 @@ class IpDelDeslindeTests(ApiTestCase):
             'moneda': 'MXN',
             'deslinde_aceptado': True,
             'deslinde_nombre': 'Ana Ruiz',
+            'servicio': servicio.slug,
         }
         response = self.client.post(
             f'/api/{self.empresa.slug}/reservas/', datos, content_type='application/json', **extra
@@ -970,6 +978,7 @@ class ThrottleTests(ApiTestCase):
     @mock.patch.dict(ScopedRateThrottle.THROTTLE_RATES, {'reservas': '1/min'})
     def test_el_limite_es_por_ip_no_global(self):
         """Dos clientes distintos detras de la misma pagina no se estorban."""
+        servicio = crear_servicio_pesca(self.empresa)
         datos = {
             'checkout_id': '55555555-5555-4555-8555-555555555555',
             'fecha': str(date.today() + timedelta(days=10)),
@@ -981,6 +990,7 @@ class ThrottleTests(ApiTestCase):
             'moneda': 'MXN',
             'deslinde_aceptado': True,
             'deslinde_nombre': 'Ana Ruiz',
+            'servicio': servicio.slug,
         }
 
         def enviar(ip):
@@ -1617,12 +1627,12 @@ class VentanaHorariaTest(EmpresaTestCase):
     def test_pesca_legacy_sin_servicio_valida_ventana_5_a_7(self):
         # 06:00 pasa
         r_ok = Reserva(**datos_reserva(self.empresa, servicio=None, hora=time(6, 0)))
-        r_ok.full_clean()
+        r_ok._validar_ventana_horaria()
 
         # 09:00 falla
         r_fail = Reserva(**datos_reserva(self.empresa, servicio=None, hora=time(9, 0)))
         with self.assertRaises(ValidationError) as ctx:
-            r_fail.full_clean()
+            r_fail._validar_ventana_horaria()
         self.assertIn('hora', ctx.exception.message_dict)
 
     def test_servicio_con_ventana_propia(self):
@@ -1662,12 +1672,12 @@ class TopePersonasTest(EmpresaTestCase):
     def test_pesca_legacy_tope_5(self):
         # 5 pasa
         r_5 = Reserva(**datos_reserva(self.empresa, servicio=None, numero_personas=5))
-        r_5.full_clean()
+        r_5._validar_tope_personas()
 
         # 6 falla
         r_6 = Reserva(**datos_reserva(self.empresa, servicio=None, numero_personas=6))
         with self.assertRaises(ValidationError) as ctx:
-            r_6.full_clean()
+            r_6._validar_tope_personas()
         self.assertIn('numero_personas', ctx.exception.message_dict)
 
     def test_servicio_con_capacidad_maxima_14(self):

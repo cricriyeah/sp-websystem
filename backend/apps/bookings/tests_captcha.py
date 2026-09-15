@@ -10,7 +10,7 @@ from unittest import mock
 import requests
 from django.test import override_settings
 
-from apps.testing import ApiTestCase, crear_flota
+from apps.testing import ApiTestCase, crear_flota, crear_servicio_pesca
 
 from .captcha import verificar_turnstile
 
@@ -86,6 +86,7 @@ class CheckoutConCaptchaTests(ApiTestCase):
         crear_flota(self.empresa)
 
     def payload(self, **overrides):
+        servicio = crear_servicio_pesca(self.empresa)
         datos = {
             'checkout_id': self.CHECKOUT_ID,
             'fecha': str(date.today() + timedelta(days=10)),
@@ -97,6 +98,7 @@ class CheckoutConCaptchaTests(ApiTestCase):
             'moneda': 'USD',
             'deslinde_aceptado': True,
             'deslinde_nombre': 'Ana Ruiz',
+            'servicio': servicio.slug,
         }
         datos.update(overrides)
         return datos

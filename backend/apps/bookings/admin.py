@@ -431,6 +431,18 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
             'extras_seleccionados__extras_item'
         )
 
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        empresa = scope.empresa_actual(request)
+        if empresa and not initial.get('servicio') and not initial.get('paquete'):
+            servicio = Servicio.objects.filter(
+                empresa=empresa, slug='pesca-deportiva',
+                tipo_servicio='pesca', activo=True,
+            ).first()
+            if servicio:
+                initial['servicio'] = servicio.pk
+        return initial
+
     class Media:
         # Aviso de reservas nuevas en el listado, ver reservas_nuevas_view.
         js = ['bookings/reservas-nuevas.js']

@@ -676,6 +676,11 @@ class Reserva(models.Model):
             self.estado = self.Estado.PAGADA
 
     def clean(self):
+        super().clean()
+        if not self.servicio_id and not self.paquete_id:
+            raise ValidationError({'servicio': 'Selecciona un servicio o paquete.'})
+        if not self.orden_id and self.servicio_id and self.paquete_id:
+            raise ValidationError({'paquete': 'No puedes seleccionar servicio y paquete a la vez.'})
         if self.fecha_salida and self.fecha_salida <= self.fecha:
             raise ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de inicio.'})
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:

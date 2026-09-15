@@ -1190,8 +1190,7 @@ class WebhookTests(ApiTestCase):
             precio_ancla=Decimal('8000.00'),
             porcentaje_anticipo=100,
         )
-        reserva = crear_reserva(self.empresa)
-        reserva.paquete = paquete
+        reserva = crear_reserva(self.empresa, paquete=paquete, servicio=None)
         reserva.precio_total = Decimal('8000.00')
         reserva.forma_pago = Reserva.FormaPago.ANTICIPO
         reserva.stripe_payment_intent_id = 'pi_paquete_100'

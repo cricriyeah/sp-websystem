@@ -43,7 +43,6 @@ class ReservaPaqueteTests(OperadorTestCase):
             hora=time(6, 0),
             numero_personas=3,
             empresa=self.empresa_lider,
-            servicio=self.servicio,
             paquete=self.paquete,
             nombre_cliente='Juan Pérez',
             telefono_cliente='+526121234567',
