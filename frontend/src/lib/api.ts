@@ -325,7 +325,8 @@ export type PaqueteCatalogo = {
   servicios_asociados: PaqueteServicioCatalogo[];
 };
 
-export const getSedes = () => request<Sede[]>('/api/sedes/');
+export const getSedes = () =>
+  request<Sede[]>('/api/sedes/', { signal: AbortSignal.timeout(8000) });
 
 export const getPaquetesSede = (sedeSlug: string) =>
   request<PaqueteCatalogo[]>(`/api/sedes/${sedeSlug}/paquetes/`);
