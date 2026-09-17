@@ -757,5 +757,23 @@
       "motivoPrefix": "Detail: ",
       "retry": "Try again"
     }
+  },
+  "hub": {
+    "nombreAgencia": "Sal y Sol Baja Experiences",
+    "mision": "A partnership of local agencies for experiencing Baja California Sur the way it deserves: with the people who truly know it.",
+    "ctaElegirDestino": "Choose your destination",
+    "verDestino": "View destination",
+    "conLabel": "With",
+    "verTodoDestinos": "See all destinations",
+    "porQueHeadline": "Why Sal y Sol Baja Experiences",
+    "pilares": [
+      { "titulo": "Trusted local partnerships", "texto": "Each destination is run by local people — captains, guides, and operators who know their stretch of coast better than anyone." },
+      { "titulo": "One place to book across Baja", "texto": "Explore and book experiences across different Baja California Sur destinations without switching sites or processes." },
+      { "titulo": "Personalized attention", "texto": "The same close, personal care as always, now available at every destination in the partnership." }
+    ],
+    "meta": {
+      "title": "Sal y Sol Baja Experiences — Experiences in Baja California Sur",
+      "description": "Discover sportfishing and tourism experiences across the Baja California Sur destinations run by the Sal y Sol Baja Experiences partnership."
+    }
   }
 }

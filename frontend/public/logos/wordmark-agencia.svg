@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 261.19 123.19">
+  <defs>
+    <style>
+      .brand-salysol { fill: #3b18b7; }
+      .brand-subtitle-stroke {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-anchor: middle;
+        stroke: #ffffff;
+        stroke-width: 4px;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+      }
+      .brand-subtitle-fill {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-anchor: middle;
+        fill: #ffb600;
+      }
+    </style>
+  </defs>
+  <g id="wordmark-sal-y-sol">
+    <!-- Letra S -->
+    <path class="brand-salysol" d="M18.32,11.2H15.89c-.5,8.07-1,17.42-1.09,28.83l8.33,0c7.56,0,11.16,5.36,11.17,10.74l.06,28.84A10.83,10.83,0,0,1,23.62,90.38l-12.69,0A10.84,10.84,0,0,1,.14,79.67L.09,55.06,15,55c0,7.18.55,17.68,1.07,24.6h2.44c.37-8.08.86-17.43,1-28.84l-8.33,0c-7.56,0-11-5.36-11-10.74L0,11.24A10.83,10.83,0,0,1,10.74.45l12.69,0A10.81,10.81,0,0,1,34.21,11.17l.06,24.6-15,0C19.26,28.63,18.72,18.12,18.32,11.2Z"/>
+    <!-- Letra A -->
+    <path class="brand-salysol" d="M42.52.39,68.92.33c1.94,11.27,4.67,89.82,4.67,89.82l-15.25,0-.08-39.47H53.52l.08,39.47-15.25,0S40.75,11.67,42.52.39ZM57,11.12H54.59C54,19.2,53.6,28.55,53.5,40h4.61C58.08,28.54,57.55,19.19,57,11.12Z"/>
+    <!-- Letra L -->
+    <path class="brand-salysol" d="M77.76.44l15.12,0,.17,78.93h4.23l0,10.76L78,90.14Z"/>
+    <!-- Letra Y -->
+    <path class="brand-salysol" d="M138.37,58.23,138.43,90l-15.25,0-.06-31.77c-4.51-8.32-9.93-29.84-10-57.9l15,0c0,25.63.72,37.16,1.38,47.16h2.31C132.43,37.49,133,26,133,.32l15,0C148,28.36,142.83,49.89,138.37,58.23Z"/>
+    <!-- Letra S -->
+    <path class="brand-salysol" d="M182.22,10.86h-2.43c-.5,8.08-1,17.43-1.1,28.84l8.33,0c7.56,0,11.16,5.36,11.17,10.74l.06,28.83A10.82,10.82,0,0,1,187.51,90l-12.68,0A10.82,10.82,0,0,1,164,79.32l0-24.6,14.86,0c0,7.17.55,17.68,1.08,24.6h2.43c.37-8.08.86-17.43,1-28.84l-8.33,0c-7.56,0-11-5.36-11-10.74l-.06-28.84A10.81,10.81,0,0,1,174.64.11l12.68,0a10.83,10.83,0,0,1,10.79,10.74l0,24.61-15,0C183.15,28.28,182.62,17.78,182.22,10.86Z"/>
+    <!-- Letra O -->
+    <path class="brand-salysol" d="M236.81,10.74,237,79.17A10.84,10.84,0,0,1,226.21,90l-12.69,0a10.81,10.81,0,0,1-10.78-10.74l-.15-68.43A10.83,10.83,0,0,1,213.34,0L226,0A10.83,10.83,0,0,1,236.81,10.74ZM222,45c0-14-.57-24.86-1.1-34.22h-2.44C217.86,20.14,217.37,31,217.4,45s.57,24.86,1.23,34.21h2.43C221.56,69.85,222.05,59,222,45Z"/>
+    <!-- Letra L -->
+    <path class="brand-salysol" d="M241.66.1l15.12,0L256.94,79h4.23l0,10.76-19.35,0Z"/>
+  </g>
+  <g id="wordmark-subtitle">
+    <text x="130.6" y="112" class="brand-subtitle-stroke">BAJA EXPERIENCES</text>
+    <text x="130.6" y="112" class="brand-subtitle-fill">BAJA EXPERIENCES</text>
+  </g>
+</svg>

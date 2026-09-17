@@ -757,5 +757,23 @@
       "motivoPrefix": "Detalle: ",
       "retry": "Intentar de nuevo"
     }
+  },
+  "hub": {
+    "nombreAgencia": "Sal y Sol Baja Experiences",
+    "mision": "Una alianza de agencias locales para vivir Baja California Sur como se merece: con quienes la conocen de verdad.",
+    "ctaElegirDestino": "Elige tu destino",
+    "verDestino": "Ver destino",
+    "conLabel": "Con",
+    "verTodoDestinos": "Ver todos los destinos",
+    "porQueHeadline": "Por qué Sal y Sol Baja Experiences",
+    "pilares": [
+      { "titulo": "Alianzas locales de confianza", "texto": "Cada sede la opera gente de ahí: capitanes, guías y operadores que conocen su tramo de costa mejor que nadie." },
+      { "titulo": "Un solo lugar para reservar en toda Baja", "texto": "Explora y reserva experiencias en distintos destinos de Baja California Sur sin cambiar de sitio ni de proceso." },
+      { "titulo": "Atención personalizada", "texto": "El mismo trato cercano de siempre, ahora disponible en cada destino de la alianza." }
+    ],
+    "meta": {
+      "title": "Sal y Sol Baja Experiences — Experiencias en Baja California Sur",
+      "description": "Descubre experiencias de pesca deportiva y turismo en los destinos de Baja California Sur operados por la alianza Sal y Sol Baja Experiences."
+    }
   }
 }
