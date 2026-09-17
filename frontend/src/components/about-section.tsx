@@ -2,7 +2,9 @@ import Image from 'next/image';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 
 type AboutSectionProps = {
-  about: Dictionary['about'];
+  about: Pick<Dictionary['about'], 'headline' | 'body1' | 'body2' | 'photoHint'>;
+  imagenSrc?: string;
+  imagenAlt?: string;
 };
 
 /**
@@ -10,13 +12,17 @@ type AboutSectionProps = {
  * `max-w-6xl` que usa el texto. Los datos del viaje (duracion, hora, cupo, ano)
  * ya viven en la portada — repetirlos aqui era la misma tabla dos veces.
  */
-export function AboutSection({ about }: AboutSectionProps) {
+export function AboutSection({
+  about,
+  imagenSrc = '/photos/capitan-cabrilla-bahia.webp',
+  imagenAlt,
+}: AboutSectionProps) {
   return (
     <section id="nosotros" className="scroll-mt-24 grid bg-surface lg:grid-cols-2">
       <div className="relative min-h-[320px] lg:min-h-[620px]">
         <Image
-          src="/photos/capitan-cabrilla-bahia.webp"
-          alt={about.photoHint}
+          src={imagenSrc}
+          alt={imagenAlt ?? about.photoHint}
           fill
           sizes="(min-width: 1024px) 50vw, 100vw"
           className="object-cover"
