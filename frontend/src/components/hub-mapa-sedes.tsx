@@ -60,7 +60,12 @@ export function HubMapaSedes({ lang, sedes, verDestinoLabel, conLabel }: HubMapa
         <div className="absolute inset-x-6 bottom-6 z-10 flex items-center gap-4 rounded-2xl border border-border bg-background p-4 shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface">
             {sedeAbierta.hero.imagen && (
-              <Image src={sedeAbierta.hero.imagen} alt="" fill className="object-cover" />
+              <Image
+                src={sedeAbierta.hero.imagen}
+                alt={sedeAbierta.negocio?.nombre ?? sedeAbierta.empresaFundadoraNombre}
+                fill
+                className="object-cover"
+              />
             )}
           </div>
           <div className="flex-1">

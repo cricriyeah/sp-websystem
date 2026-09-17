@@ -24,7 +24,12 @@ export function HubGridSedes({ lang, sedes, verDestinoLabel, conLabel }: HubGrid
         >
           <div className="relative h-48 w-full">
             {sede.hero.imagen && (
-              <Image src={sede.hero.imagen} alt="" fill className="object-cover" />
+              <Image
+                src={sede.hero.imagen}
+                alt={sede.negocio?.nombre ?? sede.empresaFundadoraNombre}
+                fill
+                className="object-cover"
+              />
             )}
           </div>
           <div className="flex flex-1 flex-col gap-2 p-6">
