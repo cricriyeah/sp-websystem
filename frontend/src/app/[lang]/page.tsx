@@ -1,22 +1,20 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from './dictionaries';
-import { StructuredData } from '@/components/structured-data';
 import { alternativasDe } from '@/lib/site';
-import { SiteHeader } from '@/components/site-header';
-import { Hero } from '@/components/hero';
-import { AboutSection } from '@/components/about-section';
-import { SeasonSection } from '@/components/season-section';
-import { IncludedSection } from '@/components/included-section';
-import { LicenseSection } from '@/components/license-section';
-import { GallerySection } from '@/components/gallery-section';
-import { ReviewsSection } from '@/components/reviews-section';
-import { FaqSection } from '@/components/faq-section';
-import { SiteFooter } from '@/components/site-footer';
-import { StickyBookingBar } from '@/components/sticky-booking-bar';
-import { ProveedorReserva } from '@/components/booking-state';
-import { getMinBookableDate } from '@/lib/dates';
+import { getSedes } from '@/lib/api';
+import { sedesActivas } from '@/lib/reconciliar-sedes';
+import { SEDES_INDICE } from '@/content/sedes-indice';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
+import type { SedeContenido } from '@/content/sedes-tipos';
+import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
+import { HubHero } from '@/components/hub-hero';
+import { HubMapaSedes } from '@/components/hub-mapa-sedes';
+import { HubGridSedes } from '@/components/hub-grid-sedes';
+import { HubPorQue } from '@/components/hub-por-que';
+
+const MAPA_ANCHOR_ID = 'hub-mapa-destinos';
 
 export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promise<Metadata> {
   const { lang } = await params;
@@ -24,10 +22,8 @@ export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promis
 
   const dict = await getDictionary(lang);
   return {
-    // `absolute` porque la portada ya trae la marca en su titulo; sin esto la
-    // plantilla del layout la repetiria.
-    title: { absolute: dict.meta.home.title },
-    description: dict.meta.home.description,
+    title: { absolute: dict.hub.meta.title },
+    description: dict.hub.meta.description,
     alternates: alternativasDe(lang),
   };
 }
@@ -38,44 +34,52 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
   if (!hasLocale(lang)) notFound();
 
   const dict = await getDictionary(lang);
-  const minDate = getMinBookableDate();
+  const sedesApi = await getSedes().then((s) => s, () => null);
+  // `sedesActivas` opera solo sobre el indice (client-safe, chico) — para
+  // pintar el mapa/grid con foto (`hero.imagen`) hace falta el cuerpo
+  // (server-only) de cada sede activa, combinado aqui, server-side.
+  const activas = sedesActivas(SEDES_INDICE, sedesApi);
+  const sedes = activas
+    .map((entrada) => getSedeContenido(entrada.slug, lang))
+    .filter((s): s is SedeContenido => s !== undefined);
 
-  // Orden pensado como la conversacion que tendrias en el muelle: quienes somos,
-  // que se esta pescando, que trae el viaje, como se ve, el unico tramite que
-  // tienes que hacer antes (la licencia), que dicen otros, y hasta el final las
-  // dudas sueltas.
   return (
     <>
-      <StructuredData lang={lang} dict={dict} />
-      {/* Fuera del `<main>` y arriba del Hero: la barra es `sticky` y solo se
-          queda pegada mientras su contenedor sigue a la vista. Vivio dentro del
-          Hero y por eso se iba con la portada al bajar. */}
-      <SiteHeader lang={lang} nav={dict.nav} />
-      {/* Envuelve el Hero y la barra pegada: las dos barras de reserva de la
-          portada comparten las respuestas, no una copia cada una. */}
-      <ProveedorReserva>
-        <main>
-          <Hero lang={lang} dict={dict} minDate={minDate} />
-          <AboutSection about={dict.about} />
-          <SeasonSection season={dict.season} />
-          <IncludedSection included={dict.included} />
-          <GallerySection gallery={dict.gallery} />
-          <LicenseSection nav={dict.nav} license={dict.license} />
-          <ReviewsSection nav={dict.nav} reviews={dict.reviews} />
-          <FaqSection faq={dict.faq} />
-        </main>
-        <SiteFooter
-          lang={lang}
-          footer={dict.footer}
-          nav={dict.nav}
-          bookLabel={dict.booking.submit}
-          negocio={getSedeContenido('la-paz', lang)?.negocio ?? null}
-          sedeSlug="la-paz"
+      <SiteHeader lang={lang} nav={dict.nav} variante="hub" />
+      <main>
+        <HubHero
+          nombreAgencia={dict.hub.nombreAgencia}
+          mision={dict.hub.mision}
+          ctaLabel={dict.hub.ctaElegirDestino}
+          mapaAnchorId={MAPA_ANCHOR_ID}
         />
-        {/* Fuera del `<main>` y al final: es una capa fija sobre la pagina, no
-          parte del contenido, y asi ningun `z-index` de seccion la tapa. */}
-        <StickyBookingBar lang={lang} booking={dict.booking} minDate={minDate} />
-      </ProveedorReserva>
+
+        <section id={MAPA_ANCHOR_ID} className="scroll-mt-24 mx-auto max-w-6xl px-6 py-16 sm:px-8 lg:px-12">
+          <HubMapaSedes
+            lang={lang}
+            sedes={sedes}
+            verDestinoLabel={dict.hub.verDestino}
+            conLabel={dict.hub.conLabel}
+          />
+          <div className="mt-12">
+            <HubGridSedes
+              lang={lang}
+              sedes={sedes}
+              verDestinoLabel={dict.hub.verDestino}
+              conLabel={dict.hub.conLabel}
+            />
+          </div>
+        </section>
+
+        <HubPorQue headline={dict.hub.porQueHeadline} pilares={dict.hub.pilares} />
+      </main>
+      <SiteFooter
+        lang={lang}
+        footer={dict.footer}
+        nav={dict.nav}
+        bookLabel={dict.booking.submit}
+        negocio={null}
+      />
     </>
   );
 }
