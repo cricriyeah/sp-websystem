@@ -14,7 +14,7 @@ export default async function NotFound() {
 
   return (
     <div className="min-h-dvh bg-background">
-      <SiteHeader lang="es" nav={dict.nav} />
+      <SiteHeader lang="es" nav={dict.nav} variante="sede" />
 
       <main
         className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-6 pb-24 text-center sm:px-8"

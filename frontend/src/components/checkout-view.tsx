@@ -1155,7 +1155,7 @@ export function CheckoutView({
 
   return (
     <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} />
+      <SiteHeader lang={lang} nav={nav} variante="sede" />
 
       {/* SiteHeader es `fixed` y no reserva espacio: sin `--nav-alto` (ver
           globals.css) el contenido arrancaria debajo de la barra. El 1.5rem es

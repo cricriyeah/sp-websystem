@@ -88,6 +88,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
           footer={dict.footer}
           nav={dict.nav}
           bookLabel={dict.booking.submit}
+          negocio={null}
         />
       </div>
     );

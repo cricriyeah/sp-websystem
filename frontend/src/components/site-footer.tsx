@@ -1,29 +1,31 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import type { SedeNegocio } from '@/content/sedes-tipos';
 
 type SiteFooterProps = {
   lang: Locale;
   footer: Dictionary['footer'];
   nav: Dictionary['nav'];
   bookLabel: string;
+  /** `null` en el hub y en cualquier sede sin `negocio` (hoy, Los Cabos): el bloque de dirección/horario se omite en vez de mostrar el de otra sede. */
+  negocio: SedeNegocio;
+  sedeSlug?: string;
 };
 
-/**
- * Una sola fila de 4 columnas a sangre, no dos filas dentro de un contenedor
- * centrado: titular+CTA, punto de encuentro/salidas, el mapa del sitio, legal.
- * La barra de derechos va aparte, con su propio borde arriba.
- *
- * Va sobre papel blanco, no sobre bruma. Lo que lo separa de la seccion que
- * viene encima es la linea de `border-t`, no un cambio de fondo.
- */
-export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
-  const secciones = [
-    { href: `/${lang}#nosotros`, label: nav.nosotros },
-    { href: `/${lang}#temporadas`, label: nav.temporadas },
-    { href: `/${lang}#incluye`, label: nav.contacto },
-    { href: `/${lang}#preguntas`, label: nav.preguntas },
-  ];
+export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: SiteFooterProps) {
+  const baseSede = sedeSlug ? `/${lang}/sede/${sedeSlug}` : null;
+  const secciones = baseSede
+    ? [
+        { href: `${baseSede}#experiencias`, label: nav.catalogo },
+        { href: `${baseSede}#nosotros`, label: nav.nosotros },
+        ...(sedeSlug === 'la-paz' ? [
+          { href: `${baseSede}#temporadas`, label: nav.temporadas },
+          { href: `${baseSede}#incluye`, label: nav.contacto },
+          { href: `${baseSede}#preguntas`, label: nav.preguntas },
+        ] : []),
+      ]
+    : [{ href: `/${lang}#sedes`, label: nav.catalogo }];
 
   const legales = [
     { href: `/${lang}/deslinde`, label: footer.waiver },
@@ -35,9 +37,6 @@ export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
       id="contacto"
       className="relative scroll-mt-24 overflow-hidden border-t border-border bg-background"
     >
-      {/* Mismo tratamiento que resenas: radial apagado con el indigo de la
-          marca, no un degradado parejo de banco de imagenes. Aqui va arriba a
-          la derecha para no pelear con el titular, que empieza a la izquierda. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -52,22 +51,26 @@ export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
               {footer.headline}
             </h2>
             <Link
-              href={`/${lang}/reservar`}
+              href={sedeSlug === 'la-paz' ? `/${lang}/reservar` : baseSede ? `${baseSede}#experiencias` : `/${lang}#sedes`}
               className="inline-flex items-center rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background transition-transform active:scale-[0.98]"
             >
               {bookLabel}
             </Link>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <span className="text-xs font-semibold text-muted">{footer.addressLabel}</span>
-            <span className="text-base text-foreground">{footer.address}</span>
-            <span className="text-base text-muted">{footer.city}</span>
-            <span className="mt-3 text-xs font-semibold text-muted">{footer.hoursLabel}</span>
-            <span className="text-base text-foreground">{footer.hours}</span>
-            <span className="mt-3 text-xs font-semibold text-muted">{footer.officeLabel}</span>
-            <span className="text-base text-foreground">{footer.office}</span>
-          </div>
+          {negocio && (
+            <div className="flex flex-col gap-3">
+              <span className="text-xs font-semibold text-muted">{footer.addressLabel}</span>
+              <span className="text-base text-foreground">{negocio.calle}</span>
+              <span className="text-base text-muted">
+                {negocio.ciudad}, {negocio.estado}
+              </span>
+              <span className="mt-3 text-xs font-semibold text-muted">{footer.hoursLabel}</span>
+              <span className="text-base text-foreground">{footer.hours}</span>
+              <span className="mt-3 text-xs font-semibold text-muted">{footer.officeLabel}</span>
+              <span className="text-base text-foreground">{footer.office}</span>
+            </div>
+          )}
 
           <nav aria-label={footer.exploreLabel} className="flex flex-col gap-3">
             <span className="text-xs font-semibold text-muted">{footer.exploreLabel}</span>
@@ -89,29 +92,20 @@ export function SiteFooter({ lang, footer, nav, bookLabel }: SiteFooterProps) {
         </div>
       </div>
 
-      {/* La marca a lo ancho, cerrando la seccion superior del pie. Sigue
-          dentro de la reja de 1152px: asi queda alineada con la barra de
-          derechos que va debajo, con su propio borde arriba.
-
-          `alt=""` porque no aporta nada nuevo a quien no la ve — el nombre ya
-          esta escrito abajo, en la linea de derechos. */}
       <div className="relative mx-auto max-w-6xl overflow-hidden px-6 pb-10 sm:px-8 lg:px-12">
         <Image
-          src="/logos/svglogosalysol2.svg"
+          src={sedeSlug === 'la-paz' ? '/logos/svglogosalysol2.svg' : '/logos/wordmark-agencia.svg'}
           alt=""
           width={261}
           height={123}
           sizes="100vw"
-          // 922px: el ancho del contenido (1152) menos un 20%. Con `w-full`
-          // debajo, en pantallas mas angostas sigue ocupando lo que haya.
           className="mx-auto h-auto w-full max-w-[922px]"
         />
-
         <div className="mt-8 flex flex-col gap-2 border-t border-border-strong pt-8 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-muted">
-            {nav.brandMain} {nav.brandAccent}. {footer.rights}
+            Sal y Sol Baja Experiences. {footer.rights}
           </span>
-          <span className="text-sm text-muted">{nav.location}</span>
+          {negocio && <span className="text-sm text-muted">{negocio.ciudad}, {negocio.estado}</span>}
         </div>
       </div>
     </footer>

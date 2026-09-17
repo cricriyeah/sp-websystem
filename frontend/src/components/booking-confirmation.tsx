@@ -122,7 +122,7 @@ export function BookingConfirmation({
   return (
     <div className="flex min-h-dvh flex-col bg-surface print:bg-white">
       <div className="print:hidden">
-        <SiteHeader lang={lang} nav={nav} />
+        <SiteHeader lang={lang} nav={nav} variante="sede" />
       </div>
 
       {/* SiteHeader es `fixed` y no reserva espacio: sin `--nav-alto` (ver

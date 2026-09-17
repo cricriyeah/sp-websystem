@@ -12,6 +12,7 @@ import { PaqueteCard } from '@/components/paquete-card';
 import { ServiciosSueltosSection } from '@/components/servicios-sueltos-section';
 import { getPaquetesSede, getSedes, getServiciosSede, type Moneda } from '@/lib/api';
 import { alternativasDe } from '@/lib/site';
+import { getSedeContenido } from '@/content/sedes-cuerpo';
 
 type PageProps = {
   params: Promise<{ lang: string }>;
@@ -170,6 +171,8 @@ export default async function CatalogoPage({ params, searchParams }: PageProps) 
         footer={dict.footer}
         nav={dict.nav}
         bookLabel={dict.booking.submit}
+        negocio={getSedeContenido(sedeActual.slug, lang)?.negocio ?? null}
+        sedeSlug={sedeActual.slug}
       />
     </div>
   );

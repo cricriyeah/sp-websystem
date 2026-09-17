@@ -30,7 +30,7 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
 
   return (
     <div className="min-h-dvh bg-background">
-      <SiteHeader lang={lang} nav={dict.nav} />
+      <SiteHeader lang={lang} nav={dict.nav} variante="sede" />
 
       {/* SiteHeader es `fixed` y no reserva espacio: sin `--nav-alto` (ver
           globals.css) el contenido arrancaria debajo de la barra. El 3rem es
@@ -60,7 +60,7 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
         </div>
       </main>
 
-      <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} />
+      <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={null} />
     </div>
   );
 }

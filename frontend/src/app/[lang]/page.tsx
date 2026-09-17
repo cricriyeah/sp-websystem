@@ -16,6 +16,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { StickyBookingBar } from '@/components/sticky-booking-bar';
 import { ProveedorReserva } from '@/components/booking-state';
 import { getMinBookableDate } from '@/lib/dates';
+import { getSedeContenido } from '@/content/sedes-cuerpo';
 
 export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promise<Metadata> {
   const { lang } = await params;
@@ -68,6 +69,8 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
           footer={dict.footer}
           nav={dict.nav}
           bookLabel={dict.booking.submit}
+          negocio={getSedeContenido('la-paz', lang)?.negocio ?? null}
+          sedeSlug="la-paz"
         />
         {/* Fuera del `<main>` y al final: es una capa fija sobre la pagina, no
           parte del contenido, y asi ningun `z-index` de seccion la tapa. */}
