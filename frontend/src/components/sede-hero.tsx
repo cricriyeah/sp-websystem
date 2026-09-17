@@ -3,14 +3,11 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeDestacada, SedeHeroContenido } from '@/content/sedes-tipos';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { SelectorExperiencia } from '@/components/selector-experiencia';
-import { BookingBar } from '@/components/booking-bar';
-import { ID_BARRA_PORTADA } from '@/components/sticky-booking-bar';
 
 type SedeHeroProps = {
   lang: Locale;
   sedeSlug: string;
   contenido: SedeHeroContenido;
-  mostrarBookingBar: boolean;
   destacadas: SedeDestacada[];
   paquetes: PaqueteCatalogo[];
   servicios: ServicioCatalogo[];
@@ -26,15 +23,18 @@ type SedeHeroProps = {
  * de la portada de hoy, sin caller tras la Tarea 9), este:
  * - Acepta imagen fija ademas de video (Los Cabos no tiene video).
  * - `facts` puede venir vacio (Los Cabos) — no renderiza la fila si esta vacia.
- * - Solo monta `BookingBar` (con `ID_BARRA_PORTADA`) cuando `mostrarBookingBar`
- *   es true — hoy, unicamente para `sedeSlug === 'la-paz'` (spec §6.1, §7).
- * - Siempre monta `SelectorExperiencia` (Paso 0), en todas las sedes.
+ * - Nunca monta `BookingBar` por su cuenta: el Paso 0 (`SelectorExperiencia`)
+ *   es el unico camino al formulario. Revisado tras hallazgo del dueño
+ *   (2026-09-16): la version anterior montaba el `BookingBar` heredado de
+ *   pesca SIEMPRE visible en La Paz, duplicado con el que el chip inline del
+ *   selector podia revelar — el Paso 0 quedaba decorativo, nunca gateaba
+ *   nada. `ID_BARRA_PORTADA` (que vigila `StickyBookingBar`) ahora vive en el
+ *   wrapper que `SelectorExperiencia` monta al abrir el chip inline, no aqui.
  */
 export function SedeHero({
   lang,
   sedeSlug,
   contenido,
-  mostrarBookingBar,
   destacadas,
   paquetes,
   servicios,
@@ -95,15 +95,6 @@ export function SedeHero({
           </div>
         </div>
       </div>
-
-      {mostrarBookingBar && (
-        <div
-          id={ID_BARRA_PORTADA}
-          className="relative mx-auto -mt-8 max-w-6xl px-6 sm:px-8 lg:-mt-12 lg:max-w-4xl lg:px-12"
-        >
-          <BookingBar lang={lang} booking={booking} minDate={minDate} />
-        </div>
-      )}
 
       {contenido.facts.length > 0 && (
         <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-6 pt-12 pb-16 sm:px-8 lg:grid-cols-4 lg:gap-x-0 lg:px-12 lg:pt-14 lg:pb-20">

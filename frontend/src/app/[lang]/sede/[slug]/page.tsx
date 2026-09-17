@@ -91,14 +91,13 @@ export default async function SedePage({ params, searchParams }: PageProps) {
             lang={lang}
             sedeSlug={slug}
             contenido={contenido.hero}
-            mostrarBookingBar={slug === 'la-paz'}
             destacadas={contenido.destacadas}
             paquetes={paquetes}
             servicios={servicios}
             moneda={moneda}
             booking={dict.booking}
             minDate={minDate}
-            verTodoLabel={dict.catalog.selectDestination}
+            verTodoLabel={dict.catalog.verTodo}
             hrefVerTodo={`/${lang}/sede/${slug}#experiencias`}
           />
 

@@ -10,6 +10,7 @@ import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { hrefPaquete, hrefServicio } from '@/lib/booking-href';
 import { resolverChips, esInlineable } from '@/lib/selector-experiencia';
 import { BookingBar } from '@/components/booking-bar';
+import { ID_BARRA_PORTADA } from '@/components/sticky-booking-bar';
 
 type SelectorExperienciaProps = {
   lang: Locale;
@@ -83,7 +84,11 @@ export function SelectorExperiencia({
       </Link>
 
       {inlineAbierto && (
-        <div className="mt-4 w-full">
+        // Unico punto de montaje de `BookingBar` en la pagina de sede (2026-09-16:
+        // antes tambien vivia, siempre visible, dentro de `SedeHero` — quedaba
+        // duplicado con este y el Paso 0 no gateaba nada). `ID_BARRA_PORTADA`
+        // vive aqui para que `StickyBookingBar` lo siga vigilando sin cambios.
+        <div id={ID_BARRA_PORTADA} className="mt-4 w-full">
           <BookingBar lang={lang} booking={booking} minDate={minDate} />
         </div>
       )}

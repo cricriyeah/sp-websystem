@@ -111,19 +111,35 @@ export function SiteHeader({
           />
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-[15px] text-foreground transition-colors hover:text-accent"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        {/* En el hub `links` trae un solo item (spec §5: nada de nosotros/
+            temporadas/galeria/preguntas ahi) — con `justify-between` de 3 hijos
+            un solo link queda flotando solo en medio de un hueco enorme, se lee
+            roto (hallazgo del dueño, 2026-09-16). Con 1 item se pliega al
+            cluster derecho, junto al selector; con 2+ (cualquier sede) conserva
+            su fila propia centrada, que ahi si tiene peso visual. */}
+        {links.length > 1 && (
+          <nav className="hidden items-center gap-7 lg:flex">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-[15px] text-foreground transition-colors hover:text-accent"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         <div className="flex items-center gap-3">
+          {links.length === 1 && (
+            <Link
+              href={links[0].href}
+              className="hidden text-[15px] text-foreground transition-colors hover:text-accent lg:inline-flex"
+            >
+              {links[0].label}
+            </Link>
+          )}
           <SedeSelector
             lang={lang}
             sedes={sedesDisponibles}

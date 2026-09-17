@@ -1,39 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" fill="none" role="img" aria-label="Mapa ilustrado de Baja California Sur">
   <defs>
     <linearGradient id="seaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f4f6fd"/>
-      <stop offset="50%" stop-color="#eef1fb"/>
-      <stop offset="100%" stop-color="#e5e9f8"/>
+      <stop offset="0%" stop-color="#e4e7f6"/>
+      <stop offset="100%" stop-color="#d1d5eb"/>
     </linearGradient>
     <linearGradient id="landGrad" x1="0%" y1="0%" x2="80%" y2="100%">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="60%" stop-color="#f8f9fe"/>
-      <stop offset="100%" stop-color="#edf1fc"/>
+      <stop offset="100%" stop-color="#f1f3fb"/>
     </linearGradient>
     <linearGradient id="gulfGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#281ab5" stop-opacity="0.03"/>
-      <stop offset="100%" stop-color="#0d9488" stop-opacity="0.06"/>
+      <stop offset="0%" stop-color="#281ab5" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#281ab5" stop-opacity="0.14"/>
     </linearGradient>
     <filter id="landShadow" x="-5%" y="-3%" width="112%" height="108%" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#16171c" flood-opacity="0.06"/>
+      <feDropShadow dx="2" dy="6" stdDeviation="8" flood-color="#16171c" flood-opacity="0.12"/>
     </filter>
   </defs>
 
-  <!-- Fondo marino sutil con gradiente -->
+  <!-- Fondo marino: tinte indigo visible, no casi-blanco-sobre-blanco -->
   <rect width="600" height="800" rx="24" fill="url(#seaGrad)"/>
 
   <!-- Líneas de batimetría / corrientes marítimas decorativas -->
-  <g stroke="#d8dff4" stroke-width="1" stroke-linecap="round" opacity="0.65" stroke-dasharray="4 6">
+  <g stroke="#b8c2e8" stroke-width="1.25" stroke-linecap="round" opacity="0.8" stroke-dasharray="4 7">
     <path d="M40 180 C 140 220, 180 340, 220 480 S 260 680, 290 740"/>
     <path d="M70 120 C 180 180, 230 310, 270 450 S 300 660, 330 760"/>
     <path d="M380 100 C 420 220, 410 380, 440 500 S 480 620, 520 700"/>
     <path d="M430 160 C 470 270, 460 410, 490 530 S 520 640, 560 720"/>
   </g>
 
-  <!-- Mar de Cortés (resaltado suave) -->
+  <!-- Mar de Cortés (resaltado con la misma familia indigo, sin color ajeno a la marca) -->
   <path d="M 330 60 C 420 180, 440 360, 450 560 L 590 560 L 590 60 Z" fill="url(#gulfGrad)" />
 
-  <!-- Península de Baja California Sur (geometría ilustrada estilizada) -->
+  <!-- Península de Baja California Sur -->
   <g filter="url(#landShadow)">
     <path d="
       M 90 20
@@ -57,40 +55,26 @@
       C 280 90, 230 50, 170 25
       Z"
       fill="url(#landGrad)"
-      stroke="#c8d2ee"
+      stroke="#a9b4de"
       stroke-width="2"
       stroke-linejoin="round"
     />
   </g>
 
   <!-- Islas ilustradas (Espíritu Santo, Cerralvo, San José) -->
-  <!-- Isla San José -->
-  <path d="M 345 220 C 348 215, 352 218, 350 228 C 348 238, 344 242, 342 238 Z" fill="#e2e7f8" stroke="#c8d2ee" stroke-width="1.5"/>
-  <!-- Isla Espíritu Santo (cerca de La Paz: ~326, 275) -->
-  <path d="M 330 270 C 335 265, 338 272, 336 282 C 334 290, 329 292, 327 285 Z" fill="#d9e1f7" stroke="#b8c5ea" stroke-width="1.5"/>
-  <!-- Isla Cerralvo -->
-  <path d="M 370 330 C 374 324, 378 330, 376 345 C 374 358, 368 360, 367 350 Z" fill="#e2e7f8" stroke="#c8d2ee" stroke-width="1.5"/>
+  <path d="M 345 220 C 348 215, 352 218, 350 228 C 348 238, 344 242, 342 238 Z" fill="#dbe1f6" stroke="#a9b4de" stroke-width="1.5"/>
+  <path d="M 330 270 C 335 265, 338 272, 336 282 C 334 290, 329 292, 327 285 Z" fill="#dbe1f6" stroke="#a9b4de" stroke-width="1.5"/>
+  <path d="M 370 330 C 374 324, 378 330, 376 345 C 374 358, 368 360, 367 350 Z" fill="#dbe1f6" stroke="#a9b4de" stroke-width="1.5"/>
 
-  <!-- Bahía de La Paz (hendidura costera alrededor de x=312, y=304) -->
-  <circle cx="312" cy="304" r="7" fill="none" stroke="#281ab5" stroke-width="1.5" stroke-dasharray="2 3" opacity="0.4"/>
-  <circle cx="312" cy="304" r="3" fill="#281ab5" opacity="0.3"/>
+  <!-- Nombres geograficos: una sola familia de color (indigo), mas legibles -->
+  <text x="80" y="420" fill="#5b52c9" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" letter-spacing="0.2em" opacity="0.75" transform="rotate(-75 80 420)">OCÉANO PACÍFICO</text>
+  <text x="440" y="270" fill="#5b52c9" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" letter-spacing="0.2em" opacity="0.75" transform="rotate(50 440 270)">MAR DE CORTÉS</text>
 
-  <!-- Cabo San Lucas / Los Cabos (alrededor de x=348, y=656) -->
-  <circle cx="348" cy="656" r="7" fill="none" stroke="#281ab5" stroke-width="1.5" stroke-dasharray="2 3" opacity="0.4"/>
-  <circle cx="348" cy="656" r="3" fill="#281ab5" opacity="0.3"/>
-
-  <!-- Conexión de ruta marítima/terrestre entre sedes -->
-  <path d="M 312 304 C 324 420, 338 540, 348 656" stroke="#ffb600" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round" opacity="0.75"/>
-
-  <!-- Nombres geográficos con tipografía del sistema -->
-  <text x="80" y="420" fill="#8892b0" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" letter-spacing="0.18em" transform="rotate(-75 80 420)">OCÉANO PACÍFICO</text>
-  <text x="440" y="270" fill="#0d9488" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" letter-spacing="0.18em" transform="rotate(50 440 270)">MAR DE CORTÉS</text>
-
-  <!-- Rosa de los vientos mínima -->
-  <g transform="translate(520, 90)" opacity="0.5">
-    <circle cx="0" cy="0" r="18" fill="none" stroke="#b8c5ea" stroke-width="1"/>
-    <path d="M 0 -15 L 4 -2 L 15 0 L 4 2 L 0 15 L -4 2 L -15 0 L -4 -2 Z" fill="#8892b0"/>
-    <path d="M 0 -15 L 4 -2 L 0 0 Z" fill="#281ab5"/>
-    <text x="0" y="-20" text-anchor="middle" fill="#281ab5" font-family="system-ui, sans-serif" font-size="11" font-weight="700">N</text>
+  <!-- Rosa de los vientos, mas discreta y solo en indigo -->
+  <g transform="translate(524, 84)" opacity="0.6">
+    <circle cx="0" cy="0" r="16" fill="#ffffff" stroke="#a9b4de" stroke-width="1"/>
+    <path d="M 0 -12 L 3 -2 L 12 0 L 3 2 L 0 12 L -3 2 L -12 0 L -3 -2 Z" fill="#a9b4de"/>
+    <path d="M 0 -12 L 3 -2 L 0 0 Z" fill="#281ab5"/>
+    <text x="0" y="-18" text-anchor="middle" fill="#281ab5" font-family="system-ui, sans-serif" font-size="10" font-weight="700">N</text>
   </g>
 </svg>
