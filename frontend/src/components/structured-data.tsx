@@ -1,50 +1,51 @@
-import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import type { Locale } from '@/app/[lang]/dictionaries';
+import type { SedeNegocio } from '@/content/sedes-tipos';
 import { whatsappNumero, tieneWhatsapp } from '@/lib/contacto';
-import { NEGOCIO, absolutaEn } from '@/lib/site';
+import { absolutaEn } from '@/lib/site';
 
 type StructuredDataProps = {
   lang: Locale;
-  dict: Dictionary;
+  /** Slug de la sede que describe este JSON-LD — nunca el hub. */
+  slug: string;
+  negocio: SedeNegocio;
+  description: string;
+  faqItems: { q: string; a: string }[] | null;
 };
 
 /**
- * JSON-LD para Google: ficha del negocio local y las preguntas frecuentes.
- *
- * Se arma con los mismos textos que ve el usuario — marcar datos que no estan
- * en la pagina va contra las reglas de Google y no ayuda a nadie. Faltan las
- * coordenadas del muelle a proposito: un pin mal puesto es peor que ninguno
- * (ver src/lib/site.ts).
+ * JSON-LD para Google: ficha del negocio de la sede y sus preguntas
+ * frecuentes. `negocio`/`faqItems` en `null` (spec §9: hoy solo pasa para
+ * Los Cabos) hace que el bloque correspondiente no se renderice — sin datos
+ * inventados.
  */
-export function StructuredData({ lang, dict }: StructuredDataProps) {
-  const negocio = {
+export function StructuredData({ lang, slug, negocio, description, faqItems }: StructuredDataProps) {
+  const negocioJsonLd = negocio && {
     '@context': 'https://schema.org',
     '@type': 'TouristAttraction',
-    name: NEGOCIO.nombre,
-    description: dict.meta.home.description,
-    url: absolutaEn(lang),
+    name: negocio.nombre,
+    description,
+    url: absolutaEn(lang, `/sede/${slug}`),
     address: {
       '@type': 'PostalAddress',
-      streetAddress: NEGOCIO.calle,
-      addressLocality: NEGOCIO.ciudad,
-      addressRegion: NEGOCIO.estado,
-      addressCountry: NEGOCIO.pais,
+      streetAddress: negocio.calle,
+      addressLocality: negocio.ciudad,
+      addressRegion: negocio.estado,
+      addressCountry: negocio.pais,
     },
     ...(tieneWhatsapp ? { telephone: `+${whatsappNumero}` } : {}),
     openingHoursSpecification: {
       '@type': 'OpeningHoursSpecification',
-      dayOfWeek: [
-        'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-      ],
-      opens: '05:00',
-      closes: '07:00',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      opens: negocio.horarioApertura,
+      closes: negocio.horarioCierre,
     },
     availableLanguage: ['es', 'en'],
   };
 
-  const preguntas = {
+  const preguntasJsonLd = faqItems && {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: dict.faq.items.map((item) => ({
+    mainEntity: faqItems.map((item) => ({
       '@type': 'Question',
       name: item.q,
       acceptedAnswer: { '@type': 'Answer', text: item.a },
@@ -53,14 +54,18 @@ export function StructuredData({ lang, dict }: StructuredDataProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(negocio) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(preguntas) }}
-      />
+      {negocioJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(negocioJsonLd) }}
+        />
+      )}
+      {preguntasJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(preguntasJsonLd) }}
+        />
+      )}
     </>
   );
 }
