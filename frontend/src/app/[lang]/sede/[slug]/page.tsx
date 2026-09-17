@@ -99,6 +99,7 @@ export default async function SedePage({ params, searchParams }: PageProps) {
             minDate={minDate}
             verTodoLabel={dict.catalog.verTodo}
             hrefVerTodo={`/${lang}/sede/${slug}#experiencias`}
+            precioDesdeLabel={dict.catalog.fromPrice}
           />
 
           <section id="experiencias" className="scroll-mt-24 mx-auto max-w-6xl px-6 pt-12 sm:px-8 lg:px-12">

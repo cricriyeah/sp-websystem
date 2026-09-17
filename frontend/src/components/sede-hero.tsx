@@ -16,6 +16,7 @@ type SedeHeroProps = {
   minDate: string;
   verTodoLabel: string;
   hrefVerTodo: string;
+  precioDesdeLabel: string;
 };
 
 /**
@@ -43,6 +44,7 @@ export function SedeHero({
   minDate,
   verTodoLabel,
   hrefVerTodo,
+  precioDesdeLabel,
 }: SedeHeroProps) {
   return (
     <section className="relative z-10 bg-background">
@@ -91,6 +93,7 @@ export function SedeHero({
               minDate={minDate}
               verTodoLabel={verTodoLabel}
               hrefVerTodo={hrefVerTodo}
+              precioDesdeLabel={precioDesdeLabel}
             />
           </div>
         </div>

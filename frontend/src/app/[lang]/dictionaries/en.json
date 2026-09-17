@@ -136,7 +136,10 @@
     "askTime": "What time?",
     "stickyOpen": "Book your trip",
     "stickyClose": "Close",
-    "stickyTitle": "Book your trip"
+    "stickyTitle": "Book your trip",
+    "reservarAqui": "Book here",
+    "verDetalles": "View details",
+    "elegirOtra": "Choose another experience"
   },
   "about": {
     "headline": "Your trusted local agency: passionate about the sea and your experience",

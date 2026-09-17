@@ -136,7 +136,10 @@
     "askTime": "¿Qué hora?",
     "stickyOpen": "Reserva tu viaje",
     "stickyClose": "Cerrar",
-    "stickyTitle": "Reserva tu viaje"
+    "stickyTitle": "Reserva tu viaje",
+    "reservarAqui": "Reservar aquí",
+    "verDetalles": "Ver detalles",
+    "elegirOtra": "Elegir otra experiencia"
   },
   "about": {
     "headline": "Tu agencia local de confianza: apasionados por el mar y por tu experiencia",
