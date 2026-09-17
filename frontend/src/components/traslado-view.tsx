@@ -96,9 +96,16 @@ type TrasladoViewProps = {
   dict: Dictionary;
   catalogo: TrasladosCatalogo;
   empresaSlug: string;
+  sedeSlugActual?: string;
 };
 
-export function TrasladoView({ lang, dict, catalogo, empresaSlug }: TrasladoViewProps) {
+export function TrasladoView({
+  lang,
+  dict,
+  catalogo,
+  empresaSlug,
+  sedeSlugActual,
+}: TrasladoViewProps) {
   const { checkout, traslados, feedback, nav, footer, booking } = dict;
   const { mostrar } = useToast();
   const sinMovimiento = useReducedMotion();
@@ -491,13 +498,15 @@ export function TrasladoView({ lang, dict, catalogo, empresaSlug }: TrasladoView
     return currency.format(min);
   };
 
+  const hrefVolver = sedeSlugActual ? `/${lang}/sede/${sedeSlugActual}` : `/${lang}`;
+
   return (
     <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} />
+      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlugActual} />
 
       <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
         <Link
-          href={`/${lang}/catalogo`}
+          href={hrefVolver}
           className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft size={16} />

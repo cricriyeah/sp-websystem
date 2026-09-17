@@ -3,7 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Warning, ArrowLeft, WhatsappLogo } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale } from '../dictionaries';
-import { getTraslados } from '@/lib/api';
+import { getTraslados, getSedes } from '@/lib/api';
+import { sedesActivas } from '@/lib/reconciliar-sedes';
+import { SEDES_INDICE } from '@/content/sedes-indice';
+import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { alternativasDe } from '@/lib/site';
 import { whatsappHref, tieneWhatsapp } from '@/lib/contacto';
 import { SiteHeader } from '@/components/site-header';
@@ -40,15 +43,25 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
       ? query.empresa
       : (process.env.NEXT_PUBLIC_TRANSPORTE_EMPRESA_SLUG ?? 'transporte-la-paz');
 
+  const sedeDeTransporte = Object.keys(SEDES_INDICE)
+    .map((slug) => getSedeContenido(slug, lang))
+    .find((contenido) => contenido?.servicioTransporte?.empresaSlug === empresaSlug);
+  let sedeSlugActual = sedeDeTransporte?.slug;
+  if (!sedeSlugActual) {
+    const sedesApi = await getSedes().catch(() => null);
+    sedeSlugActual = sedesActivas(SEDES_INDICE, sedesApi)[0]?.slug;
+  }
+  const hrefVolver = sedeSlugActual ? `/${lang}/sede/${sedeSlugActual}` : `/${lang}`;
+
   const catalogo = await getTraslados(empresaSlug).catch(() => null);
 
   if (!catalogo || !catalogo.servicio) {
     return (
       <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={dict.nav} />
+        <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={sedeSlugActual} />
         <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
           <Link
-            href={`/${lang}/catalogo`}
+            href={hrefVolver}
             className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
           >
             <ArrowLeft size={16} />
@@ -88,7 +101,8 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
           footer={dict.footer}
           nav={dict.nav}
           bookLabel={dict.booking.submit}
-          negocio={null}
+          sedeSlug={sedeSlugActual}
+          negocio={sedeDeTransporte?.negocio ?? null}
         />
       </div>
     );
@@ -100,6 +114,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
       dict={dict}
       catalogo={catalogo}
       empresaSlug={empresaSlug}
+      sedeSlugActual={sedeSlugActual}
     />
   );
 }

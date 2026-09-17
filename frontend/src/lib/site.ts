@@ -1,4 +1,7 @@
 import type { Locale } from '@/app/[lang]/dictionaries';
+import { SEDES_INDICE } from '@/content/sedes-indice';
+import { getSedes } from './api';
+import { sedesActivas } from './reconciliar-sedes';
 
 // URL publica del sitio. Hace falta para canonicals, hreflang, sitemap y para
 // que las imagenes de Open Graph salgan absolutas (las redes no resuelven rutas
@@ -16,8 +19,18 @@ export const LOCALE_TAG: Record<Locale, string> = {
   en: 'en-US',
 };
 
-/** Rutas publicas del sitio, la fuente del sitemap y de los canonicals. */
-export const RUTAS = ['', '/reservar', '/deslinde', '/privacidad'] as const;
+/** Rutas publicas estaticas del sitio (no dependen de que sedes esten activas). */
+export const rutasEstaticas = ['', '/reservar', '/deslinde', '/privacidad'] as const;
+
+/**
+ * Rutas de sede activas para el sitemap (spec §9): mismo criterio de
+ * reconciliacion que el hub — si `getSedes()` falla, fallo abierto (todas
+ * las sedes del diccionario), nunca un sitemap mas corto por un error de red.
+ */
+export async function rutasSedes(): Promise<string[]> {
+  const sedesApi = await getSedes().then((s) => s, () => null);
+  return sedesActivas(SEDES_INDICE, sedesApi).map((sede) => `/sede/${sede.slug}`);
+}
 
 export const absolutaEn = (lang: Locale, ruta: string = '') => `${SITE_URL}/${lang}${ruta}`;
 

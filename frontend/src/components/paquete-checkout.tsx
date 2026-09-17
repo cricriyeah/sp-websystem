@@ -403,7 +403,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
   if (phase === 'success') {
     return (
       <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} />
+        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
           <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{pc.success.title}</h1>
           <p className="text-sm text-muted">
@@ -430,7 +430,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
   if (phase === 'fail') {
     return (
       <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} />
+        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
           <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{pc.fail.title}</h1>
           <p className="text-sm text-muted">{pc.fail.body}</p>
@@ -470,7 +470,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
   if (phase === 'resuming') {
     return (
       <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} />
+        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
           <p className="text-sm text-muted">{pc.resumingNotice}</p>
         </div>
@@ -481,7 +481,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
   if (phase === 'capturing') {
     return (
       <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} />
+        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
           <p className="text-sm text-muted">{checkout.submitting}</p>
           <p className="mt-3 text-sm text-muted">{feedback.paySlow}</p>
@@ -493,7 +493,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
   if (phase === 'paying' && pagoActual) {
     return (
       <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} />
+        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div className="mx-auto max-w-xl px-6 pt-[calc(2rem_+_var(--nav-alto))] pb-20 sm:px-8">
           <p className="mb-4 text-center text-sm font-medium text-foreground">
             {pc.stepOf
@@ -550,11 +550,11 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
   // SP2 Seccion 9, "un solo deslinde ampara a todas las empresas").
   return (
     <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} />
+      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
 
       <div className="mx-auto max-w-3xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] pb-24 sm:px-8">
         <Link
-          href={`/${lang}/catalogo`}
+          href={`/${lang}/sede/${sedeSlug}`}
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground"
         >
           <ArrowLeft size={16} />
