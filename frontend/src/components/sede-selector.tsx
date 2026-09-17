@@ -5,15 +5,18 @@ import { useRouter, usePathname } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { CaretDown, Check, MapPin } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
-import { getSedes, type Sede } from '@/lib/api';
+import { SEDES_INDICE, getSedeIndice } from '@/content/sedes-indice';
+import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { guardarSedePreferida, leerSedePreferidaCliente } from '@/lib/sede';
+
+export type SedeOpcion = Pick<SedeIndiceEntry, 'slug' | 'nombre'>;
 
 type SedeSelectorProps = {
   lang: Locale;
-  sedes?: Sede[];
+  sedes?: SedeOpcion[];
   sedeSeleccionadaSlug?: string;
   label?: string;
-  onSelectSede?: (sede: Sede) => void;
+  onSelectSede?: (sede: SedeOpcion) => void;
   variant?: 'header' | 'catalog';
   className?: string;
 };
@@ -28,7 +31,6 @@ export function SedeSelector({
   className = '',
 }: SedeSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [sedesFetched, setSedesFetched] = useState<Sede[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
@@ -59,36 +61,16 @@ export function SedeSelector({
   }, [pathname, sedeSeleccionadaSlug]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Si no se proporcionaron sedes desde el servidor, se cargan en cliente
-  useEffect(() => {
-    if (sedesProp && sedesProp.length > 0) return;
-    let montado = true;
-    getSedes()
-      .then((data) => {
-        if (montado && data) setSedesFetched(data);
-      })
-      .catch(() => {
-        // Fallback defensivo a La Paz si la red falla
-        if (montado) {
-          setSedesFetched([{ id: 1, nombre: 'La Paz', slug: 'la-paz', zona_horaria: 'America/Mazatlan' }]);
-        }
-      });
-    return () => {
-      montado = false;
-    };
-  }, [sedesProp]);
+  // const sedes = sedesProp ?? Object.values(SEDES_INDICE): un [] explícito
+  // significa que no hay sedes activas y nunca dispara fallback. El fallback al
+  // índice es solo compatibilidad para callers que todavía omiten la prop.
+  const sedes = sedesProp ?? Object.values(SEDES_INDICE);
 
-  const sedes = sedesProp && sedesProp.length > 0 ? sedesProp : sedesFetched;
-
-  // Sede actualmente activa
+  const slugActivo = sedeSeleccionadaSlug ?? sedeSlugActiva;
   const sedeActiva =
-    sedes.find((s) => s.slug === sedeSlugActiva) ??
-    sedes[0] ?? {
-      id: 1,
-      nombre: 'La Paz',
-      slug: 'la-paz',
-      zona_horaria: 'America/Mazatlan',
-    };
+    sedes.find((sede) => sede.slug === slugActivo) ??
+    (sedeSeleccionadaSlug ? getSedeIndice(sedeSeleccionadaSlug) : undefined) ??
+    sedes[0];
 
   // Cierre al hacer click fuera
   useEffect(() => {
@@ -114,7 +96,7 @@ export function SedeSelector({
     }
   }, [open]);
 
-  function handleSelect(sede: Sede) {
+  function handleSelect(sede: SedeOpcion) {
     setOpen(false);
     // Optimista: el selector refleja la nueva sede sin esperar a la navegación.
     setSedeSlugActiva(sede.slug);
@@ -122,28 +104,31 @@ export function SedeSelector({
     if (onSelectSede) {
       onSelectSede(sede);
     } else {
-      router.push(`/${lang}/catalogo?sede=${sede.slug}`);
+      router.push(`/${lang}/sede/${sede.slug}`);
     }
   }
 
   const isHeader = variant === 'header';
+  const puedeAbrir = sedes.length > 0;
+  const nombreMostrado = sedeActiva?.nombre ?? label;
 
   return (
     <div ref={ref} className={`relative inline-block text-left ${className}`}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        disabled={!puedeAbrir}
+        onClick={() => puedeAbrir && setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
         className={
           isHeader
-            ? 'flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:border-accent hover:text-accent focus:outline-none focus:ring-1 focus:ring-accent'
-            : 'flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-all hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20'
+            ? 'flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:border-accent hover:text-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed'
+            : 'flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-all hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed'
         }
       >
         <MapPin size={isHeader ? 14 : 18} className="shrink-0 text-accent" weight="fill" />
         <span className="text-muted text-xs hidden sm:inline">{label}:</span>
-        <span className="font-semibold text-foreground">{sedeActiva.nombre}</span>
+        <span className="font-semibold text-foreground">{nombreMostrado}</span>
         <CaretDown
           size={isHeader ? 12 : 14}
           className={`shrink-0 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
@@ -151,7 +136,7 @@ export function SedeSelector({
       </button>
 
       <AnimatePresence>
-        {open && (
+        {open && puedeAbrir && (
           <motion.div
             role="listbox"
             aria-label={label}
@@ -165,7 +150,7 @@ export function SedeSelector({
               {label}
             </div>
             {sedes.map((s) => {
-              const selected = s.slug === sedeActiva.slug;
+              const selected = sedeActiva?.slug === s.slug;
               return (
                 <button
                   key={s.slug}

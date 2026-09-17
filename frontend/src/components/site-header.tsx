@@ -1,11 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { List, X } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { SEDES_INDICE } from '@/content/sedes-indice';
+import type { SedeIndiceEntry } from '@/content/sedes-tipos';
+import { sedesActivas } from '@/lib/reconciliar-sedes';
+import { getSedes } from '@/lib/api';
+import { leerSedePreferidaCliente } from '@/lib/sede';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { LangSwitch } from '@/components/lang-switch';
 import { SedeSelector } from '@/components/sede-selector';
@@ -13,58 +19,91 @@ import { SedeSelector } from '@/components/sede-selector';
 type SiteHeaderProps = {
   lang: Locale;
   nav: Dictionary['nav'];
+  /** 'hub' solo en `/[lang]`. Cualquier otra pagina (con o sin sede propia) usa 'sede'. */
+  variante?: 'hub' | 'sede';
+  /** Si no llega, se resuelve en cliente (query, localStorage/cookie, o primera sede activa). */
+  sedeSlugActual?: string;
   /** Clases extra del `<header>`. Existe para el `print:hidden` del recibo. */
   className?: string;
 };
 
-/**
- * Barra superior, una sola linea y siempre sobre papel.
- *
- * Antes tenia dos tonos porque en la portada flotaba sobre un degradado
- * turquesa. En el rediseno la portada arranca con una foto a sangre **debajo**
- * de la barra, asi que la barra es blanca en todas las paginas y la distincion
- * dejo de existir.
- */
-export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
+export function SiteHeader({
+  lang,
+  nav,
+  variante = 'sede',
+  sedeSlugActual,
+  className = '',
+}: SiteHeaderProps) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const sinMovimiento = useReducedMotion();
+  const [slugResuelto, setSlugResuelto] = useState<string | undefined>(sedeSlugActual);
+  // Fallo abierto desde el primer render (sin esperar la red): todas las
+  // sedes del indice. `sedesActivas` reduce esta lista cuando `getSedes()`
+  // resuelve. `SedeSelector` recibe esta misma lista por prop — nunca vuelve
+  // a pedir `getSedes()` por su cuenta (arch-critic ronda 2, hallazgo 5).
+  const [sedesDisponibles, setSedesDisponibles] = useState<SedeIndiceEntry[]>(
+    Object.values(SEDES_INDICE),
+  );
 
-  // Absolutos y no anclas sueltas: desde el checkout o el deslinde, un `#nosotros`
-  // no llevaria a ningun lado porque esas secciones viven en la portada.
-  const links = [
-    { href: `/${lang}/catalogo`, label: nav.catalogo },
-    { href: `/${lang}#temporadas`, label: nav.temporadas },
-    { href: `/${lang}#nosotros`, label: nav.nosotros },
-    { href: `/${lang}#galeria`, label: nav.galeria },
-    { href: `/${lang}#preguntas`, label: nav.preguntas },
-  ];
+  // Sin slug explicito, la sede activa se resuelve en cliente
+  // (localStorage/cookie) post-hidratacion. Un crawler ve el fallback
+  // (primera sede activa), nunca un valor en blanco.
+  useEffect(() => {
+    let montado = true;
+    getSedes()
+      .then((data) => data, () => null)
+      .then((sedesApi) => {
+        if (!montado) return;
+        const activas = sedesActivas(SEDES_INDICE, sedesApi);
+        setSedesDisponibles(activas);
+        if (sedeSlugActual) return;
+        const enUrl = new URLSearchParams(window.location.search).get('sede');
+        const preferida = leerSedePreferidaCliente();
+        setSlugResuelto(
+          [enUrl, preferida].find((slug) => slug && activas.some((s) => s.slug === slug))
+            ?? activas[0]?.slug,
+        );
+      });
+    return () => {
+      montado = false;
+    };
+  }, [pathname, sedeSlugActual]);
+
+  const slugActual = sedeSlugActual ?? slugResuelto ?? sedesDisponibles[0]?.slug;
+  const sedeIndiceActiva: SedeIndiceEntry | undefined =
+    variante === 'sede' && slugActual ? SEDES_INDICE[slugActual] : undefined;
+
+  const brandMain = variante === 'hub' ? nav.brandMain : (sedeIndiceActiva?.empresaFundadoraNombre ?? nav.brandMain);
+  const brandAccent = variante === 'hub' ? nav.brandAccent : '';
+  const logoSrc =
+    variante === 'hub' ? '/logos/wordmark-agencia.svg' : (sedeIndiceActiva?.logo ?? '/logos/wordmark-agencia.svg');
+
+  const anclaBase = variante === 'sede' && slugActual ? `/${lang}/sede/${slugActual}` : null;
+
+  const links = anclaBase
+    ? [
+        { href: `${anclaBase}#experiencias`, label: nav.catalogo },
+        { href: `${anclaBase}#nosotros`, label: nav.nosotros },
+        ...(slugActual === 'la-paz' ? [
+          { href: `${anclaBase}#temporadas`, label: nav.temporadas },
+          { href: `${anclaBase}#galeria`, label: nav.galeria },
+          { href: `${anclaBase}#preguntas`, label: nav.preguntas },
+        ] : []),
+      ]
+    : [{ href: `/${lang}#sedes`, label: nav.catalogo }];
 
   return (
-    // `fixed` y no `sticky`: no reserva espacio en el flujo de la pagina, asi
-    // que lo que va debajo (el video del Hero en la portada) puede llegar
-    // hasta el borde real de arriba y pasar por detras de la barra en vez de
-    // topar con un hueco en blanco del alto de esta. Las paginas sin foto a
-    // sangre compensan con su propio padding superior (ver donde se monta
-    // `SiteHeader`), porque una barra `fixed` no le avisa a nadie que ocupa
-    // ese lugar. `inset-x-0`: sin ancho explicito una caja `fixed` se encoge a
-    // su contenido en vez de cubrir el ancho de la ventana, que es lo que
-    // necesita el padding lateral de abajo para funcionar.
     <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
-      {/* `<header>` va pegado a los bordes en movil y como pastilla flotante en escritorio (lg:). */}
       <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-6 border-b border-border bg-background px-6 sm:px-8 lg:h-[88px] lg:max-w-6xl lg:border lg:border-border lg:px-12 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
-        {/* Solo el logo, sin el nombre al lado. Por eso el `alt` lleva la marca
-            completa y no va vacio: es lo unico que identifica al sitio aqui, y
-            con `alt=""` un lector de pantalla anunciaria un enlace sin nombre. */}
         <Link
           href={`/${lang}`}
           className="flex shrink-0 items-center text-foreground"
           onClick={() => setOpen(false)}
         >
-          {/* `priority`: es lo primero que se ve del sitio y va en todas las
-              paginas; a carga diferida entraria tarde, con un salto. */}
           <Image
-            src="/logos/logo2salysol.webp"
-            alt={`${nav.brandMain} ${nav.brandAccent}`}
+            src={logoSrc}
+            alt={`${brandMain} ${brandAccent}`.trim()}
             width={1026}
             height={331}
             priority
@@ -85,7 +124,14 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <SedeSelector lang={lang} label={nav.sedeLabel} variant="header" className="hidden sm:inline-block" />
+          <SedeSelector
+            lang={lang}
+            sedes={sedesDisponibles}
+            sedeSeleccionadaSlug={slugActual}
+            label={nav.sedeLabel}
+            variant="header"
+            className="hidden sm:inline-block"
+          />
           <WhatsappContact nav={nav} tone="plain" />
 
           <button
@@ -121,7 +167,13 @@ export function SiteHeader({ lang, nav, className = '' }: SiteHeaderProps) {
               ))}
               <div className="flex items-center justify-between border-b border-border-strong py-3.5">
                 <span className="text-[15px] text-muted">{nav.sedeLabel}</span>
-                <SedeSelector lang={lang} label={nav.sedeLabel} variant="header" />
+                <SedeSelector
+                  lang={lang}
+                  sedes={sedesDisponibles}
+                  sedeSeleccionadaSlug={slugActual}
+                  label={nav.sedeLabel}
+                  variant="header"
+                />
               </div>
               <div className="flex items-center justify-between border-b border-border-strong py-3.5">
                 <span className="text-[15px] text-muted">{nav.switchLang}</span>
