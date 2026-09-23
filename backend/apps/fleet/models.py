@@ -319,6 +319,11 @@ class Servicio(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.empresa})"
 
+    @property
+    def anticipo_disponible(self):
+        """El cliente puede elegir pagar solo el anticipo de este servicio."""
+        return self.permite_anticipo
+
     def precio_en(self, moneda):
         """Precio de lista en la moneda pedida, o None si no esta configurado."""
         return self.precio_base if (moneda or 'MXN').upper() == 'MXN' else self.precio_base_usd
@@ -558,6 +563,16 @@ class Paquete(models.Model):
                                 raise ValidationError({
                                     'precio_ancla_usd': f'El precio en USD del paquete ({self.precio_ancla_usd}) no puede ser menor que la tarifa de transporte en USD ({tarifa_min_usd}).'
                                 })
+
+    @property
+    def es_cruza_empresa(self):
+        """Sus servicios pertenecen a más de una empresa."""
+        return self.servicios_asociados.values('servicio__empresa_id').distinct().count() > 1
+
+    @property
+    def anticipo_disponible(self):
+        """Un paquete de dos empresas nunca admite anticipo, diga lo que diga el campo."""
+        return self.permite_anticipo and not self.es_cruza_empresa
 
     def precio_en(self, moneda):
         """Precio ancla en la moneda pedida, o None si no está configurado."""

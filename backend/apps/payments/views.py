@@ -75,6 +75,7 @@ class CrearPagoView(APIView):
             if precio_base_servicio is None:
                 return Response({'detail': f'El paquete no tiene precio en {reserva.moneda}.'}, status=503)
             porcentaje = reserva.paquete.porcentaje_anticipo
+            anticipo_disponible = reserva.paquete.anticipo_disponible
         elif reserva.servicio_id:
             estrategia = obtener_estrategia_precio(reserva.servicio.estrategia_precio)
             demanda = DemandaPrecio(personas=reserva.numero_personas, moneda=reserva.moneda, noches=reserva.noches)
@@ -94,6 +95,7 @@ class CrearPagoView(APIView):
             except ValueError as e:
                 return Response({'detail': str(e)}, status=503)
             porcentaje = reserva.servicio.porcentaje_anticipo
+            anticipo_disponible = reserva.servicio.anticipo_disponible
         else:
             return Response(
                 {'detail': 'La reserva no tiene servicio ni paquete configurado.'}, status=400,
@@ -102,6 +104,8 @@ class CrearPagoView(APIView):
         forma_pago = request.data.get('forma_pago', Reserva.FormaPago.COMPLETO)
         if forma_pago not in Reserva.FormaPago.values:
             return Response({'detail': 'forma_pago invalida.'}, status=400)
+        if forma_pago == 'anticipo' and not anticipo_disponible:
+            return Response({'detail': 'Este producto no admite pago de anticipo.'}, status=400)
 
         cargo_extras, extras_a_borrar, extras_a_congelar, error = (
             self._resolver_personalizaciones(reserva)

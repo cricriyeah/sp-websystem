@@ -709,7 +709,7 @@ class TrasladosViewTest(TestCase):
                 servicio = Servicio.objects.create(
                     empresa=empresa, nombre=f'Traslados {empresa.slug}', slug='traslado',
                     tipo_servicio='transporte', estrategia_cupo='bajo_demanda',
-                    estrategia_precio='por_ruta', capacidad_maxima=14, porcentaje_anticipo=100,
+                    estrategia_precio='por_ruta', capacidad_maxima=14, permite_anticipo=False,
                 )
                 tarifa = TransporteTarifa.objects.create(
                     empresa=empresa, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
@@ -727,7 +727,7 @@ class TrasladosViewTest(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json(), {
             'servicio': {'slug': servicio.slug, 'nombre': servicio.nombre,
-                         'capacidad_maxima': 14, 'porcentaje_anticipo': 100,
+                         'capacidad_maxima': 14, 'porcentaje_anticipo': 30,
                          'empresa_slug': self.empresa_b.slug, 'hora_apertura': None, 'hora_cierre': None},
             'tarifas': [{'tipo_traslado': tarifa.tipo_traslado, 'zona': '', 'personas_min': 1,
                          'personas_max': 4, 'precio': '4500.00', 'precio_usd': None}],

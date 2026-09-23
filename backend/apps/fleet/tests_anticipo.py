@@ -72,3 +72,45 @@ class AnticipoServicioPaqueteTests(OperadorTestCase):
         self.assertEqual(viejo_anticipo.porcentaje_anticipo, 30)
         self.assertFalse(paquete.permite_anticipo)
         self.assertEqual(paquete.porcentaje_anticipo, 30)
+
+class AnticipoDisponibleTests(OperadorTestCase):
+    def setUp(self):
+        self.sede, _ = Sede.objects.get_or_create(slug='la-paz', defaults={'nombre': 'La Paz'})
+        self.pesca = Empresa.objects.create(sede=self.sede, nombre='Pesca AD', slug='pesca-ad')
+        self.transporte = Empresa.objects.create(sede=self.sede, nombre='Transp AD', slug='transp-ad')
+        self.s_pesca = Servicio.objects.create(
+            empresa=self.pesca, nombre='Pesca', slug='pesca-ad-s', tipo_servicio='pesca',
+            precio_base=Decimal('4000.00'),
+        )
+        self.s_transp = Servicio.objects.create(
+            empresa=self.transporte, nombre='Traslado', slug='traslado-ad-s', tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta',
+        )
+
+    def _paquete(self, slug, servicios, **extra):
+        from apps.fleet.models import PaqueteServicio
+
+        paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.pesca, nombre=slug, slug=slug,
+            precio_ancla=Decimal('9000.00'), **extra,
+        )
+        for orden, servicio in enumerate(servicios, start=1):
+            PaqueteServicio.objects.create(paquete=paquete, servicio=servicio, orden=orden)
+        return paquete
+
+    def test_servicio_sigue_su_interruptor(self):
+        self.assertTrue(self.s_pesca.anticipo_disponible)
+        self.s_pesca.permite_anticipo = False
+        self.assertFalse(self.s_pesca.anticipo_disponible)
+
+    def test_paquete_de_una_empresa_admite_anticipo_si_lo_permite(self):
+        paquete = self._paquete('mono-ad', [self.s_pesca])
+        self.assertFalse(paquete.es_cruza_empresa)
+        self.assertTrue(paquete.anticipo_disponible)
+        paquete.permite_anticipo = False
+        self.assertFalse(paquete.anticipo_disponible)
+
+    def test_paquete_de_dos_empresas_nunca_admite_anticipo(self):
+        paquete = self._paquete('cruza-ad', [self.s_pesca, self.s_transp], permite_anticipo=True)
+        self.assertTrue(paquete.es_cruza_empresa)
+        self.assertFalse(paquete.anticipo_disponible)

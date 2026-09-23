@@ -357,7 +357,7 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(reserva_hotel.precio_total, Decimal('4500.00'))
 
     @mock.patch.object(StripeClient, 'payment_intents')
-    def test_crear_pago_paquete_con_anticipo_configurable(self, payment_intents):
+    def test_crear_pago_paquete_sin_anticipo_cobra_pago_completo(self, payment_intents):
         payment_intents.create.return_value = intent_falso()
         paquete = Paquete.objects.create(
             sede=self.empresa.sede,
@@ -365,7 +365,7 @@ class CrearPagoTests(ApiTestCase):
             nombre='Super Paquete',
             slug='super-paquete',
             precio_ancla=Decimal('10000.00'),
-            porcentaje_anticipo=100,
+            permite_anticipo=False,
         )
         reserva_paquete = Reserva.objects.create(
             empresa=self.empresa,
@@ -381,9 +381,9 @@ class CrearPagoTests(ApiTestCase):
             checkout_id=uuid.uuid4(),
         )
         url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva_paquete.pk})
-        # Anticipo al 100% cobra el total (10000.00)
+        # Pago completo cobra el total (10000.00)
         resp = self.client.post(url, {
-            'forma_pago': 'anticipo',
+            'forma_pago': 'completo',
             'checkout_id': str(reserva_paquete.checkout_id),
         }, content_type='application/json')
         self.assertEqual(resp.status_code, 200)
@@ -1218,23 +1218,23 @@ class WebhookTests(ApiTestCase):
         self.assertEqual(self.reserva.monto_pagado, Decimal('1000.00'))
         self.assertEqual(self.reserva.saldo_pendiente, Decimal('3500.00'))
 
-    def test_webhook_paquete_anticipo_100_no_registra_descuadre(self):
+    def test_webhook_paquete_pago_completo_no_registra_descuadre(self):
         paquete = Paquete.objects.create(
             sede=self.empresa.sede,
             empresa_lider=self.empresa,
             nombre='Paquete Total',
             slug='paquete-total',
             precio_ancla=Decimal('8000.00'),
-            porcentaje_anticipo=100,
+            permite_anticipo=False,
         )
         reserva = crear_reserva(self.empresa, paquete=paquete, servicio=None)
         reserva.precio_total = Decimal('8000.00')
-        reserva.forma_pago = Reserva.FormaPago.ANTICIPO
-        reserva.stripe_payment_intent_id = 'pi_paquete_100'
+        reserva.forma_pago = Reserva.FormaPago.COMPLETO
+        reserva.stripe_payment_intent_id = 'pi_paquete_completo'
         reserva.save()
 
         with self.assertNoLogs('apps.payments.services', level='ERROR'):
-            resp = self.entregar(evento_pagado(reserva.pk, amount=800000, intent_id='pi_paquete_100'))
+            resp = self.entregar(evento_pagado(reserva.pk, amount=800000, intent_id='pi_paquete_completo'))
         self.assertEqual(resp.status_code, 200)
         reserva.refresh_from_db()
         self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
@@ -2201,7 +2201,7 @@ class TrasladoPagoFixture:
         self.servicio = Servicio.objects.create(
             empresa=self.empresa, nombre='Traslados', slug='traslados',
             tipo_servicio='transporte', estrategia_cupo='bajo_demanda',
-            estrategia_precio='por_ruta', capacidad_maxima=14, porcentaje_anticipo=100,
+            estrategia_precio='por_ruta', capacidad_maxima=14, permite_anticipo=False,
         )
         self.punto = PuntoEncuentro.objects.create(
             empresa=self.empresa, nombre='Hotel del centro', zona='centro',
@@ -2276,16 +2276,16 @@ class CrearPagoTrasladoTest(TrasladoPagoFixture, ApiTestCase):
                 self.assertEqual(params['currency'], moneda.lower())
                 self.assertIn('idempotency_key', options)
 
-    def test_congela_detalle_y_anticipo_cobra_cien_por_ciento(self):
+    def test_congela_detalle_y_pago_completo(self):
         reserva = self.reserva()
-        response = self.post(reserva, forma_pago='anticipo')
+        response = self.post(reserva)
         self.assertEqual(response.status_code, 200, response.data)
         reserva.refresh_from_db()
         self.assertEqual(response.data['monto_a_cobrar'], '4500.00')
         self.assertEqual(reserva.detalle_transporte.numero_personas, 4)
         self.assertEqual(reserva.detalle_transporte.precio_calculado, Decimal('4500.00'))
         self.assertEqual(reserva.precio_total, Decimal('4500.00'))
-        self.assertEqual(reserva.forma_pago, 'anticipo')
+        self.assertEqual(reserva.forma_pago, 'completo')
         self.assertEqual(reserva.estado, Reserva.Estado.PENDIENTE_PAGO)
 
     def test_zona_efectiva_del_punto(self):

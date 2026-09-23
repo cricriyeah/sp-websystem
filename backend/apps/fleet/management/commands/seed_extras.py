@@ -27,9 +27,10 @@ class Command(BaseCommand):
 
         creados = 0
         with scope.con_empresa(empresa), transaction.atomic():
+            # Solo se necesita la PK, incluso con un esquema anterior a los campos nuevos.
             servicio = Servicio.objects.filter(
                 empresa=empresa, slug='pesca-deportiva', tipo_servicio='pesca',
-            ).first()
+            ).only('id').first()
             if servicio is None:
                 raise CommandError(f"Falta pesca-deportiva en empresa '{empresa.slug}'.")
             semillas = [

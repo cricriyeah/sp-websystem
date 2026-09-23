@@ -172,7 +172,7 @@ class Command(BaseCommand):
                     estrategia_cupo='por_noche', estrategia_precio='por_noche',
                     modo_ocupacion='exclusivo', precio_base=Decimal('3200'),
                     precio_base_usd=Decimal('185'), personas_incluidas=2,
-                    porcentaje_anticipo=100, activo=True,
+                    permite_anticipo=False, activo=True,
                     descripcion='Suite en el malecón de La Paz. Pago completo por adelantado.',
                 ),
             )
@@ -263,7 +263,7 @@ class Command(BaseCommand):
                     estrategia_precio='por_ruta',
                     modo_ocupacion='exclusivo',
                     capacidad_maxima=14,
-                    porcentaje_anticipo=100,
+                    permite_anticipo=False,
                     activo=True,
                     descripcion='Servicio de transporte privado en La Paz y aeropuerto.',
                 ),
@@ -310,7 +310,7 @@ class Command(BaseCommand):
                     empresa_lider=sal, nombre='Pesca + Traslado',
                     descripcion='Pesca deportiva y traslado privado en La Paz. Dos cobros, uno por empresa.',
                     precio_ancla=Decimal('7500.00'), precio_ancla_usd=Decimal('450.00'),
-                    porcentaje_anticipo=100, activo=True,
+                    permite_anticipo=False, activo=True,
                 ),
             )
             for posicion, servicio in enumerate((pesca, traslado), start=1):
