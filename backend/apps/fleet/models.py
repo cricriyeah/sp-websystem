@@ -584,6 +584,19 @@ class PaqueteServicio(models.Model):
     paquete = models.ForeignKey(Paquete, on_delete=models.CASCADE, related_name='servicios_asociados')
     servicio = models.ForeignKey(Servicio, on_delete=models.PROTECT, related_name='paquetes_incluidos')
     orden = models.PositiveSmallIntegerField(default=1)
+    dia_estancia = models.PositiveSmallIntegerField(
+        default=1,
+        help_text='Día del paquete en que ocurre este servicio (1 = día de llegada).',
+    )
+    noches = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Solo hospedaje: noches que incluye el paquete. El cliente no las elige.',
+    )
+    personas_incluidas = models.PositiveSmallIntegerField(
+        default=2,
+        help_text='Lugares de este servicio que incluye el paquete. El cliente puede usar menos '
+                  'sin que cambie el precio.',
+    )
 
     class Meta:
         constraints = [
