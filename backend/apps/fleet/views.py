@@ -141,6 +141,7 @@ class TrasladosView(APIView):
                     'nombre': servicio.nombre,
                     'capacidad_maxima': servicio.capacidad_maxima,
                     'porcentaje_anticipo': servicio.porcentaje_anticipo,
+                    'permite_anticipo': servicio.permite_anticipo,
                     'empresa_slug': empresa.slug,
                     'hora_apertura': servicio.hora_apertura.isoformat() if servicio.hora_apertura else None,
                     'hora_cierre': servicio.hora_cierre.isoformat() if servicio.hora_cierre else None,

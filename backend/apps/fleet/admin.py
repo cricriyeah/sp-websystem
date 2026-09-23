@@ -99,9 +99,10 @@ class ServicioPersonalizacionInline(TabularInline):
 class ServicioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
         'nombre', 'tipo_servicio', 'estrategia_cupo', 'estrategia_precio',
-        'modo_ocupacion', 'precio_base', 'precio_base_usd', 'activo',
+        'modo_ocupacion', 'precio_base', 'precio_base_usd',
+        'permite_anticipo', 'porcentaje_anticipo', 'activo',
     ]
-    list_filter = ['tipo_servicio', 'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion', 'activo']
+    list_filter = ['tipo_servicio', 'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion', 'permite_anticipo', 'activo']
     list_editable = ['precio_base', 'precio_base_usd', 'activo']
     search_fields = ['nombre', 'slug', 'descripcion']
     prepopulated_fields = {'slug': ('nombre',)}
@@ -134,7 +135,7 @@ class PaqueteServicioInline(TabularInline):
 @admin.register(Paquete)
 class PaqueteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     empresa_campo = 'empresa_lider'
-    list_display = ['nombre', 'sede', 'empresa_lider', 'precio_ancla', 'precio_ancla_usd', 'activo']
+    list_display = ['nombre', 'sede', 'empresa_lider', 'precio_ancla', 'precio_ancla_usd', 'permite_anticipo', 'porcentaje_anticipo', 'activo']
     list_filter = ['sede', 'activo']
     list_editable = ['precio_ancla', 'precio_ancla_usd', 'activo']
     search_fields = ['nombre', 'slug', 'descripcion']

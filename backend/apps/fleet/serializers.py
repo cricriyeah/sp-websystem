@@ -47,6 +47,7 @@ class ServicioSerializer(serializers.ModelSerializer):
             'id', 'empresa_slug', 'nombre', 'slug', 'tipo_servicio',
             'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion',
             'precio_base', 'precio_base_usd',
+            'permite_anticipo', 'porcentaje_anticipo',
             'precio_persona_extra', 'precio_persona_extra_usd',
             'personas_incluidas', 'descripcion', 'activo',
             'personalizaciones',
@@ -73,6 +74,8 @@ class PaqueteSerializer(serializers.ModelSerializer):
     empresa_lider = serializers.CharField(source='empresa_lider.nombre', read_only=True)
     empresa_lider_slug = serializers.CharField(source='empresa_lider.slug', read_only=True)
     servicios_asociados = serializers.SerializerMethodField()
+    permite_anticipo = serializers.SerializerMethodField()
+    es_cruza_empresa = serializers.SerializerMethodField()
 
     class Meta:
         model = Paquete
@@ -80,8 +83,16 @@ class PaqueteSerializer(serializers.ModelSerializer):
             'id', 'sede', 'sede_slug', 'empresa_lider', 'empresa_lider_slug',
             'nombre', 'slug', 'descripcion',
             'precio_ancla', 'precio_ancla_usd', 'regla_precio', 'activo',
+            'permite_anticipo', 'porcentaje_anticipo', 'es_cruza_empresa',
             'servicios_asociados',
         ]
+
+    def get_permite_anticipo(self, obj):
+        return obj.anticipo_disponible
+
+    def get_es_cruza_empresa(self, obj):
+        # Una consulta por paquete; aceptable para las listas cortas del catálogo.
+        return obj.es_cruza_empresa
 
     def get_servicios_asociados(self, obj):
         qs = obj.servicios_asociados.filter(servicio__activo=True).order_by('orden')

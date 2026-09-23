@@ -728,6 +728,7 @@ class TrasladosViewTest(TestCase):
         self.assertEqual(respuesta.json(), {
             'servicio': {'slug': servicio.slug, 'nombre': servicio.nombre,
                          'capacidad_maxima': 14, 'porcentaje_anticipo': 30,
+                         'permite_anticipo': False,
                          'empresa_slug': self.empresa_b.slug, 'hora_apertura': None, 'hora_cierre': None},
             'tarifas': [{'tipo_traslado': tarifa.tipo_traslado, 'zona': '', 'personas_min': 1,
                          'personas_max': 4, 'precio': '4500.00', 'precio_usd': None}],
