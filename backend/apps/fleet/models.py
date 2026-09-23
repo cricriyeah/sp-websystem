@@ -261,9 +261,15 @@ class Servicio(models.Model):
     modo_ocupacion = models.CharField(
         max_length=20, choices=ModoOcupacion.choices, default=ModoOcupacion.EXCLUSIVO,
     )
+    permite_anticipo = models.BooleanField(
+        default=True,
+        help_text='Si está activo, el cliente puede elegir pagar solo el anticipo.',
+    )
     porcentaje_anticipo = models.PositiveSmallIntegerField(
         default=30,
-        help_text='% del total que se cobra en línea. 30=anticipo, 100=completo.',
+        validators=[MinValueValidator(1), MaxValueValidator(99)],
+        help_text='% del total que se cobra en línea si el cliente elige anticipo (1 a 99). '
+                  'Solo aplica si "permite anticipo" está activo.',
     )
     precio_base = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.00'),
@@ -502,7 +508,17 @@ class Paquete(models.Model):
         help_text='Precio ancla del paquete en dólares (USD). Opcional.'
     )
     regla_precio = models.CharField(max_length=50, default='precio_ancla')
-    porcentaje_anticipo = models.PositiveSmallIntegerField(default=30)
+    permite_anticipo = models.BooleanField(
+        default=True,
+        help_text='Si está activo, el cliente puede elegir pagar solo el anticipo. '
+                  'Un paquete con servicios de dos empresas nunca admite anticipo.',
+    )
+    porcentaje_anticipo = models.PositiveSmallIntegerField(
+        default=30,
+        validators=[MinValueValidator(1), MaxValueValidator(99)],
+        help_text='% del total que se cobra en línea si el cliente elige anticipo (1 a 99). '
+                  'Sustituye al anticipo de los servicios individuales del paquete.',
+    )
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
