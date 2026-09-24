@@ -2,12 +2,14 @@
 import uuid
 from datetime import date, time
 from decimal import Decimal
+from unittest import mock
 
 from django.core.exceptions import ValidationError
 
 from apps.bookings.models import Reserva
+from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
 from apps.bookings.serializers import ReservaCheckoutSerializer
-from apps.fleet.models import Paquete, PaqueteServicio, Servicio
+from apps.fleet.models import Paquete, PaqueteServicio, Recurso, Servicio
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import OperadorTestCase
 
@@ -182,3 +184,51 @@ class SerializadorPaqueteTests(FixturePaqueteEstancia, OperadorTestCase):
         reserva.refresh_from_db()
         self.assertEqual(reserva.inicio_paquete, date(2026, 10, 12))
         self.assertEqual(Reserva.objects.filter(paquete=self.paquete).count(), 1)
+
+
+class CupoPorComponenteTests(FixturePaqueteEstancia, OperadorTestCase):
+    def setUp(self):
+        self.sembrar()
+        Recurso.objects.create(
+            empresa=self.empresa, servicio=self.hotel, nombre='Cabaña 1', capacidad_maxima=4,
+        )
+
+    def _reserva_pagada(self, personas_pesca=3, personas_hotel=1):
+        reserva = self.reserva(
+            estado=Reserva.Estado.PAGADA, fecha=date(2026, 10, 11), fecha_salida=date(2026, 10, 13),
+            numero_personas=personas_pesca,
+            personas_por_servicio={str(self.pesca.pk): personas_pesca, str(self.hotel.pk): personas_hotel},
+        )
+        reserva.save()
+        return reserva
+
+    @mock.patch('apps.bookings.cupo.confirmacion.evaluar_cupo', return_value=None)
+    @mock.patch('apps.bookings.cupo.confirmacion.bloquear_cupo')
+    def test_la_habitacion_se_ocupa_desde_el_inicio_del_paquete(self, _candado, evaluar):
+        reserva = self._reserva_pagada()
+        reservar_cupo_al_confirmar(reserva)
+        ocupacion = reserva.ocupaciones.get()
+        self.assertEqual(ocupacion.fecha_inicio, date(2026, 10, 10))
+        self.assertEqual(ocupacion.fecha_fin, date(2026, 10, 13))
+        # La pesca se valida el día 2 con las personas de la pesca, no las del hospedaje.
+        llamada = evaluar.call_args
+        self.assertEqual(llamada.args[0], date(2026, 10, 11))
+        self.assertEqual(llamada.args[1], 3)
+        self.assertEqual(reserva.componentes.count(), 2)
+
+
+class TopeDePersonasDelPaqueteTests(FixturePaqueteEstancia, OperadorTestCase):
+    def setUp(self):
+        self.sembrar()
+
+    def test_un_paquete_de_hospedaje_admite_mas_de_cinco_personas(self):
+        solo_hotel = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.empresa, nombre='Solo hotel', slug='solo-hotel-pe',
+            precio_ancla=Decimal('5000.00'),
+        )
+        PaqueteServicio.objects.create(paquete=solo_hotel, servicio=self.hotel, orden=1, noches=2, personas_incluidas=6)
+        reserva = self.reserva(
+            paquete=solo_hotel, numero_personas=6, fecha=date(2026, 10, 10), inicio_paquete=date(2026, 10, 10),
+            fecha_salida=date(2026, 10, 12), personas_por_servicio={str(self.hotel.pk): 6},
+        )
+        reserva.full_clean()

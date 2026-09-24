@@ -10,7 +10,10 @@ from apps.bookings.models import (
 )
 
 
-def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False):
+def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False, *, desde=None, hasta=None, personas=None):
+    desde = desde or reserva.fecha
+    hasta = hasta or reserva.fecha_fin_servicio
+    personas = personas or reserva.numero_personas
     recursos_candidatos = list(servicio.recursos.filter(activo=True))
     if not recursos_candidatos:
         msg = (
@@ -24,18 +27,14 @@ def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False):
         bloquear_recurso(reserva.empresa_id, recurso.pk)
 
     recursos_con_ocupaciones = obtener_recursos_con_ocupaciones(
-        desde=reserva.fecha,
-        hasta=reserva.fecha_fin_servicio,
+        desde=desde,
+        hasta=hasta,
         empresa=reserva.empresa,
         servicio=servicio,
         excluir_pk=reserva.pk,
     )
-    libres = recursos_disponibles_en_rango(
-        recursos_con_ocupaciones,
-        reserva.fecha,
-        reserva.fecha_fin_servicio,
-    )
-    elegidos = elegir_recursos(libres, personas=reserva.numero_personas, cantidad=1)
+    libres = recursos_disponibles_en_rango(recursos_con_ocupaciones, desde, hasta)
+    elegidos = elegir_recursos(libres, personas=personas, cantidad=1)
     if not elegidos:
         msg = (
             f'No hay habitación disponible para el componente {servicio.nombre}.'
@@ -50,8 +49,8 @@ def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False):
                 reserva=reserva,
                 recurso_id=rec_id,
                 empresa=reserva.empresa,
-                fecha_inicio=reserva.fecha,
-                fecha_fin=reserva.fecha_fin_servicio,
+                fecha_inicio=desde,
+                fecha_fin=hasta,
                 ocupa_cupo=True,
             )
 
@@ -108,7 +107,7 @@ def reservar_cupo_al_confirmar(reserva) -> None:
                 bloquear_cupo(reserva.empresa_id, reserva.fecha, servicio_id=servicio.pk)
                 motivo = evaluar_cupo(
                     reserva.fecha,
-                    reserva.numero_personas,
+                    reserva.personas_de(servicio.pk),
                     reserva.empresa,
                     excluir_pk=reserva.pk,
                     estrategia_cupo='por_recurso_dia',
@@ -123,7 +122,11 @@ def reservar_cupo_al_confirmar(reserva) -> None:
                     estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
                 )
             elif estrategia == 'por_noche':
-                _asignar_cupo_hospedaje(reserva, servicio, es_componente=True)
+                _asignar_cupo_hospedaje(
+                    reserva, servicio, es_componente=True,
+                    desde=reserva.fecha_inicio_paquete, hasta=reserva.fecha_fin_servicio,
+                    personas=reserva.personas_de(servicio.pk),
+                )
                 ReservaPaqueteComponente.objects.create(
                     reserva=reserva,
                     servicio=servicio,

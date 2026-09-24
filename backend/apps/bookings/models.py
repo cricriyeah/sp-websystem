@@ -224,9 +224,10 @@ def _validar_cupo_hospedaje(reserva):
 def _validar_cupo_de_paquete(reserva):
     for ps in reserva.paquete.servicios_asociados.select_related('servicio').all():
         estrategia = ps.servicio.estrategia_cupo
+        personas = reserva.personas_de(ps.servicio_id)
         if estrategia == 'por_recurso_dia':
             motivo = evaluar_cupo(
-                reserva.fecha, reserva.numero_personas, reserva.empresa,
+                reserva.fecha, personas, reserva.empresa,
                 excluir_pk=reserva.pk, estrategia_cupo='por_recurso_dia',
                 servicio_id=ps.servicio_id,
             )
@@ -236,9 +237,9 @@ def _validar_cupo_de_paquete(reserva):
                 })
         elif estrategia == 'por_noche':
             disponible = evaluar_disponibilidad_hospedaje(
-                check_in=reserva.fecha,
+                check_in=reserva.fecha_inicio_paquete,
                 check_out=reserva.fecha_fin_servicio,
-                personas=reserva.numero_personas,
+                personas=personas,
                 empresa=reserva.empresa,
                 servicio=ps.servicio,
                 excluir_pk=reserva.pk,
@@ -761,6 +762,9 @@ class Reserva(models.Model):
             raise ValidationError({'hora': f'La hora debe estar entre {ventana[0]:%H:%M} y {ventana[1]:%H:%M}.'})
 
     def _validar_tope_personas(self):
+        if self.paquete_id:
+            # Un paquete tiene tope por componente (`personas_incluidas`), validado al reservar.
+            return
         tope = MAX_PERSONAS
         if self.servicio_id and self.servicio.capacidad_maxima:
             tope = self.servicio.capacidad_maxima
