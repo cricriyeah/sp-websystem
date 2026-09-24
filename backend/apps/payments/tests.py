@@ -2564,6 +2564,7 @@ class CrearOrdenTest(TestCase):
                 slug='pesca-y-traslado',
                 precio_ancla=Decimal('5000.00'),
                 precio_ancla_usd=Decimal('300.00'),
+                permite_anticipo=False,
             )
             PaqueteServicio.objects.create(paquete=self.paquete_cruza, servicio=self.servicio_pesca, orden=1)
             PaqueteServicio.objects.create(paquete=self.paquete_cruza, servicio=self.servicio_transporte, orden=2)
@@ -2599,7 +2600,10 @@ class CrearOrdenTest(TestCase):
             'ref': 'amigo',
             'fecha': '2026-10-15',
             'hora': '07:00:00',
-            'numero_personas': 2,
+            'componentes': [
+                {'servicio': self.servicio_pesca.slug, 'numero_personas': 2},
+                {'servicio': self.servicio_transporte.slug, 'numero_personas': 2},
+            ],
             'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
             'direccion_personalizada': 'Calle Marina 123',
             'fecha_regreso': '2026-10-17',
@@ -2649,7 +2653,9 @@ class CrearOrdenTest(TestCase):
             'deslinde_nombre': 'Carlos Lopez',
             'fecha': '2026-10-15',
             'hora': '07:00:00',
-            'numero_personas': 2,
+            'componentes': [
+                {'servicio': self.servicio_pesca.slug, 'numero_personas': 2},
+            ],
         }
         res = self.client.post(f'/api/{self.sede.slug}/ordenes/', payload, content_type='application/json')
         self.assertEqual(res.status_code, 400)
@@ -2685,7 +2691,10 @@ class CrearOrdenTest(TestCase):
             'deslinde_nombre': 'Carlos Lopez',
             'fecha': '2026-10-15',
             'hora': '07:00:00',
-            'numero_personas': 2,
+            'componentes': [
+                {'servicio': self.servicio_pesca.slug, 'numero_personas': 2},
+                {'servicio': self.servicio_transporte.slug, 'numero_personas': 2},
+            ],
             'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
             'direccion_personalizada': 'Calle Marina 123',
             'fecha_regreso': '2026-10-17',
@@ -2729,7 +2738,10 @@ class CrearOrdenTest(TestCase):
             'deslinde_nombre': 'Nuevo Cliente',
             'fecha': '2026-10-15',
             'hora': '07:00:00',
-            'numero_personas': 2,
+            'componentes': [
+                {'servicio': self.servicio_pesca.slug, 'numero_personas': 2},
+                {'servicio': self.servicio_transporte.slug, 'numero_personas': 2},
+            ],
             'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
             'direccion_personalizada': 'Calle Marina 123',
             'fecha_regreso': '2026-10-17',

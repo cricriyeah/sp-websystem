@@ -467,10 +467,17 @@ class CrearOrdenView(APIView):
 
     throttle_scope = 'reservas'
     def post(self, request, sede_slug):
+        from datetime import date as _date
+
+        from apps.bookings import personalizaciones as extras_reserva
         from django.utils import timezone
         from apps.bookings.models import DESLINDE_VERSION, DetalleTransporte, Orden, Reserva, Vendedora
         from apps.bookings.serializers import ip_del_cliente
-        from apps.fleet.models import PuntoEncuentro
+        from apps.fleet.calendario_paquete import (
+            ComponenteCalendario, fecha_de_componente, fecha_salida as calcular_salida, noches_del_paquete,
+        )
+        from apps.fleet.models import PuntoEncuentro, componente_desde
+        from apps.fleet.paquete_reglas import errores_de_paquete
         from apps.tenancy.models import Sede
         from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -499,6 +506,39 @@ class CrearOrdenView(APIView):
                 {'detail': 'Este paquete no es cruza-empresa. Debe reservarse mediante el flujo habitual de reservas.'},
                 status=400,
             )
+
+        with scope.con_empresa(paquete.empresa_lider):
+            filas_ps = {
+                fila['servicio_id']: fila
+                for fila in paquete.servicios_asociados.values(
+                    'servicio_id', 'dia_estancia', 'noches', 'personas_incluidas',
+                )
+            }
+        servicios = [s for s in servicios if s.id in filas_ps]
+        calendario = [
+            ComponenteCalendario(
+                dia_estancia=filas_ps[s.id]['dia_estancia'], estrategia_cupo=s.estrategia_cupo,
+                noches=filas_ps[s.id]['noches'],
+            )
+            for s in servicios
+        ]
+        errores = errores_de_paquete(
+            permite_anticipo=paquete.permite_anticipo,
+            componentes=[
+                componente_desde(
+                    s, noches=filas_ps[s.id]['noches'], dia_estancia=filas_ps[s.id]['dia_estancia'],
+                    personas_incluidas=filas_ps[s.id]['personas_incluidas'],
+                )
+                for s in servicios
+            ],
+        )
+        if errores:
+            return Response({'paquete': errores}, status=400)
+        try:
+            inicio = _date.fromisoformat(str(request.data.get('fecha')))
+        except ValueError:
+            return Response({'fecha': 'Elige la fecha de inicio del paquete.'}, status=400)
+        hay_hospedaje = noches_del_paquete(calendario) is not None
 
         deslinde_aceptado = request.data.get('deslinde_aceptado')
         deslinde_nombre = request.data.get('deslinde_nombre')
@@ -569,11 +609,18 @@ class CrearOrdenView(APIView):
                 for servicio in servicios:
                     empresa = servicio.empresa
                     es_lider = (empresa.id == paquete.empresa_lider_id)
+                    ps = filas_ps[servicio.id]
                     comp_d = _buscar_datos_comp(servicio)
+                    if comp_d.get('fecha') or (hay_hospedaje and comp_d.get('fecha_regreso')):
+                        raise DjangoValidationError({'fecha': 'Las fechas de cada servicio las define el paquete.'})
 
-                    fecha = comp_d.get('fecha') or request.data.get('fecha')
+                    fecha = fecha_de_componente(inicio, ps['dia_estancia'])
+                    personas = comp_d.get('numero_personas') or ps['personas_incluidas']
+                    if personas > ps['personas_incluidas']:
+                        raise DjangoValidationError({
+                            'numero_personas': f'"{servicio.nombre}" incluye {ps["personas_incluidas"]} lugar(es) en este paquete.',
+                        })
                     hora = comp_d.get('hora') or request.data.get('hora', '07:00:00')
-                    personas = comp_d.get('numero_personas') or request.data.get('numero_personas', 1)
 
                     with scope.con_empresa(empresa):
                         reserva = None
@@ -590,6 +637,7 @@ class CrearOrdenView(APIView):
                                 estado=Reserva.Estado.PENDIENTE_PAGO,
                             )
                         reserva.fecha = fecha
+                        reserva.fecha_salida = calcular_salida(inicio, calendario) if servicio.estrategia_cupo == 'por_noche' else None
                         reserva.hora = hora
                         reserva.numero_personas = personas
                         reserva.nombre_cliente = nombre_cliente
@@ -614,7 +662,11 @@ class CrearOrdenView(APIView):
                             pe_id = comp_d.get('punto_encuentro') or request.data.get('punto_encuentro')
                             dir_pers = comp_d.get('direccion_personalizada') or request.data.get('direccion_personalizada', '')
                             zona = comp_d.get('zona') or request.data.get('zona', '')
-                            fecha_regreso = comp_d.get('fecha_regreso') or request.data.get('fecha_regreso')
+                            fecha_regreso = (
+                                calcular_salida(inicio, calendario)
+                                if (hay_hospedaje and tipo_traslado == 'redondo_aeropuerto')
+                                else comp_d.get('fecha_regreso') or request.data.get('fecha_regreso')
+                            )
 
                             punto_encuentro = None
                             if pe_id:
@@ -632,6 +684,10 @@ class CrearOrdenView(APIView):
                             detalle.fecha_regreso = fecha_regreso
                             detalle.full_clean()
                             detalle.save()
+
+                        items = comp_d.get('personalizaciones') or []
+                        extras_reserva.validar_seleccion(servicio, items)
+                        extras_reserva.sincronizar(reserva, items)
 
                         reservas_resultado.append({
                             'id': reserva.id,

@@ -2397,6 +2397,9 @@ class OrdenModelTest(EmpresaTestCase):
         from apps.fleet.enums import TipoTraslado
         from apps.fleet.models import PaqueteServicio, Servicio, TransporteTarifa
 
+        self.paquete.permite_anticipo = False
+        self.paquete.save(update_fields=['permite_anticipo'])
+
         self._alcance.__exit__(None, None, None)
         try:
             with scope.como_operador_plataforma():
@@ -2436,7 +2439,10 @@ class OrdenModelTest(EmpresaTestCase):
                 'deslinde_nombre': 'Juan Perez',
                 'fecha': (date.today() + timedelta(days=15)).isoformat(),
                 'hora': '07:00:00',
-                'numero_personas': 2,
+                'componentes': [
+                    {'servicio': servicio_pesca.slug, 'numero_personas': 2},
+                    {'servicio': servicio_transporte.slug, 'numero_personas': 2},
+                ],
                 'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
                 'direccion_personalizada': 'Calle Marina 123',
                 'fecha_regreso': (date.today() + timedelta(days=17)).isoformat(),
