@@ -77,7 +77,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
     servicios_asociados = serializers.SerializerMethodField()
     permite_anticipo = serializers.SerializerMethodField()
     es_cruza_empresa = serializers.SerializerMethodField()
-    noches = serializers.IntegerField(read_only=True)
+    noches = serializers.SerializerMethodField()
 
     class Meta:
         model = Paquete
@@ -96,7 +96,14 @@ class PaqueteSerializer(serializers.ModelSerializer):
         # Una consulta por paquete; aceptable para las listas cortas del catálogo.
         return obj.es_cruza_empresa
 
+    def get_noches(self, obj):
+        if self.context.get('sin_componentes'):
+            return None  # el catálogo lo completa con los componentes que arma él (catalogo.py)
+        return obj.noches
+
     def get_servicios_asociados(self, obj):
+        if self.context.get('sin_componentes'):
+            return []  # componentes de otras empresas no se pueden leer desde aquí (RLS)
         qs = obj.servicios_asociados.filter(servicio__activo=True).order_by('orden')
         return PaqueteServicioSerializer(qs, many=True).data
 
