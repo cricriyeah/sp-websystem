@@ -3,7 +3,6 @@ import logging
 import uuid
 
 import stripe
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -12,15 +11,14 @@ from rest_framework.views import APIView
 
 from apps.bookings.models import Reserva, codigo_promocional_valido, evaluar_codigo_promocional
 from apps.fleet.enums import EstrategiaPrecio
-from apps.fleet.models import CodigoPromocional, Personalizacion, ServicioPersonalizacion
+from apps.fleet.models import CodigoPromocional
 from apps.tenancy import scope
 
 from .estrategias_precio import DemandaPrecio, demanda_traslado, obtener_estrategia_precio
+from .extras import congelar_personalizaciones, cotizar_personalizaciones
 from .pricing import (
     a_centavos,
-    cantidad_efectiva,
     cargo_por_descuento,
-    cargo_personalizacion,
     monto_inicial,
     precio_paquete_total,
 )
@@ -107,9 +105,7 @@ class CrearPagoView(APIView):
         if forma_pago == 'anticipo' and not anticipo_disponible:
             return Response({'detail': 'Este producto no admite pago de anticipo.'}, status=400)
 
-        cargo_extras, extras_a_borrar, extras_a_congelar, error = (
-            self._resolver_personalizaciones(reserva)
-        )
+        cargo_extras, extras_a_borrar, extras_a_congelar, error = cotizar_personalizaciones(reserva)
         if error:
             return Response({'detail': error}, status=503)
 
@@ -146,12 +142,7 @@ class CrearPagoView(APIView):
                 detalle_a_congelar.numero_personas = reserva.numero_personas
                 detalle_a_congelar.precio_calculado = precio_base_servicio
                 detalle_a_congelar.save(update_fields=['numero_personas', 'precio_calculado'])
-            for extra in extras_a_borrar:
-                extra.delete()
-            for extra, precio_unitario, cantidad in extras_a_congelar:
-                extra.precio_unitario = precio_unitario
-                extra.cantidad = cantidad
-                extra.save(update_fields=['precio_unitario', 'cantidad'])
+            congelar_personalizaciones(extras_a_borrar, extras_a_congelar)
 
             reserva.precio_total = precio_total
             reserva.forma_pago = forma_pago
@@ -169,108 +160,6 @@ class CrearPagoView(APIView):
             'monto_a_cobrar': str(monto_a_cobrar),
             'moneda': reserva.moneda,
         })
-
-    def _resolver_personalizaciones(self, reserva):
-        """Valida y cotiza el catálogo vigente de un servicio suelto.
-
-        No escribe nada: los renglones inválidos se eliminan y los precios se
-        congelan únicamente después de que Stripe acepte crear o actualizar el
-        PaymentIntent.
-        """
-        if reserva.paquete_id:
-            activos_ids = list(
-                reserva.paquete.servicios_asociados.filter(
-                    servicio__activo=True
-                ).values_list('servicio_id', flat=True)
-            )
-            disponibles = {
-                sp.pk: sp
-                for sp in ServicioPersonalizacion.objects.filter(
-                    servicio_id__in=activos_ids,
-                    servicio__empresa=reserva.empresa,
-                    personalizacion__empresa=reserva.empresa,
-                    activo=True,
-                    personalizacion__activo=True,
-                ).select_related('servicio', 'personalizacion')
-            }
-        else:
-            disponibles = {
-                sp.pk: sp
-                for sp in ServicioPersonalizacion.objects.filter(
-                    servicio=reserva.servicio,
-                    activo=True,
-                    personalizacion__activo=True,
-                ).select_related('servicio', 'personalizacion')
-            }
-        seleccionadas = list(
-            reserva.personalizaciones_seleccionadas.select_related(
-                'servicio_personalizacion__servicio',
-                'servicio_personalizacion__personalizacion',
-            )
-        )
-        seleccionadas_por_id = {
-            fila.servicio_personalizacion_id: fila for fila in seleccionadas
-        }
-
-        faltantes = [
-            sp.personalizacion.nombre
-            for sp in disponibles.values()
-            if (
-                sp.personalizacion.tipo_interaccion != Personalizacion.TipoInteraccion.CHECK
-                and sp.obligatorio
-                and sp.pk not in seleccionadas_por_id
-            )
-        ]
-        if faltantes:
-            return 0, [], [], f'Falta responder "{faltantes[0]}" antes de pagar.'
-
-        cargo_total = Decimal('0.00')
-        a_borrar = []
-        a_congelar = []
-        for fila in seleccionadas:
-            sp = disponibles.get(fila.servicio_personalizacion_id)
-            if sp is None:
-                a_borrar.append(fila)
-                continue
-
-            # Usa las relaciones ya verificadas del catálogo vigente para que
-            # full_clean también detecte una configuración que dejó de ser válida.
-            fila.servicio_personalizacion = sp
-            try:
-                sp.full_clean()
-                fila.full_clean()
-            except DjangoValidationError:
-                return 0, [], [], (
-                    f'La configuración de "{sp.personalizacion.nombre}" cambió. '
-                    'Revisa tu selección antes de pagar.'
-                )
-
-            if sp.personalizacion.tipo_interaccion != Personalizacion.TipoInteraccion.CHECK:
-                a_congelar.append((fila, None, 1))
-                continue
-
-            precio = sp.precio_en(reserva.moneda)
-            if precio is None:
-                return 0, [], [], (
-                    f'No hay precio de "{sp.personalizacion.nombre}" '
-                    f'configurado en {reserva.moneda}.'
-                )
-            cantidad = cantidad_efectiva(
-                cobrar_por_persona=sp.personalizacion.cobrar_por_persona,
-                cantidad_editable=sp.personalizacion.cantidad_editable,
-                personas=reserva.personas_de(sp.servicio_id),
-                cantidad=fila.cantidad,
-            )
-            cargo_total += cargo_personalizacion(
-                precio,
-                cobrar_por_persona=sp.personalizacion.cobrar_por_persona,
-                cantidad_editable=sp.personalizacion.cantidad_editable,
-                personas=reserva.personas_de(sp.servicio_id),
-                cantidad=cantidad,
-            )
-            a_congelar.append((fila, precio, cantidad))
-
-        return cargo_total, a_borrar, a_congelar, None
 
     def _resolver_codigo_promocional(self, request, reserva, subtotal, empresa):
         """Resuelve el codigo (si vino uno) contra el SUBTOTAL real, con extras
