@@ -35,6 +35,59 @@ class CamposDePaqueteServicioTests(OperadorTestCase):
         self.assertEqual(ps.personas_incluidas, 2)
 
 
+class EmpresaDelComponenteTests(OperadorTestCase):
+    def setUp(self):
+        self.sede, _ = Sede.objects.get_or_create(slug='la-paz', defaults={'nombre': 'La Paz'})
+        self.pesca = Empresa.objects.create(sede=self.sede, nombre='Pesca EC', slug='pesca-ec2')
+        self.transp = Empresa.objects.create(sede=self.sede, nombre='Transp EC', slug='transp-ec2')
+        self.s_pesca = Servicio.objects.create(
+            empresa=self.pesca, nombre='Pesca', slug='pesca-ec2-s', tipo_servicio='pesca',
+            precio_base=Decimal('4000.00'),
+        )
+        self.s_transp = Servicio.objects.create(
+            empresa=self.transp, nombre='Traslado', slug='traslado-ec2-s', tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta',
+        )
+        self.paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.pesca, nombre='P', slug='p-ec2', precio_ancla=Decimal('9000.00'),
+            permite_anticipo=False,
+        )
+
+    def test_el_componente_copia_la_empresa_de_su_servicio(self):
+        ps = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.s_transp, orden=1)
+        self.assertEqual(ps.empresa_id, self.transp.pk)
+
+    def test_es_cruza_empresa_cuenta_sobre_la_copia_sin_unir_con_servicio(self):
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.s_pesca, orden=1)
+        self.assertFalse(self.paquete.es_cruza_empresa)
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.s_transp, orden=2)
+        self.assertTrue(self.paquete.es_cruza_empresa)
+        # La consulta no debe unir con fleet_servicio (RLS lo oculta entre empresas).
+        with self.assertNumQueries(1):
+            self.paquete.es_cruza_empresa
+
+    def test_migracion_de_datos_rellena_empresa_en_filas_viejas(self):
+        import importlib
+        import pkgutil
+        from types import SimpleNamespace
+
+        from django.apps import apps as django_apps
+        from django.db import connection
+
+        import apps.fleet.migrations as paquete_migraciones
+
+        nombre = next(
+            n for _, n, _ in pkgutil.iter_modules(paquete_migraciones.__path__)
+            if n.endswith('_paqueteservicio_empresa')
+        )
+        modulo = importlib.import_module(f'apps.fleet.migrations.{nombre}')
+        ps = PaqueteServicio.objects.create(paquete=self.paquete, servicio=self.s_transp, orden=1)
+        PaqueteServicio.objects.filter(pk=ps.pk).update(empresa=None)
+        modulo.rellenar_empresa(django_apps, SimpleNamespace(connection=connection))
+        ps.refresh_from_db()
+        self.assertEqual(ps.empresa_id, self.transp.pk)
+
+
 def _c(nombre='S', empresa=1, estrategia='por_recurso_dia', noches=None, dia=1, personas=2, tope=5):
     return Componente(
         servicio_nombre=nombre, empresa_id=empresa, estrategia_cupo=estrategia,

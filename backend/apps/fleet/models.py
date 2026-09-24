@@ -620,8 +620,12 @@ class Paquete(models.Model):
 
     @property
     def es_cruza_empresa(self):
-        """Sus servicios pertenecen a más de una empresa."""
-        return self.servicios_asociados.values('servicio__empresa_id').distinct().count() > 1
+        """Sus servicios pertenecen a más de una empresa. Cuenta sobre la copia `empresa` de
+        cada componente, sin unir con Servicio: funciona bajo el alcance de la líder (RLS)."""
+        return (
+            self.servicios_asociados.exclude(empresa__isnull=True)
+            .values('empresa_id').distinct().count() > 1
+        )
 
     def componentes_calendario(self):
         """Componentes activos, en orden, listos para `calendario_paquete`."""
@@ -653,6 +657,12 @@ class PaqueteServicio(models.Model):
     """Asociación entre un Paquete y un Servicio incluido en él."""
     paquete = models.ForeignKey(Paquete, on_delete=models.CASCADE, related_name='servicios_asociados')
     servicio = models.ForeignKey(Servicio, on_delete=models.PROTECT, related_name='paquetes_incluidos')
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, related_name='+',
+        null=True, blank=True, editable=False,
+        help_text='Copia de la empresa del servicio. Permite contar las empresas de un paquete sin '
+                  'unir con Servicio, que RLS oculta entre empresas.',
+    )
     orden = models.PositiveSmallIntegerField(default=1)
     dia_estancia = models.PositiveSmallIntegerField(
         default=1,
@@ -678,6 +688,11 @@ class PaqueteServicio(models.Model):
 
     def __str__(self):
         return f"{self.paquete.nombre} -> {self.servicio.nombre}"
+
+    def save(self, *args, **kwargs):
+        if self.servicio_id:
+            self.empresa_id = self.servicio.empresa_id
+        super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
