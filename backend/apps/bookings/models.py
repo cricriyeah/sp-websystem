@@ -425,6 +425,16 @@ class Reserva(models.Model):
     numero_personas = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(MIN_PERSONAS)]
     )
+    personas_por_servicio = models.JSONField(
+        default=dict, blank=True,
+        help_text='Paquete de una sola empresa: personas de cada servicio, {"<servicio_id>": n}. '
+                  '`numero_personas` es el del componente operativo principal.',
+    )
+    inicio_paquete = models.DateField(
+        null=True, blank=True,
+        help_text='Paquete de una sola empresa: primer día del paquete que eligió el cliente. '
+                  '`fecha` es el día de la actividad principal.',
+    )
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='reservas')
     servicio = models.ForeignKey(
         'fleet.Servicio', on_delete=models.PROTECT, null=True, blank=True, related_name='reservas',
@@ -598,6 +608,18 @@ class Reserva(models.Model):
     def fecha_fin_servicio(self):
         return self.fecha_salida or (self.fecha + timedelta(days=1))
 
+    def personas_de(self, servicio_id):
+        """Personas que van a ese componente; cae en `numero_personas` si no se separaron."""
+        valor = (self.personas_por_servicio or {}).get(str(servicio_id))
+        return int(valor) if valor else self.numero_personas
+
+    @property
+    def fecha_inicio_paquete(self):
+        """Primer día del paquete. Lo guardado al reservar; sin eso (reserva de servicio suelto o
+        anterior a este campo), `fecha`. No se deriva de las noches del catálogo: editarlas no
+        debe mover reservas ya vendidas."""
+        return self.inicio_paquete or self.fecha
+
     @classmethod
     def from_db(cls, db, field_names, values):
         # Guarda la salida original para poder aplicar la regla de 48 horas en
@@ -682,6 +704,11 @@ class Reserva(models.Model):
             raise ValidationError({'paquete': 'No puedes seleccionar servicio y paquete a la vez.'})
         if self.fecha_salida and self.fecha_salida <= self.fecha:
             raise ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de inicio.'})
+        if self.inicio_paquete:
+            if self.inicio_paquete > self.fecha:
+                raise ValidationError({'inicio_paquete': 'El inicio del paquete no puede ser posterior a la actividad.'})
+            if self.fecha_salida and self.fecha_salida <= self.inicio_paquete:
+                raise ValidationError({'fecha_salida': 'La salida debe ser posterior al inicio del paquete.'})
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
             if self.orden_id:
                 # Cada reserva de una orden valida unicamente el inventario de
