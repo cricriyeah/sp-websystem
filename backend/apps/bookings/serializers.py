@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.bookings import personalizaciones
 from apps.fleet.calendario_paquete import ComponenteCalendario, fecha_ancla, fecha_salida as calcular_salida
 from apps.fleet.enums import TipoServicio, TipoTraslado
 from apps.fleet.models import (
@@ -19,7 +20,6 @@ from .models import (
     DESLINDE_VERSION,
     DetalleTransporte,
     Reserva,
-    ReservaPersonalizacion,
     Vendedora,
 )
 from .validators import validar_nombre_persona
@@ -346,13 +346,8 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         return attrs
 
     def _validar_respuesta_personalizacion(self, sp, item):
-        fila = ReservaPersonalizacion(
-            servicio_personalizacion=sp,
-            cantidad=item.get('cantidad', 1),
-            respuesta=item.get('respuesta', ''),
-        )
         try:
-            fila.clean()
+            personalizaciones.validar_respuesta(sp, item)
         except DjangoValidationError as exc:
             raise serializers.ValidationError({'personalizaciones': exc.messages})
 
@@ -414,25 +409,11 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         return reserva
 
     def _sincronizar_personalizaciones(self, reserva, items_elegidos):
-        reserva.personalizaciones_seleccionadas.all().delete()
         aplica = reserva.paquete_id or reserva.servicio_id
-        if not aplica or not items_elegidos:
+        if not aplica:
+            reserva.personalizaciones_seleccionadas.all().delete()
             return
-        for item in items_elegidos:
-            respuesta = item.get('respuesta', '')
-            sp = ServicioPersonalizacion.objects.select_related('personalizacion').get(
-                pk=item['id'],
-            )
-            if sp.personalizacion.tipo_interaccion != 'check' and not respuesta.strip():
-                continue
-            fila = ReservaPersonalizacion(
-                reserva=reserva,
-                servicio_personalizacion=sp,
-                cantidad=item.get('cantidad', 1),
-                respuesta=respuesta,
-            )
-            fila.full_clean()
-            fila.save()
+        personalizaciones.sincronizar(reserva, items_elegidos)
 
 class TrasladoCheckoutSerializer(ReservaCheckoutSerializer):
     """Checkout de transporte; comparte atribucion y constancia legal del checkout."""
