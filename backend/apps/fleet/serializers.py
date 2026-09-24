@@ -65,6 +65,7 @@ class PaqueteServicioSerializer(serializers.ModelSerializer):
         model = PaqueteServicio
         fields = [
             'id', 'servicio_id', 'servicio', 'orden',
+            'dia_estancia', 'noches', 'personas_incluidas',
         ]
 
 
@@ -76,6 +77,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
     servicios_asociados = serializers.SerializerMethodField()
     permite_anticipo = serializers.SerializerMethodField()
     es_cruza_empresa = serializers.SerializerMethodField()
+    noches = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Paquete
@@ -84,7 +86,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
             'nombre', 'slug', 'descripcion',
             'precio_ancla', 'precio_ancla_usd', 'regla_precio', 'activo',
             'permite_anticipo', 'porcentaje_anticipo', 'es_cruza_empresa',
-            'servicios_asociados',
+            'servicios_asociados', 'noches',
         ]
 
     def get_permite_anticipo(self, obj):

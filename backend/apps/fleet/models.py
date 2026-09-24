@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.fleet.calendario_paquete import ComponenteCalendario
 from apps.fleet.paquete_reglas import Componente, errores_de_paquete
 from apps.fleet.tarifa_transporte import peor_tarifa
 
@@ -621,6 +622,22 @@ class Paquete(models.Model):
     def es_cruza_empresa(self):
         """Sus servicios pertenecen a más de una empresa."""
         return self.servicios_asociados.values('servicio__empresa_id').distinct().count() > 1
+
+    def componentes_calendario(self):
+        """Componentes activos, en orden, listos para `calendario_paquete`."""
+        return [
+            ComponenteCalendario(
+                dia_estancia=ps.dia_estancia, estrategia_cupo=ps.servicio.estrategia_cupo, noches=ps.noches,
+            )
+            for ps in self.servicios_asociados.filter(servicio__activo=True)
+            .select_related('servicio').order_by('orden')
+        ]
+
+    @property
+    def noches(self):
+        """Noches del hospedaje incluido, o None si el paquete no lo tiene."""
+        ps = self.servicios_asociados.filter(servicio__estrategia_cupo='por_noche').first()
+        return ps.noches if ps else None
 
     @property
     def anticipo_disponible(self):

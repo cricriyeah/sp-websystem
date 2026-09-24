@@ -54,3 +54,36 @@ class CatalogoAnticipoTests(TestCase):
         datos = self._paquete('cruza-ca')
         self.assertFalse(datos['permite_anticipo'])
         self.assertTrue(datos['es_cruza_empresa'])
+
+
+class CatalogoEstanciaTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        with scope.como_operador_plataforma():
+            sede = Sede.objects.create(nombre='Sede CE', slug='sede-ce-test')
+            empresa = Empresa.objects.create(sede=sede, nombre='Empresa CE', slug='empresa-ce')
+            pesca = Servicio.objects.create(
+                empresa=empresa, nombre='Pesca', slug='pesca-ce', tipo_servicio='pesca',
+                precio_base=Decimal('4000.00'),
+            )
+            hotel = Servicio.objects.create(
+                empresa=empresa, nombre='Cabaña', slug='cabana-ce', tipo_servicio='hospedaje',
+                estrategia_cupo='por_noche', estrategia_precio='por_noche',
+            )
+            paquete = Paquete.objects.create(
+                sede=sede, empresa_lider=empresa, nombre='Fin de semana', slug='finde-ce',
+                precio_ancla=Decimal('9500.00'),
+            )
+            PaqueteServicio.objects.create(paquete=paquete, servicio=pesca, orden=1, dia_estancia=2, personas_incluidas=3)
+            PaqueteServicio.objects.create(paquete=paquete, servicio=hotel, orden=2, noches=2, personas_incluidas=2)
+        self.sede = sede
+
+    def test_el_catalogo_trae_estancia_y_personas_por_componente(self):
+        datos = self.client.get(f'/api/sedes/{self.sede.slug}/paquetes/finde-ce/').json()
+        self.assertEqual(datos['noches'], 2)
+        por_slug = {c['servicio']['slug']: c for c in datos['servicios_asociados']}
+        self.assertEqual(por_slug['pesca-ce']['dia_estancia'], 2)
+        self.assertEqual(por_slug['pesca-ce']['personas_incluidas'], 3)
+        self.assertIsNone(por_slug['pesca-ce']['noches'])
+        self.assertEqual(por_slug['cabana-ce']['noches'], 2)
