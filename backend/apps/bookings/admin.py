@@ -604,7 +604,7 @@ class CheckoutAbandonadoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
         mensaje = (
             f'Hola {obj.nombre_cliente}, le escribimos de Sal y Sol Sportfishing. '
-            f'Vimos que empezo su reserva para el {obj.fecha} a las {obj.hora:%H:%M} '
+            f'Vimos que empezo su reserva para el {obj.fecha_inicio_paquete} a las {obj.hora:%H:%M} '
             f'y quedo pendiente el pago. ¿Le ayudamos a terminarla?'
         )
         return format_html(

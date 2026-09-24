@@ -117,7 +117,7 @@ def _cuerpo_html(reserva):
     return (
         f'<p>Hola {_html(reserva.nombre_cliente)}, tu reserva quedo confirmada.</p>'
         f'<ul>'
-        f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
+        f'<li><strong>Fecha:</strong> {reserva.fecha_inicio_paquete}</li>'
         f'<li><strong>Hora de salida:</strong> {reserva.hora:%H:%M}</li>'
         f'<li><strong>Personas:</strong> {reserva.numero_personas}</li>'
         f'{extras}'
