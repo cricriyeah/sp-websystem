@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.fleet.calendario_paquete import ComponenteCalendario, fecha_ancla, fecha_salida as calcular_salida
 from apps.fleet.enums import TipoServicio, TipoTraslado
 from apps.fleet.models import (
     Paquete,
@@ -107,6 +108,10 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         slug_field='slug', queryset=Paquete.objects.filter(activo=True), required=False, allow_null=True,
     )
     fecha_salida = serializers.DateField(required=False, allow_null=True)
+    personas_por_servicio = serializers.DictField(
+        child=serializers.IntegerField(min_value=1), required=False,
+    )
+    fecha_inicio_paquete = serializers.DateField(read_only=True)
     personalizaciones = PersonalizacionSeleccionSerializer(
         many=True, required=False, default=list, write_only=True,
     )
@@ -119,6 +124,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'moneda', 'deslinde_aceptado', 'deslinde_nombre',
             'pide_bebidas',
             'servicio', 'paquete', 'fecha_salida',
+            'personas_por_servicio', 'fecha_inicio_paquete',
             'personalizaciones',
             'ref', 'estado',
         ]
@@ -219,7 +225,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         componentes_activos = []
         if paquete:
             componentes_activos = list(
-                paquete.servicios_asociados.filter(servicio__activo=True).select_related('servicio')
+                paquete.servicios_asociados.filter(servicio__activo=True).select_related('servicio').order_by('orden')
             )
             activos_ids = {ps.servicio_id for ps in componentes_activos}
             disponibles = {
@@ -251,34 +257,38 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
                         'personalizaciones': f'Falta responder: {sp.personalizacion.nombre}.',
                     })
 
-        es_hospedaje = bool((servicio and servicio.estrategia_cupo == 'por_noche') or any(
-            ps.servicio.estrategia_cupo == 'por_noche' for ps in componentes_activos
-        ))
+        fecha = attrs.get('fecha', getattr(self.instance, 'fecha_inicio_paquete', None) if self.instance else None)
+        fecha_salida_cliente = attrs.get('fecha_salida')
 
-        fecha = attrs.get('fecha', getattr(self.instance, 'fecha', None) if self.instance else None)
-        fecha_salida = attrs.get('fecha_salida', getattr(self.instance, 'fecha_salida', None) if self.instance else None)
-
-        if es_hospedaje:
-            if not fecha_salida:
-                raise serializers.ValidationError({'fecha_salida': 'La fecha de salida es requerida para servicios con hospedaje.'})
-            if fecha and fecha_salida <= fecha:
-                raise serializers.ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de llegada.'})
+        if paquete:
+            # El paquete define noches, día de cada servicio y lugares incluidos: el
+            # cliente solo elige el inicio y cuántas personas van a cada servicio.
+            if paquete.es_cruza_empresa:
+                raise serializers.ValidationError({
+                    'paquete': 'Este paquete es de dos empresas y se reserva como orden, no como reserva.',
+                })
+            try:
+                paquete.validar_configuracion()
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({'paquete': exc.messages})
+            if fecha_salida_cliente:
+                raise serializers.ValidationError({'fecha_salida': 'La fecha de salida la define el paquete.'})
+            attrs = self._derivar_de_paquete(attrs, fecha, componentes_activos)
         else:
-            if fecha_salida:
+            es_hospedaje = bool(servicio and servicio.estrategia_cupo == 'por_noche')
+            fecha_salida = attrs.get('fecha_salida', getattr(self.instance, 'fecha_salida', None) if self.instance else None)
+            if es_hospedaje:
+                if not fecha_salida:
+                    raise serializers.ValidationError({'fecha_salida': 'La fecha de salida es requerida para servicios con hospedaje.'})
+                if fecha and fecha_salida <= fecha:
+                    raise serializers.ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de llegada.'})
+            elif fecha_salida:
                 raise serializers.ValidationError({'fecha_salida': 'La fecha de salida solo aplica para servicios con hospedaje.'})
 
-        numero_personas = attrs.get('numero_personas', getattr(self.instance, 'numero_personas', None) if self.instance else None)
-        if numero_personas:
-            servicio_dominante = None
-            if servicio:
-                servicio_dominante = servicio
-            elif paquete:
-                ps_dom = paquete.servicios_asociados.order_by('orden').first()
-                if ps_dom:
-                    servicio_dominante = ps_dom.servicio
-
-            if servicio_dominante:
-                recursos_activos = servicio_dominante.recursos.filter(activo=True)
+        if not paquete:
+            numero_personas = attrs.get('numero_personas', getattr(self.instance, 'numero_personas', None) if self.instance else None)
+            if numero_personas and servicio:
+                recursos_activos = servicio.recursos.filter(activo=True)
                 if recursos_activos.exists():
                     cap_max = max(r.capacidad_maxima for r in recursos_activos)
                     if numero_personas > cap_max:
@@ -286,6 +296,53 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
                             'numero_personas': f'El número de personas ({numero_personas}) supera la capacidad máxima ({cap_max}).'
                         })
 
+        return attrs
+
+    def _derivar_de_paquete(self, attrs, inicio, componentes):
+        if inicio is None:
+            raise serializers.ValidationError({'fecha': 'Elige la fecha de inicio del paquete.'})
+        personas = attrs.get('personas_por_servicio', {})
+        esperadas = {str(ps.servicio_id): ps for ps in componentes}
+        if set(personas) != set(esperadas):
+            raise serializers.ValidationError({
+                'personas_por_servicio': 'Indica cuántas personas van a cada servicio del paquete.',
+            })
+        for clave, ps in esperadas.items():
+            if personas[clave] > ps.personas_incluidas:
+                raise serializers.ValidationError({
+                    'personas_por_servicio': (
+                        f'"{ps.servicio.nombre}" incluye {ps.personas_incluidas} lugar(es) en este paquete.'
+                    ),
+                })
+            if ps.servicio.estrategia_cupo == 'por_noche':
+                habitaciones = ps.servicio.recursos.filter(activo=True)
+                if habitaciones.exists() and personas[clave] > max(r.capacidad_maxima for r in habitaciones):
+                    raise serializers.ValidationError({
+                        'personas_por_servicio': f'Ninguna habitación de "{ps.servicio.nombre}" admite {personas[clave]} personas.',
+                    })
+
+        # El motor de cupo cuenta `numero_personas` (las del componente principal) para todas las
+        # actividades del día; por eso todas las actividades del paquete van con el mismo número.
+        actividades = {
+            personas[str(ps.servicio_id)] for ps in componentes if ps.servicio.estrategia_cupo == 'por_recurso_dia'
+        }
+        if len(actividades) > 1:
+            raise serializers.ValidationError({
+                'personas_por_servicio': 'Las actividades del paquete van con el mismo número de personas.',
+            })
+
+        calendario = [
+            ComponenteCalendario(ps.dia_estancia, ps.servicio.estrategia_cupo, ps.noches) for ps in componentes
+        ]
+        principal = next(
+            (ps for ps in componentes if ps.servicio.estrategia_cupo == 'por_recurso_dia'),
+            componentes[0] if componentes else None,
+        )
+        attrs['fecha'] = fecha_ancla(inicio, calendario)
+        attrs['inicio_paquete'] = inicio
+        attrs['fecha_salida'] = calcular_salida(inicio, calendario)
+        if principal is not None:
+            attrs['numero_personas'] = personas[str(principal.servicio_id)]
         return attrs
 
     def _validar_respuesta_personalizacion(self, sp, item):

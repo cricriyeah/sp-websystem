@@ -1,10 +1,12 @@
 """Reserva de paquete de una sola empresa: personas por componente y estancia."""
+import uuid
 from datetime import date, time
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 
 from apps.bookings.models import Reserva
+from apps.bookings.serializers import ReservaCheckoutSerializer
 from apps.fleet.models import Paquete, PaqueteServicio, Servicio
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import OperadorTestCase
@@ -76,3 +78,107 @@ class PersonasPorServicioTests(FixturePaqueteEstancia, OperadorTestCase):
             self.reserva(fecha=date(2026, 10, 10), inicio_paquete=date(2026, 10, 10),
                          fecha_salida=date(2026, 10, 10)).full_clean()
         self.assertTrue(ctx.exception.message_dict)
+
+
+class SerializadorPaqueteTests(FixturePaqueteEstancia, OperadorTestCase):
+    def setUp(self):
+        self.sembrar()
+
+    def payload(self, **extra):
+        datos = {
+            'checkout_id': str(uuid.uuid4()), 'fecha': '2026-10-10', 'hora': '06:00:00',
+            'numero_personas': 3, 'nombre_cliente': 'Ana Ruiz', 'telefono_cliente': '+5216121234567',
+            'correo_cliente': 'ana@example.com', 'moneda': 'MXN', 'deslinde_aceptado': True,
+            'deslinde_nombre': 'Ana Ruiz', 'paquete': self.paquete.slug, 'personalizaciones': [],
+            'personas_por_servicio': {str(self.pesca.pk): 3, str(self.hotel.pk): 2},
+        }
+        datos.update(extra)
+        return datos
+
+    def validar(self, **extra):
+        serializador = ReservaCheckoutSerializer(data=self.payload(**extra), context={'empresa': self.empresa})
+        return serializador, serializador.is_valid()
+
+    def test_deriva_fecha_ancla_salida_y_personas_principales(self):
+        serializador, valido = self.validar()
+        self.assertTrue(valido, serializador.errors)
+        datos = serializador.validated_data
+        self.assertEqual(str(datos['fecha']), '2026-10-11')
+        self.assertEqual(str(datos['fecha_salida']), '2026-10-13')
+        self.assertEqual(datos['numero_personas'], 3)
+
+    def test_rechaza_fecha_de_salida_enviada_por_el_cliente(self):
+        serializador, valido = self.validar(fecha_salida='2026-10-20')
+        self.assertFalse(valido)
+        self.assertIn('fecha_salida', serializador.errors)
+
+    def test_rechaza_mas_personas_que_las_incluidas(self):
+        serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 4, str(self.hotel.pk): 2})
+        self.assertFalse(valido)
+        self.assertIn('personas_por_servicio', serializador.errors)
+
+    def test_exige_personas_de_cada_servicio_del_paquete(self):
+        serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 2})
+        self.assertFalse(valido)
+        self.assertIn('personas_por_servicio', serializador.errors)
+
+    def test_menos_personas_en_el_hospedaje_es_valido(self):
+        serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 3, str(self.hotel.pk): 1})
+        self.assertTrue(valido, serializador.errors)
+
+    def test_guarda_el_inicio_elegido_por_el_cliente(self):
+        serializador, valido = self.validar()
+        self.assertTrue(valido, serializador.errors)
+        self.assertEqual(str(serializador.validated_data['inicio_paquete']), '2026-10-10')
+
+    def test_rechaza_un_paquete_de_dos_empresas(self):
+        otra = Empresa.objects.create(sede=self.sede, nombre='Transp PE', slug='transp-pe')
+        traslado = Servicio.objects.create(
+            empresa=otra, nombre='Traslado', slug='traslado-pe', tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta',
+        )
+        PaqueteServicio.objects.create(paquete=self.paquete, servicio=traslado, orden=3)
+        serializador, valido = self.validar()
+        self.assertFalse(valido)
+        self.assertIn('paquete', serializador.errors)
+
+    def test_rechaza_un_paquete_mal_configurado(self):
+        PaqueteServicio.objects.filter(paquete=self.paquete, servicio=self.hotel).update(noches=None)
+        serializador, valido = self.validar()
+        self.assertFalse(valido)
+        self.assertIn('paquete', serializador.errors)
+
+    def test_las_actividades_deben_ir_con_las_mismas_personas(self):
+        segunda = Servicio.objects.create(
+            empresa=self.empresa, nombre='Paseo', slug='paseo-pe', tipo_servicio='paseo',
+            precio_base=Decimal('1000.00'),
+        )
+        PaqueteServicio.objects.create(
+            paquete=self.paquete, servicio=segunda, orden=3, dia_estancia=2, personas_incluidas=3,
+        )
+        serializador, valido = self.validar(personas_por_servicio={
+            str(self.pesca.pk): 3, str(self.hotel.pk): 2, str(segunda.pk): 2,
+        })
+        self.assertFalse(valido)
+        self.assertIn('personas_por_servicio', serializador.errors)
+
+    def test_guardar_y_reenviar_actualiza_la_misma_reserva(self):
+        from rest_framework.test import APIRequestFactory
+
+        peticion = APIRequestFactory().post('/x')
+        peticion.META['REMOTE_ADDR'] = '127.0.0.1'
+        contexto = {'empresa': self.empresa, 'request': peticion}
+        primero = ReservaCheckoutSerializer(data=self.payload(), context=contexto)
+        self.assertTrue(primero.is_valid(), primero.errors)
+        reserva = primero.save()
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.inicio_paquete, date(2026, 10, 10))
+        self.assertEqual(reserva.personas_de(self.hotel.pk), 2)
+        segundo = ReservaCheckoutSerializer(
+            reserva, data=self.payload(fecha='2026-10-12', checkout_id=str(reserva.checkout_id)), context=contexto,
+        )
+        self.assertTrue(segundo.is_valid(), segundo.errors)
+        segundo.save()
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.inicio_paquete, date(2026, 10, 12))
+        self.assertEqual(Reserva.objects.filter(paquete=self.paquete).count(), 1)

@@ -112,6 +112,7 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         )
         PaqueteServicio.objects.create(
             paquete=self.paquete_hospedaje, servicio=self.srv_hospedaje, orden=2,
+            noches=3,
         )
 
         # Paquete empresa B
@@ -134,6 +135,15 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
             'deslinde_nombre': 'Juan Perez',
         }
         datos.update(overrides)
+        if 'personas_por_servicio' not in datos:
+            if datos.get('paquete') == self.paquete_a.slug:
+                datos['personas_por_servicio'] = {
+                    str(self.srv_pesca.pk): 2, str(self.srv_snack.pk): 2,
+                }
+            elif datos.get('paquete') == self.paquete_hospedaje.slug:
+                datos['personas_por_servicio'] = {
+                    str(self.srv_pesca.pk): 2, str(self.srv_hospedaje.pk): 2,
+                }
         return datos
 
     def test_acepta_reserva_de_servicio_de_la_empresa(self):
@@ -203,20 +213,21 @@ class ReservaCheckoutSerializerTests(OperadorTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_exige_fecha_salida_para_paquete_con_hospedaje(self):
+    def test_paquete_con_hospedaje_deriva_salida_y_rechaza_la_enviada(self):
         datos = self._datos_base(paquete=self.paquete_hospedaje.slug)
+        serializer = ReservaCheckoutSerializer(
+            data=datos, context={'request': self.request, 'empresa': self.empresa_a},
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        fecha_llegada = date.fromisoformat(datos['fecha'])
+        self.assertEqual(serializer.validated_data['fecha_salida'], fecha_llegada + timedelta(days=3))
+
+        datos['fecha_salida'] = (fecha_llegada + timedelta(days=3)).isoformat()
         serializer = ReservaCheckoutSerializer(
             data=datos, context={'request': self.request, 'empresa': self.empresa_a},
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn('fecha_salida', serializer.errors)
-
-        fecha_llegada = date.today() + timedelta(days=10)
-        datos['fecha_salida'] = (fecha_llegada + timedelta(days=3)).isoformat()
-        serializer = ReservaCheckoutSerializer(
-            data=datos, context={'request': self.request, 'empresa': self.empresa_a},
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_prohibe_fecha_salida_si_ningun_servicio_es_hospedaje(self):
         datos = self._datos_base(
