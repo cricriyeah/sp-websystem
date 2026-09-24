@@ -7,6 +7,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.fleet.paquete_reglas import Componente, errores_de_paquete
+from apps.fleet.tarifa_transporte import peor_tarifa
+
 from .enums import (
     EstrategiaCupo,
     EstrategiaPrecio,
@@ -493,6 +496,53 @@ class ServicioPersonalizacion(models.Model):
         return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
 
 
+TOPE_PERSONAS_ACTIVIDAD = 5  # mismo valor que bookings.MAX_PERSONAS; fleet no importa bookings
+
+
+def componente_desde(servicio, *, noches, dia_estancia, personas_incluidas):
+    """Vista de un servicio + su configuración en el paquete para `paquete_reglas`."""
+    if servicio.estrategia_cupo == 'por_noche':
+        tope = None  # el hospedaje depende de las habitaciones reales
+    else:
+        tope = servicio.capacidad_maxima or (
+            TOPE_PERSONAS_ACTIVIDAD if servicio.estrategia_cupo == 'por_recurso_dia' else None
+        )
+    return Componente(
+        servicio_nombre=servicio.nombre, empresa_id=servicio.empresa_id,
+        estrategia_cupo=servicio.estrategia_cupo, noches=noches, dia_estancia=dia_estancia,
+        personas_incluidas=personas_incluidas, tope_personas=tope,
+    )
+
+
+def componente_de(ps):
+    return componente_desde(
+        ps.servicio, noches=ps.noches, dia_estancia=ps.dia_estancia, personas_incluidas=ps.personas_incluidas,
+    )
+
+
+def errores_de_precio_contra_transporte(paquete, pares):
+    """El precio del paquete debe cubrir la peor tarifa de cada traslado incluido.
+    `pares`: lista de `(servicio, personas_incluidas)`."""
+    errores = {}
+    for servicio, personas in pares:
+        if servicio.tipo_servicio != 'transporte':
+            continue
+        tarifas = list(servicio.empresa.tarifas_transporte.filter(activo=True))
+        peor_mxn = peor_tarifa(tarifas, personas=personas, moneda='MXN')
+        if peor_mxn is not None and paquete.precio_ancla is not None and paquete.precio_ancla < peor_mxn:
+            errores['precio_ancla'] = (
+                f'El precio del paquete ({paquete.precio_ancla}) no puede ser menor que la '
+                f'tarifa de transporte ({peor_mxn}).'
+            )
+        peor_usd = peor_tarifa(tarifas, personas=personas, moneda='USD')
+        if peor_usd is not None and paquete.precio_ancla_usd is not None and paquete.precio_ancla_usd < peor_usd:
+            errores['precio_ancla_usd'] = (
+                f'El precio en USD del paquete ({paquete.precio_ancla_usd}) no puede ser menor '
+                f'que la tarifa de transporte en USD ({peor_usd}).'
+            )
+    return errores
+
+
 class Paquete(models.Model):
     """Producto de primera clase vendible y editable in-place (Perception-First Design).
 
@@ -546,23 +596,26 @@ class Paquete(models.Model):
                 raise ValidationError({
                     'empresa_lider': 'La empresa líder debe pertenecer a la misma sede que el paquete.'
                 })
-        if self.pk:
-            for ps in self.servicios_asociados.select_related('servicio', 'servicio__empresa').all():
-                if ps.servicio.tipo_servicio == 'transporte':
-                    tarifas = ps.servicio.empresa.tarifas_transporte.filter(activo=True)
-                    if tarifas.exists():
-                        tarifa_min_mxn = min(t.precio for t in tarifas)
-                        if self.precio_ancla is not None and self.precio_ancla < tarifa_min_mxn:
-                            raise ValidationError({
-                                'precio_ancla': f'El precio del paquete ({self.precio_ancla}) no puede ser menor que la tarifa de transporte ({tarifa_min_mxn}).'
-                            })
-                        tarifas_usd = [t.precio_usd for t in tarifas if t.precio_usd is not None]
-                        if tarifas_usd and self.precio_ancla_usd is not None:
-                            tarifa_min_usd = min(tarifas_usd)
-                            if self.precio_ancla_usd < tarifa_min_usd:
-                                raise ValidationError({
-                                    'precio_ancla_usd': f'El precio en USD del paquete ({self.precio_ancla_usd}) no puede ser menor que la tarifa de transporte en USD ({tarifa_min_usd}).'
-                                })
+
+    def validar_configuracion(self, componentes=None):
+        """Reglas completas del paquete. Lanza ValidationError con todos los mensajes.
+
+        Sin `componentes` lee la BD (admin, shell, pruebas, o una petición bajo el alcance
+        de la empresa dueña cuando todos los servicios son suyos) e incluye el precio contra
+        la peor tarifa de transporte. Con `componentes` (lectura ya hecha bajo RLS por el
+        llamador, p. ej. una orden de dos empresas) valida solo la estructura: el precio
+        contra la tarifa lo sigue protegiendo `monto_por_empresa` al cobrar."""
+        precio = {}
+        if componentes is None:
+            filas = list(self.servicios_asociados.select_related('servicio', 'servicio__empresa'))
+            componentes = [componente_de(ps) for ps in filas]
+            precio = errores_de_precio_contra_transporte(
+                self, [(ps.servicio, ps.personas_incluidas) for ps in filas],
+            )
+        errores = errores_de_paquete(permite_anticipo=self.permite_anticipo, componentes=componentes)
+        errores += list(precio.values())
+        if errores:
+            raise ValidationError(errores)
 
     @property
     def es_cruza_empresa(self):
@@ -617,21 +670,6 @@ class PaqueteServicio(models.Model):
                     'servicio': 'El servicio debe pertenecer a una empresa de la misma sede que el paquete.'
                 })
             # (ADR-005 Revisión 2: se elimina la regla de "misma empresa_lider").
-            if self.servicio.tipo_servicio == 'transporte':
-                tarifas = self.servicio.empresa.tarifas_transporte.filter(activo=True)
-                if tarifas.exists():
-                    tarifa_min_mxn = min(t.precio for t in tarifas)
-                    if self.paquete.precio_ancla is not None and self.paquete.precio_ancla < tarifa_min_mxn:
-                        raise ValidationError({
-                            'servicio': f'El precio del paquete ({self.paquete.precio_ancla}) no puede ser menor que la tarifa de transporte ({tarifa_min_mxn}).'
-                        })
-                    tarifas_usd = [t.precio_usd for t in tarifas if t.precio_usd is not None]
-                    if tarifas_usd and self.paquete.precio_ancla_usd is not None:
-                        tarifa_min_usd = min(tarifas_usd)
-                        if self.paquete.precio_ancla_usd < tarifa_min_usd:
-                            raise ValidationError({
-                                'servicio': f'El precio en USD del paquete ({self.paquete.precio_ancla_usd}) no puede ser menor que la tarifa de transporte en USD ({tarifa_min_usd}).'
-                            })
 
 
 def capacidades_por_fecha(desde, hasta, empresa):

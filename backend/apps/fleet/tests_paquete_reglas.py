@@ -1,9 +1,15 @@
 """Campos y reglas de configuración de un paquete."""
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
+from django.forms import inlineformset_factory
 from django.test import SimpleTestCase
 
 from apps.fleet.paquete_reglas import Componente, errores_de_paquete, hay_conflicto_anticipo
+from apps.fleet.admin import PaqueteServicioFormSet
+from apps.fleet.enums import TipoTraslado
+from apps.fleet.models import TransporteTarifa
+from apps.fleet.tarifa_transporte import peor_tarifa
 from apps.fleet.models import Paquete, PaqueteServicio, Servicio
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import OperadorTestCase
@@ -88,3 +94,138 @@ class ReglasDePaqueteTests(SimpleTestCase):
         self.assertTrue(any('personas' in e for e in self.errores([_c(personas=0)])))
         self.assertTrue(any('personas' in e for e in self.errores([_c(personas=6, tope=5)])))
         self.assertEqual(self.errores([_c(personas=14, tope=None)]), [])
+
+
+class ConfiguracionDePaqueteTests(OperadorTestCase):
+    def setUp(self):
+        self.sede, _ = Sede.objects.get_or_create(slug='la-paz', defaults={'nombre': 'La Paz'})
+        self.pesca = Empresa.objects.create(sede=self.sede, nombre='Pesca CM', slug='pesca-cm')
+        self.transp = Empresa.objects.create(sede=self.sede, nombre='Transp CM', slug='transp-cm')
+        self.s_pesca = Servicio.objects.create(
+            empresa=self.pesca, nombre='Pesca', slug='pesca-cm-s', tipo_servicio='pesca',
+            precio_base=Decimal('4000.00'),
+        )
+        self.s_transp = Servicio.objects.create(
+            empresa=self.transp, nombre='Traslado', slug='traslado-cm-s', tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta',
+        )
+
+    def _paquete_cruza(self, slug, precio='9000.00', **extra):
+        paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.pesca, nombre=slug, slug=slug,
+            precio_ancla=Decimal(precio), **extra,
+        )
+        PaqueteServicio.objects.create(paquete=paquete, servicio=self.s_pesca, orden=1)
+        PaqueteServicio.objects.create(paquete=paquete, servicio=self.s_transp, orden=2)
+        return paquete
+
+    def test_peor_tarifa_toma_la_mas_alta_aplicable_al_grupo(self):
+        for tipo, minimo, maximo, precio in (
+            (TipoTraslado.REDONDO_AEROPUERTO, 1, 4, '4500.00'),
+            (TipoTraslado.REDONDO_AEROPUERTO, 5, None, '6000.00'),
+            (TipoTraslado.RECEPCION_AEROPUERTO, 1, None, '2700.00'),
+        ):
+            TransporteTarifa.objects.create(
+                empresa=self.transp, tipo_traslado=tipo, personas_min=minimo, personas_max=maximo, precio=precio,
+            )
+        tarifas = list(self.transp.tarifas_transporte.filter(activo=True))
+        self.assertEqual(peor_tarifa(tarifas, personas=2, moneda='MXN'), Decimal('4500.00'))
+        self.assertEqual(peor_tarifa(tarifas, personas=8, moneda='MXN'), Decimal('6000.00'))
+        self.assertIsNone(peor_tarifa(tarifas, personas=2, moneda='USD'))
+
+    def test_validar_configuracion_exige_que_el_precio_cubra_la_peor_tarifa(self):
+        TransporteTarifa.objects.create(
+            empresa=self.transp, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            personas_min=1, personas_max=None, precio=Decimal('4500.00'),
+        )
+        paquete = self._paquete_cruza('c-cm', precio='4000.00', permite_anticipo=False)
+        with self.assertRaises(ValidationError) as ctx:
+            paquete.validar_configuracion()
+        self.assertIn('tarifa de transporte', str(ctx.exception))
+
+    def test_validar_configuracion_rechaza_anticipo_en_paquete_de_dos_empresas(self):
+        paquete = self._paquete_cruza('d-cm', permite_anticipo=True)
+        with self.assertRaises(ValidationError) as ctx:
+            paquete.validar_configuracion()
+        self.assertIn('anticipo', str(ctx.exception))
+
+    def test_validar_configuracion_con_componentes_leidos_por_el_llamador_solo_valida_estructura(self):
+        paquete = self._paquete_cruza('e-cm', permite_anticipo=True)
+        from apps.fleet.models import componente_desde
+
+        componentes = [
+            componente_desde(self.s_pesca, noches=None, dia_estancia=1, personas_incluidas=2),
+            componente_desde(self.s_transp, noches=None, dia_estancia=1, personas_incluidas=2),
+        ]
+        with self.assertRaises(ValidationError):
+            paquete.validar_configuracion(componentes)
+
+    def test_clean_del_modelo_no_lee_filas_viejas(self):
+        # Activar el anticipo sobre un paquete de dos empresas NO falla en Paquete.clean:
+        # lo atrapa el formset del admin (estado nuevo) y validar_configuracion (venta).
+        paquete = self._paquete_cruza('f-cm', permite_anticipo=False)
+        paquete.permite_anticipo = True
+        paquete.full_clean()
+
+    def _formset(self, paquete, filas):
+        FormSet = inlineformset_factory(
+            Paquete, PaqueteServicio, formset=PaqueteServicioFormSet,
+            fields=['servicio', 'orden', 'dia_estancia', 'noches', 'personas_incluidas'], extra=0,
+        )
+        existentes = list(paquete.servicios_asociados.order_by('pk'))
+        deseados = {servicio.pk for servicio in filas}
+        existentes_ids = {ps.servicio_id for ps in existentes}
+        nuevos = [servicio for servicio in filas if servicio.pk not in existentes_ids]
+        datos = {
+            'servicios_asociados-TOTAL_FORMS': str(len(existentes) + len(nuevos)),
+            'servicios_asociados-INITIAL_FORMS': str(len(existentes)),
+            'servicios_asociados-MIN_NUM_FORMS': '0', 'servicios_asociados-MAX_NUM_FORMS': '1000',
+        }
+        for i, ps in enumerate(existentes):
+            datos.update({
+                f'servicios_asociados-{i}-id': str(ps.pk),
+                f'servicios_asociados-{i}-servicio': str(ps.servicio_id),
+                f'servicios_asociados-{i}-orden': str(ps.orden),
+                f'servicios_asociados-{i}-dia_estancia': str(ps.dia_estancia),
+                f'servicios_asociados-{i}-personas_incluidas': str(ps.personas_incluidas),
+            })
+            if ps.noches is not None:
+                datos[f'servicios_asociados-{i}-noches'] = str(ps.noches)
+            if ps.servicio_id not in deseados:
+                datos[f'servicios_asociados-{i}-DELETE'] = 'on'
+        for i, servicio in enumerate(nuevos, start=len(existentes)):
+            datos.update({
+                f'servicios_asociados-{i}-servicio': str(servicio.pk),
+                f'servicios_asociados-{i}-orden': str(i + 1),
+                f'servicios_asociados-{i}-dia_estancia': '1',
+                f'servicios_asociados-{i}-personas_incluidas': '2',
+            })
+        return FormSet(datos, instance=paquete)
+
+    def test_formset_rechaza_anticipo_con_dos_empresas(self):
+        paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.pesca, nombre='g', slug='g-cm',
+            precio_ancla=Decimal('9000.00'), permite_anticipo=True,
+        )
+        formset = self._formset(paquete, [self.s_pesca, self.s_transp])
+        self.assertFalse(formset.is_valid())
+        self.assertTrue(any('anticipo' in e for e in formset.non_form_errors()))
+
+    def test_formset_acepta_quitar_el_traslado_y_dejar_anticipo_en_el_mismo_envio(self):
+        paquete = self._paquete_cruza('h-cm', permite_anticipo=False)
+        paquete.permite_anticipo = True  # el usuario lo activa en el mismo envío en que quita el traslado
+        formset = self._formset(paquete, [self.s_pesca])
+        self.assertTrue(formset.is_valid(), formset.non_form_errors())
+
+    def test_formset_valida_el_precio_contra_la_peor_tarifa(self):
+        TransporteTarifa.objects.create(
+            empresa=self.transp, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            personas_min=1, personas_max=None, precio=Decimal('4500.00'),
+        )
+        paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.pesca, nombre='i', slug='i-cm',
+            precio_ancla=Decimal('4000.00'), permite_anticipo=False,
+        )
+        formset = self._formset(paquete, [self.s_pesca, self.s_transp])
+        self.assertFalse(formset.is_valid())
+        self.assertTrue(any('tarifa de transporte' in e for e in formset.non_form_errors()))

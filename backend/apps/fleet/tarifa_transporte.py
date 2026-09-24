@@ -26,3 +26,21 @@ def resolver_tarifa_transporte(tarifas, *, tipo_traslado, zona, personas):
     raise TarifaTransporteNoConfigurada(
         f'No hay tarifa de transporte para tipo={tipo_traslado} zona={zona_norm!r} personas={personas}.'
     )
+
+
+def peor_tarifa(tarifas, *, personas, moneda):
+    """La tarifa más alta que puede tocarle a un grupo de `personas` (cualquier tipo
+    y zona), en `moneda`, o None si ninguna aplica o no tiene precio en esa moneda.
+
+    El precio de un paquete debe cubrirla: el cliente elige el tipo de traslado al
+    reservar, así que hay que asumir el más caro."""
+    precios = []
+    for t in tarifas:
+        if personas < t.personas_min:
+            continue
+        if t.personas_max is not None and personas > t.personas_max:
+            continue
+        precio = t.precio if (moneda or 'MXN').upper() == 'MXN' else t.precio_usd
+        if precio is not None:
+            precios.append(precio)
+    return max(precios) if precios else None

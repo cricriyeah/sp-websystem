@@ -229,7 +229,7 @@ class PaquetesModelTests(OperadorTestCase):
                     servicio=self.servicio_pesca,
                 )
 
-    def test_paquete_cruza_empresa_clean_valida_precio_cubre_transporte(self):
+    def test_paquete_cruza_empresa_validar_configuracion_precio_cubre_transporte(self):
         from apps.fleet.models import TransporteTarifa
         from apps.fleet.enums import TipoTraslado
         empresa_transporte = Empresa.objects.create(
@@ -258,6 +258,7 @@ class PaquetesModelTests(OperadorTestCase):
             slug='paquete-barato-invalido',
             precio_ancla=Decimal('2000.00'),  # 2000 < 2700
             precio_ancla_usd=Decimal('100.00'),
+            permite_anticipo=False,
         )
         PaqueteServicio.objects.create(
             paquete=paquete_invalido,
@@ -269,11 +270,11 @@ class PaquetesModelTests(OperadorTestCase):
             servicio=servicio_transporte,
             orden=2,
         )
-        with self.assertRaises(ValidationError) as ctx:
-            ps_transporte.clean()
-        self.assertIn('servicio', ctx.exception.message_dict)
-
+        ps_transporte.full_clean()
         ps_transporte.save()
-        with self.assertRaises(ValidationError) as ctx2:
-            paquete_invalido.clean()
-        self.assertIn('precio_ancla', ctx2.exception.message_dict)
+        paquete_invalido.full_clean()
+        with self.assertRaises(ValidationError) as ctx:
+            paquete_invalido.validar_configuracion()
+        mensajes = ' '.join(ctx.exception.messages)
+        self.assertIn('no puede ser menor que la tarifa de transporte', mensajes)
+        self.assertIn('tarifa de transporte en USD', mensajes)

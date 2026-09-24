@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.core.exceptions import ValidationError
+from django.forms import BaseInlineFormSet
 from unfold.admin import ModelAdmin, TabularInline
 
 from apps.tenancy import scope
@@ -17,7 +19,10 @@ from .models import (
     Servicio,
     ServicioPersonalizacion,
     TransporteTarifa,
+    componente_de,
+    errores_de_precio_contra_transporte,
 )
+from .paquete_reglas import errores_de_paquete
 
 
 @admin.register(TransporteTarifa)
@@ -125,10 +130,33 @@ class PersonalizacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     search_fields = ['nombre']
 
 
+class PaqueteServicioFormSet(BaseInlineFormSet):
+    """Valida el paquete completo con lo que el usuario acaba de escribir, no con la BD vieja."""
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        filas = [
+            form.instance for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get('DELETE')
+        ]
+        errores = errores_de_paquete(
+            permite_anticipo=self.instance.permite_anticipo,
+            componentes=[componente_de(ps) for ps in filas],
+        )
+        errores += list(errores_de_precio_contra_transporte(
+            self.instance, [(ps.servicio, ps.personas_incluidas) for ps in filas],
+        ).values())
+        if errores:
+            raise ValidationError(errores)
+
+
 class PaqueteServicioInline(TabularInline):
     model = PaqueteServicio
+    formset = PaqueteServicioFormSet
     extra = 1
-    fields = ['servicio', 'orden']
+    fields = ['servicio', 'orden', 'dia_estancia', 'noches', 'personas_incluidas']
     autocomplete_fields = ['servicio']
 
 
