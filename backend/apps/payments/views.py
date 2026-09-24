@@ -258,14 +258,14 @@ class CrearPagoView(APIView):
             cantidad = cantidad_efectiva(
                 cobrar_por_persona=sp.personalizacion.cobrar_por_persona,
                 cantidad_editable=sp.personalizacion.cantidad_editable,
-                personas=reserva.numero_personas,
+                personas=reserva.personas_de(sp.servicio_id),
                 cantidad=fila.cantidad,
             )
             cargo_total += cargo_personalizacion(
                 precio,
                 cobrar_por_persona=sp.personalizacion.cobrar_por_persona,
                 cantidad_editable=sp.personalizacion.cantidad_editable,
-                personas=reserva.numero_personas,
+                personas=reserva.personas_de(sp.servicio_id),
                 cantidad=cantidad,
             )
             a_congelar.append((fila, precio, cantidad))

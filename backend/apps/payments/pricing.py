@@ -113,6 +113,7 @@ def precio_paquete_total(
     personalizaciones_extra: list[tuple[int, int]] | list[int] | dict[int, int] | None = None,
     personas: int = 1,
     moneda: str = 'MXN',
+    personas_por_servicio: dict[int, int] | None = None,
 ) -> Decimal | None:
     """Precio final de un paquete. None si el paquete no tiene precio en `moneda`.
 
@@ -122,7 +123,7 @@ def precio_paquete_total(
            de los servicios componentes, con activo=True
       + Σ  sp.precio_en(moneda) de las ServicioPersonalizacion OPCIONALES que el cliente marcó
 
-    Cada personalización que cobrar_por_persona se multiplica por personas.
+    Cada personalización por persona se multiplica por las personas de su servicio.
     Piso 0. Cuantizado a centavos, ROUND_HALF_UP.
     """
     precio_ancla = paquete.precio_en(moneda)
@@ -143,6 +144,7 @@ def precio_paquete_total(
     total = Decimal(precio_ancla)
     vistos = set()
     for ps in paquete.servicios_asociados.filter(servicio__activo=True).select_related('servicio'):
+        personas_del_servicio = (personas_por_servicio or {}).get(ps.servicio_id, personas)
         for sp in ps.servicio.servicio_personalizaciones.filter(
             activo=True, personalizacion__activo=True
         ).select_related('personalizacion'):
@@ -156,7 +158,7 @@ def precio_paquete_total(
                 sp.precio_en(moneda),
                 cobrar_por_persona=p.cobrar_por_persona,
                 cantidad_editable=p.cantidad_editable,
-                personas=personas,
+                personas=personas_del_servicio,
                 cantidad=extras_map[sp.pk],
             )
             if cargo is None:
