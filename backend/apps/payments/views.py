@@ -16,6 +16,7 @@ from apps.tenancy import scope
 
 from .estrategias_precio import DemandaPrecio, demanda_traslado, obtener_estrategia_precio
 from .extras import congelar_personalizaciones, cotizar_personalizaciones
+from .ordenes import ORDEN_TIMEOUT_AUTORIZACION, OrdenCerradaError
 from .pricing import (
     a_centavos,
     cargo_por_descuento,
@@ -24,6 +25,7 @@ from .pricing import (
 )
 from .stripe_client import configurar_stripe
 from .services import aplicar_disputa, aplicar_pago_exitoso, aplicar_reembolso
+from .situacion import Situacion
 
 logger = logging.getLogger(__name__)
 
@@ -853,6 +855,53 @@ class ConfirmarCapturaOrdenView(APIView):
         return Response({'estado': orden.estado}, status=200)
 
 
+def _reservas_info_de_orden(orden):
+    """Detalle por reserva con el estado fresco de cada PaymentIntent en Stripe."""
+    from apps.bookings.orden_lectura import reservas_de_orden
+    from apps.fleet.models import Servicio
+    from apps.tenancy.models import Empresa
+
+    filas = reservas_de_orden(orden.id)
+    reservas_info = []
+
+    for fila in filas:
+        empresa = Empresa.objects.get(pk=fila['empresa_id'])
+        servicio = None
+        if fila.get('servicio_id'):
+            with scope.con_empresa(empresa):
+                servicio = Servicio.objects.filter(pk=fila['servicio_id']).first()
+        pi_id = fila.get('stripe_payment_intent_id')
+
+        estado_pi = None
+        client_secret = None
+        monto = None
+
+        if pi_id and empresa.stripe_secret_key:
+            try:
+                cliente = configurar_stripe(empresa)
+                intent = cliente.payment_intents.retrieve(pi_id)
+                estado_pi = getattr(intent, 'status', None)
+                client_secret = getattr(intent, 'client_secret', None)
+                if hasattr(intent, 'amount') and intent.amount is not None:
+                    monto = str(Decimal(intent.amount) / Decimal(100))
+            except stripe.StripeError:
+                pass
+
+        reservas_info.append({
+            'reserva_id': fila['reserva_id'],
+            'empresa_slug': empresa.slug,
+            'servicio': servicio.slug if servicio else '',
+            'pago': {
+                'estado_pi': estado_pi,
+                'client_secret': client_secret,
+                'publishable_key': empresa.stripe_publishable_key,
+                'monto': monto,
+            },
+        })
+
+    return reservas_info
+
+
 class GetOrdenView(APIView):
     """Devuelve el estado de una Orden y el detalle de sus pagos para que el
     frontend reanude el checkout desde el primer pago pendiente.
@@ -864,9 +913,7 @@ class GetOrdenView(APIView):
 
     def get(self, request, sede_slug, pk=None):
         from apps.bookings.models import Orden
-        from apps.bookings.orden_lectura import reservas_de_orden
-        from apps.fleet.models import Servicio
-        from apps.tenancy.models import Empresa, Sede
+        from apps.tenancy.models import Sede
 
         sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
 
@@ -885,48 +932,155 @@ class GetOrdenView(APIView):
         if not orden:
             raise Http404('No se encontró la orden solicitada.')
 
-        filas = reservas_de_orden(orden.id)
-        reservas_info = []
-
-        for fila in filas:
-            empresa = Empresa.objects.get(pk=fila['empresa_id'])
-            servicio = None
-            if fila.get('servicio_id'):
-                with scope.con_empresa(empresa):
-                    servicio = Servicio.objects.filter(pk=fila['servicio_id']).first()
-            pi_id = fila.get('stripe_payment_intent_id')
-
-            estado_pi = None
-            client_secret = None
-            monto = None
-
-            if pi_id and empresa.stripe_secret_key:
-                try:
-                    cliente = configurar_stripe(empresa)
-                    intent = cliente.payment_intents.retrieve(pi_id)
-                    estado_pi = getattr(intent, 'status', None)
-                    client_secret = getattr(intent, 'client_secret', None)
-                    if hasattr(intent, 'amount') and intent.amount is not None:
-                        monto = str(Decimal(intent.amount) / Decimal(100))
-                except stripe.StripeError:
-                    pass
-
-            reservas_info.append({
-                'reserva_id': fila['reserva_id'],
-                'empresa_slug': empresa.slug,
-                'servicio': servicio.slug if servicio else '',
-                'pago': {
-                    'estado_pi': estado_pi,
-                    'client_secret': client_secret,
-                    'publishable_key': empresa.stripe_publishable_key,
-                    'monto': monto,
-                },
-            })
-
+        reservas_info = _reservas_info_de_orden(orden)
         return Response({
             'id': orden.id,
             'checkout_id': str(orden.checkout_id) if orden.checkout_id else None,
             'estado': orden.estado,
             'reservas': reservas_info,
         }, status=200)
+
+
+def _nombre_producto(paquete, servicio):
+    if paquete:
+        return paquete.nombre
+    if servicio:
+        return servicio.nombre
+    return 'tu reserva'
+
+
+class ResumenReservaView(APIView):
+    """Resumen sin datos personales para el aviso "Continuar reservación" (spec §10.1).
+    No llama a Stripe: la situación sale de lo que el webhook/conciliar_pagos ya dejaron en la BD."""
+
+    throttle_scope = 'estado_reserva'
+
+    def get(self, request, empresa_slug):
+        from .situacion import situacion_de_reserva
+
+        empresa = scope.resolver_empresa_publica(empresa_slug)
+        with scope.con_empresa(empresa):
+            crudo = request.query_params.get('checkout_id')
+            try:
+                checkout_id = uuid.UUID(str(crudo))
+            except (ValueError, TypeError):
+                return Response({'detail': 'checkout_id inválido.'}, status=400)
+            # Predicado explícito de empresa además del scope RLS: SQLite no aísla filas.
+            reserva = (
+                Reserva.objects.filter(checkout_id=checkout_id, empresa=empresa)
+                .order_by('-id').first()
+            )
+            if reserva is None:
+                return Response({'detail': 'No se encontró.'}, status=404)
+            situacion = situacion_de_reserva(
+                estado=reserva.estado, monto_pagado=reserva.monto_pagado,
+                monto_reembolsado=reserva.monto_reembolsado,
+                tiene_intent_activo=bool(reserva.stripe_payment_intent_id),
+            )
+            return Response({
+                'situacion': situacion,
+                'producto': _nombre_producto(reserva.paquete, reserva.servicio),
+                'monto': str(reserva.monto_pagado) if reserva.monto_pagado is not None else None,
+                'moneda': reserva.moneda,
+                'forma_pago': reserva.forma_pago,
+                'folio': reserva.id,
+                'vence_en': None,
+            })
+
+
+def _pagos_de_orden(orden, reservas_info):
+    """Cruza el estado de Stripe con los reembolsos guardados por reserva_id."""
+    from apps.bookings.orden_lectura import reservas_de_orden
+
+    reembolsos = {f['reserva_id']: f.get('monto_reembolsado') for f in reservas_de_orden(orden.id)}
+    return [
+        {
+            'estado_pi': r['pago']['estado_pi'],
+            'monto_pagado': Decimal(r['pago']['monto']) if r['pago'].get('monto') else None,
+            'monto_reembolsado': reembolsos.get(r['reserva_id']),
+        }
+        for r in reservas_info
+    ]
+
+
+def _resumen_de_orden(orden, *, status_override=None):
+    """Contrato completo compartido por resumen y cancelación de una orden."""
+    from .situacion import situacion_de_orden
+
+    reservas_info = _reservas_info_de_orden(orden)
+    pagos = _pagos_de_orden(orden, reservas_info)
+    situacion = situacion_de_orden(estado_orden=orden.estado, pagos=pagos)
+    vence_en = None
+    if situacion in (Situacion.RETENIDO_PARCIAL, Situacion.PAGO_EN_PROCESO):
+        vence_en = (orden.actualizado_en + ORDEN_TIMEOUT_AUTORIZACION).isoformat()
+    with scope.con_empresa(orden.empresa_lider):
+        producto = _nombre_producto(orden.paquete, None)
+    return Response({
+        'situacion': situacion,
+        'producto': producto,
+        'moneda': orden.moneda,
+        'forma_pago': orden.forma_pago,
+        'montos': [
+            {
+                'empresa': r['empresa_slug'], 'monto': r['pago']['monto'],
+                'monto_reembolsado': str(p['monto_reembolsado']) if p['monto_reembolsado'] else None,
+                'estado': p['estado_pi'],
+            }
+            for r, p in zip(reservas_info, pagos)
+        ],
+        'folio': orden.id,
+        'vence_en': vence_en,
+        'actualizado_en': orden.actualizado_en.isoformat(),
+    }, status=status_override or 200)
+
+
+class ResumenOrdenView(APIView):
+    """Resumen sin datos personales de una Orden, con estado fresco de Stripe."""
+
+    throttle_scope = 'estado_reserva'
+    permission_classes = []
+
+    def get(self, request, sede_slug):
+        from apps.tenancy.models import Sede
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+        crudo = request.query_params.get('checkout_id')
+        try:
+            checkout_id = uuid.UUID(str(crudo))
+        except (ValueError, TypeError):
+            return Response({'detail': 'checkout_id inválido.'}, status=400)
+        orden = _buscar_orden(sede, checkout_id=checkout_id)
+        if not orden:
+            return Response({'detail': 'No se encontró.'}, status=404)
+        return _resumen_de_orden(orden)
+
+
+class CancelarOrdenPublicaView(APIView):
+    """Cancela la orden del cliente tras comprobar la posesión de checkout_id."""
+
+    throttle_scope = 'pagos'
+    permission_classes = []
+
+    def post(self, request, sede_slug, pk):
+        from apps.payments.ordenes import revertir_orden
+        from apps.tenancy.models import Sede
+
+        sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
+        orden = _buscar_orden(sede, pk=pk)
+        if not orden:
+            raise Http404('No se encontró la orden solicitada.')
+        crudo = request.data.get('checkout_id')
+        if not orden.checkout_id or str(orden.checkout_id) != str(crudo):
+            return Response({'detail': 'checkout_id inválido para esta orden.'}, status=403)
+
+        try:
+            revertir_orden(orden, 'cancelada por el cliente desde "Continuar reservación"')
+        except OrdenCerradaError:
+            with scope.con_empresa(orden.empresa_lider):
+                orden.refresh_from_db()
+            return _resumen_de_orden(orden, status_override=409)
+
+        with scope.con_empresa(orden.empresa_lider):
+            orden.refresh_from_db()
+        return _resumen_de_orden(orden)
 
