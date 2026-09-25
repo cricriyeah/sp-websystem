@@ -3247,7 +3247,7 @@ git commit -m "docs(backend): documentar checkout unificado de paquetes"
 
 **Files:** ninguno.
 
-- [ ] **Paso 1: SQLite, suite completa**
+- [x] **Paso 1: SQLite, suite completa**
 
 ```bash
 $PY manage.py test apps config
@@ -3256,7 +3256,7 @@ $PY manage.py makemigrations --check --dry-run
 ```
 Esperado: `OK`; `check --deploy` sin issues nuevos; `makemigrations --check` sin cambios pendientes.
 
-- [ ] **Paso 2: PostgreSQL con RLS** (contenedor y rol según `backend/CLAUDE.md`, "Correr la suite contra Postgres en local"):
+- [x] **Paso 2: PostgreSQL con RLS** (contenedor y rol según `backend/CLAUDE.md`, "Correr la suite contra Postgres en local"):
 
 ```bash
 DJANGO_SETTINGS_MODULE=config.settings.ci DB_NAME=pescadeportiva_test \
@@ -3265,8 +3265,28 @@ $PY manage.py test apps config
 ```
 Esperado: `OK`. Si falla algo de RLS en `ReservaPersonalizacion` de una orden, la escritura quedó fuera de `scope.con_empresa(empresa)`: corrígelo (no relajes políticas).
 
-- [ ] **Paso 3: Repaso de diffs** (checklist): (a) ninguna cifra de dinero fuera de `payments/`; (b) ningún `como_operador_plataforma()` en una vista `AllowAny`; (c) las migraciones de datos usan `alcance_operador_migracion`; (d) no hay tablas nuevas; (e) `git diff feat/transporte-multi-empresa --stat` solo toca los archivos del mapa.
-- [ ] **Paso 4: Anotar** en este plan el HEAD final y el nº de tests (SQLite y Postgres).
+- [x] **Paso 3: Repaso de diffs** (checklist): (a) ninguna cifra de dinero fuera de `payments/`; (b) ningún `como_operador_plataforma()` en una vista `AllowAny`; (c) las migraciones de datos usan `alcance_operador_migracion`; (d) no hay tablas nuevas; (e) `git diff feat/transporte-multi-empresa --stat` solo toca los archivos del mapa.
+- [x] **Paso 4: Anotar** en este plan el HEAD final y el nº de tests (SQLite y Postgres).
+
+**Resultado del gate (2026-09-25).** HEAD validado antes del commit de esta anotación:
+`9906497`. SQLite (`apps config`, `settings.local`): **1005 tests, OK**.
+PostgreSQL (`apps config`, `settings.ci`, `ci_rls` sin `BYPASSRLS`): **1005 tests, OK**
+con la base de pruebas recreada. El primer intento con `--keepdb` falló con ausencia
+de los datos iniciales de `la-paz`/`sal-y-sol`; la repetición sin
+`--keepdb` pasó. `check --deploy --settings=config.settings.local` terminó con código 0
+y seis advertencias de seguridad propias de la configuración local (W004, W008, W009,
+W012, W016 y W018), sin cambios en `settings.local` frente a la rama base.
+`makemigrations --check --dry-run`: `No changes detected`.
+
+Repaso del Paso 3: (a) **no literal**: `fleet/models.py` compara el precio del paquete
+con la tarifa de transporte y el seed contiene precios demo, ambos previstos en el
+plan; el cobro y el reparto viven en `payments/`. (b) **sí**: ninguna vista invoca
+`como_operador_plataforma()`. (c) **sí**: todos los `RunPython` nuevos que escriben
+datos usan `alcance_operador_migracion`. (d) **sí**: las migraciones nuevas solo añaden
+o alteran campos. (e) **no literal**: el diff del worktree incluye cambios locales
+preexistentes de `.great_cto`; el diff de commits incluye `seed_extras.py` (arreglo de
+compatibilidad de la Tarea 1.2) fuera del mapa resumido, además del spec y el plan
+hermano copiados en la Tarea 0.1.
 
 **STOP DURO — Cierre del backend.** Reportar al dueño con el resumen y las pendientes de la §9 del spec. El plan de frontend puede empezar/terminar; no hay merge ni push sin luz verde.
 
