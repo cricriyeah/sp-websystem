@@ -149,12 +149,13 @@ class Command(BaseCommand):
             )
             PaqueteServicio.objects.get_or_create(
                 paquete=paq, servicio=pesca,
-                defaults={'orden': 1},
+                defaults={'orden': 1, 'dia_estancia': 2, 'personas_incluidas': 2},
             )
             PaqueteServicio.objects.get_or_create(
                 paquete=paq, servicio=hosp,
-                defaults={'orden': 2},
+                defaults={'orden': 2, 'noches': 2, 'personas_incluidas': 2},
             )
+            paq.validar_configuracion()
 
         # --- Segunda Empresa en La Paz: Hotel Malecón (para aislamiento / marketplace) ---
         hotel, creado = Empresa.objects.get_or_create(
@@ -242,6 +243,7 @@ class Command(BaseCommand):
                 paquete=paq_cabo, servicio=snorkel,
                 defaults={'orden': 2},
             )
+            paq_cabo.validar_configuracion()
 
         # --- Tercera Empresa en La Paz: Transporte La Paz (SP1 de transporte) ---
         transporte, _ = Empresa.objects.get_or_create(
@@ -319,6 +321,7 @@ class Command(BaseCommand):
                 )
                 componente.full_clean()
             paquete_cruza.full_clean()
+            paquete_cruza.validar_configuracion()
 
         self.stdout.write(self.style.SUCCESS(
             'Demo sembrada.\n'
