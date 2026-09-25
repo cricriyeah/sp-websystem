@@ -1,5 +1,6 @@
 import uuid
 from decimal import Decimal
+from unittest import mock
 
 from django.test import TestCase
 
@@ -75,6 +76,7 @@ class CrearOrdenPaqueteTests(OrdenPaqueteBase):
     def test_guarda_personas_por_componente_y_extras_de_cada_servicio(self):
         respuesta = self.crear()
         self.assertEqual(respuesta.status_code, 201, respuesta.content)
+        self.assertEqual(len(respuesta.json()['reservas']), 2)
         with scope.como_operador_plataforma():
             r_pesca = Reserva.objects.get(orden_id=respuesta.json()['orden_id'], empresa=self.pesca)
             r_transp = Reserva.objects.get(orden_id=respuesta.json()['orden_id'], empresa=self.transp)
@@ -132,3 +134,115 @@ class CrearOrdenPaqueteTests(OrdenPaqueteBase):
             self.assertEqual(str(r_hotel.fecha), '2026-10-15')
             self.assertEqual(str(r_hotel.fecha_salida), '2026-10-18')
             self.assertEqual(str(r_transp.fecha), '2026-10-16')
+
+
+class CrearPagoOrdenTests(OrdenPaqueteBase):
+    def _crear_orden(self, **extra):
+        respuesta = self.crear(**extra)
+        self.assertEqual(respuesta.status_code, 201, respuesta.content)
+        return respuesta.json()['orden_id']
+
+    def _pago(self, orden_id):
+        return self.client.post(
+            f'/api/{self.sede.slug}/ordenes/{orden_id}/crear-pago/', {}, content_type='application/json',
+        )
+
+    def _stripe_falso(self):
+        clientes = {}
+
+        def para(empresa):
+            if empresa.id not in clientes:
+                cliente = mock.Mock()
+                cliente.payment_intents.create.side_effect = lambda params, options: mock.Mock(
+                    id=f'pi_{empresa.id}', client_secret=f'pi_{empresa.id}_sec',
+                    amount=params['amount'], currency=params['currency'], status='requires_payment_method',
+                )
+                clientes[empresa.id] = cliente
+            return clientes[empresa.id]
+        return para, clientes
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_vector_del_spec_reparto_con_extras(self, configurar):
+        para, clientes = self._stripe_falso()
+        configurar.side_effect = para
+        orden_id = self._crear_orden()
+        respuesta = self._pago(orden_id)
+        self.assertEqual(respuesta.status_code, 200, respuesta.content)
+        montos = {p['empresa_slug']: p['monto'] for p in respuesta.json()}
+        self.assertEqual(montos, {'pesca-op': '6400.00', 'transp-op': '1650.00'})
+        self.assertEqual(sum(Decimal(m) for m in montos.values()), Decimal('8050.00'))
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_congela_los_extras_solo_despues_de_que_stripe_acepta(self, configurar):
+        para, clientes = self._stripe_falso()
+        configurar.side_effect = para
+        orden_id = self._crear_orden()
+        self._pago(orden_id)
+        with scope.como_operador_plataforma():
+            fila = Reserva.objects.get(orden_id=orden_id, empresa=self.pesca).personalizaciones_seleccionadas.get()
+            self.assertEqual(fila.precio_unitario, Decimal('400.00'))
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_usd_reparte_con_los_precios_usd(self, configurar):
+        para, clientes = self._stripe_falso()
+        configurar.side_effect = para
+        orden_id = self._crear_orden(moneda='USD')
+        respuesta = self._pago(orden_id)
+        self.assertEqual(respuesta.status_code, 200, respuesta.content)
+        montos = {p['empresa_slug']: p['monto'] for p in respuesta.json()}
+        self.assertEqual(montos, {'pesca-op': '383.00', 'transp-op': '99.00'})
+        params = clientes[self.pesca.id].payment_intents.create.call_args.args[0]
+        self.assertEqual(params['currency'], 'usd')
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_400_si_falta_la_tarifa_de_transporte_en_la_moneda(self, configurar):
+        with scope.como_operador_plataforma():
+            TransporteTarifa.objects.filter(empresa=self.transp).update(precio_usd=None)
+        orden_id = self._crear_orden(moneda='USD')
+        respuesta = self._pago(orden_id)
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('USD', respuesta.json()['detail'])
+        configurar.assert_not_called()
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_400_si_el_paquete_no_tiene_precio_en_la_moneda(self, configurar):
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(pk=self.paquete.pk).update(precio_ancla_usd=None)
+        orden_id = self._crear_orden(moneda='USD')
+        respuesta = self._pago(orden_id)
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('USD', respuesta.json()['detail'])
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_aeropuerto_con_hotel_del_catalogo_usa_la_tarifa_sin_zona(self, configurar):
+        from apps.fleet.models import PuntoEncuentro
+
+        para, clientes = self._stripe_falso()
+        configurar.side_effect = para
+        with scope.como_operador_plataforma():
+            punto = PuntoEncuentro.objects.create(empresa=self.transp, nombre='Hotel Marina', zona='centro')
+            TransporteTarifa.objects.create(
+                empresa=self.transp, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO, zona='',
+                personas_min=1, personas_max=None, precio=Decimal('4500.00'), precio_usd=Decimal('250.00'),
+            )
+        datos = self.payload()
+        datos['componentes'][1] = {
+            'servicio': self.s_transp.slug, 'numero_personas': 3, 'tipo_traslado': TipoTraslado.REDONDO_AEROPUERTO,
+            'punto_encuentro': punto.pk, 'fecha_regreso': '2026-10-18', 'personalizaciones': [{'id': self.sp_silla.pk}],
+        }
+        creada = self.client.post(self.url, datos, content_type='application/json')
+        self.assertEqual(creada.status_code, 201, creada.content)
+        respuesta = self._pago(creada.json()['orden_id'])
+        self.assertEqual(respuesta.status_code, 200, respuesta.content)
+        montos = {p['empresa_slug']: p['monto'] for p in respuesta.json()}
+        self.assertEqual(montos, {'pesca-op': '3400.00', 'transp-op': '4650.00'})
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_503_si_un_extra_no_tiene_precio_en_la_moneda(self, configurar):
+        with scope.como_operador_plataforma():
+            ServicioPersonalizacion.objects.filter(pk=self.sp_brunch.pk).update(precio_usd=None)
+        orden_id = self._crear_orden(moneda='USD')
+        respuesta = self._pago(orden_id)
+        self.assertEqual(respuesta.status_code, 503)
+        self.assertIn('USD', respuesta.json()['detail'])
+        configurar.assert_not_called()

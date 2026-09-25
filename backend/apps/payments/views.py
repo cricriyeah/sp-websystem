@@ -508,9 +508,10 @@ class CrearOrdenView(APIView):
             )
 
         with scope.con_empresa(paquete.empresa_lider):
+            # El orden por defecto une Servicio y RLS oculta los de otras empresas.
             filas_ps = {
                 fila['servicio_id']: fila
-                for fila in paquete.servicios_asociados.values(
+                for fila in paquete.servicios_asociados.order_by('orden').values(
                     'servicio_id', 'dia_estancia', 'noches', 'personas_incluidas',
                 )
             }
@@ -722,11 +723,14 @@ class CrearPagoOrdenView(APIView):
     permission_classes = []
 
     def post(self, request, sede_slug, pk):
+        from decimal import Decimal
+
         from apps.bookings.models import DetalleTransporte, Orden, Reserva
         from apps.bookings.orden_lectura import reservas_de_orden
         from apps.fleet.models import TransporteTarifa
-        from apps.fleet.tarifa_transporte import resolver_tarifa_transporte
+        from apps.fleet.tarifa_transporte import TarifaTransporteNoConfigurada, resolver_tarifa_transporte
         from apps.tenancy.models import Empresa, Sede
+        from .extras import congelar_personalizaciones, cotizar_personalizaciones
         from .ordenes import OrdenCerradaError, crear_pagos_orden
         from .pricing import monto_por_empresa
 
@@ -738,51 +742,54 @@ class CrearPagoOrdenView(APIView):
         if orden.estado in (Orden.Estado.CAPTURADA, Orden.Estado.CANCELADA):
             return Response({'detail': f'La orden ya está {orden.estado}.'}, status=409)
 
-        filas = reservas_de_orden(orden.id)
+        with scope.con_empresa(orden.empresa_lider):
+            precio_paquete = orden.paquete.precio_en(orden.moneda)
+        if precio_paquete is None:
+            return Response({'detail': f'El paquete no tiene precio en {orden.moneda}.'}, status=400)
+
         componentes = []
-
-        for fila in filas:
-            empresa_id = fila['empresa_id']
-            reserva_id = fila['reserva_id']
-            es_lider = (empresa_id == orden.empresa_lider_id)
-
-            if es_lider:
-                componentes.append({
-                    'empresa_id': empresa_id,
-                    'es_lider': True,
-                    'monto_fijo': None,
-                })
-            else:
-                empresa = Empresa.objects.get(pk=empresa_id)
-                with scope.con_empresa(empresa):
-                    reserva = Reserva.objects.select_related('servicio').get(pk=reserva_id)
-                    monto_fijo = None
-                    if reserva.servicio and reserva.servicio.tipo_servicio == 'transporte':
-                        detalle = DetalleTransporte.objects.filter(reserva=reserva).first()
-                        if detalle:
-                            tarifas = TransporteTarifa.objects.filter(empresa=empresa, activo=True)
-                            tarifa = resolver_tarifa_transporte(
-                                tarifas,
-                                tipo_traslado=detalle.tipo_traslado,
-                                zona=detalle.zona,
-                                personas=reserva.numero_personas,
-                            )
-                            monto_fijo = tarifa.precio_en(orden.moneda)
-                    componentes.append({
-                        'empresa_id': empresa_id,
-                        'es_lider': False,
-                        'monto_fijo': monto_fijo,
-                    })
+        extras_por_empresa = {}
+        por_congelar = []
+        for fila in reservas_de_orden(orden.id):
+            empresa = Empresa.objects.get(pk=fila['empresa_id'])
+            es_lider = (empresa.id == orden.empresa_lider_id)
+            with scope.con_empresa(empresa):
+                reserva = Reserva.objects.select_related('servicio', 'paquete', 'empresa').get(pk=fila['reserva_id'])
+                monto_fijo = None
+                if not es_lider and reserva.servicio and reserva.servicio.tipo_servicio == 'transporte':
+                    detalle = DetalleTransporte.objects.filter(reserva=reserva).first()
+                    if detalle is None:
+                        return Response({'detail': 'El traslado no tiene detalle configurado.'}, status=400)
+                    tarifas = TransporteTarifa.objects.filter(empresa=empresa, activo=True)
+                    try:
+                        tarifa = resolver_tarifa_transporte(
+                            tarifas, tipo_traslado=detalle.tipo_traslado,
+                            zona=detalle.zona_efectiva(), personas=reserva.numero_personas,
+                        )
+                    except TarifaTransporteNoConfigurada as exc:
+                        return Response({'detail': str(exc)}, status=400)
+                    monto_fijo = tarifa.precio_en(orden.moneda)
+                    if monto_fijo is None:
+                        return Response(
+                            {'detail': f'Falta la tarifa de transporte en {orden.moneda}.'}, status=400,
+                        )
+                cargo, a_borrar, a_congelar, error = cotizar_personalizaciones(reserva)
+            if error:
+                return Response({'detail': error}, status=503)
+            componentes.append({'empresa_id': empresa.id, 'es_lider': es_lider, 'monto_fijo': monto_fijo})
+            extras_por_empresa[empresa.id] = extras_por_empresa.get(empresa.id, Decimal('0.00')) + Decimal(cargo)
+            por_congelar.append((empresa, a_borrar, a_congelar))
 
         try:
-            with scope.con_empresa(orden.empresa_lider):
-                precio_paquete = orden.paquete.precio_en(orden.moneda)
             reparto = monto_por_empresa(
-                precio_paquete=precio_paquete,
-                componentes=componentes,
-                moneda=orden.moneda,
+                precio_paquete=precio_paquete, componentes=componentes, moneda=orden.moneda,
             )
+            for empresa_id, cargo in extras_por_empresa.items():
+                reparto[empresa_id] = reparto.get(empresa_id, Decimal('0.00')) + cargo
             pagos = crear_pagos_orden(orden, reparto)
+            for empresa, a_borrar, a_congelar in por_congelar:
+                with scope.con_empresa(empresa), transaction.atomic():
+                    congelar_personalizaciones(a_borrar, a_congelar)
         except OrdenCerradaError as exc:
             return Response({'detail': str(exc)}, status=409)
         except ValueError as exc:
