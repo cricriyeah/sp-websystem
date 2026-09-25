@@ -96,9 +96,10 @@ via env var). Rutas montadas bajo `/api/` en `config/urls.py`:
   un `ref` opcional (codigo de vendedora, write-only) para atribuir la venta; si no
   resuelve se ignora sin romper el checkout.
 - `POST /api/reservas/<id>/crear-pago/` — crea el `PaymentIntent` de Stripe. El monto
-  (tarifa en la moneda de la reserva + amenidades de `apps/payments/pricing.py` +
-  100%/30% anticipo) se calcula siempre en el servidor, nunca se confia el total que
-  manda el cliente (`apps/payments`). 503 si la moneda pedida no tiene precio.
+  (tarifa en la moneda de la reserva + extras, con pago completo o el porcentaje de
+  anticipo configurado cuando está disponible) se calcula siempre en el servidor;
+  nunca se confia el total que manda el cliente (`apps/payments`). 503 si la moneda
+  pedida no tiene precio.
 - `POST /api/stripe/webhook/` — en `payment_intent.succeeded` marca la reserva
   `pagada`, corre `full_clean()` (motor de cupo) y dispara las notificaciones. Si el
   cupo se lleno mientras el cliente pagaba, reembolsa via `stripe.Refund` y deja la
@@ -108,8 +109,9 @@ via env var). Rutas montadas bajo `/api/` en `config/urls.py`:
 
 Lo mas delicado del sistema. Reglas que **no** hay que romper:
 
-- Todo el dinero se calcula en `apps/payments/pricing.py`. El cliente manda que
-  amenidades y si paga completo o anticipo; nunca un total.
+- El servidor calcula el precio base y el reparto en `apps/payments/pricing.py`, y
+  cotiza las personalizaciones en `apps/payments/extras.py`. El cliente manda su
+  selección y, cuando aplica, si paga completo o anticipo; nunca un total.
 - `crear-pago` es idempotente: reusa el intent de la reserva si sigue sin cobrar, lo
   ajusta con `PaymentIntent.modify` si cambiaron las amenidades, y manda
   `idempotency_key` para el doble clic. Si el intent ya esta en `succeeded`/`processing`
@@ -290,7 +292,7 @@ Con la expansión multi-servicio y paquetes turísticos:
   3. `bajo_demanda` (tours/experiencias sin límite físico estricto): no bloquea inventario previo.
 - **Sincronización de `ReservaOcupacion.ocupa_cupo`**:
   `Reserva.save()` propaga automáticamente `ocupa_cupo = (estado in ESTADOS_QUE_OCUPAN_CUPO)` a sus `ocupaciones` únicamente cuando la reserva cruza la frontera de ocupación (usando `_estado_original`).
-- **Paquetes turísticos (v1 mono-empresa)**:
+- **Paquetes turísticos**:
   - Todo `Paquete` pertenece a una `sede` y a una `empresa_lider`.
   - `PaqueteServicio.clean()` permite empresas distintas dentro de la misma sede. Los paquetes cruza-empresa usan `Orden` (ver abajo); los mono-empresa conservan su flujo de reserva.
   - Al pagar la reserva de un paquete, `reservar_cupo_al_confirmar()` dentro de `aplicar_pago_exitoso` valida y crea un `ReservaPaqueteComponente(estado_cupo=OK)` por cada componente no removido, y crea las `ReservaOcupacion` correspondientes para hospedaje. Si algún componente no tiene cupo, lanza `SinCupoError`, la transacción hace rollback y se emite reembolso automático 100%.
@@ -428,9 +430,53 @@ Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra
 - `embarcacion`/`capitan` en `Reserva` son nullable a proposito: quedan vacios hasta que la
   vendedora asigna manualmente.
 - **Reactivación manual CANCELADA -> PAGADA**: si un admin cambia a mano el estado de una reserva de `CANCELADA` a `PAGADA`, `Reserva.save()` reactiva sus `ReservaOcupacion` (`ocupa_cupo=True`) sin re-validar cupo contra otras reservas que se hayan creado mientras estuvo cancelada. Es una deuda técnica conocida; no reactivar sin verificar disponibilidad manualmente.
-- **Paquetes turísticos**: en v1 (`ADR-004 Revisión 3`), un paquete agrupa servicios de una sola empresa (`empresa_lider`). Es un bundle cerrado con precio fijo: el cliente no puede retirar servicios (no existen "servicios removibles" ni resta de ajustes). El precio total vive en `pricing.py` (`precio_paquete_total`) y se calcula como `precio_ancla` fijo + Σ personalizaciones (preseleccionadas/obligatorias + opcionales marcadas). Al confirmar el pago, se reserva cupo para todos los servicios componentes del paquete y se generan sus `ReservaPaqueteComponente`.
+- **Paquetes turísticos**: el paquete es un bundle cerrado; el cliente no puede retirar servicios. En un paquete de una empresa, `precio_paquete_total` suma las personalizaciones al precio ancla y, al confirmar el pago, se reserva cupo para sus componentes y se generan sus `ReservaPaqueteComponente`. Un paquete de dos empresas usa una `Orden` y reparte el precio y los extras por empresa.
 
+## Checkout unificado de paquetes
 
+Contrato y reglas de producto: [spec de checkout unificado](../docs/superpowers/specs/2026-09-21-checkout-unificado-design.md).
+
+- **Anticipo**: un servicio individual usa `Servicio.permite_anticipo` y su
+  `porcentaje_anticipo` (1–99). Un paquete de una empresa usa los campos del
+  `Paquete` e ignora el anticipo de sus servicios. Un paquete de dos empresas
+  siempre exige pago completo (`Paquete.anticipo_disponible=False`). El endpoint
+  `crear-pago` de una reserva responde 400 si se solicita `forma_pago=anticipo`
+  cuando no aplica; las órdenes se crean con `forma_pago=completo`. Para indicar
+  pago completo se usa `permite_anticipo=False`, no `porcentaje_anticipo=100`.
+- **Configuración**: cada `PaqueteServicio` fija `dia_estancia` (día 1 = inicio),
+  `noches` solo para hospedaje y `personas_incluidas` para ese servicio. El cliente
+  puede usar menos lugares sin reducir el precio ancla. Las reglas de
+  `apps/fleet/paquete_reglas.py` se ejecutan antes de vender: como máximo un
+  hospedaje, que empieza en día 1 y tiene noches positivas; los demás servicios
+  no llevan noches; las actividades comparten día y caen antes de la salida del
+  hospedaje; sin hospedaje todos los componentes van en día 1; las personas
+  incluidas respetan la capacidad del servicio. `Paquete.validar_configuracion()`
+  valida además el precio contra la peor tarifa de transporte aplicable en las
+  monedas configuradas; el cobro de una orden protege también el reparto.
+- **Fechas**: el cliente elige el inicio. Cada componente ocurre en
+  `inicio + (dia_estancia - 1)` días y el hospedaje sale en `inicio + noches`.
+  En un paquete de una empresa, `Reserva.fecha` es el día de la actividad operativa;
+  `Reserva.inicio_paquete` guarda el inicio elegido y `fecha_inicio_paquete` lo
+  devuelve (o usa `fecha` para reservas anteriores). En uno de dos empresas, cada
+  `Reserva` lleva la fecha de su componente.
+- **Personas**: la reserva de un paquete de una empresa guarda
+  `personas_por_servicio` como `{"<servicio_id>": n}`; `Reserva.personas_de(servicio_id)`
+  obtiene ese valor y usa `numero_personas` como respaldo. Al reservar, las
+  actividades de una empresa deben llevar el mismo número de personas. En una
+  orden, cada componente tiene su propio `numero_personas`.
+- **Extras**: `apps/payments/extras.py` es la única implementación de cotización y
+  congelado de personalizaciones. En una orden, cada empresa cobra los extras de
+  sus servicios; se congelan después de que Stripe acepta los PaymentIntents.
+- **API**: `POST /api/<empresa>/reservas/` recibe `fecha` de inicio y
+  `personas_por_servicio` para un paquete de una empresa; rechaza `fecha_salida`.
+  `POST /api/<sede>/ordenes/` recibe `fecha` de inicio y `componentes[]` con
+  `servicio`, `numero_personas` y `personalizaciones` (`id`, `cantidad` o `respuesta`
+  según el extra). Rechaza `fecha` dentro de un componente y `fecha_regreso` cuando
+  el paquete tiene hospedaje. Una orden admite como máximo un servicio por empresa.
+- **USD en órdenes**: la moneda se elige para toda la orden y se usan los precios
+  USD cargados en el paquete, las tarifas de transporte y los extras, sin conversión.
+  `crear-pago` responde 400 si falta el precio del paquete o una tarifa de transporte
+  en esa moneda; un extra sin precio responde 503.
 
 ## Órdenes cruza-empresa
 
