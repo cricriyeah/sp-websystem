@@ -11,6 +11,7 @@ const suites = {
   'content-sedes-cuerpo': ['src/content/sedes-cuerpo.ts', 'CONTENT_SEDES_CUERPO_TEST_OUT'],
   'reconciliar-sedes': ['src/lib/reconciliar-sedes.ts', 'RECONCILIAR_TEST_OUT'],
   'booking-href': ['src/lib/booking-href.ts', 'BOOKING_HREF_TEST_OUT'],
+  'calendario-paquete': ['src/lib/calendario-paquete.ts', 'CALENDARIO_TEST_OUT'],
   'selector-experiencia': ['src/lib/selector-experiencia.ts', 'SELECTOR_TEST_OUT'],
   personalizaciones: ['src/lib/pricing-paquete.ts', 'PERSONALIZACIONES_TEST_OUT'],
 };
