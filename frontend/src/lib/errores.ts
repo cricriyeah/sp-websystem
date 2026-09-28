@@ -1,4 +1,5 @@
 import { ApiError } from '@/lib/api';
+import type { Dictionary } from '@/app/[lang]/dictionaries';
 
 /**
  * Traduce un fallo tecnico a algo que el cliente pueda usar.
@@ -50,6 +51,20 @@ export type TextosDeError = Record<ClaseDeFallo, string>;
 
 export function mensajeDeFallo(error: unknown, textos: TextosDeError) {
   return textos[clasificar(error)];
+}
+
+/** Mensaje de pago compartido por el checkout de servicios y el de paquetes. */
+export function mensajeDeError(
+  err: unknown,
+  checkout: Dictionary['checkout'],
+  feedback: Dictionary['feedback'],
+) {
+  if (err instanceof ApiError) {
+    if (err.status === 502) return checkout.errorPaymentProvider;
+    if (err.status === 409) return checkout.errorPaymentInProgress;
+    if (err.status === 503) return checkout.paymentUnavailable;
+  }
+  return mensajeDeFallo(err, feedback.error);
 }
 
 /**

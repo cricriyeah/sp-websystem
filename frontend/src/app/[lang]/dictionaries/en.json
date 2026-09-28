@@ -762,6 +762,35 @@
       "retry": "Try again"
     }
   },
+  "pedido": {
+    "title": "Book your package",
+    "groupOf": "by {empresa}",
+    "startLabel": "Package start",
+    "nightsNote": "{n} nights · check out on {fecha}",
+    "peopleIncluded": "The package includes {n} places",
+    "extrasTitle": "Customize your package",
+    "chargesNotice": "You'll pay in {n} charges, one per company:",
+    "chargesSum": "They add up to {total}. Each payment is held first, and the charges are made only after that. If something goes wrong, the held amount is released or refunded to you.",
+    "continueToPayment": "Continue to payment 1 of {total}",
+    "payStep": "Payment {n} of {total}",
+    "payStepLast": "Payment {n} of {total} · the last one",
+    "authorized": "held",
+    "payButton": "Pay {amount} to {empresa} · {n} of {total}",
+    "payButtonSingle": "Pay {amount}",
+    "resuming": "You already have a booking in progress. Resuming where you left off…",
+    "errorGeneric": "A temporary issue occurred while saving your booking. Please try again.",
+    "success": {
+      "title": "Your package is confirmed!",
+      "body": "We've processed payment for your package. A member of our team will contact you within 24 hours with all your trip details.",
+      "componentsHeadline": "Your package summary"
+    },
+    "fail": {
+      "title": "Payment could not be completed",
+      "body": "We couldn't complete payment for your package. Any held amount will be released or refunded to you; you can try again.",
+      "motivoPrefix": "Detail: ",
+      "retry": "Try again"
+    }
+  },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",
     "mision": "A partnership of local agencies for experiencing Baja California Sur the way it deserves: with the people who truly know it.",

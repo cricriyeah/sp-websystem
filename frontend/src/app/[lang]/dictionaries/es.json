@@ -762,6 +762,35 @@
       "retry": "Intentar de nuevo"
     }
   },
+  "pedido": {
+    "title": "Reserva tu paquete",
+    "groupOf": "de {empresa}",
+    "startLabel": "Inicio del paquete",
+    "nightsNote": "{n} noches · sales el {fecha}",
+    "peopleIncluded": "El paquete incluye {n} lugares",
+    "extrasTitle": "Personaliza tu paquete",
+    "chargesNotice": "Pagarás en {n} cargos, uno por cada empresa:",
+    "chargesSum": "Suman {total}. Primero se retiene cada pago y solo entonces se cobra. Si algo falla, se libera o se te reembolsa lo retenido.",
+    "continueToPayment": "Continuar al pago 1 de {total}",
+    "payStep": "Pago {n} de {total}",
+    "payStepLast": "Pago {n} de {total} · el último",
+    "authorized": "retenido",
+    "payButton": "Pagar {amount} a {empresa} · {n} de {total}",
+    "payButtonSingle": "Pagar {amount}",
+    "resuming": "Ya tienes una reserva en proceso. Retomando donde te quedaste…",
+    "errorGeneric": "Ocurrió un detalle temporal al guardar tu reserva. Por favor intenta de nuevo.",
+    "success": {
+      "title": "¡Tu paquete está confirmado!",
+      "body": "Ya procesamos el pago de tu paquete. Un asesor de nuestro equipo te contactará en las próximas 24 horas con todos los detalles de tu viaje.",
+      "componentsHeadline": "Resumen de tu paquete"
+    },
+    "fail": {
+      "title": "No se pudo completar el pago",
+      "body": "No se pudo completar el pago de tu paquete. Lo que se haya retenido se libera o se te reembolsa; puedes intentar de nuevo.",
+      "motivoPrefix": "Detalle: ",
+      "retry": "Intentar de nuevo"
+    }
+  },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",
     "mision": "Una alianza de agencias locales para vivir Baja California Sur como se merece: con quienes la conocen de verdad.",

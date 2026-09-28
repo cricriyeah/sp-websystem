@@ -7,7 +7,7 @@ import { DateField } from '@/components/date-field';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import type { Moneda, PaqueteServicioCatalogo, PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
-import { sumarDias } from '@/lib/calendario-paquete';
+import { fechaDeComponente, sumarDias } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
 import { cantidadEfectiva, type SeleccionPersonalizacion } from '@/lib/personalizaciones';
@@ -131,7 +131,7 @@ export function GrupoServicio({
                       id={id}
                       type="checkbox"
                       checked={marcada}
-                      disabled={bloqueado || sinPrecio}
+                      disabled={bloqueado || (sinPrecio && !marcada)}
                       onChange={(event) => actualizarExtra(extra.id, event.target.checked ? { id: extra.id, cantidad: 1 } : undefined)}
                       className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
                     />
@@ -277,7 +277,7 @@ export function GrupoServicio({
           {traslado.tipo === 'redondo_aeropuerto' && noches === null && inicio && (
             <DateField lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
               onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
-              minDate={sumarDias(inicio, 1)} prevMonthLabel={booking.prevMonth}
+              minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)} prevMonthLabel={booking.prevMonth}
               nextMonthLabel={booking.nextMonth} personas={estado.personas}
               fullLabel={checkout.dayFull} sinCupo={true} />
           )}

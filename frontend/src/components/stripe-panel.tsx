@@ -269,44 +269,47 @@ export function StripePanel({
             <span className="text-muted">{checkout.amountDueNow}</span>
             <span className="text-foreground">{amountDueNow}</span>
           </div>
+        </fieldset>
+      )}
 
-          {codigoPromocionalDisponible !== false && (
-            <div className="mt-3 border-t border-border pt-3">
-              {!promoAbierto && !codigoPromocional ? (
-                <button
-                  type="button"
-                  onClick={() => setPromoAbierto(true)}
-                  className="text-xs font-medium text-muted underline underline-offset-2 transition-colors hover:text-foreground"
-                >
-                  {checkout.promoCode.toggle}
-                </button>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
-                    {checkout.promoCode.label}
-                  </label>
-                  <input
-                    id="codigo-promocional"
-                    type="text"
-                    value={codigoPromocional}
-                    disabled={phase === 'submitting'}
-                    onChange={(e) => onCodigoPromocionalChange(e.target.value)}
-                    placeholder={checkout.promoCode.placeholder}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
-                  />
-                  {promoEstado === 'verificando' && (
-                    <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
-                  )}
-                  {promoEstado === 'valido' && promoPorcentaje && (
-                    <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-                      <CheckCircle size={14} weight="fill" />
-                      {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje)))}
-                    </p>
-                  )}
-                  {promoEstado === 'invalido' && (
-                    <FieldError id="codigo-promocional-error" mensaje={checkout.promoCode.invalid} />
-                  )}
-                </div>
+      {codigoPromocionalDisponible !== false && phase !== 'payment' && phase !== 'unavailable' && (
+        <fieldset
+          disabled={phase === 'submitting'}
+          className={`${formaPagoDisponible ? 'mt-3' : 'mt-5'} border-t border-border pt-3`}
+        >
+          {!promoAbierto && !codigoPromocional ? (
+            <button
+              type="button"
+              onClick={() => setPromoAbierto(true)}
+              className="text-xs font-medium text-muted underline underline-offset-2 transition-colors hover:text-foreground"
+            >
+              {checkout.promoCode.toggle}
+            </button>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
+                {checkout.promoCode.label}
+              </label>
+              <input
+                id="codigo-promocional"
+                type="text"
+                value={codigoPromocional}
+                disabled={phase === 'submitting'}
+                onChange={(e) => onCodigoPromocionalChange(e.target.value)}
+                placeholder={checkout.promoCode.placeholder}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+              />
+              {promoEstado === 'verificando' && (
+                <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
+              )}
+              {promoEstado === 'valido' && promoPorcentaje && (
+                <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                  <CheckCircle size={14} weight="fill" />
+                  {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje)))}
+                </p>
+              )}
+              {promoEstado === 'invalido' && (
+                <FieldError id="codigo-promocional-error" mensaje={checkout.promoCode.invalid} />
               )}
             </div>
           )}

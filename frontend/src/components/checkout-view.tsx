@@ -43,7 +43,7 @@ import {
   type ServicioCatalogo,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
-import { mensajeDeAyuda, mensajeDeFallo } from '@/lib/errores';
+import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import { calcularPrecioPaquete } from '@/lib/pricing-paquete';
 import {
@@ -163,18 +163,6 @@ type CheckoutViewProps = {
 // confirmacion.
 type Phase = 'recuperando' | 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
 
-/**
- * El texto que ve el cliente, segun lo que contesto el backend.
- *
- * Antes todo lo que no fuera 503 caia en un mensaje generico, y eso costo caro:
- * con la llave de Stripe mal capturada en Render, `crear-pago` devolvia 502 en
- * cada intento y el checkout solo decia "Algo salio mal" — sin nada que
- * separara una caida del procesador de un cobro que ya venia en curso, que son
- * dos situaciones con remedios opuestos para quien esta del otro lado.
- *
- * Lo que no se muestra es el detalle tecnico: al cliente le importa si se le
- * cobro y que hacer ahora. El diagnostico va al log del backend y a Sentry.
- */
 type CampoContacto = 'fullName' | 'phone' | 'email';
 
 /**
@@ -183,23 +171,6 @@ type CampoContacto = 'fullName' | 'phone' | 'email';
  * mas arriba de otro que tambien fallo desorienta.
  */
 const ORDEN_CAMPOS: CampoContacto[] = ['phone', 'fullName', 'email'];
-
-function mensajeDeError(
-  err: unknown,
-  checkout: Dictionary['checkout'],
-  feedback: Dictionary['feedback'],
-) {
-  if (err instanceof ApiError) {
-    // 502: el backend no pudo hablar con Stripe, asi que no hay ningun cobro.
-    if (err.status === 502) return checkout.errorPaymentProvider;
-    // 409: ya hay un intent cobrando esta reserva (apps/payments/views.py).
-    // Reintentar aqui es justo lo que puede acabar en un cargo duplicado.
-    if (err.status === 409) return checkout.errorPaymentInProgress;
-  }
-  // El resto lo resuelve el catalogo compartido, que ademas cubre el caso que
-  // antes no tenia mensaje ninguno: que no haya red. Ver src/lib/errores.ts.
-  return mensajeDeFallo(err, feedback.error);
-}
 
 function formatDay(date: Date, lang: Locale) {
   const locale = intlLocale(lang);
