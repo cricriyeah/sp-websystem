@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
-import { getPaqueteDetalle, getSedes, getServicioDetalle, type PaqueteCatalogo, type ServicioCatalogo } from '@/lib/api';
+import { PedidoPaquete } from '@/components/pedido/pedido-paquete';
+import { getPaqueteDetalle, getServicioDetalle, getTraslados, type PaqueteCatalogo, type ServicioCatalogo, type TrasladosCatalogo } from '@/lib/api';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { alternativasDe } from '@/lib/site';
 
@@ -47,18 +48,40 @@ export default async function ReservarPage({
   let paquete: PaqueteCatalogo | null = null;
 
   if (paqueteSlug) {
-    if (sedeSlug) {
-      paquete = await getPaqueteDetalle(sedeSlug, paqueteSlug).catch(() => null);
-    } else {
-      const sedes = await getSedes().catch(() => []);
-      for (const s of sedes) {
-        const p = await getPaqueteDetalle(s.slug, paqueteSlug).catch(() => null);
-        if (p) {
-          paquete = p;
-          break;
-        }
-      }
-    }
+    if (!sedeSlug) notFound();
+    paquete = await getPaqueteDetalle(sedeSlug, paqueteSlug).catch(() => null);
+  }
+
+  if (paqueteSlug) {
+    // Paquete no encontrado: 404, no caer a la pesca por defecto.
+    if (!paquete) notFound();
+    const empresasDeTraslado = [
+      ...new Set(
+        paquete.servicios_asociados
+          .filter((c) => c.servicio.tipo_servicio === 'transporte')
+          .map((c) => c.servicio.empresa_slug),
+      ),
+    ];
+    const catalogos = await Promise.all(
+      empresasDeTraslado.map((empresa) => getTraslados(empresa).catch(() => null)),
+    );
+    const tarifasPorEmpresa: Record<string, TrasladosCatalogo['tarifas']> = {};
+    const puntosPorEmpresa: Record<string, TrasladosCatalogo['puntos_encuentro']> = {};
+    empresasDeTraslado.forEach((empresa, i) => {
+      tarifasPorEmpresa[empresa] = catalogos[i]?.tarifas ?? [];
+      puntosPorEmpresa[empresa] = catalogos[i]?.puntos_encuentro ?? [];
+    });
+    return (
+      <PedidoPaquete
+        lang={lang}
+        dict={dict}
+        paquete={paquete}
+        sedeSlug={paquete.sede_slug}
+        tarifasPorEmpresa={tarifasPorEmpresa}
+        puntosPorEmpresa={puntosPorEmpresa}
+        minDate={minDate}
+      />
+    );
   }
 
   // Resolución de empresa dinámicamente según el ítem seleccionado:
