@@ -18,25 +18,22 @@ function paqueteBase(overrides = {}) {
   };
 }
 
-test('paquete mono-empresa va a /reservar con paquete_empresa', () => {
-  const href = h.hrefPaquete(paqueteBase(), 'es', 'MXN');
-  assert.equal(href, '/es/reservar?paquete=brunch-y-pesca&sede=la-paz&paquete_empresa=sal-y-sol&moneda=MXN');
-});
-
-test('paquete cruza-empresa va a /reservar-paquete sin paquete_empresa', () => {
+test('un paquete de una empresa y uno de dos van a la misma ruta y sin paquete_empresa', () => {
+  const una = h.hrefPaquete(paqueteBase(), 'es', 'MXN');
   const cruza = paqueteBase({
     servicios_asociados: [
       { id: 1, servicio_id: 1, orden: 1, servicio: { ...paqueteBase().servicios_asociados[0].servicio, empresa_slug: 'sal-y-sol' } },
       { id: 2, servicio_id: 2, orden: 2, servicio: { ...paqueteBase().servicios_asociados[0].servicio, id: 2, empresa_slug: 'transporte-la-paz' } },
     ],
   });
-  const href = h.hrefPaquete(cruza, 'es', 'MXN');
-  assert.equal(href, '/es/reservar-paquete?paquete=brunch-y-pesca&sede=la-paz&moneda=MXN');
+  const dos = h.hrefPaquete(cruza, 'es', 'MXN');
+  assert.equal(una, '/es/reservar?paquete=brunch-y-pesca&sede=la-paz&moneda=MXN');
+  assert.equal(dos, una);
 });
 
 test('paquete sin sede_slug omite el parametro sede', () => {
   const href = h.hrefPaquete(paqueteBase({ sede_slug: '' }), 'en', 'USD');
-  assert.equal(href, '/en/reservar?paquete=brunch-y-pesca&paquete_empresa=sal-y-sol&moneda=USD');
+  assert.equal(href, '/en/reservar?paquete=brunch-y-pesca&moneda=USD');
 });
 
 test('hrefServicio arma la URL de reserva de servicio suelto', () => {
