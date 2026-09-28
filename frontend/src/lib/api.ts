@@ -73,6 +73,10 @@ export type ReservaInput = {
   // Slug o ID del Paquete de experiencias que ampara esta reserva (si aplica).
   paquete?: string | number | null;
   servicio?: string;
+  // Paquete de una sola empresa: personas por id de servicio.
+  // `numero_personas` corresponde al componente operativo principal.
+  personas_por_servicio?: Record<string, number>;
+  // Solo para hospedaje suelto; la salida de un paquete la define el catálogo.
   fecha_salida?: string;
   // Seleccion de personalizaciones (brunch, licencia, carnada, etc.), sin
   // precio: el unico que lo congela es `crear-pago`, con el catalogo vigente
@@ -85,6 +89,7 @@ export type ReservaInput = {
 export type Reserva = ReservaInput & {
   id: number;
   estado: string;
+  fecha_inicio_paquete?: string;
 };
 
 export type PagoInput = {
@@ -297,6 +302,8 @@ export type ServicioCatalogo = {
   precio_persona_extra: string;
   precio_persona_extra_usd: string | null;
   personas_incluidas: number;
+  permite_anticipo: boolean;
+  porcentaje_anticipo: number;
   descripcion: string;
   activo: boolean;
   personalizaciones: ServicioPersonalizacionCatalogo[];
@@ -307,6 +314,9 @@ export type PaqueteServicioCatalogo = {
   servicio_id: number;
   servicio: ServicioCatalogo;
   orden: number;
+  dia_estancia: number;
+  noches: number | null;
+  personas_incluidas: number;
 };
 
 export type PaqueteCatalogo = {
@@ -321,6 +331,10 @@ export type PaqueteCatalogo = {
   precio_ancla: string;
   precio_ancla_usd: string | null;
   regla_precio: string;
+  permite_anticipo: boolean; // efectivo: false si el paquete es de dos empresas
+  porcentaje_anticipo: number;
+  es_cruza_empresa: boolean;
+  noches: number | null;
   activo: boolean;
   servicios_asociados: PaqueteServicioCatalogo[];
 };
@@ -396,14 +410,15 @@ export const crearReservaTraslado = (empresaSlug: string, payload: ReservaTrasla
 
 export type ComponenteOrdenInput = {
   servicio: string | number;
-  fecha?: string;
   hora?: string;
   numero_personas?: number;
   tipo_traslado?: TipoTraslado;
   punto_encuentro?: number | null;
   direccion_personalizada?: string;
   zona?: Zona | '';
+  // Solo si el paquete no incluye hospedaje; con hospedaje la define el paquete.
   fecha_regreso?: string | null;
+  personalizaciones?: { id: number; cantidad?: number; respuesta?: string }[];
 };
 
 export type CrearOrdenInput = {
@@ -419,12 +434,6 @@ export type CrearOrdenInput = {
   componentes?: ComponenteOrdenInput[];
   fecha?: string;
   hora?: string;
-  numero_personas?: number;
-  tipo_traslado?: TipoTraslado;
-  punto_encuentro?: number | null;
-  direccion_personalizada?: string;
-  zona?: Zona | '';
-  fecha_regreso?: string | null;
 };
 
 export type OrdenCreada = {

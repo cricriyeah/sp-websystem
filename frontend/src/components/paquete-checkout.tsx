@@ -338,6 +338,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
     setErrorForm('');
 
     try {
+      // Temporal hasta reemplazar este checkout en la Tarea 4.1.
       const payload: CrearOrdenInput = {
         checkout_id: checkoutId,
         paquete: paquete.slug,
@@ -363,7 +364,7 @@ export function PaqueteCheckout({ lang, dict, paquete, sedeSlug, trasladoCatalog
               }
             : {}),
         })),
-      };
+      } as unknown as CrearOrdenInput;
 
       const creada = await crearOrden(sedeSlug, payload);
       setOrdenId(creada.orden_id);
