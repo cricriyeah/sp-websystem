@@ -114,8 +114,8 @@ def crear_pagos_orden(orden: Orden, reparto: dict[int, Decimal]) -> list[dict[st
 
 def confirmar_captura(orden: Orden) -> None:
     """Lee los N PaymentIntents (por estado_reservas_de_orden → stripe_payment_intent_id).
-    Si alguno NO está 'requires_capture' → revertir_orden(orden, 'una autorización
-    no se completó'). Si todos → captura los N; si la captura de alguno falla,
+    Si alguno NO está 'requires_capture' → revertir_orden(orden, 'la retención
+    del pago no se completó'). Si todos → captura los N; si la captura de alguno falla,
     reintenta ESA hasta CAPTURA_REINTENTOS con espera corta; si agota →
     revertir_orden(orden, 'no se pudo capturar <empresa>'). Idempotente a nivel
     operación: un PI ya 'succeeded' se salta (traga PaymentIntentUnexpectedState),
@@ -130,7 +130,7 @@ def confirmar_captura(orden: Orden) -> None:
     for fila in filas:
         pi_id = fila.get('stripe_payment_intent_id')
         if not pi_id:
-            revertir_orden(orden, 'una autorización no se completó')
+            revertir_orden(orden, 'la retención del pago no se completó')
             return
 
         empresa = Empresa.objects.get(pk=fila['empresa_id'])
@@ -138,11 +138,11 @@ def confirmar_captura(orden: Orden) -> None:
         try:
             intent = cliente.payment_intents.retrieve(pi_id)
         except stripe.StripeError:
-            revertir_orden(orden, 'una autorización no se completó')
+            revertir_orden(orden, 'la retención del pago no se completó')
             return
 
         if intent.status not in ('requires_capture', 'succeeded'):
-            revertir_orden(orden, 'una autorización no se completó')
+            revertir_orden(orden, 'la retención del pago no se completó')
             return
 
         intents_info.append((empresa, cliente, intent))

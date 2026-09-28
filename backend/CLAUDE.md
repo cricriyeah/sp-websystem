@@ -109,6 +109,10 @@ via env var). Rutas montadas bajo `/api/` en `config/urls.py`:
 
 Lo mas delicado del sistema. Reglas que **no** hay que romper:
 
+- `autorizado` y `autorización` son términos internos del código y el admin. En
+  textos de cara al cliente (motivos del JSON de API, correo y WhatsApp) usar
+  `retenido` y `retención`. Los valores técnicos de estado son parte del contrato
+  del API; el frontend debe mostrar el vocabulario de cliente.
 - El servidor calcula el precio base y el reparto en `apps/payments/pricing.py`, y
   cotiza las personalizaciones en `apps/payments/extras.py`. El cliente manda su
   selección y, cuando aplica, si paga completo o anticipo; nunca un total.

@@ -3471,6 +3471,8 @@ class OrdenesApiTest(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()['estado'], 'cancelada')
         self.assertIn('motivo', res.json())
+        self.assertIn('retención', res.json()['motivo'])
+        self.assertNotIn('autorización', res.json()['motivo'])
 
         cliente_2.payment_intents.cancel.assert_called_once_with(
             'pi_api_2', options={'idempotency_key': f'orden-{self.orden.id}-{self.empresa_2.id}-cancel'},
