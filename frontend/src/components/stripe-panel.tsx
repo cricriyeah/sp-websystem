@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { motion, useReducedMotion } from 'motion/react';
@@ -36,10 +36,16 @@ type StripePanelProps = {
   usdDisponible: boolean;
   formaPago: 'completo' | 'anticipo';
   onFormaPagoChange: (value: 'completo' | 'anticipo') => void;
+  formaPagoDisponible?: boolean;
   codigoPromocional: string;
   onCodigoPromocionalChange: (value: string) => void;
+  codigoPromocionalDisponible?: boolean;
   promoEstado: 'idle' | 'verificando' | 'valido' | 'invalido';
   promoPorcentaje: string | null;
+  avisoCargos?: ReactNode;
+  encabezadoPago?: ReactNode;
+  etiquetaBotonPago?: string;
+  etiquetaBotonEnvio?: string;
   phase: Phase;
   error: string;
   pago: Pago | null;
@@ -59,12 +65,14 @@ function PaymentForm({
   checkout,
   feedback,
   ayudaMensaje,
+  etiquetaBotonPago,
   onPagoConfirmado,
   onPagoRechazado,
 }: {
   checkout: Dictionary['checkout'];
   feedback: Dictionary['feedback'];
   ayudaMensaje: string;
+  etiquetaBotonPago?: string;
   onPagoConfirmado: (procesando: boolean) => void;
   onPagoRechazado?: (mensaje: string) => void;
 }) {
@@ -129,7 +137,7 @@ function PaymentForm({
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
       >
         <Lock size={16} />
-        {submitting ? checkout.submitting : checkout.confirmPay}
+        {submitting ? checkout.submitting : (etiquetaBotonPago ?? checkout.confirmPay)}
       </button>
     </div>
   );
@@ -149,10 +157,16 @@ export function StripePanel({
   usdDisponible,
   formaPago,
   onFormaPagoChange,
+  formaPagoDisponible = true,
   codigoPromocional,
   onCodigoPromocionalChange,
+  codigoPromocionalDisponible = true,
   promoEstado,
   promoPorcentaje,
+  avisoCargos,
+  encabezadoPago,
+  etiquetaBotonPago,
+  etiquetaBotonEnvio,
   phase,
   error,
   pago,
@@ -218,7 +232,7 @@ export function StripePanel({
         </fieldset>
       )}
 
-      {phase !== 'payment' && phase !== 'unavailable' && (
+      {formaPagoDisponible !== false && phase !== 'payment' && phase !== 'unavailable' && (
         <fieldset
           className="mt-5 flex flex-col gap-2 border-t border-border pt-5"
           disabled={phase === 'submitting'}
@@ -256,44 +270,46 @@ export function StripePanel({
             <span className="text-foreground">{amountDueNow}</span>
           </div>
 
-          <div className="mt-3 border-t border-border pt-3">
-            {!promoAbierto && !codigoPromocional ? (
-              <button
-                type="button"
-                onClick={() => setPromoAbierto(true)}
-                className="text-xs font-medium text-muted underline underline-offset-2 transition-colors hover:text-foreground"
-              >
-                {checkout.promoCode.toggle}
-              </button>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
-                  {checkout.promoCode.label}
-                </label>
-                <input
-                  id="codigo-promocional"
-                  type="text"
-                  value={codigoPromocional}
-                  disabled={phase === 'submitting'}
-                  onChange={(e) => onCodigoPromocionalChange(e.target.value)}
-                  placeholder={checkout.promoCode.placeholder}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
-                />
-                {promoEstado === 'verificando' && (
-                  <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
-                )}
-                {promoEstado === 'valido' && promoPorcentaje && (
-                  <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-                    <CheckCircle size={14} weight="fill" />
-                    {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje)))}
-                  </p>
-                )}
-                {promoEstado === 'invalido' && (
-                  <FieldError id="codigo-promocional-error" mensaje={checkout.promoCode.invalid} />
-                )}
-              </div>
-            )}
-          </div>
+          {codigoPromocionalDisponible !== false && (
+            <div className="mt-3 border-t border-border pt-3">
+              {!promoAbierto && !codigoPromocional ? (
+                <button
+                  type="button"
+                  onClick={() => setPromoAbierto(true)}
+                  className="text-xs font-medium text-muted underline underline-offset-2 transition-colors hover:text-foreground"
+                >
+                  {checkout.promoCode.toggle}
+                </button>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
+                    {checkout.promoCode.label}
+                  </label>
+                  <input
+                    id="codigo-promocional"
+                    type="text"
+                    value={codigoPromocional}
+                    disabled={phase === 'submitting'}
+                    onChange={(e) => onCodigoPromocionalChange(e.target.value)}
+                    placeholder={checkout.promoCode.placeholder}
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                  />
+                  {promoEstado === 'verificando' && (
+                    <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
+                  )}
+                  {promoEstado === 'valido' && promoPorcentaje && (
+                    <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                      <CheckCircle size={14} weight="fill" />
+                      {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje)))}
+                    </p>
+                  )}
+                  {promoEstado === 'invalido' && (
+                    <FieldError id="codigo-promocional-error" mensaje={checkout.promoCode.invalid} />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </fieldset>
       )}
 
@@ -305,15 +321,19 @@ export function StripePanel({
       )}
 
       {phase === 'payment' && pago && stripePromise && (
-        <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret }}>
-          <PaymentForm
-            checkout={checkout}
-            feedback={feedback}
-            ayudaMensaje={ayudaMensaje}
-            onPagoConfirmado={onPagoConfirmado}
-            onPagoRechazado={onPagoRechazado}
-          />
-        </Elements>
+        <>
+          {encabezadoPago}
+          <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret }}>
+            <PaymentForm
+              checkout={checkout}
+              feedback={feedback}
+              ayudaMensaje={ayudaMensaje}
+              etiquetaBotonPago={etiquetaBotonPago}
+              onPagoConfirmado={onPagoConfirmado}
+              onPagoRechazado={onPagoRechazado}
+            />
+          </Elements>
+        </>
       )}
 
       {phase !== 'payment' && phase !== 'unavailable' && (
@@ -323,6 +343,7 @@ export function StripePanel({
               un solo consentimiento del checkout; el texto completo de cada uno
               vive en su propia pagina y abre en otra pestaña para no tirar lo
               que el cliente ya lleno. */}
+          {avisoCargos}
           <label className="mt-5 flex items-start gap-2.5 border-t border-border pt-5 text-xs leading-relaxed text-muted">
             <input
               type="checkbox"
@@ -403,7 +424,7 @@ export function StripePanel({
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
           >
             <Lock size={16} />
-            {phase === 'submitting' ? checkout.submitting : checkout.payButton}
+            {phase === 'submitting' ? checkout.submitting : (etiquetaBotonEnvio ?? checkout.payButton)}
           </motion.button>
         </>
       )}
