@@ -8,7 +8,7 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
-from django.db import models, transaction
+from django.db import connection, models, transaction
 from django.http import HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -20,6 +20,7 @@ from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from apps.fleet.models import Paquete, PuntoEncuentro, Recurso, Servicio
+from apps.payments.situacion import requiere_atencion, situacion_de_orden, situacion_de_reserva
 from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from apps.tenancy.models import MembresiaEmpresa
@@ -118,6 +119,27 @@ class LlegadaFilter(admin.SimpleListFilter):
             return queryset
         return queryset.filter(
             creado_en__gte=timezone.now() - timedelta(hours=HORAS_RECIEN_LLEGADA))
+
+
+class RequiereAtencionFilter(admin.SimpleListFilter):
+    title = 'requiere atención (devolución)'
+    parameter_name = 'requiere_atencion'
+
+    def lookups(self, request, model_admin):
+        return (('si', 'Sí'),)
+
+    def queryset(self, request, queryset):
+        if self.value() != 'si':
+            return queryset
+        ids = [
+            pk for pk, estado, monto_pagado, monto_reembolsado in queryset.values_list(
+                'pk', 'estado', 'monto_pagado', 'monto_reembolsado',
+            )
+            if requiere_atencion(situacion_de_reserva(
+                estado=estado, monto_pagado=monto_pagado, monto_reembolsado=monto_reembolsado,
+            ))
+        ]
+        return queryset.filter(pk__in=ids)
 
 
 class AvisoDeReservasNuevasMixin:
@@ -282,12 +304,12 @@ class OrdenAdmin(ModelAdmin):
     # Paquete tiene RLS por empresa lider: un JOIN lo ocultaria junto con
     # la orden. Solo sede se puede unir sin perder ordenes compartidas.
     list_select_related = ('sede',)
-    list_display = ['nombre_cliente', 'paquete_mostrado', 'sede', 'estado', 'creado_en', 'total']
+    list_display = ['nombre_cliente', 'paquete_mostrado', 'sede', 'estado', 'atencion_col', 'creado_en', 'total']
     exclude = ['paquete']
     readonly_fields = [field.name for field in Orden._meta.fields if field.name != 'paquete'] + [
         'paquete_mostrado', 'total', 'reservas_componentes',
     ]
-    actions = ['cancelar_orden']
+    actions = ['cancelar_orden', 'confirmar_devolucion_orden']
 
     def get_queryset(self, request):
         # Orden se comparte por sede, no por empresa_lider. Replica RLS tambien
@@ -311,7 +333,75 @@ class OrdenAdmin(ModelAdmin):
         actions = super().get_actions(request)
         if not (scope.es_operador_plataforma(request.user) or request.user.groups.filter(name='Jefe').exists()):
             actions.pop('cancelar_orden', None)
+        if not (
+            scope.es_operador_plataforma(request.user)
+            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+        ):
+            actions.pop('confirmar_devolucion_orden', None)
         return actions
+
+    @admin.display(description='Atención')
+    def atencion_col(self, obj):
+        # Una lectura de componentes por orden en la página; el listado pagina pocas filas.
+        filas = reservas_de_orden(obj.pk)
+        pagos = [
+            {
+                'estado_pi': None,
+                'monto_pagado': fila['monto_pagado'],
+                'monto_reembolsado': fila['monto_reembolsado'],
+            }
+            for fila in filas
+        ]
+        s = situacion_de_orden(estado_orden=obj.estado, pagos=pagos)
+        return '⚠️ Confirmar devolución' if requiere_atencion(s) else ''
+
+    @admin.action(description='Confirmar devolución de orden (ya se resolvió fuera del sistema)')
+    def confirmar_devolucion_orden(self, request, queryset):
+        if not (
+            scope.es_operador_plataforma(request.user)
+            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+        ):
+            raise PermissionDenied
+
+        from apps.tenancy.models import Empresa
+
+        confirmadas = 0
+        ordenes = list(queryset)
+        # El request del admin ya tiene un alcance activo. Como en revertir_orden,
+        # cada reserva se escribe bajo su empresa y al final se restaura el alcance.
+        prev_alcance = getattr(connection, 'alcance_actual', None)
+        connection.alcance_actual = None
+        try:
+            for orden in ordenes:
+                confirmadas_en_orden = 0
+                for fila in reservas_de_orden(orden.pk):
+                    empresa = Empresa.objects.get(pk=fila['empresa_id'])
+                    with scope.con_empresa(empresa):
+                        reserva = Reserva.objects.get(pk=fila['reserva_id'])
+                        s = situacion_de_reserva(
+                            estado=reserva.estado, monto_pagado=reserva.monto_pagado,
+                            monto_reembolsado=reserva.monto_reembolsado,
+                        )
+                        if not requiere_atencion(s):
+                            continue
+                        reserva.reembolsada = True
+                        reserva.monto_reembolsado = reserva.monto_pagado
+                        reserva.reembolsada_en = timezone.now()
+                        reserva.save(update_fields=['reembolsada', 'monto_reembolsado', 'reembolsada_en'])
+                        self.log_change(request, reserva, 'Devolución confirmada fuera del sistema.')
+                        confirmadas += 1
+                        confirmadas_en_orden += 1
+                if confirmadas_en_orden:
+                    self.log_change(request, orden, 'Devolución de componentes confirmada fuera del sistema.')
+        finally:
+            connection.alcance_actual = prev_alcance
+            if connection.vendor == 'postgresql' and prev_alcance:
+                with connection.cursor() as cursor:
+                    if prev_alcance[0] == 'empresa':
+                        cursor.execute(f'SET LOCAL app.current_empresa_id = {int(prev_alcance[1])}')
+                    elif prev_alcance[0] == 'operador':
+                        cursor.execute("SET LOCAL app.operador_plataforma = 'on'")
+        self.message_user(request, f'{confirmadas} reserva(s) de orden marcadas como devolución confirmada.')
 
     @admin.action(description='Cancelar orden (revertir pagos pendientes)')
     def cancelar_orden(self, request, queryset):
@@ -365,10 +455,10 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     list_display = [
         'fecha', 'hora', 'nombre_cliente', 'numero_personas',
         'estado', 'canal_origen', 'vendedora', 'cobro', 'extras',
-        'embarcacion', 'capitan', 'reembolsada', 'orden_link',
+        'embarcacion', 'capitan', 'reembolsada', 'requiere_atencion_col', 'orden_link',
     ]
     list_filter = [
-        LlegadaFilter,
+        LlegadaFilter, RequiereAtencionFilter,
         'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago', 'en_disputa',
         'pide_bebidas', 'pide_extras_whatsapp',
         'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional', 'paquete',
@@ -399,7 +489,47 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     ]
     actions = [
         'cancelar_por_mal_clima', 'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
+        'confirmar_devolucion',
     ]
+
+    def requiere_atencion_col(self, obj):
+        s = situacion_de_reserva(
+            estado=obj.estado, monto_pagado=obj.monto_pagado, monto_reembolsado=obj.monto_reembolsado,
+        )
+        return '⚠️ Confirmar devolución' if requiere_atencion(s) else ''
+    requiere_atencion_col.short_description = 'Atención'
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not (
+            scope.es_operador_plataforma(request.user)
+            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+        ):
+            actions.pop('confirmar_devolucion', None)
+        return actions
+
+    @admin.action(description='Confirmar devolución (ya se resolvió fuera del sistema)')
+    def confirmar_devolucion(self, request, queryset):
+        if not (
+            scope.es_operador_plataforma(request.user)
+            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+        ):
+            raise PermissionDenied
+        confirmadas = 0
+        for reserva in queryset:
+            s = situacion_de_reserva(
+                estado=reserva.estado, monto_pagado=reserva.monto_pagado,
+                monto_reembolsado=reserva.monto_reembolsado,
+            )
+            if not requiere_atencion(s):
+                continue
+            reserva.reembolsada = True
+            reserva.monto_reembolsado = reserva.monto_pagado
+            reserva.reembolsada_en = timezone.now()
+            reserva.save(update_fields=['reembolsada', 'monto_reembolsado', 'reembolsada_en'])
+            self.log_change(request, reserva, 'Devolución confirmada fuera del sistema.')
+            confirmadas += 1
+        self.message_user(request, f'{confirmadas} reserva(s) marcadas como devolución confirmada.')
 
     def get_queryset(self, request):
         # `vendedora` sale en el listado: sin esto es una consulta por fila.
