@@ -17,6 +17,7 @@ const suites = {
   'pedido-payload': ['src/lib/pedido-payload.ts', 'PEDIDO_PAYLOAD_TEST_OUT'],
   'pedido-estado': ['src/lib/pedido-estado.ts', 'PEDIDO_ESTADO_TEST_OUT'],
   'fallo-pago': ['src/lib/fallo-pago.ts', 'FALLO_PAGO_TEST_OUT'],
+  pendientes: ['src/lib/pendientes.ts', 'PENDIENTES_TEST_OUT'],
   'selector-experiencia': ['src/lib/selector-experiencia.ts', 'SELECTOR_TEST_OUT'],
   personalizaciones: ['src/lib/pricing-paquete.ts', 'PERSONALIZACIONES_TEST_OUT'],
 };
