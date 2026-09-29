@@ -358,7 +358,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <div className="mx-auto max-w-3xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8">
         <Link href={`/${lang}/sede/${sedeSlug}`}
           className="mb-6 inline-flex text-sm font-medium text-muted hover:text-foreground">
-          {dict.paqueteCheckout.back}
+          {textos.back}
         </Link>
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{textos.title}</h1>
         <p className="mt-2 text-sm text-muted">{paquete.nombre}</p>
