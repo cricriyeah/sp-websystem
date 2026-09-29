@@ -56,7 +56,7 @@ type StripePanelProps = {
   /** Se llama cuando Stripe acepta el pago; el checkout cambia a la pantalla de
    *  confirmacion. `procesando` es true si el cargo aun no se acredita. */
   onPagoConfirmado: (procesando: boolean) => void;
-  onPagoRechazado?: (mensaje: string) => void;
+  onPagoRechazado?: (mensaje: string, codigo?: string) => void;
   /** Token del widget de Turnstile, montado aqui mismo (ver mas abajo). */
   onCaptchaToken: (token: string) => void;
 };
@@ -74,7 +74,7 @@ function PaymentForm({
   ayudaMensaje: string;
   etiquetaBotonPago?: string;
   onPagoConfirmado: (procesando: boolean) => void;
-  onPagoRechazado?: (mensaje: string) => void;
+  onPagoRechazado?: (mensaje: string, codigo?: string) => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -95,7 +95,7 @@ function PaymentForm({
       setFormError(confirmError.message ?? checkout.errorGeneric);
       setSubmitting(false);
       if (confirmError.type === 'card_error') {
-        onPagoRechazado?.(confirmError.message ?? checkout.errorGeneric);
+        onPagoRechazado?.(confirmError.message ?? checkout.errorGeneric, confirmError.decline_code ?? confirmError.code);
       }
       return;
     }

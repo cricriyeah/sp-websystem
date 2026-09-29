@@ -788,7 +788,24 @@
       "title": "No se pudo completar el pago",
       "body": "No se pudo completar el pago de tu paquete. Lo que se haya retenido se libera o se te reembolsa; puedes intentar de nuevo.",
       "motivoPrefix": "Detalle: ",
-      "retry": "Intentar de nuevo"
+      "retry": "Intentar de nuevo",
+      "rechazoEmpresa": "{empresa} no pudo procesar tu tarjeta",
+      "capturaEmpresa": "No pudimos completar el cobro de {empresa}",
+      "motivos": {
+        "insufficient_funds": "Fondos insuficientes.",
+        "card_declined": "Tu banco rechazó la tarjeta.",
+        "expired_card": "La tarjeta está vencida.",
+        "incorrect_cvc": "El código de seguridad es incorrecto.",
+        "authentication_required": "Tu banco pidió una autenticación que no se completó.",
+        "generic": "Tu banco no aceptó el pago."
+      },
+      "sinCobro": "No se completó ningún cobro.",
+      "liberaRetencion": "La retención en {empresas} se libera; tu banco puede tardar en reflejarlo.",
+      "liberaGeneral": "Lo que se haya retenido se libera o se te reembolsa; tu banco puede tardar en reflejarlo.",
+      "dobleRetencion": "Tu banco puede mostrar por unos días dos retenciones de {monto}. Solo se cobrará una.",
+      "retryOtraTarjeta": "Probar con otra tarjeta",
+      "ayuda": "¿Sigues con problemas? Escríbenos por WhatsApp",
+      "ayudaMensaje": "Hola, tuve problemas para pagar mi paquete «{paquete}»."
     }
   },
   "hub": {

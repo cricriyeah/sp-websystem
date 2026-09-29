@@ -788,7 +788,24 @@
       "title": "Payment could not be completed",
       "body": "We couldn't complete payment for your package. Any held amount will be released or refunded to you; you can try again.",
       "motivoPrefix": "Detail: ",
-      "retry": "Try again"
+      "retry": "Try again",
+      "rechazoEmpresa": "{empresa} couldn't process your card",
+      "capturaEmpresa": "We couldn't complete the charge from {empresa}",
+      "motivos": {
+        "insufficient_funds": "Insufficient funds.",
+        "card_declined": "Your bank declined the card.",
+        "expired_card": "The card has expired.",
+        "incorrect_cvc": "The security code is incorrect.",
+        "authentication_required": "Your bank asked for authentication that wasn't completed.",
+        "generic": "Your bank didn't accept the payment."
+      },
+      "sinCobro": "No charge was completed.",
+      "liberaRetencion": "The hold at {empresas} is being released; your bank may take a while to show it.",
+      "liberaGeneral": "Anything held will be released or refunded to you; your bank may take a while to show it.",
+      "dobleRetencion": "Your bank may show two holds of {monto} for a few days. You will only be charged once.",
+      "retryOtraTarjeta": "Try another card",
+      "ayuda": "Still having trouble? Message us on WhatsApp",
+      "ayudaMensaje": "Hi, I had trouble paying for my package \"{paquete}\"."
     }
   },
   "hub": {

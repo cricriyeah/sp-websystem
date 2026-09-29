@@ -5,8 +5,11 @@ import {
   confirmarCapturaOrden, crearOrden, crearPago, crearPagoOrden, getEstadoReserva, getOrden,
   guardarReserva, type CrearOrdenInput, type OrdenDetalle, type ReservaInput,
 } from '@/lib/api';
+import { empresaDeFalloCaptura } from '@/lib/fallo-pago';
 
 export type PasoPago = { empresaSlug: string; monto: string; clientSecret: string; publishableKey: string };
+/** Qué pasó en el último fallo: la empresa (si se sabe), el código del banco y en qué pago ocurrió. */
+export type FalloPago = { empresaSlug: string | null; codigo: string; indice: number | null };
 export type FasePedido =
   | 'resumiendo' | 'formulario' | 'enviando' | 'pagando' | 'capturando' | 'confirmando' | 'exito' | 'fallo';
 
@@ -34,6 +37,11 @@ export function usePagoPedido(config: Config) {
   const [indice, setIndice] = useState(0);
   const [error, setError] = useState('');
   const [motivoFallo, setMotivoFallo] = useState('');
+  const [fallo, setFallo] = useState<FalloPago | null>(null);
+  // true si el fallo ocurrió en esta sesión de la página (el formulario sigue en memoria);
+  // false al reanudar tras una recarga, donde no hay datos que conservar.
+  const [falloEnVivo, setFalloEnVivo] = useState(false);
+  const [fallos, setFallos] = useState(0);
 
   const cfg = useRef(config);
   useEffect(() => {
@@ -147,7 +155,16 @@ export function usePagoPedido(config: Config) {
     const aplicar = (r: { estado: string; motivo?: string }) => {
       if (cancelado) return true;
       if (r.estado === 'capturada') return setFase('exito'), true;
-      if (r.estado === 'cancelada') return setMotivoFallo(r.motivo ?? ''), setFase('fallo'), true;
+      if (r.estado === 'cancelada') {
+        const motivo = r.motivo ?? '';
+        const empresaCaptura = empresaDeFalloCaptura(motivo);
+        setMotivoFallo(motivo);
+        // Un rechazo de tarjeta ya dejó su propio detalle; solo se completa si falló la captura.
+        if (empresaCaptura) setFallo({ empresaSlug: empresaCaptura, codigo: 'captura', indice: null });
+        setFalloEnVivo(true);
+        setFase('fallo');
+        return true;
+      }
       return false;
     };
     const consultar = async () => {
@@ -181,7 +198,7 @@ export function usePagoPedido(config: Config) {
         const estado = await getEstadoReserva(checkoutId, config.empresaSlug);
         if (cancelado) return;
         if (estado.estado === 'pagada') return setFase('exito');
-        if (estado.estado === 'cancelada') return setMotivoFallo(''), setFase('fallo');
+        if (estado.estado === 'cancelada') return setMotivoFallo(''), setFalloEnVivo(true), setFase('fallo');
       } catch {
         // sin red: seguir consultando
       }
@@ -194,17 +211,17 @@ export function usePagoPedido(config: Config) {
     };
   }, [fase, checkoutId, config.empresaSlug]);
 
-  const enviar = useCallback(async () => {
-    if (fase === 'enviando' || fase === 'pagando' || fase === 'capturando' || fase === 'confirmando') return;
+  // Crea la orden/reserva de `id` y deja el hook listo para pagar. `true` si llegó a 'pagando'.
+  const ejecutarEnvio = useCallback(async (id: string): Promise<boolean> => {
     setFase('enviando');
     setError('');
     const c = cfg.current;
     try {
-      const payload = c.armarPayload(checkoutId);
+      const payload = c.armarPayload(id);
       if (c.motor === 'orden') {
         const creada = await crearOrden(c.sedeSlug, payload as CrearOrdenInput);
         setOrdenId(creada.orden_id);
-        guardar({ checkoutId, ordenId: creada.orden_id });
+        guardar({ checkoutId: id, ordenId: creada.orden_id });
         const respuesta = await crearPagoOrden(c.sedeSlug, creada.orden_id);
         setPagos(respuesta.map((p) => ({
           empresaSlug: p.empresa_slug, monto: p.monto, clientSecret: p.client_secret, publishableKey: p.publishable_key,
@@ -215,7 +232,7 @@ export function usePagoPedido(config: Config) {
         );
         const pago = await crearPago(
           reserva.id,
-          { checkout_id: checkoutId, forma_pago: c.formaPago, codigo_promocional: c.codigoPromocional || undefined },
+          { checkout_id: id, forma_pago: c.formaPago, codigo_promocional: c.codigoPromocional || undefined },
           c.empresaSlug,
         );
         setPagos([{
@@ -225,12 +242,19 @@ export function usePagoPedido(config: Config) {
       }
       setIndice(0);
       setFase('pagando');
+      return true;
     } catch (err) {
       // Un 503 ("Stripe no configurado") lo traduce `mensajeDeError` a `checkout.paymentUnavailable`.
       setError(c.mensajeDeError(err));
       setFase('formulario');
+      return false;
     }
-  }, [fase, checkoutId, guardar]);
+  }, [guardar]);
+
+  const enviar = useCallback(async () => {
+    if (fase === 'enviando' || fase === 'pagando' || fase === 'capturando' || fase === 'confirmando') return;
+    await ejecutarEnvio(checkoutId);
+  }, [fase, checkoutId, ejecutarEnvio]);
 
   const onPagoConfirmado = useCallback(
     () => {
@@ -244,28 +268,51 @@ export function usePagoPedido(config: Config) {
     [indice, pagos.length],
   );
 
-  const onPagoRechazado = useCallback((mensaje: string) => {
+  const onPagoRechazado = useCallback((mensaje: string, codigo?: string) => {
     setMotivoFallo(mensaje);
     if (cfg.current.motor === 'orden') {
+      setFallo({ empresaSlug: pagos[indice]?.empresaSlug ?? null, codigo: codigo ?? '', indice });
+      setFallos((n) => n + 1);
       // pedir confirmar-captura revierte la orden incompleta (void del primer pago)
       setFase('capturando');
     } else {
       setError(mensaje);
       setFase('formulario');
     }
-  }, []);
+  }, [indice, pagos]);
 
+  // La orden/reserva anterior quedó cancelada en el servidor y su checkout_id ya está
+  // ligado a ella: un intento nuevo necesita un checkout_id propio. El formulario vive
+  // en el componente de la página y no se toca.
+  const soltarIntentoAnterior = useCallback(() => {
+    const nuevo = crypto.randomUUID();
+    setCheckoutId(nuevo);
+    guardar({ checkoutId: nuevo });
+    setOrdenId(null);
+    setPagos([]);
+    setIndice(0);
+    setMotivoFallo('');
+    setFallo(null);
+    setFalloEnVivo(false);
+    setError('');
+    return nuevo;
+  }, [guardar]);
+
+  /** Vuelve al formulario con lo que el cliente ya llenó (sin recargar la página). */
   const reiniciar = useCallback(() => {
-    try {
-      window.sessionStorage.removeItem(clave);
-    } catch {
-      // nada que limpiar
-    }
-    window.location.reload();
-  }, [clave]);
+    soltarIntentoAnterior();
+    setFase('formulario');
+  }, [soltarIntentoAnterior]);
+
+  /** Crea una orden nueva y lleva directo al pago. `false` si no pudo (el error queda en `error`). */
+  const reintentar = useCallback(
+    () => ejecutarEnvio(soltarIntentoAnterior()),
+    [ejecutarEnvio, soltarIntentoAnterior],
+  );
 
   return {
     fase, pagos, indice, error, motivoFallo, ordenId, checkoutId,
-    enviar, onPagoConfirmado, onPagoRechazado, reiniciar,
+    fallo, falloEnVivo, fallos,
+    enviar, onPagoConfirmado, onPagoRechazado, reiniciar, reintentar,
   };
 }

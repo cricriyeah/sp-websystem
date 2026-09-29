@@ -15,7 +15,9 @@ import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
+import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
+import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
 import { intlLocale } from '@/lib/intl';
 import { calcularPedido, montoInicial, usdDisponible } from '@/lib/pedido-paquete';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
@@ -23,6 +25,7 @@ import { erroresPersonalizaciones } from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
+import { AvisoFallo } from './aviso-fallo';
 import { EncabezadoPago } from './encabezado-pago';
 import { GrupoServicio } from './grupo-servicio';
 import { usePagoPedido } from './use-pago-pedido';
@@ -245,21 +248,53 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     </div>
   );
 
-  if (pago.fase === 'fallo') return (
-    <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{textos.fail.title}</h1>
-        <p className="text-sm text-muted">{textos.fail.body}</p>
-        {pago.motivoFallo && <p className="text-xs text-muted">{textos.fail.motivoPrefix}{pago.motivoFallo}</p>}
-        <button type="button" onClick={pago.reiniciar}
-          className="rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground">
-          {textos.fail.retry}
-        </button>
+  // Tras un fallo en esta misma sesión el formulario sigue en memoria: se reintenta con una
+  // orden nueva directo al pago. Tras una recarga no hay datos que conservar: se vuelve al formulario.
+  const reintentar = async () => {
+    const llegoAlPago = await pago.reintentar();
+    if (!llegoAlPago) setGrupoEditando(0); // p. ej. ya no hay cupo: se abre la fecha para cambiarla
+  };
+
+  if (pago.fase === 'fallo') {
+    const textosFallo = textos.fail;
+    const detalle = pago.fallo;
+    const rechazo = detalle !== null && detalle.codigo !== 'captura' && detalle.empresaSlug !== null;
+    const retenidas = rechazo ? pagosRetenidosAntes(pago.pagos, detalle.indice) : [];
+    const reintentoDirecto = motor === 'orden' && pago.falloEnVivo;
+    const titulo = detalle?.empresaSlug
+      ? (rechazo ? textosFallo.rechazoEmpresa : textosFallo.capturaEmpresa).replace('{empresa}', nombreEmpresa(detalle.empresaSlug))
+      : textosFallo.title;
+    const lineasDinero = rechazo
+      ? [
+        retenidas.length > 0
+          ? `${textosFallo.sinCobro} ${textosFallo.liberaRetencion.replace('{empresas}', retenidas.map((r) => nombreEmpresa(r.empresaSlug)).join(', '))}`
+          : textosFallo.sinCobro,
+        ...(retenidas.length > 0 ? [textosFallo.dobleRetencion.replace('{monto}',
+          formatearPrecio(retenidas.reduce((suma, r) => suma + Number(r.monto), 0), estado.moneda))] : []),
+      ]
+      : [detalle ? textosFallo.liberaGeneral : textosFallo.body];
+    const ayuda = ofreceAyuda(pago.fallos) && tieneWhatsapp
+      ? { etiqueta: textosFallo.ayuda, href: whatsappHref(textosFallo.ayudaMensaje.replace('{paquete}', paquete.nombre)) }
+      : null;
+
+    return (
+      <div className="min-h-dvh bg-surface">
+        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
+        <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} />
+        <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
+          <AvisoFallo
+            titulo={titulo}
+            motivo={rechazo ? textosFallo.motivos[claveMotivoRechazo(detalle.codigo)] : null}
+            lineasDinero={lineasDinero}
+            etiquetaBoton={reintentoDirecto ? textosFallo.retryOtraTarjeta : textosFallo.retry}
+            onReintentar={reintentoDirecto ? () => void reintentar() : pago.reiniciar}
+            ayuda={ayuda}
+          />
+        </div>
+        <CheckoutFooter lang={lang} footer={footer} nav={nav} />
       </div>
-      <CheckoutFooter lang={lang} footer={footer} nav={nav} />
-    </div>
-  );
+    );
+  }
 
   if (pago.fase === 'resumiendo' || pago.fase === 'capturando' || pago.fase === 'confirmando') return (
     <div className="min-h-dvh bg-surface">
