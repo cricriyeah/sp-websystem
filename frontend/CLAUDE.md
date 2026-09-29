@@ -29,53 +29,89 @@ archivo actual. Los `.tsx` sueltos si los recoge el HMR.
 - `params` es async (`Promise`) en pages/layouts — usar `await params`, tipos `PageProps<'/[lang]'>`
   / `LayoutProps<'/[lang]'>`.
 
-## Estado
+## Checkout unificado de paquetes
 
-`[lang]/reservar/page.tsx` es el checkout real, conectado al backend Django via
-`src/lib/api.ts` (`NEXT_PUBLIC_API_URL`, default `http://localhost:8000` en
-`.env.local`). Trae la tarifa server-side (`getTarifa`), crea la `Reserva`
-(`pendiente_pago`) y el `PaymentIntent` al enviar el formulario, y monta
-`@stripe/react-stripe-js` (`PaymentElement`) cuando el backend responde con
-`client_secret`. Si Stripe no esta configurado en el backend (sin llaves en local),
-el checkout muestra `checkout.paymentUnavailable` en vez de romperse — ver
-`backend/CLAUDE.md` seccion "API publica (frontend)". `[lang]/page.tsx` (home) sigue
-siendo un placeholder.
+La ruta única para paquetes es `/[lang]/reservar?paquete=<slug>&sede=<slug>`.
+`src/app/[lang]/reservar/page.tsx` consulta el paquete y monta
+`src/components/pedido/pedido-paquete.tsx` (`PedidoPaquete`); si falta
+`sede` o no existe el paquete, responde con `notFound()`. Los servicios
+sueltos y la pesca legacy siguen en `CheckoutView` dentro de esa misma
+ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
+`traslado-view.tsx`.
 
-Reglas del checkout que conviene no romper:
-
-- **Ninguna cifra hardcodeada.** Precio del tour y precios de amenidades salen de
-  `GET /api/tarifa/` en pesca legacy, o bien de `precio_ancla`/`pricing-paquete.ts` cuando hay
-  paquete, o `servicio.precio_base` para servicios sueltos. Si no hay paquete ni servicio y la tarifa falla,
-  la vista arranca en fase `unavailable`. Las empresas nuevas sin Tarifa legacy funcionan correctamente
-  con paquetes y servicios.
-- **Multi-empresa y resolución dinámica (`empresaSlug`)**:
-  El checkout resuelve la empresa responsable del cobro según el producto seleccionado:
-  1. Paquete: `paquete.empresa_lider_slug`.
-  2. Servicio suelto: `servicio.empresa_slug` (parámetro `&empresa=` en URL).
-  3. Pesca legacy: `process.env.NEXT_PUBLIC_EMPRESA_SLUG` (por defecto `sal-y-sol`).
-  `api.ts` acepta `empresaSlug?: string` opcional en `request()` y en las funciones de API (`guardarReserva`, `crearPago`, `getCupo`, etc.).
-  Stripe se inicializa dinámicamente con `pago.publishable_key` retornado por `crear-pago` para la empresa correspondiente.
-- **Campos del checkout para paquetes y hospedaje**:
-  - `paquete` / `servicio`: slug del paquete o servicio a reservar.
-  - `fecha_salida`: fecha de check-out para reservas multi-día (`por_noche`).
-  - `servicios_removidos`: IDs de componentes del paquete excluidos por el usuario.
-  - `personalizaciones`: IDs de personalizaciones opcionales añadidas al paquete.
-  - `motivo_no_disponible`: maneja `'lleno'`, `'sin_panga'` y `'sin_lugar'` para feedback específico al usuario.
-- **Moneda**: pesos o dolares (paso 6, dentro del resumen). El selector solo aparece si
-  el backend mando `precio_usd` o el paquete/servicio cuenta con precio en USD. La moneda elegida viaja en la `Reserva` y es la que usa
-  el servidor para cobrar.
-- **Deslinde**: una casilla discreta arriba del boton de pagar, con enlace a
-  `/[lang]/deslinde` (texto completo, abre en otra pestaña para no tirar lo que el
-  cliente ya lleno). El `deslinde_nombre` que se manda al backend es el nombre que ya
-  escribio en sus datos — no se pide dos veces. El backend lo exige para toda reserva
-  web, asi que quitar la casilla de la UI solo produce un 400.
-- **Selectores del booking bar**: `DateField` y `TimeField` sobre `FieldPopover`, hechos
-  a mano y sin dependencias. No usar `<input type="date">` ni `<select>`: sus
-  desplegables los pinta el sistema operativo y no se pueden llevar al diseño. Los
-  nombres de meses y dias salen de `Intl`, no de los diccionarios.
-- **Fechas ISO**: parsear siempre con `new Date(\`${iso}T00:00:00\`)`. Sin el sufijo, JS
-  lo lee como UTC y en `America/Mazatlan` (UTC-7) cae en el dia anterior. Para ir de
-  `Date` a ISO esta `toLocalISODate` en `src/lib/dates.ts`.
+- `PedidoPaquete` elige `motor = 'reserva'` para un paquete de una empresa y
+  `motor = 'orden'` para varias (`paquete.es_cruza_empresa`). Los dos pasan
+  por `src/components/pedido/use-pago-pedido.ts`: `reserva` crea una reserva
+  y un pago, y espera el estado `pagada` del webhook; `orden` crea una
+  orden y N pagos secuenciales con captura manual, llama a
+  `confirmar-captura` y solo muestra éxito al ver `capturada`. Un error de
+  red durante la captura conserva la orden y reintenta la consulta.
+  Si Stripe no está configurado, el error 503 se traduce a
+  `checkout.paymentUnavailable` sin romper el checkout.
+  `src/components/pedido/use-pedido-estado.ts` envuelve el reducer puro de
+  `src/lib/pedido-estado.ts`, que guarda contacto, inicio, moneda, forma de
+  pago y selecciones por servicio.
+- Según R1-R5 del [spec](../docs/superpowers/specs/2026-09-21-checkout-unificado-design.md)
+  y la Sección 3 del [plan](../docs/superpowers/plans/2026-09-21-checkout-unificado-frontend.md),
+  cada dato se pide una vez; los grupos de servicio terminados se colapsan
+  con opción de cambiar. Antes del primer pago, `AvisoCargos` enumera
+  empresa y monto de cada cargo, su suma y la regla de retención/captura
+  (solo cuando hay varios cargos). En cada pago, `EncabezadoPago` marca
+  los anteriores como hechos/retenidos, destaca el actual y deja los demás
+  pendientes; el botón indica empresa, monto y posición. Con un solo pago
+  se conserva la misma anatomía sin encabezado de secuencia. Hay un solo
+  `StripePanel`/`Elements` a la vez, remontado por empresa mediante
+  `key={pasoPago.empresaSlug}`; cada cuenta recibe su propia publishable
+  key y client secret del backend.
+- `src/lib/calendario-paquete.ts` deriva los días por componente y la salida
+  desde `dia_estancia` y las noches del hospedaje (espejo de la regla
+  del backend); la fecha inicial se
+  elige una vez. `personas_incluidas` fija las personas iniciales por
+  servicio y cada grupo puede ajustarlas. Los precios, topes y porcentajes
+  vienen del catálogo; `src/lib/pedido-paquete.ts` calcula solo la vista
+  previa y el servidor determina el cobro real. USD se ofrece para el
+  pedido completo solo con precio ancla y tarifas de traslado en USD;
+  si falta el precio USD de un extra elegido, no se calcula el pedido.
+  No hay conversión de moneda. El anticipo de paquete solo se ofrece
+  para una empresa si `paquete.permite_anticipo`, con
+  `paquete.porcentaje_anticipo`. `CheckoutView` y `traslado-view.tsx`
+  también respetan `servicio.permite_anticipo` y su porcentaje; en caso
+  contrario fuerzan pago completo.
+- Un rechazo de tarjeta en una orden no borra el formulario. El hook
+  solicita `confirmar-captura` para que el backend revierta la orden
+  incompleta y, si ocurrió en esta sesión,
+  `reintentar()` crea otra orden con un `checkout_id` nuevo; `reiniciar()`
+  vuelve al formulario sin recargar. `aviso-fallo.tsx` muestra la empresa
+  que rechazó y el motivo del banco traducido por `src/lib/fallo-pago.ts`.
+  Si el segundo pago falla con el primero retenido, avisa de esa retención;
+  `src/lib/fallo-pago.ts` habilita ayuda desde el tercer fallo y
+  `src/lib/contacto.ts` arma el enlace de WhatsApp. Tras una
+  recarga con la orden cancelada, el motivo bancario no se reconstruye:
+  el frontend conocía el índice del pago en vivo y el backend no devuelve
+  ese detalle.
+- La reanudación de paquete usa `sessionStorage` bajo
+  `salysol:pedido:<slug>` y guarda `checkoutId`/`ordenId`; consulta el
+  servidor y omite pagos ya `requires_capture` o `succeeded`.
+  `CheckoutView` usa `salysol:checkout-id` y traslados usa
+  `salysol:traslados:checkout_id`: cada flujo tiene su propio
+  `checkout_id`. Es reanudación de la pestaña, no el aviso global de
+  "Continuar reservación" de la Sección 5.
+- Los servicios sueltos usan `servicio.precio_base` y, para hospedaje
+  `por_noche`, envían `fecha_salida`; las personalizaciones elegidas
+  viajan sin precio para que el servidor las valore. `empresaSlug`
+  selecciona la cuenta de cobro desde `&empresa=` para servicios sueltos,
+  o desde `NEXT_PUBLIC_EMPRESA_SLUG` para pesca legacy. El deslinde se
+  acepta una vez, enlaza a `/[lang]/deslinde` y su nombre sale de los
+  datos de contacto. `DateField`
+  y `TimeField` usan `FieldPopover`; no añadir selectores nativos de
+  fecha. Para fechas ISO, usar `fromLocalISODate`/`toLocalISODate` de
+  `src/lib/dates.ts` y evitar parsear fechas ISO como UTC.
+- Pruebas desde `frontend/`: `npm.cmd test` ejecuta
+  `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,
+  `npm.cmd test -- calendario-paquete`; al añadir un módulo, registrar
+  su nombre y archivo en `suites` de ese runner. Gate de la sección:
+  `npx.cmd tsc --noEmit`, `npx.cmd eslint src tests`, `npm.cmd test` y
+  `npm.cmd run build`.
 
 ## Atribucion de ventas (?ref=)
 
@@ -104,26 +140,3 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
   4. Paso 4 — Personas: selector numérico con tope dado por `servicio.capacidad_maxima`.
   5. Paso 5 — Checkout: datos del cliente, captura de `?ref=`, checkbox de deslinde obligatorio y panel de pago seguro vía Stripe Elements (`PaymentElement`).
 - **Catálogo general**: `[lang]/catalogo/page.tsx` expone un banner secundario Perception-First para traslados cuando la sede seleccionada es La Paz.
-
-
-## Checkout de paquete cruza-empresa
-
-`/[lang]/reservar-paquete?paquete=<slug>&sede=<slug>` usa `paquete-checkout.tsx`.
-El catálogo dirige aquí los paquetes con componentes de empresas distintas;
-los paquetes mono-empresa siguen en `/reservar`.
-
-- Un formulario de contacto, datos por componente y un solo deslinde. Crea una
-  `Orden` y sus reservas con `forma_pago=completo`. Esta UI ofrece MXN; la API y el
-  catálogo conservan precios independientes MXN/USD.
-- Un `StripePanel`/`Elements` a la vez, desmontado por empresa, con la publishable
-  key y el client secret devueltos para esa cuenta. Solo tarjeta y captura manual.
-- `sessionStorage` conserva el ID de orden/checkout para reanudar. No repite pasos
-  `requires_capture` ni `succeeded`.
-- Tras autorizar todos solicita `confirmar-captura`. `autorizada` es intermedio:
-  consulta el estado cada 5 segundos y solo muestra éxito con `capturada` y fracaso
-  con `cancelada`. Un error de red conserva la orden y continúa consultando.
-- Un `card_error` en el checkout de paquete solicita confirmar el conjunto incompleto;
-  el servidor detecta la autorización fallida y ejecuta `revertir_orden` (void del
-  primer pago). El callback opcional no cambia el checkout mono-empresa.
-- La confirmación efectiva viene del webhook o de `conciliar_pagos`, nunca de una
-  inferencia del navegador. El texto final del deslinde requiere aprobación del dueño.
