@@ -34,8 +34,8 @@ test('la-paz existe en los dos idiomas con hero y negocio no nulos', () => {
   assert.notEqual(es.hero.titulo.start, en.hero.titulo.start);
 });
 
-test('los-cabos existe con negocio null (temporada/incluye no viven aqui, viven en el dict global)', () => {
-  const es = c.getSedeContenido('los-cabos', 'es');
+test('la-ventana existe con negocio null (temporada/incluye no viven aqui, viven en el dict global)', () => {
+  const es = c.getSedeContenido('la-ventana', 'es');
   assert.ok(es);
   assert.equal(es.negocio, null);
   assert.equal(es.hero.video, null);
@@ -46,6 +46,23 @@ test('los-cabos existe con negocio null (temporada/incluye no viven aqui, viven 
 test('slug inexistente devuelve undefined', () => {
   assert.equal(c.getSedeContenido('cancun', 'es'), undefined);
   assert.equal(c.getSedeContenido('__proto__', 'es'), undefined);
+});
+
+test('Puerto Chale conserva la plantilla de La Ventana con identidad propia en ambos idiomas', () => {
+  for (const lang of ['es', 'en']) {
+    const chale = c.getSedeContenido('puerto-chale', lang);
+    const ventana = c.getSedeContenido('la-ventana', lang);
+    assert.equal(chale.nombre, 'Puerto Chale');
+    assert.equal(chale.hero.titulo.emphasis, 'Puerto Chale');
+    assert.ok(chale.metaTitle.includes('Puerto Chale'));
+    assert.ok(!chale.metaDescription.includes('La Ventana'));
+    assert.equal(chale.hero.imagen, ventana.hero.imagen);
+    assert.equal(chale.negocio, null);
+    assert.equal(chale.empresaFundadoraSlug, null);
+    assert.equal(ventana.empresaFundadoraSlug, null);
+    assert.deepEqual(chale.destacadas, ventana.destacadas);
+  }
+  assert.equal(c.getSedeContenido('los-cabos', 'es'), undefined);
 });
 
 test('cada destacada inlineable de la-paz apunta al flujo de pesca legacy', () => {

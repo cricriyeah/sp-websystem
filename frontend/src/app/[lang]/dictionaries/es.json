@@ -113,7 +113,14 @@
     "whatsappMessage": "¡Hola! Me gustaría información para reservar un tour de pesca deportiva con ustedes. ¿Me pueden ayudar?",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
-    "switchLang": "Switch to English"
+    "switchLang": "Switch to English",
+    "experiencias": "Experiencias",
+    "servicios": "Servicios",
+    "opiniones": "Opiniones",
+    "mapa": "Mapa",
+    "sedes": "Sedes",
+    "colaboradores": "Colaboradores",
+    "eligeSede": "Elige tu sede"
   },
   "hero": {
     "headlineStart": "Ven a pescar",
@@ -139,7 +146,8 @@
     "stickyTitle": "Reserva tu viaje",
     "reservarAqui": "Reservar aquí",
     "verDetalles": "Ver detalles",
-    "elegirOtra": "Elegir otra experiencia"
+    "elegirOtra": "Elegir otra experiencia",
+    "incluyeHospedaje": "Incluye hospedaje"
   },
   "about": {
     "headline": "Tu agencia local de confianza: apasionados por el mar y por tu experiencia",
@@ -668,7 +676,12 @@
     "fromPrice": "Desde",
     "crossSellNotice": "Tip: Combina servicios en un paquete para mayor ahorro y coordinación garantizada.",
     "emptyPackages": "No hay paquetes disponibles en este momento para este destino.",
-    "emptyServices": "No hay servicios individuales adicionales en este destino."
+    "emptyServices": "No hay servicios individuales adicionales en este destino.",
+    "servicesLabel": "Servicios",
+    "servicesComingSoon": "Pronto podrás consultar los servicios disponibles en esta sede.",
+    "quoteRoute": "Cotiza tu ruta",
+    "moreItems": "más",
+    "learnMore": "Conocer más"
   },
   "traslados": {
     "title": "Servicio de Traslados y Transporte",
@@ -764,11 +777,25 @@
   },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",
+    "headline": "Tu próxima experiencia empieza en Baja",
     "mision": "Una alianza de agencias locales para vivir Baja California Sur como se merece: con quienes la conocen de verdad.",
     "ctaElegirDestino": "Elige tu destino",
     "verDestino": "Ver destino",
     "conLabel": "Con",
     "verTodoDestinos": "Ver todos los destinos",
+    "destinationsTitle": "Elige tu sede",
+    "aboutTitle": "Acerca de nosotros",
+    "partnersTitle": "Marcas que nos acompañan",
+    "partnersIntro": "Conoce a las empresas que forman parte de nuestras colaboraciones en Baja California Sur.",
+    "websiteLabel": "Sitio web",
+    "mapAria": "Mapa interactivo de Baja California. Usa las flechas para mover y los botones para acercar.",
+    "pacificOcean": "OCÉANO PACÍFICO",
+    "seaOfCortez": "MAR DE CORTÉS",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "resetMap": "Restablecer mapa",
+    "dragMap": "Arrastra para explorar",
+    "closeDestination": "Cerrar destino",
     "porQueHeadline": "Por qué Sal y Sol Baja Experiences",
     "pilares": [
       { "titulo": "Alianzas locales de confianza", "texto": "Cada sede la opera gente de ahí: capitanes, guías y operadores que conocen su tramo de costa mejor que nadie." },
@@ -779,5 +806,33 @@
       "title": "Sal y Sol Baja Experiences — Experiencias en Baja California Sur",
       "description": "Descubre experiencias de pesca deportiva y turismo en los destinos de Baja California Sur operados por la alianza Sal y Sol Baja Experiences."
     }
+  },
+  "destination": {
+    "transportEyebrow": "Servicio complementario",
+    "transportTitle": "Traslados privados",
+    "transportBody": "Aeropuerto, hoteles y puntos de encuentro con tarifa según tu ruta.",
+    "book": "Reservar",
+    "learnMore": "Conocer más",
+    "seasonsTitle": "Temporadas y estacionalidad",
+    "galleryTitle": "Galería",
+    "reviewsTitle": "Opiniones",
+    "faqTitle": "Preguntas frecuentes",
+    "pendingBody": "Estamos preparando esta sección con nuestros colaboradores locales. Pronto encontrarás aquí la información de esta sede."
+  },
+  "serviceDetail": {
+    "metaFallback": "Detalles del servicio",
+    "fishingTitle": "Pesca deportiva en La Paz",
+    "backToServices": "Volver a los servicios",
+    "fishingDescription": "Una salida privada por la bahía con capitán local. Conoce lo que incluye, prepara tu equipo y elige la fecha de tu viaje.",
+    "unavailableDescription": "No pudimos cargar la información en este momento. Intenta de nuevo en unos minutos.",
+    "book": "Reservar",
+    "detailsTitle": "Detalles de tu servicio",
+    "includedGuests": "Personas incluidas en la tarifa base:",
+    "beforeBookingTitle": "Antes de reservar",
+    "beforeBookingBody": "Selecciona las fechas y el tamaño de tu grupo para consultar disponibilidad y el precio final.",
+    "transferIncludedTitle": "Qué incluye tu traslado",
+    "transferInstructions": "Elige el tipo de traslado, las fechas, el número de pasajeros y el punto de encuentro al reservar. La tarifa se calcula según tu selección.",
+    "customizeTitle": "Personaliza tu experiencia",
+    "optionalPrice": "Opcional. Consulta el precio al reservar."
   }
 }

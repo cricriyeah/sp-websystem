@@ -23,12 +23,10 @@ export const LOCALE_TAG: Record<Locale, string> = {
 export const rutasEstaticas = ['', '/reservar', '/deslinde', '/privacidad'] as const;
 
 /**
- * Rutas de sede activas para el sitemap (spec §9): mismo criterio de
- * reconciliacion que el hub — si `getSedes()` falla, fallo abierto (todas
- * las sedes del diccionario), nunca un sitemap mas corto por un error de red.
+ * Keep the sitemap, hub and navigation on the same active destination list.
  */
 export async function rutasSedes(): Promise<string[]> {
-  const sedesApi = await getSedes().then((s) => s, () => null);
+  const sedesApi = await getSedes().catch(() => null);
   return sedesActivas(SEDES_INDICE, sedesApi).map((sede) => `/sede/${sede.slug}`);
 }
 

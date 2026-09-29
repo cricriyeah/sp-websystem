@@ -5,14 +5,15 @@ const path = require('node:path');
 
 const i = require(path.join(process.env.CONTENT_SEDES_INDICE_TEST_OUT, 'content/sedes-indice.js'));
 
-test('la-paz y los-cabos existen en el indice con nombre y empresa fundadora', () => {
+test('la-paz tiene empresa fundadora y las sedes pendientes no inventan una', () => {
   const laPaz = i.getSedeIndice('la-paz');
-  const losCabos = i.getSedeIndice('los-cabos');
+  const laVentana = i.getSedeIndice('la-ventana');
   assert.ok(laPaz);
-  assert.ok(losCabos);
+  assert.ok(laVentana);
   assert.equal(laPaz.nombre, 'La Paz');
   assert.equal(laPaz.empresaFundadoraNombre, 'Sal y Sol Sportfishing');
-  assert.equal(losCabos.empresaFundadoraNombre, 'Tours Cabo');
+  assert.equal(laVentana.empresaFundadoraNombre, null);
+  assert.equal(i.getSedeIndice('puerto-chale').empresaFundadoraNombre, null);
 });
 
 test('slug inexistente devuelve undefined', () => {
@@ -21,11 +22,11 @@ test('slug inexistente devuelve undefined', () => {
   assert.equal(i.getSedeIndice('constructor'), undefined);
 });
 
-test('SLUGS_CON_CONTENIDO trae exactamente la-paz y los-cabos', () => {
-  assert.deepEqual([...i.SLUGS_CON_CONTENIDO].sort(), ['la-paz', 'los-cabos']);
+test('SLUGS_CON_CONTENIDO trae La Paz, La Ventana y Puerto Chale', () => {
+  assert.deepEqual([...i.SLUGS_CON_CONTENIDO].sort(), ['la-paz', 'la-ventana', 'puerto-chale']);
 });
 
-test('el logo de la-paz apunta al logo real; los-cabos usa null (wordmark generico)', () => {
+test('el logo de la-paz apunta al logo real; la-ventana usa null (wordmark generico)', () => {
   assert.equal(i.getSedeIndice('la-paz').logo, '/logos/logo2salysol.webp');
-  assert.equal(i.getSedeIndice('los-cabos').logo, null);
+  assert.equal(i.getSedeIndice('la-ventana').logo, null);
 });

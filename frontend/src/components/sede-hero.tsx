@@ -22,8 +22,8 @@ type SedeHeroProps = {
 /**
  * Hero de la pagina de sede. A diferencia de `Hero.tsx` (que sigue siendo el
  * de la portada de hoy, sin caller tras la Tarea 9), este:
- * - Acepta imagen fija ademas de video (Los Cabos no tiene video).
- * - `facts` puede venir vacio (Los Cabos) — no renderiza la fila si esta vacia.
+ * - Acepta imagen fija además de video (las sedes pendientes no tienen video).
+ * - `facts` puede venir vacío — no renderiza la fila si está vacía.
  * - Nunca monta `BookingBar` por su cuenta: el Paso 0 (`SelectorExperiencia`)
  *   es el unico camino al formulario. Revisado tras hallazgo del dueño
  *   (2026-09-16): la version anterior montaba el `BookingBar` heredado de

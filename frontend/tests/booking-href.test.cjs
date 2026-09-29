@@ -49,3 +49,16 @@ test('hrefServicio arma la URL de reserva de servicio suelto', () => {
   const href = h.hrefServicio(servicio, 'es', 'MXN');
   assert.equal(href, '/es/reservar?servicio=pesca-deportiva&empresa=sal-y-sol&moneda=MXN');
 });
+
+test('transporte conserva empresa y moneda y abre el formulario de traslados', () => {
+  const servicio = { ...paqueteBase().servicios_asociados[0].servicio, tipo_servicio: 'transporte', empresa_slug: 'transporte-la-paz' };
+  assert.equal(h.hrefServicio(servicio, 'en', 'USD'), '/en/traslados?empresa=transporte-la-paz&moneda=USD');
+});
+
+test('detalle de servicio conserva sede y moneda mediante el helper compartido', () => {
+  const servicio = paqueteBase().servicios_asociados[0].servicio;
+  assert.equal(
+    h.hrefDetalleServicio(servicio, 'es', 'MXN', 'la-paz'),
+    '/es/servicio/sal-y-sol/pesca-deportiva?sede=la-paz&moneda=MXN',
+  );
+});
