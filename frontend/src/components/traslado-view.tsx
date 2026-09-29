@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   AirplaneLanding,
@@ -33,6 +33,7 @@ import {
   ApiError,
   crearPago,
   crearReservaTraslado,
+  getEstadoReserva,
   validarCodigoPromocional,
   type Moneda,
   type Pago,
@@ -51,6 +52,7 @@ import {
 import { mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import { leerRef } from '@/lib/ref';
+import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
 const CLAVE_CHECKOUT_ID = 'salysol:traslados:checkout_id';
 const DIGITOS_TELEFONO_MIN = 8;
@@ -90,7 +92,7 @@ function formatDay(date: Date, lang: Locale) {
 type CampoContacto = 'phone' | 'fullName' | 'email';
 const ORDEN_CAMPOS: CampoContacto[] = ['phone', 'fullName', 'email'];
 
-type Phase = 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
+type Phase = 'recuperando' | 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
 type TrasladoViewProps = {
   lang: Locale;
   dict: Dictionary;
@@ -111,15 +113,19 @@ export function TrasladoView({
   const sinMovimiento = useReducedMotion();
 
   const [checkoutId, setCheckoutId] = useState('');
+  const [recuperable, setRecuperable] = useState(false);
+  const [phase, setPhase] = useState<Phase>('recuperando');
   /* eslint-disable react-hooks/set-state-in-effect -- lectura unica de sessionStorage en cliente */
   useLayoutEffect(() => {
     const guardado = window.sessionStorage.getItem(CLAVE_CHECKOUT_ID);
     if (guardado) {
       setCheckoutId(guardado);
+      setRecuperable(true);
     } else {
       const nuevo = crypto.randomUUID();
       window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
       setCheckoutId(nuevo);
+      setPhase('form');
     }
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -182,11 +188,59 @@ export function TrasladoView({
   const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>('idle');
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
 
-  const [phase, setPhase] = useState<Phase>('form');
   const [reservaId, setReservaId] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
   const [pagoProcesando, setPagoProcesando] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!checkoutId || !recuperable) return;
+    let activo = true;
+    getEstadoReserva(checkoutId, empresaSlug).then((estado) => {
+      if (!activo) return;
+      if (estado.estado === 'cancelada') {
+        const nuevo = crypto.randomUUID();
+        window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
+        setCheckoutId(nuevo);
+        setRecuperable(false);
+        setPhase('form');
+        return;
+      }
+      setReservaId(estado.reserva_id);
+      setFecha(estado.fecha);
+      setHora(estado.hora);
+      setPersonas(estado.numero_personas);
+      setContact({ phone: 'telefono_cliente' in estado ? estado.telefono_cliente : '',
+        fullName: estado.nombre_cliente, email: estado.correo_cliente });
+      setMoneda(estado.moneda);
+      if (estado.forma_pago === 'anticipo' || estado.forma_pago === 'completo') {
+        setFormaPagoSeleccionada(estado.forma_pago);
+      }
+      if (estado.estado === 'pagada') {
+        setPhase('confirmed');
+        return;
+      }
+      const detalle = estado.detalle_transporte;
+      if (detalle) {
+        setTipoTraslado(detalle.tipo_traslado);
+        setModoHospedaje(detalle.punto_encuentro_id === null ? 'personalizada' : 'catalogo');
+        setPuntoEncuentroId(detalle.punto_encuentro_id);
+        setDireccionPersonalizada(detalle.direccion_personalizada);
+        setZonaPersonalizada(detalle.zona);
+        setFechaRegreso(detalle.fecha_regreso);
+        setPersonas(detalle.numero_personas ?? estado.numero_personas);
+      }
+      setPasosVisibles(5);
+      setPhase('form');
+    }).catch(() => {
+      if (activo) setPhase('form');
+    });
+    return () => { activo = false; };
+  }, [checkoutId, empresaSlug, recuperable]);
+
+  useEffect(() => {
+    if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
+  }, [phase, checkoutId]);
 
   const zonaEfectiva = useMemo<Zona | ''>(() => {
     if (tipoTraslado !== 'redondo_actividad') return '';
@@ -391,6 +445,13 @@ export function TrasladoView({
 
       const reserva = await crearReservaTraslado(empresaSlug, payload);
       setReservaId(reserva.id);
+      guardarPendiente({
+        tipo: 'reserva', checkoutId, empresaSlug,
+        productoSlug: catalogo.servicio.slug,
+        productoNombre: catalogo.servicio.nombre,
+        ruta: window.location.pathname + window.location.search,
+        actualizadoEn: new Date().toISOString(),
+      });
 
       const pagoResponse = await crearPago(
         reserva.id,
@@ -458,6 +519,8 @@ export function TrasladoView({
     traslados.step4Title,
     traslados.step5Title,
   ];
+  if (phase === 'recuperando') return null;
+
   if (phase === 'confirmed') {
     return (
       <BookingConfirmation

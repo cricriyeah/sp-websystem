@@ -53,6 +53,7 @@ import {
   type SeleccionPersonalizacion,
 } from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
+import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
 // Mismas reglas que el backend (apps/bookings/validators.py). Aqui existen para
 // que el cliente vea el error antes de llegar a la pantalla de pago, no para
@@ -321,6 +322,9 @@ export function CheckoutView({
   // pantalla de espera neutral — muestra el spinner de "buscando tu reserva"
   // sin comprometer nada hasta saber si hay sessionStorage que recuperar.
   const [phase, setPhase] = useState<Phase>('recuperando');
+  useEffect(() => {
+    if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
+  }, [phase, checkoutId]);
   const phaseInicializada = useRef(false);
   const tieneProducto = Boolean(servicio);
   useLayoutEffect(() => {
@@ -910,6 +914,14 @@ export function CheckoutView({
       }, empresaSlug);
 
       setReservaId(reserva.id);
+      guardarPendiente({
+        tipo: 'reserva', checkoutId,
+        empresaSlug: empresaSlug ?? process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol',
+        productoSlug: servicio?.slug ?? (typeof servicioId === 'string' ? servicioId : 'pesca-deportiva'),
+        productoNombre: servicio?.nombre ?? servicioNombre ?? '',
+        ruta: window.location.pathname + window.location.search,
+        actualizadoEn: new Date().toISOString(),
+      });
 
       const pagoResponse = await crearPago(reserva.id, {
         checkout_id: checkoutId,

@@ -110,6 +110,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     sedeSlug,
     empresaSlug: paquete.empresa_lider_slug,
     paqueteSlug: paquete.slug,
+    paqueteNombre: paquete.nombre,
     formaPago: estado.formaPago,
     codigoPromocional: motor === 'reserva' ? codigoPromocional : undefined,
     captchaToken: () => captcha.current,

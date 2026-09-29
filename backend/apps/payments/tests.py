@@ -2251,6 +2251,21 @@ class TrasladoPagoFixture:
         )
 
 
+class EstadoReservaTrasladoTests(TrasladoPagoFixture, ApiTestCase):
+    def test_pendiente_repone_detalle_del_traslado(self):
+        reserva = self.reserva(personas=4)
+        response = self.client.get(
+            reverse('reserva-estado', kwargs={'empresa_slug': self.empresa.slug}),
+            {'checkout_id': str(reserva.checkout_id)},
+        )
+        self.assertEqual(response.status_code, 200)
+        detalle = response.json()['detalle_transporte']
+        self.assertEqual(detalle['tipo_traslado'], 'redondo_aeropuerto')
+        self.assertEqual(detalle['direccion_personalizada'], 'Casa de prueba')
+        self.assertEqual(detalle['zona'], 'centro')
+        self.assertEqual(detalle['fecha_regreso'], (reserva.fecha + timedelta(days=3)).isoformat())
+
+
 class CrearPagoTrasladoTest(TrasladoPagoFixture, ApiTestCase):
     def test_total_por_tipo_zona_tamano_y_moneda(self):
         for tipo, personas, zona, moneda, esperado in (

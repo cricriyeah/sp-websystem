@@ -210,6 +210,15 @@ export type EstadoReservaPendiente = {
     zona: Zona;
     cantidad: number | null;
   } | null;
+  detalle_transporte: {
+    tipo_traslado: TipoTraslado;
+    punto_encuentro_id: number | null;
+    direccion_personalizada: string;
+    zona: Zona | '';
+    fecha_regreso: string | null;
+    numero_personas: number | null;
+    precio_calculado: string | null;
+  } | null;
 };
 
 export type EstadoReservaPagada = {

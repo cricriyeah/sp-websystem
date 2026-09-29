@@ -6,6 +6,7 @@ import {
   guardarReserva, type CrearOrdenInput, type OrdenDetalle, type ReservaInput,
 } from '@/lib/api';
 import { empresaDeFalloCaptura } from '@/lib/fallo-pago';
+import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
 export type PasoPago = { empresaSlug: string; monto: string; clientSecret: string; publishableKey: string };
 /** Qué pasó en el último fallo: la empresa (si se sabe), el código del banco y en qué pago ocurrió. */
@@ -18,6 +19,7 @@ type Config = {
   sedeSlug: string;
   empresaSlug: string;
   paqueteSlug: string;
+  paqueteNombre: string;
   armarPayload: (checkoutId: string) => CrearOrdenInput | ReservaInput;
   formaPago: 'completo' | 'anticipo';
   codigoPromocional?: string;
@@ -47,6 +49,22 @@ export function usePagoPedido(config: Config) {
   useEffect(() => {
     cfg.current = config;
   });
+
+  const registrarPendiente = useCallback((id: string, idOrden?: number, retenido = false) => {
+    const c = cfg.current;
+    guardarPendiente({
+      tipo: c.motor, checkoutId: id, ordenId: idOrden,
+      sedeSlug: c.sedeSlug, empresaSlug: c.empresaSlug,
+      productoSlug: c.paqueteSlug, productoNombre: c.paqueteNombre,
+      ruta: window.location.pathname + window.location.search,
+      actualizadoEn: new Date().toISOString(),
+      tieneDineroRetenido: retenido,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (checkoutId && (fase === 'exito' || fase === 'fallo')) borrarPendiente(checkoutId);
+  }, [checkoutId, fase]);
 
   const guardar = useCallback(
     (datos: Guardado) => {
@@ -222,6 +240,7 @@ export function usePagoPedido(config: Config) {
         const creada = await crearOrden(c.sedeSlug, payload as CrearOrdenInput);
         setOrdenId(creada.orden_id);
         guardar({ checkoutId: id, ordenId: creada.orden_id });
+        registrarPendiente(id, creada.orden_id);
         const respuesta = await crearPagoOrden(c.sedeSlug, creada.orden_id);
         setPagos(respuesta.map((p) => ({
           empresaSlug: p.empresa_slug, monto: p.monto, clientSecret: p.client_secret, publishableKey: p.publishable_key,
@@ -230,6 +249,7 @@ export function usePagoPedido(config: Config) {
         const reserva = await guardarReserva(
           { ...(payload as ReservaInput), captcha_token: c.captchaToken() }, c.empresaSlug,
         );
+        registrarPendiente(id);
         const pago = await crearPago(
           reserva.id,
           { checkout_id: id, forma_pago: c.formaPago, codigo_promocional: c.codigoPromocional || undefined },
@@ -249,7 +269,7 @@ export function usePagoPedido(config: Config) {
       setFase('formulario');
       return false;
     }
-  }, [guardar]);
+  }, [guardar, registrarPendiente]);
 
   const enviar = useCallback(async () => {
     if (fase === 'enviando' || fase === 'pagando' || fase === 'capturando' || fase === 'confirmando') return;
@@ -258,6 +278,9 @@ export function usePagoPedido(config: Config) {
 
   const onPagoConfirmado = useCallback(
     () => {
+      if (cfg.current.motor === 'orden' && ordenId !== null) {
+        registrarPendiente(checkoutId, ordenId, true);
+      }
       if (indice >= pagos.length - 1) {
         // 'orden': hay que capturar todos los pagos autorizados. 'reserva': esperar al webhook.
         setFase(cfg.current.motor === 'orden' ? 'capturando' : 'confirmando');
@@ -265,7 +288,7 @@ export function usePagoPedido(config: Config) {
       }
       setIndice(indice + 1);
     },
-    [indice, pagos.length],
+    [indice, pagos.length, ordenId, checkoutId, registrarPendiente],
   );
 
   const onPagoRechazado = useCallback((mensaje: string, codigo?: string) => {
@@ -285,6 +308,7 @@ export function usePagoPedido(config: Config) {
   // ligado a ella: un intento nuevo necesita un checkout_id propio. El formulario vive
   // en el componente de la página y no se toca.
   const soltarIntentoAnterior = useCallback(() => {
+    borrarPendiente(checkoutId);
     const nuevo = crypto.randomUUID();
     setCheckoutId(nuevo);
     guardar({ checkoutId: nuevo });
@@ -296,7 +320,7 @@ export function usePagoPedido(config: Config) {
     setFalloEnVivo(false);
     setError('');
     return nuevo;
-  }, [guardar]);
+  }, [guardar, checkoutId]);
 
   /** Vuelve al formulario con lo que el cliente ya llenó (sin recargar la página). */
   const reiniciar = useCallback(() => {

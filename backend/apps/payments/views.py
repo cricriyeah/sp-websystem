@@ -332,6 +332,18 @@ class EstadoReservaView(APIView):
             }
             for fila in reserva.personalizaciones_seleccionadas.all()
         ]
+        detalle_transporte = None
+        if hasattr(reserva, 'detalle_transporte'):
+            dt = reserva.detalle_transporte
+            detalle_transporte = {
+                'tipo_traslado': dt.tipo_traslado,
+                'punto_encuentro_id': dt.punto_encuentro_id,
+                'direccion_personalizada': dt.direccion_personalizada,
+                'zona': dt.zona,
+                'fecha_regreso': dt.fecha_regreso,
+                'numero_personas': dt.numero_personas,
+                'precio_calculado': str(dt.precio_calculado) if dt.precio_calculado is not None else None,
+            }
         return Response({
             'estado': 'pendiente_pago',
             'reserva_id': reserva.id,
@@ -346,6 +358,7 @@ class EstadoReservaView(APIView):
             'moneda': reserva.moneda,
             'forma_pago': reserva.forma_pago,
             'personalizaciones': personalizaciones,
+            'detalle_transporte': detalle_transporte,
         })
 
 
