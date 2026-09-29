@@ -499,3 +499,45 @@ export const getOrden = (sedeSlug: string, idOCheckoutId: number | string): Prom
     : `/api/ordenes/?checkout_id=${encodeURIComponent(idOCheckoutId)}`;
   return request<OrdenDetalle>(path, undefined, sedeSlug);
 };
+
+export type Situacion =
+  | 'sin_pago' | 'pago_en_proceso' | 'retenido_parcial' | 'retenido_total' | 'confirmando_cobro'
+  | 'confirmada' | 'cancelada_liberada' | 'cancelada_devolucion_solicitada'
+  | 'cancelada_devolucion_por_confirmar' | 'expirada' | 'no_existe';
+
+export type ResumenReserva = {
+  situacion: Situacion;
+  producto: string;
+  monto: string | null;
+  moneda: string;
+  forma_pago: string;
+  folio: number;
+  vence_en: null;
+};
+
+export type ResumenOrden = {
+  situacion: Situacion;
+  producto: string;
+  moneda: string;
+  forma_pago: string;
+  montos: {
+    empresa: string;
+    monto: string | null;
+    monto_reembolsado: string | null;
+    estado: string | null;
+  }[];
+  folio: number;
+  vence_en: string | null;
+  actualizado_en: string;
+};
+
+export const getResumenReserva = (checkoutId: string, empresaSlug: string) =>
+  request<ResumenReserva>(`/api/reservas/resumen/?checkout_id=${encodeURIComponent(checkoutId)}`, undefined, empresaSlug);
+
+export const getResumenOrden = (checkoutId: string, sedeSlug: string) =>
+  request<ResumenOrden>(`/api/ordenes/resumen/?checkout_id=${encodeURIComponent(checkoutId)}`, undefined, sedeSlug);
+
+export const cancelarOrdenPublica = (sedeSlug: string, ordenId: number, checkoutId: string) =>
+  request<ResumenOrden>(`/api/ordenes/${ordenId}/cancelar/`, {
+    method: 'POST', body: JSON.stringify({ checkout_id: checkoutId }),
+  }, sedeSlug);
