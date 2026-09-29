@@ -363,6 +363,7 @@ export type TrasladosCatalogo = {
     slug: string;
     nombre: string;
     capacidad_maxima: number | null;
+    permite_anticipo: boolean;
     porcentaje_anticipo: number;
     empresa_slug: string;
     hora_apertura: string | null;

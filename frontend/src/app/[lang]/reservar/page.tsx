@@ -101,13 +101,6 @@ export default async function ReservarPage({
     servicio = await getServicioDetalle(slug, empresaSlug).catch(() => null);
   }
 
-  const fechaSalidaParam =
-    typeof query.fecha_salida === 'string'
-      ? query.fecha_salida
-      : typeof query.salida === 'string'
-        ? query.salida
-        : undefined;
-
   // El booking bar siempre manda los tres juntos: si trae alguno explicito es
   // que el cliente acaba de elegir viaje, no que recargo esta misma pagina.
   // Distingue esa llegada de una recuperacion de checkout a medio pagar (ver
@@ -124,13 +117,9 @@ export default async function ReservarPage({
       minDate={minDate}
       queryOverride={queryOverride}
       empresaSlug={empresaSlug}
-      paqueteId={paquete?.id}
-      paqueteNombre={paquete?.nombre}
-      paquete={paquete}
       servicioId={servicio?.slug ?? null}
       servicioNombre={servicio?.nombre ?? null}
       servicio={servicio}
-      initialFechaSalida={fechaSalidaParam}
     />
   );
 }

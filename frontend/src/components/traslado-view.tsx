@@ -171,7 +171,9 @@ export function TrasladoView({
     [catalogo.tarifas],
   );
 
-  const formaPago = 'completo';
+  const permiteAnticipo = catalogo.servicio.permite_anticipo;
+  const [formaPagoSeleccionada, setFormaPagoSeleccionada] = useState<'completo' | 'anticipo'>('completo');
+  const formaPago = permiteAnticipo ? formaPagoSeleccionada : 'completo';
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [errorWaiver, setErrorWaiver] = useState(false);
   const captchaToken = useRef('');
@@ -219,7 +221,11 @@ export function TrasladoView({
   }, [promoEstado, promoPorcentaje, precioBase]);
 
   const total = precioBase !== null ? Math.max(0, precioBase - descuento) : null;
-  const amountDueNow = total;
+  const amountDueNow = total === null
+    ? null
+    : formaPago === 'anticipo'
+      ? Math.round(total * (catalogo.servicio.porcentaje_anticipo / 100) * 100) / 100
+      : total;
 
   const currency = useMemo(
     () =>
@@ -1005,8 +1011,9 @@ export function TrasladoView({
               moneda={moneda}
               onMonedaChange={setMoneda}
               usdDisponible={usdDisponible}
-              formaPago="completo"
-              onFormaPagoChange={() => {}}
+              formaPago={formaPago}
+              onFormaPagoChange={setFormaPagoSeleccionada}
+              formaPagoDisponible={permiteAnticipo}
               codigoPromocional={codigoPromocional}
               onCodigoPromocionalChange={onCodigoPromocionalChange}
               promoEstado={promoEstado}

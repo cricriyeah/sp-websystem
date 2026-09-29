@@ -20,6 +20,7 @@ import { AmenitiesReminder, type ExtraPendiente } from '@/components/amenities-r
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { SiteHeader } from '@/components/site-header';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
+import { DateField } from '@/components/date-field';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CheckoutStepper } from '@/components/checkout-stepper';
@@ -39,19 +40,16 @@ import {
   type EstadoReservaPagada,
   type Moneda,
   type Pago,
-  type PaqueteCatalogo,
   type ServicioCatalogo,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
-import { calcularPrecioPaquete } from '@/lib/pricing-paquete';
 import {
   cantidadEfectiva,
   erroresPersonalizaciones,
   seleccionInicial,
   totalPersonalizaciones,
-  type PersonalizacionUI,
   type SeleccionPersonalizacion,
 } from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
@@ -148,13 +146,9 @@ type CheckoutViewProps = {
   // de recuperacion mas abajo.
   queryOverride: boolean;
   empresaSlug?: string;
-  paqueteId?: number | null;
-  paqueteNombre?: string | null;
-  paquete?: PaqueteCatalogo | null;
   servicioId?: number | string | null;
   servicioNombre?: string | null;
   servicio?: ServicioCatalogo | null;
-  initialFechaSalida?: string;
 };
 
 // 'recuperando': solo se pasa por aqui si esta pestana ya tenia un checkout_id
@@ -192,13 +186,9 @@ export function CheckoutView({
   minDate,
   queryOverride,
   empresaSlug,
-  paqueteId,
-  paqueteNombre,
-  paquete,
   servicioId,
   servicioNombre,
   servicio,
-  initialFechaSalida,
 }: CheckoutViewProps) {
   const { checkout, booking, nav } = dict;
   // null mientras sessionStorage todavia no se ha leido (solo dura hasta el
@@ -206,20 +196,7 @@ export function CheckoutView({
   const checkoutIdValue = useCheckoutId();
   const checkoutId = checkoutIdValue?.id ?? '';
   const recuperable = checkoutIdValue?.recuperable ?? false;
-  const catalogoUnificado = useMemo(() => {
-    if (paquete) {
-      const mapa = new Map<number, PersonalizacionUI>();
-      for (const ps of paquete.servicios_asociados || []) {
-        for (const sp of ps.servicio?.personalizaciones || []) {
-          if (!mapa.has(sp.id)) {
-            mapa.set(sp.id, sp);
-          }
-        }
-      }
-      return Array.from(mapa.values());
-    }
-    return servicio?.personalizaciones ?? [];
-  }, [paquete, servicio]);
+  const catalogoUnificado = servicio?.personalizaciones ?? [];
 
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
@@ -233,7 +210,7 @@ export function CheckoutView({
       };
     }),
   );
-  const [fechaSalidaManual, setFechaSalidaManual] = useState<string | null>(initialFechaSalida ?? null);
+  const [fechaSalidaManual, setFechaSalidaManual] = useState<string | null>(null);
   const defaultFechaSalida = useMemo(() => {
     const d = fromLocalISODate(day);
     d.setDate(d.getDate() + 1);
@@ -241,16 +218,7 @@ export function CheckoutView({
   }, [day]);
   const fechaSalida = fechaSalidaManual && fechaSalidaManual > day ? fechaSalidaManual : defaultFechaSalida;
 
-  const tieneHospedaje = useMemo(() => {
-    if (!paquete) return false;
-    return paquete.servicios_asociados.some((ps) => {
-      return (
-        ps.servicio?.tipo_servicio === 'hospedaje' ||
-        ps.servicio?.tipo_servicio === 'alojamiento' ||
-        ps.servicio?.modo_ocupacion === 'por_noche'
-      );
-    });
-  }, [paquete]);
+  const tieneHospedaje = servicio?.estrategia_cupo === 'por_noche';
 
   const personalizacionesMap = useMemo(() => {
     return new Map(personalizaciones.map((p) => [p.id, p]));
@@ -320,11 +288,12 @@ export function CheckoutView({
   // dejaria al cliente sin forma de volver a MXN, con un total en $0.
   const [moneda, setMoneda] = useState<Moneda>(() => {
     if (lang !== 'en') return 'MXN';
-    if (paquete) return paquete.precio_ancla_usd != null ? 'USD' : 'MXN';
     if (servicio) return servicio.precio_base_usd != null ? 'USD' : 'MXN';
     return 'MXN';
   });
   const [formaPago, setFormaPago] = useState<'completo' | 'anticipo'>('completo');
+  const permiteAnticipo = servicio?.permite_anticipo ?? true;
+  const formaPagoEfectiva = permiteAnticipo ? formaPago : 'completo';
   const { mostrar: avisar } = useToast();
 
   const [contact, setContact] = useState({ phone: '', fullName: '', email: '' });
@@ -353,7 +322,7 @@ export function CheckoutView({
   // sin comprometer nada hasta saber si hay sessionStorage que recuperar.
   const [phase, setPhase] = useState<Phase>('recuperando');
   const phaseInicializada = useRef(false);
-  const tieneProducto = Boolean(paquete || servicio);
+  const tieneProducto = Boolean(servicio);
   useLayoutEffect(() => {
     // Solo se ejecuta una vez, cuando checkoutIdValue pasa de null a un valor
     // real. A partir de ahi la logica de recuperacion toma el control.
@@ -485,17 +454,11 @@ export function CheckoutView({
   }, [codigoPromocional, contact.email, empresaSlug]);
 
   // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
-  const usdDisponible = paquete
-    ? paquete.precio_ancla_usd != null
-    : servicio
-    ? servicio.precio_base_usd != null
-    : false;
+  const usdDisponible = servicio?.precio_base_usd != null;
   const precioServicioRaw = servicio
     ? (moneda === 'USD' ? servicio.precio_base_usd : servicio.precio_base)
     : null;
-  const tourPrice = paquete || precioServicioRaw === null
-    ? null
-    : Number(precioServicioRaw);
+  const tourPrice = precioServicioRaw === null ? null : Number(precioServicioRaw);
 
   const currency = useMemo(
     () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
@@ -545,33 +508,18 @@ export function CheckoutView({
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
   // recalcula esto mismo al crear el pago: aqui solo se muestra.
-  const personasIncluidas = paquete
-    ? 0
-    : servicio
-    ? servicio.personas_incluidas
-    : 0;
-  const precioPersonaExtra = paquete
-    ? 0
-    : servicio
+  const personasIncluidas = servicio?.personas_incluidas ?? 0;
+  const precioPersonaExtra = servicio
     ? Number(moneda === 'MXN' ? servicio.precio_persona_extra : servicio.precio_persona_extra_usd) || 0
     : 0;
   const personasExtra = Math.max(0, people - personasIncluidas);
   const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
 
-  const calculoPaquete = useMemo(() => {
-    if (!paquete) return null;
-    return calcularPrecioPaquete(paquete, personalizaciones, people, moneda);
-  }, [paquete, personalizaciones, people, moneda]);
-
   const cargoPersonalizacionesServicio = totalPersonalizaciones(catalogoUnificado, personalizaciones, people, moneda);
 
-  const subtotalSinDescuento = paquete
-    ? (calculoPaquete?.precioFinal ?? null)
-    : tourPrice === null
-      ? null
-      : cargoPersonalizacionesServicio === null
-        ? null
-        : tourPrice + cargoPersonas + cargoPersonalizacionesServicio;
+  const subtotalSinDescuento = tourPrice === null || cargoPersonalizacionesServicio === null
+    ? null
+    : tourPrice + cargoPersonas + cargoPersonalizacionesServicio;
 
   // Solo informativo (redondeo igual al de `cargo_por_descuento` en
   // apps/payments/pricing.py): el monto real lo congela `crear-pago` sobre el
@@ -639,61 +587,28 @@ export function CheckoutView({
       : []),
   ];
 
-  const lines = paquete
-    ? [
-        {
-          label: paquete.nombre,
-          amount:
-            calculoPaquete?.precioAncla === null || calculoPaquete?.precioAncla === undefined
-              ? '—'
-              : currency.format(calculoPaquete.precioAncla),
-        },
-        ...(calculoPaquete?.totalPersonalizaciones === null
+  const lines = tourPrice === null
+    ? []
+    : [
+        { label: servicio?.nombre || checkout.tourLabel, amount: currency.format(tourPrice) },
+        ...(cargoPersonas > 0
           ? [
               {
-                label: 'Personalizaciones',
-                amount: checkout.extrasUnavailableInCurrency ?? '—',
-              },
-            ]
-          : calculoPaquete && calculoPaquete.totalPersonalizaciones > 0
-            ? [
-                {
-                  label: 'Personalizaciones',
-                  amount: currency.format(calculoPaquete.totalPersonalizaciones),
-                },
-              ]
-            : []),
-        ...(descuentoPromocional > 0
-          ? [
-              {
-                label: `${checkout.promoCode.discountLabel} (${codigoPromocional.trim().toUpperCase()})`,
-                amount: `-${currency.format(descuentoPromocional)}`,
+                label: `${checkout.extraPeopleLabel} (${personasExtra} × ${currency.format(precioPersonaExtra)})`,
+                amount: currency.format(cargoPersonas),
               },
             ]
           : []),
-      ]
-    : tourPrice === null
-      ? []
-      : [
-          { label: servicio?.nombre || checkout.tourLabel, amount: currency.format(tourPrice) },
-          ...(cargoPersonas > 0
-            ? [
-                {
-                  label: `${checkout.extraPeopleLabel} (${personasExtra} × ${currency.format(precioPersonaExtra)})`,
-                  amount: currency.format(cargoPersonas),
-                },
-              ]
-            : []),
-          ...lineasExtras,
-        ];
+        ...lineasExtras,
+      ];
 
   const total = subtotalSinDescuento === null ? null : subtotalSinDescuento - descuentoPromocional;
-  const porcentajeAnticipo =
-    paquete && (paquete as { porcentaje_anticipo?: string | number | null }).porcentaje_anticipo != null
-      ? Number((paquete as { porcentaje_anticipo?: string | number | null }).porcentaje_anticipo) / 100
-      : 0.3;
   const amountDueNow =
-    total === null ? null : formaPago === 'completo' ? total : Math.round(total * porcentajeAnticipo * 100) / 100;
+    total === null
+      ? null
+      : formaPagoEfectiva === 'anticipo' && servicio
+        ? Math.round(total * (servicio.porcentaje_anticipo / 100) * 100) / 100
+        : total;
 
   const dayDate = useMemo(() => fromLocalISODate(day), [day]);
 
@@ -977,7 +892,6 @@ export function CheckoutView({
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         captcha_token: captchaToken.current,
-        paquete: paquete ? paquete.slug : (paqueteId ?? null),
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
         // La seleccion viaja con la reserva, sin precio: crear-pago la congela
         // con el catalogo vigente al pagar (ver backend/apps/bookings/serializers.py).
@@ -999,7 +913,7 @@ export function CheckoutView({
 
       const pagoResponse = await crearPago(reserva.id, {
         checkout_id: checkoutId,
-        forma_pago: formaPago,
+        forma_pago: formaPagoEfectiva,
         // Solo si la validacion en vivo lo dio por bueno; `crear-pago` lo
         // vuelve a validar de todos modos con el subtotal real (ver
         // apps/payments/views.py, `_resolver_codigo_promocional`).
@@ -1186,16 +1100,7 @@ export function CheckoutView({
           resumen es una columna de cifras y se lee mejor angosta. */}
       <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
         <div className="flex min-w-0 flex-col gap-6">
-          {paqueteNombre && (
-            <div className="rounded-xl border border-accent/30 bg-accent/10 p-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-accent block">
-                Experiencia amparada por paquete
-              </span>
-              <p className="mt-0.5 text-base font-bold text-foreground">{paqueteNombre}</p>
-            </div>
-          )}
-
-          {!paqueteNombre && (servicioNombre || servicio?.nombre) && (
+          {(servicioNombre || servicio?.nombre) && (
             <div className="rounded-xl border border-accent/30 bg-accent/10 p-4">
               <span className="text-xs font-semibold uppercase tracking-wider text-accent block">
                 Servicio seleccionado
@@ -1252,21 +1157,24 @@ export function CheckoutView({
 
             {tieneHospedaje && (
               <div className="mt-4 flex flex-col gap-1.5 border-t border-border pt-4">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  {lang === 'en' ? 'Check-out date' : 'Fecha de salida (Check-out)'}
-                </label>
-                <input
-                  type="date"
-                  value={fechaSalida}
-                  min={(() => {
-                    const d = fromLocalISODate(day);
-                    d.setDate(d.getDate() + 1);
-                    return toLocalISODate(d);
-                  })()}
-                  disabled={locked}
-                  onChange={(e) => setFechaSalidaManual(e.target.value)}
-                  className="w-full max-w-xs rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
-                />
+                {locked ? (
+                  <p className="text-sm text-foreground">
+                    {checkout.checkoutDateLabel}: {formatDay(fromLocalISODate(fechaSalida), lang)}
+                  </p>
+                ) : (
+                  <DateField
+                    lang={lang}
+                    label={checkout.checkoutDateLabel}
+                    value={fechaSalida}
+                    onChange={setFechaSalidaManual}
+                    minDate={defaultFechaSalida}
+                    prevMonthLabel={booking.prevMonth}
+                    nextMonthLabel={booking.nextMonth}
+                    personas={people}
+                    fullLabel={checkout.dayFull}
+                    sinCupo
+                  />
+                )}
               </div>
             )}
 
@@ -1642,8 +1550,9 @@ export function CheckoutView({
               moneda={moneda}
               onMonedaChange={setMoneda}
               usdDisponible={usdDisponible}
-              formaPago={formaPago}
+              formaPago={formaPagoEfectiva}
               onFormaPagoChange={setFormaPago}
+              formaPagoDisponible={permiteAnticipo}
               codigoPromocional={codigoPromocional}
               onCodigoPromocionalChange={onCodigoPromocionalChange}
               promoEstado={promoEstado}

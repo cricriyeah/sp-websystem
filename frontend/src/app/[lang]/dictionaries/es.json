@@ -366,6 +366,7 @@
   "checkout": {
     "back": "Volver",
     "dayLabel": "Día",
+    "checkoutDateLabel": "Fecha de salida (Check-out)",
     "hourLabel": "Hora",
     "peopleLabel": "Personas",
     "peopleUnit": {
