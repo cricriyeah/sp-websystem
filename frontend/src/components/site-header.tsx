@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
@@ -39,19 +39,27 @@ export function SiteHeader({
   className = '',
 }: SiteHeaderProps) {
   const pathname = usePathname();
-  const mostrarContinuar = variante !== 'hub' && !/^\/(?:es|en)\/(?:reservar|traslados)(?:\/|$)/.test(pathname);
+  // La banda va en todo el sitio (hub y sedes), salvo dentro del checkout, donde el propio
+  // checkout ya retoma la reserva y el aviso sobraria.
+  const mostrarContinuar = !/^\/(?:es|en)\/(?:reservar|traslados)(?:\/|$)/.test(pathname);
   const [open, setOpen] = useState(false);
-  const [esEscritorio, setEsEscritorio] = useState(false);
+  const bandaRef = useRef<HTMLDivElement>(null);
   const sinMovimiento = useReducedMotion();
   const [slugResuelto, setSlugResuelto] = useState<string | undefined>(sedeSlugActual);
   const [sedesDisponibles, setSedesDisponibles] = useState<SedeIndiceEntry[]>(Object.values(SEDES_INDICE));
+  // El header es `fixed` y las paginas se apartan con `--nav-alto`: la banda le suma su
+  // propia altura a traves de `--banda-alto` (ver globals.css), asi todo el contenido baja
+  // solo, sin que cada pagina sepa que existe. Sin banda vale 0 y nada cambia.
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 80rem)');
-    const actualizar = () => setEsEscritorio(media.matches);
-    actualizar();
-    media.addEventListener('change', actualizar);
-    return () => media.removeEventListener('change', actualizar);
-  }, []);
+    const banda = bandaRef.current;
+    if (!banda) return;
+    const raiz = document.documentElement;
+    const medir = () => raiz.style.setProperty('--banda-alto', `${banda.getBoundingClientRect().height}px`);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(banda);
+    return () => { observador.disconnect(); raiz.style.removeProperty('--banda-alto'); };
+  }, [mostrarContinuar]);
   useEffect(() => {
     let montado = true;
     getSedes().catch(() => null).then(data => {
@@ -143,7 +151,6 @@ export function SiteHeader({
             className="hidden sm:inline-block"
           />
           <div className="hidden 2xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
-          {mostrarContinuar && continuar && esEscritorio && <div className="hidden xl:contents"><ContinuarReservacion lang={lang} dict={{ continuar }} variante="chip" /></div>}
 
           <button
             type="button"
@@ -191,7 +198,6 @@ export function SiteHeader({
                 <span className="text-[15px] text-muted">{nav.switchLang}</span>
                 <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />
               </div>
-              {mostrarContinuar && continuar && !esEscritorio && <div className="border-b border-border-strong py-3.5 empty:hidden"><ContinuarReservacion lang={lang} dict={{ continuar }} variante="chip" /></div>}
               <div className="py-3">
                 <WhatsappContact nav={nav} variant="menu" />
               </div>
@@ -199,6 +205,11 @@ export function SiteHeader({
           )}
         </AnimatePresence>
       </header>
+      {mostrarContinuar && continuar && (
+        <div ref={bandaRef} className="mx-auto w-full lg:max-w-[1440px] lg:pt-2">
+          <ContinuarReservacion lang={lang} dict={{ continuar }} />
+        </div>
+      )}
     </div>
   );
 }

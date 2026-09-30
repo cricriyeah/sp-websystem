@@ -8,7 +8,6 @@ import { SEDES_INDICE } from '@/content/sedes-indice';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { SiteHeader } from '@/components/site-header';
-import { ContinuarReservacion } from '@/components/continuar-reservacion';
 import { SiteFooter } from '@/components/site-footer';
 import { HubMapaSedes } from '@/components/hub-mapa-sedes';
 import { HubGridSedes } from '@/components/hub-grid-sedes';
@@ -29,10 +28,9 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
   const sedesApi = await getSedes().catch(() => null);
   const sedes = sedesActivas(SEDES_INDICE, sedesApi).map(s => getSedeContenido(s.slug, lang)).filter((s): s is SedeContenido => !!s);
   return <>
-    <SiteHeader lang={lang} nav={dict.nav} variante="hub" />
-    <main className="pt-[var(--nav-alto)]">
-      <ContinuarReservacion lang={lang} dict={{ continuar: dict.continuar }} variante="banda" />
-      <section id="hub-mapa-destinos" className="scroll-mt-28 mx-auto max-w-[1440px] px-6 pb-12 pt-12 sm:px-8 lg:px-12">
+    <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
+    <main>
+      <section id="hub-mapa-destinos" className="scroll-mt-28 mx-auto max-w-[1440px] px-6 pb-12 pt-[calc(var(--nav-alto)+3rem)] sm:px-8 lg:px-12">
         <div className="mb-8 max-w-3xl">
           <p className="mb-3 text-sm font-semibold text-accent">{dict.hub.nombreAgencia}</p>
           <h1 className="text-5xl leading-[1.05] text-foreground sm:text-6xl">{dict.hub.headline}</h1>

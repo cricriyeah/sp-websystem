@@ -11,7 +11,7 @@ import { textoDeSituacion } from '@/lib/pendientes-texto';
 
 type Resumen = ResumenReserva | ResumenOrden;
 type Problema = 'sinConexion' | 'errorServidor';
-type Props = { lang: Locale; dict: Pick<Dictionary, 'continuar'>; variante: 'banda' | 'chip' };
+type Props = { lang: Locale; dict: Pick<Dictionary, 'continuar'> };
 
 function resumenNoExiste(p: Pendiente): Resumen {
   return {
@@ -48,14 +48,13 @@ function montoRetenido(resumen: Resumen, locale: string): string | null {
   }
 }
 
-export function ContinuarReservacion({ lang, dict, variante }: Props) {
+export function ContinuarReservacion({ lang, dict }: Props) {
   const router = useRouter();
   const sinMovimiento = useReducedMotion();
   const [pendientes, setPendientes] = useState<Pendiente[]>([]);
   const [activo, setActivo] = useState<Pendiente | null>(null);
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [problema, setProblema] = useState<Problema | null>(null);
-  const [abierto, setAbierto] = useState(false);
   const [listaAbierta, setListaAbierta] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
@@ -135,7 +134,6 @@ export function ContinuarReservacion({ lang, dict, variante }: Props) {
     setActivo(restantes[0] ?? null);
     setResumen(null);
     setProblema(null);
-    setAbierto(false);
     setListaAbierta(false);
     if (restantes[0]) void consultar(restantes[0]);
   };
@@ -262,7 +260,7 @@ export function ContinuarReservacion({ lang, dict, variante }: Props) {
   };
 
   const aviso = activo && linea && (resumen || problema) ? (
-    <div role="status" aria-live="polite" className={`border ${estilo} ${variante === 'banda' ? 'px-5 py-4 sm:px-8' : 'p-5'}`}>
+    <div role="status" aria-live="polite" className={`border ${estilo} px-5 py-4 sm:px-8`}>
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-relaxed text-foreground">{linea}</p>
@@ -297,14 +295,6 @@ export function ContinuarReservacion({ lang, dict, variante }: Props) {
   </div>;
 
   if (!aviso && !deshacerAviso) return null;
-  if (variante === 'chip') return <>
-    {aviso && <div role="status" aria-live="polite" className="relative">
-      <button type="button" aria-expanded={abierto} onClick={() => setAbierto(v => !v)} className={`max-w-64 truncate border px-3 py-2 text-xs font-medium text-foreground ${estilo}`}>{linea}</button>
-      {abierto && <div className="absolute right-0 top-full z-50 mt-2 w-[min(90vw,30rem)] shadow-xl">{aviso}</div>}
-    </div>}
-    {deshacerAviso && <div className="absolute right-0 top-full z-50 mt-2 w-[min(90vw,30rem)] shadow-xl">{deshacerAviso}</div>}
-    {dialogo}
-  </>;
   return <>
     <AnimatePresence initial={false}>
       {(aviso || deshacerAviso) && <motion.div key="continuar-banda" initial={sinMovimiento ? false : { height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }} transition={{ duration: sinMovimiento ? 0 : 0.25 }} className="overflow-hidden">

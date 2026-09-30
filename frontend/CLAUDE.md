@@ -113,6 +113,29 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   `npx.cmd tsc --noEmit`, `npx.cmd eslint src tests`, `npm.cmd test` y
   `npm.cmd run build`.
 
+## Continuar reservación (banda global)
+
+`ContinuarReservacion` (`src/components/continuar-reservacion.tsx`) es una
+banda bajo el header que aparece en **todo el sitio** (hub, sedes, servicio,
+privacidad, deslinde…) salvo dentro del checkout (`/reservar`, `/traslados`),
+donde el propio checkout ya retoma la reserva. No existe versión "chip".
+
+- Lo monta `SiteHeader` (recibe `continuar={dict.continuar}`; una página que
+  no lo pase no muestra banda). Como el header es `fixed` y las páginas se
+  apartan con `--nav-alto`, el header mide la banda con `ResizeObserver` y
+  escribe `--banda-alto` en `<html>`; `--nav-alto` (globals.css) ya lo suma,
+  así el contenido baja solo. Sin banda vale `0px` y nada cambia. No pongas
+  alturas de header a mano en una página nueva: usa `var(--nav-alto)`.
+- Lee el puntero de `src/lib/pendientes.ts` (`localStorage`, máx. 3, 7 días;
+  sin cuentas esa llave es lo único que hay, así que solo sirve en el mismo
+  navegador) y consulta el resumen al servidor; el texto sale de la
+  `situacion` que calcula el backend (`src/lib/pendientes-texto.ts`), nunca se
+  infiere en el navegador. Sin pendientes, o mientras carga, no pinta nada.
+- Los tres checkouts escriben el puntero al crear la orden/reserva y
+  `use-pago-pedido.ts` lo reasegura al reanudar una orden abierta.
+- `confirmada` solo ofrece "Cerrar"; `cancelada_devolucion_solicitada` lleva
+  el folio y un WhatsApp prellenado. No hay página de "Mi reservación".
+
 ## Atribucion de ventas (?ref=)
 
 La vendedora le pasa a sus clientes un link con su codigo (`?ref=maria`) y la venta

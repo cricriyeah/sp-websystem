@@ -146,6 +146,14 @@ export function usePagoPedido(config: Config) {
         if (cancelado) return;
         if (detalle.estado === 'capturada') return setFase('exito');
         if (detalle.estado === 'cancelada') return setFase('fallo');
+        // Reanudar una orden abierta asegura su puntero de "Continuar reservacion": cubre
+        // ordenes creadas antes de que existiera o borradas del localStorage, y deja al dia
+        // si ya hay dinero retenido.
+        if (checkoutId) {
+          registrarPendiente(checkoutId, ordenId, detalle.reservas.some(
+            (r) => ['requires_capture', 'succeeded'].includes(r.pago.estado_pi ?? ''),
+          ));
+        }
         if (detalle.estado === 'autorizando' || detalle.estado === 'autorizada') {
           setPagos(
             detalle.reservas.map((r) => ({
