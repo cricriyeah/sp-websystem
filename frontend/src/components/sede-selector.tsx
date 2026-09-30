@@ -8,6 +8,7 @@ import type { Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE, getSedeIndice } from '@/content/sedes-indice';
 import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { guardarSedePreferida, leerSedePreferidaCliente } from '@/lib/sede';
+import { hrefSede } from '@/lib/routes';
 
 export type SedeOpcion = Pick<SedeIndiceEntry, 'slug' | 'nombre'>;
 
@@ -16,6 +17,7 @@ type SedeSelectorProps = {
   sedes?: SedeOpcion[];
   sedeSeleccionadaSlug?: string;
   label?: string;
+  placeholder?: string;
   onSelectSede?: (sede: SedeOpcion) => void;
   variant?: 'header' | 'catalog';
   className?: string;
@@ -26,6 +28,7 @@ export function SedeSelector({
   sedes: sedesProp,
   sedeSeleccionadaSlug,
   label = 'Destino',
+  placeholder,
   onSelectSede,
   variant = 'catalog',
   className = '',
@@ -52,13 +55,17 @@ export function SedeSelector({
      cada navegación SPA; no se puede leer `window` en el render sin romper el
      SSR. Mismo criterio que booking-state.tsx / checkout-view.tsx. */
   useEffect(() => {
+    if (placeholder) {
+      setSedeSlugActiva(undefined);
+      return;
+    }
     if (sedeSeleccionadaSlug) {
       setSedeSlugActiva(sedeSeleccionadaSlug);
       return;
     }
     const enUrl = new URLSearchParams(window.location.search).get('sede') ?? undefined;
     setSedeSlugActiva(enUrl ?? leerSedePreferidaCliente());
-  }, [pathname, sedeSeleccionadaSlug]);
+  }, [pathname, sedeSeleccionadaSlug, placeholder]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // const sedes = sedesProp ?? Object.values(SEDES_INDICE): un [] explícito
@@ -66,11 +73,10 @@ export function SedeSelector({
   // índice es solo compatibilidad para callers que todavía omiten la prop.
   const sedes = sedesProp ?? Object.values(SEDES_INDICE);
 
-  const slugActivo = sedeSeleccionadaSlug ?? sedeSlugActiva;
+  const slugActivo = placeholder ? undefined : sedeSeleccionadaSlug ?? sedeSlugActiva;
   const sedeActiva =
     sedes.find((sede) => sede.slug === slugActivo) ??
-    (sedeSeleccionadaSlug ? getSedeIndice(sedeSeleccionadaSlug) : undefined) ??
-    sedes[0];
+    (!placeholder && sedeSeleccionadaSlug ? getSedeIndice(sedeSeleccionadaSlug) : undefined);
 
   // Cierre al hacer click fuera
   useEffect(() => {
@@ -104,13 +110,13 @@ export function SedeSelector({
     if (onSelectSede) {
       onSelectSede(sede);
     } else {
-      router.push(`/${lang}/sede/${sede.slug}`);
+      router.push(hrefSede(lang, sede.slug));
     }
   }
 
   const isHeader = variant === 'header';
   const puedeAbrir = sedes.length > 0;
-  const nombreMostrado = sedeActiva?.nombre ?? label;
+  const nombreMostrado = sedeActiva?.nombre ?? placeholder ?? label;
 
   return (
     <div ref={ref} className={`relative inline-block text-left ${className}`}>

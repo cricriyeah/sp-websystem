@@ -1,22 +1,22 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Locale } from '@/app/[lang]/dictionaries';
+import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeContenido } from '@/content/sedes-tipos';
+import { hrefSede } from '@/lib/routes';
 
 type HubGridSedesProps = {
   lang: Locale;
   sedes: SedeContenido[];
-  verDestinoLabel: string;
-  conLabel: string;
+  copy: Dictionary['hub'];
 };
 
 /**
  * Respaldo accesible/SEO del mapa (spec §5.3): las mismas sedes en tarjetas
  * normales, sin depender de JS ni de interaccion con el SVG.
  */
-export function HubGridSedes({ lang, sedes, verDestinoLabel, conLabel }: HubGridSedesProps) {
+export function HubGridSedes({ lang, sedes, copy }: HubGridSedesProps) {
   return (
-    <div id="sedes" className="scroll-mt-24 grid gap-6 sm:grid-cols-2">
+    <div className="scroll-mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {sedes.map((sede) => (
         <article
           key={sede.slug}
@@ -26,24 +26,27 @@ export function HubGridSedes({ lang, sedes, verDestinoLabel, conLabel }: HubGrid
             {sede.hero.imagen && (
               <Image
                 src={sede.hero.imagen}
-                alt={sede.negocio?.nombre ?? sede.empresaFundadoraNombre}
+                alt={sede.nombre}
                 fill
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                 className="object-cover"
               />
             )}
           </div>
           <div className="flex flex-1 flex-col gap-2 p-6">
             <h3 className="text-xl font-bold text-foreground">
-              {sede.negocio?.nombre ?? sede.empresaFundadoraNombre}
+              {sede.nombre}
             </h3>
-            <p className="text-sm text-muted">
-              {conLabel} {sede.empresaFundadoraNombre}
-            </p>
+            {sede.empresaFundadoraNombre && (
+              <p className="text-sm text-muted">
+                {copy.conLabel} {sede.empresaFundadoraNombre}
+              </p>
+            )}
             <Link
-              href={`/${lang}/sede/${sede.slug}`}
+              href={hrefSede(lang, sede.slug)}
               className="mt-4 inline-flex w-fit items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.98]"
             >
-              {verDestinoLabel}
+              {copy.verDestino}
             </Link>
           </div>
         </article>

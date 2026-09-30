@@ -11,9 +11,11 @@ export type { Locale };
 export type SedeIndiceEntry = {
   slug: string;
   nombre: string;
-  empresaFundadoraNombre: string;
+  empresaFundadoraNombre: string | null;
   /** Ruta del logo de la empresa fundadora, o `null` para el wordmark generico de agencia. */
   logo: string | null;
+  web?: string;
+  redes?: { nombre: string; url: string }[];
 };
 
 export type SedeHeroContenido = {
@@ -53,18 +55,19 @@ export type SedeOtraEmpresa = {
   slug: string;
   nombre: string;
   descripcion: string;
-  enlaceExterno: string;
+  enlaceExterno?: string;
+  logo?: string | null;
+  redes?: { nombre: string; url: string }[];
 };
 
 export type SedeServicioTransporte = {
   empresaSlug: string;
-  hrefTraslados: string;
 } | null;
 
 /** Contenido largo/pesado por sede — vive en `sedes-cuerpo.ts` (server-only). */
 export type SedeCuerpoContenido = {
   slug: string;
-  empresaFundadoraSlug: string;
+  empresaFundadoraSlug: string | null;
   negocio: SedeNegocio;
   metaTitle: string;
   metaDescription: string;

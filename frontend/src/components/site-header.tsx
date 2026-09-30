@@ -9,9 +9,10 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE } from '@/content/sedes-indice';
 import type { SedeIndiceEntry } from '@/content/sedes-tipos';
-import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { getSedes } from '@/lib/api';
+import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { leerSedePreferidaCliente } from '@/lib/sede';
+import { hrefInicio, hrefSede } from '@/lib/routes';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { LangSwitch } from '@/components/lang-switch';
 import { SedeSelector } from '@/components/sede-selector';
@@ -38,37 +39,20 @@ export function SiteHeader({
   const [open, setOpen] = useState(false);
   const sinMovimiento = useReducedMotion();
   const [slugResuelto, setSlugResuelto] = useState<string | undefined>(sedeSlugActual);
-  // Fallo abierto desde el primer render (sin esperar la red): todas las
-  // sedes del indice. `sedesActivas` reduce esta lista cuando `getSedes()`
-  // resuelve. `SedeSelector` recibe esta misma lista por prop — nunca vuelve
-  // a pedir `getSedes()` por su cuenta (arch-critic ronda 2, hallazgo 5).
-  const [sedesDisponibles, setSedesDisponibles] = useState<SedeIndiceEntry[]>(
-    Object.values(SEDES_INDICE),
-  );
-
-  // Sin slug explicito, la sede activa se resuelve en cliente
-  // (localStorage/cookie) post-hidratacion. Un crawler ve el fallback
-  // (primera sede activa), nunca un valor en blanco.
+  const [sedesDisponibles, setSedesDisponibles] = useState<SedeIndiceEntry[]>(Object.values(SEDES_INDICE));
   useEffect(() => {
     let montado = true;
-    getSedes()
-      .then((data) => data, () => null)
-      .then((sedesApi) => {
-        if (!montado) return;
-        const activas = sedesActivas(SEDES_INDICE, sedesApi);
-        setSedesDisponibles(activas);
-        if (sedeSlugActual) return;
-        const enUrl = new URLSearchParams(window.location.search).get('sede');
-        const preferida = leerSedePreferidaCliente();
-        setSlugResuelto(
-          [enUrl, preferida].find((slug) => slug && activas.some((s) => s.slug === slug))
-            ?? activas[0]?.slug,
-        );
-      });
-    return () => {
-      montado = false;
-    };
-  }, [pathname, sedeSlugActual]);
+    getSedes().catch(() => null).then(data => {
+      if (!montado) return;
+      const activas = sedesActivas(SEDES_INDICE, data);
+      setSedesDisponibles(activas);
+      if (variante === 'hub' || sedeSlugActual) return;
+      const enUrl = new URLSearchParams(window.location.search).get('sede');
+      const preferida = leerSedePreferidaCliente();
+      setSlugResuelto([enUrl, preferida].find(slug => slug && activas.some(s => s.slug === slug)) ?? undefined);
+    });
+    return () => { montado = false; };
+  }, [pathname, sedeSlugActual, variante]);
 
   const slugActual = sedeSlugActual ?? slugResuelto ?? sedesDisponibles[0]?.slug;
   const sedeIndiceActiva: SedeIndiceEntry | undefined =
@@ -79,25 +63,28 @@ export function SiteHeader({
   const logoSrc =
     variante === 'hub' ? '/logos/wordmark-agencia.svg' : (sedeIndiceActiva?.logo ?? '/logos/wordmark-agencia.svg');
 
-  const anclaBase = variante === 'sede' && slugActual ? `/${lang}/sede/${slugActual}` : null;
+  const anclaBase = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 
-  const links = anclaBase
-    ? [
-        { href: `${anclaBase}#experiencias`, label: nav.catalogo },
-        { href: `${anclaBase}#nosotros`, label: nav.nosotros },
-        ...(slugActual === 'la-paz' ? [
-          { href: `${anclaBase}#temporadas`, label: nav.temporadas },
-          { href: `${anclaBase}#galeria`, label: nav.galeria },
-          { href: `${anclaBase}#preguntas`, label: nav.preguntas },
-        ] : []),
-      ]
-    : [{ href: `/${lang}#sedes`, label: nav.catalogo }];
+  const links = anclaBase ? [
+    { href: anclaBase + '#nosotros', label: nav.nosotros },
+    { href: anclaBase + '#experiencias', label: nav.experiencias },
+    { href: anclaBase + '#servicios', label: nav.servicios },
+    { href: anclaBase + '#temporadas', label: nav.temporadas },
+    { href: anclaBase + '#galeria', label: nav.galeria },
+    { href: anclaBase + '#resenas', label: nav.opiniones },
+    { href: anclaBase + '#preguntas', label: 'FAQs' },
+  ] : [
+    { href: hrefInicio(lang, 'hub-mapa-destinos'), label: nav.mapa },
+    { href: hrefInicio(lang, 'sedes'), label: nav.sedes },
+    { href: hrefInicio(lang, 'nosotros'), label: nav.nosotros },
+    { href: hrefInicio(lang, 'colaboradores'), label: nav.colaboradores },
+  ];
 
   return (
     <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
-      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-6 border-b border-border bg-background px-6 sm:px-8 lg:h-[88px] lg:max-w-6xl lg:border lg:border-border lg:px-12 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
+      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-4 border-b border-border bg-background px-6 sm:px-8 lg:h-20 lg:max-w-[1440px] lg:border lg:border-border lg:px-6 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
         <Link
-          href={`/${lang}`}
+          href={hrefInicio(lang)}
           className="flex shrink-0 items-center text-foreground"
           onClick={() => setOpen(false)}
         >
@@ -111,19 +98,13 @@ export function SiteHeader({
           />
         </Link>
 
-        {/* En el hub `links` trae un solo item (spec §5: nada de nosotros/
-            temporadas/galeria/preguntas ahi) — con `justify-between` de 3 hijos
-            un solo link queda flotando solo en medio de un hueco enorme, se lee
-            roto (hallazgo del dueño, 2026-09-16). Con 1 item se pliega al
-            cluster derecho, junto al selector; con 2+ (cualquier sede) conserva
-            su fila propia centrada, que ahi si tiene peso visual. */}
         {links.length > 1 && (
-          <nav className="hidden items-center gap-7 lg:flex">
+          <nav className="hidden items-center gap-4 xl:flex">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-[15px] text-foreground transition-colors hover:text-accent"
+                className="whitespace-nowrap text-[13px] text-foreground transition-colors hover:text-accent"
               >
                 {link.label}
               </Link>
@@ -143,19 +124,20 @@ export function SiteHeader({
           <SedeSelector
             lang={lang}
             sedes={sedesDisponibles}
-            sedeSeleccionadaSlug={slugActual}
+            sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
+            placeholder={variante === 'hub' ? nav.eligeSede : undefined}
             label={nav.sedeLabel}
             variant="header"
             className="hidden sm:inline-block"
           />
-          <WhatsappContact nav={nav} tone="plain" />
+          <div className="hidden 2xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
 
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? nav.closeMenu : nav.openMenu}
             aria-expanded={open}
-            className="flex h-11 w-11 items-center justify-center border border-border text-foreground lg:hidden"
+            className="flex h-11 w-11 items-center justify-center border border-border text-foreground xl:hidden"
           >
             {open ? <X size={18} /> : <List size={18} />}
           </button>
@@ -169,7 +151,7 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 lg:hidden"
+              className="absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 xl:hidden"
             >
               {links.map((link) => (
                 <Link
@@ -186,7 +168,8 @@ export function SiteHeader({
                 <SedeSelector
                   lang={lang}
                   sedes={sedesDisponibles}
-                  sedeSeleccionadaSlug={slugActual}
+                  sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
+                  placeholder={variante === 'hub' ? nav.eligeSede : undefined}
                   label={nav.sedeLabel}
                   variant="header"
                 />

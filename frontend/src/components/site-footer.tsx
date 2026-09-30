@@ -8,24 +8,28 @@ type SiteFooterProps = {
   footer: Dictionary['footer'];
   nav: Dictionary['nav'];
   bookLabel: string;
-  /** `null` en el hub y en cualquier sede sin `negocio` (hoy, Los Cabos): el bloque de dirección/horario se omite en vez de mostrar el de otra sede. */
+  /** `null` en el hub y en cualquier sede sin `negocio`: el bloque de dirección/horario se omite en vez de mostrar el de otra sede. */
   negocio: SedeNegocio;
   sedeSlug?: string;
 };
 
 export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: SiteFooterProps) {
   const baseSede = sedeSlug ? `/${lang}/sede/${sedeSlug}` : null;
-  const secciones = baseSede
-    ? [
-        { href: `${baseSede}#experiencias`, label: nav.catalogo },
-        { href: `${baseSede}#nosotros`, label: nav.nosotros },
-        ...(sedeSlug === 'la-paz' ? [
-          { href: `${baseSede}#temporadas`, label: nav.temporadas },
-          { href: `${baseSede}#incluye`, label: nav.contacto },
-          { href: `${baseSede}#preguntas`, label: nav.preguntas },
-        ] : []),
-      ]
-    : [{ href: `/${lang}#sedes`, label: nav.catalogo }];
+  const es = lang === 'es';
+  const secciones = baseSede ? [
+    { href: baseSede + '#nosotros', label: nav.nosotros },
+    { href: baseSede + '#experiencias', label: es ? 'Experiencias y paquetes' : 'Experiences and packages' },
+    { href: baseSede + '#servicios', label: es ? 'Servicios' : 'Services' },
+    { href: baseSede + '#temporadas', label: nav.temporadas },
+    { href: baseSede + '#galeria', label: nav.galeria },
+    { href: baseSede + '#resenas', label: es ? 'Opiniones' : 'Reviews' },
+    { href: baseSede + '#preguntas', label: 'FAQs' },
+  ] : [
+    { href: '/' + lang + '#hub-mapa-destinos', label: es ? 'Mapa' : 'Map' },
+    { href: '/' + lang + '#sedes', label: es ? 'Sedes' : 'Destinations' },
+    { href: '/' + lang + '#nosotros', label: nav.nosotros },
+    { href: '/' + lang + '#colaboradores', label: es ? 'Colaboradores' : 'Partners' },
+  ];
 
   const legales = [
     { href: `/${lang}/deslinde`, label: footer.waiver },

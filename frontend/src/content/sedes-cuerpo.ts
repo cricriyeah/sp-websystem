@@ -40,21 +40,23 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         ],
       },
       colaboracion: {
-        titulo: 'Tu agencia local de confianza: apasionados por el mar y por tu experiencia',
+        titulo: 'Empresas locales, una experiencia compartida',
         texto1:
-          'Somos una agencia de pesca deportiva conformada por gente local que conoce, respeta y ama profundamente las aguas de La Paz. Nos preocupamos por cada detalle de tu viaje para que tú y tu grupo disfruten de una jornada extraordinaria, sintiéndose en confianza y con la calidez que nos distingue.',
+          'Sal y Sol Sportfishing reúne su experiencia en el mar con empresas locales de La Paz para ayudarte a organizar tu visita. Cada colaboración aporta su especialidad y el conocimiento de quienes viven aquí.',
         texto2:
-          'Cada tour es 100% privado y pensado a la medida de tu grupo. Si es tu primera vez en la pesca deportiva, nuestros capitanes te enseñarán con paciencia y gusto las mejores técnicas, y si ya eres un pescador experimentado, te llevaremos a los mejores puntos de la bahía para maximizar tus capturas.',
+          'Conoce las experiencias, paquetes y servicios de nuestros colaboradores. Puedes explorar cada opción y sus detalles antes de elegir lo que mejor se adapta a tu grupo.',
         imagenSrc: '/photos/capitan-cabrilla-bahia.webp',
         imagenAlt: 'Capitán local sonriendo con una cabrilla recién pescada, con La Paz al fondo',
       },
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
       ],
-      otrasEmpresas: [],
+      otrasEmpresas: [
+        { slug: 'hotel-malecon', nombre: 'Hotel Malecón', descripcion: '' },
+        { slug: 'transporte-la-paz', nombre: 'Transportes La Paz', descripcion: '' },
+      ],
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
-        hrefTraslados: '/traslados?empresa=transporte-la-paz',
       },
     },
     en: {
@@ -86,74 +88,132 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         ],
       },
       colaboracion: {
-        titulo: 'Your trusted local agency: passionate about the sea and your experience',
+        titulo: 'Local businesses, one shared experience',
         texto1:
-          'We are a local sportfishing agency based in La Paz, run by local experts who deeply know, respect, and love these waters. We take care of every detail of your charter so that you and your party feel welcomed, supported, and free to enjoy an extraordinary day out on the sea.',
+          'Sal y Sol Sportfishing brings its experience at sea together with local businesses in La Paz to help you plan your visit. Each partner contributes their specialty and local knowledge.',
         texto2:
-          'Every trip is 100% private and tailored to your group. Whether you are holding a fishing rod for the very first time or are a seasoned angler, our friendly captains will guide you with patience, warmth, and skill, taking you to the most productive spots in the bay for an unforgettable adventure.',
+          'Explore our partners’ experiences, packages and services. Read what each option includes before choosing the right experience for your group.',
         imagenSrc: '/photos/capitan-cabrilla-bahia.webp',
         imagenAlt: 'Smiling local captain holding a fresh catch, with La Paz in the background',
       },
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
       ],
-      otrasEmpresas: [],
+      otrasEmpresas: [
+        { slug: 'hotel-malecon', nombre: 'Hotel Malecón', descripcion: '' },
+        { slug: 'transporte-la-paz', nombre: 'Transportes La Paz', descripcion: '' },
+      ],
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
-        hrefTraslados: '/traslados?empresa=transporte-la-paz',
       },
     },
   },
-  'los-cabos': {
+  'la-ventana': {
     es: {
-      slug: 'los-cabos',
-      empresaFundadoraSlug: 'tours-cabo',
+      slug: 'la-ventana',
+      empresaFundadoraSlug: null,
       negocio: null,
-      metaTitle: 'Experiencias en Los Cabos, BCS | Sal y Sol Baja Experiences',
+      metaTitle: 'Experiencias en La Ventana, BCS | Sal y Sol Baja Experiences',
       metaDescription:
-        'Descubre las experiencias de Tours Cabo en Los Cabos, aliado de Sal y Sol Baja Experiences.',
+        'Descubre La Ventana y las experiencias que se integrarán próximamente a Sal y Sol Baja Experiences.',
       hero: {
         video: null,
-        imagen: '/ilustraciones/los-cabos-placeholder.webp',
-        titulo: { start: 'Descubre', emphasis: 'Los Cabos', end: 'con Tours Cabo' },
+        imagen: '/ilustraciones/costa-placeholder.webp',
+        titulo: { start: 'Descubre', emphasis: 'La Ventana', end: 'con expertos locales' },
         subtitulo:
-          'Tours Cabo es nuestro aliado local en Los Cabos. Estamos completando el contenido de esta sede — mientras tanto, escríbenos y te ayudamos igual.',
+          'Estamos preparando esta sede con operadores locales de La Ventana. Mientras completamos sus experiencias, escríbenos y te ayudamos a organizar tu visita.',
         facts: [],
       },
       colaboracion: {
         titulo: 'Una alianza en construcción',
         texto1:
-          'Estamos formalizando el contenido de esta colaboración con Tours Cabo, nuestro aliado en Los Cabos.',
+          'Estamos formalizando las colaboraciones locales que formarán parte de esta sede en La Ventana.',
         texto2:
           'Pronto podrás conocer aquí la historia completa de esta alianza, sus experiencias y su equipo.',
-        imagenSrc: '/ilustraciones/los-cabos-placeholder.webp',
-        imagenAlt: 'Ilustración genérica de costa; imagen provisional de Los Cabos',
+        imagenSrc: '/ilustraciones/costa-placeholder.webp',
+        imagenAlt: 'Ilustración genérica de costa; imagen provisional de La Ventana',
       },
       destacadas: [],
       otrasEmpresas: [],
       servicioTransporte: null,
     },
     en: {
-      slug: 'los-cabos',
-      empresaFundadoraSlug: 'tours-cabo',
+      slug: 'la-ventana',
+      empresaFundadoraSlug: null,
       negocio: null,
-      metaTitle: 'Experiences in Los Cabos, BCS | Sal y Sol Baja Experiences',
+      metaTitle: 'Experiences in La Ventana, BCS | Sal y Sol Baja Experiences',
       metaDescription:
-        'Discover Tours Cabo experiences in Los Cabos, a Sal y Sol Baja Experiences partner.',
+        'Discover La Ventana and the experiences coming soon to Sal y Sol Baja Experiences.',
       hero: {
         video: null,
-        imagen: '/ilustraciones/los-cabos-placeholder.webp',
-        titulo: { start: 'Discover', emphasis: 'Los Cabos', end: 'with Tours Cabo' },
+        imagen: '/ilustraciones/costa-placeholder.webp',
+        titulo: { start: 'Discover', emphasis: 'La Ventana', end: 'with local experts' },
         subtitulo:
-          "Tours Cabo is our local partner in Los Cabos. We're still completing this destination's content — message us in the meantime and we'll help all the same.",
+          "We're preparing this destination with local operators in La Ventana. While we complete its experiences, message us and we'll help you plan your visit.",
         facts: [],
       },
       colaboracion: {
         titulo: 'A partnership in progress',
-        texto1: "We're finalizing the content for this collaboration with Tours Cabo, our partner in Los Cabos.",
+        texto1: "We're finalizing the local collaborations that will be part of this La Ventana destination.",
         texto2: "Soon you'll be able to read the full story of this partnership, its experiences, and its team here.",
-        imagenSrc: '/ilustraciones/los-cabos-placeholder.webp',
-        imagenAlt: 'Generic coastal illustration; provisional Los Cabos image',
+        imagenSrc: '/ilustraciones/costa-placeholder.webp',
+        imagenAlt: 'Generic coastal illustration; provisional La Ventana image',
+      },
+      destacadas: [],
+      otrasEmpresas: [],
+      servicioTransporte: null,
+    },
+  },
+  'puerto-chale': {
+    es: {
+      slug: 'puerto-chale',
+      empresaFundadoraSlug: null,
+      negocio: null,
+      metaTitle: 'Experiencias en Puerto Chale, BCS | Sal y Sol Baja Experiences',
+      metaDescription:
+        'Descubre Puerto Chale y las experiencias que se integrarán próximamente a Sal y Sol Baja Experiences.',
+      hero: {
+        video: null,
+        imagen: '/ilustraciones/costa-placeholder.webp',
+        titulo: { start: 'Descubre', emphasis: 'Puerto Chale', end: 'con expertos locales' },
+        subtitulo:
+          'Estamos preparando esta sede con operadores locales de Puerto Chale. Mientras completamos sus experiencias, escríbenos y te ayudamos a organizar tu visita.',
+        facts: [],
+      },
+      colaboracion: {
+        titulo: 'Una alianza en construcción',
+        texto1:
+          'Estamos formalizando las colaboraciones locales que formarán parte de esta sede en Puerto Chale.',
+        texto2:
+          'Pronto podrás conocer aquí la historia completa de esta alianza, sus experiencias y su equipo.',
+        imagenSrc: '/ilustraciones/costa-placeholder.webp',
+        imagenAlt: 'Ilustración genérica de costa; imagen provisional de Puerto Chale',
+      },
+      destacadas: [],
+      otrasEmpresas: [],
+      servicioTransporte: null,
+    },
+    en: {
+      slug: 'puerto-chale',
+      empresaFundadoraSlug: null,
+      negocio: null,
+      metaTitle: 'Experiences in Puerto Chale, BCS | Sal y Sol Baja Experiences',
+      metaDescription:
+        'Discover Puerto Chale and the experiences coming soon to Sal y Sol Baja Experiences.',
+      hero: {
+        video: null,
+        imagen: '/ilustraciones/costa-placeholder.webp',
+        titulo: { start: 'Discover', emphasis: 'Puerto Chale', end: 'with local experts' },
+        subtitulo:
+          "We're preparing this destination with local operators in Puerto Chale. While we complete its experiences, message us and we'll help you plan your visit.",
+        facts: [],
+      },
+      colaboracion: {
+        titulo: 'A partnership in progress',
+        texto1: "We're finalizing the local collaborations that will be part of this Puerto Chale destination.",
+        texto2: "Soon you'll be able to read the full story of this partnership, its experiences, and its team here.",
+        imagenSrc: '/ilustraciones/costa-placeholder.webp',
+        imagenAlt: 'Generic coastal illustration; provisional Puerto Chale image',
       },
       destacadas: [],
       otrasEmpresas: [],

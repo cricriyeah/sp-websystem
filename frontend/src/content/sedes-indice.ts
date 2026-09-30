@@ -14,10 +14,16 @@ export const SEDES_INDICE: Record<string, SedeIndiceEntry> = {
     empresaFundadoraNombre: 'Sal y Sol Sportfishing',
     logo: '/logos/logo2salysol.webp',
   },
-  'los-cabos': {
-    slug: 'los-cabos',
-    nombre: 'Los Cabos',
-    empresaFundadoraNombre: 'Tours Cabo',
+  'la-ventana': {
+    slug: 'la-ventana',
+    nombre: 'La Ventana',
+    empresaFundadoraNombre: null,
+    logo: null,
+  },
+  'puerto-chale': {
+    slug: 'puerto-chale',
+    nombre: 'Puerto Chale',
+    empresaFundadoraNombre: null,
     logo: null,
   },
 };

@@ -15,7 +15,7 @@ type StructuredDataProps = {
 /**
  * JSON-LD para Google: ficha del negocio de la sede y sus preguntas
  * frecuentes. `negocio`/`faqItems` en `null` (spec §9: hoy solo pasa para
- * Los Cabos) hace que el bloque correspondiente no se renderice — sin datos
+ * una sede todavía pendiente) hace que el bloque correspondiente no se renderice — sin datos
  * inventados.
  */
 export function StructuredData({ lang, slug, negocio, description, faqItems }: StructuredDataProps) {

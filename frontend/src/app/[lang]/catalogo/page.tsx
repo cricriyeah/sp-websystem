@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { notFound } from 'next/navigation';
 import { hasLocale } from '../dictionaries';
 import { getSedeIndice } from '@/content/sedes-indice';
+import { hrefInicio, hrefSede } from '@/lib/routes';
 
 type PageProps = {
   params: Promise<{ lang: string }>;
@@ -19,8 +20,8 @@ export default async function CatalogoRedirectPage({ params, searchParams }: Pag
   if (!hasLocale(lang)) notFound();
 
   const query = await searchParams;
-  const sedeQuery = typeof query.sede === 'string' ? query.sede : undefined;
+  const sedeQuery = query.sede === 'los-cabos' ? 'la-ventana' : typeof query.sede === 'string' ? query.sede : undefined;
   const existe = sedeQuery ? getSedeIndice(sedeQuery) : undefined;
 
-  redirect(existe ? `/${lang}/sede/${sedeQuery}` : `/${lang}`);
+  redirect(existe && sedeQuery ? hrefSede(lang, sedeQuery) : hrefInicio(lang));
 }
