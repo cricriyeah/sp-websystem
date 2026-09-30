@@ -73,6 +73,11 @@ def situacion_de_orden(*, estado_orden, pagos):
             return Situacion.PAGO_EN_PROCESO
         comprometidos = sum(1 for p in pagos if p.get('estado_pi') in COMPROMETIDO)
         if comprometidos == 0:
+            # `requires_payment_method` en todos = ningun pago se ha intentado (o el ultimo
+            # se rechazo y volvio a ese estado): nadie ha pagado ni hay nada procesandose.
+            # Solo `processing`/`requires_action`/`requires_confirmation` son "en proceso".
+            if all(p.get('estado_pi') == 'requires_payment_method' for p in con_evidencia):
+                return Situacion.SIN_PAGO
             return Situacion.PAGO_EN_PROCESO
         if comprometidos < len(pagos):
             return Situacion.RETENIDO_PARCIAL

@@ -67,6 +67,21 @@ class SituacionDeOrdenTests(SimpleTestCase):
         pagos = [_pago(None), _pago(None)]
         self.assertEqual(situacion_de_orden(estado_orden='autorizando', pagos=pagos), Situacion.PAGO_EN_PROCESO)
 
+    def test_autorizando_con_ningun_pago_intentado_es_sin_pago(self):
+        # Regresion: la orden ya existe y sus PaymentIntents se crearon, pero el cliente
+        # aun no puso una tarjeta (`requires_payment_method` en todos). Decir "Tu banco
+        # esta procesando tu pago" seria falso: nadie ha pagado nada.
+        pagos = [_pago('requires_payment_method'), _pago('requires_payment_method')]
+        self.assertEqual(situacion_de_orden(estado_orden='autorizando', pagos=pagos), Situacion.SIN_PAGO)
+
+    def test_autorizando_con_un_pago_en_proceso_real_sigue_siendo_pago_en_proceso(self):
+        for estado_pi in ('processing', 'requires_action', 'requires_confirmation'):
+            with self.subTest(estado_pi=estado_pi):
+                pagos = [_pago(estado_pi), _pago('requires_payment_method')]
+                self.assertEqual(
+                    situacion_de_orden(estado_orden='autorizando', pagos=pagos), Situacion.PAGO_EN_PROCESO,
+                )
+
     def test_autorizando_con_una_retenida_y_otra_pendiente_es_retenido_parcial(self):
         pagos = [_pago('requires_capture'), _pago('requires_payment_method')]
         self.assertEqual(situacion_de_orden(estado_orden='autorizando', pagos=pagos), Situacion.RETENIDO_PARCIAL)
