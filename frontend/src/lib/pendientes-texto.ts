@@ -6,7 +6,7 @@ export type TextoSituacion = {
   registro: RegistroVisual;
   linea1: string;
   linea2: string;
-  principal: string;
+  principal: string | null;
   secundaria: string | null;
   requiereConfirmacion: boolean;
 };
@@ -55,10 +55,10 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
       ?? montos.find((m) => m.monto)?.monto ?? null, resumen.moneda, dict.locale)
     : montoReserva;
   const vence = horaDeVencimiento(resumen.vence_en, dict.locale);
-  const resultado = (registro: RegistroVisual, texto: string, principal: string,
+  const resultado = (registro: RegistroVisual, texto: string, principal: string | null,
     secundaria: string | null = null, requiereConfirmacion = false): TextoSituacion => ({
     registro, linea1: plantilla(texto, datos), linea2: '',
-    principal: plantilla(principal, datos), secundaria, requiereConfirmacion,
+    principal: principal === null ? null : plantilla(principal, datos), secundaria, requiereConfirmacion,
   });
 
   switch (resumen.situacion) {
@@ -95,7 +95,7 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
       if (resumen.forma_pago === 'anticipo') {
         datos.monto = montoReserva ?? dinero(montos[0]?.monto ?? null, resumen.moneda, dict.locale) ?? undefined;
         return resultado('informativo', datos.monto ? dict.confirmadaAnticipo : dict.confirmadaSinMonto,
-          dict.botonVerReservacion, dict.botonCerrar);
+          null, dict.botonCerrar);
       }
       datos.cargos = esOrden(resumen)
         ? montos.map((m) => {
@@ -104,7 +104,7 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
         }).filter((m): m is string => m !== null).join(' y ')
         : montoReserva ?? undefined;
       return resultado('informativo', datos.cargos ? dict.confirmada : dict.confirmadaSinMonto,
-        dict.botonVerReservacion, dict.botonCerrar);
+        null, dict.botonCerrar);
     }
     case 'cancelada_liberada':
       return resultado('informativo', dict.canceladaLiberada, dict.botonReservarNuevo,
@@ -112,7 +112,7 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
     case 'cancelada_devolucion_solicitada':
       datos.monto = montoDevolucion ?? undefined;
       return resultado('informativo', montoDevolucion ? dict.devolucionSolicitada : dict.devolucionSolicitadaSinMonto,
-        dict.botonVerDetalle, dict.botonEntendido);
+        dict.botonWhatsApp, dict.botonEntendido);
     case 'cancelada_devolucion_por_confirmar':
       datos.monto = montoDevolucion ?? undefined;
       return resultado('con_dinero', montoDevolucion ? dict.devolucionPorConfirmar : dict.devolucionPorConfirmarSinMonto,

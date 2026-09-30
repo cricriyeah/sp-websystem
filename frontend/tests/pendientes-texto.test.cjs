@@ -38,7 +38,7 @@ test('retenido_parcial identifica empresa, importe faltante y vencimiento reales
 });
 
 for (const situacion of ['retenido_total', 'confirmando_cobro', 'pago_en_proceso',
-  'confirmada', 'cancelada_liberada', 'cancelada_devolucion_solicitada',
+  'cancelada_liberada',
   'cancelada_devolucion_por_confirmar', 'expirada', 'no_existe']) {
   test(`${situacion}: produce texto y acciones definidos`, () => {
     const t = textoDeSituacion(es, orden(situacion));
@@ -49,10 +49,25 @@ for (const situacion of ['retenido_total', 'confirmando_cobro', 'pago_en_proceso
   });
 }
 
+test('confirmada informa y solo permite cerrar el aviso', () => {
+  const t = textoDeSituacion(es, orden('confirmada'));
+  assert.match(t.linea1, /confirmada/);
+  assert.equal(t.principal, null);
+  assert.equal(t.secundaria, es.botonCerrar);
+});
+
+test('devolucion solicitada lleva folio y ofrece WhatsApp', () => {
+  const t = textoDeSituacion(es, orden('cancelada_devolucion_solicitada'));
+  assert.match(t.linea1, /Folio #8/);
+  assert.equal(t.principal, es.botonWhatsApp);
+  assert.equal(t.secundaria, es.botonEntendido);
+});
+
 test('anticipo confirmado se distingue de pago completo', () => {
   const t = textoDeSituacion(es, reserva('confirmada', { forma_pago: 'anticipo' }));
   assert.match(t.linea1, /anticipo/);
   assert.doesNotMatch(t.linea1, /Se cobró \$/);
+  assert.equal(t.principal, null);
 });
 
 test('no inventa un monto de pago cuando el servidor no lo entrega', () => {
