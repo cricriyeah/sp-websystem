@@ -47,7 +47,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   const laPaz = slug === 'la-paz';
   const pagina = <>
     <StructuredData lang={lang} slug={slug} negocio={contenido.negocio} description={contenido.metaDescription} faqItems={laPaz ? dict.faq.items : null} />
-    <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={slug} />
+    <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="sede" sedeSlugActual={slug} />
     <main>
       <SedeHero lang={lang} sedeSlug={slug} contenido={{ ...contenido.hero, facts: [] }} destacadas={contenido.destacadas} paquetes={paquetes} servicios={servicios} moneda={moneda} booking={dict.booking} minDate={minDate} verTodoLabel={dict.catalog.verTodo} hrefVerTodo={hrefSede(lang, slug, 'experiencias')} precioDesdeLabel={dict.catalog.fromPrice} />
       <AboutSection about={{ headline: contenido.colaboracion.titulo, body1: contenido.colaboracion.texto1, body2: contenido.colaboracion.texto2, photoHint: contenido.colaboracion.imagenAlt }} imagenSrc={contenido.colaboracion.imagenSrc} imagenAlt={contenido.colaboracion.imagenAlt} />

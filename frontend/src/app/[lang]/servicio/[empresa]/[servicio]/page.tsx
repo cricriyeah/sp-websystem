@@ -47,7 +47,7 @@ export default async function ServicioPage({ params, searchParams }: Props) {
       ? hrefServicio({ slug, empresa_slug: empresa, tipo_servicio: traslado ? 'transporte' : 'pesca' }, lang, moneda)
       : null;
   return <>
-    <SiteHeader lang={lang} nav={dict.nav} sedeSlugActual={sede?.slug} />
+    <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede?.slug} />
     <main>
       <section className="mx-auto max-w-6xl px-6 pb-16 pt-[calc(var(--nav-alto)+3rem)] sm:px-8 lg:px-12">
         <Link href={sede ? hrefSede(lang, sede.slug, 'servicios') : hrefInicio(lang, 'sedes')} className="text-sm text-accent underline underline-offset-4">{dict.serviceDetail.backToServices}</Link>

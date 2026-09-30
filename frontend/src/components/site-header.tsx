@@ -16,10 +16,12 @@ import { hrefInicio, hrefSede } from '@/lib/routes';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { LangSwitch } from '@/components/lang-switch';
 import { SedeSelector } from '@/components/sede-selector';
+import { ContinuarReservacion } from '@/components/continuar-reservacion';
 
 type SiteHeaderProps = {
   lang: Locale;
   nav: Dictionary['nav'];
+  continuar?: Dictionary['continuar'];
   /** 'hub' solo en `/[lang]`. Cualquier otra pagina (con o sin sede propia) usa 'sede'. */
   variante?: 'hub' | 'sede';
   /** Si no llega, se resuelve en cliente (query, localStorage/cookie, o primera sede activa). */
@@ -31,15 +33,25 @@ type SiteHeaderProps = {
 export function SiteHeader({
   lang,
   nav,
+  continuar,
   variante = 'sede',
   sedeSlugActual,
   className = '',
 }: SiteHeaderProps) {
   const pathname = usePathname();
+  const mostrarContinuar = variante !== 'hub' && !/^\/(?:es|en)\/(?:reservar|traslados)(?:\/|$)/.test(pathname);
   const [open, setOpen] = useState(false);
+  const [esEscritorio, setEsEscritorio] = useState(false);
   const sinMovimiento = useReducedMotion();
   const [slugResuelto, setSlugResuelto] = useState<string | undefined>(sedeSlugActual);
   const [sedesDisponibles, setSedesDisponibles] = useState<SedeIndiceEntry[]>(Object.values(SEDES_INDICE));
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 80rem)');
+    const actualizar = () => setEsEscritorio(media.matches);
+    actualizar();
+    media.addEventListener('change', actualizar);
+    return () => media.removeEventListener('change', actualizar);
+  }, []);
   useEffect(() => {
     let montado = true;
     getSedes().catch(() => null).then(data => {
@@ -131,6 +143,7 @@ export function SiteHeader({
             className="hidden sm:inline-block"
           />
           <div className="hidden 2xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
+          {mostrarContinuar && continuar && esEscritorio && <div className="hidden xl:contents"><ContinuarReservacion lang={lang} dict={{ continuar }} variante="chip" /></div>}
 
           <button
             type="button"
@@ -178,6 +191,7 @@ export function SiteHeader({
                 <span className="text-[15px] text-muted">{nav.switchLang}</span>
                 <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />
               </div>
+              {mostrarContinuar && continuar && !esEscritorio && <div className="border-b border-border-strong py-3.5 empty:hidden"><ContinuarReservacion lang={lang} dict={{ continuar }} variante="chip" /></div>}
               <div className="py-3">
                 <WhatsappContact nav={nav} variant="menu" />
               </div>
