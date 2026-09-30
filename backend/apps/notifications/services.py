@@ -8,9 +8,11 @@ ya recibio el dinero, asi que todo error se registra y se sigue.
 """
 import logging
 from html import escape
+from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
+from django.utils import timezone
 
 from apps.fleet.enums import TipoServicio
 
@@ -366,6 +368,88 @@ def enviar_correo_orden(orden, reservas):
         logger.exception('Fallo el correo de confirmacion de la orden %s', orden.pk)
         return False
     return True
+
+
+def enlace_retomar_orden(orden, lang='es'):
+    """Enlace con la sede requerida por /[lang]/reservar y el UUID de la orden."""
+    base = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
+    if not base or not orden.checkout_id:
+        return ''
+    from apps.tenancy import scope
+
+    with scope.con_empresa(orden.empresa_lider):
+        paquete_slug = orden.paquete.slug
+    query = urlencode({
+        'paquete': paquete_slug,
+        'sede': orden.sede.slug,
+        'retomar': str(orden.checkout_id),
+    })
+    return f'{base}/{lang}/reservar?{query}'
+
+
+def enviar_correo_retomar_orden(orden):
+    """Avisa que falta un pago, sin afirmar que la reserva ya esté confirmada."""
+    if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
+        return False
+    enlace = enlace_retomar_orden(orden)
+    if not enlace:
+        return False
+    cuerpo = {
+        'from': settings.RESEND_FROM,
+        'to': [orden.correo_cliente],
+        'subject': 'Tu reserva sigue abierta: falta un pago',
+        'html': (
+            f'<p>Hola {_html(orden.nombre_cliente)}, tu reserva sigue abierta y falta terminar el pago.</p>'
+            f'<p>El primer pago está retenido en tu tarjeta; aún no se ha cobrado.</p>'
+            f'<p><a href="{escape(enlace, quote=True)}">Continuar reservación</a></p>'
+        ),
+    }
+    if settings.RESEND_BCC:
+        cuerpo['bcc'] = settings.RESEND_BCC
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json=cuerpo, timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        logger.exception('Fallo el correo de retomar de la orden %s', orden.pk)
+        return False
+    return True
+
+
+def notificar_orden_retenida(orden, reservas_info):
+    """Sella una sola notificación cuando un pago está retenido y otro pendiente."""
+    from apps.bookings.models import Orden
+    from apps.tenancy import scope
+
+    estados = [fila['pago']['estado_pi'] for fila in reservas_info]
+    if (
+        orden.estado != Orden.Estado.AUTORIZANDO or len(estados) < 2
+        or 'requires_capture' not in estados
+        or not any(estado in ('requires_payment_method', 'requires_confirmation',
+                             'requires_action', 'processing') for estado in estados)
+        or not getattr(settings, 'FRONTEND_URL', '')
+        or not (settings.RESEND_API_KEY and settings.RESEND_FROM)
+    ):
+        return False
+    try:
+        ahora = timezone.now()
+        with scope.con_empresa(orden.empresa_lider):
+            reclamado = Orden.objects.filter(pk=orden.pk, retomar_notificado_en__isnull=True).update(
+                retomar_notificado_en=ahora,
+            )
+        if not reclamado:
+            return False
+        enviado = enviar_correo_retomar_orden(orden)
+        if not enviado:
+            with scope.con_empresa(orden.empresa_lider):
+                Orden.objects.filter(pk=orden.pk, retomar_notificado_en=ahora).update(retomar_notificado_en=None)
+        return enviado
+    except Exception:
+        logger.exception('Fallo al evaluar el aviso de retomar de la orden %s', orden.pk)
+        return False
 
 
 def notificar_orden_pagada(orden):

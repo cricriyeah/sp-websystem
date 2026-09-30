@@ -395,6 +395,14 @@ class StripeWebhookView(APIView):
             with scope.con_empresa(empresa):
                 if evento['type'] == 'payment_intent.succeeded':
                     aplicar_pago_exitoso(objeto, empresa)
+                elif evento['type'] == 'payment_intent.amount_capturable_updated':
+                    from apps.notifications.services import notificar_orden_retenida
+
+                    orden_id = objeto.get('metadata', {}).get('orden_id')
+                    if orden_id and str(orden_id).isdigit():
+                        orden = _buscar_orden(empresa.sede, pk=int(orden_id))
+                        if orden:
+                            notificar_orden_retenida(orden, _reservas_info_de_orden(orden))
                 elif evento['type'] == 'charge.refunded':
                     aplicar_reembolso(objeto, empresa)
                 elif evento['type'] == 'charge.dispute.created':
@@ -946,6 +954,8 @@ class GetOrdenView(APIView):
             raise Http404('No se encontró la orden solicitada.')
 
         reservas_info = _reservas_info_de_orden(orden)
+        from apps.notifications.services import notificar_orden_retenida
+        notificar_orden_retenida(orden, reservas_info)
         return Response({
             'id': orden.id,
             'checkout_id': str(orden.checkout_id) if orden.checkout_id else None,
@@ -1021,6 +1031,8 @@ def _resumen_de_orden(orden, *, status_override=None):
     from .situacion import situacion_de_orden
 
     reservas_info = _reservas_info_de_orden(orden)
+    from apps.notifications.services import notificar_orden_retenida
+    notificar_orden_retenida(orden, reservas_info)
     pagos = _pagos_de_orden(orden, reservas_info)
     situacion = situacion_de_orden(estado_orden=orden.estado, pagos=pagos)
     vence_en = None

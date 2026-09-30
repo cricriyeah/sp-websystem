@@ -45,6 +45,9 @@ export default async function ReservarPage({
   // Si se seleccionó un paquete de experiencias desde el catálogo
   const paqueteSlug = typeof query.paquete === 'string' ? query.paquete : undefined;
   const sedeSlug = typeof query.sede === 'string' ? query.sede : undefined;
+  const retomarCheckoutId = typeof query.retomar === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.retomar)
+    ? query.retomar : undefined;
   let paquete: PaqueteCatalogo | null = null;
 
   if (paqueteSlug) {
@@ -80,6 +83,7 @@ export default async function ReservarPage({
         tarifasPorEmpresa={tarifasPorEmpresa}
         puntosPorEmpresa={puntosPorEmpresa}
         minDate={minDate}
+        retomarCheckoutId={retomarCheckoutId}
       />
     );
   }

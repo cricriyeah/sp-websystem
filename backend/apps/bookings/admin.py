@@ -21,6 +21,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 
 from apps.fleet.models import Paquete, PuntoEncuentro, Recurso, Servicio
 from apps.payments.situacion import requiere_atencion, situacion_de_orden, situacion_de_reserva
+from apps.notifications.services import enlace_retomar_orden
 from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from apps.tenancy.models import MembresiaEmpresa
@@ -304,7 +305,7 @@ class OrdenAdmin(ModelAdmin):
     # Paquete tiene RLS por empresa lider: un JOIN lo ocultaria junto con
     # la orden. Solo sede se puede unir sin perder ordenes compartidas.
     list_select_related = ('sede',)
-    list_display = ['nombre_cliente', 'paquete_mostrado', 'sede', 'estado', 'atencion_col', 'creado_en', 'total']
+    list_display = ['nombre_cliente', 'paquete_mostrado', 'sede', 'estado', 'atencion_col', 'contacto', 'creado_en', 'total']
     exclude = ['paquete']
     readonly_fields = [field.name for field in Orden._meta.fields if field.name != 'paquete'] + [
         'paquete_mostrado', 'total', 'reservas_componentes',
@@ -354,6 +355,23 @@ class OrdenAdmin(ModelAdmin):
         ]
         s = situacion_de_orden(estado_orden=obj.estado, pagos=pagos)
         return '⚠️ Confirmar devolución' if requiere_atencion(s) else ''
+
+    @admin.display(description='Retomar')
+    def contacto(self, obj):
+        if obj.estado != Orden.Estado.AUTORIZANDO or obj.retomar_notificado_en is None:
+            return '—'
+        enlace = enlace_retomar_orden(obj)
+        numero = telefono_marcable(obj.telefono_cliente)
+        if not enlace or not numero:
+            return '—'
+        mensaje = (
+            f'Hola {obj.nombre_cliente}, le escribimos de Sal y Sol. '
+            f'Su reservación sigue abierta y puede retomar el pago aquí: {enlace}'
+        )
+        return format_html(
+            '<a href="https://wa.me/{}?text={}" target="_blank" rel="noopener">WhatsApp</a>',
+            numero, quote(mensaje),
+        )
 
     @admin.action(description='Confirmar devolución de orden (ya se resolvió fuera del sistema)')
     def confirmar_devolucion_orden(self, request, queryset):

@@ -1225,6 +1225,7 @@ class Orden(models.Model):
 
     # Notificación combinada: se manda una sola vez
     notificada_en = models.DateTimeField(null=True, blank=True)
+    retomar_notificado_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-creado_en']

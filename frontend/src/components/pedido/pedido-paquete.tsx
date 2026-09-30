@@ -39,9 +39,10 @@ type Props = {
   tarifasPorEmpresa: Record<string, TrasladosCatalogo['tarifas']>;
   puntosPorEmpresa: Record<string, PuntoEncuentro[]>;
   minDate: string;
+  retomarCheckoutId?: string;
 };
 
-export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate }: Props) {
+export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, retomarCheckoutId }: Props) {
   const { checkout, booking, feedback, pedido: textos, nav, footer, traslados } = dict;
   const motor = paquete.es_cruza_empresa ? 'orden' : 'reserva';
   const [estado, despachar] = usePedidoEstado(paquete, {
@@ -111,6 +112,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     empresaSlug: paquete.empresa_lider_slug,
     paqueteSlug: paquete.slug,
     paqueteNombre: paquete.nombre,
+    retomarCheckoutId,
     formaPago: estado.formaPago,
     codigoPromocional: motor === 'reserva' ? codigoPromocional : undefined,
     captchaToken: () => captcha.current,

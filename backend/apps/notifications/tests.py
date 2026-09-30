@@ -5,6 +5,7 @@ webhook de Stripe ya recibio el dinero cuando esto corre) y que la copia al
 negocio salga oculta y solo cuando esta configurada.
 """
 from datetime import date, time, timedelta
+import uuid
 from decimal import Decimal
 from unittest import mock
 
@@ -503,4 +504,36 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
 
         mock_post.assert_called_once()
         self.assertEqual(mock_wa.call_count, 2)
+
+    @override_settings(FRONTEND_URL='https://frontend.example.test')
+    @mock.patch('apps.payments.views._reservas_info_de_orden')
+    @mock.patch('apps.payments.views.stripe.Webhook.construct_event')
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_webhook_repetido_envia_un_solo_correo_para_retomar(self, post, construct_event, info):
+        from apps.tenancy import scope
+
+        with scope.con_empresa(self.empresa_1):
+            self.orden.checkout_id = uuid.uuid4()
+            self.orden.estado = 'autorizando'
+            self.orden.save(update_fields=['checkout_id', 'estado'])
+        info.return_value = [
+            {'pago': {'estado_pi': 'requires_capture'}},
+            {'pago': {'estado_pi': 'requires_payment_method'}},
+        ]
+        construct_event.return_value = {
+            'id': 'evt_retenida', 'type': 'payment_intent.amount_capturable_updated',
+            'data': {'object': {'metadata': {'orden_id': str(self.orden.pk)}}},
+        }
+        post.return_value.raise_for_status.return_value = None
+        url = f'/api/{self.empresa_1.slug}/stripe/webhook/'
+        for _ in range(2):
+            response = self.client.post(url, data=b'{}', content_type='application/json')
+            self.assertEqual(response.status_code, 200)
+        post.assert_called_once()
+        correo = post.call_args.kwargs['json']
+        self.assertIn(f'/es/reservar?paquete=paquete-notif&amp;sede=sede-notif&amp;retomar={self.orden.checkout_id}',
+                      correo['html'])
+        with scope.con_empresa(self.empresa_1):
+            self.orden.refresh_from_db()
+        self.assertIsNotNone(self.orden.retomar_notificado_en)
 

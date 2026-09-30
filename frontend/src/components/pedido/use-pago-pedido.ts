@@ -20,6 +20,7 @@ type Config = {
   empresaSlug: string;
   paqueteSlug: string;
   paqueteNombre: string;
+  retomarCheckoutId?: string;
   armarPayload: (checkoutId: string) => CrearOrdenInput | ReservaInput;
   formaPago: 'completo' | 'anticipo';
   codigoPromocional?: string;
@@ -86,6 +87,10 @@ export function usePagoPedido(config: Config) {
     } catch {
       guardado = null;
     }
+    if (config.retomarCheckoutId) {
+      guardado = { checkoutId: config.retomarCheckoutId };
+      guardar(guardado);
+    }
     if (guardado?.checkoutId) {
       setCheckoutId(guardado.checkoutId);
       if (config.motor === 'orden' && guardado.ordenId) {
@@ -93,6 +98,7 @@ export function usePagoPedido(config: Config) {
         return;
       }
       if (config.motor === 'reserva') return; // sigue 'resumiendo': el efecto de abajo consulta la reserva
+      if (config.retomarCheckoutId && config.motor === 'orden') return;
     } else {
       const nuevo = crypto.randomUUID();
       guardar({ checkoutId: nuevo });
@@ -121,6 +127,15 @@ export function usePagoPedido(config: Config) {
       cancelado = true;
     };
   }, [config.motor, config.empresaSlug, fase, checkoutId]);
+
+  useEffect(() => {
+    if (config.motor !== 'orden' || fase !== 'resumiendo' || !checkoutId || ordenId !== null) return;
+    let activo = true;
+    getOrden(config.sedeSlug, checkoutId)
+      .then((detalle) => { if (activo) setOrdenId(detalle.id); })
+      .catch(() => { if (activo) setFase('formulario'); });
+    return () => { activo = false; };
+  }, [config.motor, config.sedeSlug, fase, checkoutId, ordenId]);
 
   // Motor 'orden': reanudación. El estado real lo dice el servidor.
   useEffect(() => {
@@ -280,6 +295,11 @@ export function usePagoPedido(config: Config) {
     () => {
       if (cfg.current.motor === 'orden' && ordenId !== null) {
         registrarPendiente(checkoutId, ordenId, true);
+        // La lectura confirma en el servidor la primera retención y permite
+        // enviar el enlace de retomar si el siguiente pago sigue pendiente.
+        if (indice < pagos.length - 1) {
+          void getOrden(cfg.current.sedeSlug, ordenId).catch(() => undefined);
+        }
       }
       if (indice >= pagos.length - 1) {
         // 'orden': hay que capturar todos los pagos autorizados. 'reserva': esperar al webhook.
