@@ -185,7 +185,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         if servicio and empresa and servicio.empresa_id != empresa.id:
             raise serializers.ValidationError({'servicio': 'El servicio no pertenece a esta empresa.'})
 
-        if paquete and not paquete.pide_hora:
+        if (paquete and not paquete.pide_hora) or (servicio and not paquete and not servicio.pide_hora):
             attrs['hora'] = None
         elif attrs.get('hora') is None and not (self.instance and 'hora' not in attrs and self.instance.hora):
             raise serializers.ValidationError({'hora': 'Elige la hora de salida.'})

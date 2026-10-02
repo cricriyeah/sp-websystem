@@ -312,6 +312,15 @@ class Servicio(models.Model):
         null=True, blank=True,
         help_text='Fin de la ventana horaria de salida. Vacío = sin restricción.',
     )
+    pide_hora = models.BooleanField(
+        default=True,
+        help_text='Si está activo, el cliente elige la hora de salida dentro del rango (apertura a cierre). '
+                  'Apágalo en servicios sin hora de salida, como el hospedaje.',
+    )
+    paso_hora_minutos = models.PositiveSmallIntegerField(
+        default=15, validators=[MinValueValidator(5), MaxValueValidator(240)],
+        help_text='Cada cuántos minutos se ofrece una hora dentro del rango (5 a 240).',
+    )
     descripcion = models.TextField(blank=True, default='')
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -347,6 +356,11 @@ class Servicio(models.Model):
             raise ValidationError('Configura las dos horas de la ventana o ninguna.')
         if self.hora_apertura and self.hora_cierre and self.hora_apertura > self.hora_cierre:
             raise ValidationError({'hora_cierre': 'Debe ser ≥ hora_apertura.'})
+        if self.pide_hora and not (self.hora_apertura and self.hora_cierre):
+            raise ValidationError({
+                'hora_apertura': 'Un servicio que pide hora necesita su rango: hora de apertura y de cierre. '
+                                 'Si no tiene hora de salida, apaga "pide hora".',
+            })
 
     def ventana_horaria(self):
         """(apertura, cierre) o None si el servicio no restringe la hora."""

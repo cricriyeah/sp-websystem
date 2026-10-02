@@ -20,6 +20,7 @@ empresa demo Tours Cabo en La Ventana Travel. Hazlo una sola vez, antes de sembr
 
 Uso:  venv/Scripts/python.exe manage.py seed_catalogo_real [--limpiar-demo]
 """
+from datetime import time
 from decimal import ROUND_DOWN, Decimal
 
 from django.conf import settings
@@ -88,6 +89,7 @@ class Command(BaseCommand):
             self._servicios()
             self._hotel_y_traslado_la_ventana()
             self._paquetes_la_ventana()
+            self._horarios_demo()
 
         self.stdout.write(self.style.SUCCESS('Catálogo real sembrado.'))
         self.stdout.write(
@@ -300,3 +302,37 @@ class Command(BaseCommand):
                 paquete.full_clean()
                 paquete.validar_configuracion()
                 self.stdout.write(f'  Paquete la-ventana/{slug}: {"creado" if creado else "ok"} ({precio} MXN / {usd} USD por persona)')
+
+    # ------------------------------------------------------------------ horarios (DEMO)
+    def _horarios_demo(self):
+        """Rango de horas y paso de cada servicio, o sin hora. TODO es placeholder: ninguna empresa ha
+        confirmado su horario real (ver docs/preguntas-cliente-la-ventana-travel.md). Se aplica por
+        UPDATE para que también corrija servicios ya sembrados."""
+        from apps.fleet.models import Servicio
+
+        # (empresa, slug) -> (apertura, cierre, paso en minutos) | None = no pide hora
+        horarios = {
+            ('sal-y-sol', 'pesca-deportiva'): (time(5, 0), time(7, 0), 15),
+            ('transporte-la-paz', 'traslados-la-paz'): (time(6, 0), time(22, 0), 30),
+            ('la-ventana-travel', 'pesca-con-mosca'): (time(6, 0), time(8, 0), 30),
+            ('la-ventana-travel', 'avistamiento-ballenas-orcas'): (time(8, 0), time(10, 0), 60),
+            ('la-ventana-travel', 'hospedaje-la-ventana'): None,
+            ('la-ventana-travel', 'traslado-aeropuerto-la-ventana'): None,
+            ('piratas-adventures', 'safari-marino'): (time(9, 0), time(11, 0), 60),
+            ('piratas-adventures', 'avistamiento-ballenas'): (time(8, 0), time(10, 0), 60),
+            ('piratas-adventures', 'pesca-deportiva'): (time(5, 0), time(7, 0), 15),
+        }
+        for (slug_empresa, slug), horario in horarios.items():
+            empresa = Empresa.objects.filter(slug=slug_empresa).first()
+            if empresa is None:
+                continue
+            with scope.con_empresa(empresa):
+                servicios = Servicio.objects.filter(empresa=empresa, slug=slug)
+                if horario is None:
+                    servicios.update(pide_hora=False)
+                else:
+                    apertura, cierre, paso = horario
+                    servicios.update(
+                        pide_hora=True, hora_apertura=apertura, hora_cierre=cierre, paso_hora_minutos=paso,
+                    )
+        self.stdout.write('  Horarios demo aplicados a los servicios.')

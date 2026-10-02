@@ -50,6 +50,7 @@ class ServicioSerializer(serializers.ModelSerializer):
             'permite_anticipo', 'porcentaje_anticipo',
             'precio_persona_extra', 'precio_persona_extra_usd',
             'personas_incluidas', 'descripcion', 'activo',
+            'pide_hora', 'hora_apertura', 'hora_cierre', 'paso_hora_minutos',
             'personalizaciones',
         ]
 

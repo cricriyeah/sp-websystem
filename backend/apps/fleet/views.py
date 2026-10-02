@@ -145,6 +145,7 @@ class TrasladosView(APIView):
                     'empresa_slug': empresa.slug,
                     'hora_apertura': servicio.hora_apertura.isoformat() if servicio.hora_apertura else None,
                     'hora_cierre': servicio.hora_cierre.isoformat() if servicio.hora_cierre else None,
+                    'paso_hora_minutos': servicio.paso_hora_minutos,
                 },
                 'tarifas': [{
                     'tipo_traslado': tarifa.tipo_traslado,

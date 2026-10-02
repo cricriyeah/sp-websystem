@@ -44,6 +44,7 @@ class ServicioEnumsTests(EmpresaTestCase):
             estrategia_cupo='bajo_demanda',
             estrategia_precio='por_ruta',
             precio_base=Decimal('0.00'),
+            hora_apertura=time(6, 0), hora_cierre=time(22, 0),
         )
         servicio.full_clean()
         servicio.save()
@@ -55,6 +56,7 @@ class ServicioEnumsTests(EmpresaTestCase):
             nombre='Servicio Sin Capacidad',
             slug='servicio-sin-capacidad',
             precio_base=Decimal('100.00'),
+            hora_apertura=time(5, 0), hora_cierre=time(7, 0),
         )
         self.assertIsNone(servicio.capacidad_maxima)
 
