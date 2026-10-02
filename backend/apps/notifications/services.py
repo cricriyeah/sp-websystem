@@ -39,8 +39,13 @@ def _html(valor):
     return escape(str(valor))
 
 
+def hora_texto(reserva):
+    """La hora de salida, o 'por definir' si la reserva no la tiene (paquete que no la pide)."""
+    return reserva.hora.strftime('%H:%M') if reserva.hora else 'por definir'
+
+
 def _asunto(reserva):
-    return f'Reserva confirmada — {reserva.fecha} {reserva.hora:%H:%M}'
+    return f'Reserva confirmada — {reserva.fecha} {hora_texto(reserva)}'
 
 
 def _es_traslado(reserva):
@@ -60,7 +65,7 @@ def _cuerpo_traslado_html(reserva):
         f'<ul>'
         f'<li><strong>Tipo de traslado:</strong> {_html(detalle.get_tipo_traslado_display())}</li>'
         f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
-        f'<li><strong>Hora:</strong> {reserva.hora:%H:%M}</li>'
+        f'<li><strong>Hora:</strong> {hora_texto(reserva)}</li>'
         f'{regreso}'
         f'<li><strong>Personas:</strong> {personas}</li>'
         f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>'
@@ -120,7 +125,7 @@ def _cuerpo_html(reserva):
         f'<p>Hola {_html(reserva.nombre_cliente)}, tu reserva quedo confirmada.</p>'
         f'<ul>'
         f'<li><strong>Fecha:</strong> {reserva.fecha_inicio_paquete}</li>'
-        f'<li><strong>Hora de salida:</strong> {reserva.hora:%H:%M}</li>'
+        f'<li><strong>Hora de salida:</strong> {hora_texto(reserva)}</li>'
         f'<li><strong>Personas:</strong> {reserva.numero_personas}</li>'
         f'{extras}'
         f'<li><strong>Punto de encuentro:</strong> {punto_de_encuentro}</li>'
@@ -170,7 +175,7 @@ def enviar_correo_confirmacion(reserva):
 
 
 def _asunto_asignacion(reserva):
-    return f'Tu capitan y tu panga — {reserva.fecha} {reserva.hora:%H:%M}'
+    return f'Tu capitan y tu panga — {reserva.fecha} {hora_texto(reserva)}'
 
 
 def _cuerpo_asignacion_html(reserva):
@@ -194,7 +199,7 @@ def _cuerpo_asignacion_html(reserva):
         f'<li><strong>Capitan:</strong> {_html(reserva.capitan.nombre)}</li>'
         f'<li><strong>Panga:</strong> {_html(reserva.embarcacion.nombre)}</li>'
         f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
-        f'<li><strong>Hora de salida:</strong> {reserva.hora:%H:%M}</li>'
+        f'<li><strong>Hora de salida:</strong> {hora_texto(reserva)}</li>'
         f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'
         f'</ul>'
         f'{pendiente}'
@@ -252,7 +257,7 @@ def enviar_whatsapp_confirmacion(reserva):
     parametros = [
         reserva.nombre_cliente,
         str(reserva.fecha),
-        f'{reserva.hora:%H:%M}',
+        f'{hora_texto(reserva)}',
         str(reserva.numero_personas),
     ]
 
@@ -312,7 +317,7 @@ def _cuerpo_orden_html(orden, reservas):
                 f'<li><strong>Traslado ({_html(tipo)}):</strong>'
                 f'<ul>'
                 f'<li><strong>Fecha:</strong> {r.fecha}</li>'
-                f'<li><strong>Hora:</strong> {r.hora:%H:%M}</li>'
+                f'<li><strong>Hora:</strong> {hora_texto(r)}</li>'
                 f'{regreso}'
                 f'<li><strong>Personas:</strong> {personas}</li>'
                 f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>'
@@ -324,7 +329,7 @@ def _cuerpo_orden_html(orden, reservas):
                 f'<li><strong>{_html(nombre_servicio)}:</strong>'
                 f'<ul>'
                 f'<li><strong>Fecha:</strong> {r.fecha}</li>'
-                f'<li><strong>Hora:</strong> {r.hora:%H:%M}</li>'
+                f'<li><strong>Hora:</strong> {hora_texto(r)}</li>'
                 f'<li><strong>Personas:</strong> {r.numero_personas}</li>'
                 f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'
                 f'</ul></li>'

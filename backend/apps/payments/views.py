@@ -646,7 +646,9 @@ class CrearOrdenView(APIView):
                             'numero_personas': f'"{servicio.nombre}" incluye {ps["personas_incluidas"]} lugar(es) en este paquete.',
                         })
                     personas_pedido.append((servicio, personas))
-                    hora = comp_d.get('hora') or request.data.get('hora', '07:00:00')
+                    hora = (
+                        comp_d.get('hora') or request.data.get('hora', '07:00:00')
+                    ) if paquete.pide_hora else None
 
                     with scope.con_empresa(empresa):
                         reserva = None

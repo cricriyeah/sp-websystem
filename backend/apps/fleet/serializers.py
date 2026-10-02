@@ -84,7 +84,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'sede', 'sede_slug', 'empresa_lider', 'empresa_lider_slug',
             'nombre', 'slug', 'descripcion',
-            'precio_ancla', 'precio_ancla_usd', 'precio_por_persona', 'regla_precio', 'activo',
+            'precio_ancla', 'precio_ancla_usd', 'precio_por_persona', 'pide_hora', 'regla_precio', 'activo',
             'permite_anticipo', 'porcentaje_anticipo', 'es_cruza_empresa',
             'servicios_asociados', 'noches',
         ]

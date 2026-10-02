@@ -101,6 +101,9 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     # viejo mal copiado no puede impedir que alguien reserve.
     ref = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
+    # Opcional en el esquema; `validate` la exige salvo en un paquete que no la pide.
+    hora = serializers.TimeField(required=False, allow_null=True)
+
     servicio = SlugOrNullRelatedField(
         slug_field='slug', queryset=Servicio.objects.filter(activo=True), required=False, allow_null=True,
     )
@@ -181,6 +184,11 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
         if servicio and empresa and servicio.empresa_id != empresa.id:
             raise serializers.ValidationError({'servicio': 'El servicio no pertenece a esta empresa.'})
+
+        if paquete and not paquete.pide_hora:
+            attrs['hora'] = None
+        elif attrs.get('hora') is None and not (self.instance and 'hora' not in attrs and self.instance.hora):
+            raise serializers.ValidationError({'hora': 'Elige la hora de salida.'})
 
         personalizaciones = attrs.get('personalizaciones', [])
 

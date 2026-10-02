@@ -280,7 +280,7 @@ class Command(BaseCommand):
                     sede=sede, slug=slug,
                     defaults=dict(
                         empresa_lider=empresa, nombre=nombre, precio_ancla=precio,
-                        precio_ancla_usd=usd, precio_por_persona=True, activo=True,
+                        precio_ancla_usd=usd, precio_por_persona=True, pide_hora=False, activo=True,
                         descripcion=f'{noches} noches de hospedaje, traslado redondo de aeropuerto y '
                                     f'avistamiento de ballenas y orcas del día 2 al {noches}.',
                     ),
@@ -294,6 +294,9 @@ class Command(BaseCommand):
                         paquete=paquete, servicio=servicio,
                         defaults=dict(orden=orden, personas_incluidas=10, **extra),
                     )
+                if paquete.pide_hora:
+                    paquete.pide_hora = False
+                    paquete.save(update_fields=['pide_hora'])
                 paquete.full_clean()
                 paquete.validar_configuracion()
                 self.stdout.write(f'  Paquete la-ventana/{slug}: {"creado" if creado else "ok"} ({precio} MXN / {usd} USD por persona)')

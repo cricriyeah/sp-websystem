@@ -83,7 +83,7 @@ def validar_ventana_salida(value):
 
 def salida_aware(fecha, hora):
     """Momento de salida como datetime con zona (TIME_ZONE = America/Mazatlan)."""
-    return timezone.make_aware(datetime.combine(fecha, hora))
+    return timezone.make_aware(datetime.combine(fecha, hora or datetime.min.time()))
 
 
 class CupoDiario(models.Model):
@@ -431,7 +431,10 @@ class Reserva(models.Model):
         null=True, blank=True,
         help_text='Fecha de check-out / fin de servicio. Vacio en servicios de un solo dia.'
     )
-    hora = models.TimeField()
+    hora = models.TimeField(
+        null=True, blank=True,
+        help_text='Hora de salida. Vacía en un paquete que no la pide: la acuerda el capitán durante la estadía.',
+    )
     numero_personas = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(MIN_PERSONAS)]
     )
@@ -610,7 +613,7 @@ class Reserva(models.Model):
         ordering = ['-fecha', '-hora']
 
     def __str__(self):
-        return f'{self.nombre_cliente} — {self.fecha} {self.hora}'
+        return f'{self.nombre_cliente} — {self.fecha} {self.hora or ""}'.rstrip()
 
     @property
     def noches(self):

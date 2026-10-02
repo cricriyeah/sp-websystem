@@ -55,9 +55,13 @@ class SoloEnPaqueteTests(TestCase):
 
     def test_reserva_directa_no_acepta_el_servicio(self):
         campo = ReservaCheckoutSerializer(context={'empresa': self.empresa}).fields['servicio']
-        self.assertNotIn(self.traslado, campo.queryset)
-        self.assertIn(self.suelto, campo.queryset)
+        with scope.con_empresa(self.empresa):
+            disponibles = list(campo.queryset)
+        self.assertIn(self.suelto, disponibles)
+        self.assertNotIn(self.traslado, disponibles)
 
     def test_checkout_de_traslado_no_acepta_el_servicio(self):
         campo = TrasladoCheckoutSerializer(context={'empresa': self.empresa}).fields['servicio']
-        self.assertNotIn(self.traslado, campo.queryset)
+        with scope.con_empresa(self.empresa):
+            disponibles = list(campo.queryset)
+        self.assertEqual(disponibles, [])

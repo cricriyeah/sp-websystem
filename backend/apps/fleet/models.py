@@ -595,6 +595,11 @@ class Paquete(models.Model):
         help_text='Si está activo, el precio ancla (MXN y USD) es el de UNA persona y el total es '
                   'precio × personas. Apagado, el precio ancla es un total fijo del paquete.',
     )
+    pide_hora = models.BooleanField(
+        default=True,
+        help_text='Si está activo, el cliente elige la hora de salida al reservar. Apágalo en un paquete con '
+                  'hospedaje donde la hora la acuerda el capitán durante la estadía: la reserva queda sin hora.',
+    )
     regla_precio = models.CharField(max_length=50, default='precio_ancla')
     permite_anticipo = models.BooleanField(
         default=True,
