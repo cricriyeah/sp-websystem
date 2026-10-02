@@ -976,9 +976,10 @@ export function CheckoutView({
   const colapsado2 = pasosVisibles > 2 && pasoEditando !== 2;
   const colapsado3 = locked || (extrasConfirmado && pasoEditando !== 3);
 
+  const personasResumen = `${people} ${people === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`;
   const resumenPaso1 = tieneHospedaje
-    ? `${formatDay(dayDate, lang)} → ${formatDay(fromLocalISODate(fechaSalida), lang)} · ${formatHour(time)} · ${people} ${checkout.peopleLabel.toLowerCase()}`
-    : `${formatDay(dayDate, lang)} · ${formatHour(time)} · ${people} ${checkout.peopleLabel.toLowerCase()}`;
+    ? `${formatDay(dayDate, lang)} → ${formatDay(fromLocalISODate(fechaSalida), lang)} · ${formatHour(time)} · ${personasResumen}`
+    : `${formatDay(dayDate, lang)} · ${formatHour(time)} · ${personasResumen}`;
   const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
 
   // El stepper de arriba cuenta el pago como paso 4 en cuanto el paso 3 se

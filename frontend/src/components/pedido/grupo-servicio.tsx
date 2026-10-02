@@ -18,6 +18,9 @@ type Props = {
   lang: Locale;
   dict: Dictionary;
   componente: PaqueteServicioCatalogo;
+  precioPorPersona: boolean;
+  esActividadPrincipal: boolean;
+  personasMax: number;
   estado: ComponentePedido;
   conEncabezadoEmpresa: boolean;
   nombreEmpresa: string;
@@ -38,7 +41,7 @@ type Props = {
 };
 
 export function GrupoServicio({
-  lang, dict, componente, estado, conEncabezadoEmpresa, nombreEmpresa, moneda,
+  lang, dict, componente, precioPorPersona, esActividadPrincipal, personasMax, estado, conEncabezadoEmpresa, nombreEmpresa, moneda,
   inicio, noches, salida, minDate, puntos, mostrarInicio, estadoTarjeta,
   onAccion, onCompletar, onInicio, onPersonas, onExtras, onTraslado,
 }: Props) {
@@ -54,9 +57,12 @@ export function GrupoServicio({
   const formatoFecha = (iso: string) => new Intl.DateTimeFormat(intlLocale(lang), {
     day: 'numeric', month: 'long', year: 'numeric',
   }).format(fromLocalISODate(iso));
+  const personasTexto = estado.personas === 1 ? pedido.forOne : pedido.forPeople.replace('{n}', String(estado.personas));
+  const esLogistica = precioPorPersona && !esActividadPrincipal &&
+    (servicio.tipo_servicio === 'hospedaje' || servicio.tipo_servicio === 'transporte');
   const resumen = [
     conEncabezadoEmpresa ? pedido.groupOf.replace('{empresa}', nombreEmpresa) : null,
-    `${estado.personas} ${checkout.peopleLabel.toLowerCase()}`,
+    precioPorPersona ? personasTexto : `${estado.personas} ${estado.personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`,
     mostrarInicio && inicio ? formatoFecha(inicio) : null,
   ].filter(Boolean).join(' · ');
 
@@ -94,20 +100,36 @@ export function GrupoServicio({
         </div>
       )}
 
-      <div className="border-t border-border pt-4">
-        <PeopleStepper
-          label={checkout.peopleLabel}
-          maxNotice={booking.maxPeopleNotice}
-          value={estado.personas}
-          onChange={onPersonas}
-          maxPeople={componente.personas_incluidas}
-          minPeople={1}
-          disabled={bloqueado}
-        />
-        <p className="px-6 text-xs text-muted">
-          {pedido.peopleIncluded.replace('{n}', String(componente.personas_incluidas))}
-        </p>
-      </div>
+      {esLogistica ? (
+        <div className="border-t border-border pt-4">
+          <PeopleStepper
+            label={servicio.tipo_servicio === 'hospedaje' ? pedido.stayPeopleQuestion : pedido.transferPeopleQuestion}
+            maxNotice={pedido.logisticsMaxNotice.replace('{max}', String(personasMax))}
+            value={estado.personas}
+            onChange={onPersonas}
+            maxPeople={personasMax}
+            minPeople={1}
+            disabled={bloqueado}
+          />
+        </div>
+      ) : precioPorPersona ? (
+        <p className="border-t border-border pt-4 text-sm text-muted">{personasTexto}</p>
+      ) : (
+        <div className="border-t border-border pt-4">
+          <PeopleStepper
+            label={checkout.peopleLabel}
+            maxNotice={booking.maxPeopleNotice}
+            value={estado.personas}
+            onChange={onPersonas}
+            maxPeople={componente.personas_incluidas}
+            minPeople={1}
+            disabled={bloqueado}
+          />
+          <p className="px-6 text-xs text-muted">
+            {pedido.peopleIncluded.replace('{n}', String(componente.personas_incluidas))}
+          </p>
+        </div>
+      )}
 
       {servicio.personalizaciones.length > 0 && (
         <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5">

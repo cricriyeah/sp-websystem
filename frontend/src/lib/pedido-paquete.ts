@@ -1,4 +1,4 @@
-import type { Moneda, PaqueteCatalogo, TipoTraslado, Zona } from './api';
+import type { Moneda, PaqueteCatalogo, PaqueteServicioCatalogo, TipoTraslado, Zona } from './api';
 import { totalPersonalizaciones, type SeleccionPersonalizacion } from './personalizaciones';
 import { precioTarifa, resolverTarifa, type Tarifa } from './tarifa-transporte';
 
@@ -17,6 +17,17 @@ export type SeleccionComponente = {
 export type CargoEmpresa = { empresaSlug: string; monto: number; extras: number };
 export type ResultadoPedido = { cargos: CargoEmpresa[]; total: number };
 
+/** El mismo componente operativo que usa el payload para numero_personas. */
+export function servicioPrincipalPaquete(paquete: PaqueteCatalogo): PaqueteServicioCatalogo | undefined {
+  const ordenados = [...paquete.servicios_asociados].sort((a, b) => a.orden - b.orden);
+  return ordenados.find((c) => c.servicio.estrategia_cupo === 'por_recurso_dia') ?? ordenados[0];
+}
+
+/** El grupo principal se limita por la capacidad de la actividad. */
+export function maxPersonasPaquete(paquete: PaqueteCatalogo): number {
+  return servicioPrincipalPaquete(paquete)?.personas_incluidas ?? 0;
+}
+
 const centavos = (n: number) => Math.round(n * 100);
 
 function precioAncla(paquete: PaqueteCatalogo, moneda: Moneda): number | null {
@@ -33,6 +44,15 @@ export function calcularPedido(
 ): ResultadoPedido | null {
   const ancla = precioAncla(paquete, moneda);
   if (ancla === null) return null;
+
+  const principal = paquete.precio_por_persona ? servicioPrincipalPaquete(paquete) : undefined;
+  const personas = principal ? selecciones[principal.servicio.slug]?.personas : 1;
+  if (paquete.precio_por_persona && (!principal || !Number.isInteger(personas) || personas < 1 ||
+    paquete.servicios_asociados.some((c) => {
+      const cantidad = selecciones[c.servicio.slug]?.personas;
+      return !Number.isInteger(cantidad) || cantidad < 1 || cantidad > personas;
+    }))) return null;
+  const totalAncla = centavos(ancla) * personas;
 
   const lider = paquete.empresa_lider_slug;
   const extrasPorEmpresa = new Map<string, number>();
@@ -66,7 +86,7 @@ export function calcularPedido(
   }
 
   const fijos = [...fijosPorEmpresa.values()].reduce((suma, c) => suma + c, 0);
-  const residuo = centavos(ancla) - fijos;
+  const residuo = totalAncla - fijos;
   if (residuo < 0) return null;
 
   const cargos: CargoEmpresa[] = orden

@@ -10,6 +10,7 @@ import { CheckoutStepper } from '@/components/checkout-stepper';
 import { ErrorBlock } from '@/components/error-block';
 import { FieldError } from '@/components/field-error';
 import { SiteHeader } from '@/components/site-header';
+import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
@@ -19,7 +20,7 @@ import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
 import { intlLocale } from '@/lib/intl';
-import { calcularPedido, montoInicial, usdDisponible } from '@/lib/pedido-paquete';
+import { calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, usdDisponible } from '@/lib/pedido-paquete';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
 import { erroresPersonalizaciones } from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
@@ -58,6 +59,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const [errorWaiver, setErrorWaiver] = useState(false);
   const [erroresContacto, setErroresContacto] = useState<Partial<Record<'fullName' | 'phone' | 'email', string>>>({});
   const [errorDetalles, setErrorDetalles] = useState('');
+  const [topeIntentado, setTopeIntentado] = useState(false);
   const [codigoPromocional, setCodigoPromocional] = useState('');
   const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>('idle');
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
@@ -81,6 +83,16 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   );
   const pedido = calcularPedido(paquete, selecciones, estado.moneda, tarifasPorEmpresa);
   const conUsd = usdDisponible(paquete, tarifasPorEmpresa);
+  const maxPersonas = paquete.precio_por_persona ? maxPersonasPaquete(paquete) : null;
+  const slugPrincipal = paquete.precio_por_persona ? servicioPrincipalPaquete(paquete)?.servicio.slug : undefined;
+  const primerServicio = slugPrincipal ?? paquete.servicios_asociados[0]?.servicio.slug;
+  const personasPaquete = primerServicio ? estado.componentes[primerServicio]?.personas ?? 1 : 1;
+  const anclaCruda = estado.moneda === 'USD' ? paquete.precio_ancla_usd : paquete.precio_ancla;
+  const anclaPorPersona = formatearPrecio(anclaCruda === null ? null : Number(anclaCruda), estado.moneda);
+  const precioPersonas = (personasPaquete === 1 ? textos.peoplePriceOne : textos.peoplePrice)
+    .replace('{n}', String(personasPaquete))
+    .replace('{precio}', anclaPorPersona)
+    .replace('{price}', anclaPorPersona);
   const cargos = pedido?.cargos ?? [];
   const cantidadCargos = cargos.length;
   const nombreEmpresa = (slug: string) => slug === paquete.empresa_lider_slug
@@ -94,6 +106,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     : 0;
   const totalConDescuento = pedido ? pedido.total - descuento : null;
   const total = formatearPrecio(totalConDescuento, estado.moneda);
+  const totalConMoneda = totalConDescuento === null ? null : `${total} ${estado.moneda}`;
+  const totalMovil = paquete.precio_por_persona ? totalConMoneda ?? undefined : undefined;
   const ahora = totalConDescuento !== null ? formatearPrecio(
     paquete.permite_anticipo
       ? montoInicial(totalConDescuento, estado.formaPago, paquete.porcentaje_anticipo)
@@ -103,7 +117,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const ayudaMensaje = mensajeDeAyuda(feedback.helpMessage, {
     fecha: estado.inicio ?? minDate,
     hora: estado.hora,
-    personas: paquete.servicios_asociados[0] ? estado.componentes[paquete.servicios_asociados[0].servicio.slug]?.personas ?? 1 : 1,
+    personas: personasPaquete,
   });
 
   const pago = usePagoPedido({
@@ -240,7 +254,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 <span>{item.servicio.nombre}</span>
                 <span className="text-muted">
                   {formatearFecha(fechaDeComponente(estado.inicio ?? minDate, item.dia_estancia))}
-                  {' · '}{estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas} {checkout.peopleLabel.toLowerCase()}
+                  {' · '}{estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas}{' '}
+                  {(estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas) === 1
+                    ? checkout.peopleUnit.one : checkout.peopleUnit.other}
                 </span>
               </li>
             ))}
@@ -283,7 +299,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     return (
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
-        <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} />
+        <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} totalMovil={totalMovil} />
         <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
           <AvisoFallo
             titulo={titulo}
@@ -323,14 +339,17 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       estado: (indice < pago.indice ? 'hecho' : indice === pago.indice ? 'actual' : 'pendiente') as 'hecho' | 'actual' | 'pendiente',
     }));
     const etiquetaBotonPago = n === 1
-      ? textos.payButtonSingle.replace('{amount}', monto)
+      ? paquete.precio_por_persona
+        ? (personasPaquete === 1 ? textos.payOne : textos.payPeople.replace('{n}', String(personasPaquete)))
+          .replace('{amount}', `${monto} ${estado.moneda}`)
+        : textos.payButtonSingle.replace('{amount}', monto)
       : textos.payButton.replace('{amount}', monto).replace('{empresa}', etiqueta)
         .replace('{n}', String(pago.indice + 1)).replace('{total}', String(n));
 
     return (
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
-        <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} />
+        <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} totalMovil={totalMovil} />
         <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
           <StripePanel
             key={pasoPago.empresaSlug}
@@ -384,8 +403,41 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           </fieldset>
         )}
       </div>
-      <CheckoutStepper stepper={checkout.stepper} actual={paso} steps={pasos} />
+      <CheckoutStepper stepper={checkout.stepper} actual={paso} steps={pasos} totalMovil={totalMovil} />
       <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 pt-6 pb-24 sm:px-8">
+        {paquete.precio_por_persona && maxPersonas !== null && (
+          <section className="rounded-xl border border-border bg-card p-5 sm:p-6" aria-label={textos.peopleQuestion}>
+            <p className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              <span>{anclaPorPersona}</span>
+              <span className="whitespace-nowrap">{estado.moneda} {textos.perPerson}</span>
+            </p>
+            <div className="mt-4 rounded-lg border border-border bg-surface">
+              <PeopleStepper label={textos.peopleQuestion}
+                maxNotice={(tieneWhatsapp ? textos.morePeople : textos.morePeopleOffline).replace('{max}', String(maxPersonas))}
+                value={personasPaquete} maxPeople={maxPersonas} minPeople={1}
+                onChange={(valor) => {
+                  if (valor < maxPersonas) setTopeIntentado(false);
+                  if (slugPrincipal) despachar({ tipo: 'personasPaquete', slugPrincipal, valor });
+                }}
+                onMaxAttempt={() => setTopeIntentado(true)} />
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3 text-sm text-muted">
+              <span>{precioPersonas}</span>
+              <span className="font-medium text-foreground">{textos.totalLabel} {totalConMoneda ?? '—'}</span>
+            </div>
+            {topeIntentado && (tieneWhatsapp ? (
+              <a href={whatsappHref(`${textos.morePeople.replace('{max}', String(maxPersonas))} ${paquete.nombre}`)}
+                target="_blank" rel="noopener noreferrer"
+                className="mt-3 inline-block text-sm font-medium text-accent underline underline-offset-2">
+                {textos.morePeople.replace('{max}', String(maxPersonas))}
+              </a>
+            ) : (
+              <p className="mt-3 text-sm text-muted">
+                {textos.morePeopleOffline.replace('{max}', String(maxPersonas))}
+              </p>
+            ))}
+          </section>
+        )}
         <CheckoutSectionCard
           title={checkout.contactHeadline}
           estado={paso === 1 ? 'activo' : datosEditando ? 'editando' : 'completado'}
@@ -451,6 +503,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               return (
                 <GrupoServicio key={componente.id}
                   lang={lang} dict={dict} componente={componente}
+                  precioPorPersona={paquete.precio_por_persona}
+                  esActividadPrincipal={slug === slugPrincipal} personasMax={personasPaquete}
                   estado={estado.componentes[slug]}
                   conEncabezadoEmpresa={cantidadCargos > 1}
                   nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}
@@ -460,7 +514,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                   onAccion={() => setGrupoEditando((actual) => actual === indice ? null : indice)}
                   onCompletar={() => confirmarGrupo(indice)}
                   onInicio={(valor) => despachar({ tipo: 'inicio', valor })}
-                  onPersonas={(valor) => despachar({ tipo: 'personas', slug, valor })}
+                  onPersonas={(valor) => despachar(paquete.precio_por_persona && slugPrincipal
+                    ? { tipo: 'personasLogistica', slug, slugPrincipal, valor }
+                    : { tipo: 'personas', slug, valor })}
                   onExtras={(valor) => despachar({ tipo: 'extras', slug, valor })}
                   onTraslado={(cambios) => despachar({ tipo: 'traslado', slug, cambios })}
                 />

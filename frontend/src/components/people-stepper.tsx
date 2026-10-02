@@ -9,6 +9,7 @@ type PeopleStepperProps = {
   label: string;
   /** Aviso que aparece al intentar pasar del maximo. */
   maxNotice: string;
+  onMaxAttempt?: () => void;
   /** `null` = todavia no contesta. Se muestra la pregunta en vez de una cifra. */
   value: number | null;
   onChange: (value: number) => void;
@@ -29,6 +30,7 @@ type PeopleStepperProps = {
 export function PeopleStepper({
   label,
   maxNotice,
+  onMaxAttempt,
   value,
   onChange,
   disabled,
@@ -57,6 +59,7 @@ export function PeopleStepper({
     }
     const siguiente = value + delta;
     if (siguiente > max) {
+      onMaxAttempt?.();
       setShowMaxNotice(true);
       if (noticeTimeout.current) clearTimeout(noticeTimeout.current);
       noticeTimeout.current = setTimeout(() => setShowMaxNotice(false), 2500);

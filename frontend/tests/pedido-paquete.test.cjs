@@ -94,3 +94,61 @@ test('anticipo: porcentaje del total; completo es el total', () => {
   assert.equal(p.montoInicial(9500, 'completo', 50), 9500);
   assert.equal(p.montoInicial(1000, 'anticipo', 33), 330);
 });
+
+
+test('paquete por persona MXN: 45,000 por 2 suma 90,000 y reparte cargos con extras', () => {
+  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla: '45000.00' };
+  const r = p.calcularPedido(paquete, SELECCIONES, 'MXN', TARIFAS);
+  assert.equal(r.total, 90550);
+  assert.deepEqual(r.cargos.map((c) => c.monto), [88900, 1650]);
+  assert.equal(r.cargos.reduce((sum, c) => sum + c.monto, 0), r.total);
+  const sinExtras = { pesca: { personas: 2, extras: [] }, traslado: { ...SELECCIONES.traslado, extras: [] } };
+  assert.equal(p.calcularPedido(paquete, sinExtras, 'MXN', TARIFAS).total, 90000);
+});
+
+test('paquete por persona USD: 2,500 por 3 suma 7,500', () => {
+  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla_usd: '2500.00' };
+  const selecciones = { pesca: { personas: 3, extras: [] }, traslado: { ...SELECCIONES.traslado, personas: 3, extras: [] } };
+  const r = p.calcularPedido(paquete, selecciones, 'USD', TARIFAS);
+  assert.equal(r.total, 7500);
+  assert.deepEqual(r.cargos.map((c) => c.monto), [7410, 90]);
+});
+
+test('precio fijo explícito mantiene el total aunque cambien las personas', () => {
+  const paquete = { ...PAQUETE, precio_por_persona: false };
+  const r = p.calcularPedido(paquete, SELECCIONES, 'MXN', TARIFAS);
+  assert.deepEqual(r.cargos.map((c) => c.monto), [6400, 1650]);
+  assert.equal(r.total, 8050);
+});
+
+test('el tope principal es el de la actividad aunque hospedaje y traslado admitan menos', () => {
+  const paquete = { ...PAQUETE, servicios_asociados: [
+    { ...servicio('hotel', 'sal-y-sol', 'hospedaje', []), orden: 1, personas_incluidas: 2 },
+    { ...PAQUETE.servicios_asociados[0], orden: 2, personas_incluidas: 4, servicio: { ...PAQUETE.servicios_asociados[0].servicio, estrategia_cupo: 'por_recurso_dia' } },
+    { ...PAQUETE.servicios_asociados[1], orden: 3, personas_incluidas: 1 },
+  ] };
+  assert.equal(p.maxPersonasPaquete(paquete), 4);
+  assert.equal(p.servicioPrincipalPaquete(paquete).servicio.slug, 'pesca');
+});
+
+test('precio por persona toma la actividad, no el primer servicio, y permite logística menor', () => {
+  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla: '45000.00', servicios_asociados: [
+    { ...servicio('hotel', 'sal-y-sol', 'hospedaje', []), orden: 1, personas_incluidas: 1 },
+    { ...PAQUETE.servicios_asociados[0], orden: 2, servicio: { ...PAQUETE.servicios_asociados[0].servicio, estrategia_cupo: 'por_recurso_dia' } },
+    { ...PAQUETE.servicios_asociados[1], orden: 3 },
+  ] };
+  const completo = { hotel: { personas: 2, extras: [] }, pesca: { personas: 2, extras: [] },
+    traslado: { ...SELECCIONES.traslado, personas: 2, extras: [] } };
+  const reducido = { ...completo, hotel: { personas: 1, extras: [] },
+    traslado: { ...completo.traslado, personas: 1 } };
+  assert.equal(p.calcularPedido(paquete, completo, 'MXN', TARIFAS).total, 90000);
+  assert.equal(p.calcularPedido(paquete, reducido, 'MXN', TARIFAS).total, 90000);
+  assert.equal(p.calcularPedido(paquete, reducido, 'MXN', TARIFAS).cargos.reduce((sum, c) => sum + c.monto, 0), 90000);
+  assert.equal(p.calcularPedido(paquete, { ...reducido, traslado: { ...reducido.traslado, personas: 3 } }, 'MXN', TARIFAS), null);
+});
+
+test('ancla USD de 2,916.67 por tres conserva el centavo: 8,750.01', () => {
+  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla_usd: '2916.67' };
+  const selecciones = { pesca: { personas: 3, extras: [] }, traslado: { ...SELECCIONES.traslado, personas: 1, extras: [] } };
+  assert.equal(p.calcularPedido(paquete, selecciones, 'USD', TARIFAS).total, 8750.01);
+});

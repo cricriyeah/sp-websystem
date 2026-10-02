@@ -42,3 +42,49 @@ test('contacto, inicio, moneda y forma de pago', () => {
   s = e.reducirPedido(s, { tipo: 'formaPago', valor: 'anticipo' });
   assert.deepEqual([s.contacto.fullName, s.contacto.phone, s.inicio, s.moneda, s.formaPago], ['Ana', '', '2026-10-15', 'USD', 'anticipo']);
 });
+
+
+test('paquete por persona inicia logística igual a la actividad, sin afectar el fijo', () => {
+  const s = e.estadoInicial({ ...PAQUETE, precio_por_persona: true }, { moneda: 'MXN', puntoInicial: () => 7 });
+  assert.deepEqual(Object.values(s.componentes).map((c) => c.personas), [3, 3]);
+  assert.deepEqual(Object.values(inicial().componentes).map((c) => c.personas), [3, 2]);
+});
+
+test('la logística puede bajar sin cambiar las personas de actividad', () => {
+  const previo = e.estadoInicial({ ...PAQUETE, precio_por_persona: true }, { moneda: 'MXN', puntoInicial: () => 7 });
+  const s = e.reducirPedido(previo, { tipo: 'personasLogistica', slug: 'traslado', slugPrincipal: 'pesca', valor: 1 });
+  assert.deepEqual([s.componentes.pesca.personas, s.componentes.traslado.personas], [3, 1]);
+  assert.deepEqual(s.componentes.traslado.traslado, previo.componentes.traslado.traslado);
+});
+
+test('al bajar actividad se ajusta hacia abajo la logística, sin subir la ya reducida', () => {
+  const previo = e.estadoInicial({ ...PAQUETE, precio_por_persona: true }, { moneda: 'MXN', puntoInicial: () => 7 });
+  const reducido = e.reducirPedido(previo, { tipo: 'personasLogistica', slug: 'traslado', slugPrincipal: 'pesca', valor: 1 });
+  const s = e.reducirPedido(reducido, { tipo: 'personasPaquete', slugPrincipal: 'pesca', valor: 2 });
+  assert.deepEqual([s.componentes.pesca.personas, s.componentes.traslado.personas], [2, 1]);
+  const menor = e.reducirPedido(s, { tipo: 'personasPaquete', slugPrincipal: 'pesca', valor: 1 });
+  assert.deepEqual([menor.componentes.pesca.personas, menor.componentes.traslado.personas], [1, 1]);
+  assert.deepEqual(s.componentes.pesca.extras, previo.componentes.pesca.extras);
+});
+
+test('la logística no puede superar a la actividad ni cambiar su número', () => {
+  const previo = e.estadoInicial({ ...PAQUETE, precio_por_persona: true }, { moneda: 'MXN', puntoInicial: () => 7 });
+  const s = e.reducirPedido(previo, { tipo: 'personasPaquete', slugPrincipal: 'pesca', valor: 2 });
+  const ajustado = e.reducirPedido(s, { tipo: 'personasLogistica', slug: 'traslado', slugPrincipal: 'pesca', valor: 4 });
+  assert.deepEqual([ajustado.componentes.pesca.personas, ajustado.componentes.traslado.personas], [2, 2]);
+});
+
+
+test('hospedaje y traslado se limitan por la actividad aunque figuren antes o tengan menor cupo propio', () => {
+  const paquete = { precio_por_persona: true, servicios_asociados: [
+    { orden: 1, personas_incluidas: 1, servicio: { slug: 'hotel', tipo_servicio: 'hospedaje', estrategia_cupo: 'por_noche', personalizaciones: [] } },
+    { orden: 2, personas_incluidas: 4, servicio: { slug: 'pesca', tipo_servicio: 'pesca', estrategia_cupo: 'por_recurso_dia', personalizaciones: [] } },
+    { orden: 3, personas_incluidas: 2, servicio: { slug: 'traslado', tipo_servicio: 'transporte', estrategia_cupo: 'bajo_demanda', personalizaciones: [] } },
+  ] };
+  let s = e.estadoInicial(paquete, { moneda: 'MXN', puntoInicial: () => 7 });
+  assert.deepEqual([s.componentes.hotel.personas, s.componentes.pesca.personas, s.componentes.traslado.personas], [4, 4, 4]);
+  s = e.reducirPedido(s, { tipo: 'personasLogistica', slug: 'hotel', slugPrincipal: 'pesca', valor: 2 });
+  s = e.reducirPedido(s, { tipo: 'personasLogistica', slug: 'traslado', slugPrincipal: 'pesca', valor: 3 });
+  s = e.reducirPedido(s, { tipo: 'personasPaquete', slugPrincipal: 'pesca', valor: 1 });
+  assert.deepEqual([s.componentes.hotel.personas, s.componentes.pesca.personas, s.componentes.traslado.personas], [1, 1, 1]);
+});

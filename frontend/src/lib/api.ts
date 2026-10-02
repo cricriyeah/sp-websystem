@@ -339,6 +339,7 @@ export type PaqueteCatalogo = {
   descripcion: string;
   precio_ancla: string;
   precio_ancla_usd: string | null;
+  precio_por_persona: boolean;
   regla_precio: string;
   permite_anticipo: boolean; // efectivo: false si el paquete es de dos empresas
   porcentaje_anticipo: number;

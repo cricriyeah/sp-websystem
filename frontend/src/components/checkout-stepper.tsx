@@ -7,6 +7,8 @@ type CheckoutStepperProps = {
   actual: number;
   /** Pasos personalizados. Si no se especifican, se usan los 4 por omisión. */
   steps?: string[];
+  /** Total compacto en móvil para paquetes por persona. */
+  totalMovil?: string;
 };
 
 /**
@@ -21,7 +23,7 @@ type CheckoutStepperProps = {
  * sin ella fuera de cuadro el cliente pierde la unica senal de "cuanto falta"
  * que tiene.
  */
-export function CheckoutStepper({ stepper, actual, steps }: CheckoutStepperProps) {
+export function CheckoutStepper({ stepper, actual, steps, totalMovil }: CheckoutStepperProps) {
   const pasos = steps ?? [stepper.trip, stepper.contact, stepper.extras, stepper.payment];
   const totalPasos = pasos.length;
 
@@ -43,12 +45,13 @@ export function CheckoutStepper({ stepper, actual, steps }: CheckoutStepperProps
               );
             })}
           </div>
-          <p className="text-xs font-medium text-muted">
+          <p className={totalMovil ? "min-w-0 flex-1 truncate text-xs font-medium text-muted" : "text-xs font-medium text-muted"}>
             {stepper.stepOf
               .replace('{current}', String(actual))
               .replace('{total}', String(totalPasos))}{' '}
             <span className="text-foreground">· {pasos[actual - 1]}</span>
           </p>
+          {totalMovil && <span className="shrink-0 text-xs font-semibold text-foreground">{totalMovil}</span>}
         </div>
       </div>
 
