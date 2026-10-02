@@ -55,6 +55,13 @@ test('la orden manda un inicio, personas y extras por componente, sin fechas por
   assert.equal('fecha' in t, false);
 });
 
+test('la hora elegida para pescar no se envia al traslado', () => {
+  const r = p.armarPayloadOrden({ ...BASE, hora: '05:00', paquete: CRUZA, componentes: COMPONENTES });
+  assert.equal(r.hora, '05:00');
+  assert.equal(r.componentes[0].hora, '05:00');
+  assert.equal('hora' in r.componentes[1], false);
+});
+
 test('aeropuerto con hotel del catálogo no manda la zona del hotel (sus tarifas no llevan zona)', () => {
   const comp = { ...COMPONENTES, traslado: { ...COMPONENTES.traslado, traslado: traslado({ tipo: 'redondo_aeropuerto' }) } };
   const r = p.armarPayloadOrden({ ...BASE, paquete: CRUZA, componentes: comp });

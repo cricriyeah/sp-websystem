@@ -16,6 +16,7 @@ const suites = {
   moneda: ['src/lib/moneda.ts', 'MONEDA_TEST_OUT'],
   'pedido-paquete': ['src/lib/pedido-paquete.ts', 'PEDIDO_PAQUETE_TEST_OUT'],
   'pedido-payload': ['src/lib/pedido-payload.ts', 'PEDIDO_PAYLOAD_TEST_OUT'],
+  'campo-validacion': ['src/lib/campo-validacion.ts', 'CAMPO_VALIDACION_TEST_OUT'],
   'pedido-estado': ['src/lib/pedido-estado.ts', 'PEDIDO_ESTADO_TEST_OUT'],
   'horario-servicio': ['src/lib/horario-servicio.ts', 'HORARIO_TEST_OUT'],
   'fallo-pago': ['src/lib/fallo-pago.ts', 'FALLO_PAGO_TEST_OUT'],

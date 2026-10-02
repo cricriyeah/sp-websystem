@@ -609,6 +609,13 @@
   },
   "feedback": {
     "close": "Cerrar aviso",
+    "validation": {
+      "personas": "La cantidad de personas supera los lugares incluidos en un servicio del paquete. Ajusta el grupo y vuelve a intentar.",
+      "hora": "La hora elegida no está disponible para uno de los servicios. Elige otra hora e inténtalo de nuevo.",
+      "fecha": "La fecha elegida no está disponible para este paquete. Selecciona otra.",
+      "traslado": "Revisa el traslado: selecciona un punto de encuentro o indica la dirección y la zona.",
+      "contacto": "Revisa tus datos de contacto y vuelve a intentar."
+    },
     "error": {
       "conexion": "No pudimos conectar con el servidor. Por favor revisa tu internet e intenta de nuevo.",
       "no_disponible": "Los pagos en línea no están disponibles en este momento.",

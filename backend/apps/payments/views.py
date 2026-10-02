@@ -551,6 +551,9 @@ class CrearOrdenView(APIView):
                 )
             }
         servicios = [s for s in servicios if s.id in filas_ps]
+        servicio_principal = next(
+            (s for s in servicios if s.estrategia_cupo == 'por_recurso_dia'), servicios[0],
+        )
         calendario = [
             ComponenteCalendario(
                 dia_estancia=filas_ps[s.id]['dia_estancia'], estrategia_cupo=s.estrategia_cupo,
@@ -658,9 +661,10 @@ class CrearOrdenView(APIView):
                             'numero_personas': f'"{servicio.nombre}" incluye {ps["personas_incluidas"]} lugar(es) en este paquete.',
                         })
                     personas_pedido.append((servicio, personas))
-                    hora = (
-                        comp_d.get('hora') or request.data.get('hora', '07:00:00')
-                    ) if paquete.pide_hora else None
+                    hora = comp_d.get('hora') or (
+                        request.data.get('hora', '07:00:00')
+                        if paquete.pide_hora and servicio.id == servicio_principal.id else None
+                    )
 
                     with scope.con_empresa(empresa):
                         reserva = None

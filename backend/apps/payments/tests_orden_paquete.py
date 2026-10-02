@@ -1,4 +1,5 @@
 import uuid
+from datetime import time
 from decimal import Decimal
 from unittest import mock
 
@@ -73,6 +74,25 @@ class OrdenPaqueteBase(TestCase):
 
 
 class CrearOrdenPaqueteTests(OrdenPaqueteBase):
+    def test_hora_del_paquete_no_se_asigna_al_traslado(self):
+        with scope.como_operador_plataforma():
+            self.s_pesca.pide_hora = True
+            self.s_pesca.hora_apertura = time(5, 0)
+            self.s_pesca.hora_cierre = time(7, 0)
+            self.s_pesca.save(update_fields=['pide_hora', 'hora_apertura', 'hora_cierre'])
+            self.s_transp.pide_hora = True
+            self.s_transp.hora_apertura = time(6, 0)
+            self.s_transp.hora_cierre = time(22, 0)
+            self.s_transp.save(update_fields=['pide_hora', 'hora_apertura', 'hora_cierre'])
+
+        respuesta = self.crear(hora='05:00')
+        self.assertEqual(respuesta.status_code, 201, respuesta.content)
+        with scope.como_operador_plataforma():
+            pesca = Reserva.objects.get(orden_id=respuesta.json()['orden_id'], servicio=self.s_pesca)
+            traslado = Reserva.objects.get(orden_id=respuesta.json()['orden_id'], servicio=self.s_transp)
+            self.assertEqual(pesca.hora, time(5, 0))
+            self.assertIsNone(traslado.hora)
+
     def test_guarda_personas_por_componente_y_extras_de_cada_servicio(self):
         respuesta = self.crear()
         self.assertEqual(respuesta.status_code, 201, respuesta.content)

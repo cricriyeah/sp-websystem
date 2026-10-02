@@ -57,13 +57,15 @@ export function personasPrincipales(paquete: PaqueteCatalogo, componentes: Recor
 export function armarPayloadOrden(args: ArgsComunes): CrearOrdenInput {
   const { paquete, componentes, contacto } = args;
   const tieneHospedaje = paquete.noches !== null && paquete.noches !== undefined;
+  const ordenados = [...paquete.servicios_asociados].sort((a, b) => a.orden - b.orden);
+  const principal = ordenados.find((c) => c.servicio.estrategia_cupo === 'por_recurso_dia') ?? ordenados[0];
   const nombre = contacto.fullName.trim();
 
   const filas: ComponenteOrdenInput[] = paquete.servicios_asociados.map((c) => {
     const actual = componentes[c.servicio.slug];
     const fila: ComponenteOrdenInput = {
       servicio: c.servicio.slug,
-      hora: args.hora,
+      ...(paquete.pide_hora !== false && c.servicio_id === principal?.servicio_id ? { hora: args.hora } : {}),
       numero_personas: actual.personas,
       personalizaciones: actual.extras,
     };
@@ -89,7 +91,7 @@ export function armarPayloadOrden(args: ArgsComunes): CrearOrdenInput {
     moneda: args.moneda,
     ref: args.ref,
     fecha: args.inicio,
-    hora: args.hora,
+    ...(paquete.pide_hora === false ? {} : { hora: args.hora }),
     componentes: filas,
   };
 }

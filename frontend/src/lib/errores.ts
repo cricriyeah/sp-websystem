@@ -1,4 +1,5 @@
 import { ApiError } from '@/lib/api';
+import { campoDeValidacion } from '@/lib/campo-validacion';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 
 /**
@@ -63,6 +64,10 @@ export function mensajeDeError(
     if (err.status === 502) return checkout.errorPaymentProvider;
     if (err.status === 409) return checkout.errorPaymentInProgress;
     if (err.status === 503) return checkout.paymentUnavailable;
+    if (err.status === 400) {
+      const campo = campoDeValidacion(err.detail);
+      if (campo) return feedback.validation[campo];
+    }
   }
   return mensajeDeFallo(err, feedback.error);
 }

@@ -609,6 +609,13 @@
   },
   "feedback": {
     "close": "Dismiss",
+    "validation": {
+      "personas": "The number of guests exceeds the places included in a package service. Adjust your group and try again.",
+      "hora": "The selected time is unavailable for a package service. Choose another time and try again.",
+      "fecha": "The selected date is no longer available for this package. Choose another date.",
+      "traslado": "Check the transfer: choose a meeting point or enter an address and area.",
+      "contacto": "Check your contact details and try again."
+    },
     "error": {
       "conexion": "We couldn't connect with the server. Please check your internet connection and try again.",
       "no_disponible": "Online payments are not available at this moment.",
