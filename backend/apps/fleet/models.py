@@ -583,6 +583,25 @@ class Paquete(models.Model):
         help_text='Si está activo, el precio ancla es el de UNA persona y el total es '
                   'precio × personas. Apagado, el precio ancla es un total fijo del paquete.',
     )
+    estrategia_precio = models.CharField(
+        max_length=20,
+        choices=[
+            (EstrategiaPrecio.POR_GRUPO, EstrategiaPrecio.POR_GRUPO.label),
+            (EstrategiaPrecio.POR_PERSONA, EstrategiaPrecio.POR_PERSONA.label),
+        ],
+        default=EstrategiaPrecio.POR_GRUPO,
+        help_text='Por grupo: precio base más cargo por cada persona adicional. '
+                  'Por persona: el precio base se cobra a cada persona.',
+    )
+    personas_precio_base = models.PositiveSmallIntegerField(
+        default=1, validators=[MinValueValidator(1)],
+        help_text='Personas cubiertas por el precio base del grupo.',
+    )
+    precio_persona_extra = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text='Pesos adicionales por cada persona que supere las cubiertas por el precio base.',
+    )
     pide_hora = models.BooleanField(
         default=True,
         help_text='Si está activo, el cliente elige la hora de salida al reservar. Apágalo en un paquete con '
@@ -617,6 +636,18 @@ class Paquete(models.Model):
 
     def clean(self):
         super().clean()
+        errores = {}
+        if self.estrategia_precio not in (EstrategiaPrecio.POR_GRUPO, EstrategiaPrecio.POR_PERSONA):
+            errores['estrategia_precio'] = 'El paquete solo admite precio por grupo o por persona.'
+        if self.personas_precio_base is None or self.personas_precio_base < 1:
+            errores['personas_precio_base'] = 'Debe ser al menos una persona.'
+        if self.precio_persona_extra is None or self.precio_persona_extra < 0:
+            errores['precio_persona_extra'] = 'El cargo adicional no puede ser negativo.'
+        if errores:
+            raise ValidationError(errores)
+        if self.estrategia_precio == EstrategiaPrecio.POR_PERSONA:
+            self.personas_precio_base = 1
+            self.precio_persona_extra = Decimal('0')
         if self.sede_id and self.empresa_lider_id:
             if self.empresa_lider.sede_id != self.sede_id:
                 raise ValidationError({
