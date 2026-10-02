@@ -1,0 +1,15 @@
+{
+  "conversiones": [
+    {"monto": "29.41", "moneda": "USD", "tipo_cambio": "1.0000", "esperado": "30.00"},
+    {"monto": "36.00", "moneda": "USD", "tipo_cambio": "18.0000", "esperado": "2.00"},
+    {"monto": "500.00", "moneda": "USD", "tipo_cambio": "18.0000", "esperado": "28.00"},
+    {"monto": "1000.25", "moneda": "MXN", "tipo_cambio": "18.0000", "esperado": "1000.25"}
+  ],
+  "paquetes": [
+    {"estrategia": "por_grupo", "base": "4500.00", "personas_base": 3, "extra": "500.00", "personas": 5, "moneda": "MXN", "tipo_cambio": "18.0000", "esperado": "5500.00"},
+    {"estrategia": "por_grupo", "base": "6500.00", "personas_base": 3, "extra": "500.00", "personas": 5, "moneda": "USD", "tipo_cambio": "18.0000", "esperado": "418.00"},
+    {"estrategia": "por_grupo", "base": "1000.25", "personas_base": 2, "extra": "20.10", "personas": 3, "moneda": "MXN", "tipo_cambio": "18.0000", "esperado": "1020.35"},
+    {"estrategia": "por_persona", "base": "800.25", "personas_base": 1, "extra": "0.00", "personas": 3, "moneda": "MXN", "tipo_cambio": "18.0000", "esperado": "2400.75"},
+    {"estrategia": "por_persona", "base": "6500.00", "personas_base": 1, "extra": "0.00", "personas": 2, "moneda": "USD", "tipo_cambio": "18.0000", "esperado": "724.00"}
+  ]
+}

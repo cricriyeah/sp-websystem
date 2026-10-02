@@ -62,9 +62,9 @@ estar exento.
   vars estan puestas y **nunca lanza**: el cobro ya ocurrio, una notificacion caida no
   debe hacer que Stripe reintente el webhook.
 - `fleet.Servicio`: pesca usa el servicio `pesca-deportiva` de cada Empresa y la
-  estrategia `por_grupo`. `precio_base`/`precio_base_usd` y los dos recargos por
-  persona son precios de lista independientes; sin precio USD no se cobra en esa
-  moneda. El negocio fija cada precio a mano, sin tipo de cambio.
+  estrategia `por_grupo`. `precio_base` y `precio_persona_extra` se guardan en MXN;
+  el USD se deriva del tipo de cambio de la sede y cada importe se redondea hacia
+  arriba al dólar entero.
 - `finance`: solo lectura, sin modelos. El panel de dinero para jefes, ver seccion
   "Panel de finanzas" abajo.
 - Tests: `apps/bookings/tests.py`, `apps/fleet/tests.py`, `apps/payments/tests.py` y
@@ -429,7 +429,7 @@ admin y el shell:
 
 Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra ad-hoc y pasan a ser un servicio formal de catálogo (`TipoServicio.TRANSPORTE`):
 
-- **`fleet.TransporteTarifa`**: catálogo de precios escalonado por ruta y capacidad (`tipo_traslado`, `zona`, `personas_min`, `personas_max`, `precio` en MXN y `precio_usd`). Tabla protegida por política RLS `tenancy_alcance` bajo `empresa_id`. Admin administrable únicamente por jefes (permisos en `setup_roles`).
+- **`fleet.TransporteTarifa`**: catálogo de precios escalonado por ruta y capacidad (`tipo_traslado`, `zona`, `personas_min`, `personas_max`, `precio` en MXN; el USD se deriva del tipo de cambio de la sede). Tabla protegida por política RLS `tenancy_alcance` bajo `empresa_id`. Admin administrable únicamente por jefes (permisos en `setup_roles`).
 - **Estrategia de precio `PorRuta`** (`apps/payments/strategies/por_ruta.py`): resuelve el monto mediante `apps.fleet.tarifa_transporte.resolver_tarifa_transporte(empresa, demanda)` según `tipo_traslado`, `zona` y `numero_personas`. La cotización ocurre siempre en el servidor; `CrearPagoView` congela el `precio_calculado` en `DetalleTransporte`.
 - **`bookings.DetalleTransporte`**: detalle operativo asociado `OneToOne` a `Reserva`. Guarda `tipo_traslado`, `punto_encuentro` (FK a `PuntoEncuentro`), `direccion_personalizada`, `zona`, `fecha_regreso` (para `redondo_aeropuerto`), `numero_personas` y `precio_calculado`. Su política RLS de Postgres se aplica vía FK referida a `reserva.empresa_id` y está verificada en el guardarraíl de `apps/tenancy/tests_rls.py`. Visible como `DetalleTransporteInline` en `ReservaAdmin`. La `Agenda` operativa de pangas filtra y omite traslados.
 - **Ventana horaria y capacidad por Servicio**: `Servicio.hora_apertura` y `Servicio.hora_cierre` permiten ventanas horarias por servicio (pesca 5:00–7:00am, transporte sin ventana fija). `Servicio.capacidad_maxima` fija el tope de personas (ej. 14 para transporte).
@@ -471,15 +471,15 @@ Contrato y reglas de producto: [spec de checkout unificado](../docs/superpowers/
   `crear-pago` de una reserva responde 400 si se solicita `forma_pago=anticipo`
   cuando no aplica; las órdenes se crean con `forma_pago=completo`. Para indicar
   pago completo se usa `permite_anticipo=False`, no `porcentaje_anticipo=100`.
-- **Precio por persona**: `Paquete.precio_por_persona` (default `False`). Apagado,
-  `precio_ancla` es un total fijo. Encendido, `precio_ancla` y `precio_ancla_usd` son los
-  de UNA persona y el total es `ancla × personas del pedido` (`Paquete.precio_total_en`), donde
-  las personas del pedido son el MAYOR número entre sus servicios (`Reserva.personas_del_pedido`;
-  en una orden, el mayor entre sus reservas). La actividad (`por_recurso_dia`) lleva a todas las
-  personas; el hospedaje y el traslado pueden llevar menos y el precio no baja por eso (lo exigen
-  `_derivar_de_paquete` y `CrearOrdenView`). En una orden cruza-empresa el transporte cobra su
-  tarifa (según sus pasajeros) y la líder el residuo de `ancla × personas`. `validar_configuracion`
-  revisa el ancla contra la tarifa de transporte para cada grupo de 1 a `personas_incluidas`.
+- **Precio del paquete**: `Paquete.estrategia_precio` admite `por_grupo` y `por_persona`.
+  Por grupo, `precio_ancla` cubre `personas_precio_base` y cada persona adicional suma
+  `precio_persona_extra`; por persona, el ancla se multiplica por el grupo cobrado.
+  `Paquete.precio_total_en` convierte base y extra desde MXN antes de calcular en USD.
+  El grupo cobrado es el MAYOR número entre servicios (`personas_cobradas` en reservas
+  y órdenes). Cuando el precio depende de las personas, la actividad (`por_recurso_dia`)
+  lleva a todas; hospedaje y traslado pueden llevar menos. En una orden de dos empresas,
+  transporte cobra su tarifa según pasajeros y la líder recibe el residuo. La validación
+  comprueba que el total cubra cada tamaño de grupo hasta `personas_incluidas` del traslado.
 - **Configuración**: cada `PaqueteServicio` fija `dia_estancia` (día 1 = inicio),
   `noches` solo para hospedaje y `personas_incluidas` para ese servicio. El cliente
   puede usar menos lugares sin reducir el precio ancla. Las reglas de
@@ -519,8 +519,9 @@ Contrato y reglas de producto: [spec de checkout unificado](../docs/superpowers/
 
 SP2 implementa ADR-005: `bookings.Orden` agrupa una `Reserva` por empresa; v1 admite
 un servicio base de la líder y un traslado de otra empresa de la misma sede.
-Solo `forma_pago=completo`, sin anticipo. El precio fijo sigue almacenado en
-`Paquete.precio_ancla` / `precio_ancla_usd`; no existe un campo `precio_paquete`.
+Solo `forma_pago=completo`, sin anticipo. El precio base se almacena en MXN en
+`Paquete.precio_ancla`; el total depende de `estrategia_precio`,
+`personas_precio_base` y `precio_persona_extra`.
 
 - Modelo B: `apps/payments/ordenes.py` crea un PaymentIntent de tarjeta con captura
   manual por cuenta Stripe. Se autorizan todos antes de capturarlos. El reparto

@@ -13,7 +13,7 @@ from typing import Any
 
 from apps.fleet.tarifa_transporte import TarifaTransporteNoConfigurada, resolver_tarifa_transporte
 from .moneda import convertir
-from .pricing import CENTAVOS, PERSONAS_INCLUIDAS, cargo_por_personas, personas_extra
+from .pricing import CENTAVOS, PERSONAS_INCLUIDAS, calcular_total, personas_extra
 
 
 class TipoEstrategiaPrecio(StrEnum):
@@ -104,12 +104,13 @@ class PorGrupo(EstrategiaPrecio):
             precio_extra = resolver_precio_persona_extra(servicio_config, moneda, demanda.tipo_cambio)
             if precio_extra is None:
                 raise ValueError(f"No hay cargo por persona extra configurado en {moneda}.")
-            recargo = cargo_por_personas(precio_extra, demanda.personas, personas_incluidas=incluidas)
         else:
-            recargo = Decimal('0')
+            precio_extra = Decimal('0')
 
-        total = (base + recargo).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
-        return total
+        return calcular_total(
+            estrategia=self.clave, base=base, personas=demanda.personas,
+            personas_base=incluidas, extra=precio_extra,
+        )
 
 
 class PorPersona(EstrategiaPrecio):
@@ -119,9 +120,7 @@ class PorPersona(EstrategiaPrecio):
     def calcular_base(self, servicio_config: Any, demanda: DemandaPrecio) -> Decimal:
         moneda = demanda.moneda_normalizada
         base = resolver_precio_base(servicio_config, moneda, demanda.tipo_cambio)
-        personas = max(1, demanda.personas)
-        total = (base * Decimal(personas)).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
-        return total
+        return calcular_total(estrategia=self.clave, base=base, personas=demanda.personas)
 
 
 class TarifaFija(EstrategiaPrecio):

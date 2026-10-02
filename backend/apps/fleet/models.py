@@ -527,22 +527,6 @@ def componente_de(ps):
     )
 
 
-def _errores_por_persona(paquete, tarifas, personas):
-    """Con precio por persona el total crece con el grupo, igual que la tarifa por rangos:
-    se revisa cada tamaño de 1 a `personas`. Solo en pesos: el USD se deriva con el mismo
-    tipo de cambio y redondeo hacia arriba, que conservan el orden."""
-    for n in range(1, personas + 1):
-        peor = peor_tarifa(tarifas, personas=n, moneda='MXN')
-        if peor is not None and paquete.precio_ancla is not None and paquete.precio_ancla * n < peor:
-            return {
-                'precio_ancla': (
-                    f'El precio por persona ({paquete.precio_ancla}) para {n} persona(s) es menor que la '
-                    f'tarifa de transporte ({peor}).'
-                )
-            }
-    return {}
-
-
 def errores_de_precio_contra_transporte(paquete, pares):
     """El precio del paquete debe cubrir la peor tarifa de cada traslado incluido.
     `pares`: lista de `(servicio, personas_incluidas)`."""
@@ -551,15 +535,15 @@ def errores_de_precio_contra_transporte(paquete, pares):
         if servicio.tipo_servicio != 'transporte':
             continue
         tarifas = list(servicio.empresa.tarifas_transporte.filter(activo=True))
-        if paquete.precio_por_persona:
-            errores.update(_errores_por_persona(paquete, tarifas, personas))
-            continue
-        peor_mxn = peor_tarifa(tarifas, personas=personas, moneda='MXN')
-        if peor_mxn is not None and paquete.precio_ancla is not None and paquete.precio_ancla < peor_mxn:
-            errores['precio_ancla'] = (
-                f'El precio del paquete ({paquete.precio_ancla}) no puede ser menor que la '
-                f'tarifa de transporte ({peor_mxn}).'
-            )
+        for n in range(1, personas + 1):
+            peor_mxn = peor_tarifa(tarifas, personas=n, moneda='MXN')
+            total = paquete.precio_total_en('MXN', n)
+            if peor_mxn is not None and total is not None and total < peor_mxn:
+                errores['precio_ancla'] = (
+                    f'El precio del paquete ({total}) para {n} persona(s) no puede ser menor '
+                    f'que la tarifa de transporte ({peor_mxn}).'
+                )
+                break
     return errores
 
 
@@ -577,11 +561,6 @@ class Paquete(models.Model):
     precio_ancla = models.DecimalField(
         max_digits=10, decimal_places=2,
         help_text='Precio ancla del paquete en pesos (MXN).'
-    )
-    precio_por_persona = models.BooleanField(
-        default=False,
-        help_text='Si está activo, el precio ancla es el de UNA persona y el total es '
-                  'precio × personas. Apagado, el precio ancla es un total fijo del paquete.',
     )
     estrategia_precio = models.CharField(
         max_length=20,
@@ -639,15 +618,15 @@ class Paquete(models.Model):
         errores = {}
         if self.estrategia_precio not in (EstrategiaPrecio.POR_GRUPO, EstrategiaPrecio.POR_PERSONA):
             errores['estrategia_precio'] = 'El paquete solo admite precio por grupo o por persona.'
+        if self.estrategia_precio == EstrategiaPrecio.POR_PERSONA:
+            self.personas_precio_base = 1
+            self.precio_persona_extra = Decimal('0')
         if self.personas_precio_base is None or self.personas_precio_base < 1:
             errores['personas_precio_base'] = 'Debe ser al menos una persona.'
         if self.precio_persona_extra is None or self.precio_persona_extra < 0:
             errores['precio_persona_extra'] = 'El cargo adicional no puede ser negativo.'
         if errores:
             raise ValidationError(errores)
-        if self.estrategia_precio == EstrategiaPrecio.POR_PERSONA:
-            self.personas_precio_base = 1
-            self.precio_persona_extra = Decimal('0')
         if self.sede_id and self.empresa_lider_id:
             if self.empresa_lider.sede_id != self.sede_id:
                 raise ValidationError({
@@ -709,15 +688,25 @@ class Paquete(models.Model):
         """Precio ancla en la moneda pedida (USD derivado con el tipo de cambio)."""
         return convertir(self.precio_ancla, moneda, tipo_cambio)
 
+    @property
+    def precio_depende_de_personas(self):
+        return (
+            self.estrategia_precio == EstrategiaPrecio.POR_PERSONA
+            or self.precio_persona_extra > 0
+        )
+
     def precio_total_en(self, moneda, personas=1, tipo_cambio=None):
-        """Precio base del paquete para `personas` en `moneda`, o None si no está configurado.
-        Fijo: el ancla tal cual. Por persona: ancla × personas."""
-        ancla = self.precio_en(moneda, tipo_cambio)
-        if ancla is None:
+        """Precio base del paquete para el grupo, o None si falta el ancla."""
+        from apps.payments.pricing import calcular_total
+
+        base = self.precio_en(moneda, tipo_cambio)
+        if base is None:
             return None
-        if self.precio_por_persona:
-            return (Decimal(ancla) * int(personas)).quantize(Decimal('0.01'))
-        return Decimal(ancla)
+        extra = convertir(self.precio_persona_extra, moneda, tipo_cambio)
+        return calcular_total(
+            estrategia=self.estrategia_precio, base=base, personas=personas,
+            personas_base=self.personas_precio_base, extra=extra,
+        )
 
 
 class PaqueteServicio(models.Model):

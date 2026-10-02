@@ -63,6 +63,16 @@ def calcular_total(*, estrategia, base, personas, personas_base=1, extra=Decimal
     return total.quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 
+def personas_cobradas(paquete, personas_por_servicio):
+    """El grupo cobrado por un paquete es el mayor de sus componentes.
+
+    Recibe el paquete junto con la selección para que reserva y orden compartan
+    el mismo contrato; no consulta sus servicios, que pueden estar bajo RLS de
+    distintas empresas.
+    """
+    return max([1, *(int(n) for n in personas_por_servicio.values() if n)])
+
+
 def cantidad_efectiva(*, cobrar_por_persona, cantidad_editable, personas, cantidad=1):
     if not cobrar_por_persona:
         return 1
@@ -135,7 +145,7 @@ def precio_paquete_total(
     """Precio final de un paquete. None si el paquete no tiene precio en `moneda`.
 
     Fórmula:
-        paquete.precio_total_en(moneda, personas)   # el ancla (× personas si precio_por_persona)
+        paquete.precio_total_en(moneda, personas)   # base + extras del grupo, o base × personas
       + Σ  sp.precio_en(moneda) de cada ServicioPersonalizacion (obligatorio o preseleccionado)
            de los servicios componentes, con activo=True
       + Σ  sp.precio_en(moneda) de las ServicioPersonalizacion OPCIONALES que el cliente marcó

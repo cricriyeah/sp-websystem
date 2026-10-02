@@ -320,7 +320,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'personas_por_servicio': 'Indica cuántas personas van a cada servicio del paquete.',
             })
-        if componentes and componentes[0].paquete.precio_por_persona:
+        if componentes and componentes[0].paquete.precio_depende_de_personas:
             total_personas = max(personas.values())
             if any(
                 personas[str(ps.servicio_id)] != total_personas

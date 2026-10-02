@@ -84,6 +84,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
     servicios_asociados = serializers.SerializerMethodField()
     permite_anticipo = serializers.SerializerMethodField()
     es_cruza_empresa = serializers.SerializerMethodField()
+    precio_depende_de_personas = serializers.BooleanField(read_only=True)
     noches = serializers.SerializerMethodField()
 
     class Meta:
@@ -91,7 +92,8 @@ class PaqueteSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'sede', 'sede_slug', 'empresa_lider', 'empresa_lider_slug',
             'nombre', 'slug', 'descripcion',
-            'precio_ancla', 'tipo_cambio_usd', 'precio_por_persona', 'pide_hora', 'regla_precio', 'activo',
+            'precio_ancla', 'tipo_cambio_usd', 'estrategia_precio', 'personas_precio_base',
+            'precio_persona_extra', 'precio_depende_de_personas', 'pide_hora', 'regla_precio', 'activo',
             'permite_anticipo', 'porcentaje_anticipo', 'es_cruza_empresa',
             'servicios_asociados', 'noches',
         ]

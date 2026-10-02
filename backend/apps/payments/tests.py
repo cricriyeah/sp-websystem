@@ -395,7 +395,7 @@ class CrearPagoTests(ApiTestCase):
         paquete = Paquete.objects.create(
             sede=self.empresa.sede, empresa_lider=self.empresa, nombre='Paquete Por Persona',
             slug='paquete-por-persona', precio_ancla=Decimal('45000.00'),
-            precio_por_persona=True, permite_anticipo=False,
+            estrategia_precio='por_persona', permite_anticipo=False,
         )
         reserva_paquete = Reserva.objects.create(
             empresa=self.empresa, paquete=paquete, fecha=date(2026, 10, 1), hora=time(7, 0),
@@ -418,7 +418,7 @@ class CrearPagoTests(ApiTestCase):
         paquete = Paquete.objects.create(
             sede=self.empresa.sede, empresa_lider=self.empresa, nombre='Paquete Por Persona 2',
             slug='paquete-por-persona-2', precio_ancla=Decimal('45000.00'),
-            precio_por_persona=True, permite_anticipo=False,
+            estrategia_precio='por_persona', permite_anticipo=False,
         )
         reserva_paquete = Reserva.objects.create(
             empresa=self.empresa, paquete=paquete, fecha=date(2026, 10, 1), hora=time(7, 0),
@@ -432,6 +432,45 @@ class CrearPagoTests(ApiTestCase):
         }, content_type='application/json')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['monto_a_cobrar'], '180000.00')
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_paquete_por_grupo_usa_extra_vigente_y_anticipo(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        paquete = Paquete.objects.create(
+            sede=self.empresa.sede, empresa_lider=self.empresa, nombre='Grupo con extra',
+            slug='grupo-con-extra', precio_ancla=Decimal('4000.00'),
+            estrategia_precio='por_grupo', personas_precio_base=2,
+            precio_persona_extra=Decimal('500.00'), porcentaje_anticipo=30,
+        )
+        reserva = Reserva.objects.create(
+            empresa=self.empresa, paquete=paquete, fecha=date(2026, 10, 1), hora=time(7),
+            numero_personas=2, personas_por_servicio={'1': 4, '2': 2},
+            nombre_cliente='Ana Gomez', telefono_cliente='1234567890',
+            correo_cliente='ana@test.com', moneda='MXN',
+            estado=Reserva.Estado.PENDIENTE_PAGO, checkout_id=uuid.uuid4(),
+        )
+        paquete.precio_persona_extra = Decimal('750.00')
+        paquete.save(update_fields=['precio_persona_extra'])
+        url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk})
+        respuesta = self.client.post(url, {
+            'forma_pago': 'anticipo', 'checkout_id': str(reserva.checkout_id),
+        }, content_type='application/json')
+        self.assertEqual(respuesta.status_code, 200, respuesta.content)
+        # La reserva pendiente toma la tarifa actual: 4000 + 2 × 750 = 5500; 30 % = 1650.
+        self.assertEqual(respuesta.json()['monto_a_cobrar'], '1650.00')
+        self.assertEqual(respuesta.json()['precio_total'], '5500.00')
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.precio_total, Decimal('5500.00'))
+
+        Reserva.objects.filter(pk=reserva.pk).update(estado=Reserva.Estado.PAGADA)
+        paquete.precio_persona_extra = Decimal('1000.00')
+        paquete.save(update_fields=['precio_persona_extra'])
+        otra = self.client.post(url, {
+            'forma_pago': 'anticipo', 'checkout_id': str(reserva.checkout_id),
+        }, content_type='application/json')
+        self.assertEqual(otra.status_code, 409)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.precio_total, Decimal('5500.00'))
 
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_crear_pago_paquete_no_suma_extras_legacy(self, payment_intents):

@@ -94,16 +94,26 @@ class CrearOrdenPaqueteTests(OrdenPaqueteBase):
 
     def test_paquete_por_persona_exige_que_la_actividad_lleve_a_todas_las_personas(self):
         with scope.como_operador_plataforma():
-            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+            Paquete.objects.filter(pk=self.paquete.pk).update(estrategia_precio='por_persona')
         respuesta = self.crear()  # pesca con 2 personas, traslado con 3
         self.assertEqual(respuesta.status_code, 400)
         self.assertIn('la actividad va con todas las personas', str(respuesta.json()))
         with scope.como_operador_plataforma():
             self.assertFalse(Orden.objects.exists())
 
+    def test_paquete_con_extra_exige_que_la_actividad_lleve_a_todas_las_personas(self):
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(pk=self.paquete.pk).update(
+                estrategia_precio='por_grupo', personas_precio_base=2,
+                precio_persona_extra=Decimal('500.00'),
+            )
+        respuesta = self.crear()  # pesca con 2 personas, traslado con 3
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('la actividad va con todas las personas', str(respuesta.json()))
+
     def test_paquete_por_persona_permite_menos_personas_en_el_traslado(self):
         with scope.como_operador_plataforma():
-            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+            Paquete.objects.filter(pk=self.paquete.pk).update(estrategia_precio='por_persona')
         datos = self.payload()
         datos['componentes'][0]['numero_personas'] = 3
         datos['componentes'][1]['numero_personas'] = 2
@@ -195,7 +205,7 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
         para, clientes = self._stripe_falso()
         configurar.side_effect = para
         with scope.como_operador_plataforma():
-            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+            Paquete.objects.filter(pk=self.paquete.pk).update(estrategia_precio='por_persona')
         datos = self.payload()
         datos['componentes'][0]['numero_personas'] = 3
         respuesta = self.client.post(self.url, datos, content_type='application/json')
@@ -211,7 +221,7 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
         para, clientes = self._stripe_falso()
         configurar.side_effect = para
         with scope.como_operador_plataforma():
-            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+            Paquete.objects.filter(pk=self.paquete.pk).update(estrategia_precio='por_persona')
         datos = self.payload()
         datos['componentes'][0]['numero_personas'] = 3
         datos['componentes'][1]['numero_personas'] = 2
@@ -222,6 +232,27 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
         montos = {p['empresa_slug']: p['monto'] for p in pago.json()}
         # 7500 × 3 = 22500; el traslado cobra su tarifa (1500) + silla 150; la líder el residuo 21000 + brunch 400.
         self.assertEqual(montos, {'pesca-op': '21400.00', 'transp-op': '1650.00'})
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_paquete_por_grupo_con_extra_cobra_el_mayor_grupo(self, configurar):
+        para, _ = self._stripe_falso()
+        configurar.side_effect = para
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(pk=self.paquete.pk).update(
+                estrategia_precio='por_grupo', personas_precio_base=2,
+                precio_persona_extra=Decimal('500.00'),
+            )
+        datos = self.payload()
+        datos['componentes'][0]['numero_personas'] = 3
+        datos['componentes'][1]['numero_personas'] = 2
+        respuesta = self.client.post(self.url, datos, content_type='application/json')
+        self.assertEqual(respuesta.status_code, 201, respuesta.content)
+        pago = self._pago(respuesta.json()['orden_id'])
+        self.assertEqual(pago.status_code, 200, pago.content)
+        montos = {p['empresa_slug']: Decimal(p['monto']) for p in pago.json()}
+        # Base 7500 + una persona extra 500 + brunch 400 + silla 150.
+        self.assertEqual(sum(montos.values()), Decimal('8550.00'))
+        self.assertEqual(montos['transp-op'], Decimal('1650.00'))
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_congela_los_extras_solo_despues_de_que_stripe_acepta(self, configurar):

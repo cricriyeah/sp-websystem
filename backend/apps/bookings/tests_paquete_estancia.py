@@ -136,13 +136,22 @@ class SerializadorPaqueteTests(FixturePaqueteEstancia, OperadorTestCase):
         self.assertTrue(valido, serializador.errors)
 
     def test_paquete_por_persona_permite_menos_personas_en_hospedaje(self):
-        Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        Paquete.objects.filter(pk=self.paquete.pk).update(estrategia_precio='por_persona')
         serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 3, str(self.hotel.pk): 2})
         self.assertTrue(valido, serializador.errors)
         self.assertEqual(serializador.validated_data['numero_personas'], 3)
 
     def test_paquete_por_persona_exige_que_la_actividad_lleve_a_todas_las_personas(self):
-        Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        Paquete.objects.filter(pk=self.paquete.pk).update(estrategia_precio='por_persona')
+        serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 1, str(self.hotel.pk): 2})
+        self.assertFalse(valido)
+        self.assertIn('la actividad va con todas las personas', str(serializador.errors['personas_por_servicio']))
+
+    def test_paquete_con_extra_exige_que_la_actividad_lleve_a_todas_las_personas(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(
+            estrategia_precio='por_grupo', personas_precio_base=2,
+            precio_persona_extra=Decimal('500.00'),
+        )
         serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 1, str(self.hotel.pk): 2})
         self.assertFalse(valido)
         self.assertIn('la actividad va con todas las personas', str(serializador.errors['personas_por_servicio']))

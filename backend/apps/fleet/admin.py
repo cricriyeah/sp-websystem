@@ -163,7 +163,11 @@ class PaqueteServicioInline(TabularInline):
 @admin.register(Paquete)
 class PaqueteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     empresa_campo = 'empresa_lider'
-    list_display = ['nombre', 'sede', 'empresa_lider', 'precio_ancla', 'precio_por_persona', 'pide_hora', 'permite_anticipo', 'porcentaje_anticipo', 'activo']
+    list_display = [
+        'nombre', 'sede', 'empresa_lider', 'precio_ancla', 'estrategia_precio',
+        'personas_precio_base', 'precio_persona_extra', 'pide_hora',
+        'permite_anticipo', 'porcentaje_anticipo', 'activo',
+    ]
     list_filter = ['sede', 'activo']
     list_editable = ['precio_ancla', 'activo']
     search_fields = ['nombre', 'slug', 'descripcion']

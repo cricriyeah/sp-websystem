@@ -281,7 +281,7 @@ class Command(BaseCommand):
                     sede=sede, slug=slug,
                     defaults=dict(
                         empresa_lider=empresa, nombre=nombre, precio_ancla=precio,
-                        precio_por_persona=True, pide_hora=False, activo=True,
+                        estrategia_precio='por_persona', pide_hora=False, activo=True,
                         descripcion=f'{noches} noches de hospedaje, traslado redondo de aeropuerto y '
                                     f'avistamiento de ballenas y orcas del día 2 al {noches}.',
                     ),

@@ -170,6 +170,7 @@ class CrearPagoView(APIView):
             'client_secret': intent.client_secret,
             'publishable_key': empresa.stripe_publishable_key,
             'monto_a_cobrar': str(monto_a_cobrar),
+            'precio_total': str(precio_total),
             'moneda': reserva.moneda,
         })
 
@@ -735,7 +736,7 @@ class CrearOrdenView(APIView):
                             'servicio': servicio.slug,
                         })
 
-                if paquete.precio_por_persona:
+                if paquete.precio_depende_de_personas:
                     total_personas = max(p for _, p in personas_pedido)
                     if any(sv.estrategia_cupo == 'por_recurso_dia' and p != total_personas for sv, p in personas_pedido):
                         raise DjangoValidationError({
@@ -779,7 +780,7 @@ class CrearPagoOrdenView(APIView):
         from apps.tenancy.models import Empresa, Sede
         from .extras import congelar_personalizaciones, cotizar_personalizaciones
         from .ordenes import OrdenCerradaError, crear_pagos_orden
-        from .pricing import monto_por_empresa
+        from .pricing import monto_por_empresa, personas_cobradas
 
         sede = get_object_or_404(Sede, slug=sede_slug, activo=True)
         orden = _buscar_orden(sede, pk=pk)
@@ -801,13 +802,13 @@ class CrearPagoOrdenView(APIView):
         componentes = []
         extras_por_empresa = {}
         por_congelar = []
-        personas_paquete = 1
+        personas_por_servicio = {}
         for fila in reservas_de_orden(orden.id):
             empresa = Empresa.objects.get(pk=fila['empresa_id'])
             es_lider = (empresa.id == orden.empresa_lider_id)
             with scope.con_empresa(empresa):
                 reserva = Reserva.objects.select_related('servicio', 'paquete', 'empresa').get(pk=fila['reserva_id'])
-                personas_paquete = max(personas_paquete, reserva.numero_personas)
+                personas_por_servicio[reserva.servicio_id] = reserva.numero_personas
                 monto_fijo = None
                 if not es_lider and reserva.servicio and reserva.servicio.tipo_servicio == 'transporte':
                     detalle = DetalleTransporte.objects.filter(reserva=reserva).first()
@@ -833,7 +834,9 @@ class CrearPagoOrdenView(APIView):
             extras_por_empresa[empresa.id] = extras_por_empresa.get(empresa.id, Decimal('0.00')) + Decimal(cargo)
             por_congelar.append((empresa, a_borrar, a_congelar))
 
-        precio_paquete = paquete.precio_total_en(orden.moneda, personas_paquete, orden.tipo_cambio)
+        precio_paquete = paquete.precio_total_en(
+            orden.moneda, personas_cobradas(paquete, personas_por_servicio), orden.tipo_cambio,
+        )
 
         try:
             reparto = monto_por_empresa(

@@ -657,10 +657,12 @@ class Reserva(models.Model):
 
     @property
     def personas_del_pedido(self):
-        """Personas por las que se cobra un paquete por persona: el mayor número entre sus
-        servicios. El hospedaje o el traslado pueden llevar menos, pero el precio es por persona."""
-        valores = [int(v) for v in (self.personas_por_servicio or {}).values() if v]
-        return max([self.numero_personas or 1, *valores])
+        """Mayor número de personas del pedido, compartido con el cobro de órdenes."""
+        from apps.payments.pricing import personas_cobradas
+
+        seleccion = dict(self.personas_por_servicio or {})
+        seleccion['reserva'] = self.numero_personas or 1
+        return personas_cobradas(self.paquete, seleccion)
 
     @property
     def fecha_inicio_paquete(self):

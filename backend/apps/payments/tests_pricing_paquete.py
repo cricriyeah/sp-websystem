@@ -5,7 +5,9 @@ from django.test import TestCase
 from apps.testing import OperadorTestCase
 
 from apps.fleet.models import Paquete, PaqueteServicio, Personalizacion, Servicio, ServicioPersonalizacion
-from apps.payments.pricing import calcular_precio_paquete, precio_paquete, precio_paquete_total
+from apps.payments.pricing import (
+    calcular_precio_paquete, personas_cobradas, precio_paquete, precio_paquete_total,
+)
 from apps.tenancy.models import Empresa, Sede
 
 
@@ -57,13 +59,28 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
         )
 
     def test_por_persona_multiplica_el_ancla_por_las_personas(self):
-        Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        Paquete.objects.filter(pk=self.paquete.pk).update(estrategia_precio='por_persona')
         self.paquete.refresh_from_db()
         self.assertEqual(precio_paquete_total(self.paquete, personas=3, moneda='MXN'), Decimal('19500.00'))
         # 6500/18 = 361.11 -> 362 por persona
         self.assertEqual(
             precio_paquete_total(self.paquete, personas=2, moneda='USD', tipo_cambio=Decimal('18')),
             Decimal('724.00'),
+        )
+
+    def test_por_grupo_cobra_extra_tras_personas_base_en_mxn_y_usd(self):
+        self.paquete.estrategia_precio = 'por_grupo'
+        self.paquete.personas_precio_base = 3
+        self.paquete.precio_persona_extra = Decimal('500.00')
+        self.assertTrue(self.paquete.precio_depende_de_personas)
+        self.assertEqual(self.paquete.precio_total_en('MXN', 5), Decimal('7500.00'))
+        # 6500/18 -> 362 y 500/18 -> 28; se convierte cada precio antes de sumar.
+        self.assertEqual(self.paquete.precio_total_en('USD', 5, Decimal('18')), Decimal('418.00'))
+
+    def test_personas_cobradas_toma_el_mayor_de_los_servicios(self):
+        self.assertEqual(
+            personas_cobradas(self.paquete, {self.servicio_pesca.pk: 4, self.servicio_snack.pk: 2}),
+            4,
         )
 
     def test_paquete_fijo_ignora_las_personas(self):

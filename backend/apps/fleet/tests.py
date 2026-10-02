@@ -92,6 +92,26 @@ class PescaServicioApiTests(ApiTestCase):
 
 @override_settings(DEBUG=True)
 class SeedLocalDemoPescaTests(TestCase):
+    def test_paquete_pesca_traslado_actualiza_modelo_de_precio_sin_duplicar(self):
+        from apps.fleet.models import Paquete, PaqueteServicio
+
+        for _ in range(2):
+            call_command('seed_local_demo', stdout=StringIO())
+        with scope.como_operador_plataforma():
+            paquete = Paquete.objects.get(slug='pesca-traslado')
+            self.assertEqual(Paquete.objects.filter(slug='pesca-traslado').count(), 1)
+            self.assertEqual(
+                (paquete.estrategia_precio, paquete.personas_precio_base,
+                 paquete.precio_persona_extra, paquete.precio_ancla),
+                ('por_grupo', 3, Decimal('500.00'), Decimal('7500.00')),
+            )
+            self.assertEqual(paquete.precio_total_en('MXN', 5), Decimal('8500.00'))
+            topes = dict(PaqueteServicio.objects.filter(paquete=paquete).values_list(
+                'servicio__tipo_servicio', 'personas_incluidas',
+            ))
+            self.assertEqual(topes['pesca'], 5)
+            self.assertEqual(topes['transporte'], 2)
+
     def test_crea_pesca_con_precios_y_ventana_y_respeta_configuracion_existente(self):
         empresa = Empresa.objects.get(slug='sal-y-sol')
         with scope.con_empresa(empresa):
@@ -955,4 +975,3 @@ class CrearServicioPescaHelperTests(EmpresaTestCase):
         s2 = crear_servicio_pesca(self.empresa)
         self.assertEqual(s1.pk, s2.pk)
         self.assertEqual(Servicio.objects.filter(empresa=self.empresa, slug='pesca-deportiva').count(), 1)
-

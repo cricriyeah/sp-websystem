@@ -248,14 +248,26 @@ class Command(BaseCommand):
                     empresa_lider=sal, nombre='Pesca + Traslado',
                     descripcion='Pesca deportiva y traslado privado en La Paz. Dos cobros, uno por empresa.',
                     precio_ancla=Decimal('7500.00'),
+                    estrategia_precio='por_grupo', personas_precio_base=3,
+                    precio_persona_extra=Decimal('500.00'),
                     permite_anticipo=False, activo=True,
                 ),
             )
+            paquete_cruza.precio_ancla = Decimal('7500.00')
+            paquete_cruza.estrategia_precio = 'por_grupo'
+            paquete_cruza.personas_precio_base = 3
+            paquete_cruza.precio_persona_extra = Decimal('500.00')
+            paquete_cruza.save(update_fields=[
+                'precio_ancla', 'estrategia_precio', 'personas_precio_base', 'precio_persona_extra',
+            ])
             for posicion, servicio in enumerate((pesca, traslado), start=1):
                 componente, _ = PaqueteServicio.objects.get_or_create(
-                    paquete=paquete_cruza, servicio=servicio, defaults={'orden': posicion},
+                    paquete=paquete_cruza, servicio=servicio,
+                    defaults={'orden': posicion, 'personas_incluidas': 5 if servicio == pesca else 2},
                 )
+                componente.personas_incluidas = 5 if servicio == pesca else 2
                 componente.full_clean()
+                componente.save(update_fields=['personas_incluidas'])
             paquete_cruza.full_clean()
             paquete_cruza.validar_configuracion()
 
@@ -263,6 +275,6 @@ class Command(BaseCommand):
             'Demo sembrada.\n'
             '  Sede la-paz    -> sal-y-sol (pesca/paseo/hospedaje + paquete), hotel-malecon (suite), transporte-la-paz (traslados)\n'
             '  Sedes la-ventana y puerto-chale -> pendientes de empresas y catálogo reales\n'
-            '  Paquete pesca-traslado -> Pesca + Traslado (precio demo inicial: 7500 MXN / 450 USD)\n'
+            '  Paquete pesca-traslado -> Pesca + Traslado (base demo: 7500 MXN; USD según tipo de cambio)\n'
             'Sigue: pon llaves de Stripe TEST reales en /admin/tenancy/empresa/ para las empresas.'
         ))

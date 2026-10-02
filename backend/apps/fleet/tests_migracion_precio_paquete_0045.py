@@ -104,3 +104,34 @@ class PrecioPaqueteFieldsTests(TestCase):
     def test_el_selector_de_paquete_solo_tiene_dos_estrategias(self):
         choices = dict(Paquete._meta.get_field('estrategia_precio').choices)
         self.assertEqual(set(choices), {'por_grupo', 'por_persona'})
+
+
+class PrecioPaqueteFinal0046Tests(TransactionTestCase):
+    migrate_from = [('fleet', '0045_normalizar_precio_paquete')]
+    migrate_to = [('fleet', '0046_quitar_precio_por_persona')]
+
+    def test_quita_solo_el_campo_antiguo_y_conserva_estrategia(self):
+        executor = MigrationExecutor(connection)
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(
+            MigrationExecutor(connection).loader.graph.leaf_nodes()
+        ))
+        executor.migrate(self.migrate_from)
+        executor.loader.build_graph()
+        viejo = executor.loader.project_state(self.migrate_from).apps
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            sede = viejo.get_model('tenancy', 'Sede').objects.create(
+                nombre='Migración final', slug='migracion-final',
+            )
+            empresa = viejo.get_model('tenancy', 'Empresa').objects.create(
+                sede=sede, nombre='Empresa final', slug='empresa-final', activo=True,
+            )
+            paquete = viejo.get_model('fleet', 'Paquete').objects.create(
+                sede=sede, empresa_lider=empresa, nombre='Individual', slug='individual',
+                precio_ancla=Decimal('1200.00'), precio_por_persona=True,
+                estrategia_precio='por_persona',
+            )
+        executor.migrate(self.migrate_to)
+        nuevo = executor.loader.project_state(self.migrate_to).apps.get_model('fleet', 'Paquete')
+        self.assertNotIn('precio_por_persona', [f.name for f in nuevo._meta.fields])
+        with transaction.atomic(), alcance_operador_migracion(connection):
+            self.assertEqual(nuevo.objects.get(pk=paquete.pk).estrategia_precio, 'por_persona')

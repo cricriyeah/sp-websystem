@@ -285,16 +285,16 @@ class PaquetePrecioPorPersonaTests(OperadorTestCase):
 
     def test_por_defecto_el_precio_es_un_total_fijo(self):
         paquete = self._paquete()
-        self.assertFalse(paquete.precio_por_persona)
+        self.assertEqual(paquete.estrategia_precio, 'por_grupo')
         self.assertEqual(paquete.precio_total_en('MXN', 3), Decimal('45000.00'))
 
     def test_por_persona_multiplica_en_mxn_y_usd(self):
-        paquete = self._paquete(precio_por_persona=True)
+        paquete = self._paquete(estrategia_precio='por_persona')
         self.assertEqual(paquete.precio_total_en('MXN', 3), Decimal('135000.00'))
         self.assertEqual(paquete.precio_total_en('USD', 2, Decimal('18')), Decimal('5000.00'))
 
     def test_usd_sin_tipo_de_cambio_falla(self):
-        paquete = self._paquete(precio_por_persona=True)
+        paquete = self._paquete(estrategia_precio='por_persona')
         with self.assertRaises(ValueError):
             paquete.precio_total_en('USD', 2)
 
@@ -312,7 +312,7 @@ class PaquetePrecioPorPersonaTests(OperadorTestCase):
     def test_validar_configuracion_revisa_cada_tamano_de_grupo(self):
         servicio = self._traslado('5000.00')
         paquete = self._paquete(
-            precio_por_persona=True, precio_ancla=Decimal('4000.00'),
+            estrategia_precio='por_persona', precio_ancla=Decimal('4000.00'),
         )
         PaqueteServicio.objects.create(paquete=paquete, servicio=servicio, personas_incluidas=2)
         with self.assertRaises(ValidationError) as ctx:
@@ -321,11 +321,30 @@ class PaquetePrecioPorPersonaTests(OperadorTestCase):
 
     def test_validar_configuracion_acepta_un_precio_que_cubre_el_traslado(self):
         servicio = self._traslado('3500.00')
-        paquete = self._paquete(precio_por_persona=True)
+        paquete = self._paquete(estrategia_precio='por_persona')
         PaqueteServicio.objects.create(paquete=paquete, servicio=servicio, personas_incluidas=2)
         paquete.validar_configuracion()
 
-    def test_el_catalogo_publico_expone_precio_por_persona(self):
+    def test_por_grupo_con_extra_revisa_la_tarifa_de_cada_tamano(self):
+        servicio = self._traslado('3500.00')
+        TransporteTarifa.objects.filter(empresa=self.empresa).update(personas_max=1)
+        TransporteTarifa.objects.create(
+            empresa=self.empresa, tipo_traslado='redondo_aeropuerto', zona='',
+            personas_min=2, personas_max=2, precio=Decimal('5000.00'),
+        )
+        paquete = self._paquete(
+            estrategia_precio='por_grupo', personas_precio_base=1,
+            precio_persona_extra=Decimal('1000.00'), precio_ancla=Decimal('4000.00'),
+        )
+        PaqueteServicio.objects.create(paquete=paquete, servicio=servicio, personas_incluidas=2)
+        paquete.validar_configuracion()
+
+    def test_el_catalogo_publico_expone_la_estrategia_y_sus_parametros(self):
         from apps.fleet.serializers import PaqueteSerializer
-        paquete = self._paquete(precio_por_persona=True)
-        self.assertTrue(PaqueteSerializer(paquete).data['precio_por_persona'])
+        paquete = self._paquete(estrategia_precio='por_persona')
+        datos = PaqueteSerializer(paquete).data
+        self.assertEqual(datos['estrategia_precio'], 'por_persona')
+        self.assertEqual(datos['personas_precio_base'], 1)
+        self.assertEqual(datos['precio_persona_extra'], '0.00')
+        self.assertTrue(datos['precio_depende_de_personas'])
+        self.assertNotIn('precio_por_persona', datos)
