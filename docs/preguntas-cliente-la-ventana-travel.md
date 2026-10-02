@@ -95,3 +95,11 @@ encuentro reales; si el nombre del sitio sigue siendo "Transportes La Paz" o pas
 
 **Sal y Sol Sportfishing:** confirmar que pesca deportiva es su único servicio y que los
 precios del catálogo ya son los reales.
+
+## Decisiones del dueño (2026-10-01)
+
+- Cada día de mar es UNA sola actividad: avistamiento de ballenas y orcas (un solo servicio). Sin elección por día.
+- No hay precio para niños. Habitaciones y capacidades demo por ahora.
+- Traslado y hospedaje no bajan el precio si alguien no los usa: el precio es por persona fija.
+- Tipo de cambio: se actualizará según el cambio actual; por ahora 1 USD = 18 MXN, centavos hacia abajo (A = 2,500.00 USD, B = 2,916.66 USD).
+- Paquetes sembrados en local: `paquete-5-noches` y `paquete-7-noches` (capacidad demo 10 personas).

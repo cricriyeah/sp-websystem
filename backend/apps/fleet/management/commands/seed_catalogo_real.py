@@ -12,8 +12,7 @@ Estructura de negocio:
 
 Los precios y la flota de La Ventana y Puerto Chale son PLACEHOLDER (los reales no
 se han pasado): las lanchas se llaman "DEMO ..." para que se vean en el admin y se
-reemplacen. Los paquetes de La Ventana no se siembran aquí: dependen de precio por
-persona y de actividades en varios días.
+reemplacen. Los paquetes de La Ventana (precio por persona, mar en varios días) sí se siembran.
 
 `--limpiar-demo` borra lo que dejó seed_local_demo y no es real (Hotel Malecón, paseo,
 cabañas, snorkel, paquetes demo, TODAS las reservas y órdenes de prueba) y convierte la
@@ -21,7 +20,7 @@ empresa demo Tours Cabo en La Ventana Travel. Hazlo una sola vez, antes de sembr
 
 Uso:  venv/Scripts/python.exe manage.py seed_catalogo_real [--limpiar-demo]
 """
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -88,6 +87,7 @@ class Command(BaseCommand):
                 self._empresas()
             self._servicios()
             self._hotel_y_traslado_la_ventana()
+            self._paquetes_la_ventana()
 
         self.stdout.write(self.style.SUCCESS('Catálogo real sembrado.'))
         self.stdout.write(
@@ -252,3 +252,45 @@ class Command(BaseCommand):
                     personas_min=p_min,
                     defaults=dict(personas_max=p_max, precio=precio, precio_usd=precio_usd, activo=True),
                 )
+
+    # ------------------------------------------------------------------ paquetes de La Ventana Travel
+    def _paquetes_la_ventana(self):
+        """Paquetes A (5 noches) y B (7 noches): llegada el día 1 sin mar, avistamiento
+        todos los días de mar seguidos, precio POR PERSONA. USD = MXN / 18 redondeado
+        hacia abajo a centavos (tipo de cambio fijo demo; el real se actualizará).
+        Capacidad demo: 10 personas = suma de las habitaciones DEMO."""
+        from apps.fleet.models import Paquete, PaqueteServicio, Servicio
+
+        empresa = Empresa.objects.get(slug='la-ventana-travel')
+        sede = empresa.sede
+        definiciones = (
+            ('paquete-5-noches', 'Paquete 5 noches', 5, Decimal('45000')),
+            ('paquete-7-noches', 'Paquete 7 noches', 7, Decimal('52500')),
+        )
+        with scope.con_empresa(empresa):
+            hotel = Servicio.objects.get(empresa=empresa, slug='hospedaje-la-ventana')
+            traslado = Servicio.objects.get(empresa=empresa, slug='traslado-aeropuerto-la-ventana')
+            avistamiento = Servicio.objects.get(empresa=empresa, slug='avistamiento-ballenas-orcas')
+            for slug, nombre, noches, precio in definiciones:
+                usd = (precio / Decimal(18)).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                paquete, creado = Paquete.objects.get_or_create(
+                    sede=sede, slug=slug,
+                    defaults=dict(
+                        empresa_lider=empresa, nombre=nombre, precio_ancla=precio,
+                        precio_ancla_usd=usd, precio_por_persona=True, activo=True,
+                        descripcion=f'{noches} noches de hospedaje, traslado redondo de aeropuerto y '
+                                    f'avistamiento de ballenas y orcas del día 2 al {noches}.',
+                    ),
+                )
+                for orden, servicio, extra in (
+                    (1, traslado, dict(dia_estancia=1)),
+                    (2, hotel, dict(dia_estancia=1, noches=noches)),
+                    (3, avistamiento, dict(dia_estancia=2, salidas=noches - 1)),
+                ):
+                    PaqueteServicio.objects.get_or_create(
+                        paquete=paquete, servicio=servicio,
+                        defaults=dict(orden=orden, personas_incluidas=10, **extra),
+                    )
+                paquete.full_clean()
+                paquete.validar_configuracion()
+                self.stdout.write(f'  Paquete la-ventana/{slug}: {"creado" if creado else "ok"} ({precio} MXN / {usd} USD por persona)')
