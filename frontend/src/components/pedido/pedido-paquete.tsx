@@ -10,6 +10,7 @@ import { CheckoutStepper } from '@/components/checkout-stepper';
 import { ErrorBlock } from '@/components/error-block';
 import { FieldError } from '@/components/field-error';
 import { SiteHeader } from '@/components/site-header';
+import { WaitNotice } from '@/components/wait-notice';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
@@ -265,7 +266,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{textos.success.title}</h1>
         <p className="text-sm text-muted">{textos.success.body}</p>
-        <div className="w-full rounded-xl border border-border bg-card p-5 text-left">
+        <div className="w-full border border-border bg-card p-5 text-left">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">
             {textos.success.componentsHeadline}
           </p>
@@ -320,6 +321,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     return (
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
+        <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
         <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} totalMovil={totalMovil} />
         <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
           <AvisoFallo
@@ -340,10 +342,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     <div className="min-h-dvh bg-surface">
       <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
       <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
-        <p className="text-sm text-foreground">
-          {pago.fase === 'resumiendo' ? textos.resuming : feedback.payingWait}
-        </p>
-        {pago.fase !== 'resumiendo' && <p className="mt-3 text-sm text-muted">{feedback.paySlow}</p>}
+        <WaitNotice
+          mensaje={pago.fase === 'resumiendo' ? textos.resuming : feedback.payingWait}
+          mensajeLento={pago.fase === 'resumiendo' ? undefined : feedback.paySlow}
+        />
       </div>
     </div>
   );
@@ -371,29 +373,23 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     return (
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
+        <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
         <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} totalMovil={totalMovil} />
         <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
-          <div className="hidden min-w-0 flex-col gap-6 lg:flex">
-            <section className="border border-border bg-background p-6 sm:p-8">
-              <h2 className="text-sm font-medium text-foreground">{checkout.contactHeadline}</h2>
-              <p className="mt-2 text-sm text-muted">{estado.contacto.fullName} · {estado.contacto.email}</p>
-            </section>
-            <section className="border border-border bg-background p-6 sm:p-8">
-              <h2 className="text-sm font-medium text-foreground">{textos.success.componentsHeadline}</h2>
-              <ul className="mt-4 flex flex-col gap-3">
-                {paquete.servicios_asociados.map((item) => (
-                  <li key={item.id} className="flex items-start justify-between gap-4 text-sm">
-                    <span className="font-medium text-foreground">{item.servicio.nombre}</span>
-                    <span className="text-right text-muted">
-                      {formatearFecha(fechaDeComponente(estado.inicio ?? minDate, item.dia_estancia))}
-                      {' · '}{estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas}{' '}
-                      {(estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas) === 1
-                        ? checkout.peopleUnit.one : checkout.peopleUnit.other}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          <div className="flex min-w-0 flex-col gap-6">
+            <CheckoutSectionCard title={checkout.contactHeadline} estado="completado"
+              resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}>
+              {null}
+            </CheckoutSectionCard>
+            {paquete.servicios_asociados.map((item) => {
+              const personas = estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas;
+              return (
+                <CheckoutSectionCard key={item.id} title={item.servicio.nombre} estado="completado"
+                  resumen={`${nombreEmpresa(item.servicio.empresa_slug)} · ${formatearFecha(fechaDeComponente(estado.inicio ?? minDate, item.dia_estancia))} · ${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}>
+                  {null}
+                </CheckoutSectionCard>
+              );
+            })}
           </div>
           <div className="min-w-0">
             <StripePanel
@@ -452,7 +448,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
         <div className="flex min-w-0 flex-col gap-6">
         {paquete.precio_depende_de_personas && maxPersonas !== null && (
-          <section className="rounded-xl border border-border bg-card p-5 sm:p-6" aria-label={textos.peopleQuestion}>
+          <section className="border border-border bg-card p-5 sm:p-6" aria-label={textos.peopleQuestion}>
             <p className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold tracking-tight text-foreground sm:text-3xl">
               <span>{anclaMostrada}</span>
               <span className="whitespace-nowrap">{estado.moneda} {paquete.estrategia_precio === 'por_persona'
@@ -464,7 +460,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 {textos.extraPerson.replace('{precio}', formatearPrecio(extra, estado.moneda))}
               </p>
             )}
-            <div className="mt-4 rounded-lg border border-border bg-surface">
+            <div className="mt-4 border border-border bg-surface">
               <PeopleStepper label={textos.peopleQuestion}
                 maxNotice={(tieneWhatsapp ? textos.morePeople : textos.morePeopleOffline).replace('{max}', String(maxPersonas))}
                 value={personasPaquete} maxPeople={maxPersonas} minPeople={1}

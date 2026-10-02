@@ -85,6 +85,7 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-card: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-deep: var(--surface-deep);

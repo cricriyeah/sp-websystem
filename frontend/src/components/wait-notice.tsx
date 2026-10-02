@@ -37,7 +37,7 @@ export function WaitNotice({
     // esto, quien no ve el spinner no tiene forma de saber que sigue en curso.
     <div
       aria-live="polite"
-      className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
+      className="flex items-start gap-3 border border-border bg-background px-5 py-4 text-left text-sm text-foreground"
     >
       {/* motion-safe: quien pidio menos movimiento ve el icono quieto, y el
           mensaje sigue haciendo todo el trabajo. */}

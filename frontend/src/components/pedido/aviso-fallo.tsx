@@ -13,7 +13,7 @@ type Props = {
 
 export function AvisoFallo({ titulo, motivo, lineasDinero, etiquetaBoton, onReintentar, ayuda }: Props) {
   return (
-    <div role="alert" className="rounded-xl border border-border bg-card p-5">
+    <div role="alert" className="border border-border bg-card p-5 sm:p-8">
       <h1 className="text-lg font-semibold text-foreground sm:text-xl">{titulo}</h1>
       {motivo && <p className="mt-1 text-sm text-foreground">{motivo}</p>}
       <div className="mt-3 flex flex-col gap-2 text-xs leading-relaxed text-muted">
