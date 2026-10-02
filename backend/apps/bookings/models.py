@@ -15,7 +15,7 @@ from apps.fleet.models import (
     capacidades_disponibles,
     capacidades_por_fecha,
 )
-from apps.fleet.enums import TipoTraslado, Zona
+from apps.fleet.enums import Aeropuerto, TipoTraslado, Zona
 from apps.fleet.calendario_paquete import fechas_de_componente
 from apps.tenancy.models import Empresa, Sede
 
@@ -439,6 +439,10 @@ class Reserva(models.Model):
         default=dict, blank=True,
         help_text='Paquete de una sola empresa: personas de cada servicio, {"<servicio_id>": n}. '
                   '`numero_personas` es el del componente operativo principal.',
+    )
+    aeropuerto = models.CharField(
+        max_length=3, choices=Aeropuerto.choices, blank=True, default='',
+        help_text='Paquete con hospedaje y traslado: aeropuerto del que llega la clienta (el traslado es redondo).',
     )
     inicio_paquete = models.DateField(
         null=True, blank=True,

@@ -33,6 +33,11 @@ class Zona(models.TextChoices):
     PERIFERIA = 'periferia', 'Periferia'
 
 
+class Aeropuerto(models.TextChoices):
+    LA_PAZ = 'lap', 'La Paz (LAP)'
+    LOS_CABOS = 'sjd', 'Los Cabos (SJD)'
+
+
 class TipoTraslado(models.TextChoices):
     REDONDO_AEROPUERTO = 'redondo_aeropuerto', 'Redondo con aeropuerto'
     REDONDO_ACTIVIDAD = 'redondo_actividad', 'Redondo actividad'

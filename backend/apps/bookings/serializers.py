@@ -124,7 +124,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'moneda', 'deslinde_aceptado', 'deslinde_nombre',
             'pide_bebidas',
             'servicio', 'paquete', 'fecha_salida',
-            'personas_por_servicio', 'fecha_inicio_paquete',
+            'personas_por_servicio', 'fecha_inicio_paquete', 'aeropuerto',
             'personalizaciones',
             'ref', 'estado',
         ]
@@ -273,6 +273,11 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'paquete': exc.messages})
             if fecha_salida_cliente:
                 raise serializers.ValidationError({'fecha_salida': 'La fecha de salida la define el paquete.'})
+            con_traslado = any(ps.servicio.tipo_servicio == 'transporte' for ps in componentes_activos)
+            con_hospedaje = any(ps.noches for ps in componentes_activos)
+            aeropuerto = attrs.get('aeropuerto', getattr(self.instance, 'aeropuerto', '') if self.instance else '')
+            if con_traslado and con_hospedaje and not aeropuerto:
+                raise serializers.ValidationError({'aeropuerto': 'Elige el aeropuerto.'})
             attrs = self._derivar_de_paquete(attrs, fecha, componentes_activos)
         else:
             es_hospedaje = bool(servicio and servicio.estrategia_cupo == 'por_noche')
