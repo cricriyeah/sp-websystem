@@ -47,6 +47,22 @@ def cargo_por_personas(precio_persona_extra, numero_personas, personas_incluidas
     return Decimal(precio_persona_extra) * personas_extra(numero_personas, personas_incluidas)
 
 
+def calcular_total(*, estrategia, base, personas, personas_base=1, extra=Decimal('0')):
+    """Cálculo único del precio base de algo que se vende por grupo o por persona.
+
+    `por_grupo`: `base` cubre `personas_base`; cada persona de más suma `extra`.
+    `por_persona`: `base` es el precio de UNA persona y `personas_base`/`extra` no cuentan.
+    `base` y `extra` ya vienen en la moneda del cobro (USD ya convertido, ver `payments.moneda`)."""
+    personas = max(1, int(personas))
+    if estrategia == 'por_persona':
+        total = Decimal(base) * personas
+    elif estrategia == 'por_grupo':
+        total = Decimal(base) + Decimal(extra) * personas_extra(personas, personas_base)
+    else:
+        raise ValueError(f'Estrategia de precio no soportada: {estrategia}.')
+    return total.quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+
+
 def cantidad_efectiva(*, cobrar_por_persona, cantidad_editable, personas, cantidad=1):
     if not cobrar_por_persona:
         return 1
