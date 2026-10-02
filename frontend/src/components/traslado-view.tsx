@@ -146,16 +146,15 @@ export function TrasladoView({
   const minDate = useMemo(() => getMinBookableDate(), []);
   const [fecha, setFecha] = useState(minDate);
   const [fechaRegreso, setFechaRegreso] = useState<string | null>(() => diaSiguiente(minDate));
-  const [hora, setHora] = useState('10:00');
-  const [errorPaso3, setErrorPaso3] = useState('');
-
   const horasDisponibles = useMemo(() => {
     return generarHorasVentana(
-      catalogo.servicio.hora_apertura ?? '06:00',
-      catalogo.servicio.hora_cierre ?? '22:00',
-      30,
+      catalogo.servicio.hora_apertura,
+      catalogo.servicio.hora_cierre,
+      catalogo.servicio.paso_hora_minutos,
     );
-  }, [catalogo.servicio.hora_apertura, catalogo.servicio.hora_cierre]);
+  }, [catalogo.servicio.hora_apertura, catalogo.servicio.hora_cierre, catalogo.servicio.paso_hora_minutos]);
+  const [hora, setHora] = useState(horasDisponibles[0] ?? '');
+  const [errorPaso3, setErrorPaso3] = useState('');
 
   const maxCapacidad = catalogo.servicio.capacidad_maxima ?? 14;
   const [personas, setPersonas] = useState(2);

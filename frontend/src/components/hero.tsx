@@ -6,6 +6,7 @@ type HeroProps = {
   lang: Locale;
   dict: Dictionary;
   minDate: string;
+  horasDisponibles: string[];
 };
 
 /**
@@ -32,7 +33,7 @@ type HeroProps = {
  * Es un Server Component: lo unico que necesita JavaScript es la barra de
  * reserva, su propia isla de cliente.
  */
-export function Hero({ lang, dict, minDate }: HeroProps) {
+export function Hero({ lang, dict, minDate, horasDisponibles }: HeroProps) {
   const facts = [
     dict.about.facts.duration,
     dict.about.facts.departure,
@@ -113,7 +114,7 @@ export function Hero({ lang, dict, minDate }: HeroProps) {
         id={ID_BARRA_PORTADA}
         className="relative mx-auto -mt-8 max-w-6xl px-6 sm:px-8 lg:-mt-12 lg:max-w-4xl lg:px-12"
       >
-        <BookingBar lang={lang} booking={dict.booking} minDate={minDate} />
+        <BookingBar lang={lang} booking={dict.booking} minDate={minDate} horasDisponibles={horasDisponibles} />
       </div>
 
       <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-6 pt-12 pb-16 sm:px-8 lg:grid-cols-4 lg:gap-x-0 lg:px-12 lg:pt-14 lg:pb-20">

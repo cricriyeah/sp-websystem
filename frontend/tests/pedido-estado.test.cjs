@@ -98,3 +98,16 @@ test('paquete con hospedaje de una empresa: el traslado arranca redondo con aero
 test('paquete sin hospedaje conserva el tipo inicial de siempre', () => {
   assert.equal(inicial().componentes.traslado.traslado.tipo, 'redondo_actividad');
 });
+
+test('la hora inicial es la primera del rango de la actividad principal, o ninguna si el paquete no la pide', () => {
+  const ventana = { pide_hora: true, hora_apertura: '08:00:00', hora_cierre: '10:00:00', paso_hora_minutos: 60 };
+  const paquete = (pide) => ({
+    pide_hora: pide,
+    servicios_asociados: [{
+      servicio_id: 1, orden: 1, personas_incluidas: 2,
+      servicio: { slug: 'pesca', empresa_slug: 'a', tipo_servicio: 'pesca', estrategia_cupo: 'por_recurso_dia', personalizaciones: [], ...ventana },
+    }],
+  });
+  assert.equal(e.estadoInicial(paquete(true), { moneda: 'MXN', puntoInicial: () => null }).hora, '08:00');
+  assert.equal(e.estadoInicial(paquete(false), { moneda: 'MXN', puntoInicial: () => null }).hora, '');
+});

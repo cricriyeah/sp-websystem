@@ -18,22 +18,19 @@ export function getMinBookableDate(): string {
   return toLocalISODate(date);
 }
 
-// Constantes de ventana horaria por omisión (pesca deportiva)
-export const PESCA_HORA_APERTURA = '05:00';
-export const PESCA_HORA_CIERRE = '07:00';
-export const TOUR_HOURS = ['05:00', '05:15', '05:30', '05:45', '06:00', '06:15', '06:30', '06:45', '07:00'];
 
 /**
  * Genera las horas seleccionables para una ventana horaria (apertura y cierre en 'HH:MM'),
- * con saltos de pasoMinutos (default 15). Si no se proveen horas, retorna TOUR_HOURS.
+ * con saltos de pasoMinutos (default 15). Sin rango no hay horas: la ventana es un dato de cada
+ * servicio y no se inventa una por omisión.
  */
 export function generarHorasVentana(
   apertura?: string | null,
   cierre?: string | null,
   pasoMinutos = 15
 ): string[] {
-  if (!apertura || !cierre) {
-    return TOUR_HOURS;
+  if (!apertura || !cierre || pasoMinutos < 1) {
+    return [];
   }
   const [hIni, mIni] = apertura.split(':').map(Number);
   const [hFin, mFin] = cierre.split(':').map(Number);
@@ -88,13 +85,14 @@ export function getTopePersonas(capacidadMaxima?: number | null): number {
  * necesita uno (ahi no hay campo vacio posible), la portada no — un campo sin
  * responder se queda vacio a proposito.
  *
- * Acepta opciones para sobreescribir las horas válidas o el rango de personas.
+ * La hora solo se valida de formato (HH:MM): si cabe en el rango del servicio lo decide cada
+ * checkout con las horas de ese servicio, no una lista fija de aquí.
+ * Acepta opciones para sobreescribir el rango de personas.
  */
 export function parseBookingQuery(
   get: (key: string) => string | undefined,
   minDate: string,
   options?: {
-    validHours?: string[];
     maxPeople?: number;
     minPeople?: number;
   }
@@ -103,9 +101,8 @@ export function parseBookingQuery(
   const day =
     dayParam && /^\d{4}-\d{2}-\d{2}$/.test(dayParam) && dayParam >= minDate ? dayParam : undefined;
 
-  const validHours = options?.validHours ?? TOUR_HOURS;
   const timeParam = get('time');
-  const time = timeParam && validHours.includes(timeParam) ? timeParam : undefined;
+  const time = timeParam && /^([01]\d|2[0-3]):[0-5]\d$/.test(timeParam) ? timeParam : undefined;
 
   const max = options?.maxPeople ?? MAX_PEOPLE;
   const min = options?.minPeople ?? MIN_PEOPLE;

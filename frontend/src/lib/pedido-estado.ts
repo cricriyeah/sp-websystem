@@ -1,6 +1,7 @@
 import type { Moneda, PaqueteCatalogo } from './api';
 import type { ComponentePedido, DatosContacto, DetalleTraslado } from './pedido-payload';
 import { seleccionInicial, type SeleccionPersonalizacion } from './personalizaciones';
+import { horasDePaquete } from './horario-servicio';
 import { maxPersonasPaquete, trasladoFijoAeropuerto } from './pedido-paquete';
 
 export type EstadoPedido = {
@@ -54,7 +55,7 @@ export function estadoInicial(paquete: PaqueteCatalogo, opciones: OpcionesEstado
   return {
     contacto: { fullName: '', phone: '', email: '' },
     inicio: null,
-    hora: '07:00',
+    hora: horasDePaquete(paquete)[0] ?? '',
     moneda: opciones.moneda,
     formaPago: 'completo',
     componentes,

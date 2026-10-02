@@ -5,6 +5,7 @@ import { CheckoutView } from '@/components/checkout-view';
 import { PedidoPaquete } from '@/components/pedido/pedido-paquete';
 import { getPaqueteDetalle, getServicioDetalle, getTraslados, type PaqueteCatalogo, type ServicioCatalogo, type TrasladosCatalogo } from '@/lib/api';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
+import { horasDeServicio } from '@/lib/horario-servicio';
 import { alternativasDe } from '@/lib/site';
 
 export async function generateMetadata({
@@ -39,7 +40,6 @@ export default async function ReservarPage({
     minDate,
   );
   const day = parsed.day ?? minDate;
-  const time = parsed.time ?? '06:00';
   const people = parsed.people ?? 2;
 
   // Si se seleccionó un paquete de experiencias desde el catálogo
@@ -104,6 +104,11 @@ export default async function ReservarPage({
     const slug = servicioSlug ?? 'pesca-deportiva';
     servicio = await getServicioDetalle(slug, empresaSlug).catch(() => null);
   }
+
+  // La hora inicial es la que trae la barra si cabe en las horas del servicio; si no, la primera del
+  // rango. Sin servicio (o si no pide hora) no hay hora.
+  const horasServicio = servicio ? horasDeServicio(servicio) : [];
+  const time = parsed.time && horasServicio.includes(parsed.time) ? parsed.time : horasServicio[0] ?? '';
 
   // El booking bar siempre manda los tres juntos: si trae alguno explicito es
   // que el cliente acaba de elegir viaje, no que recargo esta misma pagina.

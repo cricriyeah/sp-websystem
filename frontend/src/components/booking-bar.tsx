@@ -14,6 +14,8 @@ type BookingBarProps = {
   lang: Locale;
   booking: Dictionary['booking'];
   minDate: string;
+  /** Horas que ofrece el servicio de la barra (rango y paso del servicio, ver lib/horario-servicio.ts). */
+  horasDisponibles: string[];
 };
 
 /**
@@ -37,7 +39,7 @@ type BookingBarProps = {
  * siendo automatica es la del campo que falta, y solo al intentar enviar con
  * el formulario incompleto.
  */
-export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
+export function BookingBar({ lang, booking, minDate, horasDisponibles }: BookingBarProps) {
   const router = useRouter();
   const sinMovimiento = useReducedMotion();
 
@@ -108,6 +110,7 @@ export function BookingBar({ lang, booking, minDate }: BookingBarProps) {
         value={time}
         onChange={setTime}
         solicitarApertura={abrirHora}
+        availableHours={horasDisponibles}
       />
 
       <div className="flex items-center px-1 py-1 sm:pl-3">

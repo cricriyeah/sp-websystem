@@ -320,6 +320,11 @@ export type ServicioCatalogo = {
   porcentaje_anticipo: number;
   descripcion: string;
   activo: boolean;
+  // Rango y paso de las horas de salida que ofrece el servicio (ver lib/horario-servicio.ts).
+  pide_hora: boolean;
+  hora_apertura: string | null;
+  hora_cierre: string | null;
+  paso_hora_minutos: number;
   personalizaciones: ServicioPersonalizacionCatalogo[];
 };
 
@@ -385,6 +390,7 @@ export type TrasladosCatalogo = {
     empresa_slug: string;
     hora_apertura: string | null;
     hora_cierre: string | null;
+    paso_hora_minutos: number;
   };
   tarifas: {
     tipo_traslado: TipoTraslado;

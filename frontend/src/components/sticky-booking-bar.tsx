@@ -10,6 +10,7 @@ type StickyBookingBarProps = {
   lang: Locale;
   booking: Dictionary['booking'];
   minDate: string;
+  horasDisponibles: string[];
 };
 
 /** Lo pone el hero en el envoltorio de su barra; es lo que se vigila aqui. */
@@ -39,7 +40,7 @@ const MARGEN_APARICION = 120;
  * media pantalla de telefono tapada de forma permanente. Ahi va un solo boton
  * que abre el formulario como hoja desde abajo, y al elegir se cierra.
  */
-export function StickyBookingBar({ lang, booking, minDate }: StickyBookingBarProps) {
+export function StickyBookingBar({ lang, booking, minDate, horasDisponibles }: StickyBookingBarProps) {
   const [visible, setVisible] = useState(false);
   const [hojaAbierta, setHojaAbierta] = useState(false);
   const sinMovimiento = useReducedMotion();
@@ -109,7 +110,7 @@ export function StickyBookingBar({ lang, booking, minDate }: StickyBookingBarPro
           <div className="mx-auto max-w-6xl lg:max-w-4xl">
             {/* Escritorio: el formulario completo, igual que en la portada. */}
             <div className="hidden sm:block">
-              <BookingBar lang={lang} booking={booking} minDate={minDate} />
+              <BookingBar lang={lang} booking={booking} minDate={minDate} horasDisponibles={horasDisponibles} />
             </div>
 
             {/* Movil: un boton, y el formulario en una hoja que sube. */}
@@ -157,7 +158,7 @@ export function StickyBookingBar({ lang, booking, minDate }: StickyBookingBarPro
                       <X size={18} />
                     </button>
                   </div>
-                  <BookingBar lang={lang} booking={booking} minDate={minDate} />
+                  <BookingBar lang={lang} booking={booking} minDate={minDate} horasDisponibles={horasDisponibles} />
                 </motion.div>
               </>
             )}

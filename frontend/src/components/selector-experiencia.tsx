@@ -23,6 +23,7 @@ type SelectorExperienciaProps = {
   moneda: Moneda;
   booking: Dictionary['booking'];
   minDate: string;
+  horasDisponibles: string[];
   verTodoLabel: string;
   hrefVerTodo: string;
   precioDesdeLabel: string;
@@ -74,6 +75,7 @@ export function SelectorExperiencia({
   moneda,
   booking,
   minDate,
+  horasDisponibles,
   verTodoLabel,
   hrefVerTodo,
   precioDesdeLabel,
@@ -168,7 +170,7 @@ export function SelectorExperiencia({
               <CaretLeft size={14} weight="bold" />
               {booking.elegirOtra}
             </button>
-            <BookingBar lang={lang} booking={booking} minDate={minDate} />
+            <BookingBar lang={lang} booking={booking} minDate={minDate} horasDisponibles={horasDisponibles} />
           </motion.div>
         )}
       </AnimatePresence>

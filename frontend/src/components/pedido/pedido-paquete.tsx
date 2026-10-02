@@ -19,6 +19,7 @@ import { fromLocalISODate } from '@/lib/dates';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
+import { horasDePaquete } from '@/lib/horario-servicio';
 import { intlLocale } from '@/lib/intl';
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
@@ -496,6 +497,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             </label>
             {paquete.pide_hora && <div className="sm:col-span-2">
               <TimeField label={checkout.hourLabel} help={booking.timeHelp} value={estado.hora}
+                availableHours={horasDePaquete(paquete)}
                 onChange={(valor) => despachar({ tipo: 'hora', valor })} />
             </div>}
           </div>

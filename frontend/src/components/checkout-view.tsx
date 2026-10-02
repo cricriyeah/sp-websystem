@@ -43,6 +43,7 @@ import {
   type ServicioCatalogo,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
+import { horasDeServicio } from '@/lib/horario-servicio';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import {
@@ -198,6 +199,8 @@ export function CheckoutView({
   const checkoutId = checkoutIdValue?.id ?? '';
   const recuperable = checkoutIdValue?.recuperable ?? false;
   const catalogoUnificado = servicio?.personalizaciones ?? [];
+  const pideHora = servicio ? servicio.pide_hora : true;
+  const horasDisponibles = servicio ? horasDeServicio(servicio) : [];
 
   const [day, setDay] = useState(initialDay);
   const [time, setTime] = useState(initialTime);
@@ -677,7 +680,7 @@ export function CheckoutView({
       if (estado.estado === 'pagada') {
         setReservaId(estado.reserva_id);
         setDay(estado.fecha);
-        setTime(estado.hora);
+        setTime(estado.hora ?? '');
         setPeople(estado.numero_personas);
         setContact((c) => ({ ...c, fullName: estado.nombre_cliente, email: estado.correo_cliente }));
         setMoneda(estado.moneda);
@@ -710,7 +713,7 @@ export function CheckoutView({
         // recien elegida con la vieja cada vez que se reusaba la pestana.
         if (!queryOverride) {
           setDay(estado.fecha);
-          setTime(estado.hora);
+          setTime(estado.hora ?? '');
           setPeople(estado.numero_personas);
         }
         setContact({
@@ -883,7 +886,7 @@ export function CheckoutView({
       const reserva = await guardarReserva({
         checkout_id: checkoutId,
         fecha: day,
-        hora: time,
+        ...(pideHora ? { hora: time } : {}),
         numero_personas: people,
         nombre_cliente: contact.fullName,
         telefono_cliente: contact.phone,
@@ -977,9 +980,12 @@ export function CheckoutView({
   const colapsado3 = locked || (extrasConfirmado && pasoEditando !== 3);
 
   const personasResumen = `${people} ${people === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`;
-  const resumenPaso1 = tieneHospedaje
-    ? `${formatDay(dayDate, lang)} → ${formatDay(fromLocalISODate(fechaSalida), lang)} · ${formatHour(time)} · ${personasResumen}`
-    : `${formatDay(dayDate, lang)} · ${formatHour(time)} · ${personasResumen}`;
+  const horaTexto = pideHora && time ? formatHour(time) : '';
+  const resumenPaso1 = [
+    tieneHospedaje ? `${formatDay(dayDate, lang)} → ${formatDay(fromLocalISODate(fechaSalida), lang)}` : formatDay(dayDate, lang),
+    horaTexto || null,
+    personasResumen,
+  ].filter(Boolean).join(' · ');
   const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
 
   // El stepper de arriba cuenta el pago como paso 4 en cuanto el paso 3 se
@@ -992,9 +998,9 @@ export function CheckoutView({
   // Lo que se le manda a la vendedora si el cliente usa la salida de emergencia
   // de un error. Lleva su fecha, hora y grupo para que ella no tenga que
   // preguntarlos y el no tenga que redactar nada ya estando frustrado.
-  const ayudaMensaje = mensajeDeAyuda(dict.feedback.helpMessage, {
+  const ayudaMensaje = mensajeDeAyuda(pideHora ? dict.feedback.helpMessage : dict.feedback.helpMessageNoTime, {
     fecha: formatDay(dayDate, lang),
-    hora: formatHour(time),
+    hora: horaTexto,
     personas: people,
   });
 
@@ -1021,7 +1027,7 @@ export function CheckoutView({
         nombre={contact.fullName}
         email={contact.email}
         fecha={formatDay(dayDate, lang)}
-        hora={formatHour(time)}
+        hora={horaTexto}
         personas={people}
         // Vacio en una reserva repuesta: `EstadoReservaView` solo devuelve el
         // monto cobrado en la rama `pagada`, no el desglose, y rearmarlo con
@@ -1146,9 +1152,9 @@ export function CheckoutView({
             {/* Hora y personas siguen siendo editables aqui: cambiar de idea no
                 deberia obligar a volver a la portada. */}
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-              {locked ? (
+              {pideHora && (locked ? (
                 <p className="px-6 py-4 text-sm text-muted">
-                  {checkout.hourLabel}: <span className="text-foreground">{formatHour(time)}</span>
+                  {checkout.hourLabel}: <span className="text-foreground">{horaTexto}</span>
                 </p>
               ) : (
                 <TimeField
@@ -1156,8 +1162,9 @@ export function CheckoutView({
                   help={booking.timeHelp}
                   value={time}
                   onChange={setTime}
+                  availableHours={horasDisponibles}
                 />
-              )}
+              ))}
 
               <PeopleStepper
                 label={checkout.peopleLabel}

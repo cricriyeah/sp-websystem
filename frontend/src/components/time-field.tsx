@@ -2,7 +2,7 @@
 
 import { Check, Clock } from '@phosphor-icons/react';
 import { FieldPopover } from '@/components/field-popover';
-import { formatHour, TOUR_HOURS } from '@/lib/dates';
+import { formatHour } from '@/lib/dates';
 
 type TimeFieldProps = {
   label: string;
@@ -13,8 +13,8 @@ type TimeFieldProps = {
   /** Pregunta grande mientras no hay respuesta. */
   placeholder?: string;
   solicitarApertura?: number;
-  /** Lista de horas disponibles (default: TOUR_HOURS 5:00-7:00 am). */
-  availableHours?: string[];
+  /** Horas que ofrece el servicio (ver lib/horario-servicio.ts). */
+  availableHours: string[];
 };
 
 export function TimeField({
@@ -26,7 +26,7 @@ export function TimeField({
   solicitarApertura,
   availableHours,
 }: TimeFieldProps) {
-  const horas = availableHours ?? TOUR_HOURS;
+  const horas = availableHours;
   return (
     <FieldPopover
       label={label}
