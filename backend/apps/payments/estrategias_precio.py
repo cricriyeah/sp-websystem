@@ -12,6 +12,7 @@ from enum import StrEnum
 from typing import Any
 
 from apps.fleet.tarifa_transporte import TarifaTransporteNoConfigurada, resolver_tarifa_transporte
+from .moneda import convertir
 from .pricing import CENTAVOS, PERSONAS_INCLUIDAS, cargo_por_personas, personas_extra
 
 
@@ -31,6 +32,7 @@ class DemandaPrecio:
     noches: int = 1
     tipo_traslado: str | None = None
     zona: str | None = None
+    tipo_cambio: Decimal | None = None  # pesos por dolar; solo se usa si la moneda es USD
 
     @property
     def moneda_normalizada(self) -> str:
@@ -52,30 +54,22 @@ def _obtener_campo(config: Any, nombres: list[str]) -> Any:
     return None
 
 
-def resolver_precio_base(servicio_config: Any, moneda: str) -> Decimal:
-    """Obtiene el precio base configurado para la moneda especificada."""
-    moneda_norm = (moneda or 'MXN').upper()
-    if moneda_norm == 'USD':
-        val = _obtener_campo(servicio_config, ['precio_base_usd', 'precio_usd'])
-    else:
-        val = _obtener_campo(servicio_config, ['precio_base', 'precio'])
-
+def resolver_precio_base(servicio_config: Any, moneda: str, tipo_cambio: Decimal | None = None) -> Decimal:
+    """Precio base en la moneda pedida: el de pesos, convertido con el tipo de cambio si es USD."""
+    val = _obtener_campo(servicio_config, ['precio_base', 'precio'])
     if val is None:
-        raise ValueError(f"No hay precio configurado en {moneda_norm}.")
-    return Decimal(val)
+        raise ValueError(f"No hay precio configurado en {(moneda or 'MXN').upper()}.")
+    return convertir(Decimal(val), moneda, tipo_cambio)
 
 
-def resolver_precio_persona_extra(servicio_config: Any, moneda: str) -> Decimal | None:
-    """Obtiene el cargo por persona adicional configurado en la moneda."""
-    moneda_norm = (moneda or 'MXN').upper()
-    if moneda_norm == 'USD':
-        val = _obtener_campo(servicio_config, ['precio_persona_extra_usd'])
-    else:
-        val = _obtener_campo(servicio_config, ['precio_persona_extra'])
-
+def resolver_precio_persona_extra(
+    servicio_config: Any, moneda: str, tipo_cambio: Decimal | None = None,
+) -> Decimal | None:
+    """Cargo por persona adicional en la moneda pedida, o None si no hay."""
+    val = _obtener_campo(servicio_config, ['precio_persona_extra'])
     if val is None:
         return None
-    return Decimal(val)
+    return convertir(Decimal(val), moneda, tipo_cambio)
 
 
 def resolver_personas_incluidas(servicio_config: Any) -> int:
@@ -102,12 +96,12 @@ class PorGrupo(EstrategiaPrecio):
 
     def calcular_base(self, servicio_config: Any, demanda: DemandaPrecio) -> Decimal:
         moneda = demanda.moneda_normalizada
-        base = resolver_precio_base(servicio_config, moneda)
+        base = resolver_precio_base(servicio_config, moneda, demanda.tipo_cambio)
         incluidas = resolver_personas_incluidas(servicio_config)
         extras = personas_extra(demanda.personas, personas_incluidas=incluidas)
 
         if extras > 0:
-            precio_extra = resolver_precio_persona_extra(servicio_config, moneda)
+            precio_extra = resolver_precio_persona_extra(servicio_config, moneda, demanda.tipo_cambio)
             if precio_extra is None:
                 raise ValueError(f"No hay cargo por persona extra configurado en {moneda}.")
             recargo = cargo_por_personas(precio_extra, demanda.personas, personas_incluidas=incluidas)
@@ -124,7 +118,7 @@ class PorPersona(EstrategiaPrecio):
 
     def calcular_base(self, servicio_config: Any, demanda: DemandaPrecio) -> Decimal:
         moneda = demanda.moneda_normalizada
-        base = resolver_precio_base(servicio_config, moneda)
+        base = resolver_precio_base(servicio_config, moneda, demanda.tipo_cambio)
         personas = max(1, demanda.personas)
         total = (base * Decimal(personas)).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
         return total
@@ -136,7 +130,7 @@ class TarifaFija(EstrategiaPrecio):
 
     def calcular_base(self, servicio_config: Any, demanda: DemandaPrecio) -> Decimal:
         moneda = demanda.moneda_normalizada
-        base = resolver_precio_base(servicio_config, moneda)
+        base = resolver_precio_base(servicio_config, moneda, demanda.tipo_cambio)
         return Decimal(base).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 
@@ -146,7 +140,7 @@ class PorNoche(EstrategiaPrecio):
 
     def calcular_base(self, servicio_config: Any, demanda: DemandaPrecio) -> Decimal:
         moneda = demanda.moneda_normalizada
-        base = resolver_precio_base(servicio_config, moneda)
+        base = resolver_precio_base(servicio_config, moneda, demanda.tipo_cambio)
         noches = max(1, demanda.noches)
         total = (base * Decimal(noches)).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
         return total
@@ -171,17 +165,17 @@ class PorRuta(EstrategiaPrecio):
             )
         except TarifaTransporteNoConfigurada as e:
             raise ValueError(str(e)) from e
-        precio = fila.precio_en(demanda.moneda_normalizada)
+        precio = fila.precio_en(demanda.moneda_normalizada, demanda.tipo_cambio)
         if precio is None:
             raise ValueError(f'La tarifa no tiene precio en {demanda.moneda_normalizada}.')
         return Decimal(precio).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
 
 
-def demanda_traslado(detalle, personas, moneda):
+def demanda_traslado(detalle, personas, moneda, tipo_cambio=None):
     """La misma demanda para preparar el cobro y verificar su snapshot."""
     return DemandaPrecio(
         personas=personas, moneda=moneda,
-        tipo_traslado=detalle.tipo_traslado, zona=detalle.zona_efectiva(),
+        tipo_traslado=detalle.tipo_traslado, zona=detalle.zona_efectiva(), tipo_cambio=tipo_cambio,
     )
 
 
@@ -195,7 +189,7 @@ class _TarifaRutaCongelada:
     precio: Decimal
     moneda: str
 
-    def precio_en(self, moneda):
+    def precio_en(self, moneda, tipo_cambio=None):
         return self.precio if moneda == self.moneda else None
 
 

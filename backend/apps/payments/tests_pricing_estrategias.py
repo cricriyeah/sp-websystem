@@ -3,6 +3,7 @@
 from decimal import Decimal
 from django.test import SimpleTestCase
 
+from apps.payments.moneda import convertir
 from apps.payments.pricing import monto_inicial
 from apps.payments.estrategias_precio import (
     DemandaPrecio,
@@ -26,15 +27,11 @@ class ConfigPrueba:
     def __init__(
         self,
         precio_base=Decimal('4500.00'),
-        precio_base_usd=Decimal('260.00'),
         precio_persona_extra=Decimal('500.00'),
-        precio_persona_extra_usd=Decimal('30.00'),
         personas_incluidas=3,
     ):
         self.precio_base = precio_base
-        self.precio_base_usd = precio_base_usd
         self.precio_persona_extra = precio_persona_extra
-        self.precio_persona_extra_usd = precio_persona_extra_usd
         self.personas_incluidas = personas_incluidas
 
 
@@ -68,17 +65,17 @@ class EstrategiasPrecioTests(SimpleTestCase):
 
     def test_por_grupo_usd_con_personas_extra(self):
         estrategia = PorGrupo()
-        # 4 personas = 1 extra ($30) -> 260 + 30 = 290
-        demanda = DemandaPrecio(personas=4, moneda='USD')
+        # Cada precio sube al dolar por separado: 4500/18 = 250 y 500/18 = 27.78 -> 28.
+        # 4 personas = 1 extra -> 250 + 28 = 278
+        demanda = DemandaPrecio(personas=4, moneda='USD', tipo_cambio=Decimal('18'))
         total = estrategia.calcular_base(self.config, demanda)
-        self.assertEqual(total, Decimal('290.00'))
+        self.assertEqual(total, Decimal('278.00'))
 
-    def test_por_grupo_falla_si_falta_precio_persona_extra(self):
-        config_sin_extra = ConfigPrueba(precio_persona_extra_usd=None)
-        estrategia = PorGrupo()
-        demanda = DemandaPrecio(personas=4, moneda='USD')
-        with self.assertRaisesMessage(ValueError, 'No hay cargo por persona extra configurado en USD.'):
-            estrategia.calcular_base(config_sin_extra, demanda)
+    def test_usd_sin_tipo_de_cambio_falla(self):
+        for estrategia in (PorGrupo(), PorPersona(), TarifaFija(), PorNoche()):
+            with self.subTest(estrategia=type(estrategia).__name__):
+                with self.assertRaisesMessage(ValueError, 'tipo de cambio'):
+                    estrategia.calcular_base(self.config, DemandaPrecio(personas=4, moneda='USD'))
 
     def test_por_grupo_con_personas_incluidas_personalizadas(self):
         config_custom = ConfigPrueba(personas_incluidas=5)
@@ -95,17 +92,17 @@ class EstrategiasPrecioTests(SimpleTestCase):
         )
 
     def test_por_persona_mxn_y_usd(self):
-        config = ConfigPrueba(precio_base=Decimal('800.00'), precio_base_usd=Decimal('45.00'))
+        config = ConfigPrueba(precio_base=Decimal('800.00'))
         estrategia = PorPersona()
 
         demanda_mxn = DemandaPrecio(personas=4, moneda='MXN')
         self.assertEqual(estrategia.calcular_base(config, demanda_mxn), Decimal('3200.00'))
 
-        demanda_usd = DemandaPrecio(personas=3, moneda='USD')
+        demanda_usd = DemandaPrecio(personas=3, moneda='USD', tipo_cambio=Decimal('18'))  # 800/18 = 44.44 -> 45
         self.assertEqual(estrategia.calcular_base(config, demanda_usd), Decimal('135.00'))
 
     def test_tarifa_fija_independiente_de_personas(self):
-        config = ConfigPrueba(precio_base=Decimal('12000.00'), precio_base_usd=Decimal('700.00'))
+        config = ConfigPrueba(precio_base=Decimal('12000.00'))
         estrategia = TarifaFija()
 
         self.assertEqual(
@@ -117,12 +114,12 @@ class EstrategiasPrecioTests(SimpleTestCase):
             Decimal('12000.00'),
         )
         self.assertEqual(
-            estrategia.calcular_base(config, DemandaPrecio(personas=8, moneda='USD')),
-            Decimal('700.00'),
+            estrategia.calcular_base(config, DemandaPrecio(personas=8, moneda='USD', tipo_cambio=Decimal('18'))),
+            Decimal('667.00'),  # 12000/18 = 666.67
         )
 
     def test_por_noche_multiplica_noches(self):
-        config = ConfigPrueba(precio_base=Decimal('2500.00'), precio_base_usd=Decimal('150.00'))
+        config = ConfigPrueba(precio_base=Decimal('2500.00'))
         estrategia = PorNoche()
 
         # 1 noche
@@ -137,15 +134,17 @@ class EstrategiasPrecioTests(SimpleTestCase):
         )
         # 4 noches en USD
         self.assertEqual(
-            estrategia.calcular_base(config, DemandaPrecio(personas=2, noches=4, moneda='USD')),
-            Decimal('600.00'),
+            estrategia.calcular_base(
+                config, DemandaPrecio(personas=2, noches=4, moneda='USD', tipo_cambio=Decimal('18')),
+            ),
+            Decimal('556.00'),  # 2500/18 = 138.89 -> 139, por 4 noches
         )
 
     def test_falla_si_no_hay_precio_en_moneda(self):
-        config = ConfigPrueba(precio_base_usd=None)
+        config = ConfigPrueba(precio_base=None)
         estrategia = TarifaFija()
         with self.assertRaisesMessage(ValueError, 'No hay precio configurado en USD.'):
-            estrategia.calcular_base(config, DemandaPrecio(personas=2, moneda='USD'))
+            estrategia.calcular_base(config, DemandaPrecio(personas=2, moneda='USD', tipo_cambio=Decimal('18')))
 
     def test_soporta_diccionario_de_configuracion(self):
         config_dict = {
@@ -172,8 +171,8 @@ class EstrategiasPrecioTests(SimpleTestCase):
             Decimal('4500.00'),
         )
         self.assertEqual(
-            estrategia.calcular_base(config_legacy, DemandaPrecio(personas=3, moneda='USD')),
-            Decimal('260.00'),
+            estrategia.calcular_base(config_legacy, DemandaPrecio(personas=3, moneda='USD', tipo_cambio=Decimal('18'))),
+            Decimal('250.00'),
         )
 
     def test_registro_de_estrategias(self):
@@ -220,24 +219,23 @@ class MontoInicialTests(SimpleTestCase):
 
 
 class TarifaFalsa:
-    def __init__(self, tipo_traslado, zona='', personas_min=1, personas_max=None, precio=Decimal('1000.00'), precio_usd=None):
+    def __init__(self, tipo_traslado, zona='', personas_min=1, personas_max=None, precio=Decimal('1000.00')):
         self.tipo_traslado = tipo_traslado
         self.zona = zona
         self.personas_min = personas_min
         self.personas_max = personas_max
         self.precio = precio
-        self.precio_usd = precio_usd
 
-    def precio_en(self, moneda):
-        return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
+    def precio_en(self, moneda, tipo_cambio=None):
+        return convertir(self.precio, moneda, tipo_cambio)
 
 
 class PorRutaTest(SimpleTestCase):
     def setUp(self):
         self.tarifas = [
-            TarifaFalsa('redondo_aeropuerto', '', 1, 4, Decimal('4500.00'), Decimal('260.00')),
-            TarifaFalsa('redondo_aeropuerto', '', 5, None, Decimal('6000.00'), Decimal('350.00')),
-            TarifaFalsa('redondo_actividad', 'centro', 1, None, Decimal('1500.00'), None),
+            TarifaFalsa('redondo_aeropuerto', '', 1, 4, Decimal('4500.00')),
+            TarifaFalsa('redondo_aeropuerto', '', 5, None, Decimal('6000.00')),
+            TarifaFalsa('redondo_actividad', 'centro', 1, None, Decimal('1500.00')),
         ]
         self.config = {'tarifas_transporte_activas': self.tarifas}
         self.estrategia = PorRuta()
@@ -246,8 +244,10 @@ class PorRutaTest(SimpleTestCase):
         demanda_mxn = DemandaPrecio(personas=3, moneda='MXN', tipo_traslado='redondo_aeropuerto')
         self.assertEqual(self.estrategia.calcular_base(self.config, demanda_mxn), Decimal('4500.00'))
 
-        demanda_usd = DemandaPrecio(personas=6, moneda='USD', tipo_traslado='redondo_aeropuerto')
-        self.assertEqual(self.estrategia.calcular_base(self.config, demanda_usd), Decimal('350.00'))
+        demanda_usd = DemandaPrecio(
+            personas=6, moneda='USD', tipo_traslado='redondo_aeropuerto', tipo_cambio=Decimal('18'),
+        )
+        self.assertEqual(self.estrategia.calcular_base(self.config, demanda_usd), Decimal('334.00'))  # 333.33
 
     def test_calcular_base_con_zona(self):
         demanda = DemandaPrecio(personas=2, tipo_traslado='redondo_actividad', zona='centro')
@@ -268,9 +268,9 @@ class PorRutaTest(SimpleTestCase):
         with self.assertRaisesMessage(ValueError, 'No hay tarifa de transporte'):
             self.estrategia.calcular_base(self.config, demanda)
 
-    def test_falla_si_moneda_no_tiene_precio(self):
+    def test_usd_sin_tipo_de_cambio_falla(self):
         demanda = DemandaPrecio(personas=2, moneda='USD', tipo_traslado='redondo_actividad', zona='centro')
-        with self.assertRaisesMessage(ValueError, 'La tarifa no tiene precio en USD.'):
+        with self.assertRaisesMessage(ValueError, 'tipo de cambio'):
             self.estrategia.calcular_base(self.config, demanda)
 
     def test_registro_contiene_por_ruta(self):

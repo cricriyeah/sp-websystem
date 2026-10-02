@@ -29,11 +29,11 @@ class OrdenPaqueteBase(TestCase):
             )
             TransporteTarifa.objects.create(
                 empresa=self.transp, tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD, zona='centro',
-                personas_min=1, personas_max=None, precio=Decimal('1500.00'), precio_usd=Decimal('90.00'),
+                personas_min=1, personas_max=None, precio=Decimal('1500.00'),
             )
             self.paquete = Paquete.objects.create(
                 sede=self.sede, empresa_lider=self.pesca, nombre='Pesca + Traslado', slug='pesca-traslado-op',
-                precio_ancla=Decimal('7500.00'), precio_ancla_usd=Decimal('450.00'), permite_anticipo=False,
+                precio_ancla=Decimal('7500.00'), permite_anticipo=False,
             )
             PaqueteServicio.objects.create(
                 paquete=self.paquete, servicio=self.s_pesca, orden=1, dia_estancia=1, personas_incluidas=3,
@@ -44,10 +44,10 @@ class OrdenPaqueteBase(TestCase):
             brunch = Personalizacion.objects.create(empresa=self.pesca, nombre='Brunch', tipo_interaccion='check')
             silla = Personalizacion.objects.create(empresa=self.transp, nombre='Silla de bebé', tipo_interaccion='check')
             self.sp_brunch = ServicioPersonalizacion.objects.create(
-                servicio=self.s_pesca, personalizacion=brunch, precio=Decimal('400.00'), precio_usd=Decimal('23.00'),
+                servicio=self.s_pesca, personalizacion=brunch, precio=Decimal('400.00'),
             )
             self.sp_silla = ServicioPersonalizacion.objects.create(
-                servicio=self.s_transp, personalizacion=silla, precio=Decimal('150.00'), precio_usd=Decimal('9.00'),
+                servicio=self.s_transp, personalizacion=silla, precio=Decimal('150.00'),
             )
         self.url = f'/api/{self.sede.slug}/ordenes/'
 
@@ -234,35 +234,27 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
             self.assertEqual(fila.precio_unitario, Decimal('400.00'))
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
-    def test_usd_reparte_con_los_precios_usd(self, configurar):
+    def test_usd_reparte_con_los_precios_derivados_del_tipo_de_cambio(self, configurar):
         para, clientes = self._stripe_falso()
         configurar.side_effect = para
         orden_id = self._crear_orden(moneda='USD')
         respuesta = self._pago(orden_id)
         self.assertEqual(respuesta.status_code, 200, respuesta.content)
         montos = {p['empresa_slug']: p['monto'] for p in respuesta.json()}
-        self.assertEqual(montos, {'pesca-op': '383.00', 'transp-op': '99.00'})
+        # Cada precio sube al dolar: paquete 7500/18 = 417, traslado 1500/18 = 84, brunch 23, silla 9.
+        self.assertEqual(montos, {'pesca-op': '356.00', 'transp-op': '93.00'})
         params = clientes[self.pesca.id].payment_intents.create.call_args.args[0]
         self.assertEqual(params['currency'], 'usd')
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
-    def test_400_si_falta_la_tarifa_de_transporte_en_la_moneda(self, configurar):
-        with scope.como_operador_plataforma():
-            TransporteTarifa.objects.filter(empresa=self.transp).update(precio_usd=None)
+    def test_400_si_la_orden_en_usd_no_tiene_tipo_de_cambio(self, configurar):
         orden_id = self._crear_orden(moneda='USD')
+        with scope.como_operador_plataforma():
+            Orden.objects.filter(pk=orden_id).update(tipo_cambio=None)  # fila anterior al tipo de cambio
         respuesta = self._pago(orden_id)
         self.assertEqual(respuesta.status_code, 400)
-        self.assertIn('USD', respuesta.json()['detail'])
+        self.assertIn('tipo de cambio', respuesta.json()['detail'])
         configurar.assert_not_called()
-
-    @mock.patch('apps.payments.ordenes.configurar_stripe')
-    def test_400_si_el_paquete_no_tiene_precio_en_la_moneda(self, configurar):
-        with scope.como_operador_plataforma():
-            Paquete.objects.filter(pk=self.paquete.pk).update(precio_ancla_usd=None)
-        orden_id = self._crear_orden(moneda='USD')
-        respuesta = self._pago(orden_id)
-        self.assertEqual(respuesta.status_code, 400)
-        self.assertIn('USD', respuesta.json()['detail'])
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_aeropuerto_con_hotel_del_catalogo_usa_la_tarifa_sin_zona(self, configurar):
@@ -274,7 +266,7 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
             punto = PuntoEncuentro.objects.create(empresa=self.transp, nombre='Hotel Marina', zona='centro')
             TransporteTarifa.objects.create(
                 empresa=self.transp, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO, zona='',
-                personas_min=1, personas_max=None, precio=Decimal('4500.00'), precio_usd=Decimal('250.00'),
+                personas_min=1, personas_max=None, precio=Decimal('4500.00'),
             )
         datos = self.payload()
         datos['componentes'][1] = {
@@ -288,12 +280,3 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
         montos = {p['empresa_slug']: p['monto'] for p in respuesta.json()}
         self.assertEqual(montos, {'pesca-op': '3400.00', 'transp-op': '4650.00'})
 
-    @mock.patch('apps.payments.ordenes.configurar_stripe')
-    def test_503_si_un_extra_no_tiene_precio_en_la_moneda(self, configurar):
-        with scope.como_operador_plataforma():
-            ServicioPersonalizacion.objects.filter(pk=self.sp_brunch.pk).update(precio_usd=None)
-        orden_id = self._crear_orden(moneda='USD')
-        respuesta = self._pago(orden_id)
-        self.assertEqual(respuesta.status_code, 503)
-        self.assertIn('USD', respuesta.json()['detail'])
-        configurar.assert_not_called()

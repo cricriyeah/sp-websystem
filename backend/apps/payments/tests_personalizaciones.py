@@ -82,7 +82,7 @@ class CrearPagoPersonalizacionesTests(ApiTestCase):
         )
         self.sp_check = ServicioPersonalizacion.objects.create(
             servicio=self.servicio, personalizacion=check,
-            precio=Decimal('450.00'), precio_usd=Decimal('25.00'),
+            precio=Decimal('450.00'),
         )
         requerido = Personalizacion.objects.create(
             empresa=self.empresa, nombre='Número de habitación',
@@ -213,17 +213,15 @@ class CrearPagoPersonalizacionesTests(ApiTestCase):
         self.assertIsNone(self.reserva.precio_total)
 
     @mock.patch('apps.payments.views.configurar_stripe')
-    def test_moneda_sin_precio_no_llama_stripe(self, configurar):
+    def test_moneda_sin_tipo_de_cambio_no_llama_stripe(self, configurar):
         self.reserva.moneda = 'USD'
         self.reserva.save(update_fields=['moneda'])
-        self.sp_check.precio_usd = None
-        self.sp_check.save(update_fields=['precio_usd'])
+        Reserva.objects.filter(pk=self.reserva.pk).update(tipo_cambio=None)  # fila anterior al tipo de cambio
 
         respuesta = self.post()
 
         self.assertEqual(respuesta.status_code, 503)
         configurar.assert_not_called()
-
     @mock.patch('apps.payments.views.configurar_stripe')
     def test_input_obligatorio_agregado_despues_bloquea_el_pago(self, configurar):
         self.input.delete()
@@ -251,7 +249,7 @@ class CrearPagoPaquetePersonalizacionesTests(ApiTestCase):
         self.paquete = Paquete.objects.create(
             sede=self.empresa.sede, empresa_lider=self.empresa,
             nombre='Pack Pesca VIP', slug='pack-pesca-vip',
-            precio_ancla=Decimal('6000.00'), precio_ancla_usd=Decimal('350.00'),
+            precio_ancla=Decimal('6000.00'),
         )
         self.ps = PaqueteServicio.objects.create(
             paquete=self.paquete, servicio=self.servicio, orden=1,
@@ -263,7 +261,7 @@ class CrearPagoPaquetePersonalizacionesTests(ApiTestCase):
         )
         self.sp_licencia = ServicioPersonalizacion.objects.create(
             servicio=self.servicio, personalizacion=pers_licencia,
-            precio=Decimal('450.00'), precio_usd=Decimal('25.00'),
+            precio=Decimal('450.00'),
             preseleccionado=True, activo=True,
         )
 

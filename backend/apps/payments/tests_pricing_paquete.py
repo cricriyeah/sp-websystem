@@ -34,11 +34,11 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
 
         self.servicio_pesca = Servicio.objects.create(
             empresa=self.empresa, nombre='Pesca', slug='pesca-srv', tipo_servicio='pesca',
-            precio_base=Decimal('5000.00'), precio_base_usd=Decimal('280.00')
+            precio_base=Decimal('5000.00')
         )
         self.servicio_snack = Servicio.objects.create(
             empresa=self.empresa, nombre='Catering', slug='catering-srv', tipo_servicio='otro',
-            precio_base=Decimal('1000.00'), precio_base_usd=Decimal('60.00')
+            precio_base=Decimal('1000.00')
         )
 
         self.paquete = Paquete.objects.create(
@@ -47,7 +47,6 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
             nombre='Experiencia VIP',
             slug='experiencia-vip',
             precio_ancla=Decimal('6500.00'),
-            precio_ancla_usd=Decimal('380.00'),
         )
 
         self.ps_pesca = PaqueteServicio.objects.create(
@@ -61,7 +60,11 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
         Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
         self.paquete.refresh_from_db()
         self.assertEqual(precio_paquete_total(self.paquete, personas=3, moneda='MXN'), Decimal('19500.00'))
-        self.assertEqual(precio_paquete_total(self.paquete, personas=2, moneda='USD'), Decimal('760.00'))
+        # 6500/18 = 361.11 -> 362 por persona
+        self.assertEqual(
+            precio_paquete_total(self.paquete, personas=2, moneda='USD', tipo_cambio=Decimal('18')),
+            Decimal('724.00'),
+        )
 
     def test_paquete_fijo_ignora_las_personas(self):
         self.assertEqual(precio_paquete_total(self.paquete, personas=4, moneda='MXN'), Decimal('6500.00'))
@@ -70,19 +73,12 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
         precio_mxn = calcular_precio_paquete(self.paquete, moneda='MXN')
         self.assertEqual(precio_mxn, Decimal('6500.00'))
 
-        precio_usd = calcular_precio_paquete(self.paquete, moneda='USD')
-        self.assertEqual(precio_usd, Decimal('380.00'))
+        precio_usd = calcular_precio_paquete(self.paquete, moneda='USD', tipo_cambio=Decimal('18'))
+        self.assertEqual(precio_usd, Decimal('362.00'))
 
-    def test_paquete_sin_precio_en_moneda_retorna_none(self):
-        paquete_solo_mxn = Paquete.objects.create(
-            sede=self.sede,
-            empresa_lider=self.empresa,
-            nombre='Solo Pesos',
-            slug='solo-pesos',
-            precio_ancla=Decimal('4000.00'),
-            precio_ancla_usd=None,
-        )
-        self.assertIsNone(calcular_precio_paquete(paquete_solo_mxn, moneda='USD'))
+    def test_usd_sin_tipo_de_cambio_falla(self):
+        with self.assertRaises(ValueError):
+            calcular_precio_paquete(self.paquete, moneda='USD')
 
     def test_recomendada_se_cobra_solo_si_viene_explicita(self):
         p = Personalizacion.objects.create(
@@ -111,11 +107,11 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
 
         self.servicio_pesca = Servicio.objects.create(
             empresa=self.empresa, nombre='Pesca Fondo', slug='pesca-fondo', tipo_servicio='pesca',
-            precio_base=Decimal('5000.00'), precio_base_usd=Decimal('280.00')
+            precio_base=Decimal('5000.00')
         )
         self.servicio_snack = Servicio.objects.create(
             empresa=self.empresa, nombre='Snack Panga', slug='snack-panga', tipo_servicio='otro',
-            precio_base=Decimal('1000.00'), precio_base_usd=Decimal('60.00')
+            precio_base=Decimal('1000.00')
         )
 
         self.paquete = Paquete.objects.create(
@@ -124,7 +120,6 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
             nombre='Pack Pesca y Snack',
             slug='pack-pesca-snack',
             precio_ancla=Decimal('6500.00'),
-            precio_ancla_usd=Decimal('380.00'),
         )
 
         self.ps_pesca = PaqueteServicio.objects.create(
@@ -140,7 +135,7 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
         )
         self.sp_licencia = ServicioPersonalizacion.objects.create(
             servicio=self.servicio_pesca, personalizacion=self.pers_licencia,
-            precio=Decimal('250.00'), precio_usd=Decimal('15.00'),
+            precio=Decimal('250.00'),
             obligatorio=True, preseleccionado=False, activo=True
         )
 
@@ -149,7 +144,7 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
         )
         self.sp_carnada = ServicioPersonalizacion.objects.create(
             servicio=self.servicio_pesca, personalizacion=self.pers_carnada,
-            precio=Decimal('300.00'), precio_usd=Decimal('20.00'),
+            precio=Decimal('300.00'),
             obligatorio=False, preseleccionado=False, activo=True
         )
 
@@ -159,7 +154,7 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
         )
         self.sp_bebidas = ServicioPersonalizacion.objects.create(
             servicio=self.servicio_snack, personalizacion=self.pers_bebidas,
-            precio=Decimal('100.00'), precio_usd=Decimal('5.00'),
+            precio=Decimal('100.00'),
             obligatorio=False, preseleccionado=True, activo=True
         )
 
@@ -168,7 +163,7 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
         )
         self.sp_album = ServicioPersonalizacion.objects.create(
             servicio=self.servicio_snack, personalizacion=self.pers_album,
-            precio=Decimal('200.00'), precio_usd=Decimal('12.00'),
+            precio=Decimal('200.00'),
             obligatorio=False, preseleccionado=False, activo=True
         )
 
@@ -183,14 +178,15 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
         )
         self.assertEqual(total, Decimal('6500.00'))
 
-        # En USD: ancla=380.00
+        # En USD: 6500/18 = 361.11 -> 362
         total_usd = precio_paquete_total(
             self.paquete,
             personalizaciones_extra=[],
             personas=2,
-            moneda='USD'
+            moneda='USD',
+            tipo_cambio=Decimal('18'),
         )
-        self.assertEqual(total_usd, Decimal('380.00'))
+        self.assertEqual(total_usd, Decimal('362.00'))
 
     def test_personalizacion_marcada_suma_su_precio(self):
         # personas=2
@@ -249,13 +245,13 @@ class PrecioPaqueteTotalTests(OperadorTestCase):
         )
         self.assertEqual(total, Decimal('6500.00'))
 
-    def test_paquete_sin_precio_ancla_usd_moneda_usd_retorna_none(self):
-        paquete_solo_mxn = Paquete.objects.create(
-            sede=self.sede,
-            empresa_lider=self.empresa,
-            nombre='Solo Pesos 2',
-            slug='solo-pesos-2',
-            precio_ancla=Decimal('4000.00'),
-            precio_ancla_usd=None,
+    def test_extras_en_usd_suben_al_dolar_cada_uno(self):
+        # carnada 300/18 = 16.67 -> 17; album 200/18 = 11.11 -> 12 por 2 personas = 24
+        total = precio_paquete_total(
+            self.paquete,
+            personalizaciones_extra=[(self.sp_carnada.pk, 1), (self.sp_album.pk, 1)],
+            personas=2,
+            moneda='USD',
+            tipo_cambio=Decimal('18'),
         )
-        self.assertIsNone(precio_paquete_total(paquete_solo_mxn, moneda='USD'))
+        self.assertEqual(total, Decimal('362.00') + Decimal('17.00') + Decimal('24.00'))

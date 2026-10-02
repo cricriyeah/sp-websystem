@@ -47,7 +47,7 @@ class Command(BaseCommand):
                 creados += nuevo
                 _, nuevo = ServicioPersonalizacion.objects.get_or_create(
                     servicio=servicio, personalizacion=p,
-                    defaults=dict(precio=precio, precio_usd=None, obligatorio=False,
+                    defaults=dict(precio=precio, obligatorio=False,
                                   preseleccionado=recomendada, activo=True),
                 )
                 creados += nuevo

@@ -143,6 +143,7 @@ class TrasladosView(APIView):
                     'porcentaje_anticipo': servicio.porcentaje_anticipo,
                     'permite_anticipo': servicio.permite_anticipo,
                     'empresa_slug': empresa.slug,
+                    'tipo_cambio_usd': str(empresa.sede.tipo_cambio_usd),
                     'hora_apertura': servicio.hora_apertura.isoformat() if servicio.hora_apertura else None,
                     'hora_cierre': servicio.hora_cierre.isoformat() if servicio.hora_cierre else None,
                     'paso_hora_minutos': servicio.paso_hora_minutos,
@@ -153,7 +154,6 @@ class TrasladosView(APIView):
                     'personas_min': tarifa.personas_min,
                     'personas_max': tarifa.personas_max,
                     'precio': str(tarifa.precio),
-                    'precio_usd': str(tarifa.precio_usd) if tarifa.precio_usd is not None else None,
                 } for tarifa in TransporteTarifa.objects.filter(empresa=empresa, activo=True)],
                 'puntos_encuentro': PuntoEncuentroSerializer(
                     PuntoEncuentro.objects.filter(empresa=empresa, activo=True), many=True,

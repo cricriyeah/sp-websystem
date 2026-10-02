@@ -165,8 +165,13 @@ Una pantalla con todo el dinero centralizado:
 - Balance del día, del mes y del año, más el histórico día por día.
 - Lo que debería haber en la cuenta de Stripe y lo que debería haber en efectivo.
 
-Pesos y dólares se llevan por separado y nunca se suman: son dos precios de lista que el
-negocio fija a mano, el sistema no aplica ningún tipo de cambio.
+Pesos y dólares se llevan por separado y nunca se suman. **Cada cosa tiene un solo precio, en
+pesos.** El precio en dólares se deriva con el tipo de cambio de la sede (`Sede.tipo_cambio_usd`,
+pesos por dólar, editable en el admin) y se redondea **hacia arriba al dólar entero**, precio por
+precio (base, persona extra, tarifa de traslado, extra, mínimo de promoción); lo que se suma después
+ya está en dólares enteros, así que las líneas siempre cuadran con el total. El tipo de cambio se
+**congela** en la reserva u orden al pasar a USD: cambiarlo después no mueve el monto de un pago en
+curso. (Decisión del dueño, 2026-10-02: antes eran dos precios fijados a mano.)
 
 Notas de implementación:
 - Toda reserva creada manualmente por la vendedora debe pasar por el mismo motor de validación de cupo

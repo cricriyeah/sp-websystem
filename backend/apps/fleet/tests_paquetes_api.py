@@ -37,7 +37,6 @@ class PaquetesAPITests(TestCase):
             slug='pesca-dia-completo',
             tipo_servicio='pesca',
             precio_base=Decimal('5000.00'),
-            precio_base_usd=Decimal('290.00'),
         )
         self.servicio_hotel = Servicio.objects.create(
             empresa=self.empresa_pesca,
@@ -45,7 +44,6 @@ class PaquetesAPITests(TestCase):
             slug='estadia-2-noches',
             tipo_servicio='hospedaje',
             precio_base=Decimal('3500.00'),
-            precio_base_usd=Decimal('200.00'),
         )
 
         # Paquete activo liderado por pesca
@@ -56,7 +54,6 @@ class PaquetesAPITests(TestCase):
             slug='fin-de-semana',
             descripcion='Pesca y hospedaje',
             precio_ancla=Decimal('8000.00'),
-            precio_ancla_usd=Decimal('470.00'),
             activo=True,
         )
         PaqueteServicio.objects.create(
@@ -101,7 +98,8 @@ class PaquetesAPITests(TestCase):
         self.assertEqual(item['slug'], 'fin-de-semana')
         self.assertEqual(item['empresa_lider_slug'], 'pesca-lp-api')
         self.assertEqual(float(item['precio_ancla']), 8000.00)
-        self.assertEqual(float(item['precio_ancla_usd']), 470.00)
+        self.assertEqual(item['tipo_cambio_usd'], '18.0000')
+        self.assertNotIn('precio_ancla_usd', item)
 
         servicios = item['servicios_asociados']
         self.assertEqual(len(servicios), 2)

@@ -21,7 +21,7 @@ empresa demo Tours Cabo en La Ventana Travel. Hazlo una sola vez, antes de sembr
 Uso:  venv/Scripts/python.exe manage.py seed_catalogo_real [--limpiar-demo]
 """
 from datetime import time
-from decimal import ROUND_DOWN, Decimal
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -44,23 +44,23 @@ EMPRESAS_REALES = {
     'piratas-adventures': ('Piratas Adventures', 'puerto-chale'),
 }
 
-# (empresa, slug, nombre, tipo, estrategia_precio, precio, precio_usd, personas_incluidas,
+# (empresa, slug, nombre, tipo, estrategia_precio, precio, personas_incluidas,
 #  capacidad_maxima, descripcion, [(recurso, capacidad)])
 SERVICIOS = [
     ('la-ventana-travel', 'pesca-con-mosca', 'Pesca con mosca', 'pesca', 'por_grupo',
-     '6000', '350', 2, 3, 'Pesca con mosca (fly fishing) en La Ventana.',
+     '6000', 2, 3, 'Pesca con mosca (fly fishing) en La Ventana.',
      [('DEMO Panga La Ventana 1', 3), ('DEMO Panga La Ventana 2', 3)]),
     ('la-ventana-travel', 'avistamiento-ballenas-orcas', 'Avistamiento de ballenas y orcas', 'paseo',
-     'por_persona', '1200', '70', 1, 12,
+     'por_persona', '1200', 1, 12,
      'Salida al mar para ver ballenas y orcas según la temporada; la logística es la misma.',
      [('DEMO Lancha La Ventana 1', 12), ('DEMO Lancha La Ventana 2', 12)]),
-    ('piratas-adventures', 'safari-marino', 'Safari marino', 'paseo', 'por_persona', '900', '55', 1, 10,
+    ('piratas-adventures', 'safari-marino', 'Safari marino', 'paseo', 'por_persona', '900', 1, 10,
      'Safari marino en Puerto Chale.',
      [('DEMO Lancha Safari 1', 10)]),
     ('piratas-adventures', 'avistamiento-ballenas', 'Avistamiento de ballenas', 'paseo', 'por_persona',
-     '1100', '65', 1, 10, 'Avistamiento de ballenas en Puerto Chale.',
+     '1100', 1, 10, 'Avistamiento de ballenas en Puerto Chale.',
      [('DEMO Lancha Ballenas 1', 10)]),
-    ('piratas-adventures', 'pesca-deportiva', 'Pesca deportiva', 'pesca', 'por_grupo', '5000', '290', 2, 4,
+    ('piratas-adventures', 'pesca-deportiva', 'Pesca deportiva', 'pesca', 'por_grupo', '5000', 2, 4,
      'Pesca deportiva en Puerto Chale.',
      [('DEMO Panga Chale 1', 4), ('DEMO Panga Chale 2', 4)]),
 ]
@@ -173,7 +173,7 @@ class Command(BaseCommand):
     def _servicios(self):
         from apps.fleet.models import Embarcacion, Recurso, Servicio
 
-        for (slug_empresa, slug, nombre, tipo, est_precio, precio, precio_usd,
+        for (slug_empresa, slug, nombre, tipo, est_precio, precio,
              incluidas, capacidad, descripcion, recursos) in SERVICIOS:
             empresa = Empresa.objects.get(slug=slug_empresa)
             with scope.con_empresa(empresa):
@@ -183,7 +183,7 @@ class Command(BaseCommand):
                         nombre=nombre, tipo_servicio=tipo,
                         estrategia_cupo='por_recurso_dia', estrategia_precio=est_precio,
                         modo_ocupacion='exclusivo',
-                        precio_base=Decimal(precio), precio_base_usd=Decimal(precio_usd),
+                        precio_base=Decimal(precio),
                         personas_incluidas=incluidas, capacidad_maxima=capacidad,
                         porcentaje_anticipo=30, activo=True, descripcion=descripcion,
                     ),
@@ -219,7 +219,7 @@ class Command(BaseCommand):
                     nombre='Hospedaje en La Ventana', tipo_servicio=TipoServicio.HOSPEDAJE,
                     estrategia_cupo='por_noche', estrategia_precio='por_noche',
                     modo_ocupacion='exclusivo',
-                    precio_base=Decimal('2500'), precio_base_usd=Decimal('145'),
+                    precio_base=Decimal('2500'),
                     personas_incluidas=2, porcentaje_anticipo=30, activo=True,
                     descripcion='Habitación con hospedaje en La Ventana. Precio por noche.',
                 ),
@@ -248,14 +248,14 @@ class Command(BaseCommand):
                 traslado.solo_en_paquete = True
                 traslado.save(update_fields=['solo_en_paquete'])
             self.stdout.write(f'  Servicio la-ventana-travel/traslado-aeropuerto-la-ventana: {"creado" if creado else "ok"}')
-            for p_min, p_max, precio, precio_usd in (
-                (1, 4, Decimal('3500'), Decimal('205')),
-                (5, None, Decimal('6500'), Decimal('380')),
+            for p_min, p_max, precio in (
+                (1, 4, Decimal('3500')),
+                (5, None, Decimal('6500')),
             ):
                 TransporteTarifa.objects.get_or_create(
                     empresa=empresa, tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO, zona='',
                     personas_min=p_min,
-                    defaults=dict(personas_max=p_max, precio=precio, precio_usd=precio_usd, activo=True),
+                    defaults=dict(personas_max=p_max, precio=precio, activo=True),
                 )
 
     # ------------------------------------------------------------------ paquetes de La Ventana Travel
@@ -277,12 +277,11 @@ class Command(BaseCommand):
             traslado = Servicio.objects.get(empresa=empresa, slug='traslado-aeropuerto-la-ventana')
             avistamiento = Servicio.objects.get(empresa=empresa, slug='avistamiento-ballenas-orcas')
             for slug, nombre, noches, precio in definiciones:
-                usd = (precio / Decimal(18)).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
                 paquete, creado = Paquete.objects.get_or_create(
                     sede=sede, slug=slug,
                     defaults=dict(
                         empresa_lider=empresa, nombre=nombre, precio_ancla=precio,
-                        precio_ancla_usd=usd, precio_por_persona=True, pide_hora=False, activo=True,
+                        precio_por_persona=True, pide_hora=False, activo=True,
                         descripcion=f'{noches} noches de hospedaje, traslado redondo de aeropuerto y '
                                     f'avistamiento de ballenas y orcas del día 2 al {noches}.',
                     ),
@@ -301,7 +300,7 @@ class Command(BaseCommand):
                     paquete.save(update_fields=['pide_hora'])
                 paquete.full_clean()
                 paquete.validar_configuracion()
-                self.stdout.write(f'  Paquete la-ventana/{slug}: {"creado" if creado else "ok"} ({precio} MXN / {usd} USD por persona)')
+                self.stdout.write(f'  Paquete la-ventana/{slug}: {"creado" if creado else "ok"} ({precio} MXN por persona)')
 
     # ------------------------------------------------------------------ horarios (DEMO)
     def _horarios_demo(self):

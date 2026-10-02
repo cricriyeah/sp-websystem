@@ -225,12 +225,16 @@ class CodigoPromocionalValidoTests(EmpresaTestCase):
         ))
 
     def test_alcanza_el_monto_minimo_por_moneda_separado(self):
-        promo = self.crear_codigo(monto_minimo=Decimal('5000'), monto_minimo_usd=Decimal('100'))
+        promo = self.crear_codigo(monto_minimo=Decimal('5000'))
         self.assertFalse(codigo_promocional_valido(
             promo, 'cliente@example.com', monto_viaje=Decimal('4000'), moneda='MXN',
         ))
+        # El minimo en dolares se deriva: 5000 / 18 = 277.78 -> 278.
+        self.assertFalse(codigo_promocional_valido(
+            promo, 'cliente@example.com', monto_viaje=Decimal('277'), moneda='USD', tipo_cambio=Decimal('18'),
+        ))
         self.assertTrue(codigo_promocional_valido(
-            promo, 'cliente@example.com', monto_viaje=Decimal('200'), moneda='USD',
+            promo, 'cliente@example.com', monto_viaje=Decimal('278'), moneda='USD', tipo_cambio=Decimal('18'),
         ))
 
     def test_usos_maximos_agotados_no_cuenta_pendiente_de_pago(self):

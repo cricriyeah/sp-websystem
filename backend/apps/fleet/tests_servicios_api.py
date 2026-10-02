@@ -36,9 +36,7 @@ class ServiciosAPITests(TestCase):
             estrategia_precio='por_grupo',
             modo_ocupacion='exclusivo',
             precio_base=Decimal('4500.00'),
-            precio_base_usd=Decimal('260.00'),
             precio_persona_extra=Decimal('500.00'),
-            precio_persona_extra_usd=Decimal('30.00'),
             personas_incluidas=3,
             activo=True,
         )
@@ -55,7 +53,6 @@ class ServiciosAPITests(TestCase):
             servicio=self.servicio_a,
             personalizacion=self.pers_a,
             precio=Decimal('300.00'),
-            precio_usd=Decimal('18.00'),
             obligatorio=False,
             preseleccionado=True,
             activo=True,
@@ -86,7 +83,8 @@ class ServiciosAPITests(TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]['slug'], 'pesca-la-paz')
         self.assertEqual(data[0]['precio_base'], '4500.00')
-        self.assertEqual(data[0]['precio_base_usd'], '260.00')
+        self.assertEqual(data[0]['tipo_cambio_usd'], '18.0000')
+        self.assertNotIn('precio_base_usd', data[0])
 
         # Verifica personalizaciones anidadas
         pers = data[0]['personalizaciones']

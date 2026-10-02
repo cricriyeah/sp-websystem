@@ -6,4 +6,4 @@ from .models import Sede
 class SedeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sede
-        fields = ['id', 'nombre', 'slug', 'zona_horaria']
+        fields = ['id', 'nombre', 'slug', 'zona_horaria', 'tipo_cambio_usd']

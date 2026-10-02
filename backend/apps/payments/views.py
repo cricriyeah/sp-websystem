@@ -69,16 +69,24 @@ class CrearPagoView(APIView):
         if reserva.estado != Reserva.Estado.PENDIENTE_PAGO:
             return Response({'detail': 'Esta reserva ya no esta pendiente de pago.'}, status=409)
 
+        if reserva.moneda == Reserva.Moneda.USD and not reserva.tipo_cambio:
+            return Response({'detail': 'La reserva en USD no tiene tipo de cambio.'}, status=503)
+
         detalle_a_congelar = None
         if reserva.paquete_id:
-            precio_base_servicio = reserva.paquete.precio_total_en(reserva.moneda, reserva.personas_del_pedido)
+            precio_base_servicio = reserva.paquete.precio_total_en(
+                reserva.moneda, reserva.personas_del_pedido, reserva.tipo_cambio,
+            )
             if precio_base_servicio is None:
                 return Response({'detail': f'El paquete no tiene precio en {reserva.moneda}.'}, status=503)
             porcentaje = reserva.paquete.porcentaje_anticipo
             anticipo_disponible = reserva.paquete.anticipo_disponible
         elif reserva.servicio_id:
             estrategia = obtener_estrategia_precio(reserva.servicio.estrategia_precio)
-            demanda = DemandaPrecio(personas=reserva.numero_personas, moneda=reserva.moneda, noches=reserva.noches)
+            demanda = DemandaPrecio(
+                personas=reserva.numero_personas, moneda=reserva.moneda, noches=reserva.noches,
+                tipo_cambio=reserva.tipo_cambio,
+            )
             servicio_config = reserva.servicio
             if reserva.servicio.estrategia_precio == EstrategiaPrecio.POR_RUTA:
                 detalle_a_congelar = getattr(reserva, 'detalle_transporte', None)
@@ -89,7 +97,9 @@ class CrearPagoView(APIView):
                         reserva.servicio.empresa.tarifas_transporte.filter(activo=True)
                     ),
                 }
-                demanda = demanda_traslado(detalle_a_congelar, reserva.numero_personas, reserva.moneda)
+                demanda = demanda_traslado(
+                    detalle_a_congelar, reserva.numero_personas, reserva.moneda, reserva.tipo_cambio,
+                )
             try:
                 precio_base_servicio = estrategia.calcular_base(servicio_config, demanda)
             except ValueError as e:
@@ -189,6 +199,7 @@ class CrearPagoView(APIView):
 
         if not codigo_promocional_valido(
             promo, reserva.correo_cliente, monto_viaje=subtotal, moneda=reserva.moneda,
+            tipo_cambio=reserva.tipo_cambio,
         ):
             return None, 0, 'El codigo promocional no es valido.'
 
@@ -778,9 +789,12 @@ class CrearPagoOrdenView(APIView):
         if orden.estado in (Orden.Estado.CAPTURADA, Orden.Estado.CANCELADA):
             return Response({'detail': f'La orden ya está {orden.estado}.'}, status=409)
 
+        if orden.moneda == Reserva.Moneda.USD and not orden.tipo_cambio:
+            return Response({'detail': 'La orden en USD no tiene tipo de cambio.'}, status=400)
+
         with scope.con_empresa(orden.empresa_lider):
             paquete = orden.paquete
-            ancla = paquete.precio_en(orden.moneda)
+            ancla = paquete.precio_en(orden.moneda, orden.tipo_cambio)
         if ancla is None:
             return Response({'detail': f'El paquete no tiene precio en {orden.moneda}.'}, status=400)
 
@@ -807,7 +821,7 @@ class CrearPagoOrdenView(APIView):
                         )
                     except TarifaTransporteNoConfigurada as exc:
                         return Response({'detail': str(exc)}, status=400)
-                    monto_fijo = tarifa.precio_en(orden.moneda)
+                    monto_fijo = tarifa.precio_en(orden.moneda, orden.tipo_cambio)
                     if monto_fijo is None:
                         return Response(
                             {'detail': f'Falta la tarifa de transporte en {orden.moneda}.'}, status=400,
@@ -819,7 +833,7 @@ class CrearPagoOrdenView(APIView):
             extras_por_empresa[empresa.id] = extras_por_empresa.get(empresa.id, Decimal('0.00')) + Decimal(cargo)
             por_congelar.append((empresa, a_borrar, a_congelar))
 
-        precio_paquete = paquete.precio_total_en(orden.moneda, personas_paquete)
+        precio_paquete = paquete.precio_total_en(orden.moneda, personas_paquete, orden.tipo_cambio)
 
         try:
             reparto = monto_por_empresa(

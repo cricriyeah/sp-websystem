@@ -28,7 +28,7 @@ def resolver_tarifa_transporte(tarifas, *, tipo_traslado, zona, personas):
     )
 
 
-def peor_tarifa(tarifas, *, personas, moneda):
+def peor_tarifa(tarifas, *, personas, moneda, tipo_cambio=None):
     """La tarifa más alta que puede tocarle a un grupo de `personas` (cualquier tipo
     y zona), en `moneda`, o None si ninguna aplica o no tiene precio en esa moneda.
 
@@ -40,7 +40,5 @@ def peor_tarifa(tarifas, *, personas, moneda):
             continue
         if t.personas_max is not None and personas > t.personas_max:
             continue
-        precio = t.precio if (moneda or 'MXN').upper() == 'MXN' else t.precio_usd
-        if precio is not None:
-            precios.append(precio)
+        precios.append(t.precio_en(moneda, tipo_cambio))
     return max(precios) if precios else None

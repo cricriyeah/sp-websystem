@@ -70,8 +70,8 @@ class Command(BaseCommand):
                     empresa=sal, nombre='Pesca Deportiva', slug='pesca-deportiva',
                     tipo_servicio='pesca', estrategia_cupo='por_recurso_dia',
                     estrategia_precio='por_grupo', modo_ocupacion='exclusivo',
-                    precio_base=Decimal('4500'), precio_base_usd=Decimal('260'),
-                    precio_persona_extra=Decimal('500'), precio_persona_extra_usd=Decimal('30'),
+                    precio_base=Decimal('4500'),
+                    precio_persona_extra=Decimal('500'),
                     hora_apertura=time(5), hora_cierre=time(7),
                     personas_incluidas=3, porcentaje_anticipo=30, activo=True,
                 )
@@ -89,7 +89,7 @@ class Command(BaseCommand):
                     nombre='Paseo a las Islas', tipo_servicio='paseo',
                     estrategia_cupo='por_recurso_dia', estrategia_precio='por_grupo',
                     modo_ocupacion='exclusivo', precio_base=Decimal('3000'),
-                    precio_base_usd=Decimal('175'), personas_incluidas=6,
+                    personas_incluidas=6,
                     porcentaje_anticipo=30, activo=True,
                     descripcion='Recorrido a Espíritu Santo con snorkel.',
                 ),
@@ -106,7 +106,7 @@ class Command(BaseCommand):
                     nombre='Cabaña Frente al Mar', tipo_servicio='hospedaje',
                     estrategia_cupo='por_noche', estrategia_precio='por_noche',
                     modo_ocupacion='exclusivo', precio_base=Decimal('2800'),
-                    precio_base_usd=Decimal('160'), personas_incluidas=4,
+                    personas_incluidas=4,
                     porcentaje_anticipo=50, activo=True,
                     descripcion='Cabaña privada con vista al mar. Precio por noche.',
                 ),
@@ -128,12 +128,12 @@ class Command(BaseCommand):
             )
             ServicioPersonalizacion.objects.get_or_create(
                 servicio=pesca, personalizacion=lic,
-                defaults={'precio': Decimal('450'), 'precio_usd': Decimal('26'),
+                defaults={'precio': Decimal('450'),
                           'obligatorio': False, 'preseleccionado': True},
             )
             ServicioPersonalizacion.objects.get_or_create(
                 servicio=pesca, personalizacion=brunch,
-                defaults={'precio': Decimal('300'), 'precio_usd': Decimal('18'),
+                defaults={'precio': Decimal('300'),
                           'obligatorio': False, 'preseleccionado': False},
             )
 
@@ -143,7 +143,7 @@ class Command(BaseCommand):
                 defaults=dict(
                     empresa_lider=sal, nombre='Fin de Semana en La Paz',
                     descripcion='Pesca + 2 noches de hospedaje frente al mar.',
-                    precio_ancla=Decimal('9500'), precio_ancla_usd=Decimal('550'),
+                    precio_ancla=Decimal('9500'),
                     porcentaje_anticipo=50, activo=True,
                 ),
             )
@@ -172,7 +172,7 @@ class Command(BaseCommand):
                     nombre='Suite Malecón', tipo_servicio='hospedaje',
                     estrategia_cupo='por_noche', estrategia_precio='por_noche',
                     modo_ocupacion='exclusivo', precio_base=Decimal('3200'),
-                    precio_base_usd=Decimal('185'), personas_incluidas=2,
+                    personas_incluidas=2,
                     permite_anticipo=False, activo=True,
                     descripcion='Suite en el malecón de La Paz. Pago completo por adelantado.',
                 ),
@@ -221,27 +221,25 @@ class Command(BaseCommand):
 
             # Demo: periferia usa 2200 MXN (spec §3.1: 1800); validar precio real antes del deploy.
             tarifas_demo = [
-                (TipoTraslado.REDONDO_AEROPUERTO, '', 1, 4, Decimal('4500.00'), Decimal('265.00')),
-                (TipoTraslado.REDONDO_AEROPUERTO, '', 5, None, Decimal('6000.00'), Decimal('355.00')),
-                (TipoTraslado.REDONDO_ACTIVIDAD, Zona.CENTRO, 1, None, Decimal('1500.00'), Decimal('90.00')),
-                (TipoTraslado.REDONDO_ACTIVIDAD, Zona.PERIFERIA, 1, None, Decimal('2200.00'), Decimal('130.00')),
-                (TipoTraslado.RECEPCION_AEROPUERTO, '', 1, None, Decimal('2700.00'), Decimal('160.00')),
+                (TipoTraslado.REDONDO_AEROPUERTO, '', 1, 4, Decimal('4500.00')),
+                (TipoTraslado.REDONDO_AEROPUERTO, '', 5, None, Decimal('6000.00')),
+                (TipoTraslado.REDONDO_ACTIVIDAD, Zona.CENTRO, 1, None, Decimal('1500.00')),
+                (TipoTraslado.REDONDO_ACTIVIDAD, Zona.PERIFERIA, 1, None, Decimal('2200.00')),
+                (TipoTraslado.RECEPCION_AEROPUERTO, '', 1, None, Decimal('2700.00')),
             ]
-            for tipo_t, zona_t, p_min, p_max, precio_mxn, precio_usd in tarifas_demo:
+            for tipo_t, zona_t, p_min, p_max, precio_mxn in tarifas_demo:
                 tarifa_obj, created = TransporteTarifa.objects.get_or_create(
                     empresa=transporte, tipo_traslado=tipo_t, zona=zona_t, personas_min=p_min,
                     defaults={
                         'personas_max': p_max,
                         'precio': precio_mxn,
-                        'precio_usd': precio_usd,
                         'activo': True,
                     },
                 )
                 if not created:
                     tarifa_obj.personas_max = p_max
                     tarifa_obj.precio = precio_mxn
-                    tarifa_obj.precio_usd = precio_usd
-                    tarifa_obj.save(update_fields=['personas_max', 'precio', 'precio_usd'])
+                    tarifa_obj.save(update_fields=['personas_max', 'precio'])
 
         with scope.como_operador_plataforma():
             paquete_cruza, _ = Paquete.objects.get_or_create(
@@ -249,7 +247,7 @@ class Command(BaseCommand):
                 defaults=dict(
                     empresa_lider=sal, nombre='Pesca + Traslado',
                     descripcion='Pesca deportiva y traslado privado en La Paz. Dos cobros, uno por empresa.',
-                    precio_ancla=Decimal('7500.00'), precio_ancla_usd=Decimal('450.00'),
+                    precio_ancla=Decimal('7500.00'),
                     permite_anticipo=False, activo=True,
                 ),
             )

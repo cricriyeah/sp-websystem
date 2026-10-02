@@ -261,7 +261,9 @@ def _validar_cupo_de_paquete(reserva):
             continue
 
 
-def codigo_promocional_valido(promo, correo_cliente, monto_viaje=None, moneda=None, excluir_pk=None):
+def codigo_promocional_valido(
+    promo, correo_cliente, monto_viaje=None, moneda=None, excluir_pk=None, tipo_cambio=None,
+):
     """Si este codigo se puede aplicar ahora mismo, para este cliente y (si se
     conoce) este monto/moneda.
 
@@ -288,7 +290,7 @@ def codigo_promocional_valido(promo, correo_cliente, monto_viaje=None, moneda=No
         return False
 
     if monto_viaje is not None:
-        minimo = promo.monto_minimo_en(moneda)
+        minimo = promo.monto_minimo_en(moneda or 'MXN', tipo_cambio)
         if minimo is not None and monto_viaje < minimo:
             return False
 
@@ -323,7 +325,9 @@ def evaluar_codigo_promocional(codigo_str, correo_cliente, empresa):
     return promo if codigo_promocional_valido(promo, correo_cliente) else None
 
 
-def validar_codigo_promocional_en_pago(promo, moneda, monto_viaje, correo_cliente, empresa, excluir_pk=None):
+def validar_codigo_promocional_en_pago(
+    promo, moneda, monto_viaje, correo_cliente, empresa, excluir_pk=None, tipo_cambio=None,
+):
     """Revalidacion autoritativa al confirmar el pago (webhook). Toma el lock
     de la fila del codigo antes de contar — mismo principio que
     `bloquear_cupo_del_dia`, pero aqui si hay una fila real que bloquear (el
@@ -341,6 +345,7 @@ def validar_codigo_promocional_en_pago(promo, moneda, monto_viaje, correo_client
 
     if not codigo_promocional_valido(
         promo_bloqueado, correo_cliente, monto_viaje=monto_viaje, moneda=moneda, excluir_pk=excluir_pk,
+        tipo_cambio=tipo_cambio,
     ):
         raise ValidationError({'codigo_promocional': 'El codigo promocional ya no es valido.'})
 
@@ -800,7 +805,7 @@ class Reserva(models.Model):
                 validar_codigo_promocional_en_pago(
                     self.codigo_promocional, self.moneda,
                     (self.precio_total or 0) + (self.descuento_aplicado or 0),
-                    self.correo_cliente, self.empresa, excluir_pk=self.pk,
+                    self.correo_cliente, self.empresa, excluir_pk=self.pk, tipo_cambio=self.tipo_cambio,
                 )
         if self.estado != self.Estado.CANCELADA and (self.cancelada_por_id or self.cancelada_en):
             raise ValidationError('cancelada_por/cancelada_en solo aplican cuando estado es cancelada.')

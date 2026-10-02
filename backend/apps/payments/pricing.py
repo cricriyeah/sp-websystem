@@ -114,6 +114,7 @@ def precio_paquete_total(
     personas: int = 1,
     moneda: str = 'MXN',
     personas_por_servicio: dict[int, int] | None = None,
+    tipo_cambio: Decimal | None = None,
 ) -> Decimal | None:
     """Precio final de un paquete. None si el paquete no tiene precio en `moneda`.
 
@@ -126,7 +127,7 @@ def precio_paquete_total(
     Cada personalización por persona se multiplica por las personas de su servicio.
     Piso 0. Cuantizado a centavos, ROUND_HALF_UP.
     """
-    base = paquete.precio_total_en(moneda, personas)
+    base = paquete.precio_total_en(moneda, personas, tipo_cambio)
     if base is None:
         return None
 
@@ -155,7 +156,7 @@ def precio_paquete_total(
             if p.tipo_interaccion != 'check':
                 continue
             cargo = cargo_personalizacion(
-                sp.precio_en(moneda),
+                sp.precio_en(moneda, tipo_cambio),
                 cobrar_por_persona=p.cobrar_por_persona,
                 cantidad_editable=p.cantidad_editable,
                 personas=personas_del_servicio,
@@ -167,7 +168,7 @@ def precio_paquete_total(
     return precio_paquete(total)
 
 
-def calcular_precio_paquete(paquete, moneda='MXN'):
+def calcular_precio_paquete(paquete, moneda='MXN', tipo_cambio=None):
     """Calcula el precio de un paquete en la moneda pedida.
     Devuelve None si el paquete no tiene precio en esa moneda."""
     return precio_paquete_total(
@@ -175,6 +176,7 @@ def calcular_precio_paquete(paquete, moneda='MXN'):
         personalizaciones_extra=[],
         personas=1,
         moneda=moneda,
+        tipo_cambio=tipo_cambio,
     )
 
 

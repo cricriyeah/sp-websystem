@@ -30,7 +30,6 @@ class PaquetesModelTests(OperadorTestCase):
             slug='pesca-dia-completo',
             tipo_servicio='pesca',
             precio_base=Decimal('5000.00'),
-            precio_base_usd=Decimal('290.00'),
         )
         self.servicio_paseo = Servicio.objects.create(
             empresa=self.empresa_pesca,
@@ -38,7 +37,6 @@ class PaquetesModelTests(OperadorTestCase):
             slug='paseo-costero',
             tipo_servicio='paseo',
             precio_base=Decimal('3500.00'),
-            precio_base_usd=Decimal('200.00'),
         )
         self.servicio_hotel = Servicio.objects.create(
             empresa=self.empresa_hotel,
@@ -46,7 +44,6 @@ class PaquetesModelTests(OperadorTestCase):
             slug='estadia-2-noches',
             tipo_servicio='hospedaje',
             precio_base=Decimal('3500.00'),
-            precio_base_usd=Decimal('200.00'),
         )
         self.servicio_cabo = Servicio.objects.create(
             empresa=self.empresa_cabo,
@@ -54,7 +51,6 @@ class PaquetesModelTests(OperadorTestCase):
             slug='snorkel-los-cabos',
             tipo_servicio='paseo',
             precio_base=Decimal('2000.00'),
-            precio_base_usd=Decimal('120.00'),
         )
 
     def test_crear_paquete_exitoso(self):
@@ -65,11 +61,10 @@ class PaquetesModelTests(OperadorTestCase):
             slug='fin-de-semana',
             descripcion='Pesca y hospedaje frente al malecón',
             precio_ancla=Decimal('7500.00'),
-            precio_ancla_usd=Decimal('440.00'),
         )
         self.assertEqual(str(paquete), 'Fin de Semana Inolvidable (La Paz)')
         self.assertEqual(paquete.precio_en('MXN'), Decimal('7500.00'))
-        self.assertEqual(paquete.precio_en('USD'), Decimal('440.00'))
+        self.assertEqual(paquete.precio_en('USD', Decimal('18')), Decimal('417.00'))  # 416.67 -> 417
 
     def test_validacion_empresa_lider_misma_sede(self):
         paquete_invalido = Paquete(
@@ -117,7 +112,6 @@ class PaquetesModelTests(OperadorTestCase):
             nombre='Pesca y Paseo',
             slug='pesca-paseo',
             precio_ancla=Decimal('8000.00'),
-            precio_ancla_usd=Decimal('470.00'),
         )
         ps1 = PaqueteServicio.objects.create(
             paquete=paquete,
@@ -197,7 +191,6 @@ class PaquetesModelTests(OperadorTestCase):
             nombre='Paquete Componentes',
             slug='paquete-componentes',
             precio_ancla=Decimal('1000.00'),
-            precio_ancla_usd=Decimal('60.00'),
         )
         PaqueteServicio.objects.create(
             paquete=paquete,
@@ -249,7 +242,6 @@ class PaquetesModelTests(OperadorTestCase):
             personas_min=1,
             personas_max=4,
             precio=Decimal('2700.00'),
-            precio_usd=Decimal('160.00'),
         )
         paquete_invalido = Paquete.objects.create(
             sede=self.sede_lp,
@@ -257,7 +249,6 @@ class PaquetesModelTests(OperadorTestCase):
             nombre='Paquete Barato Invalido',
             slug='paquete-barato-invalido',
             precio_ancla=Decimal('2000.00'),  # 2000 < 2700
-            precio_ancla_usd=Decimal('100.00'),
             permite_anticipo=False,
         )
         PaqueteServicio.objects.create(
@@ -277,7 +268,6 @@ class PaquetesModelTests(OperadorTestCase):
             paquete_invalido.validar_configuracion()
         mensajes = ' '.join(ctx.exception.messages)
         self.assertIn('no puede ser menor que la tarifa de transporte', mensajes)
-        self.assertIn('tarifa de transporte en USD', mensajes)
 
 
 class PaquetePrecioPorPersonaTests(OperadorTestCase):
@@ -288,7 +278,7 @@ class PaquetePrecioPorPersonaTests(OperadorTestCase):
     def _paquete(self, **extra):
         datos = dict(
             sede=self.sede, empresa_lider=self.empresa, nombre='Paquete PPP', slug='paquete-ppp',
-            precio_ancla=Decimal('45000.00'), precio_ancla_usd=Decimal('2500.00'),
+            precio_ancla=Decimal('45000.00'),
         )
         datos.update(extra)
         return Paquete.objects.create(**datos)
@@ -301,11 +291,12 @@ class PaquetePrecioPorPersonaTests(OperadorTestCase):
     def test_por_persona_multiplica_en_mxn_y_usd(self):
         paquete = self._paquete(precio_por_persona=True)
         self.assertEqual(paquete.precio_total_en('MXN', 3), Decimal('135000.00'))
-        self.assertEqual(paquete.precio_total_en('USD', 2), Decimal('5000.00'))
+        self.assertEqual(paquete.precio_total_en('USD', 2, Decimal('18')), Decimal('5000.00'))
 
-    def test_sin_precio_en_la_moneda_devuelve_none(self):
-        paquete = self._paquete(precio_por_persona=True, precio_ancla_usd=None)
-        self.assertIsNone(paquete.precio_total_en('USD', 2))
+    def test_usd_sin_tipo_de_cambio_falla(self):
+        paquete = self._paquete(precio_por_persona=True)
+        with self.assertRaises(ValueError):
+            paquete.precio_total_en('USD', 2)
 
     def _traslado(self, precio):
         servicio = Servicio.objects.create(
@@ -314,14 +305,14 @@ class PaquetePrecioPorPersonaTests(OperadorTestCase):
         )
         TransporteTarifa.objects.create(
             empresa=self.empresa, tipo_traslado='redondo_aeropuerto', zona='', personas_min=1,
-            personas_max=None, precio=Decimal(precio), precio_usd=Decimal('280.00'),
+            personas_max=None, precio=Decimal(precio),
         )
         return servicio
 
     def test_validar_configuracion_revisa_cada_tamano_de_grupo(self):
         servicio = self._traslado('5000.00')
         paquete = self._paquete(
-            precio_por_persona=True, precio_ancla=Decimal('4000.00'), precio_ancla_usd=Decimal('300.00'),
+            precio_por_persona=True, precio_ancla=Decimal('4000.00'),
         )
         PaqueteServicio.objects.create(paquete=paquete, servicio=servicio, personas_incluidas=2)
         with self.assertRaises(ValidationError) as ctx:

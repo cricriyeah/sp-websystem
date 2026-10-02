@@ -10,6 +10,7 @@ from django.db import models
 from apps.fleet.calendario_paquete import ComponenteCalendario
 from apps.fleet.paquete_reglas import Componente, errores_de_paquete
 from apps.fleet.tarifa_transporte import peor_tarifa
+from apps.payments.moneda import convertir
 
 from .enums import (
     EstrategiaCupo,
@@ -28,7 +29,6 @@ class TransporteTarifa(models.Model):
     personas_min = models.PositiveSmallIntegerField(default=1)
     personas_max = models.PositiveSmallIntegerField(null=True, blank=True)  # None = sin tope superior
     precio = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -57,8 +57,8 @@ class TransporteTarifa(models.Model):
         if self.personas_max is not None and self.personas_max < self.personas_min:
             raise ValidationError({'personas_max': 'Debe ser ≥ personas_min.'})
 
-    def precio_en(self, moneda):
-        return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
+    def precio_en(self, moneda, tipo_cambio=None):
+        return convertir(self.precio, moneda, tipo_cambio)
 
 
 class PuntoEncuentro(models.Model):
@@ -110,16 +110,12 @@ class CodigoPromocional(models.Model):
     usos_maximos_por_cliente = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text='Por correo del cliente. Vacio = sin limite.',
     )
-    # Dos campos, no uno con tipo de cambio: mismo patron que Servicio.precio_base/
-    # precio_base_usd — el negocio fija cada minimo a mano, sin conversion (ver
-    # docs/contexto-negocio.md, pesos y dolares nunca se suman).
+    # Un solo minimo, en pesos. En dolares se deriva con el tipo de cambio de la sede
+    # (ver docs/contexto-negocio.md, seccion Monedas).
     monto_minimo = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Minimo en pesos para que aplique. Vacio = sin minimo.',
-    )
-    monto_minimo_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Minimo en dolares. Vacio = sin minimo en esa moneda.',
+        help_text='Minimo en pesos para que aplique. Vacio = sin minimo. En dolares se calcula '
+                  'con el tipo de cambio de la sede.',
     )
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -149,8 +145,8 @@ class CodigoPromocional(models.Model):
         if self.fecha_inicio and self.fecha_fin and self.fecha_inicio >= self.fecha_fin:
             raise ValidationError({'fecha_fin': 'Debe ser posterior a la fecha de inicio.'})
 
-    def monto_minimo_en(self, moneda):
-        return self.monto_minimo if moneda == 'MXN' else self.monto_minimo_usd
+    def monto_minimo_en(self, moneda, tipo_cambio=None):
+        return convertir(self.monto_minimo, moneda, tipo_cambio)
 
 
 class Embarcacion(models.Model):
@@ -284,17 +280,9 @@ class Servicio(models.Model):
         max_digits=10, decimal_places=2, default=Decimal('0.00'),
         help_text='Precio base del servicio en MXN.'
     )
-    precio_base_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Precio base del servicio en USD. Opcional.'
-    )
     precio_persona_extra = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.00'),
         help_text='Cargo por persona adicional arriba del cupo incluido en MXN.'
-    )
-    precio_persona_extra_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Cargo por persona adicional arriba del cupo incluido en USD.'
     )
     personas_incluidas = models.PositiveSmallIntegerField(
         default=3,
@@ -342,13 +330,13 @@ class Servicio(models.Model):
         """El cliente puede elegir pagar solo el anticipo de este servicio."""
         return self.permite_anticipo
 
-    def precio_en(self, moneda):
-        """Precio de lista en la moneda pedida, o None si no esta configurado."""
-        return self.precio_base if (moneda or 'MXN').upper() == 'MXN' else self.precio_base_usd
+    def precio_en(self, moneda, tipo_cambio=None):
+        """Precio de lista en la moneda pedida (USD derivado con el tipo de cambio)."""
+        return convertir(self.precio_base, moneda, tipo_cambio)
 
-    def persona_extra_en(self, moneda):
-        """Cargo por persona adicional en esa moneda. None = sin configurar."""
-        return self.precio_persona_extra if (moneda or 'MXN').upper() == 'MXN' else self.precio_persona_extra_usd
+    def persona_extra_en(self, moneda, tipo_cambio=None):
+        """Cargo por persona adicional en esa moneda (USD derivado con el tipo de cambio)."""
+        return convertir(self.precio_persona_extra, moneda, tipo_cambio)
 
     def clean(self):
         super().clean()
@@ -452,7 +440,6 @@ class Personalizacion(models.Model):
             if self.pk:
                 asociaciones_activas = self.en_servicios.exclude(
                     models.Q(precio=Decimal('0.00'), preseleccionado=False)
-                    & (models.Q(precio_usd__isnull=True) | models.Q(precio_usd=Decimal('0.00')))
                 )
                 if asociaciones_activas.exists():
                     errores['tipo_interaccion'] = (
@@ -472,7 +459,6 @@ class ServicioPersonalizacion(models.Model):
     servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE, related_name='servicio_personalizaciones')
     personalizacion = models.ForeignKey(Personalizacion, on_delete=models.PROTECT, related_name='en_servicios')
     precio = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    precio_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     obligatorio = models.BooleanField(default=False)
     preseleccionado = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
@@ -506,14 +492,14 @@ class ServicioPersonalizacion(models.Model):
                 errores = {}
                 if self.preseleccionado:
                     errores['preseleccionado'] = 'Solo aplica a checks.'
-                if (self.precio is not None and self.precio != Decimal('0.00')) or (self.precio_usd is not None and self.precio_usd != Decimal('0.00')):
+                if self.precio is not None and self.precio != Decimal('0.00'):
                     errores['precio'] = 'Los inputs no pueden tener precio.'
                 if errores:
                     raise ValidationError(errores)
 
-    def precio_en(self, moneda):
+    def precio_en(self, moneda, tipo_cambio=None):
         """Precio de la personalización en la moneda solicitada."""
-        return self.precio if (moneda or 'MXN').upper() == 'MXN' else self.precio_usd
+        return convertir(self.precio, moneda, tipo_cambio)
 
 
 TOPE_PERSONAS_ACTIVIDAD = 5  # mismo valor que bookings.MAX_PERSONAS; fleet no importa bookings
@@ -543,20 +529,18 @@ def componente_de(ps):
 
 def _errores_por_persona(paquete, tarifas, personas):
     """Con precio por persona el total crece con el grupo, igual que la tarifa por rangos:
-    se revisa cada tamaño de 1 a `personas`."""
-    errores = {}
+    se revisa cada tamaño de 1 a `personas`. Solo en pesos: el USD se deriva con el mismo
+    tipo de cambio y redondeo hacia arriba, que conservan el orden."""
     for n in range(1, personas + 1):
-        for campo, moneda, ancla in (
-            ('precio_ancla', 'MXN', paquete.precio_ancla),
-            ('precio_ancla_usd', 'USD', paquete.precio_ancla_usd),
-        ):
-            peor = peor_tarifa(tarifas, personas=n, moneda=moneda)
-            if campo not in errores and peor is not None and ancla is not None and ancla * n < peor:
-                errores[campo] = (
-                    f'El precio por persona ({ancla}) para {n} persona(s) es menor que la '
+        peor = peor_tarifa(tarifas, personas=n, moneda='MXN')
+        if peor is not None and paquete.precio_ancla is not None and paquete.precio_ancla * n < peor:
+            return {
+                'precio_ancla': (
+                    f'El precio por persona ({paquete.precio_ancla}) para {n} persona(s) es menor que la '
                     f'tarifa de transporte ({peor}).'
                 )
-    return errores
+            }
+    return {}
 
 
 def errores_de_precio_contra_transporte(paquete, pares):
@@ -576,12 +560,6 @@ def errores_de_precio_contra_transporte(paquete, pares):
                 f'El precio del paquete ({paquete.precio_ancla}) no puede ser menor que la '
                 f'tarifa de transporte ({peor_mxn}).'
             )
-        peor_usd = peor_tarifa(tarifas, personas=personas, moneda='USD')
-        if peor_usd is not None and paquete.precio_ancla_usd is not None and paquete.precio_ancla_usd < peor_usd:
-            errores['precio_ancla_usd'] = (
-                f'El precio en USD del paquete ({paquete.precio_ancla_usd}) no puede ser menor '
-                f'que la tarifa de transporte en USD ({peor_usd}).'
-            )
     return errores
 
 
@@ -600,13 +578,9 @@ class Paquete(models.Model):
         max_digits=10, decimal_places=2,
         help_text='Precio ancla del paquete en pesos (MXN).'
     )
-    precio_ancla_usd = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text='Precio ancla del paquete en dólares (USD). Opcional.'
-    )
     precio_por_persona = models.BooleanField(
         default=False,
-        help_text='Si está activo, el precio ancla (MXN y USD) es el de UNA persona y el total es '
+        help_text='Si está activo, el precio ancla es el de UNA persona y el total es '
                   'precio × personas. Apagado, el precio ancla es un total fijo del paquete.',
     )
     pide_hora = models.BooleanField(
@@ -700,14 +674,14 @@ class Paquete(models.Model):
         """Un paquete de dos empresas nunca admite anticipo, diga lo que diga el campo."""
         return self.permite_anticipo and not self.es_cruza_empresa
 
-    def precio_en(self, moneda):
-        """Precio ancla en la moneda pedida, o None si no está configurado."""
-        return self.precio_ancla if (moneda or 'MXN').upper() == 'MXN' else self.precio_ancla_usd
+    def precio_en(self, moneda, tipo_cambio=None):
+        """Precio ancla en la moneda pedida (USD derivado con el tipo de cambio)."""
+        return convertir(self.precio_ancla, moneda, tipo_cambio)
 
-    def precio_total_en(self, moneda, personas=1):
+    def precio_total_en(self, moneda, personas=1, tipo_cambio=None):
         """Precio base del paquete para `personas` en `moneda`, o None si no está configurado.
         Fijo: el ancla tal cual. Por persona: ancla × personas."""
-        ancla = self.precio_en(moneda)
+        ancla = self.precio_en(moneda, tipo_cambio)
         if ancla is None:
             return None
         if self.precio_por_persona:

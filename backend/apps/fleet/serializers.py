@@ -33,12 +33,15 @@ class ServicioPersonalizacionSerializer(serializers.ModelSerializer):
             'id', 'personalizacion_id', 'nombre', 'tipo',
             'tipo_interaccion', 'opciones_seleccion', 'aviso_reforzado',
             'cobrar_por_persona', 'cantidad_editable',
-            'precio', 'precio_usd', 'obligatorio', 'preseleccionado',
+            'precio', 'obligatorio', 'preseleccionado',
         ]
 
 
 class ServicioSerializer(serializers.ModelSerializer):
     empresa_slug = serializers.CharField(source='empresa.slug', read_only=True)
+    tipo_cambio_usd = serializers.DecimalField(
+        source='empresa.sede.tipo_cambio_usd', max_digits=8, decimal_places=4, read_only=True,
+    )
     personalizaciones = serializers.SerializerMethodField()
 
     class Meta:
@@ -46,9 +49,9 @@ class ServicioSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'empresa_slug', 'nombre', 'slug', 'tipo_servicio',
             'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion',
-            'precio_base', 'precio_base_usd',
+            'precio_base', 'tipo_cambio_usd',
             'permite_anticipo', 'porcentaje_anticipo',
-            'precio_persona_extra', 'precio_persona_extra_usd',
+            'precio_persona_extra',
             'personas_incluidas', 'descripcion', 'activo',
             'pide_hora', 'hora_apertura', 'hora_cierre', 'paso_hora_minutos',
             'personalizaciones',
@@ -73,6 +76,9 @@ class PaqueteServicioSerializer(serializers.ModelSerializer):
 class PaqueteSerializer(serializers.ModelSerializer):
     sede = serializers.CharField(source='sede.nombre', read_only=True)
     sede_slug = serializers.CharField(source='sede.slug', read_only=True)
+    tipo_cambio_usd = serializers.DecimalField(
+        source='sede.tipo_cambio_usd', max_digits=8, decimal_places=4, read_only=True,
+    )
     empresa_lider = serializers.CharField(source='empresa_lider.nombre', read_only=True)
     empresa_lider_slug = serializers.CharField(source='empresa_lider.slug', read_only=True)
     servicios_asociados = serializers.SerializerMethodField()
@@ -85,7 +91,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'sede', 'sede_slug', 'empresa_lider', 'empresa_lider_slug',
             'nombre', 'slug', 'descripcion',
-            'precio_ancla', 'precio_ancla_usd', 'precio_por_persona', 'pide_hora', 'regla_precio', 'activo',
+            'precio_ancla', 'tipo_cambio_usd', 'precio_por_persona', 'pide_hora', 'regla_precio', 'activo',
             'permite_anticipo', 'porcentaje_anticipo', 'es_cruza_empresa',
             'servicios_asociados', 'noches',
         ]

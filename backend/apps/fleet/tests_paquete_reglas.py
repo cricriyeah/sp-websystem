@@ -231,7 +231,7 @@ class ConfiguracionDePaqueteTests(OperadorTestCase):
         tarifas = list(self.transp.tarifas_transporte.filter(activo=True))
         self.assertEqual(peor_tarifa(tarifas, personas=2, moneda='MXN'), Decimal('4500.00'))
         self.assertEqual(peor_tarifa(tarifas, personas=8, moneda='MXN'), Decimal('6000.00'))
-        self.assertIsNone(peor_tarifa(tarifas, personas=2, moneda='USD'))
+        self.assertEqual(peor_tarifa(tarifas, personas=2, moneda='USD', tipo_cambio=Decimal('18')), Decimal('250.00'))
 
     def test_validar_configuracion_exige_que_el_precio_cubra_la_peor_tarifa(self):
         TransporteTarifa.objects.create(

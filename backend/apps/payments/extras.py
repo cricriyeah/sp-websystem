@@ -89,11 +89,12 @@ def cotizar_personalizaciones(reserva):
             a_congelar.append((fila, None, 1))
             continue
 
-        precio = sp.precio_en(reserva.moneda)
-        if precio is None:
+        try:
+            precio = sp.precio_en(reserva.moneda, reserva.tipo_cambio)
+        except ValueError:
             return 0, [], [], (
-                f'No hay precio de "{sp.personalizacion.nombre}" '
-                f'configurado en {reserva.moneda}.'
+                f'No se pudo cotizar "{sp.personalizacion.nombre}" en {reserva.moneda}: '
+                'la reserva no tiene tipo de cambio.'
             )
         # Las personas de un extra son las de SU servicio, no las del pedido entero.
         personas = reserva.personas_de(sp.servicio_id)

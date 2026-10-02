@@ -17,7 +17,7 @@ class ExtrasModuloTests(ApiTestCase):
             empresa=self.empresa, nombre='Brunch', tipo_interaccion='check', cobrar_por_persona=True,
         )
         self.sp = ServicioPersonalizacion.objects.create(
-            servicio=self.servicio, personalizacion=check, precio=Decimal('100.00'), precio_usd=Decimal('6.00'),
+            servicio=self.servicio, personalizacion=check, precio=Decimal('100.00'),
         )
         self.reserva = Reserva.objects.create(
             empresa=self.empresa, servicio=self.servicio, fecha=date(2026, 11, 1), hora=time(9),
@@ -41,9 +41,15 @@ class ExtrasModuloTests(ApiTestCase):
         self.assertEqual(self.fila.precio_unitario, Decimal('100.00'))
         self.assertEqual(self.fila.cantidad, 3)
 
-    def test_sin_precio_en_la_moneda_devuelve_error(self):
-        self.sp.precio_usd = None
-        self.sp.save(update_fields=['precio_usd'])
+    def test_usd_sin_tipo_de_cambio_devuelve_error(self):
         self.reserva.moneda = 'USD'
+        self.reserva.tipo_cambio = None
         _, _, _, error = cotizar_personalizaciones(self.reserva)
         self.assertIn('USD', error)
+
+    def test_usd_se_deriva_del_precio_en_pesos(self):
+        self.reserva.moneda = 'USD'
+        self.reserva.tipo_cambio = Decimal('18')
+        cargo, _, _, error = cotizar_personalizaciones(self.reserva)
+        self.assertIsNone(error)
+        self.assertEqual(cargo, Decimal('18.00'))  # 100/18 = 5.56 -> 6, por 3 personas

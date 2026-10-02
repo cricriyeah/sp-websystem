@@ -228,8 +228,8 @@ class CrearPagoTests(ApiTestCase):
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_publishable_key'])
         self.servicio = crear_servicio_pesca(
             self.empresa,
-            precio_base=Decimal('4500.00'), precio_base_usd=Decimal('260.00'),
-            precio_persona_extra=Decimal('500.00'), precio_persona_extra_usd=Decimal('30.00'),
+            precio_base=Decimal('4500.00'),
+            precio_persona_extra=Decimal('500.00'),
         )
         self.reserva = crear_reserva(self.empresa, servicio=self.servicio)
         self.url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': self.reserva.pk})
@@ -255,13 +255,11 @@ class CrearPagoTests(ApiTestCase):
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_precio_base_y_recargo_vigentes_del_servicio_en_ambas_monedas(self, payment_intents):
         self.servicio.precio_base = Decimal('5100')
-        self.servicio.precio_base_usd = Decimal('300')
         self.servicio.precio_persona_extra = Decimal('600')
-        self.servicio.precio_persona_extra_usd = Decimal('35')
         self.servicio.save()
         for moneda, personas, esperado in (
             ('MXN', 3, '5100.00'), ('MXN', 5, '6300.00'),
-            ('USD', 3, '300.00'), ('USD', 5, '370.00'),
+            ('USD', 3, '284.00'), ('USD', 5, '352.00'),  # cada precio sube al dolar: 283.33->284, 33.33->34
         ):
             with self.subTest(moneda=moneda, personas=personas):
                 reserva = crear_reserva(self.empresa, servicio=self.servicio,
@@ -286,7 +284,7 @@ class CrearPagoTests(ApiTestCase):
         datos = {
             'empresa': self.empresa,
             'tipo': 'brunch', 'nombre': 'Brunch', 'precio': Decimal('300'),
-            'precio_usd': Decimal('18'), 'cobrar_por_persona': True,
+            'cobrar_por_persona': True,
         }
         datos.update(overrides)
         reserva = reserva or self.reserva
@@ -520,7 +518,7 @@ class CrearPagoTests(ApiTestCase):
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=5)
         self.seleccionar_extra(
             tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-            precio_usd=Decimal('25'), cantidad_editable=True, cantidad_solicitada=2,
+            cantidad_editable=True, cantidad_solicitada=2,
         )
         # 4500 + 2 personas extra x 500 + 2 licencias x 450 (no 5).
         response = self.post()
@@ -536,7 +534,7 @@ class CrearPagoTests(ApiTestCase):
         # licencia para mas personas de las que trae la reserva.
         self.seleccionar_extra(
             tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-            precio_usd=Decimal('25'), cantidad_editable=True, cantidad_solicitada=5,
+            cantidad_editable=True, cantidad_solicitada=5,
         )
         response = self.post()
 
@@ -551,7 +549,7 @@ class CrearPagoTests(ApiTestCase):
         Reserva.objects.filter(pk=self.reserva.pk).update(numero_personas=4)
         self.seleccionar_extra(
             tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-            precio_usd=Decimal('25'), cantidad_editable=True,
+            cantidad_editable=True,
         )
         # Sin cantidad_solicitada (None): mismo comportamiento de siempre, todo el grupo.
         # 4500 + 1 persona extra x 500 + 4 licencias x 450.
@@ -564,22 +562,11 @@ class CrearPagoTests(ApiTestCase):
         # Bebidas la cotiza el agente aparte, no cambia el cobro.
         self.assertEqual(self.post().json()['monto_a_cobrar'], '4500.00')
 
-    @mock.patch.object(StripeClient, 'payment_intents')
-    def test_sin_precio_de_extra_en_dolares_no_se_cobra_a_medias(self, payment_intents):
-        reserva = crear_reserva(self.empresa, moneda='USD')
-        self.seleccionar_extra(reserva=reserva, precio=Decimal('300'), precio_usd=None)
-        response = self.client.post(
-            reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
-            {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
-            content_type='application/json',
-        )
-        self.assertEqual(response.status_code, 503)
-        payment_intents.create.assert_not_called()
 
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_congela_el_precio_vigente_del_catalogo_no_el_de_cuando_se_selecciono(self, payment_intents):
         payment_intents.create.return_value = intent_falso()
-        seleccion = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
+        seleccion = self.seleccionar_extra(precio=Decimal('300'))
         # El precio de lista cambia despues de que el cliente eligio, antes de pagar.
         seleccion.servicio_personalizacion.precio = Decimal('500')
         seleccion.servicio_personalizacion.save(update_fields=['precio'])
@@ -597,9 +584,9 @@ class CrearPagoTests(ApiTestCase):
         payment_intents.create.return_value = intent_falso()
         activo = self.seleccionar_extra(
             tipo='licencia', nombre='Licencia', precio=Decimal('450'),
-            precio_usd=Decimal('25'), cobrar_por_persona=False,
+            cobrar_por_persona=False,
         )
-        a_caer = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
+        a_caer = self.seleccionar_extra(precio=Decimal('300'))
         a_caer.servicio_personalizacion.activo = False
         a_caer.servicio_personalizacion.save(update_fields=['activo'])
 
@@ -617,7 +604,7 @@ class CrearPagoTests(ApiTestCase):
         payment_intents.create.return_value = intent_falso()
         self.post()
 
-        extra = self.seleccionar_extra(precio=Decimal('300'), precio_usd=Decimal('18'))
+        extra = self.seleccionar_extra(precio=Decimal('300'))
         payment_intents.retrieve.return_value = intent_falso(status='processing')
 
         response = self.post()
@@ -626,19 +613,6 @@ class CrearPagoTests(ApiTestCase):
         extra.refresh_from_db()
         self.assertIsNone(extra.precio_unitario)
 
-    @mock.patch.object(StripeClient, 'payment_intents')
-    def test_sin_cargo_en_dolares_no_se_cobra_a_medias(self, payment_intents):
-        servicio = crear_servicio_pesca(self.empresa)
-        servicio.precio_persona_extra_usd = None
-        servicio.save(update_fields=['precio_persona_extra_usd'])
-        reserva = crear_reserva(self.empresa, moneda='USD', numero_personas=5)
-        response = self.client.post(
-            reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
-            {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
-            content_type='application/json',
-        )
-        self.assertEqual(response.status_code, 503)
-        payment_intents.create.assert_not_called()
 
     @mock.patch.object(StripeClient, 'payment_intents')
     def test_manda_idempotency_key(self, payment_intents):
@@ -663,7 +637,7 @@ class CrearPagoTests(ApiTestCase):
         self.post()
 
         # El cliente vuelve atras y agrega el brunch: mismo intent, otro monto.
-        self.seleccionar_extra(precio=Decimal('150'), precio_usd=Decimal('9'))
+        self.seleccionar_extra(precio=Decimal('150'))
         payment_intents.retrieve.return_value = intent_falso()
         payment_intents.update.return_value = intent_falso(amount=480000)
         self.post()
@@ -688,11 +662,9 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(self.post().status_code, 409)
 
     @mock.patch.object(StripeClient, 'payment_intents')
-    def test_sin_precio_en_dolares_responde_503(self, payment_intents):
-        servicio = crear_servicio_pesca(self.empresa)
-        servicio.precio_base_usd = None
-        servicio.save(update_fields=['precio_base_usd'])
+    def test_usd_sin_tipo_de_cambio_responde_503_sin_llamar_stripe(self, payment_intents):
         reserva = crear_reserva(self.empresa, moneda='USD')
+        Reserva.objects.filter(pk=reserva.pk).update(tipo_cambio=None)  # fila anterior al tipo de cambio
         response = self.client.post(
             reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
             {'amenities': [], 'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
@@ -700,7 +672,6 @@ class CrearPagoTests(ApiTestCase):
         )
         self.assertEqual(response.status_code, 503)
         payment_intents.create.assert_not_called()
-
     def test_forma_pago_invalida_responde_400(self):
         self.assertEqual(self.post(forma_pago='trueque').status_code, 400)
 
@@ -1116,8 +1087,8 @@ class WebhookTests(ApiTestCase):
         self.empresa.stripe_webhook_secret = 'whsec_falsa'
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
         crear_servicio_pesca(
-            self.empresa, precio_base=Decimal('4500.00'), precio_base_usd=None,
-            precio_persona_extra=Decimal('0'), precio_persona_extra_usd=None,
+            self.empresa, precio_base=Decimal('4500.00'),
+            precio_persona_extra=Decimal('0'),
         )
         self.reserva = crear_reserva(self.empresa)
         self.reserva.precio_total = Decimal('4500.00')
@@ -1313,8 +1284,8 @@ class EventosDeStripeTests(ApiTestCase):
         self.empresa.stripe_webhook_secret = 'whsec_falsa'
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
         crear_servicio_pesca(
-            self.empresa, precio_base=Decimal('4500.00'), precio_base_usd=None,
-            precio_persona_extra=Decimal('0'), precio_persona_extra_usd=None,
+            self.empresa, precio_base=Decimal('4500.00'),
+            precio_persona_extra=Decimal('0'),
         )
         self.reserva = crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         self.reserva.precio_total = Decimal('4500.00')
@@ -1401,8 +1372,8 @@ class ConciliarPagosTests(EmpresaTestCase):
         self.empresa.stripe_webhook_secret = 'whsec_falsa'
         self.empresa.save(update_fields=['stripe_secret_key', 'stripe_webhook_secret'])
         crear_servicio_pesca(
-            self.empresa, precio_base=Decimal('4500.00'), precio_base_usd=None,
-            precio_persona_extra=Decimal('0'), precio_persona_extra_usd=None,
+            self.empresa, precio_base=Decimal('4500.00'),
+            precio_persona_extra=Decimal('0'),
         )
         self.reserva = crear_reserva(self.empresa)
         self.reserva.precio_total = Decimal('4500.00')
@@ -2280,16 +2251,16 @@ class TrasladoPagoFixture:
         self.punto = PuntoEncuentro.objects.create(
             empresa=self.empresa, nombre='Hotel del centro', zona='centro',
         )
-        for tipo, zona, minimo, maximo, mxn, usd in (
-            ('redondo_aeropuerto', '', 1, 4, '4500.00', '250.00'),
-            ('redondo_aeropuerto', '', 5, None, '6000.00', '340.00'),
-            ('redondo_actividad', 'centro', 1, None, '1500.00', '90.00'),
-            ('redondo_actividad', 'periferia', 1, None, '1800.00', None),
-            ('recepcion_aeropuerto', '', 1, None, '2700.00', '150.00'),
+        for tipo, zona, minimo, maximo, mxn in (
+            ('redondo_aeropuerto', '', 1, 4, '4500.00'),
+            ('redondo_aeropuerto', '', 5, None, '6000.00'),
+            ('redondo_actividad', 'centro', 1, None, '1500.00'),
+            ('redondo_actividad', 'periferia', 1, None, '1800.00'),
+            ('recepcion_aeropuerto', '', 1, None, '2700.00'),
         ):
             TransporteTarifa.objects.create(
                 empresa=self.empresa, tipo_traslado=tipo, zona=zona,
-                personas_min=minimo, personas_max=maximo, precio=mxn, precio_usd=usd,
+                personas_min=minimo, personas_max=maximo, precio=mxn,
             )
         self.stripe_mock = self.enterContext(mock.patch('apps.payments.views.configurar_stripe'))
         self.cliente = self.stripe_mock.return_value
@@ -2346,10 +2317,10 @@ class CrearPagoTrasladoTest(TrasladoPagoFixture, ApiTestCase):
             ('redondo_aeropuerto', 1, 'centro', 'MXN', '4500.00'),
             ('redondo_aeropuerto', 4, 'periferia', 'MXN', '4500.00'),
             ('redondo_aeropuerto', 5, 'centro', 'MXN', '6000.00'),
-            ('redondo_aeropuerto', 14, 'periferia', 'USD', '340.00'),
+            ('redondo_aeropuerto', 14, 'periferia', 'USD', '334.00'),  # 6000/18 = 333.33
             ('redondo_actividad', 14, 'centro', 'MXN', '1500.00'),
             ('redondo_actividad', 2, 'periferia', 'MXN', '1800.00'),
-            ('redondo_actividad', 3, 'centro', 'USD', '90.00'),
+            ('redondo_actividad', 3, 'centro', 'USD', '84.00'),  # 1500/18 = 83.33
             ('recepcion_aeropuerto', 14, 'periferia', 'MXN', '2700.00'),
         ):
             with self.subTest(tipo=tipo, personas=personas, zona=zona, moneda=moneda):
@@ -2421,11 +2392,9 @@ class CrearPagoTrasladoTest(TrasladoPagoFixture, ApiTestCase):
         self.assertEqual(reserva.detalle_transporte.numero_personas, 4)
         self.assertEqual(reserva.precio_total, Decimal('4500.00'))
 
-    def test_tarifa_inactiva_usd_ausente_y_detalle_ausente_no_cobran(self):
+    def test_tarifa_inactiva_y_detalle_ausente_no_cobran(self):
         from apps.fleet.models import TransporteTarifa
 
-        sin_usd = self.reserva('redondo_actividad', zona='periferia', moneda='USD')
-        self.assertEqual(self.post(sin_usd).status_code, 503)
         reserva = self.reserva()
         TransporteTarifa.objects.filter(tipo_traslado='redondo_aeropuerto').update(activo=False)
         self.assertEqual(self.post(reserva).status_code, 503)
@@ -2644,7 +2613,6 @@ class CrearOrdenTest(TestCase):
                 personas_min=1,
                 personas_max=4,
                 precio=Decimal('2000.00'),
-                precio_usd=Decimal('120.00'),
             )
             self.paquete_cruza = Paquete.objects.create(
                 sede=self.sede,
@@ -2652,7 +2620,6 @@ class CrearOrdenTest(TestCase):
                 nombre='Pesca y Traslado',
                 slug='pesca-y-traslado',
                 precio_ancla=Decimal('5000.00'),
-                precio_ancla_usd=Decimal('300.00'),
                 permite_anticipo=False,
             )
             PaqueteServicio.objects.create(paquete=self.paquete_cruza, servicio=self.servicio_pesca, orden=1)
@@ -3409,7 +3376,6 @@ class OrdenesApiTest(TestCase):
                 personas_min=1,
                 personas_max=4,
                 precio=Decimal('2000.00'),
-                precio_usd=Decimal('120.00'),
                 activo=True,
             )
             self.paquete = Paquete.objects.create(

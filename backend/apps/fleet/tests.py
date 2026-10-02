@@ -51,27 +51,20 @@ class EmpresaFKTests(TestCase):
 
 
 class PescaServicioApiTests(ApiTestCase):
-    def test_devuelve_los_cuatro_precios_y_personas_incluidas(self):
+    def test_devuelve_precios_en_pesos_tipo_de_cambio_y_personas_incluidas(self):
         crear_servicio_pesca(self.empresa, precio_base=Decimal('5100'),
-                            precio_base_usd=Decimal('300'),
-                            precio_persona_extra=Decimal('600'),
-                            precio_persona_extra_usd=Decimal('35'))
+                            precio_persona_extra=Decimal('600'))
         response = self.client.get(f'/api/{self.empresa.slug}/servicios/pesca-deportiva/')
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        for campo, valor in {'precio_base': '5100.00', 'precio_base_usd': '300.00',
+        for campo, valor in {'precio_base': '5100.00',
                              'precio_persona_extra': '600.00',
-                             'precio_persona_extra_usd': '35.00',
+                             'tipo_cambio_usd': '18.0000',
                              'personas_incluidas': 3}.items():
             self.assertEqual(body[campo], valor)
         self.assertNotIn('amenidades', body)
-
-    def test_precio_usd_no_configurado_se_publica_como_null(self):
-        crear_servicio_pesca(self.empresa, precio_base_usd=None,
-                            precio_persona_extra_usd=None)
-        body = self.client.get(f'/api/{self.empresa.slug}/servicios/pesca-deportiva/').json()
-        self.assertIsNone(body['precio_base_usd'])
-        self.assertIsNone(body['precio_persona_extra_usd'])
+        self.assertNotIn('precio_base_usd', body)
+        self.assertNotIn('precio_persona_extra_usd', body)
 
     def test_servicio_ausente_responde_404(self):
         self.assertEqual(self.client.get(
@@ -106,14 +99,11 @@ class SeedLocalDemoPescaTests(TestCase):
         call_command('seed_local_demo', stdout=StringIO())
         with scope.con_empresa(empresa):
             pesca = Servicio.objects.get(empresa=empresa, slug='pesca-deportiva')
-            self.assertEqual((pesca.precio_base, pesca.precio_base_usd,
-                              pesca.precio_persona_extra, pesca.precio_persona_extra_usd),
-                             (Decimal('4500'), Decimal('260'), Decimal('500'), Decimal('30')))
+            self.assertEqual((pesca.precio_base, pesca.precio_persona_extra),
+                             (Decimal('4500'), Decimal('500')))
             self.assertEqual((pesca.hora_apertura, pesca.hora_cierre), (time(5), time(7)))
             pesca.precio_base = Decimal('5100')
-            pesca.precio_base_usd = None
             pesca.precio_persona_extra = Decimal('600')
-            pesca.precio_persona_extra_usd = None
             pesca.hora_cierre = time(6, 30)
             pesca.save()
         empresa.stripe_secret_key = 'sk_test_personalizada'
@@ -124,9 +114,8 @@ class SeedLocalDemoPescaTests(TestCase):
         with scope.con_empresa(empresa):
             pesca.refresh_from_db()
             self.assertEqual(Servicio.objects.filter(empresa=empresa, slug='pesca-deportiva').count(), 1)
-            self.assertEqual((pesca.precio_base, pesca.precio_base_usd,
-                              pesca.precio_persona_extra, pesca.precio_persona_extra_usd),
-                             (Decimal('5100'), None, Decimal('600'), None))
+            self.assertEqual((pesca.precio_base, pesca.precio_persona_extra),
+                             (Decimal('5100'), Decimal('600')))
             self.assertEqual(pesca.hora_cierre, time(6, 30))
         empresa.refresh_from_db()
         self.assertEqual((empresa.stripe_secret_key, empresa.stripe_publishable_key,
@@ -155,13 +144,13 @@ class _AlcanceOtraEmpresa:
 class PersonalizacionesPescaTests(EmpresaTestCase):
     def test_precio_por_moneda(self):
         sp = crear_personalizacion_pesca(
-            self.empresa, nombre='Licencia', tipo='licencia', precio=Decimal('450'), precio_usd=Decimal('25'))
+            self.empresa, nombre='Licencia', tipo='licencia', precio=Decimal('450'))
         self.assertEqual(sp.precio_en('MXN'), Decimal('450'))
-        self.assertEqual(sp.precio_en('USD'), Decimal('25'))
+        self.assertEqual(sp.precio_en('USD', Decimal('18')), Decimal('25.00'))
 
-    def test_sin_precio_en_dolares_devuelve_none(self):
+    def test_precio_en_dolares_se_deriva_hacia_arriba(self):
         sp = crear_personalizacion_pesca(self.empresa, nombre='Carnada', tipo='carnada', precio=Decimal('200'))
-        self.assertIsNone(sp.precio_en('USD'))
+        self.assertEqual(sp.precio_en('USD', Decimal('18')), Decimal('12.00'))  # 11.11 -> 12
 
     def test_cantidad_editable_sin_cobrar_por_persona_no_es_valido(self):
         p = Personalizacion(empresa=self.empresa, nombre='Carnada', tipo='carnada',
@@ -258,9 +247,9 @@ class PersonalizacionesPescaApiTests(ApiTestCase):
         crear_personalizacion_pesca(self.empresa, nombre='Carnada', tipo='carnada', activo=False)
         self.assertEqual(self.catalogo(), [])
 
-    def test_sin_precio_usd_es_null(self):
+    def test_el_catalogo_ya_no_publica_precio_usd(self):
         crear_personalizacion_pesca(self.empresa, nombre='Licencia', tipo='licencia', precio=Decimal('450'))
-        self.assertIsNone(self.catalogo()[0]['precio_usd'])
+        self.assertNotIn('precio_usd', self.catalogo()[0])
 
     def test_catalogo_vacio(self):
         self.assertEqual(self.catalogo(), [])
@@ -376,10 +365,10 @@ class CodigoPromocionalTests(EmpresaTestCase):
     def test_monto_minimo_en_devuelve_el_de_la_moneda_pedida(self):
         promo = CodigoPromocional.objects.create(
             codigo='MIN', porcentaje_descuento=Decimal('10'), empresa=self.empresa,
-            monto_minimo=Decimal('5000'), monto_minimo_usd=Decimal('300'),
+            monto_minimo=Decimal('5000'),
         )
         self.assertEqual(promo.monto_minimo_en('MXN'), Decimal('5000'))
-        self.assertEqual(promo.monto_minimo_en('USD'), Decimal('300'))
+        self.assertEqual(promo.monto_minimo_en('USD', Decimal('18')), Decimal('278.00'))  # 277.78 -> 278
 
     def test_porcentaje_fuera_de_rango_no_es_valido(self):
         with self.assertRaises(ValidationError):
@@ -493,7 +482,7 @@ class TransporteTarifaTest(EmpresaTestCase):
         with self.assertRaises(ValidationError):
             tarifa.full_clean()
 
-    def test_precio_en_usd_con_precio_usd_none_devuelve_none(self):
+    def test_precio_en_usd_se_deriva_del_precio_en_pesos(self):
         tarifa = TransporteTarifa(
             empresa=self.empresa,
             tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
@@ -501,11 +490,10 @@ class TransporteTarifaTest(EmpresaTestCase):
             personas_min=1,
             personas_max=4,
             precio=Decimal('4500.00'),
-            precio_usd=None,
         )
         tarifa.full_clean()
         self.assertEqual(tarifa.precio_en('MXN'), Decimal('4500.00'))
-        self.assertIsNone(tarifa.precio_en('USD'))
+        self.assertEqual(tarifa.precio_en('USD', Decimal('18')), Decimal('250.00'))
 
 
 @skipUnless(connection.vendor == 'postgresql', 'RLS solo aplica en Postgres')
@@ -729,10 +717,10 @@ class TrasladosViewTest(TestCase):
             'servicio': {'slug': servicio.slug, 'nombre': servicio.nombre,
                          'capacidad_maxima': 14, 'porcentaje_anticipo': 30,
                          'permite_anticipo': False,
-                         'empresa_slug': self.empresa_b.slug, 'hora_apertura': None, 'hora_cierre': None,
+                         'empresa_slug': self.empresa_b.slug, 'tipo_cambio_usd': '18.0000', 'hora_apertura': None, 'hora_cierre': None,
                          'paso_hora_minutos': 15},
             'tarifas': [{'tipo_traslado': tarifa.tipo_traslado, 'zona': '', 'personas_min': 1,
-                         'personas_max': 4, 'precio': '4500.00', 'precio_usd': None}],
+                         'personas_max': 4, 'precio': '4500.00'}],
             'puntos_encuentro': [{'id': punto.pk, 'nombre': punto.nombre, 'zona': 'centro'}],
             'publishable_key': self.empresa_b.stripe_publishable_key,
         })
@@ -809,7 +797,7 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
         p = Personalizacion.objects.create(empresa=self.empresa, nombre='Pregunta',
                                            tipo_interaccion='input_texto')
         sp = ServicioPersonalizacion(servicio=s, personalizacion=p, obligatorio=True,
-                                     precio=Decimal('0.00'), precio_usd=None)
+                                     precio=Decimal('0.00'))
         sp.full_clean()
         sp.precio = Decimal('1.00')
         with self.assertRaises(ValidationError):
@@ -894,13 +882,13 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
         s2 = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Cat 2', slug='scat2')
         p = Personalizacion.objects.create(empresa=self.empresa, nombre='Check a Input Valido',
                                            tipo_interaccion='check')
-        # Asociación 1: precio=0, precio_usd=None, preseleccionado=False
+        # Asociación 1: precio=0, preseleccionado=False
         ServicioPersonalizacion.objects.create(servicio=s1, personalizacion=p,
-                                              precio=Decimal('0.00'), precio_usd=None,
+                                              precio=Decimal('0.00'),
                                               preseleccionado=False)
-        # Asociación 2: precio=0, precio_usd=0, preseleccionado=False
+        # Asociación 2: precio=0, preseleccionado=False
         ServicioPersonalizacion.objects.create(servicio=s2, personalizacion=p,
-                                              precio=Decimal('0.00'), precio_usd=Decimal('0.00'),
+                                              precio=Decimal('0.00'),
                                               preseleccionado=False)
 
         # Cambiar p a input_texto o input_numero o input_seleccion debe permitirse sin error
@@ -918,27 +906,15 @@ class PersonalizacionInteraccionTests(EmpresaTestCase):
         s = Servicio.objects.create(empresa=self.empresa, nombre='Servicio Precios', slug='sprec')
         p = Personalizacion.objects.create(empresa=self.empresa, nombre='Input Pregunta',
                                            tipo_interaccion='input_texto')
-        # precio_usd=None y precio=0 es válido
+        # precio=0 es válido
         sp = ServicioPersonalizacion(servicio=s, personalizacion=p,
-                                     precio=Decimal('0.00'), precio_usd=None)
-        sp.full_clean()
-
-        # precio_usd=0 y precio=0 es válido
-        sp.precio_usd = Decimal('0.00')
+                                     precio=Decimal('0.00'))
         sp.full_clean()
 
         # Valores distintos de cero (positivos y negativos) deben fallar
-        precios_invalidos = [
-            (Decimal('-10.00'), None),
-            (Decimal('10.00'), None),
-            (Decimal('0.00'), Decimal('-5.00')),
-            (Decimal('0.00'), Decimal('5.00')),
-            (Decimal('-1.00'), Decimal('-1.00')),
-        ]
-        for mxn, usd in precios_invalidos:
-            with self.subTest(precio_mxn=mxn, precio_usd=usd):
+        for mxn in (Decimal('-10.00'), Decimal('10.00'), Decimal('-1.00')):
+            with self.subTest(precio_mxn=mxn):
                 sp.precio = mxn
-                sp.precio_usd = usd
                 with self.assertRaises(ValidationError) as ctx:
                     sp.full_clean()
                 self.assertIn('precio', ctx.exception.message_dict)
@@ -969,9 +945,7 @@ class CrearServicioPescaHelperTests(EmpresaTestCase):
         self.assertEqual(s1.estrategia_precio, 'por_grupo')
         self.assertEqual(s1.modo_ocupacion, 'exclusivo')
         self.assertEqual(s1.precio_base, Decimal('4500'))
-        self.assertEqual(s1.precio_base_usd, Decimal('260'))
         self.assertEqual(s1.precio_persona_extra, Decimal('500'))
-        self.assertEqual(s1.precio_persona_extra_usd, Decimal('30'))
         self.assertEqual(s1.personas_incluidas, 3)
         self.assertEqual(s1.hora_apertura, time(5))
         self.assertEqual(s1.hora_cierre, time(7))

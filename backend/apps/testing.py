@@ -191,9 +191,7 @@ def crear_servicio_pesca(empresa, **overrides):
         estrategia_precio='por_grupo',
         modo_ocupacion='exclusivo',
         precio_base=Decimal('4500'),
-        precio_base_usd=Decimal('260'),
         precio_persona_extra=Decimal('500'),
-        precio_persona_extra_usd=Decimal('30'),
         personas_incluidas=3,
         hora_apertura=time(5),
         hora_cierre=time(7),
@@ -213,7 +211,7 @@ def crear_servicio_pesca(empresa, **overrides):
     return servicio
 
 
-def crear_personalizacion_pesca(empresa, *, servicio=None, precio=0, precio_usd=None,
+def crear_personalizacion_pesca(empresa, *, servicio=None, precio=0,
                                preseleccionado=False, obligatorio=False, **campos):
     """Fixture de catálogo: devuelve la asociación cuyo ID recibe el checkout."""
     from apps.fleet.models import Personalizacion, ServicioPersonalizacion
@@ -226,7 +224,7 @@ def crear_personalizacion_pesca(empresa, *, servicio=None, precio=0, precio_usd=
         personalizacion = Personalizacion.objects.create(empresa=empresa, **campos)
         return ServicioPersonalizacion.objects.create(
             servicio=servicio, personalizacion=personalizacion,
-            precio=precio, precio_usd=precio_usd,
+            precio=precio,
             preseleccionado=preseleccionado, obligatorio=obligatorio,
             activo=campos.get('activo', True),
         )
