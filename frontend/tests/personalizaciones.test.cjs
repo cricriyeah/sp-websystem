@@ -17,14 +17,13 @@ const licencia = {
   cobrar_por_persona: true,
   cantidad_editable: true,
   precio: '450.00',
-  precio_usd: null,
 };
 
 test('recomendada removible y cantidad efectiva', () => {
   assert.deepEqual(h.seleccionInicial([licencia]), [{ id: 7, cantidad: 1 }]);
-  assert.equal(h.totalPersonalizaciones([licencia], [], 5, 'MXN'), 0);
-  assert.equal(h.totalPersonalizaciones([licencia], [{ id: 7, cantidad: 2 }], 5, 'MXN'), 900);
-  assert.equal(h.totalPersonalizaciones([licencia], [{ id: 7 }], 5, 'USD'), null);
+  assert.equal(h.totalPersonalizaciones([licencia], [], 5, 'MXN', '18.0000'), 0);
+  assert.equal(h.totalPersonalizaciones([licencia], [{ id: 7, cantidad: 2 }], 5, 'MXN', '18.0000'), 900);
+  assert.equal(h.totalPersonalizaciones([licencia], [{ id: 7 }], 5, 'USD', '18.0000'), 25);
 });
 
 test('input número cero, vacío y no finito', () => {
@@ -34,7 +33,7 @@ test('input número cero, vacío y no finito', () => {
   assert.deepEqual(h.erroresPersonalizaciones([p], [{ id: 7, respuesta: 'Infinity' }]), { 7: 'number' });
 });
 
-test('input gratis aunque payload traiga cantidad y precio USD ausente', () => {
+test('input gratis aunque payload traiga cantidad', () => {
   const inputTexto = {
     id: 10,
     nombre: 'Alergias o comentarios',
@@ -46,14 +45,13 @@ test('input gratis aunque payload traiga cantidad y precio USD ausente', () => {
     cobrar_por_persona: false,
     cantidad_editable: false,
     precio: '0.00',
-    precio_usd: null,
   };
   assert.equal(
-    h.totalPersonalizaciones([inputTexto], [{ id: 10, cantidad: 5, respuesta: 'Sin gluten' }], 5, 'USD'),
+    h.totalPersonalizaciones([inputTexto], [{ id: 10, cantidad: 5, respuesta: 'Sin gluten' }], 5, 'USD', '18.0000'),
     0,
   );
   assert.equal(
-    h.totalPersonalizaciones([inputTexto], [{ id: 10, cantidad: 5, respuesta: 'Sin gluten' }], 5, 'MXN'),
+    h.totalPersonalizaciones([inputTexto], [{ id: 10, cantidad: 5, respuesta: 'Sin gluten' }], 5, 'MXN', '18.0000'),
     0,
   );
 });
@@ -64,7 +62,8 @@ test('calcularPrecioPaquete: ancla sin seleccion vs ancla + seleccion explicita'
     slug: 'paquete-pesca-playa',
     nombre: 'Paquete Pesca y Playa',
     precio_ancla: '6000.00',
-    precio_ancla_usd: '300.00',
+    tipo_cambio_usd: '18.0000', estrategia_precio: 'por_grupo',
+    personas_precio_base: 2, precio_persona_extra: '0.00',
     servicios_asociados: [
       {
         servicio: {
@@ -89,15 +88,12 @@ test('calcularPrecioPaquete: ancla sin seleccion vs ancla + seleccion explicita'
   assert.equal(resConSeleccion.totalPersonalizaciones, 900);
   assert.equal(resConSeleccion.precioFinal, 6900);
 
-  // Moneda USD sin precio en personalización seleccionada: precioFinal y totalPersonalizaciones son null
-  const resUsdSinPrecio = pp.calcularPrecioPaquete(paqueteDummy, [{ id: 7, cantidad: 2 }], 5, 'USD');
-  assert.equal(resUsdSinPrecio.precioAncla, 300);
-  assert.equal(resUsdSinPrecio.totalPersonalizaciones, null);
-  assert.equal(resUsdSinPrecio.precioFinal, null);
+  // Base 6000/18 -> 334 USD, licencia 450/18 -> 25 USD cada una.
+  const resUsd = pp.calcularPrecioPaquete(paqueteDummy, [{ id: 7, cantidad: 2 }], 5, 'USD');
+  assert.equal(resUsd.precioAncla, 334);
+  assert.equal(resUsd.totalPersonalizaciones, 50);
+  assert.equal(resUsd.precioFinal, 384);
 
-  // Moneda USD sin precio_ancla_usd: precioFinal y precioAncla son null
-  const paqueteSinUsd = { ...paqueteDummy, precio_ancla_usd: null };
-  const resSinUsd = pp.calcularPrecioPaquete(paqueteSinUsd, [], 5, 'USD');
-  assert.equal(resSinUsd.precioAncla, null);
-  assert.equal(resSinUsd.precioFinal, null);
+  const sinBase = { ...paqueteDummy, precio_ancla: null };
+  assert.equal(pp.calcularPrecioPaquete(sinBase, [], 5, 'USD').precioFinal, null);
 });

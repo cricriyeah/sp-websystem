@@ -48,7 +48,7 @@ type StripePanelProps = {
   etiquetaBotonEnvio?: string;
   phase: Phase;
   error: string;
-  pago: Pago | null;
+  pago: Pick<Pago, 'client_secret' | 'publishable_key'> | null;
   feedback: Dictionary['feedback'];
   /** Mensaje ya redactado para la vendedora, con la fecha y el grupo del cliente. */
   ayudaMensaje: string;

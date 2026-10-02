@@ -13,6 +13,7 @@ const suites = {
   'booking-href': ['src/lib/booking-href.ts', 'BOOKING_HREF_TEST_OUT'],
   'calendario-paquete': ['src/lib/calendario-paquete.ts', 'CALENDARIO_TEST_OUT'],
   'tarifa-transporte': ['src/lib/tarifa-transporte.ts', 'TARIFA_TEST_OUT'],
+  moneda: ['src/lib/moneda.ts', 'MONEDA_TEST_OUT'],
   'pedido-paquete': ['src/lib/pedido-paquete.ts', 'PEDIDO_PAQUETE_TEST_OUT'],
   'pedido-payload': ['src/lib/pedido-payload.ts', 'PEDIDO_PAYLOAD_TEST_OUT'],
   'pedido-estado': ['src/lib/pedido-estado.ts', 'PEDIDO_ESTADO_TEST_OUT'],

@@ -5,6 +5,7 @@ import { ArrowRight, Compass, Info } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, ServicioCatalogo } from '@/lib/api';
 import { formatearPrecio } from '@/lib/pricing-paquete';
+import { aMoneda } from '@/lib/moneda';
 import { hrefDetalleServicio, hrefServicio } from '@/lib/booking-href';
 
 type ServiciosSueltosSectionProps = {
@@ -51,11 +52,7 @@ export function ServiciosSueltosSection({
       {/* Grilla de servicios sueltos (menor peso visual que los paquetes) */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {servicios.map((servicio) => {
-          const precioRaw =
-            moneda === 'USD' && servicio.precio_base_usd
-              ? servicio.precio_base_usd
-              : servicio.precio_base;
-          const precio = parseFloat(precioRaw) || 0;
+          const precio = aMoneda(servicio.precio_base, moneda, servicio.tipo_cambio_usd);
 
           return (
             <div
@@ -71,9 +68,9 @@ export function ServiciosSueltosSection({
                     {servicio.tipo_servicio === 'transporte' ? <span className="text-xs text-muted">{dict.quoteRoute}</span> : <>
                     <span className="text-[11px] text-muted">{dict.fromPrice} </span>
                     <span className="text-base font-bold text-foreground">
-                      {formatearPrecio(precio, moneda === 'USD' && servicio.precio_base_usd ? 'USD' : 'MXN')}
+                      {formatearPrecio(precio, moneda)}
                     </span>
-                    <span className="ml-1 text-[10px] text-muted uppercase">{moneda === 'USD' && servicio.precio_base_usd ? 'USD' : 'MXN'}</span>
+                    <span className="ml-1 text-[10px] text-muted uppercase">{moneda}</span>
                     </>}
                   </div>
                 </div>

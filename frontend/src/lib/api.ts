@@ -111,6 +111,7 @@ export type Pago = {
   client_secret: string;
   publishable_key: string;
   monto_a_cobrar: string;
+  precio_total: string;
   moneda: string;
 };
 
@@ -284,6 +285,7 @@ export type Sede = {
   nombre: string;
   slug: string;
   zona_horaria: string;
+  tipo_cambio_usd: string;
 };
 
 export type ServicioPersonalizacionCatalogo = {
@@ -297,7 +299,6 @@ export type ServicioPersonalizacionCatalogo = {
   cobrar_por_persona: boolean;
   cantidad_editable: boolean;
   precio: string;
-  precio_usd: string | null;
   obligatorio: boolean;
   preseleccionado: boolean;
 };
@@ -312,9 +313,8 @@ export type ServicioCatalogo = {
   estrategia_precio: string;
   modo_ocupacion: string;
   precio_base: string;
-  precio_base_usd: string | null;
   precio_persona_extra: string;
-  precio_persona_extra_usd: string | null;
+  tipo_cambio_usd: string;
   personas_incluidas: number;
   permite_anticipo: boolean;
   porcentaje_anticipo: number;
@@ -348,8 +348,11 @@ export type PaqueteCatalogo = {
   slug: string;
   descripcion: string;
   precio_ancla: string;
-  precio_ancla_usd: string | null;
-  precio_por_persona: boolean;
+  tipo_cambio_usd: string;
+  estrategia_precio: 'por_grupo' | 'por_persona';
+  personas_precio_base: number;
+  precio_persona_extra: string;
+  precio_depende_de_personas: boolean;
   // false: el paquete no pide hora de salida (la acuerda el capitan durante la estadia).
   pide_hora: boolean;
   regla_precio: string;
@@ -398,8 +401,8 @@ export type TrasladosCatalogo = {
     personas_min: number;
     personas_max: number | null;
     precio: string;
-    precio_usd: string | null;
   }[];
+  tipo_cambio_usd: string;
   puntos_encuentro: PuntoEncuentro[];
   publishable_key: string;
 };

@@ -1,4 +1,5 @@
 import type { Moneda, TipoTraslado, TrasladosCatalogo, Zona } from './api';
+import { aMoneda } from './moneda';
 
 export type Tarifa = TrasladosCatalogo['tarifas'][number];
 
@@ -20,8 +21,6 @@ export function resolverTarifa(
   );
 }
 
-export function precioTarifa(tarifa: Tarifa, moneda: Moneda): number | null {
-  const crudo = moneda === 'USD' ? tarifa.precio_usd : tarifa.precio;
-  if (crudo === null || crudo === undefined || !Number.isFinite(Number(crudo))) return null;
-  return Number(crudo);
+export function precioTarifa(tarifa: Tarifa, moneda: Moneda, tipoCambio: string): number | null {
+  return aMoneda(tarifa.precio, moneda, tipoCambio);
 }

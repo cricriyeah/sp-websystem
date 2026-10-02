@@ -7,7 +7,7 @@ const t = require(path.join(process.env.TARIFA_TEST_OUT, 'lib/tarifa-transporte.
 
 const T = (over) => ({
   tipo_traslado: 'redondo_aeropuerto', zona: '', personas_min: 1, personas_max: null,
-  precio: '4500.00', precio_usd: '250.00', ...over,
+  precio: '4500.00', ...over,
 });
 
 test('elige por tipo, zona y rango de personas', () => {
@@ -22,8 +22,8 @@ test('elige por tipo, zona y rango de personas', () => {
   assert.equal(t.resolverTarifa(tarifas, 'redondo_actividad', 'periferia', 2), null);
 });
 
-test('precio por moneda; sin precio USD devuelve null', () => {
-  assert.equal(t.precioTarifa(T({}), 'MXN'), 4500);
-  assert.equal(t.precioTarifa(T({}), 'USD'), 250);
-  assert.equal(t.precioTarifa(T({ precio_usd: null }), 'USD'), null);
+test('tarifa USD derivada del tipo de cambio', () => {
+  assert.equal(t.precioTarifa(T({}), 'MXN', '18.0000'), 4500);
+  assert.equal(t.precioTarifa(T({}), 'USD', '18.0000'), 250);
+  assert.equal(t.precioTarifa(T({ precio: '1500.00' }), 'USD', '18.0000'), 84);
 });

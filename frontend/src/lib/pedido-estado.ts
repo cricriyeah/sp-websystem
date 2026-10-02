@@ -32,10 +32,10 @@ export type OpcionesEstadoInicial = {
 
 export function estadoInicial(paquete: PaqueteCatalogo, opciones: OpcionesEstadoInicial): EstadoPedido {
   const componentes: Record<string, ComponentePedido> = {};
-  const personasPaquete = paquete.precio_por_persona ? maxPersonasPaquete(paquete) : null;
+  const personasPaquete = paquete.precio_depende_de_personas ? maxPersonasPaquete(paquete) : null;
   for (const c of paquete.servicios_asociados) {
     componentes[c.servicio.slug] = {
-      personas: personasPaquete ?? c.personas_incluidas,
+      personas: personasPaquete === null ? c.personas_incluidas : Math.min(personasPaquete, c.personas_incluidas),
       extras: seleccionInicial(c.servicio.personalizaciones),
       ...(c.servicio.tipo_servicio === 'transporte'
         ? {

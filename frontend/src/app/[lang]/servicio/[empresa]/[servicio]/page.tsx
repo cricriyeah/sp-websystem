@@ -9,6 +9,7 @@ import { alternativasDe } from '@/lib/site';
 import { hrefServicio } from '@/lib/booking-href';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { formatearPrecio } from '@/lib/pricing-paquete';
+import { aMoneda } from '@/lib/moneda';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { IncludedSection } from '@/components/included-section';
@@ -53,7 +54,7 @@ export default async function ServicioPage({ params, searchParams }: Props) {
         <Link href={sede ? hrefSede(lang, sede.slug, 'servicios') : hrefInicio(lang, 'sedes')} className="text-sm text-accent underline underline-offset-4">{dict.serviceDetail.backToServices}</Link>
         <h1 className="mt-8 max-w-3xl text-5xl leading-tight sm:text-6xl">{titulo}</h1>
         <p className="mt-5 max-w-3xl whitespace-pre-line text-lg leading-relaxed text-muted">{servicio?.descripcion || (pesca ? dict.serviceDetail.fishingDescription : traslado ? dict.traslados.subtitle : dict.serviceDetail.unavailableDescription)}</p>
-        {servicio && !traslado && <p className="mt-6 text-xl font-semibold">{dict.catalog.fromPrice} {formatearPrecio(Number(moneda === 'USD' && servicio.precio_base_usd ? servicio.precio_base_usd : servicio.precio_base), moneda === 'USD' && servicio.precio_base_usd ? 'USD' : 'MXN')} {moneda === 'USD' && servicio.precio_base_usd ? 'USD' : 'MXN'}</p>}
+        {servicio && !traslado && <p className="mt-6 text-xl font-semibold">{dict.catalog.fromPrice} {formatearPrecio(aMoneda(servicio.precio_base, moneda, servicio.tipo_cambio_usd), moneda)} {moneda}</p>}
         {hrefReserva && <Link href={hrefReserva} className="mt-8 inline-flex rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-white">{dict.serviceDetail.book}</Link>}
         {pesca && <dl className="mt-12 grid gap-6 border-t border-border pt-8 sm:grid-cols-2 lg:grid-cols-4">{getSedeContenido('la-paz', lang)?.hero.facts.map(fact => <div key={fact.label}><dt className="text-sm text-muted">{fact.label}</dt><dd className="mt-2 text-xl font-semibold text-accent">{fact.value}</dd></div>)}</dl>}
       </section>

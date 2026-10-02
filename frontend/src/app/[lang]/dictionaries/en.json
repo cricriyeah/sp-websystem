@@ -755,6 +755,8 @@
     "nightsNote": "{n} nights · check out on {fecha}",
     "peopleIncluded": "The package includes {n} places",
     "perPerson": "per person",
+    "perGroup": "per group up to {n} people",
+    "extraPerson": "+{precio} for each additional person",
     "peopleQuestion": "How many people?",
     "stayPeopleQuestion": "How many will stay?",
     "transferPeopleQuestion": "How many need transfer?",

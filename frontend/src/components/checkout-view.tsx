@@ -46,6 +46,7 @@ import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { horasDeServicio } from '@/lib/horario-servicio';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
+import { aMoneda } from '@/lib/moneda';
 import {
   cantidadEfectiva,
   erroresPersonalizaciones,
@@ -287,12 +288,10 @@ export function CheckoutView({
   // le servia. El selector se queda visible y editable — esto solo cambia la
   // primera respuesta, nunca decide por el cliente sin dejarlo ver ni tocar.
   //
-  // Sin precio en USD configurado no hay selector que ofrecer (ver
-  // `usdDisponible` en StripePanel, que lo oculta entero): forzar USD aqui
-  // dejaria al cliente sin forma de volver a MXN, con un total en $0.
+  // El tipo de cambio de la sede habilita el selector USD.
   const [moneda, setMoneda] = useState<Moneda>(() => {
     if (lang !== 'en') return 'MXN';
-    if (servicio) return servicio.precio_base_usd != null ? 'USD' : 'MXN';
+    if (servicio) return Number(servicio.tipo_cambio_usd) > 0 ? 'USD' : 'MXN';
     return 'MXN';
   });
   const [formaPago, setFormaPago] = useState<'completo' | 'anticipo'>('completo');
@@ -460,12 +459,10 @@ export function CheckoutView({
     return () => clearTimeout(timer);
   }, [codigoPromocional, contact.email, empresaSlug]);
 
-  // Solo se ofrecen dolares si el negocio fijo un precio en dolares.
-  const usdDisponible = servicio?.precio_base_usd != null;
-  const precioServicioRaw = servicio
-    ? (moneda === 'USD' ? servicio.precio_base_usd : servicio.precio_base)
+  const usdDisponible = Number(servicio?.tipo_cambio_usd) > 0;
+  const tourPrice = servicio
+    ? aMoneda(servicio.precio_base, moneda, servicio.tipo_cambio_usd)
     : null;
-  const tourPrice = precioServicioRaw === null ? null : Number(precioServicioRaw);
 
   const currency = useMemo(
     () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
@@ -486,7 +483,7 @@ export function CheckoutView({
    * de paso nunca ofrecia el brunch, que es el unico que no viene marcado y
    * por lo tanto el unico que de verdad hacia falta ofrecer.
    *
-   * Sin precio en la moneda elegida no se ofrece: no se puede cobrar.
+   * Los precios se convierten con el tipo de cambio de la sede.
    */
   const personalizacionesPendientes: ExtraPendiente[] = catalogoUnificado
     .filter(
@@ -496,7 +493,7 @@ export function CheckoutView({
         !personalizacionesMap.has(p.id),
     )
     .map((p) => {
-      const precio = moneda === 'USD' ? p.precio_usd : p.precio;
+      const precio = aMoneda(p.precio, moneda, servicio?.tipo_cambio_usd);
       return {
         id: p.id,
         avisoReforzado: p.aviso_reforzado,
@@ -505,7 +502,7 @@ export function CheckoutView({
           precio === null
             ? null
             : currency.format(
-                Number(precio) * cantidadEfectiva(p, people, people),
+                precio * cantidadEfectiva(p, people, people),
               ),
         hint: null,
       };
@@ -517,12 +514,14 @@ export function CheckoutView({
   // recalcula esto mismo al crear el pago: aqui solo se muestra.
   const personasIncluidas = servicio?.personas_incluidas ?? 0;
   const precioPersonaExtra = servicio
-    ? Number(moneda === 'MXN' ? servicio.precio_persona_extra : servicio.precio_persona_extra_usd) || 0
+    ? aMoneda(servicio.precio_persona_extra, moneda, servicio.tipo_cambio_usd) ?? 0
     : 0;
   const personasExtra = Math.max(0, people - personasIncluidas);
   const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
 
-  const cargoPersonalizacionesServicio = totalPersonalizaciones(catalogoUnificado, personalizaciones, people, moneda);
+  const cargoPersonalizacionesServicio = totalPersonalizaciones(
+    catalogoUnificado, personalizaciones, people, moneda, servicio?.tipo_cambio_usd ?? '',
+  );
 
   const subtotalSinDescuento = tourPrice === null || cargoPersonalizacionesServicio === null
     ? null
@@ -550,14 +549,14 @@ export function CheckoutView({
       .filter((p) => p.tipo_interaccion === 'check' && personalizacionesMap.has(p.id))
       .map((p) => {
         const seleccion = personalizacionesMap.get(p.id);
-        const precioCrudo = moneda === 'USD' ? p.precio_usd : p.precio;
+        const precioCrudo = aMoneda(p.precio, moneda, servicio?.tipo_cambio_usd);
         const cantidad = cantidadEfectiva(p, people, seleccion?.cantidad);
         return {
           label: cantidad > 1 ? `${p.nombre} (${cantidad})` : p.nombre,
           amount:
             precioCrudo === null
               ? checkout.extrasUnavailableInCurrency
-              : currency.format(Number(precioCrudo) * cantidad),
+              : currency.format(precioCrudo * cantidad),
         };
       }),
     ...(descuentoPromocional > 0
@@ -1394,7 +1393,7 @@ export function CheckoutView({
                         | 'selection'
                         | undefined;
                       const errorId = `error-personalizacion-${sp.id}`;
-                      const precio = moneda === 'USD' ? sp.precio_usd : sp.precio;
+                      const precio = aMoneda(sp.precio, moneda, servicio?.tipo_cambio_usd);
 
                       if (sp.tipo_interaccion === 'check') {
                         const cantidad = cantidadEfectiva(sp, people, seleccion?.cantidad);
@@ -1564,9 +1563,12 @@ export function CheckoutView({
                 if (value) setErrorWaiver(false);
               }}
               errorWaiver={errorWaiver}
-              lines={lines}
-              total={total === null ? '—' : currency.format(total)}
-              amountDueNow={amountDueNow === null ? '—' : currency.format(amountDueNow)}
+              lines={pago ? [{
+                label: servicio?.nombre ?? servicioNombre ?? checkout.total,
+                amount: currency.format(Number(pago.precio_total)),
+              }] : lines}
+              total={pago ? currency.format(Number(pago.precio_total)) : total === null ? '—' : currency.format(total)}
+              amountDueNow={pago ? currency.format(Number(pago.monto_a_cobrar)) : amountDueNow === null ? '—' : currency.format(amountDueNow)}
               moneda={moneda}
               onMonedaChange={setMoneda}
               usdDisponible={usdDisponible}

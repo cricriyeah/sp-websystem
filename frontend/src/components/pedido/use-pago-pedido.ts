@@ -8,7 +8,13 @@ import {
 import { empresaDeFalloCaptura } from '@/lib/fallo-pago';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
-export type PasoPago = { empresaSlug: string; monto: string; clientSecret: string; publishableKey: string };
+export type PasoPago = {
+  empresaSlug: string;
+  monto: string;
+  precioTotal?: string;
+  clientSecret: string;
+  publishableKey: string;
+};
 /** Qué pasó en el último fallo: la empresa (si se sabe), el código del banco y en qué pago ocurrió. */
 export type FalloPago = { empresaSlug: string | null; codigo: string; indice: number | null };
 export type FasePedido =
@@ -280,6 +286,7 @@ export function usePagoPedido(config: Config) {
         );
         setPagos([{
           empresaSlug: c.empresaSlug, monto: pago.monto_a_cobrar,
+          precioTotal: pago.precio_total,
           clientSecret: pago.client_secret, publishableKey: pago.publishable_key,
         }]);
       }

@@ -9,6 +9,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeDestacada } from '@/content/sedes-tipos';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { hrefDetalleServicio, hrefPaquete, hrefServicio } from '@/lib/booking-href';
+import { aMoneda } from '@/lib/moneda';
 import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
 import { esInlineable, type ChipExperiencia } from '@/lib/selector-experiencia';
 import { BookingBar } from '@/components/booking-bar';
@@ -44,9 +45,7 @@ const SLUG_PAQUETE_DESTACADO = 'fin-de-semana-la-paz';
 const SLUG_SERVICIO_INSTANTANEO = 'pesca-deportiva';
 
 function precioServicioDesde(servicio: ServicioCatalogo, moneda: Moneda): number | null {
-  const raw = moneda === 'USD' ? servicio.precio_base_usd : servicio.precio_base;
-  const n = raw !== null && raw !== undefined && raw !== '' ? Number(raw) : NaN;
-  return Number.isFinite(n) ? n : null;
+  return aMoneda(servicio.precio_base, moneda, servicio.tipo_cambio_usd);
 }
 
 /**

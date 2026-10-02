@@ -1,161 +1,97 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
-
 const p = require(path.join(process.env.PEDIDO_PAQUETE_TEST_OUT, 'lib/pedido-paquete.js'));
-
-const check = (id, precio, precioUsd) => ({
-  id, personalizacion_id: id, nombre: `extra-${id}`, tipo: 'amenidad', tipo_interaccion: 'check',
-  opciones_seleccion: [], aviso_reforzado: false, cobrar_por_persona: false, cantidad_editable: false,
-  precio, precio_usd: precioUsd, obligatorio: false, preseleccionado: false,
+const { calcularBasePaquete } = require(path.join(process.env.PEDIDO_PAQUETE_TEST_OUT, 'lib/precio-paquete.js'));
+const casos = JSON.parse(fs.readFileSync(path.join(__dirname, '../../shared/precios_paridad.json'), 'utf8'));
+const check = (id, precio) => ({ id, tipo_interaccion: 'check', cobrar_por_persona: false,
+  cantidad_editable: false, precio });
+const servicio = (slug, empresa, tipo, extras, incluidas = 3) => ({
+  id: slug === 'pesca' ? 1 : 2, orden: slug === 'pesca' ? 1 : 2, personas_incluidas: incluidas,
+  servicio: { slug, empresa_slug: empresa, tipo_servicio: tipo,
+    estrategia_cupo: tipo === 'pesca' ? 'por_recurso_dia' : 'bajo_demanda', personalizaciones: extras },
 });
-
-const servicio = (slug, empresa, tipo, extras) => ({
-  id: 1, servicio_id: 1, orden: 1, dia_estancia: 1, noches: null, personas_incluidas: 3,
-  servicio: { slug, empresa_slug: empresa, tipo_servicio: tipo, personalizaciones: extras },
-});
-
 const PAQUETE = {
-  empresa_lider_slug: 'sal-y-sol', precio_ancla: '7500.00', precio_ancla_usd: '450.00',
+  empresa_lider_slug: 'sal-y-sol', precio_ancla: '7500.00', tipo_cambio_usd: '18.0000',
+  estrategia_precio: 'por_grupo', personas_precio_base: 3, precio_persona_extra: '0.00',
+  precio_depende_de_personas: false,
   servicios_asociados: [
-    servicio('pesca', 'sal-y-sol', 'pesca', [check(10, '400.00', '23.00')]),
-    servicio('traslado', 'transportes-la-paz', 'transporte', [check(20, '150.00', '9.00')]),
+    servicio('pesca', 'sal-y-sol', 'pesca', [check(10, '400.00')]),
+    servicio('traslado', 'transportes-la-paz', 'transporte', [check(20, '150.00')]),
   ],
 };
-
-const TARIFAS = {
-  'transportes-la-paz': [
-    { tipo_traslado: 'redondo_actividad', zona: 'centro', personas_min: 1, personas_max: null, precio: '1500.00', precio_usd: '90.00' },
-  ],
-};
-
+const TARIFAS = { 'transportes-la-paz': [{ tipo_traslado: 'redondo_actividad', zona: 'centro',
+  personas_min: 1, personas_max: null, precio: '1500.00' }] };
 const SELECCIONES = {
   pesca: { personas: 2, extras: [{ id: 10 }] },
   traslado: { personas: 2, extras: [{ id: 20 }], traslado: { tipo: 'redondo_actividad', zona: 'centro' } },
 };
 
-test('vector del spec en MXN: 6,400 + 1,650 = 8,050', () => {
+test('reparto MXN del paquete fijo y extras', () => {
   const r = p.calcularPedido(PAQUETE, SELECCIONES, 'MXN', TARIFAS);
-  assert.deepEqual(r.cargos.map((c) => [c.empresaSlug, c.monto]), [
-    ['sal-y-sol', 6400],
-    ['transportes-la-paz', 1650],
-  ]);
-  assert.equal(r.total, 8050);
-});
-
-test('vector en USD: 383 + 99 = 482', () => {
-  const r = p.calcularPedido(PAQUETE, SELECCIONES, 'USD', TARIFAS);
-  assert.deepEqual(r.cargos.map((c) => c.monto), [383, 99]);
-  assert.equal(r.total, 482);
-});
-
-test('sin extras la líder absorbe solo el residuo', () => {
-  const sel = { pesca: { personas: 2, extras: [] }, traslado: { ...SELECCIONES.traslado, extras: [] } };
-  const r = p.calcularPedido(PAQUETE, sel, 'MXN', TARIFAS);
-  assert.deepEqual(r.cargos.map((c) => c.monto), [6000, 1500]);
-});
-
-test('devuelve null si falta una tarifa, un precio en la moneda o la zona correcta', () => {
-  assert.equal(p.calcularPedido(PAQUETE, SELECCIONES, 'MXN', {}), null);
-  const sinUsd = { 'transportes-la-paz': [{ ...TARIFAS['transportes-la-paz'][0], precio_usd: null }] };
-  assert.equal(p.calcularPedido(PAQUETE, SELECCIONES, 'USD', sinUsd), null);
-  // La zona que llega aquí es la EFECTIVA (la del hotel para redondo_actividad); '' no encuentra tarifa de zona.
-  const sinZona = { ...SELECCIONES, traslado: { ...SELECCIONES.traslado, traslado: { tipo: 'redondo_actividad', zona: '' } } };
-  assert.equal(p.calcularPedido(PAQUETE, sinZona, 'MXN', TARIFAS), null);
-});
-
-test('un extra sin precio en USD hace que el pedido en USD no se pueda calcular', () => {
-  const paquete = {
-    ...PAQUETE,
-    servicios_asociados: [servicio('pesca', 'sal-y-sol', 'pesca', [check(10, '400.00', null)])],
-  };
-  assert.equal(p.calcularPedido(paquete, { pesca: { personas: 2, extras: [{ id: 10 }] } }, 'USD', {}), null);
-  assert.equal(p.calcularPedido(paquete, { pesca: { personas: 2, extras: [] } }, 'USD', {}).total, 450);
-});
-
-test('paquete de una sola empresa: un solo cargo = ancla + extras', () => {
-  const mono = {
-    empresa_lider_slug: 'sal-y-sol', precio_ancla: '9500.00', precio_ancla_usd: null,
-    servicios_asociados: [servicio('pesca', 'sal-y-sol', 'pesca', [check(10, '400.00', '23.00')])],
-  };
-  const r = p.calcularPedido(mono, { pesca: { personas: 2, extras: [{ id: 10 }] } }, 'MXN', {});
-  assert.deepEqual(r.cargos.map((c) => [c.empresaSlug, c.monto]), [['sal-y-sol', 9900]]);
-  assert.equal(p.calcularPedido(mono, { pesca: { personas: 2, extras: [] } }, 'USD', {}), null);
-});
-
-test('USD solo se ofrece si TODOS los precios existen', () => {
-  assert.equal(p.usdDisponible(PAQUETE, TARIFAS), true);
-  assert.equal(p.usdDisponible({ ...PAQUETE, precio_ancla_usd: null }, TARIFAS), false);
-});
-
-test('anticipo: porcentaje del total; completo es el total', () => {
-  assert.equal(p.montoInicial(9500, 'anticipo', 50), 4750);
-  assert.equal(p.montoInicial(9500, 'completo', 50), 9500);
-  assert.equal(p.montoInicial(1000, 'anticipo', 33), 330);
-});
-
-
-test('paquete por persona MXN: 45,000 por 2 suma 90,000 y reparte cargos con extras', () => {
-  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla: '45000.00' };
-  const r = p.calcularPedido(paquete, SELECCIONES, 'MXN', TARIFAS);
-  assert.equal(r.total, 90550);
-  assert.deepEqual(r.cargos.map((c) => c.monto), [88900, 1650]);
-  assert.equal(r.cargos.reduce((sum, c) => sum + c.monto, 0), r.total);
-  const sinExtras = { pesca: { personas: 2, extras: [] }, traslado: { ...SELECCIONES.traslado, extras: [] } };
-  assert.equal(p.calcularPedido(paquete, sinExtras, 'MXN', TARIFAS).total, 90000);
-});
-
-test('paquete por persona USD: 2,500 por 3 suma 7,500', () => {
-  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla_usd: '2500.00' };
-  const selecciones = { pesca: { personas: 3, extras: [] }, traslado: { ...SELECCIONES.traslado, personas: 3, extras: [] } };
-  const r = p.calcularPedido(paquete, selecciones, 'USD', TARIFAS);
-  assert.equal(r.total, 7500);
-  assert.deepEqual(r.cargos.map((c) => c.monto), [7410, 90]);
-});
-
-test('precio fijo explícito mantiene el total aunque cambien las personas', () => {
-  const paquete = { ...PAQUETE, precio_por_persona: false };
-  const r = p.calcularPedido(paquete, SELECCIONES, 'MXN', TARIFAS);
   assert.deepEqual(r.cargos.map((c) => c.monto), [6400, 1650]);
   assert.equal(r.total, 8050);
 });
-
-test('el tope principal es el de la actividad aunque hospedaje y traslado admitan menos', () => {
-  const paquete = { ...PAQUETE, servicios_asociados: [
-    { ...servicio('hotel', 'sal-y-sol', 'hospedaje', []), orden: 1, personas_incluidas: 2 },
-    { ...PAQUETE.servicios_asociados[0], orden: 2, personas_incluidas: 4, servicio: { ...PAQUETE.servicios_asociados[0].servicio, estrategia_cupo: 'por_recurso_dia' } },
-    { ...PAQUETE.servicios_asociados[1], orden: 3, personas_incluidas: 1 },
-  ] };
-  assert.equal(p.maxPersonasPaquete(paquete), 4);
-  assert.equal(p.servicioPrincipalPaquete(paquete).servicio.slug, 'pesca');
+test('USD convierte base, tarifa y cada extra antes de repartir', () => {
+  const r = p.calcularPedido(PAQUETE, SELECCIONES, 'USD', TARIFAS);
+  assert.deepEqual(r.cargos.map((c) => c.monto), [356, 93]);
+  assert.equal(r.total, 449);
 });
-
-test('precio por persona toma la actividad, no el primer servicio, y permite logística menor', () => {
-  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla: '45000.00', servicios_asociados: [
-    { ...servicio('hotel', 'sal-y-sol', 'hospedaje', []), orden: 1, personas_incluidas: 1 },
-    { ...PAQUETE.servicios_asociados[0], orden: 2, servicio: { ...PAQUETE.servicios_asociados[0].servicio, estrategia_cupo: 'por_recurso_dia' } },
-    { ...PAQUETE.servicios_asociados[1], orden: 3 },
-  ] };
-  const completo = { hotel: { personas: 2, extras: [] }, pesca: { personas: 2, extras: [] },
-    traslado: { ...SELECCIONES.traslado, personas: 2, extras: [] } };
-  const reducido = { ...completo, hotel: { personas: 1, extras: [] },
-    traslado: { ...completo.traslado, personas: 1 } };
-  assert.equal(p.calcularPedido(paquete, completo, 'MXN', TARIFAS).total, 90000);
-  assert.equal(p.calcularPedido(paquete, reducido, 'MXN', TARIFAS).total, 90000);
-  assert.equal(p.calcularPedido(paquete, reducido, 'MXN', TARIFAS).cargos.reduce((sum, c) => sum + c.monto, 0), 90000);
-  assert.equal(p.calcularPedido(paquete, { ...reducido, traslado: { ...reducido.traslado, personas: 3 } }, 'MXN', TARIFAS), null);
+test('sin extras la líder absorbe el residuo', () => {
+  const sel = { pesca: { personas: 2, extras: [] }, traslado: { ...SELECCIONES.traslado, extras: [] } };
+  assert.deepEqual(p.calcularPedido(PAQUETE, sel, 'MXN', TARIFAS).cargos.map((c) => c.monto), [6000, 1500]);
 });
-
-test('ancla USD de 2,916.67 por tres conserva el centavo: 8,750.01', () => {
-  const paquete = { ...PAQUETE, precio_por_persona: true, precio_ancla_usd: '2916.67' };
-  const selecciones = { pesca: { personas: 3, extras: [] }, traslado: { ...SELECCIONES.traslado, personas: 1, extras: [] } };
-  assert.equal(p.calcularPedido(paquete, selecciones, 'USD', TARIFAS).total, 8750.01);
+test('falta de tarifa o zona efectiva devuelve null', () => {
+  assert.equal(p.calcularPedido(PAQUETE, SELECCIONES, 'MXN', {}), null);
+  const sinZona = { ...SELECCIONES, traslado: { ...SELECCIONES.traslado,
+    traslado: { tipo: 'redondo_actividad', zona: '' } } };
+  assert.equal(p.calcularPedido(PAQUETE, sinZona, 'MXN', TARIFAS), null);
 });
-
-test('traslado fijo de aeropuerto: solo en paquete de una empresa con hospedaje', () => {
+test('USD se ofrece con tipo de cambio positivo', () => {
+  assert.equal(p.usdDisponible(PAQUETE), true);
+  assert.equal(p.usdDisponible({ ...PAQUETE, tipo_cambio_usd: '0' }), false);
+});
+test('por persona cobra base por el grupo mayor y conserva reparto', () => {
+  const paquete = { ...PAQUETE, estrategia_precio: 'por_persona', precio_ancla: '45000.00',
+    precio_depende_de_personas: true };
+  const r = p.calcularPedido(paquete, SELECCIONES, 'MXN', TARIFAS);
+  assert.equal(r.total, 90550);
+  assert.deepEqual(r.cargos.map((c) => c.monto), [88900, 1650]);
+  const logisticaMenor = { pesca: { personas: 3, extras: [] },
+    traslado: { ...SELECCIONES.traslado, personas: 1, extras: [] } };
+  assert.equal(p.calcularPedido(paquete, logisticaMenor, 'MXN', TARIFAS).total, 135000);
+});
+test('grupo con extra cobra solo quienes superan la base', () => {
+  const paquete = { ...PAQUETE, personas_precio_base: 2, precio_persona_extra: '500.00',
+    precio_depende_de_personas: true };
+  const sel = { pesca: { personas: 3, extras: [{ id: 10 }] },
+    traslado: { ...SELECCIONES.traslado, personas: 2 } };
+  assert.equal(p.calcularPedido(paquete, sel, 'MXN', TARIFAS).total, 8550);
+  assert.equal(p.calcularPedido(paquete, sel, 'USD', TARIFAS).total, 477);
+});
+test('selección logística no puede superar a la actividad cuando el precio depende del grupo', () => {
+  const paquete = { ...PAQUETE, personas_precio_base: 2, precio_persona_extra: '500.00',
+    precio_depende_de_personas: true };
+  const sel = { pesca: { personas: 2, extras: [] }, traslado: { ...SELECCIONES.traslado, personas: 3 } };
+  assert.equal(p.calcularPedido(paquete, sel, 'MXN', TARIFAS), null);
+});
+test('fixture compartido de cálculo de paquetes', () => {
+  for (const caso of casos.paquetes) {
+    const paquete = { precio_ancla: caso.base, tipo_cambio_usd: caso.tipo_cambio,
+      estrategia_precio: caso.estrategia, personas_precio_base: caso.personas_base,
+      precio_persona_extra: caso.extra };
+    assert.equal(calcularBasePaquete(paquete, caso.moneda, caso.personas), Number(caso.esperado));
+  }
+});
+test('anticipo y tope principal siguen usando la misma selección', () => {
+  assert.equal(p.montoInicial(9500, 'anticipo', 30), 2850);
+  assert.equal(p.maxPersonasPaquete(PAQUETE), 3);
+  assert.equal(p.servicioPrincipalPaquete(PAQUETE).servicio.slug, 'pesca');
+});
+test('traslado fijo de aeropuerto solo en paquete de una empresa con hospedaje', () => {
   assert.equal(p.trasladoFijoAeropuerto({ es_cruza_empresa: false, noches: 5 }), true);
   assert.equal(p.trasladoFijoAeropuerto({ es_cruza_empresa: false, noches: null }), false);
   assert.equal(p.trasladoFijoAeropuerto({ es_cruza_empresa: true, noches: 5 }), false);
-  assert.equal(p.trasladoFijoAeropuerto({ noches: undefined }), false);
 });

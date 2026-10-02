@@ -10,6 +10,7 @@ import type { Aeropuerto, Moneda, PaqueteServicioCatalogo, PuntoEncuentro, TipoT
 import { fechaDeComponente, sumarDias } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
+import { aMoneda } from '@/lib/moneda';
 import { cantidadEfectiva, type SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
@@ -18,7 +19,7 @@ type Props = {
   lang: Locale;
   dict: Dictionary;
   componente: PaqueteServicioCatalogo;
-  precioPorPersona: boolean;
+  precioDependeDePersonas: boolean;
   esActividadPrincipal: boolean;
   personasMax: number;
   trasladoFijo: boolean;
@@ -26,6 +27,7 @@ type Props = {
   conEncabezadoEmpresa: boolean;
   nombreEmpresa: string;
   moneda: Moneda;
+  tipoCambio: string;
   inicio: string | null;
   noches: number | null;
   salida: string | null;
@@ -42,7 +44,7 @@ type Props = {
 };
 
 export function GrupoServicio({
-  lang, dict, componente, precioPorPersona, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda,
+  lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda, tipoCambio,
   inicio, noches, salida, minDate, puntos, mostrarInicio, estadoTarjeta,
   onAccion, onCompletar, onInicio, onPersonas, onExtras, onTraslado,
 }: Props) {
@@ -59,11 +61,12 @@ export function GrupoServicio({
     day: 'numeric', month: 'long', year: 'numeric',
   }).format(fromLocalISODate(iso));
   const personasTexto = estado.personas === 1 ? pedido.forOne : pedido.forPeople.replace('{n}', String(estado.personas));
-  const esLogistica = precioPorPersona && !esActividadPrincipal &&
+  const esLogistica = precioDependeDePersonas && !esActividadPrincipal &&
     (servicio.tipo_servicio === 'hospedaje' || servicio.tipo_servicio === 'transporte');
+  const maxPersonasLogistica = Math.min(personasMax, componente.personas_incluidas);
   const resumen = [
     conEncabezadoEmpresa ? pedido.groupOf.replace('{empresa}', nombreEmpresa) : null,
-    precioPorPersona ? personasTexto : `${estado.personas} ${estado.personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`,
+    precioDependeDePersonas ? personasTexto : `${estado.personas} ${estado.personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`,
     mostrarInicio && inicio ? formatoFecha(inicio) : null,
   ].filter(Boolean).join(' · ');
 
@@ -105,15 +108,15 @@ export function GrupoServicio({
         <div className="border-t border-border pt-4">
           <PeopleStepper
             label={servicio.tipo_servicio === 'hospedaje' ? pedido.stayPeopleQuestion : pedido.transferPeopleQuestion}
-            maxNotice={pedido.logisticsMaxNotice.replace('{max}', String(personasMax))}
+            maxNotice={pedido.logisticsMaxNotice.replace('{max}', String(maxPersonasLogistica))}
             value={estado.personas}
             onChange={onPersonas}
-            maxPeople={personasMax}
+            maxPeople={maxPersonasLogistica}
             minPeople={1}
             disabled={bloqueado}
           />
         </div>
-      ) : precioPorPersona ? (
+      ) : precioDependeDePersonas ? (
         <p className="border-t border-border pt-4 text-sm text-muted">{personasTexto}</p>
       ) : (
         <div className="border-t border-border pt-4">
@@ -138,8 +141,8 @@ export function GrupoServicio({
           {servicio.personalizaciones.map((extra) => {
             const seleccion = seleccionadas.get(extra.id);
             const marcada = Boolean(seleccion);
-            const crudo = moneda === 'USD' ? extra.precio_usd : extra.precio;
-            const sinPrecio = crudo === null || crudo === '' || !Number.isFinite(Number(crudo));
+            const precio = aMoneda(extra.precio, moneda, tipoCambio);
+            const sinPrecio = precio === null;
             const cantidad = cantidadEfectiva(extra, estado.personas, seleccion?.cantidad);
             const id = `pedido-extra-${servicio.slug}-${extra.id}`;
 
@@ -166,7 +169,7 @@ export function GrupoServicio({
                     </span>
                   </span>
                   <span className="shrink-0 text-right text-muted">
-                    {sinPrecio ? checkout.extrasUnavailableInCurrency : `+${formatearPrecio(Number(crudo) * cantidad, moneda)}`}
+                    {sinPrecio ? checkout.extrasUnavailableInCurrency : `+${formatearPrecio(precio * cantidad, moneda)}`}
                   </span>
                 </label>
                 {!marcada && extra.aviso_reforzado && (

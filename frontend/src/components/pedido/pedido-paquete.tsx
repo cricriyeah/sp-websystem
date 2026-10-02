@@ -21,11 +21,13 @@ import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
 import { horasDePaquete } from '@/lib/horario-servicio';
 import { intlLocale } from '@/lib/intl';
+import { aMoneda } from '@/lib/moneda';
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
 } from '@/lib/pedido-paquete';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
 import { erroresPersonalizaciones } from '@/lib/personalizaciones';
+import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
@@ -86,17 +88,19 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     [estado.componentes, puntosPorEmpresa],
   );
   const pedido = calcularPedido(paquete, selecciones, estado.moneda, tarifasPorEmpresa);
-  const conUsd = usdDisponible(paquete, tarifasPorEmpresa);
-  const maxPersonas = paquete.precio_por_persona ? maxPersonasPaquete(paquete) : null;
-  const slugPrincipal = paquete.precio_por_persona ? servicioPrincipalPaquete(paquete)?.servicio.slug : undefined;
+  const conUsd = usdDisponible(paquete);
+  const maxPersonas = paquete.precio_depende_de_personas ? maxPersonasPaquete(paquete) : null;
+  const slugPrincipal = paquete.precio_depende_de_personas ? servicioPrincipalPaquete(paquete)?.servicio.slug : undefined;
   const primerServicio = slugPrincipal ?? paquete.servicios_asociados[0]?.servicio.slug;
   const personasPaquete = primerServicio ? estado.componentes[primerServicio]?.personas ?? 1 : 1;
-  const anclaCruda = estado.moneda === 'USD' ? paquete.precio_ancla_usd : paquete.precio_ancla;
-  const anclaPorPersona = formatearPrecio(anclaCruda === null ? null : Number(anclaCruda), estado.moneda);
+  const ancla = aMoneda(paquete.precio_ancla, estado.moneda, paquete.tipo_cambio_usd);
+  const extra = aMoneda(paquete.precio_persona_extra, estado.moneda, paquete.tipo_cambio_usd);
+  const anclaMostrada = formatearPrecio(ancla, estado.moneda);
+  const precioBaseGrupo = calcularBasePaquete(paquete, estado.moneda, personasPaquete);
   const precioPersonas = (personasPaquete === 1 ? textos.peoplePriceOne : textos.peoplePrice)
     .replace('{n}', String(personasPaquete))
-    .replace('{precio}', anclaPorPersona)
-    .replace('{price}', anclaPorPersona);
+    .replace('{precio}', formatearPrecio(precioBaseGrupo, estado.moneda))
+    .replace('{price}', formatearPrecio(precioBaseGrupo, estado.moneda));
   const cargos = pedido?.cargos ?? [];
   const cantidadCargos = cargos.length;
   const nombreEmpresa = (slug: string) => slug === paquete.empresa_lider_slug
@@ -111,7 +115,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const totalConDescuento = pedido ? pedido.total - descuento : null;
   const total = formatearPrecio(totalConDescuento, estado.moneda);
   const totalConMoneda = totalConDescuento === null ? null : `${total} ${estado.moneda}`;
-  const totalMovil = paquete.precio_por_persona ? totalConMoneda ?? undefined : undefined;
+  const totalMovil = paquete.precio_depende_de_personas ? totalConMoneda ?? undefined : undefined;
   const ahora = totalConDescuento !== null ? formatearPrecio(
     paquete.permite_anticipo
       ? montoInicial(totalConDescuento, estado.formaPago, paquete.porcentaje_anticipo)
@@ -215,11 +219,11 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     return '';
   };
 
-  // La actividad principal de un paquete por persona no tiene nada que decidir en su propia tarjeta
+  // La actividad principal de un paquete que depende de personas se elige arriba,
   // (sus personas son el grupo de arriba, y no lleva extras ni la fecha de inicio): no se muestra.
   const grupoOculto = (indice: number) => {
     const componente = paquete.servicios_asociados[indice];
-    return paquete.precio_por_persona && indice > 0 && componente.servicio.slug === slugPrincipal
+    return paquete.precio_depende_de_personas && indice > 0 && componente.servicio.slug === slugPrincipal
       && componente.servicio.personalizaciones.length === 0;
   };
 
@@ -348,6 +352,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     if (!pasoPago) return null;
     const n = cantidadCargos || pago.pagos.length;
     const monto = formatearPrecio(Number(pasoPago.monto), estado.moneda);
+    const totalPago = formatearPrecio(Number(pasoPago.precioTotal ?? pasoPago.monto), estado.moneda);
     const etiqueta = nombreEmpresa(pasoPago.empresaSlug);
     const pasosPago = pago.pagos.map((item, indice) => ({
       etiqueta: nombreEmpresa(item.empresaSlug),
@@ -355,7 +360,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       estado: (indice < pago.indice ? 'hecho' : indice === pago.indice ? 'actual' : 'pendiente') as 'hecho' | 'actual' | 'pendiente',
     }));
     const etiquetaBotonPago = n === 1
-      ? paquete.precio_por_persona
+      ? paquete.precio_depende_de_personas
         ? (personasPaquete === 1 ? textos.payOne : textos.payPeople.replace('{n}', String(personasPaquete)))
           .replace('{amount}', `${monto} ${estado.moneda}`)
         : textos.payButtonSingle.replace('{amount}', monto)
@@ -371,14 +376,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             key={pasoPago.empresaSlug}
             lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
             waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
-            lines={[{ label: etiqueta, amount: monto }]} total={monto} amountDueNow={monto}
+            lines={[{ label: etiqueta, amount: totalPago }]} total={totalPago} amountDueNow={monto}
             moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
             formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}
             codigoPromocional="" onCodigoPromocionalChange={() => {}}
             codigoPromocionalDisponible={false} promoEstado="idle" promoPorcentaje={null}
             phase="payment" error=""
-            pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey,
-              monto_a_cobrar: pasoPago.monto, moneda: estado.moneda }}
+            pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
             encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
             etiquetaBotonPago={etiquetaBotonPago}
             onSubmit={() => {}} onPagoConfirmado={pago.onPagoConfirmado}
@@ -421,12 +425,19 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       </div>
       <CheckoutStepper stepper={checkout.stepper} actual={paso} steps={pasos} totalMovil={totalMovil} />
       <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 pt-6 pb-24 sm:px-8">
-        {paquete.precio_por_persona && maxPersonas !== null && (
+        {paquete.precio_depende_de_personas && maxPersonas !== null && (
           <section className="rounded-xl border border-border bg-card p-5 sm:p-6" aria-label={textos.peopleQuestion}>
             <p className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              <span>{anclaPorPersona}</span>
-              <span className="whitespace-nowrap">{estado.moneda} {textos.perPerson}</span>
+              <span>{anclaMostrada}</span>
+              <span className="whitespace-nowrap">{estado.moneda} {paquete.estrategia_precio === 'por_persona'
+                ? textos.perPerson
+                : textos.perGroup.replace('{n}', String(paquete.personas_precio_base))}</span>
             </p>
+            {paquete.estrategia_precio === 'por_grupo' && extra !== null && (
+              <p className="mt-2 text-sm text-muted">
+                {textos.extraPerson.replace('{precio}', formatearPrecio(extra, estado.moneda))}
+              </p>
+            )}
             <div className="mt-4 rounded-lg border border-border bg-surface">
               <PeopleStepper label={textos.peopleQuestion}
                 maxNotice={(tieneWhatsapp ? textos.morePeople : textos.morePeopleOffline).replace('{max}', String(maxPersonas))}
@@ -523,19 +534,19 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               return (
                 <GrupoServicio key={componente.id}
                   lang={lang} dict={dict} componente={componente}
-                  precioPorPersona={paquete.precio_por_persona}
+                  precioDependeDePersonas={paquete.precio_depende_de_personas}
                   esActividadPrincipal={slug === slugPrincipal} personasMax={personasPaquete}
                   trasladoFijo={trasladoFijo}
                   estado={estado.componentes[slug]}
                   conEncabezadoEmpresa={cantidadCargos > 1}
                   nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}
-                  moneda={estado.moneda} inicio={estado.inicio} noches={noches} salida={salida}
+                  moneda={estado.moneda} tipoCambio={paquete.tipo_cambio_usd} inicio={estado.inicio} noches={noches} salida={salida}
                   minDate={minDate} puntos={puntosPorEmpresa[componente.servicio.empresa_slug] ?? []}
                   mostrarInicio={indice === 0} estadoTarjeta={tarjeta}
                   onAccion={() => setGrupoEditando((actual) => actual === indice ? null : indice)}
                   onCompletar={() => confirmarGrupo(indice)}
                   onInicio={(valor) => despachar({ tipo: 'inicio', valor })}
-                  onPersonas={(valor) => despachar(paquete.precio_por_persona && slugPrincipal
+                  onPersonas={(valor) => despachar(paquete.precio_depende_de_personas && slugPrincipal
                     ? { tipo: 'personasLogistica', slug, slugPrincipal, valor }
                     : { tipo: 'personas', slug, valor })}
                   onExtras={(valor) => despachar({ tipo: 'extras', slug, valor })}

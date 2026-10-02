@@ -1,3 +1,5 @@
+import { aMoneda } from './moneda';
+
 export type TipoInteraccion = 'check' | 'input_texto' | 'input_numero' | 'input_seleccion';
 
 export type PersonalizacionUI = {
@@ -11,7 +13,6 @@ export type PersonalizacionUI = {
   cobrar_por_persona: boolean;
   cantidad_editable: boolean;
   precio: string;
-  precio_usd: string | null;
 };
 
 export type SeleccionPersonalizacion = { id: number; cantidad?: number; respuesta?: string };
@@ -64,14 +65,15 @@ export function totalPersonalizaciones(
   seleccion: SeleccionPersonalizacion[],
   personas: number,
   moneda: 'MXN' | 'USD',
+  tipoCambio: string,
 ): number | null {
   const elegidas = new Map(seleccion.map((s) => [s.id, s]));
   let centavos = 0;
   for (const p of catalogo) {
     const s = elegidas.get(p.id);
     if (!s || p.tipo_interaccion !== 'check') continue;
-    const precio = moneda === 'USD' ? p.precio_usd : p.precio;
-    if (precio === null || !Number.isFinite(Number(precio))) return null;
+    const precio = aMoneda(p.precio, moneda, tipoCambio);
+    if (precio === null) return null;
     centavos +=
       Math.round(Number(precio) * 100) * cantidadEfectiva(p, personas, s.cantidad);
   }

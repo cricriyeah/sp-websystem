@@ -1,4 +1,5 @@
 import type { Moneda, PaqueteCatalogo } from './api';
+import { calcularBasePaquete } from './precio-paquete';
 import {
   totalPersonalizaciones,
   type PersonalizacionUI,
@@ -19,12 +20,11 @@ export type CalculoPrecioPaquete = {
  * Calcula de forma reactiva en cliente el precio del paquete.
  *
  * Fórmula:
- *     paquete.precio_en(moneda)                                              # el ancla
+ *     paquete.precio_total_en(moneda, personas)                               # base del grupo
  *   + Σ  sp.precio_en(moneda) de las personalizaciones explícitamente seleccionadas
  *
  * Cada personalización check que cobrar_por_persona se multiplica por personas.
- * Los inputs son siempre gratis. Si la moneda no está disponible en ancla o
- * en alguna personalización seleccionada, devuelve null.
+ * Los inputs son siempre gratis. Si falta un precio, devuelve null.
  */
 export function calcularPrecioPaquete(
   paquete: PaqueteCatalogo,
@@ -54,12 +54,7 @@ export function calcularPrecioPaquete(
     personalizacionesOpcionales = personalizacionesOMoneda;
   }
 
-  const anclaRaw =
-    moneda === 'USD' ? paquete.precio_ancla_usd : paquete.precio_ancla;
-  const precioAncla =
-    anclaRaw !== null && anclaRaw !== undefined && anclaRaw !== '' && Number.isFinite(Number(anclaRaw))
-      ? Number(anclaRaw)
-      : null;
+  const precioAncla = calcularBasePaquete(paquete, moneda, personas);
 
   const catalogoMap = new Map<number, PersonalizacionUI>();
   for (const item of paquete.servicios_asociados || []) {
@@ -76,6 +71,7 @@ export function calcularPrecioPaquete(
     personalizacionesOpcionales,
     personas,
     moneda,
+    paquete.tipo_cambio_usd,
   );
 
   const precioFinal =

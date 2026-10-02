@@ -5,8 +5,8 @@ const path = require('node:path');
 
 const s = require(path.join(process.env.SELECTOR_TEST_OUT, 'lib/selector-experiencia.js'));
 
-const servicioPesca = { id: 1, empresa_slug: 'sal-y-sol', nombre: 'Pesca deportiva', slug: 'pesca-deportiva', tipo_servicio: 'pesca', estrategia_cupo: 'x', estrategia_precio: 'x', modo_ocupacion: 'x', precio_base: '0', precio_base_usd: null, precio_persona_extra: '0', precio_persona_extra_usd: null, personas_incluidas: 1, descripcion: '', activo: true, personalizaciones: [] };
-const paqueteBrunch = { id: 2, sede: 'La Paz', sede_slug: 'la-paz', empresa_lider: 'Sal y Sol', empresa_lider_slug: 'sal-y-sol', nombre: 'Brunch y pesca', slug: 'brunch-y-pesca', descripcion: '', precio_ancla: '1', precio_ancla_usd: null, regla_precio: 'fijo', activo: true, servicios_asociados: [] };
+const servicioPesca = { id: 1, empresa_slug: 'sal-y-sol', nombre: 'Pesca deportiva', slug: 'pesca-deportiva', tipo_servicio: 'pesca', estrategia_cupo: 'x', estrategia_precio: 'x', modo_ocupacion: 'x', precio_base: '0', tipo_cambio_usd: '18.0000', precio_persona_extra: '0',  personas_incluidas: 1, descripcion: '', activo: true, personalizaciones: [] };
+const paqueteBrunch = { id: 2, sede: 'La Paz', sede_slug: 'la-paz', empresa_lider: 'Sal y Sol', empresa_lider_slug: 'sal-y-sol', nombre: 'Brunch y pesca', slug: 'brunch-y-pesca', descripcion: '', precio_ancla: '1', tipo_cambio_usd: '18.0000', estrategia_precio: 'por_grupo', personas_precio_base: 1, precio_persona_extra: '0.00', precio_depende_de_personas: false, regla_precio: 'fijo', activo: true, servicios_asociados: [] };
 
 test('resuelve el nombre desde el catalogo real, no desde el diccionario', () => {
   const destacadas = [{ tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true }];

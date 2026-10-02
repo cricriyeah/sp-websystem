@@ -51,6 +51,7 @@ import {
 } from '@/lib/dates';
 import { mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
+import { aMoneda } from '@/lib/moneda';
 import { leerRef } from '@/lib/ref';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
@@ -171,10 +172,7 @@ export function TrasladoView({
   };
 
   const [moneda, setMoneda] = useState<Moneda>('MXN');
-  const usdDisponible = useMemo(
-    () => catalogo.tarifas.some((t) => t.precio_usd !== null),
-    [catalogo.tarifas],
-  );
+  const usdDisponible = Number(catalogo.tipo_cambio_usd) > 0;
 
   const permiteAnticipo = catalogo.servicio.permite_anticipo;
   const [formaPagoSeleccionada, setFormaPagoSeleccionada] = useState<'completo' | 'anticipo'>('completo');
@@ -262,9 +260,8 @@ export function TrasladoView({
 
   const precioBase = useMemo(() => {
     if (!tarifaAplicable) return null;
-    const p = moneda === 'USD' && tarifaAplicable.precio_usd ? tarifaAplicable.precio_usd : tarifaAplicable.precio;
-    return parseFloat(p);
-  }, [tarifaAplicable, moneda]);
+    return aMoneda(tarifaAplicable.precio, moneda, catalogo.tipo_cambio_usd);
+  }, [tarifaAplicable, moneda, catalogo.tipo_cambio_usd]);
 
   const descuento = useMemo(() => {
     if (promoEstado === 'valido' && promoPorcentaje && precioBase !== null) {
@@ -559,10 +556,9 @@ export function TrasladoView({
   const getPrecioDesde = (tipo: TipoTraslado) => {
     const tarifasTipo = catalogo.tarifas.filter((t) => t.tipo_traslado === tipo);
     if (tarifasTipo.length === 0) return null;
-    const precios = tarifasTipo.map((t) =>
-      moneda === 'USD' && t.precio_usd ? parseFloat(t.precio_usd) : parseFloat(t.precio),
-    );
-    const min = Math.min(...precios);
+    const precios = tarifasTipo.map((t) => aMoneda(t.precio, moneda, catalogo.tipo_cambio_usd));
+    if (precios.some((p) => p === null)) return null;
+    const min = Math.min(...precios as number[]);
     return currency.format(min);
   };
 
@@ -1067,9 +1063,12 @@ export function TrasladoView({
                 if (value) setErrorWaiver(false);
               }}
               errorWaiver={errorWaiver}
-              lines={lines}
-              total={total === null ? '—' : currency.format(total)}
-              amountDueNow={amountDueNow === null ? '—' : currency.format(amountDueNow)}
+              lines={pago ? [{
+                label: catalogo.servicio.nombre,
+                amount: currency.format(Number(pago.precio_total)),
+              }] : lines}
+              total={pago ? currency.format(Number(pago.precio_total)) : total === null ? '—' : currency.format(total)}
+              amountDueNow={pago ? currency.format(Number(pago.monto_a_cobrar)) : amountDueNow === null ? '—' : currency.format(amountDueNow)}
               moneda={moneda}
               onMonedaChange={setMoneda}
               usdDisponible={usdDisponible}

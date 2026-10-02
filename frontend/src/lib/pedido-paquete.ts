@@ -1,5 +1,6 @@
 import type { Moneda, PaqueteCatalogo, PaqueteServicioCatalogo, TipoTraslado, Zona } from './api';
 import { totalPersonalizaciones, type SeleccionPersonalizacion } from './personalizaciones';
+import { calcularBasePaquete } from './precio-paquete';
 import { precioTarifa, resolverTarifa, type Tarifa } from './tarifa-transporte';
 
 /**
@@ -38,29 +39,22 @@ export function maxPersonasPaquete(paquete: PaqueteCatalogo): number {
 
 const centavos = (n: number) => Math.round(n * 100);
 
-function precioAncla(paquete: PaqueteCatalogo, moneda: Moneda): number | null {
-  const crudo = moneda === 'USD' ? paquete.precio_ancla_usd : paquete.precio_ancla;
-  if (crudo === null || crudo === undefined || crudo === '' || !Number.isFinite(Number(crudo))) return null;
-  return Number(crudo);
-}
-
 export function calcularPedido(
   paquete: PaqueteCatalogo,
   selecciones: Record<string, SeleccionComponente>,
   moneda: Moneda,
   tarifasPorEmpresa: Record<string, Tarifa[]>,
 ): ResultadoPedido | null {
-  const ancla = precioAncla(paquete, moneda);
-  if (ancla === null) return null;
-
-  const principal = paquete.precio_por_persona ? servicioPrincipalPaquete(paquete) : undefined;
+  const principal = paquete.precio_depende_de_personas ? servicioPrincipalPaquete(paquete) : undefined;
   const personas = principal ? selecciones[principal.servicio.slug]?.personas : 1;
-  if (paquete.precio_por_persona && (!principal || !Number.isInteger(personas) || personas < 1 ||
+  if (paquete.precio_depende_de_personas && (!principal || !Number.isInteger(personas) || personas < 1 ||
     paquete.servicios_asociados.some((c) => {
       const cantidad = selecciones[c.servicio.slug]?.personas;
       return !Number.isInteger(cantidad) || cantidad < 1 || cantidad > personas;
     }))) return null;
-  const totalAncla = centavos(ancla) * personas;
+  const base = calcularBasePaquete(paquete, moneda, personas);
+  if (base === null) return null;
+  const totalAncla = centavos(base);
 
   const lider = paquete.empresa_lider_slug;
   const extrasPorEmpresa = new Map<string, number>();
@@ -74,6 +68,7 @@ export function calcularPedido(
 
     const totalExtras = totalPersonalizaciones(
       servicio.personalizaciones, seleccion.extras, seleccion.personas, moneda,
+      paquete.tipo_cambio_usd,
     );
     if (totalExtras === null) return null;
 
@@ -87,7 +82,7 @@ export function calcularPedido(
       const tarifa = resolverTarifa(
         tarifasPorEmpresa[empresa] ?? [], seleccion.traslado.tipo, seleccion.traslado.zona, seleccion.personas,
       );
-      const precio = tarifa ? precioTarifa(tarifa, moneda) : null;
+      const precio = tarifa ? precioTarifa(tarifa, moneda, paquete.tipo_cambio_usd) : null;
       if (precio === null) return null;
       fijosPorEmpresa.set(empresa, (fijosPorEmpresa.get(empresa) ?? 0) + centavos(precio));
     }
@@ -108,14 +103,9 @@ export function calcularPedido(
   return { cargos, total: cargos.reduce((suma, c) => suma + centavos(c.monto), 0) / 100 };
 }
 
-/** USD solo se ofrece si el paquete y cada traslado incluido tienen precio en USD. */
-export function usdDisponible(paquete: PaqueteCatalogo, tarifasPorEmpresa: Record<string, Tarifa[]>): boolean {
-  if (precioAncla(paquete, 'USD') === null) return false;
-  return paquete.servicios_asociados.every((componente) => {
-    if (componente.servicio.tipo_servicio !== 'transporte') return true;
-    const tarifas = tarifasPorEmpresa[componente.servicio.empresa_slug] ?? [];
-    return tarifas.length > 0 && tarifas.every((t) => precioTarifa(t, 'USD') !== null);
-  });
+/** El catálogo siempre cotiza USD si la sede tiene tipo de cambio válido. */
+export function usdDisponible(paquete: PaqueteCatalogo): boolean {
+  return Number(paquete.tipo_cambio_usd) > 0 && calcularBasePaquete(paquete, 'USD', 1) !== null;
 }
 
 export function montoInicial(total: number, formaPago: 'completo' | 'anticipo', porcentaje: number): number {
