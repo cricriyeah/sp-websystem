@@ -1,5 +1,8 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -7,6 +10,12 @@ class Sede(models.Model):
     nombre = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150, unique=True)
     zona_horaria = models.CharField(max_length=50, default='America/Mazatlan')
+    tipo_cambio_usd = models.DecimalField(
+        max_digits=8, decimal_places=4, default=Decimal('18.0000'),
+        validators=[MinValueValidator(Decimal('0.0001'))],
+        help_text='Pesos por 1 dólar. Todos los precios se guardan en pesos; el precio en dólares se '
+                  'calcula con este valor y se redondea hacia arriba al dólar entero.',
+    )
     activo = models.BooleanField(default=True)
 
     class Meta:

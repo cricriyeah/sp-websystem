@@ -26,7 +26,7 @@ class SoloOperadorPlataformaAdminMixin:
 
 @admin.register(Sede)
 class SedeAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
-    list_display = ['nombre', 'slug', 'zona_horaria', 'activo']
+    list_display = ['nombre', 'slug', 'zona_horaria', 'tipo_cambio_usd', 'activo']
     prepopulated_fields = {'slug': ('nombre',)}
     search_fields = ['nombre', 'slug']
 
