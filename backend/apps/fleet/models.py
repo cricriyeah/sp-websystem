@@ -269,6 +269,11 @@ class Servicio(models.Model):
         default=True,
         help_text='Si está activo, el cliente puede elegir pagar solo el anticipo.',
     )
+    solo_en_paquete = models.BooleanField(
+        default=False,
+        help_text='Si está activo, el servicio solo se vende dentro de un paquete: no aparece en el '
+                  'catálogo suelto ni se puede reservar o pagar por separado.',
+    )
     porcentaje_anticipo = models.PositiveSmallIntegerField(
         default=30,
         validators=[MinValueValidator(1), MaxValueValidator(99)],

@@ -242,6 +242,9 @@ class Command(BaseCommand):
                     descripcion='Traslado redondo aeropuerto-hotel-aeropuerto.',
                 ),
             )
+            if not traslado.solo_en_paquete:
+                traslado.solo_en_paquete = True
+                traslado.save(update_fields=['solo_en_paquete'])
             self.stdout.write(f'  Servicio la-ventana-travel/traslado-aeropuerto-la-ventana: {"creado" if creado else "ok"}')
             for p_min, p_max, precio, precio_usd in (
                 (1, 4, Decimal('3500'), Decimal('205')),

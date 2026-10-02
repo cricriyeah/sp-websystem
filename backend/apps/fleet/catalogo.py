@@ -34,7 +34,7 @@ def servicios_de_sede(sede):
     for empresa in _empresas_activas_de(sede):
         with scope.con_empresa(empresa):
             qs = (
-                Servicio.objects.filter(empresa=empresa, activo=True)
+                Servicio.objects.filter(empresa=empresa, activo=True, solo_en_paquete=False)
                 .prefetch_related('servicio_personalizaciones__personalizacion')
                 .order_by('nombre')
             )

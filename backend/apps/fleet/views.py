@@ -23,7 +23,7 @@ class ServiciosListView(APIView):
         empresa = scope.resolver_empresa_publica(empresa_slug)
         with scope.con_empresa(empresa):
             servicios = (
-                Servicio.objects.filter(empresa=empresa, activo=True)
+                Servicio.objects.filter(empresa=empresa, activo=True, solo_en_paquete=False)
                 .prefetch_related('servicio_personalizaciones__personalizacion')
                 .order_by('nombre')
             )
@@ -38,7 +38,7 @@ class ServicioDetailView(APIView):
     def get(self, request, empresa_slug, slug):
         empresa = scope.resolver_empresa_publica(empresa_slug)
         with scope.con_empresa(empresa):
-            servicio = get_object_or_404(Servicio, empresa=empresa, slug=slug, activo=True)
+            servicio = get_object_or_404(Servicio, empresa=empresa, slug=slug, activo=True, solo_en_paquete=False)
             return Response(ServicioSerializer(servicio).data)
 
 
@@ -129,7 +129,7 @@ class TrasladosView(APIView):
         empresa = scope.resolver_empresa_publica(empresa_slug)
         with scope.con_empresa(empresa):
             servicio = Servicio.objects.filter(
-                empresa=empresa, activo=True, tipo_servicio=TipoServicio.TRANSPORTE,
+                empresa=empresa, activo=True, solo_en_paquete=False, tipo_servicio=TipoServicio.TRANSPORTE,
             ).order_by('pk').first()
             if servicio is None:
                 raise Http404('Servicio de transporte no encontrado.')

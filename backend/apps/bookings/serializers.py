@@ -134,7 +134,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         fields = super().get_fields()
         empresa = self.context.get('empresa')
         if empresa:
-            fields['servicio'].queryset = Servicio.objects.filter(activo=True, empresa=empresa)
+            fields['servicio'].queryset = Servicio.objects.filter(activo=True, solo_en_paquete=False, empresa=empresa)
             fields['paquete'].queryset = Paquete.objects.filter(activo=True, empresa_lider=empresa)
         return fields
 
@@ -463,7 +463,7 @@ class TrasladoCheckoutSerializer(ReservaCheckoutSerializer):
         fields = serializers.ModelSerializer.get_fields(self)
         empresa = self.context['empresa']
         fields['servicio'].queryset = Servicio.objects.filter(
-            empresa=empresa, activo=True, tipo_servicio=TipoServicio.TRANSPORTE,
+            empresa=empresa, activo=True, solo_en_paquete=False, tipo_servicio=TipoServicio.TRANSPORTE,
         )
         fields['punto_encuentro'].queryset = PuntoEncuentro.objects.filter(empresa=empresa, activo=True)
         return fields
