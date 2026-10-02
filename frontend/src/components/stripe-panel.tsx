@@ -46,6 +46,7 @@ type StripePanelProps = {
   encabezadoPago?: ReactNode;
   etiquetaBotonPago?: string;
   etiquetaBotonEnvio?: string;
+  submitDisabled?: boolean;
   phase: Phase;
   error: string;
   pago: Pick<Pago, 'client_secret' | 'publishable_key'> | null;
@@ -167,6 +168,7 @@ export function StripePanel({
   encabezadoPago,
   etiquetaBotonPago,
   etiquetaBotonEnvio,
+  submitDisabled = false,
   phase,
   error,
   pago,
@@ -406,9 +408,9 @@ export function StripePanel({
           <motion.button
             type="button"
             onClick={onSubmit}
-            disabled={phase === 'submitting'}
+            disabled={phase === 'submitting' || submitDisabled}
             animate={
-              waiverAccepted && phase !== 'submitting' && !sinMovimiento
+              waiverAccepted && phase !== 'submitting' && !submitDisabled && !sinMovimiento
                 ? {
                     scale: [1, 1.045, 1],
                     boxShadow: [
@@ -420,7 +422,7 @@ export function StripePanel({
                 : { scale: 1, boxShadow: '0 0 0 0 rgba(255,222,0,0)' }
             }
             transition={
-              waiverAccepted && phase !== 'submitting' && !sinMovimiento
+              waiverAccepted && phase !== 'submitting' && !submitDisabled && !sinMovimiento
                 ? { duration: 1.4, repeat: 2, repeatDelay: 0.6, ease: 'easeInOut' }
                 : { duration: 0.2 }
             }

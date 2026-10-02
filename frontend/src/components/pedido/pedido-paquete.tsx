@@ -238,6 +238,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   };
 
   const enviar = () => {
+    if (paso < 3) return;
     if (!validarDatos()) {
       setDatosEditando(true);
       return;
@@ -371,24 +372,48 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} totalMovil={totalMovil} />
-        <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
-          <StripePanel
-            key={pasoPago.empresaSlug}
-            lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
-            waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
-            lines={[{ label: etiqueta, amount: totalPago }]} total={totalPago} amountDueNow={monto}
-            moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
-            formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}
-            codigoPromocional="" onCodigoPromocionalChange={() => {}}
-            codigoPromocionalDisponible={false} promoEstado="idle" promoPorcentaje={null}
-            phase="payment" error=""
-            pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
-            encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
-            etiquetaBotonPago={etiquetaBotonPago}
-            onSubmit={() => {}} onPagoConfirmado={pago.onPagoConfirmado}
-            onPagoRechazado={pago.onPagoRechazado} onCaptchaToken={() => {}}
-          />
-        </div>
+        <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
+          <div className="hidden min-w-0 flex-col gap-6 lg:flex">
+            <section className="border border-border bg-background p-6 sm:p-8">
+              <h2 className="text-sm font-medium text-foreground">{checkout.contactHeadline}</h2>
+              <p className="mt-2 text-sm text-muted">{estado.contacto.fullName} · {estado.contacto.email}</p>
+            </section>
+            <section className="border border-border bg-background p-6 sm:p-8">
+              <h2 className="text-sm font-medium text-foreground">{textos.success.componentsHeadline}</h2>
+              <ul className="mt-4 flex flex-col gap-3">
+                {paquete.servicios_asociados.map((item) => (
+                  <li key={item.id} className="flex items-start justify-between gap-4 text-sm">
+                    <span className="font-medium text-foreground">{item.servicio.nombre}</span>
+                    <span className="text-right text-muted">
+                      {formatearFecha(fechaDeComponente(estado.inicio ?? minDate, item.dia_estancia))}
+                      {' · '}{estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas}{' '}
+                      {(estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas) === 1
+                        ? checkout.peopleUnit.one : checkout.peopleUnit.other}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+          <div className="min-w-0">
+            <StripePanel
+              key={pasoPago.empresaSlug}
+              lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
+              waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
+              lines={[{ label: etiqueta, amount: totalPago }]} total={totalPago} amountDueNow={monto}
+              moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
+              formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}
+              codigoPromocional="" onCodigoPromocionalChange={() => {}}
+              codigoPromocionalDisponible={false} promoEstado="idle" promoPorcentaje={null}
+              phase="payment" error=""
+              pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
+              encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
+              etiquetaBotonPago={etiquetaBotonPago}
+              onSubmit={() => {}} onPagoConfirmado={pago.onPagoConfirmado}
+              onPagoRechazado={pago.onPagoRechazado} onCaptchaToken={() => {}}
+            />
+          </div>
+        </main>
         <CheckoutFooter lang={lang} footer={footer} nav={nav} />
       </div>
     );
@@ -397,7 +422,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   return (
     <div className="min-h-dvh bg-surface">
       <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
-      <div className="mx-auto max-w-3xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8">
+      <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
         <Link href={`/${lang}/sede/${sedeSlug}`}
           className="mb-6 inline-flex text-sm font-medium text-muted hover:text-foreground">
           {textos.back}
@@ -424,7 +449,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         )}
       </div>
       <CheckoutStepper stepper={checkout.stepper} actual={paso} steps={pasos} totalMovil={totalMovil} />
-      <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 pt-6 pb-24 sm:px-8">
+      <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
+        <div className="flex min-w-0 flex-col gap-6">
         {paquete.precio_depende_de_personas && maxPersonas !== null && (
           <section className="rounded-xl border border-border bg-card p-5 sm:p-6" aria-label={textos.peopleQuestion}>
             <p className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -557,8 +583,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           </>
         )}
 
-        {paso >= 3 && (
-          pedido ? (
+        </div>
+        <div className={`min-w-0 ${paso < 3 ? 'hidden lg:block' : ''}`}>
+          {pedido ? (
             <StripePanel
               lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
               waiverAccepted={waiverAccepted}
@@ -579,6 +606,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               }}
               codigoPromocionalDisponible={motor === 'reserva'}
               promoEstado={promoEstado} promoPorcentaje={promoPorcentaje}
+              submitDisabled={paso < 3}
               phase={pago.fase === 'enviando' ? 'submitting' : pago.error ? 'error' : 'form'}
               error={pago.error} pago={null}
               avisoCargos={cantidadCargos > 1 ? (
@@ -597,8 +625,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           ) : (
             <ErrorBlock mensaje={feedback.error.no_disponible}
               ayudaTitulo={feedback.helpTitle} ayudaCta={feedback.helpCta} ayudaMensaje={ayudaMensaje} />
-          )
-        )}
+          )}
+        </div>
       </main>
       <CheckoutFooter lang={lang} footer={footer} nav={nav} />
     </div>
