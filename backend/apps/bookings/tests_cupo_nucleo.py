@@ -10,6 +10,7 @@ from apps.bookings.cupo.nucleo import (
     caben,
     caben_compartido,
     elegir_recursos,
+    habitaciones_necesarias,
     motivo_sin_lugar,
     ocupacion_por_rango,
     validar_rango,
@@ -18,6 +19,15 @@ from apps.bookings.cupo.nucleo import (
 
 class CupoNucleoPuroTests(TestCase):
     """Pruebas unitarias de las funciones puras del algoritmo de cupo."""
+
+    def test_habitaciones_necesarias_toma_las_mas_grandes_primero(self):
+        self.assertEqual(habitaciones_necesarias([2, 2, 2, 4], 5), 2)
+        self.assertEqual(habitaciones_necesarias([2, 2], 2), 1)
+        self.assertEqual(habitaciones_necesarias([2, 2], 4), 2)
+
+    def test_habitaciones_necesarias_none_si_no_alcanzan(self):
+        self.assertIsNone(habitaciones_necesarias([2, 2], 5))
+        self.assertIsNone(habitaciones_necesarias([], 1))
 
     def test_caben_algoritmo_exclusivo(self):
         # Mismo número de grupos que recursos, caben exactamente

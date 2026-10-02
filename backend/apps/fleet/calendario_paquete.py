@@ -11,6 +11,7 @@ class ComponenteCalendario:
     dia_estancia: int
     estrategia_cupo: str
     noches: int | None
+    salidas: int = 1
 
 
 def noches_del_paquete(componentes) -> int | None:
@@ -22,6 +23,19 @@ def noches_del_paquete(componentes) -> int | None:
 
 def fecha_de_componente(inicio: date, dia_estancia: int) -> date:
     return inicio + timedelta(days=dia_estancia - 1)
+
+
+def fechas_de_componente(inicio: date, dia_estancia: int, salidas: int = 1) -> list[date]:
+    """Días consecutivos en que ocurre un componente."""
+    return [fecha_de_componente(inicio, dia_estancia + i) for i in range(max(1, salidas))]
+
+
+def fechas_de_actividad(inicio: date, componentes) -> list[date]:
+    """Días de la primera actividad del paquete, si la hay."""
+    for componente in componentes:
+        if componente.estrategia_cupo == 'por_recurso_dia':
+            return fechas_de_componente(inicio, componente.dia_estancia, componente.salidas)
+    return []
 
 
 def fecha_salida(inicio: date, componentes) -> date | None:

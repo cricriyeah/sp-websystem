@@ -128,6 +128,25 @@ class SerializadorPaqueteTests(FixturePaqueteEstancia, OperadorTestCase):
         serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 3, str(self.hotel.pk): 1})
         self.assertTrue(valido, serializador.errors)
 
+    def test_hospedaje_admite_grupo_repartido_en_dos_habitaciones(self):
+        PaqueteServicio.objects.filter(paquete=self.paquete, servicio=self.hotel).update(personas_incluidas=3)
+        Recurso.objects.create(empresa=self.empresa, servicio=self.hotel, nombre='Hab 1', capacidad_maxima=2)
+        Recurso.objects.create(empresa=self.empresa, servicio=self.hotel, nombre='Hab 2', capacidad_maxima=2)
+        serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 3, str(self.hotel.pk): 3})
+        self.assertTrue(valido, serializador.errors)
+
+    def test_paquete_por_persona_permite_menos_personas_en_hospedaje(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 3, str(self.hotel.pk): 2})
+        self.assertTrue(valido, serializador.errors)
+        self.assertEqual(serializador.validated_data['numero_personas'], 3)
+
+    def test_paquete_por_persona_exige_que_la_actividad_lleve_a_todas_las_personas(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 1, str(self.hotel.pk): 2})
+        self.assertFalse(valido)
+        self.assertIn('la actividad va con todas las personas', str(serializador.errors['personas_por_servicio']))
+
     def test_guarda_el_inicio_elegido_por_el_cliente(self):
         serializador, valido = self.validar()
         self.assertTrue(valido, serializador.errors)
@@ -215,6 +234,19 @@ class CupoPorComponenteTests(FixturePaqueteEstancia, OperadorTestCase):
         self.assertEqual(llamada.args[0], date(2026, 10, 11))
         self.assertEqual(llamada.args[1], 3)
         self.assertEqual(reserva.componentes.count(), 2)
+
+    def test_paquete_de_un_dia_bloquea_mar_antes_de_habitaciones(self):
+        from apps.bookings.cupo import confirmacion
+
+        PaqueteServicio.objects.filter(paquete=self.paquete, servicio=self.hotel).update(orden=1)
+        PaqueteServicio.objects.filter(paquete=self.paquete, servicio=self.pesca).update(orden=2)
+        reserva = self._reserva_pagada()
+        orden = []
+        with mock.patch.object(confirmacion, 'bloquear_cupo', side_effect=lambda *a, **kw: orden.append('mar')):
+            with mock.patch.object(confirmacion, 'bloquear_recurso', side_effect=lambda *a, **kw: orden.append('hotel')):
+                with mock.patch.object(confirmacion, 'evaluar_cupo', return_value=None):
+                    reservar_cupo_al_confirmar(reserva)
+        self.assertEqual(orden, ['mar', 'hotel'])
 
 
 class TopeDePersonasDelPaqueteTests(FixturePaqueteEstancia, OperadorTestCase):

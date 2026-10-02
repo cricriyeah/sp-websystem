@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
-from apps.fleet.models import Paquete, PaqueteServicio, Servicio
+from apps.fleet.models import Paquete, PaqueteServicio, Servicio, TransporteTarifa
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import OperadorTestCase
 
@@ -278,3 +278,63 @@ class PaquetesModelTests(OperadorTestCase):
         mensajes = ' '.join(ctx.exception.messages)
         self.assertIn('no puede ser menor que la tarifa de transporte', mensajes)
         self.assertIn('tarifa de transporte en USD', mensajes)
+
+
+class PaquetePrecioPorPersonaTests(OperadorTestCase):
+    def setUp(self):
+        self.sede, _ = Sede.objects.get_or_create(slug='la-paz', defaults={'nombre': 'La Paz'})
+        self.empresa = Empresa.objects.create(sede=self.sede, nombre='Empresa PPP', slug='empresa-ppp')
+
+    def _paquete(self, **extra):
+        datos = dict(
+            sede=self.sede, empresa_lider=self.empresa, nombre='Paquete PPP', slug='paquete-ppp',
+            precio_ancla=Decimal('45000.00'), precio_ancla_usd=Decimal('2500.00'),
+        )
+        datos.update(extra)
+        return Paquete.objects.create(**datos)
+
+    def test_por_defecto_el_precio_es_un_total_fijo(self):
+        paquete = self._paquete()
+        self.assertFalse(paquete.precio_por_persona)
+        self.assertEqual(paquete.precio_total_en('MXN', 3), Decimal('45000.00'))
+
+    def test_por_persona_multiplica_en_mxn_y_usd(self):
+        paquete = self._paquete(precio_por_persona=True)
+        self.assertEqual(paquete.precio_total_en('MXN', 3), Decimal('135000.00'))
+        self.assertEqual(paquete.precio_total_en('USD', 2), Decimal('5000.00'))
+
+    def test_sin_precio_en_la_moneda_devuelve_none(self):
+        paquete = self._paquete(precio_por_persona=True, precio_ancla_usd=None)
+        self.assertIsNone(paquete.precio_total_en('USD', 2))
+
+    def _traslado(self, precio):
+        servicio = Servicio.objects.create(
+            empresa=self.empresa, nombre='Traslado PPP', slug='traslado-ppp', tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta', capacidad_maxima=14,
+        )
+        TransporteTarifa.objects.create(
+            empresa=self.empresa, tipo_traslado='redondo_aeropuerto', zona='', personas_min=1,
+            personas_max=None, precio=Decimal(precio), precio_usd=Decimal('280.00'),
+        )
+        return servicio
+
+    def test_validar_configuracion_revisa_cada_tamano_de_grupo(self):
+        servicio = self._traslado('5000.00')
+        paquete = self._paquete(
+            precio_por_persona=True, precio_ancla=Decimal('4000.00'), precio_ancla_usd=Decimal('300.00'),
+        )
+        PaqueteServicio.objects.create(paquete=paquete, servicio=servicio, personas_incluidas=2)
+        with self.assertRaises(ValidationError) as ctx:
+            paquete.validar_configuracion()
+        self.assertTrue(any('tarifa de transporte' in m for m in ctx.exception.messages))
+
+    def test_validar_configuracion_acepta_un_precio_que_cubre_el_traslado(self):
+        servicio = self._traslado('3500.00')
+        paquete = self._paquete(precio_por_persona=True)
+        PaqueteServicio.objects.create(paquete=paquete, servicio=servicio, personas_incluidas=2)
+        paquete.validar_configuracion()
+
+    def test_el_catalogo_publico_expone_precio_por_persona(self):
+        from apps.fleet.serializers import PaqueteSerializer
+        paquete = self._paquete(precio_por_persona=True)
+        self.assertTrue(PaqueteSerializer(paquete).data['precio_por_persona'])

@@ -49,7 +49,7 @@ def _componentes_de(paquete, empresas):
     with scope.con_empresa(paquete.empresa_lider):
         filas = list(
             paquete.servicios_asociados.order_by('orden').values(
-                'id', 'servicio_id', 'orden', 'dia_estancia', 'noches', 'personas_incluidas', 'empresa_id',
+                'id', 'servicio_id', 'orden', 'dia_estancia', 'salidas', 'noches', 'personas_incluidas', 'empresa_id',
             )
         )
     por_id = {empresa.pk: empresa for empresa in empresas}
@@ -68,7 +68,7 @@ def _componentes_de(paquete, empresas):
                 continue
             componentes.append({
                 'id': fila['id'], 'servicio_id': fila['servicio_id'], 'orden': fila['orden'],
-                'dia_estancia': fila['dia_estancia'], 'noches': fila['noches'],
+                'dia_estancia': fila['dia_estancia'], 'salidas': fila['salidas'], 'noches': fila['noches'],
                 'personas_incluidas': fila['personas_incluidas'],
                 'servicio': ServicioSerializer(servicio).data,
             })

@@ -156,17 +156,16 @@ class PaqueteServicioInline(TabularInline):
     model = PaqueteServicio
     formset = PaqueteServicioFormSet
     extra = 1
-    fields = ['servicio', 'orden', 'dia_estancia', 'noches', 'personas_incluidas']
+    fields = ['servicio', 'orden', 'dia_estancia', 'salidas', 'noches', 'personas_incluidas']
     autocomplete_fields = ['servicio']
 
 
 @admin.register(Paquete)
 class PaqueteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     empresa_campo = 'empresa_lider'
-    list_display = ['nombre', 'sede', 'empresa_lider', 'precio_ancla', 'precio_ancla_usd', 'permite_anticipo', 'porcentaje_anticipo', 'activo']
+    list_display = ['nombre', 'sede', 'empresa_lider', 'precio_ancla', 'precio_ancla_usd', 'precio_por_persona', 'permite_anticipo', 'porcentaje_anticipo', 'activo']
     list_filter = ['sede', 'activo']
     list_editable = ['precio_ancla', 'precio_ancla_usd', 'activo']
     search_fields = ['nombre', 'slug', 'descripcion']
     prepopulated_fields = {'slug': ('nombre',)}
     inlines = [PaqueteServicioInline]
-

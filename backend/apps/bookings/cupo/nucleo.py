@@ -124,6 +124,16 @@ def recursos_disponibles_en_rango(recursos_con_ocupaciones, fecha_inicio, fecha_
     return libres
 
 
+def habitaciones_necesarias(capacidades_libres: list[int], personas: int) -> int | None:
+    """Menor número de habitaciones libres cuya capacidad conjunta cubre el grupo."""
+    total = 0
+    for cantidad, capacidad in enumerate(sorted(capacidades_libres, reverse=True), start=1):
+        total += capacidad
+        if total >= personas:
+            return cantidad
+    return None
+
+
 def elegir_recursos(libres: list[tuple[int, int]], personas: int, cantidad: int = 1) -> list[int] | None:
     """`libres` = [(recurso_id, capacidad), ...]. Devuelve los ids de `cantidad`
     recursos cuyo total de capacidad >= personas, prefiriendo los más chicos que

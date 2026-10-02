@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 import stripe
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.db.utils import OperationalError
 from django.utils import timezone
 
 from apps.bookings.cupo import SinCupoError
@@ -69,8 +70,21 @@ def _momento_del_pago(intent):
         return timezone.now()
 
 
-@transaction.atomic
 def aplicar_pago_exitoso(intent, empresa):
+    """Reintenta una vez la transacción entera si Postgres aborta por deadlock."""
+    for intento in range(2):
+        try:
+            return _aplicar_pago_exitoso_transaccional(intent, empresa)
+        except OperationalError as exc:
+            causa = exc.__cause__
+            sqlstate = getattr(causa, 'sqlstate', None) or getattr(causa, 'pgcode', None)
+            if sqlstate != '40P01' or intento:
+                raise
+            logger.warning('Deadlock al aplicar el pago %s; se reintenta una vez.', intent['id'])
+
+
+@transaction.atomic
+def _aplicar_pago_exitoso_transaccional(intent, empresa):
     """Marca la reserva como pagada, o devuelve el dinero si ya no procede.
 
     `intent` es el PaymentIntent de Stripe (el del evento o el que se recupera

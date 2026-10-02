@@ -109,6 +109,23 @@ class PaquetesAPITests(TestCase):
         self.assertIn('pesca-dia-completo', slugs)
         self.assertIn('estadia-2-noches', slugs)
 
+    def test_catalogo_de_sede_y_detalle_exponen_salidas_de_cada_servicio(self):
+        with scope.como_operador_plataforma():
+            PaqueteServicio.objects.filter(
+                paquete=self.paquete_activo, servicio=self.servicio_pesca,
+            ).update(dia_estancia=2, salidas=4)
+        for url in (
+            f'/api/sedes/{self.sede_lp.slug}/paquetes/',
+            f'/api/sedes/{self.sede_lp.slug}/paquetes/{self.paquete_activo.slug}/',
+        ):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            paquete = data[0] if isinstance(data, list) else data
+            componentes = {c['servicio']['slug']: c for c in paquete['servicios_asociados']}
+            self.assertEqual(componentes[self.servicio_pesca.slug]['salidas'], 4)
+            self.assertEqual(componentes[self.servicio_hotel.slug]['salidas'], 1)
+
     def test_paquetes_por_sede_inexistente_404(self):
         resp = self.client.get('/api/sedes/sede-inexistente/paquetes/')
         self.assertEqual(resp.status_code, 404)

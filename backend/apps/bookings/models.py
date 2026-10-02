@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import connection, models
+from django.db import connection, models, transaction
 from django.utils import timezone
 
 from apps.fleet.models import (
@@ -16,6 +16,7 @@ from apps.fleet.models import (
     capacidades_por_fecha,
 )
 from apps.fleet.enums import TipoTraslado, Zona
+from apps.fleet.calendario_paquete import fechas_de_componente
 from apps.tenancy.models import Empresa, Sede
 
 from .cupo import (
@@ -226,15 +227,23 @@ def _validar_cupo_de_paquete(reserva):
         estrategia = ps.servicio.estrategia_cupo
         personas = reserva.personas_de(ps.servicio_id)
         if estrategia == 'por_recurso_dia':
-            motivo = evaluar_cupo(
-                reserva.fecha, personas, reserva.empresa,
-                excluir_pk=reserva.pk, estrategia_cupo='por_recurso_dia',
-                servicio_id=ps.servicio_id,
+            fechas = (
+                fechas_de_componente(reserva.fecha_inicio_paquete, ps.dia_estancia, ps.salidas)
+                if ps.salidas > 1 else [reserva.fecha]
             )
-            if motivo:
-                raise ValidationError({
-                    'fecha': f'No hay cupo disponible para el servicio {ps.servicio.nombre} ({motivo}).'
-                })
+            for dia in fechas:
+                motivo = evaluar_cupo(
+                    dia, personas, reserva.empresa,
+                    excluir_pk=reserva.pk, estrategia_cupo='por_recurso_dia',
+                    servicio_id=ps.servicio_id,
+                )
+                if motivo:
+                    mensaje = (
+                        f'No hay cupo disponible para el servicio {ps.servicio.nombre} el {dia} ({motivo}).'
+                        if ps.salidas > 1 else
+                        f'No hay cupo disponible para el servicio {ps.servicio.nombre} ({motivo}).'
+                    )
+                    raise ValidationError({'fecha': mensaje})
         elif estrategia == 'por_noche':
             disponible = evaluar_disponibilidad_hospedaje(
                 check_in=reserva.fecha_inicio_paquete,
@@ -615,6 +624,13 @@ class Reserva(models.Model):
         return int(valor) if valor else self.numero_personas
 
     @property
+    def personas_del_pedido(self):
+        """Personas por las que se cobra un paquete por persona: el mayor número entre sus
+        servicios. El hospedaje o el traslado pueden llevar menos, pero el precio es por persona."""
+        valores = [int(v) for v in (self.personas_por_servicio or {}).values() if v]
+        return max([self.numero_personas or 1, *valores])
+
+    @property
     def fecha_inicio_paquete(self):
         """Primer día del paquete. Lo guardado al reservar; sin eso (reserva de servicio suelto o
         anterior a este campo), `fecha`. No se deriva de las noches del catálogo: editarlas no
@@ -643,6 +659,20 @@ class Reserva(models.Model):
         return instance
 
     def save(self, *args, **kwargs):
+        if (
+            kwargs.get('update_fields') is None and self.paquete_id and not self.orden_id
+            and self.estado in ESTADOS_QUE_OCUPAN_CUPO
+        ):
+            from apps.bookings.cupo.salidas import salidas_deseadas, validar_cupo_salidas_bajo_candado
+
+            deseadas = salidas_deseadas(self)
+            if deseadas:
+                with transaction.atomic():
+                    validar_cupo_salidas_bajo_candado(self, deseadas)
+                    return self._guardar_reserva(*args, **kwargs)
+        return self._guardar_reserva(*args, **kwargs)
+
+    def _guardar_reserva(self, *args, **kwargs):
         estado_previo = getattr(self, '_estado_original', None)
         self._derivar_estado_de_asignacion()
 
@@ -662,6 +692,10 @@ class Reserva(models.Model):
             if update_fields is not None and 'vendedora' in update_fields:
                 kwargs['update_fields'] = [*update_fields, 'vendedora_asignada_en']
         super().save(*args, **kwargs)
+        if update_fields is None:
+            from apps.bookings.cupo.salidas import sincronizar_salidas
+
+            sincronizar_salidas(self)
         self._vendedora_original = self.vendedora_id
         if self.pk and estado_previo is not None:
             era_ocupante = estado_previo in ESTADOS_QUE_OCUPAN_CUPO
@@ -799,6 +833,18 @@ class Reserva(models.Model):
                                f'personas y la reserva es para {self.numero_personas}.',
             })
 
+    def _fechas_de_viaje(self):
+        """Días en que esta reserva usa panga: sus salidas, o su fecha si no las tiene."""
+        if self.paquete_id and self.estado in ESTADOS_QUE_OCUPAN_CUPO:
+            from apps.bookings.cupo.salidas import salidas_deseadas
+
+            deseadas = salidas_deseadas(self)
+            if deseadas:
+                return sorted({fecha for _, fecha in deseadas})
+        if self.pk and self.salidas.exists():
+            return list(self.salidas.values_list('fecha', flat=True))
+        return [self.fecha]
+
     def _validar_una_salida_por_dia(self):
         """Una panga hace un solo viaje al dia, y un capitan tambien.
 
@@ -818,23 +864,25 @@ class Reserva(models.Model):
         if self.servicio_id is not None and self.servicio.estrategia_cupo != 'por_recurso_dia':
             return
 
-        del_dia = Reserva.objects.filter(
-            fecha=self.fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa_id=self.empresa_id,
-        )
-        if self.pk:
-            del_dia = del_dia.exclude(pk=self.pk)
+        for dia in self._fechas_de_viaje():
+            del_dia = Reserva.objects.filter(
+                models.Q(fecha=dia) | models.Q(salidas__fecha=dia),
+                estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa_id=self.empresa_id,
+            ).distinct()
+            if self.pk:
+                del_dia = del_dia.exclude(pk=self.pk)
 
-        if self.embarcacion_id and del_dia.filter(embarcacion_id=self.embarcacion_id).exists():
-            raise ValidationError({
-                'embarcacion': f'{self.embarcacion.nombre} ya tiene un viaje el {self.fecha}. '
-                               f'Una panga hace una sola salida por dia.',
-            })
+            if self.embarcacion_id and del_dia.filter(embarcacion_id=self.embarcacion_id).exists():
+                raise ValidationError({
+                    'embarcacion': f'{self.embarcacion.nombre} ya tiene un viaje el {dia}. '
+                                   f'Una panga hace una sola salida por dia.',
+                })
 
-        if self.capitan_id and del_dia.filter(capitan_id=self.capitan_id).exists():
-            raise ValidationError({
-                'capitan': f'{self.capitan.nombre} ya tiene un viaje el {self.fecha}. '
-                           f'Un capitan hace una sola salida por dia.',
-            })
+            if self.capitan_id and del_dia.filter(capitan_id=self.capitan_id).exists():
+                raise ValidationError({
+                    'capitan': f'{self.capitan.nombre} ya tiene un viaje el {dia}. '
+                               f'Un capitan hace una sola salida por dia.',
+                })
 
     @property
     def salida(self):
@@ -981,6 +1029,32 @@ class ReservaOcupacion(models.Model):
                     f'El recurso {nombre} ya está ocupado en el rango '
                     f'[{ocupacion.fecha_inicio} a {ocupacion.fecha_fin}) por la reserva #{ocupacion.reserva_id}.'
                 )
+
+
+class ReservaSalida(models.Model):
+    """Día de mar de una reserva de paquete con más de una salida.
+
+    No lleva panga ni capitán: los asignados a la reserva cubren todos sus días.
+    El cupo se deriva del estado de la reserva, sin duplicar esa bandera.
+    """
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='salidas')
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='salidas')
+    servicio = models.ForeignKey('fleet.Servicio', on_delete=models.PROTECT, related_name='+')
+    fecha = models.DateField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha']
+        verbose_name = 'salida al mar'
+        verbose_name_plural = 'salidas al mar'
+        constraints = [
+            models.UniqueConstraint(fields=['reserva', 'servicio', 'fecha'], name='reservasalida_unica_por_dia'),
+        ]
+        indexes = [models.Index(fields=['empresa', 'fecha'], name='reservasalida_empresa_fecha')]
+
+    def __str__(self):
+        return f'Salida {self.fecha} — Reserva #{self.reserva_id}'
 
 
 class CheckoutAbandonado(Reserva):

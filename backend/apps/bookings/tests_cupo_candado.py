@@ -12,21 +12,13 @@ from apps.bookings.cupo.candado import (
 
 
 class CupoCandadoTests(TestCase):
-    """Pruebas del advisory lock re-llaveado por (empresa, servicio_id, fecha)."""
+    """Pruebas del advisory lock compartido por empresa y fecha."""
 
-    def test_calcular_clave_candado_sin_colision_bit30(self):
+    def test_calcular_clave_candado_es_la_misma_para_servicios_del_dia(self):
         f = date(2026, 9, 25)
-        legacy = f.toordinal()
-        self.assertEqual(calcular_clave_candado(f, servicio_id=None), legacy)
-        for sid in range(1, 501):
-            k = calcular_clave_candado(f, servicio_id=sid)
-            self.assertNotEqual(k, legacy)
-            self.assertGreaterEqual(k, 0x40000000)
-            self.assertLessEqual(k, 0x7FFFFFFF)
-        self.assertNotEqual(
-            calcular_clave_candado(f, servicio_id=1),
-            calcular_clave_candado(f, servicio_id=2),
-        )
+        self.assertEqual(calcular_clave_candado(f, servicio_id=1), f.toordinal())
+        self.assertEqual(calcular_clave_candado(f, servicio_id=2), f.toordinal())
+        self.assertNotEqual(calcular_clave_candado(date(2026, 9, 26), servicio_id=1), f.toordinal())
 
     def test_calcular_clave_candado_default(self):
         f = date(2026, 9, 25)

@@ -148,10 +148,16 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   saldo exacto y sella quien y cuando; para un monto distinto se edita a mano.
 - **Una panga hace una sola salida por dia, y un capitan tambien.** Se valida en
   `Reserva._validar_una_salida_por_dia()`, llamada desde `clean()`, asi que aplica igual
-  desde la agenda, desde el admin de Reservas y desde el shell. Cuentan los estados de
+  desde la agenda, desde el admin de Reservas y desde el shell. En un paquete con varios
+  dias de mar se revisa cada `ReservaSalida`; la panga y el capitan asignados en la
+  reserva cubren toda la estancia. Cuentan los estados de
   `ESTADOS_QUE_OCUPAN_CUPO`: una cancelada suelta su panga. Las salidas son de 5 a 7am y
   el viaje dura de 6 a 7 horas — escalonar no existe. (Esta nota decia lo contrario hasta
   agosto de 2026, cuando el negocio aclaro la regla.)
+  Esta validación consulta sin lock: dos operadores asignando al mismo tiempo la misma
+  panga podrían pasar ambos, igual que antes de las salidas multidía. Una reserva en
+  `pendiente_pago` con panga asignada aún no tiene `ReservaSalida`, así que la validación
+  solo revisa `Reserva.fecha`. Ambas limitaciones se aceptan por ahora.
 - **Red de seguridad**: `manage.py conciliar_pagos [--dias 7] [--dry-run]` busca reservas
   `pendiente_pago` que ya tengan PaymentIntent, le pregunta a Stripe como quedo y aplica
   lo mismo que el webhook. Existe porque una entrega de webhook puede perderse para
@@ -278,6 +284,10 @@ nuevo que cree/edite una `Reserva` (API de pago, panel vendedora) debe llamar
 `instance.full_clean()` antes de `save()` para que este motor corra — no duplicar la
 logica en otro lado.
 
+Una actividad repetida dentro de un paquete ocupa cupo en cada fecha de `ReservaSalida`.
+El motor cuenta esas salidas junto con las reservas sueltas y excluye `Reserva.fecha`
+cuando la reserva ya tiene salidas, para evitar duplicar el primer dia.
+
 **El catalogo `Embarcacion` tiene que estar completo en produccion.** Con la flota
 incompleta `capacidades_disponibles` devuelve una lista corta y el sitio deja de vender:
 fallo seguro y no silencioso, pero fallo.
@@ -292,7 +302,7 @@ Con la expansión multi-servicio y paquetes turísticos:
 
 - **Estrategias de cupo (`Servicio.estrategia_cupo`)**:
   1. `por_recurso_dia` (pesca deportiva / embarcaciones): aplica `validar_cupo_diario` y toma advisory lock `bloquear_cupo(empresa_id, fecha, servicio_id)`.
-  2. `por_noche` (hospedaje): multi-día sobre rango `[fecha, fecha_fin_servicio)`. Se crean registros `ReservaOcupacion` por habitación/recurso asignado. La base de datos protege contra sobreventa mediante constraint PostgreSQL `EXCLUDE USING gist` sobre `(recurso_id WITH =, daterange(fecha_inicio, fecha_fin, '[)') WITH &&) WHERE (ocupa_cupo)`. Lock de serialización: `bloquear_recurso(empresa_id, recurso_id)`.
+  2. `por_noche` (hospedaje): multi-día sobre rango `[fecha, fecha_fin_servicio)`. Se crean registros `ReservaOcupacion` por habitación/recurso asignado; `habitaciones_necesarias` calcula cuántas habitaciones libres hacen falta para el grupo. La base de datos protege contra sobreventa mediante constraint PostgreSQL `EXCLUDE USING gist` sobre `(recurso_id WITH =, daterange(fecha_inicio, fecha_fin, '[)') WITH &&) WHERE (ocupa_cupo)`. Lock de serialización: `bloquear_recurso(empresa_id, recurso_id)`.
   3. `bajo_demanda` (tours/experiencias sin límite físico estricto): no bloquea inventario previo.
 - **Sincronización de `ReservaOcupacion.ocupa_cupo`**:
   `Reserva.save()` propaga automáticamente `ocupa_cupo = (estado in ESTADOS_QUE_OCUPAN_CUPO)` a sus `ocupaciones` únicamente cuando la reserva cruza la frontera de ocupación (usando `_estado_original`).
@@ -301,6 +311,20 @@ Con la expansión multi-servicio y paquetes turísticos:
   - `PaqueteServicio.clean()` permite empresas distintas dentro de la misma sede. Los paquetes cruza-empresa usan `Orden` (ver abajo); los mono-empresa conservan su flujo de reserva.
   - Al pagar la reserva de un paquete, `reservar_cupo_al_confirmar()` dentro de `aplicar_pago_exitoso` valida y crea un `ReservaPaqueteComponente(estado_cupo=OK)` por cada componente no removido, y crea las `ReservaOcupacion` correspondientes para hospedaje. Si algún componente no tiene cupo, lanza `SinCupoError`, la transacción hace rollback y se emite reembolso automático 100%.
   - Al cancelar la reserva, `Reserva.save()` sincroniza `componentes` a `LIBERADO` y libera las ocupaciones.
+- **Salidas en varios días**: `PaqueteServicio.salidas` (default 1) repite una actividad en días
+  seguidos desde `dia_estancia` (día 2 con 4 salidas = días 2 a 5). Solo en paquetes de una empresa
+  y dentro de la estancia (`paquete_reglas`). Al confirmar el pago, `reservar_cupo_al_confirmar`
+  valida cada día (locks en orden de fecha) y crea un `ReservaSalida` por día; si falta cupo en
+  cualquiera, el rollback y el reembolso 100 % de siempre. El cupo cuenta las salidas por su
+  fecha (`obtener_contexto_cupo`/`_rango`) y **no** cuenta por `Reserva.fecha` a una reserva con
+  salidas, para no contarla dos veces. La panga y el capitán se asignan en la reserva (Agenda) y
+  valen para todos sus días: la regla "una panga, una salida por día" revisa cada día de mar
+  (`Reserva._fechas_de_viaje`). El hospedaje elige cuántas habitaciones hacen falta
+  (`habitaciones_necesarias`) y las reasigna el inline de ocupaciones del admin.
+  Al crear o reprogramar una reserva pagada desde el admin, `Reserva.save()` toma los
+  candados de mar en orden de fecha, revalida el cupo y sincroniza las salidas dentro
+  de la misma transacción. La validación de panga y capitán usa las fechas nuevas
+  del paquete antes de que se guarden las filas.
 - **Marketplace dinámico en el checkout**:
   - Rutas de API operan bajo `/api/<empresa_slug>/...`.
   - El frontend resuelve dinámicamente la empresa del producto (`paquete.empresa_lider_slug` o `servicio.empresa_slug`), de modo que `crear-pago` cobra directo en la cuenta de Stripe de dicha empresa proveedora (`pago.publishable_key`).
@@ -447,6 +471,15 @@ Contrato y reglas de producto: [spec de checkout unificado](../docs/superpowers/
   `crear-pago` de una reserva responde 400 si se solicita `forma_pago=anticipo`
   cuando no aplica; las órdenes se crean con `forma_pago=completo`. Para indicar
   pago completo se usa `permite_anticipo=False`, no `porcentaje_anticipo=100`.
+- **Precio por persona**: `Paquete.precio_por_persona` (default `False`). Apagado,
+  `precio_ancla` es un total fijo. Encendido, `precio_ancla` y `precio_ancla_usd` son los
+  de UNA persona y el total es `ancla × personas del pedido` (`Paquete.precio_total_en`), donde
+  las personas del pedido son el MAYOR número entre sus servicios (`Reserva.personas_del_pedido`;
+  en una orden, el mayor entre sus reservas). La actividad (`por_recurso_dia`) lleva a todas las
+  personas; el hospedaje y el traslado pueden llevar menos y el precio no baja por eso (lo exigen
+  `_derivar_de_paquete` y `CrearOrdenView`). En una orden cruza-empresa el transporte cobra su
+  tarifa (según sus pasajeros) y la líder el residuo de `ancla × personas`. `validar_configuracion`
+  revisa el ancla contra la tarifa de transporte para cada grupo de 1 a `personas_incluidas`.
 - **Configuración**: cada `PaqueteServicio` fija `dia_estancia` (día 1 = inicio),
   `noches` solo para hospedaje y `personas_incluidas` para ese servicio. El cliente
   puede usar menos lugares sin reducir el precio ancla. Las reglas de

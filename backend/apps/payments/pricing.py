@@ -118,7 +118,7 @@ def precio_paquete_total(
     """Precio final de un paquete. None si el paquete no tiene precio en `moneda`.
 
     Fórmula:
-        paquete.precio_en(moneda)                                              # el ancla
+        paquete.precio_total_en(moneda, personas)   # el ancla (× personas si precio_por_persona)
       + Σ  sp.precio_en(moneda) de cada ServicioPersonalizacion (obligatorio o preseleccionado)
            de los servicios componentes, con activo=True
       + Σ  sp.precio_en(moneda) de las ServicioPersonalizacion OPCIONALES que el cliente marcó
@@ -126,8 +126,8 @@ def precio_paquete_total(
     Cada personalización por persona se multiplica por las personas de su servicio.
     Piso 0. Cuantizado a centavos, ROUND_HALF_UP.
     """
-    precio_ancla = paquete.precio_en(moneda)
-    if precio_ancla is None:
+    base = paquete.precio_total_en(moneda, personas)
+    if base is None:
         return None
 
     extras_map: dict[int, int] = {}
@@ -141,7 +141,7 @@ def precio_paquete_total(
                 else:
                     extras_map[item] = 1
 
-    total = Decimal(precio_ancla)
+    total = base
     vistos = set()
     for ps in paquete.servicios_asociados.filter(servicio__activo=True).select_related('servicio'):
         personas_del_servicio = (personas_por_servicio or {}).get(ps.servicio_id, personas)

@@ -307,6 +307,16 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'personas_por_servicio': 'Indica cuántas personas van a cada servicio del paquete.',
             })
+        if componentes and componentes[0].paquete.precio_por_persona:
+            total_personas = max(personas.values())
+            if any(
+                personas[str(ps.servicio_id)] != total_personas
+                for ps in componentes if ps.servicio.estrategia_cupo == 'por_recurso_dia'
+            ):
+                raise serializers.ValidationError({
+                    'personas_por_servicio': 'En este paquete la actividad va con todas las personas; '
+                                             'hospedaje y traslado pueden llevar menos.',
+                })
         for clave, ps in esperadas.items():
             if personas[clave] > ps.personas_incluidas:
                 raise serializers.ValidationError({
@@ -316,9 +326,9 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
                 })
             if ps.servicio.estrategia_cupo == 'por_noche':
                 habitaciones = ps.servicio.recursos.filter(activo=True)
-                if habitaciones.exists() and personas[clave] > max(r.capacidad_maxima for r in habitaciones):
+                if habitaciones.exists() and personas[clave] > sum(r.capacidad_maxima for r in habitaciones):
                     raise serializers.ValidationError({
-                        'personas_por_servicio': f'Ninguna habitación de "{ps.servicio.nombre}" admite {personas[clave]} personas.',
+                        'personas_por_servicio': f'Las habitaciones de "{ps.servicio.nombre}" no alcanzan para {personas[clave]} personas.',
                     })
 
         # El motor de cupo cuenta `numero_personas` (las del componente principal) para todas las
@@ -332,7 +342,8 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             })
 
         calendario = [
-            ComponenteCalendario(ps.dia_estancia, ps.servicio.estrategia_cupo, ps.noches) for ps in componentes
+            ComponenteCalendario(ps.dia_estancia, ps.servicio.estrategia_cupo, ps.noches, ps.salidas)
+            for ps in componentes
         ]
         principal = next(
             (ps for ps in componentes if ps.servicio.estrategia_cupo == 'por_recurso_dia'),

@@ -71,7 +71,7 @@ class CrearPagoView(APIView):
 
         detalle_a_congelar = None
         if reserva.paquete_id:
-            precio_base_servicio = reserva.paquete.precio_en(reserva.moneda)
+            precio_base_servicio = reserva.paquete.precio_total_en(reserva.moneda, reserva.personas_del_pedido)
             if precio_base_servicio is None:
                 return Response({'detail': f'El paquete no tiene precio en {reserva.moneda}.'}, status=503)
             porcentaje = reserva.paquete.porcentaje_anticipo
@@ -535,14 +535,14 @@ class CrearOrdenView(APIView):
             filas_ps = {
                 fila['servicio_id']: fila
                 for fila in paquete.servicios_asociados.order_by('orden').values(
-                    'servicio_id', 'dia_estancia', 'noches', 'personas_incluidas',
+                    'servicio_id', 'dia_estancia', 'noches', 'personas_incluidas', 'salidas',
                 )
             }
         servicios = [s for s in servicios if s.id in filas_ps]
         calendario = [
             ComponenteCalendario(
                 dia_estancia=filas_ps[s.id]['dia_estancia'], estrategia_cupo=s.estrategia_cupo,
-                noches=filas_ps[s.id]['noches'],
+                noches=filas_ps[s.id]['noches'], salidas=filas_ps[s.id]['salidas'],
             )
             for s in servicios
         ]
@@ -551,7 +551,7 @@ class CrearOrdenView(APIView):
             componentes=[
                 componente_desde(
                     s, noches=filas_ps[s.id]['noches'], dia_estancia=filas_ps[s.id]['dia_estancia'],
-                    personas_incluidas=filas_ps[s.id]['personas_incluidas'],
+                    personas_incluidas=filas_ps[s.id]['personas_incluidas'], salidas=filas_ps[s.id]['salidas'],
                 )
                 for s in servicios
             ],
@@ -630,6 +630,7 @@ class CrearOrdenView(APIView):
                         orden.save()
 
                 reservas_resultado = []
+                personas_pedido = []  # (servicio, personas) de cada componente
                 for servicio in servicios:
                     empresa = servicio.empresa
                     es_lider = (empresa.id == paquete.empresa_lider_id)
@@ -644,6 +645,7 @@ class CrearOrdenView(APIView):
                         raise DjangoValidationError({
                             'numero_personas': f'"{servicio.nombre}" incluye {ps["personas_incluidas"]} lugar(es) en este paquete.',
                         })
+                    personas_pedido.append((servicio, personas))
                     hora = comp_d.get('hora') or request.data.get('hora', '07:00:00')
 
                     with scope.con_empresa(empresa):
@@ -719,6 +721,14 @@ class CrearOrdenView(APIView):
                             'servicio': servicio.slug,
                         })
 
+                if paquete.precio_por_persona:
+                    total_personas = max(p for _, p in personas_pedido)
+                    if any(sv.estrategia_cupo == 'por_recurso_dia' and p != total_personas for sv, p in personas_pedido):
+                        raise DjangoValidationError({
+                            'numero_personas': 'En este paquete la actividad va con todas las personas; '
+                                               'hospedaje y traslado pueden llevar menos.',
+                        })
+
             return Response(
                 {
                     'orden_id': orden.id,
@@ -766,18 +776,21 @@ class CrearPagoOrdenView(APIView):
             return Response({'detail': f'La orden ya está {orden.estado}.'}, status=409)
 
         with scope.con_empresa(orden.empresa_lider):
-            precio_paquete = orden.paquete.precio_en(orden.moneda)
-        if precio_paquete is None:
+            paquete = orden.paquete
+            ancla = paquete.precio_en(orden.moneda)
+        if ancla is None:
             return Response({'detail': f'El paquete no tiene precio en {orden.moneda}.'}, status=400)
 
         componentes = []
         extras_por_empresa = {}
         por_congelar = []
+        personas_paquete = 1
         for fila in reservas_de_orden(orden.id):
             empresa = Empresa.objects.get(pk=fila['empresa_id'])
             es_lider = (empresa.id == orden.empresa_lider_id)
             with scope.con_empresa(empresa):
                 reserva = Reserva.objects.select_related('servicio', 'paquete', 'empresa').get(pk=fila['reserva_id'])
+                personas_paquete = max(personas_paquete, reserva.numero_personas)
                 monto_fijo = None
                 if not es_lider and reserva.servicio and reserva.servicio.tipo_servicio == 'transporte':
                     detalle = DetalleTransporte.objects.filter(reserva=reserva).first()
@@ -802,6 +815,8 @@ class CrearPagoOrdenView(APIView):
             componentes.append({'empresa_id': empresa.id, 'es_lider': es_lider, 'monto_fijo': monto_fijo})
             extras_por_empresa[empresa.id] = extras_por_empresa.get(empresa.id, Decimal('0.00')) + Decimal(cargo)
             por_congelar.append((empresa, a_borrar, a_congelar))
+
+        precio_paquete = paquete.precio_total_en(orden.moneda, personas_paquete)
 
         try:
             reparto = monto_por_empresa(

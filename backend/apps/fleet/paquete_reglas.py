@@ -19,6 +19,7 @@ class Componente:
     personas_incluidas: int
     # None = no se valida aquí (el hospedaje depende de las habitaciones reales).
     tope_personas: int | None
+    salidas: int = 1
 
 
 def hay_conflicto_anticipo(*, permite_anticipo: bool, empresas_ids: set[int]) -> bool:
@@ -50,6 +51,11 @@ def errores_de_paquete(*, permite_anticipo: bool, componentes: list[Componente])
         elif c.noches is not None:
             errores.append(f'"{c.servicio_nombre}": las noches solo aplican al hospedaje.')
 
+        if c.salidas < 1:
+            errores.append(f'"{c.servicio_nombre}": las salidas deben ser al menos 1.')
+        elif c.salidas > 1 and c.estrategia_cupo != POR_RECURSO_DIA:
+            errores.append(f'"{c.servicio_nombre}": las salidas solo aplican a actividades.')
+
         if c.dia_estancia < 1:
             errores.append(f'"{c.servicio_nombre}": el día del paquete debe ser 1 o mayor.')
 
@@ -65,18 +71,33 @@ def errores_de_paquete(*, permite_anticipo: bool, componentes: list[Componente])
     for c in componentes:
         if c.estrategia_cupo == POR_NOCHE or c.dia_estancia < 1:
             continue
-        if noches_paquete is None and c.dia_estancia != 1:
+        ultimo_dia = c.dia_estancia + max(1, c.salidas) - 1
+        if noches_paquete is None and ultimo_dia != 1:
             errores.append(
                 f'"{c.servicio_nombre}": sin hospedaje el paquete dura un día; el servicio debe caer el día 1.'
             )
-        elif noches_paquete is not None and c.dia_estancia > noches_paquete:
+        elif noches_paquete is not None and ultimo_dia > noches_paquete:
             errores.append(
-                f'"{c.servicio_nombre}": el día {c.dia_estancia} cae fuera de la estancia '
+                f'"{c.servicio_nombre}": el día {ultimo_dia} cae fuera de la estancia '
                 f'({noches_paquete} noche(s); el último día válido es el {noches_paquete}).'
             )
 
-    dias_actividad = {c.dia_estancia for c in componentes if c.estrategia_cupo == POR_RECURSO_DIA}
+    dias_actividad = {
+        (c.dia_estancia, max(1, c.salidas)) for c in componentes if c.estrategia_cupo == POR_RECURSO_DIA
+    }
     if len(dias_actividad) > 1:
-        errores.append('Las actividades del paquete deben ocurrir el mismo día de la estancia.')
+        errores.append(
+            'Las actividades del paquete deben ocurrir los mismos días de la estancia '
+            '(mismo día de inicio y mismo número de salidas).'
+        )
+
+    actividades = [c for c in componentes if c.estrategia_cupo == POR_RECURSO_DIA]
+    if len(actividades) > 1 and any(c.salidas > 1 for c in actividades):
+        errores.append(
+            'Una actividad de varios días no puede acompañarse de otra actividad de mar en el mismo paquete.'
+        )
+
+    if len(empresas) > 1 and any(c.salidas > 1 for c in componentes):
+        errores.append('Una actividad de varios días solo se admite en un paquete de una sola empresa.')
 
     return errores

@@ -24,18 +24,26 @@ class ContextoCupoRango:
 
 def obtener_contexto_cupo(fecha: date, empresa, excluir_pk: int | None = None) -> ContextoCupo:
     """Obtiene el contexto de cupo para un día resolviendo reservas y flota de La Paz."""
-    from apps.bookings.models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, CupoDiario, Reserva
+    from apps.bookings.models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, CupoDiario, Reserva, ReservaSalida
     from apps.fleet.models import capacidades_disponibles
 
     ocupadas = Reserva.objects.filter(
         fecha=fecha,
         estado__in=ESTADOS_QUE_OCUPAN_CUPO,
         empresa=empresa,
+        salidas__isnull=True,
+    )
+    salidas = ReservaSalida.objects.filter(
+        fecha=fecha, empresa=empresa, reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
     )
     if excluir_pk is not None:
         ocupadas = ocupadas.exclude(pk=excluir_pk)
+        salidas = salidas.exclude(reserva_id=excluir_pk)
 
-    grupos = list(ocupadas.values_list('numero_personas', flat=True))
+    grupos = [
+        *ocupadas.values_list('numero_personas', flat=True),
+        *salidas.values_list('reserva__numero_personas', flat=True),
+    ]
     capacidades = capacidades_disponibles(fecha, empresa)
 
     override = CupoDiario.objects.filter(fecha=fecha, empresa=empresa).first()
@@ -46,17 +54,23 @@ def obtener_contexto_cupo(fecha: date, empresa, excluir_pk: int | None = None) -
 
 def obtener_contexto_rango(desde: date, hasta: date, empresa) -> ContextoCupoRango:
     """Obtiene el contexto para un rango de fechas en 4 consultas optimizadas."""
-    from apps.bookings.models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, CupoDiario, Reserva
+    from apps.bookings.models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, CupoDiario, Reserva, ReservaSalida
     from apps.fleet.models import capacidades_por_fecha
 
     fechas = [desde + timedelta(days=i) for i in range((hasta - desde).days + 1)]
 
     grupos_por_fecha = defaultdict(list)
-    for fecha, personas_de_esa in Reserva.objects.filter(
+    reservas = Reserva.objects.filter(
         fecha__range=(desde, hasta),
         estado__in=ESTADOS_QUE_OCUPAN_CUPO,
         empresa=empresa,
-    ).values_list('fecha', 'numero_personas'):
+        salidas__isnull=True,
+    ).order_by().values_list('fecha', 'numero_personas')
+    salidas = ReservaSalida.objects.filter(
+        fecha__range=(desde, hasta), empresa=empresa, reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+    ).order_by().values_list('fecha', 'reserva__numero_personas')
+    # UNION ALL conserva grupos idénticos y mantiene las cuatro consultas del calendario.
+    for fecha, personas_de_esa in reservas.union(salidas, all=True):
         grupos_por_fecha[fecha].append(personas_de_esa)
 
     topes = dict(
@@ -123,7 +137,7 @@ def evaluar_disponibilidad_hospedaje(
     personas: int,
     empresa,
     servicio=None,
-    cantidad_recursos: int = 1,
+    cantidad_recursos: int | None = None,
     excluir_pk: int | None = None,
 ) -> bool:
     """Consulta si hay recursos suficientes disponibles para una estadía multidía."""
@@ -136,6 +150,11 @@ def evaluar_disponibilidad_hospedaje(
         servicio=servicio,
         excluir_pk=excluir_pk,
     )
+    if cantidad_recursos is None:
+        from .nucleo import habitaciones_necesarias, recursos_disponibles_en_rango
+
+        libres = recursos_disponibles_en_rango(recursos_con_ocupaciones, check_in, check_out)
+        cantidad_recursos = habitaciones_necesarias([cap for _, cap in libres], personas) or 1
     demanda = DemandaCupo(
         fecha=check_in,
         fecha_fin=check_out,

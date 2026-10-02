@@ -392,6 +392,50 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(reserva_paquete.precio_total, Decimal('10000.00'))
 
     @mock.patch.object(StripeClient, 'payment_intents')
+    def test_crear_pago_paquete_por_persona_cobra_ancla_por_personas(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        paquete = Paquete.objects.create(
+            sede=self.empresa.sede, empresa_lider=self.empresa, nombre='Paquete Por Persona',
+            slug='paquete-por-persona', precio_ancla=Decimal('45000.00'),
+            precio_por_persona=True, permite_anticipo=False,
+        )
+        reserva_paquete = Reserva.objects.create(
+            empresa=self.empresa, paquete=paquete, fecha=date(2026, 10, 1), hora=time(7, 0),
+            numero_personas=3, nombre_cliente='Ana Gomez', telefono_cliente='1234567890',
+            correo_cliente='ana@test.com', moneda='MXN', estado=Reserva.Estado.PENDIENTE_PAGO,
+            checkout_id=uuid.uuid4(),
+        )
+        url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva_paquete.pk})
+        resp = self.client.post(url, {
+            'forma_pago': 'completo', 'checkout_id': str(reserva_paquete.checkout_id),
+        }, content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['monto_a_cobrar'], '135000.00')
+        reserva_paquete.refresh_from_db()
+        self.assertEqual(reserva_paquete.precio_total, Decimal('135000.00'))
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_crear_pago_paquete_por_persona_cobra_por_el_mayor_numero_de_personas(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        paquete = Paquete.objects.create(
+            sede=self.empresa.sede, empresa_lider=self.empresa, nombre='Paquete Por Persona 2',
+            slug='paquete-por-persona-2', precio_ancla=Decimal('45000.00'),
+            precio_por_persona=True, permite_anticipo=False,
+        )
+        reserva_paquete = Reserva.objects.create(
+            empresa=self.empresa, paquete=paquete, fecha=date(2026, 10, 1), hora=time(7, 0),
+            numero_personas=2, personas_por_servicio={'1': 4, '2': 2}, nombre_cliente='Ana Gomez',
+            telefono_cliente='1234567890', correo_cliente='ana@test.com', moneda='MXN',
+            estado=Reserva.Estado.PENDIENTE_PAGO, checkout_id=uuid.uuid4(),
+        )
+        url = reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva_paquete.pk})
+        resp = self.client.post(url, {
+            'forma_pago': 'completo', 'checkout_id': str(reserva_paquete.checkout_id),
+        }, content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['monto_a_cobrar'], '180000.00')
+
+    @mock.patch.object(StripeClient, 'payment_intents')
     def test_crear_pago_paquete_no_suma_extras_legacy(self, payment_intents):
         payment_intents.create.return_value = intent_falso()
         paquete = Paquete.objects.create(
@@ -1551,6 +1595,36 @@ class NotificarReservaPagadaOnCommitTests(TransactionTestCase):
         # alcance_actual es ('empresa', id), no el id solo (ver apps.tenancy.scope).
         self.assertEqual(capturado['alcance'], ('empresa', self.empresa.pk))
         self.assertEqual(capturado['reserva_id'], reserva.pk)
+
+    @mock.patch('apps.payments.services.notificar_reserva_pagada')
+    def test_deadlock_reintenta_una_vez_la_transaccion_completa(self, mock_notificar):
+        from django.db.utils import OperationalError
+
+        reserva = self._crear_reserva()
+        intent = {
+            'id': 'pi_deadlock', 'amount_received': 157500, 'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+        original = Reserva.full_clean
+        intentos = []
+
+        def limpiar_tras_deadlock(instancia, *args, **kwargs):
+            intentos.append(instancia.pk)
+            if len(intentos) == 1:
+                causa = RuntimeError('deadlock detected')
+                causa.sqlstate = '40P01'
+                raise OperationalError('deadlock detected') from causa
+            return original(instancia, *args, **kwargs)
+
+        with scope.con_empresa(self.empresa):
+            with mock.patch.object(Reserva, 'full_clean', limpiar_tras_deadlock):
+                resultado = aplicar_pago_exitoso(intent, self.empresa)
+            reserva.refresh_from_db()
+        self.assertEqual(resultado, APLICADO)
+        self.assertEqual(intentos, [reserva.pk, reserva.pk])
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+        mock_notificar.assert_called_once()
 
 
 class ReembolsarTests(TestCase):

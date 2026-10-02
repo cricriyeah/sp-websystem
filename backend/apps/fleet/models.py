@@ -500,7 +500,7 @@ class ServicioPersonalizacion(models.Model):
 TOPE_PERSONAS_ACTIVIDAD = 5  # mismo valor que bookings.MAX_PERSONAS; fleet no importa bookings
 
 
-def componente_desde(servicio, *, noches, dia_estancia, personas_incluidas):
+def componente_desde(servicio, *, noches, dia_estancia, personas_incluidas, salidas=1):
     """Vista de un servicio + su configuración en el paquete para `paquete_reglas`."""
     if servicio.estrategia_cupo == 'por_noche':
         tope = None  # el hospedaje depende de las habitaciones reales
@@ -511,14 +511,33 @@ def componente_desde(servicio, *, noches, dia_estancia, personas_incluidas):
     return Componente(
         servicio_nombre=servicio.nombre, empresa_id=servicio.empresa_id,
         estrategia_cupo=servicio.estrategia_cupo, noches=noches, dia_estancia=dia_estancia,
-        personas_incluidas=personas_incluidas, tope_personas=tope,
+        personas_incluidas=personas_incluidas, tope_personas=tope, salidas=salidas,
     )
 
 
 def componente_de(ps):
     return componente_desde(
-        ps.servicio, noches=ps.noches, dia_estancia=ps.dia_estancia, personas_incluidas=ps.personas_incluidas,
+        ps.servicio, noches=ps.noches, dia_estancia=ps.dia_estancia,
+        personas_incluidas=ps.personas_incluidas, salidas=ps.salidas,
     )
+
+
+def _errores_por_persona(paquete, tarifas, personas):
+    """Con precio por persona el total crece con el grupo, igual que la tarifa por rangos:
+    se revisa cada tamaño de 1 a `personas`."""
+    errores = {}
+    for n in range(1, personas + 1):
+        for campo, moneda, ancla in (
+            ('precio_ancla', 'MXN', paquete.precio_ancla),
+            ('precio_ancla_usd', 'USD', paquete.precio_ancla_usd),
+        ):
+            peor = peor_tarifa(tarifas, personas=n, moneda=moneda)
+            if campo not in errores and peor is not None and ancla is not None and ancla * n < peor:
+                errores[campo] = (
+                    f'El precio por persona ({ancla}) para {n} persona(s) es menor que la '
+                    f'tarifa de transporte ({peor}).'
+                )
+    return errores
 
 
 def errores_de_precio_contra_transporte(paquete, pares):
@@ -529,6 +548,9 @@ def errores_de_precio_contra_transporte(paquete, pares):
         if servicio.tipo_servicio != 'transporte':
             continue
         tarifas = list(servicio.empresa.tarifas_transporte.filter(activo=True))
+        if paquete.precio_por_persona:
+            errores.update(_errores_por_persona(paquete, tarifas, personas))
+            continue
         peor_mxn = peor_tarifa(tarifas, personas=personas, moneda='MXN')
         if peor_mxn is not None and paquete.precio_ancla is not None and paquete.precio_ancla < peor_mxn:
             errores['precio_ancla'] = (
@@ -562,6 +584,11 @@ class Paquete(models.Model):
     precio_ancla_usd = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
         help_text='Precio ancla del paquete en dólares (USD). Opcional.'
+    )
+    precio_por_persona = models.BooleanField(
+        default=False,
+        help_text='Si está activo, el precio ancla (MXN y USD) es el de UNA persona y el total es '
+                  'precio × personas. Apagado, el precio ancla es un total fijo del paquete.',
     )
     regla_precio = models.CharField(max_length=50, default='precio_ancla')
     permite_anticipo = models.BooleanField(
@@ -631,7 +658,8 @@ class Paquete(models.Model):
         """Componentes activos, en orden, listos para `calendario_paquete`."""
         return [
             ComponenteCalendario(
-                dia_estancia=ps.dia_estancia, estrategia_cupo=ps.servicio.estrategia_cupo, noches=ps.noches,
+                dia_estancia=ps.dia_estancia, estrategia_cupo=ps.servicio.estrategia_cupo,
+                noches=ps.noches, salidas=ps.salidas,
             )
             for ps in self.servicios_asociados.filter(servicio__activo=True)
             .select_related('servicio').order_by('orden')
@@ -651,6 +679,16 @@ class Paquete(models.Model):
     def precio_en(self, moneda):
         """Precio ancla en la moneda pedida, o None si no está configurado."""
         return self.precio_ancla if (moneda or 'MXN').upper() == 'MXN' else self.precio_ancla_usd
+
+    def precio_total_en(self, moneda, personas=1):
+        """Precio base del paquete para `personas` en `moneda`, o None si no está configurado.
+        Fijo: el ancla tal cual. Por persona: ancla × personas."""
+        ancla = self.precio_en(moneda)
+        if ancla is None:
+            return None
+        if self.precio_por_persona:
+            return (Decimal(ancla) * int(personas)).quantize(Decimal('0.01'))
+        return Decimal(ancla)
 
 
 class PaqueteServicio(models.Model):
@@ -676,6 +714,11 @@ class PaqueteServicio(models.Model):
         default=2,
         help_text='Lugares de este servicio que incluye el paquete. El cliente puede usar menos '
                   'sin que cambie el precio.',
+    )
+    salidas = models.PositiveSmallIntegerField(
+        default=1, validators=[MinValueValidator(1)],
+        help_text='Solo actividades: cuántos días SEGUIDOS se repite, empezando en el día indicado '
+                  'arriba. Ejemplo: día 2 con 4 salidas = días 2, 3, 4 y 5. Debe caber dentro de la estancia.',
     )
 
     class Meta:

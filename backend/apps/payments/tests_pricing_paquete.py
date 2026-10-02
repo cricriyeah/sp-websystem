@@ -57,6 +57,15 @@ class CalcularPrecioPaqueteIntegrationTests(OperadorTestCase):
             paquete=self.paquete, servicio=self.servicio_snack, orden=2,
         )
 
+    def test_por_persona_multiplica_el_ancla_por_las_personas(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        self.paquete.refresh_from_db()
+        self.assertEqual(precio_paquete_total(self.paquete, personas=3, moneda='MXN'), Decimal('19500.00'))
+        self.assertEqual(precio_paquete_total(self.paquete, personas=2, moneda='USD'), Decimal('760.00'))
+
+    def test_paquete_fijo_ignora_las_personas(self):
+        self.assertEqual(precio_paquete_total(self.paquete, personas=4, moneda='MXN'), Decimal('6500.00'))
+
     def test_calcular_precio_fijo_mxn_y_usd(self):
         precio_mxn = calcular_precio_paquete(self.paquete, moneda='MXN')
         self.assertEqual(precio_mxn, Decimal('6500.00'))

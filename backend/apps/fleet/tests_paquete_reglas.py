@@ -141,7 +141,54 @@ class ReglasDePaqueteTests(SimpleTestCase):
     def test_las_actividades_comparten_dia(self):
         hotel = _c('Hotel', estrategia='por_noche', noches=3, dia=1, tope=None)
         errores = self.errores([_c('A', dia=1), _c('B', dia=2), hotel])
-        self.assertTrue(any('mismo día' in e for e in errores))
+        self.assertTrue(any('mismos días' in e for e in errores))
+
+    def _actividad(self, dia, salidas, empresa_id=1):
+        return Componente(
+            servicio_nombre='Pesca', empresa_id=empresa_id, estrategia_cupo='por_recurso_dia', noches=None,
+            dia_estancia=dia, personas_incluidas=2, tope_personas=3, salidas=salidas,
+        )
+
+    def _hotel(self, noches):
+        return Componente(
+            servicio_nombre='Hotel', empresa_id=1, estrategia_cupo='por_noche', noches=noches,
+            dia_estancia=1, personas_incluidas=2, tope_personas=None,
+        )
+
+    def test_salidas_seguidas_dentro_de_la_estancia_son_validas(self):
+        self.assertEqual(self.errores([self._hotel(5), self._actividad(2, 4)]), [])
+        self.assertEqual(self.errores([self._hotel(7), self._actividad(2, 6)]), [])
+
+    def test_las_salidas_no_pueden_pasar_de_la_estancia(self):
+        self.assertTrue(any('fuera de la estancia' in e for e in self.errores([self._hotel(5), self._actividad(2, 5)])))
+
+    def test_sin_hospedaje_no_hay_salidas_multiples(self):
+        self.assertTrue(any('dura un día' in e for e in self.errores([self._actividad(1, 3)])))
+
+    def test_salidas_solo_para_actividades(self):
+        hotel = Componente(
+            servicio_nombre='Hotel', empresa_id=1, estrategia_cupo='por_noche', noches=3,
+            dia_estancia=1, personas_incluidas=2, tope_personas=None, salidas=2,
+        )
+        self.assertTrue(any('solo aplican a actividades' in e for e in self.errores([hotel])))
+
+    def test_las_actividades_deben_compartir_los_mismos_dias(self):
+        errores = self.errores([self._hotel(5), self._actividad(2, 4), self._actividad(2, 3)])
+        self.assertTrue(any('mismos días' in e for e in errores))
+
+    def test_actividad_multidia_no_puede_compartir_paquete_con_otra_actividad_de_mar(self):
+        errores = self.errores([self._hotel(5), self._actividad(2, 4), self._actividad(2, 4)])
+        self.assertIn(
+            'Una actividad de varios días no puede acompañarse de otra actividad de mar en el mismo paquete.',
+            errores,
+        )
+
+    def test_salidas_multiples_no_se_admiten_entre_dos_empresas(self):
+        traslado = Componente(
+            servicio_nombre='Traslado', empresa_id=2, estrategia_cupo='bajo_demanda', noches=None,
+            dia_estancia=1, personas_incluidas=2, tope_personas=None,
+        )
+        self.assertTrue(any('una sola empresa' in e for e in self.errores([self._actividad(1, 2), traslado])))
 
     def test_personas_incluidas_dentro_del_tope(self):
         self.assertTrue(any('personas' in e for e in self.errores([_c(personas=0)])))

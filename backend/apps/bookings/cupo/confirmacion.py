@@ -1,8 +1,9 @@
 """Lógica de confirmación y asignación de cupo al confirmar el pago de una reserva."""
+from apps.fleet.calendario_paquete import fechas_de_componente
 from apps.bookings.cupo import SinCupoError
 from apps.bookings.cupo.adaptador import obtener_recursos_con_ocupaciones
 from apps.bookings.cupo.candado import bloquear_cupo, bloquear_recurso
-from apps.bookings.cupo.nucleo import elegir_recursos, recursos_disponibles_en_rango
+from apps.bookings.cupo.nucleo import elegir_recursos, habitaciones_necesarias, recursos_disponibles_en_rango
 from apps.bookings.models import (
     ReservaOcupacion,
     ReservaPaqueteComponente,
@@ -34,7 +35,8 @@ def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False, *, desde=Non
         excluir_pk=reserva.pk,
     )
     libres = recursos_disponibles_en_rango(recursos_con_ocupaciones, desde, hasta)
-    elegidos = elegir_recursos(libres, personas=personas, cantidad=1)
+    cantidad = habitaciones_necesarias([cap for _, cap in libres], personas)
+    elegidos = elegir_recursos(libres, personas=personas, cantidad=cantidad) if cantidad else None
     if not elegidos:
         msg = (
             f'No hay habitación disponible para el componente {servicio.nombre}.'
@@ -99,22 +101,39 @@ def reservar_cupo_al_confirmar(reserva) -> None:
 
     # Caso B: paquete con componentes
     if reserva.paquete is not None and reserva.orden_id is None:
-        for ps in reserva.paquete.servicios_asociados.select_related('servicio').order_by('orden'):
+        componentes = list(reserva.paquete.servicios_asociados.select_related('servicio').order_by('orden'))
+        locks = [
+            (dia, ps.servicio_id)
+            for ps in componentes if ps.servicio.estrategia_cupo == 'por_recurso_dia'
+            for dia in (
+                fechas_de_componente(reserva.fecha_inicio_paquete, ps.dia_estancia, ps.salidas)
+                if ps.salidas > 1 else [reserva.fecha]
+            )
+        ]
+        for dia, servicio_id in sorted(locks):
+            bloquear_cupo(reserva.empresa_id, dia, servicio_id=servicio_id)
+
+        for ps in componentes:
             servicio = ps.servicio
             estrategia = servicio.estrategia_cupo
 
             if estrategia == 'por_recurso_dia':
-                bloquear_cupo(reserva.empresa_id, reserva.fecha, servicio_id=servicio.pk)
-                motivo = evaluar_cupo(
-                    reserva.fecha,
-                    reserva.personas_de(servicio.pk),
-                    reserva.empresa,
-                    excluir_pk=reserva.pk,
-                    estrategia_cupo='por_recurso_dia',
-                    servicio_id=servicio.pk,
+                personas = reserva.personas_de(servicio.pk)
+                fechas = (
+                    sorted(fechas_de_componente(reserva.fecha_inicio_paquete, ps.dia_estancia, ps.salidas))
+                    if ps.salidas > 1 else [reserva.fecha]
                 )
-                if motivo:
-                    raise SinCupoError(f'No hay cupo disponible para el componente {servicio.nombre} ({motivo}).')
+                for dia in fechas:
+                    motivo = evaluar_cupo(
+                        dia, personas, reserva.empresa, excluir_pk=reserva.pk,
+                        estrategia_cupo='por_recurso_dia', servicio_id=servicio.pk,
+                    )
+                    if motivo:
+                        if ps.salidas > 1:
+                            raise SinCupoError(
+                                f'No hay cupo disponible para el componente {servicio.nombre} el {dia} ({motivo}).'
+                            )
+                        raise SinCupoError(f'No hay cupo disponible para el componente {servicio.nombre} ({motivo}).')
                 ReservaPaqueteComponente.objects.create(
                     reserva=reserva,
                     servicio=servicio,
@@ -140,6 +159,9 @@ def reservar_cupo_al_confirmar(reserva) -> None:
                     empresa=reserva.empresa,
                     estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
                 )
+        from apps.bookings.cupo.salidas import sincronizar_salidas
+
+        sincronizar_salidas(reserva)
         return
 
     # Caso C: servicio directo bajo_demanda (incluido transporte), pesca/paseo

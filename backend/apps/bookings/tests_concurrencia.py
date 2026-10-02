@@ -30,14 +30,15 @@ from unittest import mock, skipUnless
 from django.db import connection, connections
 from django.test import TransactionTestCase
 
-from apps.fleet.models import Recurso, Servicio
+from apps.fleet.models import Embarcacion, Paquete, PaqueteServicio, Recurso, Servicio
+from apps.bookings.cupo import confirmacion
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 from apps.testing import crear_flota, crear_servicio_pesca
 
 from stripe import StripeClient
 
-from .models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, Reserva, ReservaOcupacion
+from .models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, Reserva, ReservaOcupacion, ReservaSalida
 
 SOLO_POSTGRES = skipUnless(
     connection.vendor == 'postgresql',
@@ -359,4 +360,348 @@ class SobreventaHospedajeConcurrenteTests(TransactionTestCase):
             )
             self.assertTrue(perdedora.reembolsada)
             self.assertIn('habitación', perdedora.motivo_cancelacion.lower())
+
+
+@SOLO_POSTGRES
+class SobreventaSalidasConcurrenteTests(TransactionTestCase):
+    """Dos paquetes cruzan días de mar; una sola panga solo admite uno."""
+
+    def setUp(self):
+        self.empresa = _crear_empresa_de_prueba()
+        with scope.con_empresa(self.empresa):
+            Embarcacion.objects.create(
+                empresa=self.empresa, nombre='Panga única', clase=Embarcacion.Clase.CHICA,
+                capacidad_maxima=2,
+            )
+            pesca = Servicio.objects.create(
+                empresa=self.empresa, nombre='Pesca de cuatro días', slug='pesca-cuatro-dias',
+                tipo_servicio='pesca', estrategia_cupo='por_recurso_dia',
+                precio_base=Decimal('4500.00'),
+            )
+            hotel = Servicio.objects.create(
+                empresa=self.empresa, nombre='Hotel de la prueba', slug='hotel-concurrencia',
+                tipo_servicio='hospedaje', estrategia_cupo='por_noche',
+                estrategia_precio='por_noche', precio_base=Decimal('1000.00'),
+            )
+            # Dos habitaciones evitan que el hospedaje, en lugar de la panga,
+            # decida cuál pago se cancela.
+            for indice in (1, 2):
+                Recurso.objects.create(
+                    empresa=self.empresa, servicio=hotel,
+                    nombre=f'Habitación {indice}', capacidad_maxima=2,
+                )
+            paquete = Paquete.objects.create(
+                sede=self.empresa.sede, empresa_lider=self.empresa,
+                nombre='Mar en cuatro días', slug='mar-concurrente',
+                precio_ancla=Decimal('4500.00'),
+            )
+            PaqueteServicio.objects.create(
+                paquete=paquete, servicio=pesca, orden=1, dia_estancia=2,
+                salidas=4, personas_incluidas=2,
+            )
+            PaqueteServicio.objects.create(
+                paquete=paquete, servicio=hotel, orden=2, noches=5,
+                personas_incluidas=2,
+            )
+            self.pendientes = []
+            self.fechas_de_mar = []
+            for indice, nombre in enumerate(('Cliente Mar Uno', 'Cliente Mar Dos')):
+                inicio = date.today() + timedelta(days=20 + 2 * indice)
+                self.fechas_de_mar.append([inicio + timedelta(days=d) for d in (1, 2, 3, 4)])
+                reserva = Reserva(**_datos(
+                    self.empresa, paquete=paquete,
+                    fecha=inicio + timedelta(days=1), inicio_paquete=inicio,
+                    fecha_salida=inicio + timedelta(days=5),
+                    nombre_cliente=nombre, precio_total=Decimal('4500.00'),
+                    forma_pago=Reserva.FormaPago.COMPLETO,
+                ))
+                reserva.full_clean()
+                reserva.save()
+                self.pendientes.append(reserva)
+
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_dos_pagos_con_salidas_solapadas_no_sobrevenden_la_panga(self, refund):
+        import threading
+
+        from apps.bookings.cupo import salidas
+        from apps.payments.services import APLICADO, SIN_CUPO_REEMBOLSADO, aplicar_pago_exitoso
+
+        empresa_id = self.empresa.pk
+        arrancar = threading.Barrier(2)
+        antes_del_primer_lock = threading.Barrier(2)
+        paso_primer_lock = threading.local()
+        validar_real = salidas.validar_cupo_salidas_bajo_candado
+        resultados = [None, None]
+        errores = [None, None]
+
+        def validar_juntos(*args, **kwargs):
+            if not getattr(paso_primer_lock, 'listo', False):
+                paso_primer_lock.listo = True
+                antes_del_primer_lock.wait(timeout=10)
+            return validar_real(*args, **kwargs)
+
+        def pagar(indice):
+            try:
+                arrancar.wait(timeout=10)
+                empresa_del_hilo = Empresa.objects.get(pk=empresa_id)
+                with scope.con_empresa(empresa_del_hilo):
+                    resultados[indice] = aplicar_pago_exitoso(
+                        _intent_falso(self.pendientes[indice]), empresa_del_hilo,
+                    )
+            except Exception as exc:  # noqa: BLE001 — se re-lanza en el hilo principal
+                errores[indice] = exc
+            finally:
+                connections.close_all()
+
+        with mock.patch.object(salidas, 'validar_cupo_salidas_bajo_candado', side_effect=validar_juntos):
+            hilos = [threading.Thread(target=pagar, args=(i,)) for i in range(2)]
+            for hilo in hilos:
+                hilo.start()
+            for hilo in hilos:
+                hilo.join(timeout=30)
+
+        self.assertFalse(any(hilo.is_alive() for hilo in hilos), 'Un pago quedó bloqueado.')
+        for error in errores:
+            if error is not None:
+                raise error
+        self.assertEqual(sorted(resultados), sorted([APLICADO, SIN_CUPO_REEMBOLSADO]))
+
+        with scope.con_empresa(self.empresa):
+            estados = list(
+                Reserva.objects.filter(pk__in=[r.pk for r in self.pendientes])
+                .values_list('estado', flat=True)
+            )
+            self.assertEqual(sorted(estados), sorted([Reserva.Estado.PAGADA, Reserva.Estado.CANCELADA]))
+            ganadora = Reserva.objects.get(
+                pk__in=[r.pk for r in self.pendientes], estado=Reserva.Estado.PAGADA,
+            )
+            perdedora = Reserva.objects.get(
+                pk__in=[r.pk for r in self.pendientes], estado=Reserva.Estado.CANCELADA,
+            )
+            indice_ganador = next(
+                i for i, pendiente in enumerate(self.pendientes) if pendiente.pk == ganadora.pk
+            )
+            self.assertEqual(
+                list(ReservaSalida.objects.filter(reserva=ganadora).order_by('fecha')
+                     .values_list('fecha', flat=True)),
+                self.fechas_de_mar[indice_ganador],
+            )
+            self.assertFalse(ReservaSalida.objects.filter(reserva=perdedora).exists())
+            self.assertTrue(perdedora.reembolsada)
+            self.assertIn('cupo', perdedora.motivo_cancelacion.lower())
+        self.assertEqual(refund.create.call_count, 1)
+
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_paquete_de_un_dia_y_multidia_no_se_interbloquean(self, refund):
+        import threading
+
+        from apps.payments.services import APLICADO, SIN_CUPO_REEMBOLSADO, aplicar_pago_exitoso
+
+        with scope.con_empresa(self.empresa):
+            multidia = self.pendientes[0].paquete
+            pesca = multidia.servicios_asociados.get(servicio__estrategia_cupo='por_recurso_dia').servicio
+            hotel = multidia.servicios_asociados.get(servicio__estrategia_cupo='por_noche').servicio
+            un_dia = Paquete.objects.create(
+                sede=self.empresa.sede, empresa_lider=self.empresa,
+                nombre='Hotel primero', slug='hotel-primero', precio_ancla=Decimal('4500.00'),
+            )
+            PaqueteServicio.objects.create(
+                paquete=un_dia, servicio=hotel, orden=1, noches=5, personas_incluidas=2,
+            )
+            PaqueteServicio.objects.create(
+                paquete=un_dia, servicio=pesca, orden=2, dia_estancia=2, personas_incluidas=2,
+            )
+
+        for intento in range(5):
+            inicio = date.today() + timedelta(days=40 + 7 * intento)
+            with scope.con_empresa(self.empresa):
+                pendientes = []
+                for paquete, nombre in ((un_dia, 'Cliente Un Día'), (multidia, 'Cliente Varios Días')):
+                    reserva = Reserva(**_datos(
+                        self.empresa, paquete=paquete, fecha=inicio + timedelta(days=1),
+                        inicio_paquete=inicio, fecha_salida=inicio + timedelta(days=5),
+                        nombre_cliente=nombre, precio_total=Decimal('4500.00'),
+                        forma_pago=Reserva.FormaPago.COMPLETO,
+                    ))
+                    reserva.full_clean()
+                    reserva.save()
+                    pendientes.append(reserva)
+
+            empezar = threading.Barrier(2)
+            primer_lock = threading.Barrier(2)
+            visto = threading.local()
+            bloquear_real = confirmacion.bloquear_cupo
+            resultados = [None, None]
+            errores = [None, None]
+
+            def bloquear_juntos(*args, **kwargs):
+                if not getattr(visto, 'primero', False):
+                    visto.primero = True
+                    primer_lock.wait(timeout=10)
+                return bloquear_real(*args, **kwargs)
+
+            def pagar(indice):
+                try:
+                    empezar.wait(timeout=10)
+                    empresa = Empresa.objects.get(pk=self.empresa.pk)
+                    with scope.con_empresa(empresa):
+                        resultados[indice] = aplicar_pago_exitoso(_intent_falso(pendientes[indice]), empresa)
+                except Exception as exc:  # noqa: BLE001 — re-lanzar en el hilo principal
+                    errores[indice] = exc
+                finally:
+                    connections.close_all()
+
+            with mock.patch.object(confirmacion, 'bloquear_cupo', side_effect=bloquear_juntos):
+                hilos = [threading.Thread(target=pagar, args=(i,)) for i in range(2)]
+                for hilo in hilos:
+                    hilo.start()
+                for hilo in hilos:
+                    hilo.join(timeout=30)
+            self.assertFalse(any(hilo.is_alive() for hilo in hilos), f'Pago bloqueado en intento {intento + 1}.')
+            for error in errores:
+                if error is not None:
+                    raise error
+            self.assertEqual(sorted(resultados), sorted([APLICADO, SIN_CUPO_REEMBOLSADO]))
+        self.assertEqual(refund.create.call_count, 5)
+
+    def test_dos_altas_pagadas_del_admin_no_sobrevenden_salidas(self):
+        import threading
+
+        from django.core.exceptions import ValidationError
+
+        paquete_id = self.pendientes[0].paquete_id
+        inicio = date.today() + timedelta(days=90)
+        ambas_validadas = threading.Barrier(2)
+        resultados = [None, None]
+        errores = [None, None]
+
+        def crear(indice):
+            try:
+                empresa = Empresa.objects.get(pk=self.empresa.pk)
+                with scope.con_empresa(empresa):
+                    paquete = Paquete.objects.get(pk=paquete_id)
+                    reserva = Reserva(**_datos(
+                        empresa, paquete=paquete, fecha=inicio + timedelta(days=1),
+                        inicio_paquete=inicio, fecha_salida=inicio + timedelta(days=5),
+                        nombre_cliente=('Cliente Alta Uno', 'Cliente Alta Dos')[indice],
+                        estado=Reserva.Estado.PAGADA,
+                    ))
+                    reserva.full_clean()
+                    ambas_validadas.wait(timeout=10)
+                    try:
+                        reserva.save()
+                    except ValidationError:
+                        resultados[indice] = 'sin_cupo'
+                    else:
+                        resultados[indice] = 'pagada'
+            except Exception as exc:  # noqa: BLE001 — re-lanzar en el hilo principal
+                errores[indice] = exc
+            finally:
+                connections.close_all()
+
+        hilos = [threading.Thread(target=crear, args=(i,)) for i in range(2)]
+        for hilo in hilos:
+            hilo.start()
+        for hilo in hilos:
+            hilo.join(timeout=30)
+        self.assertFalse(any(hilo.is_alive() for hilo in hilos), 'Un alta quedó bloqueada.')
+        for error in errores:
+            if error is not None:
+                raise error
+        self.assertEqual(sorted(resultados), ['pagada', 'sin_cupo'])
+        with scope.con_empresa(self.empresa):
+            self.assertEqual(
+                ReservaSalida.objects.filter(fecha=inicio + timedelta(days=2)).count(), 1,
+            )
+
+
+@SOLO_POSTGRES
+class SobreventaEntreServiciosConcurrenteTests(TransactionTestCase):
+    """Servicios distintos compiten por la misma flota de la empresa."""
+
+    def setUp(self):
+        self.empresa = _crear_empresa_de_prueba()
+        self.fecha = date.today() + timedelta(days=20)
+        with scope.con_empresa(self.empresa):
+            Embarcacion.objects.create(
+                empresa=self.empresa, nombre='Panga compartida',
+                clase=Embarcacion.Clase.CHICA, capacidad_maxima=2,
+            )
+            servicios = [
+                Servicio.objects.create(
+                    empresa=self.empresa, nombre=nombre, slug=slug,
+                    tipo_servicio=tipo, estrategia_cupo='por_recurso_dia',
+                    precio_base=Decimal('4500.00'),
+                )
+                for nombre, slug, tipo in (
+                    ('Pesca', 'pesca-concurrente', 'pesca'),
+                    ('Avistamiento', 'avistamiento-concurrente', 'paseo'),
+                )
+            ]
+            self.pendientes = []
+            for nombre, servicio in zip(('Cliente Pesca', 'Cliente Avistamiento'), servicios):
+                reserva = Reserva(**_datos(
+                    self.empresa, servicio=servicio, fecha=self.fecha,
+                    nombre_cliente=nombre, precio_total=Decimal('4500.00'),
+                    forma_pago=Reserva.FormaPago.COMPLETO,
+                ))
+                reserva.full_clean()
+                reserva.save()
+                self.pendientes.append(reserva)
+
+    @mock.patch.object(StripeClient, 'refunds')
+    def test_dos_servicios_no_venden_la_misma_panga(self, refund):
+        import threading
+
+        from apps.bookings.cupo import confirmacion
+        from apps.payments.services import APLICADO, SIN_CUPO_REEMBOLSADO, aplicar_pago_exitoso
+
+        empresa_id = self.empresa.pk
+        empezar = threading.Barrier(2)
+        ambos_evaluaron = threading.Barrier(2)
+        evaluar_real = confirmacion.evaluar_cupo
+        resultados = [None, None]
+        errores = [None, None]
+
+        def evaluar_juntos(*args, **kwargs):
+            resultado = evaluar_real(*args, **kwargs)
+            try:
+                # Con claves distintas ambos leen cupo libre antes de confirmar.
+                # Con una clave compartida, el primero continúa tras el timeout
+                # y el segundo encuentra la panga ocupada.
+                ambos_evaluaron.wait(timeout=5)
+            except threading.BrokenBarrierError:
+                pass
+            return resultado
+
+        def pagar(indice):
+            try:
+                empezar.wait(timeout=10)
+                empresa = Empresa.objects.get(pk=empresa_id)
+                with scope.con_empresa(empresa):
+                    resultados[indice] = aplicar_pago_exitoso(_intent_falso(self.pendientes[indice]), empresa)
+            except Exception as exc:  # noqa: BLE001 — se re-lanza en el hilo principal
+                errores[indice] = exc
+            finally:
+                connections.close_all()
+
+        with mock.patch.object(confirmacion, 'evaluar_cupo', side_effect=evaluar_juntos):
+            hilos = [threading.Thread(target=pagar, args=(i,)) for i in range(2)]
+            for hilo in hilos:
+                hilo.start()
+            for hilo in hilos:
+                hilo.join(timeout=30)
+
+        self.assertFalse(any(hilo.is_alive() for hilo in hilos), 'Un pago quedó bloqueado.')
+        for error in errores:
+            if error is not None:
+                raise error
+        self.assertEqual(sorted(resultados), sorted([APLICADO, SIN_CUPO_REEMBOLSADO]))
+        with scope.con_empresa(self.empresa):
+            estados = sorted(
+                Reserva.objects.filter(pk__in=[r.pk for r in self.pendientes])
+                .values_list('estado', flat=True)
+            )
+        self.assertEqual(estados, sorted([Reserva.Estado.PAGADA, Reserva.Estado.CANCELADA]))
+        self.assertEqual(refund.create.call_count, 1)
 

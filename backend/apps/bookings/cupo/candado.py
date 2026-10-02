@@ -7,24 +7,16 @@ from django.db import connection
 
 
 def calcular_clave_candado(fecha: date, servicio_id: int | None = None) -> int:
-    """Calcula la clave secundaria de 32 bits para el advisory lock.
+    """Una clave por día compartida por todos los servicios de la empresa.
 
-    Si servicio_id es None, utiliza fecha.toordinal() directamente para
-    conservar compatibilidad exacta con la implementación previa de pesca legacy.
-    Si servicio_id es un entero, calcula un hash CRC32 acotado con bit 30
-    forzado (0x40000000), lo cual garantiza un entero positivo con signo de 32 bits
-    que nunca colisiona con un toordinal() realista.
+    Se conserva servicio_id en la firma para los llamadores existentes, pero el
+    cupo y la flota son comunes a la empresa: no puede haber locks separados.
     """
-    ordinal = fecha.toordinal()
-    if servicio_id is None:
-        return ordinal
-
-    cadena = f'{servicio_id}:{ordinal}'
-    return (zlib.crc32(cadena.encode('utf-8')) & 0x3FFFFFFF) | 0x40000000
+    return fecha.toordinal()
 
 
 def bloquear_cupo(empresa_id: int, fecha: date, servicio_id: int | None = None) -> None:
-    """Serializa la validación y confirmación de cupo en Postgres.
+    """Serializa por empresa y fecha la validación de todos sus servicios de mar.
 
     Utiliza pg_advisory_xact_lock(empresa_id, clave_secundaria), el cual se libera
     automáticamente al terminar la transacción actual. En SQLite (entornos locales)

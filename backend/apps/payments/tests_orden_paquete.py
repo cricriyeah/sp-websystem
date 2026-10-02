@@ -92,6 +92,24 @@ class CrearOrdenPaqueteTests(OrdenPaqueteBase):
         self.assertEqual(respuesta.status_code, 400)
         self.assertIn('lugar', str(respuesta.json()))
 
+    def test_paquete_por_persona_exige_que_la_actividad_lleve_a_todas_las_personas(self):
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        respuesta = self.crear()  # pesca con 2 personas, traslado con 3
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('la actividad va con todas las personas', str(respuesta.json()))
+        with scope.como_operador_plataforma():
+            self.assertFalse(Orden.objects.exists())
+
+    def test_paquete_por_persona_permite_menos_personas_en_el_traslado(self):
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        datos = self.payload()
+        datos['componentes'][0]['numero_personas'] = 3
+        datos['componentes'][1]['numero_personas'] = 2
+        respuesta = self.client.post(self.url, datos, content_type='application/json')
+        self.assertEqual(respuesta.status_code, 201, respuesta.content)
+
     def test_rechaza_un_extra_que_no_es_del_servicio(self):
         datos = self.payload()
         datos['componentes'][0]['personalizaciones'] = [{'id': self.sp_silla.pk}]
@@ -171,6 +189,39 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
         montos = {p['empresa_slug']: p['monto'] for p in respuesta.json()}
         self.assertEqual(montos, {'pesca-op': '6400.00', 'transp-op': '1650.00'})
         self.assertEqual(sum(Decimal(m) for m in montos.values()), Decimal('8050.00'))
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_paquete_por_persona_reparte_ancla_por_personas(self, configurar):
+        para, clientes = self._stripe_falso()
+        configurar.side_effect = para
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        datos = self.payload()
+        datos['componentes'][0]['numero_personas'] = 3
+        respuesta = self.client.post(self.url, datos, content_type='application/json')
+        self.assertEqual(respuesta.status_code, 201, respuesta.content)
+        pago = self._pago(respuesta.json()['orden_id'])
+        self.assertEqual(pago.status_code, 200, pago.content)
+        montos = {p['empresa_slug']: p['monto'] for p in pago.json()}
+        # 7500 × 3 = 22500; transporte 1500 + silla 150; la líder recibe el residuo 21000 + brunch 400.
+        self.assertEqual(montos, {'pesca-op': '21400.00', 'transp-op': '1650.00'})
+
+    @mock.patch('apps.payments.ordenes.configurar_stripe')
+    def test_paquete_por_persona_cobra_por_el_mayor_numero_aunque_el_traslado_lleve_menos(self, configurar):
+        para, clientes = self._stripe_falso()
+        configurar.side_effect = para
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(pk=self.paquete.pk).update(precio_por_persona=True)
+        datos = self.payload()
+        datos['componentes'][0]['numero_personas'] = 3
+        datos['componentes'][1]['numero_personas'] = 2
+        respuesta = self.client.post(self.url, datos, content_type='application/json')
+        self.assertEqual(respuesta.status_code, 201, respuesta.content)
+        pago = self._pago(respuesta.json()['orden_id'])
+        self.assertEqual(pago.status_code, 200, pago.content)
+        montos = {p['empresa_slug']: p['monto'] for p in pago.json()}
+        # 7500 × 3 = 22500; el traslado cobra su tarifa (1500) + silla 150; la líder el residuo 21000 + brunch 400.
+        self.assertEqual(montos, {'pesca-op': '21400.00', 'transp-op': '1650.00'})
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_congela_los_extras_solo_despues_de_que_stripe_acepta(self, configurar):
