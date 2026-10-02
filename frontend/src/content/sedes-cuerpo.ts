@@ -52,8 +52,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
       ],
       otrasEmpresas: [
-        { slug: 'hotel-malecon', nombre: 'Hotel Malecón', descripcion: '' },
-        { slug: 'transporte-la-paz', nombre: 'Transportes La Paz', descripcion: '' },
+        { slug: 'transporte-la-paz', nombre: 'DLS Transporte', descripcion: '' },
       ],
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
@@ -100,8 +99,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
       ],
       otrasEmpresas: [
-        { slug: 'hotel-malecon', nombre: 'Hotel Malecón', descripcion: '' },
-        { slug: 'transporte-la-paz', nombre: 'Transportes La Paz', descripcion: '' },
+        { slug: 'transporte-la-paz', nombre: 'DLS Transporte', descripcion: '' },
       ],
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
@@ -115,26 +113,28 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiencias en La Ventana, BCS | Sal y Sol Baja Experiences',
       metaDescription:
-        'Descubre La Ventana y las experiencias que se integrarán próximamente a Sal y Sol Baja Experiences.',
+        'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes de La Ventana Travel.',
       hero: {
         video: null,
         imagen: '/ilustraciones/costa-placeholder.webp',
         titulo: { start: 'Descubre', emphasis: 'La Ventana', end: 'con expertos locales' },
         subtitulo:
-          'Estamos preparando esta sede con operadores locales de La Ventana. Mientras completamos sus experiencias, escríbenos y te ayudamos a organizar tu visita.',
+          'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes con hospedaje de La Ventana Travel.',
         facts: [],
       },
       colaboracion: {
-        titulo: 'Una alianza en construcción',
+        titulo: 'Experiencias con operadores locales',
         texto1:
-          'Estamos formalizando las colaboraciones locales que formarán parte de esta sede en La Ventana.',
+          'La Ventana Travel reúne experiencias en el mar y paquetes de varios días en La Ventana.',
         texto2:
-          'Pronto podrás conocer aquí la historia completa de esta alianza, sus experiencias y su equipo.',
+          'Consulta los servicios y paquetes disponibles para elegir el viaje que se adapte a tu grupo.',
         imagenSrc: '/ilustraciones/costa-placeholder.webp',
         imagenAlt: 'Ilustración genérica de costa; imagen provisional de La Ventana',
       },
       destacadas: [],
-      otrasEmpresas: [],
+      otrasEmpresas: [
+        { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', descripcion: '' },
+      ],
       servicioTransporte: null,
     },
     en: {
@@ -143,24 +143,26 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiences in La Ventana, BCS | Sal y Sol Baja Experiences',
       metaDescription:
-        'Discover La Ventana and the experiences coming soon to Sal y Sol Baja Experiences.',
+        'Explore fly fishing, whale and orca watching, and multi-day packages with La Ventana Travel.',
       hero: {
         video: null,
         imagen: '/ilustraciones/costa-placeholder.webp',
         titulo: { start: 'Discover', emphasis: 'La Ventana', end: 'with local experts' },
         subtitulo:
-          "We're preparing this destination with local operators in La Ventana. While we complete its experiences, message us and we'll help you plan your visit.",
+          'Explore fly fishing, whale and orca watching, and packages with lodging from La Ventana Travel.',
         facts: [],
       },
       colaboracion: {
-        titulo: 'A partnership in progress',
-        texto1: "We're finalizing the local collaborations that will be part of this La Ventana destination.",
-        texto2: "Soon you'll be able to read the full story of this partnership, its experiences, and its team here.",
+        titulo: 'Experiences with local operators',
+        texto1: 'La Ventana Travel brings together sea experiences and multi-day packages in La Ventana.',
+        texto2: 'Explore the available services and packages to find a trip that fits your group.',
         imagenSrc: '/ilustraciones/costa-placeholder.webp',
         imagenAlt: 'Generic coastal illustration; provisional La Ventana image',
       },
       destacadas: [],
-      otrasEmpresas: [],
+      otrasEmpresas: [
+        { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', descripcion: '' },
+      ],
       servicioTransporte: null,
     },
   },
@@ -171,26 +173,28 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiencias en Puerto Chale, BCS | Sal y Sol Baja Experiences',
       metaDescription:
-        'Descubre Puerto Chale y las experiencias que se integrarán próximamente a Sal y Sol Baja Experiences.',
+        'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
       hero: {
         video: null,
         imagen: '/ilustraciones/costa-placeholder.webp',
         titulo: { start: 'Descubre', emphasis: 'Puerto Chale', end: 'con expertos locales' },
         subtitulo:
-          'Estamos preparando esta sede con operadores locales de Puerto Chale. Mientras completamos sus experiencias, escríbenos y te ayudamos a organizar tu visita.',
+          'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
         facts: [],
       },
       colaboracion: {
-        titulo: 'Una alianza en construcción',
+        titulo: 'Experiencias con operadores locales',
         texto1:
-          'Estamos formalizando las colaboraciones locales que formarán parte de esta sede en Puerto Chale.',
+          'Piratas Adventures ofrece salidas al mar y pesca deportiva en Puerto Chale.',
         texto2:
-          'Pronto podrás conocer aquí la historia completa de esta alianza, sus experiencias y su equipo.',
+          'Consulta los servicios disponibles y elige la experiencia que se adapte a tu grupo.',
         imagenSrc: '/ilustraciones/costa-placeholder.webp',
         imagenAlt: 'Ilustración genérica de costa; imagen provisional de Puerto Chale',
       },
       destacadas: [],
-      otrasEmpresas: [],
+      otrasEmpresas: [
+        { slug: 'piratas-adventures', nombre: 'Piratas Adventures', descripcion: '' },
+      ],
       servicioTransporte: null,
     },
     en: {
@@ -199,24 +203,26 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiences in Puerto Chale, BCS | Sal y Sol Baja Experiences',
       metaDescription:
-        'Discover Puerto Chale and the experiences coming soon to Sal y Sol Baja Experiences.',
+        'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
       hero: {
         video: null,
         imagen: '/ilustraciones/costa-placeholder.webp',
         titulo: { start: 'Discover', emphasis: 'Puerto Chale', end: 'with local experts' },
         subtitulo:
-          "We're preparing this destination with local operators in Puerto Chale. While we complete its experiences, message us and we'll help you plan your visit.",
+          'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
         facts: [],
       },
       colaboracion: {
-        titulo: 'A partnership in progress',
-        texto1: "We're finalizing the local collaborations that will be part of this Puerto Chale destination.",
-        texto2: "Soon you'll be able to read the full story of this partnership, its experiences, and its team here.",
+        titulo: 'Experiences with local operators',
+        texto1: 'Piratas Adventures offers sea outings and sportfishing in Puerto Chale.',
+        texto2: 'Explore the available services and choose an experience that fits your group.',
         imagenSrc: '/ilustraciones/costa-placeholder.webp',
         imagenAlt: 'Generic coastal illustration; provisional Puerto Chale image',
       },
       destacadas: [],
-      otrasEmpresas: [],
+      otrasEmpresas: [
+        { slug: 'piratas-adventures', nombre: 'Piratas Adventures', descripcion: '' },
+      ],
       servicioTransporte: null,
     },
   },
