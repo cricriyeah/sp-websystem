@@ -88,3 +88,13 @@ test('hospedaje y traslado se limitan por la actividad aunque figuren antes o te
   s = e.reducirPedido(s, { tipo: 'personasPaquete', slugPrincipal: 'pesca', valor: 1 });
   assert.deepEqual([s.componentes.hotel.personas, s.componentes.pesca.personas, s.componentes.traslado.personas], [1, 1, 1]);
 });
+
+test('paquete con hospedaje de una empresa: el traslado arranca redondo con aeropuerto, sin aeropuerto elegido', () => {
+  const s = e.estadoInicial({ ...PAQUETE, es_cruza_empresa: false, noches: 5 }, { moneda: 'MXN', puntoInicial: () => 7 });
+  assert.equal(s.componentes.traslado.traslado.tipo, 'redondo_aeropuerto');
+  assert.equal(s.componentes.traslado.traslado.aeropuerto, '');
+});
+
+test('paquete sin hospedaje conserva el tipo inicial de siempre', () => {
+  assert.equal(inicial().componentes.traslado.traslado.tipo, 'redondo_actividad');
+});

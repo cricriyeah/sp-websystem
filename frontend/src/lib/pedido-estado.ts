@@ -1,7 +1,7 @@
 import type { Moneda, PaqueteCatalogo } from './api';
 import type { ComponentePedido, DatosContacto, DetalleTraslado } from './pedido-payload';
 import { seleccionInicial, type SeleccionPersonalizacion } from './personalizaciones';
-import { maxPersonasPaquete } from './pedido-paquete';
+import { maxPersonasPaquete, trasladoFijoAeropuerto } from './pedido-paquete';
 
 export type EstadoPedido = {
   contacto: DatosContacto;
@@ -39,12 +39,13 @@ export function estadoInicial(paquete: PaqueteCatalogo, opciones: OpcionesEstado
       ...(c.servicio.tipo_servicio === 'transporte'
         ? {
             traslado: {
-              tipo: 'redondo_actividad' as const,
+              tipo: trasladoFijoAeropuerto(paquete) ? 'redondo_aeropuerto' as const : 'redondo_actividad' as const,
               modo: 'catalogo' as const,
               puntoEncuentroId: opciones.puntoInicial(c.servicio.empresa_slug),
               direccion: '',
               zonaLibre: '' as const,
               fechaRegreso: null,
+              aeropuerto: '' as const,
             },
           }
         : {}),

@@ -23,6 +23,14 @@ export function servicioPrincipalPaquete(paquete: PaqueteCatalogo): PaqueteServi
   return ordenados.find((c) => c.servicio.estrategia_cupo === 'por_recurso_dia') ?? ordenados[0];
 }
 
+/**
+ * Un paquete de una sola empresa con hospedaje trae el traslado ya definido: redondo con aeropuerto,
+ * y el hotel es el del paquete. La clienta solo elige de que aeropuerto llega.
+ */
+export function trasladoFijoAeropuerto(paquete: Pick<PaqueteCatalogo, 'es_cruza_empresa' | 'noches'>): boolean {
+  return !paquete.es_cruza_empresa && paquete.noches != null;
+}
+
 /** El grupo principal se limita por la capacidad de la actividad. */
 export function maxPersonasPaquete(paquete: PaqueteCatalogo): number {
   return servicioPrincipalPaquete(paquete)?.personas_incluidas ?? 0;

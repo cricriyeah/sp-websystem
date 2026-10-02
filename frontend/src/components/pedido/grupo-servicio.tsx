@@ -6,7 +6,7 @@ import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { DateField } from '@/components/date-field';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
-import type { Moneda, PaqueteServicioCatalogo, PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
+import type { Aeropuerto, Moneda, PaqueteServicioCatalogo, PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
 import { fechaDeComponente, sumarDias } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
@@ -21,6 +21,7 @@ type Props = {
   precioPorPersona: boolean;
   esActividadPrincipal: boolean;
   personasMax: number;
+  trasladoFijo: boolean;
   estado: ComponentePedido;
   conEncabezadoEmpresa: boolean;
   nombreEmpresa: string;
@@ -41,7 +42,7 @@ type Props = {
 };
 
 export function GrupoServicio({
-  lang, dict, componente, precioPorPersona, esActividadPrincipal, personasMax, estado, conEncabezadoEmpresa, nombreEmpresa, moneda,
+  lang, dict, componente, precioPorPersona, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda,
   inicio, noches, salida, minDate, puntos, mostrarInicio, estadoTarjeta,
   onAccion, onCompletar, onInicio, onPersonas, onExtras, onTraslado,
 }: Props) {
@@ -218,7 +219,36 @@ export function GrupoServicio({
         </div>
       )}
 
-      {traslado && (
+      {traslado && trasladoFijo && (
+        <div className="mt-5 flex flex-col gap-4 border-t border-border pt-5">
+          <div>
+            <p className="text-sm font-medium text-foreground">{pedido.fixedTransfer}</p>
+            {inicio && salida && (
+              <p className="mt-1 text-xs text-muted">
+                {pedido.fixedTransferDates
+                  .replace('{llegada}', formatoFecha(fechaDeComponente(inicio, componente.dia_estancia)))
+                  .replace('{salida}', formatoFecha(salida))}
+              </p>
+            )}
+          </div>
+          <label className="flex flex-col gap-1.5 text-sm text-foreground">
+            <span className="text-muted">{pedido.airportLabel}</span>
+            <select
+              value={traslado.aeropuerto}
+              disabled={bloqueado}
+              onChange={(event) => onTraslado({ aeropuerto: event.target.value as Aeropuerto | '' })}
+              className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent"
+            >
+              <option value="">{pedido.airportPlaceholder}</option>
+              {(['lap', 'sjd'] as Aeropuerto[]).map((codigo) => (
+                <option key={codigo} value={codigo}>{pedido.airports[codigo]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {traslado && !trasladoFijo && (
         <div className="mt-5 flex flex-col gap-4 border-t border-border pt-5">
           <fieldset className="grid gap-3 sm:grid-cols-3">
             <legend className="sr-only">{traslados.step1Title}</legend>

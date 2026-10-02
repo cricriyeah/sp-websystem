@@ -1,5 +1,5 @@
 import type {
-  ComponenteOrdenInput, CrearOrdenInput, Moneda, PaqueteCatalogo, ReservaInput, TipoTraslado, Zona,
+  Aeropuerto, ComponenteOrdenInput, CrearOrdenInput, Moneda, PaqueteCatalogo, ReservaInput, TipoTraslado, Zona,
 } from './api';
 import type { SeleccionPersonalizacion } from './personalizaciones';
 
@@ -12,6 +12,8 @@ export type DetalleTraslado = {
   direccion: string;
   zonaLibre: Zona | '';
   fechaRegreso: string | null;
+  /** Solo traslado fijo de paquete con hospedaje; '' hasta que la clienta lo elige. */
+  aeropuerto: Aeropuerto | '';
 };
 
 export type ComponentePedido = {
@@ -97,15 +99,17 @@ export function armarPayloadReserva(args: ArgsComunes): ReservaInput {
   const nombre = contacto.fullName.trim();
   const personasPorServicio: Record<string, number> = {};
   const personalizaciones: ReservaInput['personalizaciones'] = [];
+  let aeropuerto: Aeropuerto | '' = '';
   for (const c of paquete.servicios_asociados) {
     const actual = componentes[c.servicio.slug];
+    if (c.servicio.tipo_servicio === 'transporte' && actual.traslado?.aeropuerto) aeropuerto = actual.traslado.aeropuerto;
     personasPorServicio[String(c.servicio_id)] = actual.personas;
     personalizaciones.push(...actual.extras.map((x) => ({ id: x.id, cantidad: x.cantidad, respuesta: x.respuesta })));
   }
   return {
     checkout_id: args.checkoutId,
     fecha: args.inicio,
-    hora: args.hora,
+    ...(paquete.pide_hora === false ? {} : { hora: args.hora }),
     numero_personas: personasPrincipales(paquete, componentes),
     personas_por_servicio: personasPorServicio,
     nombre_cliente: nombre,
@@ -116,6 +120,7 @@ export function armarPayloadReserva(args: ArgsComunes): ReservaInput {
     deslinde_nombre: nombre,
     ref: args.ref,
     paquete: paquete.slug,
+    ...(aeropuerto ? { aeropuerto } : {}),
     personalizaciones,
   };
 }

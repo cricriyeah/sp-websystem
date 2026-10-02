@@ -47,13 +47,16 @@ export type Cupo = {
   motivo_no_disponible: MotivoNoDisponible | null;
 };
 
+export type Aeropuerto = 'lap' | 'sjd';
+
 export type ReservaInput = {
   // Identificador de la sesion de checkout que genera el navegador. El backend
   // lo usa como llave: mientras la reserva siga pendiente de pago, reenviar el
   // checkout reescribe la misma fila en vez de crear otra.
   checkout_id: string;
   fecha: string;
-  hora: string;
+  // Ausente en un paquete que no pide hora (`pide_hora: false`).
+  hora?: string;
   numero_personas: number;
   nombre_cliente: string;
   telefono_cliente: string;
@@ -78,6 +81,8 @@ export type ReservaInput = {
   personas_por_servicio?: Record<string, number>;
   // Solo para hospedaje suelto; la salida de un paquete la define el catálogo.
   fecha_salida?: string;
+  // Paquete con hospedaje y traslado: aeropuerto del que llega la clienta (el traslado es redondo).
+  aeropuerto?: Aeropuerto;
   // Seleccion de personalizaciones (brunch, licencia, carnada, etc.), sin
   // precio: el unico que lo congela es `crear-pago`, con el catalogo vigente
   // en ese momento (ver backend/apps/bookings/serializers.py). Se manda
@@ -340,6 +345,8 @@ export type PaqueteCatalogo = {
   precio_ancla: string;
   precio_ancla_usd: string | null;
   precio_por_persona: boolean;
+  // false: el paquete no pide hora de salida (la acuerda el capitan durante la estadia).
+  pide_hora: boolean;
   regla_precio: string;
   permite_anticipo: boolean; // efectivo: false si el paquete es de dos empresas
   porcentaje_anticipo: number;

@@ -152,3 +152,10 @@ test('ancla USD de 2,916.67 por tres conserva el centavo: 8,750.01', () => {
   const selecciones = { pesca: { personas: 3, extras: [] }, traslado: { ...SELECCIONES.traslado, personas: 1, extras: [] } };
   assert.equal(p.calcularPedido(paquete, selecciones, 'USD', TARIFAS).total, 8750.01);
 });
+
+test('traslado fijo de aeropuerto: solo en paquete de una empresa con hospedaje', () => {
+  assert.equal(p.trasladoFijoAeropuerto({ es_cruza_empresa: false, noches: 5 }), true);
+  assert.equal(p.trasladoFijoAeropuerto({ es_cruza_empresa: false, noches: null }), false);
+  assert.equal(p.trasladoFijoAeropuerto({ es_cruza_empresa: true, noches: 5 }), false);
+  assert.equal(p.trasladoFijoAeropuerto({ noches: undefined }), false);
+});

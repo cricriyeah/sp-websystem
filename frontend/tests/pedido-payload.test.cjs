@@ -101,3 +101,36 @@ test('la reserva manda personas por servicio (por id), inicio y todos los extras
   assert.deepEqual(r.personalizaciones.map((x) => x.id), [1, 2]);
   assert.equal(r.fecha_salida, undefined);
 });
+
+test('reserva de paquete con traslado fijo: manda el aeropuerto elegido', () => {
+  const paquete = {
+    ...CRUZA, es_cruza_empresa: false, noches: 5,
+    servicios_asociados: [
+      svc(1, 'pesca', 'ventana', 'pesca', 'por_recurso_dia'),
+      svc(2, 'traslado', 'ventana', 'transporte', 'bajo_demanda'),
+    ],
+  };
+  const componentes = {
+    pesca: { personas: 2, extras: [] },
+    traslado: { personas: 2, extras: [], traslado: traslado({ tipo: 'redondo_aeropuerto', aeropuerto: 'sjd' }) },
+  };
+  assert.equal(p.armarPayloadReserva({ ...BASE, paquete, componentes }).aeropuerto, 'sjd');
+});
+
+test('reserva sin traslado no manda aeropuerto', () => {
+  const paquete = { ...CRUZA, servicios_asociados: [svc(1, 'pesca', 'ventana', 'pesca', 'por_recurso_dia')] };
+  const payload = p.armarPayloadReserva({ ...BASE, paquete, componentes: { pesca: { personas: 2, extras: [] } } });
+  assert.equal('aeropuerto' in payload, false);
+});
+
+test('paquete que no pide hora: la reserva no manda hora', () => {
+  const paquete = { ...CRUZA, pide_hora: false, servicios_asociados: [svc(1, 'pesca', 'ventana', 'pesca', 'por_recurso_dia')] };
+  const payload = p.armarPayloadReserva({ ...BASE, paquete, componentes: { pesca: { personas: 2, extras: [] } } });
+  assert.equal('hora' in payload, false);
+});
+
+test('paquete que pide hora (o sin dato) la sigue mandando', () => {
+  const paquete = { ...CRUZA, pide_hora: true, servicios_asociados: [svc(1, 'pesca', 'ventana', 'pesca', 'por_recurso_dia')] };
+  const payload = p.armarPayloadReserva({ ...BASE, paquete, componentes: { pesca: { personas: 2, extras: [] } } });
+  assert.equal(payload.hora, '07:00');
+});

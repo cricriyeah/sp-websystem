@@ -20,7 +20,9 @@ import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
 import { intlLocale } from '@/lib/intl';
-import { calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, usdDisponible } from '@/lib/pedido-paquete';
+import {
+  calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
+} from '@/lib/pedido-paquete';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
 import { erroresPersonalizaciones } from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
@@ -46,6 +48,7 @@ type Props = {
 export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, retomarCheckoutId }: Props) {
   const { checkout, booking, feedback, pedido: textos, nav, footer, traslados } = dict;
   const motor = paquete.es_cruza_empresa ? 'orden' : 'reserva';
+  const trasladoFijo = trasladoFijoAeropuerto(paquete);
   const [estado, despachar] = usePedidoEstado(paquete, {
     moneda: 'MXN',
     puntoInicial: (empresa) => puntosPorEmpresa[empresa]?.[0]?.id ?? null,
@@ -114,7 +117,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       : totalConDescuento,
     estado.moneda,
   ) : '—';
-  const ayudaMensaje = mensajeDeAyuda(feedback.helpMessage, {
+  const ayudaMensaje = mensajeDeAyuda(paquete.pide_hora ? feedback.helpMessage : feedback.helpMessageNoTime, {
     fecha: estado.inicio ?? minDate,
     hora: estado.hora,
     personas: personasPaquete,
@@ -189,7 +192,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     const primerError = Object.values(errores)[0];
     if (primerError) return checkout.personalizacionErrors[primerError];
     const t = actual.traslado;
-    if (t) {
+    if (t && trasladoFijo) {
+      if (!t.aeropuerto) return textos.airportError;
+    } else if (t) {
       if (t.modo === 'catalogo' && t.puntoEncuentroId === null) {
         return traslados.errors.seleccionaHospedaje;
       }
@@ -209,12 +214,22 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     return '';
   };
 
+  // La actividad principal de un paquete por persona no tiene nada que decidir en su propia tarjeta
+  // (sus personas son el grupo de arriba, y no lleva extras ni la fecha de inicio): no se muestra.
+  const grupoOculto = (indice: number) => {
+    const componente = paquete.servicios_asociados[indice];
+    return paquete.precio_por_persona && indice > 0 && componente.servicio.slug === slugPrincipal
+      && componente.servicio.personalizaciones.length === 0;
+  };
+
   const confirmarGrupo = (indice: number) => {
     const error = errorDeGrupo(indice);
     if (error) return setErrorDetalles(error);
     setErrorDetalles('');
-    setGruposCompletados(indice + 1);
-    if (indice === paquete.servicios_asociados.length - 1) setPaso(3);
+    let siguiente = indice + 1;
+    while (siguiente < paquete.servicios_asociados.length && grupoOculto(siguiente)) siguiente += 1;
+    setGruposCompletados(siguiente);
+    if (siguiente >= paquete.servicios_asociados.length) setPaso(3);
   };
 
   const enviar = () => {
@@ -425,6 +440,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               <span>{precioPersonas}</span>
               <span className="font-medium text-foreground">{textos.totalLabel} {totalConMoneda ?? '—'}</span>
             </div>
+            {grupoOculto(paquete.servicios_asociados.findIndex((c) => c.servicio.slug === slugPrincipal)) && (
+              <p className="mt-3 text-xs text-muted">{servicioPrincipalPaquete(paquete)?.servicio.nombre}</p>
+            )}
             {topeIntentado && (tieneWhatsapp ? (
               <a href={whatsappHref(`${textos.morePeople.replace('{max}', String(maxPersonas))} ${paquete.nombre}`)}
                 target="_blank" rel="noopener noreferrer"
@@ -476,10 +494,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               </span>
               {erroresContacto.email && <FieldError id="pedido-email-error" mensaje={erroresContacto.email} />}
             </label>
-            <div className="sm:col-span-2">
+            {paquete.pide_hora && <div className="sm:col-span-2">
               <TimeField label={checkout.hourLabel} help={booking.timeHelp} value={estado.hora}
                 onChange={(valor) => despachar({ tipo: 'hora', valor })} />
-            </div>
+            </div>}
           </div>
           {paso === 1 && (
             <div className="mt-6 flex justify-end border-t border-border pt-5">
@@ -495,7 +513,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           <>
             {errorDetalles && <FieldError id="pedido-detalles-error" mensaje={errorDetalles} />}
             {paquete.servicios_asociados.map((componente, indice) => {
-              if (indice > gruposCompletados) return null;
+              if (indice > gruposCompletados || grupoOculto(indice)) return null;
               const slug = componente.servicio.slug;
               const tarjeta = indice < gruposCompletados
                 ? grupoEditando === indice ? 'editando' : 'completado'
@@ -505,6 +523,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                   lang={lang} dict={dict} componente={componente}
                   precioPorPersona={paquete.precio_por_persona}
                   esActividadPrincipal={slug === slugPrincipal} personasMax={personasPaquete}
+                  trasladoFijo={trasladoFijo}
                   estado={estado.componentes[slug]}
                   conEncabezadoEmpresa={cantidadCargos > 1}
                   nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}
