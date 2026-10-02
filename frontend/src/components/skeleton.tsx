@@ -11,13 +11,13 @@
  * un tercero, llega cuando llega, y un skeleton que no coincide con lo que
  * aparece despues produce un salto de layout — peor que no poner nada.
  *
- * `animate-pulse` de Tailwind respeta `prefers-reduced-motion` por su cuenta.
+ * La animacion se limita a quien no pidio reducir el movimiento.
  */
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={`block animate-pulse rounded-md bg-muted/15 ${className}`}
+      className={`block bg-muted/15 motion-safe:animate-pulse ${className}`}
     />
   );
 }
