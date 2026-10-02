@@ -672,6 +672,7 @@ class CrearOrdenView(APIView):
                         reserva.telefono_cliente = telefono_cliente
                         reserva.correo_cliente = correo_cliente
                         reserva.moneda = moneda
+                        reserva.tipo_cambio = orden.tipo_cambio  # un solo valor para toda la orden
                         reserva.forma_pago = Reserva.FormaPago.COMPLETO
                         reserva.deslinde_aceptado = True
                         reserva.deslinde_nombre = deslinde_nombre

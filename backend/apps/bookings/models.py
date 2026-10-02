@@ -402,6 +402,22 @@ class Vendedora(models.Model):
         return cls.objects.filter(codigo=codigo, empresa=empresa, activo=True).first()
 
 
+def _congelar_tipo_cambio(instancia, obtener_sede, kwargs):
+    """Congela en `instancia.tipo_cambio` el de la sede al pasar a USD; lo limpia en MXN.
+
+    Una vez puesto no se vuelve a leer de la sede: cambiarlo a mitad de un pago no mueve el
+    monto de Stripe. Con `update_fields` agrega el campo a la lista para que el UPDATE lo escriba."""
+    antes = instancia.tipo_cambio
+    if instancia.moneda == 'USD':
+        if instancia.tipo_cambio is None:
+            instancia.tipo_cambio = obtener_sede().tipo_cambio_usd
+    else:
+        instancia.tipo_cambio = None
+    update_fields = kwargs.get('update_fields')
+    if update_fields is not None and instancia.tipo_cambio != antes and 'tipo_cambio' not in update_fields:
+        kwargs['update_fields'] = [*update_fields, 'tipo_cambio']
+
+
 class Reserva(models.Model):
     class Estado(models.TextChoices):
         PENDIENTE_PAGO = 'pendiente_pago', 'Pendiente de pago'
@@ -511,6 +527,10 @@ class Reserva(models.Model):
     # nunca confiado del cliente. monto_pagado es lo efectivamente cobrado por
     # Stripe (100% o el 30% de anticipo).
     moneda = models.CharField(max_length=3, choices=Moneda.choices, default=Moneda.MXN)
+    tipo_cambio = models.DecimalField(
+        max_digits=8, decimal_places=4, null=True, blank=True, editable=False,
+        help_text='Pesos por dolar de la sede, congelado al pasar la reserva a USD. Vacio en MXN.',
+    )
     forma_pago = models.CharField(max_length=10, choices=FormaPago.choices, blank=True)
     precio_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -666,6 +686,7 @@ class Reserva(models.Model):
         return instance
 
     def save(self, *args, **kwargs):
+        _congelar_tipo_cambio(self, lambda: self.empresa.sede, kwargs)
         if (
             kwargs.get('update_fields') is None and self.paquete_id and not self.orden_id
             and self.estado in ESTADOS_QUE_OCUPAN_CUPO
@@ -1298,6 +1319,10 @@ class Orden(models.Model):
     correo_cliente = models.EmailField()
 
     moneda = models.CharField(max_length=3, choices=Reserva.Moneda.choices, default=Reserva.Moneda.MXN)
+    tipo_cambio = models.DecimalField(
+        max_digits=8, decimal_places=4, null=True, blank=True, editable=False,
+        help_text='Pesos por dolar de la sede, congelado al pasar la orden a USD. Vacio en MXN.',
+    )
     forma_pago = models.CharField(max_length=10, choices=Reserva.FormaPago.choices, default=Reserva.FormaPago.COMPLETO)
 
     estado = models.CharField(max_length=15, choices=Estado.choices, default=Estado.ARMANDO)
@@ -1331,6 +1356,10 @@ class Orden(models.Model):
             raise ValidationError({'forma_pago': 'Las órdenes cruza-empresa solo admiten pago completo.'})
         if self.paquete_id and self.empresa_lider_id and self.paquete.empresa_lider_id != self.empresa_lider_id:
             raise ValidationError({'empresa_lider': 'Debe coincidir con la empresa líder del paquete.'})
+
+    def save(self, *args, **kwargs):
+        _congelar_tipo_cambio(self, lambda: self.sede, kwargs)
+        super().save(*args, **kwargs)
 
     def transicionar(self, nuevo_estado):
         if nuevo_estado not in self.TRANSICIONES.get(self.estado, set()):
