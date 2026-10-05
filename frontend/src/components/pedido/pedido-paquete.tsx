@@ -536,6 +536,11 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     });
   }
 
+  // El error de detalles vive en la tarjeta de grupo que está en foco (la que lo
+  // causó, pegado a su CTA); si no hay ninguna en foco, va debajo de la lista.
+  const indiceGrupoEnFoco = [...posicionDeGrupo.entries()]
+    .find(([, posicion]) => secuencia[posicion] === 'activo' || secuencia[posicion] === 'editando')?.[0] ?? null;
+
   return (
     <>
       <PaginaCheckout
@@ -653,7 +658,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
 
             {tarjeta('detalles') !== 'oculto' && (
               <>
-                <ErrorDeCampo id="pedido-detalles-error" mensaje={errorDetalles} />
                 {paquete.servicios_asociados.map((componente, indice) => {
                   if (indice > gruposCompletados || grupoOculto(indice)) return null;
                   const slug = componente.servicio.slug;
@@ -678,6 +682,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                       salida={salida}
                       puntos={puntosPorEmpresa[componente.servicio.empresa_slug] ?? []}
                       estadoTarjeta={estadoGrupo}
+                      error={indice === indiceGrupoEnFoco ? errorDetalles : ''}
                       onAccion={() => setGrupoEditando((a) => a === indice ? null : indice)}
                       onCompletar={() => confirmarGrupo(indice)}
                       onTope={() => ayuda.tropezar('tope-personas')}
@@ -690,6 +695,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                     </ItemPaso>
                   );
                 })}
+                <ErrorDeCampo id="pedido-detalles-error-general" mensaje={indiceGrupoEnFoco === null ? errorDetalles : ''} />
               </>
             )}
           </>

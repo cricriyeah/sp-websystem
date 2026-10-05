@@ -6,6 +6,7 @@ import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section
 import { BotonPaso } from '@/components/checkout/boton-paso';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { CAJA_CAMPO } from '@/components/checkout/estilos';
+import { ErrorDeCampo } from '@/components/field-error';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
@@ -39,6 +40,8 @@ type Props = {
   salida: string | null;
   puntos: PuntoEncuentro[];
   estadoTarjeta: 'activo' | 'editando' | 'completado' | 'suspendido';
+  /** Error de validación de ESTA tarjeta: se muestra pegado a su CTA, no entre otras tarjetas. */
+  error?: string;
   onAccion: () => void;
   onCompletar: () => void;
   onTope?: () => void;
@@ -50,7 +53,7 @@ type Props = {
 export function GrupoServicio({
   lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda, tipoCambio,
   inicio, noches, salida, puntos, estadoTarjeta,
-  onAccion, onCompletar, onTope, onPersonas, onExtras, onTraslado,
+  onAccion, onCompletar, onTope, onPersonas, onExtras, onTraslado, error,
 }: Props) {
   const { checkout, booking, pedido, traslados } = dict;
   const servicio = componente.servicio;
@@ -358,6 +361,8 @@ export function GrupoServicio({
           {opcionales.map(renderExtra)}
         </BloqueDePaso>
       )}
+
+      <ErrorDeCampo id="pedido-detalles-error" mensaje={error ?? ''} />
     </CheckoutSectionCard>
   );
 }

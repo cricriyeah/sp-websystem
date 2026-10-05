@@ -83,9 +83,11 @@ export function CheckoutSectionCard({
         )}
         {enRenglon ? (
           <span className="flex min-w-0 items-center gap-x-2 text-sm">
-            <span className="shrink-0 font-sans font-medium tracking-tight text-foreground">{title}</span>
+            <span className="min-w-0 truncate font-sans font-medium tracking-tight text-foreground">{title}</span>
             {etiqueta && (
-              <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
+              // En pantallas angostas el renglón no tiene sitio para la empresa
+              // sin pisar "Modificar": se ve completa al abrir la tarjeta.
+              <span className="hidden shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted sm:inline">
                 {etiqueta}
               </span>
             )}
