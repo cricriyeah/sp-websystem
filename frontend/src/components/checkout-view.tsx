@@ -1,31 +1,25 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
-import Link from 'next/link';
-import {
-  ArrowLeft,
-  ArrowRight,
-  EnvelopeSimple,
-  Lock,
-  Minus,
-  Phone,
-  Plus,
-  ShieldCheck,
-  User,
-  Warning,
-} from '@phosphor-icons/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { Minus, Plus, ShieldCheck, Warning } from '@phosphor-icons/react';
+import { AnimatePresence } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AmenitiesReminder, type ExtraPendiente } from '@/components/amenities-reminder';
 import { BookingConfirmation } from '@/components/booking-confirmation';
-import { SiteHeader } from '@/components/site-header';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
+import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
+import { BotonPaso } from '@/components/checkout/boton-paso';
+import { CamposContacto } from '@/components/checkout/campos-contacto';
+import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
+import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
+import { ItemPaso } from '@/components/checkout/item-paso';
+import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
+import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
+import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { DateField } from '@/components/date-field';
-import { CheckoutFooter } from '@/components/checkout-footer';
-import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import { CheckoutStepper } from '@/components/checkout-stepper';
-import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/field-error';
+import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
+import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
@@ -43,7 +37,7 @@ import {
   type Pago,
   type ServicioCatalogo,
 } from '@/lib/api';
-import { formatHour, fromLocalISODate, toLocalISODate } from '@/lib/dates';
+import { formatHour, fromLocalISODate, MAX_PEOPLE, toLocalISODate } from '@/lib/dates';
 import { horasDeServicio } from '@/lib/horario-servicio';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
@@ -52,9 +46,13 @@ import {
   cantidadEfectiva,
   erroresPersonalizaciones,
   seleccionInicial,
+  separarPersonalizaciones,
   totalPersonalizaciones,
   type SeleccionPersonalizacion,
 } from '@/lib/personalizaciones';
+import {
+  estadoDeTarjeta, estadoVisible, numeroDePaso, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+} from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
@@ -194,7 +192,7 @@ export function CheckoutView({
   servicioNombre,
   servicio,
 }: CheckoutViewProps) {
-  const { checkout, booking, nav } = dict;
+  const { checkout, booking } = dict;
   // null mientras sessionStorage todavia no se ha leido (solo dura hasta el
   // primer useLayoutEffect del cliente — ver useCheckoutId).
   const checkoutIdValue = useCheckoutId();
@@ -623,21 +621,15 @@ export function CheckoutView({
   const [erroresCampo, setErroresCampo] = useState<Partial<Record<CampoContacto, string>>>({});
   const [erroresPersonalizacion, setErroresPersonalizacion] = useState<Record<number, string>>({});
 
-  // Cuantos de los tres pasos ya se ven. Empieza en 1: dia/hora/personas llegan
-  // precargados desde la barra de reserva, asi que el primer paso no tiene un
-  // momento natural de "ya se lleno" — necesita un click explicito para avanzar.
-  const [pasosVisibles, setPasosVisibles] = useState(1);
-  // El paso 3 (extras) no tiene un dato que validar como el 1 o el 2 — es una
-  // sola casilla opcional — asi que necesita su propio "ya termine aqui" en
-  // vez de derivarlo de `pasosVisibles`. Confirmarlo es lo que revela el
-  // panel de pago completo en movil y adelanta el stepper al paso 4.
-  const [extrasConfirmado, setExtrasConfirmado] = useState(false);
-  // Que paso ya confirmado se reabrio a mano con "Cambiar". `null` = ninguno,
-  // todo se muestra segun `pasosVisibles` como siempre. Reabrir no reinicia
-  // nada: el dato ya validado se queda en su estado normal, esto solo decide
-  // que tarjeta se ve expandida.
-  const [pasoEditando, setPasoEditando] = useState<number | null>(null);
-  const sinMovimiento = useReducedMotion();
+  // Paso en el que va el cliente (viaje → contacto → detalles → pago) y cuál ya
+  // contestado reabrió a mano con "Modificar". Día/hora/personas llegan
+  // precargados desde la barra de reserva, así que el primer paso no tiene un
+  // momento natural de "ya se llenó": necesita un click explícito para avanzar.
+  const [actual, setActual] = useState<PasoId>('viaje');
+  const [editando, setEditando] = useState<PasoId | null>(null);
+  const ayuda = useAyudaContextual();
+  // Al cambiar de paso, la tarjeta en foco se trae a la vista solo si hace falta.
+  useScrollAlFoco(`${actual}|${editando}`);
 
   /**
    * Repone el checkout de esta pestana, si `checkoutId` ya traia una reserva
@@ -726,8 +718,7 @@ export function CheckoutView({
         // nuevo los checks recomendados después de una recarga.
         setPersonalizaciones(estado.personalizaciones);
         if (estado.forma_pago) setFormaPago(estado.forma_pago);
-        setPasosVisibles(3);
-        setExtrasConfirmado(true);
+        setActual('pago');
         setPhase(tieneProducto ? 'form' : 'unavailable');
         return;
       }
@@ -775,13 +766,6 @@ export function CheckoutView({
     };
   }, []);
 
-  // Antes, al revelarse un paso nuevo, la pagina lo traia a la vista con
-  // `scrollIntoView`: el paso 1 se quedaba expandido entero (calendario, hora,
-  // personas) y el 2 quedaba fuera de cuadro, abajo del todo. Ahora el paso
-  // recien confirmado se colapsa solo a un renglon (`colapsado1`/`colapsado2`
-  // abajo), asi que el siguiente aparece justo debajo de donde el cliente ya
-  // esta mirando — el salto de scroll dejo de hacer falta.
-
   /**
    * Valida los datos de contacto y devuelve los errores por campo.
    *
@@ -817,13 +801,28 @@ export function CheckoutView({
     setErroresCampo(errores);
 
     if (Object.keys(errores).length > 0) {
+      ayuda.tropezar('validacion');
       const primero = ORDEN_CAMPOS.find((campo) => errores[campo]);
       if (primero) refsContacto[primero].current?.focus();
       return;
     }
 
-    setPasosVisibles(3);
-    if (pasoEditando === 2) setPasoEditando(null);
+    setActual((a) => (a === 'contacto' ? 'detalles' : a));
+    setEditando(null);
+  };
+
+  const confirmarViaje = () => {
+    setActual((a) => (a === 'viaje' ? 'contacto' : a));
+    setEditando(null);
+  };
+
+  /** Extras confirmados: pasa al pago y lo trae a la vista (en móvil el panel de pago aparece aquí). */
+  const continuarAPago = () => {
+    setActual('pago');
+    setEditando(null);
+    setTimeout(() => {
+      refStripePanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
 
   /** Primer paso del pago: valida, y antes de tocar la red ofrece las amenidades. */
@@ -832,6 +831,7 @@ export function CheckoutView({
     setErroresCampo(errores);
 
     if (Object.keys(errores).length > 0) {
+      ayuda.tropezar('validacion');
       // El foco salta al primer campo malo. Sin esto, quien navega con teclado o
       // con lector de pantalla no tiene forma de enterarse de que hay un error:
       // el mensaje existe visualmente y para el nadie lo dijo.
@@ -842,6 +842,7 @@ export function CheckoutView({
 
     // Sin deslinde aceptado no hay reserva; el backend lo rechaza igual.
     if (!waiverAccepted) {
+      ayuda.tropezar('validacion');
       setErrorWaiver(true);
       return;
     }
@@ -856,6 +857,7 @@ export function CheckoutView({
       (p) => erroresDePersonalizacion[p.id],
     );
     if (primeraPersonalizacion) {
+      ayuda.tropezar('validacion');
       const campo = document.getElementById(`personalizacion-${primeraPersonalizacion.id}`);
       campo?.focus();
       campo?.scrollIntoView({ block: 'center' });
@@ -971,14 +973,6 @@ export function CheckoutView({
 
   const enviando = phase === 'submitting';
 
-  // Colapsado = ya confirmado y no se esta reabriendo a mano. El paso 3
-  // (extras) deja de poderse reabrir una vez `locked`: el checkbox ya esta
-  // deshabilitado, reabrirlo no dejaria cambiar nada — por eso ese caso
-  // ignora `pasoEditando` a proposito.
-  const colapsado1 = pasosVisibles > 1 && pasoEditando !== 1;
-  const colapsado2 = pasosVisibles > 2 && pasoEditando !== 2;
-  const colapsado3 = locked || (extrasConfirmado && pasoEditando !== 3);
-
   const personasResumen = `${people} ${people === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`;
   const horaTexto = pideHora && time ? formatHour(time) : '';
   const resumenPaso1 = [
@@ -987,13 +981,6 @@ export function CheckoutView({
     personasResumen,
   ].filter(Boolean).join(' · ');
   const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
-
-  // El stepper de arriba cuenta el pago como paso 4 en cuanto el paso 3 se
-  // confirma — ahi es cuando el panel de pago completo aparece en movil — o
-  // antes si ya se mando el formulario (desde escritorio el panel siempre
-  // estuvo a la vista, sin pasar por el boton de extras).
-  const pasoActualStepper =
-    phase === 'submitting' || phase === 'payment' || extrasConfirmado ? 4 : pasosVisibles;
 
   // Lo que se le manda a la vendedora si el cliente usa la salida de emergencia
   // de un error. Lleva su fecha, hora y grupo para que ella no tenga que
@@ -1057,329 +1044,40 @@ export function CheckoutView({
     );
   }
 
-  return (
-    <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} variante="sede" />
+  // Un solo foco abierto: si el cliente reabrió una respuesta, la tarjeta activa
+  // se pliega a un renglón "pendiente" hasta que termine de corregirla.
+  const hayEdicion = editando !== null;
+  const estadoPaso = (id: PasoId): EstadoTarjeta | 'oculto' => {
+    const estado = estadoDeTarjeta(id, actual, editando);
+    // Con el pago en curso los extras ya no se pueden cambiar: reabrirlos no dejaría tocar nada.
+    return estado !== 'oculto' && locked && id === 'detalles' ? 'completado' : estado;
+  };
+  const crudoViaje = estadoPaso('viaje') as EstadoTarjeta;
+  const crudoContacto = estadoPaso('contacto');
+  const crudoDetalles = estadoPaso('detalles');
+  const estadoViaje = estadoVisible(crudoViaje, hayEdicion);
+  const estadoContacto = crudoContacto === 'oculto' ? null : estadoVisible(crudoContacto, hayEdicion);
+  const estadoDetalles = crudoDetalles === 'oculto' ? null : estadoVisible(crudoDetalles, hayEdicion);
+  const secuencia: EstadoVisible[] = [estadoViaje];
+  if (estadoContacto) secuencia.push(estadoContacto);
+  if (estadoDetalles) secuencia.push(estadoDetalles);
+  const reabrir = (id: PasoId) => setEditando((e) => (e === id ? null : id));
+  const etiquetaAccion = (estado: EstadoTarjeta | 'oculto') =>
+    estado === 'completado' ? checkout.changeStep : estado === 'editando' ? checkout.doneEditing : undefined;
 
-      {/* SiteHeader es `fixed` y no reserva espacio: sin `--nav-alto` (ver
-          globals.css) el contenido arrancaria debajo de la barra. El 1.5rem es
-          la separacion que llevaba de siempre. */}
-      <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
-        <Link
-          // Con lo que el cliente ya habia contestado: `page.tsx` de la portada
-          // lo lee y precarga el booking bar, para no hacerlo empezar de cero
-          // solo por haber vuelto a revisar algo.
-          href={`/${lang}?${new URLSearchParams({ day, time, people: String(people) }).toString()}`}
-          className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft size={16} />
-          {checkout.back}
-        </Link>
-      </div>
+  // El stepper cuenta el pago como paso 4 en cuanto se confirman los extras, o
+  // antes si ya se mandó el formulario (en escritorio el panel siempre está a la vista).
+  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? 4 : numeroDePaso(actual);
+  const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
 
-      {sinLugar && (
-        <div className="mx-auto mb-2 flex max-w-6xl items-start gap-3 px-6 sm:px-8 lg:px-12">
-          <div className="flex w-full flex-col gap-2 border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <Warning size={18} className="mt-0.5 shrink-0 text-accent" />
-              <p>{sinLugar.mensaje}</p>
-            </div>
-            {/* La alternativa se OFRECE, no se aplica. Es el cliente quien decide
-                cambiar de fecha: para un turista con vuelo el jueves, el
-                siguiente dia libre puede no servirle de nada. */}
-            {sinLugar.alternativa && (
-              <button
-                type="button"
-                onClick={() => {
-                  const nueva = sinLugar.alternativa!;
-                  setDay(nueva);
-                  avisar(
-                    'info',
-                    dict.feedback.dateChanged.replace(
-                      '{date}',
-                      formatDay(fromLocalISODate(nueva), lang),
-                    ),
-                  );
-                }}
-                className="shrink-0 self-start rounded-full bg-accent px-4 py-2 text-xs font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:self-auto"
-              >
-                {checkout.takeOffered.replace(
-                  '{date}',
-                  formatDay(fromLocalISODate(sinLugar.alternativa), lang),
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+  const lineasViaje = [
+    { etiqueta: checkout.summary.date, valor: formatDay(dayDate, lang) },
+    tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: formatDay(fromLocalISODate(fechaSalida), lang) } : null,
+    horaTexto ? { etiqueta: checkout.summary.time, valor: horaTexto } : null,
+    { etiqueta: checkout.summary.people, valor: String(people) },
+  ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
 
-      <CheckoutStepper stepper={checkout.stepper} actual={pasoActualStepper} />
-
-      {/* 3fr/2fr: los pasos necesitan el ancho (calendario, formulario), el
-          resumen es una columna de cifras y se lee mejor angosta. */}
-      <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
-        <div className="flex min-w-0 flex-col gap-6">
-          {(servicioNombre || servicio?.nombre) && (
-            <div className="rounded-xl border border-accent/30 bg-accent/10 p-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-accent block">
-                Servicio seleccionado
-              </span>
-              <p className="mt-0.5 text-base font-bold text-foreground">{servicioNombre || servicio?.nombre}</p>
-            </div>
-          )}
-
-          <CheckoutSectionCard
-            title={checkout.tripHeadline}
-            estado={colapsado1 ? 'completado' : pasoEditando === 1 ? 'editando' : 'activo'}
-            resumen={resumenPaso1}
-            actionLabel={colapsado1 ? checkout.changeStep : pasoEditando === 1 ? checkout.doneEditing : undefined}
-            onAction={() => setPasoEditando(colapsado1 ? 1 : null)}
-          >
-            <CheckoutCalendar
-              lang={lang}
-              selected={day}
-              onSelect={setDay}
-              minDate={minDate}
-              personas={people}
-              fullLabel={checkout.dayFull}
-              weekdaysShort={checkout.weekdaysShort}
-            />
-
-            <p className="mt-5 border-t border-border pt-5 text-sm text-foreground">
-              {formatDay(dayDate, lang)}
-            </p>
-
-            {/* Hora y personas siguen siendo editables aqui: cambiar de idea no
-                deberia obligar a volver a la portada. */}
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-              {pideHora && (locked ? (
-                <p className="px-6 py-4 text-sm text-muted">
-                  {checkout.hourLabel}: <span className="text-foreground">{horaTexto}</span>
-                </p>
-              ) : (
-                <TimeField
-                  label={checkout.hourLabel}
-                  help={booking.timeHelp}
-                  value={time}
-                  onChange={setTime}
-                  availableHours={horasDisponibles}
-                />
-              ))}
-
-              <PeopleStepper
-                label={checkout.peopleLabel}
-                maxNotice={booking.maxPeopleNotice}
-                value={people}
-                onChange={cambiarPersonas}
-                disabled={locked}
-              />
-            </div>
-
-            {tieneHospedaje && (
-              <div className="mt-4 flex flex-col gap-1.5 border-t border-border pt-4">
-                {locked ? (
-                  <p className="text-sm text-foreground">
-                    {checkout.checkoutDateLabel}: {formatDay(fromLocalISODate(fechaSalida), lang)}
-                  </p>
-                ) : (
-                  <DateField
-                    lang={lang}
-                    label={checkout.checkoutDateLabel}
-                    value={fechaSalida}
-                    onChange={setFechaSalidaManual}
-                    minDate={defaultFechaSalida}
-                    prevMonthLabel={booking.prevMonth}
-                    nextMonthLabel={booking.nextMonth}
-                    personas={people}
-                    fullLabel={checkout.dayFull}
-                    sinCupo
-                  />
-                )}
-              </div>
-            )}
-
-            {precioPersonaExtra > 0 && (
-              <p className="mt-2 px-6 text-xs text-muted">
-                {checkout.extraPeopleHint
-                  .replace('{included}', String(personasIncluidas))
-                  .replace('{price}', currency.format(precioPersonaExtra))}
-              </p>
-            )}
-
-            {/* Dia, hora y personas llegan precargados desde la barra de la
-                portada: no hay un "se acaba de llenar" que dispare el paso
-                siguiente solo, hace falta que el cliente lo confirme. */}
-            {pasosVisibles === 1 && (
-              <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-foreground">{checkout.tripConfirmQuestion}</p>
-                <button
-                  type="button"
-                  onClick={() => setPasosVisibles(2)}
-                  className="shrink-0 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
-                >
-                  {checkout.confirmStep}
-                </button>
-              </div>
-            )}
-          </CheckoutSectionCard>
-
-          {pasosVisibles < 2 ? null : (
-            <motion.div
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <CheckoutSectionCard
-                title={checkout.contactHeadline}
-                estado={colapsado2 ? 'completado' : pasoEditando === 2 ? 'editando' : 'activo'}
-                resumen={resumenPaso2}
-                actionLabel={
-                  colapsado2 ? checkout.changeStep : pasoEditando === 2 ? checkout.doneEditing : undefined
-                }
-                onAction={() => setPasoEditando(colapsado2 ? 2 : null)}
-              >
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
-                    <span className="text-muted">{checkout.phone}</span>
-                    <span className="relative">
-                      <Phone
-                        size={18}
-                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-                      />
-                      <input
-                        ref={refPhone}
-                        type="tel"
-                        required
-                        disabled={locked}
-                        value={contact.phone}
-                        onChange={(e) => {
-                          setContact((prev) => ({ ...prev, phone: e.target.value }));
-                          // El error se limpia al escribir: dejarlo puesto mientras el
-                          // cliente corrige lo convierte en un regano que no se calla.
-                          if (erroresCampo.phone)
-                            setErroresCampo((prev) => ({ ...prev, phone: undefined }));
-                        }}
-                        {...propsDeError('error-phone', Boolean(erroresCampo.phone))}
-                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
-                          erroresCampo.phone
-                            ? CLASES_CAMPO_CON_ERROR
-                            : 'border-border focus:border-accent'
-                        }`}
-                      />
-                    </span>
-                    <ErrorDeCampo id="error-phone" mensaje={erroresCampo.phone} />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
-                    <span className="text-muted">{checkout.fullName}</span>
-                    <span className="relative">
-                      <User
-                        size={18}
-                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-                      />
-                      <input
-                        ref={refFullName}
-                        type="text"
-                        required
-                        disabled={locked}
-                        value={contact.fullName}
-                        onChange={(e) => {
-                          setContact((prev) => ({ ...prev, fullName: e.target.value }));
-                          // El error se limpia al escribir: dejarlo puesto mientras el
-                          // cliente corrige lo convierte en un regano que no se calla.
-                          if (erroresCampo.fullName)
-                            setErroresCampo((prev) => ({ ...prev, fullName: undefined }));
-                        }}
-                        {...propsDeError('error-fullName', Boolean(erroresCampo.fullName))}
-                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
-                          erroresCampo.fullName
-                            ? CLASES_CAMPO_CON_ERROR
-                            : 'border-border focus:border-accent'
-                        }`}
-                      />
-                    </span>
-                    <ErrorDeCampo id="error-fullName" mensaje={erroresCampo.fullName} />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                    <span className="text-muted">{checkout.email}</span>
-                    <span className="relative">
-                      <EnvelopeSimple
-                        size={18}
-                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-                      />
-                      <input
-                        ref={refEmail}
-                        type="email"
-                        required
-                        disabled={locked}
-                        value={contact.email}
-                        onChange={(e) => {
-                          setContact((prev) => ({ ...prev, email: e.target.value }));
-                          // El error se limpia al escribir: dejarlo puesto mientras el
-                          // cliente corrige lo convierte en un regano que no se calla.
-                          if (erroresCampo.email)
-                            setErroresCampo((prev) => ({ ...prev, email: undefined }));
-                        }}
-                        {...propsDeError('error-email', Boolean(erroresCampo.email))}
-                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
-                          erroresCampo.email
-                            ? CLASES_CAMPO_CON_ERROR
-                            : 'border-border focus:border-accent'
-                        }`}
-                      />
-                    </span>
-                    <ErrorDeCampo id="error-email" mensaje={erroresCampo.email} />
-                  </label>
-                </div>
-
-                {(pasosVisibles === 2 || pasoEditando === 2) && (
-                  <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm text-foreground">{checkout.contactConfirmQuestion}</p>
-                    <button
-                      type="button"
-                      onClick={confirmarContacto}
-                      className="shrink-0 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
-                    >
-                      {checkout.confirmStep}
-                    </button>
-                  </div>
-                )}
-              </CheckoutSectionCard>
-            </motion.div>
-          )}
-
-          {/* El punto de encuentro real y el aviso del agente ya no van aqui:
-              son informacion de despues de pagar, viven en
-              BookingConfirmation. Bebidas se quito del checkout: depende del
-              tipo de bebida, un dato que el sitio no captura; la vendedora la
-              sigue cotizando a mano en reservas por WhatsApp o telefono. */}
-          {pasosVisibles < 3 ? null : (
-            <motion.div
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <CheckoutSectionCard
-                title={checkout.extrasStepHeadline}
-                estado={colapsado3 ? 'completado' : pasoEditando === 3 ? 'editando' : 'activo'}
-                resumen={
-                  catalogoUnificado
-                    .filter((p) => personalizacionesMap.has(p.id))
-                    .map((p) => p.nombre)
-                    .join(', ') ||
-                  checkout.noExtrasSelected
-                }
-                actionLabel={
-                  colapsado3 && !locked
-                    ? checkout.changeStep
-                    : pasoEditando === 3
-                      ? checkout.doneEditing
-                      : undefined
-                }
-                onAction={locked ? undefined : () => setPasoEditando(colapsado3 ? 3 : null)}
-              >
-                {catalogoUnificado.length > 0 && (
-                  <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5">
-                    {catalogoUnificado.map((sp) => {
+  const renderPersonalizacion = (sp: (typeof catalogoUnificado)[number]) => {
                       const seleccion = personalizacionesMap.get(sp.id);
                       const marcada = Boolean(seleccion);
                       const errorCodigo = erroresPersonalizacion[sp.id] as
@@ -1501,46 +1199,223 @@ export function CheckoutView({
                           <ErrorDeCampo id={errorId} mensaje={errorCodigo ? checkout.personalizacionErrors[errorCodigo] : ''} />
                         </label>
                       );
-                    })}
-                  </div>
-                )}
+  };
 
-                {(!extrasConfirmado || pasoEditando === 3) && (
-                  <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm font-medium text-foreground">{checkout.extrasConfirmQuestion}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExtrasConfirmado(true);
-                        if (pasoEditando === 3) setPasoEditando(null);
-                        setTimeout(() => {
-                          refStripePanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 80);
-                      }}
-                      className="flex items-center justify-center gap-2 bg-action px-6 py-3 text-sm font-semibold text-action-foreground shadow-sm transition-transform active:scale-[0.98]"
-                    >
-                      <span>{checkout.continueToPayment || checkout.confirmStep}</span>
-                      <ArrowRight size={16} weight="bold" />
-                    </button>
-                  </div>
+  const { obligatorias, opcionales } = separarPersonalizaciones(catalogoUnificado);
+
+  return (
+    <>
+      <PaginaCheckout
+        lang={lang}
+        dict={dict}
+        // Con lo que el cliente ya había contestado: `page.tsx` de la portada
+        // lo lee y precarga el booking bar, para no hacerlo empezar de cero
+        // solo por haber vuelto a revisar algo.
+        volverHref={`/${lang}?${new URLSearchParams({ day, time, people: String(people) }).toString()}`}
+        volverLabel={checkout.back}
+        encabezado={
+          <EncabezadoCompra
+            kicker={checkout.purchaseKicker}
+            nombre={servicioNombre || servicio?.nombre || ''}
+          />
+        }
+        aviso={sinLugar ? (
+        <div className="mx-auto mb-2 flex max-w-6xl items-start gap-3 px-6 sm:px-8 lg:px-12">
+          <div className="flex w-full flex-col gap-2 border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Warning size={18} className="mt-0.5 shrink-0 text-accent" />
+              <p>{sinLugar.mensaje}</p>
+            </div>
+            {/* La alternativa se OFRECE, no se aplica. Es el cliente quien decide
+                cambiar de fecha: para un turista con vuelo el jueves, el
+                siguiente dia libre puede no servirle de nada. */}
+            {sinLugar.alternativa && (
+              <button
+                type="button"
+                onClick={() => {
+                  const nueva = sinLugar.alternativa!;
+                  setDay(nueva);
+                  avisar(
+                    'info',
+                    dict.feedback.dateChanged.replace(
+                      '{date}',
+                      formatDay(fromLocalISODate(nueva), lang),
+                    ),
+                  );
+                }}
+                className="shrink-0 self-start rounded-full bg-accent px-4 py-2 text-xs font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:self-auto"
+              >
+                {checkout.takeOffered.replace(
+                  '{date}',
+                  formatDay(fromLocalISODate(sinLugar.alternativa), lang),
                 )}
-              </CheckoutSectionCard>
-            </motion.div>
-          )}
+              </button>
+            )}
+          </div>
         </div>
+        ) : undefined}
+        stepper={{ actual: pasoActualStepper, totalMovil }}
+        pasos={
+          <>
+            <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
+              <CheckoutSectionCard
+                title={checkout.tripHeadline}
+                estado={estadoViaje}
+                resumen={resumenPaso1}
+                actionLabel={etiquetaAccion(crudoViaje)}
+                onAction={crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
+                pie={crudoViaje === 'activo' && !locked
+                  ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso>
+                  : undefined}
+              >
+                <ContenidoViaje
+                  fecha={
+                    <>
+                      <CheckoutCalendar
+                        lang={lang}
+                        selected={day}
+                        onSelect={setDay}
+                        minDate={minDate}
+                        personas={people}
+                        fullLabel={checkout.dayFull}
+                        weekdaysShort={checkout.weekdaysShort}
+                      />
+                      <p className="mt-5 border-t border-border pt-5 text-sm text-foreground">
+                        {formatDay(dayDate, lang)}
+                      </p>
+                    </>
+                  }
+                  hora={pideHora ? (locked ? (
+                    <p className="px-6 py-4 text-sm text-muted">
+                      {checkout.hourLabel}: <span className="text-foreground">{horaTexto}</span>
+                    </p>
+                  ) : (
+                    <TimeField
+                      label={checkout.hourLabel}
+                      help={booking.timeHelp}
+                      value={time}
+                      onChange={setTime}
+                      availableHours={horasDisponibles}
+                    />
+                  )) : undefined}
+                  personas={
+                    <PeopleStepper
+                      label={checkout.peopleLabel}
+                      maxNotice={booking.maxPeopleNotice}
+                      value={people}
+                      onChange={cambiarPersonas}
+                      disabled={locked}
+                      onMaxAttempt={() => ayuda.tropezar('tope-personas')}
+                    />
+                  }
+                  salida={tieneHospedaje ? (locked ? (
+                    <p className="text-sm text-foreground">
+                      {checkout.checkoutDateLabel}: {formatDay(fromLocalISODate(fechaSalida), lang)}
+                    </p>
+                  ) : (
+                    <div className="border border-border bg-surface">
+                      <DateField
+                        lang={lang}
+                        label={checkout.checkoutDateLabel}
+                        value={fechaSalida}
+                        onChange={setFechaSalidaManual}
+                        minDate={defaultFechaSalida}
+                        prevMonthLabel={booking.prevMonth}
+                        nextMonthLabel={booking.nextMonth}
+                        personas={people}
+                        fullLabel={checkout.dayFull}
+                        sinCupo
+                      />
+                    </div>
+                  )) : undefined}
+                  nota={precioPersonaExtra > 0 ? (
+                    <p>
+                      {checkout.extraPeopleHint
+                        .replace('{included}', String(personasIncluidas))
+                        .replace('{price}', currency.format(precioPersonaExtra))}
+                    </p>
+                  ) : undefined}
+                />
+              </CheckoutSectionCard>
+            </ItemPaso>
 
-        {/* Ya no es `sticky`: se queda donde cae en su columna, no persigue el
-            scroll. */}
-        <div className="min-w-0">
-          {/* Un solo StripePanel en todo el arbol — montarlo dos veces (uno por
-              breakpoint) inicializaria Stripe.js y el widget de Turnstile por
-              duplicado. En escritorio se ve siempre, en su propia columna: ahi
-              nunca compite por el mismo canal de atencion que el formulario. En
-              movil, donde SI comparte canal con los pasos, solo se ve completo
-              hasta que el paso 3 (extras) se confirma con su propio boton —
-              antes de eso queda montado pero oculto, nunca se desmonta ni se
-              vuelve a armar. */}
-          <div ref={refStripePanel} className={`scroll-mt-28 ${!extrasConfirmado ? 'hidden lg:block' : undefined}`}>
+            {estadoContacto && (
+              <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
+                <CheckoutSectionCard
+                  title={checkout.contactHeadline}
+                  estado={estadoContacto}
+                  resumen={resumenPaso2}
+                  actionLabel={etiquetaAccion(crudoContacto)}
+                  onAction={crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
+                  pie={crudoContacto === 'activo' && !locked
+                    ? <BotonPaso onClick={confirmarContacto}>{checkout.confirmStep}</BotonPaso>
+                    : undefined}
+                >
+                  <CamposContacto
+                    idPrefijo="checkout"
+                    valores={contact}
+                    errores={erroresCampo}
+                    etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
+                    refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
+                    disabled={locked}
+                    onCambio={(campo, valor) => {
+                      setContact((prev) => ({ ...prev, [campo]: valor }));
+                      // El error se limpia al escribir: dejarlo puesto mientras el
+                      // cliente corrige lo convierte en un regaño que no se calla.
+                      if (erroresCampo[campo]) setErroresCampo((prev) => ({ ...prev, [campo]: undefined }));
+                    }}
+                  />
+                </CheckoutSectionCard>
+              </ItemPaso>
+            )}
+
+            {/* El punto de encuentro real y el aviso del agente ya no van aquí:
+                son información de después de pagar, viven en BookingConfirmation.
+                Bebidas se quitó del checkout: depende del tipo de bebida, un dato
+                que el sitio no captura; la vendedora la sigue cotizando a mano en
+                reservas por WhatsApp o teléfono. */}
+            {estadoDetalles && (
+              <ItemPaso unida={unidaConAnterior(secuencia, secuencia.length - 1)}>
+                <CheckoutSectionCard
+                  title={checkout.extrasStepHeadline}
+                  estado={estadoDetalles}
+                  resumen={
+                    catalogoUnificado
+                      .filter((p) => personalizacionesMap.has(p.id))
+                      .map((p) => p.nombre)
+                      .join(', ') ||
+                    checkout.noExtrasSelected
+                  }
+                  actionLabel={locked ? undefined : etiquetaAccion(crudoDetalles)}
+                  onAction={locked || crudoDetalles === 'activo' ? undefined : () => reabrir('detalles')}
+                  pie={crudoDetalles === 'activo' && !locked
+                    ? <BotonPaso conFlecha onClick={continuarAPago}>{checkout.continueToPayment || checkout.confirmStep}</BotonPaso>
+                    : undefined}
+                >
+                  {catalogoUnificado.length === 0 && (
+                    <p className="text-sm text-muted">{checkout.noExtrasSelected}</p>
+                  )}
+                  {obligatorias.length > 0 && (
+                    <BloqueDePaso titulo={checkout.extrasRequiredLabel}>
+                      {obligatorias.map(renderPersonalizacion)}
+                    </BloqueDePaso>
+                  )}
+                  {opcionales.length > 0 && (
+                    <BloqueDePaso titulo={checkout.extrasOptionalLabel} opcional={checkout.optionalTag}>
+                      {opcionales.map(renderPersonalizacion)}
+                    </BloqueDePaso>
+                  )}
+                </CheckoutSectionCard>
+              </ItemPaso>
+            )}
+          </>
+        }
+        pedido={
+          // Un solo StripePanel en todo el arbol — montarlo dos veces inicializaria
+          // Stripe.js y el widget de Turnstile por duplicado. En movil la zona de
+          // pago se muestra al llegar al paso 4 (`pagoVisibleMovil`); antes queda
+          // montada pero oculta, nunca se desmonta.
+          <div ref={refStripePanel} className="scroll-mt-28">
             <StripePanel
               lang={lang}
               checkout={checkout}
@@ -1570,6 +1445,8 @@ export function CheckoutView({
               error={error}
               pago={pago}
               feedback={dict.feedback}
+              lineasViaje={lineasViaje}
+              pagoVisibleMovil={actual === 'pago' || enviando || locked}
               ayudaMensaje={ayudaMensaje}
               onSubmit={iniciarPago}
               onPagoConfirmado={(procesando) => {
@@ -1598,29 +1475,22 @@ export function CheckoutView({
               </span>
             </p>
           </div>
+        }
+      />
 
-          {/* Movil, mientras faltan los extras por confirmar: una franja con el
-              total en vez de la tarjeta completa. No es que "no haya nada" —
-              el total sigue a la vista todo el tiempo, solo que no compite con
-              el paso que se esta llenando ahora mismo. */}
-          {!extrasConfirmado && (
-            <motion.div
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="flex items-center justify-between border border-border bg-background px-5 py-4 lg:hidden"
-            >
-              <span className="text-sm text-muted">{checkout.total}</span>
-              <span className="flex items-center gap-2 text-base font-medium text-foreground">
-                {total === null ? '—' : currency.format(total)}
-                <Lock size={14} weight="bold" className="text-muted" />
-              </span>
-            </motion.div>
-          )}
-        </div>
-      </main>
-
-      <CheckoutFooter lang={lang} footer={dict.footer} nav={nav} />
+      <AyudaFlotante
+        visible={ayuda.visible}
+        etiqueta={dict.feedback.floatingHelp.label}
+        cerrarLabel={dict.feedback.floatingHelp.dismiss}
+        mensaje={ayuda.motivo === 'tope-personas'
+          ? dict.feedback.floatingHelp.messageMaxPeople
+              .replace('{name}', servicio?.nombre ?? servicioNombre ?? '')
+              .replace('{max}', String(MAX_PEOPLE))
+          : dict.feedback.floatingHelp.messageValidation
+              .replace('{date}', formatDay(dayDate, lang))
+              .replace('{people}', String(people))}
+        onDescartar={ayuda.descartar}
+      />
 
       <AnimatePresence>
         {recordatorioAbierto && (
@@ -1636,6 +1506,6 @@ export function CheckoutView({
           />
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
