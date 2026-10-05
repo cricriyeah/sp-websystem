@@ -1,9 +1,10 @@
 'use client';
 
-import { Buildings, MapPin, Minus, Plus, Warning } from '@phosphor-icons/react';
+import { AirplaneTilt, Buildings, MapPin, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BotonPaso } from '@/components/checkout/boton-paso';
+import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import type { Aeropuerto, Moneda, PaqueteServicioCatalogo, PuntoEncuentro, Zona } from '@/lib/api';
@@ -130,23 +131,30 @@ export function GrupoServicio({
       </div>
     );
 
+    if (extra.tipo_interaccion === 'input_seleccion') {
+      return (
+        <div key={extra.id} className="flex flex-col gap-2 text-sm text-foreground">
+          <span className="font-medium">{extra.nombre}{extra.obligatorio ? ' *' : ''}</span>
+          <SelectPersonalizado
+            label={extra.nombre}
+            value={seleccion?.respuesta ?? ''}
+            disabled={bloqueado}
+            sinRespuestaLabel="—"
+            opciones={extra.opciones_seleccion.map((opcion) => ({ valor: opcion, etiqueta: opcion }))}
+            onChange={(valor) => actualizarExtra(extra.id, valor ? { id: extra.id, respuesta: valor } : undefined)}
+          />
+        </div>
+      );
+    }
+
     return (
       <label key={extra.id} htmlFor={id} className="flex flex-col gap-2 text-sm text-foreground">
         <span className="font-medium">{extra.nombre}{extra.obligatorio ? ' *' : ''}</span>
-        {extra.tipo_interaccion === 'input_seleccion' ? (
-          <select id={id} value={seleccion?.respuesta ?? ''} disabled={bloqueado}
-            onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
-            className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent">
-            <option value="">—</option>
-            {extra.opciones_seleccion.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}
-          </select>
-        ) : (
-          <input id={id} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
-            step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
-            value={seleccion?.respuesta ?? ''} disabled={bloqueado}
-            onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
-            className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent" />
-        )}
+        <input id={id} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
+          step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
+          value={seleccion?.respuesta ?? ''} disabled={bloqueado}
+          onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
+          className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent" />
       </label>
     );
   };
@@ -210,20 +218,18 @@ export function GrupoServicio({
               </p>
             )}
           </div>
-          <label className="flex flex-col gap-1.5 text-sm text-foreground">
+          <div className="flex flex-col gap-1.5 text-sm text-foreground">
             <span className="text-muted">{pedido.airportLabel}</span>
-            <select
+            <SelectPersonalizado
+              label={pedido.airportLabel}
+              placeholder={pedido.airportPlaceholder}
               value={traslado.aeropuerto}
               disabled={bloqueado}
-              onChange={(event) => onTraslado({ aeropuerto: event.target.value as Aeropuerto | '' })}
-              className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent"
-            >
-              <option value="">{pedido.airportPlaceholder}</option>
-              {(['lap', 'sjd'] as Aeropuerto[]).map((codigo) => (
-                <option key={codigo} value={codigo}>{pedido.airports[codigo]}</option>
-              ))}
-            </select>
-          </label>
+              icon={<AirplaneTilt size={20} className="shrink-0 text-muted" />}
+              opciones={(['lap', 'sjd'] as Aeropuerto[]).map((codigo) => ({ valor: codigo, etiqueta: pedido.airports[codigo] }))}
+              onChange={(valor) => onTraslado({ aeropuerto: valor as Aeropuerto | '' })}
+            />
+          </div>
         </BloqueDePaso>
       )}
 

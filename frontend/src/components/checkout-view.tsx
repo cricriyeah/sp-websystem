@@ -20,6 +20,7 @@ import { AmenitiesReminder, type ExtraPendiente } from '@/components/amenities-r
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { SiteHeader } from '@/components/site-header';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
+import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { DateField } from '@/components/date-field';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
@@ -1464,6 +1465,28 @@ export function CheckoutView({
                       }
 
                       const valor = seleccion?.respuesta ?? '';
+                      if (sp.tipo_interaccion === 'input_seleccion') {
+                        return (
+                          <div key={sp.id} className="flex flex-col gap-2 text-sm text-foreground">
+                            <span className="font-medium">
+                              {sp.nombre}
+                              {sp.obligatorio ? ' *' : ''}
+                            </span>
+                            <SelectPersonalizado
+                              label={sp.nombre}
+                              value={valor}
+                              disabled={locked}
+                              invalido={Boolean(errorCodigo)}
+                              sinRespuestaLabel="—"
+                              opciones={sp.opciones_seleccion.map((opcion) => ({ valor: opcion, etiqueta: opcion }))}
+                              onChange={(nuevo) => actualizarRespuestaPersonalizacion(sp.id, nuevo)}
+                            />
+                            {errorCodigo && (
+                              <FieldError id={errorId} mensaje={checkout.personalizacionErrors[errorCodigo]} />
+                            )}
+                          </div>
+                        );
+                      }
                       return (
                         <label
                           key={sp.id}
@@ -1474,38 +1497,19 @@ export function CheckoutView({
                             {sp.nombre}
                             {sp.obligatorio ? ' *' : ''}
                           </span>
-                          {sp.tipo_interaccion === 'input_seleccion' ? (
-                            <select
-                              id={`personalizacion-${sp.id}`}
-                              value={valor}
-                              disabled={locked}
-                              aria-invalid={Boolean(errorCodigo)}
-                              aria-describedby={errorCodigo ? errorId : undefined}
-                              onChange={(e) => actualizarRespuestaPersonalizacion(sp.id, e.target.value)}
-                              className={`border bg-surface px-4 py-3 outline-none ${
-                                errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
-                              }`}
-                            >
-                              <option value="">—</option>
-                              {sp.opciones_seleccion.map((opcion) => (
-                                <option key={opcion} value={opcion}>{opcion}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              id={`personalizacion-${sp.id}`}
-                              type={sp.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
-                              step={sp.tipo_interaccion === 'input_numero' ? 'any' : undefined}
-                              value={valor}
-                              disabled={locked}
-                              aria-invalid={Boolean(errorCodigo)}
-                              aria-describedby={errorCodigo ? errorId : undefined}
-                              onChange={(e) => actualizarRespuestaPersonalizacion(sp.id, e.target.value)}
-                              className={`border bg-surface px-4 py-3 outline-none ${
-                                errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
-                              }`}
-                            />
-                          )}
+                          <input
+                            id={`personalizacion-${sp.id}`}
+                            type={sp.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
+                            step={sp.tipo_interaccion === 'input_numero' ? 'any' : undefined}
+                            value={valor}
+                            disabled={locked}
+                            aria-invalid={Boolean(errorCodigo)}
+                            aria-describedby={errorCodigo ? errorId : undefined}
+                            onChange={(e) => actualizarRespuestaPersonalizacion(sp.id, e.target.value)}
+                            className={`border bg-surface px-4 py-3 outline-none ${
+                              errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
+                            }`}
+                          />
                           {errorCodigo && (
                             <FieldError
                               id={errorId}
