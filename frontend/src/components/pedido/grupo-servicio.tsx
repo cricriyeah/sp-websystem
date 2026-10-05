@@ -6,7 +6,7 @@ import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section
 import { BotonPaso } from '@/components/checkout/boton-paso';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
-import type { Aeropuerto, Moneda, PaqueteServicioCatalogo, PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
+import type { Aeropuerto, Moneda, PaqueteServicioCatalogo, PuntoEncuentro, Zona } from '@/lib/api';
 import { fechaDeComponente, sumarDias } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
@@ -14,6 +14,7 @@ import { aMoneda } from '@/lib/moneda';
 import { cantidadEfectiva, separarPersonalizaciones, type SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
+import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { FechaPaquete } from './fecha-paquete';
 
 type Props = {
@@ -227,18 +228,13 @@ export function GrupoServicio({
 
       {traslado && !trasladoFijo && (
         <BloqueDePaso>
-          <fieldset className="grid gap-3 sm:grid-cols-3">
-            <legend className="sr-only">{traslados.step1Title}</legend>
-            {(['redondo_aeropuerto', 'redondo_actividad', 'recepcion_aeropuerto'] as TipoTraslado[]).map((tipo) => (
-              <label key={tipo} className={`cursor-pointer rounded-lg border p-3 text-sm transition-colors ${
-                traslado.tipo === tipo ? 'border-accent bg-surface font-medium text-foreground ring-1 ring-accent' : 'border-border text-muted hover:border-border-strong'
-              }`}>
-                <input type="radio" name={`tipo-traslado-${servicio.slug}`} checked={traslado.tipo === tipo}
-                  onChange={() => onTraslado({ tipo })} className="sr-only" />
-                {traslados.types[tipo].title}
-              </label>
-            ))}
-          </fieldset>
+          <TipoTrasladoCards
+            tipos={['redondo_aeropuerto', 'redondo_actividad', 'recepcion_aeropuerto']}
+            valor={traslado.tipo}
+            textos={traslados.types}
+            etiqueta={traslados.step1Title}
+            onChange={(tipo) => onTraslado({ tipo })}
+          />
 
           {traslado.modo === 'catalogo' ? (
             <FieldPopover

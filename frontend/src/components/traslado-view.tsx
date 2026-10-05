@@ -3,12 +3,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  AirplaneLanding,
-  AirplaneTakeoff,
   ArrowLeft,
   Buildings,
-  Car,
-  Check,
   EnvelopeSimple,
   MapPin,
   Phone,
@@ -27,6 +23,7 @@ import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import { SiteHeader } from '@/components/site-header';
 import { StripePanel } from '@/components/stripe-panel';
+import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import {
@@ -542,17 +539,6 @@ export function TrasladoView({
     'recepcion_aeropuerto',
   ];
 
-  const getIconoTipo = (tipo: TipoTraslado) => {
-    switch (tipo) {
-      case 'redondo_aeropuerto':
-        return <AirplaneTakeoff size={24} className="text-accent" />;
-      case 'redondo_actividad':
-        return <Car size={24} className="text-accent" />;
-      case 'recepcion_aeropuerto':
-        return <AirplaneLanding size={24} className="text-accent" />;
-    }
-  };
-
   const getPrecioDesde = (tipo: TipoTraslado) => {
     const tarifasTipo = catalogo.tarifas.filter((t) => t.tipo_traslado === tipo);
     if (tarifasTipo.length === 0) return null;
@@ -598,45 +584,18 @@ export function TrasladoView({
             onAction={() => setPasoEditando(colapsado1 ? 1 : null)}
           >
             <p className="mb-4 text-xs text-muted">{traslados.step1Description}</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {tiposDisponibles.map((tipo) => {
-                const seleccionado = tipoTraslado === tipo;
-                const info = traslados.types[tipo];
-                const precioDesde = getPrecioDesde(tipo);
-                return (
-                  <button
-                    key={tipo}
-                    type="button"
-                    onClick={() => {
-                      setTipoTraslado(tipo);
-                      if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
-                      else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
-                    }}
-                    className={`flex flex-col items-start justify-between rounded-xl border p-4 text-left transition-colors ${
-                      seleccionado
-                        ? 'border-accent bg-surface shadow-sm ring-1 ring-accent'
-                        : 'border-border bg-background hover:border-border-strong'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      {getIconoTipo(tipo)}
-                      {seleccionado && <Check size={16} weight="bold" className="text-accent" />}
-                    </div>
-                    <span className="mt-3 font-semibold text-foreground text-sm leading-tight">
-                      {info.title}
-                    </span>
-                    <span className="mt-1 text-xs text-muted leading-relaxed line-clamp-3">
-                      {info.description}
-                    </span>
-                    {precioDesde && (
-                      <span className="mt-4 inline-block text-xs font-medium text-accent">
-                        Desde {precioDesde}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            <TipoTrasladoCards
+              tipos={tiposDisponibles}
+              valor={tipoTraslado}
+              textos={traslados.types}
+              etiqueta={traslados.step1Title}
+              precioDesde={getPrecioDesde}
+              onChange={(tipo) => {
+                setTipoTraslado(tipo);
+                if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
+                else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
+              }}
+            />
 
             {pasosVisibles === 1 && (
               <div className="mt-6 flex justify-end border-t border-border pt-5">
