@@ -2,7 +2,8 @@
 
 import { Buildings, MapPin, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
+import { BotonPaso } from '@/components/checkout/boton-paso';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import type { Aeropuerto, Moneda, PaqueteServicioCatalogo, PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
@@ -10,7 +11,7 @@ import { fechaDeComponente, sumarDias } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
-import { cantidadEfectiva, type SeleccionPersonalizacion } from '@/lib/personalizaciones';
+import { cantidadEfectiva, separarPersonalizaciones, type SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
 import { FechaPaquete } from './fecha-paquete';
@@ -31,13 +32,11 @@ type Props = {
   inicio: string | null;
   noches: number | null;
   salida: string | null;
-  minDate: string;
   puntos: PuntoEncuentro[];
-  mostrarInicio: boolean;
   estadoTarjeta: 'activo' | 'editando' | 'completado';
   onAccion: () => void;
   onCompletar: () => void;
-  onInicio: (fecha: string) => void;
+  onTope?: () => void;
   onPersonas: (personas: number) => void;
   onExtras: (seleccion: SeleccionPersonalizacion[]) => void;
   onTraslado: (cambios: Partial<DetalleTraslado>) => void;
@@ -45,8 +44,8 @@ type Props = {
 
 export function GrupoServicio({
   lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda, tipoCambio,
-  inicio, noches, salida, minDate, puntos, mostrarInicio, estadoTarjeta,
-  onAccion, onCompletar, onInicio, onPersonas, onExtras, onTraslado,
+  inicio, noches, salida, puntos, estadoTarjeta,
+  onAccion, onCompletar, onTope, onPersonas, onExtras, onTraslado,
 }: Props) {
   const { checkout, booking, pedido, traslados } = dict;
   const servicio = componente.servicio;
@@ -64,52 +63,106 @@ export function GrupoServicio({
   const esLogistica = precioDependeDePersonas && !esActividadPrincipal &&
     (servicio.tipo_servicio === 'hospedaje' || servicio.tipo_servicio === 'transporte');
   const maxPersonasLogistica = Math.min(personasMax, componente.personas_incluidas);
-  const resumen = [
-    conEncabezadoEmpresa ? pedido.groupOf.replace('{empresa}', nombreEmpresa) : null,
-    precioDependeDePersonas ? personasTexto : `${estado.personas} ${estado.personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`,
-    mostrarInicio && inicio ? formatoFecha(inicio) : null,
-  ].filter(Boolean).join(' · ');
+  const resumen = precioDependeDePersonas
+    ? personasTexto
+    : `${estado.personas} ${estado.personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`;
+  const { obligatorias, opcionales } = separarPersonalizaciones(servicio.personalizaciones);
+  const renderExtra = (extra: (typeof servicio.personalizaciones)[number]) => {
+    const seleccion = seleccionadas.get(extra.id);
+    const marcada = Boolean(seleccion);
+    const precio = aMoneda(extra.precio, moneda, tipoCambio);
+    const sinPrecio = precio === null;
+    const cantidad = cantidadEfectiva(extra, estado.personas, seleccion?.cantidad);
+    const id = `pedido-extra-${servicio.slug}-${extra.id}`;
+
+    if (extra.tipo_interaccion === 'check') return (
+      <div key={extra.id}>
+        <label
+          htmlFor={id}
+          className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
+        >
+          <span className="flex items-start gap-3">
+            <input
+              id={id}
+              type="checkbox"
+              checked={marcada}
+              disabled={bloqueado || (sinPrecio && !marcada)}
+              onChange={(event) => actualizarExtra(extra.id, event.target.checked ? { id: extra.id, cantidad: 1 } : undefined)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+            />
+            <span>
+              <span className="font-medium">{extra.nombre}</span>
+              {extra.preseleccionado && (
+                <span className="ml-2 text-xs font-medium text-accent">{checkout.recommendedBadge}</span>
+              )}
+            </span>
+          </span>
+          <span className="shrink-0 text-right text-muted">
+            {sinPrecio ? checkout.extrasUnavailableInCurrency : `+${formatearPrecio(precio * cantidad, moneda)}`}
+          </span>
+        </label>
+        {!marcada && extra.aviso_reforzado && (
+          <div className="flex items-start gap-2 border border-t-0 border-action/40 bg-action/10 px-4 py-2.5 text-xs text-foreground">
+            <Warning size={14} className="mt-0.5 shrink-0 text-action" />
+            <p>{checkout.amenitiesModal.reinforcedWarning}</p>
+          </div>
+        )}
+        {marcada && extra.cantidad_editable && estado.personas > 1 && (
+          <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
+            <span className="text-muted">{checkout.licenseQuantity.question}</span>
+            <span className="flex items-center gap-2">
+              <button type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
+                onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad - 1 })}
+                className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
+                <Minus size={12} />
+              </button>
+              <span>{checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(estado.personas))}</span>
+              <button type="button" aria-label="+" disabled={cantidad >= estado.personas || bloqueado}
+                onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad + 1 })}
+                className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
+                <Plus size={12} />
+              </button>
+            </span>
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <label key={extra.id} htmlFor={id} className="flex flex-col gap-2 text-sm text-foreground">
+        <span className="font-medium">{extra.nombre}{extra.obligatorio ? ' *' : ''}</span>
+        {extra.tipo_interaccion === 'input_seleccion' ? (
+          <select id={id} value={seleccion?.respuesta ?? ''} disabled={bloqueado}
+            onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
+            className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent">
+            <option value="">—</option>
+            {extra.opciones_seleccion.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}
+          </select>
+        ) : (
+          <input id={id} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
+            step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
+            value={seleccion?.respuesta ?? ''} disabled={bloqueado}
+            onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
+            className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent" />
+        )}
+      </label>
+    );
+  };
 
   return (
     <CheckoutSectionCard
       title={servicio.nombre}
+      etiqueta={conEncabezadoEmpresa ? nombreEmpresa : undefined}
       estado={estadoTarjeta}
       resumen={resumen}
       actionLabel={estadoTarjeta === 'completado' ? checkout.changeStep : estadoTarjeta === 'editando' ? checkout.doneEditing : undefined}
       onAction={estadoTarjeta === 'activo' ? undefined : onAccion}
+      pie={estadoTarjeta === 'activo' ? (
+        <BotonPaso onClick={onCompletar}>{checkout.confirmStep}</BotonPaso>
+      ) : undefined}
     >
-      {conEncabezadoEmpresa && (
-        <p className="mb-4 text-xs text-muted">{pedido.groupOf.replace('{empresa}', nombreEmpresa)}</p>
-      )}
-
-      {mostrarInicio && (
-        <div className="mb-4">
-          <FechaPaquete
-            lang={lang}
-            label={pedido.startLabel}
-            value={inicio}
-            onChange={onInicio}
-            minDate={minDate}
-            chooseLabel={pedido.chooseStart}
-            viewMonthLabel={pedido.viewMonth}
-            hideMonthLabel={pedido.hideMonth}
-            previousWeekLabel={pedido.previousWeek}
-            nextWeekLabel={pedido.nextWeek}
-            previousMonthLabel={booking.prevMonth}
-            nextMonthLabel={booking.nextMonth}
-            personas={estado.personas}
-            fullLabel={checkout.dayFull}
-          />
-          {noches !== null && salida && (
-            <p className="mt-2 text-xs text-muted">
-              {pedido.nightsNote.replace('{n}', String(noches)).replace('{fecha}', formatoFecha(salida))}
-            </p>
-          )}
-        </div>
-      )}
-
       {esLogistica ? (
-        <div className="border-t border-border pt-4">
+        <div className="border border-border bg-surface">
           <PeopleStepper
             label={servicio.tipo_servicio === 'hospedaje' ? pedido.stayPeopleQuestion : pedido.transferPeopleQuestion}
             maxNotice={pedido.logisticsMaxNotice.replace('{max}', String(maxPersonasLogistica))}
@@ -118,116 +171,33 @@ export function GrupoServicio({
             maxPeople={maxPersonasLogistica}
             minPeople={1}
             disabled={bloqueado}
+            onMaxAttempt={onTope}
           />
         </div>
       ) : precioDependeDePersonas ? (
-        <p className="border-t border-border pt-4 text-sm text-muted">{personasTexto}</p>
+        <p className="text-sm text-muted">{personasTexto}</p>
       ) : (
-        <div className="border-t border-border pt-4">
-          <PeopleStepper
-            label={checkout.peopleLabel}
-            maxNotice={booking.maxPeopleNotice}
-            value={estado.personas}
-            onChange={onPersonas}
-            maxPeople={componente.personas_incluidas}
-            minPeople={1}
-            disabled={bloqueado}
-          />
-          <p className="px-6 text-xs text-muted">
+        <div>
+          <div className="border border-border bg-surface">
+            <PeopleStepper
+              label={checkout.peopleLabel}
+              maxNotice={booking.maxPeopleNotice}
+              value={estado.personas}
+              onChange={onPersonas}
+              maxPeople={componente.personas_incluidas}
+              minPeople={1}
+              disabled={bloqueado}
+              onMaxAttempt={onTope}
+            />
+          </div>
+          <p className="mt-2 text-xs text-muted">
             {pedido.peopleIncluded.replace('{n}', String(componente.personas_incluidas))}
           </p>
         </div>
       )}
 
-      {servicio.personalizaciones.length > 0 && (
-        <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
-          <p className="text-sm font-medium text-foreground">{pedido.extrasTitle}</p>
-          {servicio.personalizaciones.map((extra) => {
-            const seleccion = seleccionadas.get(extra.id);
-            const marcada = Boolean(seleccion);
-            const precio = aMoneda(extra.precio, moneda, tipoCambio);
-            const sinPrecio = precio === null;
-            const cantidad = cantidadEfectiva(extra, estado.personas, seleccion?.cantidad);
-            const id = `pedido-extra-${servicio.slug}-${extra.id}`;
-
-            if (extra.tipo_interaccion === 'check') return (
-              <div key={extra.id}>
-                <label
-                  htmlFor={id}
-                  className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
-                >
-                  <span className="flex items-start gap-3">
-                    <input
-                      id={id}
-                      type="checkbox"
-                      checked={marcada}
-                      disabled={bloqueado || (sinPrecio && !marcada)}
-                      onChange={(event) => actualizarExtra(extra.id, event.target.checked ? { id: extra.id, cantidad: 1 } : undefined)}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                    />
-                    <span>
-                      <span className="font-medium">{extra.nombre}</span>
-                      {extra.preseleccionado && (
-                        <span className="ml-2 text-xs font-medium text-accent">{checkout.recommendedBadge}</span>
-                      )}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-right text-muted">
-                    {sinPrecio ? checkout.extrasUnavailableInCurrency : `+${formatearPrecio(precio * cantidad, moneda)}`}
-                  </span>
-                </label>
-                {!marcada && extra.aviso_reforzado && (
-                  <div className="flex items-start gap-2 border border-t-0 border-action/40 bg-action/10 px-4 py-2.5 text-xs text-foreground">
-                    <Warning size={14} className="mt-0.5 shrink-0 text-action" />
-                    <p>{checkout.amenitiesModal.reinforcedWarning}</p>
-                  </div>
-                )}
-                {marcada && extra.cantidad_editable && estado.personas > 1 && (
-                  <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
-                    <span className="text-muted">{checkout.licenseQuantity.question}</span>
-                    <span className="flex items-center gap-2">
-                      <button type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
-                        onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad - 1 })}
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
-                        <Minus size={12} />
-                      </button>
-                      <span>{checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(estado.personas))}</span>
-                      <button type="button" aria-label="+" disabled={cantidad >= estado.personas || bloqueado}
-                        onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad + 1 })}
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
-                        <Plus size={12} />
-                      </button>
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-
-            return (
-              <label key={extra.id} htmlFor={id} className="flex flex-col gap-2 text-sm text-foreground">
-                <span className="font-medium">{extra.nombre}{extra.obligatorio ? ' *' : ''}</span>
-                {extra.tipo_interaccion === 'input_seleccion' ? (
-                  <select id={id} value={seleccion?.respuesta ?? ''} disabled={bloqueado}
-                    onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
-                    className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent">
-                    <option value="">—</option>
-                    {extra.opciones_seleccion.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}
-                  </select>
-                ) : (
-                  <input id={id} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
-                    step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
-                    value={seleccion?.respuesta ?? ''} disabled={bloqueado}
-                    onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
-                    className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent" />
-                )}
-              </label>
-            );
-          })}
-        </div>
-      )}
-
       {traslado && trasladoFijo && (
-        <div className="mt-5 flex flex-col gap-4 border-t border-border pt-5">
+        <BloqueDePaso>
           <div>
             <p className="text-sm font-medium text-foreground">{pedido.fixedTransfer}</p>
             {inicio && salida && (
@@ -252,11 +222,11 @@ export function GrupoServicio({
               ))}
             </select>
           </label>
-        </div>
+        </BloqueDePaso>
       )}
 
       {traslado && !trasladoFijo && (
-        <div className="mt-5 flex flex-col gap-4 border-t border-border pt-5">
+        <BloqueDePaso>
           <fieldset className="grid gap-3 sm:grid-cols-3">
             <legend className="sr-only">{traslados.step1Title}</legend>
             {(['redondo_aeropuerto', 'redondo_actividad', 'recepcion_aeropuerto'] as TipoTraslado[]).map((tipo) => (
@@ -343,16 +313,18 @@ export function GrupoServicio({
               previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}
               personas={estado.personas} fullLabel={checkout.dayFull} />
           )}
-        </div>
+        </BloqueDePaso>
       )}
 
-      {estadoTarjeta === 'activo' && (
-        <div className="mt-6 flex justify-end border-t border-border pt-5">
-          <button type="button" onClick={onCompletar}
-            className="rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]">
-            {checkout.confirmStep}
-          </button>
-        </div>
+      {obligatorias.length > 0 && (
+        <BloqueDePaso titulo={checkout.extrasRequiredLabel}>
+          {obligatorias.map(renderExtra)}
+        </BloqueDePaso>
+      )}
+      {opcionales.length > 0 && (
+        <BloqueDePaso titulo={pedido.extrasTitle} opcional={checkout.optionalTag}>
+          {opcionales.map(renderExtra)}
+        </BloqueDePaso>
       )}
     </CheckoutSectionCard>
   );

@@ -1,9 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { EnvelopeSimple, Phone, User } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
+import { BotonPaso } from '@/components/checkout/boton-paso';
+import { CamposContacto } from '@/components/checkout/campos-contacto';
+import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
+import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
+import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
+import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CheckoutStepper } from '@/components/checkout-stepper';
@@ -16,13 +21,14 @@ import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
-import { fromLocalISODate } from '@/lib/dates';
+import { formatHour, fromLocalISODate } from '@/lib/dates';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
 import { horasDePaquete } from '@/lib/horario-servicio';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
+import { estadoDeTarjeta, numeroDePaso, type PasoId } from '@/lib/pasos-checkout';
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
 } from '@/lib/pedido-paquete';
@@ -34,6 +40,7 @@ import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
 import { AvisoFallo } from './aviso-fallo';
 import { EncabezadoPago } from './encabezado-pago';
+import { FechaPaquete } from './fecha-paquete';
 import { GrupoServicio } from './grupo-servicio';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
@@ -58,15 +65,17 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     puntoInicial: (empresa) => puntosPorEmpresa[empresa]?.[0]?.id ?? null,
   });
   const captcha = useRef('');
-  const [paso, setPaso] = useState(1);
-  const [datosEditando, setDatosEditando] = useState(false);
+  const [actual, setActual] = useState<PasoId>('viaje');
+  const [editando, setEditando] = useState<PasoId | null>(null);
+  const tarjeta = (id: PasoId) => estadoDeTarjeta(id, actual, editando);
+  const ayuda = useAyudaContextual();
   const [gruposCompletados, setGruposCompletados] = useState(0);
   const [grupoEditando, setGrupoEditando] = useState<number | null>(null);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [errorWaiver, setErrorWaiver] = useState(false);
   const [erroresContacto, setErroresContacto] = useState<Partial<Record<'fullName' | 'phone' | 'email', string>>>({});
+  const [errorViaje, setErrorViaje] = useState('');
   const [errorDetalles, setErrorDetalles] = useState('');
-  const [topeIntentado, setTopeIntentado] = useState(false);
   const [codigoPromocional, setCodigoPromocional] = useState('');
   const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>('idle');
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
@@ -128,6 +137,27 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     hora: estado.hora,
     personas: personasPaquete,
   });
+  const empresas = [...new Set(paquete.servicios_asociados.map((c) => nombreEmpresa(c.servicio.empresa_slug)))];
+  const detalleCompra = [
+    paquete.sede,
+    empresas.join(' + '),
+    noches !== null ? checkout.purchaseNights.replace('{n}', String(noches)) : null,
+  ].filter(Boolean).join(' · ');
+  const resumenViaje = [
+    estado.inicio ? formatearFecha(estado.inicio) : null,
+    paquete.pide_hora && estado.hora ? formatHour(estado.hora) : null,
+    paquete.precio_depende_de_personas
+      ? `${personasPaquete} ${personasPaquete === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`
+      : null,
+  ].filter(Boolean).join(' · ');
+  const lineasViaje = [
+    estado.inicio ? { etiqueta: checkout.summary.date, valor: formatearFecha(estado.inicio) } : null,
+    salida && noches !== null ? { etiqueta: checkout.summary.checkOut, valor: formatearFecha(salida) } : null,
+    paquete.pide_hora && estado.hora ? { etiqueta: checkout.summary.time, valor: formatHour(estado.hora) } : null,
+    paquete.precio_depende_de_personas
+      ? { etiqueta: checkout.summary.people, valor: String(personasPaquete) }
+      : null,
+  ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
 
   const pago = usePagoPedido({
     motor,
@@ -184,10 +214,24 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     return Object.keys(errores).length === 0;
   };
 
+  const confirmarViaje = () => {
+    if (!estado.inicio) {
+      setErrorViaje(traslados.errors.seleccionaFecha);
+      ayuda.tropezar('validacion');
+      return;
+    }
+    setErrorViaje('');
+    setEditando(null);
+    setActual((a) => (a === 'viaje' ? 'contacto' : a));
+  };
+
   const confirmarDatos = () => {
-    if (!validarDatos()) return;
-    setDatosEditando(false);
-    setPaso((actual) => Math.max(actual, 2));
+    if (!validarDatos()) {
+      ayuda.tropezar('validacion');
+      return;
+    }
+    setEditando(null);
+    setActual((a) => (a === 'contacto' ? 'detalles' : a));
   };
 
   const errorDeGrupo = (indice: number): string => {
@@ -220,8 +264,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     return '';
   };
 
-  // La actividad principal de un paquete que depende de personas se elige arriba,
-  // (sus personas son el grupo de arriba, y no lleva extras ni la fecha de inicio): no se muestra.
+  // La actividad principal de un paquete que depende de personas se elige en
+  // Viaje; si no lleva extras, no necesita una tarjeta de detalles adicional.
   const grupoOculto = (indice: number) => {
     const componente = paquete.servicios_asociados[indice];
     return paquete.precio_depende_de_personas && indice > 0 && componente.servicio.slug === slugPrincipal
@@ -230,35 +274,53 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
 
   const confirmarGrupo = (indice: number) => {
     const error = errorDeGrupo(indice);
-    if (error) return setErrorDetalles(error);
+    if (error) {
+      ayuda.tropezar('validacion');
+      if (!estado.inicio) {
+        setErrorViaje(error);
+        setErrorDetalles('');
+        setEditando('viaje');
+      } else {
+        setErrorDetalles(error);
+      }
+      return;
+    }
     setErrorDetalles('');
     let siguiente = indice + 1;
     while (siguiente < paquete.servicios_asociados.length && grupoOculto(siguiente)) siguiente += 1;
     setGruposCompletados(siguiente);
-    if (siguiente >= paquete.servicios_asociados.length) setPaso(3);
+    if (siguiente >= paquete.servicios_asociados.length) setActual('pago');
   };
 
   const enviar = () => {
-    if (paso < 3) return;
+    if (actual !== 'pago') return;
     if (!validarDatos()) {
-      setDatosEditando(true);
+      setEditando('contacto');
+      ayuda.tropezar('validacion');
       return;
     }
     for (let indice = 0; indice < paquete.servicios_asociados.length; indice++) {
       const error = errorDeGrupo(indice);
       if (error) {
-        setErrorDetalles(error);
-        setGrupoEditando(indice);
+        if (!estado.inicio) {
+          setErrorViaje(error);
+          setErrorDetalles('');
+          setEditando('viaje');
+        } else {
+          setErrorDetalles(error);
+          setGrupoEditando(indice);
+        }
         return;
       }
     }
-    if (!waiverAccepted) return setErrorWaiver(true);
+    if (!waiverAccepted) {
+      ayuda.tropezar('validacion');
+      return setErrorWaiver(true);
+    }
     if (!pedido) return setErrorDetalles(feedback.error.no_disponible);
     setErrorDetalles('');
     void pago.enviar();
   };
-
-  const pasos = [checkout.stepper.contact, checkout.stepper.extras, checkout.confirmStep, checkout.stepper.payment];
 
   if (pago.fase === 'exito') return (
     <div className="min-h-dvh bg-surface">
@@ -293,7 +355,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   // orden nueva directo al pago. Tras una recarga no hay datos que conservar: se vuelve al formulario.
   const reintentar = async () => {
     const llegoAlPago = await pago.reintentar();
-    if (!llegoAlPago) setGrupoEditando(0); // p. ej. ya no hay cupo: se abre la fecha para cambiarla
+    if (!llegoAlPago) setEditando('viaje'); // p. ej. ya no hay cupo: se abre la fecha para cambiarla
   };
 
   if (pago.fase === 'fallo') {
@@ -322,7 +384,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
-        <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} totalMovil={totalMovil} />
+        <CheckoutStepper stepper={checkout.stepper} actual={4} totalMovil={totalMovil} />
         <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
           <AvisoFallo
             titulo={titulo}
@@ -374,7 +436,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
-        <CheckoutStepper stepper={checkout.stepper} actual={4} steps={pasos} totalMovil={totalMovil} />
+        <CheckoutStepper stepper={checkout.stepper} actual={4} totalMovil={totalMovil} />
         <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
           <div className="flex min-w-0 flex-col gap-6">
             <CheckoutSectionCard title={checkout.contactHeadline} estado="completado"
@@ -416,215 +478,215 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   }
 
   return (
-    <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
-      <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
-        <Link href={`/${lang}/sede/${sedeSlug}`}
-          className="mb-6 inline-flex text-sm font-medium text-muted hover:text-foreground">
-          {textos.back}
-        </Link>
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{textos.title}</h1>
-        <p className="mt-2 text-sm text-muted">{paquete.nombre}</p>
-        {conUsd && (
-          <fieldset className="mt-5 flex items-center gap-3">
-            <legend className="sr-only">{checkout.currency.headline}</legend>
-            <span className="text-xs text-muted">{checkout.currency.headline}</span>
-            <div className="flex overflow-hidden rounded-full border border-border text-xs">
-              {(['MXN', 'USD'] as const).map((opcion) => (
-                <label key={opcion}
-                  className="cursor-pointer px-3 py-1.5 font-medium text-muted transition-colors has-[:checked]:bg-foreground has-[:checked]:text-surface">
-                  <input type="radio" name="moneda-pedido" value={opcion}
-                    checked={estado.moneda === opcion}
-                    onChange={() => despachar({ tipo: 'moneda', valor: opcion })}
-                    className="sr-only" />
-                  {opcion}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
-      </div>
-      <CheckoutStepper stepper={checkout.stepper} actual={paso} steps={pasos} totalMovil={totalMovil} />
-      <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
-        <div className="flex min-w-0 flex-col gap-6">
-        {paquete.precio_depende_de_personas && maxPersonas !== null && (
-          <section className="border border-border bg-card p-5 sm:p-6" aria-label={textos.peopleQuestion}>
-            <p className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              <span>{anclaMostrada}</span>
-              <span className="whitespace-nowrap">{estado.moneda} {paquete.estrategia_precio === 'por_persona'
-                ? textos.perPerson
-                : textos.perGroup.replace('{n}', String(paquete.personas_precio_base))}</span>
-            </p>
-            {paquete.estrategia_precio === 'por_grupo' && extra !== null && (
-              <p className="mt-2 text-sm text-muted">
-                {textos.extraPerson.replace('{precio}', formatearPrecio(extra, estado.moneda))}
-              </p>
-            )}
-            <div className="mt-4 border border-border bg-surface">
-              <PeopleStepper label={textos.peopleQuestion}
-                maxNotice={(tieneWhatsapp ? textos.morePeople : textos.morePeopleOffline).replace('{max}', String(maxPersonas))}
-                value={personasPaquete} maxPeople={maxPersonas} minPeople={1}
-                onChange={(valor) => {
-                  if (valor < maxPersonas) setTopeIntentado(false);
-                  if (slugPrincipal) despachar({ tipo: 'personasPaquete', slugPrincipal, valor });
-                }}
-                onMaxAttempt={() => setTopeIntentado(true)} />
-            </div>
-            <div className="mt-4 flex items-center justify-between gap-3 text-sm text-muted">
-              <span>{precioPersonas}</span>
-              <span className="font-medium text-foreground">{textos.totalLabel} {totalConMoneda ?? '—'}</span>
-            </div>
-            {grupoOculto(paquete.servicios_asociados.findIndex((c) => c.servicio.slug === slugPrincipal)) && (
-              <p className="mt-3 text-xs text-muted">{servicioPrincipalPaquete(paquete)?.servicio.nombre}</p>
-            )}
-            {topeIntentado && (tieneWhatsapp ? (
-              <a href={whatsappHref(`${textos.morePeople.replace('{max}', String(maxPersonas))} ${paquete.nombre}`)}
-                target="_blank" rel="noopener noreferrer"
-                className="mt-3 inline-block text-sm font-medium text-accent underline underline-offset-2">
-                {textos.morePeople.replace('{max}', String(maxPersonas))}
-              </a>
-            ) : (
-              <p className="mt-3 text-sm text-muted">
-                {textos.morePeopleOffline.replace('{max}', String(maxPersonas))}
-              </p>
-            ))}
-          </section>
-        )}
-        <CheckoutSectionCard
-          title={checkout.contactHeadline}
-          estado={paso === 1 ? 'activo' : datosEditando ? 'editando' : 'completado'}
-          resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
-          actionLabel={paso > 1 ? datosEditando ? checkout.doneEditing : checkout.changeStep : undefined}
-          onAction={paso > 1 ? () => setDatosEditando((actual) => !actual) : undefined}
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="text-muted">{checkout.phone}</span>
-              <span className="relative">
-                <Phone size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-                <input type="tel" value={estado.contacto.phone}
-                  onChange={(event) => despachar({ tipo: 'contacto', cambios: { phone: event.target.value } })}
-                  className="w-full border border-border bg-surface py-3 pr-4 pl-11 text-foreground outline-none focus:border-accent" />
-              </span>
-              {erroresContacto.phone && <FieldError id="pedido-phone-error" mensaje={erroresContacto.phone} />}
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="text-muted">{checkout.fullName}</span>
-              <span className="relative">
-                <User size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-                <input type="text" value={estado.contacto.fullName}
-                  onChange={(event) => despachar({ tipo: 'contacto', cambios: { fullName: event.target.value } })}
-                  className="w-full border border-border bg-surface py-3 pr-4 pl-11 text-foreground outline-none focus:border-accent" />
-              </span>
-              {erroresContacto.fullName && <FieldError id="pedido-name-error" mensaje={erroresContacto.fullName} />}
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-              <span className="text-muted">{checkout.email}</span>
-              <span className="relative">
-                <EnvelopeSimple size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-                <input type="email" value={estado.contacto.email}
-                  onChange={(event) => despachar({ tipo: 'contacto', cambios: { email: event.target.value } })}
-                  className="w-full border border-border bg-surface py-3 pr-4 pl-11 text-foreground outline-none focus:border-accent" />
-              </span>
-              {erroresContacto.email && <FieldError id="pedido-email-error" mensaje={erroresContacto.email} />}
-            </label>
-            {paquete.pide_hora && <div className="sm:col-span-2">
-              <TimeField label={checkout.hourLabel} help={booking.timeHelp} value={estado.hora}
-                availableHours={horasDePaquete(paquete)}
-                onChange={(valor) => despachar({ tipo: 'hora', valor })} />
-            </div>}
-          </div>
-          {paso === 1 && (
-            <div className="mt-6 flex justify-end border-t border-border pt-5">
-              <button type="button" onClick={confirmarDatos}
-                className="rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground">
-                {checkout.confirmStep}
-              </button>
-            </div>
-          )}
-        </CheckoutSectionCard>
-
-        {paso >= 2 && (
+    <>
+      <PaginaCheckout
+        lang={lang}
+        dict={dict}
+        sedeSlug={sedeSlug}
+        volverHref={`/${lang}/sede/${sedeSlug}`}
+        volverLabel={textos.back}
+        encabezado={
+          <EncabezadoCompra
+            kicker={checkout.purchaseKicker}
+            nombre={paquete.nombre}
+            detalle={detalleCompra}
+          />
+        }
+        stepper={{ actual: numeroDePaso(actual), totalMovil }}
+        pasos={
           <>
-            {errorDetalles && <FieldError id="pedido-detalles-error" mensaje={errorDetalles} />}
-            {paquete.servicios_asociados.map((componente, indice) => {
-              if (indice > gruposCompletados || grupoOculto(indice)) return null;
-              const slug = componente.servicio.slug;
-              const tarjeta = indice < gruposCompletados
-                ? grupoEditando === indice ? 'editando' : 'completado'
-                : 'activo';
-              return (
-                <GrupoServicio key={componente.id}
-                  lang={lang} dict={dict} componente={componente}
-                  precioDependeDePersonas={paquete.precio_depende_de_personas}
-                  esActividadPrincipal={slug === slugPrincipal} personasMax={personasPaquete}
-                  trasladoFijo={trasladoFijo}
-                  estado={estado.componentes[slug]}
-                  conEncabezadoEmpresa={cantidadCargos > 1}
-                  nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}
-                  moneda={estado.moneda} tipoCambio={paquete.tipo_cambio_usd} inicio={estado.inicio} noches={noches} salida={salida}
-                  minDate={minDate} puntos={puntosPorEmpresa[componente.servicio.empresa_slug] ?? []}
-                  mostrarInicio={indice === 0} estadoTarjeta={tarjeta}
-                  onAccion={() => setGrupoEditando((actual) => actual === indice ? null : indice)}
-                  onCompletar={() => confirmarGrupo(indice)}
-                  onInicio={(valor) => despachar({ tipo: 'inicio', valor })}
-                  onPersonas={(valor) => despachar(paquete.precio_depende_de_personas && slugPrincipal
-                    ? { tipo: 'personasLogistica', slug, slugPrincipal, valor }
-                    : { tipo: 'personas', slug, valor })}
-                  onExtras={(valor) => despachar({ tipo: 'extras', slug, valor })}
-                  onTraslado={(cambios) => despachar({ tipo: 'traslado', slug, cambios })}
-                />
-              );
-            })}
-          </>
-        )}
+            <CheckoutSectionCard
+              title={checkout.tripHeadline}
+              estado={tarjeta('viaje') as 'activo' | 'editando' | 'completado'}
+              resumen={resumenViaje}
+              actionLabel={tarjeta('viaje') === 'completado' ? checkout.changeStep : tarjeta('viaje') === 'editando' ? checkout.doneEditing : undefined}
+              onAction={tarjeta('viaje') === 'activo' ? undefined : () => setEditando((e) => (e === 'viaje' ? null : 'viaje'))}
+              pie={tarjeta('viaje') === 'activo' ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso> : undefined}
+            >
+              <ContenidoViaje
+                fecha={
+                  <FechaPaquete
+                    lang={lang}
+                    label={textos.startLabel}
+                    value={estado.inicio}
+                    onChange={(valor) => despachar({ tipo: 'inicio', valor })}
+                    minDate={minDate}
+                    chooseLabel={textos.chooseStart}
+                    viewMonthLabel={textos.viewMonth}
+                    hideMonthLabel={textos.hideMonth}
+                    previousWeekLabel={textos.previousWeek}
+                    nextWeekLabel={textos.nextWeek}
+                    previousMonthLabel={booking.prevMonth}
+                    nextMonthLabel={booking.nextMonth}
+                    personas={personasPaquete}
+                    fullLabel={checkout.dayFull}
+                  />
+                }
+                hora={paquete.pide_hora ? (
+                  <TimeField
+                    label={checkout.hourLabel}
+                    help={booking.timeHelp}
+                    value={estado.hora}
+                    availableHours={horasDePaquete(paquete)}
+                    onChange={(valor) => despachar({ tipo: 'hora', valor })}
+                  />
+                ) : undefined}
+                personas={paquete.precio_depende_de_personas && maxPersonas !== null ? (
+                  <PeopleStepper
+                    label={textos.peopleQuestion}
+                    maxNotice={(tieneWhatsapp ? textos.morePeople : textos.morePeopleOffline).replace('{max}', String(maxPersonas))}
+                    value={personasPaquete}
+                    maxPeople={maxPersonas}
+                    minPeople={1}
+                    onChange={(valor) => {
+                      if (slugPrincipal) despachar({ tipo: 'personasPaquete', slugPrincipal, valor });
+                    }}
+                    onMaxAttempt={() => ayuda.tropezar('tope-personas')}
+                  />
+                ) : undefined}
+                nota={
+                  <>
+                    {noches !== null && salida && (
+                      <p>{textos.nightsNote.replace('{n}', String(noches)).replace('{fecha}', formatearFecha(salida))}</p>
+                    )}
+                    {paquete.precio_depende_de_personas && (
+                      <>
+                        <p className="font-medium text-foreground">
+                          {anclaMostrada} {estado.moneda}{' '}
+                          {paquete.estrategia_precio === 'por_persona'
+                            ? textos.perPerson
+                            : textos.perGroup.replace('{n}', String(paquete.personas_precio_base))}
+                        </p>
+                        {paquete.estrategia_precio === 'por_grupo' && extra !== null && (
+                          <p>{textos.extraPerson.replace('{precio}', formatearPrecio(extra, estado.moneda))}</p>
+                        )}
+                        <p>{precioPersonas}</p>
+                      </>
+                    )}
+                  </>
+                }
+              />
+              {errorViaje && <FieldError id="pedido-viaje-error" mensaje={errorViaje} />}
+            </CheckoutSectionCard>
 
-        </div>
-        <div className={`min-w-0 ${paso < 3 ? 'hidden lg:block' : ''}`}>
-          {pedido ? (
-            <StripePanel
-              lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
-              waiverAccepted={waiverAccepted}
-              onWaiverChange={(valor) => { setWaiverAccepted(valor); if (valor) setErrorWaiver(false); }}
-              errorWaiver={errorWaiver}
-              lines={cargos.map((cargo) => ({ label: nombreEmpresa(cargo.empresaSlug),
-                amount: formatearPrecio(cantidadCargos === 1 ? totalConDescuento : cargo.monto, estado.moneda) }))}
-              total={total} amountDueNow={ahora} moneda={estado.moneda}
-              onMonedaChange={(valor) => despachar({ tipo: 'moneda', valor })} usdDisponible={false}
-              formaPago={estado.formaPago}
-              onFormaPagoChange={(valor) => despachar({ tipo: 'formaPago', valor })}
-              formaPagoDisponible={paquete.permite_anticipo}
-              codigoPromocional={codigoPromocional}
-              onCodigoPromocionalChange={(valor) => {
-                setCodigoPromocional(valor);
-                setPromoEstado(valor.trim() ? 'verificando' : 'idle');
-                setPromoPorcentaje(null);
-              }}
-              codigoPromocionalDisponible={motor === 'reserva'}
-              promoEstado={promoEstado} promoPorcentaje={promoPorcentaje}
-              submitDisabled={paso < 3}
-              phase={pago.fase === 'enviando' ? 'submitting' : pago.error ? 'error' : 'form'}
-              error={pago.error} pago={null}
-              avisoCargos={cantidadCargos > 1 ? (
-                <div className="mt-5 border-t border-border pt-5">
-                  <AvisoCargos dict={dict}
-                    cargos={cargos.map((cargo) => ({ etiqueta: nombreEmpresa(cargo.empresaSlug), monto: formatearPrecio(cargo.monto, estado.moneda) }))}
-                    total={total} />
-                </div>
-              ) : undefined}
-              etiquetaBotonEnvio={cantidadCargos > 1
-                ? textos.continueToPayment.replace('{total}', String(cantidadCargos)) : undefined}
-              onSubmit={enviar} onPagoConfirmado={pago.onPagoConfirmado}
-              onPagoRechazado={pago.onPagoRechazado}
-              onCaptchaToken={(token) => { captcha.current = token; }}
-            />
-          ) : (
-            <ErrorBlock mensaje={feedback.error.no_disponible}
-              ayudaTitulo={feedback.helpTitle} ayudaCta={feedback.helpCta} ayudaMensaje={ayudaMensaje} />
-          )}
-        </div>
-      </main>
-      <CheckoutFooter lang={lang} footer={footer} nav={nav} />
-    </div>
+            {tarjeta('contacto') !== 'oculto' && (
+              <CheckoutSectionCard
+                title={checkout.contactHeadline}
+                estado={tarjeta('contacto') as 'activo' | 'editando' | 'completado'}
+                resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
+                actionLabel={tarjeta('contacto') === 'completado' ? checkout.changeStep : tarjeta('contacto') === 'editando' ? checkout.doneEditing : undefined}
+                onAction={tarjeta('contacto') === 'activo' ? undefined : () => setEditando((e) => (e === 'contacto' ? null : 'contacto'))}
+                pie={tarjeta('contacto') === 'activo' ? <BotonPaso onClick={confirmarDatos}>{checkout.confirmStep}</BotonPaso> : undefined}
+              >
+                <CamposContacto
+                  idPrefijo="pedido"
+                  valores={estado.contacto}
+                  errores={erroresContacto}
+                  etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
+                  onCambio={(campo, valor) => despachar({ tipo: 'contacto', cambios: { [campo]: valor } })}
+                />
+              </CheckoutSectionCard>
+            )}
+
+            {tarjeta('detalles') !== 'oculto' && (
+              <>
+                {errorDetalles && <FieldError id="pedido-detalles-error" mensaje={errorDetalles} />}
+                {paquete.servicios_asociados.map((componente, indice) => {
+                  if (indice > gruposCompletados || grupoOculto(indice)) return null;
+                  const slug = componente.servicio.slug;
+                  const estadoGrupo = indice < gruposCompletados
+                    ? grupoEditando === indice ? 'editando' : 'completado'
+                    : 'activo';
+                  return (
+                    <GrupoServicio
+                      key={componente.id}
+                      lang={lang}
+                      dict={dict}
+                      componente={componente}
+                      precioDependeDePersonas={paquete.precio_depende_de_personas}
+                      esActividadPrincipal={slug === slugPrincipal}
+                      personasMax={personasPaquete}
+                      trasladoFijo={trasladoFijo}
+                      estado={estado.componentes[slug]}
+                      conEncabezadoEmpresa={cantidadCargos > 1}
+                      nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}
+                      moneda={estado.moneda}
+                      tipoCambio={paquete.tipo_cambio_usd}
+                      inicio={estado.inicio}
+                      noches={noches}
+                      salida={salida}
+                      puntos={puntosPorEmpresa[componente.servicio.empresa_slug] ?? []}
+                      estadoTarjeta={estadoGrupo}
+                      onAccion={() => setGrupoEditando((a) => a === indice ? null : indice)}
+                      onCompletar={() => confirmarGrupo(indice)}
+                      onTope={() => ayuda.tropezar('tope-personas')}
+                      onPersonas={(valor) => despachar(paquete.precio_depende_de_personas && slugPrincipal
+                        ? { tipo: 'personasLogistica', slug, slugPrincipal, valor }
+                        : { tipo: 'personas', slug, valor })}
+                      onExtras={(valor) => despachar({ tipo: 'extras', slug, valor })}
+                      onTraslado={(cambios) => despachar({ tipo: 'traslado', slug, cambios })}
+                    />
+                  );
+                })}
+              </>
+            )}
+          </>
+        }
+        pedido={pedido ? (
+          <StripePanel
+            lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
+            waiverAccepted={waiverAccepted}
+            onWaiverChange={(valor) => { setWaiverAccepted(valor); if (valor) setErrorWaiver(false); }}
+            errorWaiver={errorWaiver}
+            lines={cargos.map((cargo) => ({ label: nombreEmpresa(cargo.empresaSlug),
+              amount: formatearPrecio(cantidadCargos === 1 ? totalConDescuento : cargo.monto, estado.moneda) }))}
+            lineasViaje={lineasViaje}
+            pagoVisibleMovil={actual === 'pago'}
+            total={total} amountDueNow={ahora} moneda={estado.moneda}
+            onMonedaChange={(valor) => despachar({ tipo: 'moneda', valor })} usdDisponible={conUsd}
+            formaPago={estado.formaPago}
+            onFormaPagoChange={(valor) => despachar({ tipo: 'formaPago', valor })}
+            formaPagoDisponible={paquete.permite_anticipo}
+            codigoPromocional={codigoPromocional}
+            onCodigoPromocionalChange={(valor) => {
+              setCodigoPromocional(valor);
+              setPromoEstado(valor.trim() ? 'verificando' : 'idle');
+              setPromoPorcentaje(null);
+            }}
+            codigoPromocionalDisponible={motor === 'reserva'}
+            promoEstado={promoEstado} promoPorcentaje={promoPorcentaje}
+            submitDisabled={actual !== 'pago'}
+            phase={pago.fase === 'enviando' ? 'submitting' : pago.error ? 'error' : 'form'}
+            error={pago.error} pago={null}
+            avisoCargos={cantidadCargos > 1 ? (
+              <div className="mt-5 border-t border-border pt-5">
+                <AvisoCargos dict={dict}
+                  cargos={cargos.map((cargo) => ({ etiqueta: nombreEmpresa(cargo.empresaSlug), monto: formatearPrecio(cargo.monto, estado.moneda) }))}
+                  total={total} />
+              </div>
+            ) : undefined}
+            etiquetaBotonEnvio={cantidadCargos > 1
+              ? textos.continueToPayment.replace('{total}', String(cantidadCargos)) : undefined}
+            onSubmit={enviar} onPagoConfirmado={pago.onPagoConfirmado}
+            onPagoRechazado={pago.onPagoRechazado}
+            onCaptchaToken={(token) => { captcha.current = token; }}
+          />
+        ) : (
+          <ErrorBlock mensaje={feedback.error.no_disponible}
+            ayudaTitulo={feedback.helpTitle} ayudaCta={feedback.helpCta} ayudaMensaje={ayudaMensaje} />
+        )}
+      />
+      <AyudaFlotante
+        visible={ayuda.visible}
+        etiqueta={feedback.floatingHelp.label}
+        cerrarLabel={feedback.floatingHelp.dismiss}
+        mensaje={ayuda.motivo === 'tope-personas' && maxPersonas !== null
+          ? feedback.floatingHelp.messageMaxPeople.replace('{name}', paquete.nombre).replace('{max}', String(maxPersonas))
+          : feedback.floatingHelp.messageValidation
+              .replace('{date}', formatearFecha(estado.inicio ?? minDate))
+              .replace('{people}', String(personasPaquete))}
+        onDescartar={ayuda.descartar}
+      />
+    </>
   );
 }
