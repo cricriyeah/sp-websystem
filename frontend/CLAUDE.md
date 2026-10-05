@@ -126,6 +126,20 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   `<ErrorDeCampo id mensaje={error} />` siempre montado, que entra/sale con
   `Despliegue` y, si queda fuera de pantalla, hace scroll y lleva el foco al
   campo con `aria-describedby` igual al id.
+- Anatomía de la tarjeta de traslado (y de cualquier tarjeta con controles):
+  una pregunta por bloque; los controles que se contestan dentro de una caja
+  (hotel, personas, aeropuerto, listas) usan `CAJA_CAMPO` de
+  `components/checkout/estilos.ts` con `compacto` en `FieldPopover` /
+  `PeopleStepper` (relleno de 16 px, borde izquierdo alineado con las filas de
+  tipo); los grupos de opciones y la fecha llevan su pregunta como título
+  arriba. Orden por causalidad: tipo → regreso (solo aeropuerto) → dónde →
+  personas (prellenado, al final y callado) → extras. Las preguntas que
+  aparecen y desaparecen llevan su separación (`pt-5`) dentro del bloque y no
+  en el `gap` del cuerpo, para que al desplegarse no brinque el hueco. Los
+  enlaces secundarios usan `ENLACE_SECUNDARIO`. El tipo de traslado va en
+  lista (descripción completa), no en columnas. La tira semanal arranca en
+  el primer día reservable y avanza de 7 en 7 (`lib/calendario-semana.ts`):
+  sin celdas pasadas que no se pueden tocar.
 - Pruebas desde `frontend/`: `npm.cmd test` ejecuta
   `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,
   `npm.cmd test -- calendario-paquete`; al añadir un módulo, registrar

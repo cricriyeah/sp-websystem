@@ -1462,12 +1462,8 @@ export function CheckoutView({
                       if (sp.tipo_interaccion === 'input_seleccion') {
                         return (
                           <div key={sp.id} className="flex flex-col gap-2 text-sm text-foreground">
-                            <span className="font-medium">
-                              {sp.nombre}
-                              {sp.obligatorio ? ' *' : ''}
-                            </span>
                             <SelectPersonalizado
-                              label={sp.nombre}
+                              label={`${sp.nombre}${sp.obligatorio ? ' *' : ''}`}
                               value={valor}
                               disabled={locked}
                               invalido={Boolean(errorCodigo)}

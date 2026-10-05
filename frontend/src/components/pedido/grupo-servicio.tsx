@@ -4,6 +4,7 @@ import { AirplaneTilt, Buildings, MapPin, Minus, Plus, Warning } from '@phosphor
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BotonPaso } from '@/components/checkout/boton-paso';
+import { CAJA_CAMPO, ENLACE_SECUNDARIO } from '@/components/checkout/estilos';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
@@ -133,10 +134,9 @@ export function GrupoServicio({
 
     if (extra.tipo_interaccion === 'input_seleccion') {
       return (
-        <div key={extra.id} className="flex flex-col gap-2 text-sm text-foreground">
-          <span className="font-medium">{extra.nombre}{extra.obligatorio ? ' *' : ''}</span>
+        <div key={extra.id} className="text-sm text-foreground">
           <SelectPersonalizado
-            label={extra.nombre}
+            label={`${extra.nombre}${extra.obligatorio ? ' *' : ''}`}
             value={seleccion?.respuesta ?? ''}
             disabled={bloqueado}
             sinRespuestaLabel="—"
@@ -171,9 +171,142 @@ export function GrupoServicio({
         <BotonPaso onClick={onCompletar}>{checkout.confirmStep}</BotonPaso>
       ) : undefined}
     >
+      {traslado && trasladoFijo && (
+        <BloqueDePaso>
+          <div>
+            <p className="text-sm font-medium text-foreground">{pedido.fixedTransfer}</p>
+            {inicio && salida && (
+              <p className="mt-1 text-xs text-muted">
+                {pedido.fixedTransferDates
+                  .replace('{llegada}', formatoFecha(fechaDeComponente(inicio, componente.dia_estancia)))
+                  .replace('{salida}', formatoFecha(salida))}
+              </p>
+            )}
+          </div>
+          <div className="text-sm text-foreground">
+            <SelectPersonalizado
+              label={pedido.airportLabel}
+              placeholder={pedido.airportLabel}
+              value={traslado.aeropuerto}
+              disabled={bloqueado}
+              icon={<AirplaneTilt size={20} className="shrink-0 text-muted" />}
+              opciones={(['lap', 'sjd'] as Aeropuerto[]).map((codigo) => ({ valor: codigo, etiqueta: pedido.airports[codigo] }))}
+              onChange={(valor) => onTraslado({ aeropuerto: valor as Aeropuerto | '' })}
+            />
+          </div>
+        </BloqueDePaso>
+      )}
+
+      {traslado && !trasladoFijo && (
+        // Un solo hijo de la tarjeta: la separación entre preguntas (`pt-5`) vive
+        // dentro de cada bloque. Así, al aparecer el regreso, no brinca el hueco
+        // que el cuerpo de la tarjeta pondría entre hijos antes de que crezca.
+        <div>
+          <BloqueDePaso titulo={traslados.step1Title}>
+            <TipoTrasladoCards
+              tipos={['redondo_aeropuerto', 'redondo_actividad', 'recepcion_aeropuerto']}
+              valor={traslado.tipo}
+              textos={traslados.types}
+              etiqueta={traslados.step1Title}
+              onChange={(tipo) => onTraslado({ tipo })}
+            />
+          </BloqueDePaso>
+
+          {/* El regreso depende del tipo: aparece pegado a las tarjetas que lo
+              provocan y sin prellenar (sin respuesta se ve la pregunta). */}
+          {inicio && (
+            <Despliegue abierto={traslado.tipo === 'redondo_aeropuerto' && noches === null}>
+              <div className="pt-5">
+                <FechaRegresoCompacta lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
+                  onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
+                  minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)}
+                  chooseLabel={pedido.chooseReturnDate}
+                  changeButtonLabel={checkout.changeStep} doneButtonLabel={checkout.doneEditing}
+                  viewMonthLabel={pedido.viewMonth} hideMonthLabel={pedido.hideMonth}
+                  previousWeekLabel={pedido.previousWeek} nextWeekLabel={pedido.nextWeek}
+                  previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}
+                  personas={estado.personas} fullLabel={checkout.dayFull} />
+              </div>
+            </Despliegue>
+          )}
+
+          <div className="flex flex-col gap-3 pt-5">
+            <Despliegue abierto={traslado.modo === 'catalogo'}>
+              <div className={CAJA_CAMPO}>
+                <FieldPopover
+                  compacto
+                  label={traslados.fields.puntoEncuentro}
+                  value={puntos.find((p) => p.id === traslado.puntoEncuentroId)?.nombre ?? ''}
+                  vacio={traslado.puntoEncuentroId === null}
+                  placeholder={traslados.fields.puntoEncuentroPlaceholder}
+                  icon={<Buildings size={20} className="shrink-0 text-muted" />}
+                >
+                  {(cerrar) => (
+                    <div className="max-h-72 w-full overflow-y-auto sm:w-80">
+                      {puntos.map((punto) => (
+                        <button key={punto.id} type="button"
+                          onClick={() => { onTraslado({ puntoEncuentroId: punto.id }); cerrar(); }}
+                          className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                            punto.id === traslado.puntoEncuentroId ? 'bg-accent font-medium text-accent-foreground' : 'text-foreground hover:bg-background'
+                          }`}>
+                          <span className="truncate pr-2">{punto.nombre}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </FieldPopover>
+              </div>
+            </Despliegue>
+            <Despliegue abierto={traslado.modo !== 'catalogo'}>
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="text-muted">{traslados.fields.otraDireccion}</span>
+                  <span className="relative">
+                    <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
+                    <input type="text" value={traslado.direccion}
+                      onChange={(event) => onTraslado({ direccion: event.target.value })}
+                      placeholder={traslados.fields.direccionPlaceholder}
+                      className={`w-full ${CAJA_CAMPO} py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent`} />
+                  </span>
+                </label>
+                <Despliegue abierto={traslado.tipo === 'redondo_actividad'}>
+                  <fieldset className="grid grid-cols-2 gap-3">
+                    <legend className="sr-only">{traslados.fields.zona}</legend>
+                    {(['centro', 'periferia'] as Zona[]).map((zona) => (
+                      <label key={zona} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm ${
+                        traslado.zonaLibre === zona ? 'border-accent bg-surface font-medium' : 'border-border text-muted'
+                      }`}>
+                        <input type="radio" name={`zona-${servicio.slug}`} checked={traslado.zonaLibre === zona}
+                          onChange={() => onTraslado({ zonaLibre: zona })} className="h-4 w-4 accent-accent" />
+                        {zona === 'centro' ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
+                      </label>
+                    ))}
+                  </fieldset>
+                </Despliegue>
+              </div>
+            </Despliegue>
+
+            <Despliegue abierto={traslado.tipo === 'redondo_actividad' && traslado.modo === 'catalogo' && traslado.puntoEncuentroId !== null}>
+              <p className="text-xs text-muted">
+                {traslados.fields.zona}: {puntos.find((p) => p.id === traslado.puntoEncuentroId)?.zona === 'centro'
+                  ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
+              </p>
+            </Despliegue>
+
+            <button type="button" onClick={() => onTraslado({ modo: traslado.modo === 'catalogo' ? 'personalizada' : 'catalogo' })}
+              className={ENLACE_SECUNDARIO}>
+              {traslado.modo === 'catalogo' ? traslados.fields.otraDireccion : traslados.fields.puntoEncuentro}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lo prellenado va al final y callado: llega resuelto del paso anterior, así
+          que no merece ser lo primero que el cliente lee en la tarjeta. */}
       {esLogistica ? (
-        <div className="border border-border bg-surface">
+        <div className={CAJA_CAMPO}>
           <PeopleStepper
+            compacto
             label={servicio.tipo_servicio === 'hospedaje' ? pedido.stayPeopleQuestion : pedido.transferPeopleQuestion}
             maxNotice={pedido.logisticsMaxNotice.replace('{max}', String(maxPersonasLogistica))}
             value={estado.personas}
@@ -188,8 +321,9 @@ export function GrupoServicio({
         <p className="text-sm text-muted">{personasTexto}</p>
       ) : (
         <div>
-          <div className="border border-border bg-surface">
+          <div className={CAJA_CAMPO}>
             <PeopleStepper
+              compacto
               label={checkout.peopleLabel}
               maxNotice={booking.maxPeopleNotice}
               value={estado.personas}
@@ -204,125 +338,6 @@ export function GrupoServicio({
             {pedido.peopleIncluded.replace('{n}', String(componente.personas_incluidas))}
           </p>
         </div>
-      )}
-
-      {traslado && trasladoFijo && (
-        <BloqueDePaso>
-          <div>
-            <p className="text-sm font-medium text-foreground">{pedido.fixedTransfer}</p>
-            {inicio && salida && (
-              <p className="mt-1 text-xs text-muted">
-                {pedido.fixedTransferDates
-                  .replace('{llegada}', formatoFecha(fechaDeComponente(inicio, componente.dia_estancia)))
-                  .replace('{salida}', formatoFecha(salida))}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1.5 text-sm text-foreground">
-            <span className="text-muted">{pedido.airportLabel}</span>
-            <SelectPersonalizado
-              label={pedido.airportLabel}
-              placeholder={pedido.airportPlaceholder}
-              value={traslado.aeropuerto}
-              disabled={bloqueado}
-              icon={<AirplaneTilt size={20} className="shrink-0 text-muted" />}
-              opciones={(['lap', 'sjd'] as Aeropuerto[]).map((codigo) => ({ valor: codigo, etiqueta: pedido.airports[codigo] }))}
-              onChange={(valor) => onTraslado({ aeropuerto: valor as Aeropuerto | '' })}
-            />
-          </div>
-        </BloqueDePaso>
-      )}
-
-      {traslado && !trasladoFijo && (
-        <BloqueDePaso>
-          <TipoTrasladoCards
-            tipos={['redondo_aeropuerto', 'redondo_actividad', 'recepcion_aeropuerto']}
-            valor={traslado.tipo}
-            textos={traslados.types}
-            etiqueta={traslados.step1Title}
-            onChange={(tipo) => onTraslado({ tipo })}
-          />
-
-          {/* El regreso depende del tipo: aparece pegado a las tarjetas que lo provocan,
-              antes del "dónde", y sin prellenar (sin respuesta se ve la pregunta). */}
-          {inicio && (
-            <Despliegue abierto={traslado.tipo === 'redondo_aeropuerto' && noches === null}>
-              <FechaRegresoCompacta lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
-                onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
-                minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)}
-                chooseLabel={pedido.chooseReturnDate}
-                changeButtonLabel={checkout.changeStep} doneButtonLabel={checkout.doneEditing}
-                viewMonthLabel={pedido.viewMonth} hideMonthLabel={pedido.hideMonth}
-                previousWeekLabel={pedido.previousWeek} nextWeekLabel={pedido.nextWeek}
-                previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}
-                personas={estado.personas} fullLabel={checkout.dayFull} />
-            </Despliegue>
-          )}
-
-          <Despliegue abierto={traslado.modo === 'catalogo'}>
-            <FieldPopover
-              label={traslados.fields.puntoEncuentro}
-              value={puntos.find((p) => p.id === traslado.puntoEncuentroId)?.nombre ?? ''}
-              vacio={traslado.puntoEncuentroId === null}
-              placeholder={traslados.fields.puntoEncuentroPlaceholder}
-              icon={<Buildings size={20} className="shrink-0 text-muted" />}
-            >
-              {(cerrar) => (
-                <div className="max-h-72 w-full overflow-y-auto sm:w-80">
-                  {puntos.map((punto) => (
-                    <button key={punto.id} type="button"
-                      onClick={() => { onTraslado({ puntoEncuentroId: punto.id }); cerrar(); }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                        punto.id === traslado.puntoEncuentroId ? 'bg-accent font-medium text-accent-foreground' : 'text-foreground hover:bg-background'
-                      }`}>
-                      <span className="truncate pr-2">{punto.nombre}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </FieldPopover>
-          </Despliegue>
-          <Despliegue abierto={traslado.modo !== 'catalogo'}>
-            <div className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-muted">{traslados.fields.otraDireccion}</span>
-                <span className="relative">
-                  <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-                  <input type="text" value={traslado.direccion}
-                    onChange={(event) => onTraslado({ direccion: event.target.value })}
-                    placeholder={traslados.fields.direccionPlaceholder}
-                    className="w-full border border-border bg-surface py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent" />
-                </span>
-              </label>
-              <Despliegue abierto={traslado.tipo === 'redondo_actividad'}>
-                <fieldset className="grid grid-cols-2 gap-3">
-                  <legend className="sr-only">{traslados.fields.zona}</legend>
-                  {(['centro', 'periferia'] as Zona[]).map((zona) => (
-                    <label key={zona} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm ${
-                      traslado.zonaLibre === zona ? 'border-accent bg-surface font-medium' : 'border-border text-muted'
-                    }`}>
-                      <input type="radio" name={`zona-${servicio.slug}`} checked={traslado.zonaLibre === zona}
-                        onChange={() => onTraslado({ zonaLibre: zona })} className="h-4 w-4 accent-accent" />
-                      {zona === 'centro' ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
-                    </label>
-                  ))}
-                </fieldset>
-              </Despliegue>
-            </div>
-          </Despliegue>
-
-          <Despliegue abierto={traslado.tipo === 'redondo_actividad' && traslado.modo === 'catalogo' && traslado.puntoEncuentroId !== null}>
-            <p className="text-xs text-muted">
-              {traslados.fields.zona}: {puntos.find((p) => p.id === traslado.puntoEncuentroId)?.zona === 'centro'
-                ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
-            </p>
-          </Despliegue>
-
-          <button type="button" onClick={() => onTraslado({ modo: traslado.modo === 'catalogo' ? 'personalizada' : 'catalogo' })}
-            className="self-start text-xs font-medium text-accent underline underline-offset-2">
-            {traslado.modo === 'catalogo' ? traslados.fields.otraDireccion : traslados.fields.puntoEncuentro}
-          </button>
-        </BloqueDePaso>
       )}
 
       {obligatorias.length > 0 && (

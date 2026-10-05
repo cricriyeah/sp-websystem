@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { Despliegue } from '@/components/checkout/despliegue';
+import { ENLACE_SECUNDARIO } from '@/components/checkout/estilos';
 import { PanelCalendario } from '@/components/date-field';
 import { puedeRetroceder, semanaVisible } from '@/lib/calendario-semana';
 import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
@@ -153,7 +154,7 @@ export function FechaPaquete({
 
       <button type="button" aria-expanded={mesAbierto} aria-controls={mesAbierto ? panelId : undefined}
         onClick={() => setMesAbierto((abierto) => !abierto)}
-        className="mt-3 text-sm font-medium text-accent underline underline-offset-4 hover:text-foreground">
+        className={`mt-3 block ${ENLACE_SECUNDARIO}`}>
         {mesAbierto ? hideMonthLabel : viewMonthLabel}
       </button>
 

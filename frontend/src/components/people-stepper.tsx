@@ -21,7 +21,14 @@ type PeopleStepperProps = {
   /** Tope configurable de personas. Vacio = MAX_PEOPLE (5). */
   maxPeople?: number;
   minPeople?: number;
+  /** Dentro de una tarjeta del checkout: relleno de 16 px y botones con contraste normal. */
+  compacto?: boolean;
 };
+
+const botonStepper = (compacto: boolean) =>
+  compacto
+    ? 'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-30'
+    : 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30';
 
 /**
  * Contador de personas, compartido por el booking bar y el checkout.
@@ -38,6 +45,7 @@ export function PeopleStepper({
   valorInicial = 2,
   maxPeople,
   minPeople,
+  compacto = false,
 }: PeopleStepperProps) {
   const vacio = value === null;
   const [showMaxNotice, setShowMaxNotice] = useState(false);
@@ -70,7 +78,7 @@ export function PeopleStepper({
   };
 
   return (
-    <div className="relative flex flex-1 items-center gap-3 px-6 py-3.5">
+    <div className={`relative flex flex-1 items-center gap-3 ${compacto ? 'px-4 py-3' : 'px-6 py-3.5'}`}>
       <UsersThree size={20} className="shrink-0 text-muted" />
       {/* Alto reservado, igual que en FieldPopover: la etiqueta solo existe una
           vez contestado, y dejar que el contenido mande el alto hacia que la
@@ -91,7 +99,7 @@ export function PeopleStepper({
               onClick={() => ajustar(-1)}
               disabled={disabled || (value !== null && value <= MIN_PEOPLE)}
               aria-label="-"
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
+              className={botonStepper(compacto)}
             >
               <Minus size={12} />
             </button>
@@ -100,7 +108,7 @@ export function PeopleStepper({
               onClick={() => ajustar(1)}
               disabled={disabled}
               aria-label="+"
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30"
+              className={botonStepper(compacto)}
             >
               <Plus size={12} />
             </button>

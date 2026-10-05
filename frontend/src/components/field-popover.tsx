@@ -22,6 +22,8 @@ type FieldPopoverProps = {
   vacio?: boolean;
   /** Texto grande cuando esta vacio (la pregunta). */
   placeholder?: string;
+  /** Dentro de una tarjeta del checkout: el relleno interno alinea con el resto de controles (16 px). */
+  compacto?: boolean;
 };
 
 /** Margen contra el borde del viewport, y separacion entre el campo y el panel. */
@@ -74,6 +76,7 @@ export function FieldPopover({
   solicitarApertura = 0,
   vacio = false,
   placeholder,
+  compacto = false,
 }: FieldPopoverProps) {
   const [open, setOpen] = useState(false);
   const [posicion, setPosicion] = useState<Posicion | null>(null);
@@ -167,7 +170,7 @@ export function FieldPopover({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        className="flex flex-1 items-center gap-3 px-6 py-3.5 text-left transition-colors hover:bg-background"
+        className={`flex flex-1 items-center gap-3 text-left transition-colors ${compacto ? 'rounded-lg px-4 py-3 hover:bg-surface' : 'px-6 py-3.5 hover:bg-background'}`}
       >
         {icon}
         {/* Sin contestar, la pregunta ocupa el lugar grande y no hay etiqueta

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { ListBullets } from '@phosphor-icons/react';
+import { CAJA_CAMPO, CAJA_CAMPO_ERROR } from '@/components/checkout/estilos';
 import { FieldPopover } from '@/components/field-popover';
 
 type Opcion = { valor: string; etiqueta: string };
@@ -37,7 +38,7 @@ export function SelectPersonalizado({
   return (
     <div
       aria-disabled={disabled || undefined}
-      className={`border bg-surface ${invalido ? 'border-red-400' : 'border-border'} ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+      className={`${invalido ? CAJA_CAMPO_ERROR : CAJA_CAMPO} ${disabled ? 'pointer-events-none opacity-60' : ''}`}
     >
       <FieldPopover
         label={label}
@@ -45,6 +46,7 @@ export function SelectPersonalizado({
         vacio={!actual}
         placeholder={placeholder ?? label}
         icon={icon ?? <ListBullets size={20} className="shrink-0 text-muted" />}
+        compacto
       >
         {(cerrar) => (
           <div className="max-h-72 w-full overflow-y-auto sm:w-80">
