@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { CaretDown, Check } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
 
 type CheckoutSectionCardProps = {
   title: string;
@@ -107,10 +108,8 @@ export function CheckoutSectionCard({
 
       {actionLabel && onAction && enRenglon && (
         // Secundario: un renglón de respuesta no debe competir con el CTA de la
-        // tarjeta activa, así que "Modificar" es un enlace discreto, no un botón.
-        <span className="shrink-0 text-xs font-medium text-muted underline underline-offset-4 transition-colors group-hover:text-foreground">
-          {actionLabel}
-        </span>
+        // tarjeta activa. El renglón entero es el botón; la etiqueta solo lo dice.
+        <EtiquetaModificar>{actionLabel}</EtiquetaModificar>
       )}
       {actionLabel && onAction && !enRenglon && (
         <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">

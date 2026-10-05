@@ -135,8 +135,13 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   arriba. Orden por causalidad: tipo → regreso (solo aeropuerto) → dónde →
   personas (prellenado, al final y callado) → extras. Las preguntas que
   aparecen y desaparecen llevan su separación (`pt-5`) dentro del bloque y no
-  en el `gap` del cuerpo, para que al desplegarse no brinque el hueco. Los
-  enlaces secundarios usan `ENLACE_SECUNDARIO`. El tipo de traslado va en
+  en el `gap` del cuerpo, para que al desplegarse no brinque el hueco. Las
+  acciones secundarias NO van subrayadas en reposo (`checkout/accion-terciaria`):
+  "Modificar" de un renglón es `EtiquetaModificar` (lápiz, el renglón entero es
+  el botón); "revelar más" (ver mes, código promocional) es `AccionTexto` con
+  caret que gira; la otra dirección del hotel es la última opción de la lista y
+  en modo manual `AccionTexto` vuelve a la lista. El subrayado queda para
+  enlaces dentro de una oración (deslinde, términos). El tipo de traslado va en
   lista (descripción completa), no en columnas. La tira semanal arranca en
   el primer día reservable y avanza de 7 en 7 (`lib/calendario-semana.ts`):
   sin celdas pasadas que no se pueden tocar.

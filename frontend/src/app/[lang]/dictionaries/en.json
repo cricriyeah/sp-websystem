@@ -739,6 +739,8 @@
       "puntoEncuentro": "Hotel or meeting point",
       "puntoEncuentroPlaceholder": "Select a hotel or known meeting point",
       "otraDireccion": "Or enter a custom address",
+      "otraDireccionOpcion": "Enter another address…",
+      "volverALista": "Choose from the list",
       "direccionPlaceholder": "Street, number, neighborhood, or details",
       "zona": "Transfer zone",
       "zonaCentro": "Downtown / Malecón Area",

@@ -1,10 +1,11 @@
 'use client';
 
-import { AirplaneTilt, Buildings, MapPin, Minus, Plus, Warning } from '@phosphor-icons/react';
+import { AirplaneTilt, Buildings, ListBullets, MapPin, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { CAJA_CAMPO, ENLACE_SECUNDARIO } from '@/components/checkout/estilos';
+import { AccionTexto } from '@/components/checkout/accion-terciaria';
+import { CAJA_CAMPO } from '@/components/checkout/estilos';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
@@ -252,6 +253,14 @@ export function GrupoServicio({
                           <span className="truncate pr-2">{punto.nombre}</span>
                         </button>
                       ))}
+                      {/* La otra dirección es una opción más de ESTA pregunta: va donde el
+                          cliente ya está buscando, no como un enlace suelto en la tarjeta. */}
+                      <button type="button"
+                        onClick={() => { onTraslado({ modo: 'personalizada' }); cerrar(); }}
+                        className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-background">
+                        <MapPin size={16} className="shrink-0 text-muted" />
+                        {traslados.fields.otraDireccionOpcion}
+                      </button>
                     </div>
                   )}
                 </FieldPopover>
@@ -269,6 +278,9 @@ export function GrupoServicio({
                       className={`w-full ${CAJA_CAMPO} py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent`} />
                   </span>
                 </label>
+                <AccionTexto icono={<ListBullets size={14} />} onClick={() => onTraslado({ modo: 'catalogo' })}>
+                  {traslados.fields.volverALista}
+                </AccionTexto>
                 <Despliegue abierto={traslado.tipo === 'redondo_actividad'}>
                   <fieldset className="grid grid-cols-2 gap-3">
                     <legend className="sr-only">{traslados.fields.zona}</legend>
@@ -293,10 +305,6 @@ export function GrupoServicio({
               </p>
             </Despliegue>
 
-            <button type="button" onClick={() => onTraslado({ modo: traslado.modo === 'catalogo' ? 'personalizada' : 'catalogo' })}
-              className={ENLACE_SECUNDARIO}>
-              {traslado.modo === 'catalogo' ? traslados.fields.otraDireccion : traslados.fields.puntoEncuentro}
-            </button>
           </div>
         </div>
       )}

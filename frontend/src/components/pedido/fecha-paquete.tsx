@@ -2,10 +2,10 @@
 
 import { useId, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { CalendarDots, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { Despliegue } from '@/components/checkout/despliegue';
-import { ENLACE_SECUNDARIO } from '@/components/checkout/estilos';
+import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { PanelCalendario } from '@/components/date-field';
 import { puedeRetroceder, semanaVisible } from '@/lib/calendario-semana';
 import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
@@ -152,11 +152,13 @@ export function FechaPaquete({
         })}
       </Deslizable>
 
-      <button type="button" aria-expanded={mesAbierto} aria-controls={mesAbierto ? panelId : undefined}
-        onClick={() => setMesAbierto((abierto) => !abierto)}
-        className={`mt-3 block ${ENLACE_SECUNDARIO}`}>
-        {mesAbierto ? hideMonthLabel : viewMonthLabel}
-      </button>
+      <div className="mt-1">
+        <AccionTexto tono="acento" abierto={mesAbierto} aria-controls={mesAbierto ? panelId : undefined}
+          icono={<CalendarDots size={14} />}
+          onClick={() => setMesAbierto((abierto) => !abierto)}>
+          {mesAbierto ? hideMonthLabel : viewMonthLabel}
+        </AccionTexto>
+      </div>
 
       <Despliegue abierto={mesAbierto}>
         <div id={panelId} className="mt-3 rounded-lg border border-border bg-surface p-4">

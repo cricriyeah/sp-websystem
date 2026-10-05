@@ -4,11 +4,12 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { motion, useReducedMotion } from 'motion/react';
-import { Lock, Warning } from '@phosphor-icons/react';
+import { Lock, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckCircle } from '@phosphor-icons/react';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo, FieldError, propsDeError } from '@/components/field-error';
@@ -305,13 +306,9 @@ export function StripePanel({
               el salto de cambiar un elemento por otro. Los mensajes de estado
               entran y salen igual, para que el total de abajo no brinque. */}
           <Despliegue abierto={!promoAbierto && !codigoPromocional}>
-            <button
-              type="button"
-              onClick={() => setPromoAbierto(true)}
-              className="text-xs font-medium text-muted underline underline-offset-2 transition-colors hover:text-foreground"
-            >
+            <AccionTexto icono={<Ticket size={14} />} onClick={() => setPromoAbierto(true)}>
               {checkout.promoCode.toggle}
-            </button>
+            </AccionTexto>
           </Despliegue>
           <Despliegue abierto={promoAbierto || Boolean(codigoPromocional)}>
             <div className="flex flex-col gap-1.5">

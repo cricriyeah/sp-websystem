@@ -739,6 +739,8 @@
       "puntoEncuentro": "Hotel o punto de encuentro",
       "puntoEncuentroPlaceholder": "Selecciona un hotel o punto conocido",
       "otraDireccion": "O escribe una dirección personalizada",
+      "otraDireccionOpcion": "Escribir otra dirección…",
+      "volverALista": "Elegir de la lista",
       "direccionPlaceholder": "Calle, número, colonia o referencias",
       "zona": "Zona del traslado",
       "zonaCentro": "Zona Centro / Malecón",

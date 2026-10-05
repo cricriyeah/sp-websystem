@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Buildings,
   EnvelopeSimple,
+  ListBullets,
   MapPin,
   Phone,
   ShieldCheck,
@@ -23,6 +24,7 @@ import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import { SiteHeader } from '@/components/site-header';
 import { StripePanel } from '@/components/stripe-panel';
+import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
@@ -666,20 +668,22 @@ export function TrasladoView({
                               );
                             })}
                           </ul>
+                          {/* Opción más de ESTA pregunta: va donde el cliente ya busca. */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setModoHospedaje('personalizada');
+                              setPuntoEncuentroId(null);
+                              cerrar();
+                            }}
+                            className="mt-2 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-background"
+                          >
+                            <MapPin size={16} className="shrink-0 text-muted" />
+                            {traslados.fields.otraDireccionOpcion}
+                          </button>
                         </div>
                       )}
                     </FieldPopover>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setModoHospedaje('personalizada');
-                        setPuntoEncuentroId(null);
-                      }}
-                      className="self-start text-xs font-medium text-accent underline underline-offset-2 hover:opacity-80"
-                    >
-                      {traslados.fields.otraDireccion}
-                    </button>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
@@ -735,18 +739,17 @@ export function TrasladoView({
                       </div>
                     )}
 
-                    <button
-                      type="button"
+                    <AccionTexto
+                      icono={<ListBullets size={14} />}
                       onClick={() => {
                         setModoHospedaje('catalogo');
                         setDireccionPersonalizada('');
                         setZonaPersonalizada('');
                         setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
                       }}
-                      className="self-start text-xs font-medium text-accent underline underline-offset-2 hover:opacity-80"
                     >
-                      {traslados.fields.puntoEncuentro}
-                    </button>
+                      {traslados.fields.volverALista}
+                    </AccionTexto>
                   </div>
                 )}
 
