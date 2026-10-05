@@ -17,14 +17,17 @@ type CheckoutSectionCardProps = {
    * `actionLabel` ("Listo") para volver a colapsarla sin repetir la
    * validacion — lo que haya adentro ya es valido, solo se estaba corrigiendo.
    * 'completado': colapsada a un renglon con `resumen` y `actionLabel`
-   * ("Cambiar") para reabrirla.
+   * ("Cambiar") para reabrirla. Es un renglón de una línea: varias seguidas
+   * se ven como un solo bloque compacto (`unidaConAnterior`).
+   * 'suspendido': la tarjeta que estaba activa mientras el cliente corrige una
+   * respuesta anterior: solo su título, sin cuerpo, hasta que termine.
    *
    * El numero de paso ya no vive en esta tarjeta — antes era un circulo con
    * numero que decia lo mismo que la linea verde de abajo y ahora tambien el
    * `CheckoutStepper` de arriba; tres senales del mismo progreso. El stepper
    * es la unica que queda.
    */
-  estado?: 'activo' | 'editando' | 'completado';
+  estado?: 'activo' | 'editando' | 'completado' | 'suspendido';
   /** Colapsado: la respuesta ya dada, en una linea. */
   resumen?: ReactNode;
   /** Texto del boton del encabezado ("Cambiar" / "Listo" segun `estado`). */
@@ -53,8 +56,9 @@ export function CheckoutSectionCard({
   pie,
   children,
 }: CheckoutSectionCardProps) {
-  const abierto = estado !== 'completado';
-  const confirmado = estado !== 'activo';
+  const abierto = estado === 'activo' || estado === 'editando';
+  const confirmado = estado === 'completado' || estado === 'editando';
+  const enRenglon = estado === 'completado' && variant === 'flat';
   const sinMovimiento = useReducedMotion();
   // `overflow-hidden` solo hace falta MIENTRAS la altura esta en un valor
   // intermedio (la transicion de 0 a 'auto'): asentada, el cuadro ya mide lo
@@ -75,24 +79,40 @@ export function CheckoutSectionCard({
             <Check size={13} weight="bold" />
           </span>
         )}
-        <span className="flex min-w-0 flex-col">
-          <span className="flex min-w-0 flex-wrap items-center gap-x-2">
-            <span className="font-sans text-sm font-medium tracking-tight text-foreground">
-              {title}
-            </span>
+        {enRenglon ? (
+          <span className="flex min-w-0 items-center gap-x-2 text-sm">
+            <span className="shrink-0 font-sans font-medium tracking-tight text-foreground">{title}</span>
             {etiqueta && (
-              <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
+              <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
                 {etiqueta}
               </span>
             )}
+            {resumen && <span className="min-w-0 truncate text-muted">· {resumen}</span>}
           </span>
-          {!abierto && resumen && (
-            <span className="block truncate text-xs text-muted">{resumen}</span>
-          )}
-        </span>
+        ) : (
+          <span className="flex min-w-0 flex-col">
+            <span className="flex min-w-0 flex-wrap items-center gap-x-2">
+              <span className="font-sans text-sm font-medium tracking-tight text-foreground">
+                {title}
+              </span>
+              {etiqueta && (
+                <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
+                  {etiqueta}
+                </span>
+              )}
+            </span>
+          </span>
+        )}
       </span>
 
-      {actionLabel && onAction && (
+      {actionLabel && onAction && enRenglon && (
+        // Secundario: un renglón de respuesta no debe competir con el CTA de la
+        // tarjeta activa, así que "Modificar" es un enlace discreto, no un botón.
+        <span className="shrink-0 text-xs font-medium text-muted underline underline-offset-4 transition-colors group-hover:text-foreground">
+          {actionLabel}
+        </span>
+      )}
+      {actionLabel && onAction && !enRenglon && (
         <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
           {actionLabel}
           {/* Apunta hacia donde lleva el click: abajo cuando abrir revela mas,
@@ -109,8 +129,29 @@ export function CheckoutSectionCard({
     </>
   );
 
+  if (estado === 'suspendido') {
+    return (
+      <section className="border border-dashed border-border bg-background px-5 py-3 sm:px-6">
+        <p className="flex items-center gap-x-2 text-sm font-medium text-muted">
+          {title}
+          {etiqueta && (
+            <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium">{etiqueta}</span>
+          )}
+        </p>
+      </section>
+    );
+  }
+
   return (
-    <section className={`border ${ESTILOS[variant]} ${abierto ? 'p-6 sm:p-8' : 'p-5 sm:p-6'}`}>
+    <section
+      // La tarjeta en foco (activa o en edición) se marca para que el scroll
+      // automático sepa a cuál llevar al cliente; `scroll-mt` deja libre el
+      // header fijo y el stepper.
+      data-tarjeta-foco={abierto ? '' : undefined}
+      className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] border lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS[variant]} ${
+        abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-3 sm:px-6' : 'p-5 sm:p-6'
+      }`}
+    >
       {/* El encabezado es boton solo si de verdad hace algo. El paso 3 una
           vez bloqueado el pago (`onAction` sin poner) queda como fila
           informativa: un boton que no responde al click es la misma mentira
@@ -142,7 +183,9 @@ export function CheckoutSectionCard({
           >
             <div className={`mt-5 ${variant === 'flat' ? 'flex flex-col gap-5' : ''}`}>{children}</div>
             {pie && (
-              <div className="mt-6 flex justify-end border-t border-border pt-5">{pie}</div>
+              // En escritorio el CTA se queda pegado al borde inferior de la pantalla
+              // mientras la tarjeta sea más alta que ella: siempre alcanzable.
+              <div className="mt-6 flex justify-end border-t border-border bg-background pt-5 lg:sticky lg:bottom-0 lg:z-10 lg:pb-4">{pie}</div>
             )}
           </motion.div>
         )}

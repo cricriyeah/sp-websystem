@@ -37,7 +37,7 @@ type Props = {
   noches: number | null;
   salida: string | null;
   puntos: PuntoEncuentro[];
-  estadoTarjeta: 'activo' | 'editando' | 'completado';
+  estadoTarjeta: 'activo' | 'editando' | 'completado' | 'suspendido';
   onAccion: () => void;
   onCompletar: () => void;
   onTope?: () => void;

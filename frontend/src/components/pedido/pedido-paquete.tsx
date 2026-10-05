@@ -7,8 +7,10 @@ import { BotonPaso } from '@/components/checkout/boton-paso';
 import { CamposContacto } from '@/components/checkout/campos-contacto';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
+import { ItemPaso } from '@/components/checkout/item-paso';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
+import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CheckoutStepper } from '@/components/checkout-stepper';
@@ -28,7 +30,9 @@ import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fall
 import { horasDePaquete } from '@/lib/horario-servicio';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
-import { estadoDeTarjeta, numeroDePaso, type PasoId } from '@/lib/pasos-checkout';
+import {
+  estadoDeTarjeta, estadoVisible, numeroDePaso, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+} from '@/lib/pasos-checkout';
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
 } from '@/lib/pedido-paquete';
@@ -71,6 +75,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const ayuda = useAyudaContextual();
   const [gruposCompletados, setGruposCompletados] = useState(0);
   const [grupoEditando, setGrupoEditando] = useState<number | null>(null);
+  // Cuando el cliente cambia de paso (confirma uno o reabre una respuesta) la
+  // tarjeta en foco se trae a la vista solo si hace falta.
+  useScrollAlFoco(`${actual}|${editando}|${gruposCompletados}|${grupoEditando}`);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [errorWaiver, setErrorWaiver] = useState(false);
   const [erroresContacto, setErroresContacto] = useState<Partial<Record<'fullName' | 'phone' | 'email', string>>>({});
@@ -449,32 +456,37 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         stepper={{ actual: 4, totalMovil }}
         pasos={
           <>
-            <CheckoutSectionCard
-              title={checkout.tripHeadline}
-              estado="completado"
-              resumen={resumenViaje}
-            >
-              {null}
-            </CheckoutSectionCard>
-            <CheckoutSectionCard
-              title={checkout.contactHeadline}
-              estado="completado"
-              resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
-            >
-              {null}
-            </CheckoutSectionCard>
+            <ItemPaso>
+              <CheckoutSectionCard
+                title={checkout.tripHeadline}
+                estado="completado"
+                resumen={resumenViaje}
+              >
+                {null}
+              </CheckoutSectionCard>
+            </ItemPaso>
+            <ItemPaso unida>
+              <CheckoutSectionCard
+                title={checkout.contactHeadline}
+                estado="completado"
+                resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
+              >
+                {null}
+              </CheckoutSectionCard>
+            </ItemPaso>
             {paquete.servicios_asociados.map((item) => {
               const personas = estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas;
               return (
-                <CheckoutSectionCard
-                  key={item.id}
-                  title={item.servicio.nombre}
-                  etiqueta={cantidadCargos > 1 ? nombreEmpresa(item.servicio.empresa_slug) : undefined}
-                  estado="completado"
-                  resumen={`${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}
-                >
-                  {null}
-                </CheckoutSectionCard>
+                <ItemPaso key={item.id} unida>
+                  <CheckoutSectionCard
+                    title={item.servicio.nombre}
+                    etiqueta={cantidadCargos > 1 ? nombreEmpresa(item.servicio.empresa_slug) : undefined}
+                    estado="completado"
+                    resumen={`${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}
+                  >
+                    {null}
+                  </CheckoutSectionCard>
+                </ItemPaso>
               );
             })}
           </>
@@ -503,6 +515,27 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     );
   }
 
+  // Un solo foco abierto: si el cliente reabrió una respuesta, la tarjeta activa
+  // se pliega a un renglón "pendiente" hasta que termine de corregirla.
+  const hayEdicion = editando !== null || grupoEditando !== null;
+  const estadoDeGrupo = (indice: number): EstadoTarjeta =>
+    indice < gruposCompletados ? (grupoEditando === indice ? 'editando' : 'completado') : 'activo';
+  const estadoViaje = estadoVisible(tarjeta('viaje') as EstadoTarjeta, hayEdicion);
+  const estadoContacto: EstadoVisible = estadoVisible(
+    (tarjeta('contacto') === 'oculto' ? 'activo' : tarjeta('contacto')) as EstadoTarjeta, hayEdicion,
+  );
+  // Orden exacto en el que se pintan las tarjetas, para saber cuáles van pegadas.
+  const secuencia: EstadoVisible[] = [estadoViaje];
+  if (tarjeta('contacto') !== 'oculto') secuencia.push(estadoContacto);
+  const posicionDeGrupo = new Map<number, number>();
+  if (tarjeta('detalles') !== 'oculto') {
+    paquete.servicios_asociados.forEach((_, indice) => {
+      if (indice > gruposCompletados || grupoOculto(indice)) return;
+      posicionDeGrupo.set(indice, secuencia.length);
+      secuencia.push(estadoVisible(estadoDeGrupo(indice), hayEdicion));
+    });
+  }
+
   return (
     <>
       <PaginaCheckout
@@ -521,9 +554,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         stepper={{ actual: numeroDePaso(actual), totalMovil }}
         pasos={
           <>
+            <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
             <CheckoutSectionCard
               title={checkout.tripHeadline}
-              estado={tarjeta('viaje') as 'activo' | 'editando' | 'completado'}
+              estado={estadoViaje}
               resumen={resumenViaje}
               actionLabel={tarjeta('viaje') === 'completado' ? checkout.changeStep : tarjeta('viaje') === 'editando' ? checkout.doneEditing : undefined}
               onAction={tarjeta('viaje') === 'activo' ? undefined : () => setEditando((e) => (e === 'viaje' ? null : 'viaje'))}
@@ -594,11 +628,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               />
               <ErrorDeCampo id="pedido-viaje-error" mensaje={errorViaje} />
             </CheckoutSectionCard>
+            </ItemPaso>
 
             {tarjeta('contacto') !== 'oculto' && (
+              <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
               <CheckoutSectionCard
                 title={checkout.contactHeadline}
-                estado={tarjeta('contacto') as 'activo' | 'editando' | 'completado'}
+                estado={estadoContacto as 'activo' | 'editando' | 'completado' | 'suspendido'}
                 resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
                 actionLabel={tarjeta('contacto') === 'completado' ? checkout.changeStep : tarjeta('contacto') === 'editando' ? checkout.doneEditing : undefined}
                 onAction={tarjeta('contacto') === 'activo' ? undefined : () => setEditando((e) => (e === 'contacto' ? null : 'contacto'))}
@@ -612,6 +648,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                   onCambio={(campo, valor) => despachar({ tipo: 'contacto', cambios: { [campo]: valor } })}
                 />
               </CheckoutSectionCard>
+              </ItemPaso>
             )}
 
             {tarjeta('detalles') !== 'oculto' && (
@@ -620,12 +657,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 {paquete.servicios_asociados.map((componente, indice) => {
                   if (indice > gruposCompletados || grupoOculto(indice)) return null;
                   const slug = componente.servicio.slug;
-                  const estadoGrupo = indice < gruposCompletados
-                    ? grupoEditando === indice ? 'editando' : 'completado'
-                    : 'activo';
+                  const estadoGrupo = estadoVisible(estadoDeGrupo(indice), hayEdicion);
                   return (
+                    <ItemPaso key={componente.id} unida={unidaConAnterior(secuencia, posicionDeGrupo.get(indice) ?? 0)}>
                     <GrupoServicio
-                      key={componente.id}
                       lang={lang}
                       dict={dict}
                       componente={componente}
@@ -652,6 +687,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                       onExtras={(valor) => despachar({ tipo: 'extras', slug, valor })}
                       onTraslado={(cambios) => despachar({ tipo: 'traslado', slug, cambios })}
                     />
+                    </ItemPaso>
                   );
                 })}
               </>

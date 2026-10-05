@@ -140,6 +140,17 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   lista (descripción completa), no en columnas. La tira semanal arranca en
   el primer día reservable y avanza de 7 en 7 (`lib/calendario-semana.ts`):
   sin celdas pasadas que no se pueden tocar.
+- Respuestas ya dadas y foco: una tarjeta `completado` es un renglón de una
+  línea ("título · resumen" + "Modificar" como enlace discreto) y varias
+  seguidas comparten borde (`ItemPaso` + `unidaConAnterior`, por posición: las
+  tarjetas siguen montadas y su colapso sigue animándose). Un solo foco abierto:
+  mientras el cliente reabre una respuesta, la tarjeta activa pasa a
+  `suspendido` (solo título; sus respuestas viven en el estado del pedido) con
+  `estadoVisible`. `useScrollAlFoco` lleva al cliente a la tarjeta con
+  `data-tarjeta-foco` solo si no se ve, tras su acción y con `reducir
+  movimiento` instantáneo. En escritorio el stepper y el pie con el CTA de la
+  tarjeta activa son `sticky`. Lo usa `PedidoPaquete` (mismo para paquete de una
+  empresa y cruza-empresa); `CheckoutView` lo adopta al migrar.
 - Pruebas desde `frontend/`: `npm.cmd test` ejecuta
   `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,
   `npm.cmd test -- calendario-paquete`; al añadir un módulo, registrar

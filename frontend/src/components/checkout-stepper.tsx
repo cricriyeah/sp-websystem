@@ -56,7 +56,10 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil }: Checkout
       </div>
 
       {/* --- Escritorio: los 4 pasos a la vista. ---------------------------- */}
-      <div className="mx-auto hidden max-w-6xl px-6 pt-6 sm:px-8 lg:block lg:px-12">
+      {/* Fija bajo el header, como la de móvil: el progreso es información que
+          debe seguir a la vista mientras el cliente baja por las tarjetas. */}
+      <div className="hidden border-b border-border bg-surface/95 backdrop-blur-sm lg:sticky lg:top-[var(--nav-alto)] lg:z-30 lg:block">
+        <div className="mx-auto max-w-6xl px-6 pt-4 pb-3 sm:px-8 lg:px-12">
         <ol className="flex items-center">
           {pasos.map((label, i) => {
             const numero = i + 1;
@@ -98,6 +101,7 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil }: Checkout
             );
           })}
         </ol>
+        </div>
       </div>
     </>
   );
