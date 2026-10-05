@@ -21,6 +21,7 @@ const suites = {
   'pedido-estado': ['src/lib/pedido-estado.ts', 'PEDIDO_ESTADO_TEST_OUT'],
   'horario-servicio': ['src/lib/horario-servicio.ts', 'HORARIO_TEST_OUT'],
   'fallo-pago': ['src/lib/fallo-pago.ts', 'FALLO_PAGO_TEST_OUT'],
+  'pasos-checkout': ['src/lib/pasos-checkout.ts', 'PASOS_CHECKOUT_TEST_OUT'],
   pendientes: ['src/lib/pendientes.ts', 'PENDIENTES_TEST_OUT'],
   'pendientes-texto': ['src/lib/pendientes-texto.ts', 'PENDIENTES_TEXTO_TEST_OUT'],
   'selector-experiencia': ['src/lib/selector-experiencia.ts', 'SELECTOR_TEST_OUT'],
