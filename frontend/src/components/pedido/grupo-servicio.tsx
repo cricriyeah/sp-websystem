@@ -251,8 +251,7 @@ export function GrupoServicio({
                 onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
                 minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)}
                 chooseLabel={pedido.chooseReturnDate}
-                chooseButtonLabel={pedido.chooseDate} changeButtonLabel={checkout.changeStep}
-                doneButtonLabel={checkout.doneEditing}
+                changeButtonLabel={checkout.changeStep} doneButtonLabel={checkout.doneEditing}
                 viewMonthLabel={pedido.viewMonth} hideMonthLabel={pedido.hideMonth}
                 previousWeekLabel={pedido.previousWeek} nextWeekLabel={pedido.nextWeek}
                 previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}

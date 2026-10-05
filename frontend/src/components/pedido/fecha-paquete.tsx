@@ -166,18 +166,20 @@ export function FechaPaquete({
 }
 
 type PropsCompacta = Omit<Props, 'sinEncabezado'> & {
-  /** "Elegir" / "Modificar" / "Listo": el botón de la fila. */
-  chooseButtonLabel: string;
+  /** "Modificar" / "Listo": el botón de la fila, que solo existe cuando ya hay respuesta. */
   changeButtonLabel: string;
   doneButtonLabel: string;
 };
 
 /**
- * La fecha de regreso del traslado es secundaria frente al inicio del paquete:
- * una fila ("Regreso: sáb 12 oct") y la tira semanal solo si el cliente la pide.
- * No se prellena: sin respuesta se muestra la pregunta, no una fecha inventada.
+ * La fecha de regreso es obligatoria, así que mientras no haya respuesta se ve
+ * la pregunta con la tira semanal abierta: un botón "Elegir" la haría parecer
+ * opcional y sumaría un paso. Al contestar se pliega a una fila ("Regreso: sáb
+ * 12 oct") y recién entonces aparece "Modificar", como las tarjetas del
+ * checkout. No se prellena: sin respuesta se muestra la pregunta, no una fecha
+ * que el cliente no eligió.
  */
-export function FechaRegresoCompacta({ chooseButtonLabel, changeButtonLabel, doneButtonLabel, ...props }: PropsCompacta) {
+export function FechaRegresoCompacta({ changeButtonLabel, doneButtonLabel, ...props }: PropsCompacta) {
   const { lang, value, minDate, label, chooseLabel, onChange } = props;
   const [abierta, setAbierta] = useState(false);
   const locale = intlLocale(lang);
@@ -186,19 +188,25 @@ export function FechaRegresoCompacta({ chooseButtonLabel, changeButtonLabel, don
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">{label}</p>
-          <p className={`mt-0.5 truncate text-sm first-letter:uppercase ${vigente ? 'text-foreground' : 'text-muted'}`}>
-            {vigente ? formato.format(fromLocalISODate(vigente)).replace('.', '') : chooseLabel}
-          </p>
-        </div>
+      <Despliegue abierto={!vigente}>
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="mt-1 text-sm text-muted">{chooseLabel}</p>
+      </Despliegue>
+      <Despliegue abierto={Boolean(vigente)}>
         <button type="button" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}
-          className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent">
-          {abierta ? doneButtonLabel : vigente ? changeButtonLabel : chooseButtonLabel}
+          className="group flex w-full items-center justify-between gap-3 text-left">
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-foreground">{label}</span>
+            <span className="mt-0.5 block truncate text-sm text-foreground first-letter:uppercase">
+              {vigente ? formato.format(fromLocalISODate(vigente)).replace('.', '') : ''}
+            </span>
+          </span>
+          <span className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
+            {abierta ? doneButtonLabel : changeButtonLabel}
+          </span>
         </button>
-      </div>
-      <Despliegue abierto={abierta}>
+      </Despliegue>
+      <Despliegue abierto={!vigente || abierta}>
         <div className="mt-4">
           <FechaPaquete {...props} sinEncabezado onChange={(fecha) => { onChange(fecha); setAbierta(false); }} />
         </div>
