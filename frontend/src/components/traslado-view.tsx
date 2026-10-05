@@ -22,7 +22,7 @@ import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import { SiteHeader } from '@/components/site-header';
-import { FormularioPago, NotaSeguridadStripe, StripePanel } from '@/components/stripe-panel';
+import { FormularioPago, StripePanel } from '@/components/stripe-panel';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { TimeField } from '@/components/time-field';
@@ -185,6 +185,8 @@ export function TrasladoView({
 
   const [reservaId, setReservaId] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
+  // Donde se pinta la tarjeta "Cómo pagas" (el último paso, en la columna de pasos).
+  const [destinoTarjetaPago, setDestinoTarjetaPago] = useState<HTMLElement | null>(null);
   const [pagoProcesando, setPagoProcesando] = useState(false);
   const [error, setError] = useState('');
 
@@ -997,7 +999,10 @@ export function TrasladoView({
             </motion.div>
           )}
 
-          {/* El pago es el último paso: su tarjeta va aquí, no al final del panel. */}
+          {/* El último paso: "Cómo pagas" se pinta aquí (portal del panel) y, al crearse
+              el pago, el formulario de tarjeta aparece debajo. */}
+          {(pasosVisibles >= 5 || phase !== 'form') && <div className={phase === 'payment' ? '-mt-[calc(1.5rem+1px)]' : undefined} ref={setDestinoTarjetaPago} />}
+
           {phase === 'payment' && pago && (
             <FormularioPago
               checkout={checkout}
@@ -1040,6 +1045,7 @@ export function TrasladoView({
               onCodigoPromocionalChange={onCodigoPromocionalChange}
               promoEstado={promoEstado}
               promoPorcentaje={promoPorcentaje}
+              destinoTarjeta={destinoTarjetaPago}
               phase={phase}
               error={error}
               feedback={feedback}
@@ -1048,7 +1054,6 @@ export function TrasladoView({
               onCaptchaToken={(token) => (captchaToken.current = token)}
             />
 
-            {phase !== 'payment' && <NotaSeguridadStripe checkout={checkout} />}
           </div>
         </div>
       </main>

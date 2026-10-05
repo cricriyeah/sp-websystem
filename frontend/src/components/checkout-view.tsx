@@ -21,7 +21,7 @@ import { DateField } from '@/components/date-field';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
-import { FormularioPago, NotaSeguridadStripe, StripePanel } from '@/components/stripe-panel';
+import { FormularioPago, StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import { WaitNotice } from '@/components/wait-notice';
@@ -305,6 +305,8 @@ export function CheckoutView({
   const refFullName = useRef<HTMLInputElement>(null);
   const refEmail = useRef<HTMLInputElement>(null);
   const refStripePanel = useRef<HTMLDivElement>(null);
+  // Donde se pinta la tarjeta "Cómo pagas" (el cuarto paso, en la columna de pasos).
+  const [destinoTarjetaPago, setDestinoTarjetaPago] = useState<HTMLElement | null>(null);
   const refsContacto: Record<CampoContacto, React.RefObject<HTMLInputElement | null>> = {
     phone: refPhone,
     fullName: refFullName,
@@ -1409,8 +1411,10 @@ export function CheckoutView({
               </ItemPaso>
             )}
 
-            {/* El pago es el cuarto paso: la tarjeta aparece justo debajo de las
-                respuestas ya dadas, no al final del panel de resumen. */}
+            {/* El cuarto paso. "Cómo pagas" se pinta aquí (portal del panel) al llegar al
+                paso 4; el formulario de tarjeta aparece debajo cuando se crea el pago. */}
+            {(actual === 'pago' || phase !== 'form') && <div className={phase === 'payment' ? '-mt-[calc(1.5rem+1px)]' : undefined} ref={setDestinoTarjetaPago} />}
+
             {phase === 'payment' && pago && (
               <FormularioPago
                 checkout={checkout}
@@ -1460,15 +1464,11 @@ export function CheckoutView({
               error={error}
               feedback={dict.feedback}
               lineasViaje={lineasViaje}
-              pagoVisibleMovil={actual === 'pago' || enviando || locked}
+              destinoTarjeta={destinoTarjetaPago}
               ayudaMensaje={ayudaMensaje}
               onSubmit={iniciarPago}
               onCaptchaToken={(token) => (captchaToken.current = token)}
             />
-            {/* Fuera de la tarjeta de resumen, debajo: no es parte del desglose de
-                precio, es la respuesta a "es seguro pagar aquí". En la fase de pago
-                va junto al formulario de tarjeta (ver `FormularioPago`). */}
-            {phase !== 'payment' && <NotaSeguridadStripe checkout={checkout} />}
           </div>
         }
       />

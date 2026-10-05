@@ -165,17 +165,19 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   → stepper → [pasos | pedido]. Los pasos son siempre viaje → contacto →
   detalles → pago (`src/lib/pasos-checkout.ts`); cada tarjeta es un
   `CheckoutSectionCard` con un solo CTA en el `pie` (`BotonPaso`) y bloques
-  separados por espacio, no por rayas. El panel derecho (`StripePanel`) tiene
-  dos zonas: "qué compras" (líneas vivas del viaje, cargos y total) y "cómo
-  pagas" (moneda, forma de pago, promo, deslinde, botón que crea el pago); en
-  móvil la zona de pago aparece al llegar al paso 4 (`pagoVisibleMovil`). El
-  formulario de tarjeta NO vive en el panel: al crearse el pago aparece como la
-  tarjeta "Pago" de la columna de pasos (`FormularioPago` de `stripe-panel.tsx`,
-  con `NotaSeguridadStripe` debajo), en servicio, paquete (una empresa y
-  cruza-empresa) y `/traslados`; en esa fase el panel solo muestra el resumen.
-  Los `Elements` de Stripe solo envuelven ese formulario (en cruza-empresa se
-  remonta por empresa con `key`). Los pagos de una reserva se crean con
-  `payment_method_types=['card']` (sin "Link"), igual que las órdenes. Dentro de cada
+  separados por espacio, no por rayas. El panel derecho (`StripePanel`) es SOLO
+  el resumen del pedido (líneas vivas del viaje, cargos, total y "pagarás
+  ahora" si difiere). El cuarto paso vive en la columna de pasos: "Cómo
+  pagas" (moneda, modalidad, promo, deslinde, Turnstile y el botón que crea
+  el pago) es una tarjeta que el panel pinta ahí mediante un portal
+  (`destinoTarjeta`: el llamador pone `<div ref={setDestino}>` en `pasos` al
+  llegar al paso 4 y pasa ese nodo al panel, que conserva todo el estado y las
+  props); al crearse el pago esa tarjeta se pliega a un renglón y debajo
+  aparece el formulario de tarjeta (`FormularioPago`, con `NotaSeguridadStripe`).
+  Sirve igual para servicio, paquete (una empresa y cruza-empresa) y
+  `/traslados`. Los `Elements` de Stripe solo envuelven `FormularioPago` (en
+  cruza-empresa se remonta por empresa con `key`). Los pagos de una reserva se
+  crean con `payment_method_types=['card']` (sin "Link"), igual que las órdenes. Dentro de cada
   tarjeta: lo obligatorio antes que lo opcional (`separarPersonalizaciones`).
   `AyudaFlotante` ofrece WhatsApp, sin mover la página, tras tres tropiezos
   (`src/lib/ayuda-contextual.ts`): errores de validación al confirmar pasos o

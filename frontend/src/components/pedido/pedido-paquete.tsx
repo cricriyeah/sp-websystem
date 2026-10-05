@@ -69,6 +69,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     puntoInicial: (empresa) => puntosPorEmpresa[empresa]?.[0]?.id ?? null,
   });
   const captcha = useRef('');
+  // Donde se pinta la tarjeta "Cómo pagas" (el cuarto paso, en la columna de pasos).
+  const [destinoTarjetaPago, setDestinoTarjetaPago] = useState<HTMLElement | null>(null);
   const [actual, setActual] = useState<PasoId>('viaje');
   const [editando, setEditando] = useState<PasoId | null>(null);
   const tarjeta = (id: PasoId) => estadoDeTarjeta(id, actual, editando);
@@ -492,6 +494,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               );
             })}
 
+            {/* "Cómo pagas" (ya con el pago creado, un renglón) se pinta aquí. */}
+            <div className="-mt-[calc(1.5rem+1px)]" ref={setDestinoTarjetaPago} />
+
             {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
                 respuestas ya dadas. En cruza-empresa se remonta por empresa
                 (cada una cobra con su propia clave y secreto). */}
@@ -514,7 +519,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
             waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
             lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={lineasViaje}
-            pagoVisibleMovil={true}
+            destinoTarjeta={destinoTarjetaPago}
             total={totalPago} amountDueNow={monto}
             moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
             formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}
@@ -711,6 +716,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 <ErrorDeCampo id="pedido-detalles-error-general" mensaje={indiceGrupoEnFoco === null ? errorDetalles : ''} />
               </>
             )}
+
+            {/* El cuarto paso: "Cómo pagas" se pinta aquí (portal del panel) al llegar a él. */}
+            {actual === 'pago' && <div ref={setDestinoTarjetaPago} />}
           </>
         }
         pedido={pedido ? (
@@ -722,7 +730,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             lines={cargos.map((cargo) => ({ label: nombreEmpresa(cargo.empresaSlug),
               amount: formatearPrecio(cantidadCargos === 1 ? totalConDescuento : cargo.monto, estado.moneda) }))}
             lineasViaje={lineasViaje}
-            pagoVisibleMovil={actual === 'pago'}
+            destinoTarjeta={destinoTarjetaPago}
             total={total} amountDueNow={ahora} moneda={estado.moneda}
             onMonedaChange={(valor) => despachar({ tipo: 'moneda', valor })} usdDisponible={conUsd}
             formaPago={estado.formaPago}
