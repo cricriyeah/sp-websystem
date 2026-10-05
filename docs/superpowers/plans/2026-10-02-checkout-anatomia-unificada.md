@@ -157,15 +157,16 @@ test('en el pago todas las tarjetas de pasos están completadas', () => {
 
 ```js
   'pasos-checkout': ['src/lib/pasos-checkout.ts', 'PASOS_CHECKOUT_TEST_OUT'],
-  'ayuda-contextual': ['src/lib/ayuda-contextual.ts', 'AYUDA_CONTEXTUAL_TEST_OUT'],
 ```
+
+(`ayuda-contextual` se registra en la Tarea 2, junto con su módulo: registrarla antes rompe `npm.cmd test` completo.)
 
 - [ ] **Paso 3: verificar que falla.** Desde `frontend/`:
 
 ```bash
 npm.cmd test -- pasos-checkout
 ```
-Esperado: FALLA con error de TypeScript por archivo inexistente (`src/lib/pasos-checkout.ts`). (La entrada de `ayuda-contextual` ya está registrada; ese archivo se crea en la Tarea 2. Mientras no exista, correr solo `-- pasos-checkout` no la toca.)
+Esperado: FALLA con error de TypeScript por archivo inexistente (`src/lib/pasos-checkout.ts`).
 
 - [ ] **Paso 4: implementar** — `frontend/src/lib/pasos-checkout.ts`:
 
@@ -229,6 +230,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Archivos:**
 - Crear: `frontend/src/lib/ayuda-contextual.ts`
 - Crear: `frontend/tests/ayuda-contextual.test.cjs`
+- Modificar: `frontend/tests/run-hub-tests.cjs` (registrar la suite aquí, no en la Tarea 1)
 
 **Interfaces:**
 - Produce: `type TipoTropiezo = 'validacion' | 'tope-personas'`; `type EstadoAyuda = { validacion: number; topePersonas: number; descartada: boolean }`; `ayudaInicial: EstadoAyuda`; `TROPIEZOS_PARA_OFRECER_AYUDA = 3`; `registrarTropiezo(estado, tipo): EstadoAyuda`; `descartarAyuda(estado): EstadoAyuda`; `ofreceAyudaFlotante(estado): boolean`; `motivoDeAyuda(estado): TipoTropiezo`.
@@ -286,6 +288,12 @@ test('registrar un tropiezo no muta el estado anterior', () => {
   a.registrarTropiezo(antes, 'validacion');
   assert.equal(antes.validacion, 0);
 });
+```
+
+- [ ] **Paso 1b: registrar la suite** en `frontend/tests/run-hub-tests.cjs`, dentro de `suites`, justo después de la línea de `'pasos-checkout'`:
+
+```js
+  'ayuda-contextual': ['src/lib/ayuda-contextual.ts', 'AYUDA_CONTEXTUAL_TEST_OUT'],
 ```
 
 - [ ] **Paso 2: verificar que falla.**
@@ -347,7 +355,7 @@ Esperado: 7 pruebas pasan.
 - [ ] **Paso 5: commit.**
 
 ```bash
-git add frontend/src/lib/ayuda-contextual.ts frontend/tests/ayuda-contextual.test.cjs
+git add frontend/src/lib/ayuda-contextual.ts frontend/tests/ayuda-contextual.test.cjs frontend/tests/run-hub-tests.cjs
 git commit -m "feat(checkout): reglas puras de ayuda contextual por tropiezos repetidos
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
