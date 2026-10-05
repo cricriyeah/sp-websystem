@@ -37,3 +37,46 @@ test('en el pago todas las tarjetas de pasos están completadas', () => {
     assert.equal(p.estadoDeTarjeta(id, 'pago', null), 'completado');
   }
 });
+
+test('con una respuesta reabierta, la tarjeta activa se suspende', () => {
+  assert.equal(p.estadoVisible('activo', true), 'suspendido');
+  assert.equal(p.estadoVisible('activo', false), 'activo');
+});
+
+test('la suspensión no toca a las completadas ni a la que se está editando', () => {
+  assert.equal(p.estadoVisible('completado', true), 'completado');
+  assert.equal(p.estadoVisible('editando', true), 'editando');
+});
+
+test('las completadas seguidas forman una sola lista y lo demás va aparte', () => {
+  const items = [
+    { id: 'viaje', estado: 'completado' },
+    { id: 'contacto', estado: 'completado' },
+    { id: 'pesca', estado: 'completado' },
+    { id: 'traslado', estado: 'activo' },
+  ];
+  const segmentos = p.agruparResumenes(items);
+  assert.equal(segmentos.length, 2);
+  assert.equal(segmentos[0].tipo, 'resumen');
+  assert.deepEqual(segmentos[0].items.map((i) => i.id), ['viaje', 'contacto', 'pesca']);
+  assert.equal(segmentos[1].tipo, 'tarjeta');
+  assert.equal(segmentos[1].item.id, 'traslado');
+});
+
+test('una tarjeta en edición parte la lista en dos y conserva el orden', () => {
+  const items = [
+    { id: 'viaje', estado: 'completado' },
+    { id: 'contacto', estado: 'editando' },
+    { id: 'pesca', estado: 'completado' },
+    { id: 'traslado', estado: 'suspendido' },
+  ];
+  const segmentos = p.agruparResumenes(items);
+  assert.deepEqual(segmentos.map((s) => s.tipo), ['resumen', 'tarjeta', 'resumen', 'tarjeta']);
+  assert.equal(segmentos[1].item.id, 'contacto');
+  assert.equal(segmentos[3].item.id, 'traslado');
+});
+
+test('sin completadas no hay lista de resumen', () => {
+  const segmentos = p.agruparResumenes([{ id: 'viaje', estado: 'activo' }]);
+  assert.deepEqual(segmentos.map((s) => s.tipo), ['tarjeta']);
+});
