@@ -48,35 +48,17 @@ test('la suspensión no toca a las completadas ni a la que se está editando', (
   assert.equal(p.estadoVisible('editando', true), 'editando');
 });
 
-test('las completadas seguidas forman una sola lista y lo demás va aparte', () => {
-  const items = [
-    { id: 'viaje', estado: 'completado' },
-    { id: 'contacto', estado: 'completado' },
-    { id: 'pesca', estado: 'completado' },
-    { id: 'traslado', estado: 'activo' },
-  ];
-  const segmentos = p.agruparResumenes(items);
-  assert.equal(segmentos.length, 2);
-  assert.equal(segmentos[0].tipo, 'resumen');
-  assert.deepEqual(segmentos[0].items.map((i) => i.id), ['viaje', 'contacto', 'pesca']);
-  assert.equal(segmentos[1].tipo, 'tarjeta');
-  assert.equal(segmentos[1].item.id, 'traslado');
+test('dos completadas seguidas van pegadas; lo demás conserva su separación', () => {
+  const estados = ['completado', 'completado', 'completado', 'activo'];
+  assert.equal(p.unidaConAnterior(estados, 0), false);
+  assert.equal(p.unidaConAnterior(estados, 1), true);
+  assert.equal(p.unidaConAnterior(estados, 2), true);
+  assert.equal(p.unidaConAnterior(estados, 3), false);
 });
 
-test('una tarjeta en edición parte la lista en dos y conserva el orden', () => {
-  const items = [
-    { id: 'viaje', estado: 'completado' },
-    { id: 'contacto', estado: 'editando' },
-    { id: 'pesca', estado: 'completado' },
-    { id: 'traslado', estado: 'suspendido' },
-  ];
-  const segmentos = p.agruparResumenes(items);
-  assert.deepEqual(segmentos.map((s) => s.tipo), ['resumen', 'tarjeta', 'resumen', 'tarjeta']);
-  assert.equal(segmentos[1].item.id, 'contacto');
-  assert.equal(segmentos[3].item.id, 'traslado');
-});
-
-test('sin completadas no hay lista de resumen', () => {
-  const segmentos = p.agruparResumenes([{ id: 'viaje', estado: 'activo' }]);
-  assert.deepEqual(segmentos.map((s) => s.tipo), ['tarjeta']);
+test('una tarjeta en edición o suspendida parte el bloque de completadas', () => {
+  const estados = ['completado', 'editando', 'completado', 'suspendido'];
+  assert.equal(p.unidaConAnterior(estados, 1), false);
+  assert.equal(p.unidaConAnterior(estados, 2), false);
+  assert.equal(p.unidaConAnterior(estados, 3), false);
 });

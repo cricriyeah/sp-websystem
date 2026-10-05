@@ -46,26 +46,16 @@ export function estadoVisible(estado: EstadoTarjeta, hayEdicion: boolean): Estad
   return estado === 'activo' && hayEdicion ? 'suspendido' : estado;
 }
 
-export type SegmentoPasos<T> =
-  | { tipo: 'resumen'; items: T[] }
-  | { tipo: 'tarjeta'; item: T };
-
 /**
- * Las respuestas ya dadas que van seguidas forman UNA lista compacta; cualquier
- * otra tarjeta (activa, en edición, suspendida) va aparte, en su sitio. Así tres
- * respuestas cerradas ocupan tres renglones de un mismo bloque en vez de tres
- * tarjetas sueltas que empujan la activa fuera de la pantalla.
+ * ¿Esta tarjeta va pegada a la anterior? Dos respuestas ya dadas seguidas se
+ * ven como UN bloque compacto (renglones que comparten borde) y no como
+ * tarjetas sueltas separadas por huecos: tres respuestas cerradas dejan de
+ * empujar la tarjeta activa fuera de la pantalla. Cualquier otra tarjeta
+ * (activa, en edición, suspendida) conserva su separación normal.
+ *
+ * Se resuelve por posición y no reubicando las tarjetas en otro contenedor:
+ * así cada una sigue montada y su colapso sigue animándose.
  */
-export function agruparResumenes<T extends { estado: EstadoVisible }>(items: T[]): SegmentoPasos<T>[] {
-  const segmentos: SegmentoPasos<T>[] = [];
-  for (const item of items) {
-    const ultimo = segmentos[segmentos.length - 1];
-    if (item.estado === 'completado') {
-      if (ultimo && ultimo.tipo === 'resumen') ultimo.items.push(item);
-      else segmentos.push({ tipo: 'resumen', items: [item] });
-    } else {
-      segmentos.push({ tipo: 'tarjeta', item });
-    }
-  }
-  return segmentos;
+export function unidaConAnterior(estados: readonly EstadoVisible[], indice: number): boolean {
+  return indice > 0 && estados[indice] === 'completado' && estados[indice - 1] === 'completado';
 }
