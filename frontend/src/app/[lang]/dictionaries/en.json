@@ -777,6 +777,7 @@
     "startLabel": "Package start",
     "chooseStart": "Choose a date to start the package",
     "chooseReturnDate": "Choose the airport return date",
+    "chooseDate": "Choose",
     "viewMonth": "View full month",
     "hideMonth": "Hide month",
     "previousWeek": "Previous week",

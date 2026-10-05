@@ -24,11 +24,13 @@ type Props = {
   nextMonthLabel: string;
   personas: number;
   fullLabel: string;
+  /** Sin la etiqueta ni la fecha elegida arriba: las pinta quien lo envuelve (fila compacta). */
+  sinEncabezado?: boolean;
 };
 
 export function FechaPaquete({
   lang, value, onChange, minDate, label, chooseLabel, viewMonthLabel, hideMonthLabel,
-  previousWeekLabel, nextWeekLabel, previousMonthLabel, nextMonthLabel, personas, fullLabel,
+  previousWeekLabel, nextWeekLabel, previousMonthLabel, nextMonthLabel, personas, fullLabel, sinEncabezado = false,
 }: Props) {
   const locale = intlLocale(lang);
   const [inicioVisible, setInicioVisible] = useState(() => semanaVisible(value, minDate).inicio);
@@ -66,12 +68,16 @@ export function FechaPaquete({
 
   return (
     <div>
-      <p className="text-sm font-medium text-foreground">{label}</p>
-      <p className={`mt-1 text-sm first-letter:uppercase ${seleccionVigente ? 'text-foreground' : 'text-muted'}`}>
-        {seleccionVigente ? formatoCompleto.format(fromLocalISODate(seleccionVigente)) : chooseLabel}
-      </p>
+      {!sinEncabezado && (
+        <>
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className={`mt-1 text-sm first-letter:uppercase ${seleccionVigente ? 'text-foreground' : 'text-muted'}`}>
+            {seleccionVigente ? formatoCompleto.format(fromLocalISODate(seleccionVigente)) : chooseLabel}
+          </p>
+        </>
+      )}
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className={`${sinEncabezado ? '' : 'mt-4 '}flex items-center justify-between gap-3`}>
         <button type="button" onClick={() => moverSemana(-1)}
           disabled={!puedeRetroceder(inicioVisible, minDate)} aria-label={previousWeekLabel}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30">
@@ -118,6 +124,48 @@ export function FechaPaquete({
             prevMonthLabel={previousMonthLabel} nextMonthLabel={nextMonthLabel}
             sinCupo={true} cerrar={() => setMesAbierto(false)} anchoCompleto
           />
+        </div>
+      </Despliegue>
+    </div>
+  );
+}
+
+type PropsCompacta = Omit<Props, 'sinEncabezado'> & {
+  /** "Elegir" / "Modificar" / "Listo": el botón de la fila. */
+  chooseButtonLabel: string;
+  changeButtonLabel: string;
+  doneButtonLabel: string;
+};
+
+/**
+ * La fecha de regreso del traslado es secundaria frente al inicio del paquete:
+ * una fila ("Regreso: sáb 12 oct") y la tira semanal solo si el cliente la pide.
+ * No se prellena: sin respuesta se muestra la pregunta, no una fecha inventada.
+ */
+export function FechaRegresoCompacta({ chooseButtonLabel, changeButtonLabel, doneButtonLabel, ...props }: PropsCompacta) {
+  const { lang, value, minDate, label, chooseLabel, onChange } = props;
+  const [abierta, setAbierta] = useState(false);
+  const locale = intlLocale(lang);
+  const vigente = value && value >= minDate ? value : null;
+  const formato = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className={`mt-0.5 truncate text-sm first-letter:uppercase ${vigente ? 'text-foreground' : 'text-muted'}`}>
+            {vigente ? formato.format(fromLocalISODate(vigente)).replace('.', '') : chooseLabel}
+          </p>
+        </div>
+        <button type="button" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}
+          className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent">
+          {abierta ? doneButtonLabel : vigente ? changeButtonLabel : chooseButtonLabel}
+        </button>
+      </div>
+      <Despliegue abierto={abierta}>
+        <div className="mt-4">
+          <FechaPaquete {...props} sinEncabezado onChange={(fecha) => { onChange(fecha); setAbierta(false); }} />
         </div>
       </Despliegue>
     </div>

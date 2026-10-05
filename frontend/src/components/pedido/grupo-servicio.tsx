@@ -15,7 +15,8 @@ import { cantidadEfectiva, separarPersonalizaciones, type SeleccionPersonalizaci
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
-import { FechaPaquete } from './fecha-paquete';
+import { Despliegue } from '@/components/checkout/despliegue';
+import { FechaRegresoCompacta } from './fecha-paquete';
 
 type Props = {
   lang: Locale;
@@ -102,13 +103,13 @@ export function GrupoServicio({
             {sinPrecio ? checkout.extrasUnavailableInCurrency : `+${formatearPrecio(precio * cantidad, moneda)}`}
           </span>
         </label>
-        {!marcada && extra.aviso_reforzado && (
+        <Despliegue abierto={!marcada && Boolean(extra.aviso_reforzado)}>
           <div className="flex items-start gap-2 border border-t-0 border-action/40 bg-action/10 px-4 py-2.5 text-xs text-foreground">
             <Warning size={14} className="mt-0.5 shrink-0 text-action" />
             <p>{checkout.amenitiesModal.reinforcedWarning}</p>
           </div>
-        )}
-        {marcada && extra.cantidad_editable && estado.personas > 1 && (
+        </Despliegue>
+        <Despliegue abierto={marcada && Boolean(extra.cantidad_editable) && estado.personas > 1}>
           <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
             <span className="text-muted">{checkout.licenseQuantity.question}</span>
             <span className="flex items-center gap-2">
@@ -125,7 +126,7 @@ export function GrupoServicio({
               </button>
             </span>
           </div>
-        )}
+        </Despliegue>
       </div>
     );
 
@@ -236,7 +237,24 @@ export function GrupoServicio({
             onChange={(tipo) => onTraslado({ tipo })}
           />
 
-          {traslado.modo === 'catalogo' ? (
+          {/* El regreso depende del tipo: aparece pegado a las tarjetas que lo provocan,
+              antes del "dónde", y sin prellenar (sin respuesta se ve la pregunta). */}
+          {inicio && (
+            <Despliegue abierto={traslado.tipo === 'redondo_aeropuerto' && noches === null}>
+              <FechaRegresoCompacta lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
+                onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
+                minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)}
+                chooseLabel={pedido.chooseReturnDate}
+                chooseButtonLabel={pedido.chooseDate} changeButtonLabel={checkout.changeStep}
+                doneButtonLabel={checkout.doneEditing}
+                viewMonthLabel={pedido.viewMonth} hideMonthLabel={pedido.hideMonth}
+                previousWeekLabel={pedido.previousWeek} nextWeekLabel={pedido.nextWeek}
+                previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}
+                personas={estado.personas} fullLabel={checkout.dayFull} />
+            </Despliegue>
+          )}
+
+          <Despliegue abierto={traslado.modo === 'catalogo'}>
             <FieldPopover
               label={traslados.fields.puntoEncuentro}
               value={puntos.find((p) => p.id === traslado.puntoEncuentroId)?.nombre ?? ''}
@@ -258,7 +276,8 @@ export function GrupoServicio({
                 </div>
               )}
             </FieldPopover>
-          ) : (
+          </Despliegue>
+          <Despliegue abierto={traslado.modo !== 'catalogo'}>
             <div className="flex flex-col gap-3">
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="text-muted">{traslados.fields.otraDireccion}</span>
@@ -270,7 +289,7 @@ export function GrupoServicio({
                     className="w-full border border-border bg-surface py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent" />
                 </span>
               </label>
-              {traslado.tipo === 'redondo_actividad' && (
+              <Despliegue abierto={traslado.tipo === 'redondo_actividad'}>
                 <fieldset className="grid grid-cols-2 gap-3">
                   <legend className="sr-only">{traslados.fields.zona}</legend>
                   {(['centro', 'periferia'] as Zona[]).map((zona) => (
@@ -283,32 +302,21 @@ export function GrupoServicio({
                     </label>
                   ))}
                 </fieldset>
-              )}
+              </Despliegue>
             </div>
-          )}
+          </Despliegue>
 
-          {traslado.tipo === 'redondo_actividad' && traslado.modo === 'catalogo' && traslado.puntoEncuentroId !== null && (
+          <Despliegue abierto={traslado.tipo === 'redondo_actividad' && traslado.modo === 'catalogo' && traslado.puntoEncuentroId !== null}>
             <p className="text-xs text-muted">
               {traslados.fields.zona}: {puntos.find((p) => p.id === traslado.puntoEncuentroId)?.zona === 'centro'
                 ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
             </p>
-          )}
+          </Despliegue>
 
           <button type="button" onClick={() => onTraslado({ modo: traslado.modo === 'catalogo' ? 'personalizada' : 'catalogo' })}
             className="self-start text-xs font-medium text-accent underline underline-offset-2">
             {traslado.modo === 'catalogo' ? traslados.fields.otraDireccion : traslados.fields.puntoEncuentro}
           </button>
-
-          {traslado.tipo === 'redondo_aeropuerto' && noches === null && inicio && (
-            <FechaPaquete lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
-              onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
-              minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)}
-              chooseLabel={pedido.chooseReturnDate}
-              viewMonthLabel={pedido.viewMonth} hideMonthLabel={pedido.hideMonth}
-              previousWeekLabel={pedido.previousWeek} nextWeekLabel={pedido.nextWeek}
-              previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}
-              personas={estado.personas} fullLabel={checkout.dayFull} />
-          )}
         </BloqueDePaso>
       )}
 
