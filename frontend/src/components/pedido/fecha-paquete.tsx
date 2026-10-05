@@ -85,8 +85,14 @@ export function FechaPaquete({
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
   const formatoDia = new Intl.DateTimeFormat(locale, { weekday: 'short' });
-  const etiquetaMes = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' })
-    .format(fromLocalISODate(dias[3]));
+  // Los 7 días arrancan donde arranca la disponibilidad, no en lunes: casi
+  // siempre cruzan de mes, y entonces el rótulo dice el rango real.
+  const primerDia = fromLocalISODate(dias[0]);
+  const ultimoDia = fromLocalISODate(dias[6]);
+  const formatoCorto = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' });
+  const etiquetaMes = primerDia.getMonth() === ultimoDia.getMonth()
+    ? new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(primerDia)
+    : `${formatoCorto.format(primerDia).replace('.', '')} – ${formatoCorto.format(ultimoDia).replace('.', '')}`;
 
   const moverSemana = (semanas: number) => {
     const lunes = fromLocalISODate(inicioVisible);
