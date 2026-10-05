@@ -512,6 +512,16 @@
         "selection": "Select a valid option"
       },
       "orderSummaryHeadline": "Reservation summary",
+    "purchaseKicker": "Your booking",
+    "purchaseNights": "{n} nights",
+    "howYouPay": "How you pay",
+    "optionalTag": "Optional",
+    "summary": {
+      "date": "Date",
+      "time": "Time",
+      "people": "Guests",
+      "checkOut": "Check-out"
+    },
     "tourLabel": "Private fishing charter",
     "extraPeopleLabel": "Additional guests",
     "extraPeopleHint": "The base trip covers up to {included} guests. Beyond that it is {price} per additional guest.",
@@ -608,6 +618,12 @@
     "keepLooking": "Choose another date"
   },
   "feedback": {
+    "floatingHelp": {
+      "label": "Need help?",
+      "dismiss": "Close",
+      "messageValidation": "Hi, I'm trying to book on the website for {date} for {people} people and I can't complete my details. Can you help me?",
+      "messageMaxPeople": "Hi, I'd like to book {name} for more than {max} people. Can you help me?"
+    },
     "close": "Dismiss",
     "validation": {
       "personas": "The number of guests exceeds the places included in a package service. Adjust your group and try again.",

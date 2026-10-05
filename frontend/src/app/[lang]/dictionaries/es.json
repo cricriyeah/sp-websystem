@@ -512,6 +512,16 @@
         "selection": "Selecciona una opción válida"
       },
       "orderSummaryHeadline": "Resumen de tu reserva",
+    "purchaseKicker": "Tu compra",
+    "purchaseNights": "{n} noches",
+    "howYouPay": "Cómo pagas",
+    "optionalTag": "Opcional",
+    "summary": {
+      "date": "Fecha",
+      "time": "Hora",
+      "people": "Personas",
+      "checkOut": "Salida"
+    },
     "tourLabel": "Tour de pesca privado",
     "extraPeopleLabel": "Personas adicionales",
     "extraPeopleHint": "El viaje base incluye hasta {included} personas. A partir de esa cantidad aplica {price} por persona adicional.",
@@ -608,6 +618,12 @@
     "keepLooking": "Elegir otra fecha"
   },
   "feedback": {
+    "floatingHelp": {
+      "label": "¿Necesitas ayuda?",
+      "dismiss": "Cerrar",
+      "messageValidation": "Hola, estoy intentando reservar en la página para el {date} para {people} personas y no logro completar los datos. ¿Me pueden ayudar?",
+      "messageMaxPeople": "Hola, quiero reservar {name} para más de {max} personas. ¿Me pueden ayudar?"
+    },
     "close": "Cerrar aviso",
     "validation": {
       "personas": "La cantidad de personas supera los lugares incluidos en un servicio del paquete. Ajusta el grupo y vuelve a intentar.",
