@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { Deslizable } from '@/components/checkout/deslizable';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { useDisponibilidad } from '@/lib/disponibilidad';
@@ -57,6 +58,15 @@ export function CheckoutCalendar({
     }
   }
 
+  // Hacia dónde se movió la semana (flechas, o porque se aceptó un día lejano):
+  // de ahí sale el lado por el que entran los días nuevos.
+  const [inicioPrevio, setInicioPrevio] = useState(weekStart.getTime());
+  const [direccion, setDireccion] = useState<1 | -1>(1);
+  if (weekStart.getTime() !== inicioPrevio) {
+    setDireccion(weekStart.getTime() > inicioPrevio ? 1 : -1);
+    setInicioPrevio(weekStart.getTime());
+  }
+
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart);
     date.setDate(date.getDate() + i);
@@ -91,7 +101,9 @@ export function CheckoutCalendar({
         >
           <CaretLeft size={16} />
         </button>
-        <p className="text-sm font-medium text-foreground">{capitalizedMonth}</p>
+        <Deslizable clave={capitalizedMonth} direccion={direccion}>
+          <p className="text-sm font-medium text-foreground">{capitalizedMonth}</p>
+        </Deslizable>
         <button
           type="button"
           onClick={() => shiftWeek(1)}
@@ -101,7 +113,7 @@ export function CheckoutCalendar({
         </button>
       </div>
 
-      <div className="mt-4 grid grid-cols-7 gap-2">
+      <Deslizable clave={toIso(weekStart)} direccion={direccion} className="mt-4 grid grid-cols-7 gap-2">
         {days.map((date, i) => {
           const iso = toIso(date);
           const isSelected = iso === selected;
@@ -141,7 +153,7 @@ export function CheckoutCalendar({
             </button>
           );
         })}
-      </div>
+      </Deslizable>
 
       {/* No va en un `title`: Chrome no muestra el tooltip de un boton
           deshabilitado y en movil no hay hover. */}

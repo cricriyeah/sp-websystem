@@ -1,9 +1,9 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useId, useState } from 'react';
 import { CalendarDots, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
+import { Deslizable } from '@/components/checkout/deslizable';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { PanelCalendario } from '@/components/date-field';
@@ -29,29 +29,6 @@ type Props = {
   /** Sin la etiqueta ni la fecha elegida arriba: las pinta quien lo envuelve (fila compacta). */
   sinEncabezado?: boolean;
 };
-
-/**
- * Cambia de semana deslizando en la dirección del click: adelante entra por la
- * derecha, atrás por la izquierda. Una dirección coherente le dice al ojo qué
- * viene; redibujar los 7 días de golpe no le da nada que predecir.
- */
-function Deslizable({ clave, direccion, children, className }: {
-  clave: string; direccion: 1 | -1; children: ReactNode; className?: string;
-}) {
-  const sinMovimiento = useReducedMotion();
-  const desplazamiento = sinMovimiento ? 0 : 20;
-  return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div key={clave} className={className}
-        initial={{ opacity: 0, x: direccion * desplazamiento }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -direccion * desplazamiento }}
-        transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}>
-        {children}
-      </motion.div>
-    </AnimatePresence>
-  );
-}
 
 export function FechaPaquete({
   lang, value, onChange, minDate, label, chooseLabel, viewMonthLabel, hideMonthLabel,
