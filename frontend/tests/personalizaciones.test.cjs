@@ -97,3 +97,17 @@ test('calcularPrecioPaquete: ancla sin seleccion vs ancla + seleccion explicita'
   const sinBase = { ...paqueteDummy, precio_ancla: null };
   assert.equal(pp.calcularPrecioPaquete(sinBase, [], 5, 'USD').precioFinal, null);
 });
+
+test('separa obligatorias de opcionales conservando el orden', () => {
+  const a = { id: 1, obligatorio: false };
+  const b = { id: 2, obligatorio: true };
+  const c = { id: 3, obligatorio: false };
+  const d = { id: 4, obligatorio: true };
+  const { obligatorias, opcionales } = h.separarPersonalizaciones([a, b, c, d]);
+  assert.deepEqual(obligatorias.map((x) => x.id), [2, 4]);
+  assert.deepEqual(opcionales.map((x) => x.id), [1, 3]);
+});
+
+test('sin personalizaciones devuelve dos listas vacías', () => {
+  assert.deepEqual(h.separarPersonalizaciones([]), { obligatorias: [], opcionales: [] });
+});

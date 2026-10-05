@@ -22,6 +22,18 @@ export const seleccionInicial = (catalogo: PersonalizacionUI[]): SeleccionPerson
     .filter((p) => p.tipo_interaccion === 'check' && p.preseleccionado)
     .map((p) => ({ id: p.id, cantidad: 1 }));
 
+/**
+ * Lo que el cliente debe contestar (obligatorio) va antes que lo que puede
+ * saltarse. Mismo criterio de orden en el checkout de servicio y en cada grupo
+ * de un paquete: primero lo que bloquea avanzar, luego los extras.
+ */
+export function separarPersonalizaciones<T extends { obligatorio: boolean }>(items: T[]) {
+  return {
+    obligatorias: items.filter((item) => item.obligatorio),
+    opcionales: items.filter((item) => !item.obligatorio),
+  };
+}
+
 export function cantidadEfectiva(p: PersonalizacionUI, personas: number, cantidad = 1) {
   return !p.cobrar_por_persona
     ? 1
