@@ -106,6 +106,18 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   y `TimeField` usan `FieldPopover`; no añadir selectores nativos de
   fecha. Para fechas ISO, usar `fromLocalISODate`/`toLocalISODate` de
   `src/lib/dates.ts` y evitar parsear fechas ISO como UTC.
+- Transiciones y piezas compartidas del checkout: todo lo que aparece, se
+  pliega o cambia de sitio (código promocional y sus mensajes, mes del
+  calendario, bloques del traslado, avisos de un extra) pasa por
+  `components/checkout/despliegue.tsx` (`Despliegue`: altura + opacidad con
+  la misma curva de `CheckoutSectionCard`, solo opacidad con "reducir
+  movimiento"). No renderices condicionalmente con `&&` algo que el cliente
+  ve aparecer: el contenido de abajo brinca. El tipo de traslado se pinta con
+  `components/checkout/tipo-traslado-cards.tsx` en `/traslados` y en el paquete
+  (en el paquete sin "Desde $": el traslado va incluido). `PanelCalendario`
+  tiene ancho fijo en un popover y `anchoCompleto` cuando va en línea. La fecha
+  de regreso del traslado es una fila compacta (`FechaRegresoCompacta`) que
+  despliega la tira semanal; no se prellena.
 - Pruebas desde `frontend/`: `npm.cmd test` ejecuta
   `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,
   `npm.cmd test -- calendario-paquete`; al añadir un módulo, registrar
