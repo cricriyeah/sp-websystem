@@ -30,6 +30,10 @@ type CheckoutSectionCardProps = {
   /** Texto del boton del encabezado ("Cambiar" / "Listo" segun `estado`). */
   actionLabel?: string;
   onAction?: () => void;
+  /** Empresa del grupo (solo cuando el pedido tiene más de una): una sola vez, junto al título. */
+  etiqueta?: string;
+  /** Fila final de la tarjeta abierta con el único CTA primario. Solo en `activo`. */
+  pie?: ReactNode;
   children: ReactNode;
 };
 
@@ -45,6 +49,8 @@ export function CheckoutSectionCard({
   resumen,
   actionLabel,
   onAction,
+  etiqueta,
+  pie,
   children,
 }: CheckoutSectionCardProps) {
   const abierto = estado !== 'completado';
@@ -70,8 +76,15 @@ export function CheckoutSectionCard({
           </span>
         )}
         <span className="flex min-w-0 flex-col">
-          <span className="font-sans text-sm font-medium tracking-tight text-foreground">
-            {title}
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2">
+            <span className="font-sans text-sm font-medium tracking-tight text-foreground">
+              {title}
+            </span>
+            {etiqueta && (
+              <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
+                {etiqueta}
+              </span>
+            )}
           </span>
           {!abierto && resumen && (
             <span className="block truncate text-xs text-muted">{resumen}</span>
@@ -127,10 +140,40 @@ export function CheckoutSectionCard({
             onAnimationComplete={() => setEnTransicion(false)}
             className={enTransicion ? 'overflow-hidden' : 'overflow-visible'}
           >
-            <div className="mt-5">{children}</div>
+            <div className={`mt-5 ${variant === 'flat' ? 'flex flex-col gap-5' : ''}`}>{children}</div>
+            {pie && (
+              <div className="mt-6 flex justify-end border-t border-border pt-5">{pie}</div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </section>
+  );
+}
+
+/**
+ * Un bloque de la tarjeta: una pregunta, con su título corto opcional. El
+ * espacio entre bloques lo pone el cuerpo de la tarjeta (`gap-5`), no rayas.
+ * `opcional` es el texto de la etiqueta ("Opcional") — se pasa traducido.
+ */
+export function BloqueDePaso({
+  titulo,
+  opcional,
+  children,
+}: {
+  titulo?: string;
+  opcional?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {titulo && (
+        <p className="text-sm font-medium text-foreground">
+          {titulo}
+          {opcional && <span className="ml-2 text-xs font-normal text-muted">{opcional}</span>}
+        </p>
+      )}
+      {children}
+    </div>
   );
 }
