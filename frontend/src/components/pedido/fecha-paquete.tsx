@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
+import { Despliegue } from '@/components/checkout/despliegue';
 import { PanelCalendario } from '@/components/date-field';
 import { puedeRetroceder, semanaVisible } from '@/lib/calendario-semana';
 import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
@@ -109,16 +110,16 @@ export function FechaPaquete({
         {mesAbierto ? hideMonthLabel : viewMonthLabel}
       </button>
 
-      {mesAbierto && (
-        <div id={panelId} className="mt-3 border border-border bg-surface p-4">
+      <Despliegue abierto={mesAbierto}>
+        <div id={panelId} className="mt-3 rounded-lg border border-border bg-surface p-4">
           <PanelCalendario
             locale={locale} value={seleccionVigente ?? minDate} seleccionado={seleccionVigente}
             onChange={elegir} minDate={minDate} personas={personas} fullLabel={fullLabel}
             prevMonthLabel={previousMonthLabel} nextMonthLabel={nextMonthLabel}
-            sinCupo={true} cerrar={() => setMesAbierto(false)}
+            sinCupo={true} cerrar={() => setMesAbierto(false)} anchoCompleto
           />
         </div>
-      )}
+      </Despliegue>
     </div>
   );
 }

@@ -112,6 +112,7 @@ export function PanelCalendario({
   nextMonthLabel,
   sinCupo,
   cerrar,
+  anchoCompleto = false,
 }: {
   locale: string;
   /** Mes que se abre. Sin respuesta todavia, es el primer dia disponible. */
@@ -127,6 +128,8 @@ export function PanelCalendario({
   nextMonthLabel: string;
   sinCupo?: boolean;
   cerrar: () => void;
+  /** En línea dentro de una tarjeta ocupa todo el ancho; en un popover conserva su ancho fijo. */
+  anchoCompleto?: boolean;
 }) {
   const [mesVisible, setMesVisible] = useState(() => inicioDeMes(fromLocalISODate(value)));
 
@@ -150,7 +153,7 @@ export function PanelCalendario({
     setMesVisible((actual) => new Date(actual.getFullYear(), actual.getMonth() + delta, 1));
 
   return (
-    <div className="w-full sm:w-72">
+    <div className={anchoCompleto ? 'w-full' : 'w-full sm:w-72'}>
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
@@ -204,7 +207,7 @@ export function PanelCalendario({
                 onChange(iso);
                 cerrar();
               }}
-              className={`flex h-9 items-center justify-center rounded-lg text-sm transition-colors ${
+              className={`flex ${anchoCompleto ? 'h-11' : 'h-9'} items-center justify-center rounded-lg text-sm transition-colors ${
                 // Mientras no sabemos, los dias futuros se atenuan en vez de
                 // verse plenamente disponibles: asi el tachado que llega medio
                 // segundo despues no es un cambio de contenido a la vista.
