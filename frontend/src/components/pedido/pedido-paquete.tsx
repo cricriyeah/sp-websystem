@@ -19,7 +19,7 @@ import { ErrorDeCampo } from '@/components/field-error';
 import { SiteHeader } from '@/components/site-header';
 import { WaitNotice } from '@/components/wait-notice';
 import { PeopleStepper } from '@/components/people-stepper';
-import { StripePanel } from '@/components/stripe-panel';
+import { FormularioPago, StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
@@ -186,6 +186,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       return motor === 'orden' ? armarPayloadOrden(args) : armarPayloadReserva(args);
     },
   });
+  // Al pasar a pagar (o al siguiente pago de una orden) la tarjeta de pago se trae a la vista.
+  useScrollAlFoco(`pago|${pago.fase}|${pago.indice}`);
 
   useEffect(() => {
     if (motor !== 'reserva' || !codigoPromocional.trim() || !estado.contacto.email.trim()) return;
@@ -489,6 +491,21 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 </ItemPaso>
               );
             })}
+
+            {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
+                respuestas ya dadas. En cruza-empresa se remonta por empresa
+                (cada una cobra con su propia clave y secreto). */}
+            <FormularioPago
+              key={pasoPago.empresaSlug}
+              checkout={checkout}
+              feedback={feedback}
+              ayudaMensaje={ayudaMensaje}
+              pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
+              encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
+              etiquetaBotonPago={etiquetaBotonPago}
+              onPagoConfirmado={pago.onPagoConfirmado}
+              onPagoRechazado={pago.onPagoRechazado}
+            />
           </>
         }
         pedido={
@@ -504,11 +521,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             codigoPromocional="" onCodigoPromocionalChange={() => {}}
             codigoPromocionalDisponible={false} promoEstado="idle" promoPorcentaje={null}
             phase="payment" error=""
-            pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
-            encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
-            etiquetaBotonPago={etiquetaBotonPago}
-            onSubmit={() => {}} onPagoConfirmado={pago.onPagoConfirmado}
-            onPagoRechazado={pago.onPagoRechazado} onCaptchaToken={() => {}}
+            onSubmit={() => {}} onCaptchaToken={() => {}}
           />
         }
       />
@@ -725,7 +738,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             promoEstado={promoEstado} promoPorcentaje={promoPorcentaje}
             submitDisabled={actual !== 'pago'}
             phase={pago.fase === 'enviando' ? 'submitting' : pago.error ? 'error' : 'form'}
-            error={pago.error} pago={null}
+            error={pago.error}
             avisoCargos={cantidadCargos > 1 ? (
               <div className="mt-5 border-t border-border pt-5">
                 <AvisoCargos dict={dict}
@@ -735,8 +748,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             ) : undefined}
             etiquetaBotonEnvio={cantidadCargos > 1
               ? textos.continueToPayment.replace('{total}', String(cantidadCargos)) : undefined}
-            onSubmit={enviar} onPagoConfirmado={pago.onPagoConfirmado}
-            onPagoRechazado={pago.onPagoRechazado}
+            onSubmit={enviar}
             onCaptchaToken={(token) => { captcha.current = token; }}
           />
         ) : (

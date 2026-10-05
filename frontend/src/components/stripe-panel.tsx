@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { motion, useReducedMotion } from 'motion/react';
-import { Lock, Ticket, Warning } from '@phosphor-icons/react';
+import { Lock, ShieldCheck, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckCircle } from '@phosphor-icons/react';
@@ -49,21 +49,14 @@ type StripePanelProps = {
   promoEstado: 'idle' | 'verificando' | 'valido' | 'invalido';
   promoPorcentaje: string | null;
   avisoCargos?: ReactNode;
-  encabezadoPago?: ReactNode;
-  etiquetaBotonPago?: string;
   etiquetaBotonEnvio?: string;
   submitDisabled?: boolean;
   phase: Phase;
   error: string;
-  pago: Pick<Pago, 'client_secret' | 'publishable_key'> | null;
   feedback: Dictionary['feedback'];
   /** Mensaje ya redactado para la vendedora, con la fecha y el grupo del cliente. */
   ayudaMensaje: string;
   onSubmit: () => void;
-  /** Se llama cuando Stripe acepta el pago; el checkout cambia a la pantalla de
-   *  confirmacion. `procesando` es true si el cargo aun no se acredita. */
-  onPagoConfirmado: (procesando: boolean) => void;
-  onPagoRechazado?: (mensaje: string, codigo?: string) => void;
   /** Token del widget de Turnstile, montado aqui mismo (ver mas abajo). */
   onCaptchaToken: (token: string) => void;
 };
@@ -113,7 +106,7 @@ function PaymentForm({
   };
 
   return (
-    <div className="mt-6 flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {/* Puente entre los dos envios: sin esto, pasar de "reserva guardada"
           (el toast de exito) a un formulario de tarjeta nuevo se lee como "¿otra
           vez lo mismo?" en vez de "el siguiente paso" — el crear-Reserva y el
@@ -150,6 +143,80 @@ function PaymentForm({
   );
 }
 
+/** "Es seguro pagar aquí": la duda que queda justo antes de pagar, junto al formulario. */
+export function NotaSeguridadStripe({ checkout }: { checkout: Dictionary['checkout'] }) {
+  return (
+    <p className="mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+      <ShieldCheck size={14} weight="fill" className="mt-0.5 shrink-0 text-muted" />
+      <span>
+        {checkout.securityNoteBefore}
+        <a
+          href="https://stripe.com"
+          target="_blank"
+          rel="noopener"
+          className="text-foreground underline underline-offset-2"
+        >
+          Stripe
+        </a>
+        {checkout.securityNoteAfter}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * El formulario de tarjeta como el cuarto paso: una tarjeta más de la columna
+ * de pasos, justo debajo de las respuestas ya dadas, y no al final de un panel
+ * largo en la otra columna (donde obligaba a hacer scroll para llegar a los
+ * campos y a "Pagar"). El resumen del pedido se queda a la derecha.
+ *
+ * Los `Elements` de Stripe solo envuelven este formulario; Stripe.js se carga
+ * aquí una vez por clave publicable (en cruza-empresa cada empresa tiene la
+ * suya y el llamador remonta con `key`).
+ */
+export function FormularioPago({
+  checkout,
+  feedback,
+  ayudaMensaje,
+  pago,
+  encabezadoPago,
+  etiquetaBotonPago,
+  onPagoConfirmado,
+  onPagoRechazado,
+}: {
+  checkout: Dictionary['checkout'];
+  feedback: Dictionary['feedback'];
+  ayudaMensaje: string;
+  pago: Pick<Pago, 'client_secret' | 'publishable_key'>;
+  /** Secuencia de pagos (cruza-empresa): qué ya se hizo, cuál es y cuáles faltan. */
+  encabezadoPago?: ReactNode;
+  etiquetaBotonPago?: string;
+  /** Se llama cuando Stripe acepta el pago; el checkout cambia a la pantalla de
+   *  confirmacion. `procesando` es true si el cargo aun no se acredita. */
+  onPagoConfirmado: (procesando: boolean) => void;
+  onPagoRechazado?: (mensaje: string, codigo?: string) => void;
+}) {
+  const stripePromise = useMemo(() => loadStripe(pago.publishable_key), [pago.publishable_key]);
+  return (
+    <>
+      <CheckoutSectionCard title={checkout.stepper.payment} estado="activo">
+        {encabezadoPago}
+        <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret }}>
+          <PaymentForm
+            checkout={checkout}
+            feedback={feedback}
+            ayudaMensaje={ayudaMensaje}
+            etiquetaBotonPago={etiquetaBotonPago}
+            onPagoConfirmado={onPagoConfirmado}
+            onPagoRechazado={onPagoRechazado}
+          />
+        </Elements>
+      </CheckoutSectionCard>
+      <NotaSeguridadStripe checkout={checkout} />
+    </>
+  );
+}
+
 export function StripePanel({
   lang,
   checkout,
@@ -173,21 +240,15 @@ export function StripePanel({
   promoEstado,
   promoPorcentaje,
   avisoCargos,
-  encabezadoPago,
-  etiquetaBotonPago,
   etiquetaBotonEnvio,
   submitDisabled = false,
   phase,
   error,
-  pago,
   feedback,
   ayudaMensaje,
   onSubmit,
-  onPagoConfirmado,
-  onPagoRechazado,
   onCaptchaToken,
 }: StripePanelProps) {
-  const stripePromise = useMemo(() => (pago ? loadStripe(pago.publishable_key) : null), [pago]);
   // Cerrado por default: la mayoria de las reservas no lleva codigo, mismo
   // criterio que la moneda mas abajo — una correccion disponible para quien
   // la busca, no la primera decision del checkout.
@@ -220,10 +281,19 @@ export function StripePanel({
         <p className="text-lg font-medium tracking-tight text-foreground">{total}</p>
       </div>
 
+      {phase === 'payment' && amountDueNow !== total && (
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span className="text-muted">{checkout.amountDueNow}</span>
+          <span className="text-foreground">{amountDueNow}</span>
+        </div>
+      )}
+
       <div className={pagoVisibleMovil ? undefined : 'hidden lg:block'}>
-        <p className="mt-6 text-xs font-semibold tracking-wider text-muted uppercase">
-          {checkout.howYouPay}
-        </p>
+        {phase !== 'payment' && (
+          <p className="mt-6 text-xs font-semibold tracking-wider text-muted uppercase">
+            {checkout.howYouPay}
+          </p>
+        )}
 
       {/* Ya se precarga segun el idioma (ver checkout-view.tsx): esto deja de
           ser la primera decision del checkout y pasa a ser una correccion
@@ -346,22 +416,6 @@ export function StripePanel({
           <Warning size={20} className="text-muted" />
           <p className="text-sm text-muted">{checkout.paymentUnavailable}</p>
         </div>
-      )}
-
-      {phase === 'payment' && pago && stripePromise && (
-        <>
-          {encabezadoPago}
-          <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret }}>
-            <PaymentForm
-              checkout={checkout}
-              feedback={feedback}
-              ayudaMensaje={ayudaMensaje}
-              etiquetaBotonPago={etiquetaBotonPago}
-              onPagoConfirmado={onPagoConfirmado}
-              onPagoRechazado={onPagoRechazado}
-            />
-          </Elements>
-        </>
       )}
 
       {phase !== 'payment' && phase !== 'unavailable' && (

@@ -167,8 +167,15 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   `CheckoutSectionCard` con un solo CTA en el `pie` (`BotonPaso`) y bloques
   separados por espacio, no por rayas. El panel derecho (`StripePanel`) tiene
   dos zonas: "qué compras" (líneas vivas del viaje, cargos y total) y "cómo
-  pagas" (moneda, forma de pago, promo, deslinde, botón); en móvil la zona de
-  pago aparece al llegar al paso 4 (`pagoVisibleMovil`). Dentro de cada
+  pagas" (moneda, forma de pago, promo, deslinde, botón que crea el pago); en
+  móvil la zona de pago aparece al llegar al paso 4 (`pagoVisibleMovil`). El
+  formulario de tarjeta NO vive en el panel: al crearse el pago aparece como la
+  tarjeta "Pago" de la columna de pasos (`FormularioPago` de `stripe-panel.tsx`,
+  con `NotaSeguridadStripe` debajo), en servicio, paquete (una empresa y
+  cruza-empresa) y `/traslados`; en esa fase el panel solo muestra el resumen.
+  Los `Elements` de Stripe solo envuelven ese formulario (en cruza-empresa se
+  remonta por empresa con `key`). Los pagos de una reserva se crean con
+  `payment_method_types=['card']` (sin "Link"), igual que las órdenes. Dentro de cada
   tarjeta: lo obligatorio antes que lo opcional (`separarPersonalizaciones`).
   `AyudaFlotante` ofrece WhatsApp, sin mover la página, tras tres tropiezos
   (`src/lib/ayuda-contextual.ts`): errores de validación al confirmar pasos o

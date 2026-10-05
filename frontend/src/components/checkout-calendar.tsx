@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { Deslizable } from '@/components/checkout/deslizable';
 import type { Locale } from '@/app/[lang]/dictionaries';
+import { puedeRetroceder, semanaVisible } from '@/lib/calendario-semana';
 import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { useDisponibilidad } from '@/lib/disponibilidad';
 import { intlLocale } from '@/lib/intl';
@@ -22,13 +23,6 @@ type CheckoutCalendarProps = {
 
 const toIso = toLocalISODate;
 
-function startOfWeek(date: Date) {
-  const start = new Date(date);
-  const day = (start.getDay() + 6) % 7; // 0 = Monday
-  start.setDate(start.getDate() - day);
-  return start;
-}
-
 export function CheckoutCalendar({
   lang,
   selected,
@@ -38,7 +32,9 @@ export function CheckoutCalendar({
   personas,
   fullLabel,
 }: CheckoutCalendarProps) {
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(fromLocalISODate(selected)));
+  // La tira arranca en el primer día reservable y avanza de 7 en 7 (ver
+  // `lib/calendario-semana`): sin celdas pasadas que no se pueden tocar.
+  const [inicio, setInicio] = useState(() => semanaVisible(selected, minDate).inicio);
 
   // Si la fecha elegida cae fuera de la semana que se esta viendo, la tira la
   // sigue. Hace falta desde que aceptar el dia que ofrecemos es un clic del
@@ -52,26 +48,20 @@ export function CheckoutCalendar({
   const [seleccionPrevia, setSeleccionPrevia] = useState(selected);
   if (selected !== seleccionPrevia) {
     setSeleccionPrevia(selected);
-    const semanaDeLaSeleccion = startOfWeek(fromLocalISODate(selected));
-    if (semanaDeLaSeleccion.getTime() !== weekStart.getTime()) {
-      setWeekStart(semanaDeLaSeleccion);
-    }
+    const deLaSeleccion = semanaVisible(selected, minDate).inicio;
+    if (deLaSeleccion !== inicio) setInicio(deLaSeleccion);
   }
 
   // Hacia dónde se movió la semana (flechas, o porque se aceptó un día lejano):
   // de ahí sale el lado por el que entran los días nuevos.
-  const [inicioPrevio, setInicioPrevio] = useState(weekStart.getTime());
+  const [inicioPrevio, setInicioPrevio] = useState(inicio);
   const [direccion, setDireccion] = useState<1 | -1>(1);
-  if (weekStart.getTime() !== inicioPrevio) {
-    setDireccion(weekStart.getTime() > inicioPrevio ? 1 : -1);
-    setInicioPrevio(weekStart.getTime());
+  if (inicio !== inicioPrevio) {
+    setDireccion(inicio > inicioPrevio ? 1 : -1);
+    setInicioPrevio(inicio);
   }
 
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(weekStart);
-    date.setDate(date.getDate() + i);
-    return date;
-  });
+  const days = semanaVisible(inicio, minDate).dias.map((iso) => fromLocalISODate(iso));
 
   const { dias: disponibilidad, cargando } = useDisponibilidad(
     toIso(days[0]),
@@ -79,16 +69,18 @@ export function CheckoutCalendar({
     personas,
   );
 
-  const monthLabel = new Intl.DateTimeFormat(intlLocale(lang), {
-    month: 'long',
-    year: 'numeric',
-  }).format(days[0]);
-  const capitalizedMonth = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  // Los 7 días casi nunca caen en un solo mes: entonces el rótulo dice el rango.
+  const formatoMes = new Intl.DateTimeFormat(intlLocale(lang), { month: 'long', year: 'numeric' });
+  const formatoCorto = new Intl.DateTimeFormat(intlLocale(lang), { day: 'numeric', month: 'short' });
+  const etiquetaMes = days[0].getMonth() === days[6].getMonth()
+    ? formatoMes.format(days[0])
+    : `${formatoCorto.format(days[0]).replace('.', '')} – ${formatoCorto.format(days[6]).replace('.', '')}`;
+  const capitalizedMonth = etiquetaMes.charAt(0).toUpperCase() + etiquetaMes.slice(1);
 
   const shiftWeek = (delta: number) => {
-    const next = new Date(weekStart);
+    const next = fromLocalISODate(inicio);
     next.setDate(next.getDate() + delta * 7);
-    setWeekStart(next);
+    setInicio(toIso(next));
   };
 
   return (
@@ -97,7 +89,8 @@ export function CheckoutCalendar({
         <button
           type="button"
           onClick={() => shiftWeek(-1)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground"
+          disabled={!puedeRetroceder(inicio, minDate)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
         >
           <CaretLeft size={16} />
         </button>
@@ -113,8 +106,8 @@ export function CheckoutCalendar({
         </button>
       </div>
 
-      <Deslizable clave={toIso(weekStart)} direccion={direccion} className="mt-4 grid grid-cols-7 gap-2">
-        {days.map((date, i) => {
+      <Deslizable clave={inicio} direccion={direccion} className="mt-4 grid grid-cols-7 gap-2">
+        {days.map((date) => {
           const iso = toIso(date);
           const isSelected = iso === selected;
           const isPast = iso < minDate;
@@ -148,7 +141,7 @@ export function CheckoutCalendar({
                       : 'border-border text-foreground hover:border-accent/50'
               }`}
             >
-              <span className="text-[11px] opacity-80">{weekdaysShort[i]}</span>
+              <span className="text-[11px] opacity-80">{weekdaysShort[(date.getDay() + 6) % 7]}</span>
               <span className="font-medium">{date.getDate()}</span>
             </button>
           );

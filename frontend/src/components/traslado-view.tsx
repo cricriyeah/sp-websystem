@@ -9,7 +9,6 @@ import {
   ListBullets,
   MapPin,
   Phone,
-  ShieldCheck,
   User,
 } from '@phosphor-icons/react';
 import { motion, useReducedMotion } from 'motion/react';
@@ -23,7 +22,7 @@ import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import { SiteHeader } from '@/components/site-header';
-import { StripePanel } from '@/components/stripe-panel';
+import { FormularioPago, NotaSeguridadStripe, StripePanel } from '@/components/stripe-panel';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { TimeField } from '@/components/time-field';
@@ -997,6 +996,20 @@ export function TrasladoView({
               </CheckoutSectionCard>
             </motion.div>
           )}
+
+          {/* El pago es el último paso: su tarjeta va aquí, no al final del panel. */}
+          {phase === 'payment' && pago && (
+            <FormularioPago
+              checkout={checkout}
+              feedback={feedback}
+              ayudaMensaje={`Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`}
+              pago={pago}
+              onPagoConfirmado={(procesando) => {
+                setPagoProcesando(procesando);
+                setPhase('confirmed');
+              }}
+            />
+          )}
         </div>
 
         {/* Panel de resumen y pago */}
@@ -1029,32 +1042,13 @@ export function TrasladoView({
               promoPorcentaje={promoPorcentaje}
               phase={phase}
               error={error}
-              pago={pago}
               feedback={feedback}
               ayudaMensaje={`Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`}
               onSubmit={iniciarPago}
-              onPagoConfirmado={(procesando) => {
-                setPagoProcesando(procesando);
-                setPhase('confirmed');
-              }}
               onCaptchaToken={(token) => (captchaToken.current = token)}
             />
 
-            <p className="mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
-              <ShieldCheck size={14} weight="fill" className="mt-0.5 shrink-0 text-muted" />
-              <span>
-                {checkout.securityNoteBefore}
-                <a
-                  href="https://stripe.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground underline underline-offset-2"
-                >
-                  Stripe
-                </a>
-                {checkout.securityNoteAfter}
-              </span>
-            </p>
+            {phase !== 'payment' && <NotaSeguridadStripe checkout={checkout} />}
           </div>
         </div>
       </main>

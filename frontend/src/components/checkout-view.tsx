@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
-import { Minus, Plus, ShieldCheck, Warning } from '@phosphor-icons/react';
+import { Minus, Plus, Warning } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AmenitiesReminder, type ExtraPendiente } from '@/components/amenities-reminder';
@@ -21,7 +21,7 @@ import { DateField } from '@/components/date-field';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
-import { StripePanel } from '@/components/stripe-panel';
+import { FormularioPago, NotaSeguridadStripe, StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import { WaitNotice } from '@/components/wait-notice';
@@ -629,7 +629,7 @@ export function CheckoutView({
   const [editando, setEditando] = useState<PasoId | null>(null);
   const ayuda = useAyudaContextual();
   // Al cambiar de paso, la tarjeta en foco se trae a la vista solo si hace falta.
-  useScrollAlFoco(`${actual}|${editando}`);
+  useScrollAlFoco(`${actual}|${editando}|${phase === 'payment'}`);
 
   /**
    * Repone el checkout de esta pestana, si `checkoutId` ya traia una reserva
@@ -1408,6 +1408,21 @@ export function CheckoutView({
                 </CheckoutSectionCard>
               </ItemPaso>
             )}
+
+            {/* El pago es el cuarto paso: la tarjeta aparece justo debajo de las
+                respuestas ya dadas, no al final del panel de resumen. */}
+            {phase === 'payment' && pago && (
+              <FormularioPago
+                checkout={checkout}
+                feedback={dict.feedback}
+                ayudaMensaje={ayudaMensaje}
+                pago={pago}
+                onPagoConfirmado={(procesando) => {
+                  setPagoProcesando(procesando);
+                  setPhase('confirmed');
+                }}
+              />
+            )}
           </>
         }
         pedido={
@@ -1443,37 +1458,17 @@ export function CheckoutView({
               promoPorcentaje={promoPorcentaje}
               phase={phase}
               error={error}
-              pago={pago}
               feedback={dict.feedback}
               lineasViaje={lineasViaje}
               pagoVisibleMovil={actual === 'pago' || enviando || locked}
               ayudaMensaje={ayudaMensaje}
               onSubmit={iniciarPago}
-              onPagoConfirmado={(procesando) => {
-                setPagoProcesando(procesando);
-                setPhase('confirmed');
-              }}
               onCaptchaToken={(token) => (captchaToken.current = token)}
             />
             {/* Fuera de la tarjeta de resumen, debajo: no es parte del desglose de
-                precio, es la respuesta a "es seguro pagar aqui" — la duda que
-                queda justo antes de tocar pagar, y que si solo vive en el FAQ
-                nadie la ve desde aqui. */}
-            <p className="mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
-              <ShieldCheck size={14} weight="fill" className="mt-0.5 shrink-0 text-muted" />
-              <span>
-                {checkout.securityNoteBefore}
-                <a
-                  href="https://stripe.com"
-                  target="_blank"
-                  rel="noopener"
-                  className="text-foreground underline underline-offset-2"
-                >
-                  Stripe
-                </a>
-                {checkout.securityNoteAfter}
-              </span>
-            </p>
+                precio, es la respuesta a "es seguro pagar aquí". En la fase de pago
+                va junto al formulario de tarjeta (ver `FormularioPago`). */}
+            {phase !== 'payment' && <NotaSeguridadStripe checkout={checkout} />}
           </div>
         }
       />
