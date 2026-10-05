@@ -1,30 +1,28 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import {
-  ArrowLeft,
-  Buildings,
-  EnvelopeSimple,
-  ListBullets,
-  MapPin,
-  Phone,
-  User,
-} from '@phosphor-icons/react';
-import { motion, useReducedMotion } from 'motion/react';
+import { Buildings, ListBullets, MapPin } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
-import { CheckoutFooter } from '@/components/checkout-footer';
-import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import { CheckoutStepper } from '@/components/checkout-stepper';
-import { DateField } from '@/components/date-field';
-import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/field-error';
+import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
+import { ErrorDeCampo } from '@/components/field-error';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
-import { SiteHeader } from '@/components/site-header';
 import { FormularioPago, StripePanel } from '@/components/stripe-panel';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
+import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
+import { BotonPaso } from '@/components/checkout/boton-paso';
+import { CamposContacto } from '@/components/checkout/campos-contacto';
+import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
+import { Despliegue } from '@/components/checkout/despliegue';
+import { CAJA_CAMPO } from '@/components/checkout/estilos';
+import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
+import { ItemPaso } from '@/components/checkout/item-paso';
+import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
+import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
+import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
+import { FechaPaquete, FechaRegresoCompacta } from '@/components/pedido/fecha-paquete';
 import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import {
@@ -50,6 +48,9 @@ import {
 import { mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
+import {
+  estadoDeTarjeta, estadoVisible, numeroDePaso, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+} from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
@@ -107,9 +108,8 @@ export function TrasladoView({
   empresaSlug,
   sedeSlugActual,
 }: TrasladoViewProps) {
-  const { checkout, traslados, feedback, nav, footer, booking } = dict;
+  const { checkout, traslados, feedback, booking, pedido } = dict;
   const { mostrar } = useToast();
-  const sinMovimiento = useReducedMotion();
 
   const [checkoutId, setCheckoutId] = useState('');
   const [recuperable, setRecuperable] = useState(false);
@@ -129,8 +129,12 @@ export function TrasladoView({
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const [pasosVisibles, setPasosVisibles] = useState(1);
-  const [pasoEditando, setPasoEditando] = useState<number | null>(null);
+  // Viaje (tipo, fechas, hora y pasajeros) → Datos → Recogida → Pago: la misma
+  // secuencia que el resto de los checkouts. `editando` es la respuesta ya dada
+  // que el cliente reabrió con "Modificar".
+  const [actual, setActual] = useState<PasoId>('viaje');
+  const [editando, setEditando] = useState<PasoId | null>(null);
+  const ayuda = useAyudaContextual();
 
   const [tipoTraslado, setTipoTraslado] = useState<TipoTraslado>('redondo_aeropuerto');
 
@@ -140,6 +144,7 @@ export function TrasladoView({
   });
   const [direccionPersonalizada, setDireccionPersonalizada] = useState('');
   const [zonaPersonalizada, setZonaPersonalizada] = useState<Zona | ''>('');
+  // Error de la tarjeta de recogida (hotel o dirección).
   const [errorPaso2, setErrorPaso2] = useState('');
 
   const minDate = useMemo(() => getMinBookableDate(), []);
@@ -153,6 +158,7 @@ export function TrasladoView({
     );
   }, [catalogo.servicio.hora_apertura, catalogo.servicio.hora_cierre, catalogo.servicio.paso_hora_minutos]);
   const [hora, setHora] = useState(horasDisponibles[0] ?? '');
+  // Error de la tarjeta de viaje (fechas).
   const [errorPaso3, setErrorPaso3] = useState('');
 
   const maxCapacidad = catalogo.servicio.capacidad_maxima ?? 14;
@@ -168,6 +174,8 @@ export function TrasladoView({
     fullName: refFullName,
     email: refEmail,
   };
+  // Al cambiar de paso, la tarjeta en foco se trae a la vista solo si hace falta.
+  useScrollAlFoco(`${actual}|${editando}|${phase === 'payment'}`);
 
   const [moneda, setMoneda] = useState<Moneda>('MXN');
   const usdDisponible = Number(catalogo.tipo_cambio_usd) > 0;
@@ -227,7 +235,7 @@ export function TrasladoView({
         setFechaRegreso(detalle.fecha_regreso);
         setPersonas(detalle.numero_personas ?? estado.numero_personas);
       }
-      setPasosVisibles(5);
+      setActual('pago');
       setPhase('form');
     }).catch(() => {
       if (activo) setPhase('form');
@@ -321,55 +329,59 @@ export function TrasladoView({
     return errs;
   };
 
-  const confirmarPaso1 = () => {
-    setPasosVisibles((v) => Math.max(v, 2));
-    if (pasoEditando === 1) setPasoEditando(null);
-  };
-
-  const confirmarPaso2 = () => {
-    setErrorPaso2('');
-    if (modoHospedaje === 'catalogo') {
-      if (puntoEncuentroId === null) {
-        setErrorPaso2(traslados.errors.seleccionaHospedaje);
-        return;
-      }
-    } else {
-      if (!direccionPersonalizada.trim()) {
-        setErrorPaso2(traslados.errors.seleccionaHospedaje);
-        return;
-      }
-      if (tipoTraslado === 'redondo_actividad' && !zonaPersonalizada) {
-        setErrorPaso2(traslados.errors.seleccionaZona);
-        return;
-      }
+  /** Lo que falta o está mal en las fechas del viaje; vacío = todo bien. */
+  const errorDeViaje = (): string => {
+    if (!fecha) return traslados.errors.seleccionaFecha;
+    if (tipoTraslado === 'redondo_aeropuerto') {
+      if (!fechaRegreso) return traslados.errors.seleccionaFechaRegreso;
+      if (fechaRegreso <= fecha) return traslados.errors.fechaRegresoPosterior;
     }
-    setPasosVisibles((v) => Math.max(v, 3));
-    if (pasoEditando === 2) setPasoEditando(null);
+    return '';
   };
 
-  const confirmarPaso3 = () => {
-    setErrorPaso3('');
-    if (!fecha) {
-      setErrorPaso3(traslados.errors.seleccionaFecha);
+  /** Lo que falta o está mal en la recogida (hotel o dirección); vacío = todo bien. */
+  const errorDeRecogida = (): string => {
+    if (modoHospedaje === 'catalogo') {
+      return puntoEncuentroId === null ? traslados.errors.seleccionaHospedaje : '';
+    }
+    if (!direccionPersonalizada.trim()) return traslados.errors.seleccionaHospedaje;
+    if (tipoTraslado === 'redondo_actividad' && !zonaPersonalizada) return traslados.errors.seleccionaZona;
+    return '';
+  };
+
+  const confirmarViaje = () => {
+    const falla = errorDeViaje();
+    setErrorPaso3(falla);
+    if (falla) {
+      ayuda.tropezar('validacion');
       return;
     }
-    if (tipoTraslado === 'redondo_aeropuerto') {
-      if (!fechaRegreso) {
-        setErrorPaso3(traslados.errors.seleccionaFechaRegreso);
-        return;
-      }
-      if (fechaRegreso <= fecha) {
-        setErrorPaso3(traslados.errors.fechaRegresoPosterior);
-        return;
-      }
-    }
-    setPasosVisibles((v) => Math.max(v, 4));
-    if (pasoEditando === 3) setPasoEditando(null);
+    setActual((a) => (a === 'viaje' ? 'contacto' : a));
+    setEditando(null);
   };
 
-  const confirmarPaso4 = () => {
-    setPasosVisibles((v) => Math.max(v, 5));
-    if (pasoEditando === 4) setPasoEditando(null);
+  const confirmarDatos = () => {
+    const errs = validarContacto();
+    setErroresContacto(errs);
+    if (Object.keys(errs).length > 0) {
+      ayuda.tropezar('validacion');
+      const primero = ORDEN_CAMPOS.find((c) => errs[c]);
+      if (primero) refsContacto[primero].current?.focus();
+      return;
+    }
+    setActual((a) => (a === 'contacto' ? 'detalles' : a));
+    setEditando(null);
+  };
+
+  const confirmarRecogida = () => {
+    const falla = errorDeRecogida();
+    setErrorPaso2(falla);
+    if (falla) {
+      ayuda.tropezar('validacion');
+      return;
+    }
+    setActual((a) => (a === 'detalles' ? 'pago' : a));
+    setEditando(null);
   };
 
   const onCodigoPromocionalChange = (codigo: string) => {
@@ -397,14 +409,33 @@ export function TrasladoView({
   };
 
   const iniciarPago = async () => {
+    // Lo ya confirmado se revalida: cambiar el tipo de traslado después de elegir
+    // la recogida puede dejarla incompleta (p. ej. ahora pide zona).
+    const fallaViaje = errorDeViaje();
+    if (fallaViaje) {
+      setErrorPaso3(fallaViaje);
+      setEditando('viaje');
+      ayuda.tropezar('validacion');
+      return;
+    }
     const errs = validarContacto();
     setErroresContacto(errs);
     if (Object.keys(errs).length > 0) {
+      setEditando('contacto');
+      ayuda.tropezar('validacion');
       const primero = ORDEN_CAMPOS.find((c) => errs[c]);
       if (primero) refsContacto[primero].current?.focus();
       return;
     }
+    const fallaRecogida = errorDeRecogida();
+    if (fallaRecogida) {
+      setErrorPaso2(fallaRecogida);
+      setEditando('detalles');
+      ayuda.tropezar('validacion');
+      return;
+    }
     if (!waiverAccepted) {
+      ayuda.tropezar('validacion');
       setErrorWaiver(true);
       return;
     }
@@ -485,36 +516,21 @@ export function TrasladoView({
     }
   };
 
-  const resumenPaso1 = traslados.types[tipoTraslado]?.title ?? tipoTraslado;
-
   const puntoSeleccionado = catalogo.puntos_encuentro.find((p) => p.id === puntoEncuentroId);
-  const resumenPaso2 =
+  const resumenRecogida =
     modoHospedaje === 'catalogo'
       ? (puntoSeleccionado?.nombre ?? '')
       : `${direccionPersonalizada}${zonaPersonalizada ? ` (${zonaPersonalizada})` : ''}`;
+  const resumenViaje = [
+    traslados.types[tipoTraslado]?.title ?? tipoTraslado,
+    formatDay(fromLocalISODate(fecha), lang),
+    formatHour(hora),
+    `${personas} ${traslados.fields.pasajeros.toLowerCase()}`,
+  ].join(' · ');
+  const resumenDatos = `${contact.fullName} · ${contact.phone}`;
 
-  const resumenPaso3 = `${formatDay(fromLocalISODate(fecha), lang)} · ${formatHour(hora)}${
-    tipoTraslado === 'redondo_aeropuerto' && fechaRegreso
-      ? ` | ${traslados.fields.fechaRegreso}: ${formatDay(fromLocalISODate(fechaRegreso), lang)}`
-      : ''
-  }`;
+  const locked = phase === 'submitting' || phase === 'payment' || phase === 'unavailable';
 
-  const resumenPaso4 = `${personas} ${traslados.fields.pasajeros.toLowerCase()}`;
-
-  const colapsado1 = pasosVisibles > 1 && pasoEditando !== 1;
-  const colapsado2 = pasosVisibles > 2 && pasoEditando !== 2;
-  const colapsado3 = pasosVisibles > 3 && pasoEditando !== 3;
-  const colapsado4 = pasosVisibles > 4 && pasoEditando !== 4;
-
-  const pasoActualStepper = phase === 'confirmed' ? 5 : pasoEditando ?? pasosVisibles;
-
-  const stepsList = [
-    traslados.step1Title,
-    traslados.step2Title,
-    traslados.step3Title,
-    traslados.step4Title,
-    traslados.step5Title,
-  ];
   if (phase === 'recuperando') return null;
 
   if (phase === 'confirmed') {
@@ -553,259 +569,136 @@ export function TrasladoView({
 
   const hrefVolver = sedeSlugActual ? `/${lang}/sede/${sedeSlugActual}` : `/${lang}`;
 
+  // --- estados de las tarjetas (un solo foco abierto) -----------------------------------
+  const hayEdicion = editando !== null;
+  const estadoPaso = (id: PasoId): EstadoTarjeta | 'oculto' => estadoDeTarjeta(id, actual, editando);
+  const crudoViaje = estadoPaso('viaje') as EstadoTarjeta;
+  const crudoContacto = estadoPaso('contacto');
+  const crudoRecogida = estadoPaso('detalles');
+  const estadoViaje = estadoVisible(crudoViaje, hayEdicion);
+  const estadoContacto = crudoContacto === 'oculto' ? null : estadoVisible(crudoContacto, hayEdicion);
+  const estadoRecogida = crudoRecogida === 'oculto' ? null : estadoVisible(crudoRecogida, hayEdicion);
+  const secuencia: EstadoVisible[] = [estadoViaje];
+  if (estadoContacto) secuencia.push(estadoContacto);
+  if (estadoRecogida) secuencia.push(estadoRecogida);
+  const reabrir = (id: PasoId) => setEditando((e) => (e === id ? null : id));
+  const etiquetaAccion = (estado: EstadoTarjeta | 'oculto') =>
+    estado === 'completado' ? checkout.changeStep : estado === 'editando' ? checkout.doneEditing : undefined;
+
+  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? 4 : numeroDePaso(actual);
+  const stepsList = [checkout.stepper.trip, checkout.stepper.contact, traslados.stepPickup, checkout.stepper.payment];
+  const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
+
+  const recogidaElegida = actual === 'pago' || phase !== 'form';
+  const lineasViaje = [
+    { etiqueta: traslados.step1Title, valor: traslados.types[tipoTraslado]?.title ?? tipoTraslado },
+    { etiqueta: checkout.summary.date, valor: formatDay(fromLocalISODate(fecha), lang) },
+    tipoTraslado === 'redondo_aeropuerto' && fechaRegreso
+      ? { etiqueta: traslados.fields.fechaRegreso, valor: formatDay(fromLocalISODate(fechaRegreso), lang) }
+      : null,
+    { etiqueta: checkout.summary.time, valor: formatHour(hora) },
+    { etiqueta: checkout.summary.people, valor: String(personas) },
+    recogidaElegida && resumenRecogida
+      ? { etiqueta: traslados.fields.puntoEncuentro, valor: resumenRecogida }
+      : null,
+  ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
+
+  const ayudaMensaje = `Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`;
+
   return (
-    <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlugActual} />
-
-      <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
-        <Link
-          href={hrefVolver}
-          className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft size={16} />
-          {traslados.back}
-        </Link>
-      </div>
-
-      <div className="mx-auto max-w-6xl px-6 pt-6 sm:px-8 lg:px-12">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          {traslados.title}
-        </h1>
-        <p className="mt-1 text-sm text-muted">{traslados.subtitle}</p>
-      </div>
-
-      <CheckoutStepper stepper={checkout.stepper} actual={pasoActualStepper} steps={stepsList} />
-
-      <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
-        <div className="flex min-w-0 flex-col gap-6">
-          {/* PASO 1: Tipo de traslado */}
-          <CheckoutSectionCard
-            title={traslados.step1Title}
-            estado={colapsado1 ? 'completado' : pasoEditando === 1 ? 'editando' : 'activo'}
-            resumen={resumenPaso1}
-            actionLabel={colapsado1 ? checkout.changeStep : pasoEditando === 1 ? checkout.doneEditing : undefined}
-            onAction={() => setPasoEditando(colapsado1 ? 1 : null)}
-          >
-            <p className="mb-4 text-xs text-muted">{traslados.step1Description}</p>
-            <TipoTrasladoCards
-              tipos={tiposDisponibles}
-              valor={tipoTraslado}
-              textos={traslados.types}
-              etiqueta={traslados.step1Title}
-              precioDesde={getPrecioDesde}
-              onChange={(tipo) => {
-                setTipoTraslado(tipo);
-                if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
-                else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
-              }}
-            />
-
-            {pasosVisibles === 1 && (
-              <div className="mt-6 flex justify-end border-t border-border pt-5">
-                <button
-                  type="button"
-                  onClick={confirmarPaso1}
-                  className="rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
-                >
-                  {checkout.confirmStep}
-                </button>
-              </div>
-            )}
-          </CheckoutSectionCard>
-
-          {/* PASO 2: Punto de encuentro u hospedaje */}
-          {pasosVisibles < 2 ? null : (
-            <motion.div
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-            >
+    <>
+      <PaginaCheckout
+        lang={lang}
+        dict={dict}
+        sedeSlug={sedeSlugActual}
+        volverHref={hrefVolver}
+        volverLabel={traslados.back}
+        encabezado={
+          <EncabezadoCompra
+            kicker={checkout.purchaseKicker}
+            nombre={traslados.title}
+            detalle={traslados.subtitle}
+          />
+        }
+        stepper={{ actual: pasoActualStepper, steps: stepsList, totalMovil }}
+        pasos={
+          <>
+            <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
               <CheckoutSectionCard
-                title={traslados.step2Title}
-                estado={colapsado2 ? 'completado' : pasoEditando === 2 ? 'editando' : 'activo'}
-                resumen={resumenPaso2}
-                actionLabel={colapsado2 ? checkout.changeStep : pasoEditando === 2 ? checkout.doneEditing : undefined}
-                onAction={() => setPasoEditando(colapsado2 ? 2 : null)}
+                title={checkout.tripHeadline}
+                estado={estadoViaje}
+                resumen={resumenViaje}
+                actionLabel={locked ? undefined : etiquetaAccion(crudoViaje)}
+                onAction={locked || crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
+                pie={crudoViaje === 'activo' && !locked
+                  ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso>
+                  : undefined}
               >
-                <p className="mb-4 text-xs text-muted">{traslados.step2Description}</p>
+                {/* Lo que define el producto va primero. */}
+                <BloqueDePaso titulo={traslados.step1Title}>
+                  <TipoTrasladoCards
+                    tipos={tiposDisponibles}
+                    valor={tipoTraslado}
+                    textos={traslados.types}
+                    etiqueta={traslados.step1Title}
+                    precioDesde={getPrecioDesde}
+                    onChange={(tipo) => {
+                      setTipoTraslado(tipo);
+                      if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
+                      else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
+                    }}
+                  />
+                </BloqueDePaso>
 
-                {modoHospedaje === 'catalogo' ? (
-                  <div className="flex flex-col gap-3">
-                    <FieldPopover
-                      label={traslados.fields.puntoEncuentro}
-                      value={puntoSeleccionado?.nombre ?? ''}
-                      vacio={puntoEncuentroId === null}
-                      placeholder={traslados.fields.puntoEncuentroPlaceholder}
-                      icon={<Buildings size={20} className="shrink-0 text-muted" />}
-                    >
-                      {(cerrar) => (
-                        <div className="w-full sm:w-80 max-h-72 overflow-y-auto">
-                          <p className="px-2 pb-2 text-xs font-semibold text-muted uppercase tracking-wider">
-                            {traslados.fields.puntoEncuentro}
-                          </p>
-                          <ul className="flex flex-col gap-1">
-                            {catalogo.puntos_encuentro.map((p) => {
-                              const sel = p.id === puntoEncuentroId;
-                              return (
-                                <li key={p.id}>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setPuntoEncuentroId(p.id);
-                                      cerrar();
-                                    }}
-                                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-left transition-colors ${
-                                      sel
-                                        ? 'bg-accent font-medium text-accent-foreground'
-                                        : 'text-foreground hover:bg-background'
-                                    }`}
-                                  >
-                                    <span className="truncate pr-2">{p.nombre}</span>
-                                    <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase opacity-75">
-                                      {p.zona}
-                                    </span>
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                          {/* Opción más de ESTA pregunta: va donde el cliente ya busca. */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setModoHospedaje('personalizada');
-                              setPuntoEncuentroId(null);
-                              cerrar();
-                            }}
-                            className="mt-2 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-background"
-                          >
-                            <MapPin size={16} className="shrink-0 text-muted" />
-                            {traslados.fields.otraDireccionOpcion}
-                          </button>
+                <ContenidoViaje
+                  fecha={
+                    <>
+                      <FechaPaquete
+                        lang={lang}
+                        label={traslados.fields.fecha}
+                        value={fecha}
+                        onChange={(f) => {
+                          setFecha(f);
+                          if (fechaRegreso && fechaRegreso <= f) setFechaRegreso(diaSiguiente(f));
+                        }}
+                        minDate={minDate}
+                        chooseLabel={pedido.chooseStart}
+                        viewMonthLabel={pedido.viewMonth}
+                        hideMonthLabel={pedido.hideMonth}
+                        previousWeekLabel={pedido.previousWeek}
+                        nextWeekLabel={pedido.nextWeek}
+                        previousMonthLabel={booking.prevMonth}
+                        nextMonthLabel={booking.nextMonth}
+                        personas={personas}
+                        fullLabel={checkout.dayFull}
+                      />
+                      {/* El regreso depende del tipo y de la fecha de inicio: aparece
+                          pegado a la fecha, y solo con "redondo con aeropuerto". */}
+                      <Despliegue abierto={tipoTraslado === 'redondo_aeropuerto'}>
+                        <div className="pt-5">
+                          <FechaRegresoCompacta
+                            lang={lang}
+                            label={traslados.fields.fechaRegreso}
+                            value={fechaRegreso}
+                            onChange={setFechaRegreso}
+                            minDate={diaSiguiente(fecha)}
+                            chooseLabel={pedido.chooseReturnDate}
+                            changeButtonLabel={checkout.changeStep}
+                            doneButtonLabel={checkout.doneEditing}
+                            viewMonthLabel={pedido.viewMonth}
+                            hideMonthLabel={pedido.hideMonth}
+                            previousWeekLabel={pedido.previousWeek}
+                            nextWeekLabel={pedido.nextWeek}
+                            previousMonthLabel={booking.prevMonth}
+                            nextMonthLabel={booking.nextMonth}
+                            personas={personas}
+                            fullLabel={checkout.dayFull}
+                          />
                         </div>
-                      )}
-                    </FieldPopover>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <label className="flex flex-col gap-1.5 text-sm">
-                      <span className="text-muted">{traslados.fields.otraDireccion}</span>
-                      <div className="relative">
-                        <MapPin
-                          size={18}
-                          className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-                        />
-                        <input
-                          type="text"
-                          value={direccionPersonalizada}
-                          onChange={(e) => setDireccionPersonalizada(e.target.value)}
-                          placeholder={traslados.fields.direccionPlaceholder}
-                          className="w-full border border-border bg-surface py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent"
-                        />
-                      </div>
-                    </label>
-
-                    {tipoTraslado === 'redondo_actividad' && (
-                      <div className="flex flex-col gap-2 rounded-xl border border-border bg-background p-4">
-                        <span className="text-xs font-semibold text-foreground">
-                          {traslados.fields.zona}
-                        </span>
-                        <p className="text-xs text-muted">{traslados.fields.zonaRequiredNotice}</p>
-                        <div className="mt-1 grid grid-cols-2 gap-3">
-                          {(['centro', 'periferia'] as const).map((z) => (
-                            <label
-                              key={z}
-                              className={`flex items-center gap-2.5 rounded-lg border p-3 text-sm cursor-pointer transition-colors ${
-                                zonaPersonalizada === z
-                                  ? 'border-accent bg-surface font-medium text-foreground ring-1 ring-accent'
-                                  : 'border-border text-muted hover:border-border-strong'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="zona-personalizada"
-                                value={z}
-                                checked={zonaPersonalizada === z}
-                                onChange={() => setZonaPersonalizada(z)}
-                                className="h-4 w-4 accent-accent"
-                              />
-                              <span>
-                                {z === 'centro'
-                                  ? traslados.fields.zonaCentro
-                                  : traslados.fields.zonaPeriferia}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <AccionTexto
-                      icono={<ListBullets size={14} />}
-                      onClick={() => {
-                        setModoHospedaje('catalogo');
-                        setDireccionPersonalizada('');
-                        setZonaPersonalizada('');
-                        setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
-                      }}
-                    >
-                      {traslados.fields.volverALista}
-                    </AccionTexto>
-                  </div>
-                )}
-
-                <ErrorDeCampo id="error-paso2" mensaje={errorPaso2} className="mt-2.5" />
-
-                {(pasosVisibles === 2 || pasoEditando === 2) && (
-                  <div className="mt-6 flex justify-end border-t border-border pt-5">
-                    <button
-                      type="button"
-                      onClick={confirmarPaso2}
-                      className="rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
-                    >
-                      {checkout.confirmStep}
-                    </button>
-                  </div>
-                )}
-              </CheckoutSectionCard>
-            </motion.div>
-          )}
-          {/* PASO 3: Fechas y horario */}
-          {pasosVisibles < 3 ? null : (
-            <motion.div
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-            >
-              <CheckoutSectionCard
-                title={traslados.step3Title}
-                estado={colapsado3 ? 'completado' : pasoEditando === 3 ? 'editando' : 'activo'}
-                resumen={resumenPaso3}
-                actionLabel={colapsado3 ? checkout.changeStep : pasoEditando === 3 ? checkout.doneEditing : undefined}
-                onAction={() => setPasoEditando(colapsado3 ? 3 : null)}
-              >
-                <p className="mb-4 text-xs text-muted">{traslados.step3Description}</p>
-
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <DateField
-                      lang={lang}
-                      label={traslados.fields.fecha}
-                      value={fecha}
-                      onChange={(f) => {
-                        setFecha(f);
-                        if (fechaRegreso && fechaRegreso <= f) {
-                          setFechaRegreso(diaSiguiente(f));
-                        }
-                      }}
-                      minDate={minDate}
-                      prevMonthLabel={booking.prevMonth}
-                      nextMonthLabel={booking.nextMonth}
-                      personas={personas}
-                      fullLabel={checkout.dayFull}
-                      sinCupo={true}
-                    />
-
+                      </Despliegue>
+                    </>
+                  }
+                  hora={
                     <TimeField
                       label={traslados.fields.hora}
                       help={checkout.hourLabel}
@@ -813,212 +706,208 @@ export function TrasladoView({
                       onChange={setHora}
                       availableHours={horasDisponibles}
                     />
-                  </div>
-
-                  {tipoTraslado === 'redondo_aeropuerto' && (
-                    <div className="border-t border-border pt-4">
-                      <DateField
-                        lang={lang}
-                        label={traslados.fields.fechaRegreso}
-                        value={fechaRegreso}
-                        onChange={setFechaRegreso}
-                        minDate={diaSiguiente(fecha)}
-                        prevMonthLabel={booking.prevMonth}
-                        nextMonthLabel={booking.nextMonth}
-                        personas={personas}
-                        fullLabel={checkout.dayFull}
-                        sinCupo={true}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <ErrorDeCampo id="error-paso3" mensaje={errorPaso3} className="mt-2.5" />
-
-                {(pasosVisibles === 3 || pasoEditando === 3) && (
-                  <div className="mt-6 flex justify-end border-t border-border pt-5">
-                    <button
-                      type="button"
-                      onClick={confirmarPaso3}
-                      className="rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
-                    >
-                      {checkout.confirmStep}
-                    </button>
-                  </div>
-                )}
+                  }
+                  personas={
+                    <PeopleStepper
+                      label={traslados.fields.pasajeros}
+                      value={personas}
+                      onChange={setPersonas}
+                      maxPeople={maxCapacidad}
+                      minPeople={1}
+                      maxNotice={traslados.fields.maxPasajerosNotice.replace('{max}', String(maxCapacidad))}
+                      onMaxAttempt={() => ayuda.tropezar('tope-personas')}
+                    />
+                  }
+                  nota={
+                    <p>
+                      <span className="font-semibold text-foreground">{traslados.summary.transfer}</span>
+                      {' '}
+                      {traslados.summary.included}
+                    </p>
+                  }
+                />
+                <ErrorDeCampo id="error-viaje" mensaje={errorPaso3} />
               </CheckoutSectionCard>
-            </motion.div>
-          )}
+            </ItemPaso>
 
-          {/* PASO 4: Pasajeros */}
-          {pasosVisibles < 4 ? null : (
-            <motion.div
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-            >
-              <CheckoutSectionCard
-                title={traslados.step4Title}
-                estado={colapsado4 ? 'completado' : pasoEditando === 4 ? 'editando' : 'activo'}
-                resumen={resumenPaso4}
-                actionLabel={colapsado4 ? checkout.changeStep : pasoEditando === 4 ? checkout.doneEditing : undefined}
-                onAction={() => setPasoEditando(colapsado4 ? 4 : null)}
-              >
-                <p className="mb-4 text-xs text-muted">{traslados.step4Description}</p>
-
-                <div className="rounded-xl border border-border bg-surface p-2">
-                  <PeopleStepper
-                    label={traslados.fields.pasajeros}
-                    value={personas}
-                    onChange={setPersonas}
-                    maxPeople={maxCapacidad}
-                    minPeople={1}
-                    maxNotice={traslados.fields.maxPasajerosNotice.replace('{max}', String(maxCapacidad))}
+            {estadoContacto && (
+              <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
+                <CheckoutSectionCard
+                  title={checkout.contactHeadline}
+                  estado={estadoContacto}
+                  resumen={resumenDatos}
+                  actionLabel={locked ? undefined : etiquetaAccion(crudoContacto)}
+                  onAction={locked || crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
+                  pie={crudoContacto === 'activo' && !locked
+                    ? <BotonPaso onClick={confirmarDatos}>{checkout.confirmStep}</BotonPaso>
+                    : undefined}
+                >
+                  <CamposContacto
+                    idPrefijo="traslado"
+                    valores={contact}
+                    errores={erroresContacto}
+                    etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
+                    refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
+                    disabled={locked}
+                    onCambio={(campo, valor) => {
+                      setContact((prev) => ({ ...prev, [campo]: valor }));
+                      if (erroresContacto[campo]) setErroresContacto((prev) => ({ ...prev, [campo]: undefined }));
+                    }}
                   />
-                </div>
+                </CheckoutSectionCard>
+              </ItemPaso>
+            )}
 
-                {(pasosVisibles === 4 || pasoEditando === 4) && (
-                  <div className="mt-6 flex justify-end border-t border-border pt-5">
-                    <button
-                      type="button"
-                      onClick={confirmarPaso4}
-                      className="rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98]"
-                    >
-                      {checkout.confirmStep}
-                    </button>
+            {estadoRecogida && (
+              <ItemPaso unida={unidaConAnterior(secuencia, secuencia.length - 1)}>
+                <CheckoutSectionCard
+                  title={traslados.step2Title}
+                  estado={estadoRecogida}
+                  resumen={resumenRecogida}
+                  actionLabel={locked ? undefined : etiquetaAccion(crudoRecogida)}
+                  onAction={locked || crudoRecogida === 'activo' ? undefined : () => reabrir('detalles')}
+                  pie={crudoRecogida === 'activo' && !locked
+                    ? <BotonPaso conFlecha onClick={confirmarRecogida}>{checkout.confirmStep}</BotonPaso>
+                    : undefined}
+                >
+                  <div className="flex flex-col gap-3">
+                    <Despliegue abierto={modoHospedaje === 'catalogo'}>
+                      <div className={CAJA_CAMPO}>
+                        <FieldPopover
+                          compacto
+                          label={traslados.fields.puntoEncuentro}
+                          value={puntoSeleccionado?.nombre ?? ''}
+                          vacio={puntoEncuentroId === null}
+                          placeholder={traslados.fields.puntoEncuentroPlaceholder}
+                          icon={<Buildings size={20} className="shrink-0 text-muted" />}
+                        >
+                          {(cerrar) => (
+                            <div className="max-h-72 w-full overflow-y-auto sm:w-80">
+                              {catalogo.puntos_encuentro.map((punto) => (
+                                <button
+                                  key={punto.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setPuntoEncuentroId(punto.id);
+                                    cerrar();
+                                  }}
+                                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                                    punto.id === puntoEncuentroId
+                                      ? 'bg-accent font-medium text-accent-foreground'
+                                      : 'text-foreground hover:bg-background'
+                                  }`}
+                                >
+                                  <span className="truncate pr-2">{punto.nombre}</span>
+                                  <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase opacity-75">
+                                    {punto.zona}
+                                  </span>
+                                </button>
+                              ))}
+                              {/* La otra dirección es una opción más de ESTA pregunta. */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setModoHospedaje('personalizada');
+                                  setPuntoEncuentroId(null);
+                                  cerrar();
+                                }}
+                                className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-background"
+                              >
+                                <MapPin size={16} className="shrink-0 text-muted" />
+                                {traslados.fields.otraDireccionOpcion}
+                              </button>
+                            </div>
+                          )}
+                        </FieldPopover>
+                      </div>
+                    </Despliegue>
+
+                    <Despliegue abierto={modoHospedaje !== 'catalogo'}>
+                      <div className="flex flex-col gap-3">
+                        <label className="flex flex-col gap-1.5 text-sm">
+                          <span className="text-muted">{traslados.fields.otraDireccion}</span>
+                          <span className="relative">
+                            <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
+                            <input
+                              type="text"
+                              value={direccionPersonalizada}
+                              onChange={(e) => setDireccionPersonalizada(e.target.value)}
+                              placeholder={traslados.fields.direccionPlaceholder}
+                              className={`w-full ${CAJA_CAMPO} py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent`}
+                            />
+                          </span>
+                        </label>
+                        <AccionTexto
+                          icono={<ListBullets size={14} />}
+                          onClick={() => {
+                            setModoHospedaje('catalogo');
+                            setDireccionPersonalizada('');
+                            setZonaPersonalizada('');
+                            setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
+                          }}
+                        >
+                          {traslados.fields.volverALista}
+                        </AccionTexto>
+                        <Despliegue abierto={tipoTraslado === 'redondo_actividad'}>
+                          <fieldset className="grid grid-cols-2 gap-3">
+                            <legend className="sr-only">{traslados.fields.zona}</legend>
+                            {(['centro', 'periferia'] as const).map((z) => (
+                              <label
+                                key={z}
+                                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm ${
+                                  zonaPersonalizada === z ? 'border-accent bg-surface font-medium' : 'border-border text-muted'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="zona-personalizada"
+                                  value={z}
+                                  checked={zonaPersonalizada === z}
+                                  onChange={() => setZonaPersonalizada(z)}
+                                  className="h-4 w-4 accent-accent"
+                                />
+                                {z === 'centro' ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
+                              </label>
+                            ))}
+                          </fieldset>
+                          <p className="mt-2 text-xs text-muted">{traslados.fields.zonaRequiredNotice}</p>
+                        </Despliegue>
+                      </div>
+                    </Despliegue>
+
+                    <Despliegue abierto={tipoTraslado === 'redondo_actividad' && modoHospedaje === 'catalogo' && puntoEncuentroId !== null}>
+                      <p className="text-xs text-muted">
+                        {traslados.fields.zona}: {puntoSeleccionado?.zona === 'centro'
+                          ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
+                      </p>
+                    </Despliegue>
                   </div>
-                )}
-              </CheckoutSectionCard>
-            </motion.div>
-          )}
+                  <ErrorDeCampo id="error-recogida" mensaje={errorPaso2} />
+                </CheckoutSectionCard>
+              </ItemPaso>
+            )}
 
-          {/* PASO 5: Contacto */}
-          {pasosVisibles < 5 ? null : (
-            <motion.div
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-            >
-              <CheckoutSectionCard title={traslados.step5Title} estado="activo">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
-                    <span className="text-muted">{checkout.phone}</span>
-                    <span className="relative">
-                      <Phone
-                        size={18}
-                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-                      />
-                      <input
-                        ref={refPhone}
-                        type="tel"
-                        required
-                        disabled={phase === 'submitting' || phase === 'payment'}
-                        value={contact.phone}
-                        onChange={(e) => {
-                          setContact((prev) => ({ ...prev, phone: e.target.value }));
-                          if (erroresContacto.phone)
-                            setErroresContacto((prev) => ({ ...prev, phone: undefined }));
-                        }}
-                        {...propsDeError('error-phone', Boolean(erroresContacto.phone))}
-                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
-                          erroresContacto.phone
-                            ? CLASES_CAMPO_CON_ERROR
-                            : 'border-border focus:border-accent'
-                        }`}
-                      />
-                    </span>
-                    <ErrorDeCampo id="error-phone" mensaje={erroresContacto.phone} />
-                  </label>
+            {/* El último paso: "Cómo pagas" se pinta aquí (portal del panel) y, al crearse
+                el pago, el formulario de tarjeta aparece debajo. */}
+            {(actual === 'pago' || phase !== 'form') && (
+              <div className={phase === 'payment' ? '-mt-[calc(1.5rem+1px)]' : undefined} ref={setDestinoTarjetaPago} />
+            )}
 
-                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
-                    <span className="text-muted">{checkout.fullName}</span>
-                    <span className="relative">
-                      <User
-                        size={18}
-                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-                      />
-                      <input
-                        ref={refFullName}
-                        type="text"
-                        required
-                        disabled={phase === 'submitting' || phase === 'payment'}
-                        value={contact.fullName}
-                        onChange={(e) => {
-                          setContact((prev) => ({ ...prev, fullName: e.target.value }));
-                          if (erroresContacto.fullName)
-                            setErroresContacto((prev) => ({ ...prev, fullName: undefined }));
-                        }}
-                        {...propsDeError('error-fullName', Boolean(erroresContacto.fullName))}
-                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
-                          erroresContacto.fullName
-                            ? CLASES_CAMPO_CON_ERROR
-                            : 'border-border focus:border-accent'
-                        }`}
-                      />
-                    </span>
-                    <ErrorDeCampo id="error-fullName" mensaje={erroresContacto.fullName} />
-                  </label>
-
-                  <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                    <span className="text-muted">{checkout.email}</span>
-                    <span className="relative">
-                      <EnvelopeSimple
-                        size={18}
-                        className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-                      />
-                      <input
-                        ref={refEmail}
-                        type="email"
-                        required
-                        disabled={phase === 'submitting' || phase === 'payment'}
-                        value={contact.email}
-                        onChange={(e) => {
-                          setContact((prev) => ({ ...prev, email: e.target.value }));
-                          if (erroresContacto.email)
-                            setErroresContacto((prev) => ({ ...prev, email: undefined }));
-                        }}
-                        {...propsDeError('error-email', Boolean(erroresContacto.email))}
-                        className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
-                          erroresContacto.email
-                            ? CLASES_CAMPO_CON_ERROR
-                            : 'border-border focus:border-accent'
-                        }`}
-                      />
-                    </span>
-                    <ErrorDeCampo id="error-email" mensaje={erroresContacto.email} />
-                  </label>
-                </div>
-
-                <div className="mt-6 rounded-xl border border-border bg-background p-4 text-xs text-muted leading-relaxed">
-                  <span className="font-semibold text-foreground block mb-1">
-                    {traslados.summary.transfer}
-                  </span>
-                  {traslados.summary.included}
-                </div>
-              </CheckoutSectionCard>
-            </motion.div>
-          )}
-
-          {/* El último paso: "Cómo pagas" se pinta aquí (portal del panel) y, al crearse
-              el pago, el formulario de tarjeta aparece debajo. */}
-          {(pasosVisibles >= 5 || phase !== 'form') && <div className={phase === 'payment' ? '-mt-[calc(1.5rem+1px)]' : undefined} ref={setDestinoTarjetaPago} />}
-
-          {phase === 'payment' && pago && (
-            <FormularioPago
+            {phase === 'payment' && pago && (
+              <FormularioPago
               checkout={checkout}
               feedback={feedback}
-              ayudaMensaje={`Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`}
+              ayudaMensaje={ayudaMensaje}
               pago={pago}
               onPagoConfirmado={(procesando) => {
                 setPagoProcesando(procesando);
                 setPhase('confirmed');
               }}
             />
-          )}
-        </div>
-
-        {/* Panel de resumen y pago */}
-        <div className="min-w-0">
+            )}
+          </>
+        }
+        pedido={
           <div className="scroll-mt-28">
             <StripePanel
               lang={lang}
@@ -1046,19 +935,31 @@ export function TrasladoView({
               promoEstado={promoEstado}
               promoPorcentaje={promoPorcentaje}
               destinoTarjeta={destinoTarjetaPago}
+              lineasViaje={lineasViaje}
               phase={phase}
               error={error}
               feedback={feedback}
-              ayudaMensaje={`Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`}
+              ayudaMensaje={ayudaMensaje}
               onSubmit={iniciarPago}
               onCaptchaToken={(token) => (captchaToken.current = token)}
             />
-
           </div>
-        </div>
-      </main>
+        }
+      />
 
-      <CheckoutFooter lang={lang} footer={footer} nav={nav} />
-    </div>
+      <AyudaFlotante
+        visible={ayuda.visible}
+        etiqueta={feedback.floatingHelp.label}
+        cerrarLabel={feedback.floatingHelp.dismiss}
+        mensaje={ayuda.motivo === 'tope-personas'
+          ? feedback.floatingHelp.messageMaxPeople
+              .replace('{name}', catalogo.servicio.nombre)
+              .replace('{max}', String(maxCapacidad))
+          : feedback.floatingHelp.messageValidation
+              .replace('{date}', formatDay(fromLocalISODate(fecha), lang))
+              .replace('{people}', String(personas))}
+        onDescartar={ayuda.descartar}
+      />
+    </>
   );
 }

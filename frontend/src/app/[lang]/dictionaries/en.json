@@ -721,6 +721,7 @@
     "step4Title": "Number of passengers",
     "step4Description": "Maximum capacity for the assigned vehicle.",
     "step5Title": "Contact details & payment",
+    "stepPickup": "Pickup",
     "types": {
       "redondo_aeropuerto": {
         "title": "Airport round trip",

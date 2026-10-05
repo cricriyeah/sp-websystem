@@ -234,10 +234,22 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
 
 - **Server Component + SSR**: obtiene el diccionario con `getDictionary(lang)` y el catálogo con `getTraslados(empresaSlug)` (vía `GET /api/<empresa>/traslados/`). El slug se toma de `searchParams.empresa` o `NEXT_PUBLIC_TRANSPORTE_EMPRESA_SLUG` (por defecto `'transporte-la-paz'`).
 - **Resiliencia**: si la API de traslados devuelve 404 o 503 (ej. Stripe no configurado en esa empresa), la página muestra un estado accesible de servicio no disponible sin reventar. Cuenta con `loading.tsx` con esqueletos visuales durante la carga.
-- **Componente `traslado-view.tsx`**:
-  1. Paso 1 — Tipo de traslado: 3 modalidades (`redondo_aeropuerto`, `redondo_actividad`, `recepcion_aeropuerto`) con precios base calculados desde las tarifas del catálogo.
-  2. Paso 2 — Hospedaje: selector `<FieldPopover>` con `puntos_encuentro` predefinidos u opción de ingresar dirección libre (con selector de zona solo si el tipo de traslado es `redondo_actividad`).
-  3. Paso 3 — Fechas y horario: `DateField` para fecha de inicio y fecha de regreso (solo si aplica), y `TimeField` sin ventanas fijas restrictivas (el transporte opera en cualquier horario).
-  4. Paso 4 — Personas: selector numérico con tope dado por `servicio.capacidad_maxima`.
-  5. Paso 5 — Checkout: datos del cliente, captura de `?ref=`, checkbox de deslinde obligatorio y panel de pago seguro vía Stripe Elements (`PaymentElement`).
+- **Componente `traslado-view.tsx`**: usa la misma anatomía que el resto de los
+  checkouts (`PaginaCheckout`, `EncabezadoCompra`, renglones unidos, un foco,
+  `AyudaFlotante`). Secuencia fija de 4 pasos con stepper `Viaje · Datos ·
+  Recogida · Pago`:
+  1. **Viaje** (`checkout.tripHeadline`), 4 bloques en este orden: tipo de traslado
+     (`TipoTrasladoCards`, lo que define el producto va primero) → fecha de inicio
+     (`FechaPaquete`, sin cupo) → fecha de regreso solo con `redondo_aeropuerto`
+     (`FechaRegresoCompacta`, pegada a la fecha de la que depende) → hora y
+     pasajeros (`ContenidoViaje`, tope = `servicio.capacidad_maxima`).
+  2. **Datos** (`CamposContacto`, `idPrefijo="traslado"`).
+  3. **Recogida** (`traslados.step2Title`): hotel/punto de encuentro, con "Escribir
+     otra dirección…" como última opción de la lista y la zona solo para
+     `redondo_actividad`.
+  4. **Pago**: la tarjeta "Cómo pagas" (portal del `StripePanel`) y debajo el
+     formulario de tarjeta. El panel derecho es el resumen vivo (tipo, fechas,
+     hora, pasajeros y, ya elegida, la recogida) y el total va en el stepper móvil.
+  `iniciarPago` revalida viaje, datos y recogida (cambiar el tipo después de elegir
+  la recogida puede dejarla incompleta) y reabre la tarjeta que falle.
 - **Catálogo general**: `[lang]/catalogo/page.tsx` expone un banner secundario Perception-First para traslados cuando la sede seleccionada es La Paz.
