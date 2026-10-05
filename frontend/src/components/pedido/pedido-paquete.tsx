@@ -433,47 +433,73 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         .replace('{n}', String(pago.indice + 1)).replace('{total}', String(n));
 
     return (
-      <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
-        <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
-        <CheckoutStepper stepper={checkout.stepper} actual={4} totalMovil={totalMovil} />
-        <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
-          <div className="flex min-w-0 flex-col gap-6">
-            <CheckoutSectionCard title={checkout.contactHeadline} estado="completado"
-              resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}>
+      <PaginaCheckout
+        lang={lang}
+        dict={dict}
+        sedeSlug={sedeSlug}
+        volverHref={`/${lang}/sede/${sedeSlug}`}
+        volverLabel={textos.back}
+        encabezado={
+          <EncabezadoCompra
+            kicker={checkout.purchaseKicker}
+            nombre={paquete.nombre}
+            detalle={detalleCompra}
+          />
+        }
+        stepper={{ actual: 4, totalMovil }}
+        pasos={
+          <>
+            <CheckoutSectionCard
+              title={checkout.tripHeadline}
+              estado="completado"
+              resumen={resumenViaje}
+            >
+              {null}
+            </CheckoutSectionCard>
+            <CheckoutSectionCard
+              title={checkout.contactHeadline}
+              estado="completado"
+              resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
+            >
               {null}
             </CheckoutSectionCard>
             {paquete.servicios_asociados.map((item) => {
               const personas = estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas;
               return (
-                <CheckoutSectionCard key={item.id} title={item.servicio.nombre} estado="completado"
-                  resumen={`${nombreEmpresa(item.servicio.empresa_slug)} · ${formatearFecha(fechaDeComponente(estado.inicio ?? minDate, item.dia_estancia))} · ${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}>
+                <CheckoutSectionCard
+                  key={item.id}
+                  title={item.servicio.nombre}
+                  etiqueta={cantidadCargos > 1 ? nombreEmpresa(item.servicio.empresa_slug) : undefined}
+                  estado="completado"
+                  resumen={`${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}
+                >
                   {null}
                 </CheckoutSectionCard>
               );
             })}
-          </div>
-          <div className="min-w-0">
-            <StripePanel
-              key={pasoPago.empresaSlug}
-              lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
-              waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
-              lines={[{ label: etiqueta, amount: totalPago }]} total={totalPago} amountDueNow={monto}
-              moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
-              formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}
-              codigoPromocional="" onCodigoPromocionalChange={() => {}}
-              codigoPromocionalDisponible={false} promoEstado="idle" promoPorcentaje={null}
-              phase="payment" error=""
-              pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
-              encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
-              etiquetaBotonPago={etiquetaBotonPago}
-              onSubmit={() => {}} onPagoConfirmado={pago.onPagoConfirmado}
-              onPagoRechazado={pago.onPagoRechazado} onCaptchaToken={() => {}}
-            />
-          </div>
-        </main>
-        <CheckoutFooter lang={lang} footer={footer} nav={nav} />
-      </div>
+          </>
+        }
+        pedido={
+          <StripePanel
+            key={pasoPago.empresaSlug}
+            lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
+            waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
+            lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={lineasViaje}
+            pagoVisibleMovil={true}
+            total={totalPago} amountDueNow={monto}
+            moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
+            formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}
+            codigoPromocional="" onCodigoPromocionalChange={() => {}}
+            codigoPromocionalDisponible={false} promoEstado="idle" promoPorcentaje={null}
+            phase="payment" error=""
+            pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
+            encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
+            etiquetaBotonPago={etiquetaBotonPago}
+            onSubmit={() => {}} onPagoConfirmado={pago.onPagoConfirmado}
+            onPagoRechazado={pago.onPagoRechazado} onCaptchaToken={() => {}}
+          />
+        }
+      />
     );
   }
 
