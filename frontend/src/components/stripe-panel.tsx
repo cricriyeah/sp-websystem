@@ -9,6 +9,7 @@ import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckCircle } from '@phosphor-icons/react';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { Despliegue } from '@/components/checkout/despliegue';
 import { ErrorBlock } from '@/components/error-block';
 import { FieldError, propsDeError } from '@/components/field-error';
 import { Turnstile } from '@/components/turnstile';
@@ -300,7 +301,10 @@ export function StripePanel({
           disabled={phase === 'submitting'}
           className={`${formaPagoDisponible ? 'mt-3' : 'mt-5'} border-t border-border pt-3`}
         >
-          {!promoAbierto && !codigoPromocional ? (
+          {/* El botón se pliega mientras el campo se despliega: el panel crece sin
+              el salto de cambiar un elemento por otro. Los mensajes de estado
+              entran y salen igual, para que el total de abajo no brinque. */}
+          <Despliegue abierto={!promoAbierto && !codigoPromocional}>
             <button
               type="button"
               onClick={() => setPromoAbierto(true)}
@@ -308,7 +312,8 @@ export function StripePanel({
             >
               {checkout.promoCode.toggle}
             </button>
-          ) : (
+          </Despliegue>
+          <Despliegue abierto={promoAbierto || Boolean(codigoPromocional)}>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
                 {checkout.promoCode.label}
@@ -322,20 +327,20 @@ export function StripePanel({
                 placeholder={checkout.promoCode.placeholder}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
               />
-              {promoEstado === 'verificando' && (
+              <Despliegue abierto={promoEstado === 'verificando'}>
                 <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
-              )}
-              {promoEstado === 'valido' && promoPorcentaje && (
+              </Despliegue>
+              <Despliegue abierto={promoEstado === 'valido' && Boolean(promoPorcentaje)}>
                 <p className="flex items-center gap-1.5 text-xs text-emerald-600">
                   <CheckCircle size={14} weight="fill" />
-                  {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje)))}
+                  {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje ?? 0)))}
                 </p>
-              )}
-              {promoEstado === 'invalido' && (
+              </Despliegue>
+              <Despliegue abierto={promoEstado === 'invalido'}>
                 <FieldError id="codigo-promocional-error" mensaje={checkout.promoCode.invalid} />
-              )}
+              </Despliegue>
             </div>
-          )}
+          </Despliegue>
         </fieldset>
       )}
 
