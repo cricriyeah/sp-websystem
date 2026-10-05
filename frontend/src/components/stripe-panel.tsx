@@ -29,6 +29,10 @@ type StripePanelProps = {
   onWaiverChange: (value: boolean) => void;
   errorWaiver: boolean;
   lines: OrderLine[];
+  /** Lo elegido en el viaje (fecha, hora, personas…), vivo desde el paso 1. */
+  lineasViaje?: { etiqueta: string; valor: string }[];
+  /** En móvil la zona de pago solo se ve al llegar al último paso; en escritorio siempre. */
+  pagoVisibleMovil?: boolean;
   total: string;
   amountDueNow: string;
   moneda: Moneda;
@@ -151,6 +155,8 @@ export function StripePanel({
   onWaiverChange,
   errorWaiver,
   lines,
+  lineasViaje = [],
+  pagoVisibleMovil = true,
   total,
   amountDueNow,
   moneda,
@@ -188,6 +194,16 @@ export function StripePanel({
 
   return (
     <CheckoutSectionCard title={checkout.orderSummaryHeadline} variant="elevated">
+      {lineasViaje.length > 0 && (
+        <dl className="mb-4 flex flex-col gap-2 border-b border-border pb-4">
+          {lineasViaje.map((linea) => (
+            <div key={linea.etiqueta} className="flex items-baseline justify-between gap-4 text-sm">
+              <dt className="text-muted">{linea.etiqueta}</dt>
+              <dd className="text-right text-foreground first-letter:uppercase">{linea.valor}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <dl className="flex flex-col gap-3">
         {lines.map((line) => (
           <div key={line.label} className="flex items-center justify-between text-sm">
@@ -202,13 +218,18 @@ export function StripePanel({
         <p className="text-lg font-medium tracking-tight text-foreground">{total}</p>
       </div>
 
+      <div className={pagoVisibleMovil ? undefined : 'hidden lg:block'}>
+        <p className="mt-6 text-xs font-semibold tracking-wider text-muted uppercase">
+          {checkout.howYouPay}
+        </p>
+
       {/* Ya se precarga segun el idioma (ver checkout-view.tsx): esto deja de
           ser la primera decision del checkout y pasa a ser una correccion
           disponible para quien la busque, junto al total que ya describe. Por
           eso va aqui y no arriba de todo, y por eso es chico. */}
       {usdDisponible && phase !== 'payment' && phase !== 'unavailable' && (
         <fieldset
-          className="mt-2 flex items-center justify-end gap-2"
+          className="mt-3 flex items-center justify-between gap-2"
           disabled={phase === 'submitting'}
         >
           <legend className="sr-only">{checkout.currency.headline}</legend>
@@ -433,6 +454,7 @@ export function StripePanel({
           </motion.button>
         </>
       )}
+      </div>
     </CheckoutSectionCard>
   );
 }
