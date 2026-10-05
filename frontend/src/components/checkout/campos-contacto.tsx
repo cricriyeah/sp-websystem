@@ -2,7 +2,7 @@
 
 import type { Ref } from 'react';
 import { EnvelopeSimple, Phone, User } from '@phosphor-icons/react';
-import { CLASES_CAMPO_CON_ERROR, FieldError, propsDeError } from '@/components/field-error';
+import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/field-error';
 
 export type CampoContacto = 'fullName' | 'phone' | 'email';
 
@@ -51,7 +51,7 @@ export function CamposContacto({ valores, errores, etiquetas, onCambio, refs, di
                 }`}
               />
             </span>
-            {error && <FieldError id={idError} mensaje={error} />}
+            <ErrorDeCampo id={idError} mensaje={error} />
           </label>
         );
       })}

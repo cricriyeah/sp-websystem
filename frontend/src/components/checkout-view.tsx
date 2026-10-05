@@ -25,7 +25,7 @@ import { DateField } from '@/components/date-field';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CheckoutStepper } from '@/components/checkout-stepper';
-import { CLASES_CAMPO_CON_ERROR, FieldError, propsDeError } from '@/components/field-error';
+import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { TimeField } from '@/components/time-field';
@@ -1267,9 +1267,7 @@ export function CheckoutView({
                         }`}
                       />
                     </span>
-                    {erroresCampo.phone && (
-                      <FieldError id="error-phone" mensaje={erroresCampo.phone} />
-                    )}
+                    <ErrorDeCampo id="error-phone" mensaje={erroresCampo.phone} />
                   </label>
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
                     <span className="text-muted">{checkout.fullName}</span>
@@ -1299,9 +1297,7 @@ export function CheckoutView({
                         }`}
                       />
                     </span>
-                    {erroresCampo.fullName && (
-                      <FieldError id="error-fullName" mensaje={erroresCampo.fullName} />
-                    )}
+                    <ErrorDeCampo id="error-fullName" mensaje={erroresCampo.fullName} />
                   </label>
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
                     <span className="text-muted">{checkout.email}</span>
@@ -1331,9 +1327,7 @@ export function CheckoutView({
                         }`}
                       />
                     </span>
-                    {erroresCampo.email && (
-                      <FieldError id="error-email" mensaje={erroresCampo.email} />
-                    )}
+                    <ErrorDeCampo id="error-email" mensaje={erroresCampo.email} />
                   </label>
                 </div>
 
@@ -1481,9 +1475,7 @@ export function CheckoutView({
                               opciones={sp.opciones_seleccion.map((opcion) => ({ valor: opcion, etiqueta: opcion }))}
                               onChange={(nuevo) => actualizarRespuestaPersonalizacion(sp.id, nuevo)}
                             />
-                            {errorCodigo && (
-                              <FieldError id={errorId} mensaje={checkout.personalizacionErrors[errorCodigo]} />
-                            )}
+                            <ErrorDeCampo id={errorId} mensaje={errorCodigo ? checkout.personalizacionErrors[errorCodigo] : ''} />
                           </div>
                         );
                       }
@@ -1510,12 +1502,7 @@ export function CheckoutView({
                               errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
                             }`}
                           />
-                          {errorCodigo && (
-                            <FieldError
-                              id={errorId}
-                              mensaje={checkout.personalizacionErrors[errorCodigo]}
-                            />
-                          )}
+                          <ErrorDeCampo id={errorId} mensaje={errorCodigo ? checkout.personalizacionErrors[errorCodigo] : ''} />
                         </label>
                       );
                     })}

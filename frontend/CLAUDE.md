@@ -116,8 +116,16 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   `components/checkout/tipo-traslado-cards.tsx` en `/traslados` y en el paquete
   (en el paquete sin "Desde $": el traslado va incluido). `PanelCalendario`
   tiene ancho fijo en un popover y `anchoCompleto` cuando va en línea. La fecha
-  de regreso del traslado es una fila compacta (`FechaRegresoCompacta`) que
-  despliega la tira semanal; no se prellena.
+  de regreso del traslado (`FechaRegresoCompacta`) es obligatoria: se ve con
+  la tira semanal abierta hasta que hay fecha, y entonces se pliega a una fila
+  con "Modificar" (nunca un botón "Elegir", que la haría parecer opcional);
+  no se prellena. La tira cambia de semana deslizando en la dirección del
+  click. Las listas cortas usan `SelectPersonalizado` (sobre `FieldPopover`),
+  no `<select>` nativo. Los errores que bloquean se quedan en la tarjeta,
+  pegados a su campo (los toasts se auto-descartan: son para avisos): usa
+  `<ErrorDeCampo id mensaje={error} />` siempre montado, que entra/sale con
+  `Despliegue` y, si queda fuera de pantalla, hace scroll y lleva el foco al
+  campo con `aria-describedby` igual al id.
 - Pruebas desde `frontend/`: `npm.cmd test` ejecuta
   `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,
   `npm.cmd test -- calendario-paquete`; al añadir un módulo, registrar

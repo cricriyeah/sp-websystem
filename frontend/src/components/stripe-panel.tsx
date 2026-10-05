@@ -11,7 +11,7 @@ import { CheckCircle } from '@phosphor-icons/react';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { ErrorBlock } from '@/components/error-block';
-import { FieldError, propsDeError } from '@/components/field-error';
+import { ErrorDeCampo, FieldError, propsDeError } from '@/components/field-error';
 import { Turnstile } from '@/components/turnstile';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Moneda, Pago } from '@/lib/api';
@@ -406,7 +406,7 @@ export function StripePanel({
               .
             </span>
           </label>
-          {errorWaiver && <FieldError id="error-waiver" mensaje={checkout.waiver.missing} />}
+          <ErrorDeCampo id="error-waiver" mensaje={errorWaiver ? checkout.waiver.missing : ''} />
 
           {/* Mismo lugar donde el cliente ya esta mirando, justo antes de pagar
               — no debajo de la tarjeta, donde parecia parte de otra cosa. */}

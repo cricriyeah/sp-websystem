@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { WarningCircle } from '@phosphor-icons/react';
+import { useReducedMotion } from 'motion/react';
+import { Despliegue } from '@/components/checkout/despliegue';
 
 /**
  * El error, pegado al campo que lo causo.
@@ -20,6 +23,40 @@ export function FieldError({ id, mensaje }: { id: string; mensaje: string }) {
       <WarningCircle size={14} weight="fill" className="mt-px shrink-0" />
       <span className="leading-snug">{mensaje}</span>
     </p>
+  );
+}
+
+/**
+ * `FieldError` que entra y sale animado, para usar siempre montado:
+ * `<ErrorDeCampo id=… mensaje={error} />` con `mensaje` vacío = sin error.
+ *
+ * - Aparecer de golpe empuja todo lo de abajo; el despliegue lo hace gradual.
+ * - Conserva el último texto mientras se pliega (el estado ya lo vació).
+ * - Si al aparecer queda fuera de pantalla (el cliente confirmó un paso desde
+ *   más abajo), lo trae a la vista y lleva el foco al campo que lo causó. Si ya
+ *   se ve, no mueve nada: un error de un campo que se acaba de dejar no debe
+ *   arrancar al cliente de donde está.
+ */
+export function ErrorDeCampo({ id, mensaje, className }: { id: string; mensaje?: string | null; className?: string }) {
+  const [ultimo, setUltimo] = useState('');
+  if (mensaje && mensaje !== ultimo) setUltimo(mensaje);
+  const hay = Boolean(mensaje);
+  const sinMovimiento = useReducedMotion();
+
+  useEffect(() => {
+    if (!hay) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    const caja = el.getBoundingClientRect();
+    if (caja.top >= 0 && caja.bottom <= window.innerHeight) return;
+    el.scrollIntoView({ block: 'center', behavior: sinMovimiento ? 'auto' : 'smooth' });
+    document.querySelector<HTMLElement>(`[aria-describedby~="${id}"]`)?.focus({ preventScroll: true });
+  }, [hay, id, sinMovimiento]);
+
+  return (
+    <Despliegue abierto={hay} className={className}>
+      <FieldError id={id} mensaje={ultimo} />
+    </Despliegue>
   );
 }
 

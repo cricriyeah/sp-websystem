@@ -13,7 +13,7 @@ import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import { ErrorBlock } from '@/components/error-block';
-import { FieldError } from '@/components/field-error';
+import { ErrorDeCampo } from '@/components/field-error';
 import { SiteHeader } from '@/components/site-header';
 import { WaitNotice } from '@/components/wait-notice';
 import { PeopleStepper } from '@/components/people-stepper';
@@ -592,7 +592,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                   </>
                 }
               />
-              {errorViaje && <FieldError id="pedido-viaje-error" mensaje={errorViaje} />}
+              <ErrorDeCampo id="pedido-viaje-error" mensaje={errorViaje} />
             </CheckoutSectionCard>
 
             {tarjeta('contacto') !== 'oculto' && (
@@ -616,7 +616,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
 
             {tarjeta('detalles') !== 'oculto' && (
               <>
-                {errorDetalles && <FieldError id="pedido-detalles-error" mensaje={errorDetalles} />}
+                <ErrorDeCampo id="pedido-detalles-error" mensaje={errorDetalles} />
                 {paquete.servicios_asociados.map((componente, indice) => {
                   if (indice > gruposCompletados || grupoOculto(indice)) return null;
                   const slug = componente.servicio.slug;

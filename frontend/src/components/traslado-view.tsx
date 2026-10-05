@@ -18,7 +18,7 @@ import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import { DateField } from '@/components/date-field';
-import { CLASES_CAMPO_CON_ERROR, FieldError, propsDeError } from '@/components/field-error';
+import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/field-error';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import { SiteHeader } from '@/components/site-header';
@@ -750,11 +750,7 @@ export function TrasladoView({
                   </div>
                 )}
 
-                {errorPaso2 && (
-                  <div className="mt-4">
-                    <FieldError id="error-paso2" mensaje={errorPaso2} />
-                  </div>
-                )}
+                <ErrorDeCampo id="error-paso2" mensaje={errorPaso2} className="mt-2.5" />
 
                 {(pasosVisibles === 2 || pasoEditando === 2) && (
                   <div className="mt-6 flex justify-end border-t border-border pt-5">
@@ -833,11 +829,7 @@ export function TrasladoView({
                   )}
                 </div>
 
-                {errorPaso3 && (
-                  <div className="mt-4">
-                    <FieldError id="error-paso3" mensaje={errorPaso3} />
-                  </div>
-                )}
+                <ErrorDeCampo id="error-paso3" mensaje={errorPaso3} className="mt-2.5" />
 
                 {(pasosVisibles === 3 || pasoEditando === 3) && (
                   <div className="mt-6 flex justify-end border-t border-border pt-5">
@@ -931,9 +923,7 @@ export function TrasladoView({
                         }`}
                       />
                     </span>
-                    {erroresContacto.phone && (
-                      <FieldError id="error-phone" mensaje={erroresContacto.phone} />
-                    )}
+                    <ErrorDeCampo id="error-phone" mensaje={erroresContacto.phone} />
                   </label>
 
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-1">
@@ -962,9 +952,7 @@ export function TrasladoView({
                         }`}
                       />
                     </span>
-                    {erroresContacto.fullName && (
-                      <FieldError id="error-fullName" mensaje={erroresContacto.fullName} />
-                    )}
+                    <ErrorDeCampo id="error-fullName" mensaje={erroresContacto.fullName} />
                   </label>
 
                   <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
@@ -993,9 +981,7 @@ export function TrasladoView({
                         }`}
                       />
                     </span>
-                    {erroresContacto.email && (
-                      <FieldError id="error-email" mensaje={erroresContacto.email} />
-                    )}
+                    <ErrorDeCampo id="error-email" mensaje={erroresContacto.email} />
                   </label>
                 </div>
 
