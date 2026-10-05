@@ -1,6 +1,7 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { Despliegue } from '@/components/checkout/despliegue';
@@ -28,6 +29,29 @@ type Props = {
   sinEncabezado?: boolean;
 };
 
+/**
+ * Cambia de semana deslizando en la dirección del click: adelante entra por la
+ * derecha, atrás por la izquierda. Una dirección coherente le dice al ojo qué
+ * viene; redibujar los 7 días de golpe no le da nada que predecir.
+ */
+function Deslizable({ clave, direccion, children, className }: {
+  clave: string; direccion: 1 | -1; children: ReactNode; className?: string;
+}) {
+  const sinMovimiento = useReducedMotion();
+  const desplazamiento = sinMovimiento ? 0 : 20;
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div key={clave} className={className}
+        initial={{ opacity: 0, x: direccion * desplazamiento }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -direccion * desplazamiento }}
+        transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}>
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export function FechaPaquete({
   lang, value, onChange, minDate, label, chooseLabel, viewMonthLabel, hideMonthLabel,
   previousWeekLabel, nextWeekLabel, previousMonthLabel, nextMonthLabel, personas, fullLabel, sinEncabezado = false,
@@ -37,6 +61,8 @@ export function FechaPaquete({
   const [valorAnterior, setValorAnterior] = useState(value);
   const [minimoAnterior, setMinimoAnterior] = useState(minDate);
   const [mesAbierto, setMesAbierto] = useState(false);
+  const [inicioPrevio, setInicioPrevio] = useState(inicioVisible);
+  const [direccion, setDireccion] = useState<1 | -1>(1);
   const panelId = useId();
   const seleccionVigente = value && value >= minDate ? value : null;
 
@@ -45,6 +71,13 @@ export function FechaPaquete({
     setValorAnterior(value);
     setMinimoAnterior(minDate);
     setInicioVisible(semanaVisible(value, minDate).inicio);
+  }
+
+  // Hacia dónde se movió la semana (sea por las flechas o porque se eligió una
+  // fecha lejana): de ahí sale el lado por el que entran los días nuevos.
+  if (inicioVisible !== inicioPrevio) {
+    setDireccion(inicioVisible > inicioPrevio ? 1 : -1);
+    setInicioPrevio(inicioVisible);
   }
 
   const { dias } = semanaVisible(inicioVisible, minDate);
@@ -83,14 +116,16 @@ export function FechaPaquete({
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30">
           <CaretLeft size={17} />
         </button>
-        <span className="text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</span>
+        <Deslizable clave={etiquetaMes} direccion={direccion}>
+          <span className="block text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</span>
+        </Deslizable>
         <button type="button" onClick={() => moverSemana(1)} aria-label={nextWeekLabel}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground">
           <CaretRight size={17} />
         </button>
       </div>
 
-      <div className="mt-2 grid grid-cols-7 gap-1 sm:gap-2">
+      <Deslizable clave={inicioVisible} direccion={direccion} className="mt-2 grid grid-cols-7 gap-1 sm:gap-2">
         {dias.map((iso) => {
           const fecha = fromLocalISODate(iso);
           const seleccionada = iso === seleccionVigente;
@@ -108,7 +143,7 @@ export function FechaPaquete({
             </button>
           );
         })}
-      </div>
+      </Deslizable>
 
       <button type="button" aria-expanded={mesAbierto} aria-controls={mesAbierto ? panelId : undefined}
         onClick={() => setMesAbierto((abierto) => !abierto)}
