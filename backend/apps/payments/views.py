@@ -233,6 +233,10 @@ class CrearPagoView(APIView):
             {
                 'amount': centavos,
                 'currency': moneda,
+                # SOLO tarjeta, igual que las ordenes cruza-empresa: sin esto Stripe
+                # elige los metodos solo y ofrece "Link" (guardar la tarjeta en una
+                # cuenta de Stripe), un paso extra que el checkout no quiere.
+                'payment_method_types': ['card'],
                 'metadata': {'reserva_id': reserva.id},
             },
             {'idempotency_key': f'reserva-{reserva.pk}-{moneda}-{centavos}'},

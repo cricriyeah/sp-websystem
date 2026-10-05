@@ -277,6 +277,21 @@ class CrearPagoTests(ApiTestCase):
                 self.assertEqual(payment_intents.create.call_args.args[0]['amount'],
                                  a_centavos(Decimal(esperado)))
 
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_el_pago_de_una_reserva_solo_ofrece_tarjeta(self, payment_intents):
+        # Sin payment_method_types Stripe agrega Link por su cuenta; las ordenes
+        # cruza-empresa ya fijan ['card'] y el pago de una empresa debe ser igual.
+        reserva = crear_reserva(self.empresa, servicio=self.servicio, moneda='MXN',
+                                numero_personas=2, checkout_id=uuid.uuid4())
+        payment_intents.create.return_value = intent_falso(
+            id=f'pi_{reserva.pk}', amount=100000, currency='mxn')
+        response = self.client.post(
+            reverse('crear-pago', kwargs={'empresa_slug': self.empresa.slug, 'pk': reserva.pk}),
+            {'forma_pago': 'completo', 'checkout_id': str(reserva.checkout_id)},
+            content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payment_intents.create.call_args.args[0]['payment_method_types'], ['card'])
+
     def seleccionar_extra(self, reserva=None, cantidad_solicitada=None, **overrides):
         """Simula lo que deja el checkout: la SELECCION de un extra, sin precio
         congelado todavia (eso solo lo escribe `CrearPagoView`). `cantidad_solicitada`
