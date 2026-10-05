@@ -158,7 +158,23 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   elemento: natural, o pegado al borde inferior solo si su sitio natural queda
   bajo la pantalla, y entonces se ve como capa (translúcido, desenfoque,
   sombra hacia arriba, título de la tarjeta a la izquierda). Lo usa `PedidoPaquete` (mismo para paquete de una
-  empresa y cruza-empresa); `CheckoutView` lo adopta al migrar.
+  empresa y cruza-empresa) y por `CheckoutView` (servicio suelto).
+- Anatomía común de la ruta `/reservar` (servicio suelto, paquete de una
+  empresa y paquete cruza-empresa): `PaginaCheckout`
+  (`src/components/checkout/pagina-checkout.tsx`) pone volver → `EncabezadoCompra`
+  → stepper → [pasos | pedido]. Los pasos son siempre viaje → contacto →
+  detalles → pago (`src/lib/pasos-checkout.ts`); cada tarjeta es un
+  `CheckoutSectionCard` con un solo CTA en el `pie` (`BotonPaso`) y bloques
+  separados por espacio, no por rayas. El panel derecho (`StripePanel`) tiene
+  dos zonas: "qué compras" (líneas vivas del viaje, cargos y total) y "cómo
+  pagas" (moneda, forma de pago, promo, deslinde, botón); en móvil la zona de
+  pago aparece al llegar al paso 4 (`pagoVisibleMovil`). Dentro de cada
+  tarjeta: lo obligatorio antes que lo opcional (`separarPersonalizaciones`).
+  `AyudaFlotante` ofrece WhatsApp, sin mover la página, tras tres tropiezos
+  (`src/lib/ayuda-contextual.ts`): errores de validación al confirmar pasos o
+  intentos de pasar el tope de personas. En `CheckoutView` los datos de
+  contacto usan `CamposContacto` con `idPrefijo="checkout"` (ids de error
+  `checkout-error-<campo>`).
 - Pruebas desde `frontend/`: `npm.cmd test` ejecuta
   `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,
   `npm.cmd test -- calendario-paquete`; al añadir un módulo, registrar

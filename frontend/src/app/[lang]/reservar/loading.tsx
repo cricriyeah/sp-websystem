@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/skeleton';
 /** La ruta sirve tanto servicios como paquetes; muestra solo la estructura común del primer paso. */
 export default function CargandoReserva() {
   return (
-    <CheckoutLoadingShell>
+    <CheckoutLoadingShell withTitle showSummaryMobile>
       <section className="border border-border bg-background p-6 sm:p-8" aria-hidden="true">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="mt-6 h-64 w-full" />
