@@ -100,7 +100,7 @@ export function DateField({
  * calendario y no en cada visita a la portada, que es estatica y no deberia
  * pegarle a la API para nada.
  */
-function PanelCalendario({
+export function PanelCalendario({
   locale,
   value,
   seleccionado,
@@ -227,6 +227,8 @@ function PanelCalendario({
                     ? 'bg-accent font-medium text-accent-foreground'
                     : pasada
                       ? 'cursor-not-allowed text-muted/50'
+                    : sinCupo
+                      ? 'text-foreground hover:bg-accent/10'
                       : 'text-accent hover:bg-accent/10'
               }`}
             >

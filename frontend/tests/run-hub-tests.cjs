@@ -12,6 +12,7 @@ const suites = {
   'reconciliar-sedes': ['src/lib/reconciliar-sedes.ts', 'RECONCILIAR_TEST_OUT'],
   'booking-href': ['src/lib/booking-href.ts', 'BOOKING_HREF_TEST_OUT'],
   'calendario-paquete': ['src/lib/calendario-paquete.ts', 'CALENDARIO_TEST_OUT'],
+  'calendario-semana': ['src/lib/calendario-semana.ts', 'CALENDARIO_SEMANA_TEST_OUT'],
   'tarifa-transporte': ['src/lib/tarifa-transporte.ts', 'TARIFA_TEST_OUT'],
   moneda: ['src/lib/moneda.ts', 'MONEDA_TEST_OUT'],
   'pedido-paquete': ['src/lib/pedido-paquete.ts', 'PEDIDO_PAQUETE_TEST_OUT'],

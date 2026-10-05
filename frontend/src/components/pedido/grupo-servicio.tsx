@@ -3,7 +3,6 @@
 import { Buildings, MapPin, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import { DateField } from '@/components/date-field';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import type { Aeropuerto, Moneda, PaqueteServicioCatalogo, PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
@@ -14,6 +13,7 @@ import { aMoneda } from '@/lib/moneda';
 import { cantidadEfectiva, type SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
+import { FechaPaquete } from './fecha-paquete';
 
 type Props = {
   lang: Locale;
@@ -83,18 +83,22 @@ export function GrupoServicio({
       )}
 
       {mostrarInicio && (
-        <div className="mb-4 max-w-sm">
-          <DateField
+        <div className="mb-4">
+          <FechaPaquete
             lang={lang}
             label={pedido.startLabel}
             value={inicio}
             onChange={onInicio}
             minDate={minDate}
-            prevMonthLabel={booking.prevMonth}
+            chooseLabel={pedido.chooseStart}
+            viewMonthLabel={pedido.viewMonth}
+            hideMonthLabel={pedido.hideMonth}
+            previousWeekLabel={pedido.previousWeek}
+            nextWeekLabel={pedido.nextWeek}
+            previousMonthLabel={booking.prevMonth}
             nextMonthLabel={booking.nextMonth}
             personas={estado.personas}
             fullLabel={checkout.dayFull}
-            sinCupo={true}
           />
           {noches !== null && salida && (
             <p className="mt-2 text-xs text-muted">
@@ -330,11 +334,14 @@ export function GrupoServicio({
           </button>
 
           {traslado.tipo === 'redondo_aeropuerto' && noches === null && inicio && (
-            <DateField lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
+            <FechaPaquete lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
               onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
-              minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)} prevMonthLabel={booking.prevMonth}
-              nextMonthLabel={booking.nextMonth} personas={estado.personas}
-              fullLabel={checkout.dayFull} sinCupo={true} />
+              minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)}
+              chooseLabel={pedido.chooseReturnDate}
+              viewMonthLabel={pedido.viewMonth} hideMonthLabel={pedido.hideMonth}
+              previousWeekLabel={pedido.previousWeek} nextWeekLabel={pedido.nextWeek}
+              previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}
+              personas={estado.personas} fullLabel={checkout.dayFull} />
           )}
         </div>
       )}
