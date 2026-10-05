@@ -153,8 +153,11 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   `suspendido` (solo título; sus respuestas viven en el estado del pedido) con
   `estadoVisible`. `useScrollAlFoco` lleva al cliente a la tarjeta con
   `data-tarjeta-foco` solo si no se ve, tras su acción y con `reducir
-  movimiento` instantáneo. En escritorio el stepper y el pie con el CTA de la
-  tarjeta activa son `sticky`. Lo usa `PedidoPaquete` (mismo para paquete de una
+  movimiento` instantáneo. En escritorio el stepper es `sticky` y el pie con el
+  CTA de la tarjeta activa (`PieDeTarjeta`) tiene dos estados en un solo
+  elemento: natural, o pegado al borde inferior solo si su sitio natural queda
+  bajo la pantalla, y entonces se ve como capa (translúcido, desenfoque,
+  sombra hacia arriba, título de la tarjeta a la izquierda). Lo usa `PedidoPaquete` (mismo para paquete de una
   empresa y cruza-empresa); `CheckoutView` lo adopta al migrar.
 - Pruebas desde `frontend/`: `npm.cmd test` ejecuta
   `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,

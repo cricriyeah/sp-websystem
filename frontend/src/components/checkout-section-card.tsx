@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { CaretDown, Check } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
+import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
 
 type CheckoutSectionCardProps = {
   title: string;
@@ -181,11 +182,7 @@ export function CheckoutSectionCard({
             className={enTransicion ? 'overflow-hidden' : 'overflow-visible'}
           >
             <div className={`mt-5 ${variant === 'flat' ? 'flex flex-col gap-5' : ''}`}>{children}</div>
-            {pie && (
-              // En escritorio el CTA se queda pegado al borde inferior de la pantalla
-              // mientras la tarjeta sea más alta que ella: siempre alcanzable.
-              <div className="mt-6 flex justify-end border-t border-border bg-background pt-5 lg:sticky lg:bottom-0 lg:z-10 lg:pb-4">{pie}</div>
-            )}
+            {pie && <PieDeTarjeta titulo={title}>{pie}</PieDeTarjeta>}
           </motion.div>
         )}
       </AnimatePresence>
