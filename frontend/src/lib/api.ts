@@ -391,6 +391,8 @@ export type TrasladosCatalogo = {
     permite_anticipo: boolean;
     porcentaje_anticipo: number;
     empresa_slug: string;
+    /** El backend lo manda dentro de `servicio` (tipo de cambio de la sede). */
+    tipo_cambio_usd: string;
     hora_apertura: string | null;
     hora_cierre: string | null;
     paso_hora_minutos: number;
@@ -402,7 +404,6 @@ export type TrasladosCatalogo = {
     personas_max: number | null;
     precio: string;
   }[];
-  tipo_cambio_usd: string;
   puntos_encuentro: PuntoEncuentro[];
   publishable_key: string;
 };

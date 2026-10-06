@@ -178,7 +178,7 @@ export function TrasladoView({
   useScrollAlFoco(`${actual}|${editando}|${phase === 'payment'}`);
 
   const [moneda, setMoneda] = useState<Moneda>('MXN');
-  const usdDisponible = Number(catalogo.tipo_cambio_usd) > 0;
+  const usdDisponible = Number(catalogo.servicio.tipo_cambio_usd) > 0;
 
   const permiteAnticipo = catalogo.servicio.permite_anticipo;
   const [formaPagoSeleccionada, setFormaPagoSeleccionada] = useState<'completo' | 'anticipo'>('completo');
@@ -268,8 +268,8 @@ export function TrasladoView({
 
   const precioBase = useMemo(() => {
     if (!tarifaAplicable) return null;
-    return aMoneda(tarifaAplicable.precio, moneda, catalogo.tipo_cambio_usd);
-  }, [tarifaAplicable, moneda, catalogo.tipo_cambio_usd]);
+    return aMoneda(tarifaAplicable.precio, moneda, catalogo.servicio.tipo_cambio_usd);
+  }, [tarifaAplicable, moneda, catalogo.servicio.tipo_cambio_usd]);
 
   const descuento = useMemo(() => {
     if (promoEstado === 'valido' && promoPorcentaje && precioBase !== null) {
@@ -561,7 +561,7 @@ export function TrasladoView({
   const getPrecioDesde = (tipo: TipoTraslado) => {
     const tarifasTipo = catalogo.tarifas.filter((t) => t.tipo_traslado === tipo);
     if (tarifasTipo.length === 0) return null;
-    const precios = tarifasTipo.map((t) => aMoneda(t.precio, moneda, catalogo.tipo_cambio_usd));
+    const precios = tarifasTipo.map((t) => aMoneda(t.precio, moneda, catalogo.servicio.tipo_cambio_usd));
     if (precios.some((p) => p === null)) return null;
     const min = Math.min(...precios as number[]);
     return currency.format(min);
