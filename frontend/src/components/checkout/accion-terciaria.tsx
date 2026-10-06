@@ -1,14 +1,15 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { CaretDown, PencilSimple } from '@phosphor-icons/react';
+import { CaretDown, CaretLeft } from '@phosphor-icons/react';
 
 /**
  * Acciones secundarias del checkout, sin subrayado en reposo.
  *
  * El subrayado le dice al ojo "esto lleva a otra página", y estas acciones
- * abren o cambian algo aquí mismo. Cada rol tiene su pista propia: el lápiz
- * edita, el caret que gira despliega. Quedan por debajo del CTA amarillo en
+ * abren o cambian algo aquí mismo. Cada rol tiene su pista propia: la flecha
+ * a la izquierda de un renglón lo abre (y al abrirse gira hacia abajo), el
+ * caret que gira despliega. Quedan por debajo del CTA amarillo en
  * contraste pero se reconocen como clicables por el icono, el cambio de color
  * al pasar el cursor y el subrayado que aparece al enfocar con teclado. El
  * subrayado se reserva para los enlaces dentro de una oración (deslinde,
@@ -22,8 +23,8 @@ import { CaretDown, PencilSimple } from '@phosphor-icons/react';
 export function EtiquetaModificar({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted transition-colors group-hover:text-foreground group-hover:underline group-hover:underline-offset-4 group-focus-visible:text-foreground group-focus-visible:underline group-focus-visible:underline-offset-4">
-      <PencilSimple size={13} />
       {children}
+      <CaretLeft size={13} weight="bold" />
     </span>
   );
 }

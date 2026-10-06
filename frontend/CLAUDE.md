@@ -137,7 +137,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   aparecen y desaparecen llevan su separación (`pt-5`) dentro del bloque y no
   en el `gap` del cuerpo, para que al desplegarse no brinque el hueco. Las
   acciones secundarias NO van subrayadas en reposo (`checkout/accion-terciaria`):
-  "Modificar" de un renglón es `EtiquetaModificar` (lápiz, el renglón entero es
+  "Modificar" de un renglón es `EtiquetaModificar` (flecha a la izquierda que gira hacia abajo al abrir, el renglón entero es
   el botón); "revelar más" (ver mes, código promocional) es `AccionTexto` con
   caret que gira; la otra dirección del hotel es la última opción de la lista y
   en modo manual `AccionTexto` vuelve a la lista. El subrayado queda para
@@ -147,7 +147,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   sin celdas pasadas que no se pueden tocar.
 - Respuestas ya dadas y foco: una tarjeta `completado` es un renglón de una
   línea ("título · resumen" + "Modificar" como enlace discreto) y varias
-  seguidas comparten borde (`ItemPaso` + `unidaConAnterior`, por posición: las
+  seguidas son tarjetas delgadas con 8 px entre sí (`ItemPaso` + `unidaConAnterior`, por posición: las
   tarjetas siguen montadas y su colapso sigue animándose). Un solo foco abierto:
   mientras el cliente reabre una respuesta, la tarjeta activa pasa a
   `suspendido` (solo título; sus respuestas viven en el estado del pedido) con

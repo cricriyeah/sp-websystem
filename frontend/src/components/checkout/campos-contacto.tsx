@@ -18,9 +18,9 @@ type Props = {
 };
 
 const CAMPOS: { campo: CampoContacto; tipo: string; icono: typeof Phone; ancho: string }[] = [
+  { campo: 'fullName', tipo: 'text', icono: User, ancho: 'sm:col-span-2' },
   { campo: 'phone', tipo: 'tel', icono: Phone, ancho: 'sm:col-span-1' },
-  { campo: 'fullName', tipo: 'text', icono: User, ancho: 'sm:col-span-1' },
-  { campo: 'email', tipo: 'email', icono: EnvelopeSimple, ancho: 'sm:col-span-2' },
+  { campo: 'email', tipo: 'email', icono: EnvelopeSimple, ancho: 'sm:col-span-1' },
 ];
 
 /** Los tres datos de contacto, iguales en servicio suelto y en paquete. */

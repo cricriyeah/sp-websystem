@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { CaretDown, Check } from '@phosphor-icons/react';
+import { CaretLeft, Check } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
 import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
@@ -117,14 +117,13 @@ export function CheckoutSectionCard({
       {actionLabel && onAction && !enRenglon && (
         <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
           {actionLabel}
-          {/* Apunta hacia donde lleva el click: abajo cuando abrir revela mas,
-              arriba cuando ya esta abierta y el click la cierra. La rotacion
-              es lo que hace obvio que es la MISMA flecha, no un icono
-              distinto por estado. */}
-          <CaretDown
+          {/* Misma flecha que la del renglón colapsado: a la izquierda cerrada,
+              hacia abajo abierta. La rotación es lo que hace obvio que es la
+              MISMA flecha, no un icono distinto por estado. */}
+          <CaretLeft
             size={12}
             weight="bold"
-            className={`transition-transform duration-300 ${abierto ? 'rotate-180' : ''}`}
+            className={`transition-transform duration-300 ${abierto ? '-rotate-90' : ''}`}
           />
         </span>
       )}
@@ -151,7 +150,7 @@ export function CheckoutSectionCard({
       // header fijo y el stepper.
       data-tarjeta-foco={abierto ? '' : undefined}
       className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] border lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS[variant]} ${
-        abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-3 sm:px-6' : 'p-5 sm:p-6'
+        abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-2 sm:px-6' : 'p-5 sm:p-6'
       }`}
     >
       {/* El encabezado es boton solo si de verdad hace algo. El paso 3 una
