@@ -41,6 +41,8 @@ type StripePanelProps = {
    * en otra columna (portal). `null` = todavía no se llegó al paso 4.
    */
   destinoTarjeta?: HTMLElement | null;
+  /** En móvil el resumen ya se pintó arriba del formulario de pago (`FranjaResumen`): aquí no se repite. */
+  resumenSoloEscritorio?: boolean;
   total: string;
   amountDueNow: string;
   moneda: Moneda;
@@ -224,10 +226,11 @@ export function FormularioPago({
 }
 
 export function StripePanel(props: StripePanelProps) {
-  const { checkout, lines, lineasViaje = [], total, amountDueNow, destinoTarjeta = null } = props;
+  const { checkout, lines, lineasViaje = [], total, amountDueNow, destinoTarjeta = null, resumenSoloEscritorio = false } = props;
 
   return (
     <>
+      <div className={resumenSoloEscritorio ? 'hidden lg:block' : undefined}>
       <CheckoutSectionCard title={checkout.orderSummaryHeadline} variant="elevated">
         {lineasViaje.length > 0 && (
           <dl className="mb-4 flex flex-col gap-2 border-b border-border pb-4">
@@ -261,6 +264,7 @@ export function StripePanel(props: StripePanelProps) {
           </div>
         )}
       </CheckoutSectionCard>
+      </div>
 
       {destinoTarjeta && createPortal(<TarjetaComoPagas {...props} />, destinoTarjeta)}
     </>

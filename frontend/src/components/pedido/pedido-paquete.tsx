@@ -547,7 +547,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
             waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
             lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={lineasViaje}
-            destinoTarjeta={destinoTarjetaPago}
+            destinoTarjeta={destinoTarjetaPago} resumenSoloEscritorio
             total={totalPago} amountDueNow={monto}
             moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
             formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}

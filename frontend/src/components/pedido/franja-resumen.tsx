@@ -18,7 +18,8 @@ type Props = {
 };
 
 /**
- * El plan de pagos para quien paga en móvil: va ANTES del formulario de
+ * El resumen de la reserva para quien paga en móvil (el mismo que la columna
+ * derecha de escritorio, que aquí no se repite), reducido al plan de pagos: va ANTES del formulario de
  * tarjeta, porque se verifica antes de dar datos de pago, no después. Una línea
  * por cobro, en el orden real: los cobros de un pedido cruza-empresa se hacen
  * uno tras otro en la misma sesión, así que el siguiente es "enseguida", no
@@ -34,13 +35,16 @@ export function FranjaResumen({ dict, total, pagos, saldo = null }: Props) {
   const actual = pagos.find((p) => p.estado === 'actual');
 
   return (
-    <section className="border border-border bg-background px-5 py-3 sm:px-6 lg:hidden">
-      <p className="text-sm font-medium text-foreground">
+    <section className="border border-border bg-background p-5 sm:p-6 lg:hidden">
+      <h2 className="font-sans text-sm font-medium tracking-tight text-foreground">
+        {dict.checkout.orderSummaryHeadline}
+      </h2>
+      <p className="mt-3 text-sm text-muted">
         {varios
           ? textos.stripTotal.replace('{total}', total).replace('{n}', String(pagos.length))
           : `${dict.checkout.total} ${total}`}
       </p>
-      <ol className="mt-2 flex flex-col gap-1.5 text-sm">
+      <ol className="mt-3 flex flex-col gap-2 border-t border-border pt-3 text-sm">
         {varios ? pagos.map((pago, i) => (
           <li
             key={`${pago.etiqueta}-${i}`}
