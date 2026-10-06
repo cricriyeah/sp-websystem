@@ -1413,7 +1413,7 @@ export function CheckoutView({
 
             {/* El cuarto paso. "Cómo pagas" se pinta aquí (portal del panel) al llegar al
                 paso 4; el formulario de tarjeta aparece debajo cuando se crea el pago. */}
-            {(actual === 'pago' || phase !== 'form') && <div className={phase === 'payment' ? '-mt-[calc(1.5rem+1px)]' : undefined} ref={setDestinoTarjetaPago} />}
+            {(actual === 'pago' || phase !== 'form') && <div className={phase === 'payment' ? '-mt-4' : undefined} ref={setDestinoTarjetaPago} />}
 
             {phase === 'payment' && pago && (
               <FormularioPago

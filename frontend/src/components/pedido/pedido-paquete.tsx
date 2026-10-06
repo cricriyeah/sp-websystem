@@ -517,7 +517,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             })}
 
             {/* "Cómo pagas" (ya con el pago creado, un renglón) se pinta aquí. */}
-            <div className="-mt-[calc(1.5rem+1px)]" ref={setDestinoTarjetaPago} />
+            <div className="-mt-4" ref={setDestinoTarjetaPago} />
 
             {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
                 respuestas ya dadas. En cruza-empresa se remonta por empresa

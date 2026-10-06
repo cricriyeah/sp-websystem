@@ -68,7 +68,7 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil }: Checkout
 
             return (
               <li key={label} className="flex flex-1 items-center last:flex-none">
-                <div className="flex items-center gap-2.5">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <span
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
                       completado
@@ -92,7 +92,7 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil }: Checkout
                 {numero < totalPasos && (
                   <span
                     aria-hidden
-                    className={`mx-4 h-px flex-1 transition-colors ${
+                    className={`mx-4 h-px min-w-6 flex-1 transition-colors ${
                       completado ? 'bg-accent' : 'bg-border'
                     }`}
                   />

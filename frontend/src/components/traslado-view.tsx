@@ -890,7 +890,7 @@ export function TrasladoView({
             {/* El último paso: "Cómo pagas" se pinta aquí (portal del panel) y, al crearse
                 el pago, el formulario de tarjeta aparece debajo. */}
             {(actual === 'pago' || phase !== 'form') && (
-              <div className={phase === 'payment' ? '-mt-[calc(1.5rem+1px)]' : undefined} ref={setDestinoTarjetaPago} />
+              <div className={phase === 'payment' ? '-mt-4' : undefined} ref={setDestinoTarjetaPago} />
             )}
 
             {phase === 'payment' && pago && (
