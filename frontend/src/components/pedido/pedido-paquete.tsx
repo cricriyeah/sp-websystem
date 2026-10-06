@@ -44,6 +44,7 @@ import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
 import { AvisoFallo } from './aviso-fallo';
 import { EncabezadoPago } from './encabezado-pago';
+import { FranjaResumen } from './franja-resumen';
 import { FechaPaquete } from './fecha-paquete';
 import { GrupoServicio } from './grupo-servicio';
 import { usePagoPedido } from './use-pago-pedido';
@@ -452,6 +453,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       monto: formatearPrecio(Number(item.monto), estado.moneda),
       estado: (indice < pago.indice ? 'hecho' : indice === pago.indice ? 'actual' : 'pendiente') as 'hecho' | 'actual' | 'pendiente',
     }));
+    // Lo que queda por cobrar después de este pago: los pagos que faltan y, con
+    // anticipo, el saldo de la empresa actual.
+    const faltaPorCobrar = pago.pagos.slice(pago.indice + 1).reduce((suma, p) => suma + Number(p.monto), 0)
+      + Math.max(0, Number(pasoPago.precioTotal ?? pasoPago.monto) - Number(pasoPago.monto));
     const etiquetaBotonPago = n === 1
       ? paquete.precio_depende_de_personas
         ? (personasPaquete === 1 ? textos.payOne : textos.payPeople.replace('{n}', String(personasPaquete)))
@@ -517,6 +522,16 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
                 respuestas ya dadas. En cruza-empresa se remonta por empresa
                 (cada una cobra con su propia clave y secreto). */}
+            <FranjaResumen
+              dict={dict}
+              total={total}
+              hoy={monto}
+              despues={faltaPorCobrar > 0 ? formatearPrecio(faltaPorCobrar, estado.moneda) : null}
+              lineasViaje={lineasViaje}
+              cargos={n === 1
+                ? [{ etiqueta, valor: totalPago }]
+                : pasosPago.map((paso) => ({ etiqueta: paso.etiqueta, valor: paso.monto }))}
+            />
             <FormularioPago
               key={pasoPago.empresaSlug}
               checkout={checkout}
