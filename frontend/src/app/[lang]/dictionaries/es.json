@@ -401,6 +401,7 @@
       "contact": "Datos",
       "extras": "Personalizar",
       "payment": "Pago",
+      "paymentNumbered": "Pago {n} · {empresa}",
       "stepOf": "Paso {current} de {total}"
     },
     "contactHeadline": "Tus datos de contacto",

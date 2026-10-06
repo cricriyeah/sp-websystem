@@ -369,6 +369,23 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     if (!llegoAlPago) setEditando('viaje'); // p. ej. ya no hay cupo: se abre la fecha para cambiarla
   };
 
+  // Cruza-empresa: cada cobro es un paso del stepper y su cifra es la de ese
+  // cobro (no el total del pedido), para que coincida con el botón de pagar.
+  // Con un solo cobro el stepper queda de 4 pasos, como siempre.
+  const stepperPagos = (indicePago: number, monto?: number) => {
+    if (cantidadCargos <= 1) return null;
+    const dato = monto ?? cargos[indicePago]?.monto;
+    return {
+      steps: [
+        checkout.stepper.trip, checkout.stepper.contact, checkout.stepper.extras,
+        ...cargos.map((cargo, i) => checkout.stepper.paymentNumbered
+          .replace('{n}', String(i + 1)).replace('{empresa}', nombreEmpresa(cargo.empresaSlug))),
+      ],
+      actual: 4 + indicePago,
+      totalMovil: dato !== undefined ? `${formatearPrecio(dato, estado.moneda)} ${estado.moneda}` : undefined,
+    };
+  };
+
   if (pago.fase === 'fallo') {
     const textosFallo = textos.fail;
     const detalle = pago.fallo;
@@ -395,7 +412,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <div className="min-h-dvh bg-surface">
         <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
         <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
-        <CheckoutStepper stepper={checkout.stepper} actual={4} totalMovil={totalMovil} />
+        <CheckoutStepper stepper={checkout.stepper} {...(stepperPagos(pago.fallo?.indice ?? 0) ?? { actual: 4, totalMovil })} />
         <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
           <AvisoFallo
             titulo={titulo}
@@ -457,7 +474,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             detalle={detalleCompra}
           />
         }
-        stepper={{ actual: 4, totalMovil }}
+        stepper={stepperPagos(pago.indice, Number(pasoPago.monto)) ?? { actual: 4, totalMovil }}
         pasos={
           <>
             <ItemPaso>
@@ -574,7 +591,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             detalle={detalleCompra}
           />
         }
-        stepper={{ actual: numeroDePaso(actual), totalMovil }}
+        stepper={(actual === 'pago' ? stepperPagos(0) : null) ?? {
+          actual: numeroDePaso(actual), totalMovil,
+          steps: cantidadCargos > 1 ? stepperPagos(0)?.steps : undefined,
+        }}
         pasos={
           <>
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>

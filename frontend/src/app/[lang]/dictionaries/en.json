@@ -401,6 +401,7 @@
       "contact": "Details",
       "extras": "Customize",
       "payment": "Payment",
+      "paymentNumbered": "Payment {n} · {empresa}",
       "stepOf": "Step {current} of {total}"
     },
     "contactHeadline": "Your contact details",
