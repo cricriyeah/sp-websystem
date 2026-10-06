@@ -525,12 +525,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             <FranjaResumen
               dict={dict}
               total={total}
-              hoy={monto}
-              despues={faltaPorCobrar > 0 ? formatearPrecio(faltaPorCobrar, estado.moneda) : null}
-              lineasViaje={lineasViaje}
-              cargos={n === 1
-                ? [{ etiqueta, valor: totalPago }]
-                : pasosPago.map((paso) => ({ etiqueta: paso.etiqueta, valor: paso.monto }))}
+              pagos={pasosPago}
+              saldo={pasosPago.length === 1 && faltaPorCobrar > 0 ? formatearPrecio(faltaPorCobrar, estado.moneda) : null}
             />
             <FormularioPago
               key={pasoPago.empresaSlug}
@@ -538,7 +534,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               feedback={feedback}
               ayudaMensaje={ayudaMensaje}
               pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
-              encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} />}
+              encabezadoPago={<div className="hidden lg:block"><EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} /></div>}
               etiquetaBotonPago={etiquetaBotonPago}
               onPagoConfirmado={pago.onPagoConfirmado}
               onPagoRechazado={pago.onPagoRechazado}

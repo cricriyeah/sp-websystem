@@ -1,88 +1,75 @@
-'use client';
-
-import { useState } from 'react';
-import { CaretLeft } from '@phosphor-icons/react';
+import { Check } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
-import { Despliegue } from '@/components/checkout/despliegue';
 
-type Linea = { etiqueta: string; valor: string };
+type Pago = {
+  etiqueta: string;
+  monto: string;
+  estado: 'hecho' | 'actual' | 'pendiente';
+};
 
 type Props = {
   dict: Dictionary;
   /** Total del pedido completo. */
   total: string;
-  /** Lo que se cobra en este pago (el que dice el botón). */
-  hoy: string;
-  /** Lo que queda por cobrar después de este pago; null si no hay más. */
-  despues: string | null;
-  /** Fecha, personas, etc. */
-  lineasViaje: Linea[];
-  /** Un renglón por empresa/cobro. */
-  cargos: Linea[];
+  /** Los cobros en el orden en que se hacen. */
+  pagos: Pago[];
+  /** Con un solo cobro y anticipo: lo que queda por pagar después. */
+  saldo?: string | null;
 };
 
 /**
- * El resumen del pedido para quien paga en móvil: va ANTES del formulario de
- * tarjeta, porque se verifica antes de dar datos de pago, no después. Fija el
- * punto de referencia (total, lo de hoy, lo de después) en una línea y deja el
- * detalle a un toque. En escritorio el resumen vive en la columna derecha y
- * esta franja no se pinta.
+ * El plan de pagos para quien paga en móvil: va ANTES del formulario de
+ * tarjeta, porque se verifica antes de dar datos de pago, no después. Una línea
+ * por cobro, en el orden real: los cobros de un pedido cruza-empresa se hacen
+ * uno tras otro en la misma sesión, así que el siguiente es "enseguida", no
+ * "después". Fecha, personas y demás ya están en los renglones de arriba: aquí
+ * no se repiten. En escritorio el resumen vive en la columna derecha.
  */
-export function FranjaResumen({ dict, total, hoy, despues, lineasViaje, cargos }: Props) {
-  const [abierto, setAbierto] = useState(false);
+export function FranjaResumen({ dict, total, pagos, saldo = null }: Props) {
   const textos = dict.pedido;
+  const varios = pagos.length > 1;
+  // Un solo cobro sin saldo: el total ya está en el stepper y en el botón.
+  if (!varios && !saldo) return null;
+
+  const actual = pagos.find((p) => p.estado === 'actual');
 
   return (
     <section className="border border-border bg-background px-5 py-3 sm:px-6 lg:hidden">
-      <dl className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-        <div className="flex items-baseline gap-2">
-          <dt className="text-muted">{dict.checkout.total}</dt>
-          <dd className="font-medium text-foreground">{total}</dd>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <dt className="text-muted">{textos.stripToday}</dt>
-          <dd className="text-base font-semibold text-foreground">{hoy}</dd>
-        </div>
-        {despues && (
-          <div className="flex items-baseline gap-2">
-            <dt className="text-muted">{textos.stripLater}</dt>
-            <dd className="text-foreground">{despues}</dd>
-          </div>
+      <p className="text-sm font-medium text-foreground">
+        {varios
+          ? textos.stripTotal.replace('{total}', total).replace('{n}', String(pagos.length))
+          : `${dict.checkout.total} ${total}`}
+      </p>
+      <ol className="mt-2 flex flex-col gap-1.5 text-sm">
+        {varios ? pagos.map((pago, i) => (
+          <li
+            key={`${pago.etiqueta}-${i}`}
+            className={`flex items-baseline justify-between gap-3 ${
+              pago.estado === 'actual' ? 'font-medium text-foreground' : 'text-muted'
+            }`}
+          >
+            <span className="flex min-w-0 items-baseline gap-2">
+              {pago.estado === 'hecho'
+                ? <Check size={12} weight="bold" className="shrink-0 self-center text-exito" />
+                : <span className="shrink-0">{i + 1}</span>}
+              <span className="truncate">{pago.etiqueta}</span>
+              {pago.estado === 'actual' && <span className="shrink-0 text-xs font-normal text-accent">{textos.stripNow}</span>}
+              {pago.estado === 'pendiente' && <span className="shrink-0 text-xs">{textos.stripNext}</span>}
+              {pago.estado === 'hecho' && <span className="shrink-0 text-xs">{textos.authorized}</span>}
+            </span>
+            <span className="shrink-0">{pago.monto}</span>
+          </li>
+        )) : (
+          <>
+            <li className="flex items-baseline justify-between gap-3 font-medium text-foreground">
+              <span>{textos.stripDeposit}</span><span>{actual?.monto}</span>
+            </li>
+            <li className="flex items-baseline justify-between gap-3 text-muted">
+              <span>{textos.stripBalance}</span><span>{saldo}</span>
+            </li>
+          </>
         )}
-      </dl>
-
-      <button
-        type="button"
-        onClick={() => setAbierto((a) => !a)}
-        aria-expanded={abierto}
-        className="mt-2 inline-flex min-h-8 items-center gap-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground focus-visible:underline focus-visible:underline-offset-4"
-      >
-        {abierto ? textos.stripHide : textos.stripShow}
-        <CaretLeft size={12} weight="bold" className={`transition-transform duration-300 ${abierto ? '-rotate-90' : ''}`} />
-      </button>
-
-      <Despliegue abierto={abierto}>
-        <div className="flex flex-col gap-3 pt-3 text-sm">
-          {lineasViaje.length > 0 && (
-            <dl className="flex flex-col gap-2 border-b border-border pb-3">
-              {lineasViaje.map((linea) => (
-                <div key={linea.etiqueta} className="flex items-baseline justify-between gap-4">
-                  <dt className="text-muted">{linea.etiqueta}</dt>
-                  <dd className="text-right text-foreground first-letter:uppercase">{linea.valor}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-          <dl className="flex flex-col gap-2">
-            {cargos.map((cargo) => (
-              <div key={cargo.etiqueta} className="flex items-baseline justify-between gap-4">
-                <dt className="text-muted">{cargo.etiqueta}</dt>
-                <dd className="text-foreground">{cargo.valor}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </Despliegue>
+      </ol>
     </section>
   );
 }
