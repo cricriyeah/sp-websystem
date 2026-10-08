@@ -1,0 +1,102 @@
+# Entorno de QA en Render, separado de produccion (`render.yaml`).
+#
+# Existe para que alguien pruebe reservas y backoffice sobre una copia estable
+# (rama `qa/checkout-unificado`) mientras el frontend se rediseña en otra rama.
+# Todo lleva el prefijo `pescadeportiva-qa-` y su propio grupo de variables y
+# su propia base de datos: NADA apunta a produccion. Ver docs/deploy/QA.md para
+# el orden de los pasos y las variables que se capturan a mano.
+#
+# Para aplicarlo: Render Dashboard > Blueprints > New Blueprint Instance,
+# apuntando a este repo, rama `qa/checkout-unificado` y archivo `render.qa.yaml`.
+# Los secretos (`sync: false`) se capturan en el dashboard la primera vez; este
+# archivo nunca debe contener una llave ni la contraseña de la base.
+
+services:
+  - type: web
+    name: pescadeportiva-qa-api
+    runtime: python
+    plan: starter
+    region: oregon
+    branch: qa/checkout-unificado
+    rootDir: backend
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate
+    startCommand: gunicorn config.wsgi:application --workers 3 --timeout 60
+    healthCheckPath: /healthz
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      - key: TRUSTED_PROXY_COUNT
+        value: "1"
+      # En QA no hay prisa por fijar HSTS: 1 hora y no mas.
+      - key: SECURE_HSTS_SECONDS
+        value: "3600"
+      # URL del frontend de QA en Vercel (puede ser mas de una, separadas por coma).
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      # Las llaves de Stripe NO van aqui: son por empresa y viven en la base
+      # (Empresa.stripe_*, se capturan en el admin). En QA, solo llaves de PRUEBA.
+      - fromGroup: pescadeportiva-qa-secrets
+
+  # Misma red de seguridad que produccion, porque la pantalla de pago de una
+  # orden cruza-empresa depende de ella (las retenciones vencen a las 24 h).
+  - type: cron
+    name: pescadeportiva-qa-conciliar-pagos
+    runtime: python
+    plan: starter
+    region: oregon
+    branch: qa/checkout-unificado
+    rootDir: backend
+    schedule: "0 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py conciliar_pagos --dias 7
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      - fromGroup: pescadeportiva-qa-secrets
+
+envVarGroups:
+  - name: pescadeportiva-qa-secrets
+    envVars:
+      # Una llave nueva y distinta de la de produccion.
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      # Una base Postgres NUEVA, solo para QA.
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      # El dominio de `pescadeportiva-qa-api` en Render.
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      # En QA conviene dejar vacias las de correo y WhatsApp para no escribirle a
+      # clientes reales desde datos de prueba. Sin ellas el backend funciona igual.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: RESEND_BCC
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      # Sin ella el gate anti-bot queda apagado: es lo que se quiere en QA.
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
