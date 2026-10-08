@@ -62,7 +62,7 @@ Todas están declaradas en `render.qa.yaml` con `sync: false`.
   `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DJANGO_ALLOWED_HOSTS` (dominio de
   Render), `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`. Las llaves de Stripe no son
   variables: van por empresa en el admin.
-- **Dejar vacías en QA:** `RESEND_*`, `WHATSAPP_*`, `TURNSTILE_SECRET_KEY`,
+- **No se declaran en QA:** `RESEND_*`, `WHATSAPP_*`, `TURNSTILE_SECRET_KEY`,
   `SENTRY_DSN`. Sin ellas el backend funciona igual y no le escribe a clientes
   reales desde datos de prueba.
 

@@ -83,20 +83,7 @@ envVarGroups:
       # El dominio de `pescadeportiva-qa-api` en Render.
       - key: DJANGO_ALLOWED_HOSTS
         sync: false
-      # En QA conviene dejar vacias las de correo y WhatsApp para no escribirle a
-      # clientes reales desde datos de prueba. Sin ellas el backend funciona igual.
-      - key: RESEND_API_KEY
-        sync: false
-      - key: RESEND_FROM
-        sync: false
-      - key: RESEND_BCC
-        sync: false
-      - key: WHATSAPP_TOKEN
-        sync: false
-      - key: WHATSAPP_PHONE_NUMBER_ID
-        sync: false
-      - key: SENTRY_DSN
-        sync: false
-      # Sin ella el gate anti-bot queda apagado: es lo que se quiere en QA.
-      - key: TURNSTILE_SECRET_KEY
-        sync: false
+      # Correo (RESEND_*), WhatsApp (WHATSAPP_*), alertas (SENTRY_DSN) y el gate
+      # anti-bot (TURNSTILE_SECRET_KEY) NO se declaran en QA a proposito: sin ellas
+      # el backend funciona igual y no le escribe a clientes reales desde datos de
+      # prueba. Si algun dia se quiere probar una, se agrega como variable del grupo.
