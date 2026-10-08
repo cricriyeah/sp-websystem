@@ -48,9 +48,16 @@ def aplicar_funcion(apps, schema_editor):
     with schema_editor.connection.cursor() as cursor:
         cursor.execute(SQL_FUNCION)
         cursor.execute("REVOKE ALL ON FUNCTION estado_reservas_de_orden(bigint) FROM PUBLIC;")
+        # El USER configurado puede no ser el nombre real del rol: detras del pooler de
+        # Supabase lleva el sufijo del proyecto ("app_pesca.<ref>") y GRANT a ese nombre
+        # falla con "role does not exist". Se prueba tal cual y sin el sufijo, y solo se
+        # otorga a los que existan; CURRENT_USER (abajo) cubre al rol que migra.
         user = schema_editor.connection.settings_dict.get('USER')
         if user:
-            cursor.execute(f'GRANT EXECUTE ON FUNCTION estado_reservas_de_orden(bigint) TO "{user}";')
+            for rol in dict.fromkeys([user, user.split('.')[0]]):
+                cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", [rol])
+                if cursor.fetchone():
+                    cursor.execute(f'GRANT EXECUTE ON FUNCTION estado_reservas_de_orden(bigint) TO "{rol}";')
         cursor.execute("GRANT EXECUTE ON FUNCTION estado_reservas_de_orden(bigint) TO CURRENT_USER;")
 
 
