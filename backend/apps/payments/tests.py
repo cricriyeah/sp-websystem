@@ -37,6 +37,7 @@ from apps.testing import crear_personalizacion_pesca, ApiTestCase, EmpresaTestCa
 
 
 from .checks import revisar_llaves_de_stripe
+from .ordenes import ORDEN_TIMEOUT_AUTORIZACION
 from .services import (
     APLICADO,
     SIN_CUPO_REEMBOLSADO,
@@ -3518,9 +3519,12 @@ class OrdenesApiTest(TestCase):
         self.assertEqual(pago_trans['monto'], '2000.00')
         self.assertEqual(pago_trans['client_secret'], 'sec_2')
 
+        # La hora límite que se le muestra al cliente es la misma que hace valer conciliar_pagos.
         with scope.con_empresa(self.empresa_1):
             self.orden.refresh_from_db()
             self.assertEqual(self.orden.estado, Orden.Estado.AUTORIZANDO)
+            esperado = (self.orden.actualizado_en + ORDEN_TIMEOUT_AUTORIZACION).isoformat()
+        self.assertEqual({p['vence_en'] for p in pagos}, {esperado})
 
     @mock.patch('apps.payments.ordenes.configurar_stripe')
     def test_confirmar_captura_flujo_exitoso(self, mock_configurar_stripe):
@@ -3606,12 +3610,18 @@ class OrdenesApiTest(TestCase):
         cliente_1.payment_intents.retrieve.return_value = intent_1
         cliente_2.payment_intents.retrieve.return_value = intent_2
 
+        with scope.con_empresa(self.empresa_1):
+            self.orden.refresh_from_db()
+
         # Vía ID
         url_id = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/'
         res = self.client.get(url_id)
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertEqual(data['id'], self.orden.id)
+        self.assertEqual(
+            data['vence_en'], (self.orden.actualizado_en + ORDEN_TIMEOUT_AUTORIZACION).isoformat(),
+        )
         self.assertEqual(len(data['reservas']), 2)
         r1 = next(r for r in data['reservas'] if r['empresa_slug'] == self.empresa_1.slug)
         self.assertEqual(r1['pago']['estado_pi'], 'requires_capture')

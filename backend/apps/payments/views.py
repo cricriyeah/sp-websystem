@@ -768,6 +768,15 @@ class CrearOrdenView(APIView):
         return GetOrdenView().get(request, sede_slug=sede_slug)
 
 
+def _vence_de_orden(orden):
+    """Hora en que `conciliar_pagos` libera una orden que no completó sus retenciones.
+
+    Es la misma cuenta del timeout de conciliación (`actualizado_en` + 24 h), para que
+    el aviso al cliente no prometa una hora distinta a la que el sistema hace valer.
+    """
+    return (orden.actualizado_en + ORDEN_TIMEOUT_AUTORIZACION).isoformat()
+
+
 class CrearPagoOrdenView(APIView):
     """Resuelve el reparto del paquete de la orden y crea (o reutiliza) los N
     PaymentIntents con captura manual en Stripe, uno por empresa.
@@ -869,7 +878,8 @@ class CrearPagoOrdenView(APIView):
                 orden.transicionar(Orden.Estado.AUTORIZANDO)
                 orden.save(update_fields=['estado'])
 
-        return Response(pagos, status=200)
+        vence_en = _vence_de_orden(orden)
+        return Response([{**pago, 'vence_en': vence_en} for pago in pagos], status=200)
 
 
 class ConfirmarCapturaOrdenView(APIView):
@@ -1003,6 +1013,7 @@ class GetOrdenView(APIView):
             'id': orden.id,
             'checkout_id': str(orden.checkout_id) if orden.checkout_id else None,
             'estado': orden.estado,
+            'vence_en': _vence_de_orden(orden),
             'reservas': reservas_info,
         }, status=200)
 
@@ -1080,7 +1091,7 @@ def _resumen_de_orden(orden, *, status_override=None):
     situacion = situacion_de_orden(estado_orden=orden.estado, pagos=pagos)
     vence_en = None
     if situacion in (Situacion.RETENIDO_PARCIAL, Situacion.PAGO_EN_PROCESO):
-        vence_en = (orden.actualizado_en + ORDEN_TIMEOUT_AUTORIZACION).isoformat()
+        vence_en = _vence_de_orden(orden)
     with scope.con_empresa(orden.empresa_lider):
         producto = _nombre_producto(orden.paquete, None)
     return Response({

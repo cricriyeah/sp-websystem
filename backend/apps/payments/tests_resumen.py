@@ -183,8 +183,11 @@ class ResumenOrdenTest(TestCase):
         self._intent(self.cliente_2, 'pi_detalle_2', 'requires_payment_method', 300000)
         r = self.client.get(f'/api/{self.sede.slug}/ordenes/{self.orden.pk}/')
         self.assertEqual(r.status_code, 200)
+        with scope.con_empresa(self.empresa_1):
+            self.orden.refresh_from_db()
         self.assertEqual(r.json(), {
             'id': self.orden.id, 'checkout_id': str(self.checkout_id), 'estado': Orden.Estado.ARMANDO,
+            'vence_en': (self.orden.actualizado_en + ORDEN_TIMEOUT_AUTORIZACION).isoformat(),
             'reservas': [
                 {'reserva_id': self.reserva_1.id, 'empresa_slug': self.empresa_1.slug,
                  'servicio': self.servicio_1.slug,
