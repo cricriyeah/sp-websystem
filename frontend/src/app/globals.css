@@ -79,7 +79,7 @@
 
 @media (min-width: 64rem) {
   :root {
-    --nav-alto: calc(104px + var(--banda-alto)); /* lg:top-4 (16) + lg:h-[88px] en escritorio + banda */
+    --nav-alto: calc(96px + var(--banda-alto)); /* lg:top-4 (16) + lg:h-20 (80) en escritorio + banda: debe coincidir con site-header.tsx, un hueco aqui deja ver el contenido bajo el stepper */
   }
 }
 

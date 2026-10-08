@@ -77,13 +77,13 @@ export function CheckoutSectionCard({
             "esto ya quedo" que le queda a la tarjeta abierta para editar, y
             la que reemplaza el circulo numerado que traia antes. */}
         {confirmado && (
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-exito-fondo text-exito">
+          <span className="marca-paso flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-exito-fondo text-exito">
             <Check size={13} weight="bold" />
           </span>
         )}
         {enRenglon ? (
           <span className="flex min-w-0 items-center gap-x-2 text-sm">
-            <span className="min-w-0 truncate font-sans font-medium tracking-tight text-foreground">{title}</span>
+            <span className="max-w-full shrink-0 truncate font-sans font-medium tracking-tight text-foreground">{title}</span>
             {etiqueta && (
               // En pantallas angostas el renglón no tiene sitio para la empresa
               // sin pisar "Modificar": se ve completa al abrir la tarjeta.

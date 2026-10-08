@@ -13,6 +13,7 @@ import { CamposContacto } from '@/components/checkout/campos-contacto';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
+import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
@@ -1071,6 +1072,15 @@ export function CheckoutView({
   // antes si ya se mandó el formulario (en escritorio el panel siempre está a la vista).
   const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? 4 : numeroDePaso(actual);
   const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
+  // Con anticipo, la cifra del paso de pago es lo que se cobra hoy, no el total.
+  const stepperPago = phase === 'payment' && pago && Number(pago.monto_a_cobrar) < Number(pago.precio_total)
+    ? {
+        actual: pasoActualStepper,
+        totalMovil: `${currency.format(Number(pago.monto_a_cobrar))} ${moneda}`,
+        rotulo: checkout.stepper.payNow,
+        totalGeneral: `${currency.format(Number(pago.precio_total))} ${moneda}`,
+      }
+    : { actual: pasoActualStepper, totalMovil };
 
   const lineasViaje = [
     { etiqueta: checkout.summary.date, valor: formatDay(dayDate, lang) },
@@ -1256,16 +1266,25 @@ export function CheckoutView({
           </div>
         </div>
         ) : undefined}
-        stepper={{ actual: pasoActualStepper, totalMovil }}
+        stepper={stepperPago}
         pasos={
           <>
+            <ReservaPlegable
+              activo={phase === 'payment'}
+              titulo={dict.pedido.yourBooking}
+              etiquetaEstado={dict.pedido.bookingSaved}
+              resumen={resumenPaso1}
+              notaBloqueada={dict.pedido.lockedNote}
+              ctaAyuda={dict.pedido.lockedCta}
+              mensajeAyuda={ayudaMensaje}
+            >
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
               <CheckoutSectionCard
                 title={checkout.tripHeadline}
                 estado={estadoViaje}
                 resumen={resumenPaso1}
-                actionLabel={etiquetaAccion(crudoViaje)}
-                onAction={crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
+                actionLabel={locked ? undefined : etiquetaAccion(crudoViaje)}
+                onAction={locked || crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
                 pie={crudoViaje === 'activo' && !locked
                   ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso>
                   : undefined}
@@ -1347,8 +1366,8 @@ export function CheckoutView({
                   title={checkout.contactHeadline}
                   estado={estadoContacto}
                   resumen={resumenPaso2}
-                  actionLabel={etiquetaAccion(crudoContacto)}
-                  onAction={crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
+                  actionLabel={locked ? undefined : etiquetaAccion(crudoContacto)}
+                  onAction={locked || crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
                   pie={crudoContacto === 'activo' && !locked
                     ? <BotonPaso onClick={confirmarContacto}>{checkout.confirmStep}</BotonPaso>
                     : undefined}
@@ -1410,13 +1429,15 @@ export function CheckoutView({
                 </CheckoutSectionCard>
               </ItemPaso>
             )}
+            </ReservaPlegable>
 
             {/* El cuarto paso. "Cómo pagas" se pinta aquí (portal del panel) al llegar al
                 paso 4; el formulario de tarjeta aparece debajo cuando se crea el pago. */}
-            {(actual === 'pago' || phase !== 'form') && <div className={phase === 'payment' ? '-mt-4' : undefined} ref={setDestinoTarjetaPago} />}
+            {(actual === 'pago' || phase !== 'form') && <div ref={setDestinoTarjetaPago} />}
 
             {phase === 'payment' && pago && (
               <FormularioPago
+                lang={lang}
                 checkout={checkout}
                 feedback={dict.feedback}
                 ayudaMensaje={ayudaMensaje}

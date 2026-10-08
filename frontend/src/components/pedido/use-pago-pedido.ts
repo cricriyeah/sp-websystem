@@ -14,6 +14,8 @@ export type PasoPago = {
   precioTotal?: string;
   clientSecret: string;
   publishableKey: string;
+  /** Solo las órdenes de varias empresas vencen: la hora en que se libera si no se completan los pagos. */
+  venceEn?: string | null;
 };
 /** Qué pasó en el último fallo: la empresa (si se sabe), el código del banco y en qué pago ocurrió. */
 export type FalloPago = { empresaSlug: string | null; codigo: string; indice: number | null };
@@ -167,6 +169,7 @@ export function usePagoPedido(config: Config) {
               monto: r.pago.monto ?? '0',
               clientSecret: r.pago.client_secret ?? '',
               publishableKey: r.pago.publishable_key,
+              venceEn: detalle.vence_en,
             })),
           );
           const pendiente = detalle.reservas.findIndex(
@@ -273,6 +276,7 @@ export function usePagoPedido(config: Config) {
         const respuesta = await crearPagoOrden(c.sedeSlug, creada.orden_id);
         setPagos(respuesta.map((p) => ({
           empresaSlug: p.empresa_slug, monto: p.monto, clientSecret: p.client_secret, publishableKey: p.publishable_key,
+          venceEn: p.vence_en,
         })));
       } else {
         const reserva = await guardarReserva(

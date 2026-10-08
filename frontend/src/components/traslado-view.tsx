@@ -18,6 +18,7 @@ import { Despliegue } from '@/components/checkout/despliegue';
 import { CAJA_CAMPO } from '@/components/checkout/estilos';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
+import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
@@ -588,6 +589,15 @@ export function TrasladoView({
   const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? 4 : numeroDePaso(actual);
   const stepsList = [checkout.stepper.trip, checkout.stepper.contact, traslados.stepPickup, checkout.stepper.payment];
   const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
+  // Con anticipo, la cifra del paso de pago es lo que se cobra hoy, no el total.
+  const stepperPago = phase === 'payment' && pago && Number(pago.monto_a_cobrar) < Number(pago.precio_total)
+    ? {
+        actual: pasoActualStepper,
+        totalMovil: `${currency.format(Number(pago.monto_a_cobrar))} ${moneda}`,
+        rotulo: checkout.stepper.payNow,
+        totalGeneral: `${currency.format(Number(pago.precio_total))} ${moneda}`,
+      }
+    : { actual: pasoActualStepper, totalMovil };
 
   const recogidaElegida = actual === 'pago' || phase !== 'form';
   const lineasViaje = [
@@ -620,9 +630,18 @@ export function TrasladoView({
             detalle={traslados.subtitle}
           />
         }
-        stepper={{ actual: pasoActualStepper, steps: stepsList, totalMovil }}
+        stepper={{ ...stepperPago, steps: stepsList }}
         pasos={
           <>
+            <ReservaPlegable
+              activo={phase === 'payment'}
+              titulo={dict.pedido.yourBooking}
+              etiquetaEstado={dict.pedido.bookingSaved}
+              resumen={resumenViaje}
+              notaBloqueada={dict.pedido.lockedNote}
+              ctaAyuda={dict.pedido.lockedCta}
+              mensajeAyuda={ayudaMensaje}
+            >
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
               <CheckoutSectionCard
                 title={checkout.tripHeadline}
@@ -886,16 +905,18 @@ export function TrasladoView({
                 </CheckoutSectionCard>
               </ItemPaso>
             )}
+            </ReservaPlegable>
 
             {/* El último paso: "Cómo pagas" se pinta aquí (portal del panel) y, al crearse
                 el pago, el formulario de tarjeta aparece debajo. */}
             {(actual === 'pago' || phase !== 'form') && (
-              <div className={phase === 'payment' ? '-mt-4' : undefined} ref={setDestinoTarjetaPago} />
+              <div ref={setDestinoTarjetaPago} />
             )}
 
             {phase === 'payment' && pago && (
               <FormularioPago
-              checkout={checkout}
+                lang={lang}
+                checkout={checkout}
               feedback={feedback}
               ayudaMensaje={ayudaMensaje}
               pago={pago}

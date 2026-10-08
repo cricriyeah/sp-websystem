@@ -28,6 +28,12 @@ type SiteHeaderProps = {
   sedeSlugActual?: string;
   /** Clases extra del `<header>`. Existe para el `print:hidden` del recibo. */
   className?: string;
+  /**
+   * Header de checkout: logo, idioma y WhatsApp, sin enlaces a la sede ni
+   * selector de destino. Con dinero en juego cada salida extra es atención que
+   * se fuga, y cambiar de destino a media compra puede tirar el pedido.
+   */
+  minimo?: boolean;
 };
 
 export function SiteHeader({
@@ -37,6 +43,7 @@ export function SiteHeader({
   variante = 'sede',
   sedeSlugActual,
   className = '',
+  minimo = false,
 }: SiteHeaderProps) {
   const pathname = usePathname();
   // La banda va en todo el sitio (hub y sedes), salvo dentro del checkout, donde el propio
@@ -85,7 +92,7 @@ export function SiteHeader({
 
   const anclaBase = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 
-  const links = anclaBase ? [
+  const links = minimo ? [] : anclaBase ? [
     { href: anclaBase + '#nosotros', label: nav.nosotros },
     { href: anclaBase + '#experiencias', label: nav.experiencias },
     { href: anclaBase + '#servicios', label: nav.servicios },
@@ -141,23 +148,31 @@ export function SiteHeader({
               {links[0].label}
             </Link>
           )}
-          <SedeSelector
-            lang={lang}
-            sedes={sedesDisponibles}
-            sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
-            placeholder={variante === 'hub' ? nav.eligeSede : undefined}
-            label={nav.sedeLabel}
-            variant="header"
-            className="hidden sm:inline-block"
-          />
-          <div className="hidden 2xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
+          {minimo ? (
+            // El idioma en escritorio ya lo da el selector fijo del layout (abajo a la izquierda):
+            // repetirlo aquí lo duplicaba. En móvil sigue en el menú.
+            <WhatsappContact nav={nav} tone="plain" />
+          ) : (
+            <>
+              <SedeSelector
+                lang={lang}
+                sedes={sedesDisponibles}
+                sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
+                placeholder={variante === 'hub' ? nav.eligeSede : undefined}
+                label={nav.sedeLabel}
+                variant="header"
+                className="hidden sm:inline-block"
+              />
+              <div className="hidden 2xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
+            </>
+          )}
 
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? nav.closeMenu : nav.openMenu}
             aria-expanded={open}
-            className="flex h-11 w-11 items-center justify-center border border-border text-foreground xl:hidden"
+            className={`flex h-11 w-11 items-center justify-center border border-border text-foreground ${minimo ? 'lg:hidden' : 'xl:hidden'}`}
           >
             {open ? <X size={18} /> : <List size={18} />}
           </button>
@@ -171,7 +186,7 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 xl:hidden"
+              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 ${minimo ? 'lg:hidden' : 'xl:hidden'}`}
             >
               {links.map((link) => (
                 <Link
@@ -183,17 +198,19 @@ export function SiteHeader({
                   {link.label}
                 </Link>
               ))}
-              <div className="flex items-center justify-between border-b border-border-strong py-3.5">
-                <span className="text-[15px] text-muted">{nav.sedeLabel}</span>
-                <SedeSelector
-                  lang={lang}
-                  sedes={sedesDisponibles}
-                  sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
-                  placeholder={variante === 'hub' ? nav.eligeSede : undefined}
-                  label={nav.sedeLabel}
-                  variant="header"
-                />
-              </div>
+              {!minimo && (
+                <div className="flex items-center justify-between border-b border-border-strong py-3.5">
+                  <span className="text-[15px] text-muted">{nav.sedeLabel}</span>
+                  <SedeSelector
+                    lang={lang}
+                    sedes={sedesDisponibles}
+                    sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
+                    placeholder={variante === 'hub' ? nav.eligeSede : undefined}
+                    label={nav.sedeLabel}
+                    variant="header"
+                  />
+                </div>
+              )}
               <div className="flex items-center justify-between border-b border-border-strong py-3.5">
                 <span className="text-[15px] text-muted">{nav.switchLang}</span>
                 <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />

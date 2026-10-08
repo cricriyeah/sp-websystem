@@ -17,6 +17,7 @@ import { ErrorDeCampo, FieldError, propsDeError } from '@/components/field-error
 import { Turnstile } from '@/components/turnstile';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Moneda, Pago } from '@/lib/api';
+import { fechaHoraDeVencimiento } from '@/lib/pendientes-texto';
 
 type OrderLine = {
   label: string;
@@ -69,7 +70,27 @@ type StripePanelProps = {
   onCaptchaToken: (token: string) => void;
 };
 
+// Stripe pinta en un iframe: no hereda las variables CSS ni la fuente del sitio,
+// así que se le pasan los mismos valores de la paleta (globals.css) para que el
+// formulario de tarjeta no parezca de otra marca.
+const STRIPE_FUENTES = [
+  { cssSrc: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap' },
+];
+const STRIPE_APARIENCIA = {
+  theme: 'stripe' as const,
+  variables: {
+    colorPrimary: '#281ab5',
+    colorText: '#16171c',
+    colorTextSecondary: '#55565f',
+    colorBackground: '#ffffff',
+    colorDanger: '#c22118',
+    fontFamily: '"Instrument Sans", system-ui, sans-serif',
+    borderRadius: '8px',
+  },
+};
+
 function PaymentForm({
+  puente,
   checkout,
   feedback,
   ayudaMensaje,
@@ -77,6 +98,8 @@ function PaymentForm({
   onPagoConfirmado,
   onPagoRechazado,
 }: {
+  /** Lo que une "reserva guardada" con el cobro; con hora si la reserva vence. */
+  puente: string;
   checkout: Dictionary['checkout'];
   feedback: Dictionary['feedback'];
   ayudaMensaje: string;
@@ -121,7 +144,7 @@ function PaymentForm({
           cobro son dos peticiones distintas porque Stripe Elements necesita el
           PaymentIntent para montarse, pero eso es un detalle tecnico que al
           cliente no le toca notar. */}
-      <p className="text-sm text-muted">{checkout.paymentBridge}</p>
+      <p className="text-sm text-muted">{puente}</p>
       <PaymentElement />
 
       {/* La espera del banco es la mas larga de todo el flujo y la que mas caro
@@ -142,9 +165,9 @@ function PaymentForm({
         type="button"
         onClick={handleConfirm}
         disabled={!stripe || submitting}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-action px-5 py-2.5 text-center text-sm font-medium leading-tight text-balance text-action-foreground transition-[opacity,transform] active:scale-[0.98] disabled:opacity-60"
       >
-        <Lock size={16} />
+        <Lock size={16} className="shrink-0" />
         {submitting ? checkout.submitting : (etiquetaBotonPago ?? checkout.confirmPay)}
       </button>
     </div>
@@ -183,19 +206,24 @@ export function NotaSeguridadStripe({ checkout }: { checkout: Dictionary['checko
  * suya y el llamador remonta con `key`).
  */
 export function FormularioPago({
+  lang,
   checkout,
   feedback,
   ayudaMensaje,
   pago,
+  venceEn,
   encabezadoPago,
   etiquetaBotonPago,
   onPagoConfirmado,
   onPagoRechazado,
 }: {
+  lang: Locale;
   checkout: Dictionary['checkout'];
   feedback: Dictionary['feedback'];
   ayudaMensaje: string;
   pago: Pick<Pago, 'client_secret' | 'publishable_key'>;
+  /** Solo las órdenes de varias empresas se liberan a una hora; el resto no promete plazo. */
+  venceEn?: string | null;
   /** Secuencia de pagos (cruza-empresa): qué ya se hizo, cuál es y cuáles faltan. */
   encabezadoPago?: ReactNode;
   etiquetaBotonPago?: string;
@@ -205,12 +233,15 @@ export function FormularioPago({
   onPagoRechazado?: (mensaje: string, codigo?: string) => void;
 }) {
   const stripePromise = useMemo(() => loadStripe(pago.publishable_key), [pago.publishable_key]);
+  const cuando = fechaHoraDeVencimiento(venceEn, lang === 'en' ? 'en-US' : 'es-MX');
+  const puente = cuando ? checkout.paymentBridgeUntil.replace('{cuando}', cuando) : checkout.paymentBridge;
   return (
     <>
       <CheckoutSectionCard title={checkout.stepper.payment} estado="activo">
         {encabezadoPago}
-        <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret }}>
+        <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret, locale: lang, fonts: STRIPE_FUENTES, appearance: STRIPE_APARIENCIA }}>
           <PaymentForm
+            puente={puente}
             checkout={checkout}
             feedback={feedback}
             ayudaMensaje={ayudaMensaje}

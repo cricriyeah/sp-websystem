@@ -36,6 +36,14 @@ function horaDeVencimiento(iso: string | null, locale: string): string | null {
   }).format(new Date(iso));
 }
 
+/** "8 de octubre, 4:32 p.m.": día y hora (la hora sola es ambigua cuando el límite es mañana). */
+export function fechaHoraDeVencimiento(iso: string | null | undefined, locale: string): string | null {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return null;
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'America/Mazatlan',
+  }).format(new Date(iso));
+}
+
 function esOrden(resumen: ResumenReserva | ResumenOrden): resumen is ResumenOrden {
   return 'montos' in resumen;
 }

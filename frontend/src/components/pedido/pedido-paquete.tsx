@@ -45,6 +45,7 @@ import { AvisoCargos } from './aviso-cargos';
 import { AvisoFallo } from './aviso-fallo';
 import { EncabezadoPago } from './encabezado-pago';
 import { FranjaResumen } from './franja-resumen';
+import { ReservaPlegable } from './reserva-plegable';
 import { FechaPaquete } from './fecha-paquete';
 import { GrupoServicio } from './grupo-servicio';
 import { usePagoPedido } from './use-pago-pedido';
@@ -336,7 +337,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
 
   if (pago.fase === 'exito') return (
     <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
+      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{textos.success.title}</h1>
         <p className="text-sm text-muted">{textos.success.body}</p>
@@ -382,8 +383,15 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         ...cargos.map((cargo, i) => checkout.stepper.paymentNumbered
           .replace('{n}', String(i + 1)).replace('{empresa}', nombreEmpresa(cargo.empresaSlug))),
       ],
+      etiquetasCortas: [
+        checkout.stepper.trip, checkout.stepper.contact, checkout.stepper.extras,
+        ...cargos.map((_, i) => checkout.stepper.paymentShort.replace('{n}', String(i + 1))),
+      ],
       actual: 4 + indicePago,
       totalMovil: dato !== undefined ? `${formatearPrecio(dato, estado.moneda)} ${estado.moneda}` : undefined,
+      // "Pagas ahora": con varios cobros la cifra del paso no es el total.
+      rotulo: dato !== undefined ? checkout.stepper.payNow : undefined,
+      totalGeneral: totalConMoneda ?? undefined,
     };
   };
 
@@ -411,7 +419,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
 
     return (
       <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
+        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
         <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
         <CheckoutStepper stepper={checkout.stepper} {...(stepperPagos(pago.fallo?.indice ?? 0) ?? { actual: 4, totalMovil })} />
         <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
@@ -431,7 +439,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
 
   if (pago.fase === 'resumiendo' || pago.fase === 'capturando' || pago.fase === 'confirmando') return (
     <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} />
+      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
       <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
         <WaitNotice
           mensaje={pago.fase === 'resumiendo' ? textos.resuming : feedback.payingWait}
@@ -479,9 +487,20 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             detalle={detalleCompra}
           />
         }
-        stepper={stepperPagos(pago.indice, Number(pasoPago.monto)) ?? { actual: 4, totalMovil }}
+        stepper={stepperPagos(pago.indice, Number(pasoPago.monto)) ?? (Number(pasoPago.monto) < Number(pasoPago.precioTotal ?? pasoPago.monto)
+          // Un solo cobro con anticipo: la cifra del paso es el anticipo, no el total.
+          ? { actual: 4, totalMovil: `${monto} ${estado.moneda}`, rotulo: checkout.stepper.payNow, totalGeneral: `${totalPago} ${estado.moneda}` }
+          : { actual: 4, totalMovil })}
         pasos={
           <>
+            <ReservaPlegable
+              titulo={textos.yourBooking}
+              etiquetaEstado={textos.bookingSaved}
+              resumen={resumenViaje || paquete.nombre}
+              notaBloqueada={textos.lockedNote}
+              ctaAyuda={textos.lockedCta}
+              mensajeAyuda={ayudaMensaje}
+            >
             <ItemPaso>
               <CheckoutSectionCard
                 title={checkout.tripHeadline}
@@ -515,9 +534,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 </ItemPaso>
               );
             })}
+            </ReservaPlegable>
 
             {/* "Cómo pagas" (ya con el pago creado, un renglón) se pinta aquí. */}
-            <div className="-mt-4" ref={setDestinoTarjetaPago} />
+            <div ref={setDestinoTarjetaPago} />
 
             {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
                 respuestas ya dadas. En cruza-empresa se remonta por empresa
@@ -529,11 +549,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               saldo={pasosPago.length === 1 && faltaPorCobrar > 0 ? formatearPrecio(faltaPorCobrar, estado.moneda) : null}
             />
             <FormularioPago
+              lang={lang}
               key={pasoPago.empresaSlug}
               checkout={checkout}
               feedback={feedback}
               ayudaMensaje={ayudaMensaje}
               pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
+              venceEn={pasoPago.venceEn}
               encabezadoPago={<div className="hidden lg:block"><EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} /></div>}
               etiquetaBotonPago={etiquetaBotonPago}
               onPagoConfirmado={pago.onPagoConfirmado}
@@ -605,6 +627,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         stepper={(actual === 'pago' ? stepperPagos(0) : null) ?? {
           actual: numeroDePaso(actual), totalMovil,
           steps: cantidadCargos > 1 ? stepperPagos(0)?.steps : undefined,
+          etiquetasCortas: cantidadCargos > 1 ? stepperPagos(0)?.etiquetasCortas : undefined,
         }}
         pasos={
           <>

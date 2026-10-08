@@ -16,7 +16,7 @@ type Props = {
   encabezado: ReactNode;
   /** Aviso a todo el ancho entre el encabezado y el stepper (p. ej. día sin lugar). */
   aviso?: ReactNode;
-  stepper: { actual: number; steps?: string[]; totalMovil?: string };
+  stepper: { actual: number; steps?: string[]; totalMovil?: string; rotulo?: string; totalGeneral?: string; etiquetasCortas?: string[] };
   /** Columna izquierda: las tarjetas de paso. */
   pasos: ReactNode;
   /** Columna derecha: `StripePanel`. */
@@ -33,7 +33,7 @@ export function PaginaCheckout({
 }: Props) {
   return (
     <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={sedeSlug} />
+      <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
 
       {/* SiteHeader es `fixed` y no reserva espacio: `--nav-alto` (globals.css)
           lo compensa. El 1.5rem es la separación de siempre. */}
@@ -55,6 +55,9 @@ export function PaginaCheckout({
         actual={stepper.actual}
         steps={stepper.steps}
         totalMovil={stepper.totalMovil}
+        rotulo={stepper.rotulo}
+        totalGeneral={stepper.totalGeneral}
+        etiquetasCortas={stepper.etiquetasCortas}
       />
 
       {/* 3fr/2fr: los pasos necesitan el ancho, el pedido es una columna de cifras. */}

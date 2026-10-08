@@ -124,7 +124,11 @@ export function PeopleStepper({
             animate={{ opacity: 1, y: 0 }}
             exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={{ duration: 0.16 }}
-            className="absolute -bottom-8 left-0 z-10 rounded-lg bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-surface shadow-lg"
+            className={`absolute left-0 z-10 rounded-lg bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-surface shadow-lg ${
+              // En un cuadro con scroll (compacto) el borde de abajo lo recorta pegado al pie con
+              // "Confirmar": el aviso sube. En la barra de reserva sigue abajo, donde sí cabe.
+              compacto ? 'bottom-full mb-1.5' : '-bottom-8'
+            }`}
           >
             {maxNotice}
           </motion.span>

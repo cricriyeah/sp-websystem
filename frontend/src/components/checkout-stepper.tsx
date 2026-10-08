@@ -1,5 +1,6 @@
 import { Check } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { CifraAnimada } from '@/components/checkout/cifra-animada';
 
 type CheckoutStepperProps = {
   stepper: Dictionary['checkout']['stepper'];
@@ -7,8 +8,14 @@ type CheckoutStepperProps = {
   actual: number;
   /** Pasos personalizados. Si no se especifican, se usan los 4 por omisión. */
   steps?: string[];
-  /** Total compacto en móvil para paquetes por persona. */
+  /** Cifra que acompaña al progreso (total del pedido, o lo que se paga en este paso). */
   totalMovil?: string;
+  /** Rótulo sobre la cifra cuando no es el total ("Pagas ahora"). */
+  rotulo?: string;
+  /** Total del pedido, junto a la cifra de este paso cuando son distintas (solo escritorio). */
+  totalGeneral?: string;
+  /** Etiquetas de escritorio: más cortas que `steps` ("Pago 1" en vez de "Pago 1 · Empresa"). */
+  etiquetasCortas?: string[];
 };
 
 /**
@@ -23,14 +30,15 @@ type CheckoutStepperProps = {
  * sin ella fuera de cuadro el cliente pierde la unica senal de "cuanto falta"
  * que tiene.
  */
-export function CheckoutStepper({ stepper, actual, steps, totalMovil }: CheckoutStepperProps) {
+export function CheckoutStepper({ stepper, actual, steps, totalMovil, rotulo, totalGeneral, etiquetasCortas }: CheckoutStepperProps) {
   const pasos = steps ?? [stepper.trip, stepper.contact, stepper.extras, stepper.payment];
   const totalPasos = pasos.length;
+  const etiquetas = etiquetasCortas ?? pasos;
 
   return (
     <>
       {/* --- Movil: compacta y fija. --------------------------------------- */}
-      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-surface/95 px-6 py-3 backdrop-blur-sm sm:px-8 lg:hidden">
+      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-surface px-6 py-3 sm:px-8 lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
             {pasos.map((_, i) => {
@@ -51,23 +59,29 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil }: Checkout
               .replace('{total}', String(totalPasos))}{' '}
             <span className="text-foreground">· {pasos[actual - 1]}</span>
           </p>
-          {totalMovil && <span className="shrink-0 text-xs font-semibold text-foreground">{totalMovil}</span>}
+          {totalMovil && (
+            <CifraAnimada valor={`${rotulo ?? ''}|${totalMovil}`} className="flex shrink-0 flex-col items-end leading-tight">
+              {rotulo && <span className="text-[10px] font-normal text-muted">{rotulo}</span>}
+              <span className="text-xs font-semibold text-foreground">{totalMovil}</span>
+            </CifraAnimada>
+          )}
         </div>
       </div>
 
       {/* --- Escritorio: los 4 pasos a la vista. ---------------------------- */}
       {/* Fija bajo el header, como la de móvil: el progreso es información que
           debe seguir a la vista mientras el cliente baja por las tarjetas. */}
-      <div className="hidden border-b border-border bg-surface/95 backdrop-blur-sm lg:sticky lg:top-[var(--nav-alto)] lg:z-30 lg:block">
+      <div className="hidden border-b border-border bg-surface lg:sticky lg:top-[var(--nav-alto)] lg:z-30 lg:block">
         <div className="mx-auto max-w-6xl px-6 pt-4 pb-3 sm:px-8 lg:px-12">
-        <ol className="flex items-center">
-          {pasos.map((label, i) => {
+        <div className="flex items-center gap-8">
+        <ol className="flex min-w-0 flex-1 items-center" aria-label={stepper.stepOf.replace('{current}', String(actual)).replace('{total}', String(totalPasos))}>
+          {etiquetas.map((label, i) => {
             const numero = i + 1;
             const completado = numero < actual;
             const activo = numero === actual;
 
             return (
-              <li key={label} className="flex flex-1 items-center last:flex-none">
+              <li key={label} aria-current={activo ? 'step' : undefined} className="flex flex-1 items-center last:flex-none">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
@@ -101,6 +115,23 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil }: Checkout
             );
           })}
         </ol>
+        {totalMovil && (
+          <CifraAnimada valor={`${rotulo ?? ''}|${totalMovil}|${totalGeneral ?? ''}`} className="block shrink-0 text-right text-sm leading-tight">
+            {rotulo && totalGeneral ? (
+              <>
+                <span className="text-muted">{rotulo} </span>
+                <span className="font-semibold text-foreground">{totalMovil}</span>
+                <span className="text-muted"> · {stepper.totalLabel} {totalGeneral}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-muted">{rotulo ?? stepper.totalLabel} </span>
+                <span className="font-semibold text-foreground">{totalMovil}</span>
+              </>
+            )}
+          </CifraAnimada>
+        )}
+        </div>
         </div>
       </div>
     </>

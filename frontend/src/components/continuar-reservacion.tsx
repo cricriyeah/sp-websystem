@@ -234,7 +234,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     : problema ? null : situacion === 'no_existe' && !whatsapp ? null : contenido?.secundaria;
   const registro = contenido?.registro ?? 'informativo';
   const estilo = registro === 'con_dinero'
-    ? 'border-accent bg-accent/10'
+    ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_10%,var(--background))]'
     : registro === 'en_curso' ? 'border-border-strong bg-surface' : 'border-border bg-background';
   const otros = pendientes.filter(p => p.checkoutId !== activo?.checkoutId).slice(0, 3);
 

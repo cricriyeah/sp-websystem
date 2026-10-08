@@ -486,6 +486,8 @@ export type PagoOrdenItem = {
   monto: string;
   client_secret: string;
   publishable_key: string;
+  /** Hora en que se libera la orden si no se completan los pagos. */
+  vence_en?: string | null;
 };
 
 export const crearPagoOrden = (sedeSlug: string, ordenId: number): Promise<PagoOrdenItem[]> =>
@@ -507,6 +509,7 @@ export type OrdenDetalle = {
   id: number;
   checkout_id: string | null;
   estado: string;
+  vence_en?: string | null;
   reservas: {
     reserva_id: number;
     empresa_slug: string;
