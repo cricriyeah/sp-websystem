@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from 'react';
 import { CaretLeft, Lock, WhatsappLogo } from '@phosphor-icons/react';
+import { DetalleAbiertoContexto, useProveedorDetalle } from '@/components/checkout/detalle-abierto';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 
 /**
@@ -72,8 +73,10 @@ export function ReservaPlegable({
 }) {
   const [abierto, setAbierto] = useState(false);
   const id = useId();
+  const detalle = useProveedorDetalle();
 
   return (
+    <DetalleAbiertoContexto.Provider value={detalle}>
     <div>
       <button
         type="button"
@@ -127,5 +130,6 @@ export function ReservaPlegable({
         </div>
       </div>
     </div>
+    </DetalleAbiertoContexto.Provider>
   );
 }

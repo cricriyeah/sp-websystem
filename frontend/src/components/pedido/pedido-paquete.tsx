@@ -36,7 +36,7 @@ import {
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
 } from '@/lib/pedido-paquete';
-import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
+import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado, type DetalleTraslado } from '@/lib/pedido-payload';
 import { erroresPersonalizaciones } from '@/lib/personalizaciones';
 import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { leerRef } from '@/lib/ref';
@@ -169,6 +169,19 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       ? { etiqueta: checkout.summary.people, valor: String(personasPaquete) }
       : null,
   ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
+  const lineasContacto = [
+    { etiqueta: checkout.fullName, valor: estado.contacto.fullName },
+    { etiqueta: checkout.email, valor: estado.contacto.email },
+    { etiqueta: checkout.phone, valor: estado.contacto.phone },
+  ].filter((linea) => linea.valor.trim() !== '');
+  // Dónde lo recogen: el nombre del punto elegido, o la dirección escrita a mano.
+  const lineaPunto = (traslado: DetalleTraslado | undefined) => {
+    if (!traslado) return [];
+    const valor = traslado.modo === 'catalogo'
+      ? Object.values(puntosPorEmpresa).flat().find((p) => p.id === traslado.puntoEncuentroId)?.nombre
+      : traslado.direccion;
+    return valor ? [{ etiqueta: dict.traslados.fields.puntoEncuentro, valor }] : [];
+  };
 
   const pago = usePagoPedido({
     motor,
@@ -506,6 +519,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 title={checkout.tripHeadline}
                 estado="completado"
                 resumen={resumenViaje}
+                detalle={lineasViaje}
               >
                 {null}
               </CheckoutSectionCard>
@@ -515,12 +529,14 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 title={checkout.contactHeadline}
                 estado="completado"
                 resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
+                detalle={lineasContacto}
               >
                 {null}
               </CheckoutSectionCard>
             </ItemPaso>
             {paquete.servicios_asociados.map((item) => {
-              const personas = estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas;
+              const componente = estado.componentes[item.servicio.slug];
+              const personas = componente?.personas ?? item.personas_incluidas;
               return (
                 <ItemPaso key={item.id} unida>
                   <CheckoutSectionCard
@@ -528,6 +544,11 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                     etiqueta={cantidadCargos > 1 ? nombreEmpresa(item.servicio.empresa_slug) : undefined}
                     estado="completado"
                     resumen={`${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}
+                    detalle={[
+                      { etiqueta: checkout.summary.date, valor: formatearFecha(fechaDeComponente(estado.inicio ?? minDate, item.dia_estancia)) },
+                      { etiqueta: checkout.summary.people, valor: String(personas) },
+                      ...lineaPunto(componente?.traslado),
+                    ]}
                   >
                     {null}
                   </CheckoutSectionCard>
@@ -556,7 +577,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               ayudaMensaje={ayudaMensaje}
               pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
               venceEn={pasoPago.venceEn}
-              encabezadoPago={<div className="hidden lg:block"><EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} /></div>}
+              encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} total={totalConMoneda ?? undefined} />}
               etiquetaBotonPago={etiquetaBotonPago}
               onPagoConfirmado={pago.onPagoConfirmado}
               onPagoRechazado={pago.onPagoRechazado}

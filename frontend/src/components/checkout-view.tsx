@@ -984,6 +984,18 @@ export function CheckoutView({
     personasResumen,
   ].filter(Boolean).join(' · ');
   const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
+  // Lo mismo que los resúmenes, pero una línea por dato, para leerlo al abrir el renglón.
+  const detallePaso1 = [
+    { etiqueta: checkout.summary.date, valor: formatDay(dayDate, lang) },
+    tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: formatDay(fromLocalISODate(fechaSalida), lang) } : null,
+    horaTexto ? { etiqueta: checkout.summary.time, valor: horaTexto } : null,
+    { etiqueta: checkout.summary.people, valor: String(people) },
+  ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
+  const detallePaso2 = [
+    { etiqueta: checkout.fullName, valor: contact.fullName },
+    { etiqueta: checkout.email, valor: contact.email },
+    { etiqueta: checkout.phone, valor: contact.phone },
+  ].filter((linea) => linea.valor.trim() !== '');
 
   // Lo que se le manda a la vendedora si el cliente usa la salida de emergencia
   // de un error. Lleva su fecha, hora y grupo para que ella no tenga que
@@ -1283,6 +1295,7 @@ export function CheckoutView({
                 title={checkout.tripHeadline}
                 estado={estadoViaje}
                 resumen={resumenPaso1}
+                detalle={detallePaso1}
                 actionLabel={locked ? undefined : etiquetaAccion(crudoViaje)}
                 onAction={locked || crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
                 pie={crudoViaje === 'activo' && !locked
@@ -1366,6 +1379,7 @@ export function CheckoutView({
                   title={checkout.contactHeadline}
                   estado={estadoContacto}
                   resumen={resumenPaso2}
+                  detalle={detallePaso2}
                   actionLabel={locked ? undefined : etiquetaAccion(crudoContacto)}
                   onAction={locked || crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
                   pie={crudoContacto === 'activo' && !locked
@@ -1407,6 +1421,15 @@ export function CheckoutView({
                       .join(', ') ||
                     checkout.noExtrasSelected
                   }
+                  detalle={catalogoUnificado.some((p) => personalizacionesMap.has(p.id))
+                    ? [{
+                        etiqueta: checkout.extrasStepHeadline,
+                        valor: catalogoUnificado
+                          .filter((p) => personalizacionesMap.has(p.id))
+                          .map((p) => p.nombre)
+                          .join(', '),
+                      }]
+                    : undefined}
                   actionLabel={locked ? undefined : etiquetaAccion(crudoDetalles)}
                   onAction={locked || crudoDetalles === 'activo' ? undefined : () => reabrir('detalles')}
                   pie={crudoDetalles === 'activo' && !locked

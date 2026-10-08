@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { CaretLeft, Check } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
+import { useDetalleAbierto } from '@/components/checkout/detalle-abierto';
 import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
 
 type CheckoutSectionCardProps = {
@@ -32,6 +33,12 @@ type CheckoutSectionCardProps = {
   estado?: 'activo' | 'editando' | 'completado' | 'suspendido';
   /** Colapsado: la respuesta ya dada, en una linea. */
   resumen?: ReactNode;
+  /**
+   * Solo lectura: si el renglón completado no se puede reabrir (`onAction` sin
+   * poner) pero trae `detalle`, se abre para leer cada dato en su propia línea
+   * (etiqueta y valor) en vez de solo el resumen cortado.
+   */
+  detalle?: { etiqueta: string; valor: ReactNode }[];
   /** Texto del boton del encabezado ("Cambiar" / "Listo" segun `estado`). */
   actionLabel?: string;
   onAction?: () => void;
@@ -52,6 +59,7 @@ export function CheckoutSectionCard({
   variant = 'flat',
   estado = 'activo',
   resumen,
+  detalle,
   actionLabel,
   onAction,
   etiqueta,
@@ -61,6 +69,9 @@ export function CheckoutSectionCard({
   const abierto = estado === 'activo' || estado === 'editando';
   const confirmado = estado === 'completado' || estado === 'editando';
   const enRenglon = estado === 'completado' && variant === 'flat';
+  const conDetalle = enRenglon && !onAction && !!detalle && detalle.length > 0;
+  const verDetalle = useDetalleAbierto();
+  const detalleAbierto = conDetalle && verDetalle.abierto;
   const sinMovimiento = useReducedMotion();
   // `overflow-hidden` solo hace falta MIENTRAS la altura esta en un valor
   // intermedio (la transicion de 0 a 'auto'): asentada, el cuadro ya mide lo
@@ -91,7 +102,15 @@ export function CheckoutSectionCard({
                 {etiqueta}
               </span>
             )}
-            {resumen && <span className="min-w-0 truncate text-muted">· {resumen}</span>}
+            {resumen && (
+              // Abierto, el detalle de abajo ya lo dice: el resumen se desvanece sin mover el título.
+              <span
+                aria-hidden={detalleAbierto || undefined}
+                className={`min-w-0 truncate text-muted transition-opacity duration-300 motion-reduce:transition-none ${detalleAbierto ? 'opacity-0' : ''}`}
+              >
+                · {resumen}
+              </span>
+            )}
           </span>
         ) : (
           <span className="flex min-w-0 flex-col">
@@ -109,23 +128,41 @@ export function CheckoutSectionCard({
         )}
       </span>
 
+      {conDetalle && (
+        <CaretLeft
+          size={12}
+          weight="bold"
+          aria-hidden
+          className={`shrink-0 text-muted transition-transform duration-300 ${detalleAbierto ? '-rotate-90' : ''}`}
+        />
+      )}
       {actionLabel && onAction && enRenglon && (
         // Secundario: un renglón de respuesta no debe competir con el CTA de la
         // tarjeta activa. El renglón entero es el botón; la etiqueta solo lo dice.
         <EtiquetaModificar>{actionLabel}</EtiquetaModificar>
       )}
       {actionLabel && onAction && !enRenglon && (
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
-          {actionLabel}
-          {/* Misma flecha que la del renglón colapsado: a la izquierda cerrada,
-              hacia abajo abierta. La rotación es lo que hace obvio que es la
-              MISMA flecha, no un icono distinto por estado. */}
-          <CaretLeft
-            size={12}
-            weight="bold"
-            className={`transition-transform duration-300 ${abierto ? '-rotate-90' : ''}`}
-          />
-        </span>
+        estado === 'editando' ? (
+          // "Listo" es el CTA primario de una tarjeta que se reabrió: confirma y
+          // sigue. Lleva el mismo amarillo que `BotonPaso` para que se lea como
+          // "el siguiente paso" y no como un control secundario.
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-action px-4 py-1.5 text-xs font-semibold text-action-foreground transition-[transform,filter] group-hover:brightness-95 group-active:scale-[0.98]">
+            {actionLabel}
+            <Check size={13} weight="bold" aria-hidden />
+          </span>
+        ) : (
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
+            {actionLabel}
+            {/* Misma flecha que la del renglón colapsado: a la izquierda cerrada,
+                hacia abajo abierta. La rotación es lo que hace obvio que es la
+                MISMA flecha, no un icono distinto por estado. */}
+            <CaretLeft
+              size={12}
+              weight="bold"
+              className={`transition-transform duration-300 ${abierto ? '-rotate-90' : ''}`}
+            />
+          </span>
+        )
       )}
     </>
   );
@@ -166,8 +203,39 @@ export function CheckoutSectionCard({
         >
           {encabezado}
         </button>
+      ) : conDetalle ? (
+        <button
+          type="button"
+          onClick={verDetalle.alternar}
+          aria-expanded={detalleAbierto}
+          aria-controls={verDetalle.id}
+          className="group flex min-h-9 w-full items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+        >
+          {encabezado}
+        </button>
       ) : (
         <div className="flex w-full items-center justify-between gap-4 text-left">{encabezado}</div>
+      )}
+
+      {conDetalle && (
+        // Altura animada con la cuadrícula (0fr a 1fr): se abre y se pliega sin medir nada.
+        <div
+          id={verDetalle.id}
+          className={`grid transition-[grid-template-rows,opacity,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+            detalleAbierto ? 'visible grid-rows-[1fr] opacity-100' : 'invisible grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <dl className="mt-2 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border pb-2 pt-3 text-sm">
+              {detalle!.map((linea) => (
+                <div key={linea.etiqueta} className="contents">
+                  <dt className="text-muted">{linea.etiqueta}</dt>
+                  <dd className="min-w-0 break-words text-foreground">{linea.valor}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
       )}
 
       <AnimatePresence initial={false}>

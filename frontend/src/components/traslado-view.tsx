@@ -612,6 +612,16 @@ export function TrasladoView({
       ? { etiqueta: traslados.fields.puntoEncuentro, valor: resumenRecogida }
       : null,
   ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
+  // Al abrir los renglones de "Tu reserva": viaje sin la recogida (que tiene su propio renglón) y datos de contacto.
+  const detalleViaje = lineasViaje.filter((linea) => linea.etiqueta !== traslados.fields.puntoEncuentro);
+  const detalleContacto = [
+    { etiqueta: checkout.fullName, valor: contact.fullName },
+    { etiqueta: checkout.email, valor: contact.email },
+    { etiqueta: checkout.phone, valor: contact.phone },
+  ].filter((linea) => linea.valor.trim() !== '');
+  const detalleRecogida = resumenRecogida
+    ? [{ etiqueta: traslados.fields.puntoEncuentro, valor: resumenRecogida }]
+    : undefined;
 
   const ayudaMensaje = `Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`;
 
@@ -647,6 +657,7 @@ export function TrasladoView({
                 title={checkout.tripHeadline}
                 estado={estadoViaje}
                 resumen={resumenViaje}
+                detalle={detalleViaje}
                 actionLabel={locked ? undefined : etiquetaAccion(crudoViaje)}
                 onAction={locked || crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
                 pie={crudoViaje === 'activo' && !locked
@@ -755,6 +766,7 @@ export function TrasladoView({
                   title={checkout.contactHeadline}
                   estado={estadoContacto}
                   resumen={resumenDatos}
+                  detalle={detalleContacto}
                   actionLabel={locked ? undefined : etiquetaAccion(crudoContacto)}
                   onAction={locked || crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
                   pie={crudoContacto === 'activo' && !locked
@@ -783,6 +795,7 @@ export function TrasladoView({
                   title={traslados.step2Title}
                   estado={estadoRecogida}
                   resumen={resumenRecogida}
+                  detalle={detalleRecogida}
                   actionLabel={locked ? undefined : etiquetaAccion(crudoRecogida)}
                   onAction={locked || crudoRecogida === 'activo' ? undefined : () => reabrir('detalles')}
                   pie={crudoRecogida === 'activo' && !locked
