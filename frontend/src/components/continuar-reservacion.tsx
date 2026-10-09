@@ -144,10 +144,51 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     siguiente(activo.checkoutId);
   };
 
+  // El checkout guarda su propio punto de reanudacion en sessionStorage, aparte
+  // del puntero de esta banda. Descartar tiene que soltar los dos: si solo se
+  // borraba el puntero, al volver al mismo producto el checkout se reanudaba
+  // solo desde la sesion y volvia a escribir el puntero.
+  const claveDeSesion = (p: Pendiente): string | null => {
+    const ruta = rutaSegura(p.ruta, lang);
+    if (!ruta) return null;
+    const destino = new URL(ruta, window.location.origin);
+    if (destino.pathname.endsWith('/traslados')) return 'salysol:traslados:checkout_id';
+    if (destino.searchParams.has('paquete')) return `salysol:pedido:${p.productoSlug}`;
+    return 'salysol:checkout-id';
+  };
+
+  const soltarSesion = (p: Pendiente) => {
+    const clave = claveDeSesion(p);
+    if (!clave) return;
+    try {
+      const guardado = sessionStorage.getItem(clave);
+      if (!guardado) return;
+      // Solo si es el checkout descartado: otro en curso del mismo producto no se toca.
+      const id = guardado.startsWith('{') ? (JSON.parse(guardado) as { checkoutId?: string }).checkoutId : guardado;
+      if (id === p.checkoutId) sessionStorage.removeItem(clave);
+    } catch {
+      // sessionStorage bloqueado o JSON invalido: no hay nada que reanudar.
+    }
+  };
+
+  const restaurarSesion = (p: Pendiente) => {
+    const clave = claveDeSesion(p);
+    if (!clave) return;
+    try {
+      sessionStorage.setItem(
+        clave,
+        clave.startsWith('salysol:pedido:') ? JSON.stringify({ checkoutId: p.checkoutId, ordenId: p.ordenId }) : p.checkoutId,
+      );
+    } catch {
+      // sin sessionStorage el puntero de la banda sigue funcionando.
+    }
+  };
+
   const descartar = () => {
     if (!activo) return;
     const guardado = activo;
     borrarPendiente(guardado.checkoutId);
+    soltarSesion(guardado);
     setDeshecho(guardado);
     if (timerDeshacer.current) clearTimeout(timerDeshacer.current);
     timerDeshacer.current = setTimeout(() => setDeshecho(null), 8000);
@@ -157,6 +198,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   const deshacer = () => {
     if (!deshecho) return;
     guardarPendiente(deshecho);
+    restaurarSesion(deshecho);
     if (timerDeshacer.current) clearTimeout(timerDeshacer.current);
     setDeshecho(null);
     const lista = listarPendientes();
