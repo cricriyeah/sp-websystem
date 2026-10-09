@@ -20,7 +20,6 @@ import { GallerySection } from '@/components/gallery-section';
 import { ReviewsSection } from '@/components/reviews-section';
 import { FaqSection } from '@/components/faq-section';
 import { StructuredData } from '@/components/structured-data';
-import { StickyBookingBar } from '@/components/sticky-booking-bar';
 import { ProveedorReserva } from '@/components/booking-state';
 import { ColaboradoresSection } from '@/components/colaboradores-section';
 import { SedePendingSection } from '@/components/sede-pending-section';
@@ -76,7 +75,6 @@ export default async function SedePage({ params, searchParams }: Props) {
       {laPaz ? <FaqSection faq={dict.faq} /> : <SedePendingSection id="preguntas" title={dict.destination.faqTitle} body={dict.destination.pendingBody} />}
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={contenido.negocio} sedeSlug={slug} />
-    {laPaz && <StickyBookingBar lang={lang} booking={dict.booking} minDate={minDate} horasDisponibles={horasDisponibles} />}
   </>;
   return laPaz ? <ProveedorReserva>{pagina}</ProveedorReserva> : pagina;
 }
