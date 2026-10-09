@@ -22,8 +22,8 @@ from apps.fleet.views import TrasladosView
 
 from .health import healthz
 
-admin.site.site_header = 'Sal y Sol Sportfishing — Backoffice'
-admin.site.site_title = 'Sal y Sol Sportfishing'
+admin.site.site_header = 'Sun Baja Experiences'
+admin.site.site_title = 'Sun Baja Experiences'
 admin.site.index_title = 'Panel de administracion'
 
 urlpatterns = [

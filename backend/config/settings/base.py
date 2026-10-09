@@ -153,8 +153,8 @@ def _perm_es_operador(request):
 # Config visual de unfold. El tema (colores, sidebar) se define aqui en codigo,
 # no es editable en vivo desde el admin como admin_interface.
 UNFOLD = {
-    'SITE_TITLE': 'Sal y Sol Sportfishing',
-    'SITE_HEADER': 'Sal y Sol Sportfishing',
+    'SITE_TITLE': 'apps.tenancy.admin_branding.nombre_backoffice',
+    'SITE_HEADER': 'apps.tenancy.admin_branding.nombre_backoffice',
     'SITE_SYMBOL': 'anchor',
     'SHOW_HISTORY': True,
     'SHOW_VIEW_ON_SITE': False,
