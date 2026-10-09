@@ -62,6 +62,7 @@ class EmpresaAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
     search_fields = ['nombre', 'slug']
     fields = [
         'sede', 'nombre', 'slug', 'activo', 'exclusiva',
+        'correos_aviso',
         'stripe_secret_key', 'stripe_webhook_secret', 'stripe_publishable_key',
     ]
 

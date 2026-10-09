@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, validate_email
 from django.db import models
 
 
@@ -47,6 +47,11 @@ class Empresa(models.Model):
     stripe_secret_key = models.CharField(max_length=200, blank=True)
     stripe_webhook_secret = models.CharField(max_length=200, blank=True)
     stripe_publishable_key = models.CharField(max_length=200, blank=True)
+    correos_aviso = models.CharField(
+        max_length=300, blank=True,
+        help_text='A quien se le avisa por correo cada vez que entra una reserva pagada '
+                  'de esta Empresa. Varias direcciones separadas por coma. Vacio = no se avisa.',
+    )
 
     class Meta:
         ordering = ['nombre']
@@ -64,8 +69,17 @@ class Empresa(models.Model):
             errores['stripe_webhook_secret'] = "Debe empezar con 'whsec_'."
         if self.stripe_publishable_key and not self.stripe_publishable_key.startswith('pk_'):
             errores['stripe_publishable_key'] = "Debe empezar con 'pk_'."
+        for correo in self.lista_correos_aviso():
+            try:
+                validate_email(correo)
+            except ValidationError:
+                errores['correos_aviso'] = f'"{correo}" no es un correo valido.'
+                break
         if errores:
             raise ValidationError(errores)
+
+    def lista_correos_aviso(self):
+        return [c.strip() for c in self.correos_aviso.split(',') if c.strip()]
 
 
 class MembresiaEmpresa(models.Model):

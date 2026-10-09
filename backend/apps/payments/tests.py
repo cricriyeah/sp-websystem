@@ -2578,7 +2578,7 @@ class WebhookTrasladoTest(TrasladoPagoFixture, ApiTestCase):
         detalle.direccion_personalizada = 'Casa <b>Azul</b> & patio'
         detalle.save()
         resultado = notificar_reserva_pagada(reserva)
-        self.assertEqual(resultado, {'email': True, 'whatsapp': False})
+        self.assertEqual(resultado, {'email': True, 'whatsapp': False, 'empresa': False})
         cuerpo = post.call_args.kwargs['json']['html']
         self.assertIn('Casa &lt;b&gt;Azul&lt;/b&gt; &amp; patio', cuerpo)
         self.assertNotIn('<b>Azul</b>', cuerpo)

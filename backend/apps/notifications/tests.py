@@ -139,7 +139,7 @@ class FallosNoTumbanElCobroTests(EmpresaTestCase):
 
         resultado = notificar_reserva_pagada(crear_reserva(self.empresa))
 
-        self.assertEqual(resultado, {'email': False, 'whatsapp': False})
+        self.assertEqual(resultado, {'email': False, 'whatsapp': False, 'empresa': False})
 
 
 @override_settings(RESEND_API_KEY='', RESEND_FROM='', RESEND_BCC=['operacion@ejemplo.com'])
@@ -475,6 +475,32 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
 
     @mock.patch('apps.notifications.services.enviar_whatsapp_confirmacion')
     @mock.patch('apps.notifications.services.requests.post')
+    def test_notificar_orden_pagada_avisa_a_las_dos_empresas(self, mock_post, mock_wa):
+        """Paquete de dos empresas: cada una recibe su aviso con su parte y nada mas."""
+        from apps.bookings.models import Orden
+        from apps.notifications.services import notificar_orden_pagada
+        from apps.tenancy.models import Empresa
+
+        Empresa.objects.filter(pk=self.empresa_1.pk).update(correos_aviso='pesca@ejemplo.com')
+        Empresa.objects.filter(pk=self.empresa_2.pk).update(correos_aviso='transporte@ejemplo.com, jefe@ejemplo.com')
+        mock_post.return_value.raise_for_status.return_value = None
+
+        resultado = notificar_orden_pagada(Orden.objects.get(pk=self.orden.pk))
+
+        self.assertEqual(resultado['empresas'], [True, True])
+        envios = {tuple(c.kwargs['json']['to']): c.kwargs['json'] for c in mock_post.call_args_list}
+        self.assertEqual(len(mock_post.call_args_list), 3)  # cliente + una por empresa
+        self.assertIn(('carlos@example.com',), envios)
+        aviso_pesca = envios[('pesca@ejemplo.com',)]['html']
+        aviso_transporte = envios[('transporte@ejemplo.com', 'jefe@ejemplo.com')]['html']
+        self.assertIn('Empresa Pesca Notif', aviso_pesca)
+        self.assertIn('Pesca en Panga', aviso_pesca)
+        self.assertNotIn('Hotel Gran Baja', aviso_pesca)
+        self.assertIn('Hotel Gran Baja', aviso_transporte)
+        self.assertNotIn('Pesca en Panga', aviso_transporte)
+
+    @mock.patch('apps.notifications.services.enviar_whatsapp_confirmacion')
+    @mock.patch('apps.notifications.services.requests.post')
     def test_notificar_orden_pagada_fallo_correo_no_propaga_y_manda_whatsapp(self, mock_post, mock_wa):
         """Si el correo falla, no propaga el error y aun asi se intenta WhatsApp."""
         from apps.notifications.services import notificar_orden_pagada
@@ -537,3 +563,64 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
             self.orden.refresh_from_db()
         self.assertIsNotNone(self.orden.retomar_notificado_en)
 
+
+
+@override_settings(**LLAVES)
+class AvisoALaEmpresaTests(EmpresaTestCase):
+    """Cada empresa se entera por correo de lo que le entra, aparte de la copia
+    global `RESEND_BCC`. Sin direcciones configuradas no se manda nada."""
+
+    def _con_correos(self, correos):
+        self.empresa.correos_aviso = correos
+        self.empresa.save(update_fields=['correos_aviso'])
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_avisa_a_todas_las_direcciones_de_la_empresa(self, post):
+        post.return_value.raise_for_status.return_value = None
+        self._con_correos('dueno@ejemplo.com, socia@ejemplo.com')
+        reserva = crear_reserva_guardada(self.empresa)
+
+        from .services import enviar_aviso_empresa
+        self.assertTrue(enviar_aviso_empresa(reserva))
+
+        cuerpo = _cuerpo_enviado(post)
+        self.assertEqual(cuerpo['to'], ['dueno@ejemplo.com', 'socia@ejemplo.com'])
+        self.assertEqual(cuerpo['reply_to'], 'ana@example.com')
+        self.assertIn('Ana Ruiz', cuerpo['html'])
+        self.assertIn(f'#{reserva.pk}', cuerpo['html'])
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_sin_direcciones_no_llama_a_la_red(self, post):
+        reserva = crear_reserva_guardada(self.empresa)
+
+        from .services import enviar_aviso_empresa
+        self.assertFalse(enviar_aviso_empresa(reserva))
+        post.assert_not_called()
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_si_resend_falla_no_lanza(self, post):
+        post.side_effect = requests.ConnectionError('sin red')
+        self._con_correos('dueno@ejemplo.com')
+        reserva = crear_reserva_guardada(self.empresa)
+
+        from .services import enviar_aviso_empresa
+        self.assertFalse(enviar_aviso_empresa(reserva))
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_notificar_reserva_pagada_incluye_el_aviso_a_la_empresa(self, post):
+        post.return_value.raise_for_status.return_value = None
+        self._con_correos('dueno@ejemplo.com')
+        reserva = crear_reserva_guardada(self.empresa)
+
+        resultado = notificar_reserva_pagada(reserva)
+
+        self.assertTrue(resultado['empresa'])
+        destinos = [llamada.kwargs['json']['to'] for llamada in post.call_args_list]
+        self.assertIn(['dueno@ejemplo.com'], destinos)
+        self.assertIn(['ana@example.com'], destinos)
+
+    def test_un_correo_invalido_no_se_puede_guardar(self):
+        from django.core.exceptions import ValidationError
+        self.empresa.correos_aviso = 'dueno@ejemplo.com, esto-no-es-correo'
+        with self.assertRaises(ValidationError):
+            self.empresa.full_clean()

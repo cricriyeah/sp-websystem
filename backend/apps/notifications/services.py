@@ -287,12 +287,90 @@ def enviar_whatsapp_confirmacion(reserva):
     return True
 
 
+def _cuerpo_aviso_empresa_html(reserva):
+    """Lo que necesita la empresa para saber que le entro una reserva y a quien
+    hablarle. Solo lo de su propio componente: en un paquete de dos empresas cada
+    una recibe su aviso con su parte, no el desglose de dinero de la otra."""
+    producto = reserva.servicio.nombre if reserva.servicio_id else (
+        reserva.paquete.nombre if reserva.paquete_id else 'Reserva')
+    detalle = ''
+    if _es_traslado(reserva) and hasattr(reserva, 'detalle_transporte'):
+        d = reserva.detalle_transporte
+        punto = d.punto_encuentro.nombre if d.punto_encuentro_id else d.direccion_personalizada
+        regreso = f'<li><strong>Regreso:</strong> {d.fecha_regreso}</li>' if d.fecha_regreso else ''
+        detalle = (
+            f'<li><strong>Traslado:</strong> {_html(d.get_tipo_traslado_display())}</li>'
+            f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>{regreso}'
+        )
+    pago = ''
+    if reserva.monto_pagado:
+        pago = f'<li><strong>Pagado en linea:</strong> {reserva.monto_pagado} {_html(reserva.moneda)}</li>'
+    saldo = reserva.saldo_pendiente
+    if saldo and saldo > 0:
+        pago += f'<li><strong>Saldo por cobrar:</strong> {saldo} {_html(reserva.moneda)}</li>'
+    return (
+        f'<p>Entro una reserva pagada para {_html(reserva.empresa.nombre)}.</p>'
+        f'<ul>'
+        f'<li><strong>Servicio:</strong> {_html(producto)}</li>'
+        f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
+        f'<li><strong>Hora:</strong> {hora_texto(reserva)}</li>'
+        f'<li><strong>Personas:</strong> {reserva.numero_personas}</li>'
+        f'{detalle}'
+        f'<li><strong>Cliente:</strong> {_html(reserva.nombre_cliente)}</li>'
+        f'<li><strong>Telefono:</strong> {_html(reserva.telefono_cliente)}</li>'
+        f'<li><strong>Correo:</strong> {_html(reserva.correo_cliente)}</li>'
+        f'{pago}'
+        f'<li><strong>Folio:</strong> #{reserva.pk}</li>'
+        f'</ul>'
+    )
+
+
+def enviar_aviso_empresa(reserva):
+    """Avisa a la empresa duena de la reserva que entro una pagada. True si se mando.
+
+    Los destinatarios son `Empresa.correos_aviso`; sin ellos no hace nada. Va aparte
+    de `RESEND_BCC` (una copia global de todo al negocio): esto es por empresa, para
+    que cada una se entere de lo suyo. Responder al correo le contesta al cliente.
+    """
+    destinatarios = reserva.empresa.lista_correos_aviso()
+    if not destinatarios:
+        return False
+    if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
+        logger.info('Resend sin configurar, no se mando el aviso a la empresa de la reserva %s', reserva.pk)
+        return False
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json={
+                'from': settings.RESEND_FROM,
+                'to': destinatarios,
+                'reply_to': reserva.correo_cliente,
+                'subject': f'Nueva reserva — {reserva.fecha} {hora_texto(reserva)} · {reserva.nombre_cliente}',
+                'html': _cuerpo_aviso_empresa_html(reserva),
+            },
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        logger.exception('Fallo el aviso a la empresa de la reserva %s', reserva.pk)
+        return False
+    return True
+
+
 def notificar_reserva_pagada(reserva):
     """Punto de entrada unico desde el webhook de pago. Nunca lanza."""
-    return {
+    resultado = {
         'email': enviar_correo_confirmacion(reserva),
         'whatsapp': enviar_whatsapp_confirmacion(reserva),
     }
+    try:
+        resultado['empresa'] = enviar_aviso_empresa(reserva)
+    except Exception:
+        logger.exception('Fallo inesperado al avisar a la empresa de la reserva %s', reserva.pk)
+        resultado['empresa'] = False
+    return resultado
 
 
 def _cuerpo_orden_html(orden, reservas):
@@ -535,7 +613,36 @@ def notificar_orden_pagada(orden):
                     elif prev_alcance[0] == 'operador':
                         cursor.execute("SET LOCAL app.operador_plataforma = 'on'")
 
-        return {'email': email_enviado, 'whatsapp': wa_resultados}
+        # 3. Aviso a cada empresa que participa (una sola vez por empresa)
+        avisos_empresa = []
+        avisadas = set()
+        prev_alcance = getattr(connection, 'alcance_actual', None)
+        connection.alcance_actual = None
+        try:
+            for r in reservas:
+                if r.empresa_id in avisadas:
+                    continue
+                avisadas.add(r.empresa_id)
+                try:
+                    with scope.con_empresa(r.empresa):
+                        avisos_empresa.append(enviar_aviso_empresa(r))
+                except Exception:
+                    logger.exception(
+                        'Fallo inesperado al avisar a la empresa de la reserva %s de orden %s',
+                        r.pk,
+                        orden.pk,
+                    )
+                    avisos_empresa.append(False)
+        finally:
+            connection.alcance_actual = prev_alcance
+            if connection.vendor == 'postgresql' and prev_alcance:
+                with connection.cursor() as cursor:
+                    if prev_alcance[0] == 'empresa':
+                        cursor.execute(f'SET LOCAL app.current_empresa_id = {int(prev_alcance[1])}')
+                    elif prev_alcance[0] == 'operador':
+                        cursor.execute("SET LOCAL app.operador_plataforma = 'on'")
+
+        return {'email': email_enviado, 'whatsapp': wa_resultados, 'empresas': avisos_empresa}
     except Exception:
         logger.exception('Error no controlado en notificar_orden_pagada para orden %s', getattr(orden, 'pk', None))
         return {'email': False, 'whatsapp': []}
