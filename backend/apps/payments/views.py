@@ -248,7 +248,8 @@ class ValidarCodigoPromocionalView(APIView):
     checkout — solo informativa, no liga a ninguna reserva. La autoritativa
     vuelve a correr en `CrearPagoView`.
 
-    Respuesta siempre `{'valido': bool, 'porcentaje_descuento': str|None}` sin
+    Respuesta siempre `{'valido': bool, 'porcentaje_descuento': str|None,
+    'descuento': str|None}` sin
     importar el motivo del rechazo, para no darle pistas a quien prueba
     codigos al azar.
     """
@@ -264,7 +265,25 @@ class ValidarCodigoPromocionalView(APIView):
             return Response({
                 'valido': promo is not None,
                 'porcentaje_descuento': str(promo.porcentaje_descuento) if promo else None,
+                'descuento': self._descuento(promo, request.query_params.get('subtotal')),
             })
+
+    @staticmethod
+    def _descuento(promo, subtotal_crudo):
+        """Cuanto resta el codigo de `subtotal`, calculado con la misma funcion
+        que `crear-pago` para que la pantalla muestre el numero que se cobra y
+        no una estimacion propia con otro redondeo. Informativo: el monto que
+        cuenta lo congela `crear-pago` sobre el subtotal que el servidor
+        recalcula. None sin codigo valido o sin un subtotal utilizable."""
+        if promo is None or not subtotal_crudo:
+            return None
+        try:
+            subtotal = Decimal(subtotal_crudo)
+        except ArithmeticError:
+            return None
+        if not subtotal.is_finite() or subtotal <= 0:
+            return None
+        return str(min(subtotal, cargo_por_descuento(subtotal, promo.porcentaje_descuento)))
 
 
 class EstadoReservaView(APIView):

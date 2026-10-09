@@ -930,7 +930,7 @@ class ValidarCodigoPromocionalTests(ApiTestCase):
             empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
         )
         body = self.get(codigo='VERANO10', correo_cliente='ana@example.com').json()
-        self.assertEqual(body, {'valido': True, 'porcentaje_descuento': '10.00'})
+        self.assertEqual(body, {'valido': True, 'porcentaje_descuento': '10.00', 'descuento': None})
 
     def test_codigo_no_distingue_mayusculas_ni_espacios(self):
         CodigoPromocional.objects.create(
@@ -941,7 +941,7 @@ class ValidarCodigoPromocionalTests(ApiTestCase):
 
     def test_codigo_inexistente(self):
         body = self.get(codigo='NOEXISTE', correo_cliente='ana@example.com').json()
-        self.assertEqual(body, {'valido': False, 'porcentaje_descuento': None})
+        self.assertEqual(body, {'valido': False, 'porcentaje_descuento': None, 'descuento': None})
 
     def test_codigo_inactivo_da_la_misma_respuesta_generica_que_uno_inexistente(self):
         CodigoPromocional.objects.create(
@@ -954,7 +954,27 @@ class ValidarCodigoPromocionalTests(ApiTestCase):
 
     def test_sin_codigo_no_es_valido(self):
         body = self.get(codigo='', correo_cliente='ana@example.com').json()
-        self.assertEqual(body, {'valido': False, 'porcentaje_descuento': None})
+        self.assertEqual(body, {'valido': False, 'porcentaje_descuento': None, 'descuento': None})
+
+    def test_con_subtotal_devuelve_el_descuento_calculado_por_el_servidor(self):
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
+        body = self.get(codigo='VERANO10', correo_cliente='ana@example.com', subtotal='1234.55').json()
+        # 123.455 se redondea hacia arriba (ROUND_HALF_UP), igual que en crear-pago.
+        self.assertEqual(body['descuento'], '123.46')
+
+    def test_subtotal_invalido_no_rompe_la_validacion(self):
+        CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO10', porcentaje_descuento=Decimal('10'),
+        )
+        body = self.get(codigo='VERANO10', correo_cliente='ana@example.com', subtotal='abc').json()
+        self.assertTrue(body['valido'])
+        self.assertIsNone(body['descuento'])
+
+    def test_codigo_invalido_con_subtotal_no_da_descuento(self):
+        body = self.get(codigo='NOEXISTE', correo_cliente='ana@example.com', subtotal='1000').json()
+        self.assertIsNone(body['descuento'])
 
     def test_agotado_para_este_cliente_no_es_valido(self):
         promo = CodigoPromocional.objects.create(
