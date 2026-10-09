@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.forms import BaseInlineFormSet
 from unfold.admin import ModelAdmin, TabularInline
 
@@ -66,10 +67,20 @@ class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 @admin.register(Embarcacion)
 class EmbarcacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
-    list_display = ['nombre', 'clase', 'capacidad_maxima', 'activa']
+    list_display = ['nombre', 'clase', 'capacidad_maxima', 'activa', 'fuera_hoy']
     list_filter = ['clase', 'activa']
     list_editable = ['activa']
     search_fields = ['nombre']
+
+    @admin.display(description='Fuera hoy')
+    def fuera_hoy(self, obj):
+        """`activa` es la flota permanente; una baja de un dia vive en
+        `EmbarcacionNoDisponible`. Sin esta columna una panga dada de baja hoy
+        seguia viendose como activa y parecia que la baja no habia pasado."""
+        baja = obj.no_disponibles.filter(fecha=timezone.localdate()).first()
+        if baja is None:
+            return '—'
+        return f'Fuera hoy: {baja.motivo}' if baja.motivo else 'Fuera hoy'
 
 
 @admin.register(Capitan)

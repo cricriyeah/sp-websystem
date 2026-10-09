@@ -17,6 +17,7 @@ from django.utils import timezone
 
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
+from django.contrib import admin
 from apps.testing import crear_personalizacion_pesca, ApiTestCase, EmpresaTestCase, crear_servicio_pesca
 
 from .enums import TipoTraslado
@@ -975,3 +976,23 @@ class CrearServicioPescaHelperTests(EmpresaTestCase):
         s2 = crear_servicio_pesca(self.empresa)
         self.assertEqual(s1.pk, s2.pk)
         self.assertEqual(Servicio.objects.filter(empresa=self.empresa, slug='pesca-deportiva').count(), 1)
+
+
+class EmbarcacionAdminFueraHoyTests(EmpresaTestCase):
+    def test_columna_fuera_hoy_refleja_la_baja_de_hoy(self):
+        from django.utils import timezone
+
+        from .admin import EmbarcacionAdmin
+
+        panga = Embarcacion.objects.create(
+            nombre='Lupita', clase=Embarcacion.Clase.GRANDE, capacidad_maxima=5, empresa=self.empresa,
+        )
+        admin_embarcacion = EmbarcacionAdmin(Embarcacion, admin.site)
+        self.assertEqual(admin_embarcacion.fuera_hoy(panga), '—')
+
+        EmbarcacionNoDisponible.objects.create(
+            fecha=timezone.localdate(), embarcacion=panga, motivo='Motor', empresa=self.empresa,
+        )
+        self.assertEqual(admin_embarcacion.fuera_hoy(panga), 'Fuera hoy: Motor')
+        panga.refresh_from_db()
+        self.assertTrue(panga.activa)
