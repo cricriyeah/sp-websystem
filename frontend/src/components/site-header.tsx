@@ -126,7 +126,7 @@ export function SiteHeader({
         </Link>
 
         {links.length > 1 && (
-          <nav className="hidden items-center gap-4 xl:flex">
+          <nav className="hidden items-center gap-4 2xl:flex">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -163,7 +163,7 @@ export function SiteHeader({
                 variant="header"
                 className="hidden sm:inline-block"
               />
-              <div className="hidden 2xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
+              <div className="hidden xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
             </>
           )}
 
@@ -172,7 +172,7 @@ export function SiteHeader({
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? nav.closeMenu : nav.openMenu}
             aria-expanded={open}
-            className={`flex h-11 w-11 items-center justify-center border border-border text-foreground ${minimo ? 'lg:hidden' : 'xl:hidden'}`}
+            className={`flex h-11 w-11 items-center justify-center border border-border text-foreground ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
           >
             {open ? <X size={18} /> : <List size={18} />}
           </button>
@@ -186,7 +186,7 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 ${minimo ? 'lg:hidden' : 'xl:hidden'}`}
+              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
             >
               {links.map((link) => (
                 <Link
