@@ -137,6 +137,92 @@ class AgendaAdminTests(EmpresaTestCase):
         self.assertIn('embarcacion', formset.forms[0].fields)
         self.assertIn('capitan', formset.forms[0].fields)
 
+    def test_asignar_panga_a_reserva_con_hora_invalida_muestra_error_sin_500(self):
+        servicio = crear_servicio_pesca(self.empresa)
+        servicio.hora_apertura = time(8, 0)
+        servicio.hora_cierre = time(10, 0)
+        servicio.save(update_fields=['hora_apertura', 'hora_cierre'])
+        reserva = viaje(self.empresa, servicio=servicio, hora=time(17, 0))
+        panga = Embarcacion.objects.filter(
+            empresa=self.empresa, capacidad_maxima__gte=reserva.numero_personas,
+        ).first()
+        respuesta = self.client.post(self.url, {
+            'form-TOTAL_FORMS': '1',
+            'form-INITIAL_FORMS': '1',
+            'form-MIN_NUM_FORMS': '0',
+            'form-MAX_NUM_FORMS': '1000',
+            'form-0-id': str(reserva.pk),
+            'form-0-embarcacion': str(panga.pk),
+            'form-0-capitan': '',
+            '_save': 'Guardar',
+        })
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'hora')
+        self.assertContains(respuesta, 'La hora debe estar entre 08:00 y 10:00.')
+        reserva.refresh_from_db()
+        self.assertIsNone(reserva.embarcacion_id)
+
+    def test_asignar_panga_a_reserva_de_las_cinco_si_funciona(self):
+        servicio = crear_servicio_pesca(self.empresa)
+        servicio.hora_cierre = time(10, 0)
+        servicio.paso_hora_minutos = 15
+        servicio.save(update_fields=['hora_cierre', 'paso_hora_minutos'])
+        reserva = viaje(self.empresa, servicio=servicio, hora=time(5, 0), numero_personas=5)
+        servicio.hora_cierre = time(7, 0)
+        servicio.paso_hora_minutos = 30
+        servicio.save(update_fields=['hora_cierre', 'paso_hora_minutos'])
+        panga = Embarcacion.objects.filter(
+            empresa=self.empresa, capacidad_maxima__gte=5,
+        ).first()
+        respuesta = self.client.post(self.url, {
+            'form-TOTAL_FORMS': '1',
+            'form-INITIAL_FORMS': '1',
+            'form-MIN_NUM_FORMS': '0',
+            'form-MAX_NUM_FORMS': '1000',
+            'form-0-id': str(reserva.pk),
+            'form-0-embarcacion': str(panga.pk),
+            'form-0-capitan': '',
+            '_save': 'Guardar',
+        })
+
+        self.assertEqual(respuesta.status_code, 302)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.embarcacion_id, panga.pk)
+
+    def test_otra_fila_con_hora_invalida_no_bloquea_la_asignacion(self):
+        servicio = crear_servicio_pesca(self.empresa)
+        servicio.hora_cierre = time(10, 0)
+        servicio.save(update_fields=['hora_cierre'])
+        objetivo = viaje(self.empresa, servicio=servicio, hora=time(5, 0))
+        otra = viaje(self.empresa, servicio=servicio, hora=time(9, 0))
+        servicio.hora_cierre = time(7, 0)
+        servicio.paso_hora_minutos = 30
+        servicio.save(update_fields=['hora_cierre', 'paso_hora_minutos'])
+        panga = Embarcacion.objects.filter(
+            empresa=self.empresa, capacidad_maxima__gte=objetivo.numero_personas,
+        ).first()
+
+        respuesta = self.client.post(self.url, {
+            'form-TOTAL_FORMS': '2',
+            'form-INITIAL_FORMS': '2',
+            'form-MIN_NUM_FORMS': '0',
+            'form-MAX_NUM_FORMS': '1000',
+            'form-0-id': str(objetivo.pk),
+            'form-0-embarcacion': str(panga.pk),
+            'form-0-capitan': '',
+            'form-1-id': str(otra.pk),
+            'form-1-embarcacion': '',
+            'form-1-capitan': '',
+            '_save': 'Guardar',
+        })
+
+        self.assertEqual(respuesta.status_code, 302)
+        objetivo.refresh_from_db()
+        otra.refresh_from_db()
+        self.assertEqual(objetivo.embarcacion_id, panga.pk)
+        self.assertIsNone(otra.embarcacion_id)
+
 
 class AgendaPermisosTests(EmpresaTestCase):
     def setUp(self):

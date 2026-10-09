@@ -3,12 +3,14 @@ from datetime import timedelta
 from decimal import Decimal
 from urllib.parse import quote
 
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import connection, models, transaction
+from django.forms.forms import NON_FIELD_ERRORS
 from django.http import HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -893,6 +895,38 @@ class CuandoFilter(admin.SimpleListFilter):
         )
 
 
+class AgendaForm(forms.ModelForm):
+    class Meta:
+        model = Agenda
+        fields = ['embarcacion', 'capitan']
+
+    def _post_clean(self):
+        # El listado envia todas las reservas visibles, aunque solo se cambie
+        # una. Una fila intacta no se guarda y no debe revalidarse contra un
+        # horario de servicio que pudo cambiar despues de la venta.
+        if not self.has_changed():
+            return
+        super()._post_clean()
+
+    def _update_errors(self, errors):
+        # La agenda solo edita panga y capitan. Una reserva antigua puede tener
+        # un dato invalido (por ejemplo la hora); Django no puede asociar ese
+        # error a un campo ausente y lanzaria un 500 al guardar el listado.
+        if hasattr(errors, 'error_dict'):
+            errores = {campo: list(mensajes) for campo, mensajes in errors.error_dict.items()}
+            for campo in list(errores):
+                if campo in self.fields or campo == NON_FIELD_ERRORS:
+                    continue
+                etiqueta = self.instance._meta.get_field(campo).verbose_name
+                errores.setdefault(NON_FIELD_ERRORS, []).extend(
+                    ValidationError(f'{etiqueta}: {mensaje}')
+                    for error in errores.pop(campo)
+                    for mensaje in error.messages
+                )
+            errors = ValidationError(errores)
+        super()._update_errors(errors)
+
+
 @admin.register(Agenda)
 class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     """Repartir los viajes ya vendidos: que panga y que capitan le toca a cada uno.
@@ -915,6 +949,9 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
 
     # La cuadricula de dias x pangas va encima de la tabla, ver la plantilla.
     change_list_template = 'bookings/agenda_changelist.html'
+
+    def get_changelist_form(self, request, **kwargs):
+        return super().get_changelist_form(request, form=AgendaForm, **kwargs)
 
     class Media:
         # Mismo aviso de reservas nuevas que el listado de Reservas: repartir
