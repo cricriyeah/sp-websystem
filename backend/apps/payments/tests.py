@@ -687,6 +687,38 @@ class CrearPagoTests(ApiTestCase):
         self.assertEqual(payment_intents.create.call_count, 1)  # no se creo un segundo intent
 
     @mock.patch.object(StripeClient, 'payment_intents')
+    def test_intent_de_otra_cuenta_de_stripe_se_reemplaza_en_vez_de_dar_502(self, payment_intents):
+        """Las llaves de la Empresa cambiaron entre dos intentos: el id guardado ya
+        no existe en esta cuenta (`resource_missing`). Se crea uno nuevo."""
+        import stripe
+
+        payment_intents.create.return_value = intent_falso()
+        self.post()
+
+        payment_intents.retrieve.side_effect = stripe.InvalidRequestError(
+            'No such payment_intent', param='id', code='resource_missing',
+        )
+        payment_intents.create.return_value = intent_falso(id='pi_nuevo')
+        response = self.post()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payment_intents.create.call_count, 2)
+        self.reserva.refresh_from_db()
+        self.assertEqual(self.reserva.stripe_payment_intent_id, 'pi_nuevo')
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_otro_error_de_stripe_al_recuperar_el_intent_sigue_siendo_502(self, payment_intents):
+        import stripe
+
+        payment_intents.create.return_value = intent_falso()
+        self.post()
+
+        payment_intents.retrieve.side_effect = stripe.InvalidRequestError(
+            'Otra cosa', param='id', code='parameter_invalid_empty',
+        )
+        self.assertEqual(self.post().status_code, 502)
+
+    @mock.patch.object(StripeClient, 'payment_intents')
     def test_cambiar_los_extras_ajusta_el_intent_en_vez_de_duplicarlo(self, payment_intents):
         payment_intents.create.return_value = intent_falso()
         self.post()

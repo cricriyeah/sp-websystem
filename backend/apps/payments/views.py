@@ -206,6 +206,29 @@ class CrearPagoView(APIView):
 
         return promo, cargo_por_descuento(subtotal, promo.porcentaje_descuento), None
 
+    @staticmethod
+    def _recuperar_intent(cliente, reserva):
+        """El intent guardado en la reserva, o None si esta cuenta de Stripe no lo
+        conoce.
+
+        Pasa cuando las llaves de la Empresa cambiaron entre dos intentos de pago
+        de la misma reserva (otra cuenta, otro modo prueba/real): el id guardado
+        pertenece a la cuenta anterior y aqui responde `resource_missing`. Ese
+        intent no se puede cobrar desde esta cuenta, asi que no hay dinero en
+        curso que proteger y se crea uno nuevo; antes esto terminaba en un 502 que
+        el cliente no podia salvar reintentando.
+        """
+        try:
+            return cliente.payment_intents.retrieve(reserva.stripe_payment_intent_id)
+        except stripe.InvalidRequestError as error:
+            if getattr(error, 'code', None) != 'resource_missing':
+                raise
+            logger.warning(
+                'El intent %s de la reserva %s no existe en la cuenta de Stripe de %s; se crea uno nuevo',
+                reserva.stripe_payment_intent_id, reserva.pk, reserva.empresa.slug,
+            )
+            return None
+
     def _intent_de(self, cliente, reserva, monto):
         """Reusa el intent de la reserva si sigue sin cobrar; si no, crea uno,
         con el `cliente` de Stripe explicito de la Empresa (P1) — nunca
@@ -217,17 +240,18 @@ class CrearPagoView(APIView):
         moneda = reserva.moneda.lower()
 
         if reserva.stripe_payment_intent_id:
-            intent = cliente.payment_intents.retrieve(reserva.stripe_payment_intent_id)
-            if intent.status in INTENT_YA_COBRANDO:
-                raise PagoEnCurso
-            if intent.status in INTENT_REUTILIZABLE:
-                if intent.amount == centavos and intent.currency == moneda:
-                    return intent
-                # Cambio de amenidades o de moneda: se ajusta el mismo intent.
-                # El metodo real del servicio es `update`, no `modify`.
-                return cliente.payment_intents.update(
-                    intent.id, {'amount': centavos, 'currency': moneda},
-                )
+            intent = self._recuperar_intent(cliente, reserva)
+            if intent is not None:
+                if intent.status in INTENT_YA_COBRANDO:
+                    raise PagoEnCurso
+                if intent.status in INTENT_REUTILIZABLE:
+                    if intent.amount == centavos and intent.currency == moneda:
+                        return intent
+                    # Cambio de amenidades o de moneda: se ajusta el mismo intent.
+                    # El metodo real del servicio es `update`, no `modify`.
+                    return cliente.payment_intents.update(
+                        intent.id, {'amount': centavos, 'currency': moneda},
+                    )
 
         return cliente.payment_intents.create(
             {
