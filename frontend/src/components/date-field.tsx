@@ -1,5 +1,6 @@
 'use client';
 
+import { Deslizable } from '@/components/checkout/deslizable';
 import { useState } from 'react';
 import { CalendarBlank, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
@@ -149,8 +150,13 @@ export function PanelCalendario({
 
   const hayDiasLlenos = Object.values(disponibilidad).some(Boolean);
 
-  const moverMes = (delta: number) =>
+  // Hacia donde va el mes nuevo: lo usa `Deslizable` para entrar por el lado
+  // del click, igual que la tira semanal del checkout.
+  const [direccion, setDireccion] = useState<1 | -1>(1);
+  const moverMes = (delta: number) => {
+    setDireccion(delta > 0 ? 1 : -1);
     setMesVisible((actual) => new Date(actual.getFullYear(), actual.getMonth() + delta, 1));
+  };
 
   return (
     <div className={anchoCompleto ? 'w-full' : 'w-full sm:w-72'}>
@@ -163,7 +169,9 @@ export function PanelCalendario({
         >
           <CaretLeft size={16} />
         </button>
-        <p className="text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</p>
+        <Deslizable clave={primerDia} direccion={direccion}>
+          <p className="text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</p>
+        </Deslizable>
         <button
           type="button"
           onClick={() => moverMes(1)}
@@ -182,7 +190,10 @@ export function PanelCalendario({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      {/* Alto de seis filas reservado: un mes de cinco y uno de seis no deben
+          mover lo que hay debajo mientras la cuadrícula se desliza. */}
+      <div className={anchoCompleto ? 'min-h-[17.75rem]' : 'min-h-[14.75rem]'}>
+      <Deslizable clave={primerDia} direccion={direccion} className="grid grid-cols-7 gap-1">
         {Array.from({ length: huecosIniciales }, (_, i) => (
           <span key={`hueco-${i}`} />
         ))}
@@ -239,6 +250,7 @@ export function PanelCalendario({
             </button>
           );
         })}
+      </Deslizable>
       </div>
 
       {/* La explicacion va aqui y no en un `title`: Chrome no muestra el tooltip

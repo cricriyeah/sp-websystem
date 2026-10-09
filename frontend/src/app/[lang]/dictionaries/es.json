@@ -129,7 +129,7 @@
     "time": "Hora",
     "timeHelp": "Salida entre 5:00 y 7:00 am",
     "people": "Personas",
-    "maxPeopleNotice": "Máximo 5 personas por viaje.",
+    "maxPeopleNotice": "En este servicio no se permiten más de 5 personas.",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "submit": "Agendar",
@@ -412,6 +412,11 @@
     "phone": "Número telefónico",
     "fullName": "Nombre completo",
     "email": "Correo electrónico",
+    "contactExamples": {
+      "fullName": "Ej. María López",
+      "phone": "Ej. 612 123 4567",
+      "email": "Ej. maria@correo.com"
+    },
     "meetingPointLabel": "Lugar de encuentro",
     "notice": "En cuanto se confirme tu pago, un asesor de nuestro equipo te contactará en las próximas 24 horas para darte la bienvenida y compartirte todos los detalles de tu viaje: ubicación exacta, recomendaciones y el nombre de tu capitán.",
     "extrasStepHeadline": "Personaliza tu viaje",
@@ -757,7 +762,7 @@
       "fechaRegreso": "Fecha de regreso al aeropuerto",
       "hora": "Hora estimada de recogida",
       "pasajeros": "Número de personas",
-      "maxPasajerosNotice": "Máximo {max} personas para esta unidad.",
+      "maxPasajerosNotice": "En este servicio no se permiten más de {max} personas.",
       "fechaRegresoInvalida": "La fecha de regreso debe ser posterior a la fecha de llegada."
     },
     "errors": {
@@ -804,7 +809,8 @@
     "airportPlaceholder": "Elige el aeropuerto",
     "airports": { "lap": "La Paz (LAP)", "sjd": "Los Cabos (SJD)" },
     "airportError": "Elige el aeropuerto.",
-    "logisticsMaxNotice": "Máximo {max} personas en el grupo principal.",
+    "logisticsMaxNotice": "En este paquete no se permiten más de {max} personas.",
+    "maxPeoplePackage": "En este paquete no se permiten más de {max} personas.",
     "morePeopleOffline": "Para más de {max} personas, contáctanos",
     "peoplePrice": "{n} personas  {precio}",
     "peoplePriceOne": "1 persona  {precio}",

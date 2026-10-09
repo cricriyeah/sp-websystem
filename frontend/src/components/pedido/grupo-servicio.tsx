@@ -336,7 +336,7 @@ export function GrupoServicio({
             <PeopleStepper
               compacto
               label={checkout.peopleLabel}
-              maxNotice={booking.maxPeopleNotice}
+              maxNotice={pedido.maxPeoplePackage.replace('{max}', String(componente.personas_incluidas))}
               value={estado.personas}
               onChange={onPersonas}
               maxPeople={componente.personas_incluidas}

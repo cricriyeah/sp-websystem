@@ -1401,6 +1401,7 @@ export function CheckoutView({
                     valores={contact}
                     errores={erroresCampo}
                     etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
+                    ejemplos={checkout.contactExamples}
                     refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
                     disabled={locked}
                     onCambio={(campo, valor) => {

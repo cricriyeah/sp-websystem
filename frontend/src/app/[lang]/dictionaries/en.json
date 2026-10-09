@@ -129,7 +129,7 @@
     "time": "Time",
     "timeHelp": "Departure between 5:00 and 7:00 am",
     "people": "Guests",
-    "maxPeopleNotice": "Maximum 5 guests per trip.",
+    "maxPeopleNotice": "This service doesn't allow more than 5 people.",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "submit": "Book now",
@@ -412,6 +412,11 @@
     "phone": "Phone number",
     "fullName": "Full name",
     "email": "Email",
+    "contactExamples": {
+      "fullName": "e.g. Jane Smith",
+      "phone": "e.g. 612 123 4567",
+      "email": "e.g. jane@email.com"
+    },
     "meetingPointLabel": "Meeting point",
     "notice": "As soon as your payment is confirmed, an advisor from our team will contact you within 24 hours to welcome you and share all your trip details: exact dock location, helpful recommendations, and your captain's name.",
     "extrasStepHeadline": "Customize your trip",
@@ -757,7 +762,7 @@
       "fechaRegreso": "Airport return date",
       "hora": "Estimated pickup time",
       "pasajeros": "Number of guests",
-      "maxPasajerosNotice": "Maximum {max} passengers for this vehicle.",
+      "maxPasajerosNotice": "This service doesn't allow more than {max} people.",
       "fechaRegresoInvalida": "Return date must be after arrival date."
     },
     "errors": {
@@ -804,7 +809,8 @@
     "airportPlaceholder": "Choose the airport",
     "airports": { "lap": "La Paz (LAP)", "sjd": "Los Cabos (SJD)" },
     "airportError": "Choose the airport.",
-    "logisticsMaxNotice": "Maximum {max} people in the main group.",
+    "logisticsMaxNotice": "This package doesn't allow more than {max} people.",
+    "maxPeoplePackage": "This package doesn't allow more than {max} people.",
     "morePeopleOffline": "For more than {max} people, contact us",
     "peoplePrice": "{n} people  {price}",
     "peoplePriceOne": "1 person  {price}",

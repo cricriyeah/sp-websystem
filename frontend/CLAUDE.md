@@ -179,7 +179,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   cruza-empresa se remonta por empresa con `key`). Los pagos de una reserva se
   crean con `payment_method_types=['card']` (sin "Link"), igual que las órdenes. Dentro de cada
   tarjeta: lo obligatorio antes que lo opcional (`separarPersonalizaciones`).
-  `AyudaFlotante` ofrece WhatsApp, sin mover la página, tras tres tropiezos
+  `AyudaFlotante` ofrece WhatsApp, sin mover la página, tras dos tropiezos
   (`src/lib/ayuda-contextual.ts`): errores de validación al confirmar pasos o
   intentos de pasar el tope de personas. En `CheckoutView` los datos de
   contacto usan `CamposContacto` con `idPrefijo="checkout"` (ids de error

@@ -11,7 +11,7 @@ export type EstadoAyuda = {
   descartada: boolean;
 };
 
-export const TROPIEZOS_PARA_OFRECER_AYUDA = 3;
+export const TROPIEZOS_PARA_OFRECER_AYUDA = 2;
 
 export const ayudaInicial: EstadoAyuda = { validacion: 0, topePersonas: 0, descartada: false };
 

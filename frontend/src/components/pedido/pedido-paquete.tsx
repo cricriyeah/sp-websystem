@@ -699,7 +699,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 personas={paquete.precio_depende_de_personas && maxPersonas !== null ? (
                   <PeopleStepper
                     label={textos.peopleQuestion}
-                    maxNotice={(tieneWhatsapp ? textos.morePeople : textos.morePeopleOffline).replace('{max}', String(maxPersonas))}
+                    maxNotice={textos.maxPeoplePackage.replace('{max}', String(maxPersonas))}
                     value={personasPaquete}
                     maxPeople={maxPersonas}
                     minPeople={1}
@@ -750,6 +750,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                   valores={estado.contacto}
                   errores={erroresContacto}
                   etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
+                    ejemplos={checkout.contactExamples}
                   onCambio={(campo, valor) => despachar({ tipo: 'contacto', cambios: { [campo]: valor } })}
                 />
               </CheckoutSectionCard>

@@ -10,6 +10,8 @@ type Props = {
   valores: Record<CampoContacto, string>;
   errores: Partial<Record<CampoContacto, string>>;
   etiquetas: Record<CampoContacto, string>;
+  /** Texto gris de ejemplo (placeholder) de cada campo. */
+  ejemplos?: Record<CampoContacto, string>;
   onCambio: (campo: CampoContacto, valor: string) => void;
   refs?: Partial<Record<CampoContacto, Ref<HTMLInputElement>>>;
   disabled?: boolean;
@@ -24,7 +26,7 @@ const CAMPOS: { campo: CampoContacto; tipo: string; icono: typeof Phone; ancho: 
 ];
 
 /** Los tres datos de contacto, iguales en servicio suelto y en paquete. */
-export function CamposContacto({ valores, errores, etiquetas, onCambio, refs, disabled, idPrefijo }: Props) {
+export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio, refs, disabled, idPrefijo }: Props) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {CAMPOS.map(({ campo, tipo, icono: Icono, ancho }) => {
@@ -44,6 +46,7 @@ export function CamposContacto({ valores, errores, etiquetas, onCambio, refs, di
                 required
                 disabled={disabled}
                 value={valores[campo]}
+                placeholder={ejemplos?.[campo]}
                 onChange={(e) => onCambio(campo, e.target.value)}
                 {...propsDeError(idError, Boolean(error))}
                 className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${

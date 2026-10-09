@@ -15,18 +15,18 @@ test('al inicio no se ofrece ayuda', () => {
   assert.equal(a.ofreceAyudaFlotante(a.ayudaInicial), false);
 });
 
-test('se ofrece desde el tercer tropiezo de validación', () => {
-  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'validacion', 2)), false);
-  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'validacion', 3)), true);
+test('se ofrece desde el segundo tropiezo de validación', () => {
+  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'validacion', 1)), false);
+  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'validacion', 2)), true);
 });
 
-test('se ofrece desde el tercer intento de pasar el tope de personas', () => {
-  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'tope-personas', 2)), false);
-  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'tope-personas', 3)), true);
+test('se ofrece desde el segundo intento de pasar el tope de personas', () => {
+  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'tope-personas', 1)), false);
+  assert.equal(a.ofreceAyudaFlotante(tropezar(a.ayudaInicial, 'tope-personas', 2)), true);
 });
 
 test('los tropiezos de distinto tipo se suman', () => {
-  const mezclado = tropezar(tropezar(a.ayudaInicial, 'validacion', 2), 'tope-personas', 1);
+  const mezclado = tropezar(tropezar(a.ayudaInicial, 'validacion', 1), 'tope-personas', 1);
   assert.equal(a.ofreceAyudaFlotante(mezclado), true);
 });
 
