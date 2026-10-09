@@ -34,6 +34,7 @@ test('retenido_parcial identifica empresa, importe faltante y vencimiento reales
   assert.match(t.linea1, /Transportes La Paz/);
   assert.match(t.linea1, /1,650/);
   assert.match(t.linea1, /3:40/);
+  assert.match(t.linea1, /15 de octubre/);
   assert.equal(t.requiereConfirmacion, true);
 });
 

@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { Minus, Plus, Warning } from '@phosphor-icons/react';
-import { AnimatePresence } from 'motion/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { AmenitiesReminder, type ExtraPendiente } from '@/components/amenities-reminder';
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
@@ -365,7 +363,6 @@ export function CheckoutView({
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
   // Lo que resta el codigo segun el servidor (misma funcion que `crear-pago`).
   const [promoDescuento, setPromoDescuento] = useState<{ valor: number; base: number | null } | null>(null);
-  const [recordatorioAbierto, setRecordatorioAbierto] = useState(false);
   const [pagoProcesando, setPagoProcesando] = useState(false);
   // Dia sin lugar para este grupo, con la alternativa que ofrece el backend.
   // **No se reasigna la fecha sola.** Antes se hacia (`setDay(proxima)`) y el
@@ -447,42 +444,6 @@ export function CheckoutView({
   // "2 de 5": leyenda para el extra con cantidad editable para decir la cantidad elegida.
   const deLabel = (cantidad: number, total: number) =>
     checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(total));
-
-  /**
-   * Todo lo del catalogo que el cliente NO lleva: es lo que el recordatorio
-   * de antes de pagar puede ofrecerle.
-   *
-   * Cuenta cualquier item sin marcar, no solo los recomendados. Filtrarlo a
-   * `preseleccionado` dejaba el recordatorio muerto desde que los
-   * recomendados empezaron a venir marcados —la lista salia siempre vacia— y
-   * de paso nunca ofrecia el brunch, que es el unico que no viene marcado y
-   * por lo tanto el unico que de verdad hacia falta ofrecer.
-   *
-   * Los precios se convierten con el tipo de cambio de la sede.
-   */
-  const personalizacionesPendientes: ExtraPendiente[] = catalogoUnificado
-    .filter(
-      (p) =>
-        p.tipo_interaccion === 'check' &&
-        p.preseleccionado &&
-        !personalizacionesMap.has(p.id),
-    )
-    .map((p) => {
-      const precio = aMoneda(p.precio, moneda, servicio?.tipo_cambio_usd);
-      return {
-        id: p.id,
-        avisoReforzado: p.aviso_reforzado,
-        nombre: p.nombre,
-        monto:
-          precio === null
-            ? null
-            : currency.format(
-                precio * cantidadEfectiva(p, people, people),
-              ),
-        hint: null,
-      };
-    });
-  const opcionesPendientes = personalizacionesPendientes;
 
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
@@ -877,11 +838,6 @@ export function CheckoutView({
       return;
     }
 
-    if (opcionesPendientes.length > 0) {
-      setRecordatorioAbierto(true);
-      return;
-    }
-
     enviar();
   };
 
@@ -952,14 +908,12 @@ export function CheckoutView({
       }, empresaSlug);
 
       setPago(pagoResponse);
-      setRecordatorioAbierto(false);
       setPhase('payment');
       // La reserva ya quedo guardada aunque el pago siga pendiente: decirlo
       // separa los dos pasos, para que un fallo de tarjeta no se lea como
       // "se perdio todo lo que llene".
       avisar('exito', dict.feedback.saved);
     } catch (err) {
-      setRecordatorioAbierto(false);
       if (err instanceof ApiError && err.status === 503) {
         setPhase('unavailable');
         return;
@@ -983,8 +937,6 @@ export function CheckoutView({
   // Token de Turnstile. Lo produce el widget solo; el backend lo exige unicamente
   // al crear la reserva, asi que estar vacio no bloquea un reenvio.
   const captchaToken = useRef('');
-
-  const enviando = phase === 'submitting';
 
   const personasResumen = `${people} ${people === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`;
   const horaTexto = pideHora && time ? formatHour(time) : '';
@@ -1541,21 +1493,6 @@ export function CheckoutView({
               .replace('{people}', String(people))}
         onDescartar={ayuda.descartar}
       />
-
-      <AnimatePresence>
-        {recordatorioAbierto && (
-          <AmenitiesReminder
-            key="amenities-reminder"
-            checkout={checkout}
-            feedback={dict.feedback}
-            pendientes={opcionesPendientes}
-            onSeleccionarExtra={(id) => alternarPersonalizacion(id, true)}
-            onContinuar={enviar}
-            onCerrar={() => setRecordatorioAbierto(false)}
-            enviando={enviando}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }

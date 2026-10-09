@@ -879,7 +879,7 @@
   "continuar": {
     "locale": "es-MX",
     "sinPago": "{producto} · Tus datos están guardados · Aún no has pagado",
-    "retenidoParcial": "{producto} · Pago {n} de {total} retenido: {montoHecho} en {empresaHecha} · Falta {montoFalta} a {empresaFalta}. Se cancela si no terminas antes de las {vence}.",
+    "retenidoParcial": "{producto} · Pago {n} de {total} retenido: {montoHecho} en {empresaHecha} · Falta {montoFalta} a {empresaFalta}. Se cancela si no terminas antes del {vence}.",
     "retenidoParcialSinMonto": "{producto} · Hay un pago retenido en {empresaHecha}. Falta el pago a {empresaFalta}.",
     "retenidoTotal": "{producto} · Tus pagos están retenidos ({montos}). Estamos confirmando el cobro.",
     "pagoEnProceso": "{producto} · Tu banco está procesando tu pago de {monto}.",

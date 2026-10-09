@@ -29,13 +29,6 @@ function dinero(monto: string | null, moneda: string, locale: string): string | 
   }
 }
 
-function horaDeVencimiento(iso: string | null, locale: string): string | null {
-  if (!iso || !Number.isFinite(Date.parse(iso))) return null;
-  return new Intl.DateTimeFormat(locale, {
-    hour: 'numeric', minute: '2-digit', timeZone: 'America/Mazatlan',
-  }).format(new Date(iso));
-}
-
 /** "8 de octubre, 4:32 p.m.": día y hora (la hora sola es ambigua cuando el límite es mañana). */
 export function fechaHoraDeVencimiento(iso: string | null | undefined, locale: string): string | null {
   if (!iso || !Number.isFinite(Date.parse(iso))) return null;
@@ -62,7 +55,7 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
     ? dinero(montos.find((m) => m.monto_reembolsado)?.monto_reembolsado
       ?? montos.find((m) => m.monto)?.monto ?? null, resumen.moneda, dict.locale)
     : montoReserva;
-  const vence = horaDeVencimiento(resumen.vence_en, dict.locale);
+  const vence = fechaHoraDeVencimiento(resumen.vence_en, dict.locale);
   const resultado = (registro: RegistroVisual, texto: string, principal: string | null,
     secundaria: string | null = null, requiereConfirmacion = false): TextoSituacion => ({
     registro, linea1: plantilla(texto, datos), linea2: '',
