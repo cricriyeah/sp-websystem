@@ -267,11 +267,23 @@ export const getEstadoReserva = (checkoutId: string, empresaSlug?: string) =>
  * descuento. `valido: false` cubre por igual un codigo que no existe, vencido,
  * agotado o desactivado — nunca distingue el motivo.
  */
-export type CodigoPromocionalCheck = { valido: boolean; porcentaje_descuento: string | null };
+export type CodigoPromocionalCheck = {
+  valido: boolean;
+  porcentaje_descuento: string | null;
+  /** Lo que resta el codigo de `subtotal`, calculado por el servidor con la misma
+   *  funcion que `crear-pago`. `null` sin codigo valido o sin subtotal. */
+  descuento: string | null;
+};
 
-export const validarCodigoPromocional = (codigo: string, correoCliente: string, empresaSlug?: string) =>
+export const validarCodigoPromocional = (
+  codigo: string,
+  correoCliente: string,
+  empresaSlug?: string,
+  subtotal?: number | null,
+) =>
   request<CodigoPromocionalCheck>(
-    `/api/codigo-promocional/validar/?codigo=${encodeURIComponent(codigo)}&correo_cliente=${encodeURIComponent(correoCliente)}`,
+    `/api/codigo-promocional/validar/?codigo=${encodeURIComponent(codigo)}&correo_cliente=${encodeURIComponent(correoCliente)}`
+      + (subtotal != null && subtotal > 0 ? `&subtotal=${subtotal.toFixed(2)}` : ''),
     undefined,
     empresaSlug,
   );

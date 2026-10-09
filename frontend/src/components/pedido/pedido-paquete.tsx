@@ -90,6 +90,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const [codigoPromocional, setCodigoPromocional] = useState('');
   const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>('idle');
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
+  // Lo que resta el codigo segun el servidor (misma funcion que `crear-pago`).
+  const [promoDescuento, setPromoDescuento] = useState<{ valor: number; base: number | null } | null>(null);
 
   const componentes = useMemo(
     () => paquete.servicios_asociados.map((c) => ({ dia_estancia: c.dia_estancia, estrategia_cupo: c.servicio.estrategia_cupo, noches: c.noches })),
@@ -130,8 +132,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const formatearFecha = (iso: string) => new Intl.DateTimeFormat(intlLocale(lang), {
     day: 'numeric', month: 'long', year: 'numeric',
   }).format(fromLocalISODate(iso));
+  // El descuento que se muestra es el que calcula el servidor; el calculo local
+  // solo cubre el instante entre cambiar el subtotal y recibir la respuesta.
   const descuento = pedido && motor === 'reserva' && promoEstado === 'valido' && promoPorcentaje
-    ? Math.min(pedido.total, Math.round(pedido.total * Number(promoPorcentaje) / 100 * 100) / 100)
+    ? Math.min(pedido.total, promoDescuento && promoDescuento.base === pedido.total ? promoDescuento.valor : Math.round(pedido.total * Number(promoPorcentaje) / 100 * 100) / 100)
     : 0;
   const totalConDescuento = pedido ? pedido.total - descuento : null;
   const total = formatearPrecio(totalConDescuento, estado.moneda);
@@ -206,22 +210,25 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   // Al pasar a pagar (o al siguiente pago de una orden) la tarjeta de pago se trae a la vista.
   useScrollAlFoco(`pago|${pago.fase}|${pago.indice}`);
 
+  const subtotalPromo = pedido?.total ?? null;
+
   useEffect(() => {
     if (motor !== 'reserva' || !codigoPromocional.trim() || !estado.contacto.email.trim()) return;
     let activo = true;
     const timer = setTimeout(() => {
-      validarCodigoPromocional(codigoPromocional.trim(), estado.contacto.email.trim(), paquete.empresa_lider_slug)
+      validarCodigoPromocional(codigoPromocional.trim(), estado.contacto.email.trim(), paquete.empresa_lider_slug, subtotalPromo)
         .then((resultado) => {
           if (!activo) return;
           setPromoEstado(resultado.valido ? 'valido' : 'invalido');
           setPromoPorcentaje(resultado.porcentaje_descuento);
+          setPromoDescuento(resultado.descuento === null ? null : { valor: Number(resultado.descuento), base: subtotalPromo });
         })
         .catch(() => {
           if (activo) setPromoEstado('idle');
         });
     }, 400);
     return () => { activo = false; clearTimeout(timer); };
-  }, [motor, codigoPromocional, estado.contacto.email, paquete.empresa_lider_slug]);
+  }, [motor, codigoPromocional, estado.contacto.email, paquete.empresa_lider_slug, subtotalPromo]);
 
   const validarDatos = () => {
     const errores: typeof erroresContacto = {};
@@ -802,8 +809,16 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             waiverAccepted={waiverAccepted}
             onWaiverChange={(valor) => { setWaiverAccepted(valor); if (valor) setErrorWaiver(false); }}
             errorWaiver={errorWaiver}
-            lines={cargos.map((cargo) => ({ label: nombreEmpresa(cargo.empresaSlug),
-              amount: formatearPrecio(cantidadCargos === 1 ? totalConDescuento : cargo.monto, estado.moneda) }))}
+            lines={[
+              ...cargos.map((cargo) => ({ label: nombreEmpresa(cargo.empresaSlug),
+                amount: formatearPrecio(cantidadCargos === 1 ? pedido.total : cargo.monto, estado.moneda) })),
+              ...(descuento > 0
+                ? [{
+                    label: `${checkout.promoCode.discountLabel} (${codigoPromocional.trim().toUpperCase()})`,
+                    amount: `-${formatearPrecio(descuento, estado.moneda)}`,
+                  }]
+                : []),
+            ]}
             lineasViaje={lineasViaje}
             destinoTarjeta={destinoTarjetaPago}
             total={total} amountDueNow={ahora} moneda={estado.moneda}
@@ -816,6 +831,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               setCodigoPromocional(valor);
               setPromoEstado(valor.trim() ? 'verificando' : 'idle');
               setPromoPorcentaje(null);
+              setPromoDescuento(null);
             }}
             codigoPromocionalDisponible={motor === 'reserva'}
             promoEstado={promoEstado} promoPorcentaje={promoPorcentaje}

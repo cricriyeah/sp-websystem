@@ -10,7 +10,6 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckCircle } from '@phosphor-icons/react';
 import { createPortal } from 'react-dom';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
-import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo, FieldError, propsDeError } from '@/components/field-error';
@@ -457,10 +456,18 @@ function TarjetaComoPagas({
 
               {codigoPromocionalDisponible !== false && (
                 <fieldset disabled={phase === 'submitting'}>
+                  {/* Boton con borde y no texto suelto: se tiene que ver a primera
+                      vista (el QA no lo encontraba), pero sin relleno ni color de
+                      accion para no competir con el boton de pagar. */}
                   <Despliegue abierto={!promoAbierto && !codigoPromocional}>
-                    <AccionTexto icono={<Ticket size={14} />} onClick={() => setPromoAbierto(true)}>
+                    <button
+                      type="button"
+                      onClick={() => setPromoAbierto(true)}
+                      className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent"
+                    >
+                      <Ticket size={16} />
                       {checkout.promoCode.toggle}
-                    </AccionTexto>
+                    </button>
                   </Despliegue>
                   <Despliegue abierto={promoAbierto || Boolean(codigoPromocional)}>
                     <div className="flex flex-col gap-1.5">
@@ -480,9 +487,19 @@ function TarjetaComoPagas({
                         <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
                       </Despliegue>
                       <Despliegue abierto={promoEstado === 'valido' && Boolean(promoPorcentaje)}>
-                        <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-                          <CheckCircle size={14} weight="fill" />
-                          {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje ?? 0)))}
+                        <p className="flex items-center justify-between gap-3 text-xs text-emerald-600">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle size={14} weight="fill" />
+                            {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje ?? 0)))}
+                          </span>
+                          {/* Reversible: quitar vacia el campo y el descuento desaparece del resumen. */}
+                          <button
+                            type="button"
+                            onClick={() => { onCodigoPromocionalChange(''); setPromoAbierto(false); }}
+                            className="text-muted underline-offset-2 hover:text-foreground hover:underline"
+                          >
+                            {checkout.promoCode.remove}
+                          </button>
                         </p>
                       </Despliegue>
                       <Despliegue abierto={promoEstado === 'invalido'}>

@@ -540,13 +540,14 @@
     },
     "amountDueNow": "Total due now",
     "promoCode": {
-      "toggle": "Have a promo code?",
+      "toggle": "Apply discount code",
       "label": "Promo code",
       "placeholder": "Code",
       "checking": "Checking…",
       "valid": "Code applied: {percent}% off.",
       "invalid": "That code isn't valid.",
-      "discountLabel": "Discount"
+      "discountLabel": "Discount",
+      "remove": "Remove"
     },
     "securityNoteBefore": "Your online payment is 100% secure. It is processed by ",
     "securityNoteAfter": " with bank-grade encryption, and your card details never touch our servers.",

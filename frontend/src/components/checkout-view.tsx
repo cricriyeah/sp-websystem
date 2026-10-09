@@ -363,6 +363,8 @@ export function CheckoutView({
     'idle',
   );
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
+  // Lo que resta el codigo segun el servidor (misma funcion que `crear-pago`).
+  const [promoDescuento, setPromoDescuento] = useState<{ valor: number; base: number | null } | null>(null);
   const [recordatorioAbierto, setRecordatorioAbierto] = useState(false);
   const [pagoProcesando, setPagoProcesando] = useState(false);
   // Dia sin lugar para este grupo, con la alternativa que ofrece el backend.
@@ -425,41 +427,12 @@ export function CheckoutView({
   const onCodigoPromocionalChange = (value: string) => {
     setCodigoPromocional(value);
     setPromoEstado(value.trim() ? 'verificando' : 'idle');
-    if (!value.trim()) setPromoPorcentaje(null);
+    if (!value.trim()) {
+      setPromoPorcentaje(null);
+      setPromoDescuento(null);
+    }
   };
 
-  // Con debounce (no en cada tecla): a diferencia de `getCupo`, este si depende
-  // de texto libre. La respuesta es solo informativa — `crear-pago` vuelve a
-  // validar el codigo con el subtotal real (ver apps/payments/views.py) — asi
-  // que un fallo de red aqui no debe bloquear nada, solo deja el campo sin
-  // confirmar.
-  useEffect(() => {
-    const codigo = codigoPromocional.trim();
-    if (!codigo) return;
-
-    const checkId = ++promoCheckId.current;
-
-    const timer = setTimeout(async () => {
-      let resultado;
-      try {
-        resultado = await validarCodigoPromocional(codigo, contact.email, empresaSlug);
-      } catch {
-        if (promoCheckId.current === checkId) setPromoEstado('idle');
-        return;
-      }
-      if (promoCheckId.current !== checkId) return;
-
-      if (resultado.valido) {
-        setPromoEstado('valido');
-        setPromoPorcentaje(resultado.porcentaje_descuento);
-      } else {
-        setPromoEstado('invalido');
-        setPromoPorcentaje(null);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [codigoPromocional, contact.email, empresaSlug]);
 
   const usdDisponible = Number(servicio?.tipo_cambio_usd) > 0;
   const tourPrice = servicio
@@ -529,6 +502,41 @@ export function CheckoutView({
     ? null
     : tourPrice + cargoPersonas + cargoPersonalizacionesServicio;
 
+  // Con debounce (no en cada tecla): a diferencia de `getCupo`, este si depende
+  // de texto libre. La respuesta es solo informativa — `crear-pago` vuelve a
+  // validar el codigo con el subtotal real (ver apps/payments/views.py) — asi
+  // que un fallo de red aqui no debe bloquear nada, solo deja el campo sin
+  // confirmar.
+  useEffect(() => {
+    const codigo = codigoPromocional.trim();
+    if (!codigo) return;
+
+    const checkId = ++promoCheckId.current;
+
+    const timer = setTimeout(async () => {
+      let resultado;
+      try {
+        resultado = await validarCodigoPromocional(codigo, contact.email, empresaSlug, subtotalSinDescuento);
+      } catch {
+        if (promoCheckId.current === checkId) setPromoEstado('idle');
+        return;
+      }
+      if (promoCheckId.current !== checkId) return;
+
+      if (resultado.valido) {
+        setPromoEstado('valido');
+        setPromoPorcentaje(resultado.porcentaje_descuento);
+        setPromoDescuento(resultado.descuento === null ? null : { valor: Number(resultado.descuento), base: subtotalSinDescuento });
+      } else {
+        setPromoEstado('invalido');
+        setPromoPorcentaje(null);
+        setPromoDescuento(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [codigoPromocional, contact.email, empresaSlug, subtotalSinDescuento]);
+
   // Solo informativo (redondeo igual al de `cargo_por_descuento` en
   // apps/payments/pricing.py): el monto real lo congela `crear-pago` sobre el
   // subtotal exacto, este puede diferir por centavos de redondeo.
@@ -536,7 +544,9 @@ export function CheckoutView({
     subtotalSinDescuento !== null && promoEstado === 'valido' && promoPorcentaje
       ? Math.min(
           subtotalSinDescuento,
-          Math.round(subtotalSinDescuento * (Number(promoPorcentaje) / 100) * 100) / 100,
+          promoDescuento && promoDescuento.base === subtotalSinDescuento
+            ? promoDescuento.valor
+            : Math.round(subtotalSinDescuento * (Number(promoPorcentaje) / 100) * 100) / 100,
         )
       : 0;
 

@@ -191,6 +191,8 @@ export function TrasladoView({
   const [codigoPromocional, setCodigoPromocional] = useState('');
   const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>('idle');
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
+  // Lo que resta el codigo segun el servidor (misma funcion que `crear-pago`).
+  const [promoDescuento, setPromoDescuento] = useState<{ valor: number; base: number | null } | null>(null);
 
   const [reservaId, setReservaId] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
@@ -274,10 +276,10 @@ export function TrasladoView({
 
   const descuento = useMemo(() => {
     if (promoEstado === 'valido' && promoPorcentaje && precioBase !== null) {
-      return (precioBase * parseFloat(promoPorcentaje)) / 100;
+      return Math.min(precioBase, promoDescuento && promoDescuento.base === precioBase ? promoDescuento.valor : (precioBase * parseFloat(promoPorcentaje)) / 100);
     }
     return 0;
-  }, [promoEstado, promoPorcentaje, precioBase]);
+  }, [promoEstado, promoPorcentaje, promoDescuento, precioBase]);
 
   const total = precioBase !== null ? Math.max(0, precioBase - descuento) : null;
   const amountDueNow = total === null
@@ -390,22 +392,26 @@ export function TrasladoView({
     if (!codigo.trim()) {
       setPromoEstado('idle');
       setPromoPorcentaje(null);
+      setPromoDescuento(null);
       return;
     }
     setPromoEstado('verificando');
-    validarCodigoPromocional(codigo, contact.email, empresaSlug)
+    validarCodigoPromocional(codigo, contact.email, empresaSlug, precioBase)
       .then((res) => {
         if (res.valido && res.porcentaje_descuento) {
           setPromoEstado('valido');
           setPromoPorcentaje(res.porcentaje_descuento);
+          setPromoDescuento(res.descuento === null ? null : { valor: Number(res.descuento), base: precioBase });
         } else {
           setPromoEstado('invalido');
           setPromoPorcentaje(null);
+          setPromoDescuento(null);
         }
       })
       .catch(() => {
         setPromoEstado('invalido');
         setPromoPorcentaje(null);
+        setPromoDescuento(null);
       });
   };
 

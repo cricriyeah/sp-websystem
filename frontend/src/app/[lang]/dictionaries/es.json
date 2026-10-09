@@ -540,13 +540,14 @@
     },
     "amountDueNow": "Total a pagar ahora",
     "promoCode": {
-      "toggle": "¿Tienes un código promocional?",
+      "toggle": "Aplicar código de descuento",
       "label": "Código promocional",
       "placeholder": "Código",
       "checking": "Verificando…",
       "valid": "Código aplicado: {percent}% de descuento.",
       "invalid": "Ese código no es válido.",
-      "discountLabel": "Descuento"
+      "discountLabel": "Descuento",
+      "remove": "Quitar"
     },
     "securityNoteBefore": "Tu pago en línea es 100% seguro. Es procesado por ",
     "securityNoteAfter": " con encriptación bancaria y los datos de tu tarjeta nunca pasan por nuestros servidores.",
