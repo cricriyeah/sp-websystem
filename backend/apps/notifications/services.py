@@ -23,6 +23,20 @@ TIMEOUT_SEGUNDOS = 10
 PUNTO_DE_ENCUENTRO = 'Marina La Costa, Rangel y Navarro, La Paz, BCS'
 
 
+def _motivo_http(error):
+    """Lo que respondio el proveedor, para el log.
+
+    `raise_for_status()` solo dice "403 Forbidden" y descarta el cuerpo, que es
+    donde Resend y Meta explican por que rechazaron el envio (dominio sin
+    verificar, destinatario no permitido, llave sin permiso...). Sin esto, un
+    fallo de configuracion se queda en adivinanzas.
+    """
+    respuesta = getattr(error, 'response', None)
+    if respuesta is None:
+        return str(error)
+    return (respuesta.text or '')[:300]
+
+
 def _html(valor):
     """Escapa un dato escrito por una persona antes de meterlo al correo.
 
@@ -168,8 +182,8 @@ def enviar_correo_confirmacion(reserva):
             timeout=TIMEOUT_SEGUNDOS,
         )
         response.raise_for_status()
-    except requests.RequestException:
-        logger.exception('Fallo el correo de confirmacion de la reserva %s', reserva.pk)
+    except requests.RequestException as error:
+        logger.exception('Fallo el correo de confirmacion de la reserva %s: %s', reserva.pk, _motivo_http(error))
         return False
     return True
 
@@ -236,8 +250,8 @@ def enviar_correo_asignacion(reserva):
             timeout=TIMEOUT_SEGUNDOS,
         )
         response.raise_for_status()
-    except requests.RequestException:
-        logger.exception('Fallo el aviso de asignacion de la reserva %s', reserva.pk)
+    except requests.RequestException as error:
+        logger.exception('Fallo el aviso de asignacion de la reserva %s: %s', reserva.pk, _motivo_http(error))
         return False
     return True
 
@@ -281,8 +295,8 @@ def enviar_whatsapp_confirmacion(reserva):
             timeout=TIMEOUT_SEGUNDOS,
         )
         response.raise_for_status()
-    except requests.RequestException:
-        logger.exception('Fallo el WhatsApp de confirmacion de la reserva %s', reserva.pk)
+    except requests.RequestException as error:
+        logger.exception('Fallo el WhatsApp de confirmacion de la reserva %s: %s', reserva.pk, _motivo_http(error))
         return False
     return True
 
@@ -353,8 +367,8 @@ def enviar_aviso_empresa(reserva):
             timeout=TIMEOUT_SEGUNDOS,
         )
         response.raise_for_status()
-    except requests.RequestException:
-        logger.exception('Fallo el aviso a la empresa de la reserva %s', reserva.pk)
+    except requests.RequestException as error:
+        logger.exception('Fallo el aviso a la empresa de la reserva %s: %s', reserva.pk, _motivo_http(error))
         return False
     return True
 
@@ -447,8 +461,8 @@ def enviar_correo_orden(orden, reservas):
             timeout=TIMEOUT_SEGUNDOS,
         )
         response.raise_for_status()
-    except requests.RequestException:
-        logger.exception('Fallo el correo de confirmacion de la orden %s', orden.pk)
+    except requests.RequestException as error:
+        logger.exception('Fallo el correo de confirmacion de la orden %s: %s', orden.pk, _motivo_http(error))
         return False
     return True
 
@@ -496,8 +510,8 @@ def enviar_correo_retomar_orden(orden):
             json=cuerpo, timeout=TIMEOUT_SEGUNDOS,
         )
         response.raise_for_status()
-    except requests.RequestException:
-        logger.exception('Fallo el correo de retomar de la orden %s', orden.pk)
+    except requests.RequestException as error:
+        logger.exception('Fallo el correo de retomar de la orden %s: %s', orden.pk, _motivo_http(error))
         return False
     return True
 
