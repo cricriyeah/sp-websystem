@@ -457,15 +457,16 @@ function TarjetaComoPagas({
               {codigoPromocionalDisponible !== false && (
                 <fieldset disabled={phase === 'submitting'}>
                   {/* Boton con borde y no texto suelto: se tiene que ver a primera
-                      vista (el QA no lo encontraba), pero sin relleno ni color de
-                      accion para no competir con el boton de pagar. */}
+                      vista (el QA no lo encontraba), pero en el color de acento (indigo) con un tinte suave, no
+                      en el amarillo de accion, para llamar la atencion sin competir con el
+                      boton de pagar. */}
                   <Despliegue abierto={!promoAbierto && !codigoPromocional}>
                     <button
                       type="button"
                       onClick={() => setPromoAbierto(true)}
-                      className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent"
+                      className="inline-flex items-center gap-2 rounded-full border border-accent bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent/20"
                     >
-                      <Ticket size={16} />
+                      <Ticket size={18} weight="fill" />
                       {checkout.promoCode.toggle}
                     </button>
                   </Despliegue>
