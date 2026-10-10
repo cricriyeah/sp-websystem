@@ -347,6 +347,22 @@ se reparten los viajes vendidos: que panga y que capitan le toca a cada uno.
   anterior) y **Proximos 7 dias** (repartir la semana, incluye los atrasados que siguen
   en `pagada`). Sin filtro abre en la semana.
 - Los permisos son propios del proxy: `manage.py setup_roles` se los da a la vendedora.
+- **Pantalla de asignar** (rama `feat/agenda-asignar`). Reservas es el registro de todo; la
+  Agenda es solo para asignar panga:
+  - Una linea de resumen arriba ("N atrasados · N sin panga · N sin capitan", o "Todo
+    asignado"), de `Panorama.resumen`.
+  - El panorama muestra por celda nombre y personas, y en la fila "Sin panga" cada viaje
+    pendiente con nombre y grupo. "Pangas ocupadas" cuenta pangas, no personas.
+  - La tabla pone primero lo que no tiene panga (luego fecha y hora) y "Aviso" va pegado a
+    panga y capitan.
+  - Los selectores de panga y capitan **no** usan autocompletado: cada fila ofrece solo las
+    pangas libres ese dia y con lugar para su grupo (`ContextoAsignacion`, una consulta por
+    dia). Es solo para mostrar: al guardar el formulario conserva todas las opciones para que
+    el modelo explique el motivo ("X ya tiene un viaje el ..."). Limite conocido: se
+    filtra por `Reserva.fecha`, no por cada dia de un paquete de varias salidas.
+  - `static/bookings/panorama.js`: tocar un viaje sin panga marca en verde las pangas
+    libres de ese dia cuyo valor exista en el selector de su fila, y tocar una llena el
+    selector. No guarda; Guardar sigue siendo el boton de la tabla.
 
 ## Cancelacion y reembolso
 

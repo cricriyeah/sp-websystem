@@ -525,10 +525,41 @@ class PanoramaTests(EmpresaTestCase):
         self.assertIsNone(renglon.celdas[0].reserva)
 
     def test_no_crece_en_consultas_con_los_dias(self):
-        """Tres fijas: reservas del rango, pangas activas y las marcadas fuera.
-        Sin ninguna por celda — son 70 celdas con la flota completa."""
-        with self.assertNumQueries(3):
+        """Cuatro fijas: reservas del rango, pangas activas, las marcadas fuera y
+        los atrasados. Sin ninguna por celda — son 70 celdas con la flota completa."""
+        with self.assertNumQueries(4):
             armar_panorama(self.hoy, self.empresa, dias=7)
+
+    def test_el_resumen_cuenta_lo_que_falta(self):
+        viaje(self.empresa, fecha=self.hoy + timedelta(days=1))
+        viaje(
+            self.empresa, fecha=self.hoy + timedelta(days=2),
+            estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande,
+        )
+        viaje(self.empresa, fecha=self.hoy - timedelta(days=2))
+
+        resumen = armar_panorama(self.hoy, self.empresa).resumen
+
+        self.assertEqual(
+            (resumen.sin_panga, resumen.sin_capitan, resumen.atrasados), (1, 1, 1))
+        self.assertFalse(resumen.todo_al_dia)
+
+    def test_el_resumen_de_una_semana_limpia_dice_que_todo_esta_al_dia(self):
+        capitan = Capitan.objects.create(
+            empresa=self.empresa, nombre='Juan Perez', telefono='+5216121234567')
+        viaje(
+            self.empresa, fecha=self.hoy + timedelta(days=2),
+            estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande, capitan=capitan,
+        )
+
+        self.assertTrue(armar_panorama(self.hoy, self.empresa).resumen.todo_al_dia)
+
+    def test_cada_celda_sabe_su_fecha(self):
+        """`panorama.js` marca las pangas libres del dia de la reserva tocada."""
+        renglon = self._renglon_de(armar_panorama(self.hoy, self.empresa), self.grande)
+
+        self.assertEqual(
+            [c.fecha for c in renglon.celdas][:2], [self.hoy, self.hoy + timedelta(days=1)])
 
     def _renglon_de(self, panorama, embarcacion):
         return next(r for r in panorama.renglones if r.embarcacion.pk == embarcacion.pk)
@@ -580,3 +611,150 @@ class PanoramaEnLaAgendaTests(EmpresaTestCase):
         respuesta = self.client.get(reverse('admin:bookings_reserva_changelist'))
 
         self.assertIsNone(respuesta.context.get('panorama'))
+
+
+class AsignarDesdeLaAgendaTests(EmpresaTestCase):
+    """Lo que se ve y se ofrece al asignar: pendientes primero, y solo las pangas que
+    sirven. Guardar sigue validando en el modelo; esto evita llegar al error."""
+
+    def setUp(self):
+        crear_flota(self.empresa)
+        self.url = reverse('admin:bookings_agenda_changelist')
+        self.client.force_login(self.crear_jefe())
+        self.manana = date.today() + timedelta(days=1)
+        self.grandes = list(Embarcacion.objects.filter(
+            empresa=self.empresa, capacidad_maxima=5).order_by('nombre'))
+        self.chicas = list(Embarcacion.objects.filter(
+            empresa=self.empresa, capacidad_maxima=3).order_by('nombre'))
+
+    def _forma_de(self, reserva):
+        formset = self.client.get(self.url).context['cl'].formset
+        return next(f for f in formset.forms if f.instance.pk == reserva.pk)
+
+    def _opciones(self, reserva, campo='embarcacion'):
+        return set(self._forma_de(reserva).fields[campo].queryset.values_list('pk', flat=True))
+
+    def test_un_grupo_de_cinco_solo_ve_las_pangas_donde_cabe(self):
+        reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
+
+        self.assertEqual(self._opciones(reserva), {p.pk for p in self.grandes})
+
+    def test_una_panga_ya_tomada_ese_dia_no_se_ofrece(self):
+        viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[0], nombre_cliente='Otra',
+        )
+        reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
+
+        self.assertEqual(self._opciones(reserva), {self.grandes[1].pk})
+
+    def test_una_panga_fuera_de_servicio_no_se_ofrece(self):
+        EmbarcacionNoDisponible.objects.create(
+            empresa=self.empresa, fecha=self.manana, embarcacion=self.grandes[0], motivo='Motor')
+        reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
+
+        self.assertEqual(self._opciones(reserva), {self.grandes[1].pk})
+
+    def test_la_panga_ya_asignada_sigue_en_su_selector(self):
+        reserva = viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[0], numero_personas=5,
+        )
+
+        self.assertIn(self.grandes[0].pk, self._opciones(reserva))
+
+    def test_otra_fecha_no_estorba(self):
+        viaje(
+            self.empresa, fecha=self.manana + timedelta(days=1), estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[0], nombre_cliente='Otra',
+        )
+        reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
+
+        self.assertEqual(self._opciones(reserva), {p.pk for p in self.grandes})
+
+    def test_un_capitan_con_viaje_ese_dia_no_se_ofrece(self):
+        ocupado = Capitan.objects.create(empresa=self.empresa, nombre='Ocupado', telefono='1')
+        libre = Capitan.objects.create(empresa=self.empresa, nombre='Libre', telefono='2')
+        viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.chicas[0], capitan=ocupado, nombre_cliente='Otra',
+        )
+        reserva = viaje(self.empresa, fecha=self.manana)
+
+        self.assertEqual(self._opciones(reserva, 'capitan'), {libre.pk})
+
+    def test_sin_pangas_libres_el_selector_lo_dice(self):
+        for panga in self.grandes:
+            viaje(
+                self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+                embarcacion=panga, nombre_cliente=f'Otra {panga.pk}',
+            )
+        reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
+
+        self.assertEqual(
+            self._forma_de(reserva).fields['embarcacion'].empty_label,
+            'Sin pangas libres donde quepan',
+        )
+
+    def test_al_guardar_una_panga_tomada_el_modelo_explica_por_que(self):
+        """El selector ya no la ofrece, pero un formulario viejo o una pestana
+        abierta mucho rato puede mandarla: el error tiene que decir la razon."""
+        viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[0], nombre_cliente='Otra',
+        )
+        reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
+
+        respuesta = self.client.post(self.url, {
+            'form-TOTAL_FORMS': '1', 'form-INITIAL_FORMS': '1',
+            'form-MIN_NUM_FORMS': '0', 'form-MAX_NUM_FORMS': '1000',
+            'form-0-id': str(reserva.pk),
+            'form-0-embarcacion': str(self.grandes[0].pk),
+            'form-0-capitan': '',
+            '_save': 'Guardar',
+        })
+
+        self.assertContains(respuesta, 'ya tiene un viaje')
+        reserva.refresh_from_db()
+        self.assertIsNone(reserva.embarcacion_id)
+
+    def test_lo_que_no_tiene_panga_va_primero(self):
+        asignada = viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[0], nombre_cliente='Con panga',
+        )
+        pendiente = viaje(
+            self.empresa, fecha=self.manana + timedelta(days=3), nombre_cliente='Sin panga',
+        )
+
+        filas = [r.pk for r in self.client.get(self.url).context['cl'].result_list]
+
+        self.assertEqual(filas, [pendiente.pk, asignada.pk])
+
+    def test_el_aviso_va_pegado_a_la_panga_y_no_al_final(self):
+        from .admin import AgendaAdmin
+
+        columnas = AgendaAdmin.list_display
+        self.assertLess(columnas.index('capitan'), columnas.index('aviso'))
+        self.assertLess(columnas.index('aviso'), columnas.index('avisado'))
+
+    def test_el_resumen_y_los_pendientes_se_pintan_con_nombre_y_grupo(self):
+        viaje(self.empresa, fecha=self.manana, numero_personas=3)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn('data-resumen', html)
+        self.assertIn('1 sin panga', html)
+        self.assertIn('data-pendiente', html)
+        self.assertIn('Ana Ruiz', html)
+        self.assertIn('3 pers', html)
+        self.assertIn('Pangas ocupadas', html)
+
+    def test_una_semana_sin_pendientes_dice_todo_asignado(self):
+        self.assertContains(self.client.get(self.url), 'Todo asignado')
+
+    def test_las_celdas_llevan_los_datos_que_usa_el_script(self):
+        html = self.client.get(self.url).content.decode()
+
+        for atributo in ['data-celda', 'data-fecha=', 'data-embarcacion=', 'data-capacidad=']:
+            self.assertIn(atributo, html)

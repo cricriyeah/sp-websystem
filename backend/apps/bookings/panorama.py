@@ -8,10 +8,14 @@ panga al dia, esa respuesta cabe entera en una cuadricula sin scroll.
 Es solo lectura a proposito. Repartir se sigue haciendo en la tabla, con sus
 selectores y su validacion; esto solo ensena el panorama.
 
-Todo sale en **tres consultas fijas** para la cuadricula completa — reservas del
-rango, pangas activas y las marcadas fuera de servicio — sin ninguna por celda.
-Con la flota completa y una semana son setenta celdas: una consulta por celda
-seria setenta consultas para pintar una tabla.
+Todo sale en **cuatro consultas fijas** para la cuadricula completa — reservas del
+rango, pangas activas, las marcadas fuera de servicio y los viajes atrasados — sin
+ninguna por celda. Con la flota completa y una semana son setenta celdas: una
+consulta por celda seria setenta consultas para pintar una tabla.
+
+La cuadricula tambien es la superficie donde se asigna: cada celda y cada viaje sin
+panga llevan sus datos (`data-*`) para que `panorama.js` deje elegir la panga desde
+aqui. Lo que se guarda sigue siendo el selector de la tabla, con su validacion.
 """
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -27,6 +31,7 @@ DIAS_DEL_PANORAMA = 7
 class Celda:
     """Una panga en un dia."""
 
+    fecha: date
     reserva: object | None
     # False cuando la panga esta marcada fuera de servicio ese dia. Vacio
     # significa disponible, y confundir las dos cosas haria asignarle un viaje a
@@ -41,6 +46,19 @@ class Renglon:
 
 
 @dataclass(frozen=True)
+class Resumen:
+    """Lo que falta, contado, para la linea de arriba de la agenda."""
+
+    sin_panga: int
+    sin_capitan: int
+    atrasados: int
+
+    @property
+    def todo_al_dia(self):
+        return not (self.sin_panga or self.sin_capitan or self.atrasados)
+
+
+@dataclass(frozen=True)
 class Panorama:
     dias: list
     renglones: list
@@ -51,6 +69,7 @@ class Panorama:
     sin_repartir: list
     ocupadas: list
     a_flote: list
+    resumen: Resumen
 
     @property
     def pie(self):
@@ -75,19 +94,29 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
 
     asignadas = {}
     sin_panga = {fecha: [] for fecha in fechas}
+    sin_capitan = 0
     for reserva in Reserva.objects.filter(
         fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
-    ).select_related('embarcacion'):
+    ).select_related('embarcacion').order_by('hora', 'pk'):
         if reserva.embarcacion_id:
             asignadas[(reserva.fecha, reserva.embarcacion_id)] = reserva
+            if reserva.estado == Reserva.Estado.ASIGNADA and not reserva.capitan_id:
+                sin_capitan += 1
         else:
             sin_panga[reserva.fecha].append(reserva)
+
+    # Cobrados que ya pasaron y nadie asigno: la agenda los lista y los marca
+    # ATRASADO, asi que el resumen tiene que contarlos tambien.
+    atrasados = Reserva.objects.filter(
+        fecha__lt=desde, estado=Reserva.Estado.PAGADA, empresa=empresa,
+    ).count()
 
     renglones = [
         Renglon(
             embarcacion=embarcacion,
             celdas=[
                 Celda(
+                    fecha=fecha,
                     reserva=asignadas.get((fecha, embarcacion.pk)),
                     disponible=(fecha, embarcacion.pk) not in fuera,
                 )
@@ -107,4 +136,9 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
         a_flote=[
             sum(1 for e in embarcaciones if (fecha, e.pk) not in fuera) for fecha in fechas
         ],
+        resumen=Resumen(
+            sin_panga=sum(len(dia) for dia in sin_panga.values()),
+            sin_capitan=sin_capitan,
+            atrasados=atrasados,
+        ),
     )

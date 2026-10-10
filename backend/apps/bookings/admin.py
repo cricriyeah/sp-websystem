@@ -21,7 +21,9 @@ from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from apps.fleet.models import Paquete, PuntoEncuentro, Recurso, Servicio
+from apps.fleet.models import (
+    Embarcacion, EmbarcacionNoDisponible, Paquete, PuntoEncuentro, Recurso, Servicio,
+)
 from apps.payments.situacion import requiere_atencion, situacion_de_orden, situacion_de_reserva
 from apps.notifications.services import enlace_retomar_orden
 from apps.tenancy import scope
@@ -895,10 +897,85 @@ class CuandoFilter(admin.SimpleListFilter):
         )
 
 
+class ContextoAsignacion:
+    """Lo que ya esta tomado cada dia, para ofrecer solo las pangas que sirven.
+
+    Una consulta por cada dia distinto del listado (no por fila) y una por flota,
+    asi que una semana de agenda son unas diez consultas y no cien. Vive lo que
+    dura la peticion: se crea en `get_changelist_form`.
+    """
+
+    def __init__(self):
+        self._dias = {}
+        self._flota = {}
+
+    def _pangas(self, empresa_id):
+        if empresa_id not in self._flota:
+            self._flota[empresa_id] = list(
+                Embarcacion.objects.filter(empresa_id=empresa_id, activa=True)
+                .values_list('pk', 'capacidad_maxima')
+            )
+        return self._flota[empresa_id]
+
+    def _tomado(self, fecha, empresa_id):
+        clave = (fecha, empresa_id)
+        if clave not in self._dias:
+            del_dia = Reserva.objects.filter(
+                models.Q(fecha=fecha) | models.Q(salidas__fecha=fecha),
+                estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa_id=empresa_id,
+            ).distinct().values_list('pk', 'embarcacion_id', 'capitan_id')
+            fuera = EmbarcacionNoDisponible.objects.filter(
+                fecha=fecha, empresa_id=empresa_id,
+            ).values_list('embarcacion_id', flat=True)
+            self._dias[clave] = (list(del_dia), set(fuera))
+        return self._dias[clave]
+
+    def pangas_que_sirven(self, reserva):
+        """Libres ese dia y con lugar para el grupo. Misma regla que `clean()`:
+        una sola salida por dia y no pasar la capacidad."""
+        del_dia, fuera = self._tomado(reserva.fecha, reserva.empresa_id)
+        tomadas = {panga for pk, panga, _ in del_dia if panga and pk != reserva.pk}
+        return [
+            pk for pk, capacidad in self._pangas(reserva.empresa_id)
+            if pk not in tomadas and pk not in fuera and capacidad >= reserva.numero_personas
+        ]
+
+    def capitanes_ocupados(self, reserva):
+        """Los que ya tienen viaje ese dia, sin contar el de esta misma reserva."""
+        del_dia, _ = self._tomado(reserva.fecha, reserva.empresa_id)
+        return {capitan for pk, _, capitan in del_dia if capitan and pk != reserva.pk}
+
+
 class AgendaForm(forms.ModelForm):
+    # Lo pone `AgendaAdmin.get_changelist_form`; sin el, el formulario ofrece todo
+    # y la validacion del modelo sigue rechazando lo que no sirve.
+    contexto = None
+
     class Meta:
         model = Agenda
         fields = ['embarcacion', 'capitan']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo al mostrar. Al guardar el formulario queda con todas las opciones a
+        # proposito: si una ya no sirve, el modelo contesta "X ya tiene un viaje el
+        # ..." y eso explica mas que "escoja una opcion valida".
+        if self.contexto is not None and self.instance.pk and not self.is_bound:
+            self._ofrecer_solo_lo_que_sirve(self.instance)
+
+    def _ofrecer_solo_lo_que_sirve(self, reserva):
+        """Lo que no esta libre o no cabe no se ofrece, en vez de enterarse al guardar."""
+        pangas = self.fields['embarcacion']
+        ids = set(self.contexto.pangas_que_sirven(reserva))
+        if reserva.embarcacion_id:
+            ids.add(reserva.embarcacion_id)  # la actual nunca desaparece del selector
+        pangas.queryset = pangas.queryset.filter(pk__in=ids).order_by('-capacidad_maxima', 'nombre')
+        pangas.empty_label = 'Elegir panga' if ids else 'Sin pangas libres donde quepan'
+
+        capitanes = self.fields['capitan']
+        ocupados = self.contexto.capitanes_ocupados(reserva) - {reserva.capitan_id}
+        capitanes.queryset = capitanes.queryset.exclude(pk__in=ocupados)
+        capitanes.empty_label = 'Elegir capitan'
 
     def _post_clean(self):
         # El listado envia todas las reservas visibles, aunque solo se cambie
@@ -936,22 +1013,29 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
     para lo que en la cabeza es una sola decision.
     """
 
+    # "Aviso" va pegado a la panga y al capitan, no al final: es lo que dice que falta
+    # (SIN CAPITAN / ATRASADO) y a la derecha quedaba fuera de pantalla.
     list_display = [
         'fecha', 'hora', 'nombre_cliente', 'numero_personas',
-        'embarcacion', 'capitan', 'avisado', 'aviso',
+        'embarcacion', 'capitan', 'aviso', 'avisado',
     ]
     list_editable = ['embarcacion', 'capitan']
     list_display_links = ['nombre_cliente']
     list_filter = [CuandoFilter]
     search_fields = ['nombre_cliente', 'telefono_cliente']
-    autocomplete_fields = ['embarcacion', 'capitan']
+    # Sin `autocomplete_fields` a proposito: el autocompletado trae todas las
+    # pangas sin saber de que fila viene. Con un selector normal cada fila ofrece
+    # solo las pangas libres y con lugar para su grupo (`ContextoAsignacion`).
     list_per_page = 50
 
     # La cuadricula de dias x pangas va encima de la tabla, ver la plantilla.
     change_list_template = 'bookings/agenda_changelist.html'
 
     def get_changelist_form(self, request, **kwargs):
-        return super().get_changelist_form(request, form=AgendaForm, **kwargs)
+        # Un formulario con su propio contexto por peticion: lo tomado cada dia se
+        # consulta una vez y lo comparten todas las filas.
+        formulario = type('AgendaFormConContexto', (AgendaForm,), {'contexto': ContextoAsignacion()})
+        return super().get_changelist_form(request, form=formulario, **kwargs)
 
     class Media:
         # Mismo aviso de reservas nuevas que el listado de Reservas: repartir
@@ -992,7 +1076,9 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
         """
         if request.GET.get(CuandoFilter.parameter_name) == 'recientes':
             return ['-creado_en']
-        return super().get_ordering(request)
+        # Lo que no tiene panga va primero: es el trabajo de esta pantalla. Dentro de
+        # cada grupo, por fecha y hora, asi que los atrasados siguen arriba.
+        return [models.F('embarcacion_id').asc(nulls_first=True), 'fecha', 'hora']
 
     def has_add_permission(self, request):
         # Una reserva se crea vendiendo, no se inventa desde aqui.
