@@ -196,10 +196,66 @@
     });
   }
 
+  /* Contadores que reaccionan antes de guardar. Valen igual si se asigna desde la
+   * cuadricula que desde los selectores de la tabla: miran los selectores, que son
+   * lo unico que se guarda.
+   *
+   *  - "Sin panga (N)" baja con cada viaje al que ya se le puso panga.
+   *  - El pie, junto a Guardar, dice cuantos viajes tienen un cambio sin guardar en
+   *    vez del conteo de filas, que no informa nada. */
+  function iniciarContadores(panel) {
+    var guardar = document.querySelector('button[name="_save"]');
+    var pie = guardar && guardar.parentElement ? guardar.parentElement.previousElementSibling : null;
+    var textoPie = pie ? pie.textContent.replace(/\s+/g, ' ').trim() : '';
+    var etiqueta = panel.querySelector('[data-sin-panga]');
+    var inicial = etiqueta ? parseInt(etiqueta.getAttribute('data-sin-panga'), 10) : 0;
+    var chips = panel.querySelectorAll('[data-pendiente]');
+    var selects = document.querySelectorAll('select[name$="-embarcacion"], select[name$="-capitan"]');
+    if (!selects.length) return;
+
+    for (var i = 0; i < selects.length; i++) {
+      selects[i].setAttribute('data-original', selects[i].value);
+    }
+
+    function actualizar() {
+      var filas = {};
+      for (var i = 0; i < selects.length; i++) {
+        if (selects[i].value !== selects[i].getAttribute('data-original')) {
+          filas[selects[i].name.split('-').slice(0, 2).join('-')] = true;
+        }
+      }
+      var cambios = Object.keys(filas).length;
+
+      if (pie) {
+        pie.textContent = cambios
+          ? cambios + (cambios === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
+          : textoPie;
+        pie.style.color = cambios ? VERDE : '';
+        pie.style.fontWeight = cambios ? '600' : '';
+      }
+
+      if (etiqueta) {
+        var asignados = 0;
+        for (var j = 0; j < chips.length; j++) {
+          var select = selectorDe(chips[j].getAttribute('data-reserva'));
+          if (select && select.value) asignados++;
+        }
+        var faltan = Math.max(inicial - asignados, 0);
+        etiqueta.textContent = faltan ? 'Sin panga (' + faltan + ')' : 'Todos con panga';
+        etiqueta.style.color = faltan ? ROJO : VERDE;
+      }
+    }
+
+    for (var k = 0; k < selects.length; k++) {
+      selects[k].addEventListener('change', actualizar);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var panel = document.querySelector('[data-panorama]');
     if (!panel) return;
     recordarApertura(panel);
     iniciarAsignacion(panel);
+    iniciarContadores(panel);
   });
 })();

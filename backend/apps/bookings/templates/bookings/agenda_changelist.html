@@ -66,11 +66,11 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                     {% if r.todo_al_dia %}
                                         <span style="color: #15803d; font-weight: 600">Todo asignado</span>
                                     {% else %}
-                                        {% if r.sin_panga %}
-                                            <span style="color: #dc2626; font-weight: 600">Sin panga ({{ r.sin_panga }})</span>
-                                        {% else %}
-                                            <span style="color: #15803d; font-weight: 600">Todos con panga</span>
-                                        {% endif %}
+                                        {# `data-sin-panga` lo mantiene al dia `panorama.js` al asignar, antes de guardar. #}
+                                        <span data-sin-panga="{{ r.sin_panga }}"
+                                              style="color: {% if r.sin_panga %}#dc2626{% else %}#15803d{% endif %}; font-weight: 600">
+                                            {% if r.sin_panga %}Sin panga ({{ r.sin_panga }}){% else %}Todos con panga{% endif %}
+                                        </span>
                                         {% if r.sin_capitan %}
                                             <br><span style="color: #dc2626; font-size: 0.75rem">{{ r.sin_capitan }} sin capitan</span>
                                         {% endif %}

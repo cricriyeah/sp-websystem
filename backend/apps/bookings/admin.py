@@ -16,6 +16,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
@@ -1036,7 +1037,7 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
     # "Aviso" va pegado a la panga y al capitan, no al final: es lo que dice que falta
     # (SIN CAPITAN / ATRASADO) y a la derecha quedaba fuera de pantalla.
     list_display = [
-        'fecha', 'hora', 'nombre_cliente', 'numero_personas',
+        'dia', 'hora', 'nombre_cliente', 'numero_personas',
         'embarcacion', 'capitan', 'aviso', 'avisado',
     ]
     list_editable = ['embarcacion', 'capitan']
@@ -1108,15 +1109,30 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
         # Una reserva se cancela, no se borra (ver docs/contexto-negocio.md).
         return False
 
-    @admin.display(description='Avisado', boolean=True)
+    @admin.display(description='Fecha', ordering='fecha')
+    def dia(self, obj):
+        """"Sab 10 Oct", igual que los encabezados del panorama: una sola forma de
+        decir el dia en toda la pantalla. El ano solo si no es el actual."""
+        formato = 'D j M' if obj.fecha.year == timezone.localdate().year else 'D j M Y'
+        return date_format(obj.fecha, formato)
+
+    @admin.display(description='Avisado')
     def avisado(self, obj):
         """Si al cliente ya le salio el correo con su capitan y su panga.
 
         Importa porque un cambio posterior de capitan NO se reenvia solo: esa
         llamada la hace la vendedora, y para hacerla necesita saber que fue lo
         ultimo que el cliente leyo.
+
+        Solo tiene sentido cuando ya hay panga: antes no hay nada que avisar, y una
+        cruz roja en cada viaje pendiente le quitaba al rojo su significado.
+        Gris y no rojo: "pendiente" es lo normal hasta que se asigna.
         """
-        return obj.aviso_asignacion_enviado_en is not None
+        if obj.estado != Reserva.Estado.ASIGNADA:
+            return '—'
+        if obj.aviso_asignacion_enviado_en is not None:
+            return format_html('<span style="color:#15803d">{}</span>', 'Enviado')
+        return format_html('<span style="color:#6b7280">{}</span>', 'Pendiente')
 
     @admin.display(description='Aviso')
     def aviso(self, obj):

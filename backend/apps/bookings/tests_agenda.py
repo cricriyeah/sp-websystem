@@ -14,7 +14,7 @@ from django.utils import timezone
 from apps.fleet.models import Capitan, Embarcacion, EmbarcacionNoDisponible
 from apps.testing import EmpresaTestCase, crear_flota, crear_servicio_pesca
 
-from .models import Reserva
+from .models import Agenda, Reserva
 from .panorama import armar_panorama
 
 
@@ -793,6 +793,54 @@ class AsignarDesdeLaAgendaTests(EmpresaTestCase):
         self.assertTrue(capitan.widget.can_add_related)
         self.assertFalse(capitan.widget.can_change_related)
         self.assertFalse(capitan.widget.can_delete_related)
+
+    def test_avisado_no_pone_rojo_en_lo_que_aun_no_tiene_panga(self):
+        """Una cruz roja en cada viaje pendiente le quitaba al rojo su significado."""
+        viaje(self.empresa, fecha=self.manana)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertNotIn('icon-no', html)
+        self.assertNotIn('Pendiente', html)  # sin panga todavia: no hay nada que avisar
+
+    def test_avisado_dice_pendiente_o_enviado_cuando_ya_hay_panga(self):
+        from django.contrib import admin as django_admin
+
+        from .admin import AgendaAdmin
+
+        sin_aviso = viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[0], nombre_cliente='Sin aviso',
+        )
+        con_aviso = viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[1], nombre_cliente='Con aviso',
+            aviso_asignacion_enviado_en=timezone.now(),
+        )
+        sin_panga = viaje(self.empresa, fecha=self.manana, nombre_cliente='Sin panga')
+
+        modelo = AgendaAdmin(Agenda, django_admin.site)
+        self.assertIn('Pendiente', modelo.avisado(sin_aviso))
+        self.assertIn('Enviado', modelo.avisado(con_aviso))
+        self.assertEqual(modelo.avisado(sin_panga), '—')
+
+    def test_la_fecha_se_dice_como_en_el_panorama(self):
+        from django.contrib import admin as django_admin
+
+        from .admin import AgendaAdmin
+
+        reserva = viaje(self.empresa, fecha=date.today() + timedelta(days=1))
+        texto = AgendaAdmin(Agenda, django_admin.site).dia(reserva)
+
+        self.assertIn(str((date.today() + timedelta(days=1)).day), texto)
+        self.assertNotIn(' de ', texto)  # nada de "10 de Octubre de 2026"
+
+    def test_el_pie_y_el_contador_los_mantiene_el_script(self):
+        viaje(self.empresa, fecha=self.manana)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn('data-sin-panga="1"', html)
 
     def test_las_celdas_llevan_los_datos_que_usa_el_script(self):
         html = self.client.get(self.url).content.decode()
