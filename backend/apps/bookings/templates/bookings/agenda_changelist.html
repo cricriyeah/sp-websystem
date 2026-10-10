@@ -27,12 +27,35 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
         <details data-panorama open
                  class="border border-base-200 rounded-default dark:border-base-800"
                  style="margin-bottom: 1.5rem">
+            {% comment %}
+            El resumen vive aqui, en la linea del titulo y a la derecha, y no dentro de la
+            cuadricula: "sin capitan" y "atrasado" no son datos de una panga, y bajo la
+            columna "Panga" se leian como si lo fueran. Aqui tambien se ve con el
+            panorama plegado. `panorama.js` mantiene al dia el numero de "sin panga".
+            {% endcomment %}
             <summary class="font-medium px-4 py-3 text-base-700 text-sm dark:text-base-300"
                      style="cursor: pointer; user-select: none">
                 Panorama de la semana
                 <span class="text-base-400" style="font-weight: 400; font-size: 0.8rem">
                     · toca un viaje sin panga y luego una panga libre
                 </span>
+                {% with r=panorama.resumen %}
+                    <span data-resumen data-otros="{{ r.sin_capitan|add:r.atrasados }}"
+                          class="text-base-500 dark:text-base-400"
+                          style="float: right; display: inline-flex; gap: 1rem; font-size: 0.8rem; font-weight: 400">
+                        <span data-todo-asignado {% if not r.todo_al_dia %}hidden{% endif %}
+                              style="color: #15803d; font-weight: 600">Todo asignado</span>
+                        <span data-pieza-sin-panga {% if not r.sin_panga %}hidden{% endif %}>
+                            <b data-n-sin-panga style="color: #dc2626">{{ r.sin_panga }}</b> sin panga
+                        </span>
+                        {% if r.sin_capitan %}
+                            <span><b style="color: #dc2626">{{ r.sin_capitan }}</b> sin capitan</span>
+                        {% endif %}
+                        {% if r.atrasados %}
+                            <span><b style="color: #dc2626">{{ r.atrasados }}</b> atrasado{{ r.atrasados|pluralize }}</span>
+                        {% endif %}
+                    </span>
+                {% endwith %}
             </summary>
 
             <div style="overflow-x: auto; padding: 0 1rem 0.5rem">
@@ -56,32 +79,23 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                         {% comment %}
                         Los viajes vendidos sin panga no caben en ningun renglon de
                         abajo. Van arriba porque son el trabajo: cada uno con su nombre
-                        y su grupo, y se puede tocar. La primera celda dice cuantos
-                        faltan y lo demas que esta mal (sin capitan, atrasados), que
-                        antes era una linea aparte repitiendo lo mismo.
+                        y su grupo, y se puede tocar. La banda de color suave y la linea
+                        mas marcada antes de la primera panga lo separan de la cuadricula:
+                        es la zona de "por asignar", no una panga mas. La primera celda
+                        solo lleva su etiqueta; el resto del resumen esta en el titulo.
                         {% endcomment %}
-                        <tr>
+                        <tr style="background: rgba(220, 38, 38, 0.05)">
                             {% with r=panorama.resumen %}
-                                <td data-resumen style="padding: 0.4rem 0.5rem; vertical-align: top; line-height: 1.25">
-                                    {% if r.todo_al_dia %}
-                                        <span style="color: #15803d; font-weight: 600">Todo asignado</span>
-                                    {% else %}
-                                        {# `data-sin-panga` lo mantiene al dia `panorama.js` al asignar, antes de guardar. #}
-                                        <span data-sin-panga="{{ r.sin_panga }}"
-                                              style="color: {% if r.sin_panga %}#dc2626{% else %}#15803d{% endif %}; font-weight: 600">
-                                            {% if r.sin_panga %}Sin panga ({{ r.sin_panga }}){% else %}Todos con panga{% endif %}
-                                        </span>
-                                        {% if r.sin_capitan %}
-                                            <br><span style="color: #dc2626; font-size: 0.75rem">{{ r.sin_capitan }} sin capitan</span>
-                                        {% endif %}
-                                        {% if r.atrasados %}
-                                            <br><span style="color: #dc2626; font-size: 0.75rem">{{ r.atrasados }} atrasado{{ r.atrasados|pluralize }}</span>
-                                        {% endif %}
-                                    {% endif %}
+                                <td style="padding: 0.7rem 0.5rem 0.6rem; vertical-align: top">
+                                    {# `data-sin-panga` lo mantiene al dia `panorama.js` al asignar, antes de guardar. #}
+                                    <span data-sin-panga="{{ r.sin_panga }}"
+                                          style="color: {% if r.sin_panga %}#dc2626{% else %}#15803d{% endif %}; font-weight: 600">
+                                        {% if r.sin_panga %}Sin panga ({{ r.sin_panga }}){% else %}Todos con panga{% endif %}
+                                    </span>
                                 </td>
                             {% endwith %}
                             {% for pendientes in panorama.sin_repartir %}
-                                <td style="padding: 0.3rem 0.5rem; vertical-align: top">
+                                <td style="padding: 0.7rem 0.5rem 0.4rem; vertical-align: top">
                                     {% for reserva in pendientes %}
                                         <button type="button" data-pendiente
                                                 data-reserva="{{ reserva.pk }}"
@@ -97,7 +111,8 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                         </tr>
 
                         {% for renglon in panorama.renglones %}
-                            <tr class="border-t border-base-200 dark:border-base-800">
+                            <tr class="border-t border-base-200 dark:border-base-800"
+                                {% if forloop.first %}style="border-top: 2px solid rgba(127, 127, 127, 0.35)"{% endif %}>
                                 <td class="text-base-700 dark:text-base-300"
                                     style="padding: 0.2rem 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                                     {{ renglon.embarcacion.nombre }}

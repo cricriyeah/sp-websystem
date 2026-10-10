@@ -356,6 +356,7 @@
     var pie = guardar && guardar.parentElement ? guardar.parentElement.previousElementSibling : null;
     var textoPie = pie ? pie.textContent.replace(/\s+/g, ' ').trim() : '';
     var etiqueta = panel.querySelector('[data-sin-panga]');
+    var resumen = panel.querySelector('[data-resumen]');
     var inicial = etiqueta ? parseInt(etiqueta.getAttribute('data-sin-panga'), 10) : 0;
     var chips = panel.querySelectorAll('[data-pendiente]');
     var selects = document.querySelectorAll('select[name$="-embarcacion"], select[name$="-capitan"]');
@@ -417,6 +418,18 @@
           etiqueta.textContent = nuevo;
           etiqueta.style.color = faltan ? ROJO : VERDE;
           animar(etiqueta, [{ opacity: 0.2 }, { opacity: 1 }], { duration: 180 });
+        }
+
+        /* El resumen del titulo dice lo mismo que la etiqueta de la fila: no puede
+         * quedarse atras. "Todo asignado" solo cuando tampoco queda otra cosa mala. */
+        if (resumen) {
+          var otros = parseInt(resumen.getAttribute('data-otros'), 10) || 0;
+          var pieza = resumen.querySelector('[data-pieza-sin-panga]');
+          var numero = resumen.querySelector('[data-n-sin-panga]');
+          var todo = resumen.querySelector('[data-todo-asignado]');
+          if (numero) numero.textContent = faltan;
+          if (pieza) pieza.hidden = !faltan;
+          if (todo) todo.hidden = !(faltan === 0 && otros === 0);
         }
       }
     }

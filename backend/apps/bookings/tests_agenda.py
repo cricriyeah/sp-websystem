@@ -751,7 +751,26 @@ class AsignarDesdeLaAgendaTests(EmpresaTestCase):
         self.assertIn('Pangas ocupadas', html)
 
     def test_una_semana_sin_pendientes_dice_todo_asignado(self):
-        self.assertContains(self.client.get(self.url), 'Todo asignado')
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn('Todo asignado', html)
+        self.assertNotRegex(html, r'data-todo-asignado\s+hidden')
+
+    def test_con_algo_pendiente_no_dice_todo_asignado(self):
+        viaje(self.empresa, fecha=self.manana)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertRegex(html, r'data-todo-asignado\s+hidden')
+
+    def test_el_resumen_esta_en_el_titulo_y_no_dentro_de_la_cuadricula(self):
+        """Bajo la columna "Panga" se leia como datos de una panga."""
+        viaje(self.empresa, fecha=self.manana)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertLess(html.index('<summary'), html.index('data-resumen'))
+        self.assertLess(html.index('data-resumen'), html.index('</summary>'))
 
     def test_los_viajes_sin_panga_van_arriba_de_las_pangas(self):
         """Con diez pangas, si lo pendiente fuera al final quedaria bajo el pliegue,
@@ -765,7 +784,7 @@ class AsignarDesdeLaAgendaTests(EmpresaTestCase):
     def test_la_ayuda_esta_junto_a_la_cuadricula_y_no_al_final(self):
         html = self.client.get(self.url).content.decode()
 
-        self.assertLess(html.index('data-panorama-ayuda'), html.index('data-resumen'))
+        self.assertLess(html.index('data-panorama-ayuda'), html.index('data-celda'))
 
     def test_el_resumen_vive_en_la_fila_de_pendientes_y_no_aparte(self):
         viaje(self.empresa, fecha=self.manana)
@@ -774,7 +793,7 @@ class AsignarDesdeLaAgendaTests(EmpresaTestCase):
         html = self.client.get(self.url).content.decode()
 
         self.assertEqual(html.count('data-resumen'), 1)
-        self.assertIn('1 atrasado', html)
+        self.assertIn('>1</b> atrasado', html)
 
     def test_el_selector_de_panga_muestra_nombre_y_capacidad_sin_botones_extra(self):
         reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
