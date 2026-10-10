@@ -957,11 +957,31 @@ class AgendaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._aligerar_selectores()
         # Solo al mostrar. Al guardar el formulario queda con todas las opciones a
         # proposito: si una ya no sirve, el modelo contesta "X ya tiene un viaje el
         # ..." y eso explica mas que "escoja una opcion valida".
         if self.contexto is not None and self.instance.pk and not self.is_bound:
             self._ofrecer_solo_lo_que_sirve(self.instance)
+
+    def _aligerar_selectores(self):
+        """Menos ruido por fila: nombre y capacidad en vez de la descripcion larga, y
+        sin los botones de agregar/editar/borrar salvo "agregar" en el capitan.
+
+        Siete viajes eran catorce selectores y catorce botones. La panga es catalogo
+        de jefes: no se crea ni se edita desde repartir. El capitan si, porque
+        faltar uno es justo lo que se resuelve sin salir de la pantalla.
+        """
+        self.fields['embarcacion'].label_from_instance = (
+            lambda panga: f'{panga.nombre} ({panga.capacidad_maxima})'
+        )
+        for campo, puede_crear in (('embarcacion', False), ('capitan', True)):
+            envoltorio = self.fields[campo].widget
+            if hasattr(envoltorio, 'can_add_related'):
+                envoltorio.can_add_related = envoltorio.can_add_related and puede_crear
+                envoltorio.can_change_related = False
+                envoltorio.can_delete_related = False
+                envoltorio.can_view_related = False
 
     def _ofrecer_solo_lo_que_sirve(self, reserva):
         """Lo que no esta libre o no cabe no se ofrece, en vez de enterarse al guardar."""

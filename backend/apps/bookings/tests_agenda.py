@@ -744,7 +744,7 @@ class AsignarDesdeLaAgendaTests(EmpresaTestCase):
         html = self.client.get(self.url).content.decode()
 
         self.assertIn('data-resumen', html)
-        self.assertIn('1 sin panga', html)
+        self.assertIn('Sin panga (1)', html)
         self.assertIn('data-pendiente', html)
         self.assertIn('Ana Ruiz', html)
         self.assertIn('3 pers', html)
@@ -752,6 +752,47 @@ class AsignarDesdeLaAgendaTests(EmpresaTestCase):
 
     def test_una_semana_sin_pendientes_dice_todo_asignado(self):
         self.assertContains(self.client.get(self.url), 'Todo asignado')
+
+    def test_los_viajes_sin_panga_van_arriba_de_las_pangas(self):
+        """Con diez pangas, si lo pendiente fuera al final quedaria bajo el pliegue,
+        lejos de las celdas donde hay que soltarlo."""
+        viaje(self.empresa, fecha=self.manana)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertLess(html.index('data-pendiente'), html.index('data-celda'))
+
+    def test_la_ayuda_esta_junto_a_la_cuadricula_y_no_al_final(self):
+        html = self.client.get(self.url).content.decode()
+
+        self.assertLess(html.index('data-panorama-ayuda'), html.index('data-resumen'))
+
+    def test_el_resumen_vive_en_la_fila_de_pendientes_y_no_aparte(self):
+        viaje(self.empresa, fecha=self.manana)
+        viaje(self.empresa, fecha=date.today() - timedelta(days=1), nombre_cliente='Tarde')
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertEqual(html.count('data-resumen'), 1)
+        self.assertIn('1 atrasado', html)
+
+    def test_el_selector_de_panga_muestra_nombre_y_capacidad_sin_botones_extra(self):
+        reserva = viaje(self.empresa, fecha=self.manana, numero_personas=5)
+
+        forma = self._forma_de(reserva)
+        panga = forma.fields['embarcacion']
+        self.assertEqual(panga.label_from_instance(self.grandes[0]), f'{self.grandes[0].nombre} (5)')
+        self.assertFalse(panga.widget.can_add_related)
+        self.assertFalse(panga.widget.can_change_related)
+        self.assertFalse(panga.widget.can_delete_related)
+
+    def test_el_capitan_conserva_poder_crearse_desde_la_agenda(self):
+        reserva = viaje(self.empresa, fecha=self.manana)
+
+        capitan = self._forma_de(reserva).fields['capitan']
+        self.assertTrue(capitan.widget.can_add_related)
+        self.assertFalse(capitan.widget.can_change_related)
+        self.assertFalse(capitan.widget.can_delete_related)
 
     def test_las_celdas_llevan_los_datos_que_usa_el_script(self):
         html = self.client.get(self.url).content.decode()

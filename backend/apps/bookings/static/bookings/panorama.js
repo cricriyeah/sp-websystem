@@ -67,13 +67,26 @@
       ayuda.style.color = color || '';
     }
 
+    /* Lo que se puso en una celda y todavia no se guarda, por reserva, para
+     * devolverla a como estaba si se elige otra panga para el mismo viaje. */
+    var tentativas = {};
+
     function limpiarCeldas() {
       for (var i = 0; i < celdas.length; i++) {
         celdas[i].removeAttribute('data-elegible');
         celdas[i].style.outline = '';
         celdas[i].style.background = '';
         celdas[i].style.cursor = '';
+        celdas[i].style.opacity = '';
       }
+    }
+
+    function revertirTentativa(reserva) {
+      var previa = tentativas[reserva];
+      if (!previa) return;
+      while (previa.celda.firstChild) previa.celda.removeChild(previa.celda.firstChild);
+      for (var i = 0; i < previa.hijos.length; i++) previa.celda.appendChild(previa.hijos[i]);
+      delete tentativas[reserva];
     }
 
     function soltar() {
@@ -103,10 +116,15 @@
 
       for (var i = 0; i < celdas.length; i++) {
         var celda = celdas[i];
+        /* Lo que no sirve se atenua: con 70 celdas, las pocas que si sirven
+         * tienen que destacar contra todo lo demas. */
+        celda.style.opacity = '0.3';
         if (celda.getAttribute('data-fecha') !== fecha) continue;
         if (celda.hasAttribute('data-ocupada') || celda.hasAttribute('data-fuera')) continue;
+        if (celda.querySelector('[data-tentativa]')) continue;
         if (parseInt(celda.getAttribute('data-capacidad'), 10) < personas) continue;
         if (select && !tieneOpcion(select, celda.getAttribute('data-embarcacion'))) continue;
+        celda.style.opacity = '';
         celda.setAttribute('data-elegible', '1');
         celda.style.outline = '2px solid ' + VERDE;
         celda.style.outlineOffset = '-2px';
@@ -143,6 +161,20 @@
 
       var panga = select.options[select.selectedIndex].textContent.replace(/\s*\(.*$/, '');
       decir(nombreDe(elegido) + ' → ' + panga + '. Falta Guardar.', VERDE);
+
+      /* La celda muestra ya el viaje, en verde y cursiva: asi se ve de un vistazo
+       * que hay un cambio sin guardar, sin bajar a la tabla. */
+      revertirTentativa(reserva);
+      var hijos = [];
+      while (celda.firstChild) hijos.push(celda.removeChild(celda.firstChild));
+      tentativas[reserva] = { celda: celda, hijos: hijos };
+      var marca = document.createElement('span');
+      marca.setAttribute('data-tentativa', '1');
+      marca.style.color = VERDE;
+      marca.style.fontStyle = 'italic';
+      marca.textContent = nombreDe(elegido).replace(/\s*·.*$/, '') + ' · sin guardar';
+      celda.appendChild(marca);
+
       limpiarCeldas();
       elegido.style.background = 'transparent';
       elegido.style.color = VERDE;

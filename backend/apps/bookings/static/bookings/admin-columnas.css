@@ -18,7 +18,7 @@
 .field-embarcacion,
 .column-capitan,
 .field-capitan {
-  min-width: 15rem;
+  min-width: 12rem;
   overflow: visible;
 }
 
@@ -30,6 +30,14 @@
 .field-capitan input,
 .field-embarcacion .select2-container,
 .field-capitan .select2-container {
-  min-width: 14rem;
+  min-width: 11rem;
   width: 100%;
+}
+
+/* La agenda dice aqui que falta (ATRASADO, SIN CAPITAN): si se corta o se parte en
+ * dos renglones deja de leerse de un golpe. Solo existe en la Agenda. */
+.column-aviso,
+.field-aviso {
+  min-width: 8.5rem;
+  white-space: nowrap;
 }
