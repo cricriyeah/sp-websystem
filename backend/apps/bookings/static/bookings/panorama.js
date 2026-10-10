@@ -6,19 +6,59 @@
  *
  * 2. Asignar desde la cuadricula. Se toca un viaje sin panga (boton rojo de la fila
  *    "Sin panga"), las pangas libres ese dia donde cabe el grupo se marcan en verde,
- *    y al tocar una se llena el selector de esa reserva en la tabla de abajo. No
- *    guarda: Guardar sigue siendo el boton de la tabla, con su validacion.
+ *    el resto se atenua, y al tocar una el viaje viaja hasta ella y se llena el
+ *    selector de su fila. No guarda: Guardar sigue siendo el boton de la tabla.
+ *    Tocar de nuevo el viaje ya colocado (o su celda) lo deshace.
  *
  *    Una panga solo se marca si su opcion existe en el selector de la fila: el
  *    servidor ya ofrece ahi nada mas las que estan libres y tienen lugar, asi que el
  *    selector es la fuente de verdad y esto no repite la regla.
+ *
+ * 3. Contadores y avisos antes de guardar: "Sin panga (N)", el pie junto a Guardar y
+ *    una barra en las filas con cambio. Tras guardar, lo guardado destella en verde.
+ *
+ * Movimiento: solo explica lo que acaba de pasar (de donde salio el viaje y a donde
+ * fue) y nunca retiene al usuario. El estado cambia primero y la animacion va
+ * despues, asi que tocar otra cosa a medio vuelo no espera. Todo dura menos de
+ * 400 ms, usa solo transform y opacity, y con `prefers-reduced-motion` se queda en
+ * fundidos.
  */
 (function () {
   'use strict';
 
   var CLAVE = 'agenda:panorama-abierto';
+  var CLAVE_GUARDADO = 'agenda:guardado';
   var VERDE = '#15803d';
   var ROJO = '#dc2626';
+  var GRIS = '#6b7280';
+  /* Casi un resorte criticamente amortiguado: arranca rapido y asienta sin rebote.
+   * No hay gesto con impulso, asi que rebotar estaria de mas. */
+  var SUAVE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+  var sinMovimiento = !!(window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  /* Animacion nativa. Con "reducir movimiento" se queda solo con opacidad y color:
+   * se sigue viendo que cambio, pero nada se desplaza. Devuelve null si no anima. */
+  function animar(el, cuadros, opciones) {
+    if (!el || !el.animate) return null;
+    var usar = cuadros;
+    if (sinMovimiento) {
+      usar = [];
+      var hay = false;
+      for (var i = 0; i < cuadros.length; i++) {
+        var c = {};
+        if ('opacity' in cuadros[i]) { c.opacity = cuadros[i].opacity; hay = true; }
+        if ('backgroundColor' in cuadros[i]) { c.backgroundColor = cuadros[i].backgroundColor; hay = true; }
+        if ('offset' in cuadros[i]) c.offset = cuadros[i].offset;
+        usar.push(c);
+      }
+      if (!hay) return null;
+    }
+    var config = { easing: SUAVE, duration: 250 };
+    for (var k in opciones) if (Object.prototype.hasOwnProperty.call(opciones, k)) config[k] = opciones[k];
+    return el.animate(usar, config);
+  }
 
   function recordarApertura(panel) {
     try {
@@ -60,6 +100,15 @@
 
     var elegido = null;
 
+    /* Lo que se puso en una celda y todavia no se guarda, por reserva: la celda, lo
+     * que tenia y el boton del viaje. Sirve para deshacer. */
+    var tentativas = {};
+
+    var i;
+    for (i = 0; i < pendientes.length; i++) {
+      pendientes[i].setAttribute('data-texto', pendientes[i].textContent.replace(/\s+/g, ' ').trim());
+    }
+
     function decir(texto, color) {
       if (!ayuda) return;
       ayuda.hidden = !texto;
@@ -67,46 +116,58 @@
       ayuda.style.color = color || '';
     }
 
-    /* Lo que se puso en una celda y todavia no se guarda, por reserva, para
-     * devolverla a como estaba si se elige otra panga para el mismo viaje. */
-    var tentativas = {};
-
     function limpiarCeldas() {
-      for (var i = 0; i < celdas.length; i++) {
-        celdas[i].removeAttribute('data-elegible');
-        celdas[i].style.outline = '';
-        celdas[i].style.background = '';
-        celdas[i].style.cursor = '';
-        celdas[i].style.opacity = '';
+      for (var c = 0; c < celdas.length; c++) {
+        celdas[c].removeAttribute('data-elegible');
+        celdas[c].style.boxShadow = '';
+        celdas[c].style.background = '';
+        celdas[c].style.cursor = '';
+        celdas[c].style.opacity = '';
       }
     }
 
-    function revertirTentativa(reserva) {
-      var previa = tentativas[reserva];
-      if (!previa) return;
-      while (previa.celda.firstChild) previa.celda.removeChild(previa.celda.firstChild);
-      for (var i = 0; i < previa.hijos.length; i++) previa.celda.appendChild(previa.hijos[i]);
-      delete tentativas[reserva];
+    function pintarPendiente(boton) {
+      boton.removeAttribute('data-asignado');
+      boton.style.background = 'transparent';
+      boton.style.color = ROJO;
+      boton.style.borderColor = ROJO;
+      boton.style.borderStyle = 'solid';
+      boton.style.fontWeight = '600';
+      boton.textContent = boton.getAttribute('data-texto');
+    }
+
+    function pintarElegido(boton) {
+      boton.style.background = ROJO;
+      boton.style.color = '#fff';
+    }
+
+    function pintarAsignado(boton, panga) {
+      boton.setAttribute('data-asignado', '1');
+      boton.style.background = 'transparent';
+      boton.style.color = GRIS;
+      boton.style.borderColor = '#9ca3af';
+      boton.style.borderStyle = 'dashed';
+      boton.style.fontWeight = '500';
+      boton.textContent = '✓ ' + panga;
+      boton.title = boton.getAttribute('data-texto') + ' → ' + panga + ' (sin guardar) — toca para deshacer';
     }
 
     function soltar() {
       limpiarCeldas();
-      for (var i = 0; i < pendientes.length; i++) {
-        pendientes[i].style.background = 'transparent';
-        pendientes[i].style.color = ROJO;
+      for (var p = 0; p < pendientes.length; p++) {
+        if (!pendientes[p].hasAttribute('data-asignado')) pintarPendiente(pendientes[p]);
       }
       elegido = null;
     }
 
     function nombreDe(boton) {
-      return boton.getAttribute('data-nombre') || boton.textContent.replace(/\s+/g, ' ').trim();
+      return boton.getAttribute('data-texto');
     }
 
     function elegir(boton) {
       soltar();
       elegido = boton;
-      boton.style.background = ROJO;
-      boton.style.color = '#fff';
+      pintarElegido(boton);
 
       var reserva = boton.getAttribute('data-reserva');
       var fecha = boton.getAttribute('data-fecha');
@@ -114,10 +175,10 @@
       var select = selectorDe(reserva);
       var cabe = 0;
 
-      for (var i = 0; i < celdas.length; i++) {
-        var celda = celdas[i];
+      for (var c = 0; c < celdas.length; c++) {
+        var celda = celdas[c];
         /* Lo que no sirve se atenua: con 70 celdas, las pocas que si sirven
-         * tienen que destacar contra todo lo demas. */
+         * tienen que destacar contra todo lo demas. La transicion va en CSS. */
         celda.style.opacity = '0.3';
         if (celda.getAttribute('data-fecha') !== fecha) continue;
         if (celda.hasAttribute('data-ocupada') || celda.hasAttribute('data-fuera')) continue;
@@ -126,8 +187,7 @@
         if (select && !tieneOpcion(select, celda.getAttribute('data-embarcacion'))) continue;
         celda.style.opacity = '';
         celda.setAttribute('data-elegible', '1');
-        celda.style.outline = '2px solid ' + VERDE;
-        celda.style.outlineOffset = '-2px';
+        celda.style.boxShadow = 'inset 0 0 0 2px ' + VERDE;
         celda.style.background = 'rgba(21, 128, 61, 0.10)';
         celda.style.cursor = 'pointer';
         cabe++;
@@ -142,54 +202,140 @@
       }
     }
 
+    /* El viaje sale de su boton y llega a la celda: asi se ve a donde fue, en vez de
+     * desaparecer de un sitio y aparecer en otro. Es una copia que vuela y se
+     * descarta; el estado ya cambio antes de empezar y no espera a la animacion. */
+    function vuelo(boton, desde, hasta, marca, alTerminar) {
+      var fueraDePantalla = hasta.bottom < 0 || hasta.top > window.innerHeight;
+      if (sinMovimiento || fueraDePantalla || !boton.animate) {
+        animar(marca, [{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+        alTerminar();
+        return;
+      }
+
+      var fantasma = boton.cloneNode(true);
+      fantasma.removeAttribute('data-pendiente');
+      fantasma.style.cssText = boton.style.cssText;
+      fantasma.style.position = 'fixed';
+      fantasma.style.left = desde.left + 'px';
+      fantasma.style.top = desde.top + 'px';
+      fantasma.style.width = desde.width + 'px';
+      fantasma.style.height = desde.height + 'px';
+      fantasma.style.margin = '0';
+      fantasma.style.pointerEvents = 'none';
+      fantasma.style.zIndex = '10000';
+      fantasma.style.transition = 'none';
+      document.body.appendChild(fantasma);
+
+      var dx = hasta.left + 6 - desde.left;
+      var dy = hasta.top + (hasta.height - desde.height) / 2 - desde.top;
+      var vuela = fantasma.animate([
+        { transform: 'translate(0, 0)', opacity: 1 },
+        { transform: 'translate(' + dx + 'px, ' + dy + 'px)', opacity: 1, offset: 0.75 },
+        { transform: 'translate(' + dx + 'px, ' + dy + 'px)', opacity: 0 }
+      ], { duration: 360, easing: SUAVE, fill: 'forwards' });
+
+      /* La marca de la celda aparece justo cuando llega la copia. */
+      animar(marca, [{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay: 200, fill: 'backwards' });
+
+      var terminado = false;
+      function terminar() {
+        if (terminado) return;
+        terminado = true;
+        if (fantasma.parentNode) fantasma.parentNode.removeChild(fantasma);
+        alTerminar();
+      }
+      vuela.onfinish = terminar;
+      vuela.oncancel = terminar;
+    }
+
+    function revertirCelda(reserva) {
+      var previa = tentativas[reserva];
+      if (!previa) return;
+      while (previa.celda.firstChild) previa.celda.removeChild(previa.celda.firstChild);
+      for (var h = 0; h < previa.hijos.length; h++) previa.celda.appendChild(previa.hijos[h]);
+      previa.celda.removeAttribute('title');
+      delete tentativas[reserva];
+    }
+
+    function deshacer(reserva) {
+      var previa = tentativas[reserva];
+      if (!previa) return;
+      revertirCelda(reserva);
+      var select = selectorDe(reserva);
+      if (select) {
+        select.value = '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      pintarPendiente(previa.boton);
+      previa.boton.title = '';
+      animar(previa.boton, [{ opacity: 0.3 }, { opacity: 1 }], { duration: 200 });
+      decir('');
+    }
+
     function colocar(celda) {
       if (!elegido || !celda.hasAttribute('data-elegible')) return;
-      var reserva = elegido.getAttribute('data-reserva');
+      var boton = elegido;
+      var reserva = boton.getAttribute('data-reserva');
       var select = selectorDe(reserva);
       if (!select) return;
 
+      var desde = boton.getBoundingClientRect();
+      var hasta = celda.getBoundingClientRect();
+
+      /* 1. El estado primero. */
       select.value = celda.getAttribute('data-embarcacion');
       select.dispatchEvent(new Event('change', { bubbles: true }));
 
-      var fila = select.closest('tr');
-      if (fila) {
-        fila.style.transition = 'background 0.4s';
-        fila.style.background = 'rgba(21, 128, 61, 0.15)';
-        window.setTimeout(function () { fila.style.background = ''; }, 1600);
-        if (fila.scrollIntoView) fila.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-
-      var panga = select.options[select.selectedIndex].textContent.replace(/\s*\(.*$/, '');
-      decir(nombreDe(elegido) + ' → ' + panga + '. Falta Guardar.', VERDE);
-
-      /* La celda muestra ya el viaje, en verde y cursiva: asi se ve de un vistazo
-       * que hay un cambio sin guardar, sin bajar a la tabla. */
-      revertirTentativa(reserva);
       var hijos = [];
       while (celda.firstChild) hijos.push(celda.removeChild(celda.firstChild));
-      tentativas[reserva] = { celda: celda, hijos: hijos };
+      tentativas[reserva] = { celda: celda, hijos: hijos, boton: boton };
       var marca = document.createElement('span');
       marca.setAttribute('data-tentativa', '1');
       marca.style.color = VERDE;
       marca.style.fontStyle = 'italic';
-      marca.textContent = nombreDe(elegido).replace(/\s*·.*$/, '') + ' · sin guardar';
+      marca.textContent = nombreDe(boton).replace(/\s*·.*$/, '') + ' · sin guardar';
       celda.appendChild(marca);
+      celda.title = 'Toca para deshacer';
+
+      var panga = select.options[select.selectedIndex].textContent.replace(/\s*\(.*$/, '');
+      decir(nombreDe(boton) + ' → ' + panga + '. Falta Guardar.', VERDE);
+
+      var fila = select.closest('tr');
+      if (fila) {
+        animar(fila, [{ backgroundColor: 'rgba(21, 128, 61, 0.15)' }, { backgroundColor: 'rgba(21, 128, 61, 0)' }], { duration: 1600 });
+      }
 
       limpiarCeldas();
-      elegido.style.background = 'transparent';
-      elegido.style.color = VERDE;
-      elegido.style.borderColor = VERDE;
       elegido = null;
+      boton.style.visibility = 'hidden';
+
+      /* 2. Despues, la animacion: el boton reaparece ya como "asignado". */
+      vuelo(boton, desde, hasta, marca, function () {
+        pintarAsignado(boton, panga);
+        boton.style.visibility = '';
+        animar(boton, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
+      });
     }
 
-    for (var i = 0; i < pendientes.length; i++) {
+    for (i = 0; i < pendientes.length; i++) {
       pendientes[i].addEventListener('click', function (evento) {
         evento.preventDefault();
+        var reserva = this.getAttribute('data-reserva');
+        if (this.hasAttribute('data-asignado')) { deshacer(reserva); return; }
         if (elegido === this) { soltar(); decir(''); } else { elegir(this); }
       });
     }
     for (var j = 0; j < celdas.length; j++) {
-      celdas[j].addEventListener('click', function () { colocar(this); });
+      celdas[j].addEventListener('click', function () {
+        var marca = this.querySelector('[data-tentativa]');
+        if (marca && !elegido) {
+          for (var reserva in tentativas) {
+            if (tentativas[reserva].celda === this) { deshacer(reserva); return; }
+          }
+        }
+        colocar(this);
+      });
     }
     document.addEventListener('keydown', function (evento) {
       if (evento.key === 'Escape' && elegido) { soltar(); decir(''); }
@@ -202,7 +348,9 @@
    *
    *  - "Sin panga (N)" baja con cada viaje al que ya se le puso panga.
    *  - El pie, junto a Guardar, dice cuantos viajes tienen un cambio sin guardar en
-   *    vez del conteo de filas, que no informa nada. */
+   *    vez del conteo de filas, que no informa nada.
+   *  - Las filas con cambio llevan una barra verde a la izquierda.
+   *  - Al guardar se anota que viajes eran, para celebrarlos al recargar. */
   function iniciarContadores(panel) {
     var guardar = document.querySelector('button[name="_save"]');
     var pie = guardar && guardar.parentElement ? guardar.parentElement.previousElementSibling : null;
@@ -213,18 +361,35 @@
     var selects = document.querySelectorAll('select[name$="-embarcacion"], select[name$="-capitan"]');
     if (!selects.length) return;
 
-    for (var i = 0; i < selects.length; i++) {
+    var i;
+    for (i = 0; i < selects.length; i++) {
       selects[i].setAttribute('data-original', selects[i].value);
+    }
+    var habiaCambios = false;
+
+    function filasConCambio() {
+      var filas = {};
+      for (var s = 0; s < selects.length; s++) {
+        if (selects[s].value !== selects[s].getAttribute('data-original')) {
+          filas[selects[s].name.split('-').slice(0, 2).join('-')] = selects[s].closest('tr');
+        }
+      }
+      return filas;
     }
 
     function actualizar() {
-      var filas = {};
-      for (var i = 0; i < selects.length; i++) {
-        if (selects[i].value !== selects[i].getAttribute('data-original')) {
-          filas[selects[i].name.split('-').slice(0, 2).join('-')] = true;
-        }
-      }
+      var filas = filasConCambio();
       var cambios = Object.keys(filas).length;
+
+      /* Barra de la fila: la que tiene cambio la lleva, las demas no. */
+      var todas = document.querySelectorAll('select[name$="-embarcacion"]');
+      for (var t = 0; t < todas.length; t++) {
+        var tr = todas[t].closest('tr');
+        var primera = tr ? tr.querySelector('.field-dia') : null;
+        if (!primera) continue;
+        var clave = todas[t].name.split('-').slice(0, 2).join('-');
+        primera.style.boxShadow = filas[clave] ? 'inset 3px 0 0 ' + VERDE : '';
+      }
 
       if (pie) {
         pie.textContent = cambios
@@ -232,7 +397,13 @@
           : textoPie;
         pie.style.color = cambios ? VERDE : '';
         pie.style.fontWeight = cambios ? '600' : '';
+        if (cambios && !habiaCambios) {
+          animar(pie, [{ transform: 'translateY(6px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 220 });
+          /* Un solo pulso en Guardar: es lo siguiente que hay que hacer. */
+          if (guardar) animar(guardar, [{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 320, delay: 120 });
+        }
       }
+      habiaCambios = cambios > 0;
 
       if (etiqueta) {
         var asignados = 0;
@@ -241,13 +412,65 @@
           if (select && select.value) asignados++;
         }
         var faltan = Math.max(inicial - asignados, 0);
-        etiqueta.textContent = faltan ? 'Sin panga (' + faltan + ')' : 'Todos con panga';
-        etiqueta.style.color = faltan ? ROJO : VERDE;
+        var nuevo = faltan ? 'Sin panga (' + faltan + ')' : 'Todos con panga';
+        if (etiqueta.textContent !== nuevo) {
+          etiqueta.textContent = nuevo;
+          etiqueta.style.color = faltan ? ROJO : VERDE;
+          animar(etiqueta, [{ opacity: 0.2 }, { opacity: 1 }], { duration: 180 });
+        }
       }
     }
 
     for (var k = 0; k < selects.length; k++) {
       selects[k].addEventListener('change', actualizar);
+    }
+
+    /* Al guardar, se anota que viajes eran: la pagina recarga y al volver se celebran. */
+    var forma = document.getElementById('changelist-form');
+    if (forma) {
+      forma.addEventListener('submit', function () {
+        var filas = filasConCambio();
+        var ids = [];
+        for (var clave in filas) {
+          var campo = document.querySelector('input[type="hidden"][name="' + clave + '-id"]');
+          if (campo) ids.push(campo.value);
+        }
+        try {
+          window.sessionStorage.setItem(CLAVE_GUARDADO, JSON.stringify({ ids: ids, t: Date.now() }));
+        } catch (e) { /* sin almacenamiento: no hay destello, y ya */ }
+      });
+    }
+  }
+
+  /* Tras guardar, lo guardado destella en verde y se apaga: confirma que quedo, sin
+   * un cartel que haya que cerrar. Solo destella lo que de verdad quedo con panga: si
+   * el guardado fallo, la celda no existe y la fila no tiene valor, asi que no hay
+   * falsa confirmacion. */
+  function celebrarGuardado() {
+    var crudo = null;
+    try {
+      crudo = window.sessionStorage.getItem(CLAVE_GUARDADO);
+      window.sessionStorage.removeItem(CLAVE_GUARDADO);
+    } catch (e) { return; }
+    if (!crudo) return;
+
+    var anotado;
+    try { anotado = JSON.parse(crudo); } catch (e) { return; }
+    if (!anotado || !anotado.ids || Date.now() - anotado.t > 30000) return;
+
+    var destello = [
+      { backgroundColor: 'rgba(21, 128, 61, 0.30)' },
+      { backgroundColor: 'rgba(21, 128, 61, 0)' }
+    ];
+    for (var i = 0; i < anotado.ids.length; i++) {
+      var id = anotado.ids[i];
+      var celda = document.querySelector('[data-celda][data-reserva="' + id + '"]');
+      if (celda) animar(celda, destello, { duration: 1400 });
+      var select = selectorDe(id);
+      if (select && select.value) {
+        var fila = select.closest('tr');
+        if (fila) animar(fila, destello, { duration: 1400 });
+      }
     }
   }
 
@@ -257,5 +480,6 @@
     recordarApertura(panel);
     iniciarAsignacion(panel);
     iniciarContadores(panel);
+    celebrarGuardado();
   });
 })();

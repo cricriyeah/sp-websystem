@@ -34,6 +34,38 @@
   width: 100%;
 }
 
+/* Movimiento de la cuadricula de la Agenda (ver `panorama.js`).
+ *
+ * Lo que cambia de estado se funde en vez de saltar. El boton de un viaje responde al
+ * presionarlo, no al soltarlo: la respuesta inmediata es lo que hace sentir directo.
+ * Solo propiedades baratas (color, opacidad, transform); nada que mueva el diseno. */
+[data-pendiente] {
+  transition: background-color 150ms ease-out, color 150ms ease-out,
+    border-color 150ms ease-out, transform 100ms ease-out;
+}
+[data-pendiente]:active {
+  transform: scale(0.97);
+}
+[data-celda] {
+  transition: opacity 150ms ease-out, background-color 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+.field-dia {
+  transition: box-shadow 200ms ease-out;
+}
+
+/* Con "reducir movimiento" no se desplaza nada; los cambios siguen viendose. */
+@media (prefers-reduced-motion: reduce) {
+  [data-pendiente]:active {
+    transform: none;
+  }
+  [data-pendiente],
+  [data-celda],
+  .field-dia {
+    transition: none;
+  }
+}
+
 /* La agenda dice aqui que falta (ATRASADO, SIN CAPITAN): si se corta o se parte en
  * dos renglones deja de leerse de un golpe. Solo existe en la Agenda. */
 .column-aviso,

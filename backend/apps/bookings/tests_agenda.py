@@ -842,6 +842,25 @@ class AsignarDesdeLaAgendaTests(EmpresaTestCase):
 
         self.assertIn('data-sin-panga="1"', html)
 
+    def test_la_celda_ocupada_dice_de_que_reserva_es_para_celebrar_al_guardar(self):
+        reserva = viaje(
+            self.empresa, fecha=self.manana, estado=Reserva.Estado.ASIGNADA,
+            embarcacion=self.grandes[0], nombre_cliente='Con panga',
+        )
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn(f'data-reserva="{reserva.pk}"', html)
+
+    def test_el_movimiento_respeta_reducir_movimiento(self):
+        """Quien pide menos movimiento no ve nada desplazarse: ni en CSS ni en el
+        script. Los cambios se siguen viendo, como fundidos."""
+        from pathlib import Path
+
+        estaticos = Path(__file__).parent / 'static' / 'bookings'
+        self.assertIn('prefers-reduced-motion', (estaticos / 'admin-columnas.css').read_text(encoding='utf-8'))
+        self.assertIn('prefers-reduced-motion', (estaticos / 'panorama.js').read_text(encoding='utf-8'))
+
     def test_las_celdas_llevan_los_datos_que_usa_el_script(self):
         html = self.client.get(self.url).content.decode()
 

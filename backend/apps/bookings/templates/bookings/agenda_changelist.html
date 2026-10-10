@@ -110,9 +110,9 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                         data-fecha="{{ celda.fecha|date:'Y-m-d' }}"
                                         data-embarcacion="{{ renglon.embarcacion.pk }}"
                                         data-capacidad="{{ renglon.embarcacion.capacidad_maxima }}"
-                                        {% if celda.reserva %}data-ocupada="1"{% endif %}
+                                        {% if celda.reserva %}data-ocupada="1" data-reserva="{{ celda.reserva.pk }}"{% endif %}
                                         {% if not celda.disponible %}data-fuera="1"{% endif %}
-                                        style="padding: 0.2rem 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity 0.15s">
+                                        style="padding: 0.2rem 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
                                         {% if not celda.disponible %}
                                             {# Fuera de servicio no es lo mismo que libre. #}
                                             <span class="text-base-400" style="font-style: italic">fuera</span>
