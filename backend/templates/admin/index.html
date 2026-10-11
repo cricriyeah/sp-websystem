@@ -1,9 +1,15 @@
 {% extends "admin/base.html" %}
-{% load static humanize %}
+{% load static humanize i18n %}
 
 {% block extrahead %}
     {{ block.super }}
     <link rel="stylesheet" href="{% static 'tenancy/inicio.css' %}">
+{% endblock %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
 {% endblock %}
 
 {% block content %}
@@ -71,6 +77,12 @@
                             </div>
                         {% endif %}
                     </section>
+                    {% for moneda, serie in inicio.grafica.items %}
+                        <section class="inicio-grafica" aria-label="Entradas por día {{ moneda }}">
+                            <h2>Entradas por día este mes · {{ moneda }}</h2>
+                            {% include "unfold/components/chart/bar.html" with data=serie height=180 %}
+                        </section>
+                    {% endfor %}
                     <a class="inicio-avanzado-enlace" href="{% url 'admin_avanzado' %}">Ajustes y vista avanzada</a>
                 {% endif %}
             {% endif %}

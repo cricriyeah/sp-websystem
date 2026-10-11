@@ -263,3 +263,19 @@ class InicioTests(TestCase):
         )
         self.client.force_login(sin_permiso)
         self.assertEqual(self.client.get(url).status_code, 403)
+
+    def test_jefe_ve_grafica_de_entradas_y_nombre_de_su_empresa(self):
+        with scope.como_operador_plataforma():
+            self._reserva(self.empresa_a, pagada_en=timezone.now())
+
+        self.client.force_login(self.jefe)
+        response = self.client.get(reverse('admin:index'))
+        self.assertContains(response, 'Entradas por día este mes · MXN')
+        self.assertContains(response, '<canvas')
+        # El nombre de la empresa sale en el encabezado y no solo en el título.
+        self.assertGreaterEqual(response.content.decode().count('Empresa A'), 2)
+
+        self.client.force_login(self.vendedora)
+        response = self.client.get(reverse('admin:index'))
+        self.assertNotContains(response, 'Entradas por día')
+        self.assertNotContains(response, '<canvas')

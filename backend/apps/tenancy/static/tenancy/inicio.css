@@ -87,3 +87,21 @@ html.dark .inicio-avanzado-enlace { border-color: #5eead4; }
 @media (min-width: 1100px) {
     .inicio-tarjetas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+.inicio-grafica {
+    border: 1px solid var(--color-base-200);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.inicio-grafica h2 {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    margin: 0 0 0.75rem;
+}
+
+html.dark .inicio-grafica {
+    border-color: var(--color-base-800);
+}

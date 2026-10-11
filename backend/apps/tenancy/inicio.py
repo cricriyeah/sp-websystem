@@ -15,6 +15,7 @@ from apps.bookings.models import (
     Agenda, CheckoutAbandonado, ESTADOS_QUE_OCUPAN_CUPO, HORAS_RESERVAS_NUEVAS, Reserva,
 )
 from apps.finance.services import balances
+from apps.finance.views import _grafica_de_entradas
 
 from . import scope
 from .models import Empresa, MembresiaEmpresa
@@ -128,6 +129,7 @@ def contexto_inicio(request, context):
                     }
                     for moneda in sorted(dia.keys() | mes.keys())
                 ]
+                inicio['grafica'] = _grafica_de_entradas(hoy.replace(day=1), hoy, empresa=empresa)
     return {**context, 'inicio': inicio}
 
 
