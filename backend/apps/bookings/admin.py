@@ -36,6 +36,7 @@ from .forms import AltaVendedoraForm
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
+    HORAS_RECIEN_LLEGADA,
     Agenda,
     CheckoutAbandonado,
     CupoDiario,
@@ -49,10 +50,6 @@ from .models import (
 )
 from .panorama import armar_panorama
 from .orden_lectura import reservas_de_orden
-
-# Que tan atras llega "recien llegadas". 48 horas cubre un fin de semana y lo que
-# entro mientras nadie miraba, sin que la lista deje de ser corta.
-HORAS_RECIEN_LLEGADA = 48
 
 # Lada de Mexico, para completar los telefonos que el cliente escribio a 10 digitos.
 LADA_PAIS = '52'

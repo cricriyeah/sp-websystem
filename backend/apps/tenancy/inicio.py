@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.bookings.models import (
-    Agenda, CheckoutAbandonado, ESTADOS_QUE_OCUPAN_CUPO, Reserva,
+    Agenda, CheckoutAbandonado, HORAS_RECIEN_LLEGADA, Reserva,
 )
 from apps.finance.services import balances
 
@@ -33,9 +33,9 @@ def _conteos(empresa, hoy, ahora):
             empresa=empresa, fecha=hoy + timedelta(days=1), embarcacion__isnull=True,
         ).count(),
         'efectivo': _reservas_con_saldo(empresa).count(),
+        # LlegadaFilter incluye todos los estados; el numero debe coincidir con el listado.
         'nuevas': reservas.filter(
-            estado__in=ESTADOS_QUE_OCUPAN_CUPO,
-            creado_en__gte=ahora - timedelta(hours=24),
+            creado_en__gte=ahora - timedelta(hours=HORAS_RECIEN_LLEGADA),
         ).count(),
         'abandonados': CheckoutAbandonado.abandonados().filter(empresa=empresa).count(),
     }
@@ -51,8 +51,7 @@ def _reservas_con_saldo(empresa):
     )
 
 
-def _tarjetas(conteos, ahora):
-    reservas = 'admin:bookings_reserva_changelist'
+def _tarjetas(conteos):
     return [
         {
             'clave': 'manana', 'titulo': 'Viajes de mañana sin panga',
@@ -67,10 +66,7 @@ def _tarjetas(conteos, ahora):
         {
             'clave': 'nuevas', 'titulo': 'Reservas nuevas',
             'numero': conteos['nuevas'], 'accion': 'Ver reservas',
-            'url': _url(
-                reservas, estado__in=','.join(ESTADOS_QUE_OCUPAN_CUPO),
-                creado_en__gte=(ahora - timedelta(hours=24)).isoformat(),
-            ),
+            'url': _url('admin:bookings_reserva_changelist', llegada='recientes'),
         },
         {
             'clave': 'abandonados', 'titulo': 'Checkouts por recuperar',
@@ -116,7 +112,7 @@ def contexto_inicio(request, context):
             ],
         }
     else:
-        inicio = {'rol': rol, 'tarjetas': _tarjetas(_conteos(empresa, hoy, ahora), ahora)}
+        inicio = {'rol': rol, 'tarjetas': _tarjetas(_conteos(empresa, hoy, ahora))}
         if rol == 'jefe':
             inicio['atrasados'] = Reserva.objects.filter(
                 empresa=empresa, estado=Reserva.Estado.PAGADA, fecha__lt=hoy,

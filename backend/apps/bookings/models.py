@@ -61,6 +61,10 @@ HORAS_MINIMAS_CAMBIO_FECHA = 48
 # queremos hablarle a un cliente que sigue pagando en ese momento.
 HORAS_PARA_CONSIDERAR_ABANDONADO = 2
 
+# Que tan atras llega "recien llegadas". 48 horas cubre un fin de semana y lo que
+# entro mientras nadie miraba, sin que la lista deje de ser corta.
+HORAS_RECIEN_LLEGADA = 48
+
 # Capacidad operativa por defecto (8 a 10 viajes/dia, ver docs/contexto-negocio.md).
 # Los jefes/vendedora cierran o reducen un dia especifico creando un CupoDiario.
 CUPO_MAXIMO_DEFAULT = 10
