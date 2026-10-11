@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.bookings.models import (
-    Agenda, CheckoutAbandonado, HORAS_RECIEN_LLEGADA, Reserva,
+    Agenda, CheckoutAbandonado, ESTADOS_QUE_OCUPAN_CUPO, HORAS_RESERVAS_NUEVAS, Reserva,
 )
 from apps.finance.services import balances
 
@@ -33,9 +33,9 @@ def _conteos(empresa, hoy, ahora):
             empresa=empresa, fecha=hoy + timedelta(days=1), embarcacion__isnull=True,
         ).count(),
         'efectivo': _reservas_con_saldo(empresa).count(),
-        # LlegadaFilter incluye todos los estados; el numero debe coincidir con el listado.
         'nuevas': reservas.filter(
-            creado_en__gte=ahora - timedelta(hours=HORAS_RECIEN_LLEGADA),
+            estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+            creado_en__gte=ahora - timedelta(hours=HORAS_RESERVAS_NUEVAS),
         ).count(),
         'abandonados': CheckoutAbandonado.abandonados().filter(empresa=empresa).count(),
     }
@@ -66,7 +66,7 @@ def _tarjetas(conteos):
         {
             'clave': 'nuevas', 'titulo': 'Reservas nuevas',
             'numero': conteos['nuevas'], 'accion': 'Ver reservas',
-            'url': _url('admin:bookings_reserva_changelist', llegada='recientes'),
+            'url': _url('admin:bookings_reserva_changelist', llegada='nuevas'),
         },
         {
             'clave': 'abandonados', 'titulo': 'Checkouts por recuperar',

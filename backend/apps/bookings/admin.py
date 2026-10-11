@@ -37,6 +37,7 @@ from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
     HORAS_RECIEN_LLEGADA,
+    HORAS_RESERVAS_NUEVAS,
     Agenda,
     CheckoutAbandonado,
     CupoDiario,
@@ -115,13 +116,21 @@ class LlegadaFilter(admin.SimpleListFilter):
     parameter_name = 'llegada'
 
     def lookups(self, request, model_admin):
-        return [('recientes', f'Recien llegadas ({HORAS_RECIEN_LLEGADA}h)')]
+        return [
+            ('recientes', f'Recien llegadas ({HORAS_RECIEN_LLEGADA}h)'),
+            ('nuevas', f'Nuevas ({HORAS_RESERVAS_NUEVAS}h, ya pagadas)'),
+        ]
 
     def queryset(self, request, queryset):
-        if self.value() != 'recientes':
-            return queryset
-        return queryset.filter(
-            creado_en__gte=timezone.now() - timedelta(hours=HORAS_RECIEN_LLEGADA))
+        if self.value() == 'recientes':
+            return queryset.filter(
+                creado_en__gte=timezone.now() - timedelta(hours=HORAS_RECIEN_LLEGADA))
+        if self.value() == 'nuevas':
+            return queryset.filter(
+                estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+                creado_en__gte=timezone.now() - timedelta(hours=HORAS_RESERVAS_NUEVAS),
+            )
+        return queryset
 
 
 class RequiereAtencionFilter(admin.SimpleListFilter):

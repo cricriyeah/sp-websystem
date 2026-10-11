@@ -65,6 +65,9 @@ HORAS_PARA_CONSIDERAR_ABANDONADO = 2
 # entro mientras nadie miraba, sin que la lista deje de ser corta.
 HORAS_RECIEN_LLEGADA = 48
 
+# Ventana del Inicio para reservas que ya ocupan cupo.
+HORAS_RESERVAS_NUEVAS = 24
+
 # Capacidad operativa por defecto (8 a 10 viajes/dia, ver docs/contexto-negocio.md).
 # Los jefes/vendedora cierran o reducen un dia especifico creando un CupoDiario.
 CUPO_MAXIMO_DEFAULT = 10
