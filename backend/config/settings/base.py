@@ -158,14 +158,15 @@ UNFOLD = {
     'SITE_SYMBOL': 'anchor',
     'SHOW_HISTORY': True,
     'SHOW_VIEW_ON_SITE': False,
+    'DASHBOARD_CALLBACK': 'apps.tenancy.inicio.contexto_inicio',
     # El menu lateral se arma a mano porque el panel de finanzas no es un modelo
     # y no aparece solo. Cada item se filtra con el permiso del usuario: la
     # vendedora ve la operacion, los jefes ven ademas el dinero. Si se agrega un
-    # modelo nuevo hay que darlo de alta aqui — mientras tanto sigue alcanzable
-    # desde el menu "todas las aplicaciones" (`show_all_applications`).
+    # modelo nuevo hay que darlo de alta aqui. La lista completa sigue en
+    # "Ajustes y vista avanzada" para jefes y en el menu del operador.
     'SIDEBAR': {
         'show_search': True,
-        'show_all_applications': True,
+        'show_all_applications': _perm_es_operador,
         'navigation': [
             {
                 'title': 'Operacion',
@@ -392,7 +393,9 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        # Unfold va antes de nuestras apps: la plantilla del Inicio debe ganar
+        # desde DIRS para reemplazar su admin/index.html.
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

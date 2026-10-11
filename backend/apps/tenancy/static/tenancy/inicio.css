@@ -1,0 +1,73 @@
+.inicio {
+    width: 100%;
+    min-width: 0;
+    color: inherit;
+}
+
+.inicio h1, .inicio h2, .inicio p, .inicio dl { margin: 0; }
+.inicio-encabezado { margin-bottom: 1.25rem; }
+.inicio-encabezado h1, .inicio-avanzado h1 { font-size: 1.5rem; font-weight: 650; }
+.inicio-encabezado p { margin-top: .25rem; color: #737373; }
+
+.inicio-tarjetas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .75rem;
+}
+
+.inicio-tarjeta, .inicio-empresa, .inicio-resumen {
+    min-width: 0;
+    border: 1px solid rgba(127, 127, 127, .28);
+    border-radius: .5rem;
+    background: rgba(127, 127, 127, .025);
+}
+
+.inicio-tarjeta { display: flex; flex-direction: column; padding: 1rem; }
+.inicio-tarjeta h2 { min-height: 2.5em; font-size: .875rem; font-weight: 600; line-height: 1.25; }
+.inicio-numero { display: block; margin: .35rem 0; font-size: 2.75rem; font-variant-numeric: tabular-nums; line-height: 1; }
+.inicio-tarjeta a, .inicio-avanzado-enlace {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    width: fit-content;
+    max-width: 100%;
+    padding: .4rem .7rem;
+    border-radius: .4rem;
+    color: #0f766e;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+.inicio-tarjeta a:hover, .inicio-avanzado-enlace:hover { text-decoration: underline; }
+.inicio a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+.inicio-resumen { margin-top: 1rem; padding: 1rem; }
+.inicio-atrasados { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.inicio-atrasados strong { font-size: 1.75rem; font-variant-numeric: tabular-nums; }
+.inicio-dinero { margin-top: 1rem; border-top: 1px solid rgba(127, 127, 127, .25); padding-top: 1rem; }
+.inicio-dinero h2 { margin-bottom: .6rem; font-size: .875rem; font-weight: 600; }
+.inicio-moneda { display: flex; flex-wrap: wrap; gap: .25rem 1rem; padding: .45rem 0; border-top: 1px solid rgba(127, 127, 127, .15); }
+.inicio-moneda > * { min-width: 0; overflow-wrap: anywhere; }
+.inicio-moneda strong { min-width: 3rem; }
+.inicio-moneda b { font-variant-numeric: tabular-nums; }
+.inicio-avanzado-enlace { margin-top: 1rem; border: 1px solid #0f766e; }
+
+.inicio-empresas { display: grid; gap: .75rem; }
+.inicio-empresa { padding: 1rem; }
+.inicio-empresa h2 { margin-bottom: .65rem; font-size: 1rem; font-weight: 650; overflow-wrap: anywhere; }
+.inicio-conteos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.inicio-conteos div { min-width: 0; }
+.inicio-conteos dt { font-size: .75rem; line-height: 1.25; color: #737373; overflow-wrap: anywhere; }
+.inicio-conteos dd { margin: .2rem 0 0; font-size: 1.5rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+html.dark .inicio-encabezado p, html.dark .inicio-conteos dt { color: #a3a3a3; }
+html.dark .inicio-tarjeta a, html.dark .inicio-avanzado-enlace { color: #5eead4; }
+html.dark .inicio-avanzado-enlace { border-color: #5eead4; }
+
+@media (min-width: 640px) {
+    .inicio-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .inicio-conteos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1100px) {
+    .inicio-tarjetas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

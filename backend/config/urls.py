@@ -19,6 +19,7 @@ from django.urls import include, path
 
 from apps.finance.views import panel_financiero
 from apps.fleet.views import TrasladosView
+from apps.tenancy.inicio import vista_avanzada
 
 from .health import healthz
 
@@ -36,6 +37,7 @@ urlpatterns = [
     # `admin_view` le pone el login del admin encima; que solo entren jefes lo
     # decide la vista (ver apps/finance/views.py).
     path('admin/finanzas/', admin.site.admin_view(panel_financiero), name='finanzas'),
+    path('admin/avanzado/', admin.site.admin_view(vista_avanzada), name='admin_avanzado'),
     path('admin/', admin.site.urls),
     path('api/<slug:empresa_slug>/traslados/', TrasladosView.as_view(), name='traslados'),
     path('api/', include('apps.fleet.urls')),

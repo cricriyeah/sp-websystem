@@ -1,0 +1,79 @@
+{% extends "admin/base.html" %}
+{% load static humanize %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'tenancy/inicio.css' %}">
+{% endblock %}
+
+{% block content %}
+    {% if inicio_avanzado %}
+        <div class="inicio inicio-avanzado">
+            <h1>Ajustes y vista avanzada</h1>
+            {% include "unfold/helpers/app_list_default.html" %}
+        </div>
+    {% else %}
+        <div class="inicio">
+            <header class="inicio-encabezado">
+                <h1>Inicio</h1>
+                {% if inicio.rol == 'operador' %}
+                    <p>Operación por empresa</p>
+                {% else %}
+                    <p>Lo que requiere atención</p>
+                {% endif %}
+            </header>
+
+            {% if inicio.rol == 'operador' %}
+                <section class="inicio-empresas" aria-label="Resumen por empresa">
+                    {% for fila in inicio.filas %}
+                        <article class="inicio-empresa">
+                            <h2>{{ fila.empresa }}</h2>
+                            <dl class="inicio-conteos">
+                                <div><dt>Mañana sin panga</dt><dd>{{ fila.conteos.manana }}</dd></div>
+                                <div><dt>Efectivo por cobrar</dt><dd>{{ fila.conteos.efectivo }}</dd></div>
+                                <div><dt>Reservas nuevas</dt><dd>{{ fila.conteos.nuevas }}</dd></div>
+                                <div><dt>Checkouts por recuperar</dt><dd>{{ fila.conteos.abandonados }}</dd></div>
+                            </dl>
+                        </article>
+                    {% empty %}
+                        <p>Sin empresas.</p>
+                    {% endfor %}
+                </section>
+            {% else %}
+                <section class="inicio-tarjetas" aria-label="Pendientes">
+                    {% for tarjeta in inicio.tarjetas %}
+                        <article class="inicio-tarjeta">
+                            <h2>{{ tarjeta.titulo }}</h2>
+                            <strong class="inicio-numero">{{ tarjeta.numero }}</strong>
+                            <a href="{{ tarjeta.url }}">{{ tarjeta.accion }}</a>
+                        </article>
+                    {% endfor %}
+                </section>
+
+                {% if inicio.rol == 'jefe' %}
+                    <section class="inicio-resumen" aria-label="Resumen del negocio">
+                        <div class="inicio-atrasados">
+                            <span>Viajes atrasados</span>
+                            <strong>{{ inicio.atrasados }}</strong>
+                        </div>
+                        {% if inicio.dinero != None %}
+                            <div class="inicio-dinero">
+                                <h2>Entradas</h2>
+                                {% for fila in inicio.dinero %}
+                                    <div class="inicio-moneda">
+                                        <strong>{{ fila.moneda }}</strong>
+                                        <span>Hoy <b>{{ fila.hoy|floatformat:2|intcomma }}</b></span>
+                                        <span>Este mes <b>{{ fila.mes|floatformat:2|intcomma }}</b></span>
+                                    </div>
+                                {% empty %}
+                                    <p>Sin entradas registradas.</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </section>
+                    <a class="inicio-avanzado-enlace" href="{% url 'admin_avanzado' %}">Ajustes y vista avanzada</a>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}
