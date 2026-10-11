@@ -1,7 +1,7 @@
 import re
 from datetime import timedelta
 from decimal import Decimal
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from django import forms
 from django.contrib import admin
@@ -29,7 +29,7 @@ from apps.payments.situacion import requiere_atencion, situacion_de_orden, situa
 from apps.notifications.services import enlace_retomar_orden
 from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
-from apps.tenancy.models import MembresiaEmpresa
+from apps.tenancy.models import Empresa, MembresiaEmpresa
 
 from .forms import AltaVendedoraForm
 
@@ -861,6 +861,29 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
 AVISO = '<span style="color:#dc2626;font-weight:600">{}</span>'
 
 
+class EmpresaAgendaFilter(admin.SimpleListFilter):
+    """Registra `?empresa=` como parametro conocido del listado de la Agenda.
+
+    No filtra ni se dibuja: Django descarta un filtro sin salida (`has_output`) pero
+    antes le deja consumir su parametro, y eso evita que el listado lo rechace como un
+    campo inexistente. El filtrado real esta en `AgendaAdmin.get_queryset` y las
+    pestañas de la plantilla son la interfaz. Los enlaces de los demas filtros y de la
+    paginacion lo conservan solos.
+    """
+
+    title = 'empresa'
+    parameter_name = 'empresa'
+
+    def lookups(self, request, model_admin):
+        return []
+
+    def has_output(self):
+        return False
+
+    def queryset(self, request, queryset):
+        return queryset
+
+
 class CuandoFilter(admin.SimpleListFilter):
     """Los dos modos de usar la agenda, que son dos rangos de fechas y nada mas.
 
@@ -1001,7 +1024,7 @@ class AgendaForm(forms.ModelForm):
 
         capitanes = self.fields['capitan']
         ocupados = self.contexto.capitanes_ocupados(reserva) - {reserva.capitan_id}
-        capitanes.queryset = capitanes.queryset.exclude(pk__in=ocupados)
+        capitanes.queryset = capitanes.queryset.filter(empresa_id=reserva.empresa_id).exclude(pk__in=ocupados)
         capitanes.empty_label = 'Elegir capitan'
 
     def _post_clean(self):
@@ -1070,6 +1093,18 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
         js = ['bookings/reservas-nuevas.js', 'bookings/panorama.js']
         css = {'all': ['bookings/admin-columnas.css']}
 
+    SESION_EMPRESA = 'agenda_empresa'
+
+    @staticmethod
+    def _es_listado(request):
+        match = request.resolver_match
+        return match is not None and match.url_name == 'bookings_agenda_changelist'
+
+    def get_list_filter(self, request):
+        if scope.es_operador_plataforma(request.user):
+            return [EmpresaAgendaFilter, CuandoFilter]
+        return [CuandoFilter]
+
     def changelist_view(self, request, extra_context=None):
         """Mete el panorama de la semana en el contexto del listado.
 
@@ -1077,17 +1112,98 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
         modo "Manana" quedaria una sola columna y en "Recien llegadas" no hay
         ventana de fechas que dibujar; ademas es justo cerrando el dia de manana
         cuando mas sirve ver la semana completa alrededor.
+
+        El operador de plataforma no pertenece a una empresa: elige cual mirar
+        (`_contexto_operador`). Sin eso el panorama salia vacio y decia "Todo asignado".
         """
-        return super().changelist_view(request, {
-            **(extra_context or {}),
-            'panorama': armar_panorama(timezone.localdate(), scope.empresa_actual(request)),
-        })
+        if scope.es_operador_plataforma(request.user):
+            respuesta, contexto = self._contexto_operador(request)
+            if respuesta is not None:
+                return respuesta
+        else:
+            contexto = {
+                'panorama': armar_panorama(timezone.localdate(), scope.empresa_actual(request)),
+            }
+        return super().changelist_view(request, {**(extra_context or {}), **contexto})
+
+    def _contexto_operador(self, request):
+        """`(redireccion, contexto)`: pestañas de empresa, la elegida y su panorama.
+
+        La ultima empresa elegida se recuerda en la sesion y se vuelve a poner en la
+        URL; no se elige una por el operador (es una pantalla donde se escribe).
+        """
+        empresas = list(Empresa.objects.filter(activo=True).order_by('nombre'))
+        por_slug = {e.slug: e for e in empresas}
+        pedida = request.GET.get('empresa')
+
+        if pedida in por_slug:
+            request.session[self.SESION_EMPRESA] = pedida
+        elif not pedida:
+            recordada = request.session.get(self.SESION_EMPRESA)
+            if recordada in por_slug and request.method == 'GET':
+                consulta = request.GET.copy()
+                consulta['empresa'] = recordada
+                return HttpResponseRedirect(f'{request.path}?{consulta.urlencode()}'), None
+        elif request.session.get(self.SESION_EMPRESA) == pedida:
+            del request.session[self.SESION_EMPRESA]
+        elegida = por_slug.get(pedida)
+
+        con_pangas = set(
+            Embarcacion.objects.filter(activa=True).values_list('empresa_id', flat=True)
+        )
+        sin_panga = dict(
+            Reserva.objects.filter(estado=Reserva.Estado.PAGADA, embarcacion__isnull=True)
+            .exclude(
+                models.Q(servicio__estrategia_cupo='bajo_demanda') |
+                models.Q(servicio__tipo_servicio='transporte')
+            )
+            .values_list('empresa_id').annotate(n=models.Count('pk'))
+        )
+        resto = request.GET.copy()
+        resto.pop('empresa', None)
+        resto.pop('p', None)
+
+        def enlace(empresa):
+            return f'{request.path}?{urlencode({**resto.dict(), "empresa": empresa.slug})}'
+
+        pestanas = [
+            {
+                'nombre': e.nombre,
+                'url': enlace(e),
+                'activa': e == elegida,
+                'aplica': e.pk in con_pangas,
+                'sin_panga': sin_panga.get(e.pk, 0),
+            }
+            for e in empresas
+        ]
+
+        if elegida is None:
+            estado = 'elegir'
+        elif elegida.pk not in con_pangas:
+            estado = 'sin_pangas'
+        else:
+            estado = 'normal'
+
+        return None, {
+            'agenda_pestanas': pestanas,
+            'agenda_estado': estado,
+            'agenda_empresa': elegida,
+            'panorama': (
+                armar_panorama(timezone.localdate(), elegida) if estado == 'normal' else None
+            ),
+        }
 
     def get_queryset(self, request):
         # `super()` aplica el filtro por empresa del mixin; se replica el criterio
         # de `Agenda.por_repartir()` sin perder el aislamiento. `embarcacion` y
         # `capitan` salen en el listado: sin `select_related` es una consulta por fila.
-        return super().get_queryset(request).filter(
+        qs = super().get_queryset(request)
+        if scope.es_operador_plataforma(request.user) and self._es_listado(request):
+            # El operador ve una empresa a la vez, la que eligio. Sin eleccion valida
+            # no hay filas: ninguna empresa se reparte por defecto. Fuera del listado
+            # (abrir una reserva) no aplica, ahi no viaja `?empresa=`.
+            qs = qs.filter(empresa__slug=request.GET.get('empresa') or None)
+        return qs.filter(
             estado__in=Agenda.ESTADOS_EN_AGENDA
         ).exclude(
             models.Q(servicio__estrategia_cupo='bajo_demanda') |
