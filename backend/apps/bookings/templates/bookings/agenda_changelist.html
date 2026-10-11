@@ -30,17 +30,15 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
         panga, para decidir donde entrar sin abrirlas todas. La elegida no cambia de
         lugar ni de tamaño: lo unico que cambia es lo que hay debajo.
         {% endcomment %}
-        <nav data-empresas aria-label="Empresa de la agenda"
-             style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem">
+        <nav data-empresas aria-label="Empresa de la agenda" class="agenda-pestanas">
             {% for p in agenda_pestanas %}
                 <a href="{{ p.url }}" data-empresa-pestana {% if p.activa %}aria-current="page"{% endif %}
-                   class="text-base-700 dark:text-base-300"
-                   style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.875rem; text-decoration: none; border-radius: 6px; border: 1px solid {% if p.activa %}#b7410e{% else %}rgba(127,127,127,0.35){% endif %}; {% if p.activa %}font-weight: 600; background: rgba(183,65,14,0.08);{% endif %}{% if not p.aplica %} opacity: 0.55;{% endif %}">
+                   class="agenda-pestana text-base-700 dark:text-base-300{% if not p.aplica %} agenda-pestana-apagada{% endif %}">
                     {{ p.nombre }}
                     {% if not p.aplica %}
-                        <span class="text-base-500 dark:text-base-400" style="font-size: 0.75rem">sin pangas</span>
+                        <span class="agenda-pestana-nota">sin pangas</span>
                     {% elif p.sin_panga %}
-                        <span style="font-size: 0.75rem; font-weight: 600; color: #dc2626">{{ p.sin_panga }} sin panga</span>
+                        <span class="agenda-pestana-cuenta">{{ p.sin_panga }} sin panga</span>
                     {% endif %}
                 </a>
             {% endfor %}
@@ -74,8 +72,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                 </span>
                 {% with r=panorama.resumen %}
                     <span data-resumen data-otros="{{ r.sin_capitan|add:r.atrasados }}"
-                          class="text-base-500 dark:text-base-400"
-                          style="float: right; display: inline-flex; gap: 1rem; font-size: 0.8rem; font-weight: 400">
+                          class="agenda-resumen text-base-500 dark:text-base-400">
                         <span data-todo-asignado {% if not r.todo_al_dia %}hidden{% endif %}
                               style="color: #15803d; font-weight: 600">Todo asignado</span>
                         <span data-pieza-sin-panga {% if not r.sin_panga %}hidden{% endif %}>
@@ -98,7 +95,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                 <table class="text-sm" style="width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 56rem">
                     <thead>
                         <tr>
-                            <th class="text-base-500 dark:text-base-400"
+                            <th class="agenda-pegada bg-white dark:bg-base-900 text-base-500 dark:text-base-400"
                                 style="text-align: left; padding: 0.35rem 0.5rem; white-space: nowrap; width: 12rem">Panga</th>
                             {% for dia in panorama.dias %}
                                 <th class="text-base-500 dark:text-base-400"
@@ -119,7 +116,8 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                         {% endcomment %}
                         <tr style="background: rgba(220, 38, 38, 0.05)">
                             {% with r=panorama.resumen %}
-                                <td style="padding: 0.7rem 0.5rem 0.6rem; vertical-align: top">
+                                <td class="agenda-pegada bg-white dark:bg-base-900"
+                                    style="padding: 0.7rem 0.5rem 0.6rem; vertical-align: top; background-image: linear-gradient(rgba(220, 38, 38, 0.05), rgba(220, 38, 38, 0.05))">
                                     {# `data-sin-panga` lo mantiene al dia `panorama.js` al asignar, antes de guardar. #}
                                     <span data-sin-panga="{{ r.sin_panga }}"
                                           style="color: {% if r.sin_panga %}#dc2626{% else %}#15803d{% endif %}; font-weight: 600">
@@ -146,7 +144,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                         {% for renglon in panorama.renglones %}
                             <tr class="border-t border-base-200 dark:border-base-800"
                                 {% if forloop.first %}style="border-top: 2px solid rgba(127, 127, 127, 0.35)"{% endif %}>
-                                <td class="text-base-700 dark:text-base-300"
+                                <td class="agenda-pegada bg-white dark:bg-base-900 text-base-700 dark:text-base-300"
                                     style="padding: 0.2rem 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                                     {{ renglon.embarcacion.nombre }}
                                     <span class="text-base-400" style="font-size: 0.75rem">
@@ -180,7 +178,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                     </tbody>
                     <tfoot>
                         <tr class="border-t border-base-200 dark:border-base-800">
-                            <td class="text-base-500 dark:text-base-400"
+                            <td class="agenda-pegada bg-white dark:bg-base-900 text-base-500 dark:text-base-400"
                                 style="padding: 0.3rem 0.5rem; white-space: nowrap">Pangas ocupadas</td>
                             {% for ocupadas, a_flote in panorama.pie %}
                                 <td class="text-base-500 dark:text-base-400"

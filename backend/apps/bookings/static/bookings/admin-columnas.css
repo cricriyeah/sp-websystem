@@ -73,3 +73,159 @@
   min-width: 8.5rem;
   white-space: nowrap;
 }
+
+/* Agenda: pestañas de empresa (solo operador), resumen del panorama y lista en movil.
+ *
+ * En una hoja y no en `style=` porque las consultas de ancho no existen en linea. */
+
+/* Pestañas: una fila que se desplaza de lado en movil en vez de partirse en renglones
+ * disparejos. La elegida va llena: es la unica que dice donde esta uno. */
+.agenda-pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.agenda-pestana {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.875rem;
+  text-decoration: none;
+  border-radius: 6px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  white-space: nowrap;
+}
+.agenda-pestana[aria-current='page'] {
+  background: #b7410e;
+  border-color: #b7410e;
+  color: #fff;
+  font-weight: 600;
+}
+.agenda-pestana[aria-current='page'] .agenda-pestana-cuenta {
+  color: #fff;
+}
+.agenda-pestana-cuenta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+.agenda-pestana-nota {
+  font-size: 0.75rem;
+}
+.agenda-pestana-apagada {
+  opacity: 0.55;
+}
+
+/* Resumen del panorama, a la derecha del titulo. */
+.agenda-resumen {
+  float: right;
+  display: inline-flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+/* La primera columna de la cuadricula se queda al desplazarla de lado: sin ella
+ * no se sabe de que panga es cada celda. */
+.agenda-pegada {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .agenda-pestanas {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .agenda-pestanas::-webkit-scrollbar {
+    display: none;
+  }
+  .agenda-pestana {
+    flex: 0 0 auto;
+  }
+
+  /* El resumen baja a su propia linea, a la izquierda, en vez de caer suelto a la
+   * derecha. */
+  .agenda-resumen {
+    float: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-top: 0.35rem;
+  }
+
+  /* Cada viaje es una tarjeta: nombre arriba, luego dia, hora, personas y aviso en
+   * parejas, y los selectores a lo ancho. Una tabla de ocho columnas obligaba a
+   * deslizar de lado para llegar a lo que se viene a hacer, que es elegir panga. */
+  .model-agenda #result_list thead {
+    display: none;
+  }
+  .model-agenda #result_list,
+  .model-agenda #result_list tbody {
+    display: block;
+    width: 100%;
+  }
+  .model-agenda #result_list tr.data-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 0.75rem;
+    padding: 0.75rem;
+    border-top: 1px solid rgba(127, 127, 127, 0.25);
+  }
+  .model-agenda #result_list tr.data-row > td,
+  .model-agenda #result_list tr.data-row > th {
+    display: block;
+    height: auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+  }
+  .model-agenda #result_list .field-nombre_cliente {
+    order: -1;
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .model-agenda #result_list .field-embarcacion,
+  .model-agenda #result_list .field-capitan,
+  .model-agenda #result_list .field-avisado {
+    grid-column: 1 / -1;
+  }
+  .model-agenda #result_list .field-embarcacion select,
+  .model-agenda #result_list .field-capitan select {
+    min-width: 0;
+  }
+  .model-agenda #result_list .field-aviso {
+    min-width: 0;
+    white-space: normal;
+  }
+  .model-agenda #result_list .field-dia::before,
+  .model-agenda #result_list .field-hora::before,
+  .model-agenda #result_list .field-numero_personas::before,
+  .model-agenda #result_list .field-embarcacion::before,
+  .model-agenda #result_list .field-capitan::before,
+  .model-agenda #result_list .field-aviso::before,
+  .model-agenda #result_list .field-avisado::before {
+    display: block;
+    margin-bottom: 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(127, 127, 127, 0.95);
+  }
+  .model-agenda #result_list .field-dia::before { content: 'Fecha'; }
+  .model-agenda #result_list .field-hora::before { content: 'Hora'; }
+  .model-agenda #result_list .field-numero_personas::before { content: 'Personas'; }
+  .model-agenda #result_list .field-embarcacion::before { content: 'Panga'; }
+  .model-agenda #result_list .field-capitan::before { content: 'Capitán'; }
+  .model-agenda #result_list .field-aviso::before { content: 'Aviso'; }
+  .model-agenda #result_list .field-avisado::before { content: 'Avisado'; }
+}

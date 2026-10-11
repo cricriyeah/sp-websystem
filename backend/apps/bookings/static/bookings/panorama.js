@@ -487,7 +487,15 @@
     }
   }
 
+  // En movil las pestañas de empresa se desplazan de lado: la elegida arranca a la vista.
+  function mostrarPestanaElegida() {
+    var barra = document.querySelector('[data-empresas]');
+    var actual = barra && barra.querySelector('[aria-current="page"]');
+    if (actual) barra.scrollLeft = actual.offsetLeft - barra.offsetLeft - 16;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    mostrarPestanaElegida();
     var panel = document.querySelector('[data-panorama]');
     if (!panel) return;
     recordarApertura(panel);
