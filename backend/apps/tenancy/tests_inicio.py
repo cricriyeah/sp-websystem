@@ -182,3 +182,35 @@ class InicioTests(TestCase):
         for tarjeta in self._contexto(self.vendedora, self.empresa_a)['tarjetas']:
             with self.subTest(tarjeta=tarjeta['clave']):
                 self.assertEqual(self.client.get(tarjeta['url']).status_code, 200)
+
+    def test_el_enlace_de_efectivo_lista_solo_reservas_con_saldo_de_su_empresa(self):
+        with scope.con_empresa(self.empresa_a):
+            pendiente = self._reserva(self.empresa_a)
+            self._reserva(self.empresa_a, pagado='100.00')
+            self._reserva(self.empresa_a, estado=Reserva.Estado.ASIGNADA, efectivo='70.00')
+        with scope.con_empresa(self.empresa_b):
+            self._reserva(self.empresa_b)
+
+        url = next(t['url'] for t in self._contexto(self.vendedora, self.empresa_a)['tarjetas']
+                   if t['clave'] == 'efectivo')
+        self.client.force_login(self.vendedora)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'admin/saldos.html')
+        self.assertEqual([reserva.pk for reserva in response.context['reservas']], [pendiente.pk])
+
+        self.client.force_login(self.jefe)
+        response = self.client.get(url)
+        self.assertEqual([reserva.pk for reserva in response.context['reservas']], [pendiente.pk])
+
+        self.client.force_login(self.operador)
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        sin_permiso = get_user_model().objects.create_user(
+            'sin-permiso-inicio', password='x', is_staff=True,
+        )
+        MembresiaEmpresa.objects.create(
+            user=sin_permiso, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        )
+        self.client.force_login(sin_permiso)
+        self.assertEqual(self.client.get(url).status_code, 403)

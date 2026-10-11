@@ -19,7 +19,7 @@ from django.urls import include, path
 
 from apps.finance.views import panel_financiero
 from apps.fleet.views import TrasladosView
-from apps.tenancy.inicio import vista_avanzada
+from apps.tenancy.inicio import vista_avanzada, vista_saldos
 
 from .health import healthz
 
@@ -38,6 +38,7 @@ urlpatterns = [
     # decide la vista (ver apps/finance/views.py).
     path('admin/finanzas/', admin.site.admin_view(panel_financiero), name='finanzas'),
     path('admin/avanzado/', admin.site.admin_view(vista_avanzada), name='admin_avanzado'),
+    path('admin/saldos-por-cobrar/', admin.site.admin_view(vista_saldos), name='saldos_por_cobrar'),
     path('admin/', admin.site.urls),
     path('api/<slug:empresa_slug>/traslados/', TrasladosView.as_view(), name='traslados'),
     path('api/', include('apps.fleet.urls')),

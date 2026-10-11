@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from django.core.exceptions import PermissionDenied
 from django.db.models import DecimalField, F, Value
 from django.db.models.functions import Coalesce
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils import timezone
 
@@ -27,22 +28,27 @@ def _url(nombre, **filtros):
 
 def _conteos(empresa, hoy, ahora):
     reservas = Reserva.objects.filter(empresa=empresa)
-    cero = Value(Decimal('0.00'), output_field=DecimalField(max_digits=12, decimal_places=2))
-    saldo_cubierto = Coalesce(F('monto_pagado'), cero) + Coalesce(F('monto_efectivo'), cero)
     return {
         'manana': Agenda.por_repartir().filter(
             empresa=empresa, fecha=hoy + timedelta(days=1), embarcacion__isnull=True,
         ).count(),
-        'efectivo': reservas.filter(
-            estado__in=[Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA],
-            precio_total__gt=saldo_cubierto,
-        ).count(),
+        'efectivo': _reservas_con_saldo(empresa).count(),
         'nuevas': reservas.filter(
             estado__in=ESTADOS_QUE_OCUPAN_CUPO,
             creado_en__gte=ahora - timedelta(hours=24),
         ).count(),
         'abandonados': CheckoutAbandonado.abandonados().filter(empresa=empresa).count(),
     }
+
+
+def _reservas_con_saldo(empresa):
+    cero = Value(Decimal('0.00'), output_field=DecimalField(max_digits=12, decimal_places=2))
+    saldo_cubierto = Coalesce(F('monto_pagado'), cero) + Coalesce(F('monto_efectivo'), cero)
+    return Reserva.objects.filter(
+        empresa=empresa,
+        estado__in=[Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA],
+        precio_total__gt=saldo_cubierto,
+    )
 
 
 def _tarjetas(conteos, ahora):
@@ -56,7 +62,7 @@ def _tarjetas(conteos, ahora):
         {
             'clave': 'efectivo', 'titulo': 'Saldos en efectivo por cobrar',
             'numero': conteos['efectivo'], 'accion': 'Ver reservas',
-            'url': _url(reservas, estado__in='pagada,asignada'),
+            'url': reverse('saldos_por_cobrar'),
         },
         {
             'clave': 'nuevas', 'titulo': 'Reservas nuevas',
@@ -138,4 +144,18 @@ def vista_avanzada(request):
     return admin.site.index(request, extra_context={
         'inicio_avanzado': True,
         'title': 'Ajustes y vista avanzada',
+    })
+
+
+def vista_saldos(request):
+    """Reservas con saldo exacto, sin modificar el listado normal de Reservas."""
+    from django.contrib import admin
+
+    rol, empresa = _rol(request)
+    if rol == 'operador' or not request.user.has_perm('bookings.view_reserva'):
+        raise PermissionDenied
+    return TemplateResponse(request, 'admin/saldos.html', {
+        **admin.site.each_context(request),
+        'title': 'Saldos en efectivo por cobrar',
+        'reservas': list(_reservas_con_saldo(empresa).order_by('fecha', 'pk')),
     })

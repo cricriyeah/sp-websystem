@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% load static humanize %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'tenancy/inicio.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="inicio">
+        <header class="inicio-encabezado">
+            <h1>Saldos en efectivo por cobrar</h1>
+            <p>Reservas pagadas o asignadas con dinero pendiente.</p>
+        </header>
+        <ul class="inicio-saldos">
+            {% for reserva in reservas %}
+                <li>
+                    <a href="{% url 'admin:bookings_reserva_change' reserva.pk %}">
+                        <strong>{{ reserva.nombre_cliente }}</strong>
+                        <span>{{ reserva.fecha|date:'j M Y' }}</span>
+                        <span>{{ reserva.moneda }} {{ reserva.saldo_pendiente|floatformat:2|intcomma }}</span>
+                    </a>
+                </li>
+            {% empty %}
+                <li class="inicio-saldos-vacio">No hay saldos por cobrar.</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock %}
