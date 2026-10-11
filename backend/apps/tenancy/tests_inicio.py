@@ -91,7 +91,7 @@ class InicioTests(TestCase):
         self.assertEqual(inicio['rol'], 'vendedora')
         self.assertEqual(
             {t['clave']: t['numero'] for t in inicio['tarjetas']},
-            {'manana': 1, 'efectivo': 1, 'nuevas': 3, 'abandonados': 1},
+            {'manana': 1, 'efectivo': 1, 'nuevas': 2, 'abandonados': 1},
         )
         self.assertEqual(len(inicio['tarjetas']), 4)
         self.assertNotIn('dinero', inicio)
@@ -106,7 +106,7 @@ class InicioTests(TestCase):
             self._reserva(self.empresa_a, fecha=timezone.localdate() + timedelta(days=2))
 
         conteos = {t['clave']: t['numero'] for t in self._contexto(self.vendedora, self.empresa_a)['tarjetas']}
-        self.assertEqual(conteos, {'manana': 1, 'efectivo': 2, 'nuevas': 4, 'abandonados': 0})
+        self.assertEqual(conteos, {'manana': 1, 'efectivo': 2, 'nuevas': 1, 'abandonados': 0})
 
     def test_jefe_ve_atrasados_y_entradas_separadas_por_moneda(self):
         ahora = timezone.now()
@@ -148,7 +148,7 @@ class InicioTests(TestCase):
         self.assertEqual(
             [(fila['empresa'], fila['conteos']) for fila in inicio['filas']],
             [('Empresa A', {'manana': 1, 'efectivo': 1, 'nuevas': 1, 'abandonados': 0}),
-             ('Empresa B', {'manana': 0, 'efectivo': 0, 'nuevas': 1, 'abandonados': 1}),
+             ('Empresa B', {'manana': 0, 'efectivo': 0, 'nuevas': 0, 'abandonados': 1}),
              ('Sal y Sol Sportfishing', {'manana': 0, 'efectivo': 0, 'nuevas': 0, 'abandonados': 0})],
         )
 
@@ -174,8 +174,10 @@ class InicioTests(TestCase):
         self.assertNotContains(response, 'inicio-tarjeta')
         self.assertEqual(self.client.get(reverse('admin_avanzado')).status_code, 200)
 
-    def test_reservas_nuevas_coincide_con_el_listado_de_llegadas_recientes(self):
+    def test_reservas_nuevas_coincide_con_su_filtro_sin_cambiar_recientes(self):
         with scope.con_empresa(self.empresa_a):
+            self._reserva(self.empresa_a, creada_hace=1)
+            self._reserva(self.empresa_a, estado=Reserva.Estado.ASIGNADA, creada_hace=3)
             self._reserva(self.empresa_a, creada_hace=25)
             self._reserva(self.empresa_a, estado=Reserva.Estado.PENDIENTE_PAGO, creada_hace=1)
             self._reserva(self.empresa_a, estado=Reserva.Estado.CANCELADA, creada_hace=4)
@@ -185,12 +187,17 @@ class InicioTests(TestCase):
 
         tarjeta = next(t for t in self._contexto(self.vendedora, self.empresa_a)['tarjetas']
                        if t['clave'] == 'nuevas')
-        self.assertEqual(tarjeta['url'], reverse('admin:bookings_reserva_changelist') + '?llegada=recientes')
-        self.assertEqual(tarjeta['numero'], 3)
+        listado = reverse('admin:bookings_reserva_changelist')
+        self.assertEqual(tarjeta['url'], listado + '?llegada=nuevas')
+        self.assertEqual(tarjeta['numero'], 2)
         self.client.force_login(self.vendedora)
         response = self.client.get(tarjeta['url'], follow=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['cl'].result_count, tarjeta['numero'])
+
+        recientes = self.client.get(listado + '?llegada=recientes', follow=False)
+        self.assertEqual(recientes.status_code, 200)
+        self.assertEqual(recientes.context['cl'].result_count, 5)
 
     def test_cada_enlace_por_rol_abre_sin_error_del_admin(self):
         with scope.con_empresa(self.empresa_a):
