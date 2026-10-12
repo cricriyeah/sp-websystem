@@ -1,6 +1,12 @@
 {% extends "admin/change_list.html" %}
 
-{% block result_list %}
+{% comment %}
+Las pestañas van DENTRO de la tarjeta de busqueda de Unfold (bloque `filters`), como una
+segunda fila: ahi heredan su relleno y quedan alineadas con el buscador. En `result_list`
+caian sobre el solape de 2rem de esa tarjeta, pegadas a su borde y cruzadas por su linea.
+{% endcomment %}
+{% block filters %}
+    {{ block.super }}
     <nav aria-label="Vistas de reservas" class="agenda-pestanas">
         {% for p in reservas_pestanas %}
             <a href="{{ p.url }}" data-vista="{{ p.clave }}" {% if p.activa %}aria-current="page"{% endif %}
@@ -21,10 +27,9 @@
             <input type="date" name="dia" value="{{ reservas_dia.valor }}" aria-label="Ver un día" onchange="this.form.submit()">
             <a href="{{ reservas_dia.siguiente }}" data-dia-siguiente class="agenda-dia-flecha" aria-label="Día siguiente">&rsaquo;</a>
             {% if reservas_dia.activo %}
-                <span class="agenda-dia-cuenta">{{ reservas_dia.conteo }}</span>
-                <a href="{{ reservas_dia.quitar }}" data-dia-quitar class="agenda-dia-flecha" aria-label="Quitar el día">&times;</a>
+                <span class="agenda-dia-cuenta">{{ reservas_dia.conteo }} reserva{{ reservas_dia.conteo|pluralize }}</span>
+                <a href="{{ reservas_dia.quitar }}" data-dia-quitar class="agenda-dia-quitar" title="Quitar el día elegido">Quitar</a>
             {% endif %}
         </form>
     </nav>
-    {{ block.super }}
 {% endblock %}

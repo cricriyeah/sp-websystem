@@ -248,6 +248,21 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertIn('vista=proximas', selector['quitar'])
         self.assertNotIn('dia=', selector['quitar'])
 
+    def test_las_pestanas_van_dentro_de_la_tarjeta_de_busqueda_y_no_sobre_la_tabla(self):
+        self.reserva('Ana', 1)
+        html = self.client.get(self.url).content.decode()
+
+        # La tarjeta de busqueda (con su relleno) va antes del formulario de resultados;
+        # las pestañas deben quedar antes de ese formulario, no dentro de el.
+        self.assertLess(html.index('agenda-pestanas'), html.index('id="changelist-form"'))
+
+    def test_el_conteo_del_dia_dice_que_son_reservas(self):
+        self.reserva('Ana', 5)
+        html = self.client.get(self.url, {'dia': (self.hoy + timedelta(days=5)).isoformat()}).content.decode()
+
+        self.assertRegex(html, r'1 reserva\s*<')
+        self.assertIn('data-dia-quitar', html)
+
     def test_el_panel_ya_no_ofrece_filtros_de_fecha(self):
         self.reserva('Ana', 1)
         html = self.client.get(self.url, {'vista': 'todas'}).content.decode()

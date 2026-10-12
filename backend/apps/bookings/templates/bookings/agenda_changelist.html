@@ -22,14 +22,9 @@ toca, las pangas que le sirven se marcan, el resto se atenua, y al tocar una se 
 el selector de su fila. Guardar sigue siendo el boton de la tabla.
 {% endcomment %}
 
-{% block result_list %}
+{% block filters %}
+    {{ block.super }}
     {% if agenda_pestanas %}
-        {% comment %}
-        Solo para el operador de plataforma, que no pertenece a una empresa: elige
-        cual agenda mira. Una pestaña por empresa, con cuantos viajes pagados esperan
-        panga, para decidir donde entrar sin abrirlas todas. La elegida no cambia de
-        lugar ni de tamaño: lo unico que cambia es lo que hay debajo.
-        {% endcomment %}
         <nav data-empresas aria-label="Empresa de la agenda" class="agenda-pestanas">
             {% for p in agenda_pestanas %}
                 <a href="{{ p.url }}" data-empresa-pestana {% if p.activa %}aria-current="page"{% endif %}
@@ -43,6 +38,18 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                 </a>
             {% endfor %}
         </nav>
+    {% endif %}
+{% endblock %}
+
+{% block result_list %}
+    {% if agenda_pestanas %}
+        {% comment %}
+        Solo para el operador de plataforma, que no pertenece a una empresa: elige
+        cual agenda mira. Una pestaña por empresa, con cuantos viajes pagados esperan
+        panga, para decidir donde entrar sin abrirlas todas. La elegida no cambia de
+        lugar ni de tamaño: lo unico que cambia es lo que hay debajo.
+        {% endcomment %}
+
         {% if agenda_estado == 'elegir' %}
             <p data-elegir-empresa class="text-base-600 dark:text-base-300" style="margin: 2rem 0; font-size: 0.95rem">
                 Elige una empresa para ver su agenda.

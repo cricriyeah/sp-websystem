@@ -92,8 +92,9 @@
 .agenda-pestanas {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  width: 100%;
 }
 .agenda-pestana {
   display: inline-flex;
@@ -158,8 +159,15 @@
   color-scheme: dark;
 }
 .agenda-dia-cuenta {
-  font-size: 0.75rem;
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
   font-weight: 600;
+}
+.agenda-dia-quitar {
+  padding: 0.1rem 0.5rem;
+  font-size: 0.8rem;
+  color: inherit;
+  text-decoration: underline;
 }
 .agenda-pestana-nota {
   font-size: 0.75rem;
