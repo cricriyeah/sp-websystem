@@ -60,18 +60,15 @@ def sugerir_precio(
     # 4. Obtener tipo de cambio de la sede si el cobro es en USD
     tipo_cambio = None
     if moneda_str == Reserva.Moneda.USD:
-        try:
-            if servicio is not None:
-                empresa = getattr(servicio, 'empresa', None)
-                sede = getattr(empresa, 'sede', None) if empresa else None
-            else:
-                sede = getattr(paquete, 'sede', None)
-                if not sede:
-                    empresa_lider = getattr(paquete, 'empresa_lider', None)
-                    sede = getattr(empresa_lider, 'sede', None) if empresa_lider else None
-            tipo_cambio = getattr(sede, 'tipo_cambio_usd', None) if sede else None
-        except Exception:
-            tipo_cambio = None
+        if servicio is not None:
+            empresa = getattr(servicio, 'empresa', None)
+            sede = getattr(empresa, 'sede', None) if empresa else None
+        else:
+            sede = getattr(paquete, 'sede', None)
+            if not sede:
+                empresa_lider = getattr(paquete, 'empresa_lider', None)
+                sede = getattr(empresa_lider, 'sede', None) if empresa_lider else None
+        tipo_cambio = getattr(sede, 'tipo_cambio_usd', None) if sede else None
 
         # Sin tipo de cambio positivo, no es posible calcular precios en USD
         if tipo_cambio is None or Decimal(tipo_cambio) <= Decimal('0.0000'):
@@ -79,23 +76,25 @@ def sugerir_precio(
 
     # 5. Caso Paquete
     if paquete is not None:
-        try:
-            # Paquetes cruza-empresa se tramitan como Orden, no como Reserva
-            if getattr(paquete, 'es_cruza_empresa', False):
-                return None
-
-            # Un paquete sin precio ancla o con precio <= 0 no tiene tarifa valida
-            precio_ancla = getattr(paquete, 'precio_ancla', None)
-            if precio_ancla is None or Decimal(precio_ancla) <= Decimal('0.00'):
-                return None
-
-            # Reutiliza el calculo de paquete de apps.fleet (que llama a calcular_total)
-            total = paquete.precio_total_en(moneda_str, personas_int, tipo_cambio)
-            if total is None or Decimal(total) <= Decimal('0.00'):
-                return None
-            return Decimal(total).quantize(CENTAVOS)
-        except Exception:
+        # Paquetes cruza-empresa se tramitan como Orden, no como Reserva
+        if getattr(paquete, 'es_cruza_empresa', False):
             return None
+
+        # Un paquete sin precio ancla o con precio <= 0 no tiene tarifa valida
+        precio_ancla = getattr(paquete, 'precio_ancla', None)
+        if precio_ancla is None or Decimal(precio_ancla) <= Decimal('0.00'):
+            return None
+
+        # Reutiliza el calculo de paquete de apps.fleet (que llama a calcular_total).
+        # Solo se atrapa lo que significa "no hay precio en esa moneda": cualquier otro
+        # error es un defecto y debe verse, no esconderse como "sin sugerencia".
+        try:
+            total = paquete.precio_total_en(moneda_str, personas_int, tipo_cambio)
+        except ValueError:
+            return None
+        if total is None or Decimal(total) <= Decimal('0.00'):
+            return None
+        return Decimal(total).quantize(CENTAVOS)
 
     # 6. Caso Servicio
     try:
@@ -186,6 +185,5 @@ def sugerir_precio(
         return Decimal(precio).quantize(CENTAVOS)
 
     except (ValueError, TarifaTransporteNoConfigurada):
-        return None
-    except Exception:
+        # Sin tarifa o sin precio en esa moneda: no hay sugerencia. Lo demas se propaga.
         return None

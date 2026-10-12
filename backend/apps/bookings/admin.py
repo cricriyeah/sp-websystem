@@ -34,6 +34,7 @@ from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUser
 from apps.tenancy.models import Empresa, MembresiaEmpresa
 
 from .forms import AltaVendedoraForm
+from .vistas_precio import respuesta_precio_sugerido
 
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
@@ -978,9 +979,22 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 initial['servicio'] = servicio.pk
         return initial
 
+    def get_urls(self):
+        # Va antes de super(): el admin termina con un catch-all <path:object_id>/.
+        return [
+            path(
+                'precio-sugerido/',
+                self.admin_site.admin_view(self.precio_sugerido_view),
+                name='bookings_reserva_precio_sugerido',
+            ),
+        ] + super().get_urls()
+
+    def precio_sugerido_view(self, request):
+        return respuesta_precio_sugerido(self, request)
+
     class Media:
         # Aviso de reservas nuevas en el listado, ver reservas_nuevas_view.
-        js = ['bookings/reservas-nuevas.js']
+        js = ['bookings/reservas-nuevas.js', 'bookings/alta-reserva.js']
         # Ancho de las columnas de asignacion, ver el propio archivo.
         css = {'all': ['bookings/admin-columnas.css']}
 
