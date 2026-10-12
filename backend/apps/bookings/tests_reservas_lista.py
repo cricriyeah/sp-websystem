@@ -51,7 +51,7 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertTrue(pestanas['proximas']['activa'])
         self.assertContains(respuesta, 'agenda-pestanas')
         self.assertContains(respuesta, 'bookings/reservas-nuevas.js')
-        self.assertIn('nombre_cliente', respuesta.context['cl'].list_display_links)
+        self.assertIn('cliente', respuesta.context['cl'].list_display_links)
         for vista, ids in [('hoy', [hoy.pk]), ('manana', [temprano.pk, tarde.pk]),
                            ('todas', [tarde.pk, cancelada.pk, pendiente.pk, temprano.pk, hoy.pk, ayer.pk])]:
             respuesta = self.client.get(self.url, {'vista': vista})
@@ -162,6 +162,25 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertNotContains(respuesta, 'Sin panga')
         self.assertNotContains(respuesta, 'None')
         self.assertEqual(len(respuesta.context['cl'].list_display), 9)  # casilla + ocho columnas
+
+    def test_el_menu_de_acciones_no_se_corrompe_y_eliminar_va_al_final(self):
+        self.client.force_login(self.crear_jefe())
+
+        acciones = [a for a, _ in self.client.get(self.url).context['action_form'].fields['action'].choices]
+        etiquetas = dict(self.client.get(self.url).context['action_form'].fields['action'].choices)
+
+        self.assertEqual(acciones[-1], 'delete_selected')
+        self.assertEqual(acciones[-2], 'cancelar_por_mal_clima')
+        self.assertIn('(el 70% restante)', etiquetas['registrar_liquidacion_en_efectivo'])
+        self.assertNotIn('verbose_name', ' '.join(map(str, etiquetas.values())))
+
+    def test_los_encabezados_dicen_cliente_y_personas(self):
+        self.reserva('Ana', 1)
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn('Cliente', html)
+        self.assertNotIn('Nombre cliente', html)
+        self.assertNotIn('Numero personas', html)
 
     def test_una_reserva_de_pesca_sin_panga_si_lo_dice(self):
         self.reserva('Pesca sin panga', 1)

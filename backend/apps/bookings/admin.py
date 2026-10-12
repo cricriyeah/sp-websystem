@@ -505,10 +505,10 @@ class OrdenAdmin(ModelAdmin):
 @admin.register(Reserva)
 class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
-        'cuando', 'nombre_cliente', 'numero_personas', 'servicio_resumen',
+        'cuando', 'cliente', 'personas', 'servicio_resumen',
         'estado', 'cobro', 'extras', 'asignacion',
     ]
-    list_display_links = ['nombre_cliente']
+    list_display_links = ['cliente']
     list_filter = [
         VistaReservasFilter,
         'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago',
@@ -671,6 +671,10 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
             or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
         ):
             actions.pop('confirmar_devolucion', None)
+        # Eliminar es lo mas destructivo: Django lo pone primero, y aqui va al final,
+        # despues de cancelar. Una reserva se cancela, no se borra.
+        if 'delete_selected' in actions:
+            actions['delete_selected'] = actions.pop('delete_selected')
         return actions
 
     @admin.action(description='Confirmar devolución (ya se resolvió fuera del sistema)')
@@ -720,6 +724,14 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         etiqueta = ('Hoy' if obj.fecha == hoy else 'Mañana' if obj.fecha == hoy + timedelta(days=1)
                     else fecha)
         return format_html('<span class="reservas-dia">{}</span>{}{}', etiqueta, fecha, hora)
+
+    @admin.display(description='Cliente', ordering='nombre_cliente')
+    def cliente(self, obj):
+        return obj.nombre_cliente
+
+    @admin.display(description='Personas', ordering='numero_personas')
+    def personas(self, obj):
+        return obj.numero_personas
 
     @admin.display(description='Servicio')
     def servicio_resumen(self, obj):
@@ -916,7 +928,7 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
             'Falta ejecutar el reembolso en Stripe.',
         )
 
-    @admin.action(description='Registrar liquidacion en efectivo (el 70% restante)')
+    @admin.action(description='Registrar liquidacion en efectivo (el 70%% restante)')
     def registrar_liquidacion_en_efectivo(self, request, queryset):
         """Deja constancia del efectivo que se recibio el dia del viaje.
 
