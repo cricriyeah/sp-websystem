@@ -610,7 +610,10 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
             return f'{request.path}?{consulta.urlencode()}'
 
         pestanas = [dict(clave=clave, nombre=nombre, conteo=conteos[clave],
-                         activa=clave == vista, url=enlace(clave))
+                         activa=clave == vista, url=enlace(clave),
+                         # El rojo se reserva a lo accionable: un saldo por cobrar o una
+                         # devolución por confirmar. El resto del conteo es solo un dato.
+                         urgente=clave in ('por_cobrar', 'atencion') and conteos[clave] > 0)
                     for clave, nombre in self.VISTAS]
         respuesta = super().changelist_view(request, {
             **(extra_context or {}), 'reservas_pestanas': pestanas,
@@ -723,6 +726,11 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
 
     @admin.display(description='Asignación')
     def asignacion(self, obj):
+        servicio = obj.servicio if obj.servicio_id else None
+        if servicio and (servicio.tipo_servicio == 'transporte'
+                         or servicio.estrategia_cupo == 'bajo_demanda'):
+            # No se reparten en la Agenda: "Sin panga" aqui seria un pendiente falso.
+            return '—'
         if not obj.embarcacion_id and not obj.capitan_id:
             return 'Sin panga · Sin capitán'
         return f'{obj.embarcacion.nombre if obj.embarcacion_id else "Sin panga"} · {obj.capitan.nombre if obj.capitan_id else "Sin capitán"}'

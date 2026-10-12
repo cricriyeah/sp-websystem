@@ -129,9 +129,25 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertContains(respuesta, 'Redondo actividad')
         self.assertContains(respuesta, 'Centro')
         self.assertContains(respuesta, 'Hotel Azul')
-        self.assertContains(respuesta, 'Sin panga · Sin capitán')
+        # Un traslado no se reparte en la Agenda: "Sin panga" aqui seria un pendiente falso.
+        self.assertNotContains(respuesta, 'Sin panga')
         self.assertNotContains(respuesta, 'None')
         self.assertEqual(len(respuesta.context['cl'].list_display), 9)  # casilla + ocho columnas
+
+    def test_una_reserva_de_pesca_sin_panga_si_lo_dice(self):
+        self.reserva('Pesca sin panga', 1)
+
+        self.assertContains(self.client.get(self.url, {'vista': 'manana'}), 'Sin panga · Sin capitán')
+
+    def test_el_conteo_solo_va_en_rojo_si_es_accionable(self):
+        self.reserva('Debe efectivo', 0, forma_pago=Reserva.FormaPago.ANTICIPO,
+                     precio_total=Decimal('516.00'), monto_pagado=Decimal('154.80'))
+
+        pestanas = {p['clave']: p for p in self.client.get(self.url).context['reservas_pestanas']}
+
+        self.assertTrue(pestanas['por_cobrar']['urgente'])
+        for clave in ('proximas', 'hoy', 'manana', 'atencion', 'todas'):
+            self.assertFalse(pestanas[clave]['urgente'], clave)
 
     def test_ordenar_cuando_invierte_fecha_y_hora(self):
         temprano = self.reserva('Hora temprana', 1, hora=time(5))

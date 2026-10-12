@@ -5,7 +5,7 @@
         {% for p in reservas_pestanas %}
             <a href="{{ p.url }}" data-vista="{{ p.clave }}" {% if p.activa %}aria-current="page"{% endif %}
                class="agenda-pestana text-base-700 dark:text-base-300">
-                {{ p.nombre }} <span class="agenda-pestana-cuenta">{{ p.conteo }}</span>
+                {{ p.nombre }} <span class="{% if p.urgente %}agenda-pestana-cuenta{% else %}agenda-pestana-n{% endif %}">{{ p.conteo }}</span>
             </a>
         {% endfor %}
     </nav>
