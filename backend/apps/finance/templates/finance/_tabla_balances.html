@@ -10,6 +10,7 @@ independientes, el sistema no tiene tipo de cambio (ver services.py).
                 <th class="font-medium px-3 py-2 text-left">Moneda</th>
                 <th class="font-medium px-3 py-2 text-right">Tarjeta</th>
                 <th class="font-medium px-3 py-2 text-right">Efectivo</th>
+                <th class="font-medium px-3 py-2 text-right">Transferencia</th>
                 <th class="font-medium px-3 py-2 text-right">Reembolsos</th>
                 <th class="font-medium px-3 py-2 text-right">Balance</th>
             </tr>
@@ -20,6 +21,7 @@ independientes, el sistema no tiene tipo de cambio (ver services.py).
                     <td class="font-medium px-3 py-2 text-base-700 dark:text-base-300">{{ moneda }}</td>
                     <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.tarjeta|floatformat:2|intcomma }}</td>
                     <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.efectivo|floatformat:2|intcomma }}</td>
+                    <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.transferencia|floatformat:2|intcomma }}</td>
                     <td class="px-3 py-2 text-right {% if saldo.reembolsos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
                         {% if saldo.reembolsos %}−{% endif %}{{ saldo.reembolsos|floatformat:2|intcomma }}
                     </td>
@@ -27,7 +29,7 @@ independientes, el sistema no tiene tipo de cambio (ver services.py).
                 </tr>
             {% empty %}
                 <tr>
-                    <td class="px-3 py-4 text-base-400 text-center" colspan="5">Sin movimientos.</td>
+                    <td class="px-3 py-4 text-base-400 text-center" colspan="6">Sin movimientos.</td>
                 </tr>
             {% endfor %}
         </tbody>

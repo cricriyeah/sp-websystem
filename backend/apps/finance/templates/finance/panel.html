@@ -2,6 +2,7 @@
 {% load humanize %}
 
 {% block content %}
+{{ block.super }}
 <div class="flex flex-col gap-8">
 
     {% comment %}
@@ -14,10 +15,11 @@
             <p class="mt-1 text-base-500 text-sm dark:text-base-400">
                 Acumulado de toda la operacion. En la cuenta: cobros con tarjeta menos reembolsos.
                 En efectivo: lo que la vendedora registro haber recibido el dia del viaje.
+                En el banco: transferencias registradas.
             </p>
         </div>
 
-        <div class="gap-4 grid grid-cols-1 md:grid-cols-2">
+        <div class="gap-4 grid" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr))">
             <div class="border border-base-200 flex flex-col gap-2 p-4 rounded-default dark:border-base-800">
                 <span class="font-medium text-base-500 text-xs uppercase dark:text-base-400">En la cuenta (Stripe)</span>
                 {% for moneda, saldo in acumulado.items %}
@@ -50,6 +52,19 @@
                     se devuelven por Stripe.
                 </p>
             </div>
+
+            <div class="border border-base-200 flex flex-col gap-2 p-4 rounded-default dark:border-base-800">
+                <span class="font-medium text-base-500 text-xs uppercase dark:text-base-400">En el banco (transferencias)</span>
+                {% for moneda, saldo in acumulado.items %}
+                    <div class="flex justify-between" style="align-items: baseline">
+                        <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
+                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_banco|floatformat:2|intcomma }}</span>
+                    </div>
+                {% empty %}
+                    <span class="text-base-400 text-sm">Sin movimientos todavia.</span>
+                {% endfor %}
+                <p class="text-base-400 text-xs">Los reembolsos de transferencias se hacen fuera del sistema y no se descuentan aqui.</p>
+            </div>
         </div>
     </section>
 
@@ -80,7 +95,7 @@
         {% include "finance/_tabla_balances.html" with balances=saldo_periodo %}
 
         {% comment %}
-        Una barra por dia con lo que entro (tarjeta + efectivo). Los dias vacios
+        Una barra por dia con lo que entro (tarjeta + efectivo + transferencia). Los dias vacios
         se dibujan a proposito: el hueco enseña que ese dia no entro nada.
 
         Una grafica por moneda. MXN y USD nunca se mezclan: el sistema no guarda
@@ -156,6 +171,7 @@
                         <th class="font-medium px-3 py-2 text-left">Moneda</th>
                         <th class="font-medium px-3 py-2 text-right">Tarjeta</th>
                         <th class="font-medium px-3 py-2 text-right">Efectivo</th>
+                        <th class="font-medium px-3 py-2 text-right">Transferencia</th>
                         <th class="font-medium px-3 py-2 text-right">Reembolsos</th>
                         <th class="font-medium px-3 py-2 text-right">Balance</th>
                     </tr>
@@ -170,6 +186,7 @@
                                 <td class="px-3 py-2 text-base-500 dark:text-base-400">{{ moneda }}</td>
                                 <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.tarjeta|floatformat:2|intcomma }}</td>
                                 <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.efectivo|floatformat:2|intcomma }}</td>
+                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.transferencia|floatformat:2|intcomma }}</td>
                                 <td class="px-3 py-2 text-right {% if saldo.reembolsos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
                                     {% if saldo.reembolsos %}−{% endif %}{{ saldo.reembolsos|floatformat:2|intcomma }}
                                 </td>
@@ -178,7 +195,7 @@
                         {% endfor %}
                     {% empty %}
                         <tr>
-                            <td class="px-3 py-4 text-base-400 text-center" colspan="6">
+                            <td class="px-3 py-4 text-base-400 text-center" colspan="7">
                                 Ningun movimiento de dinero en este mes.
                             </td>
                         </tr>

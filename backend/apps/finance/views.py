@@ -136,7 +136,7 @@ def _mes_vecino(primero, salto):
 
 
 def panel_financiero(request):
-    """Entradas, salidas y balance del dia, del mes y del año.
+    """Tarjeta, efectivo, transferencia, salidas y balance por periodo.
 
     El operador de plataforma ve todas las Empresas juntas; un jefe (o
     vendedora con membresia) ve solo la suya. Ya no corta con `is_superuser`

@@ -4,21 +4,23 @@ No hay tabla de movimientos aparte a proposito: cada peso que se mueve ya deja
 su rastro en la reserva que lo genero, y duplicarlo en un libro paralelo solo
 abre la puerta a que los dos dejen de cuadrar. Aqui solo se agrupa y se suma.
 
-Tres movimientos posibles por reserva, cada uno con su monto y su fecha:
+Cuatro movimientos posibles por reserva, cada uno con su monto y su fecha:
 
 | Movimiento         | Monto               | Fecha                 | Lo sella            |
 |--------------------|---------------------|-----------------------|---------------------|
 | Entrada tarjeta    | `monto_pagado`      | `pagada_en`           | webhook de Stripe   |
 | Entrada efectivo   | `monto_efectivo`    | `efectivo_cobrado_en` | la vendedora        |
+| Entrada transferencia | `monto_transferencia` | `transferencia_registrada_en` | la vendedora |
 | Salida (reembolso) | `monto_reembolsado` | `reembolsada_en`      | webhook de Stripe   |
 
-Dos reglas que no hay que romper:
+Reglas que no hay que romper:
 
-- **Cada moneda se lleva por separado.** El negocio fija el precio en pesos y en
-  dolares a mano, sin tipo de cambio (ver `fleet.Servicio`), asi que sumar MXN con
-  USD daria una cifra que no significa nada.
+- **Cada moneda se lleva por separado.** Los precios USD se calculan con el
+  tipo de cambio de la sede; sumar MXN con USD daria una cifra sin significado.
 - **Solo cuenta el dinero que se movio.** `Reserva.reembolsada` es la decision de
   devolver; la salida se registra hasta que Stripe confirma que salio.
+- **Las devoluciones de transferencias se hacen fuera del sistema.** No se
+  descuentan del saldo teorico del banco.
 """
 from dataclasses import dataclass
 from datetime import date
@@ -35,6 +37,7 @@ CERO = Decimal('0.00')
 MOVIMIENTOS = (
     ('tarjeta', 'monto_pagado', 'pagada_en'),
     ('efectivo', 'monto_efectivo', 'efectivo_cobrado_en'),
+    ('transferencia', 'monto_transferencia', 'transferencia_registrada_en'),
     ('reembolsos', 'monto_reembolsado', 'reembolsada_en'),
 )
 
@@ -46,11 +49,12 @@ class Balance:
     moneda: str
     tarjeta: Decimal = CERO
     efectivo: Decimal = CERO
+    transferencia: Decimal = CERO
     reembolsos: Decimal = CERO
 
     @property
     def entradas(self):
-        return self.tarjeta + self.efectivo
+        return self.tarjeta + self.efectivo + self.transferencia
 
     @property
     def neto(self):
@@ -59,7 +63,7 @@ class Balance:
 
     @property
     def en_cuenta(self):
-        """Lo que deberia haber entrado a la cuenta bancaria.
+        """Lo que deberia haber quedado en Stripe.
 
         Es bruto: Stripe descuenta su comision antes de depositar y el sistema no
         la registra, asi que el deposito real siempre es un poco menor.
@@ -73,8 +77,13 @@ class Balance:
         return self.efectivo
 
     @property
+    def en_banco(self):
+        """Transferencias acumuladas; las devoluciones se hacen fuera del sistema."""
+        return self.transferencia
+
+    @property
     def hay_movimiento(self):
-        return bool(self.tarjeta or self.efectivo or self.reembolsos)
+        return bool(self.tarjeta or self.efectivo or self.transferencia or self.reembolsos)
 
 
 def _reservas(empresa):

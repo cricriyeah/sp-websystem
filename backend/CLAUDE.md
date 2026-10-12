@@ -178,26 +178,26 @@ Pantalla unica de dinero, en `/admin/finanzas/` (`apps/finance/views.py`, montad
 `config/urls.py` **antes** de `admin/`, que si no se traga la ruta).
 Corta con `scope.es_operador_plataforma(request.user)` (ve todas las Empresas) o
 `scope.empresa_actual(request)` no vacío (ve la suya) — ya no con `is_superuser` (ver expansión multi-sede).
-Muestra entradas (tarjeta / efectivo), salidas (reembolsos), balance de hoy, del mes y
-del año, historico por dia con navegacion de meses, y los dos saldos teoricos contra
-los que se cuadra: lo que deberia haber en la cuenta de Stripe y lo que deberia haber
-en caja.
+Muestra entradas (tarjeta / efectivo / transferencia), salidas (reembolsos), balance de hoy, del mes y
+del año, historico por dia con navegacion de meses, y los tres saldos teoricos contra
+los que se cuadra: lo que deberia haber en la cuenta de Stripe, en caja y en el banco.
 
 **No hay tabla de movimientos.** Todo sale de `Reserva` agregando por fecha
 (`apps/finance/services.py`), porque cada peso ya deja su rastro en la reserva que lo
-genero y un libro paralelo solo puede acabar descuadrado con ella. Tres movimientos
+genero y un libro paralelo solo puede acabar descuadrado con ella. Cuatro movimientos
 posibles por reserva, cada uno con monto y fecha propios:
 
 | Movimiento | Monto | Fecha | Quien la sella |
 |---|---|---|---|
 | Entrada tarjeta | `monto_pagado` | `pagada_en` | webhook de Stripe |
 | Entrada efectivo | `monto_efectivo` | `efectivo_cobrado_en` | la vendedora |
+| Entrada transferencia | `monto_transferencia` | `transferencia_registrada_en` | la vendedora |
 | Salida (reembolso) | `monto_reembolsado` | `reembolsada_en` | webhook de Stripe |
 
 Reglas que no hay que romper:
 
-- **Cada moneda por separado, nunca sumadas.** No hay tipo de cambio en el sistema
-  (ver precios de `fleet.Servicio`); sumar MXN con USD daria una cifra sin significado.
+- **Cada moneda por separado, nunca sumadas.** El tipo de cambio de la sede sirve
+  para cotizar USD; sumar MXN con USD daria una cifra sin significado.
 - **`reembolsada` (bool) no es una salida.** Es la decision de devolver, que toma la
   vendedora al cancelar por mal clima. La salida se registra cuando el dinero sale de
   verdad y llega `charge.refunded`. Por eso una reserva cancelada puede aparecer
@@ -211,6 +211,8 @@ Reglas que no hay que romper:
   tenerlo neto habria que leer el `balance_transaction` del cargo en el webhook.
 - Los reembolsos no bajan el saldo en efectivo: se devuelven por Stripe, salen de la
   cuenta.
+- Los reembolsos de reservas pagadas por transferencia se hacen fuera del sistema;
+  no hay movimiento de salida bancaria ni se descuentan del saldo teorico del banco.
 - El menu lateral del admin se arma a mano en `UNFOLD['SIDEBAR']`
   (`config/settings/base.py`) porque esta pantalla no es un modelo y no aparece sola.
   Un modelo nuevo hay que darlo de alta ahi; mientras tanto sigue alcanzable por
