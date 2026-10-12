@@ -625,6 +625,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         # mano los desincronizaria de ese numero y del conteo de usos del codigo.
         'codigo_promocional', 'descuento_aplicado',
         'personas_por_servicio_legible', 'tipo_cambio',
+        'apartado_hasta', 'apartado_demanda', 'alerta_reembolso_fallido_en',
     ]
 
     def get_form(self, request, obj=None, **kwargs):
@@ -682,7 +683,9 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             'efectivo_cobrado_en', 'efectivo_cobrado_por',
             'transferencia_registrada_en', 'transferencia_registrada_por', 'en_disputa',
             'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en',
-            'deslinde_ip', 'deslinde_version', 'creado_en', 'actualizado_en',
+            'deslinde_ip', 'deslinde_version',
+            'apartado_hasta', 'apartado_demanda', 'alerta_reembolso_fallido_en',
+            'creado_en', 'actualizado_en',
         ]
         cancelacion = {'fields': (
             'motivo_cancelacion', 'reembolsada', 'monto_reembolsado',

@@ -135,6 +135,7 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
         self.assertIn('collapse', fieldsets[-2][1]['classes'])
         self.assertIn('monto_transferencia', fieldsets[2][1]['fields'])
         self.assertTrue({'transferencia_registrada_en', 'transferencia_registrada_por'} <= set(fieldsets[-1][1]['fields']))
+        self.assertTrue({'apartado_hasta', 'apartado_demanda', 'alerta_reembolso_fallido_en'} <= set(fieldsets[-1][1]['fields']))
         self.reserva.estado = Reserva.Estado.CANCELADA
         self.assertNotIn('collapse', self.admin.get_fieldsets(self._request(usuario), self.reserva)[-2][1].get('classes', ()))
 

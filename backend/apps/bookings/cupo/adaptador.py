@@ -26,6 +26,7 @@ def obtener_contexto_cupo(fecha: date, empresa, excluir_pk: int | None = None) -
     """Obtiene el contexto de cupo para un día resolviendo reservas y flota de La Paz."""
     from apps.bookings.models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, CupoDiario, Reserva, ReservaSalida
     from apps.fleet.models import capacidades_disponibles
+    from .apartado import apartado_activo, demanda_apartada_del_dia
 
     ocupadas = Reserva.objects.filter(
         fecha=fecha,
@@ -44,6 +45,9 @@ def obtener_contexto_cupo(fecha: date, empresa, excluir_pk: int | None = None) -
         *ocupadas.values_list('numero_personas', flat=True),
         *salidas.values_list('reserva__numero_personas', flat=True),
     ]
+    if apartado_activo():
+        grupos.extend(demanda_apartada_del_dia(empresa, fecha, excluir_pk=excluir_pk))
+
     capacidades = capacidades_disponibles(fecha, empresa)
 
     override = CupoDiario.objects.filter(fecha=fecha, empresa=empresa).first()

@@ -648,6 +648,16 @@ class Reserva(models.Model):
     )
     reembolsada_en = models.DateTimeField(null=True, blank=True)
 
+    apartado_hasta = models.DateTimeField(
+        null=True, blank=True, verbose_name='apartado hasta',
+    )
+    apartado_demanda = models.JSONField(
+        null=True, blank=True, verbose_name='demanda apartada',
+    )
+    alerta_reembolso_fallido_en = models.DateTimeField(
+        null=True, blank=True, verbose_name='alerta de reembolso fallido en',
+    )
+
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
 

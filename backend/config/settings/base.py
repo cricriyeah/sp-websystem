@@ -444,6 +444,9 @@ TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
 # URL pública del frontend para enlaces de retomar enviados desde el backend.
 FRONTEND_URL = os.environ.get('FRONTEND_URL', '')
 
+# Minutos que dura el apartado temporal de cupo en el checkout web. 0 = apagado.
+APARTADO_MINUTOS = int(os.environ.get('APARTADO_MINUTOS', '0'))
+
 # Duracion de la sesion del backoffice. El default de Django son dos semanas, que
 # para un panel con dinero y datos de clientes es demasiado: una laptop olvidada
 # sigue con sesion viva medio mes. Diez horas cubren una jornada completa.

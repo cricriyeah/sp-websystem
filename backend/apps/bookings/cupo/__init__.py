@@ -8,6 +8,12 @@ from .adaptador import (
     obtener_contexto_rango,
     obtener_recursos_con_ocupaciones,
 )
+from .apartado import (
+    apartado_activo,
+    construir_retrato_servicio_suelto,
+    demanda_apartada_del_dia,
+    reservas_con_apartado_vigente,
+)
 from .candado import (
     bloquear_cupo,
     bloquear_cupo_del_dia,
@@ -85,5 +91,9 @@ __all__ = [
     'REGISTRO_ESTRATEGIAS',
     'obtener_estrategia',
     'registrar_estrategia',
+    'apartado_activo',
+    'construir_retrato_servicio_suelto',
+    'demanda_apartada_del_dia',
+    'reservas_con_apartado_vigente',
 ]
 
