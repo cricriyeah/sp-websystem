@@ -5,7 +5,7 @@
 <div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
     <div class="p-4">
         <h1 class="font-semibold text-important">Confirmar cancelaci&oacute;n por mal clima</h1>
-        <p>{{ cantidad }} reservas se cancelar&aacute;n. {{ omitidas }} ya cancelada{{ omitidas|pluralize }} se omiten.</p>
+        <p>{{ cantidad }} reserva{{ cantidad|pluralize }} se cancelar&aacute;{{ cantidad|pluralize:",n" }}. {{ omitidas }} ya cancelada{{ omitidas|pluralize }} se omiten.</p>
     </div>
 
     {% if por_cancelar %}
@@ -39,7 +39,7 @@
         <input type="hidden" name="confirmar_cancelacion" value="si">
         <div class="flex items-center gap-4">
             <a href="{{ volver }}">No, volver</a>
-            {% if cantidad %}<button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default">S&iacute;, cancelar {{ cantidad }} reservas</button>{% endif %}
+            {% if cantidad %}<button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default">S&iacute;, cancelar {{ cantidad }} reserva{{ cantidad|pluralize }}</button>{% endif %}
         </div>
     </form>
 </div>

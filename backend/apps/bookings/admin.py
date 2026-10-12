@@ -518,7 +518,6 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     ]
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     search_help_text = 'Busca por nombre, tel\u00e9fono o correo del cliente'
-    list_filter_sheet = False
     date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
     inlines = [
@@ -897,7 +896,11 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
 
         actualizadas = 0
         with transaction.atomic():
-            for reserva in queryset.select_for_update().exclude(estado=Reserva.Estado.CANCELADA):
+            # `of=('self',)`: el listado trae `select_related` de FK opcionales (vendedora,
+            # paquete, panga...) y Postgres rechaza FOR UPDATE sobre el lado nulo de un
+            # LEFT JOIN. Solo se bloquean las filas de Reserva.
+            for reserva in queryset.select_for_update(of=('self',)).exclude(
+                    estado=Reserva.Estado.CANCELADA):
                 reserva.estado = Reserva.Estado.CANCELADA
                 reserva.motivo_cancelacion = reserva.motivo_cancelacion or 'Mal clima'
                 reserva.cancelada_por = request.user
