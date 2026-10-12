@@ -741,6 +741,10 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
         ):
             actions.pop('confirmar_devolucion', None)
+        if 'marcar_como_venta_mia' in actions and self._mi_perfil_de_vendedora(request) is None:
+            # Sin perfil de vendedora la accion solo puede avisar que no hace nada: un jefe
+            # o el operador de plataforma no la ven, en vez de topar con ese aviso.
+            actions.pop('marcar_como_venta_mia')
         # Eliminar es lo mas destructivo: Django lo pone primero, y aqui va al final,
         # despues de cancelar. Una reserva se cancela, no se borra.
         if 'delete_selected' in actions:
@@ -912,18 +916,28 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return format_html('<span class="reservas-cobro-urgente">{}</span>',
                            f'Descuadre de {monto(saldo)} {obj.moneda}')
 
+    @staticmethod
+    def _mi_perfil_de_vendedora(request):
+        """El perfil activo de quien usa el sistema en su empresa, o None. El operador de
+        plataforma no pertenece a una empresa, asi que nunca tiene uno."""
+        empresa = scope.empresa_actual(request)
+        if empresa is None:
+            return None
+        return Vendedora.objects.filter(usuario=request.user, empresa=empresa, activo=True).first()
+
     @admin.action(description='Marcar como venta mia')
     def marcar_como_venta_mia(self, request, queryset):
         """Para las ventas que la vendedora cerro por WhatsApp o por telefono.
 
         Cuando el cliente entra por su link (?ref=) la atribucion ya viene sola;
         esto es para el resto. Se autoasigna a quien esta usando el sistema — no
-        se puede atribuir una venta a otra persona desde aqui — y queda en el
-        History de cada reserva quien la reclamo y cuando.
+        se puede atribuir una venta a otra persona desde aqui.
+
+        Solo toma las reservas que todavia no tienen vendedora. Una venta ya
+        atribuida a otra persona no se le quita desde aqui: la comision se calcula
+        afuera a partir de este registro. Cada atribucion queda en el History.
         """
-        vendedora = Vendedora.objects.filter(
-            usuario=request.user, empresa=scope.empresa_actual(request), activo=True,
-        ).first()
+        vendedora = self._mi_perfil_de_vendedora(request)
         if vendedora is None:
             self.message_user(
                 request,
@@ -933,11 +947,18 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             return
 
         marcadas = 0
-        for reserva in queryset.exclude(vendedora=vendedora):
-            reserva.vendedora = vendedora
-            reserva.save(update_fields=['vendedora'])
-            marcadas += 1
-        self.message_user(request, f'{marcadas} venta(s) atribuida(s) a {vendedora}.')
+        with transaction.atomic():
+            # Se cuentan ANTES de atribuir: despues, las recien marcadas tambien tendrian vendedora.
+            ya_atribuidas = queryset.filter(vendedora__isnull=False).count()
+            for reserva in queryset.filter(vendedora__isnull=True):
+                reserva.vendedora = vendedora
+                reserva.save(update_fields=['vendedora'])
+                self.log_change(request, reserva, f'Marcada como venta de {vendedora}.')
+                marcadas += 1
+        aviso = f'{marcadas} venta(s) atribuida(s) a {vendedora}.'
+        if ya_atribuidas:
+            aviso += f' {ya_atribuidas} se omitieron: ya tenian vendedora.'
+        self.message_user(request, aviso)
 
     @admin.action(description='\u26a0 Cancelar por mal clima (reembolso completo)')
     def cancelar_por_mal_clima(self, request, queryset):

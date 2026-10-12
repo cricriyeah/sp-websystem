@@ -8,7 +8,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils.formats import date_format
 
-from apps.bookings.models import Reserva
+from apps.bookings.models import Reserva, Vendedora
 from apps.bookings.tests import crear_reserva
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
@@ -18,6 +18,7 @@ from apps.testing import EmpresaTestCase
 class ConfirmacionMalClimaTests(EmpresaTestCase):
     def setUp(self):
         self.usuario = self.crear_vendedora()
+        Vendedora.objects.create(usuario=self.usuario, empresa=self.empresa, codigo='ventas-prueba')
         self.client.force_login(self.usuario)
         self.url = reverse('admin:bookings_reserva_changelist')
 
@@ -176,3 +177,91 @@ class CancelacionMalClimaEmpresasTests(TestCase):
             self.rb.refresh_from_db()
             self.assertEqual(self.ra.estado, Reserva.Estado.CANCELADA)
             self.assertEqual(self.rb.estado, Reserva.Estado.CANCELADA)
+
+
+class MarcarComoVentaMiaTests(EmpresaTestCase):
+    def setUp(self):
+        self.url = reverse('admin:bookings_reserva_changelist')
+
+    def acciones_de(self, usuario):
+        self.client.force_login(usuario)
+        respuesta = self.client.get(self.url, {'vista': 'todas'})
+        return [valor for valor, _ in respuesta.context['action_form'].fields['action'].choices]
+
+    def marcar(self, reservas):
+        return self.client.post(self.url, {
+            'action': 'marcar_como_venta_mia',
+            '_selected_action': [str(r.pk) for r in reservas],
+        }, follow=True)
+
+    def perfil(self, usuario, codigo='ventas-a', activo=True):
+        return Vendedora.objects.create(
+            usuario=usuario, empresa=self.empresa, codigo=codigo, activo=activo)
+
+    def test_una_vendedora_con_perfil_ve_la_accion_y_atribuye_con_constancia(self):
+        usuario = self.crear_vendedora()
+        perfil = self.perfil(usuario)
+        libre = crear_reserva(self.empresa, nombre_cliente='Libre', estado=Reserva.Estado.PAGADA)
+        self.assertIn('marcar_como_venta_mia', self.acciones_de(usuario))
+
+        self.marcar([libre])
+
+        libre.refresh_from_db()
+        self.assertEqual(libre.vendedora, perfil)
+        self.assertIsNotNone(libre.vendedora_asignada_en)
+        entrada = LogEntry.objects.filter(object_id=str(libre.pk)).latest('action_time')
+        self.assertIn('venta de', entrada.change_message)
+
+    def test_no_le_quita_la_venta_a_otra_vendedora_y_avisa_cuantas_omitio(self):
+        yo = self.crear_vendedora('yo')
+        mi_perfil = self.perfil(yo, 'ventas-yo')
+        otra = self.crear_vendedora('otra')
+        perfil_otra = self.perfil(otra, 'ventas-otra')
+        ajena = crear_reserva(self.empresa, nombre_cliente='Ajena', estado=Reserva.Estado.PAGADA,
+                              vendedora=perfil_otra)
+        libre = crear_reserva(self.empresa, nombre_cliente='Libre', estado=Reserva.Estado.PAGADA)
+        self.client.force_login(yo)
+
+        respuesta = self.marcar([ajena, libre])
+
+        ajena.refresh_from_db()
+        libre.refresh_from_db()
+        self.assertEqual(ajena.vendedora, perfil_otra)
+        self.assertEqual(libre.vendedora, mi_perfil)
+        self.assertContains(respuesta, '1 venta(s) atribuida(s)')
+        self.assertContains(respuesta, '1 se omitieron: ya tenian vendedora.')
+        self.assertFalse(LogEntry.objects.filter(object_id=str(ajena.pk)).exclude(
+            change_message__icontains='creada').filter(change_message__icontains='venta de').exists())
+
+    def test_un_jefe_sin_perfil_de_vendedora_no_ve_la_accion(self):
+        self.assertNotIn('marcar_como_venta_mia', self.acciones_de(self.crear_jefe()))
+
+    def test_un_perfil_inactivo_tampoco_ve_la_accion(self):
+        usuario = self.crear_vendedora()
+        self.perfil(usuario, activo=False)
+
+        self.assertNotIn('marcar_como_venta_mia', self.acciones_de(usuario))
+
+    def test_el_post_directo_de_quien_no_tiene_perfil_no_atribuye_nada(self):
+        jefe = self.crear_jefe()
+        self.client.force_login(jefe)
+        reserva = crear_reserva(self.empresa, nombre_cliente='Libre', estado=Reserva.Estado.PAGADA)
+
+        self.marcar([reserva])
+
+        reserva.refresh_from_db()
+        self.assertIsNone(reserva.vendedora)
+
+
+class MarcarComoVentaMiaOperadorTests(TestCase):
+    def test_el_operador_de_plataforma_no_ve_la_accion(self):
+        call_command('setup_roles', verbosity=0)
+        operador = get_user_model().objects.create_user('op-venta', password='x', is_staff=True)
+        operador.groups.add(Group.objects.get(name='OperadorPlataforma'))
+        self.client.force_login(operador)
+
+        respuesta = self.client.get(reverse('admin:bookings_reserva_changelist'), {'vista': 'todas'})
+
+        acciones = [valor for valor, _ in respuesta.context['action_form'].fields['action'].choices]
+        self.assertNotIn('marcar_como_venta_mia', acciones)
+        self.assertIn('cancelar_por_mal_clima', acciones)
