@@ -121,8 +121,9 @@ def obtener_recursos_con_ocupaciones(
     """
     from apps.bookings.models import ESTADOS_QUE_OCUPAN_CUPO, ReservaOcupacion
     from apps.fleet.models import Recurso
+    from .apartado import apartado_activo, habitaciones_apartadas
 
-    recursos_qs = Recurso.objects.filter(empresa=empresa, activo=True)
+    recursos_qs = Recurso.objects.filter(empresa=empresa, activo=True).order_by('pk')
     if servicio is not None:
         recursos_qs = recursos_qs.filter(servicio=servicio)
 
@@ -143,6 +144,20 @@ def obtener_recursos_con_ocupaciones(
     ocupaciones_por_recurso = defaultdict(list)
     for r_id, o_ini, o_fin in ocupaciones_qs.values_list('recurso_id', 'fecha_inicio', 'fecha_fin'):
         ocupaciones_por_recurso[r_id].append((o_ini, o_fin))
+
+    if apartado_activo():
+        recursos_por_id = {r.id: r for r in recursos}
+        servicio_id = servicio.pk if hasattr(servicio, 'pk') else servicio
+        apartadas = habitaciones_apartadas(
+            empresa=empresa,
+            desde=desde,
+            hasta=hasta,
+            excluir_pk=excluir_pk,
+            servicio_id=servicio_id,
+        )
+        for r_id, intervalos in apartadas.items():
+            if r_id in recursos_por_id:
+                ocupaciones_por_recurso[r_id].extend(intervalos)
 
     return [
         (r.id, r.capacidad_maxima, ocupaciones_por_recurso[r.id])

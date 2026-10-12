@@ -1,21 +1,69 @@
 """Lógica de confirmación y asignación de cupo al confirmar el pago de una reserva."""
+from datetime import date
+
 from apps.fleet.calendario_paquete import fechas_de_componente
-from apps.bookings.cupo import SinCupoError
-from apps.bookings.cupo.adaptador import obtener_recursos_con_ocupaciones
-from apps.bookings.cupo.candado import bloquear_cupo, bloquear_recurso
-from apps.bookings.cupo.nucleo import elegir_recursos, habitaciones_necesarias, recursos_disponibles_en_rango
-from apps.bookings.models import (
-    ReservaOcupacion,
-    ReservaPaqueteComponente,
-    evaluar_cupo,
-)
+from . import SinCupoError
+from .adaptador import obtener_recursos_con_ocupaciones
+from .candado import bloquear_cupo, bloquear_recurso
+from .nucleo import elegir_recursos, habitaciones_necesarias, recursos_disponibles_en_rango
+
+
+
+def evaluar_cupo(fecha, personas, empresa, excluir_pk=None, estrategia_cupo='por_recurso_dia', servicio_id=None):
+    """Consulta la disponibilidad de cupo delegando en models.evaluar_cupo.
+
+    Definido a nivel de módulo en confirmacion para permitir su parcheo en pruebas
+    y evitar importaciones circulares en tiempo de carga.
+    """
+    from apps.bookings.models import evaluar_cupo as _evaluar_cupo
+    return _evaluar_cupo(
+        fecha,
+        personas,
+        empresa,
+        excluir_pk=excluir_pk,
+        estrategia_cupo=estrategia_cupo,
+        servicio_id=servicio_id,
+    )
+
+
+
+def elegir_habitaciones(
+    servicio,
+    desde: date,
+    hasta: date,
+    personas: int,
+    empresa=None,
+    excluir_pk: int | None = None,
+) -> list[int]:
+    """Elige deterministamente las habitaciones necesarias para el grupo y rango.
+
+    Función pura de asignación (sin tomar candados ni crear ReservaOcupacion).
+    Devuelve la lista de IDs de recursos seleccionados, o [] si no hay
+    disponibilidad o recursos suficientes.
+    """
+    if empresa is None:
+        empresa = servicio.empresa
+
+    recursos_con_ocupaciones = obtener_recursos_con_ocupaciones(
+        desde=desde,
+        hasta=hasta,
+        empresa=empresa,
+        servicio=servicio,
+        excluir_pk=excluir_pk,
+    )
+    libres = recursos_disponibles_en_rango(recursos_con_ocupaciones, desde, hasta)
+    cantidad = habitaciones_necesarias([cap for _, cap in libres], personas)
+    if not cantidad:
+        return []
+    elegidos = elegir_recursos(libres, personas=personas, cantidad=cantidad)
+    return elegidos or []
 
 
 def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False, *, desde=None, hasta=None, personas=None):
     desde = desde or reserva.fecha
     hasta = hasta or reserva.fecha_fin_servicio
     personas = personas or reserva.numero_personas
-    recursos_candidatos = list(servicio.recursos.filter(activo=True))
+    recursos_candidatos = list(servicio.recursos.filter(activo=True).order_by('pk'))
     if not recursos_candidatos:
         msg = (
             f'No hay habitación disponible para el componente {servicio.nombre}.'
@@ -27,16 +75,14 @@ def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False, *, desde=Non
     for recurso in recursos_candidatos:
         bloquear_recurso(reserva.empresa_id, recurso.pk)
 
-    recursos_con_ocupaciones = obtener_recursos_con_ocupaciones(
+    elegidos = elegir_habitaciones(
+        servicio=servicio,
         desde=desde,
         hasta=hasta,
+        personas=personas,
         empresa=reserva.empresa,
-        servicio=servicio,
         excluir_pk=reserva.pk,
     )
-    libres = recursos_disponibles_en_rango(recursos_con_ocupaciones, desde, hasta)
-    cantidad = habitaciones_necesarias([cap for _, cap in libres], personas)
-    elegidos = elegir_recursos(libres, personas=personas, cantidad=cantidad) if cantidad else None
     if not elegidos:
         msg = (
             f'No hay habitación disponible para el componente {servicio.nombre}.'
@@ -46,6 +92,8 @@ def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False, *, desde=Non
         raise SinCupoError(msg)
 
     if not reserva.ocupaciones.filter(recurso__servicio=servicio).exists():
+        from apps.bookings.models import ReservaOcupacion
+
         for rec_id in elegidos:
             ReservaOcupacion.objects.create(
                 reserva=reserva,
@@ -64,6 +112,8 @@ def reservar_cupo_al_confirmar(reserva) -> None:
     o habitación. Todo debe ejecutarse dentro de la transacción del webhook
     o conciliar_pagos.
     """
+    from apps.bookings.models import ReservaPaqueteComponente
+
     # Caso D: esta reserva es un unico componente de una orden cruza-empresa.
     # Cada webhook confirma solo el servicio de su propia empresa.
     if reserva.orden_id is not None:
@@ -159,7 +209,7 @@ def reservar_cupo_al_confirmar(reserva) -> None:
                     empresa=reserva.empresa,
                     estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
                 )
-        from apps.bookings.cupo.salidas import sincronizar_salidas
+        from .salidas import sincronizar_salidas
 
         sincronizar_salidas(reserva)
         return

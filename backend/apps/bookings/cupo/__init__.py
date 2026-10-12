@@ -1,5 +1,11 @@
 """Módulo de cupo y disponibilidad de reservas."""
 
+
+class SinCupoError(Exception):
+    """Lanzada cuando no hay cupo o recursos disponibles al confirmar un pago."""
+    pass
+
+
 from .adaptador import (
     ContextoCupo,
     ContextoCupoRango,
@@ -10,10 +16,12 @@ from .adaptador import (
 )
 from .apartado import (
     apartado_activo,
+    construir_retrato_hospedaje,
     construir_retrato_paquete,
     construir_retrato_servicio_suelto,
     demanda_apartada_del_dia,
     demanda_apartada_por_rango,
+    habitaciones_apartadas,
     reservas_con_apartado_vigente,
 )
 from .candado import (
@@ -22,6 +30,9 @@ from .candado import (
     bloquear_recurso,
     calcular_clave_candado,
     calcular_clave_recurso,
+)
+from .confirmacion import (
+    elegir_habitaciones,
 )
 from .estrategias import (
     BajoDemanda,
@@ -52,12 +63,6 @@ from .registro import (
     registrar_estrategia,
 )
 
-
-class SinCupoError(Exception):
-    """Lanzada cuando no hay cupo o recursos disponibles al confirmar un pago."""
-    pass
-
-
 __all__ = [
     'ContextoCupo',
     'ContextoCupoRango',
@@ -86,6 +91,7 @@ __all__ = [
     'caben',
     'caben_compartido',
     'elegir_recursos',
+    'elegir_habitaciones',
     'motivo_sin_lugar',
     'ocupacion_por_rango',
     'rango_traslapa',
@@ -94,10 +100,12 @@ __all__ = [
     'obtener_estrategia',
     'registrar_estrategia',
     'apartado_activo',
+    'construir_retrato_hospedaje',
     'construir_retrato_paquete',
     'construir_retrato_servicio_suelto',
     'demanda_apartada_del_dia',
     'demanda_apartada_por_rango',
+    'habitaciones_apartadas',
     'reservas_con_apartado_vigente',
 ]
 

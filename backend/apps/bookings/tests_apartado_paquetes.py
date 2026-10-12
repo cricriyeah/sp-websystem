@@ -54,6 +54,14 @@ class ApartadoPaquetesTests(EmpresaTestCase):
             estrategia_precio='por_noche',
             precio_base=Decimal('3000.00'),
         )
+        self.transporte = Servicio.objects.create(
+            empresa=self.empresa,
+            nombre='Transporte Terrestre',
+            slug='transporte-terrestre',
+            tipo_servicio='transporte',
+            estrategia_cupo='bajo_demanda',
+            precio_base=Decimal('1500.00'),
+        )
 
         # Paquete multidía con 3 salidas de pesca consecutivas a partir del día 2 de estancia
         self.paquete_multidia = Paquete.objects.create(
@@ -197,22 +205,21 @@ class ApartadoPaquetesTests(EmpresaTestCase):
 
     def test_paquete_sin_mar_no_cuenta(self):
         """Un paquete sin componentes de mar devuelve salidas: [] y no cuenta en el motor."""
-        paquete_solo_hotel = Paquete.objects.create(
+        paquete_solo_transporte = Paquete.objects.create(
             sede=self.sede,
             empresa_lider=self.empresa,
-            nombre='Paquete Solo Estancia',
-            slug='paquete-solo-estancia',
+            nombre='Paquete Solo Transporte',
+            slug='paquete-solo-transporte',
             precio_ancla=Decimal('5000.00'),
         )
         PaqueteServicio.objects.create(
-            paquete=paquete_solo_hotel,
-            servicio=self.hotel,
+            paquete=paquete_solo_transporte,
+            servicio=self.transporte,
             orden=1,
-            noches=3,
             personas_incluidas=2,
         )
 
-        reserva = self._crear_reserva_paquete(paquete_solo_hotel)
+        reserva = self._crear_reserva_paquete(paquete_solo_transporte)
         retrato = construir_retrato_paquete(reserva)
 
         self.assertEqual(retrato['salidas'], [])
