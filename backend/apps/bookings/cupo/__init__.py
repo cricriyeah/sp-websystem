@@ -12,6 +12,7 @@ from .apartado import (
     apartado_activo,
     construir_retrato_servicio_suelto,
     demanda_apartada_del_dia,
+    demanda_apartada_por_rango,
     reservas_con_apartado_vigente,
 )
 from .candado import (
@@ -94,6 +95,7 @@ __all__ = [
     'apartado_activo',
     'construir_retrato_servicio_suelto',
     'demanda_apartada_del_dia',
+    'demanda_apartada_por_rango',
     'reservas_con_apartado_vigente',
 ]
 

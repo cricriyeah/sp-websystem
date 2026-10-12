@@ -56,26 +56,41 @@ def obtener_contexto_cupo(fecha: date, empresa, excluir_pk: int | None = None) -
     return ContextoCupo(grupos=grupos, capacidades=capacidades, tope=tope)
 
 
-def obtener_contexto_rango(desde: date, hasta: date, empresa) -> ContextoCupoRango:
+def obtener_contexto_rango(
+    desde: date, hasta: date, empresa, excluir_pk: int | None = None
+) -> ContextoCupoRango:
     """Obtiene el contexto para un rango de fechas en 4 consultas optimizadas."""
     from apps.bookings.models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, CupoDiario, Reserva, ReservaSalida
     from apps.fleet.models import capacidades_por_fecha
+    from .apartado import apartado_activo, demanda_apartada_por_rango
 
     fechas = [desde + timedelta(days=i) for i in range((hasta - desde).days + 1)]
 
     grupos_por_fecha = defaultdict(list)
-    reservas = Reserva.objects.filter(
+    reservas_qs = Reserva.objects.filter(
         fecha__range=(desde, hasta),
         estado__in=ESTADOS_QUE_OCUPAN_CUPO,
         empresa=empresa,
         salidas__isnull=True,
-    ).order_by().values_list('fecha', 'numero_personas')
-    salidas = ReservaSalida.objects.filter(
+    )
+    salidas_qs = ReservaSalida.objects.filter(
         fecha__range=(desde, hasta), empresa=empresa, reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
-    ).order_by().values_list('fecha', 'reserva__numero_personas')
+    )
+    if excluir_pk is not None:
+        reservas_qs = reservas_qs.exclude(pk=excluir_pk)
+        salidas_qs = salidas_qs.exclude(reserva_id=excluir_pk)
+
+    reservas = reservas_qs.order_by().values_list('fecha', 'numero_personas')
+    salidas = salidas_qs.order_by().values_list('fecha', 'reserva__numero_personas')
     # UNION ALL conserva grupos idénticos y mantiene las cuatro consultas del calendario.
     for fecha, personas_de_esa in reservas.union(salidas, all=True):
         grupos_por_fecha[fecha].append(personas_de_esa)
+
+    if apartado_activo():
+        for fecha_salida, personas_lista in demanda_apartada_por_rango(
+            empresa, desde, hasta, excluir_pk=excluir_pk
+        ).items():
+            grupos_por_fecha[fecha_salida].extend(personas_lista)
 
     topes = dict(
         CupoDiario.objects.filter(fecha__range=(desde, hasta), empresa=empresa)

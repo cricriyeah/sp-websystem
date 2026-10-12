@@ -5,6 +5,7 @@ Settings comunes a todos los entornos (local y production heredan de aqui).
 import os
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
 from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -39,6 +40,13 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.finance',
 ]
+
+# Cabeceras permitidas por CORS extendiendo las predeterminadas.
+# El checkout web envía X-Checkout-Id para excluir su propio apartado temporal en consultas de cupo.
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    'x-checkout-id',
+)
 
 # Bloqueo por intentos fallidos (django-axes). Cierra la unica puerta de auth del
 # sistema: el /admin/login/. El throttle de DRF de arriba NO lo cubre — ese es

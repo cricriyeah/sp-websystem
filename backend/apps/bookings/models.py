@@ -145,26 +145,32 @@ def cupo_maximo_del_dia(fecha, empresa):
 DIAS_BUSQUEDA_DISPONIBILIDAD = 90
 
 
-def proxima_fecha_disponible(desde, personas, empresa, dias=DIAS_BUSQUEDA_DISPONIBILIDAD, estrategia_cupo='por_recurso_dia'):
+def proxima_fecha_disponible(
+    desde, personas, empresa, dias=DIAS_BUSQUEDA_DISPONIBILIDAD, estrategia_cupo='por_recurso_dia', excluir_pk=None
+):
     """Primera fecha donde cabe un grupo de `personas`, o None si no hay en `dias`.
 
     Se resuelve con cuatro consultas mediante el adaptador de cupo, no una por dia.
     """
     hasta = desde + timedelta(days=dias - 1)
-    for fecha, motivo in sorted(disponibilidad_por_fecha(desde, hasta, personas, empresa, estrategia_cupo=estrategia_cupo).items()):
+    for fecha, motivo in sorted(disponibilidad_por_fecha(
+        desde, hasta, personas, empresa, estrategia_cupo=estrategia_cupo, excluir_pk=excluir_pk
+    ).items()):
         if motivo is None:
             return fecha
     return None
 
 
-def disponibilidad_por_fecha(desde, hasta, personas, empresa, estrategia_cupo='por_recurso_dia'):
+def disponibilidad_por_fecha(
+    desde, hasta, personas, empresa, estrategia_cupo='por_recurso_dia', excluir_pk=None
+):
     """Por que no cabe un grupo de `personas` cada dia del rango, o None si cabe.
 
     `{fecha: None | MOTIVO_LLENO | MOTIVO_SIN_PANGA}`, una entrada por dia,
     extremos incluidos. Resuelve con cuatro consultas para todo el rango delegando
     en la estrategia configurada (PorRecursoDia por defecto).
     """
-    ctx = obtener_contexto_rango(desde, hasta, empresa)
+    ctx = obtener_contexto_rango(desde, hasta, empresa, excluir_pk=excluir_pk)
     estrategia = obtener_estrategia(estrategia_cupo)
     res_rango = estrategia.evaluar_rango(
         fechas=ctx.fechas,

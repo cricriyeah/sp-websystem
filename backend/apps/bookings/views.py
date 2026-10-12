@@ -18,8 +18,35 @@ from .models import (
     evaluar_cupo,
     proxima_fecha_disponible,
 )
+from .cupo import (
+    apartado_activo,
+    demanda_apartada_del_dia,
+    reservas_con_apartado_vigente,
+)
 from .captcha import verificar_turnstile
 from .serializers import CupoSerializer, ReservaCheckoutSerializer, TrasladoCheckoutSerializer, ip_del_cliente
+
+
+def _resolver_excluir_pk_apartado(request, empresa) -> int | None:
+    """Resuelve la pk de la reserva a excluir a partir de la cabecera X-Checkout-Id.
+
+    Solo se excluye si coincide con una reserva pendiente_pago con apartado vigente
+    DE LA EMPRESA de la petición. Si es inexistente, inválida o de otra empresa, se ignora (None).
+    """
+    raw_checkout_id = request.META.get('HTTP_X_CHECKOUT_ID')
+    if not raw_checkout_id:
+        return None
+    try:
+        checkout_uuid = uuid.UUID(str(raw_checkout_id).strip())
+    except (ValueError, AttributeError, TypeError):
+        return None
+
+    return (
+        reservas_con_apartado_vigente(empresa)
+        .filter(checkout_id=checkout_uuid)
+        .values_list('pk', flat=True)
+        .first()
+    )
 
 
 class CupoDisponibleView(APIView):
@@ -56,17 +83,28 @@ class CupoDisponibleView(APIView):
                     status=400,
                 )
 
-            motivo = evaluar_cupo(fecha, personas, empresa)
+            excluir_pk = _resolver_excluir_pk_apartado(request, empresa)
+            motivo = evaluar_cupo(fecha, personas, empresa, excluir_pk=excluir_pk)
+
+            ocupadas_qs = Reserva.objects.filter(
+                fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
+            )
+            if excluir_pk is not None:
+                ocupadas_qs = ocupadas_qs.exclude(pk=excluir_pk)
+            ocupadas = ocupadas_qs.count()
+            if apartado_activo():
+                ocupadas += len(demanda_apartada_del_dia(empresa, fecha, excluir_pk=excluir_pk))
+
             data = {
                 'fecha': fecha,
                 'cupo_maximo': cupo_maximo_del_dia(fecha, empresa),
-                'ocupadas': Reserva.objects.filter(
-                    fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
-                ).count(),
+                'ocupadas': ocupadas,
                 'disponible': motivo is None,
                 # Se responde siempre, tambien cuando el dia pedido si tiene espacio:
                 # asi el navegador nunca necesita una segunda vuelta.
-                'proxima_disponible': proxima_fecha_disponible(fecha, personas, empresa),
+                'proxima_disponible': proxima_fecha_disponible(
+                    fecha, personas, empresa, excluir_pk=excluir_pk
+                ),
                 'motivo_no_disponible': motivo,
             }
             return Response(CupoSerializer(data).data)
@@ -129,10 +167,13 @@ class CupoRangoView(APIView):
                     status=400,
                 )
 
+            excluir_pk = _resolver_excluir_pk_apartado(request, empresa)
             return Response({
                 'dias': {
                     fecha.isoformat(): motivo
-                    for fecha, motivo in disponibilidad_por_fecha(desde, hasta, personas, empresa).items()
+                    for fecha, motivo in disponibilidad_por_fecha(
+                        desde, hasta, personas, empresa, excluir_pk=excluir_pk
+                    ).items()
                 }
             })
 
