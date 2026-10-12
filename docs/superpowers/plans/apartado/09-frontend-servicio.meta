@@ -1,0 +1,6 @@
+TITULO='frontend: servicio suelto (errores, línea fija, renovación, confirmación honesta)'
+KIND='frontend'
+DIRS='frontend/src docs'
+VERIFY='tsc_limpio && npx eslint src/components/checkout-view.tsx src/components/stripe-panel.tsx src/lib/errores.ts src/lib/api.ts'
+REGRESION=0
+SPEC='§4.6 puntos 1 a 6 (servicio suelto) y el cambio común de errores.ts'

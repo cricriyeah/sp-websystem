@@ -1,0 +1,6 @@
+TITULO='frontend: paquete de una empresa y traslado'
+KIND='frontend'
+DIRS='frontend/src docs'
+VERIFY='tsc_limpio && npx eslint src/components/pedido src/components/traslado-view.tsx src/lib/errores.ts'
+REGRESION=0
+SPEC='§4.6 (tabla: paquete de una empresa y traslado)'

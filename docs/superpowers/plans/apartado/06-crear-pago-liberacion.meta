@@ -1,0 +1,6 @@
+TITULO='crear-pago: liberación segura, cobro en curso, 503 reintentar y edición'
+KIND='backend'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python manage.py test apps.payments.tests_apartado_liberacion apps.bookings.tests_apartado_edicion apps.payments apps.bookings.tests_checkout_serializer apps.bookings.tests_captcha'
+REGRESION=0
+SPEC='§4.3 (Bloque C, repetición, editar la reserva, contrato 503)'

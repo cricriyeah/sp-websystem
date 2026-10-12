@@ -1,0 +1,6 @@
+TITULO='apartado de hospedaje: extraer elegir_habitaciones y apartar habitaciones'
+KIND='backend'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python manage.py test apps.bookings.tests_apartado_hospedaje apps.bookings.tests_apartado_paquetes apps.bookings.tests_apartado_motor apps.bookings.tests_ocupacion apps.bookings.tests_cupo_estrategias apps.bookings.tests_reserva_paquete'
+REGRESION=1
+SPEC='§4.1, §4.2 (hospedaje), §7 (riesgo hospedaje)'

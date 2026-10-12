@@ -1,0 +1,6 @@
+TITULO='checkout_id por cabecera en los endpoints públicos de cupo'
+KIND='backend'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python manage.py test apps.bookings.tests_apartado_endpoints apps.bookings.tests_apartado_motor apps.bookings.tests_cupo_rango apps.bookings.tests_cupo_adaptador'
+REGRESION=0
+SPEC='§4.2 (endpoints públicos)'

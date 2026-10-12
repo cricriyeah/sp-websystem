@@ -1,0 +1,6 @@
+TITULO='campos del apartado y conteo en el motor (pesca suelta)'
+KIND='backend'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python manage.py makemigrations --check --dry-run && python manage.py test apps.bookings.tests_apartado_motor apps.bookings.tests_reservas_formulario apps.bookings.tests_cupo_adaptador apps.bookings.tests_cupo_nucleo apps.bookings.tests_cupo_estrategias'
+REGRESION=0
+SPEC='§3, §4.1 y §4.2'

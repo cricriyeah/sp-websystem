@@ -1,0 +1,6 @@
+TITULO='avisos de reembolso por causa, alerta urgente deduplicada'
+KIND='backend'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python manage.py test apps.payments.tests_apartado_avisos apps.notifications apps.payments'
+REGRESION=1
+SPEC='§4.5 completo'

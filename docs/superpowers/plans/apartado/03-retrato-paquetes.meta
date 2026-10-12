@@ -1,0 +1,6 @@
+TITULO='retrato del apartado para paquetes de una empresa (mar)'
+KIND='backend'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python manage.py test apps.bookings.tests_apartado_paquetes apps.bookings.tests_apartado_motor apps.bookings.tests_cupo_salidas apps.bookings.tests_salidas apps.bookings.tests_paquete_estancia'
+REGRESION=0
+SPEC='§4.1 (retrato) y §4.2 (paquetes)'

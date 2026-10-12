@@ -1,0 +1,6 @@
+TITULO='crear-pago: bloques A/B/C, tomar el apartado y contrato de errores'
+KIND='backend'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python manage.py test apps.payments.tests_apartado_crear_pago apps.payments apps.bookings.tests_apartado_motor'
+REGRESION=0
+SPEC='§4.3 (completo) salvo lo marcado para la tarea 06'

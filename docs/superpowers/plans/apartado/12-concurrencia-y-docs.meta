@@ -1,0 +1,6 @@
+TITULO='pruebas de concurrencia en Postgres y documentación'
+KIND='especial'
+DIRS='backend/apps/bookings backend/apps/payments backend/apps/fleet backend/apps/tenancy backend/apps/notifications backend/config docs'
+VERIFY='python -m py_compile apps/bookings/tests_apartado_concurrencia.py'
+REGRESION=0
+SPEC='§5 (Postgres) y §6 (documentación)'
