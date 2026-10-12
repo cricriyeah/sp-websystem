@@ -115,13 +115,13 @@ class ReservasListaTests(EmpresaTestCase):
         lateral = unescape(html[html.index('id="changelist-filter"'):])
         titulos = [re.sub(r'\s+', ' ', titulo).strip().lower()
                    for titulo in re.findall(r'<h3[^>]*>(.*?)</h3>', lateral, re.S)]
-        self.assertEqual(titulos[:5], ['por estado', 'por canal origen', 'por vendedora', 'por fecha',
+        self.assertEqual(titulos[:4], ['por estado', 'por canal origen', 'por vendedora',
                                       'por forma pago'])
-        self.assertEqual(titulos[5:8], ['por llegada',
+        self.assertEqual(titulos[4:7], ['por llegada',
                                        'por requiere atenci\u00f3n (devoluci\u00f3n)',
                                        'por en disputa'])
         antes, despues = lateral.split('id="reservas-mas-filtros"', 1)
-        self.assertEqual(len(re.findall(r'<h3[^>]*>', antes)), 5)
+        self.assertEqual(len(re.findall(r'<h3[^>]*>', antes)), 4)
         self.assertIn('llegada', despues)
 
     def test_filtro_avanzado_activo_abre_seccion_y_muestra_cantidad(self):
@@ -197,34 +197,64 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertTrue(
             {p['clave']: p for p in respuesta.context['reservas_pestanas']}['pasadas']['activa'])
 
-    def test_un_filtro_de_fecha_en_una_pestana_con_fecha_propia_pasa_a_todas(self):
-        ayer = self.reserva('Ayer', -1)
-        manana = self.reserva('Mañana', 1)
-        for vista in ('proximas', 'hoy', 'manana', 'por_cobrar'):
-            respuesta = self.client.get(self.url, {
-                'vista': vista, 'fecha__gte': (self.hoy - timedelta(days=7)).isoformat()})
-            pestanas = {p['clave']: p for p in respuesta.context['reservas_pestanas']}
-            self.assertTrue(pestanas['todas']['activa'], vista)
-            self.assertFalse(pestanas[vista]['activa'], vista)
-            self.assertEqual({r.pk for r in respuesta.context['cl'].result_list},
-                             {ayer.pk, manana.pk}, vista)
+    def test_un_dia_concreto_muestra_todo_lo_de_ese_dia_con_canceladas(self):
+        dia = self.hoy + timedelta(days=5)
+        tarde = self.reserva('Tarde', 5, hora=time(7))
+        temprano = self.reserva('Temprano', 5, hora=time(5))
+        cancelada = self.reserva('Cancelada', 5, Reserva.Estado.CANCELADA, hora=time(6))
+        self.reserva('Sin pagar', 5, Reserva.Estado.PENDIENTE_PAGO)
+        self.reserva('Otro dia', 6)
 
-    def test_un_filtro_de_fecha_se_suma_a_pasadas_sin_cambiar_de_pestana(self):
-        self.reserva('Hace tres semanas', -21)
-        ayer = self.reserva('Ayer', -1)
+        respuesta = self.client.get(self.url, {'dia': dia.isoformat()})
+
+        self.assertEqual([r.pk for r in respuesta.context['cl'].result_list],
+                         [temprano.pk, cancelada.pk, tarde.pk])
+        self.assertEqual(respuesta.context['reservas_dia']['conteo'], 3)
+        self.assertTrue(respuesta.context['reservas_dia']['activo'])
+        self.assertFalse(any(p['activa'] for p in respuesta.context['reservas_pestanas']))
+
+    def test_las_flechas_van_al_dia_anterior_y_siguiente(self):
+        dia = self.hoy + timedelta(days=5)
+
+        selector = self.client.get(self.url, {'dia': dia.isoformat()}).context['reservas_dia']
+
+        self.assertIn(f'dia={(dia - timedelta(days=1)).isoformat()}', selector['anterior'])
+        self.assertIn(f'dia={(dia + timedelta(days=1)).isoformat()}', selector['siguiente'])
+        # sin dia elegido las flechas parten de hoy
+        selector = self.client.get(self.url).context['reservas_dia']
+        self.assertFalse(selector['activo'])
+        self.assertIn(f'dia={(self.hoy - timedelta(days=1)).isoformat()}', selector['anterior'])
+
+    def test_un_dia_invalido_se_ignora(self):
+        respuesta = self.client.get(self.url, {'dia': 'no-es-fecha'})
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertFalse(respuesta.context['reservas_dia']['activo'])
+
+    def test_el_dia_conserva_la_busqueda_y_los_filtros(self):
+        self.reserva('Ana Ruiz', 5, correo_cliente='ana.ruiz@example.com')
+        self.reserva('Beto Soto', 5, correo_cliente='beto.soto@example.com')
 
         respuesta = self.client.get(self.url, {
-            'vista': 'pasadas', 'fecha__gte': (self.hoy - timedelta(days=7)).isoformat()})
+            'dia': (self.hoy + timedelta(days=5)).isoformat(), 'q': 'Ana'})
 
-        self.assertEqual([r.pk for r in respuesta.context['cl'].result_list], [ayer.pk])
-        self.assertTrue(
-            {p['clave']: p for p in respuesta.context['reservas_pestanas']}['pasadas']['activa'])
+        self.assertEqual([r.nombre_cliente for r in respuesta.context['cl'].result_list], ['Ana Ruiz'])
+        self.assertIn(('q', 'Ana'), respuesta.context['reservas_dia']['otros_parametros'])
+        self.assertIn('q=Ana', respuesta.context['reservas_dia']['siguiente'])
 
-    def test_las_pestanas_no_arrastran_el_filtro_de_fecha(self):
-        respuesta = self.client.get(self.url, {'vista': 'pasadas', 'fecha__gte': '2020-01-01'})
+    def test_quitar_el_dia_vuelve_a_proximas(self):
+        selector = self.client.get(self.url, {'dia': self.hoy.isoformat()}).context['reservas_dia']
 
-        for pestana in respuesta.context['reservas_pestanas']:
-            self.assertNotIn('fecha__gte', pestana['url'])
+        self.assertIn('vista=proximas', selector['quitar'])
+        self.assertNotIn('dia=', selector['quitar'])
+
+    def test_el_panel_ya_no_ofrece_filtros_de_fecha(self):
+        self.reserva('Ana', 1)
+        html = self.client.get(self.url, {'vista': 'todas'}).content.decode()
+
+        self.assertNotIn('Por fecha', html)
+        self.assertNotIn('fecha__year', html)
+        self.assertContains(self.client.get(self.url), 'data-dia-selector')
 
     def test_una_reserva_de_pesca_sin_panga_si_lo_dice(self):
         self.reserva('Pesca sin panga', 1)

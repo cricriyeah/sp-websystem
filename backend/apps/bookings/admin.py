@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from urllib.parse import quote, urlencode
 
@@ -159,6 +159,23 @@ def consulta_devolucion_pendiente():
         & (models.Q(monto_reembolsado__isnull=True)
            | models.Q(monto_reembolsado__lt=models.F('monto_pagado')))
     )
+
+
+class DiaReservasFilter(admin.SimpleListFilter):
+    """Registra `?dia=AAAA-MM-DD` (un dia concreto); el selector se dibuja en la plantilla
+    y el filtrado esta en `ReservaAdmin.get_queryset`, igual que `?vista=`."""
+
+    title = 'día'
+    parameter_name = 'dia'
+
+    def lookups(self, request, model_admin):
+        return []
+
+    def has_output(self):
+        return False
+
+    def queryset(self, request, queryset):
+        return queryset
 
 
 class VistaReservasFilter(admin.SimpleListFilter):
@@ -519,15 +536,14 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
     ]
     list_display_links = ['cliente']
     list_filter = [
-        VistaReservasFilter,
-        'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago',
+        VistaReservasFilter, DiaReservasFilter,
+        'estado', 'canal_origen', 'vendedora', 'forma_pago',
         LlegadaFilter, RequiereAtencionFilter, 'en_disputa',
         'pide_bebidas', 'pide_extras_whatsapp',
         'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional', 'paquete',
     ]
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     search_help_text = 'Busca por nombre, tel\u00e9fono o correo del cliente'
-    date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
     inlines = [
         ReservaPersonalizacionInline,
@@ -560,9 +576,20 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         ('por_cobrar', 'Por cobrar'), ('atencion', 'Requieren atención'),
         ('pasadas', 'Pasadas'), ('todas', 'Todas'),
     )
-    # Pestañas que ya recortan por fecha: un filtro de fecha encima chocaria con ellas
-    # (Proximas + "Ultimos 7 dias" = nada). Con un filtro de fecha pasan a "Todas".
-    VISTAS_CON_FECHA_PROPIA = ('proximas', 'hoy', 'manana', 'por_cobrar')
+    # Un dia concreto (`?dia=`) es la unica forma de elegir fecha fuera de las pestañas:
+    # no hay filtros de fecha en el panel que choquen con ellas.
+    ESTADOS_DEL_DIA = (
+        Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA,
+        Reserva.Estado.COMPLETADA, Reserva.Estado.CANCELADA,
+    )
+
+    @staticmethod
+    def _dia(request):
+        """El dia pedido en `?dia=`, o None si falta o no es una fecha valida."""
+        try:
+            return date.fromisoformat(request.GET.get('dia', ''))
+        except ValueError:
+            return None
 
     @staticmethod
     def _es_listado(request):
@@ -570,11 +597,10 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return match is not None and match.url_name == 'bookings_reserva_changelist'
 
     def _vista(self, request):
+        if self._dia(request):
+            return 'dia'
         pedida = request.GET.get('vista')
         if pedida in dict(self.VISTAS):
-            if pedida in self.VISTAS_CON_FECHA_PROPIA and any(
-                    parametro.startswith('fecha') for parametro in request.GET):
-                return 'todas'
             return pedida
         if request.method == 'POST':
             # Las acciones masivas existentes también se invocan directamente
@@ -593,7 +619,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             output_field=dinero,
         )
 
-    def _consulta_vista(self, vista, hoy):
+    def _consulta_vista(self, vista, hoy, dia=None):
         activos = models.Q(estado__in=[Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA])
         if vista == 'proximas':
             return activos & models.Q(fecha__gte=hoy)
@@ -606,6 +632,9 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                     & models.Q(_saldo_lista__gt=0, forma_pago=Reserva.FormaPago.ANTICIPO))
         if vista == 'atencion':
             return consulta_devolucion_pendiente()
+        if vista == 'dia':
+            # Todo lo que paso ese dia, cancelado o no; un checkout sin pagar no cuenta.
+            return models.Q(fecha=dia, estado__in=self.ESTADOS_DEL_DIA)
         if vista == 'pasadas':
             # El historico: lo que ya paso, cancelado o no. Un checkout sin pagar no es historia.
             return models.Q(fecha__lt=hoy, estado__in=[
@@ -631,8 +660,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             consulta['vista'] = clave
             consulta.pop('p', None)
             consulta.pop('o', None)
-            for parametro in [k for k in consulta if k.startswith('fecha')]:
-                consulta.pop(parametro)
+            consulta.pop('dia', None)
             return f'{request.path}?{consulta.urlencode()}'
 
         pestanas = [dict(clave=clave, nombre=nombre, conteo=conteos[clave],
@@ -641,11 +669,30 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                          # devolución por confirmar. El resto del conteo es solo un dato.
                          urgente=clave in ('por_cobrar', 'atencion') and conteos[clave] > 0)
                     for clave, nombre in self.VISTAS]
+        dia = self._dia(request)
+        resto = request.GET.copy()
+        for parametro in ('vista', 'dia', 'p', 'o'):
+            resto.pop(parametro, None)
+
+        def enlace_dia(fecha):
+            return f'{request.path}?{urlencode({**resto.dict(), "dia": fecha.isoformat()})}'
+
+        referencia = dia or hoy
+        selector_dia = {
+            'valor': dia.isoformat() if dia else '',
+            'activo': dia is not None,
+            'etiqueta': date_format(dia, 'D j M') if dia else '',
+            'conteo': base.filter(self._consulta_vista('dia', hoy, dia)).count() if dia else None,
+            'anterior': enlace_dia(referencia - timedelta(days=1)),
+            'siguiente': enlace_dia(referencia + timedelta(days=1)),
+            'quitar': f'{request.path}?{urlencode({**resto.dict(), "vista": "proximas"})}',
+            'otros_parametros': [(k, v) for k, valores in resto.lists() for v in valores],
+        }
         respuesta = super().changelist_view(request, {
-            **(extra_context or {}), 'reservas_pestanas': pestanas,
+            **(extra_context or {}), 'reservas_pestanas': pestanas, 'reservas_dia': selector_dia,
         })
         if getattr(respuesta, 'context_data', None) and 'cl' in respuesta.context_data:
-            frecuentes = {'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago'}
+            frecuentes = {'estado', 'canal_origen', 'vendedora', 'forma_pago'}
             visibles, avanzados = [], []
             for spec in respuesta.context_data['cl'].filter_specs:
                 campo = getattr(spec, 'field_path', getattr(spec, 'parameter_name', None))
@@ -658,7 +705,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 for spec in avanzados
             )
         if (getattr(respuesta, 'context_data', None) and 'cl' in respuesta.context_data
-                and vista != 'todas' and request.GET.get('o', '1') in ('1', '-1')):
+                and vista not in ('todas', 'dia') and request.GET.get('o', '1') in ('1', '-1')):
             # La página ya está paginada y ordenada. Sólo se marca la primera fila
             # de cada día; Unfold conserva sus tbody, casillas y acciones intactos.
             cl = respuesta.context_data['cl']
@@ -734,7 +781,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         if not self._es_listado(request):
             return qs
         return qs.annotate(_saldo_lista=self._saldo_sql()).filter(
-            self._consulta_vista(self._vista(request), timezone.localdate()))
+            self._consulta_vista(self._vista(request), timezone.localdate(), self._dia(request)))
 
     @admin.display(description='Cuándo', ordering='fecha')
     def cuando(self, obj):

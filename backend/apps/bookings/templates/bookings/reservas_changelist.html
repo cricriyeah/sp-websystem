@@ -8,6 +8,23 @@
                 {{ p.nombre }} <span class="{% if p.urgente %}agenda-pestana-cuenta{% else %}agenda-pestana-n{% endif %}">{{ p.conteo }}</span>
             </a>
         {% endfor %}
+        {% comment %}
+        Un dia concreto: calendario con flechas. Es la unica forma de elegir fecha fuera de
+        las pestañas, asi que no hay filtros de fecha que choquen con ellas. Al elegir un
+        dia la pestaña activa pasa a ser ese dia, con una X para quitarlo.
+        {% endcomment %}
+        <form method="get" data-dia-selector class="agenda-dia{% if reservas_dia.activo %} agenda-dia-activo{% endif %}">
+            {% for nombre, valor in reservas_dia.otros_parametros %}
+                <input type="hidden" name="{{ nombre }}" value="{{ valor }}">
+            {% endfor %}
+            <a href="{{ reservas_dia.anterior }}" data-dia-anterior class="agenda-dia-flecha" aria-label="Día anterior">&lsaquo;</a>
+            <input type="date" name="dia" value="{{ reservas_dia.valor }}" aria-label="Ver un día" onchange="this.form.submit()">
+            <a href="{{ reservas_dia.siguiente }}" data-dia-siguiente class="agenda-dia-flecha" aria-label="Día siguiente">&rsaquo;</a>
+            {% if reservas_dia.activo %}
+                <span class="agenda-dia-cuenta">{{ reservas_dia.conteo }}</span>
+                <a href="{{ reservas_dia.quitar }}" data-dia-quitar class="agenda-dia-flecha" aria-label="Quitar el día">&times;</a>
+            {% endif %}
+        </form>
     </nav>
     {{ block.super }}
 {% endblock %}

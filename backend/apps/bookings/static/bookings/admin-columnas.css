@@ -125,6 +125,42 @@
   font-weight: 500;
   opacity: 0.7;
 }
+.agenda-dia {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.agenda-dia input[type='date'] {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  padding: 0.2rem 0.25rem;
+}
+.agenda-dia-flecha {
+  padding: 0 0.4rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  text-decoration: none;
+  color: inherit;
+}
+.agenda-dia-activo {
+  background: #b7410e;
+  border-color: #b7410e;
+  color: #fff;
+}
+.agenda-dia-activo input[type='date'] {
+  color-scheme: dark;
+}
+.agenda-dia-cuenta {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
 .agenda-pestana-nota {
   font-size: 0.75rem;
 }
