@@ -34,6 +34,7 @@ from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUser
 from apps.tenancy.models import Empresa, MembresiaEmpresa
 
 from .forms import AltaVendedoraForm
+from .forms_alta_reserva import AltaReservaForm
 from .vistas_precio import respuesta_precio_sugerido
 
 from .models import (
@@ -577,7 +578,48 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         'personas_por_servicio_legible', 'tipo_cambio',
     ]
 
+    def get_form(self, request, obj=None, **kwargs):
+        if obj is None:
+            kwargs['form'] = AltaReservaForm
+        form_class = super().get_form(request, obj, **kwargs)
+        if obj is not None:
+            return form_class
+
+        usuario = request.user
+        empresa = scope.empresa_actual(request)
+        perfil_vendedora = self._mi_perfil_de_vendedora(request)
+
+        class FormularioAltaAdmin(form_class):
+            def __init__(self, *args, **form_kwargs):
+                form_kwargs.setdefault('usuario', usuario)
+                form_kwargs.setdefault('empresa', empresa)
+                form_kwargs.setdefault('perfil_vendedora', perfil_vendedora)
+                super().__init__(*args, **form_kwargs)
+
+        return FormularioAltaAdmin
+
     def get_fieldsets(self, request, obj=None):
+        if obj is None:
+            es_operador = scope.es_operador_plataforma(request.user)
+            es_jefe = request.user.groups.filter(name='Jefe').exists()
+            viaje_alta = [
+                'servicio', 'paquete', 'fecha', 'hora', 'numero_personas',
+                'aeropuerto', 'fecha_salida', 'inicio_paquete',
+            ]
+            if es_operador:
+                viaje_alta.insert(0, 'empresa')
+
+            asignacion_alta = ['embarcacion', 'capitan']
+            if es_operador or es_jefe:
+                asignacion_alta.insert(0, 'vendedora')
+
+            return [
+                ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente')}),
+                ('Viaje', {'fields': tuple(viaje_alta)}),
+                ('Cobro', {'fields': ('moneda', 'precio_total', 'ya_pago', 'monto_recibido')}),
+                ('Asignación', {'fields': tuple(asignacion_alta), 'classes': ('collapse',)}),
+            ]
+
         viaje = [
             'servicio', 'paquete', 'fecha', 'hora', 'numero_personas',
             'personas_por_servicio_legible', 'aeropuerto', 'fecha_salida', 'inicio_paquete',
@@ -614,6 +656,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         ]
 
     def get_readonly_fields(self, request, obj=None):
+        if obj is None:
+            return ()
         campos = list(super().get_readonly_fields(request, obj))
         if (not scope.es_operador_plataforma(request.user)
                 and request.user.groups.filter(name='Vendedora').exists()
@@ -623,7 +667,11 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return tuple(dict.fromkeys(campos))
 
     def save_model(self, request, obj, form, change):
-        if 'monto_transferencia' in form.changed_data:
+        if not change:
+            if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
+                obj.transferencia_registrada_en = timezone.now()
+                obj.transferencia_registrada_por = request.user
+        elif 'monto_transferencia' in form.changed_data:
             if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
                 obj.transferencia_registrada_en = timezone.now()
                 obj.transferencia_registrada_por = request.user

@@ -175,6 +175,38 @@
 
     // Consulta inicial en caso de que el formulario ya traiga campos precargados (p. ej. servicio por defecto)
     pedirSugerencia();
+
+    // Toggle de visibilidad de monto_recibido segun opcion elegida en ya_pago
+    function iniciarVisibilidadMontoRecibido() {
+      var inputMonto = document.getElementById('id_monto_recibido');
+      var contenedorMonto = document.querySelector('.field-monto_recibido') ||
+        (inputMonto ? (inputMonto.closest('.form-row') || inputMonto.parentElement) : null);
+
+      if (!contenedorMonto) {
+        return;
+      }
+
+      function actualizarVisibilidadMonto() {
+        var radioSeleccionado = document.querySelector('input[name="ya_pago"]:checked');
+        var esAnticipo = radioSeleccionado && radioSeleccionado.value === 'anticipo_transferencia';
+        contenedorMonto.style.display = esAnticipo ? '' : 'none';
+      }
+
+      var radiosYaPago = document.querySelectorAll('input[name="ya_pago"]');
+      radiosYaPago.forEach(function (radio) {
+        radio.addEventListener('change', actualizarVisibilidadMonto);
+      });
+
+      document.addEventListener('change', function (evento) {
+        if (evento.target && evento.target.name === 'ya_pago') {
+          actualizarVisibilidadMonto();
+        }
+      });
+
+      actualizarVisibilidadMonto();
+    }
+
+    iniciarVisibilidadMontoRecibido();
   }
 
   if (document.readyState === 'loading') {

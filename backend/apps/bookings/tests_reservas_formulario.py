@@ -33,10 +33,9 @@ class AltaReservaEmpresaTests(EmpresaTestCase):
             'hora': '06:00',
             'numero_personas': '2',
             'servicio': str(self.servicio.pk),
-            'canal_origen': Reserva.CanalOrigen.WHATSAPP,
-            'estado': Reserva.Estado.PENDIENTE_PAGO,
             'moneda': Reserva.Moneda.MXN,
-            'forma_pago': Reserva.FormaPago.COMPLETO,
+            # El alta ya no pide estado ni canal: «¿Ya pagó?» decide el estado.
+            'ya_pago': 'no',
             **extra,
         }
         for prefijo in ('personalizaciones_seleccionadas', 'ocupaciones', 'componentes', 'detalle_transporte'):
@@ -62,8 +61,8 @@ class AltaReservaEmpresaTests(EmpresaTestCase):
         )
         self.client.force_login(self.crear_jefe())
         respuesta = self.client.post(self.url, self._datos(
-            servicio='', paquete=str(paquete.pk), estado=Reserva.Estado.PAGADA,
-            precio_total='1000.00', monto_pagado='1000.00', empresa='999999',
+            servicio='', paquete=str(paquete.pk), ya_pago='todo_transferencia',
+            precio_total='1000.00', empresa='999999',
         ))
         self.assertEqual(respuesta.status_code, 302, getattr(respuesta, 'context', None) and (
             respuesta.context['adminform'].form.errors,
