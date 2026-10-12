@@ -117,21 +117,21 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                     el dia escribe en Cupo diario (el mismo modelo, sin pasar por su
                                     pantalla).
                                     {% endcomment %}
-                                    <div data-cupo-dia data-fecha="{{ dia|date:'Y-m-d' }}"
-                                         style="font-weight: 400; font-size: 0.75rem; line-height: 1.35">
+                                    <div data-cupo-dia data-fecha="{{ dia|date:'Y-m-d' }}" class="agenda-cupo-dia">
                                         {% if cupo.cerrado %}
-                                            <span style="color: #dc2626; font-weight: 600">Cerrado</span>
+                                            <span class="agenda-cupo-linea" style="color: #dc2626; font-weight: 600">Cerrado</span>
                                             {% if puede_cerrar_dia %}
                                                 <button type="button" data-accion-dia="abrir_dia" class="agenda-accion-texto">Reabrir</button>
                                             {% endif %}
                                         {% else %}
-                                            <span title="Tope de viajes: {{ cupo.tope }}. Vendidos: {{ cupo.vendidos }}. Apartados: {{ cupo.apartados }} (clientes en el paso de pago, 15 min).">
+                                            <span class="agenda-cupo-linea"
+                                                  title="Tope de viajes: {{ cupo.tope }}. Vendidos: {{ cupo.vendidos }}. Apartados: {{ cupo.apartados }} (clientes en el paso de pago, 15 min).">
                                                 Quedan <b style="{% if cupo.quedan == 0 %}color: #dc2626{% endif %}">{{ cupo.quedan }}</b> de {{ cupo.tope }}
                                             </span>
                                             {% if cupo.apartados %}
-                                                <span class="text-base-400"
+                                                <span class="agenda-cupo-linea text-base-400"
                                                       title="Clientes que estan en el paso de pago; su lugar se libera solo si no pagan.">
-                                                    · {{ cupo.apartados }} apartado{{ cupo.apartados|pluralize }}
+                                                    {{ cupo.apartados }} apartado{{ cupo.apartados|pluralize }}
                                                 </span>
                                             {% endif %}
                                             {% if puede_cerrar_dia %}
@@ -202,7 +202,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                             <span class="text-base-400" style="font-style: italic">fuera</span>
                                             {% if puede_traer_panga %}
                                                 <button type="button" data-panga-vuelve class="agenda-celda-accion"
-                                                        title="Volver a poner esta panga en servicio ese día" aria-label="Volver a servicio">↺</button>
+                                                        title="Volver a poner esta panga en servicio ese día">volver</button>
                                             {% endif %}
                                         {% elif celda.reserva %}
                                             <span class="text-base-700 dark:text-base-300"
@@ -214,7 +214,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                             <span class="text-base-300 dark:text-base-600" data-libre>·</span>
                                             {% if puede_sacar_panga %}
                                                 <button type="button" data-panga-fuera class="agenda-celda-accion"
-                                                        title="Marcar esta panga fuera de servicio ese día" aria-label="Marcar fuera de servicio">⊘</button>
+                                                        title="Marcar esta panga fuera de servicio ese día">sacar</button>
                                             {% endif %}
                                         {% endif %}
                                     </td>
