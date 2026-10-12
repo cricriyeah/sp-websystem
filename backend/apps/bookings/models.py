@@ -589,6 +589,16 @@ class Reserva(models.Model):
         related_name='cobros_en_efectivo',
     )
 
+    monto_transferencia = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(0)], verbose_name='cobrado por transferencia',
+    )
+    transferencia_registrada_en = models.DateTimeField(null=True, blank=True)
+    transferencia_registrada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='transferencias_registradas',
+    )
+
     # Lo levanta el webhook con charge.dispute.created. La vendedora necesita
     # verlo: una reserva en disputa no se toca hasta que Stripe resuelva.
     en_disputa = models.BooleanField(default=False, verbose_name='en disputa')
@@ -643,6 +653,12 @@ class Reserva(models.Model):
 
     class Meta:
         ordering = ['-fecha', '-hora']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(monto_transferencia__gte=0),
+                name='reserva_transferencia_no_negativa',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.nombre_cliente} — {self.fecha} {self.hora or ""}'.rstrip()
@@ -937,7 +953,7 @@ class Reserva(models.Model):
 
     @property
     def saldo_pendiente(self):
-        """Lo que falta por cobrar, ya descontado el efectivo recibido.
+        """Lo que falta por cobrar, ya descontadas las tres entradas de dinero.
 
         Con forma de pago 'anticipo' arranca en el 70% restante y llega a cero
         cuando la vendedora registra la liquidacion. Con 'completo' deberia ser
@@ -946,7 +962,8 @@ class Reserva(models.Model):
         `_verificar_monto`)."""
         if self.precio_total is None:
             return None
-        return self.precio_total - (self.monto_pagado or 0) - (self.monto_efectivo or 0)
+        return (self.precio_total - (self.monto_pagado or 0)
+                - (self.monto_efectivo or 0) - (self.monto_transferencia or 0))
 
     @property
     def liquidado(self):
