@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+    <nav aria-label="Vistas de reservas" class="agenda-pestanas">
+        {% for p in reservas_pestanas %}
+            <a href="{{ p.url }}" data-vista="{{ p.clave }}" {% if p.activa %}aria-current="page"{% endif %}
+               class="agenda-pestana text-base-700 dark:text-base-300">
+                {{ p.nombre }} <span class="agenda-pestana-cuenta">{{ p.conteo }}</span>
+            </a>
+        {% endfor %}
+    </nav>
+    {{ block.super }}
+{% endblock %}

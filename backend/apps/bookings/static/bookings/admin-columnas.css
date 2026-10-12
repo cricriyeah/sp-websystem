@@ -118,6 +118,28 @@
   opacity: 0.55;
 }
 
+/* La primera fila de cada día conserva el tbody y las casillas de Unfold. */
+.model-reserva #result_list tbody:has(.reservas-dia) td,
+.model-reserva #result_list tbody:has(.reservas-dia) th {
+  border-top-width: 3px;
+  border-top-color: rgba(127, 127, 127, 0.45);
+}
+.reservas-dia {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #b7410e;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+.reservas-cobro-urgente {
+  color: #b91c1c;
+  font-weight: 600;
+}
+.model-reserva .field-cuando,
+.model-reserva .field-cobro {
+  white-space: nowrap;
+}
+
 /* Resumen del panorama, a la derecha del titulo. */
 .agenda-resumen {
   float: right;

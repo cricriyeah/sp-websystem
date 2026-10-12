@@ -10,6 +10,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import connection, models, transaction
+from django.db.models.functions import Coalesce
 from django.forms.forms import NON_FIELD_ERRORS
 from django.http import HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
@@ -143,15 +144,36 @@ class RequiereAtencionFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value() != 'si':
             return queryset
-        ids = [
-            pk for pk, estado, monto_pagado, monto_reembolsado in queryset.values_list(
-                'pk', 'estado', 'monto_pagado', 'monto_reembolsado',
-            )
-            if requiere_atencion(situacion_de_reserva(
-                estado=estado, monto_pagado=monto_pagado, monto_reembolsado=monto_reembolsado,
-            ))
-        ]
-        return queryset.filter(pk__in=ids)
+        return queryset.filter(consulta_devolucion_pendiente())
+
+
+def consulta_devolucion_pendiente():
+    """La misma condición que `requiere_atencion(situacion_de_reserva(...))`.
+
+    Una cancelada requiere confirmación si se cobró algo y aún no se devolvió
+    todo. Se expresa en SQL para los conteos y el filtro sin leer todas las filas.
+    """
+    return (
+        models.Q(estado=Reserva.Estado.CANCELADA, monto_pagado__gt=0)
+        & (models.Q(monto_reembolsado__isnull=True)
+           | models.Q(monto_reembolsado__lt=models.F('monto_pagado')))
+    )
+
+
+class VistaReservasFilter(admin.SimpleListFilter):
+    """Registra `?vista=`; las pestañas se dibujan en la plantilla."""
+
+    title = 'vista'
+    parameter_name = 'vista'
+
+    def lookups(self, request, model_admin):
+        return []
+
+    def has_output(self):
+        return False
+
+    def queryset(self, request, queryset):
+        return queryset
 
 
 class AvisoDeReservasNuevasMixin:
@@ -482,12 +504,12 @@ class OrdenAdmin(ModelAdmin):
 @admin.register(Reserva)
 class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
-        'fecha', 'hora', 'nombre_cliente', 'numero_personas',
-        'estado', 'canal_origen', 'vendedora', 'cobro', 'extras',
-        'embarcacion', 'capitan', 'reembolsada', 'requiere_atencion_col', 'orden_link',
+        'cuando', 'nombre_cliente', 'numero_personas', 'servicio_resumen',
+        'estado', 'cobro', 'extras', 'asignacion',
     ]
+    list_display_links = ['nombre_cliente']
     list_filter = [
-        LlegadaFilter, RequiereAtencionFilter,
+        VistaReservasFilter, LlegadaFilter, RequiereAtencionFilter,
         'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago', 'en_disputa',
         'pide_bebidas', 'pide_extras_whatsapp',
         'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional', 'paquete',
@@ -520,6 +542,101 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         'cancelar_por_mal_clima', 'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
         'confirmar_devolucion',
     ]
+    change_list_template = 'bookings/reservas_changelist.html'
+    VISTAS = (
+        ('proximas', 'Próximas'), ('hoy', 'Hoy'), ('manana', 'Mañana'),
+        ('por_cobrar', 'Por cobrar'), ('atencion', 'Requieren atención'),
+        ('todas', 'Todas'),
+    )
+
+    @staticmethod
+    def _es_listado(request):
+        match = request.resolver_match
+        return match is not None and match.url_name == 'bookings_reserva_changelist'
+
+    def _vista(self, request):
+        pedida = request.GET.get('vista')
+        if pedida in dict(self.VISTAS):
+            return pedida
+        if request.method == 'POST':
+            # Las acciones masivas existentes también se invocan directamente
+            # contra la URL sin query string (p. ej. desde integraciones).
+            return 'todas'
+        # Enlaces históricos con búsqueda o filtro mantienen el alcance de antes.
+        return 'todas' if request.GET else 'proximas'
+
+    @staticmethod
+    def _saldo_sql():
+        dinero = models.DecimalField(max_digits=12, decimal_places=2)
+        return models.ExpressionWrapper(
+            models.F('precio_total')
+            - Coalesce('monto_pagado', models.Value(Decimal('0.00')), output_field=dinero)
+            - Coalesce('monto_efectivo', models.Value(Decimal('0.00')), output_field=dinero),
+            output_field=dinero,
+        )
+
+    def _consulta_vista(self, vista, hoy):
+        activos = models.Q(estado__in=[Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA])
+        if vista == 'proximas':
+            return activos & models.Q(fecha__gte=hoy)
+        if vista == 'hoy':
+            return activos & models.Q(fecha=hoy)
+        if vista == 'manana':
+            return activos & models.Q(fecha=hoy + timedelta(days=1))
+        if vista == 'por_cobrar':
+            return (activos & models.Q(fecha__lte=hoy + timedelta(days=1))
+                    & models.Q(_saldo_lista__gt=0, forma_pago=Reserva.FormaPago.ANTICIPO))
+        if vista == 'atencion':
+            return consulta_devolucion_pendiente()
+        return models.Q()
+
+    def changelist_view(self, request, extra_context=None):
+        hoy = timezone.localdate()
+        vista = self._vista(request)
+        # `super(ReservaAdmin, self)` aplica el mixin de empresa y deja todas las
+        # empresas visibles al operador. Una agregación, sin precargas por fila.
+        base = super(ReservaAdmin, self).get_queryset(request).annotate(
+            _saldo_lista=self._saldo_sql())
+        conteos = base.aggregate(**{
+            clave: models.Count('pk', filter=self._consulta_vista(clave, hoy))
+            for clave, _ in self.VISTAS
+        })
+
+        def enlace(clave):
+            consulta = request.GET.copy()
+            consulta['vista'] = clave
+            consulta.pop('p', None)
+            consulta.pop('o', None)
+            return f'{request.path}?{consulta.urlencode()}'
+
+        pestanas = [dict(clave=clave, nombre=nombre, conteo=conteos[clave],
+                         activa=clave == vista, url=enlace(clave))
+                    for clave, nombre in self.VISTAS]
+        respuesta = super().changelist_view(request, {
+            **(extra_context or {}), 'reservas_pestanas': pestanas,
+        })
+        if (getattr(respuesta, 'context_data', None) and 'cl' in respuesta.context_data
+                and vista != 'todas' and request.GET.get('o', '1') in ('1', '-1')):
+            # La página ya está paginada y ordenada. Sólo se marca la primera fila
+            # de cada día; Unfold conserva sus tbody, casillas y acciones intactos.
+            cl = respuesta.context_data['cl']
+            filas = list(cl.result_list)
+            anterior = None
+            for reserva in filas:
+                reserva._inicio_dia_lista = reserva.fecha != anterior
+                anterior = reserva.fecha
+            cl.result_list = filas
+        return respuesta
+
+    def get_ordering(self, request):
+        # Al ordenar la columna Cuándo, la hora sigue la misma dirección.
+        if self._es_listado(request) and request.GET.get('o') == '1':
+            return ['fecha', 'hora']
+        if self._es_listado(request) and request.GET.get('o') == '-1':
+            return ['-fecha', '-hora']
+        if self._es_listado(request) and self._vista(request) != 'todas':
+            return ['fecha', 'hora']
+        return ['-fecha', '-hora']
 
     def requiere_atencion_col(self, obj):
         s = situacion_de_reserva(
@@ -561,11 +678,54 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         self.message_user(request, f'{confirmadas} reserva(s) marcadas como devolución confirmada.')
 
     def get_queryset(self, request):
-        # `vendedora` sale en el listado: sin esto es una consulta por fila.
         # El desglose operativo muestra solo checks, sin respuestas de inputs.
-        return super().get_queryset(request).select_related('vendedora__usuario').prefetch_related(
+        qs = super().get_queryset(request).select_related(
+            'vendedora__usuario', 'servicio', 'paquete', 'embarcacion', 'capitan',
+            'detalle_transporte__punto_encuentro',
+        ).prefetch_related(
             'personalizaciones_seleccionadas__servicio_personalizacion__personalizacion'
         )
+        if not self._es_listado(request):
+            return qs
+        return qs.annotate(_saldo_lista=self._saldo_sql()).filter(
+            self._consulta_vista(self._vista(request), timezone.localdate()))
+
+    @admin.display(description='Cuándo', ordering='fecha')
+    def cuando(self, obj):
+        formato = 'D j M' if obj.fecha.year == timezone.localdate().year else 'D j M Y'
+        fecha = date_format(obj.fecha, formato)
+        hora = f' · {obj.hora:%H:%M}' if obj.hora else ''
+        if not getattr(obj, '_inicio_dia_lista', False):
+            return f'{fecha}{hora}'
+        hoy = timezone.localdate()
+        etiqueta = ('Hoy' if obj.fecha == hoy else 'Mañana' if obj.fecha == hoy + timedelta(days=1)
+                    else fecha)
+        return format_html('<span class="reservas-dia">{}</span>{}{}', etiqueta, fecha, hora)
+
+    @admin.display(description='Servicio')
+    def servicio_resumen(self, obj):
+        nombre = obj.paquete.nombre if obj.paquete_id else (
+            obj.servicio.nombre if obj.servicio_id else 'Sin servicio')
+        if not obj.servicio_id or obj.servicio.tipo_servicio != 'transporte':
+            return nombre
+        try:
+            detalle = obj.detalle_transporte
+        except DetalleTransporte.DoesNotExist:
+            return nombre
+        partes = [detalle.get_tipo_traslado_display()]
+        if detalle.zona:
+            partes.append(detalle.get_zona_display())
+        if detalle.punto_encuentro_id:
+            partes.append(detalle.punto_encuentro.nombre)
+        elif detalle.direccion_personalizada:
+            partes.append(detalle.direccion_personalizada)
+        return format_html('{}<br><small>{}</small>', nombre, ' · '.join(partes))
+
+    @admin.display(description='Asignación')
+    def asignacion(self, obj):
+        if not obj.embarcacion_id and not obj.capitan_id:
+            return 'Sin panga · Sin capitán'
+        return f'{obj.embarcacion.nombre if obj.embarcacion_id else "Sin panga"} · {obj.capitan.nombre if obj.capitan_id else "Sin capitán"}'
 
     def get_changeform_initial_data(self, request):
         initial = super().get_changeform_initial_data(request)
@@ -618,30 +778,33 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
 
     @admin.display(description='Cobro')
     def cobro(self, obj):
-        """Cuanto se ha recibido contra el total, y que falta.
+        """Un hecho breve; rojo sólo para deuda vencida, devolución o descuadre."""
+        def monto(valor):
+            return (f'{valor:,.0f}' if valor == valor.to_integral_value()
+                    else f'{valor:,.2f}')
 
-        En rojo cuando la reserva es de pago completo y aun asi falta dinero: eso
-        no deberia pasar nunca y significa que lo que cobro Stripe no cuadra con
-        lo que calculo el servidor."""
-        if obj.precio_total is None:
-            return '—'
-
-        recibido = (obj.monto_pagado or 0) + (obj.monto_efectivo or 0)
-        resumen = f'{recibido} / {obj.precio_total} {obj.moneda}'
-        if obj.monto_efectivo:
-            resumen = f'{resumen} (incl. {obj.monto_efectivo} en efectivo)'
-
-        saldo = obj.saldo_pendiente
-        if saldo <= 0:
-            return resumen
-
-        if obj.forma_pago == Reserva.FormaPago.ANTICIPO:
-            return format_html('{} <small>(faltan {} en efectivo)</small>', resumen, saldo)
-        if obj.estado == Reserva.Estado.PENDIENTE_PAGO:
-            return resumen
-        return format_html(
-            '<span style="color:#b91c1c">{} (descuadre de {})</span>', resumen, saldo
+        situacion = situacion_de_reserva(
+            estado=obj.estado, monto_pagado=obj.monto_pagado,
+            monto_reembolsado=obj.monto_reembolsado,
         )
+        if requiere_atencion(situacion):
+            resta = (obj.monto_pagado or Decimal('0')) - (obj.monto_reembolsado or Decimal('0'))
+            return format_html('<span class="reservas-cobro-urgente">{}</span>',
+                               f'Devolver {monto(resta)} {obj.moneda}')
+        if obj.estado == Reserva.Estado.PENDIENTE_PAGO:
+            return 'Sin pagar'
+        saldo = obj.saldo_pendiente
+        if saldo is None:
+            return '—'
+        if saldo <= 0:
+            return 'Pagado'
+        if obj.forma_pago == Reserva.FormaPago.ANTICIPO:
+            texto = f'Debe {monto(saldo)} {obj.moneda} en efectivo'
+            if obj.fecha <= timezone.localdate():
+                return format_html('<span class="reservas-cobro-urgente">{}</span>', texto)
+            return texto
+        return format_html('<span class="reservas-cobro-urgente">{}</span>',
+                           f'Descuadre de {monto(saldo)} {obj.moneda}')
 
     @admin.action(description='Marcar como venta mia')
     def marcar_como_venta_mia(self, request, queryset):
