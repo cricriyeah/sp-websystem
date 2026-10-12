@@ -2712,7 +2712,9 @@ class OrdenAdminTests(TestCase):
     def test_reserva_enlaza_a_orden_y_admite_reserva_suelta(self):
         from django.contrib import admin
         model_admin = admin.site._registry[Reserva]
-        self.assertIn('orden_link', model_admin.list_display)
+        # El enlace sigue disponible en el admin, pero la lista operativa ya no
+        # dedica una columna a la orden: se consulta desde el formulario.
+        self.assertNotIn('orden_link', model_admin.list_display)
         self.assertIn(reverse('admin:bookings_orden_change', args=[self.orden.pk]),
                       model_admin.orden_link(self.reservas[1]))
         self.assertEqual(model_admin.orden_link(Reserva()), '—')
