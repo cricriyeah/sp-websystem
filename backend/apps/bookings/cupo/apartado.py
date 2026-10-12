@@ -7,6 +7,8 @@ from typing import Any
 from django.conf import settings
 from django.utils import timezone
 
+from apps.fleet.calendario_paquete import fechas_de_componente
+
 
 def apartado_activo() -> bool:
     """True si el ajuste APARTADO_MINUTOS es mayor que 0.
@@ -133,5 +135,53 @@ def construir_retrato_servicio_suelto(reserva) -> dict[str, Any]:
                 "servicio_id": reserva.servicio_id,
             }
         ],
+        "habitaciones": [],
+    }
+
+
+def construir_retrato_paquete(reserva) -> dict[str, Any]:
+    """Arma el retrato de demanda para una reserva de paquete de una sola empresa.
+
+    Refleja la lista de validación de actividades de mar (estrategia 'por_recurso_dia')
+    que reservar_cupo_al_confirmar validaría para esa reserva.
+    Un paquete sin componentes de mar devuelve salidas: [].
+    El hospedaje queda para la tarea 04: habitaciones va vacío.
+    """
+    if not getattr(reserva, 'paquete_id', None) and not getattr(reserva, 'paquete', None):
+        return {"v": 1, "salidas": [], "habitaciones": []}
+
+    if getattr(reserva, 'orden_id', None) is not None:
+        return {"v": 1, "salidas": [], "habitaciones": []}
+
+    paquete = reserva.paquete
+    if paquete is None or not hasattr(paquete, 'servicios_asociados'):
+        return {"v": 1, "salidas": [], "habitaciones": []}
+
+    componentes = list(
+        paquete.servicios_asociados.select_related('servicio').order_by('orden')
+    )
+
+    salidas: list[dict[str, Any]] = []
+    for ps in componentes:
+        servicio = ps.servicio
+        if servicio.estrategia_cupo != 'por_recurso_dia':
+            continue
+
+        personas = reserva.personas_de(servicio.pk)
+        fechas = (
+            sorted(fechas_de_componente(reserva.fecha_inicio_paquete, ps.dia_estancia, ps.salidas))
+            if ps.salidas > 1 else [reserva.fecha]
+        )
+        for dia in fechas:
+            fecha_str = dia.isoformat() if hasattr(dia, 'isoformat') else str(dia)
+            salidas.append({
+                "fecha": fecha_str,
+                "personas": int(personas),
+                "servicio_id": servicio.pk,
+            })
+
+    return {
+        "v": 1,
+        "salidas": salidas,
         "habitaciones": [],
     }

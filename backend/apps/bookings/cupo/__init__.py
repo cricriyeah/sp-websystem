@@ -10,6 +10,7 @@ from .adaptador import (
 )
 from .apartado import (
     apartado_activo,
+    construir_retrato_paquete,
     construir_retrato_servicio_suelto,
     demanda_apartada_del_dia,
     demanda_apartada_por_rango,
@@ -93,6 +94,7 @@ __all__ = [
     'obtener_estrategia',
     'registrar_estrategia',
     'apartado_activo',
+    'construir_retrato_paquete',
     'construir_retrato_servicio_suelto',
     'demanda_apartada_del_dia',
     'demanda_apartada_por_rango',
