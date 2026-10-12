@@ -232,7 +232,9 @@ def _validar_cupo_hospedaje(reserva):
         excluir_pk=reserva.pk,
     )
     if not disponible:
-        raise ValidationError({'fecha': 'No hay disponibilidad de hospedaje en esas fechas.'})
+        raise ValidationError({
+            'fecha': ValidationError('No hay disponibilidad de hospedaje en esas fechas.', code='sin_cupo'),
+        })
 
 
 def _validar_cupo_de_paquete(reserva):
@@ -256,7 +258,9 @@ def _validar_cupo_de_paquete(reserva):
                         if ps.salidas > 1 else
                         f'No hay cupo disponible para el servicio {ps.servicio.nombre} ({motivo}).'
                     )
-                    raise ValidationError({'fecha': mensaje})
+                    raise ValidationError({
+                        'fecha': ValidationError(mensaje, code='sin_cupo'),
+                    })
         elif estrategia == 'por_noche':
             disponible = evaluar_disponibilidad_hospedaje(
                 check_in=reserva.fecha_inicio_paquete,
@@ -268,7 +272,10 @@ def _validar_cupo_de_paquete(reserva):
             )
             if not disponible:
                 raise ValidationError({
-                    'fecha': f'No hay disponibilidad de hospedaje para el servicio {ps.servicio.nombre} en esas fechas.'
+                    'fecha': ValidationError(
+                        f'No hay disponibilidad de hospedaje para el servicio {ps.servicio.nombre} en esas fechas.',
+                        code='sin_cupo',
+                    ),
                 })
         elif estrategia == 'bajo_demanda':
             continue
@@ -850,7 +857,7 @@ class Reserva(models.Model):
                 )
         if self.estado != self.Estado.CANCELADA and (self.cancelada_por_id or self.cancelada_en):
             raise ValidationError('cancelada_por/cancelada_en solo aplican cuando estado es cancelada.')
-        if self.canal_origen == self.CanalOrigen.WEB and not self.deslinde_aceptado:
+        if self.estado != self.Estado.CANCELADA and self.canal_origen == self.CanalOrigen.WEB and not self.deslinde_aceptado:
             raise ValidationError(
                 {'deslinde_aceptado': 'La reserva web requiere aceptar el deslinde de responsabilidad.'}
             )

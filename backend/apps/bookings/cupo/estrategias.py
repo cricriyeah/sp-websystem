@@ -87,18 +87,21 @@ class EstrategiaCupo(ABC):
 
         if resultado.motivo == MOTIVO_LLENO:
             raise ValidationError(
-                f'No hay cupo disponible para el {demanda.fecha}: se alcanzo el maximo de viajes del dia.'
+                f'No hay cupo disponible para el {demanda.fecha}: se alcanzo el maximo de viajes del dia.',
+                code='sin_cupo',
             )
         if resultado.motivo == MOTIVO_SIN_PANGA:
             raise ValidationError(
                 f'No queda panga para un grupo de {demanda.personas} personas el {demanda.fecha}. '
-                f'Las de mayor capacidad ya estan comprometidas.'
+                f'Las de mayor capacidad ya estan comprometidas.',
+                code='sin_cupo',
             )
         if resultado.motivo == MOTIVO_SIN_LUGAR:
             raise ValidationError(
-                f'No hay espacio disponible para {demanda.personas} personas el {demanda.fecha}.'
+                f'No hay espacio disponible para {demanda.personas} personas el {demanda.fecha}.',
+                code='sin_cupo',
             )
-        raise ValidationError(f'No hay cupo disponible para el {demanda.fecha}.')
+        raise ValidationError(f'No hay cupo disponible para el {demanda.fecha}.', code='sin_cupo')
 
     @abstractmethod
     def evaluar_rango(

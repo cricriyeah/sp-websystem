@@ -145,6 +145,7 @@ WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '')
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
 WHATSAPP_TEMPLATE = os.environ.get('WHATSAPP_TEMPLATE', 'reserva_confirmada')
 WHATSAPP_TEMPLATE_LANG = os.environ.get('WHATSAPP_TEMPLATE_LANG', 'es_MX')
+WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO = os.environ.get('WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO', '')
 
 def _perm_puede_ver_finanzas(request):
     from apps.tenancy.permisos_unfold import puede_ver_finanzas

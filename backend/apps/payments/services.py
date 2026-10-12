@@ -21,7 +21,11 @@ from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
 from apps.bookings.models import Orden, Reserva
 from apps.bookings.orden_lectura import reservas_de_orden
 from apps.fleet.enums import EstrategiaPrecio
-from apps.notifications.services import notificar_reserva_pagada
+from apps.notifications.services import (
+    notificar_fallo_reembolso,
+    notificar_reembolso_sin_cupo,
+    notificar_reserva_pagada,
+)
 
 try:
     from apps.notifications.services import notificar_orden_pagada
@@ -134,12 +138,14 @@ def _aplicar_pago_exitoso_transaccional(intent, empresa):
             return _cancelar_codigo_promocional_invalido(reserva, intent, empresa)
         if reserva.orden_id:
             return _cancelar_orden_sin_cupo(reserva, intent, empresa)
-        return _cancelar_sin_cupo(reserva, intent, empresa)
+        causa = 'cupo' if _es_error_sin_cupo(exc) else 'otra'
+        motivo = None if causa == 'cupo' else str(exc)
+        return _cancelar_sin_cupo(reserva, intent, empresa, motivo=motivo, causa=causa)
     except SinCupoError as exc:
         if reserva.orden_id:
             nombre_servicio = reserva.servicio.nombre if reserva.servicio else 'servicio'
             return _cancelar_orden_sin_cupo(reserva, intent, empresa, motivo=f'sin cupo en {nombre_servicio}')
-        return _cancelar_sin_cupo(reserva, intent, empresa, motivo=str(exc))
+        return _cancelar_sin_cupo(reserva, intent, empresa, motivo=str(exc), causa='cupo')
 
     if reserva.orden_id:
         orden = Orden.objects.select_for_update().get(pk=reserva.orden_id)
@@ -251,11 +257,73 @@ def _cancelar_orden_sin_cupo(reserva, intent, empresa, motivo=None):
     return SIN_CUPO_REEMBOLSADO if reserva.reembolsada else FALLO_REEMBOLSO
 
 
-def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None):
+def _es_error_sin_cupo(exc):
+    """Determina si la excepcion corresponde a una falla de cupo.
+
+    Devuelve True si es SinCupoError o una ValidationError cuyos codigos
+    (recorriendo error_dict y error_list anidados) incluyen 'sin_cupo'.
+    """
+    if isinstance(exc, SinCupoError):
+        return True
+    if not isinstance(exc, DjangoValidationError):
+        return False
+
+    vistos = set()
+
+    def _tiene_codigo(e):
+        if id(e) in vistos:
+            return False
+        vistos.add(id(e))
+
+        if getattr(e, 'code', None) == 'sin_cupo':
+            return True
+        if hasattr(e, 'error_dict'):
+            for lista in e.error_dict.values():
+                for sub_e in lista:
+                    if _tiene_codigo(sub_e):
+                        return True
+        if hasattr(e, 'error_list'):
+            for sub_e in e.error_list:
+                if sub_e is not e and _tiene_codigo(sub_e):
+                    return True
+        return False
+
+    return _tiene_codigo(exc)
+
+
+def _gestionar_fallo_reembolso(reserva, intent, empresa, motivo):
+    """Alerta urgente deduplicada cuando falla el reembolso de una reserva."""
+    ahora = timezone.now()
+    filas = Reserva.objects.filter(
+        pk=reserva.pk,
+        alerta_reembolso_fallido_en__isnull=True,
+    ).update(alerta_reembolso_fallido_en=ahora)
+    if filas:
+        monto = de_centavos(intent.get('amount_received') or 0)
+        empresa_id = empresa.pk
+        reserva_id = reserva.pk
+        motivo_alerta = motivo or 'Fallo al procesar el reembolso en Stripe'
+
+        def _notificar_fallo():
+            try:
+                with scope.con_empresa(Empresa.objects.get(pk=empresa_id)):
+                    r = Reserva.objects.get(pk=reserva_id)
+                    notificar_fallo_reembolso(r, monto=monto, motivo=motivo_alerta)
+            except Exception:
+                logger.exception(
+                    'Fallo inesperado al enviar alerta de fallo de reembolso para reserva %s',
+                    reserva_id,
+                )
+
+        transaction.on_commit(_notificar_fallo)
+
+
+def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None, causa='cupo'):
     """El dia se lleno mientras el cliente pagaba. Se devuelve el 100% y la
     reserva queda cancelada con el motivo real, para que la vendedora la vea en
     su panel en vez de que desaparezca como 'pendiente de pago'."""
     if not reembolsar(intent, 'sin cupo', empresa):
+        _gestionar_fallo_reembolso(reserva, intent, empresa, motivo=motivo or 'Sin cupo')
         return FALLO_REEMBOLSO
 
     reserva.estado = Reserva.Estado.CANCELADA
@@ -266,8 +334,27 @@ def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None):
     reserva.reembolsada_en = timezone.now()
     reserva.apartado_hasta = None
     reserva.apartado_demanda = None
-    reserva.full_clean()
+    try:
+        reserva.full_clean()
+    except DjangoValidationError:
+        pass
     reserva.save()
+
+    empresa_id = empresa.pk
+    reserva_id = reserva.pk
+
+    def _notificar():
+        try:
+            with scope.con_empresa(Empresa.objects.get(pk=empresa_id)):
+                r = Reserva.objects.select_related('servicio', 'paquete', 'empresa').get(pk=reserva_id)
+                notificar_reembolso_sin_cupo(r, causa=causa, motivo=motivo)
+        except Exception:
+            logger.exception(
+                'Fallo inesperado al notificar cancelacion con reembolso de la reserva %s',
+                reserva_id,
+            )
+
+    transaction.on_commit(_notificar)
     return SIN_CUPO_REEMBOLSADO
 
 
@@ -276,6 +363,7 @@ def _cancelar_codigo_promocional_invalido(reserva, intent, empresa):
     cliente pagaba. Mismo remedio que sin cupo: se devuelve el 100% y la
     reserva queda cancelada con el motivo real, no uno prestado de cupo."""
     if not reembolsar(intent, 'codigo promocional invalido', empresa):
+        _gestionar_fallo_reembolso(reserva, intent, empresa, motivo='codigo promocional invalido')
         return FALLO_REEMBOLSO
 
     reserva.estado = Reserva.Estado.CANCELADA

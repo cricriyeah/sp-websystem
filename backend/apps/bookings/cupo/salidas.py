@@ -31,7 +31,10 @@ def validar_cupo_salidas_bajo_candado(reserva, deseadas):
         )
         if motivo:
             raise ValidationError({
-                'fecha': f'No hay cupo disponible para el {fecha} ({motivo}).',
+                'fecha': ValidationError(
+                    f'No hay cupo disponible para el {fecha} ({motivo}).',
+                    code='sin_cupo',
+                ),
             })
 
 

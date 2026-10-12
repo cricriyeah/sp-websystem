@@ -662,3 +662,277 @@ def notificar_orden_pagada(orden):
     except Exception:
         logger.exception('Error no controlado en notificar_orden_pagada para orden %s', getattr(orden, 'pk', None))
         return {'email': False, 'whatsapp': []}
+
+
+# ---------------------------------------------------------------------------
+# Avisos de reembolso por falta de cupo (spec §4.5)
+# ---------------------------------------------------------------------------
+
+def enlace_precargado_reserva(reserva, lang='es'):
+    """Enlace del sitio con el viaje precargado para que el cliente elija otra fecha."""
+    base = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
+    if reserva.servicio_id and reserva.servicio:
+        params = {
+            'servicio': reserva.servicio.slug,
+            'empresa': reserva.empresa.slug,
+            'day': reserva.fecha.isoformat() if reserva.fecha else '',
+            'people': reserva.numero_personas or 1,
+        }
+        if reserva.hora:
+            params['time'] = reserva.hora.strftime('%H:%M')
+        if reserva.vendedora_id and reserva.vendedora:
+            params['ref'] = reserva.vendedora.codigo
+        query = urlencode(params)
+        return f'{base}/{lang}/reservar?{query}' if base else f'/{lang}/reservar?{query}'
+    elif reserva.paquete_id and reserva.paquete:
+        sede = getattr(reserva.paquete, 'sede', None)
+        sede_slug = sede.slug if sede else (reserva.empresa.sede.slug if reserva.empresa_id and hasattr(reserva.empresa, 'sede') else '')
+        params = {
+            'paquete': reserva.paquete.slug,
+            'sede': sede_slug,
+        }
+        if reserva.vendedora_id and reserva.vendedora:
+            params['ref'] = reserva.vendedora.codigo
+        query = urlencode(params)
+        return f'{base}/{lang}/reservar?{query}' if base else f'/{lang}/reservar?{query}'
+    return ''
+
+
+def _asunto_reembolso_sin_cupo(reserva):
+    return f'No pudimos asegurar tu lugar — {reserva.fecha}'
+
+
+def _cuerpo_reembolso_sin_cupo_html(reserva):
+    monto = f'{reserva.monto_reembolsado or reserva.monto_pagado or 0} {reserva.moneda}'
+    enlace = enlace_precargado_reserva(reserva)
+    boton = (
+        f'<p><a href="{escape(enlace, quote=True)}" style="display:inline-block;padding:10px 20px;background-color:#0284c7;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">Elegir otra fecha</a></p>'
+        if enlace else ''
+    )
+    return (
+        f'<p>Hola {_html(reserva.nombre_cliente)},</p>'
+        f'<p>No pudimos asegurar tu lugar para el {reserva.fecha}. Ya solicitamos el reembolso completo de {monto}; tu banco puede tardar en reflejarlo.</p>'
+        f'{boton}'
+    )
+
+
+def enviar_correo_reembolso_sin_cupo(reserva):
+    """Correo al cliente via Resend cuando se cancela por falta de cupo."""
+    if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
+        logger.info('Resend sin configurar, no se mando correo de reembolso sin cupo de la reserva %s', reserva.pk)
+        return False
+
+    cuerpo = {
+        'from': settings.RESEND_FROM,
+        'to': [reserva.correo_cliente],
+        'subject': _asunto_reembolso_sin_cupo(reserva),
+        'html': _cuerpo_reembolso_sin_cupo_html(reserva),
+    }
+    if settings.RESEND_BCC:
+        cuerpo['bcc'] = settings.RESEND_BCC
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json=cuerpo,
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        logger.exception(
+            'Fallo el correo de reembolso sin cupo de la reserva %s: %s',
+            reserva.pk,
+            _motivo_http(error),
+        )
+        return False
+    return True
+
+
+def _asunto_alerta_reembolso_empresa(reserva, causa='cupo'):
+    return f'ALERTA: reserva #{reserva.pk} · {causa} · reembolsada automáticamente · {reserva.nombre_cliente} · {reserva.telefono_cliente}'
+
+
+def _cuerpo_alerta_reembolso_empresa_html(reserva, causa='cupo', motivo=None):
+    monto = f'{reserva.monto_reembolsado or reserva.monto_pagado or 0} {reserva.moneda}'
+    motivo_texto = motivo or reserva.motivo_cancelacion or 'Sin cupo'
+    return (
+        f'<p>ALERTA: reserva #{reserva.pk} · {_html(causa)} · reembolsada automáticamente · {_html(reserva.nombre_cliente)} · {_html(reserva.telefono_cliente)}</p>'
+        f'<ul>'
+        f'<li><strong>Folio:</strong> #{reserva.pk}</li>'
+        f'<li><strong>Causa:</strong> {_html(causa)}</li>'
+        f'<li><strong>Motivo:</strong> {_html(motivo_texto)}</li>'
+        f'<li><strong>Cliente:</strong> {_html(reserva.nombre_cliente)}</li>'
+        f'<li><strong>Telefono:</strong> {_html(reserva.telefono_cliente)}</li>'
+        f'<li><strong>Correo:</strong> {_html(reserva.correo_cliente)}</li>'
+        f'<li><strong>Fecha original:</strong> {reserva.fecha}</li>'
+        f'<li><strong>Monto reembolsado:</strong> {monto}</li>'
+        f'</ul>'
+    )
+
+
+def enviar_alerta_reembolso_empresa(reserva, causa='cupo', motivo=None):
+    """Aviso a Empresa.correos_aviso de una reserva cancelada con reembolso automatico."""
+    destinatarios = reserva.empresa.lista_correos_aviso()
+    if not destinatarios:
+        return False
+    if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
+        logger.info('Resend sin configurar, no se mando alerta a la empresa de la reserva %s', reserva.pk)
+        return False
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json={
+                'from': settings.RESEND_FROM,
+                'to': destinatarios,
+                'reply_to': reserva.correo_cliente,
+                'subject': _asunto_alerta_reembolso_empresa(reserva, causa=causa),
+                'html': _cuerpo_alerta_reembolso_empresa_html(reserva, causa=causa, motivo=motivo),
+            },
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        logger.exception(
+            'Fallo la alerta a la empresa para reserva %s: %s',
+            reserva.pk,
+            _motivo_http(error),
+        )
+        return False
+    return True
+
+
+def enviar_whatsapp_reembolso_sin_cupo(reserva):
+    """Aviso de cancelacion/reembolso por WhatsApp Business API.
+    Apagado por defecto, solo se envia si WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO esta configurado."""
+    template = getattr(settings, 'WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO', '')
+    if not template:
+        return False
+    if not (settings.WHATSAPP_TOKEN and settings.WHATSAPP_PHONE_NUMBER_ID):
+        logger.info('WhatsApp sin configurar, no se mando mensaje de reembolso de la reserva %s', reserva.pk)
+        return False
+
+    monto = str(reserva.monto_reembolsado or reserva.monto_pagado or 0)
+    parametros = [
+        reserva.nombre_cliente,
+        str(reserva.fecha),
+        monto,
+        reserva.moneda,
+    ]
+
+    try:
+        response = requests.post(
+            f'https://graph.facebook.com/v21.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages',
+            headers={'Authorization': f'Bearer {settings.WHATSAPP_TOKEN}'},
+            json={
+                'messaging_product': 'whatsapp',
+                'to': reserva.telefono_cliente,
+                'type': 'template',
+                'template': {
+                    'name': template,
+                    'language': {'code': getattr(settings, 'WHATSAPP_TEMPLATE_LANG', 'es_MX')},
+                    'components': [{
+                        'type': 'body',
+                        'parameters': [{'type': 'text', 'text': p} for p in parametros],
+                    }],
+                },
+            },
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        logger.exception(
+            'Fallo el WhatsApp de reembolso sin cupo de la reserva %s: %s',
+            reserva.pk,
+            _motivo_http(error),
+        )
+        return False
+    return True
+
+
+def notificar_reembolso_sin_cupo(reserva, causa='cupo', motivo=None):
+    """Notifica reembolso automatico de reserva por falta de cupo u otra razon.
+    - causa == 'cupo': correo al cliente y whatsapp (si esta configurado).
+    - Para cualquier causa: alerta interna a Empresa.correos_aviso.
+    Nunca lanza.
+    """
+    resultado = {
+        'email': False,
+        'alerta_empresa': False,
+        'whatsapp': False,
+    }
+    if causa == 'cupo':
+        resultado['email'] = enviar_correo_reembolso_sin_cupo(reserva)
+        resultado['whatsapp'] = enviar_whatsapp_reembolso_sin_cupo(reserva)
+
+    resultado['alerta_empresa'] = enviar_alerta_reembolso_empresa(reserva, causa=causa, motivo=motivo)
+    return resultado
+
+
+def notificar_reembolso(reserva, causa='cupo', motivo=None):
+    return notificar_reembolso_sin_cupo(reserva, causa=causa, motivo=motivo)
+
+
+enviar_alerta_empresa_reembolso = enviar_alerta_reembolso_empresa
+
+
+def _asunto_fallo_reembolso(reserva):
+    return f'URGENTE: Fallo de reembolso en reserva #{reserva.pk}'
+
+
+def _cuerpo_fallo_reembolso_html(reserva, monto, motivo=None):
+    monto_texto = f'{monto} {reserva.moneda}'
+    motivo_texto = motivo or 'Error al procesar el reembolso en Stripe'
+    return (
+        f'<p><strong>ALERTA URGENTE:</strong> No se pudo procesar el reembolso automático de la reserva #{reserva.pk}.</p>'
+        f'<p>El cobro fue recibido pero el reembolso en Stripe falló. La reserva sigue en estado pendiente de pago con dinero cobrado. '
+        f'Se requiere intervención manual inmediata para resolver el reembolso.</p>'
+        f'<ul>'
+        f'<li><strong>Folio:</strong> #{reserva.pk}</li>'
+        f'<li><strong>Monto a reembolsar:</strong> {monto_texto}</li>'
+        f'<li><strong>Motivo de cancelación:</strong> {_html(motivo_texto)}</li>'
+        f'<li><strong>Cliente:</strong> {_html(reserva.nombre_cliente)}</li>'
+        f'<li><strong>Teléfono:</strong> {_html(reserva.telefono_cliente)}</li>'
+        f'<li><strong>Correo:</strong> {_html(reserva.correo_cliente)}</li>'
+        f'<li><strong>PaymentIntent:</strong> {_html(reserva.stripe_payment_intent_id or "N/A")}</li>'
+        f'</ul>'
+    )
+
+
+def notificar_fallo_reembolso(reserva, monto, motivo=None):
+    """Alerta urgente a Empresa.correos_aviso cuando el reembolso automatico falla.
+    Nunca lanza."""
+    destinatarios = reserva.empresa.lista_correos_aviso()
+    if not destinatarios:
+        return False
+    if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
+        logger.info('Resend sin configurar, no se mando alerta urgente de la reserva %s', reserva.pk)
+        return False
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json={
+                'from': settings.RESEND_FROM,
+                'to': destinatarios,
+                'reply_to': reserva.correo_cliente,
+                'subject': _asunto_fallo_reembolso(reserva),
+                'html': _cuerpo_fallo_reembolso_html(reserva, monto=monto, motivo=motivo),
+            },
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        logger.exception(
+            'Fallo la alerta urgente de fallo de reembolso para reserva %s: %s',
+            reserva.pk,
+            _motivo_http(error),
+        )
+        return False
+    return True
+
+
+enviar_alerta_fallo_reembolso = notificar_fallo_reembolso
