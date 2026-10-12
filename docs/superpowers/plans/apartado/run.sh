@@ -9,6 +9,7 @@ LOG="$PLAN_DIR/logs"
 EV="$LOG/eventos.log"
 BRIDGE="${AGY_CMD:-$HOME/.claude/plugins/cache/agy-delegate/agy-delegate/1.6.3/scripts/agy_bridge.sh}"
 INTENTOS=3
+MODELO="${AGY_MODELO:-claude-sonnet-4-6}"
 mkdir -p "$LOG"
 
 evento() { # nivel mensaje
@@ -96,13 +97,25 @@ for n in "${TAREAS[@]}"; do
         echo "El trabajo del intento anterior sigue en el árbol. La verificación (\`$VERIFY\`) falló así:"; echo '```'; echo "$retro"; echo '```'
       fi; } > "$prompt"
     evento INFO "tarea $n intento $i: agy"
-    ( cd "$ROOT" && AGY_SKIP_PERMISSIONS=1 bash "$BRIDGE" --type implement --timeout 1500 "${adddirs[@]}" \
+    ( cd "$ROOT" && AGY_SKIP_PERMISSIONS=1 bash "$BRIDGE" --type implement --model "$MODELO" --timeout 1500 "${adddirs[@]}" \
         --log-file "$LOG/$n.agy.$i.log" < "$prompt" > "$LOG/$n.agy.$i.out" 2>&1 )
     rc=$?
     [ $rc -ne 0 ] && evento INFO "tarea $n intento $i: agy salió con código $rc"
 
+    # agy que falla de inmediato (no 0 ni 124=timeout) NO es un intento valido: no se verifica ni se commitea
+    if [ $rc -ne 0 ] && [ $rc -ne 124 ]; then
+      { echo "agy salio con codigo $rc sin completar el trabajo:"; tail -20 "$LOG/$n.agy.$i.out"; } > "$LOG/$n.verify.$i.out"
+      retro="$(cat "$LOG/$n.verify.$i.out")"
+      evento INFO "tarea $n intento $i: agy fallo (codigo $rc), no se verifica"
+      sleep 60
+      continue
+    fi
     ( cd "$base" && timeout 1800 bash -c "$VERIFY" ) > "$LOG/$n.verify.$i.out" 2>&1
     vrc=$?
+    # sin cambios reales en el codigo = intento vacio
+    if [ $vrc -eq 0 ] && [ -z "$(cd "$ROOT" && git status --porcelain -- backend frontend ':!backend/shared' ':!backend/.great_cto')" ]; then
+      vrc=1; echo "agy no modifico ningun archivo de backend/ ni frontend/" > "$LOG/$n.verify.$i.out"
+    fi
     if [ $vrc -eq 0 ] && [ "${REGRESION:-0}" = "1" ]; then
       if ! suite_completa; then vrc=1; cp "$LOG/suite.nuevos" "$LOG/$n.verify.$i.out"; echo "(fallos NUEVOS en la suite completa; ver listado arriba)" >> "$LOG/$n.verify.$i.out"; fi
     fi
@@ -136,7 +149,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" ) >> "$LOG/git.out" 2
   { echo "Revisa este commit contra el spec docs/superpowers/specs/2026-10-12-apartado-temporal-cupo-design.md (secciones: $SPEC)."
     echo "Busca defectos reales: contradicciones con el spec, nombres inventados, carreras, tenancy, except demasiado amplio, pruebas que no prueban lo que dicen. Reporte breve en español, con archivo:línea. No edites nada."
     echo; echo '```diff'; (cd "$ROOT" && git show HEAD --stat -p | head -c 90000); echo '```'; } > "$LOG/$n.review.prompt.md"
-  ( cd "$ROOT" && AGY_SKIP_PERMISSIONS=1 bash "$BRIDGE" --type review --timeout 600 --add-dir "$ROOT/docs" \
+  ( cd "$ROOT" && AGY_SKIP_PERMISSIONS=1 bash "$BRIDGE" --type review --model "$MODELO" --timeout 600 --add-dir "$ROOT/docs" \
       < "$LOG/$n.review.prompt.md" > "$PLAN_DIR/$n.review.md" 2>>"$LOG/review.err" ) || evento INFO "tarea $n: la revisión de agy no terminó"
 
   case "$n" in 05|08|11) evento IMPORTANTE "HITO: tarea $n lista (${TITULO})";; esac
