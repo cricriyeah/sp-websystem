@@ -646,15 +646,25 @@ class CancelacionLiberaCupoTests(OperadorTestCase):
         with self.assertRaises(ValidationError):
             r2.full_clean()
 
-        # Acción de cancelar (simulando cancelar_por_mal_clima en admin)
+        # La accion requiere una previa y un segundo POST confirmado.
         from django.contrib.auth import get_user_model
-        from apps.bookings.admin import ReservaAdmin
         from django.contrib.admin.sites import AdminSite
+        from django.template.response import TemplateResponse
+        from django.test import RequestFactory
+        from apps.bookings.admin import ReservaAdmin
         admin = ReservaAdmin(Reserva, AdminSite())
-        request = mock.Mock()
-        request.user = get_user_model().objects.create_user(username='admin_test')
-        admin.cancelar_por_mal_clima(request, Reserva.objects.filter(pk=r1.pk))
+        admin.message_user = mock.Mock()
+        usuario = get_user_model().objects.create_superuser(username='admin_test', password='x')
+        request = RequestFactory().post('/admin/bookings/reserva/', {})
+        request.user = usuario
+        previa = admin.cancelar_por_mal_clima(request, Reserva.objects.filter(pk=r1.pk))
+        self.assertIsInstance(previa, TemplateResponse)
+        oc1.refresh_from_db()
+        self.assertTrue(oc1.ocupa_cupo)
 
+        request = RequestFactory().post('/admin/bookings/reserva/', {'confirmar_cancelacion': 'si'})
+        request.user = usuario
+        admin.cancelar_por_mal_clima(request, Reserva.objects.filter(pk=r1.pk))
         oc1.refresh_from_db()
         self.assertFalse(oc1.ocupa_cupo)
 

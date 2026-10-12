@@ -5,6 +5,7 @@ from urllib.parse import quote, urlencode
 
 from django import forms
 from django.contrib import admin
+from django.contrib.admin import helpers
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
@@ -542,8 +543,8 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         'codigo_promocional', 'descuento_aplicado',
     ]
     actions = [
-        'cancelar_por_mal_clima', 'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
-        'confirmar_devolucion',
+        'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
+        'confirmar_devolucion', 'cancelar_por_mal_clima',
     ]
     change_list_template = 'bookings/reservas_changelist.html'
     VISTAS = (
@@ -857,22 +858,60 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
             marcadas += 1
         self.message_user(request, f'{marcadas} venta(s) atribuida(s) a {vendedora}.')
 
-    @admin.action(description='Cancelar por mal clima (reembolso completo)')
+    @admin.action(description='\u26a0 Cancelar por mal clima (reembolso completo)')
     def cancelar_por_mal_clima(self, request, queryset):
         """Marca la decision de devolver el dinero. La salida no aparece en el
         panel de finanzas hasta que el reembolso se ejecuta en Stripe y llega el
         evento `charge.refunded`: ahi se sella cuanto salio y cuando."""
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+
+        if request.POST.get('confirmar_cancelacion') != 'si':
+            seleccionadas = list(queryset)
+            por_cancelar = [reserva for reserva in seleccionadas
+                            if reserva.estado != Reserva.Estado.CANCELADA]
+            por_moneda = {}
+            efectivo_por_moneda = {}
+            for reserva in por_cancelar:
+                moneda = reserva.moneda
+                por_moneda[moneda] = por_moneda.get(moneda, Decimal('0.00')) + (
+                    reserva.monto_pagado or Decimal('0.00'))
+                if reserva.monto_efectivo and reserva.monto_efectivo > 0:
+                    efectivo_por_moneda[moneda] = efectivo_por_moneda.get(
+                        moneda, Decimal('0.00')) + reserva.monto_efectivo
+            return TemplateResponse(request, 'bookings/confirmar_cancelacion.html', {
+                **self.admin_site.each_context(request),
+                'opts': self.model._meta,
+                'titulo': 'Confirmar cancelaci\u00f3n por mal clima',
+                'seleccionadas': seleccionadas,
+                'por_cancelar': por_cancelar[:20],
+                'restantes': max(0, len(por_cancelar) - 20),
+                'cantidad': len(por_cancelar),
+                'omitidas': len(seleccionadas) - len(por_cancelar),
+                'totales': [(moneda, f'{monto:.2f}') for moneda, monto in sorted(por_moneda.items())],
+                'efectivo': [(moneda, f'{monto:.2f}')
+                             for moneda, monto in sorted(efectivo_por_moneda.items())],
+                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+                'volver': request.get_full_path(),
+            })
+
         actualizadas = 0
-        for reserva in queryset.exclude(estado=Reserva.Estado.CANCELADA):
-            reserva.estado = Reserva.Estado.CANCELADA
-            reserva.motivo_cancelacion = reserva.motivo_cancelacion or 'Mal clima'
-            reserva.cancelada_por = request.user
-            reserva.cancelada_en = timezone.now()
-            reserva.reembolsada = True
-            reserva.full_clean()
-            reserva.save()
-            actualizadas += 1
-        self.message_user(request, f'{actualizadas} reserva(s) cancelada(s) y marcada(s) para reembolso.')
+        with transaction.atomic():
+            for reserva in queryset.select_for_update().exclude(estado=Reserva.Estado.CANCELADA):
+                reserva.estado = Reserva.Estado.CANCELADA
+                reserva.motivo_cancelacion = reserva.motivo_cancelacion or 'Mal clima'
+                reserva.cancelada_por = request.user
+                reserva.cancelada_en = timezone.now()
+                reserva.reembolsada = True
+                reserva.full_clean()
+                reserva.save()
+                self.log_change(request, reserva, 'Cancelada por mal clima; reembolso pendiente en Stripe.')
+                actualizadas += 1
+        self.message_user(
+            request,
+            f'{actualizadas} reserva(s) cancelada(s) y marcada(s) para reembolso. '
+            'Falta ejecutar el reembolso en Stripe.',
+        )
 
     @admin.action(description='Registrar liquidacion en efectivo (el 70% restante)')
     def registrar_liquidacion_en_efectivo(self, request, queryset):

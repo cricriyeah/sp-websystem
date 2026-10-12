@@ -367,8 +367,11 @@ se reparten los viajes vendidos: que panga y que capitan le toca a cada uno.
 ## Cancelacion y reembolso
 
 `Reserva` tiene `motivo_cancelacion`, `cancelada_por` (FK user), `cancelada_en`,
-`reembolsada`. Accion de admin "Cancelar por mal clima (reembolso completo)" en
-`ReservaAdmin` marca los 4 campos de una. Mal clima es la unica causa de cancelacion
+`reembolsada`. La accion de admin "Cancelar por mal clima (reembolso completo)" en
+`ReservaAdmin` muestra primero una confirmacion con las reservas y los montos por
+moneda; solo el segundo POST marca los 4 campos en una transaccion y deja una
+entrada en el History de cada reserva. El reembolso se ejecuta despues en Stripe;
+`reembolsada` representa la decision, no la salida de dinero. Mal clima es la unica causa de cancelacion
 iniciada por el negocio (ver contexto-negocio.md); la otra la dispara el webhook cuando
 el dia se llena mientras el cliente pagaba. Por eso el estado se llama solo "Cancelada
 (reembolsada)" y el motivo real vive en `motivo_cancelacion`. No hay flujo de

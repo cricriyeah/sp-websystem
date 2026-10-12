@@ -1,0 +1,46 @@
+{% extends "admin/base_site.html" %}
+{% load l10n %}
+
+{% block content %}
+<div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
+    <div class="p-4">
+        <h1 class="font-semibold text-important">Confirmar cancelaci&oacute;n por mal clima</h1>
+        <p>{{ cantidad }} reservas se cancelar&aacute;n. {{ omitidas }} ya cancelada{{ omitidas|pluralize }} se omiten.</p>
+    </div>
+
+    {% if por_cancelar %}
+    <div class="border-t border-base-200 p-4 dark:border-base-800">
+        <h2 class="font-semibold text-important">Reservas que se cancelar&aacute;n</h2>
+        <ul>
+            {% for reserva in por_cancelar %}
+            <li>{{ reserva.fecha|date:"j M Y" }} &middot; {{ reserva.nombre_cliente }} &middot; {{ reserva.numero_personas }} persona{{ reserva.numero_personas|pluralize }}</li>
+            {% endfor %}
+        </ul>
+        {% if restantes %}<p>Y {{ restantes }} reservas m&aacute;s.</p>{% endif %}
+    </div>
+
+    <div class="border-t border-base-200 p-4 dark:border-base-800">
+        <h2 class="font-semibold text-important">Dinero a devolver por Stripe</h2>
+        <ul>{% for moneda, monto in totales %}<li>{{ monto }} {{ moneda }}</li>{% endfor %}</ul>
+        {% if efectivo %}
+        <p>Adem&aacute;s se recibi&oacute; efectivo que no pasa por Stripe:</p>
+        <ul>{% for moneda, monto in efectivo %}<li>{{ monto }} {{ moneda }} en efectivo</li>{% endfor %}</ul>
+        {% endif %}
+        <p>Tras cancelar, haz el reembolso en Stripe. Cuando Stripe lo confirme, quedar&aacute; registrado solo. Si ya se resolvi&oacute; fuera del sistema, usa &ldquo;Confirmar devoluci&oacute;n&rdquo;.</p>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ volver }}" class="border-t border-base-200 p-4 dark:border-base-800">
+        {% csrf_token %}
+        {% for reserva in seleccionadas %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ reserva.pk|unlocalize }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="cancelar_por_mal_clima">
+        <input type="hidden" name="confirmar_cancelacion" value="si">
+        <div class="flex items-center gap-4">
+            <a href="{{ volver }}">No, volver</a>
+            {% if cantidad %}<button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default">S&iacute;, cancelar {{ cantidad }} reservas</button>{% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
