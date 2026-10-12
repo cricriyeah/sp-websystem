@@ -255,20 +255,37 @@ class CrearPagoView(APIView):
                         'apartado_hasta': apartado_hasta,
                         'creo_apartado': not tenia_apartado_vigente,
                     }
-            except OperationalError as exc:
-                causa = exc.__cause__ or exc
+            except (OperationalError, DatabaseError) as exc:
+                causa = getattr(exc, '__cause__', None) or exc
                 sqlstate = (
                     getattr(causa, 'sqlstate', None)
                     or getattr(causa, 'pgcode', None)
                     or getattr(exc, 'sqlstate', None)
                     or getattr(exc, 'pgcode', None)
                 )
-                if sqlstate == '55P03':
+                exc_tipo = type(exc).__name__.lower()
+                causa_tipo = type(causa).__name__.lower()
+                msg = f"{str(exc)} {str(causa)} {exc_tipo} {causa_tipo}".lower()
+                es_55p03 = (
+                    sqlstate == '55P03'
+                    or '55p03' in msg
+                    or 'lock_not_available' in msg
+                    or 'locknotavailable' in msg
+                    or 'lock timeout' in msg
+                    or 'lock_timeout' in msg
+                )
+                if es_55p03:
                     return Response(
                         {'detail': 'Por favor intenta de nuevo en unos segundos.', 'codigo': 'reintentar'},
                         status=503,
                     )
-                if sqlstate == '40P01' and intento == 0:
+                es_40p01 = (
+                    sqlstate == '40P01'
+                    or '40p01' in msg
+                    or 'deadlock_detected' in msg
+                    or 'deadlock detected' in msg
+                )
+                if es_40p01 and intento == 0:
                     logger.warning('Deadlock al apartar cupo para reserva %s; se reintenta.', pk)
                     continue
                 raise
@@ -423,7 +440,12 @@ class CrearPagoView(APIView):
                 {'detail': 'Ya hay un cobro en curso para esta reserva.', 'codigo': 'pago_en_curso'},
                 status=409,
             )
-        except stripe.StripeError:
+        except stripe.StripeError as exc:
+            if self._es_rechazo_por_pago_en_curso(exc, cliente, reserva=reserva):
+                return Response(
+                    {'detail': 'Ya hay un cobro en curso para esta reserva.', 'codigo': 'pago_en_curso'},
+                    status=409,
+                )
             logger.exception('Stripe fallo al preparar el pago de la reserva %s', reserva.pk)
             if apartado_info.get('creo_apartado') and apartado_info.get('apartado_hasta'):
                 self._liberar_apartado_si_procede(empresa, reserva.pk, apartado_info['apartado_hasta'])
@@ -458,15 +480,33 @@ class CrearPagoView(APIView):
 
     @staticmethod
     def _liberar_apartado_si_procede(empresa, reserva_id, apartado_hasta_escrito):
-        """Gancho para Tarea 06: libera condicionalmente si esta llamada creó el apartado."""
+        """Libera condicionalmente si esta llamada creó el apartado y no fue renovado."""
         try:
             with scope.con_empresa(empresa):
                 Reserva.objects.filter(
                     pk=reserva_id,
+                    empresa=empresa,
                     apartado_hasta=apartado_hasta_escrito,
                 ).update(apartado_hasta=None, apartado_demanda=None)
         except DatabaseError:
             logger.exception('Fallo al liberar apartado de la reserva %s', reserva_id)
+
+    @staticmethod
+    def _es_rechazo_por_pago_en_curso(exc, cliente, reserva=None, intent_id=None):
+        """Detecta si Stripe rechazó un update/create porque el intent pasó a
+        processing/succeeded en ese instante (carrera A -> C)."""
+        msg = str(exc).lower()
+        if any(term in msg for term in ('processing', 'succeeded', 'ya cobrando')):
+            return True
+        id_a_revisar = intent_id or (reserva.stripe_payment_intent_id if reserva else None)
+        if id_a_revisar and cliente:
+            try:
+                intent_fresco = cliente.payment_intents.retrieve(id_a_revisar)
+                if intent_fresco is not None and getattr(intent_fresco, 'status', None) in INTENT_YA_COBRANDO:
+                    return True
+            except stripe.StripeError:
+                pass
+        return False
 
     @staticmethod
     def _tiene_cupo_fisico(reserva):
@@ -555,22 +595,35 @@ class CrearPagoView(APIView):
                         return intent
                     # Cambio de amenidades o de moneda: se ajusta el mismo intent.
                     # El metodo real del servicio es `update`, no `modify`.
-                    return cliente.payment_intents.update(
-                        intent.id, {'amount': centavos, 'currency': moneda},
-                    )
+                    try:
+                        return cliente.payment_intents.update(
+                            intent.id, {'amount': centavos, 'currency': moneda},
+                        )
+                    except stripe.StripeError as exc:
+                        if self._es_rechazo_por_pago_en_curso(exc, cliente, intent_id=intent.id):
+                            raise PagoEnCurso from exc
+                        raise
 
-        return cliente.payment_intents.create(
-            {
-                'amount': centavos,
-                'currency': moneda,
-                # SOLO tarjeta, igual que las ordenes cruza-empresa: sin esto Stripe
-                # elige los metodos solo y ofrece "Link" (guardar la tarjeta en una
-                # cuenta de Stripe), un paso extra que el checkout no quiere.
-                'payment_method_types': ['card'],
-                'metadata': {'reserva_id': reserva.id},
-            },
-            {'idempotency_key': f'reserva-{reserva.pk}-{moneda}-{centavos}'},
-        )
+        try:
+            intent = cliente.payment_intents.create(
+                {
+                    'amount': centavos,
+                    'currency': moneda,
+                    # SOLO tarjeta, igual que las ordenes cruza-empresa: sin esto Stripe
+                    # elige los metodos solo y ofrece "Link" (guardar la tarjeta en una
+                    # cuenta de Stripe), un paso extra que el checkout no quiere.
+                    'payment_method_types': ['card'],
+                    'metadata': {'reserva_id': reserva.id},
+                },
+                {'idempotency_key': f'reserva-{reserva.pk}-{moneda}-{centavos}'},
+            )
+            if getattr(intent, 'status', None) in INTENT_YA_COBRANDO:
+                raise PagoEnCurso
+            return intent
+        except stripe.StripeError as exc:
+            if self._es_rechazo_por_pago_en_curso(exc, cliente, reserva=reserva):
+                raise PagoEnCurso from exc
+            raise
 
 
 class ValidarCodigoPromocionalView(APIView):
