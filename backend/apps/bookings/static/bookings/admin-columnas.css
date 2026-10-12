@@ -34,6 +34,15 @@
   width: 100%;
 }
 
+/* Los filtros menos frecuentes conservan el HTML y enlaces de Unfold. */
+.reservas-mas-filtros-titulo {
+  cursor: pointer;
+  padding: 0.4rem 0;
+}
+.reservas-mas-filtros-contenido {
+  padding-top: 0.75rem;
+}
+
 /* Movimiento de la cuadricula de la Agenda (ver `panorama.js`).
  *
  * Lo que cambia de estado se funde en vez de saltar. El boton de un viaje responde al

@@ -1,5 +1,7 @@
 from datetime import timedelta, time
 from decimal import Decimal
+from html import unescape
+import re
 from unittest import mock
 
 from django.contrib import admin
@@ -12,7 +14,7 @@ from django.core.management import call_command
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from apps.bookings.models import DetalleTransporte, Reserva
+from apps.bookings.models import DetalleTransporte, Reserva, Vendedora
 from apps.bookings.tests import crear_reserva
 from apps.fleet.models import PuntoEncuentro, Servicio
 from apps.tenancy import scope
@@ -101,6 +103,33 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, 'vista=proximas')
         self.assertContains(respuesta, 'reservas-dia')
+
+    def test_filtros_frecuentes_antes_de_mas_filtros_y_ayuda_de_busqueda(self):
+        vendedora = self.crear_vendedora(username='segunda-vendedora')
+        Vendedora.objects.create(usuario=vendedora, empresa=self.empresa, codigo='segunda')
+        respuesta = self.client.get(self.url, {'vista': 'todas'})
+        html = respuesta.content.decode()
+        self.assertContains(respuesta, 'Busca por nombre, tel\u00e9fono o correo del cliente')
+        self.assertIn('id="reservas-mas-filtros"', html)
+        self.assertNotIn('id="reservas-mas-filtros" open', html)
+        lateral = unescape(html[html.index('id="changelist-filter"'):])
+        titulos = [re.sub(r'\s+', ' ', titulo).strip().lower()
+                   for titulo in re.findall(r'<h3[^>]*>(.*?)</h3>', lateral, re.S)]
+        self.assertEqual(titulos[:5], ['por estado', 'por canal origen', 'por vendedora', 'por fecha',
+                                      'por forma pago'])
+        self.assertEqual(titulos[5:8], ['por llegada',
+                                       'por requiere atenci\u00f3n (devoluci\u00f3n)',
+                                       'por en disputa'])
+        antes, despues = lateral.split('id="reservas-mas-filtros"', 1)
+        self.assertEqual(len(re.findall(r'<h3[^>]*>', antes)), 5)
+        self.assertIn('llegada', despues)
+
+    def test_filtro_avanzado_activo_abre_seccion_y_muestra_cantidad(self):
+        self.reserva('Reserva reciente', 1)
+        respuesta = self.client.get(self.url, {'vista': 'todas', 'llegada': 'recientes',
+                                                'en_disputa__exact': '0'})
+        self.assertContains(respuesta, 'id="reservas-mas-filtros" open')
+        self.assertRegex(respuesta.content.decode(), r'M&aacute;s filtros\s*\(2\)')
 
     def test_deuda_pasada_usd_y_devolucion_parcial(self):
         atrasada = self.reserva('Saldo atrasado', -2,

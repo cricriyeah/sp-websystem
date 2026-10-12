@@ -509,12 +509,15 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
     ]
     list_display_links = ['nombre_cliente']
     list_filter = [
-        VistaReservasFilter, LlegadaFilter, RequiereAtencionFilter,
-        'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago', 'en_disputa',
+        VistaReservasFilter,
+        'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago',
+        LlegadaFilter, RequiereAtencionFilter, 'en_disputa',
         'pide_bebidas', 'pide_extras_whatsapp',
         'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional', 'paquete',
     ]
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
+    search_help_text = 'Busca por nombre, tel\u00e9fono o correo del cliente'
+    list_filter_sheet = False
     date_hierarchy = 'fecha'
     autocomplete_fields = ['embarcacion', 'capitan', 'vendedora', 'paquete']
     inlines = [
@@ -618,6 +621,19 @@ class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdm
         respuesta = super().changelist_view(request, {
             **(extra_context or {}), 'reservas_pestanas': pestanas,
         })
+        if getattr(respuesta, 'context_data', None) and 'cl' in respuesta.context_data:
+            frecuentes = {'estado', 'canal_origen', 'vendedora', 'fecha', 'forma_pago'}
+            visibles, avanzados = [], []
+            for spec in respuesta.context_data['cl'].filter_specs:
+                campo = getattr(spec, 'field_path', getattr(spec, 'parameter_name', None))
+                (visibles if campo in frecuentes else avanzados).append(spec)
+            respuesta.context_data['filtros_reservas_visibles'] = visibles
+            respuesta.context_data['filtros_reservas_avanzados'] = avanzados
+            respuesta.context_data['filtros_avanzados_activos'] = sum(
+                any(parametro in request.GET and request.GET[parametro] != ''
+                    for parametro in spec.expected_parameters())
+                for spec in avanzados
+            )
         if (getattr(respuesta, 'context_data', None) and 'cl' in respuesta.context_data
                 and vista != 'todas' and request.GET.get('o', '1') in ('1', '-1')):
             # La página ya está paginada y ordenada. Sólo se marca la primera fila
