@@ -407,6 +407,16 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         personalizaciones = self._sacar_datos_paquete(validated_data)
+        campos_relevantes_cupo = {
+            'fecha', 'hora', 'numero_personas', 'servicio', 'paquete',
+            'fecha_salida', 'personas_por_servicio',
+        }
+        if any(
+            campo in validated_data and getattr(instance, campo) != validated_data[campo]
+            for campo in campos_relevantes_cupo
+        ):
+            instance.apartado_hasta = None
+            instance.apartado_demanda = None
         for campo, valor in validated_data.items():
             setattr(instance, campo, valor)
         return self._guardar(instance, personalizaciones)

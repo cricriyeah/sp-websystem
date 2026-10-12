@@ -1,15 +1,35 @@
+from datetime import date, timedelta
 from decimal import Decimal
 import logging
 import uuid
 
 import stripe
-from django.db import transaction
+from django.conf import settings
+from django.db import DatabaseError, connection, transaction
+from django.db.utils import OperationalError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.bookings.models import Reserva, codigo_promocional_valido, evaluar_codigo_promocional
+from apps.bookings.cupo import (
+    SinCupoError,
+    apartado_activo,
+    bloquear_cupo,
+    bloquear_recurso,
+    construir_retrato_hospedaje,
+    construir_retrato_paquete,
+    construir_retrato_servicio_suelto,
+)
+from apps.bookings.cupo.confirmacion import evaluar_cupo
+from apps.bookings.models import (
+    Reserva,
+    codigo_promocional_valido,
+    evaluar_codigo_promocional,
+    proxima_fecha_disponible,
+)
+from apps.fleet.calendario_paquete import fechas_de_componente
 from apps.fleet.enums import EstrategiaPrecio
 from apps.fleet.models import CodigoPromocional
 from apps.tenancy import scope
@@ -54,20 +74,41 @@ class CrearPagoView(APIView):
 
     def post(self, request, empresa_slug, pk):
         empresa = scope.resolver_empresa_publica(empresa_slug)
-        with scope.con_empresa(empresa):
-            return self._post(request, empresa, pk)
 
-    def _post(self, request, empresa, pk):
+        # Bloque A (lectura y validaciones tempranas)
+        with scope.con_empresa(empresa):
+            resultado_a = self._bloque_a(request, empresa, pk)
+            if isinstance(resultado_a, Response):
+                return resultado_a
+            contexto = resultado_a
+
+        # Bloque B (Fase 1: tomar el apartado temporal si aplica)
+        resultado_b = self._bloque_b(request, empresa, pk, contexto)
+        if isinstance(resultado_b, Response):
+            return resultado_b
+        apartado_info = resultado_b
+
+        # Bloque C (Fase 2: Stripe y escrituras finales)
+        with scope.con_empresa(empresa):
+            return self._bloque_c(request, empresa, pk, contexto, apartado_info)
+
+    def _bloque_a(self, request, empresa, pk):
         reserva = get_object_or_404(Reserva, pk=pk, empresa=empresa)
 
         # Los ids de reserva son consecutivos y la API es publica: sin esto,
         # cualquiera podria adivinar un id y generar cobros sobre la reserva de
         # otra persona. El checkout_id lo genera el navegador del cliente.
         if not reserva.checkout_id or str(reserva.checkout_id) != str(request.data.get('checkout_id')):
-            return Response({'detail': 'checkout_id invalido para esta reserva.'}, status=403)
+            return Response(
+                {'detail': 'checkout_id invalido para esta reserva.', 'codigo': 'checkout_invalido'},
+                status=403,
+            )
 
         if reserva.estado != Reserva.Estado.PENDIENTE_PAGO:
-            return Response({'detail': 'Esta reserva ya no esta pendiente de pago.'}, status=409)
+            return Response(
+                {'detail': 'Esta reserva ya no esta pendiente de pago.', 'codigo': 'ya_no_pendiente'},
+                status=409,
+            )
 
         if reserva.moneda == Reserva.Moneda.USD and not reserva.tipo_cambio:
             return Response({'detail': 'La reserva en USD no tiene tipo de cambio.'}, status=503)
@@ -139,14 +180,253 @@ class CrearPagoView(APIView):
             return Response({'detail': 'Stripe no esta configurado todavia.'}, status=503)
 
         cliente = configurar_stripe(empresa)
+        if reserva.stripe_payment_intent_id:
+            try:
+                intent_existente = self._recuperar_intent(cliente, reserva)
+                if intent_existente is not None and intent_existente.status in INTENT_YA_COBRANDO:
+                    return Response(
+                        {'detail': 'Ya hay un cobro en curso para esta reserva.', 'codigo': 'pago_en_curso'},
+                        status=409,
+                    )
+            except stripe.StripeError:
+                logger.exception('Stripe fallo al recuperar intent en Bloque A para reserva %s', reserva.pk)
+                return Response({'detail': 'No se pudo iniciar el pago. Intenta de nuevo.'}, status=502)
+
+        return {
+            'reserva': reserva,
+            'precio_base_servicio': precio_base_servicio,
+            'detalle_a_congelar': detalle_a_congelar,
+            'extras_a_borrar': extras_a_borrar,
+            'extras_a_congelar': extras_a_congelar,
+            'precio_total': precio_total,
+            'monto_a_cobrar': monto_a_cobrar,
+            'forma_pago': forma_pago,
+            'codigo_promocional': codigo_promocional,
+            'descuento': descuento,
+        }
+
+    def _bloque_b(self, request, empresa, pk, contexto):
+        reserva = contexto['reserva']
+        if not apartado_activo() or not self._tiene_cupo_fisico(reserva):
+            return {'apartado_hasta': None, 'creo_apartado': False}
+
+        for intento in range(2):
+            try:
+                with scope.con_empresa(empresa):
+                    if connection.vendor == 'postgresql':
+                        with connection.cursor() as cursor:
+                            cursor.execute("SET LOCAL lock_timeout = '5s'")
+
+                    reserva_lock = (
+                        Reserva.objects.select_for_update()
+                        .filter(pk=pk, empresa=empresa)
+                        .first()
+                    )
+                    if reserva_lock is None:
+                        raise Http404
+                    if reserva_lock.estado != Reserva.Estado.PENDIENTE_PAGO:
+                        return Response(
+                            {
+                                'detail': 'Esta reserva ya no esta pendiente de pago.',
+                                'codigo': 'ya_no_pendiente',
+                            },
+                            status=409,
+                        )
+
+                    ahora = timezone.now()
+                    tenia_apartado_vigente = bool(
+                        reserva_lock.apartado_hasta
+                        and reserva_lock.apartado_hasta > ahora
+                        and reserva_lock.apartado_demanda
+                    )
+
+                    resp_o_retrato = self._evaluar_y_construir_retrato(reserva_lock, empresa)
+                    if isinstance(resp_o_retrato, Response):
+                        return resp_o_retrato
+                    retrato = resp_o_retrato
+
+                    minutos = getattr(settings, 'APARTADO_MINUTOS', 0)
+                    apartado_hasta = ahora + timedelta(minutes=minutos)
+                    reserva_lock.apartado_hasta = apartado_hasta
+                    reserva_lock.apartado_demanda = retrato
+                    reserva_lock.save(update_fields=['apartado_hasta', 'apartado_demanda'])
+
+                    return {
+                        'apartado_hasta': apartado_hasta,
+                        'creo_apartado': not tenia_apartado_vigente,
+                    }
+            except OperationalError as exc:
+                causa = exc.__cause__ or exc
+                sqlstate = (
+                    getattr(causa, 'sqlstate', None)
+                    or getattr(causa, 'pgcode', None)
+                    or getattr(exc, 'sqlstate', None)
+                    or getattr(exc, 'pgcode', None)
+                )
+                if sqlstate == '55P03':
+                    return Response(
+                        {'detail': 'Por favor intenta de nuevo en unos segundos.', 'codigo': 'reintentar'},
+                        status=503,
+                    )
+                if sqlstate == '40P01' and intento == 0:
+                    logger.warning('Deadlock al apartar cupo para reserva %s; se reintenta.', pk)
+                    continue
+                raise
+
+    def _evaluar_y_construir_retrato(self, reserva, empresa):
+        """Evalúa cupo con el motor excluyendo la propia reserva y toma los candados
+        en el orden correspondiente. Devuelve el dict del retrato o Response(409)."""
+        if reserva.paquete_id and reserva.paquete:
+            componentes = list(
+                reserva.paquete.servicios_asociados.select_related('servicio').order_by('orden')
+            )
+            locks_mar = [
+                (dia, ps.servicio_id)
+                for ps in componentes if ps.servicio.estrategia_cupo == 'por_recurso_dia'
+                for dia in (
+                    fechas_de_componente(reserva.fecha_inicio_paquete, ps.dia_estancia, ps.salidas)
+                    if ps.salidas > 1 else [reserva.fecha]
+                )
+            ]
+            for dia, servicio_id in sorted(locks_mar):
+                bloquear_cupo(empresa.pk, dia, servicio_id=servicio_id)
+
+            for ps in componentes:
+                if ps.servicio.estrategia_cupo == 'por_noche':
+                    for recurso in list(ps.servicio.recursos.filter(activo=True).order_by('pk')):
+                        bloquear_recurso(empresa.pk, recurso.pk)
+
+            try:
+                retrato = construir_retrato_paquete(reserva)
+            except SinCupoError as exc:
+                return Response(
+                    {
+                        'detail': str(exc),
+                        'codigo': 'sin_cupo',
+                        'motivo': 'sin_lugar',
+                        'proxima_disponible': None,
+                    },
+                    status=409,
+                )
+
+            for salida in retrato.get('salidas', []):
+                fecha_salida = date.fromisoformat(salida['fecha']) if isinstance(salida['fecha'], str) else salida['fecha']
+                personas_salida = salida['personas']
+                srv_id = salida.get('servicio_id')
+                motivo = evaluar_cupo(
+                    fecha_salida,
+                    personas_salida,
+                    empresa,
+                    excluir_pk=reserva.pk,
+                    estrategia_cupo='por_recurso_dia',
+                    servicio_id=srv_id,
+                )
+                if motivo:
+                    if motivo == 'lleno':
+                        detail = f'No hay cupo disponible para el {fecha_salida}: se alcanzo el maximo de viajes del dia.'
+                    elif motivo == 'sin_panga':
+                        detail = (
+                            f'No queda panga para un grupo de {personas_salida} personas el {fecha_salida}. '
+                            f'Las de mayor capacidad ya estan comprometidas.'
+                        )
+                    else:
+                        detail = f'No hay espacio disponible para {personas_salida} personas el {fecha_salida}.'
+                    return Response(
+                        {
+                            'detail': detail,
+                            'codigo': 'sin_cupo',
+                            'motivo': motivo,
+                            'proxima_disponible': None,
+                        },
+                        status=409,
+                    )
+            return retrato
+
+        elif reserva.servicio_id and reserva.servicio:
+            if reserva.servicio.estrategia_cupo == 'por_recurso_dia':
+                bloquear_cupo(empresa.pk, reserva.fecha, servicio_id=reserva.servicio_id)
+                motivo = evaluar_cupo(
+                    reserva.fecha,
+                    reserva.numero_personas,
+                    empresa,
+                    excluir_pk=reserva.pk,
+                    estrategia_cupo='por_recurso_dia',
+                    servicio_id=reserva.servicio_id,
+                )
+                if motivo:
+                    proxima = proxima_fecha_disponible(
+                        reserva.fecha,
+                        reserva.numero_personas,
+                        empresa,
+                        estrategia_cupo='por_recurso_dia',
+                        excluir_pk=reserva.pk,
+                    )
+                    proxima_str = proxima.isoformat() if proxima else None
+                    if motivo == 'lleno':
+                        detail = f'No hay cupo disponible para el {reserva.fecha}: se alcanzo el maximo de viajes del dia.'
+                    elif motivo == 'sin_panga':
+                        detail = (
+                            f'No queda panga para un grupo de {reserva.numero_personas} personas el {reserva.fecha}. '
+                            f'Las de mayor capacidad ya estan comprometidas.'
+                        )
+                    else:
+                        detail = f'No hay espacio disponible para {reserva.numero_personas} personas el {reserva.fecha}.'
+                    return Response(
+                        {
+                            'detail': detail,
+                            'codigo': 'sin_cupo',
+                            'motivo': motivo,
+                            'proxima_disponible': proxima_str,
+                        },
+                        status=409,
+                    )
+                return construir_retrato_servicio_suelto(reserva)
+
+            elif reserva.servicio.estrategia_cupo == 'por_noche':
+                recursos_candidatos = list(reserva.servicio.recursos.filter(activo=True).order_by('pk'))
+                for recurso in recursos_candidatos:
+                    bloquear_recurso(empresa.pk, recurso.pk)
+                try:
+                    return construir_retrato_hospedaje(reserva)
+                except SinCupoError as exc:
+                    return Response(
+                        {
+                            'detail': str(exc),
+                            'codigo': 'sin_cupo',
+                            'motivo': 'sin_lugar',
+                            'proxima_disponible': None,
+                        },
+                        status=409,
+                    )
+
+        return {'v': 1, 'salidas': [], 'habitaciones': []}
+
+    def _bloque_c(self, request, empresa, pk, contexto, apartado_info):
+        reserva = contexto['reserva']
+        reserva.refresh_from_db()
+
+        monto_a_cobrar = contexto['monto_a_cobrar']
+        precio_total = contexto['precio_total']
+        forma_pago = contexto['forma_pago']
+        codigo_promocional = contexto['codigo_promocional']
+        descuento = contexto['descuento']
+        detalle_a_congelar = contexto['detalle_a_congelar']
+        precio_base_servicio = contexto['precio_base_servicio']
+        extras_a_borrar = contexto['extras_a_borrar']
+        extras_a_congelar = contexto['extras_a_congelar']
+
+        cliente = configurar_stripe(empresa)
         try:
             intent = self._intent_de(cliente, reserva, monto_a_cobrar)
         except PagoEnCurso:
             return Response(
-                {'detail': 'Ya hay un cobro en curso para esta reserva.'}, status=409
+                {'detail': 'Ya hay un cobro en curso para esta reserva.', 'codigo': 'pago_en_curso'},
+                status=409,
             )
         except stripe.StripeError:
             logger.exception('Stripe fallo al preparar el pago de la reserva %s', reserva.pk)
+            if apartado_info.get('creo_apartado') and apartado_info.get('apartado_hasta'):
+                self._liberar_apartado_si_procede(empresa, reserva.pk, apartado_info['apartado_hasta'])
             return Response({'detail': 'No se pudo iniciar el pago. Intenta de nuevo.'}, status=502)
 
         with transaction.atomic():
@@ -166,13 +446,39 @@ class CrearPagoView(APIView):
                 'codigo_promocional', 'descuento_aplicado',
             ])
 
+        apartado_hasta = apartado_info.get('apartado_hasta')
         return Response({
             'client_secret': intent.client_secret,
             'publishable_key': empresa.stripe_publishable_key,
             'monto_a_cobrar': str(monto_a_cobrar),
             'precio_total': str(precio_total),
             'moneda': reserva.moneda,
+            'apartado_hasta': apartado_hasta.isoformat() if apartado_hasta else None,
         })
+
+    @staticmethod
+    def _liberar_apartado_si_procede(empresa, reserva_id, apartado_hasta_escrito):
+        """Gancho para Tarea 06: libera condicionalmente si esta llamada creó el apartado."""
+        try:
+            with scope.con_empresa(empresa):
+                Reserva.objects.filter(
+                    pk=reserva_id,
+                    apartado_hasta=apartado_hasta_escrito,
+                ).update(apartado_hasta=None, apartado_demanda=None)
+        except DatabaseError:
+            logger.exception('Fallo al liberar apartado de la reserva %s', reserva_id)
+
+    @staticmethod
+    def _tiene_cupo_fisico(reserva):
+        if getattr(reserva, 'orden_id', None) is not None:
+            return False
+        if reserva.paquete_id and reserva.paquete:
+            return reserva.paquete.servicios_asociados.filter(
+                servicio__estrategia_cupo__in=['por_recurso_dia', 'por_noche']
+            ).exists()
+        if reserva.servicio_id and reserva.servicio:
+            return reserva.servicio.estrategia_cupo in ('por_recurso_dia', 'por_noche')
+        return False
 
     def _resolver_codigo_promocional(self, request, reserva, subtotal, empresa):
         """Resuelve el codigo (si vino uno) contra el SUBTOTAL real, con extras
