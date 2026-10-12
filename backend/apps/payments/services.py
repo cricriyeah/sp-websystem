@@ -334,10 +334,7 @@ def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None, causa='cupo'):
     reserva.reembolsada_en = timezone.now()
     reserva.apartado_hasta = None
     reserva.apartado_demanda = None
-    try:
-        reserva.full_clean()
-    except DjangoValidationError:
-        pass
+    reserva.full_clean()
     reserva.save()
 
     empresa_id = empresa.pk
