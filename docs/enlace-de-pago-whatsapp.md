@@ -1,6 +1,10 @@
-# Enlace de pago por WhatsApp (sin código nuevo)
+# Enlace de pago por WhatsApp
 
 Cuando una venta se cierra por WhatsApp o teléfono y el cliente quiere **pagar con tarjeta**, no se registra la reserva a mano: se le manda un enlace del sitio con el viaje ya precargado. El cliente llena su nombre, teléfono y correo, acepta el deslinde y paga por el checkout normal. Verificado el 12 de octubre de 2026 leyendo `frontend/src/app/[lang]/reservar/page.tsx`, `frontend/src/lib/dates.ts` y `frontend/src/lib/ref.ts`, y comprobado en el sitio local (la página sale con la fecha y las personas ya cargadas).
+
+## Lo más fácil: el botón «Enlace de pago»
+
+En el admin, en **Reservas**, arriba de la lista hay un botón **Enlace de pago**. Eliges el servicio o paquete, la fecha, la hora, las personas y el idioma; la pantalla pone tu código de vendedora y el dominio del sitio, y te da el enlace listo con **Copiar** y **Abrir en WhatsApp**. No guarda ninguna reserva. Lo que sigue explica cómo se arma el enlace y las reglas, por si hay que armarlo a mano.
 
 ## La fórmula (servicio suelto, por ejemplo pesca)
 

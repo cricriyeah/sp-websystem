@@ -22,6 +22,7 @@ from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
+from unfold.decorators import action
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from apps.fleet.enums import TipoServicio
@@ -38,6 +39,7 @@ from .forms import AltaVendedoraForm
 from .forms_alta_reserva import AltaReservaForm
 from .precio_sugerido import sugerir_precio
 from .vistas_precio import respuesta_precio_sugerido
+from .vistas_enlace_pago import respuesta_enlace_pago
 
 from .models import (
     ESTADOS_QUE_OCUPAN_CUPO,
@@ -830,6 +832,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
         'confirmar_devolucion', 'cancelar_por_mal_clima',
     ]
+    actions_list = ['accion_enlace_pago']
     change_list_template = 'bookings/reservas_changelist.html'
     VISTAS = (
         ('proximas', 'Próximas'), ('hoy', 'Hoy'), ('manana', 'Mañana'),
@@ -1118,10 +1121,24 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 self.admin_site.admin_view(self.precio_sugerido_view),
                 name='bookings_reserva_precio_sugerido',
             ),
+            path(
+                'enlace-de-pago/',
+                self.admin_site.admin_view(self.enlace_pago_view),
+                name='bookings_reserva_enlace_pago',
+            ),
         ] + super().get_urls()
 
     def precio_sugerido_view(self, request):
         return respuesta_precio_sugerido(self, request)
+
+    def enlace_pago_view(self, request):
+        return respuesta_enlace_pago(self, request)
+
+    @action(description='Enlace de pago', url_path='enlace-pago-accion', permissions=['add'])
+    def accion_enlace_pago(self, request):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        return HttpResponseRedirect(reverse('admin:bookings_reserva_enlace_pago'))
 
     class Media:
         # Aviso de reservas nuevas en el listado, ver reservas_nuevas_view.
