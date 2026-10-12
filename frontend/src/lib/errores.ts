@@ -96,6 +96,8 @@ export function mensajeDeError(
     const codigo = codigoDeApiError(err);
 
     // Casos con codigo explicito (backend >= apartado)
+    // Sin cupo en un paquete (el servicio suelto lo maneja aparte, con su fecha alternativa).
+    if (codigo === 'sin_cupo') return checkout.sinCupoPaquete;
     if (codigo === 'pago_en_curso') return checkout.errorPaymentInProgress;
     if (codigo === 'ya_no_pendiente') return checkout.errorPaymentInProgress;
     // reintentar: no "pagos no disponibles", sino aviso de reintento suave

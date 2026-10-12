@@ -83,6 +83,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   // tarjeta en foco se trae a la vista solo si hace falta.
   useScrollAlFoco(`${actual}|${editando}|${gruposCompletados}|${grupoEditando}`);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
+  // Cambia para remontar el StripePanel con su Turnstile: el token es de un solo uso.
+  const [captchaKey, setCaptchaKey] = useState(0);
   const [errorWaiver, setErrorWaiver] = useState(false);
   const [erroresContacto, setErroresContacto] = useState<Partial<Record<'fullName' | 'phone' | 'email', string>>>({});
   const [errorViaje, setErrorViaje] = useState('');
@@ -198,6 +200,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     codigoPromocional: motor === 'reserva' ? codigoPromocional : undefined,
     captchaToken: () => captcha.current,
     mensajeDeError: (err) => mensajeDeError(err, checkout, feedback),
+    mensajeMontoDistinto: (monto) => checkout.montoDistinto
+      .replace('{monto}', formatearPrecio(Number(monto), estado.moneda)),
     armarPayload: (checkoutId) => {
       const args = {
         checkoutId, paquete, componentes: estado.componentes, inicio: estado.inicio ?? minDate,
@@ -415,6 +419,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     };
   };
 
+  // Volver al formulario tras una cancelacion: checkout_id nuevo (lo genera el hook) y Turnstile nuevo.
+  const reiniciarPedido = () => {
+    captcha.current = '';
+    setCaptchaKey((k) => k + 1);
+    pago.reiniciar();
+  };
+
   if (pago.fase === 'fallo') {
     const textosFallo = textos.fail;
     const detalle = pago.fallo;
@@ -433,6 +444,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           formatearPrecio(retenidas.reduce((suma, r) => suma + Number(r.monto), 0), estado.moneda))] : []),
       ]
       : [detalle ? textosFallo.liberaGeneral : textosFallo.body];
+    // Motor reserva: el webhook cancelo y reembolso porque el lugar se fue. No hubo rechazo de tarjeta.
+    const lugarNoAsegurado = motor === 'reserva';
     const ayuda = ofreceAyuda(pago.fallos) && tieneWhatsapp
       ? { etiqueta: textosFallo.ayuda, href: whatsappHref(textosFallo.ayudaMensaje.replace('{paquete}', paquete.nombre)) }
       : null;
@@ -444,11 +457,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         <CheckoutStepper stepper={checkout.stepper} {...(stepperPagos(pago.fallo?.indice ?? 0) ?? { actual: 4, totalMovil })} />
         <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
           <AvisoFallo
-            titulo={titulo}
+            titulo={lugarNoAsegurado ? checkout.lugarNoAseguradoTitulo : titulo}
             motivo={rechazo ? textosFallo.motivos[claveMotivoRechazo(detalle.codigo)] : null}
-            lineasDinero={lineasDinero}
-            etiquetaBoton={reintentoDirecto ? textosFallo.retryOtraTarjeta : textosFallo.retry}
-            onReintentar={reintentoDirecto ? () => void reintentar() : pago.reiniciar}
+            lineasDinero={lugarNoAsegurado ? [checkout.lugarNoAseguradoCuerpo] : lineasDinero}
+            etiquetaBoton={lugarNoAsegurado
+              ? checkout.eligeOtraFecha
+              : reintentoDirecto ? textosFallo.retryOtraTarjeta : textosFallo.retry}
+            onReintentar={reintentoDirecto ? () => void reintentar() : reiniciarPedido}
             ayuda={ayuda}
           />
         </div>
@@ -462,8 +477,12 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
       <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
         <WaitNotice
-          mensaje={pago.fase === 'resumiendo' ? textos.resuming : feedback.payingWait}
-          mensajeLento={pago.fase === 'resumiendo' ? undefined : feedback.paySlow}
+          mensaje={pago.fase === 'resumiendo'
+            ? textos.resuming
+            : pago.fase === 'confirmando'
+              ? (pago.confirmandoLargo ? checkout.siguiendoConfirmando : checkout.confirmandoTitulo)
+              : feedback.payingWait}
+          mensajeLento={pago.fase === 'resumiendo' || pago.fase === 'confirmando' ? undefined : feedback.paySlow}
         />
       </div>
     </div>
@@ -586,6 +605,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               venceEn={pasoPago.venceEn}
               encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} total={totalConMoneda ?? undefined} />}
               etiquetaBotonPago={etiquetaBotonPago}
+              apartadoHasta={pago.apartadoHasta}
+              antesDePagar={motor === 'reserva' ? pago.antesDePagar : undefined}
               onPagoConfirmado={pago.onPagoConfirmado}
               onPagoRechazado={pago.onPagoRechazado}
             />
@@ -806,6 +827,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         }
         pedido={pedido ? (
           <StripePanel
+            key={captchaKey}
             lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
             waiverAccepted={waiverAccepted}
             onWaiverChange={(valor) => { setWaiverAccepted(valor); if (valor) setErrorWaiver(false); }}

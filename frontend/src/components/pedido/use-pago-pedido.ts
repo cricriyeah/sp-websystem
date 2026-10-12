@@ -5,6 +5,7 @@ import {
   confirmarCapturaOrden, crearOrden, crearPago, crearPagoOrden, getEstadoReserva, getOrden,
   guardarReserva, type CrearOrdenInput, type OrdenDetalle, type ReservaInput,
 } from '@/lib/api';
+import { ApiError } from '@/lib/api';
 import { empresaDeFalloCaptura } from '@/lib/fallo-pago';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
@@ -34,6 +35,8 @@ type Config = {
   codigoPromocional?: string;
   captchaToken: () => string;
   mensajeDeError: (err: unknown) => string;
+  /** Texto cuando la renovacion devuelve otro importe: el cliente debe verlo antes de pagar. */
+  mensajeMontoDistinto: (monto: string) => string;
 };
 
 type Guardado = { checkoutId?: string; ordenId?: number };
@@ -53,6 +56,10 @@ export function usePagoPedido(config: Config) {
   // false al reanudar tras una recarga, donde no hay datos que conservar.
   const [falloEnVivo, setFalloEnVivo] = useState(false);
   const [fallos, setFallos] = useState(0);
+  // Solo motor 'reserva': la reserva a renovar y hasta cuando dura el apartado (null = sin apartado).
+  const [reservaId, setReservaId] = useState<number | null>(null);
+  const [apartadoHasta, setApartadoHasta] = useState<string | null>(null);
+  const [confirmandoLargo, setConfirmandoLargo] = useState(false);
 
   const cfg = useRef(config);
   useEffect(() => {
@@ -243,6 +250,7 @@ export function usePagoPedido(config: Config) {
     if (fase !== 'confirmando') return;
     let cancelado = false;
     let timer: ReturnType<typeof setTimeout>;
+    const inicio = Date.now();
     const consultar = async () => {
       try {
         const estado = await getEstadoReserva(checkoutId, config.empresaSlug);
@@ -252,7 +260,11 @@ export function usePagoPedido(config: Config) {
       } catch {
         // sin red: seguir consultando
       }
-      if (!cancelado) timer = setTimeout(consultar, REINTENTO_MS);
+      if (cancelado) return;
+      // Cada 2 s los primeros ~12 s (lo normal es que el webhook ya haya respondido); luego mas espaciado.
+      const transcurrido = Date.now() - inicio;
+      if (transcurrido > 12000) setConfirmandoLargo(true);
+      timer = setTimeout(consultar, transcurrido > 12000 ? REINTENTO_MS : 2000);
     };
     consultar();
     return () => {
@@ -288,6 +300,8 @@ export function usePagoPedido(config: Config) {
           { checkout_id: id, forma_pago: c.formaPago, codigo_promocional: c.codigoPromocional || undefined },
           c.empresaSlug,
         );
+        setReservaId(reserva.id);
+        setApartadoHasta(pago.apartado_hasta);
         setPagos([{
           empresaSlug: c.empresaSlug, monto: pago.monto_a_cobrar,
           precioTotal: pago.precio_total,
@@ -298,6 +312,14 @@ export function usePagoPedido(config: Config) {
       setFase('pagando');
       return true;
     } catch (err) {
+      // El cobro ya estaba en marcha (doble clic, otra pestana): no se vuelve a cobrar, se espera al webhook.
+      if (c.motor === 'reserva' && err instanceof ApiError) {
+        const codigo = (err.detail as Record<string, unknown> | null)?.['codigo'];
+        if (codigo === 'pago_en_curso' || codigo === 'ya_no_pendiente') {
+          setFase('confirmando');
+          return true;
+        }
+      }
       // Un 503 ("Stripe no configurado") lo traduce `mensajeDeError` a `checkout.paymentUnavailable`.
       setError(c.mensajeDeError(err));
       setFase('formulario');
@@ -330,6 +352,46 @@ export function usePagoPedido(config: Config) {
     [indice, pagos.length, ordenId, checkoutId, registrarPendiente],
   );
 
+  /**
+   * Se llama en CADA clic de «Pagar», antes de Stripe: renueva el apartado reenviando identicos
+   * forma_pago y codigo_promocional (si no, el servidor cambiaria el monto). null = cobrar;
+   * texto = no cobrar y mostrarlo; '' = no cobrar, el hook ya cambio de fase.
+   */
+  const antesDePagar = useCallback(async (): Promise<string | null> => {
+    const c = cfg.current;
+    const actual = pagos[0];
+    if (c.motor !== 'reserva' || reservaId === null || !actual) return null;
+    try {
+      const renovado = await crearPago(
+        reservaId,
+        { checkout_id: checkoutId, forma_pago: c.formaPago, codigo_promocional: c.codigoPromocional || undefined },
+        c.empresaSlug,
+      );
+      setApartadoHasta(renovado.apartado_hasta);
+      if (Number(renovado.monto_a_cobrar) !== Number(actual.monto)) {
+        setPagos([{ ...actual, monto: renovado.monto_a_cobrar, precioTotal: renovado.precio_total }]);
+        return c.mensajeMontoDistinto(renovado.monto_a_cobrar);
+      }
+      return null;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const codigo = (err.detail as Record<string, unknown> | null)?.['codigo'];
+        if (codigo === 'sin_cupo') {
+          setError(c.mensajeDeError(err));
+          setPagos([]);
+          setApartadoHasta(null);
+          setFase('formulario');
+          return '';
+        }
+        if (codigo === 'pago_en_curso' || codigo === 'ya_no_pendiente') {
+          setFase('confirmando');
+          return '';
+        }
+      }
+      return c.mensajeDeError(err);
+    }
+  }, [pagos, reservaId, checkoutId]);
+
   const onPagoRechazado = useCallback((mensaje: string, codigo?: string) => {
     setMotivoFallo(mensaje);
     if (cfg.current.motor === 'orden') {
@@ -353,6 +415,9 @@ export function usePagoPedido(config: Config) {
     guardar({ checkoutId: nuevo });
     setOrdenId(null);
     setPagos([]);
+    setReservaId(null);
+    setApartadoHasta(null);
+    setConfirmandoLargo(false);
     setIndice(0);
     setMotivoFallo('');
     setFallo(null);
@@ -375,7 +440,7 @@ export function usePagoPedido(config: Config) {
 
   return {
     fase, pagos, indice, error, motivoFallo, ordenId, checkoutId,
-    fallo, falloEnVivo, fallos,
-    enviar, onPagoConfirmado, onPagoRechazado, reiniciar, reintentar,
+    fallo, falloEnVivo, fallos, apartadoHasta, confirmandoLargo,
+    enviar, antesDePagar, onPagoConfirmado, onPagoRechazado, reiniciar, reintentar,
   };
 }

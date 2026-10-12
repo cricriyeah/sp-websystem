@@ -634,7 +634,8 @@
     "eligeOtraFecha": "Elegir otra fecha",
     "confirmandoTitulo": "Estamos confirmando tu lugar…",
     "siguiendoConfirmando": "Estamos confirmando tu pago. Si en unos minutos no recibes un correo, escríbenos.",
-    "montoDistinto": "El importe cambió a {monto}. Revísalo y pulsa Pagar de nuevo para continuar."
+    "montoDistinto": "El importe cambió a {monto}. Revísalo y pulsa Pagar de nuevo para continuar.",
+    "sinCupoPaquete": "El cupo de tu itinerario se agotó; elige otra fecha de inicio. Tus datos siguen guardados."
   },
   "feedback": {
     "floatingHelp": {

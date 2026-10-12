@@ -634,7 +634,8 @@
     "eligeOtraFecha": "Choose another date",
     "confirmandoTitulo": "Confirming your spot…",
     "siguiendoConfirmando": "We're confirming your payment. If you don't receive an email in a few minutes, please message us.",
-    "montoDistinto": "The amount changed to {monto}. Review it and press Pay again to continue."
+    "montoDistinto": "The amount changed to {monto}. Review it and press Pay again to continue.",
+    "sinCupoPaquete": "Availability for your itinerary ran out; please choose another start date. Your info is still saved."
   },
   "feedback": {
     "floatingHelp": {
