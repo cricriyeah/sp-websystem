@@ -76,7 +76,7 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertIn('reservas-cobro-urgente', str(model_admin.cobro(debe)))
         respuesta = self.client.get(self.url, {'vista': 'atencion'})
         self.assertEqual([r.pk for r in respuesta.context['cl'].result_list], [devolucion.pk])
-        self.assertContains(respuesta, 'Devolver 1,200 MXN')
+        self.assertContains(respuesta, 'Falta devolver 1,200 MXN')
         respuesta = self.client.get(self.url, {'vista': 'todas'})
         self.assertContains(respuesta, 'Sin pagar')
         self.assertContains(respuesta, 'Descuadre de 100 MXN')
@@ -171,7 +171,7 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertContains(respuesta, 'Debe 140 USD en efectivo')
         respuesta = self.client.get(self.url, {'vista': 'atencion'})
         self.assertEqual([r.pk for r in respuesta.context['cl'].result_list], [parcial.pk])
-        self.assertContains(respuesta, 'Devolver 150 MXN')
+        self.assertContains(respuesta, 'Falta devolver 150 MXN')
 
     def test_columnas_servicio_traslado_asignacion_y_hora_nula(self):
         servicio = Servicio.objects.create(empresa=self.empresa, nombre='Traslado privado',

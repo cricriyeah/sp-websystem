@@ -27,6 +27,7 @@ class ReservaAdminAtencionTests(EmpresaTestCase):
     def _accion(self, reserva):
         return self.client.post(self.url, {
             'action': 'confirmar_devolucion', '_selected_action': [str(reserva.pk)],
+            'confirmar_devolucion_hecha': 'si',
         })
 
     def test_filtro_muestra_cancelada_pendiente_y_excluye_pagada(self):
@@ -36,7 +37,7 @@ class ReservaAdminAtencionTests(EmpresaTestCase):
         ids = {r.pk for r in respuesta.context['cl'].result_list}
         self.assertIn(self.pendiente.pk, ids)
         self.assertNotIn(self.pagada.pk, ids)
-        self.assertContains(respuesta, 'Confirmar devolución')
+        self.assertContains(respuesta, 'Falta devolver 4,500 MXN')
 
     def test_vendedora_confirma_y_queda_en_history_sin_llamar_stripe(self):
         vendedora = self.crear_vendedora()
@@ -87,7 +88,7 @@ class OrdenAdminAtencionTests(TestCase):
     def test_columna_muestra_atencion_y_vendedora_ve_accion(self):
         respuesta = self.client.get(self.url)
         self.assertEqual(respuesta.status_code, 200)
-        self.assertContains(respuesta, 'Confirmar devolución')
+        self.assertContains(respuesta, 'Falta devolver')
         self.assertIn('confirmar_devolucion_orden', respuesta.context['cl'].model_admin.get_actions(
             respuesta.wsgi_request,
         ))
@@ -127,3 +128,50 @@ class OrdenAdminAtencionTests(TestCase):
             content_type=ContentType.objects.get_for_model(Orden),
             object_id=str(self.orden.pk),
         ).exists())
+
+
+class ConfirmacionDeDevolucionHechaTests(EmpresaTestCase):
+    """Marcar una reserva como devuelta no mueve dinero: antes de anotarlo se pide confirmar."""
+
+    def setUp(self):
+        from apps.bookings.tests import crear_reserva
+
+        self.reserva = crear_reserva(self.empresa)
+        self.reserva.estado = Reserva.Estado.CANCELADA
+        self.reserva.monto_pagado = Decimal('4500.00')
+        self.reserva.stripe_payment_intent_id = 'pi_prueba_devolucion'
+        self.reserva.save(update_fields=['estado', 'monto_pagado', 'stripe_payment_intent_id'])
+        self.url = reverse('admin:bookings_reserva_changelist')
+        self.client.force_login(self.crear_jefe())
+
+    def test_sin_confirmar_muestra_la_pagina_y_no_anota_nada(self):
+        respuesta = self.client.post(self.url, {
+            'action': 'confirmar_devolucion', '_selected_action': [str(self.reserva.pk)],
+        })
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'Esto no devuelve dinero')
+        self.assertContains(respuesta, '4500.00')
+        self.assertContains(respuesta, 'https://dashboard.stripe.com/payments/pi_prueba_devolucion')
+        self.reserva.refresh_from_db()
+        self.assertFalse(self.reserva.reembolsada)
+        self.assertIsNone(self.reserva.monto_reembolsado)
+
+    def test_la_columna_enlaza_al_pago_en_el_modo_correcto(self):
+        self.empresa.stripe_secret_key = 'sk_test_falsa'
+        self.empresa.save(update_fields=['stripe_secret_key'])
+
+        respuesta = self.client.get(self.url, {'requiere_atencion': 'si'})
+
+        self.assertContains(respuesta, 'Falta devolver 4,500 MXN')
+        self.assertContains(respuesta, 'https://dashboard.stripe.com/test/payments/pi_prueba_devolucion')
+
+    def test_confirmando_si_se_anota(self):
+        self.client.post(self.url, {
+            'action': 'confirmar_devolucion', '_selected_action': [str(self.reserva.pk)],
+            'confirmar_devolucion_hecha': 'si',
+        })
+
+        self.reserva.refresh_from_db()
+        self.assertTrue(self.reserva.reembolsada)
+        self.assertEqual(self.reserva.monto_reembolsado, Decimal('4500.00'))

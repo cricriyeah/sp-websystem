@@ -1,0 +1,43 @@
+{% extends "admin/base_site.html" %}
+{% load l10n %}
+
+{% block content %}
+{{ block.super }}
+<div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
+    <div class="p-4">
+        <h1 class="font-semibold text-important">{{ titulo }}</h1>
+        <p><strong>Esto no devuelve dinero.</strong> Solo anota que ya se devolvi&oacute; todo lo pagado con tarjeta. Si todav&iacute;a no lo has devuelto, c&aacute;ncelalo: primero haz la devoluci&oacute;n (en Stripe, o en efectivo o transferencia) y despu&eacute;s m&aacute;rcala aqu&iacute;.</p>
+        <p>{{ cantidad }} reserva{{ cantidad|pluralize }} se marcar&aacute;{{ cantidad|pluralize:",n" }} como devuelta{{ cantidad|pluralize }}. {{ omitidas }} se omite{{ omitidas|pluralize:",n" }} porque no ten&iacute;an devoluci&oacute;n pendiente.</p>
+    </div>
+
+    {% if pendientes %}
+    <div class="border-t border-base-200 p-4 dark:border-base-800">
+        <h2 class="font-semibold text-important">Reservas que se marcar&aacute;n</h2>
+        <ul>
+            {% for reserva, monto, enlace in pendientes %}
+            <li>
+                {{ reserva.fecha|date:"j M Y" }} &middot; {{ reserva.nombre_cliente }} &middot; {{ monto }} {{ reserva.moneda }}
+                {% if enlace %}&middot; <a href="{{ enlace }}" target="_blank" rel="noopener">Ver pago en Stripe</a>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% if restantes %}<p>Y {{ restantes }} reservas m&aacute;s.</p>{% endif %}
+        <h2 class="font-semibold text-important">Total que se anotar&aacute; como devuelto</h2>
+        <ul>{% for moneda, monto in totales %}<li>{{ monto }} {{ moneda }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ volver }}" class="border-t border-base-200 p-4 dark:border-base-800">
+        {% csrf_token %}
+        {% for reserva in seleccionadas %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ reserva.pk|unlocalize }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="confirmar_devolucion">
+        <input type="hidden" name="confirmar_devolucion_hecha" value="si">
+        <div class="flex items-center gap-4">
+            <a href="{{ volver }}">No, volver</a>
+            {% if cantidad %}<button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default">S&iacute;, ya lo devolv&iacute;</button>{% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

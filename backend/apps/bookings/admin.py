@@ -169,6 +169,23 @@ def consulta_devolucion_pendiente():
     )
 
 
+def enlace_pago_stripe(reserva):
+    """Enlace directo al pago en el panel de Stripe, o None si la reserva no tiene PaymentIntent.
+
+    Modo de prueba o real se deduce de la llave de la empresa (`sk_test_`): el panel tiene
+    una URL distinta para cada uno y un enlace al modo equivocado muestra "no encontrado".
+    """
+    intent = reserva.stripe_payment_intent_id
+    if not intent:
+        return None
+    modo = 'test/' if (reserva.empresa.stripe_secret_key or '').startswith('sk_test') else ''
+    return f'https://dashboard.stripe.com/{modo}payments/{intent}'
+
+
+def falta_devolver(reserva):
+    return (reserva.monto_pagado or Decimal('0.00')) - (reserva.monto_reembolsado or Decimal('0.00'))
+
+
 class DiaReservasFilter(admin.SimpleListFilter):
     """Registra `?dia=AAAA-MM-DD` (un dia concreto); el selector se dibuja en la plantilla
     y el filtrado esta en `ReservaAdmin.get_queryset`, igual que `?vista=`."""
@@ -470,7 +487,11 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
             for fila in filas
         ]
         s = situacion_de_orden(estado_orden=obj.estado, pagos=pagos)
-        return '⚠️ Confirmar devolución' if requiere_atencion(s) else ''
+        if not requiere_atencion(s):
+            return ''
+        falta = sum((p['monto_pagado'] or Decimal('0.00')) - (p['monto_reembolsado'] or Decimal('0.00'))
+                    for p in pagos)
+        return f'⚠️ Falta devolver {falta:.2f} {obj.moneda}'
 
     @admin.display(description='Retomar')
     def contacto(self, obj):
@@ -489,7 +510,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
             numero, quote(mensaje),
         )
 
-    @admin.action(description='Confirmar devolución de orden (ya se resolvió fuera del sistema)')
+    @admin.action(description='Marcar devolución de orden ya hecha (solo anota; no devuelve dinero)')
     def confirmar_devolucion_orden(self, request, queryset):
         if not (
             scope.es_operador_plataforma(request.user)
@@ -537,7 +558,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
                         cursor.execute("SET LOCAL app.operador_plataforma = 'on'")
         self.message_user(request, f'{confirmadas} reserva(s) de orden marcadas como devolución confirmada.')
 
-    @admin.action(description='Cancelar orden (revertir pagos pendientes)')
+    @admin.action(description='Cancelar orden (revierte los cobros en Stripe)')
     def cancelar_orden(self, request, queryset):
         if not (scope.es_operador_plataforma(request.user) or request.user.groups.filter(name='Jefe').exists()):
             raise PermissionDenied
@@ -999,13 +1020,6 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             return ['fecha', 'hora']
         return ['-fecha', '-hora']
 
-    def requiere_atencion_col(self, obj):
-        s = situacion_de_reserva(
-            estado=obj.estado, monto_pagado=obj.monto_pagado, monto_reembolsado=obj.monto_reembolsado,
-        )
-        return '⚠️ Confirmar devolución' if requiere_atencion(s) else ''
-    requiere_atencion_col.short_description = 'Atención'
-
     def get_actions(self, request):
         actions = super().get_actions(request)
         if not (
@@ -1023,13 +1037,47 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             actions['delete_selected'] = actions.pop('delete_selected')
         return actions
 
-    @admin.action(description='Confirmar devolución (ya se resolvió fuera del sistema)')
+    @admin.action(description='Marcar devolución ya hecha (efectivo, transferencia o Stripe)')
     def confirmar_devolucion(self, request, queryset):
+        """Solo ANOTA que el dinero ya se devolvio; no devuelve nada.
+
+        Por eso pide confirmacion: marcar por error una reserva como devuelta, sin que se
+        haya movido un peso, es el fallo mas caro de este flujo.
+        """
         if not (
             scope.es_operador_plataforma(request.user)
             or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
         ):
             raise PermissionDenied
+
+        pendientes = [
+            reserva for reserva in queryset
+            if requiere_atencion(situacion_de_reserva(
+                estado=reserva.estado, monto_pagado=reserva.monto_pagado,
+                monto_reembolsado=reserva.monto_reembolsado,
+            ))
+        ]
+        if request.POST.get('confirmar_devolucion_hecha') != 'si':
+            por_moneda = {}
+            for reserva in pendientes:
+                por_moneda[reserva.moneda] = por_moneda.get(reserva.moneda, Decimal('0.00')) + falta_devolver(reserva)
+            return TemplateResponse(request, 'bookings/confirmar_devolucion.html', {
+                **self.admin_site.each_context(request),
+                'opts': self.model._meta,
+                'titulo': 'Marcar devolución como hecha',
+                'seleccionadas': list(queryset),
+                'pendientes': [
+                    (reserva, f'{falta_devolver(reserva):.2f}', enlace_pago_stripe(reserva))
+                    for reserva in pendientes[:20]
+                ],
+                'restantes': max(0, len(pendientes) - 20),
+                'cantidad': len(pendientes),
+                'omitidas': len(list(queryset)) - len(pendientes),
+                'totales': [(moneda, f'{monto:.2f}') for moneda, monto in sorted(por_moneda.items())],
+                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+                'volver': request.get_full_path(),
+            })
+
         confirmadas = 0
         for reserva in queryset:
             s = situacion_de_reserva(
@@ -1049,7 +1097,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
     def get_queryset(self, request):
         # El desglose operativo muestra solo checks, sin respuestas de inputs.
         qs = super().get_queryset(request).select_related(
-            'vendedora__usuario', 'servicio', 'paquete', 'embarcacion', 'capitan',
+            'vendedora__usuario', 'servicio', 'paquete', 'embarcacion', 'capitan', 'empresa',
             'detalle_transporte__punto_encuentro',
         ).prefetch_related(
             'personalizaciones_seleccionadas__servicio_personalizacion__personalizacion'
@@ -1198,8 +1246,14 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         )
         if requiere_atencion(situacion):
             resta = (obj.monto_pagado or Decimal('0')) - (obj.monto_reembolsado or Decimal('0'))
-            return format_html('<span class="reservas-cobro-urgente">{}</span>',
-                               f'Devolver {monto(resta)} {obj.moneda}')
+            texto = f'Falta devolver {monto(resta)} {obj.moneda}'
+            enlace = enlace_pago_stripe(obj)
+            if enlace is None:
+                return format_html('<span class="reservas-cobro-urgente">{}</span>', texto)
+            return format_html(
+                '<span class="reservas-cobro-urgente">{}</span><br>'
+                '<a href="{}" target="_blank" rel="noopener">Ver pago en Stripe</a>', texto, enlace,
+            )
         if obj.estado == Reserva.Estado.PENDIENTE_PAGO:
             return 'Sin pagar'
         saldo = obj.saldo_pendiente
@@ -1259,7 +1313,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             aviso += f' {ya_atribuidas} se omitieron: ya tenian vendedora.'
         self.message_user(request, aviso)
 
-    @admin.action(description='\u26a0 Cancelar por mal clima (reembolso completo)')
+    @admin.action(description='\u26a0 Cancelar por mal clima (luego hay que devolver el dinero)')
     def cancelar_por_mal_clima(self, request, queryset):
         """Marca la decision de devolver el dinero. La salida no aparece en el
         panel de finanzas hasta que el reembolso se ejecuta en Stripe y llega el
@@ -1320,8 +1374,10 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 actualizadas += 1
         self.message_user(
             request,
-            f'{actualizadas} reserva(s) cancelada(s) y marcada(s) para reembolso. '
-            'Falta ejecutar el reembolso en Stripe.',
+            f'{actualizadas} reserva(s) cancelada(s). El dinero todavía NO se devolvió: haz el reembolso '
+            'en Stripe (cada reserva en la columna "Atención" tiene su enlace) o, si fue en efectivo o '
+            'transferencia, devuélvelo y usa "Marcar devolución ya hecha". '
+            'Filtro rápido: requiere atención (devolución) = Sí.',
         )
 
     @admin.action(description='Registrar liquidacion en efectivo (el 70%% restante)')

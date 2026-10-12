@@ -67,7 +67,7 @@ class ConfirmacionMalClimaTests(EmpresaTestCase):
         self.assertContains(respuesta, '30.00 MXN en efectivo')
         self.assertContains(respuesta, '70.00 MXN por transferencia')
         self.assertContains(respuesta, 'Stripe')
-        self.assertContains(respuesta, 'Confirmar devoluci')
+        self.assertContains(respuesta, 'Marcar devoluci')
         self.assertContains(respuesta, 'S&iacute;, cancelar 3 reservas')
         self.assertContains(respuesta, 'No, volver')
         self.assertContains(respuesta, 'name="csrfmiddlewaretoken"')

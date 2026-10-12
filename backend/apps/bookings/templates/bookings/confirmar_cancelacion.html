@@ -31,7 +31,11 @@
         <p>Adem&aacute;s se recibi&oacute; dinero por transferencia que no pasa por Stripe:</p>
         <ul>{% for moneda, monto in transferencias %}<li>{{ monto }} {{ moneda }} por transferencia</li>{% endfor %}</ul>
         {% endif %}
-        <p>Si hubo cobro con tarjeta, haz el reembolso en Stripe. Cuando Stripe lo confirme, quedar&aacute; registrado solo. Si ya se resolvi&oacute; fuera del sistema, usa &ldquo;Confirmar devoluci&oacute;n&rdquo;. Las devoluciones de transferencias se gestionan fuera del sistema.</p>
+        <p><strong>Cancelar no devuelve el dinero.</strong> Despu&eacute;s de cancelar:</p>
+        <ol>
+            <li>Lo cobrado con tarjeta se devuelve en Stripe; cada reserva tendr&aacute; su enlace en la columna &ldquo;Atenci&oacute;n&rdquo;. Cuando Stripe lo confirme, queda registrado solo.</li>
+            <li>El efectivo y las transferencias se devuelven fuera del sistema; luego usa &ldquo;Marcar devoluci&oacute;n ya hecha&rdquo;.</li>
+        </ol>
     </div>
     {% endif %}
 
