@@ -392,7 +392,14 @@
 }
 
 /* Dialogo propio de la agenda (confirmar, pedir motivo, mostrar un error). */
+/* Centrado explicito: el reset de unfold (Tailwind) quita el `margin: auto` con el que el
+ * navegador centra un <dialog> modal, y sin esto queda pegado a la esquina superior izquierda. */
 .agenda-dialogo {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100vh - 2rem);
   width: min(24rem, calc(100vw - 2rem));
   padding: 1.1rem 1.25rem;
   border: 1px solid rgba(127, 127, 127, 0.4);
