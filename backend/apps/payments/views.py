@@ -194,6 +194,7 @@ class CrearPagoView(APIView):
 
         return {
             'reserva': reserva,
+            'tiene_cupo_fisico': self._tiene_cupo_fisico(reserva),
             'precio_base_servicio': precio_base_servicio,
             'detalle_a_congelar': detalle_a_congelar,
             'extras_a_borrar': extras_a_borrar,
@@ -207,7 +208,9 @@ class CrearPagoView(APIView):
 
     def _bloque_b(self, request, empresa, pk, contexto):
         reserva = contexto['reserva']
-        if not apartado_activo() or not self._tiene_cupo_fisico(reserva):
+        # `tiene_cupo_fisico` se calculo en el Bloque A, dentro del alcance de la empresa: aqui,
+        # fuera de el, la consulta de los componentes del paquete la filtra RLS y daria False.
+        if not apartado_activo() or not contexto['tiene_cupo_fisico']:
             return {'apartado_hasta': None, 'creo_apartado': False}
 
         for intento in range(2):

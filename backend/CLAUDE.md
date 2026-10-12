@@ -120,6 +120,35 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   ajusta con `PaymentIntent.modify` si cambiaron las amenidades, y manda
   `idempotency_key` para el doble clic. Si el intent ya esta en `succeeded`/`processing`
   responde 409 — jamas se crea un intent nuevo encima de uno que ya esta cobrando.
+- **`crear-pago` aparta el cupo (apartado temporal)**, solo si `APARTADO_MINUTOS > 0` y el
+  servicio/paquete tiene cupo fisico (`por_recurso_dia` o `por_noche`; no `bajo_demanda` ni
+  ordenes cruza-empresa). Va en tres bloques, cada uno en su propio `scope.con_empresa` para que
+  el candado se libere ANTES de hablar con Stripe: **A** (validaciones, monto, lectura del intent
+  guardado; si ya esta `processing`/`succeeded` responde `pago_en_curso` sin tocar el apartado y
+  calcula `tiene_cupo_fisico` AQUI, dentro del alcance: fuera de el RLS vacia la consulta de los
+  componentes del paquete y el apartado se omitiria en silencio), **B** (transaccion corta:
+  `select_for_update` de la fila de la reserva primero, luego los candados del cupo en el mismo
+  orden que `reservar_cupo_al_confirmar`, `lock_timeout` de 5 s, un reintento si hay deadlock
+  `40P01`; evalua el cupo excluyendo la propia reserva y escribe `apartado_hasta` +
+  `apartado_demanda`; commit) y **C** (Stripe y escrituras finales). Contrato de errores, cuerpo
+  plano `{"detail", "codigo", ...}`: 409 `sin_cupo` (`motivo` = `lleno`/`sin_panga`/`sin_lugar`,
+  `proxima_disponible` = fecha solo para servicio suelto de mar; `null` en hospedaje y paquetes),
+  409 `ya_no_pendiente`, 409 `pago_en_curso`, 403 `checkout_invalido`, 503 `reintentar` (candado
+  no obtenido a tiempo). Si Stripe falla (502), el bloque C libera SOLO un apartado que esta
+  llamada creo y con `UPDATE ... WHERE apartado_hasta = <valor que escribio>`: nunca borra uno que
+  otra llamada renovo. Editar la reserva por `POST /reservas/` (upsert por `checkout_id`) borra el
+  apartado si cambia algo relevante al cupo; los campos `apartado_*` no son escribibles por la API.
+- **Avisos cuando aun asi se reembolsa por falta de cupo**: `_cancelar_sin_cupo(..., causa)` recibe
+  `'cupo'` si la excepcion es `SinCupoError` o una `ValidationError` con codigo `sin_cupo`
+  (recorriendo `error_dict`/`error_list` anidados), `'otra'` en cualquier otro caso. Cliente: correo
+  (Resend) solo con causa `cupo`; aviso interno a `Empresa.correos_aviso` con cualquier causa;
+  WhatsApp apagado hasta que exista `WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO`. Un reembolso que
+  falla (`FALLO_REEMBOLSO`) genera una alerta urgente una sola vez por reserva, sellada con
+  `Reserva.objects.filter(pk=..., alerta_reembolso_fallido_en__isnull=True).update(...)` (nunca
+  `save()`: el objeto en memoria ya tiene `estado=PAGADA` sin persistir). **Todo `raise` de falla de
+  cupo lleva `code='sin_cupo'`**; con mensaje en forma de diccionario el codigo va en el error
+  interior (`ValidationError({'fecha': ValidationError(msg, code='sin_cupo')})`) porque Django
+  ignora `code=` cuando el mensaje es un diccionario.
 - El webhook es la unica fuente de verdad: nada se marca pagado desde el navegador.
   Corre en `transaction.atomic` con `select_for_update` para que dos entregas
   simultaneas del mismo evento no dupliquen nada.
@@ -285,7 +314,22 @@ que los cuatro no puedan decidir distinto. `evaluar_cupo` consulta sin tomar el 
 `validar_cupo_diario` lo toma antes de contar (ver `bloquear_cupo_del_dia`).
 
 Solo cuentan contra el cupo los estados en `ESTADOS_QUE_OCUPAN_CUPO` (`pagada`,
-`asignada`, `completada`) — `pendiente_pago` no bloquea a otros clientes. Cualquier flujo
+`asignada`, `completada`) — `pendiente_pago` no bloquea a otros clientes, **salvo por el apartado
+temporal** (siguiente parrafo). `ESTADOS_QUE_OCUPAN_CUPO` NO cambia: lo consumen la Agenda, el
+panorama, la restriccion EXCLUDE y la regla de 48 h.
+
+**Apartado temporal de cupo (checkout web).** `Reserva.apartado_hasta` (vencimiento) y
+`apartado_demanda` (un "retrato" JSON `{"v":1,"salidas":[{fecha,personas,servicio_id}],
+"habitaciones":[{recurso_id,inicio,fin,servicio_id}]}` de lo que esa reserva ocuparia) hacen que
+una reserva `pendiente_pago` con apartado vigente cuente contra el cupo, y solo dentro del adaptador
+del motor (`bookings/cupo/adaptador.py` con `bookings/cupo/apartado.py`): pesca por fecha/servicio y
+habitaciones por rango, excluyendo siempre la propia reserva (`excluir_pk`). Vence solo (comparar
+con la hora, sin tarea que limpie). `APARTADO_MINUTOS` (variable de entorno, 0 = apagado, default 0;
+15 en produccion) lo gobierna: con 0 el motor ignora los apartados aunque existan. Los endpoints
+publicos `/api/cupo/` y `/api/cupo/rango/` aceptan la cabecera `X-Checkout-Id` para no contar el
+apartado del propio cliente. `crear-pago` lo toma (ver "Garantias del cobro"); el webhook lo limpia
+al pagar o cancelar. Sin tope de edad en v1: renovar al pulsar Pagar puede prolongar un apartado
+(riesgo aceptado). Fuera de alcance: paquetes cruza-empresa (Orden). Cualquier flujo
 nuevo que cree/edite una `Reserva` (API de pago, panel vendedora) debe llamar
 `instance.full_clean()` antes de `save()` para que este motor corra — no duplicar la
 logica en otro lado.
@@ -310,6 +354,10 @@ Con la expansión multi-servicio y paquetes turísticos:
   1. `por_recurso_dia` (pesca deportiva / embarcaciones): aplica `validar_cupo_diario` y toma advisory lock `bloquear_cupo(empresa_id, fecha, servicio_id)`.
   2. `por_noche` (hospedaje): multi-día sobre rango `[fecha, fecha_fin_servicio)`. Se crean registros `ReservaOcupacion` por habitación/recurso asignado; `habitaciones_necesarias` calcula cuántas habitaciones libres hacen falta para el grupo. La base de datos protege contra sobreventa mediante constraint PostgreSQL `EXCLUDE USING gist` sobre `(recurso_id WITH =, daterange(fecha_inicio, fecha_fin, '[)') WITH &&) WHERE (ocupa_cupo)`. Lock de serialización: `bloquear_recurso(empresa_id, recurso_id)`.
   3. `bajo_demanda` (tours/experiencias sin límite físico estricto): no bloquea inventario previo.
+- **Apartado de hospedaje**: no crea filas `ReservaOcupacion` (no toca el `EXCLUDE`); el retrato
+  guarda las habitaciones elegidas por `elegir_habitaciones` (misma funcion pura que usa
+  `_asignar_cupo_hospedaje`, orden determinista por `pk`) y `obtener_recursos_con_ocupaciones`
+  suma esos intervalos `[inicio, fin)` a cada habitacion del mismo servicio.
 - **Sincronización de `ReservaOcupacion.ocupa_cupo`**:
   `Reserva.save()` propaga automáticamente `ocupa_cupo = (estado in ESTADOS_QUE_OCUPAN_CUPO)` a sus `ocupaciones` únicamente cuando la reserva cruza la frontera de ocupación (usando `_estado_original`).
 - **Paquetes turísticos**:
