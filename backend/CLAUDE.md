@@ -316,7 +316,9 @@ que los cuatro no puedan decidir distinto. `evaluar_cupo` consulta sin tomar el 
 Solo cuentan contra el cupo los estados en `ESTADOS_QUE_OCUPAN_CUPO` (`pagada`,
 `asignada`, `completada`) — `pendiente_pago` no bloquea a otros clientes, **salvo por el apartado
 temporal** (siguiente parrafo). `ESTADOS_QUE_OCUPAN_CUPO` NO cambia: lo consumen la Agenda, el
-panorama, la restriccion EXCLUDE y la regla de 48 h.
+panorama, la restriccion EXCLUDE y la regla de 48 h. Cualquier flujo nuevo que cree/edite
+una `Reserva` (API de pago, panel vendedora) debe llamar `instance.full_clean()` antes de `save()`
+para que este motor corra — no duplicar la logica en otro lado.
 
 **Apartado temporal de cupo (checkout web).** `Reserva.apartado_hasta` (vencimiento) y
 `apartado_demanda` (un "retrato" JSON `{"v":1,"salidas":[{fecha,personas,servicio_id}],
@@ -329,10 +331,7 @@ con la hora, sin tarea que limpie). `APARTADO_MINUTOS` (variable de entorno, 0 =
 publicos `/api/cupo/` y `/api/cupo/rango/` aceptan la cabecera `X-Checkout-Id` para no contar el
 apartado del propio cliente. `crear-pago` lo toma (ver "Garantias del cobro"); el webhook lo limpia
 al pagar o cancelar. Sin tope de edad en v1: renovar al pulsar Pagar puede prolongar un apartado
-(riesgo aceptado). Fuera de alcance: paquetes cruza-empresa (Orden). Cualquier flujo
-nuevo que cree/edite una `Reserva` (API de pago, panel vendedora) debe llamar
-`instance.full_clean()` antes de `save()` para que este motor corra — no duplicar la
-logica en otro lado.
+(riesgo aceptado). Fuera de alcance: paquetes cruza-empresa (Orden).
 
 Una actividad repetida dentro de un paquete ocupa cupo en cada fecha de `ReservaSalida`.
 El motor cuenta esas salidas junto con las reservas sueltas y excluye `Reserva.fecha`
