@@ -257,6 +257,7 @@ class AvisoDeReservasNuevasMixin:
 
 class ReservaPersonalizacionInline(admin.TabularInline):
     model = ReservaPersonalizacion
+    verbose_name_plural = 'Extras comprados'
     extra = 0
     fields = [
         'servicio_personalizacion', 'cantidad', 'respuesta',
@@ -277,6 +278,7 @@ class ReservaPersonalizacionInline(admin.TabularInline):
 
 class ReservaOcupacionInline(admin.TabularInline):
     model = ReservaOcupacion
+    verbose_name_plural = 'Ocupaciones del viaje'
     extra = 0
     fields = ['recurso', 'fecha_inicio', 'fecha_fin', 'creado_en']
     readonly_fields = ['creado_en']
@@ -304,6 +306,7 @@ class ReservaOcupacionInline(admin.TabularInline):
 
 class ReservaPaqueteComponenteInline(admin.TabularInline):
     model = ReservaPaqueteComponente
+    verbose_name_plural = 'Componentes del paquete'
     extra = 0
     fields = ['servicio', 'estado_cupo', 'creado_en']
     readonly_fields = ['creado_en']
@@ -331,6 +334,7 @@ class ReservaPaqueteComponenteInline(admin.TabularInline):
 
 class DetalleTransporteInline(admin.StackedInline):
     model = DetalleTransporte
+    verbose_name_plural = 'Detalle de traslado'
     extra = 0
     fields = [
         'tipo_traslado', 'punto_encuentro', 'direccion_personalizada', 'zona',
@@ -530,6 +534,9 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
 
 @admin.register(Reserva)
 class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
+    campos_escopeados_por_empresa = ('servicio', 'vendedora', 'embarcacion', 'capitan')
+    change_form_template = 'bookings/reserva_change_form.html'
+    warn_unsaved_form = True
     list_display = [
         'cuando', 'cliente', 'personas', 'servicio_resumen',
         'estado', 'cobro', 'extras', 'asignacion',
@@ -565,7 +572,115 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         # Se congelan en CrearPagoView junto con precio_total: editarlos aqui a
         # mano los desincronizaria de ese numero y del conteo de usos del codigo.
         'codigo_promocional', 'descuento_aplicado',
+        'personas_por_servicio_legible', 'tipo_cambio',
     ]
+
+    def get_fieldsets(self, request, obj=None):
+        viaje = [
+            'servicio', 'paquete', 'fecha', 'hora', 'numero_personas',
+            'personas_por_servicio_legible', 'aeropuerto', 'fecha_salida', 'inicio_paquete',
+        ]
+        if obj is None and scope.es_operador_plataforma(request.user):
+            viaje.insert(0, 'empresa')
+        sistema = [
+            'orden', 'personas_por_servicio', 'tipo_cambio',
+            'checkout_id', 'stripe_payment_intent_id', 'pagada_en',
+            'vendedora_asignada_en', 'aviso_asignacion_enviado_en',
+            'efectivo_cobrado_en', 'efectivo_cobrado_por', 'en_disputa',
+            'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en',
+            'deslinde_ip', 'deslinde_version', 'creado_en', 'actualizado_en',
+        ]
+        cancelacion = {'fields': (
+            'motivo_cancelacion', 'reembolsada', 'monto_reembolsado',
+            'cancelada_por', 'cancelada_en', 'reembolsada_en',
+        )}
+        if obj is None or (obj.estado != Reserva.Estado.CANCELADA and not obj.motivo_cancelacion):
+            cancelacion['classes'] = ('collapse',)
+        return [
+            ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente')}),
+            ('Viaje', {'fields': tuple(viaje)}),
+            ('Cobro', {'fields': (
+                'forma_pago', 'moneda', 'precio_total', 'monto_pagado', 'monto_efectivo',
+                'pide_bebidas', 'pide_extras_whatsapp', 'codigo_promocional', 'descuento_aplicado',
+            )}),
+            # El canal es obligatorio en el alta; queda visible junto a la atribución.
+            ('Asignación', {'fields': ('estado', 'canal_origen', 'vendedora', 'embarcacion', 'capitan')}),
+            ('Cancelación', cancelacion),
+            ('Registro del sistema', {'fields': tuple(sistema), 'classes': ('collapse',)}),
+        ]
+
+    def get_readonly_fields(self, request, obj=None):
+        campos = list(super().get_readonly_fields(request, obj))
+        if (not scope.es_operador_plataforma(request.user)
+                and request.user.groups.filter(name='Vendedora').exists()
+                and not request.user.groups.filter(name='Jefe').exists()):
+            campos.extend(('stripe_payment_intent_id', 'checkout_id', 'orden',
+                           'personas_por_servicio', 'vendedora'))
+        return tuple(dict.fromkeys(campos))
+
+    @admin.display(description='Personas por servicio')
+    def personas_por_servicio_legible(self, obj):
+        valores = obj.personas_por_servicio or {}
+        if not isinstance(valores, dict) or not valores or not obj.empresa_id:
+            return '—'
+        identificadores = {}
+        for clave in valores:
+            try:
+                identificadores[clave] = int(clave)
+            except (TypeError, ValueError):
+                identificadores[clave] = None
+        nombres = dict(Servicio.objects.filter(
+            empresa_id=obj.empresa_id,
+            pk__in=[pk for pk in identificadores.values() if pk is not None],
+        ).values_list('pk', 'nombre'))
+        return ' · '.join(
+            f'{nombres.get(identificadores[clave], "servicio eliminado")} {cantidad}'
+            for clave, cantidad in valores.items()
+        )
+
+    def get_inline_instances(self, request, obj=None):
+        inlines = super().get_inline_instances(request, obj)
+        if obj is None:
+            return []
+        relaciones = {
+            ReservaPersonalizacionInline: obj.personalizaciones_seleccionadas.exists,
+            ReservaOcupacionInline: obj.ocupaciones.exists,
+            ReservaPaqueteComponenteInline: obj.componentes.exists,
+        }
+        resultado = []
+        for inline in inlines:
+            if type(inline) in relaciones and not relaciones[type(inline)]():
+                continue
+            if isinstance(inline, DetalleTransporteInline) and (
+                    not obj.servicio_id or obj.servicio.tipo_servicio != 'transporte'):
+                continue
+            resultado.append(inline)
+        return resultado
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'paquete' and not scope.es_operador_plataforma(request.user):
+            kwargs['queryset'] = Paquete.objects.filter(empresa_lider=scope.empresa_actual(request))
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        contexto = {**(extra_context or {}), 'show_delete': False}
+        if object_id is not None:
+            obj = self.get_object(request, object_id)
+            if obj is not None:
+                numero = telefono_marcable(obj.telefono_cliente)
+                asignacion = self.asignacion(obj)
+                contexto['resumen_reserva'] = {
+                    'cliente': obj.nombre_cliente,
+                    'telefono': obj.telefono_cliente,
+                    'whatsapp': f'https://wa.me/{numero}' if numero else '',
+                    'cuando': self.cuando(obj),
+                    'servicio': self.servicio_resumen(obj),
+                    'estado': obj.get_estado_display(),
+                    'cobro': self.cobro(obj),
+                    'asignacion': asignacion,
+                    'asignacion_urgente': 'Sin panga' in str(asignacion),
+                }
+        return super().changeform_view(request, object_id, form_url, contexto)
     actions = [
         'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
         'confirmar_devolucion', 'cancelar_por_mal_clima',

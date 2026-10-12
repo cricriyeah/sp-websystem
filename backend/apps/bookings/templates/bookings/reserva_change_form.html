@@ -1,0 +1,36 @@
+{% extends "admin/change_form.html" %}
+{% load admin_urls %}
+
+{% block form_before %}
+    {{ block.super }}
+    {% if resumen_reserva %}
+        <section class="reserva-resumen" aria-label="Resumen de la reserva">
+            <div class="reserva-resumen-cliente">
+                <strong>{{ resumen_reserva.cliente }}</strong>
+                {% if resumen_reserva.whatsapp %}
+                    <a href="{{ resumen_reserva.whatsapp }}" target="_blank" rel="noopener">{{ resumen_reserva.telefono }} · WhatsApp</a>
+                {% else %}
+                    <span>{{ resumen_reserva.telefono }}</span>
+                {% endif %}
+            </div>
+            <dl>
+                <div><dt>Cuándo</dt><dd>{{ resumen_reserva.cuando }}</dd></div>
+                <div><dt>Servicio</dt><dd>{{ resumen_reserva.servicio }}</dd></div>
+                <div><dt>Estado</dt><dd>{{ resumen_reserva.estado }}</dd></div>
+                <div><dt>Cobro</dt><dd>{{ resumen_reserva.cobro }}</dd></div>
+                <div><dt>Asignación</dt><dd{% if resumen_reserva.asignacion_urgente %} class="reserva-asignacion-urgente"{% endif %}>{{ resumen_reserva.asignacion }}</dd></div>
+            </dl>
+        </section>
+    {% endif %}
+{% endblock %}
+
+{% block form_after %}
+    {{ block.super }}
+    {% if original and has_delete_permission %}
+        {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
+        <aside class="reserva-eliminar">
+            <p>Para cancelar una reserva usa Cancelar por mal clima; eliminar la borra definitivamente.</p>
+            <a href="{{ delete_url }}">Eliminar reserva</a>
+        </aside>
+    {% endif %}
+{% endblock %}

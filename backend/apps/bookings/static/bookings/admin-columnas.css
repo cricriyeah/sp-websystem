@@ -193,6 +193,34 @@
   color: #b91c1c;
   font-weight: 600;
 }
+
+.reserva-resumen,
+.reserva-eliminar {
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.reserva-resumen-cliente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+.reserva-resumen-cliente strong { font-size: 1.1rem; }
+.reserva-resumen a,
+.reserva-eliminar a { text-decoration: underline; }
+.reserva-resumen dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+.reserva-resumen dt { font-size: 0.75rem; opacity: 0.7; }
+.reserva-resumen dd { margin: 0.2rem 0 0; font-weight: 500; }
+.reserva-asignacion-urgente { color: #c2410c; }
+.reserva-eliminar { margin-top: 1.5rem; }
+.reserva-eliminar p { margin-bottom: 0.5rem; }
 .model-reserva .field-cuando,
 .model-reserva .field-cobro {
   white-space: nowrap;
