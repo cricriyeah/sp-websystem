@@ -119,6 +119,8 @@ def _aplicar_pago_exitoso_transaccional(intent, empresa):
     reserva.pagada_en = _momento_del_pago(intent)
     reserva.stripe_payment_intent_id = intent['id']
     reserva.estado = Reserva.Estado.PAGADA
+    reserva.apartado_hasta = None
+    reserva.apartado_demanda = None
     try:
         with transaction.atomic():
             reserva.full_clean()
@@ -262,6 +264,8 @@ def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None):
     reserva.reembolsada = True
     reserva.monto_reembolsado = de_centavos(intent['amount_received'])
     reserva.reembolsada_en = timezone.now()
+    reserva.apartado_hasta = None
+    reserva.apartado_demanda = None
     reserva.full_clean()
     reserva.save()
     return SIN_CUPO_REEMBOLSADO
@@ -283,6 +287,8 @@ def _cancelar_codigo_promocional_invalido(reserva, intent, empresa):
     reserva.reembolsada = True
     reserva.monto_reembolsado = de_centavos(intent['amount_received'])
     reserva.reembolsada_en = timezone.now()
+    reserva.apartado_hasta = None
+    reserva.apartado_demanda = None
     reserva.full_clean()
     reserva.save()
     return CODIGO_INVALIDO_REEMBOLSADO
