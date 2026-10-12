@@ -566,7 +566,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         'cancelada_por', 'cancelada_en', 'creado_en', 'actualizado_en',
         'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en', 'deslinde_ip',
         'deslinde_version',
-        'efectivo_cobrado_en', 'efectivo_cobrado_por', 'en_disputa',
+        'efectivo_cobrado_en', 'efectivo_cobrado_por',
+        'transferencia_registrada_en', 'transferencia_registrada_por', 'en_disputa',
         'vendedora_asignada_en', 'pagada_en', 'monto_reembolsado', 'reembolsada_en',
         'aviso_asignacion_enviado_en',
         # Se congelan en CrearPagoView junto con precio_total: editarlos aqui a
@@ -586,7 +587,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             'orden', 'personas_por_servicio', 'tipo_cambio',
             'checkout_id', 'stripe_payment_intent_id', 'pagada_en',
             'vendedora_asignada_en', 'aviso_asignacion_enviado_en',
-            'efectivo_cobrado_en', 'efectivo_cobrado_por', 'en_disputa',
+            'efectivo_cobrado_en', 'efectivo_cobrado_por',
+            'transferencia_registrada_en', 'transferencia_registrada_por', 'en_disputa',
             'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en',
             'deslinde_ip', 'deslinde_version', 'creado_en', 'actualizado_en',
         ]
@@ -600,7 +602,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente')}),
             ('Viaje', {'fields': tuple(viaje)}),
             ('Cobro', {'fields': (
-                'forma_pago', 'moneda', 'precio_total', 'monto_pagado', 'monto_efectivo',
+                'forma_pago', 'moneda', 'precio_total', 'monto_pagado',
+                'monto_efectivo', 'monto_transferencia',
                 'pide_bebidas', 'pide_extras_whatsapp', 'codigo_promocional', 'descuento_aplicado',
             )}),
             # El canal es obligatorio en el alta; queda visible junto a la atribución.
@@ -617,6 +620,16 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             campos.extend(('stripe_payment_intent_id', 'checkout_id', 'orden',
                            'personas_por_servicio', 'vendedora'))
         return tuple(dict.fromkeys(campos))
+
+    def save_model(self, request, obj, form, change):
+        if 'monto_transferencia' in form.changed_data:
+            if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
+                obj.transferencia_registrada_en = timezone.now()
+                obj.transferencia_registrada_por = request.user
+            else:
+                obj.transferencia_registrada_en = None
+                obj.transferencia_registrada_por = None
+        super().save_model(request, obj, form, change)
 
     @admin.display(description='Personas por servicio')
     def personas_por_servicio_legible(self, obj):
@@ -730,7 +743,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return models.ExpressionWrapper(
             models.F('precio_total')
             - Coalesce('monto_pagado', models.Value(Decimal('0.00')), output_field=dinero)
-            - Coalesce('monto_efectivo', models.Value(Decimal('0.00')), output_field=dinero),
+            - Coalesce('monto_efectivo', models.Value(Decimal('0.00')), output_field=dinero)
+            - Coalesce('monto_transferencia', models.Value(Decimal('0.00')), output_field=dinero),
             output_field=dinero,
         )
 
@@ -1089,6 +1103,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                             if reserva.estado != Reserva.Estado.CANCELADA]
             por_moneda = {}
             efectivo_por_moneda = {}
+            transferencia_por_moneda = {}
             for reserva in por_cancelar:
                 moneda = reserva.moneda
                 por_moneda[moneda] = por_moneda.get(moneda, Decimal('0.00')) + (
@@ -1096,6 +1111,9 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 if reserva.monto_efectivo and reserva.monto_efectivo > 0:
                     efectivo_por_moneda[moneda] = efectivo_por_moneda.get(
                         moneda, Decimal('0.00')) + reserva.monto_efectivo
+                if reserva.monto_transferencia and reserva.monto_transferencia > 0:
+                    transferencia_por_moneda[moneda] = transferencia_por_moneda.get(
+                        moneda, Decimal('0.00')) + reserva.monto_transferencia
             return TemplateResponse(request, 'bookings/confirmar_cancelacion.html', {
                 **self.admin_site.each_context(request),
                 'opts': self.model._meta,
@@ -1108,6 +1126,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 'totales': [(moneda, f'{monto:.2f}') for moneda, monto in sorted(por_moneda.items())],
                 'efectivo': [(moneda, f'{monto:.2f}')
                              for moneda, monto in sorted(efectivo_por_moneda.items())],
+                'transferencias': [(moneda, f'{monto:.2f}')
+                                   for moneda, monto in sorted(transferencia_por_moneda.items())],
                 'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
                 'volver': request.get_full_path(),
             })

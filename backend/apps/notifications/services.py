@@ -93,11 +93,12 @@ def _cuerpo_html(reserva):
 
     pendiente = ''
     if reserva.forma_pago == reserva.FormaPago.ANTICIPO and reserva.precio_total and reserva.monto_pagado:
-        restante = reserva.precio_total - reserva.monto_pagado
-        pendiente = (
-            f'<p>Pagaste tu anticipo de {reserva.monto_pagado} {reserva.moneda}. '
-            f'Quedan {restante} {reserva.moneda} por liquidar en efectivo el dia del viaje.</p>'
-        )
+        restante = reserva.saldo_pendiente
+        if restante > 0:
+            pendiente = (
+                f'<p>Pagaste tu anticipo de {reserva.monto_pagado} {reserva.moneda}. '
+                f'Quedan {restante} {reserva.moneda} por liquidar en efectivo el dia del viaje.</p>'
+            )
 
     # Lo que compro en el checkout (brunch, licencia, carnada): ya tiene precio
     # congelado porque este correo solo se manda despues de pagar. `reserva.pk`
@@ -201,11 +202,12 @@ def _cuerpo_asignacion_html(reserva):
     """
     pendiente = ''
     if reserva.forma_pago == reserva.FormaPago.ANTICIPO and reserva.precio_total and reserva.monto_pagado:
-        restante = reserva.precio_total - reserva.monto_pagado
-        pendiente = (
-            f'<p>Recuerda que llevas {restante} {reserva.moneda} por liquidar en efectivo '
-            f'el dia del viaje.</p>'
-        )
+        restante = reserva.saldo_pendiente
+        if restante > 0:
+            pendiente = (
+                f'<p>Recuerda que llevas {restante} {reserva.moneda} por liquidar en efectivo '
+                f'el dia del viaje.</p>'
+            )
 
     return (
         f'<p>Hola {_html(reserva.nombre_cliente)}, ya sabemos con quien sales.</p>'

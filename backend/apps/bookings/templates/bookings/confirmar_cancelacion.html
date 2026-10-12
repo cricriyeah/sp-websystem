@@ -2,6 +2,7 @@
 {% load l10n %}
 
 {% block content %}
+{{ block.super }}
 <div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
     <div class="p-4">
         <h1 class="font-semibold text-important">Confirmar cancelaci&oacute;n por mal clima</h1>
@@ -26,7 +27,11 @@
         <p>Adem&aacute;s se recibi&oacute; efectivo que no pasa por Stripe:</p>
         <ul>{% for moneda, monto in efectivo %}<li>{{ monto }} {{ moneda }} en efectivo</li>{% endfor %}</ul>
         {% endif %}
-        <p>Tras cancelar, haz el reembolso en Stripe. Cuando Stripe lo confirme, quedar&aacute; registrado solo. Si ya se resolvi&oacute; fuera del sistema, usa &ldquo;Confirmar devoluci&oacute;n&rdquo;.</p>
+        {% if transferencias %}
+        <p>Adem&aacute;s se recibi&oacute; dinero por transferencia que no pasa por Stripe:</p>
+        <ul>{% for moneda, monto in transferencias %}<li>{{ monto }} {{ moneda }} por transferencia</li>{% endfor %}</ul>
+        {% endif %}
+        <p>Si hubo cobro con tarjeta, haz el reembolso en Stripe. Cuando Stripe lo confirme, quedar&aacute; registrado solo. Si ya se resolvi&oacute; fuera del sistema, usa &ldquo;Confirmar devoluci&oacute;n&rdquo;. Las devoluciones de transferencias se gestionan fuera del sistema.</p>
     </div>
     {% endif %}
 

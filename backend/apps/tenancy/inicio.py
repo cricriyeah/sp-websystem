@@ -44,7 +44,8 @@ def _conteos(empresa, hoy, ahora):
 
 def _reservas_con_saldo(empresa):
     cero = Value(Decimal('0.00'), output_field=DecimalField(max_digits=12, decimal_places=2))
-    saldo_cubierto = Coalesce(F('monto_pagado'), cero) + Coalesce(F('monto_efectivo'), cero)
+    saldo_cubierto = (Coalesce(F('monto_pagado'), cero) + Coalesce(F('monto_efectivo'), cero)
+                      + Coalesce(F('monto_transferencia'), cero))
     return Reserva.objects.filter(
         empresa=empresa,
         estado__in=[Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA],
