@@ -419,6 +419,26 @@ class OperadorEnlacePagoTests(TestCase):
     def setUp(self):
         self.client.force_login(self.operador)
 
+    def test_el_operador_tambien_recibe_el_aviso_de_disponibilidad(self):
+        # El operador no tiene una empresa activa: el aviso de cupo no debe depender de ello
+        # ni esconder un fallo (antes un con_empresa anidado lo habria silenciado).
+        with scope.como_operador_plataforma():
+            crear_flota(self.empresa_alfa)
+        manana = timezone.localdate() + timedelta(days=2)
+        parametros = {'fecha': manana.isoformat(), 'personas': 2, 'idioma': 'es'}
+
+        con_flota = self.client.get(self.url, {
+            'producto': f'servicio:{self.servicio_alfa.pk}', **parametros})
+        sin_flota = self.client.get(self.url, {
+            'producto': f'servicio:{self.servicio_beta.pk}', **parametros})
+
+        self.assertIsNotNone(con_flota.context['disponibilidad'])
+        self.assertTrue(con_flota.context['disponibilidad']['disponible'])
+        self.assertIsNotNone(con_flota.context['enlace'])
+        # Sin flota cargada no se afirma nada (ni «hay» ni «no hay» lugar), pero el enlace sale.
+        self.assertIsNone(sin_flota.context['disponibilidad'])
+        self.assertIsNotNone(sin_flota.context['enlace'])
+
     def test_operador_ve_multiples_empresas_y_genera_enlace_con_slug_correcto(self):
         manana = timezone.localdate() + timedelta(days=2)
 

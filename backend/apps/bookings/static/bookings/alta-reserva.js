@@ -34,6 +34,16 @@
       }
     }
 
+    var scriptLimites = document.getElementById('limites-servicios');
+    var mapaLimitesServicios = {};
+    if (scriptLimites) {
+      try {
+        mapaLimitesServicios = JSON.parse(scriptLimites.textContent) || {};
+      } catch (e) {
+        mapaLimitesServicios = {};
+      }
+    }
+
     var elTipoTraslado = document.getElementById('id_detalle_transporte-0-tipo_traslado');
     var elZona = document.getElementById('id_detalle_transporte-0-zona');
 
@@ -221,8 +231,99 @@
       }
     });
 
+    var elHora = document.getElementById('id_hora');
+
+    function obtenerElementoAyuda(input) {
+      if (!input) return null;
+      var contenedor = input.closest('.form-row') || input.closest('div') || input.parentElement;
+      var ayuda = contenedor ? (contenedor.querySelector('.help') || contenedor.querySelector('[data-ayuda-limite]')) : null;
+      if (!ayuda && contenedor) {
+        ayuda = document.createElement('p');
+        ayuda.setAttribute('data-ayuda-limite', '');
+        ayuda.className = 'help text-xs text-font-subtle mt-1';
+        if (input.nextSibling) {
+          input.parentNode.insertBefore(ayuda, input.nextSibling);
+        } else {
+          input.parentNode.appendChild(ayuda);
+        }
+      }
+      return ayuda;
+    }
+
+    function actualizarLimitesServicio() {
+      var idServicio = elServicio ? elServicio.value : '';
+      var limites = idServicio ? mapaLimitesServicios[idServicio] : null;
+
+      // 1. Número de personas (#id_numero_personas)
+      if (elPersonas) {
+        var ayudaPersonas = obtenerElementoAyuda(elPersonas);
+        if (ayudaPersonas && !ayudaPersonas.hasAttribute('data-ayuda-original')) {
+          ayudaPersonas.setAttribute('data-ayuda-original', ayudaPersonas.textContent || '');
+        }
+
+        if (limites) {
+          elPersonas.min = limites.min_personas || 1;
+          elPersonas.max = limites.max_personas;
+          if (ayudaPersonas) {
+            ayudaPersonas.textContent = 'De ' + (limites.min_personas || 1) + ' a ' + limites.max_personas + ' personas';
+            ayudaPersonas.style.display = '';
+          }
+        } else {
+          elPersonas.min = 1;
+          elPersonas.removeAttribute('max');
+          if (ayudaPersonas) {
+            var origP = ayudaPersonas.getAttribute('data-ayuda-original') || '';
+            ayudaPersonas.textContent = origP;
+            if (!origP && ayudaPersonas.hasAttribute('data-ayuda-limite')) {
+              ayudaPersonas.style.display = 'none';
+            }
+          }
+        }
+      }
+
+      // 2. Hora (#id_hora)
+      if (elHora) {
+        var ayudaHora = obtenerElementoAyuda(elHora);
+        if (ayudaHora && !ayudaHora.hasAttribute('data-ayuda-original')) {
+          ayudaHora.setAttribute('data-ayuda-original', ayudaHora.textContent || '');
+        }
+
+        if (limites) {
+          if (limites.apertura && limites.cierre) {
+            elHora.min = limites.apertura;
+            elHora.max = limites.cierre;
+            if (ayudaHora) {
+              ayudaHora.textContent = 'Entre ' + limites.apertura + ' y ' + limites.cierre;
+              ayudaHora.style.display = '';
+            }
+          } else if (!limites.pide_hora) {
+            elHora.removeAttribute('min');
+            elHora.removeAttribute('max');
+            if (ayudaHora) {
+              ayudaHora.textContent = 'No requiere hora de salida';
+              ayudaHora.style.display = '';
+            }
+          } else {
+            elHora.removeAttribute('min');
+            elHora.removeAttribute('max');
+          }
+        } else {
+          elHora.removeAttribute('min');
+          elHora.removeAttribute('max');
+          if (ayudaHora) {
+            var origH = ayudaHora.getAttribute('data-ayuda-original') || '';
+            ayudaHora.textContent = origH;
+            if (!origH && ayudaHora.hasAttribute('data-ayuda-limite')) {
+              ayudaHora.style.display = 'none';
+            }
+          }
+        }
+      }
+    }
+
     if (elServicio) {
       elServicio.addEventListener('change', actualizarVisibilidadDetalleTransporte);
+      elServicio.addEventListener('change', actualizarLimitesServicio);
     }
 
     // Si django.jQuery esta presente (widgets autocomplete de select2), enlazar tambien el evento change
@@ -230,9 +331,11 @@
       window.django.jQuery('#id_servicio, #id_paquete, #id_numero_personas, #id_moneda, #id_fecha, #id_detalle_transporte-0-tipo_traslado, #id_detalle_transporte-0-zona')
         .on('change', pedirSugerenciaDebounced);
       window.django.jQuery('#id_servicio').on('change', actualizarVisibilidadDetalleTransporte);
+      window.django.jQuery('#id_servicio').on('change', actualizarLimitesServicio);
     }
 
     actualizarVisibilidadDetalleTransporte();
+    actualizarLimitesServicio();
 
     // Consulta inicial en caso de que el formulario ya traiga campos precargados (p. ej. servicio por defecto)
     pedirSugerencia();

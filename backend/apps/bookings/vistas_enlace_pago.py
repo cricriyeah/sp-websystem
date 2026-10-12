@@ -15,9 +15,10 @@ from django.core.exceptions import PermissionDenied
 from django.template.response import TemplateResponse
 from django.utils import timezone
 
-from apps.fleet.models import Paquete, Servicio
+from apps.fleet.models import Embarcacion, Paquete, Servicio
 from apps.tenancy import scope
-from apps.bookings.models import Vendedora
+from apps.bookings.limites_servicio import limites_de_servicio, mapa_limites
+from apps.bookings.models import Vendedora, evaluar_cupo
 
 
 def obtener_telefono_marcable(telefono):
@@ -112,7 +113,7 @@ class EnlacePagoForm(forms.Form):
                 .order_by('empresa__nombre', 'nombre')
             )
             opciones_servicios = [
-                (f'servicio:{s.pk}', f'{s.nombre} ({s.empresa.nombre})')
+                (f'servicio:{s.pk}', f'{s.nombre} ({s.empresa.nombre}) — {limites_de_servicio(s)["etiqueta"]}')
                 for s in qs_servicios
             ]
             qs_paquetes = (
@@ -139,8 +140,13 @@ class EnlacePagoForm(forms.Form):
                 qs_servicios = Servicio.objects.none()
                 qs_paquetes = Paquete.objects.none()
 
-            opciones_servicios = [(f'servicio:{s.pk}', s.nombre) for s in qs_servicios]
+            opciones_servicios = [
+                (f'servicio:{s.pk}', f'{s.nombre} — {limites_de_servicio(s)["etiqueta"]}')
+                for s in qs_servicios
+            ]
             opciones_paquetes = [(f'paquete:{p.pk}', p.nombre) for p in qs_paquetes]
+
+        self.limites_servicios = mapa_limites(qs_servicios, prefijo='servicio:')
 
         choices_producto = [('', '---------')]
         if opciones_servicios:
@@ -319,10 +325,38 @@ def enlace_pago_view(modelo_admin, request):
     enlace = None
     whatsapp_url = None
     codigo_ref = None
+    disponibilidad = None
 
     if hay_parametros and form.is_valid():
         codigo_ref = form.codigo_ref
         idioma = form.cleaned_data.get('idioma') or 'es'
+
+        # Aviso de disponibilidad para servicios con cupo por recurso/día (informativo, sin locks)
+        if form.tipo_producto == 'servicio':
+            servicio = form.instancia_producto
+            if getattr(servicio, 'estrategia_cupo', None) == 'por_recurso_dia':
+                fecha = form.cleaned_data.get('fecha')
+                personas = form.cleaned_data.get('personas')
+                # Sin flota cargada no hay forma de saber si cabe: se calla en vez de afirmar
+                # «no hay lugar».
+                if fecha and personas and Embarcacion.objects.filter(
+                        empresa=servicio.empresa, activa=True).exists():
+                    # La peticion ya corre bajo el alcance de quien la hace (su empresa, o el
+                    # operador, que ve todas): no se abre otro. `evaluar_cupo` solo consulta,
+                    # no toma el lock (es la misma lectura informativa de /api/cupo/).
+                    motivo = evaluar_cupo(
+                        fecha, personas, servicio.empresa, servicio_id=servicio.pk
+                    )
+                    motivos_legibles = {
+                        'lleno': 'ya no quedan viajes',
+                        'sin_panga': 'no queda una embarcación donde quepa el grupo',
+                    }
+                    disponibilidad = {
+                        'disponible': motivo is None,
+                        'motivo': motivo,
+                        'motivo_legible': motivos_legibles.get(motivo, motivo or ''),
+                        'personas': personas,
+                    }
 
         if base_frontend:
             if form.tipo_producto == 'servicio':
@@ -369,6 +403,8 @@ def enlace_pago_view(modelo_admin, request):
         'title': 'Enlace de pago',
         'titulo': 'Enlace de pago',
         'form': form,
+        'limites_servicios': getattr(form, 'limites_servicios', {}),
+        'disponibilidad': disponibilidad,
         'enlace': enlace,
         'whatsapp_url': whatsapp_url,
         'codigo_ref': codigo_ref,

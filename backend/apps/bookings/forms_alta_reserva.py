@@ -6,6 +6,7 @@ from apps.fleet.enums import TipoServicio
 from apps.tenancy import scope
 from apps.bookings.models import Reserva, Vendedora
 from apps.bookings.precio_sugerido import sugerir_precio
+from apps.bookings.limites_servicio import limites_de_servicio
 
 OPCIONES_YA_PAGO = [
     ('no', 'Aún no pagó — no aparta lugar en el cupo hasta que pague'),
@@ -96,6 +97,17 @@ class AltaReservaForm(forms.ModelForm):
                     )
                 if self.perfil_vendedora and not self.initial.get('vendedora'):
                     self.fields['vendedora'].initial = self.perfil_vendedora
+
+        # Mostrar límites del servicio en cada opción del selector
+        if 'servicio' in self.fields:
+            if es_operador:
+                self.fields['servicio'].label_from_instance = (
+                    lambda s: f"{s.nombre} ({s.empresa.nombre}) — {limites_de_servicio(s)['etiqueta']}"
+                )
+            else:
+                self.fields['servicio'].label_from_instance = (
+                    lambda s: f"{s.nombre} — {limites_de_servicio(s)['etiqueta']}"
+                )
 
     def clean(self):
         cleaned_data = super().clean()

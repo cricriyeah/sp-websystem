@@ -6,6 +6,9 @@
     {% if servicios_transporte_ids is not None %}
         {{ servicios_transporte_ids|json_script:"servicios-transporte-ids" }}
     {% endif %}
+    {% if limites_servicios is not None %}
+        {{ limites_servicios|json_script:"limites-servicios" }}
+    {% endif %}
     {% if resumen_reserva %}
         <section class="reserva-resumen" aria-label="Resumen de la reserva">
             <div class="reserva-resumen-cliente">

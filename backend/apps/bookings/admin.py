@@ -37,6 +37,7 @@ from apps.tenancy.models import Empresa, MembresiaEmpresa
 
 from .forms import AltaVendedoraForm
 from .forms_alta_reserva import AltaReservaForm
+from .limites_servicio import mapa_limites
 from .precio_sugerido import sugerir_precio
 from .vistas_precio import respuesta_precio_sugerido
 from .vistas_enlace_pago import respuesta_enlace_pago
@@ -805,12 +806,15 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             es_operador = scope.es_operador_plataforma(request.user)
             empresa = scope.empresa_actual(request)
             if es_operador:
-                qs = Servicio.objects.filter(tipo_servicio=TipoServicio.TRANSPORTE, activo=True)
+                qs_servicios = list(Servicio.objects.filter(activo=True))
             elif empresa:
-                qs = Servicio.objects.filter(tipo_servicio=TipoServicio.TRANSPORTE, activo=True, empresa=empresa)
+                qs_servicios = list(Servicio.objects.filter(empresa=empresa, activo=True))
             else:
-                qs = Servicio.objects.none()
-            contexto['servicios_transporte_ids'] = list(qs.values_list('pk', flat=True))
+                qs_servicios = []
+            contexto['servicios_transporte_ids'] = [
+                s.pk for s in qs_servicios if s.tipo_servicio == TipoServicio.TRANSPORTE
+            ]
+            contexto['limites_servicios'] = mapa_limites(qs_servicios)
         else:
             obj = self.get_object(request, object_id)
             if obj is not None:

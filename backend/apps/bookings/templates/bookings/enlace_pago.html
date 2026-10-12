@@ -15,6 +15,7 @@
 
 {% block content %}
 {{ block.super }}
+{{ limites_servicios|json_script:"limites-servicios" }}
 <div class="border border-base-200 rounded-default shadow-xs dark:border-base-800 bg-white dark:bg-base-900">
     <div class="p-4 border-b border-base-200 dark:border-base-800">
         <h1 class="font-semibold text-important text-xl">Enlace de pago por WhatsApp</h1>
@@ -36,6 +37,18 @@
         <div class="enlace-pago-alerta mt-2">
             <strong>Atención:</strong> Este enlace no atribuye la venta a nadie.
         </div>
+        {% endif %}
+
+        {% if disponibilidad %}
+            {% if disponibilidad.disponible %}
+            <div class="p-3 my-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-default text-green-800 dark:text-green-200 text-sm font-medium">
+                Hoy hay lugar para {{ disponibilidad.personas }} personas ese día (se confirma al pagar)
+            </div>
+            {% else %}
+            <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-default text-amber-800 dark:text-amber-200 text-sm font-medium">
+                Ese día ya no tiene lugar para {{ disponibilidad.personas }} personas ({{ disponibilidad.motivo_legible }}). Puedes mandar el enlace, pero el cliente verá que no hay disponibilidad; ofrécele otra fecha.
+            </div>
+            {% endif %}
         {% endif %}
 
         <div class="mt-3">

@@ -22,6 +22,158 @@
         }
     }
 
+    function obtenerMapaLimites() {
+        var script = document.getElementById('limites-servicios');
+        if (!script) {
+            return {};
+        }
+        try {
+            return JSON.parse(script.textContent) || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    var mapaLimites = obtenerMapaLimites();
+    var inputHoraOriginal = null;
+
+    function actualizarLimites() {
+        var selectProducto = document.getElementById('id_producto');
+        if (!selectProducto) {
+            return;
+        }
+
+        var valor = selectProducto.value || '';
+        var limites = mapaLimites[valor];
+
+        // 1. Número de personas
+        var inputPersonas = document.getElementById('id_personas');
+        if (inputPersonas) {
+            var contenedorPersonas = inputPersonas.closest('[data-campo-servicio]') || inputPersonas.parentElement;
+            var ayudaPersonas = contenedorPersonas ? contenedorPersonas.querySelector('.enlace-pago-ayuda') : null;
+            if (ayudaPersonas && !ayudaPersonas.hasAttribute('data-ayuda-original')) {
+                ayudaPersonas.setAttribute('data-ayuda-original', ayudaPersonas.textContent);
+            }
+
+            if (limites) {
+                inputPersonas.min = limites.min_personas || 1;
+                inputPersonas.max = limites.max_personas;
+                if (ayudaPersonas) {
+                    ayudaPersonas.textContent = 'De ' + (limites.min_personas || 1) + ' a ' + limites.max_personas + ' personas';
+                }
+            } else {
+                inputPersonas.min = 1;
+                inputPersonas.removeAttribute('max');
+                if (ayudaPersonas && ayudaPersonas.hasAttribute('data-ayuda-original')) {
+                    ayudaPersonas.textContent = ayudaPersonas.getAttribute('data-ayuda-original');
+                }
+            }
+        }
+
+        // 2. Hora
+        var elHora = document.getElementById('id_hora');
+        if (elHora) {
+            var contenedorHora = elHora.closest('[data-campo-servicio]') || elHora.parentElement;
+            var ayudaHora = contenedorHora ? contenedorHora.querySelector('.enlace-pago-ayuda') : null;
+            if (ayudaHora && !ayudaHora.hasAttribute('data-ayuda-original')) {
+                ayudaHora.setAttribute('data-ayuda-original', ayudaHora.textContent);
+            }
+
+            if (limites) {
+                if (limites.apertura && limites.cierre) {
+                    if (ayudaHora) {
+                        ayudaHora.textContent = 'Entre ' + limites.apertura + ' y ' + limites.cierre;
+                    }
+                } else if (!limites.pide_hora) {
+                    if (ayudaHora) {
+                        ayudaHora.textContent = 'No requiere hora de salida';
+                    }
+                }
+
+                if (limites.horas && limites.horas.length > 0) {
+                    var valorHoraActual = elHora.value || '';
+                    if (elHora.tagName === 'INPUT') {
+                        inputHoraOriginal = elHora;
+                        var selectHora = document.createElement('select');
+                        selectHora.name = elHora.name;
+                        selectHora.id = 'id_hora';
+                        selectHora.className = elHora.className;
+
+                        var optVacia = document.createElement('option');
+                        optVacia.value = '';
+                        optVacia.textContent = '---------';
+                        selectHora.appendChild(optVacia);
+
+                        for (var j = 0; j < limites.horas.length; j++) {
+                            var h = limites.horas[j];
+                            var opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            if (h === valorHoraActual) {
+                                opt.selected = true;
+                            }
+                            selectHora.appendChild(opt);
+                        }
+                        elHora.parentNode.replaceChild(selectHora, elHora);
+                    } else if (elHora.tagName === 'SELECT') {
+                        elHora.innerHTML = '';
+                        var optDef = document.createElement('option');
+                        optDef.value = '';
+                        optDef.textContent = '---------';
+                        elHora.appendChild(optDef);
+
+                        for (var k = 0; k < limites.horas.length; k++) {
+                            var horaOpt = limites.horas[k];
+                            var o = document.createElement('option');
+                            o.value = horaOpt;
+                            o.textContent = horaOpt;
+                            if (horaOpt === valorHoraActual) {
+                                o.selected = true;
+                            }
+                            elHora.appendChild(o);
+                        }
+                    }
+                } else {
+                    if (elHora.tagName === 'SELECT' && inputHoraOriginal) {
+                        inputHoraOriginal.value = elHora.value || '';
+                        elHora.parentNode.replaceChild(inputHoraOriginal, elHora);
+                        elHora = inputHoraOriginal;
+                    }
+                    if (elHora.tagName === 'INPUT') {
+                        if (limites.apertura && limites.cierre) {
+                            elHora.min = limites.apertura;
+                            elHora.max = limites.cierre;
+                            elHora.step = 900;
+                        } else {
+                            elHora.removeAttribute('min');
+                            elHora.removeAttribute('max');
+                            elHora.removeAttribute('step');
+                        }
+                    }
+                }
+            } else {
+                if (elHora.tagName === 'SELECT' && inputHoraOriginal) {
+                    inputHoraOriginal.value = elHora.value || '';
+                    elHora.parentNode.replaceChild(inputHoraOriginal, elHora);
+                    elHora = inputHoraOriginal;
+                }
+                if (elHora.tagName === 'INPUT') {
+                    elHora.removeAttribute('min');
+                    elHora.removeAttribute('max');
+                    elHora.removeAttribute('step');
+                }
+                if (ayudaHora && ayudaHora.hasAttribute('data-ayuda-original')) {
+                    ayudaHora.textContent = ayudaHora.getAttribute('data-ayuda-original');
+                }
+            }
+        }
+    }
+
+    function alCambiarProducto() {
+        actualizarVisibilidadCampos();
+        actualizarLimites();
+    }
+
     function inicializarBotonCopiar() {
         var boton = document.getElementById('btn-copiar-enlace');
         var input = document.getElementById('input-enlace-pago');
@@ -71,16 +223,16 @@
         document.addEventListener('DOMContentLoaded', function () {
             var selectProducto = document.getElementById('id_producto');
             if (selectProducto) {
-                selectProducto.addEventListener('change', actualizarVisibilidadCampos);
-                actualizarVisibilidadCampos();
+                selectProducto.addEventListener('change', alCambiarProducto);
+                alCambiarProducto();
             }
             inicializarBotonCopiar();
         });
     } else {
         var selectProducto = document.getElementById('id_producto');
         if (selectProducto) {
-            selectProducto.addEventListener('change', actualizarVisibilidadCampos);
-            actualizarVisibilidadCampos();
+            selectProducto.addEventListener('change', alCambiarProducto);
+            alCambiarProducto();
         }
         inicializarBotonCopiar();
     }
