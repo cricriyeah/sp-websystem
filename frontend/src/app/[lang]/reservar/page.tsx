@@ -40,6 +40,9 @@ export default async function ReservarPage({
     minDate,
   );
   const day = parsed.day ?? minDate;
+  // El enlace traia una fecha pero no sirvio (pasada, mal formada): se uso la primera disponible
+  // y el cliente debe enterarse, no descubrirlo despues. Sin `day` en el enlace no hay nada que avisar.
+  const fechaDescartada = typeof query.day === 'string' && query.day !== '' && parsed.day === undefined;
   const people = parsed.people ?? 2;
 
   // Si se seleccionó un paquete de experiencias desde el catálogo
@@ -125,6 +128,7 @@ export default async function ReservarPage({
       initialPeople={people}
       minDate={minDate}
       queryOverride={queryOverride}
+      fechaDescartada={fechaDescartada}
       empresaSlug={empresaSlug}
       servicioId={servicio?.slug ?? null}
       servicioNombre={servicio?.nombre ?? null}

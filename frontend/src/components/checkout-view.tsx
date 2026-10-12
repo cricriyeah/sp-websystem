@@ -154,6 +154,8 @@ type CheckoutViewProps = {
   // de elegir viaje en el booking bar, no recargo esta pagina. Ver el efecto
   // de recuperacion mas abajo.
   queryOverride: boolean;
+  // `true` si el enlace traia `day` pero se descarto y se uso la primera fecha disponible.
+  fechaDescartada?: boolean;
   empresaSlug?: string;
   servicioId?: number | string | null;
   servicioNombre?: string | null;
@@ -196,6 +198,7 @@ export function CheckoutView({
   initialPeople,
   minDate,
   queryOverride,
+  fechaDescartada = false,
   empresaSlug,
   servicioId,
   servicioNombre,
@@ -337,6 +340,16 @@ export function CheckoutView({
   useEffect(() => {
     if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
   }, [phase, checkoutId]);
+
+  // Una sola vez: el enlace traia una fecha que no sirvio y se uso otra. Se espera a que el
+  // formulario este listo y solo se avisa si sigue vigente (una reserva recuperada puede traer su fecha).
+  const avisoFechaMostrado = useRef(false);
+  useEffect(() => {
+    if (!fechaDescartada || avisoFechaMostrado.current || phase !== 'form') return;
+    avisoFechaMostrado.current = true;
+    if (day !== initialDay) return;
+    avisar('info', dict.feedback.dateChanged.replace('{date}', formatDay(fromLocalISODate(initialDay), lang)));
+  }, [fechaDescartada, phase, day, initialDay, avisar, dict.feedback.dateChanged, lang]);
   const phaseInicializada = useRef(false);
   const tieneProducto = Boolean(servicio);
   useLayoutEffect(() => {
