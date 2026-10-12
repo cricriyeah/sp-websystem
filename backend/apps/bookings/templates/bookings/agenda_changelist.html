@@ -237,6 +237,26 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                 </table>
             </div>
         </details>
+
+        {% comment %}
+        Dialogo propio para confirmar, pedir el motivo y mostrar errores. Reemplaza los
+        cuadros del navegador (prompt/confirm/alert), que se ven mal y en movil estorban.
+        Un solo <dialog> que `panorama.js` rellena segun la accion.
+        {% endcomment %}
+        <dialog data-dialogo class="agenda-dialogo" aria-labelledby="agenda-dialogo-titulo">
+            <h3 id="agenda-dialogo-titulo" data-dialogo-titulo class="agenda-dialogo-titulo"></h3>
+            <p data-dialogo-texto class="agenda-dialogo-texto"></p>
+            <label data-dialogo-motivo-caja hidden class="agenda-dialogo-texto">
+                Motivo (opcional)
+                <input type="text" data-dialogo-motivo maxlength="200" class="agenda-dialogo-campo"
+                       placeholder="Mantenimiento, motor descompuesto…">
+            </label>
+            <p data-dialogo-error role="alert" hidden class="agenda-dialogo-error"></p>
+            <div class="agenda-dialogo-botones">
+                <button type="button" data-dialogo-cancelar class="agenda-dialogo-boton">Cancelar</button>
+                <button type="button" data-dialogo-aceptar class="agenda-dialogo-boton agenda-dialogo-principal">Aceptar</button>
+            </div>
+        </dialog>
     {% endif %}
 
     {% if not agenda_estado or agenda_estado == 'normal' %}

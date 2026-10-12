@@ -372,23 +372,89 @@
 .agenda-accion-texto:focus-visible {
   opacity: 1;
 }
+/* Siempre visible (tenue): en movil no hay hover, asi que no puede depender de el. */
 .agenda-celda-accion {
   display: inline-block;
   margin-left: 0.35rem;
-  padding: 0 0.35rem;
+  padding: 0 0.4rem;
   border: 1px solid rgba(127, 127, 127, 0.45);
   border-radius: 4px;
   background: transparent;
   color: inherit;
   font-size: 0.7rem;
-  line-height: 1.35;
+  line-height: 1.4;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.6;
 }
-[data-celda]:hover .agenda-celda-accion,
+.agenda-celda-accion:hover,
 .agenda-celda-accion:focus-visible {
-  opacity: 0.85;
-}
-.agenda-celda-accion:hover {
   opacity: 1;
+}
+
+/* Dialogo propio de la agenda (confirmar, pedir motivo, mostrar un error). */
+.agenda-dialogo {
+  width: min(24rem, calc(100vw - 2rem));
+  padding: 1.1rem 1.25rem;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+.dark .agenda-dialogo {
+  background: #1f2937;
+  color: #f3f4f6;
+}
+.agenda-dialogo::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.agenda-dialogo-titulo {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.agenda-dialogo-texto {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.agenda-dialogo-campo {
+  display: block;
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid rgba(127, 127, 127, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+}
+.agenda-dialogo-error {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #dc2626;
+}
+.agenda-dialogo-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.agenda-dialogo-boton {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid rgba(127, 127, 127, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.agenda-dialogo-principal {
+  border-color: #b7410e;
+  background: #b7410e;
+  color: #fff;
+  font-weight: 600;
+}
+.agenda-dialogo-boton:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }

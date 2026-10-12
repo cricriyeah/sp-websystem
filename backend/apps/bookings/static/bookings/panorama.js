@@ -490,11 +490,22 @@
   // Disponibilidad: cerrar/reabrir un dia y marcar una panga fuera, sin salir de la agenda.
   // Escribe en los mismos modelos que sus pantallas de siempre (Cupo diario, Pangas fuera
   // de servicio) y recarga: el panorama, el pie y el selector de cada fila salen del
-  // servidor y no hay que mantenerlos sincronizados a mano.
+  // servidor y no hay que mantenerlos sincronizados a mano. Confirmaciones, motivo y
+  // errores van en un dialogo propio de la pagina, no en los cuadros del navegador.
   function iniciarDisponibilidad(panel) {
     var url = panel.getAttribute('data-disponibilidad-url');
     var token = document.querySelector('input[name="csrfmiddlewaretoken"]');
-    if (!url || !token) return;
+    var dialogo = document.querySelector('[data-dialogo]');
+    if (!url || !token || !dialogo || typeof dialogo.showModal !== 'function') return;
+
+    var titulo = dialogo.querySelector('[data-dialogo-titulo]');
+    var texto = dialogo.querySelector('[data-dialogo-texto]');
+    var cajaMotivo = dialogo.querySelector('[data-dialogo-motivo-caja]');
+    var campoMotivo = dialogo.querySelector('[data-dialogo-motivo]');
+    var error = dialogo.querySelector('[data-dialogo-error]');
+    var aceptar = dialogo.querySelector('[data-dialogo-aceptar]');
+    var cancelar = dialogo.querySelector('[data-dialogo-cancelar]');
+    var alAceptar = null;
 
     function enviar(datos) {
       var cuerpo = new URLSearchParams(datos);
@@ -508,10 +519,51 @@
       }).then(function (respuesta) {
         return respuesta.json().catch(function () { return {}; }).then(function (cuerpoJson) {
           if (!respuesta.ok) throw new Error(cuerpoJson.detail || 'No se pudo guardar.');
-          window.location.reload();
         });
-      }).catch(function (error) {
-        window.alert(error.message || 'No se pudo guardar.');
+      });
+    }
+
+    // `config`: titulo, texto, pedirMotivo, etiqueta del boton, soloCerrar y alAceptar(motivo).
+    function abrir(config) {
+      titulo.textContent = config.titulo;
+      texto.textContent = config.texto || '';
+      texto.hidden = !config.texto;
+      cajaMotivo.hidden = !config.pedirMotivo;
+      campoMotivo.value = '';
+      error.hidden = true;
+      error.textContent = '';
+      aceptar.hidden = !!config.soloCerrar;
+      aceptar.textContent = config.aceptar || 'Aceptar';
+      aceptar.disabled = false;
+      cancelar.textContent = config.soloCerrar ? 'Cerrar' : 'Cancelar';
+      alAceptar = config.alAceptar || null;
+      dialogo.showModal();
+      if (config.pedirMotivo) campoMotivo.focus();
+    }
+
+    function ejecutar() {
+      if (!alAceptar) return;
+      aceptar.disabled = true;
+      error.hidden = true;
+      Promise.resolve(alAceptar(campoMotivo.value.trim())).then(function () {
+        window.location.reload();
+      }).catch(function (fallo) {
+        error.textContent = fallo.message || 'No se pudo guardar.';
+        error.hidden = false;
+        aceptar.disabled = false;
+      });
+    }
+
+    aceptar.addEventListener('click', ejecutar);
+    cancelar.addEventListener('click', function () { dialogo.close(); });
+    campoMotivo.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Enter') { evento.preventDefault(); ejecutar(); }
+    });
+
+    function sinConfirmar(datos) {
+      // Reabrir y devolver una panga no necesitan confirmacion; si fallan, se dice por que.
+      enviar(datos).then(function () { window.location.reload(); }).catch(function (fallo) {
+        abrir({ titulo: 'No se pudo guardar', texto: fallo.message, soloCerrar: true });
       });
     }
 
@@ -525,10 +577,16 @@
       if (dia) {
         var accion = objetivo.getAttribute('data-accion-dia');
         var fecha = dia.getAttribute('data-fecha');
-        if (accion === 'cerrar_dia' && !window.confirm(
-          'Cerrar el ' + fecha + ': no se aceptarán más reservas ese día. Las que ya existen no se tocan.'
-        )) return;
-        enviar({ accion: accion, fecha: fecha });
+        if (accion === 'cerrar_dia') {
+          abrir({
+            titulo: 'Cerrar el ' + fecha,
+            texto: 'No se aceptarán más reservas ese día. Las que ya existen no se tocan.',
+            aceptar: 'Cerrar el día',
+            alAceptar: function () { return enviar({ accion: 'cerrar_dia', fecha: fecha }); },
+          });
+        } else {
+          sinConfirmar({ accion: 'abrir_dia', fecha: fecha });
+        }
         return;
       }
 
@@ -539,14 +597,18 @@
         embarcacion: celda.getAttribute('data-embarcacion'),
       };
       if (objetivo.hasAttribute('data-panga-fuera')) {
-        var motivo = window.prompt('¿Por qué no sale ese día? (mantenimiento, motor… — opcional)', '');
-        if (motivo === null) return;
-        datos.accion = 'panga_fuera';
-        datos.motivo = motivo;
+        abrir({
+          titulo: 'Sacar la panga ese día',
+          texto: 'No saldrá el ' + datos.fecha + ' y dejará de contar para el cupo.',
+          pedirMotivo: true,
+          aceptar: 'Sacar la panga',
+          alAceptar: function (motivo) {
+            return enviar({ accion: 'panga_fuera', fecha: datos.fecha, embarcacion: datos.embarcacion, motivo: motivo });
+          },
+        });
       } else {
-        datos.accion = 'panga_vuelve';
+        sinConfirmar({ accion: 'panga_vuelve', fecha: datos.fecha, embarcacion: datos.embarcacion });
       }
-      enviar(datos);
     }, true);
   }
 
