@@ -24,6 +24,50 @@
     var elMoneda = document.getElementById('id_moneda');
     var elFecha = document.getElementById('id_fecha');
 
+    var scriptIds = document.getElementById('servicios-transporte-ids');
+    var serviciosTransporteIds = [];
+    if (scriptIds) {
+      try {
+        serviciosTransporteIds = JSON.parse(scriptIds.textContent);
+      } catch (e) {
+        serviciosTransporteIds = [];
+      }
+    }
+
+    var elTipoTraslado = document.getElementById('id_detalle_transporte-0-tipo_traslado');
+    var elZona = document.getElementById('id_detalle_transporte-0-zona');
+
+    function obtenerGrupoDetalleTransporte() {
+      var grupo = document.getElementById('detalle_transporte-group');
+      if (grupo) {
+        return grupo;
+      }
+      var totalForms = document.getElementById('id_detalle_transporte-TOTAL_FORMS');
+      if (totalForms) {
+        return totalForms.closest('.inline-group') || totalForms.closest('.js-inline-admin-formset') || totalForms.closest('fieldset') || totalForms.parentElement;
+      }
+      return null;
+    }
+
+    function esServicioTransporte(idServicio) {
+      if (!idServicio) {
+        return false;
+      }
+      return serviciosTransporteIds.some(function (id) {
+        return String(id) === String(idServicio);
+      });
+    }
+
+    function actualizarVisibilidadDetalleTransporte() {
+      var grupo = obtenerGrupoDetalleTransporte();
+      if (!grupo) {
+        return;
+      }
+      var servicioVal = elServicio ? elServicio.value : '';
+      var esTransporte = esServicioTransporte(servicioVal);
+      grupo.style.display = esTransporte ? '' : 'none';
+    }
+
     // Si ya trae un valor inicial al cargar (p. ej. tras error de validacion POST), se respeta
     if (inputPrecio.value && inputPrecio.value.trim() !== '') {
       inputPrecio.setAttribute('data-editado', '1');
@@ -117,6 +161,16 @@
       if (monedaVal) url.searchParams.set('moneda', monedaVal);
       if (fechaVal) url.searchParams.set('fecha', fechaVal);
 
+      if (esServicioTransporte(servicioVal)) {
+        var elTipoActual = elTipoTraslado || document.getElementById('id_detalle_transporte-0-tipo_traslado');
+        var elZonaActual = elZona || document.getElementById('id_detalle_transporte-0-zona');
+        var tipoTrasladoVal = elTipoActual ? elTipoActual.value : '';
+        var zonaVal = elZonaActual ? elZonaActual.value : '';
+        if (tipoTrasladoVal) url.searchParams.set('tipo_traslado', tipoTrasladoVal);
+        if (zonaVal) url.searchParams.set('zona', zonaVal);
+        if (personasVal) url.searchParams.set('personas_traslado', personasVal);
+      }
+
       fetch(url.toString(), {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' },
@@ -159,7 +213,7 @@
     });
 
     // Escuchar cambios en los campos que determinan la cotizacion
-    var camposObservados = [elServicio, elPaquete, elPersonas, elMoneda, elFecha];
+    var camposObservados = [elServicio, elPaquete, elPersonas, elMoneda, elFecha, elTipoTraslado, elZona];
     camposObservados.forEach(function (campo) {
       if (campo) {
         campo.addEventListener('change', pedirSugerenciaDebounced);
@@ -167,11 +221,18 @@
       }
     });
 
+    if (elServicio) {
+      elServicio.addEventListener('change', actualizarVisibilidadDetalleTransporte);
+    }
+
     // Si django.jQuery esta presente (widgets autocomplete de select2), enlazar tambien el evento change
     if (window.django && window.django.jQuery) {
-      window.django.jQuery('#id_servicio, #id_paquete, #id_numero_personas, #id_moneda, #id_fecha')
+      window.django.jQuery('#id_servicio, #id_paquete, #id_numero_personas, #id_moneda, #id_fecha, #id_detalle_transporte-0-tipo_traslado, #id_detalle_transporte-0-zona')
         .on('change', pedirSugerenciaDebounced);
+      window.django.jQuery('#id_servicio').on('change', actualizarVisibilidadDetalleTransporte);
     }
+
+    actualizarVisibilidadDetalleTransporte();
 
     // Consulta inicial en caso de que el formulario ya traiga campos precargados (p. ej. servicio por defecto)
     pedirSugerencia();

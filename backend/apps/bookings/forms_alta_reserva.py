@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django import forms
 
+from apps.fleet.enums import TipoServicio
 from apps.tenancy import scope
 from apps.bookings.models import Reserva, Vendedora
 from apps.bookings.precio_sugerido import sugerir_precio
@@ -151,7 +152,14 @@ class AltaReservaForm(forms.ModelForm):
         ya_pago = cleaned_data.get('ya_pago')
         if ya_pago in ('todo_transferencia', 'anticipo_transferencia'):
             if precio_total is None:
-                self.add_error('precio_total', 'Escribe el precio total: no se pudo sugerir para este servicio.')
+                servicio = cleaned_data.get('servicio')
+                if servicio and getattr(servicio, 'tipo_servicio', None) == TipoServicio.TRANSPORTE:
+                    self.add_error(
+                        'precio_total',
+                        'Escribe el precio total o elige el tipo de traslado para que se sugiera.',
+                    )
+                else:
+                    self.add_error('precio_total', 'Escribe el precio total: no se pudo sugerir para este servicio.')
             else:
                 self.instance.precio_total = precio_total
 

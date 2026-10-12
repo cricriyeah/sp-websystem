@@ -3,6 +3,9 @@
 
 {% block form_before %}
     {{ block.super }}
+    {% if servicios_transporte_ids is not None %}
+        {{ servicios_transporte_ids|json_script:"servicios-transporte-ids" }}
+    {% endif %}
     {% if resumen_reserva %}
         <section class="reserva-resumen" aria-label="Resumen de la reserva">
             <div class="reserva-resumen-cliente">

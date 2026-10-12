@@ -58,6 +58,10 @@ class AltaReservaTests(EmpresaTestCase):
             'servicio': str(self.servicio.pk),
             'moneda': Reserva.Moneda.MXN,
             'precio_total': '4500.00',
+            # El alta incluye el formset del detalle de traslado: un navegador manda siempre
+            # sus campos de gestion (una fila vacia, que se ignora si no es un traslado).
+            'detalle_transporte-TOTAL_FORMS': '1',
+            'detalle_transporte-INITIAL_FORMS': '0',
             **extra,
         }
         return datos
@@ -349,6 +353,8 @@ class AltaReservaOperadorTests(TestCase):
             'moneda': Reserva.Moneda.MXN,
             'precio_total': '4500.00',
             'ya_pago': 'no',
+            'detalle_transporte-TOTAL_FORMS': '1',
+            'detalle_transporte-INITIAL_FORMS': '0',
         }
         resp_post = self.client.post(self.url, datos)
         self.assertEqual(resp_post.status_code, 302)

@@ -24,6 +24,7 @@ from django.utils.timesince import timesince
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
+from apps.fleet.enums import TipoServicio
 from apps.fleet.models import (
     Embarcacion, EmbarcacionNoDisponible, Paquete, PuntoEncuentro, Recurso, Servicio,
 )
@@ -35,6 +36,7 @@ from apps.tenancy.models import Empresa, MembresiaEmpresa
 
 from .forms import AltaVendedoraForm
 from .forms_alta_reserva import AltaReservaForm
+from .precio_sugerido import sugerir_precio
 from .vistas_precio import respuesta_precio_sugerido
 
 from .models import (
@@ -334,15 +336,59 @@ class ReservaPaqueteComponenteInline(admin.TabularInline):
         return super().has_delete_permission(request, obj)
 
 
+class DetalleTransporteFormSet(forms.BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        # Solo en el ALTA: una reserva de traslado anterior pudo guardarse sin detalle y
+        # no debe quedar imposible de editar (corregir un telefono) por eso.
+        if self.instance.pk is not None:
+            return
+        servicio = getattr(self.instance, 'servicio', None)
+        if servicio is None and getattr(self.instance, 'servicio_id', None):
+            servicio = Servicio.objects.filter(pk=self.instance.servicio_id).first()
+
+        es_transporte = bool(
+            servicio and getattr(servicio, 'tipo_servicio', None) == TipoServicio.TRANSPORTE
+        )
+
+        formularios = [
+            form for form in self.forms
+            if not (self.can_delete and self._should_delete_form(form))
+        ]
+
+        tiene_detalle = any(
+            (form.cleaned_data.get('tipo_traslado') if getattr(form, 'cleaned_data', None) else None)
+            for form in formularios
+        )
+        tiene_datos = any(
+            (form.has_changed() or getattr(form.instance, 'pk', None) is not None)
+            for form in formularios
+        )
+
+        if es_transporte:
+            if not tiene_detalle:
+                raise forms.ValidationError('Falta el detalle del traslado: elige el tipo de traslado.')
+        else:
+            if tiene_datos or tiene_detalle:
+                raise forms.ValidationError('El detalle de traslado solo aplica a servicios de transporte.')
+
+
 class DetalleTransporteInline(admin.StackedInline):
     model = DetalleTransporte
+    formset = DetalleTransporteFormSet
     verbose_name_plural = 'Detalle de traslado'
     extra = 0
+    max_num = 1
     fields = [
         'tipo_traslado', 'punto_encuentro', 'direccion_personalizada', 'zona',
         'fecha_regreso', 'numero_personas', 'precio_calculado',
     ]
     readonly_fields = ['numero_personas', 'precio_calculado']
+
+    def get_extra(self, request, obj=None, **kwargs):
+        if obj is None:
+            return 1
+        return 0
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'punto_encuentro' and not scope.es_operador_plataforma(request.user):
@@ -680,6 +726,33 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 obj.transferencia_registrada_por = None
         super().save_model(request, obj, form, change)
 
+    def save_formset(self, request, form, formset, change):
+        if formset.model == DetalleTransporte and not change:
+            instances = formset.save(commit=False)
+            for instance in instances:
+                reserva = instance.reserva
+                num_personas = instance.numero_personas or reserva.numero_personas
+                instance.numero_personas = num_personas
+                zona = instance.zona_efectiva() if hasattr(instance, 'zona_efectiva') else (instance.zona or '')
+                tarifa = sugerir_precio(
+                    servicio=reserva.servicio,
+                    numero_personas=num_personas,
+                    moneda=reserva.moneda,
+                    fecha=reserva.fecha,
+                    detalle_transporte={
+                        'tipo_traslado': instance.tipo_traslado,
+                        'zona': zona,
+                        'numero_personas': num_personas,
+                    },
+                )
+                instance.precio_calculado = tarifa
+                instance.save()
+            formset.save_m2m()
+            for obj in formset.deleted_objects:
+                obj.delete()
+        else:
+            super().save_formset(request, form, formset, change)
+
     @admin.display(description='Personas por servicio')
     def personas_por_servicio_legible(self, obj):
         valores = obj.personas_por_servicio or {}
@@ -703,7 +776,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
     def get_inline_instances(self, request, obj=None):
         inlines = super().get_inline_instances(request, obj)
         if obj is None:
-            return []
+            return [inline for inline in inlines if isinstance(inline, DetalleTransporteInline)]
         relaciones = {
             ReservaPersonalizacionInline: obj.personalizaciones_seleccionadas.exists,
             ReservaOcupacionInline: obj.ocupaciones.exists,
@@ -726,7 +799,17 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         contexto = {**(extra_context or {}), 'show_delete': False}
-        if object_id is not None:
+        if object_id is None:
+            es_operador = scope.es_operador_plataforma(request.user)
+            empresa = scope.empresa_actual(request)
+            if es_operador:
+                qs = Servicio.objects.filter(tipo_servicio=TipoServicio.TRANSPORTE, activo=True)
+            elif empresa:
+                qs = Servicio.objects.filter(tipo_servicio=TipoServicio.TRANSPORTE, activo=True, empresa=empresa)
+            else:
+                qs = Servicio.objects.none()
+            contexto['servicios_transporte_ids'] = list(qs.values_list('pk', flat=True))
+        else:
             obj = self.get_object(request, object_id)
             if obj is not None:
                 numero = telefono_marcable(obj.telefono_cliente)
