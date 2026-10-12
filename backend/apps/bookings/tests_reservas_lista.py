@@ -169,6 +169,7 @@ class ReservasListaTests(EmpresaTestCase):
         acciones = [a for a, _ in self.client.get(self.url).context['action_form'].fields['action'].choices]
         etiquetas = dict(self.client.get(self.url).context['action_form'].fields['action'].choices)
 
+        self.assertEqual(etiquetas[''], 'Elegir acción')
         self.assertEqual(acciones[-1], 'delete_selected')
         self.assertEqual(acciones[-2], 'cancelar_por_mal_clima')
         self.assertIn('(el 70% restante)', etiquetas['registrar_liquidacion_en_efectivo'])

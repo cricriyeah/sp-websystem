@@ -177,6 +177,15 @@ class VistaReservasFilter(admin.SimpleListFilter):
         return queryset
 
 
+class AccionesEnEspanolMixin:
+    """El selector de acciones de Unfold dice "Select action" y su traduccion no existe
+    en es-mx. Solo cambia esa primera opcion; las acciones traen su propio texto."""
+
+    def get_action_choices(self, request, *args, **kwargs):
+        opciones = super().get_action_choices(request, *args, **kwargs)
+        return [('', 'Elegir acción'), *opciones[1:]]
+
+
 class AvisoDeReservasNuevasMixin:
     """Contador de reservas nuevas para un listado del admin.
 
@@ -335,7 +344,7 @@ class ReservaPaqueteComponenteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(Orden)
-class OrdenAdmin(ModelAdmin):
+class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
     # Paquete tiene RLS por empresa lider: un JOIN lo ocultaria junto con
     # la orden. Solo sede se puede unir sin perder ordenes compartidas.
     list_select_related = ('sede',)
@@ -503,7 +512,7 @@ class OrdenAdmin(ModelAdmin):
 
 
 @admin.register(Reserva)
-class ReservaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
+class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
     list_display = [
         'cuando', 'cliente', 'personas', 'servicio_resumen',
         'estado', 'cobro', 'extras', 'asignacion',
