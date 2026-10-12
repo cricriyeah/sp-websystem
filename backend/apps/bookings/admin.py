@@ -43,6 +43,7 @@ from .vistas_precio import respuesta_precio_sugerido
 from .vistas_enlace_pago import respuesta_enlace_pago
 
 from .models import (
+    CUPO_MAXIMO_DEFAULT,
     ESTADOS_QUE_OCUPAN_CUPO,
     HORAS_PARA_CONSIDERAR_ABANDONADO,
     HORAS_RECIEN_LLEGADA,
@@ -1731,6 +1732,98 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
 
     SESION_EMPRESA = 'agenda_empresa'
 
+    def get_urls(self):
+        # Antes de super(): el admin termina en un catch-all `<path:object_id>/`.
+        return [
+            path(
+                'disponibilidad/',
+                self.admin_site.admin_view(self.disponibilidad_view),
+                name='bookings_agenda_disponibilidad',
+            ),
+        ] + super().get_urls()
+
+    def _empresa_de_la_peticion(self, request):
+        """La empresa sobre la que se actua: la propia, o la elegida si es operador."""
+        if scope.es_operador_plataforma(request.user):
+            return Empresa.objects.filter(activo=True, slug=request.POST.get('empresa') or None).first()
+        return scope.empresa_actual(request)
+
+    def disponibilidad_view(self, request):
+        """Cerrar o reabrir un dia y marcar una panga fuera de servicio, desde el panorama.
+
+        Son las dos acciones de "no hay lugar" que se hacian en pantallas aparte
+        (`CupoDiario` y `EmbarcacionNoDisponible`). Escribe en esos mismos modelos: no
+        hay un modelo nuevo ni se toca el motor de cupo. Cada accion pide el permiso
+        del modelo que escribe, asi que no abre nada que la vendedora no pudiera hacer
+        ya en su pantalla.
+        """
+        if request.method != 'POST':
+            return JsonResponse({'detail': 'Solo POST.'}, status=405)
+        if not self.has_view_permission(request):
+            raise PermissionDenied
+
+        empresa = self._empresa_de_la_peticion(request)
+        if empresa is None:
+            return JsonResponse({'detail': 'Elige una empresa.'}, status=400)
+        try:
+            fecha = date.fromisoformat(request.POST.get('fecha', ''))
+        except ValueError:
+            return JsonResponse({'detail': 'Fecha invalida.'}, status=400)
+        if fecha < timezone.localdate():
+            return JsonResponse({'detail': 'No se puede cambiar un dia que ya pasó.'}, status=400)
+
+        usuario = request.user
+        accion = request.POST.get('accion')
+
+        if accion in ('cerrar_dia', 'abrir_dia'):
+            if not (usuario.has_perm('bookings.add_cupodiario') and usuario.has_perm('bookings.change_cupodiario')):
+                raise PermissionDenied
+            # Reabrir vuelve al tope normal en vez de borrar la fila: borrar es un permiso
+            # que la vendedora no tiene y el resultado para el motor es el mismo.
+            CupoDiario.objects.update_or_create(
+                empresa=empresa, fecha=fecha,
+                defaults={'cupo_maximo': 0 if accion == 'cerrar_dia' else CUPO_MAXIMO_DEFAULT},
+            )
+            return JsonResponse({'ok': True})
+
+        if accion in ('panga_fuera', 'panga_vuelve'):
+            try:
+                embarcacion_id = int(request.POST.get('embarcacion', ''))
+            except ValueError:
+                return JsonResponse({'detail': 'Panga invalida.'}, status=400)
+            embarcacion = Embarcacion.objects.filter(pk=embarcacion_id, empresa=empresa, activa=True).first()
+            if embarcacion is None:
+                return JsonResponse({'detail': 'Esa panga no existe en esta empresa.'}, status=400)
+
+            if accion == 'panga_fuera':
+                if not usuario.has_perm('fleet.add_embarcacionnodisponible'):
+                    raise PermissionDenied
+                if Reserva.objects.filter(
+                    empresa=empresa, fecha=fecha, embarcacion=embarcacion,
+                    estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+                ).exists():
+                    return JsonResponse(
+                        {'detail': 'Esa panga ya tiene un viaje asignado ese dia. Reasignalo primero.'},
+                        status=409,
+                    )
+                EmbarcacionNoDisponible.objects.get_or_create(
+                    empresa=empresa, fecha=fecha, embarcacion=embarcacion,
+                    defaults={
+                        'motivo': (request.POST.get('motivo') or '').strip()[:200],
+                        'registrado_por': usuario,
+                    },
+                )
+                return JsonResponse({'ok': True})
+
+            if not usuario.has_perm('fleet.delete_embarcacionnodisponible'):
+                raise PermissionDenied
+            EmbarcacionNoDisponible.objects.filter(
+                empresa=empresa, fecha=fecha, embarcacion=embarcacion,
+            ).delete()
+            return JsonResponse({'ok': True})
+
+        return JsonResponse({'detail': 'Accion desconocida.'}, status=400)
+
     @staticmethod
     def _es_listado(request):
         match = request.resolver_match
@@ -1760,6 +1853,14 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
             contexto = {
                 'panorama': armar_panorama(timezone.localdate(), scope.empresa_actual(request)),
             }
+        usuario = request.user
+        contexto = {
+            **contexto,
+            'puede_cerrar_dia': usuario.has_perm('bookings.add_cupodiario')
+            and usuario.has_perm('bookings.change_cupodiario'),
+            'puede_sacar_panga': usuario.has_perm('fleet.add_embarcacionnodisponible'),
+            'puede_traer_panga': usuario.has_perm('fleet.delete_embarcacionnodisponible'),
+        }
         return super().changelist_view(request, {**(extra_context or {}), **contexto})
 
     def _contexto_operador(self, request):

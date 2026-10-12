@@ -207,7 +207,7 @@ UNFOLD = {
                         ),
                     },
                     {
-                        'title': 'Cupo diario',
+                        'title': 'Tope de viajes por día',
                         'icon': 'event_busy',
                         'link': reverse_lazy('admin:bookings_cupodiario_changelist'),
                         'permission': lambda request: request.user.has_perm('bookings.view_cupodiario'),

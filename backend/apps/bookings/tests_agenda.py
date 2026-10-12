@@ -525,10 +525,13 @@ class PanoramaTests(EmpresaTestCase):
         self.assertIsNone(renglon.celdas[0].reserva)
 
     def test_no_crece_en_consultas_con_los_dias(self):
-        """Cuatro fijas: reservas del rango, pangas activas, las marcadas fuera y
-        los atrasados. Sin ninguna por celda — son 70 celdas con la flota completa."""
-        with self.assertNumQueries(4):
+        """Fijas: reservas del rango, pangas activas, las marcadas fuera, los atrasados
+        y el contexto de cupo del rango (tope y apartados por dia, 4 consultas). Sin
+        ninguna por celda ni por dia — son 70 celdas con la flota completa."""
+        with self.assertNumQueries(8):
             armar_panorama(self.hoy, self.empresa, dias=7)
+        with self.assertNumQueries(8):
+            armar_panorama(self.hoy, self.empresa, dias=1)
 
     def test_el_resumen_cuenta_lo_que_falta(self):
         viaje(self.empresa, fecha=self.hoy + timedelta(days=1))

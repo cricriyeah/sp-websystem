@@ -63,6 +63,8 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
 
     {% if panorama %}
         <details data-panorama open
+                 data-disponibilidad-url="{% url 'admin:bookings_agenda_disponibilidad' %}"
+                 data-empresa="{{ agenda_empresa.slug|default:'' }}"
                  class="border border-base-200 rounded-default dark:border-base-800"
                  style="margin-bottom: 1.5rem">
             {% comment %}
@@ -104,10 +106,39 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                         <tr>
                             <th class="agenda-pegada bg-white dark:bg-base-900 text-base-500 dark:text-base-400"
                                 style="text-align: left; padding: 0.35rem 0.5rem; white-space: nowrap; width: 12rem">Panga</th>
-                            {% for dia in panorama.dias %}
+                            {% for dia, cupo in panorama.encabezados %}
                                 <th class="text-base-500 dark:text-base-400"
-                                    style="text-align: left; padding: 0.35rem 0.5rem; white-space: nowrap">
+                                    style="text-align: left; padding: 0.35rem 0.5rem; white-space: nowrap; vertical-align: top">
                                     {{ dia|date:"D j M" }}
+                                    {% comment %}
+                                    Lo que el motor de cupo usa para ese dia, no un calculo aparte:
+                                    cuantos viajes quedan por vender contra el tope, y cuantos lugares
+                                    tienen apartados clientes que estan pagando ahora. Cerrar o reabrir
+                                    el dia escribe en Cupo diario (el mismo modelo, sin pasar por su
+                                    pantalla).
+                                    {% endcomment %}
+                                    <div data-cupo-dia data-fecha="{{ dia|date:'Y-m-d' }}"
+                                         style="font-weight: 400; font-size: 0.75rem; line-height: 1.35">
+                                        {% if cupo.cerrado %}
+                                            <span style="color: #dc2626; font-weight: 600">Cerrado</span>
+                                            {% if puede_cerrar_dia %}
+                                                <button type="button" data-accion-dia="abrir_dia" class="agenda-accion-texto">Reabrir</button>
+                                            {% endif %}
+                                        {% else %}
+                                            <span title="Tope de viajes: {{ cupo.tope }}. Vendidos: {{ cupo.vendidos }}. Apartados: {{ cupo.apartados }} (clientes en el paso de pago, 15 min).">
+                                                Quedan <b style="{% if cupo.quedan == 0 %}color: #dc2626{% endif %}">{{ cupo.quedan }}</b> de {{ cupo.tope }}
+                                            </span>
+                                            {% if cupo.apartados %}
+                                                <span class="text-base-400"
+                                                      title="Clientes que estan en el paso de pago; su lugar se libera solo si no pagan.">
+                                                    · {{ cupo.apartados }} apartado{{ cupo.apartados|pluralize }}
+                                                </span>
+                                            {% endif %}
+                                            {% if puede_cerrar_dia %}
+                                                <button type="button" data-accion-dia="cerrar_dia" class="agenda-accion-texto">Cerrar día</button>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
                                 </th>
                             {% endfor %}
                         </tr>
@@ -169,6 +200,10 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                         {% if not celda.disponible %}
                                             {# Fuera de servicio no es lo mismo que libre. #}
                                             <span class="text-base-400" style="font-style: italic">fuera</span>
+                                            {% if puede_traer_panga %}
+                                                <button type="button" data-panga-vuelve class="agenda-celda-accion"
+                                                        title="Volver a poner esta panga en servicio ese día" aria-label="Volver a servicio">↺</button>
+                                            {% endif %}
                                         {% elif celda.reserva %}
                                             <span class="text-base-700 dark:text-base-300"
                                                   title="{{ celda.reserva.nombre_cliente }} · {{ celda.reserva.numero_personas }} pers">
@@ -177,6 +212,10 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                             </span>
                                         {% else %}
                                             <span class="text-base-300 dark:text-base-600" data-libre>·</span>
+                                            {% if puede_sacar_panga %}
+                                                <button type="button" data-panga-fuera class="agenda-celda-accion"
+                                                        title="Marcar esta panga fuera de servicio ese día" aria-label="Marcar fuera de servicio">⊘</button>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                 {% endfor %}

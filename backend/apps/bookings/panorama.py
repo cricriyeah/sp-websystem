@@ -17,11 +17,13 @@ La cuadricula tambien es la superficie donde se asigna: cada celda y cada viaje 
 panga llevan sus datos (`data-*`) para que `panorama.js` deje elegir la panga desde
 aqui. Lo que se guarda sigue siendo el selector de la tabla, con su validacion.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
 
+from .cupo.adaptador import obtener_contexto_rango
+from .cupo.apartado import apartado_activo, demanda_apartada_por_rango
 from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva
 
 DIAS_DEL_PANORAMA = 7
@@ -43,6 +45,27 @@ class Celda:
 class Renglon:
     embarcacion: object
     celdas: list
+
+
+@dataclass(frozen=True)
+class DiaCupo:
+    """Lo que el motor de cupo usa para decidir si todavia se vende ese dia.
+
+    Sale del mismo contexto que `/api/cupo/` y la validacion (`obtener_contexto_rango`),
+    no de un calculo aparte: asi esta cifra no puede decir "quedan 3" cuando el sistema
+    ya rechaza la venta. El tope es el de `CupoDiario` (o el normal) y los apartados son
+    los clientes que estan en el paso de pago ahora mismo.
+    """
+
+    fecha: date
+    tope: int
+    vendidos: int
+    apartados: int
+    quedan: int
+
+    @property
+    def cerrado(self):
+        return self.tope == 0
 
 
 @dataclass(frozen=True)
@@ -70,6 +93,12 @@ class Panorama:
     ocupadas: list
     a_flote: list
     resumen: Resumen
+    cupo_dias: list = field(default_factory=list)
+
+    @property
+    def encabezados(self):
+        """`[(fecha, DiaCupo), ...]` para pintar la cabecera de cada dia."""
+        return list(zip(self.dias, self.cupo_dias))
 
     @property
     def pie(self):
@@ -126,6 +155,18 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
         for embarcacion in embarcaciones
     ]
 
+    contexto = obtener_contexto_rango(desde, hasta, empresa)
+    apartados = demanda_apartada_por_rango(empresa, desde, hasta) if apartado_activo() else {}
+    cupo_dias = []
+    for fecha in fechas:
+        total = len(contexto.grupos_por_fecha.get(fecha, []))  # ya incluye los apartados
+        n_apartados = len(apartados.get(fecha, []))
+        tope = contexto.topes_por_fecha[fecha]
+        cupo_dias.append(DiaCupo(
+            fecha=fecha, tope=tope, vendidos=total - n_apartados,
+            apartados=n_apartados, quedan=max(0, tope - total),
+        ))
+
     return Panorama(
         dias=fechas,
         renglones=renglones,
@@ -141,4 +182,5 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
             sin_capitan=sin_capitan,
             atrasados=atrasados,
         ),
+        cupo_dias=cupo_dias,
     )

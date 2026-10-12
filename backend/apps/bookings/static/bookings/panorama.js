@@ -487,6 +487,69 @@
     }
   }
 
+  // Disponibilidad: cerrar/reabrir un dia y marcar una panga fuera, sin salir de la agenda.
+  // Escribe en los mismos modelos que sus pantallas de siempre (Cupo diario, Pangas fuera
+  // de servicio) y recarga: el panorama, el pie y el selector de cada fila salen del
+  // servidor y no hay que mantenerlos sincronizados a mano.
+  function iniciarDisponibilidad(panel) {
+    var url = panel.getAttribute('data-disponibilidad-url');
+    var token = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (!url || !token) return;
+
+    function enviar(datos) {
+      var cuerpo = new URLSearchParams(datos);
+      var empresa = panel.getAttribute('data-empresa');
+      if (empresa) cuerpo.set('empresa', empresa);
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': token.value, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: cuerpo.toString(),
+        credentials: 'same-origin',
+      }).then(function (respuesta) {
+        return respuesta.json().catch(function () { return {}; }).then(function (cuerpoJson) {
+          if (!respuesta.ok) throw new Error(cuerpoJson.detail || 'No se pudo guardar.');
+          window.location.reload();
+        });
+      }).catch(function (error) {
+        window.alert(error.message || 'No se pudo guardar.');
+      });
+    }
+
+    panel.addEventListener('click', function (evento) {
+      var objetivo = evento.target.closest('[data-accion-dia], [data-panga-fuera], [data-panga-vuelve]');
+      if (!objetivo || !panel.contains(objetivo)) return;
+      // La celda tambien escucha clics (asignar); estos botones son otra cosa.
+      evento.stopPropagation();
+
+      var dia = objetivo.closest('[data-cupo-dia]');
+      if (dia) {
+        var accion = objetivo.getAttribute('data-accion-dia');
+        var fecha = dia.getAttribute('data-fecha');
+        if (accion === 'cerrar_dia' && !window.confirm(
+          'Cerrar el ' + fecha + ': no se aceptarán más reservas ese día. Las que ya existen no se tocan.'
+        )) return;
+        enviar({ accion: accion, fecha: fecha });
+        return;
+      }
+
+      var celda = objetivo.closest('[data-celda]');
+      if (!celda) return;
+      var datos = {
+        fecha: celda.getAttribute('data-fecha'),
+        embarcacion: celda.getAttribute('data-embarcacion'),
+      };
+      if (objetivo.hasAttribute('data-panga-fuera')) {
+        var motivo = window.prompt('¿Por qué no sale ese día? (mantenimiento, motor… — opcional)', '');
+        if (motivo === null) return;
+        datos.accion = 'panga_fuera';
+        datos.motivo = motivo;
+      } else {
+        datos.accion = 'panga_vuelve';
+      }
+      enviar(datos);
+    }, true);
+  }
+
   // En movil las pestañas de empresa se desplazan de lado: la elegida arranca a la vista.
   function mostrarPestanaElegida() {
     var barra = document.querySelector('[data-empresas]');
@@ -499,6 +562,7 @@
     var panel = document.querySelector('[data-panorama]');
     if (!panel) return;
     recordarApertura(panel);
+    iniciarDisponibilidad(panel);
     iniciarAsignacion(panel);
     iniciarContadores(panel);
     celebrarGuardado();
