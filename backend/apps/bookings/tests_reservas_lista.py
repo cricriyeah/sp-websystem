@@ -46,7 +46,7 @@ class ReservasListaTests(EmpresaTestCase):
         pestanas = {p['clave']: p for p in respuesta.context['reservas_pestanas']}
         self.assertEqual({k: p['conteo'] for k, p in pestanas.items()}, {
             'proximas': 3, 'hoy': 1, 'manana': 2, 'por_cobrar': 0,
-            'atencion': 0, 'todas': 6,
+            'atencion': 0, 'pasadas': 1, 'todas': 6,
         })
         self.assertTrue(pestanas['proximas']['activa'])
         self.assertContains(respuesta, 'agenda-pestanas')
@@ -183,6 +183,49 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertNotIn('Nombre cliente', html)
         self.assertNotIn('Numero personas', html)
 
+    def test_pasadas_es_el_historico_de_la_mas_reciente_a_la_mas_antigua(self):
+        hace_dos = self.reserva('Hace dos dias', -2)
+        ayer = self.reserva('Ayer', -1)
+        cancelada = self.reserva('Cancelada vieja', -3, Reserva.Estado.CANCELADA)
+        self.reserva('Checkout sin pagar', -1, Reserva.Estado.PENDIENTE_PAGO)
+        self.reserva('Futura', 1)
+
+        respuesta = self.client.get(self.url, {'vista': 'pasadas'})
+
+        self.assertEqual([r.pk for r in respuesta.context['cl'].result_list],
+                         [ayer.pk, hace_dos.pk, cancelada.pk])
+        self.assertTrue(
+            {p['clave']: p for p in respuesta.context['reservas_pestanas']}['pasadas']['activa'])
+
+    def test_un_filtro_de_fecha_en_una_pestana_con_fecha_propia_pasa_a_todas(self):
+        ayer = self.reserva('Ayer', -1)
+        manana = self.reserva('Mañana', 1)
+        for vista in ('proximas', 'hoy', 'manana', 'por_cobrar'):
+            respuesta = self.client.get(self.url, {
+                'vista': vista, 'fecha__gte': (self.hoy - timedelta(days=7)).isoformat()})
+            pestanas = {p['clave']: p for p in respuesta.context['reservas_pestanas']}
+            self.assertTrue(pestanas['todas']['activa'], vista)
+            self.assertFalse(pestanas[vista]['activa'], vista)
+            self.assertEqual({r.pk for r in respuesta.context['cl'].result_list},
+                             {ayer.pk, manana.pk}, vista)
+
+    def test_un_filtro_de_fecha_se_suma_a_pasadas_sin_cambiar_de_pestana(self):
+        self.reserva('Hace tres semanas', -21)
+        ayer = self.reserva('Ayer', -1)
+
+        respuesta = self.client.get(self.url, {
+            'vista': 'pasadas', 'fecha__gte': (self.hoy - timedelta(days=7)).isoformat()})
+
+        self.assertEqual([r.pk for r in respuesta.context['cl'].result_list], [ayer.pk])
+        self.assertTrue(
+            {p['clave']: p for p in respuesta.context['reservas_pestanas']}['pasadas']['activa'])
+
+    def test_las_pestanas_no_arrastran_el_filtro_de_fecha(self):
+        respuesta = self.client.get(self.url, {'vista': 'pasadas', 'fecha__gte': '2020-01-01'})
+
+        for pestana in respuesta.context['reservas_pestanas']:
+            self.assertNotIn('fecha__gte', pestana['url'])
+
     def test_una_reserva_de_pesca_sin_panga_si_lo_dice(self):
         self.reserva('Pesca sin panga', 1)
 
@@ -195,7 +238,7 @@ class ReservasListaTests(EmpresaTestCase):
         pestanas = {p['clave']: p for p in self.client.get(self.url).context['reservas_pestanas']}
 
         self.assertTrue(pestanas['por_cobrar']['urgente'])
-        for clave in ('proximas', 'hoy', 'manana', 'atencion', 'todas'):
+        for clave in ('proximas', 'hoy', 'manana', 'atencion', 'pasadas', 'todas'):
             self.assertFalse(pestanas[clave]['urgente'], clave)
 
     def test_ordenar_cuando_invierte_fecha_y_hora(self):

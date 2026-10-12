@@ -558,8 +558,11 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
     VISTAS = (
         ('proximas', 'Próximas'), ('hoy', 'Hoy'), ('manana', 'Mañana'),
         ('por_cobrar', 'Por cobrar'), ('atencion', 'Requieren atención'),
-        ('todas', 'Todas'),
+        ('pasadas', 'Pasadas'), ('todas', 'Todas'),
     )
+    # Pestañas que ya recortan por fecha: un filtro de fecha encima chocaria con ellas
+    # (Proximas + "Ultimos 7 dias" = nada). Con un filtro de fecha pasan a "Todas".
+    VISTAS_CON_FECHA_PROPIA = ('proximas', 'hoy', 'manana', 'por_cobrar')
 
     @staticmethod
     def _es_listado(request):
@@ -569,6 +572,9 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
     def _vista(self, request):
         pedida = request.GET.get('vista')
         if pedida in dict(self.VISTAS):
+            if pedida in self.VISTAS_CON_FECHA_PROPIA and any(
+                    parametro.startswith('fecha') for parametro in request.GET):
+                return 'todas'
             return pedida
         if request.method == 'POST':
             # Las acciones masivas existentes también se invocan directamente
@@ -600,6 +606,12 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                     & models.Q(_saldo_lista__gt=0, forma_pago=Reserva.FormaPago.ANTICIPO))
         if vista == 'atencion':
             return consulta_devolucion_pendiente()
+        if vista == 'pasadas':
+            # El historico: lo que ya paso, cancelado o no. Un checkout sin pagar no es historia.
+            return models.Q(fecha__lt=hoy, estado__in=[
+                Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA,
+                Reserva.Estado.COMPLETADA, Reserva.Estado.CANCELADA,
+            ])
         return models.Q()
 
     def changelist_view(self, request, extra_context=None):
@@ -619,6 +631,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             consulta['vista'] = clave
             consulta.pop('p', None)
             consulta.pop('o', None)
+            for parametro in [k for k in consulta if k.startswith('fecha')]:
+                consulta.pop(parametro)
             return f'{request.path}?{consulta.urlencode()}'
 
         pestanas = [dict(clave=clave, nombre=nombre, conteo=conteos[clave],
@@ -662,7 +676,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             return ['fecha', 'hora']
         if self._es_listado(request) and request.GET.get('o') == '-1':
             return ['-fecha', '-hora']
-        if self._es_listado(request) and self._vista(request) != 'todas':
+        if self._es_listado(request) and self._vista(request) not in ('todas', 'pasadas'):
             return ['fecha', 'hora']
         return ['-fecha', '-hora']
 
