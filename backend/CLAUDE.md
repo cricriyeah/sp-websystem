@@ -146,6 +146,10 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   por eso puede superar el saldo del tour y no se valida contra el. `saldo_pendiente`
   ya lo descuenta. La accion de admin "Registrar liquidacion en efectivo" rellena el
   saldo exacto y sella quien y cuando; para un monto distinto se edita a mano.
+- **Transferencia**: `monto_transferencia` guarda una entrada independiente de Stripe
+  y de caja. Descuenta `saldo_pendiente`; `monto_pagado` sigue siendo solo lo cobrado
+  por Stripe para verificar montos y reembolsos de tarjeta. El admin sella fecha y
+  usuario al cambiar un importe positivo de transferencia.
 - **Una panga hace una sola salida por dia, y un capitan tambien.** Se valida en
   `Reserva._validar_una_salida_por_dia()`, llamada desde `clean()`, asi que aplica igual
   desde la agenda, desde el admin de Reservas y desde el shell. En un paquete con varios
@@ -379,6 +383,8 @@ el dia se llena mientras el cliente pagaba. Por eso el estado se llama solo "Can
 (reembolsada)" y el motivo real vive en `motivo_cancelacion`. No hay flujo de
 cancelacion sin reembolso todavia. Auditoria de quien cambio que reserva: el boton
 "History" nativo del admin de Django (no se agrego nada custom).
+La confirmacion separa los cobros de Stripe, efectivo y transferencia. Los reembolsos
+de transferencias se resuelven fuera del sistema y no crean salidas en finanzas.
 
 ## Aviso de reservas nuevas en el admin
 
