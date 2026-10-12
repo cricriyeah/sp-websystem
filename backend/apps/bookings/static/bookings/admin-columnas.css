@@ -372,23 +372,14 @@
 .agenda-accion-texto:focus-visible {
   opacity: 1;
 }
-/* Siempre visible (tenue): en movil no hay hover, asi que no puede depender de el. */
-.agenda-celda-accion {
-  display: inline-block;
-  margin-left: 0.35rem;
-  padding: 0 0.4rem;
-  border: 1px solid rgba(127, 127, 127, 0.45);
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  font-size: 0.7rem;
-  line-height: 1.4;
+/* Una celda vacia (o "fuera") se puede tocar para sacar o devolver la panga: se ve con el
+ * cursor y un tinte al pasar por encima. No durante una asignacion, donde las celdas que
+ * importan ya van marcadas en verde. */
+[data-panorama]:not([data-asignando]) [data-celda][data-tocable] {
   cursor: pointer;
-  opacity: 0.6;
 }
-.agenda-celda-accion:hover,
-.agenda-celda-accion:focus-visible {
-  opacity: 1;
+[data-panorama]:not([data-asignando]) [data-celda][data-tocable]:hover {
+  background: rgba(127, 127, 127, 0.12);
 }
 
 /* Dialogo propio de la agenda (confirmar, pedir motivo, mostrar un error). */

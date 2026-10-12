@@ -127,7 +127,10 @@ class CupoDelDiaEnElPanoramaTests(EmpresaTestCase):
         self.assertContains(respuesta, 'data-cupo-dia')
         self.assertContains(respuesta, f'Quedan <b style="">{CUPO_MAXIMO_DEFAULT - 1}</b> de {CUPO_MAXIMO_DEFAULT}')
         self.assertContains(respuesta, 'data-accion-dia="cerrar_dia"')
-        self.assertContains(respuesta, 'data-panga-fuera')
+        # Sacar una panga es tocar su celda vacia: sin una etiqueta repetida en cada celda.
+        self.assertContains(respuesta, 'data-tocable')
+        self.assertContains(respuesta, 'Toca para sacar esta panga ese día')
+        self.assertNotContains(respuesta, 'data-panga-fuera')
 
     def test_sin_permiso_no_se_pintan_los_botones(self):
         sin_permisos = self.crear_vendedora(username='sinpermisos', permisos=[])
@@ -138,7 +141,7 @@ class CupoDelDiaEnElPanoramaTests(EmpresaTestCase):
 
         self.assertEqual(respuesta.status_code, 200)
         self.assertNotContains(respuesta, 'data-accion-dia')
-        self.assertNotContains(respuesta, 'data-panga-fuera')
+        self.assertNotContains(respuesta, 'data-tocable')
 
 
 class AccionesDeDisponibilidadTests(EmpresaTestCase):

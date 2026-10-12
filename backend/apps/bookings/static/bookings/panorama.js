@@ -153,6 +153,7 @@
     }
 
     function soltar() {
+      panel.removeAttribute('data-asignando');
       limpiarCeldas();
       for (var p = 0; p < pendientes.length; p++) {
         if (!pendientes[p].hasAttribute('data-asignado')) pintarPendiente(pendientes[p]);
@@ -167,6 +168,7 @@
     function elegir(boton) {
       soltar();
       elegido = boton;
+      panel.setAttribute('data-asignando', '1');
       pintarElegido(boton);
 
       var reserva = boton.getAttribute('data-reserva');
@@ -567,19 +569,22 @@
       });
     }
 
-    panel.addEventListener('click', function (evento) {
-      var objetivo = evento.target.closest('[data-accion-dia], [data-panga-fuera], [data-panga-vuelve]');
-      if (!objetivo || !panel.contains(objetivo)) return;
-      // La celda tambien escucha clics (asignar); estos botones son otra cosa.
-      evento.stopPropagation();
+    function fechaLarga(iso) {
+      var partes = iso.split('-');
+      var fecha = new Date(+partes[0], +partes[1] - 1, +partes[2]);
+      return fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
 
-      var dia = objetivo.closest('[data-cupo-dia]');
-      if (dia) {
-        var accion = objetivo.getAttribute('data-accion-dia');
+    panel.addEventListener('click', function (evento) {
+      // Encabezado del dia: cerrar o reabrir.
+      var boton = evento.target.closest('[data-accion-dia]');
+      if (boton && panel.contains(boton)) {
+        evento.stopPropagation();
+        var dia = boton.closest('[data-cupo-dia]');
         var fecha = dia.getAttribute('data-fecha');
-        if (accion === 'cerrar_dia') {
+        if (boton.getAttribute('data-accion-dia') === 'cerrar_dia') {
           abrir({
-            titulo: 'Cerrar el ' + fecha,
+            titulo: 'Cerrar el ' + fechaLarga(fecha),
             texto: 'No se aceptarán más reservas ese día. Las que ya existen no se tocan.',
             aceptar: 'Cerrar el día',
             alAceptar: function () { return enviar({ accion: 'cerrar_dia', fecha: fecha }); },
@@ -590,24 +595,39 @@
         return;
       }
 
-      var celda = objetivo.closest('[data-celda]');
-      if (!celda) return;
+      // Celda tocable: vacia (sacar la panga ese dia) o "fuera" (devolverla). Mientras se
+      // asigna un viaje, el toque es para asignar y lo atiende `iniciarAsignacion`.
+      var celda = evento.target.closest('[data-celda][data-tocable]');
+      if (!celda || !panel.contains(celda) || panel.hasAttribute('data-asignando')) return;
+      if (celda.hasAttribute('data-ocupada') || celda.querySelector('[data-tentativa]')) return;
+      evento.stopPropagation();
+
+      var panga = celda.getAttribute('data-panga');
       var datos = {
         fecha: celda.getAttribute('data-fecha'),
         embarcacion: celda.getAttribute('data-embarcacion'),
       };
-      if (objetivo.hasAttribute('data-panga-fuera')) {
+      if (celda.hasAttribute('data-fuera')) {
         abrir({
-          titulo: 'Sacar la panga ese día',
-          texto: 'No saldrá el ' + datos.fecha + ' y dejará de contar para el cupo.',
-          pedirMotivo: true,
-          aceptar: 'Sacar la panga',
-          alAceptar: function (motivo) {
-            return enviar({ accion: 'panga_fuera', fecha: datos.fecha, embarcacion: datos.embarcacion, motivo: motivo });
+          titulo: 'Volver a poner ' + panga + ' en servicio',
+          texto: 'Vuelve a contar para el cupo el ' + fechaLarga(datos.fecha) + '.',
+          aceptar: 'Volver a servicio',
+          alAceptar: function () {
+            return enviar({ accion: 'panga_vuelve', fecha: datos.fecha, embarcacion: datos.embarcacion });
           },
         });
       } else {
-        sinConfirmar({ accion: 'panga_vuelve', fecha: datos.fecha, embarcacion: datos.embarcacion });
+        abrir({
+          titulo: 'Sacar ' + panga + ' el ' + fechaLarga(datos.fecha),
+          texto: 'No saldrá ese día y dejará de contar para el cupo.',
+          pedirMotivo: true,
+          aceptar: 'Sacar la panga',
+          alAceptar: function (motivo) {
+            return enviar({
+              accion: 'panga_fuera', fecha: datos.fecha, embarcacion: datos.embarcacion, motivo: motivo,
+            });
+          },
+        });
       }
     }, true);
   }

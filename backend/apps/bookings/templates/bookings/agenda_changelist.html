@@ -77,7 +77,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                      style="cursor: pointer; user-select: none">
                 Panorama de la semana
                 <span class="text-base-400" style="font-weight: 400; font-size: 0.8rem">
-                    · toca un viaje sin panga y luego una panga libre
+                    · toca un viaje sin panga y luego una panga libre{% if puede_sacar_panga %}; para sacar una panga, toca su celda vacía{% endif %}
                 </span>
                 {% with r=panorama.resumen %}
                     <span data-resumen data-otros="{{ r.sin_capitan|add:r.atrasados }}"
@@ -194,16 +194,16 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                         data-fecha="{{ celda.fecha|date:'Y-m-d' }}"
                                         data-embarcacion="{{ renglon.embarcacion.pk }}"
                                         data-capacidad="{{ renglon.embarcacion.capacidad_maxima }}"
+                                        data-panga="{{ renglon.embarcacion.nombre }}"
+                                        {% comment %}Tocar una celda vacia saca esa panga ese dia; una "fuera" la devuelve. Sin etiquetas en cada celda: son 70 y lo raro no debe pesar como lo diario.{% endcomment %}
+                                        {% if not celda.disponible %}{% if puede_traer_panga %}data-tocable title="Toca para volver a poner esta panga en servicio ese día"{% endif %}{% elif not celda.reserva and puede_sacar_panga %}data-tocable title="Toca para sacar esta panga ese día"{% endif %}
                                         {% if celda.reserva %}data-ocupada="1" data-reserva="{{ celda.reserva.pk }}"{% endif %}
                                         {% if not celda.disponible %}data-fuera="1"{% endif %}
                                         style="padding: 0.2rem 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
                                         {% if not celda.disponible %}
                                             {# Fuera de servicio no es lo mismo que libre. #}
                                             <span class="text-base-400" style="font-style: italic">fuera</span>
-                                            {% if puede_traer_panga %}
-                                                <button type="button" data-panga-vuelve class="agenda-celda-accion"
-                                                        title="Volver a poner esta panga en servicio ese día">volver</button>
-                                            {% endif %}
+
                                         {% elif celda.reserva %}
                                             <span class="text-base-700 dark:text-base-300"
                                                   title="{{ celda.reserva.nombre_cliente }} · {{ celda.reserva.numero_personas }} pers">
@@ -212,10 +212,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                             </span>
                                         {% else %}
                                             <span class="text-base-300 dark:text-base-600" data-libre>·</span>
-                                            {% if puede_sacar_panga %}
-                                                <button type="button" data-panga-fuera class="agenda-celda-accion"
-                                                        title="Marcar esta panga fuera de servicio ese día">sacar</button>
-                                            {% endif %}
+
                                         {% endif %}
                                     </td>
                                 {% endfor %}
