@@ -29,6 +29,25 @@ class EmpresaScopedAdminMixin:
         # Creacion + operador: se queda, visible y obligatorio.
         return fields
 
+    def get_form(self, request, obj=None, **kwargs):
+        form_class = super().get_form(request, obj, **kwargs)
+        if obj is not None or scope.es_operador_plataforma(request.user):
+            return form_class
+
+        empresa = scope.empresa_actual(request)
+        campo = self.empresa_campo
+
+        class FormularioConEmpresa(form_class):
+            def __init__(self, *args, **form_kwargs):
+                instancia = form_kwargs.get('instance')
+                if instancia is None:
+                    instancia = self._meta.model()
+                    form_kwargs['instance'] = instancia
+                setattr(instancia, campo, empresa)
+                super().__init__(*args, **form_kwargs)
+
+        return FormularioConEmpresa
+
     def save_model(self, request, obj, form, change):
         if not change and not scope.es_operador_plataforma(request.user):
             setattr(obj, self.empresa_campo, scope.empresa_actual(request))
