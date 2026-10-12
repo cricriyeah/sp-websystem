@@ -59,6 +59,27 @@ def crear_reserva(empresa, **overrides):
 
 
 class BalancesTests(EmpresaTestCase):
+    def test_transferencia_se_separa_por_fecha_moneda_y_banco(self):
+        crear_reserva(self.empresa, monto_transferencia=Decimal('2000.00'),
+                      transferencia_registrada_en=momento(2026, 3, 5))
+        crear_reserva(self.empresa, fecha=date.today() + timedelta(days=11),
+                      moneda=Reserva.Moneda.USD, monto_transferencia=Decimal('100.00'),
+                      transferencia_registrada_en=momento(2026, 3, 6))
+        marzo = balances(date(2026, 3, 1), date(2026, 3, 31), empresa=self.empresa)
+        self.assertEqual(marzo['MXN'].transferencia, Decimal('2000.00'))
+        self.assertEqual(marzo['MXN'].en_banco, Decimal('2000.00'))
+        self.assertEqual(marzo['MXN'].neto, Decimal('2000.00'))
+        self.assertEqual(marzo['USD'].transferencia, Decimal('100.00'))
+        self.assertEqual(marzo['USD'].en_banco, Decimal('100.00'))
+        self.assertEqual(balances(date(2026, 3, 5), date(2026, 3, 5), empresa=self.empresa)['MXN'].transferencia,
+                         Decimal('2000.00'))
+        self.assertEqual([dia for dia, _ in balances_por_dia(date(2026, 3, 1), date(2026, 3, 31), empresa=self.empresa)],
+                         [date(2026, 3, 6), date(2026, 3, 5)])
+
+    def test_transferencia_sin_fecha_no_entre_en_el_balance(self):
+        crear_reserva(self.empresa, monto_transferencia=Decimal('2000.00'))
+        self.assertEqual(balances(empresa=self.empresa), {})
+
     def test_el_cobro_con_tarjeta_entra_como_entrada_del_dia_en_que_se_pago(self):
         crear_reserva(self.empresa, monto_pagado=Decimal('4500.00'), pagada_en=momento(2026, 3, 5))
 
@@ -145,6 +166,17 @@ class BalancesTests(EmpresaTestCase):
         self.assertEqual(acumulado.en_efectivo, Decimal('3150.00'))
         self.assertEqual(acumulado.en_cuenta, Decimal('0.00'))
 
+    def test_reembolso_de_stripe_no_baja_el_banco(self):
+        crear_reserva(self.empresa,
+                      monto_pagado=Decimal('100.00'), pagada_en=momento(2026, 3, 5),
+                      monto_transferencia=Decimal('200.00'),
+                      transferencia_registrada_en=momento(2026, 3, 6),
+                      monto_reembolsado=Decimal('100.00'), reembolsada_en=momento(2026, 3, 7),
+                      estado=Reserva.Estado.CANCELADA, reembolsada=True)
+        acumulado = balances(empresa=self.empresa)['MXN']
+        self.assertEqual(acumulado.en_cuenta, Decimal('0.00'))
+        self.assertEqual(acumulado.en_banco, Decimal('200.00'))
+
     def test_el_historico_omite_los_dias_sin_movimiento(self):
         crear_reserva(self.empresa, monto_pagado=Decimal('4500.00'), pagada_en=momento(2026, 3, 5))
         crear_reserva(self.empresa, 
@@ -169,12 +201,19 @@ class BalancesTests(EmpresaTestCase):
             fecha=date.today() + timedelta(days=12),
             monto_pagado=Decimal('400.00'), pagada_en=momento(2026, 1, 9),
         )
+        crear_reserva(self.empresa,
+            fecha=date.today() + timedelta(days=13),
+            monto_transferencia=Decimal('50.00'), transferencia_registrada_en=momento(2026, 3, 15),
+        )
 
         datos = resumen(hoy, empresa=self.empresa)
 
         self.assertEqual(datos['dia']['MXN'].tarjeta, Decimal('100.00'))
         self.assertEqual(datos['mes']['MXN'].tarjeta, Decimal('300.00'))
         self.assertEqual(datos['anio']['MXN'].tarjeta, Decimal('700.00'))
+        self.assertEqual(datos['dia']['MXN'].transferencia, Decimal('50.00'))
+        self.assertEqual(datos['mes']['MXN'].transferencia, Decimal('50.00'))
+        self.assertEqual(datos['anio']['MXN'].transferencia, Decimal('50.00'))
 
 
 class PanelTests(EmpresaTestCase):
@@ -234,6 +273,32 @@ class PanelTests(EmpresaTestCase):
 
         self.assertContains(respuesta, '4,500.00')
         self.assertNotContains(respuesta, '9,999.00')
+
+    def test_transferencia_en_panel_respeta_empresa_y_el_operador_ve_todas(self):
+        crear_reserva(self.empresa, monto_transferencia=Decimal('111.00'),
+                      transferencia_registrada_en=timezone.now())
+        otra_sede = Sede.objects.create(nombre='Sede bancaria', slug='sede-bancaria')
+        otra = Empresa.objects.create(sede=otra_sede, nombre='Otra banco', slug='otra-banco')
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(otra):
+                crear_reserva(otra, monto_transferencia=Decimal('999.00'),
+                              transferencia_registrada_en=timezone.now())
+            self.client.force_login(self.crear_jefe())
+            jefe = self.client.get(self.url)
+            self.assertEqual(jefe.context['acumulado']['MXN'].en_banco, Decimal('111.00'))
+            self.assertNotContains(jefe, '999.00')
+            operador = User.objects.create_user('operador-banco', password='x', is_staff=True)
+            from django.contrib.auth.models import Group
+            operador.groups.add(Group.objects.get(name='OperadorPlataforma'))
+            self.client.force_login(operador)
+            respuesta = self.client.get(self.url)
+            self.assertEqual(respuesta.context['acumulado']['MXN'].en_banco, Decimal('1110.00'))
+            self.assertContains(respuesta, 'Transferencia')
+            self.assertContains(respuesta, 'En el banco')
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
 
 
 class RangoDelPeriodoTests(TestCase):

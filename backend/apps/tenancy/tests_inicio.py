@@ -264,6 +264,20 @@ class InicioTests(TestCase):
         self.client.force_login(sin_permiso)
         self.assertEqual(self.client.get(url).status_code, 403)
 
+    def test_inicio_y_por_cobrar_descontaron_transferencia(self):
+        with scope.con_empresa(self.empresa_a):
+            cubierta = self._reserva(self.empresa_a)
+            cubierta.monto_transferencia = Decimal('70.00')
+            cubierta.save(update_fields=['monto_transferencia'])
+            pendiente = self._reserva(self.empresa_a)
+            pendiente.monto_transferencia = Decimal('20.00')
+            pendiente.save(update_fields=['monto_transferencia'])
+        inicio = self._contexto(self.vendedora, self.empresa_a)
+        self.assertEqual(next(t['numero'] for t in inicio['tarjetas'] if t['clave'] == 'efectivo'), 1)
+        self.client.force_login(self.vendedora)
+        respuesta = self.client.get(reverse('saldos_por_cobrar'))
+        self.assertEqual([r.pk for r in respuesta.context['reservas']], [pendiente.pk])
+
     def test_jefe_ve_grafica_de_entradas_y_nombre_de_su_empresa(self):
         with scope.como_operador_plataforma():
             self._reserva(self.empresa_a, pagada_en=timezone.now())

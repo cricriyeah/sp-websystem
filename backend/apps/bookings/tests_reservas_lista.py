@@ -83,6 +83,34 @@ class ReservasListaTests(EmpresaTestCase):
         self.assertContains(respuesta, 'Futuro tranquilo')
         self.assertContains(respuesta, 'Debe 361.20 MXN en efectivo')
 
+    def test_transferencia_total_y_parcial_en_lista_y_cabecera(self):
+        total = self.reserva('Transferencia completa', 1,
+                             precio_total=Decimal('4500.00'), monto_transferencia=Decimal('4500.00'))
+        parcial = self.reserva('Transferencia parcial', 1,
+                               forma_pago=Reserva.FormaPago.ANTICIPO,
+                               precio_total=Decimal('4500.00'), monto_pagado=Decimal('1350.00'),
+                               monto_transferencia=Decimal('2000.00'))
+        model_admin = admin.site._registry[Reserva]
+        self.assertEqual(model_admin.cobro(total), 'Pagado')
+        self.assertEqual(model_admin.cobro(parcial), 'Debe 1,150 MXN en efectivo')
+        respuesta = self.client.get(self.url, {'vista': 'proximas'})
+        self.assertContains(respuesta, 'Pagado')
+        self.assertContains(respuesta, 'Debe 1,150 MXN en efectivo')
+        cabecera = self.client.get(reverse('admin:bookings_reserva_change', args=[total.pk]))
+        self.assertEqual(cabecera.context['resumen_reserva']['cobro'], 'Pagado')
+        cabecera = self.client.get(reverse('admin:bookings_reserva_change', args=[parcial.pk]))
+        self.assertEqual(cabecera.context['resumen_reserva']['cobro'], 'Debe 1,150 MXN en efectivo')
+
+    def test_por_cobrar_desconte_transferencia_en_sql(self):
+        self.reserva('Ya cubierta', 1, forma_pago=Reserva.FormaPago.ANTICIPO,
+                     precio_total=Decimal('4500.00'), monto_pagado=Decimal('1350.00'),
+                     monto_transferencia=Decimal('3150.00'))
+        pendiente = self.reserva('Aun debe', 1, forma_pago=Reserva.FormaPago.ANTICIPO,
+                                  precio_total=Decimal('4500.00'), monto_pagado=Decimal('1350.00'),
+                                  monto_transferencia=Decimal('2000.00'))
+        respuesta = self.client.get(self.url, {'vista': 'por_cobrar'})
+        self.assertEqual([r.pk for r in respuesta.context['cl'].result_list], [pendiente.pk])
+
     def test_busqueda_filtros_paginacion_y_agrupacion(self):
         self.reserva('Cliente lunes', 1)
         self.reserva('Cliente martes', 2)

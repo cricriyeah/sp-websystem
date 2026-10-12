@@ -18,6 +18,7 @@ from apps.testing import crear_personalizacion_pesca, EmpresaTestCase, crear_flo
 
 from .services import (
     PUNTO_DE_ENCUENTRO,
+    _cuerpo_html,
     _asunto,
     enviar_correo_asignacion,
     enviar_correo_confirmacion,
@@ -67,6 +68,19 @@ def crear_reserva_guardada(empresa, **overrides):
 def _cuerpo_enviado(post):
     """El json= de la llamada a Resend."""
     return post.call_args.kwargs['json']
+
+
+class SaldoDeAnticipoConTransferenciaTests(EmpresaTestCase):
+    def test_correo_desconta_transferencia_del_saldo(self):
+        reserva = crear_reserva(self.empresa)
+        reserva.forma_pago = Reserva.FormaPago.ANTICIPO
+        reserva.precio_total = Decimal('4500.00')
+        reserva.monto_pagado = Decimal('1350.00')
+        reserva.monto_transferencia = Decimal('2000.00')
+        self.assertIn('Quedan 1150.00 MXN', _cuerpo_html(reserva))
+
+        reserva.monto_transferencia = Decimal('3150.00')
+        self.assertNotIn('por liquidar en efectivo', _cuerpo_html(reserva))
 
 
 @override_settings(**LLAVES, RESEND_BCC=['operacion@ejemplo.com'])

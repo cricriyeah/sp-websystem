@@ -134,6 +134,8 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
         self.assertEqual(len(campos), len(set(campos)))
         self.assertIn('collapse', fieldsets[-1][1]['classes'])
         self.assertIn('collapse', fieldsets[-2][1]['classes'])
+        self.assertIn('monto_transferencia', fieldsets[2][1]['fields'])
+        self.assertTrue({'transferencia_registrada_en', 'transferencia_registrada_por'} <= set(fieldsets[-1][1]['fields']))
         self.reserva.estado = Reserva.Estado.CANCELADA
         self.assertNotIn('collapse', self.admin.get_fieldsets(self._request(usuario), self.reserva)[-2][1].get('classes', ()))
 
@@ -158,10 +160,11 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
             readonly = set(self.admin.get_readonly_fields(self._request(usuario), self.reserva))
             if usuario == vendedora:
                 self.assertTrue(protegidos <= readonly)
-                self.assertFalse({'precio_total', 'monto_pagado', 'monto_efectivo',
+                self.assertFalse({'precio_total', 'monto_pagado', 'monto_efectivo', 'monto_transferencia',
                                   'forma_pago', 'moneda'} & readonly)
             else:
                 self.assertFalse(protegidos & readonly)
+            self.assertTrue({'transferencia_registrada_en', 'transferencia_registrada_por'} <= readonly)
             self.client.force_login(usuario)
             if usuario == operador:
                 self._alcance.__exit__(None, None, None)
@@ -197,9 +200,10 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
         otra = self.crear_vendedora(username='otra')
         self.reserva.stripe_payment_intent_id = 'pi_original'
         self.reserva.save(update_fields=['stripe_payment_intent_id'])
-        self.client.force_login(self.crear_vendedora())
+        vendedora = self.crear_vendedora()
+        self.client.force_login(vendedora)
         respuesta = self.client.post(self.url, self._datos_edicion(
-            precio_total='4500.00', monto_pagado='1000.00',
+            precio_total='4500.00', monto_pagado='1000.00', monto_transferencia='500.00',
             stripe_payment_intent_id='pi_falso', vendedora=str(otra.pk),
             personas_por_servicio='{"999": 5}', empresa='999999',
         ))
@@ -207,10 +211,34 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.precio_total, 4500)
         self.assertEqual(self.reserva.monto_pagado, 1000)
+        self.assertEqual(self.reserva.monto_transferencia, 500)
+        self.assertIsNotNone(self.reserva.transferencia_registrada_en)
+        self.assertEqual(self.reserva.transferencia_registrada_por, vendedora)
         self.assertEqual(self.reserva.stripe_payment_intent_id, 'pi_original')
         self.assertEqual(self.reserva.empresa_id, self.empresa.pk)
         self.assertIsNone(self.reserva.vendedora_id)
         self.assertEqual(self.reserva.personas_por_servicio, {})
+
+    def test_sello_de_transferencia_solo_cambia_con_el_importe(self):
+        vendedora = self.crear_vendedora()
+        self.client.force_login(vendedora)
+        self.assertEqual(self.client.post(self.url, self._datos_edicion(
+            precio_total='4500.00', monto_transferencia='100.00')).status_code, 302)
+        self.reserva.refresh_from_db()
+        primero = self.reserva.transferencia_registrada_en
+        self.assertEqual(self.reserva.transferencia_registrada_por, vendedora)
+        self.assertIsNotNone(primero)
+
+        self.assertEqual(self.client.post(self.url, self._datos_edicion(
+            precio_total='4500.00', monto_transferencia='100.00', nombre_cliente='Nombre nuevo')).status_code, 302)
+        self.reserva.refresh_from_db()
+        self.assertEqual(self.reserva.transferencia_registrada_en, primero)
+
+        self.assertEqual(self.client.post(self.url, self._datos_edicion(
+            precio_total='4500.00', monto_transferencia='200.00')).status_code, 302)
+        self.reserva.refresh_from_db()
+        self.assertGreater(self.reserva.transferencia_registrada_en, primero)
+        self.assertEqual(self.reserva.transferencia_registrada_por, vendedora)
 
     def test_alta_por_rol_y_borrado_fuera_de_guardado(self):
         vendedora = self.crear_vendedora()

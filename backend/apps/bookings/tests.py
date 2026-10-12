@@ -433,6 +433,33 @@ class LiquidacionEnEfectivoTests(EmpresaTestCase):
     def test_el_saldo_arranca_en_el_70_por_ciento(self):
         self.assertEqual(self.reserva_con_anticipo().saldo_pendiente, Decimal('3150.00'))
 
+    def test_transferencia_reduce_el_saldo_y_la_liquidacion_cobra_solo_el_resto(self):
+        reserva = self.reserva_con_anticipo()
+        reserva.monto_transferencia = Decimal('2000.00')
+        reserva.full_clean()
+        reserva.save()
+        self.assertEqual(reserva.saldo_pendiente, Decimal('1150.00'))
+
+        self.liquidar(reserva)
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.monto_efectivo, Decimal('1150.00'))
+        self.assertTrue(reserva.liquidado)
+
+    def test_transferencia_negativa_se_rechaza(self):
+        from django.core.exceptions import ValidationError
+
+        reserva = self.reserva_con_anticipo()
+        reserva.monto_transferencia = Decimal('-1.00')
+        with self.assertRaises(ValidationError):
+            reserva.full_clean()
+
+    def test_la_base_rechaza_transferencia_negativa(self):
+        from django.db import IntegrityError, transaction
+
+        reserva = self.reserva_con_anticipo()
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Reserva.objects.filter(pk=reserva.pk).update(monto_transferencia=Decimal('-1.00'))
+
     def test_registrar_la_liquidacion_deja_el_saldo_en_cero(self):
         reserva = self.reserva_con_anticipo()
         self.liquidar(reserva)

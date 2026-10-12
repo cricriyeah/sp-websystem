@@ -1340,6 +1340,19 @@ class WebhookTests(ApiTestCase):
         self.assertEqual(self.reserva.monto_pagado, Decimal('1000.00'))
         self.assertEqual(self.reserva.saldo_pendiente, Decimal('3500.00'))
 
+    def test_webhook_verifica_solo_tarjeta_aunque_haya_transferencia(self):
+        self.reserva.forma_pago = Reserva.FormaPago.ANTICIPO
+        self.reserva.monto_transferencia = Decimal('1000.00')
+        self.reserva.save(update_fields=['forma_pago', 'monto_transferencia'])
+        with mock.patch('apps.payments.services.logger.error') as error:
+            # La cuenta de Stripe recibe exactamente el anticipo esperado.
+            self.entregar(evento_pagado(self.reserva.pk, amount=135000))
+        error.assert_not_called()
+        self.reserva.refresh_from_db()
+        self.assertEqual(self.reserva.monto_pagado, Decimal('1350.00'))
+        self.assertEqual(self.reserva.monto_transferencia, Decimal('1000.00'))
+        self.assertEqual(self.reserva.saldo_pendiente, Decimal('2150.00'))
+
     def test_webhook_paquete_pago_completo_no_registra_descuadre(self):
         paquete = Paquete.objects.create(
             sede=self.empresa.sede,

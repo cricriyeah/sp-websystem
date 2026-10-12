@@ -43,7 +43,8 @@ class ConfirmacionMalClimaTests(EmpresaTestCase):
 
     def test_previa_muestra_conteos_monedas_efectivo_y_siguiente_paso(self):
         mxn = crear_reserva(self.empresa, nombre_cliente='Ana MXN', estado=Reserva.Estado.PAGADA,
-                            monto_pagado=Decimal('200.00'), monto_efectivo=Decimal('30.00'))
+                            monto_pagado=Decimal('200.00'), monto_efectivo=Decimal('30.00'),
+                            monto_transferencia=Decimal('70.00'))
         usd = crear_reserva(self.empresa, nombre_cliente='Beto USD', estado=Reserva.Estado.PAGADA,
                             moneda=Reserva.Moneda.USD, monto_pagado=Decimal('40.00'))
         pendiente = crear_reserva(self.empresa, nombre_cliente='Cora pendiente',
@@ -64,6 +65,7 @@ class ConfirmacionMalClimaTests(EmpresaTestCase):
         self.assertContains(respuesta, '40.00 USD')
         self.assertNotContains(respuesta, '500.00 MXN')
         self.assertContains(respuesta, '30.00 MXN en efectivo')
+        self.assertContains(respuesta, '70.00 MXN por transferencia')
         self.assertContains(respuesta, 'Stripe')
         self.assertContains(respuesta, 'Confirmar devoluci')
         self.assertContains(respuesta, 'S&iacute;, cancelar 3 reservas')
