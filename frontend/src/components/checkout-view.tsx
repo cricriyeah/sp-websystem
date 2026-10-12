@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
@@ -132,7 +132,15 @@ function useCheckoutId() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  return value;
+  // Id nuevo: una reserva cancelada ya no la reutiliza el upsert (solo reusa
+  // pendiente_pago), asi que volver a intentar tras una cancelacion necesita uno limpio.
+  const renovar = useCallback(() => {
+    const nuevo = crypto.randomUUID();
+    window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
+    setValue({ id: nuevo, recuperable: false });
+  }, []);
+
+  return [value, renovar] as const;
 }
 
 type CheckoutViewProps = {
@@ -156,7 +164,9 @@ type CheckoutViewProps = {
 // guardado (ver useCheckoutId) — se pregunta si tiene una reserva detras antes
 // de decidir si el checkout arranca vacio, precargado, o directo en la
 // confirmacion.
-type Phase = 'recuperando' | 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error';
+// 'confirmando': stripe.confirmPayment() termino; se consulta getEstadoReserva hasta saber.
+// 'cancelada': el webhook cancelo la reserva (reembolso); se muestra aviso y boton de elegir otra fecha.
+type Phase = 'recuperando' | 'form' | 'submitting' | 'payment' | 'confirmed' | 'unavailable' | 'error' | 'confirmando' | 'cancelada';
 
 type CampoContacto = 'fullName' | 'phone' | 'email';
 
@@ -194,7 +204,7 @@ export function CheckoutView({
   const { checkout, booking } = dict;
   // null mientras sessionStorage todavia no se ha leido (solo dura hasta el
   // primer useLayoutEffect del cliente — ver useCheckoutId).
-  const checkoutIdValue = useCheckoutId();
+  const [checkoutIdValue, renovarCheckoutId] = useCheckoutId();
   const checkoutId = checkoutIdValue?.id ?? '';
   const recuperable = checkoutIdValue?.recuperable ?? false;
   const catalogoUnificado = servicio?.personalizaciones ?? [];
@@ -356,6 +366,12 @@ export function CheckoutView({
   const [recuperadoCodigoPromocional, setRecuperadoCodigoPromocional] = useState<string | null>(null);
   const [recuperadoDescuento, setRecuperadoDescuento] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
+  /** ISO 8601 del vencimiento del apartado devuelto por el ultimo crear-pago exitoso. null = sin apartado. */
+  const [apartadoHasta, setApartadoHasta] = useState<string | null>(null);
+  /** Tras ~12 s sin respuesta, «confirmando» pasa a «seguimos confirmando». */
+  const [confirmandoLargo, setConfirmandoLargo] = useState(false);
+  /** Cambia para remontar StripePanel y con el el widget de Turnstile (token de un solo uso). */
+  const [captchaKey, setCaptchaKey] = useState(0);
   const [codigoPromocional, setCodigoPromocional] = useState('');
   const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>(
     'idle',
@@ -385,7 +401,7 @@ export function CheckoutView({
     (async () => {
       let cupo;
       try {
-        cupo = await getCupo(day, people, empresaSlug);
+        cupo = await getCupo(day, people, empresaSlug, checkoutId || undefined);
       } catch {
         // Sin respuesta no se avisa nada: es ayuda adelantada, el cupo real lo
         // valida el backend al cobrar. Nunca debe trabar el checkout.
@@ -413,7 +429,7 @@ export function CheckoutView({
         alternativa: cupo.proxima_disponible,
       });
     })();
-  }, [day, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice, empresaSlug]);
+  }, [day, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice, empresaSlug, checkoutId]);
 
   const promoCheckId = useRef(0);
 
@@ -847,6 +863,33 @@ export function CheckoutView({
    * guarda con `checkout_id`, asi que reintentar tras un error reescribe la
    * misma fila en vez de crear otra.
    */
+  /**
+   * El ultimo lugar se fue mientras el cliente llenaba o pagaba: vuelve al paso del
+   * viaje con todo lo capturado en memoria y el aviso de cupo agotado (mas la fecha
+   * alternativa si el servidor la dio). La reserva sigue pendiente_pago y al reenviar
+   * se reutiliza por checkout_id.
+   */
+  const volverPorSinCupo = (body: Record<string, unknown>) => {
+    const motivo = body['motivo'] as string | undefined;
+    const proximaDisponible = body['proxima_disponible'] as string | null | undefined;
+    const plantilla =
+      motivo === 'sin_panga' || motivo === 'sin_lugar'
+        ? checkout.noBoatForGroupNotice
+        : checkout.dayFullOffer;
+    const mensajeDia = plantilla
+      .replace('{date}', formatDay(fromLocalISODate(day), lang))
+      .replace('{people}', String(people));
+    setSinLugar({
+      mensaje: `${checkout.cupoAgotado} ${mensajeDia}`,
+      alternativa: proximaDisponible ?? null,
+    });
+    setPago(null);
+    setApartadoHasta(null);
+    setActual('viaje');
+    setEditando('viaje');
+    setPhase('form');
+  };
+
   const enviar = async () => {
     if (phase === 'submitting' || phase === 'payment') return;
 
@@ -908,29 +951,155 @@ export function CheckoutView({
       }, empresaSlug);
 
       setPago(pagoResponse);
+      setApartadoHasta(pagoResponse.apartado_hasta);
       setPhase('payment');
       // La reserva ya quedo guardada aunque el pago siga pendiente: decirlo
       // separa los dos pasos, para que un fallo de tarjeta no se lea como
       // "se perdio todo lo que llene".
       avisar('exito', dict.feedback.saved);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 503) {
-        setPhase('unavailable');
-        return;
-      }
-      // El codigo paso la validacion en vivo pero crear-pago lo rechazo con el
-      // subtotal real (se agoto justo ahora, o vencio mientras el cliente
-      // llenaba el formulario). Se marca invalido para que reintentar sin el
-      // codigo funcione al primer intento, en vez de repetir el mismo 400.
-      if (err instanceof ApiError && err.status === 400 && promoEstado === 'valido') {
-        setPromoEstado('invalido');
-        setError(checkout.promoCode.invalid);
-        setPhase('error');
-        return;
+      if (err instanceof ApiError) {
+        const body = err.detail as Record<string, unknown> | null;
+        const codigo = body && typeof body === 'object' ? (body['codigo'] as string | undefined) : undefined;
+
+        // sin_cupo: volver al paso del viaje con datos en memoria y aviso de cupo agotado.
+        // El cliente ya tiene una reserva guardada (pendiente_pago); reenviarla la reutiliza.
+        if (codigo === 'sin_cupo') {
+          volverPorSinCupo(body ?? {});
+          return;
+        }
+
+        // pago_en_curso / ya_no_pendiente: el cobro ya esta activo o la reserva
+        // cambio de estado. Pasar directo al polling sin llamar a confirmPayment.
+        if (codigo === 'pago_en_curso' || codigo === 'ya_no_pendiente') {
+          setPhase('confirmando');
+          return;
+        }
+
+        // reintentar (503 candado): no es un error de pagos sino un reintento suave.
+        // El cliente se queda en el formulario de pago con el aviso.
+        if (codigo === 'reintentar') {
+          setError(dict.feedback.reintentar);
+          setPhase('error');
+          return;
+        }
+
+        if (err.status === 503) {
+          setPhase('unavailable');
+          return;
+        }
+
+        // El codigo paso la validacion en vivo pero crear-pago lo rechazo con el
+        // subtotal real (se agoto justo ahora, o vencio mientras el cliente
+        // llenaba el formulario). Se marca invalido para que reintentar sin el
+        // codigo funcione al primer intento, en vez de repetir el mismo 400.
+        if (err.status === 400 && promoEstado === 'valido') {
+          setPromoEstado('invalido');
+          setError(checkout.promoCode.invalid);
+          setPhase('error');
+          return;
+        }
       }
       setError(mensajeDeError(err, checkout, dict.feedback));
       setPhase('error');
     }
+  };
+
+  /**
+   * Se llama en CADA clic de «Pagar», antes de hablar con Stripe: renueva el apartado.
+   * Reenvia identicos forma_pago y codigo_promocional (si no, el servidor tomaria
+   * «completo» y sin codigo y cambiaria el monto del cobro). null = cobrar; texto =
+   * no cobrar y mostrarlo; '' = no cobrar, esta funcion ya cambio de pantalla.
+   */
+  const antesDePagar = async (): Promise<string | null> => {
+    if (reservaId === null || !pago) return null;
+    try {
+      const renovado = await crearPago(reservaId, {
+        checkout_id: checkoutId,
+        forma_pago: formaPagoEfectiva,
+        codigo_promocional:
+          promoEstado === 'valido' ? codigoPromocional.trim().toUpperCase() : undefined,
+      }, empresaSlug);
+      setApartadoHasta(renovado.apartado_hasta);
+      if (Number(renovado.monto_a_cobrar) !== Number(pago.monto_a_cobrar)) {
+        // El cliente vio otro importe: no se le cobra sin que lo vea. Al pulsar
+        // Pagar de nuevo el importe ya coincide y sigue.
+        setPago(renovado);
+        return checkout.montoDistinto.replace(
+          '{monto}',
+          currency.format(Number(renovado.monto_a_cobrar)),
+        );
+      }
+      return null;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const body = err.detail as Record<string, unknown> | null;
+        const codigo = body && typeof body === 'object' ? body['codigo'] : undefined;
+        if (codigo === 'sin_cupo') {
+          volverPorSinCupo(body ?? {});
+          return '';
+        }
+        if (codigo === 'pago_en_curso' || codigo === 'ya_no_pendiente') {
+          setPhase('confirmando');
+          return '';
+        }
+      }
+      return mensajeDeError(err, checkout, dict.feedback);
+    }
+  };
+
+  // Tras stripe.confirmPayment() el webhook aun puede cancelar y reembolsar si el
+  // lugar se fue: se pregunta cada 2 s hasta saber, y no se dice «confirmada» antes.
+  useEffect(() => {
+    if (phase !== 'confirmando') return;
+    let cancelado = false;
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    const inicio = Date.now();
+    const consultar = async () => {
+      try {
+        const estado = await getEstadoReserva(checkoutId, empresaSlug);
+        if (cancelado) return;
+        if (estado.estado === 'pagada') {
+          setReservaId(estado.reserva_id);
+          setPhase('confirmed');
+          return;
+        }
+        if (estado.estado === 'cancelada') {
+          setPhase('cancelada');
+          return;
+        }
+      } catch {
+        // Sin red o aun sin respuesta: se sigue preguntando.
+      }
+      if (cancelado) return;
+      const transcurrido = Date.now() - inicio;
+      if (transcurrido > 12000) setConfirmandoLargo(true);
+      if (transcurrido > 600000) return;
+      temporizador = setTimeout(consultar, transcurrido > 12000 ? 10000 : 2000);
+    };
+    consultar();
+    return () => {
+      cancelado = true;
+      if (temporizador) clearTimeout(temporizador);
+    };
+  }, [phase, checkoutId, empresaSlug]);
+
+  /** Tras una cancelacion: id nuevo, Turnstile nuevo y el formulario tal como lo dejo el cliente. */
+  const elegirOtraFecha = () => {
+    borrarPendiente(checkoutId);
+    renovarCheckoutId();
+    captchaToken.current = '';
+    setCaptchaKey((k) => k + 1);
+    setPago(null);
+    setApartadoHasta(null);
+    setReservaId(null);
+    setPagoProcesando(false);
+    setConfirmandoLargo(false);
+    setError('');
+    setSinLugar(null);
+    setActual('viaje');
+    setEditando('viaje');
+    setPhase('form');
   };
 
   const locked = phase === 'payment' || phase === 'unavailable';
@@ -975,6 +1144,26 @@ export function CheckoutView({
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-surface px-6">
         <WaitNotice mensaje={dict.feedback.recoveringNotice} />
+      </div>
+    );
+  }
+
+  if (phase === 'confirmando') {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-surface px-6 text-center">
+        <WaitNotice
+          mensaje={confirmandoLargo ? checkout.siguiendoConfirmando : checkout.confirmandoTitulo}
+        />
+      </div>
+    );
+  }
+
+  if (phase === 'cancelada') {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface px-6 text-center">
+        <h1 className="text-xl font-semibold text-foreground">{checkout.lugarNoAseguradoTitulo}</h1>
+        <p className="max-w-md text-sm text-foreground/80">{checkout.lugarNoAseguradoCuerpo}</p>
+        <BotonPaso onClick={elegirOtraFecha}>{checkout.eligeOtraFecha}</BotonPaso>
       </div>
     );
   }
@@ -1428,9 +1617,12 @@ export function CheckoutView({
                 feedback={dict.feedback}
                 ayudaMensaje={ayudaMensaje}
                 pago={pago}
+                apartadoHasta={apartadoHasta}
+                antesDePagar={antesDePagar}
                 onPagoConfirmado={(procesando) => {
                   setPagoProcesando(procesando);
-                  setPhase('confirmed');
+                  setConfirmandoLargo(false);
+                  setPhase('confirmando');
                 }}
               />
             )}
@@ -1441,7 +1633,7 @@ export function CheckoutView({
           // Stripe.js y el widget de Turnstile por duplicado. En movil la zona de
           // pago se muestra al llegar al paso 4 (`pagoVisibleMovil`); antes queda
           // montada pero oculta, nunca se desmonta.
-          <div ref={refStripePanel} className="scroll-mt-28">
+          <div key={captchaKey} ref={refStripePanel} className="scroll-mt-28">
             <StripePanel
               lang={lang}
               checkout={checkout}

@@ -30,7 +30,28 @@ export type ClaseDeFallo =
   | 'desconocido';
 
 /**
+ * Extrae el campo `codigo` del cuerpo plano de un ApiError.
+ * El backend manda: `{"detail": "...", "codigo": "...", ...}`.
+ * `detail` en `ApiError` guarda el body completo parseado, no solo el string.
+ */
+function codigoDeApiError(error: ApiError): string | null {
+  if (
+    error.detail !== null &&
+    typeof error.detail === 'object' &&
+    'codigo' in (error.detail as object)
+  ) {
+    const codigo = (error.detail as Record<string, unknown>)['codigo'];
+    return typeof codigo === 'string' ? codigo : null;
+  }
+  return null;
+}
+
+/**
  * De que tipo es este fallo.
+ *
+ * Decide por `codigo` del cuerpo cuando existe (backend >= apartado); si falta,
+ * cae al comportamiento anterior por status HTTP para compatibilidad con
+ * backends viejos o con los 400/503 sin cambio.
  *
  * Un `ApiError` sin status util o un `TypeError` de `fetch` son lo mismo para el
  * cliente: no llego. Se agrupan a proposito — distinguirlos solo serviria para
@@ -39,6 +60,17 @@ export type ClaseDeFallo =
 export function clasificar(error: unknown): ClaseDeFallo {
   if (!(error instanceof ApiError)) return 'conexion';
 
+  const codigo = codigoDeApiError(error);
+  if (codigo === 'sin_cupo') return 'sin_cupo';
+  // ya_no_pendiente = la reserva ya cambio de estado (pagada u otro): no hay cupo que reservar
+  if (codigo === 'ya_no_pendiente') return 'sin_cupo';
+  // pago_en_curso = ya hay una transaccion activa
+  if (codigo === 'pago_en_curso') return 'desconocido';
+  if (codigo === 'checkout_invalido') return 'desconocido';
+  // reintentar (503 por candado): mensaje especifico, no "pagos no disponibles"
+  if (codigo === 'reintentar') return 'no_disponible';
+
+  // Respaldo por status HTTP (backend viejo o errores sin codigo)
   if (error.status === 429) return 'demasiados_intentos';
   if (error.status === 503) return 'no_disponible';
   if (error.status === 409) return 'sin_cupo';
@@ -61,6 +93,15 @@ export function mensajeDeError(
   feedback: Dictionary['feedback'],
 ) {
   if (err instanceof ApiError) {
+    const codigo = codigoDeApiError(err);
+
+    // Casos con codigo explicito (backend >= apartado)
+    if (codigo === 'pago_en_curso') return checkout.errorPaymentInProgress;
+    if (codigo === 'ya_no_pendiente') return checkout.errorPaymentInProgress;
+    // reintentar: no "pagos no disponibles", sino aviso de reintento suave
+    if (codigo === 'reintentar') return feedback.reintentar;
+
+    // Respaldo por status HTTP
     if (err.status === 502) return checkout.errorPaymentProvider;
     if (err.status === 409) return checkout.errorPaymentInProgress;
     if (err.status === 503) return checkout.paymentUnavailable;

@@ -626,7 +626,15 @@
     "dayFull": "Las fechas marcadas ya cuentan con reservas completas para este grupo.",
     "dayFullOffer": "El {date} ya no cuenta con espacio para {people} personas.",
     "takeOffered": "Ver disponibilidad para el {date}",
-    "keepLooking": "Elegir otra fecha"
+    "keepLooking": "Elegir otra fecha",
+    "apartadoLinea": "Tu lugar está apartado por 15 minutos.",
+    "cupoAgotado": "El cupo se agotó mientras llenabas tus datos. Tus datos siguen guardados.",
+    "lugarNoAseguradoTitulo": "No fue posible asegurar tu lugar",
+    "lugarNoAseguradoCuerpo": "Tu pago se reembolsa al 100%. Si deseas, puedes elegir otra fecha.",
+    "eligeOtraFecha": "Elegir otra fecha",
+    "confirmandoTitulo": "Estamos confirmando tu lugar…",
+    "siguiendoConfirmando": "Estamos confirmando tu pago. Si en unos minutos no recibes un correo, escríbenos.",
+    "montoDistinto": "El importe cambió a {monto}. Revísalo y pulsa Pagar de nuevo para continuar."
   },
   "feedback": {
     "floatingHelp": {
@@ -659,7 +667,8 @@
     "payingWait": "Confirmando tu pago de forma segura con el banco. Por favor no cierres esta ventana.",
     "paySlow": "La confirmación está tomando unos segundos adicionales. Sigue en proceso, por favor no cierres ni recargues.",
     "saved": "¡Listo! Guardamos tu reserva con éxito.",
-    "dateChanged": "Actualizamos la fecha de tu viaje al {date}."
+    "dateChanged": "Actualizamos la fecha de tu viaje al {date}.",
+    "reintentar": "Intenta de nuevo en unos segundos."
   },
   "cookies": {
     "title": "Aviso de cookies y privacidad",

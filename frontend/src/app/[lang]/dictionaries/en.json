@@ -626,7 +626,15 @@
     "dayFull": "Marked dates are fully booked for this group size.",
     "dayFullOffer": "{date} has no space left for {people} guests.",
     "takeOffered": "Check availability for {date}",
-    "keepLooking": "Choose another date"
+    "keepLooking": "Choose another date",
+    "apartadoLinea": "Your spot is held for 15 minutes.",
+    "cupoAgotado": "Availability ran out while you were filling in your details. Your info is still saved.",
+    "lugarNoAseguradoTitulo": "We couldn't secure your spot",
+    "lugarNoAseguradoCuerpo": "Your payment will be fully refunded. You can choose another date if you'd like.",
+    "eligeOtraFecha": "Choose another date",
+    "confirmandoTitulo": "Confirming your spot…",
+    "siguiendoConfirmando": "We're confirming your payment. If you don't receive an email in a few minutes, please message us.",
+    "montoDistinto": "The amount changed to {monto}. Review it and press Pay again to continue."
   },
   "feedback": {
     "floatingHelp": {
@@ -659,7 +667,8 @@
     "payingWait": "Confirming your payment securely with the bank. Please do not close this window.",
     "paySlow": "Confirmation is taking a few extra seconds. It's still in progress, please don't close or reload.",
     "saved": "All set! Your booking was saved successfully.",
-    "dateChanged": "We updated your trip date to {date}."
+    "dateChanged": "We updated your trip date to {date}.",
+    "reintentar": "Try again in a few seconds."
   },
   "cookies": {
     "title": "Cookie and privacy notice",

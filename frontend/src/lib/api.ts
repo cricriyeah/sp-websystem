@@ -113,6 +113,8 @@ export type Pago = {
   monto_a_cobrar: string;
   precio_total: string;
   moneda: string;
+  /** ISO 8601 hasta cuando dura el apartado, o null si no hubo apartado (APARTADO_MINUTOS=0 o servicio sin cupo fisico). */
+  apartado_hasta: string | null;
 };
 
 class ApiError extends Error {
@@ -158,8 +160,14 @@ async function request<T>(path: string, init?: RequestInit, empresaSlug?: string
   return body as T;
 }
 
-export const getCupo = (fecha: string, personas: number, empresaSlug?: string) =>
-  request<Cupo>(`/api/cupo/?fecha=${fecha}&personas=${personas}`, undefined, empresaSlug);
+export const getCupo = (fecha: string, personas: number, empresaSlug?: string, checkoutId?: string) =>
+  request<Cupo>(
+    `/api/cupo/?fecha=${fecha}&personas=${personas}`,
+    // La cabecera solo se manda cuando hay checkout_id: el calendario del inicio
+    // y la barra de reserva corren antes de que exista y no deben fallar.
+    checkoutId ? { headers: { 'X-Checkout-Id': checkoutId } } : undefined,
+    empresaSlug,
+  );
 
 /** Por que no cabe el grupo cada dia del rango; null = si cabe. */
 export type DisponibilidadRango = Record<string, MotivoNoDisponible | null>;
@@ -172,10 +180,10 @@ export type DisponibilidadRango = Record<string, MotivoNoDisponible | null>;
  * por IP, y el segundo mes devuelve 429. El backend tampoco pasa de 62 dias por
  * llamada.
  */
-export const getCupoRango = (desde: string, hasta: string, personas: number, empresaSlug?: string) =>
+export const getCupoRango = (desde: string, hasta: string, personas: number, empresaSlug?: string, checkoutId?: string) =>
   request<{ dias: DisponibilidadRango }>(
     `/api/cupo/rango/?desde=${desde}&hasta=${hasta}&personas=${personas}`,
-    undefined,
+    checkoutId ? { headers: { 'X-Checkout-Id': checkoutId } } : undefined,
     empresaSlug,
   ).then((r) => r.dias);
 

@@ -94,6 +94,7 @@ function PaymentForm({
   feedback,
   ayudaMensaje,
   etiquetaBotonPago,
+  antesDePagar,
   onPagoConfirmado,
   onPagoRechazado,
 }: {
@@ -103,6 +104,8 @@ function PaymentForm({
   feedback: Dictionary['feedback'];
   ayudaMensaje: string;
   etiquetaBotonPago?: string;
+  /** Renueva el apartado antes de cada cobro. null = seguir; texto = detener y mostrarlo; '' = detener sin texto. */
+  antesDePagar?: () => Promise<string | null>;
   onPagoConfirmado: (procesando: boolean) => void;
   onPagoRechazado?: (mensaje: string, codigo?: string) => void;
 }) {
@@ -115,6 +118,18 @@ function PaymentForm({
     if (!stripe || !elements || submitting) return;
     setSubmitting(true);
     setFormError('');
+
+    // Renovacion silenciosa del apartado antes de hablar con Stripe: la hace el
+    // componente que conoce la reserva. Si decide que no se cobra (sin cupo, monto
+    // distinto, cobro ya en curso) devuelve el texto a mostrar, o '' si ya cambio de pantalla.
+    if (antesDePagar) {
+      const detener = await antesDePagar();
+      if (detener !== null) {
+        if (detener) setFormError(detener);
+        setSubmitting(false);
+        return;
+      }
+    }
 
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
@@ -213,6 +228,8 @@ export function FormularioPago({
   venceEn,
   encabezadoPago,
   etiquetaBotonPago,
+  apartadoHasta,
+  antesDePagar,
   onPagoConfirmado,
   onPagoRechazado,
 }: {
@@ -226,6 +243,18 @@ export function FormularioPago({
   /** Secuencia de pagos (cruza-empresa): qué ya se hizo, cuál es y cuáles faltan. */
   encabezadoPago?: ReactNode;
   etiquetaBotonPago?: string;
+  /**
+   * ISO 8601 del vencimiento del apartado; null si no hubo apartado.
+   * Solo cuando no es null se muestra la linea «Tu lugar está apartado por 15 minutos».
+   */
+  apartadoHasta?: string | null;
+  /**
+   * Callback que el componente padre pasa para renovar el apartado ANTES de que
+   * Stripe confirme el pago. Se llama en cada clic de «Pagar». Devuelve null para
+   * seguir al cobro; un texto para detenerlo y mostrarlo; '' para detenerlo sin texto
+   * (el padre ya cambio de pantalla: sin cupo, cobro en curso).
+   */
+  antesDePagar?: () => Promise<string | null>;
   /** Se llama cuando Stripe acepta el pago; el checkout cambia a la pantalla de
    *  confirmacion. `procesando` es true si el cargo aun no se acredita. */
   onPagoConfirmado: (procesando: boolean) => void;
@@ -238,6 +267,14 @@ export function FormularioPago({
     <>
       <CheckoutSectionCard title={checkout.stepper.payment} estado="activo">
         {encabezadoPago}
+        {/* Linea fija del apartado: solo cuando crear-pago devolvio apartado_hasta.
+            Con APARTADO_MINUTOS=0 o servicios sin cupo fisico, apartadoHasta es null y no aparece. */}
+        {apartadoHasta && (
+          <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <span aria-hidden="true">🔒</span>
+            {checkout.apartadoLinea}
+          </p>
+        )}
         <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret, locale: lang, fonts: STRIPE_FUENTES, appearance: STRIPE_APARIENCIA }}>
           <PaymentForm
             puente={puente}
@@ -245,6 +282,7 @@ export function FormularioPago({
             feedback={feedback}
             ayudaMensaje={ayudaMensaje}
             etiquetaBotonPago={etiquetaBotonPago}
+            antesDePagar={antesDePagar}
             onPagoConfirmado={onPagoConfirmado}
             onPagoRechazado={onPagoRechazado}
           />
