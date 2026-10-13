@@ -198,8 +198,16 @@ class AccionesDeDisponibilidadTests(EmpresaTestCase):
 
     def test_una_panga_de_otra_empresa_se_rechaza(self):
         otra = Empresa.objects.create(sede=self.sede, nombre='Otra', slug='otra-flota-x')
-        ajena = Embarcacion.objects.create(
-            empresa=otra, nombre='Ajena', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3)
+        # Con RLS real (Postgres) el alcance de la prueba no puede escribir filas de otra empresa:
+        # se siembra dentro del alcance de ESA empresa y luego se restaura el de la prueba.
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.con_empresa(otra):
+                ajena = Embarcacion.objects.create(
+                    empresa=otra, nombre='Ajena', clase=Embarcacion.Clase.CHICA, capacidad_maxima=3)
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
 
         respuesta = self._post(accion='panga_fuera', embarcacion=ajena.pk)
 
