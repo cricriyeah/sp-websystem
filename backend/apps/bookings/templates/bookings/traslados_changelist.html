@@ -1,18 +1,9 @@
 {% extends "admin/change_list.html" %}
 
 {% block result_list %}
-    <div style="margin-bottom: 1.25rem;">
-        {% if sin_vehiculo %}
-            <div data-resumen-traslados style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.375rem; background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.25); color: #dc2626; font-size: 0.875rem; font-weight: 600;">
-                <span style="display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: #dc2626;"></span>
-                <span>{{ resumen_traslados }}</span>
-            </div>
-        {% else %}
-            <div data-resumen-traslados style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.375rem; background: rgba(21, 128, 61, 0.08); border: 1px solid rgba(21, 128, 61, 0.25); color: #15803d; font-size: 0.875rem; font-weight: 600;">
-                <span style="display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: #15803d;"></span>
-                <span>{{ resumen_traslados }}</span>
-            </div>
-        {% endif %}
-    </div>
+    {# Solo texto, como el resumen de la Agenda: en rojo lo que falta, en verde cuando no falta nada. #}
+    <p data-resumen-traslados class="text-sm" style="margin: 0 0 1rem; font-weight: 600; color: {% if sin_vehiculo %}#dc2626{% else %}#15803d{% endif %}">
+        {{ resumen_traslados }}
+    </p>
     {{ block.super }}
 {% endblock %}
