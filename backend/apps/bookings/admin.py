@@ -1,4 +1,5 @@
 import re
+from contextvars import ContextVar
 from datetime import date, timedelta
 from decimal import Decimal
 from urllib.parse import quote, urlencode
@@ -9,7 +10,7 @@ from django.contrib.admin import helpers
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db import connection, models, transaction
 from django.db.models.functions import Coalesce
 from django.forms.forms import NON_FIELD_ERRORS
@@ -28,6 +29,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 from apps.fleet.enums import TipoServicio
 from apps.fleet.models import (
     Embarcacion, EmbarcacionNoDisponible, Paquete, PuntoEncuentro, Recurso, Servicio,
+    Vehiculo, VehiculoNoDisponible,
 )
 from apps.payments.situacion import requiere_atencion, situacion_de_orden, situacion_de_reserva
 from apps.notifications.services import enlace_retomar_orden
@@ -58,9 +60,11 @@ from .models import (
     ReservaOcupacion,
     ReservaPaqueteComponente,
     Vendedora,
+    ViajeTransporte,
 )
 from .panorama import armar_panorama
 from .orden_lectura import reservas_de_orden
+from .traslados_reglas import bloqueo_cubre_viaje, bloqueo_toca_viaje
 
 # Lada de Mexico, para completar los telefonos que el cliente escribio a 10 digitos.
 LADA_PAIS = '52'
@@ -2063,3 +2067,372 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
         if obj.estado == Reserva.Estado.ASIGNADA and not obj.capitan_id:
             return format_html(AVISO, 'SIN CAPITAN')
         return '—'
+
+
+# Contexto por petición para el changelist de Traslados
+_contexto_traslados = ContextVar('contexto_traslados', default=None)
+
+
+class ContextoAsignacionVehiculo:
+    """Lo que ya está tomado cada día y los vehículos disponibles para traslados.
+
+    Sigue el mismo patrón que ContextoAsignacion de la Agenda: una consulta por empresa
+    para la flota de vehículos y una consulta por cada fecha distinta (no por fila).
+    Esto garantiza que el listado no genere consultas N+1 al crecer las filas.
+    """
+
+    def __init__(self):
+        self._vehiculos = {}  # empresa_id -> list of Vehiculo
+        self._bloqueos = {}   # (fecha, empresa_id) -> list of (vehiculo_id, hora_desde, hora_hasta)
+        self._empalmes = {}   # (fecha, empresa_id) -> dict of (vehiculo_id, hora) -> list of (pk, reserva_id)
+
+    def _obtener_vehiculos(self, empresa_id):
+        if empresa_id not in self._vehiculos:
+            self._vehiculos[empresa_id] = list(
+                Vehiculo.objects.filter(empresa_id=empresa_id, activo=True).order_by('lugares', 'nombre')
+            )
+        return self._vehiculos[empresa_id]
+
+    def vehiculos_activos(self, empresa_id):
+        return self._obtener_vehiculos(empresa_id)
+
+    def _obtener_bloqueos(self, fecha, empresa_id):
+        clave = (fecha, empresa_id)
+        if clave not in self._bloqueos:
+            self._bloqueos[clave] = list(
+                VehiculoNoDisponible.objects.filter(
+                    fecha=fecha, empresa_id=empresa_id
+                ).values_list('vehiculo_id', 'hora_desde', 'hora_hasta')
+            )
+        return self._bloqueos[clave]
+
+    def _obtener_empalmes(self, fecha, empresa_id):
+        clave = (fecha, empresa_id)
+        if clave not in self._empalmes:
+            viajes = ViajeTransporte.objects.filter(
+                empresa_id=empresa_id,
+                fecha=fecha,
+                cancelado=False,
+                vehiculo__isnull=False,
+                hora__isnull=False,
+            ).values_list('pk', 'reserva_id', 'vehiculo_id', 'hora')
+            mapa = {}
+            for pk, reserva_id, vehiculo_id, hora in viajes:
+                mapa.setdefault((vehiculo_id, hora), []).append((pk, reserva_id))
+            self._empalmes[clave] = mapa
+        return self._empalmes[clave]
+
+    def vehiculos_que_sirven(self, viaje):
+        """Vehículos activos de la empresa donde cabe el grupo y no están bloqueados ese día/hora."""
+        personas = viaje.reserva.numero_personas if viaje.reserva_id else 0
+        bloqueos = self._obtener_bloqueos(viaje.fecha, viaje.empresa_id)
+        sirven = []
+        for v in self._obtener_vehiculos(viaje.empresa_id):
+            if v.lugares < personas:
+                continue
+            bloqueado = any(
+                v_id == v.pk and bloqueo_toca_viaje(h_desde, h_hasta, viaje.hora)
+                for v_id, h_desde, h_hasta in bloqueos
+            )
+            if not bloqueado:
+                sirven.append(v.pk)
+        return sirven
+
+    def otros_viajes_empalmados(self, viaje):
+        """Lista de reserva_ids de otros viajes asignados al mismo vehículo, fecha y hora."""
+        if not viaje.vehiculo_id or not viaje.hora or viaje.cancelado:
+            return []
+        empalmes = self._obtener_empalmes(viaje.fecha, viaje.empresa_id)
+        clave = (viaje.vehiculo_id, viaje.hora)
+        grupo = empalmes.get(clave, [])
+        return [reserva_id for pk, reserva_id in grupo if pk != viaje.pk]
+
+    def asignacion_es_invalida(self, viaje):
+        """True si el vehículo asignado ya no cabe, está inactivo o está bloqueado."""
+        if not viaje.vehiculo_id:
+            return False
+        vehiculo = viaje.vehiculo
+        if not vehiculo.activo:
+            return True
+        if viaje.reserva_id and viaje.reserva.numero_personas > vehiculo.lugares:
+            return True
+        bloqueos = self._obtener_bloqueos(viaje.fecha, viaje.empresa_id)
+        return any(
+            v_id == vehiculo.pk and bloqueo_toca_viaje(h_desde, h_hasta, viaje.hora)
+            for v_id, h_desde, h_hasta in bloqueos
+        )
+
+
+def filtrar_traslados_por_cuando(queryset, valor):
+    """Hoy, Mañana, Todos o (por defecto) los próximos 7 días. Lo usan el filtro y el resumen."""
+    hoy = timezone.localdate()
+    if valor == 'hoy':
+        return queryset.filter(fecha=hoy)
+    if valor == 'manana':
+        return queryset.filter(fecha=hoy + timedelta(days=1))
+    if valor == 'todos':
+        return queryset
+    return queryset.filter(fecha__range=(hoy, hoy + timedelta(days=7)))
+
+
+class CuandoTransporteFilter(admin.SimpleListFilter):
+    """Filtro de fechas para Traslados: Hoy, Mañana, Próximos 7 días (por defecto), Todos."""
+
+    title = 'cuándo'
+    parameter_name = 'cuando'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('hoy', 'Hoy'),
+            ('manana', 'Mañana'),
+            ('semana', 'Próximos 7 días'),
+            ('todos', 'Todos'),
+        ]
+
+    def choices(self, changelist):
+        valor = self.value()
+        for lookup, title in self.lookup_choices:
+            yield {
+                'selected': (valor == lookup) or (valor is None and lookup == 'semana'),
+                'query_string': changelist.get_query_string({self.parameter_name: lookup}),
+                'display': title,
+            }
+
+    def queryset(self, request, queryset):
+        return filtrar_traslados_por_cuando(queryset, self.value())
+
+
+class ViajeTransporteForm(forms.ModelForm):
+    contexto = None
+
+    class Meta:
+        model = ViajeTransporte
+        fields = ['hora', 'vehiculo']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._aligerar_selectores()
+        # La hora de la ida o del tramo unico viene de la reserva (y la sincronizacion la
+        # repone); solo la del regreso se captura aqui, porque el checkout no la pide.
+        if self.instance.pk and self.instance.sentido != ViajeTransporte.Sentido.REGRESO:
+            self.fields['hora'].disabled = True
+        # Solo al mostrar. Al guardar el formulario queda con todas las opciones a
+        # propósito: si una ya no sirve, el modelo contesta con el motivo específico.
+        if self.contexto is not None and self.instance.pk and not self.is_bound:
+            self._ofrecer_solo_lo_que_sirve(self.instance)
+
+    def _aligerar_selectores(self):
+        """Quita botones de agregar/editar/borrar y muestra nombre y lugares."""
+        self.fields['vehiculo'].label_from_instance = (
+            lambda v: f'{v.nombre} ({v.lugares})'
+        )
+        envoltorio = self.fields['vehiculo'].widget
+        if hasattr(envoltorio, 'can_add_related'):
+            envoltorio.can_add_related = False
+            envoltorio.can_change_related = False
+            envoltorio.can_delete_related = False
+            envoltorio.can_view_related = False
+
+    def _ofrecer_solo_lo_que_sirve(self, viaje):
+        """Ofrece los vehículos activos que caben y no están bloqueados, más el actual."""
+        campo_vehiculo = self.fields['vehiculo']
+        ids = set(self.contexto.vehiculos_que_sirven(viaje))
+        if viaje.vehiculo_id:
+            ids.add(viaje.vehiculo_id)  # el actual nunca desaparece del selector
+
+        # Las opciones salen de la lista que el contexto ya cargo (una consulta por empresa), no
+        # de una consulta por fila: un selector con `queryset.filter(...)` consulta la base cada
+        # vez que se dibuja, y con 50 filas por pagina seria una consulta por viaje.
+        vehiculos = {v.pk: v for v in self.contexto.vehiculos_activos(viaje.empresa_id) if v.pk in ids}
+        if viaje.vehiculo_id and viaje.vehiculo_id not in vehiculos:
+            vehiculos[viaje.vehiculo_id] = viaje.vehiculo  # asignado y ya inactivo: se sigue viendo
+        etiqueta_vacia = 'Elegir vehículo' if vehiculos else 'Sin vehículos disponibles donde quepan'
+        campo_vehiculo.choices = [('', etiqueta_vacia)] + [
+            (v.pk, f'{v.nombre} ({v.lugares})')
+            for v in sorted(vehiculos.values(), key=lambda v: (v.lugares, v.nombre))
+        ]
+
+    def _post_clean(self):
+        # El listado envía todas las filas visibles, aunque solo se cambie una.
+        # Una fila intacta no se guarda y no debe revalidarse.
+        if not self.has_changed():
+            return
+        super()._post_clean()
+
+    def _update_errors(self, errors):
+        # Mapea errores de campos ausentes del formulario a NON_FIELD_ERRORS para evitar 500.
+        if hasattr(errors, 'error_dict'):
+            errores = {campo: list(mensajes) for campo, mensajes in errors.error_dict.items()}
+            for campo in list(errores):
+                if campo in self.fields or campo == NON_FIELD_ERRORS:
+                    continue
+                etiqueta = self.instance._meta.get_field(campo).verbose_name
+                errores.setdefault(NON_FIELD_ERRORS, []).extend(
+                    ValidationError(f'{etiqueta}: {mensaje}')
+                    for error in errores.pop(campo)
+                    for mensaje in error.messages
+                )
+            errors = ValidationError(errores)
+        super()._update_errors(errors)
+
+
+@admin.register(ViajeTransporte)
+class ViajeTransporteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    """Pantalla Traslados: asignación de vehículos a viajes de transporte por tramo."""
+
+    campos_escopeados_por_empresa = ('vehiculo',)
+    change_list_template = 'bookings/traslados_changelist.html'
+
+    list_display = [
+        'dia', 'hora', 'cliente', 'personas', 'tramo', 'recogida',
+        'vehiculo', 'aviso',
+    ]
+    list_editable = ['hora', 'vehiculo']
+    list_display_links = ['cliente']
+    list_filter = [CuandoTransporteFilter]
+    search_fields = ['reserva__nombre_cliente', 'reserva__telefono_cliente']
+    list_per_page = 50
+
+    class Media:
+        css = {'all': ['bookings/admin-columnas.css']}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(
+            cancelado=False,
+        ).select_related(
+            'reserva__detalle_transporte__punto_encuentro',
+            'vehiculo',
+        )
+
+    def get_ordering(self, request):
+        sin_vehiculo_primero = models.Case(
+            models.When(vehiculo__isnull=True, then=models.Value(0)),
+            default=models.Value(1),
+            output_field=models.IntegerField(),
+        )
+        return [
+            sin_vehiculo_primero,
+            'fecha',
+            models.F('hora').asc(nulls_last=True),
+            'pk',
+        ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        token = _contexto_traslados.set(ContextoAsignacionVehiculo())
+        try:
+            visibles = filtrar_traslados_por_cuando(self.get_queryset(request), request.GET.get('cuando'))
+            sin_vehiculo = visibles.filter(vehiculo__isnull=True).count()
+            resumen_texto = f'{sin_vehiculo} sin vehículo' if sin_vehiculo > 0 else 'Todo asignado'
+            extra = {
+                **(extra_context or {}),
+                'title': 'Traslados',
+                'sin_vehiculo': sin_vehiculo,
+                'resumen_traslados': resumen_texto,
+            }
+            return super().changelist_view(request, extra_context=extra)
+        finally:
+            _contexto_traslados.reset(token)
+
+    def get_changelist_form(self, request, **kwargs):
+        contexto = _contexto_traslados.get()
+        if contexto is None:
+            contexto = ContextoAsignacionVehiculo()
+        formulario = type('ViajeTransporteFormConContexto', (ViajeTransporteForm,), {'contexto': contexto})
+        return super().get_changelist_form(request, form=formulario, **kwargs)
+
+    @admin.display(description='Día', ordering='fecha')
+    def dia(self, obj):
+        formato = 'D j M' if obj.fecha.year == timezone.localdate().year else 'D j M Y'
+        return date_format(obj.fecha, formato)
+
+    @admin.display(description='Cliente', ordering='reserva__nombre_cliente')
+    def cliente(self, obj):
+        return obj.reserva.nombre_cliente
+
+    @admin.display(description='Personas', ordering='reserva__numero_personas')
+    def personas(self, obj):
+        return obj.reserva.numero_personas
+
+    @admin.display(description='Tramo', ordering='sentido')
+    def tramo(self, obj):
+        sentidos = {
+            ViajeTransporte.Sentido.UNICO: 'Único',
+            ViajeTransporte.Sentido.IDA: 'Ida',
+            ViajeTransporte.Sentido.REGRESO: 'Regreso',
+        }
+        return sentidos.get(obj.sentido, obj.get_sentido_display())
+
+    @admin.display(description='Recogida')
+    def recogida(self, obj):
+        try:
+            detalle = obj.reserva.detalle_transporte
+        except (ObjectDoesNotExist, AttributeError):
+            return '—'
+        if detalle is None:
+            return '—'
+        if detalle.punto_encuentro_id:
+            return detalle.punto_encuentro.nombre
+        if detalle.direccion_personalizada:
+            return detalle.direccion_personalizada
+        if detalle.zona:
+            return detalle.get_zona_display() or detalle.zona
+        return '—'
+
+    def _obtener_avisos(self, obj):
+        avisos = []
+        contexto = _contexto_traslados.get()
+
+        # 1. Empalme informativo (mismo vehículo a la misma hora)
+        if obj.vehiculo_id and obj.hora and not obj.cancelado:
+            if contexto is not None:
+                otros_reserva = contexto.otros_viajes_empalmados(obj)
+            else:
+                otros_reserva = list(
+                    ViajeTransporte.objects.filter(
+                        empresa_id=obj.empresa_id,
+                        fecha=obj.fecha,
+                        hora=obj.hora,
+                        vehiculo_id=obj.vehiculo_id,
+                        cancelado=False,
+                    ).exclude(pk=obj.pk).values_list('reserva_id', flat=True)
+                )
+            if otros_reserva:
+                referencias = ', '.join(f'#{r_id}' for r_id in sorted(set(otros_reserva)))
+                avisos.append(f'Mismo vehículo a la misma hora que {referencias}')
+
+        # 2. Regreso sin hora
+        if obj.sentido == ViajeTransporte.Sentido.REGRESO and not obj.hora:
+            avisos.append('Falta la hora')
+
+        # 3. Asignación que quedó inválida (ya no cabe o está bloqueado)
+        if obj.vehiculo_id:
+            es_invalida = False
+            if contexto is not None:
+                es_invalida = contexto.asignacion_es_invalida(obj)
+            else:
+                v = obj.vehiculo
+                if not v.activo or (obj.reserva_id and obj.reserva.numero_personas > v.lugares):
+                    es_invalida = True
+                elif bloqueo_cubre_viaje(obj.vehiculo_id, obj.fecha, obj.hora):
+                    es_invalida = True
+            if es_invalida:
+                avisos.append('El vehículo ya no cabe o está bloqueado')
+
+        return avisos
+
+    @admin.display(description='Aviso')
+    def aviso(self, obj):
+        avisos = self._obtener_avisos(obj)
+        if not avisos:
+            return '—'
+        return format_html(
+            '<span style="color:#dc2626;font-weight:600">{}</span>',
+            ' · '.join(avisos),
+        )
+

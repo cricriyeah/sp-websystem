@@ -199,6 +199,12 @@ UNFOLD = {
                         'permission': lambda request: request.user.has_perm('bookings.view_agenda'),
                     },
                     {
+                        'title': 'Traslados',
+                        'icon': 'commute',
+                        'link': reverse_lazy('admin:bookings_viajetransporte_changelist'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_viajetransporte'),
+                    },
+                    {
                         'title': 'Checkouts abandonados',
                         'icon': 'remove_shopping_cart',
                         'link': reverse_lazy('admin:bookings_checkoutabandonado_changelist'),

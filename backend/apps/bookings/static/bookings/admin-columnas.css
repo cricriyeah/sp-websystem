@@ -17,7 +17,9 @@
 .column-embarcacion,
 .field-embarcacion,
 .column-capitan,
-.field-capitan {
+.field-capitan,
+.column-vehiculo,
+.field-vehiculo {
   min-width: 12rem;
   overflow: visible;
 }
@@ -26,10 +28,13 @@
  * en blanco y el nombre se sigue cortando igual. */
 .field-embarcacion select,
 .field-capitan select,
+.field-vehiculo select,
 .field-embarcacion input,
 .field-capitan input,
+.field-vehiculo input,
 .field-embarcacion .select2-container,
-.field-capitan .select2-container {
+.field-capitan .select2-container,
+.field-vehiculo .select2-container {
   min-width: 11rem;
   width: 100%;
 }
@@ -455,4 +460,9 @@
 .agenda-dialogo-boton:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+/* Hora editable del regreso en Traslados: un campo corto, no una caja de ancho completo. */
+.field-hora input {
+  width: 5.5rem;
 }
