@@ -241,6 +241,116 @@ class EmbarcacionNoDisponible(models.Model):
         return f'{self.embarcacion.nombre} fuera el {self.fecha}'
 
 
+class Vehiculo(models.Model):
+    """Vehiculo de transporte asignable a viajes de traslado.
+
+    Patron identico a Embarcacion: se da de baja con activo=False, nunca se
+    borra (PROTECT desde ViajeTransporte). Un vehiculo inactivo deja de
+    aparecer en el selector pero conserva el historial de asignaciones.
+    """
+
+    nombre = models.CharField(max_length=100)
+    lugares = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)],
+        help_text='Numero de lugares disponibles (minimo 1).',
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text='Desmarcalo para sacar el vehiculo de la flota sin borrarlo. '
+                  'Un vehiculo inactivo no se puede asignar a nuevos viajes pero '
+                  'conserva el historial.',
+    )
+    empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='vehiculos')
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = 'vehiculo'
+        verbose_name_plural = 'vehiculos'
+        constraints = [
+            models.UniqueConstraint(fields=['nombre', 'empresa'], name='vehiculo_nombre_unico_por_empresa'),
+        ]
+
+    def __str__(self):
+        return f'{self.nombre} ({self.lugares} lugares)'
+
+
+class VehiculoNoDisponible(models.Model):
+    """Un vehiculo que no puede hacer viajes en una fecha o rango de horas.
+
+    Sin horas = bloqueo de dia completo. Si hay una hora debe haber las dos
+    y hora_desde < hora_hasta. Patron identico a EmbarcacionNoDisponible pero
+    con rango opcional de horas para reflejar que un vehiculo puede salir
+    dos veces en el dia (a diferencia de una panga que hace una sola salida).
+    """
+
+    empresa = models.ForeignKey(
+        'tenancy.Empresa', on_delete=models.PROTECT, related_name='vehiculos_no_disponibles',
+    )
+    vehiculo = models.ForeignKey(
+        Vehiculo, on_delete=models.PROTECT, related_name='no_disponibles',
+    )
+    fecha = models.DateField()
+    hora_desde = models.TimeField(
+        null=True, blank=True,
+        help_text='Inicio del bloqueo. Vacio = bloqueo de dia completo.',
+    )
+    hora_hasta = models.TimeField(
+        null=True, blank=True,
+        help_text='Fin del bloqueo. Vacio = bloqueo de dia completo.',
+    )
+    motivo = models.CharField(max_length=200, blank=True)
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='vehiculos_dados_de_baja',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha', 'vehiculo__nombre']
+        verbose_name = 'vehiculo no disponible'
+        verbose_name_plural = 'vehiculos no disponibles'
+
+    def __str__(self):
+        if self.hora_desde and self.hora_hasta:
+            return f'{self.vehiculo.nombre} bloqueado el {self.fecha} de {self.hora_desde} a {self.hora_hasta}'
+        return f'{self.vehiculo.nombre} bloqueado el {self.fecha}'
+
+    def clean(self):
+        # Las dos horas o ninguna, y hora_desde < hora_hasta.
+        tiene_desde = self.hora_desde is not None
+        tiene_hasta = self.hora_hasta is not None
+        if tiene_desde != tiene_hasta:
+            raise ValidationError('Pon las dos horas o deja las dos vacias.')
+        if self.hora_desde and self.hora_hasta and self.hora_desde >= self.hora_hasta:
+            raise ValidationError({'hora_hasta': 'hora_hasta debe ser posterior a hora_desde.'})
+
+        # El vehiculo debe pertenecer a la misma empresa.
+        if self.vehiculo_id and self.empresa_id and self.vehiculo.empresa_id != self.empresa_id:
+            raise ValidationError({'vehiculo': 'El vehiculo pertenece a otra empresa.'})
+
+        # Validacion inversa: no bloquear si ya hay viajes no cancelados que choquen.
+        # Importamos aqui para evitar importaciones circulares (bookings importa fleet).
+        from apps.bookings.traslados_reglas import viajes_que_chocan_con_bloqueo
+
+        if self.vehiculo_id and self.fecha:
+            viajes = viajes_que_chocan_con_bloqueo(
+                vehiculo_id=self.vehiculo_id,
+                fecha=self.fecha,
+                hora_desde=self.hora_desde,
+                hora_hasta=self.hora_hasta,
+                excluir_cancelados=True,
+            )
+            # Si hay viajes concretos no cancelados, rechazamos el bloqueo.
+            chocantes = list(viajes[:1])
+            if chocantes:
+                viaje = chocantes[0]
+                raise ValidationError(
+                    f'El vehiculo ya tiene asignado el viaje #{viaje.pk} '
+                    f'(reserva #{viaje.reserva_id}) el {self.fecha}. '
+                    f'Cancela o reasigna ese viaje antes de bloquearlo.'
+                )
+
+
 class Servicio(models.Model):
     """Experiencia vendible en una sede/empresa.
 

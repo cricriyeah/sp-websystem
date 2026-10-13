@@ -1355,6 +1355,85 @@ class DetalleTransporte(models.Model):
         return self.zona
 
 
+class ViajeTransporte(models.Model):
+    """Un tramo de traslado asignado (o por asignar) a un vehiculo.
+
+    Se crea automaticamente al pagar una reserva de transporte (via sincronizar_viajes
+    en bookings/traslados.py). La vendedora NO lo crea a mano: tiene permiso de cambio
+    pero no de alta ni borrado. El vehiculo empieza nulo y se asigna desde la pantalla
+    de Traslados.
+
+    Un viaje cancelado no cuenta como ocupacion del vehiculo. Al cancelar la reserva,
+    sincronizar_viajes marca cancelado=True y quita el vehiculo.
+    """
+
+    class Sentido(models.TextChoices):
+        UNICO = 'unico', 'Unico'
+        IDA = 'ida', 'Ida'
+        REGRESO = 'regreso', 'Regreso'
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='viajes_transporte')
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='viajes_transporte')
+    sentido = models.CharField(max_length=10, choices=Sentido.choices)
+    fecha = models.DateField()
+    hora = models.TimeField(
+        null=True, blank=True,
+        help_text='Hora de recogida. Vacia en el regreso hasta que la vendedora la capture.',
+    )
+    vehiculo = models.ForeignKey(
+        # PROTECT: borrar un vehiculo con historial de viajes dejaria registros huerfanos.
+        # Para retirarlo se desmarca activo. Nulo = sin asignar aun.
+        'fleet.Vehiculo', on_delete=models.PROTECT, null=True, blank=True, related_name='viajes',
+    )
+    cancelado = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['fecha', 'hora', 'pk']
+        verbose_name = 'viaje de transporte'
+        verbose_name_plural = 'viajes de transporte'
+        constraints = [
+            models.UniqueConstraint(fields=['reserva', 'sentido'], name='viajetransporte_unico_por_sentido'),
+        ]
+
+    def __str__(self):
+        return f'{self.get_sentido_display()} — {self.fecha} — Reserva #{self.reserva_id}'
+
+    def clean(self):
+        from apps.bookings.traslados_reglas import bloqueo_cubre_viaje
+
+        # Un viaje cancelado no puede tener vehiculo asignado.
+        if self.cancelado and self.vehiculo_id:
+            raise ValidationError({'vehiculo': 'Un viaje cancelado no puede tener vehiculo asignado.'})
+
+        if not self.vehiculo_id:
+            return
+
+        # El vehiculo debe pertenecer a la misma empresa y estar activo.
+        if self.empresa_id and self.vehiculo.empresa_id != self.empresa_id:
+            raise ValidationError({'vehiculo': 'El vehiculo pertenece a otra empresa.'})
+        if not self.vehiculo.activo:
+            raise ValidationError({'vehiculo': 'El vehiculo esta inactivo.'})
+
+        # El grupo debe caber en el vehiculo.
+        if self.reserva_id and self.reserva.numero_personas > self.vehiculo.lugares:
+            raise ValidationError({
+                'vehiculo': (
+                    f'{self.vehiculo} tiene {self.vehiculo.lugares} lugar(es) y la reserva '
+                    f'es para {self.reserva.numero_personas} persona(s).'
+                ),
+            })
+
+        # No puede haber un VehiculoNoDisponible que cubra este viaje.
+        if self.fecha and bloqueo_cubre_viaje(self.vehiculo_id, self.fecha, self.hora):
+            raise ValidationError({
+                'vehiculo': (
+                    f'{self.vehiculo} esta bloqueado el {self.fecha}'
+                    + (f' a las {self.hora}' if self.hora else '')
+                    + '.'
+                ),
+            })
+
+
 class Orden(models.Model):
     class Estado(models.TextChoices):
         ARMANDO = 'armando', 'Armando (reservas creadas)'
