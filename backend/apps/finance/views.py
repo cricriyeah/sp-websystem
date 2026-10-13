@@ -166,11 +166,12 @@ def panel_financiero(request):
     ultimo_dia = mes.replace(day=monthrange(mes.year, mes.month)[1])
     siguiente = _mes_vecino(mes, 1)
 
+    datos_resumen = resumen(hoy, empresa=empresa)
+
     return render(request, 'finance/panel.html', {
         **admin.site.each_context(request),
         'title': 'Finanzas',
-        'hoy': hoy,
-        **resumen(hoy, empresa=empresa),
+        'acumulado': datos_resumen['acumulado'],
         # El periodo elegido en el select: filtra el balance de arriba y la
         # grafica. El historico de abajo sigue siendo mes a mes con sus flechas,
         # que es lo unico que deja llegar a un mes viejo cualquiera.

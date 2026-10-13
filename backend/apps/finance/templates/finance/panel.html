@@ -5,13 +5,20 @@
 {{ block.super }}
 <div class="flex flex-col gap-8">
 
+    <div>
+        <h1 class="font-semibold text-base-800 text-xl dark:text-base-200">Finanzas</h1>
+        <p class="mt-1 text-base-500 text-sm dark:text-base-400">
+            Toca una cifra para ver las reservas que la forman.
+        </p>
+    </div>
+
     {% comment %}
     Lo primero que se busca al abrir esta pantalla: cuanto deberia haber ahorita
     en cada lado, para cuadrarlo contra el banco y contra la caja.
     {% endcomment %}
     <section class="flex flex-col gap-3">
         <div>
-            <h1 class="font-semibold text-base-800 text-xl dark:text-base-200">Lo que deberia haber</h1>
+            <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">Lo que deberia haber</h2>
             <p class="mt-1 text-base-500 text-sm dark:text-base-400">
                 Acumulado de toda la operacion. En la cuenta: cobros con tarjeta menos reembolsos.
                 En efectivo: lo que la vendedora registro haber recibido el dia del viaje.
@@ -25,7 +32,13 @@
                 {% for moneda, saldo in acumulado.items %}
                     <div class="flex justify-between" style="align-items: baseline">
                         <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
-                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_cuenta|floatformat:2|intcomma }}</span>
+                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">
+                            {% if saldo.en_cuenta %}
+                                <a href="{% url 'finanzas_movimientos' %}?concepto=stripe&moneda={{ moneda }}" class="hover:underline">{{ saldo.en_cuenta|floatformat:2|intcomma }}</a>
+                            {% else %}
+                                {{ saldo.en_cuenta|floatformat:2|intcomma }}
+                            {% endif %}
+                        </span>
                     </div>
                 {% empty %}
                     <span class="text-base-400 text-sm">Sin movimientos todavia.</span>
@@ -41,7 +54,13 @@
                 {% for moneda, saldo in acumulado.items %}
                     <div class="flex justify-between" style="align-items: baseline">
                         <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
-                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_efectivo|floatformat:2|intcomma }}</span>
+                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">
+                            {% if saldo.en_efectivo %}
+                                <a href="{% url 'finanzas_movimientos' %}?concepto=efectivo&moneda={{ moneda }}" class="hover:underline">{{ saldo.en_efectivo|floatformat:2|intcomma }}</a>
+                            {% else %}
+                                {{ saldo.en_efectivo|floatformat:2|intcomma }}
+                            {% endif %}
+                        </span>
                     </div>
                 {% empty %}
                     <span class="text-base-400 text-sm">Sin movimientos todavia.</span>
@@ -58,7 +77,13 @@
                 {% for moneda, saldo in acumulado.items %}
                     <div class="flex justify-between" style="align-items: baseline">
                         <span class="text-base-500 text-sm dark:text-base-400">{{ moneda }}</span>
-                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">{{ saldo.en_banco|floatformat:2|intcomma }}</span>
+                        <span class="font-semibold text-2xl text-base-800 dark:text-base-200">
+                            {% if saldo.en_banco %}
+                                <a href="{% url 'finanzas_movimientos' %}?concepto=transferencia&moneda={{ moneda }}" class="hover:underline">{{ saldo.en_banco|floatformat:2|intcomma }}</a>
+                            {% else %}
+                                {{ saldo.en_banco|floatformat:2|intcomma }}
+                            {% endif %}
+                        </span>
                     </div>
                 {% empty %}
                     <span class="text-base-400 text-sm">Sin movimientos todavia.</span>
@@ -72,9 +97,6 @@
     El periodo elegido manda sobre el balance de esta seccion y sobre la grafica.
     El select se envia solo al cambiar: es una pantalla de consulta y pedir un
     boton "aplicar" para un solo campo es un clic de mas.
-
-    Se conservan abajo los cuadros fijos de hoy / mes / año: sirven para ver los
-    tres de un golpe, que es algo que un select no puede hacer.
     {% endcomment %}
     <section class="flex flex-col gap-3">
         <form class="flex flex-wrap gap-3 items-center justify-between" method="get">
@@ -92,19 +114,11 @@
             </select>
         </form>
 
-        {% include "finance/_tabla_balances.html" with balances=saldo_periodo %}
+        {% include "finance/_tabla_balances.html" with balances=saldo_periodo desde=periodo_desde hasta=periodo_hasta %}
 
         {% comment %}
         Una barra por dia con lo que entro (tarjeta + efectivo + transferencia). Los dias vacios
         se dibujan a proposito: el hueco enseña que ese dia no entro nada.
-
-        Una grafica por moneda. MXN y USD nunca se mezclan: el sistema no guarda
-        tipo de cambio, asi que un total junto seria un numero inventado.
-        {% endcomment %}
-        {% comment %}
-        Chart.js ya viene con Unfold y su app.js instancia solo cada canvas con
-        class="chart": lee el JSON de `data-value` y dibuja. Aqui no se escribe
-        JavaScript ni se instala nada.
 
         Una grafica por moneda. MXN y USD nunca se mezclan: el sistema no guarda
         tipo de cambio, asi que un total junto seria un numero inventado.
@@ -120,29 +134,6 @@
             <p class="text-base-400 text-sm">Sin entradas en este periodo, no hay nada que graficar.</p>
         {% endfor %}
     </section>
-
-    <section class="flex flex-col gap-3">
-        <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
-            Hoy · {{ hoy|date:"j \d\e F \d\e Y" }}
-        </h2>
-        {% include "finance/_tabla_balances.html" with balances=dia %}
-    </section>
-
-    <div class="gap-8 grid grid-cols-1 xl:grid-cols-2">
-        <section class="flex flex-col gap-3">
-            <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
-                Mes en curso · {{ hoy|date:"F Y" }}
-            </h2>
-            {% include "finance/_tabla_balances.html" with balances=mes %}
-        </section>
-
-        <section class="flex flex-col gap-3">
-            <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
-                Año en curso · {{ hoy|date:"Y" }}
-            </h2>
-            {% include "finance/_tabla_balances.html" with balances=anio %}
-        </section>
-    </div>
 
     {% comment %}
     Historico: el cierre de cada dia. Los dias sin un solo movimiento no
@@ -184,13 +175,41 @@
                                     {% if forloop.first %}{{ dia|date:"D j" }}{% endif %}
                                 </td>
                                 <td class="px-3 py-2 text-base-500 dark:text-base-400">{{ moneda }}</td>
-                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.tarjeta|floatformat:2|intcomma }}</td>
-                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.efectivo|floatformat:2|intcomma }}</td>
-                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.transferencia|floatformat:2|intcomma }}</td>
-                                <td class="px-3 py-2 text-right {% if saldo.reembolsos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
-                                    {% if saldo.reembolsos %}−{% endif %}{{ saldo.reembolsos|floatformat:2|intcomma }}
+                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">
+                                    {% if saldo.tarjeta %}
+                                        <a href="{% url 'finanzas_movimientos' %}?concepto=tarjeta&moneda={{ moneda }}&desde={{ dia|date:'Y-m-d'|default:dia }}&hasta={{ dia|date:'Y-m-d'|default:dia }}" class="hover:underline">{{ saldo.tarjeta|floatformat:2|intcomma }}</a>
+                                    {% else %}
+                                        {{ saldo.tarjeta|floatformat:2|intcomma }}
+                                    {% endif %}
                                 </td>
-                                <td class="font-semibold px-3 py-2 text-right text-base-800 dark:text-base-200">{{ saldo.neto|floatformat:2|intcomma }}</td>
+                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">
+                                    {% if saldo.efectivo %}
+                                        <a href="{% url 'finanzas_movimientos' %}?concepto=efectivo&moneda={{ moneda }}&desde={{ dia|date:'Y-m-d'|default:dia }}&hasta={{ dia|date:'Y-m-d'|default:dia }}" class="hover:underline">{{ saldo.efectivo|floatformat:2|intcomma }}</a>
+                                    {% else %}
+                                        {{ saldo.efectivo|floatformat:2|intcomma }}
+                                    {% endif %}
+                                </td>
+                                <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">
+                                    {% if saldo.transferencia %}
+                                        <a href="{% url 'finanzas_movimientos' %}?concepto=transferencia&moneda={{ moneda }}&desde={{ dia|date:'Y-m-d'|default:dia }}&hasta={{ dia|date:'Y-m-d'|default:dia }}" class="hover:underline">{{ saldo.transferencia|floatformat:2|intcomma }}</a>
+                                    {% else %}
+                                        {{ saldo.transferencia|floatformat:2|intcomma }}
+                                    {% endif %}
+                                </td>
+                                <td class="px-3 py-2 text-right {% if saldo.reembolsos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
+                                    {% if saldo.reembolsos %}
+                                        <a href="{% url 'finanzas_movimientos' %}?concepto=reembolsos&moneda={{ moneda }}&desde={{ dia|date:'Y-m-d'|default:dia }}&hasta={{ dia|date:'Y-m-d'|default:dia }}" class="hover:underline">−{{ saldo.reembolsos|floatformat:2|intcomma }}</a>
+                                    {% else %}
+                                        {{ saldo.reembolsos|floatformat:2|intcomma }}
+                                    {% endif %}
+                                </td>
+                                <td class="font-semibold px-3 py-2 text-right text-base-800 dark:text-base-200">
+                                    {% if saldo.neto %}
+                                        <a href="{% url 'finanzas_movimientos' %}?concepto=todos&moneda={{ moneda }}&desde={{ dia|date:'Y-m-d'|default:dia }}&hasta={{ dia|date:'Y-m-d'|default:dia }}" class="hover:underline">{{ saldo.neto|floatformat:2|intcomma }}</a>
+                                    {% else %}
+                                        {{ saldo.neto|floatformat:2|intcomma }}
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endfor %}
                     {% empty %}

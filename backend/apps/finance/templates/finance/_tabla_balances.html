@@ -19,13 +19,41 @@ independientes, el sistema no tiene tipo de cambio (ver services.py).
             {% for moneda, saldo in balances.items %}
                 <tr class="border-t border-base-200 dark:border-base-800">
                     <td class="font-medium px-3 py-2 text-base-700 dark:text-base-300">{{ moneda }}</td>
-                    <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.tarjeta|floatformat:2|intcomma }}</td>
-                    <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.efectivo|floatformat:2|intcomma }}</td>
-                    <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ saldo.transferencia|floatformat:2|intcomma }}</td>
-                    <td class="px-3 py-2 text-right {% if saldo.reembolsos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
-                        {% if saldo.reembolsos %}−{% endif %}{{ saldo.reembolsos|floatformat:2|intcomma }}
+                    <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">
+                        {% if saldo.tarjeta %}
+                            <a href="{% url 'finanzas_movimientos' %}?concepto=tarjeta&moneda={{ moneda }}{% if desde and hasta %}&desde={{ desde|date:'Y-m-d'|default:desde }}&hasta={{ hasta|date:'Y-m-d'|default:hasta }}{% endif %}" class="hover:underline">{{ saldo.tarjeta|floatformat:2|intcomma }}</a>
+                        {% else %}
+                            {{ saldo.tarjeta|floatformat:2|intcomma }}
+                        {% endif %}
                     </td>
-                    <td class="font-semibold px-3 py-2 text-right text-base-800 dark:text-base-200">{{ saldo.neto|floatformat:2|intcomma }}</td>
+                    <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">
+                        {% if saldo.efectivo %}
+                            <a href="{% url 'finanzas_movimientos' %}?concepto=efectivo&moneda={{ moneda }}{% if desde and hasta %}&desde={{ desde|date:'Y-m-d'|default:desde }}&hasta={{ hasta|date:'Y-m-d'|default:hasta }}{% endif %}" class="hover:underline">{{ saldo.efectivo|floatformat:2|intcomma }}</a>
+                        {% else %}
+                            {{ saldo.efectivo|floatformat:2|intcomma }}
+                        {% endif %}
+                    </td>
+                    <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">
+                        {% if saldo.transferencia %}
+                            <a href="{% url 'finanzas_movimientos' %}?concepto=transferencia&moneda={{ moneda }}{% if desde and hasta %}&desde={{ desde|date:'Y-m-d'|default:desde }}&hasta={{ hasta|date:'Y-m-d'|default:hasta }}{% endif %}" class="hover:underline">{{ saldo.transferencia|floatformat:2|intcomma }}</a>
+                        {% else %}
+                            {{ saldo.transferencia|floatformat:2|intcomma }}
+                        {% endif %}
+                    </td>
+                    <td class="px-3 py-2 text-right {% if saldo.reembolsos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
+                        {% if saldo.reembolsos %}
+                            <a href="{% url 'finanzas_movimientos' %}?concepto=reembolsos&moneda={{ moneda }}{% if desde and hasta %}&desde={{ desde|date:'Y-m-d'|default:desde }}&hasta={{ hasta|date:'Y-m-d'|default:hasta }}{% endif %}" class="hover:underline">−{{ saldo.reembolsos|floatformat:2|intcomma }}</a>
+                        {% else %}
+                            {{ saldo.reembolsos|floatformat:2|intcomma }}
+                        {% endif %}
+                    </td>
+                    <td class="font-semibold px-3 py-2 text-right text-base-800 dark:text-base-200">
+                        {% if saldo.neto %}
+                            <a href="{% url 'finanzas_movimientos' %}?concepto=todos&moneda={{ moneda }}{% if desde and hasta %}&desde={{ desde|date:'Y-m-d'|default:desde }}&hasta={{ hasta|date:'Y-m-d'|default:hasta }}{% endif %}" class="hover:underline">{{ saldo.neto|floatformat:2|intcomma }}</a>
+                        {% else %}
+                            {{ saldo.neto|floatformat:2|intcomma }}
+                        {% endif %}
+                    </td>
                 </tr>
             {% empty %}
                 <tr>
