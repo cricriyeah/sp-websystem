@@ -134,6 +134,49 @@ Para habilitar tours alternativos, experiencias o empresas de hospedaje:
 4. Si se ofrecen paquetes: crear el `Paquete` en `/admin/fleet/paquete/` con su `precio_ancla` y asociar los servicios componentes en `/admin/fleet/paqueteservicio/` (todos deben pertenecer a la misma `empresa_lider`).
 5. **Importante:** Las empresas nuevas **no requieren `Tarifa` legacy**. El modelo `Tarifa` singleton por empresa aplica únicamente a empresas con flujo clásico de pesca deportiva mono-tarifa (`sal-y-sol`). Las empresas nuevas operan al 100% mediante `Servicio` y `Paquete`.
 
+## 10. Lo que se suma encima del corte (apartado, backoffice y traslados)
+
+Esta rama (`feat/traslados-vehiculos`) es una pila **lineal** sobre `main`: fusionar es un avance
+rápido, sin conflictos. Además del corte a multi-empresa trae, en este orden de migraciones:
+`bookings 0055` (apartado: tres columnas nulas, aditiva), `fleet 0047-0048` y `bookings 0056-0058`
+(vehículos, bloqueos y viajes de transporte, con sus políticas RLS, y una migración de datos que
+corre con el alcance de operador). Todo es aditivo: nada borra datos.
+
+**Antes del deploy (variables de Render)**
+1. `APARTADO_MINUTOS=0`, escrito explícitamente. Con 0 el checkout se comporta como antes aunque el
+   código nuevo ya esté desplegado.
+2. `WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO` vacía hasta que Meta apruebe la plantilla (el aviso por
+   WhatsApp queda apagado; el correo y la alerta interna no dependen de esto).
+3. Cada empresa con cobros necesita su webhook de Stripe y su `stripe_webhook_secret` (paso 6).
+
+**Deploy, en este orden**
+1. Backend (Render): el `buildCommand` corre `migrate`. Comprobar que termina sin `tenancy.E001`.
+2. `python manage.py setup_roles` **después** de `migrate`: da a la vendedora y al jefe los permisos
+   nuevos (traslados, vehículos, bloqueos). Sin esto la vendedora de DLS no ve «Traslados».
+3. `python manage.py sincronizar_viajes_transporte --dry-run` y luego sin `--dry-run`: crea los viajes
+   de los traslados ya pagados (la migración de datos ya lo hace; esto verifica y repara).
+4. Frontend (Vercel). Con `APARTADO_MINUTOS=0` la interfaz nueva queda inerte: el backend responde
+   `apartado_hasta: null` y no se muestra la línea de «lugar apartado».
+5. Dar de alta los vehículos de DLS en `/admin/fleet/vehiculo/`.
+
+**Encender el apartado** (cuando lo anterior esté verificado)
+1. Poner `APARTADO_MINUTOS=15` en Render y reiniciar el servicio web.
+2. Probar con dos navegadores y la tarjeta de prueba `4242 4242 4242 4242`: dos clientes por el último
+   lugar de un día; el segundo debe volver al paso del viaje con el aviso de cupo agotado.
+3. Para **apagarlo** de inmediato basta volver a `APARTADO_MINUTOS=0`; no hace falta revertir código
+   ni migraciones.
+
+**Verificación posterior**
+- Reservas: cancelar por mal clima una reserva pagada con tarjeta de prueba debe mostrar «Falta devolver…»
+  con enlace al pago en Stripe en la columna Cobro.
+- Agenda de pangas: cada día muestra «Quedan N de 10»; DLS (sin pangas) ve el aviso con enlace a Traslados.
+- Traslados: un traslado pagado genera sus viajes; asignar un vehículo que no cabe da el motivo.
+
+**Estado de las pruebas al cerrar la integración**
+La suite completa (SQLite) tiene 13 fallos que ya existían antes de este trabajo (migraciones antiguas
+sensibles al motor y pruebas de `correos_aviso`); ninguno es nuevo. Las pruebas de RLS, concurrencia del
+apartado y traslados pasan en Postgres.
+
 ## Trade-off aceptado, declarado (no un descuido)
 
 El rol `<rol_app>` es dueño de las tablas, así que técnicamente puede correr
