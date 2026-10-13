@@ -1,0 +1,6 @@
+TITULO='sincronizar_viajes con envoltura segura, ganchos, comando y migracion de datos'
+KIND='backend'
+DIRS='backend/apps backend/config docs'
+VERIFY='python manage.py makemigrations --check --dry-run && python manage.py test apps.bookings.tests_traslados_sync apps.bookings.tests_traslados_modelos apps.bookings.tests_alta_traslado apps.payments'
+REGRESION=1
+SPEC='§5 y §10'

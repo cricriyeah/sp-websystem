@@ -1,0 +1,6 @@
+TITULO='admin de Vehiculos y bloqueos, menu y permisos de los roles'
+KIND='backend'
+DIRS='backend/apps backend/config docs'
+VERIFY='python manage.py test apps.bookings.tests_traslados_catalogos apps.bookings.tests_traslados_modelos apps.bookings.tests_agenda apps.tenancy'
+REGRESION=0
+SPEC='§6 (catálogos y menú) y §7'

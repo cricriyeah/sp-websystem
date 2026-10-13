@@ -1,0 +1,6 @@
+TITULO='documentacion en backend/CLAUDE.md'
+KIND='backend'
+DIRS='backend/apps backend/config docs'
+VERIFY='python manage.py check'
+REGRESION=0
+SPEC='§3, §5 y §6'

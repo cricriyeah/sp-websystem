@@ -1,0 +1,3 @@
+# Tarea 05: documentación
+
+Lee todo el spec. Actualiza `backend/CLAUDE.md` con una sección nueva «Traslados con vehículos (DLS Transporte)», concisa y en el mismo estilo de las secciones vecinas (por ejemplo «Agenda operativa» y «Transporte como servicio»). Debe cubrir: los tres modelos y sus reglas de validación; cuándo y cómo se crean los viajes (los tres tipos de traslado, los dos ganchos, la envoltura segura que no tumba el pago, el comando `sincronizar_viajes_transporte`); la pantalla Traslados y sus avisos; los permisos por rol y las políticas RLS; y lo que queda fuera de alcance. Si «Transporte como servicio» o «Agenda operativa» dicen algo que ya no es cierto (por ejemplo, que un traslado nunca se asigna), corrígelo. No toques código.

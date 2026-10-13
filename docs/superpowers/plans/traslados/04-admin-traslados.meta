@@ -1,0 +1,6 @@
+TITULO='pantalla Traslados: lista con selector de vehiculo por fila'
+KIND='backend'
+DIRS='backend/apps backend/config docs'
+VERIFY='python manage.py test apps.bookings.tests_traslados_admin apps.bookings.tests_traslados_catalogos apps.bookings.tests_agenda apps.bookings.tests_disponibilidad'
+REGRESION=1
+SPEC='§6 (Traslados) y §3'
