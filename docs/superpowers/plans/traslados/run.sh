@@ -56,7 +56,7 @@ postgres_concurrencia() { # levanta postgres (si hace falta) y corre las pruebas
   }
   docker start psd-pg >/dev/null 2>&1; sleep 4
   (cd "$ROOT/backend" && DJANGO_SETTINGS_MODULE=config.settings.ci DB_NAME=pescadeportiva_test \
-    DB_USER=ci_rls DB_PASSWORD=ci_rls_password_local DB_HOST=localhost DB_PORT=5434 \
+    DB_USER=ci_rls DB_PASSWORD=ci_rls_password_local DB_HOST=127.0.0.1 DB_PORT=5434 \
     timeout 2400 python manage.py test apps.tenancy.tests_rls apps.bookings.tests_traslados_modelos apps.bookings.tests_traslados_sync apps.bookings.tests_traslados_catalogos apps.bookings.tests_traslados_admin --noinput) \
     > "$LOG/postgres.out" 2>&1
 }
