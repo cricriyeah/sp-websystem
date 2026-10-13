@@ -1038,7 +1038,7 @@ class ReservaOcupacion(models.Model):
     class Meta:
         ordering = ['fecha_inicio', 'recurso']
         verbose_name = 'ocupación de recurso'
-        verbose_name_plural = 'ocupaciones de recursos'
+        verbose_name_plural = 'ocupaciones de hospedaje'
 
     def __init__(self, *args, **kwargs):
         self._ocupa_cupo_explicito = 'ocupa_cupo' in kwargs
