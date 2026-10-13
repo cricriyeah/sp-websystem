@@ -177,6 +177,22 @@ y una migración de datos que corre con el alcance de operador).
 - Agenda de pangas: cada día muestra «Quedan N de 10»; DLS (sin pangas) ve el aviso con enlace a Traslados.
 - Traslados: un traslado pagado genera sus viajes; asignar un vehículo que no cabe da el motivo.
 
+## 11. Dar de alta una empresa nueva
+
+Desde que existe la pantalla de alta, ya no hay que recordar el orden ni correr `setup_roles` a mano.
+Entrando como operador de plataforma:
+
+1. Admin → Empresas → **Alta de empresa**. Elegir la sede (o escribir una nueva), nombre, correos de aviso y los datos
+   del jefe. En un paso se crean la sede si es nueva, la empresa, la cuenta del jefe (grupo `Jefe`) y su membresía.
+   Si los grupos de roles no existían, el alta corre `setup_roles` sola.
+2. La pantalla que sigue lista lo que falta (llaves de Stripe, vendedora, servicios, pangas o vehículos), con el enlace
+   a donde se arregla, y muestra la **URL del webhook** de esa empresa. La misma lista sale en la columna «Pendientes»
+   del listado de Empresas.
+3. En el Dashboard de Stripe de la empresa: crear el webhook a esa URL y pegar su `whsec_` junto con las llaves
+   secreta y publicable en la empresa (admin → Empresas → la empresa). Es lo único que no se puede hacer desde aquí.
+
+No hay migraciones nuevas en esta pieza.
+
 ## Trade-off aceptado, declarado (no un descuido)
 
 El rol `<rol_app>` es dueño de las tablas, así que técnicamente puede correr

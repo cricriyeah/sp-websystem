@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div style="max-width: 44rem">
+  <p style="margin-bottom: 1rem">
+    {% if pendientes %}Faltan {{ pendientes }} cosa{{ pendientes|pluralize }} para que {{ empresa.nombre }} pueda vender.
+    {% else %}{{ empresa.nombre }} tiene todo lo necesario para vender.{% endif %}
+  </p>
+  <ul style="list-style: none; padding: 0; margin: 0 0 2rem">
+    {% for paso in pasos %}
+      <li data-paso data-hecho="{{ paso.hecho|yesno:'si,no' }}" style="display: flex; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid rgba(128,128,128,0.25)">
+        <span style="width: 1.2rem; font-weight: 700; color: {% if paso.hecho %}#16a34a{% else %}#dc2626{% endif %}">{% if paso.hecho %}✓{% else %}✗{% endif %}</span>
+        <span style="flex: 1">{{ paso.texto }}</span>
+        {% if not paso.hecho %}<a href="{{ paso.url }}" style="text-decoration: underline">{{ paso.accion }}</a>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <h2 style="font-weight: 600; margin-bottom: 0.5rem">Webhook de Stripe</h2>
+  <p style="margin-bottom: 0.5rem">
+    En el Dashboard de Stripe de {{ empresa.nombre }}, crea un webhook a esta dirección con los eventos
+    <code>payment_intent.succeeded</code>, <code>charge.refunded</code> y <code>charge.dispute.created</code>
+    (más <code>charge.dispute.closed</code> y <code>charge.dispute.funds_reinstated</code>).
+    Luego pega su secreto (<code>whsec_…</code>) en la empresa.
+  </p>
+  <input type="text" readonly value="{{ webhook }}" data-webhook onclick="this.select()" style="width: 100%; max-width: 40rem">
+</div>
+{% endblock %}

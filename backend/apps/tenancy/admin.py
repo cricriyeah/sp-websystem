@@ -1,9 +1,17 @@
 # backend/apps/tenancy/admin.py
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.utils.html import format_html
 from unfold.admin import ModelAdmin
+from unfold.decorators import action
 
 from . import scope
+from .alta_empresa import AltaEmpresaForm, dar_de_alta_empresa, estado_de_empresa, url_del_webhook
 from .models import Empresa, MembresiaEmpresa, Sede
 
 
@@ -57,7 +65,8 @@ class EmpresaAdminForm(forms.ModelForm):
 @admin.register(Empresa)
 class EmpresaAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
     form = EmpresaAdminForm
-    list_display = ['nombre', 'sede', 'slug', 'activo', 'exclusiva']
+    list_display = ['nombre', 'sede', 'slug', 'activo', 'exclusiva', 'pendientes']
+    actions_list = ['accion_alta_empresa']
     list_filter = ['sede', 'activo']
     search_fields = ['nombre', 'slug']
     fields = [
@@ -65,6 +74,51 @@ class EmpresaAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
         'correos_aviso',
         'stripe_secret_key', 'stripe_webhook_secret', 'stripe_publishable_key',
     ]
+
+    def get_urls(self):
+        # Antes de super(): el admin termina en un catch-all <path:object_id>/.
+        return [
+            path('alta/', self.admin_site.admin_view(self.alta_view), name='tenancy_empresa_alta'),
+            path('<int:object_id>/estado/', self.admin_site.admin_view(self.estado_view),
+                 name='tenancy_empresa_estado'),
+        ] + super().get_urls()
+
+    @action(description='Alta de empresa', url_path='alta-accion', permissions=['add'])
+    def accion_alta_empresa(self, request):
+        return HttpResponseRedirect(reverse('admin:tenancy_empresa_alta'))
+
+    @admin.display(description='Pendientes')
+    def pendientes(self, obj):
+        faltan = sum(1 for paso in estado_de_empresa(obj) if not paso['hecho'])
+        texto = f'{faltan} por hacer' if faltan else 'Lista'
+        return format_html('<a href="{}">{}</a>', reverse('admin:tenancy_empresa_estado', args=[obj.pk]), texto)
+
+    def alta_view(self, request):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        if request.method == 'POST':
+            form = AltaEmpresaForm(request.POST)
+            if form.is_valid():
+                empresa = dar_de_alta_empresa(form.cleaned_data)
+                messages.success(request, f'{empresa.nombre} dada de alta. Esto es lo que falta para que venda.')
+                return HttpResponseRedirect(reverse('admin:tenancy_empresa_estado', args=[empresa.pk]))
+        else:
+            form = AltaEmpresaForm()
+        return TemplateResponse(request, 'tenancy/alta_empresa.html', {
+            **self.admin_site.each_context(request), 'form': form, 'title': 'Alta de empresa',
+        })
+
+    def estado_view(self, request, object_id):
+        if not self.has_view_permission(request):
+            raise PermissionDenied
+        empresa = get_object_or_404(Empresa, pk=object_id)
+        pasos = estado_de_empresa(empresa)
+        return TemplateResponse(request, 'tenancy/estado_empresa.html', {
+            **self.admin_site.each_context(request),
+            'title': f'{empresa.nombre}: qué falta', 'empresa': empresa, 'pasos': pasos,
+            'pendientes': sum(1 for paso in pasos if not paso['hecho']),
+            'webhook': url_del_webhook(empresa, request),
+        })
 
 
 @admin.register(MembresiaEmpresa)

@@ -1,0 +1,23 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div style="max-width: 40rem">
+  <p style="margin-bottom: 1.5rem">
+    Crea la empresa y la cuenta de su jefe de una vez. Las llaves de Stripe y el catálogo se
+    ponen después: al terminar verás qué falta y a dónde ir.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for campo in form %}
+      <div style="margin-bottom: 1rem">
+        <label for="{{ campo.id_for_label }}" style="font-weight: 600">{{ campo.label }}</label><br>
+        {{ campo }}
+        {% if campo.help_text %}<div style="font-size: 0.85rem; opacity: 0.7">{{ campo.help_text }}</div>{% endif %}
+        {{ campo.errors }}
+      </div>
+    {% endfor %}
+    <input type="submit" value="Dar de alta la empresa">
+  </form>
+</div>
+{% endblock %}
