@@ -1,0 +1,160 @@
+{% extends "admin/base_site.html" %}
+{% load humanize %}
+
+{% block content %}
+{{ block.super }}
+<div class="flex flex-col gap-6">
+
+    <div class="flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{% url 'finanzas' %}"
+               class="border border-base-200 px-3 py-1 rounded-default text-base-600 hover:bg-base-50 text-sm dark:border-base-800 dark:text-base-300 dark:hover:bg-base-800">
+                ← Finanzas
+            </a>
+            <h1 class="font-semibold text-base-800 text-xl dark:text-base-200">Movimientos</h1>
+        </div>
+        <p class="font-medium text-base-600 text-sm dark:text-base-400">
+            {{ filtro_descripcion }}
+        </p>
+    </div>
+
+    <form method="get" class="border border-base-200 p-4 rounded-default flex flex-wrap gap-3 items-end bg-base-50 dark:border-base-800 dark:bg-base-900">
+        <div class="flex flex-col gap-1">
+            <label class="font-medium text-base-500 text-xs dark:text-base-400">Concepto</label>
+            <select name="concepto"
+                    class="bg-white border border-base-200 px-3 py-2 rounded-default text-base-700 text-sm dark:bg-base-900 dark:border-base-800 dark:text-base-300">
+                {% for clave, etiqueta in conceptos.items %}
+                    <option value="{{ clave }}" {% if clave == concepto %}selected{% endif %}>{{ etiqueta }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="font-medium text-base-500 text-xs dark:text-base-400">Moneda</label>
+            <select name="moneda"
+                    class="bg-white border border-base-200 px-3 py-2 rounded-default text-base-700 text-sm dark:bg-base-900 dark:border-base-800 dark:text-base-300">
+                <option value="" {% if not moneda %}selected{% endif %}>Todas</option>
+                <option value="MXN" {% if moneda == "MXN" %}selected{% endif %}>MXN</option>
+                <option value="USD" {% if moneda == "USD" %}selected{% endif %}>USD</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="font-medium text-base-500 text-xs dark:text-base-400">Desde</label>
+            <input type="date" name="desde" value="{{ desde_str }}"
+                   class="bg-white border border-base-200 px-3 py-2 rounded-default text-base-700 text-sm dark:bg-base-900 dark:border-base-800 dark:text-base-300">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="font-medium text-base-500 text-xs dark:text-base-400">Hasta</label>
+            <input type="date" name="hasta" value="{{ hasta_str }}"
+                   class="bg-white border border-base-200 px-3 py-2 rounded-default text-base-700 text-sm dark:bg-base-900 dark:border-base-800 dark:text-base-300">
+        </div>
+
+        <div>
+            <button type="submit"
+                    class="border border-base-200 bg-white px-4 py-2 rounded-default font-medium text-sm text-base-700 hover:bg-base-100 dark:bg-base-800 dark:border-base-700 dark:text-base-200 dark:hover:bg-base-700 cursor-pointer">
+                Aplicar
+            </button>
+        </div>
+    </form>
+
+    <div class="border border-base-200 rounded-default overflow-hidden dark:border-base-800">
+        <table class="w-full text-sm">
+            <thead class="bg-base-50 text-base-500 dark:bg-base-900 dark:text-base-400">
+                <tr>
+                    <th class="font-medium px-3 py-2 text-left">Fecha</th>
+                    <th class="font-medium px-3 py-2 text-left">Reserva</th>
+                    <th class="font-medium px-3 py-2 text-left">Cliente</th>
+                    <th class="font-medium px-3 py-2 text-left">Concepto</th>
+                    <th class="font-medium px-3 py-2 text-right">Monto</th>
+                    <th class="font-medium px-3 py-2 text-left">Moneda</th>
+                    <th class="font-medium px-3 py-2 text-center">Stripe</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in filas %}
+                    <tr class="border-t border-base-200 dark:border-base-800">
+                        <td class="px-3 py-2 text-base-700 dark:text-base-300">
+                            {{ fila.fecha|date:"j M Y, H:i" }}
+                        </td>
+                        <td class="px-3 py-2 font-medium">
+                            <a href="{% url 'admin:bookings_reserva_change' fila.reserva.pk %}"
+                               class="text-primary-600 hover:underline dark:text-primary-400">
+                                #{{ fila.reserva.pk }}
+                            </a>
+                        </td>
+                        <td class="px-3 py-2 text-base-700 dark:text-base-300">
+                            {{ fila.reserva.nombre_cliente }}
+                        </td>
+                        <td class="px-3 py-2 text-base-600 dark:text-base-400">
+                            {{ fila.concepto|capfirst }}
+                        </td>
+                        <td class="px-3 py-2 text-right font-medium {% if fila.concepto == 'reembolsos' %}text-red-600 dark:text-red-400{% else %}text-base-800 dark:text-base-200{% endif %}">
+                            {% if fila.concepto == 'reembolsos' %}−{% endif %}{{ fila.monto|floatformat:2|intcomma }}
+                        </td>
+                        <td class="px-3 py-2 text-base-500 dark:text-base-400">
+                            {{ fila.moneda }}
+                        </td>
+                        <td class="px-3 py-2 text-center">
+                            {% if fila.enlace_stripe %}
+                                <a href="{{ fila.enlace_stripe }}" target="_blank" rel="noopener noreferrer"
+                                   class="text-primary-600 hover:underline text-xs dark:text-primary-400">
+                                    Ver pago
+                                </a>
+                            {% else %}
+                                <span class="text-base-400 text-xs">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-3 py-4 text-base-400 text-center">
+                            Sin movimientos en este filtro.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            {% if totales %}
+            <tfoot class="border-t-2 border-base-200 bg-base-50 font-semibold text-base-800 dark:border-base-800 dark:bg-base-900 dark:text-base-200">
+                {% for mon, tot in totales.items %}
+                    <tr>
+                        <td colspan="4" class="px-3 py-2 text-right text-base-600 dark:text-base-400 font-medium">
+                            {{ etiqueta_total }} ({{ mon }}):
+                        </td>
+                        <td class="px-3 py-2 text-right {% if tot < 0 %}text-red-600 dark:text-red-400{% endif %}">
+                            {{ tot|floatformat:2|intcomma }}
+                        </td>
+                        <td class="px-3 py-2 text-left">{{ mon }}</td>
+                        <td class="px-3 py-2"></td>
+                    </tr>
+                {% endfor %}
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between text-sm text-base-600 dark:text-base-400">
+        <div>
+            Página {{ page_obj.number }} de {{ paginator.num_pages }} ({{ paginator.count }} movimientos)
+        </div>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?pagina={{ page_obj.previous_page_number }}&desde={{ desde_str }}&hasta={{ hasta_str }}&concepto={{ concepto }}&moneda={{ moneda }}"
+                   class="border border-base-200 px-3 py-1 rounded-default text-base-600 hover:bg-base-50 dark:border-base-800 dark:text-base-300 dark:hover:bg-base-800">
+                    ← Anterior
+                </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?pagina={{ page_obj.next_page_number }}&desde={{ desde_str }}&hasta={{ hasta_str }}&concepto={{ concepto }}&moneda={{ moneda }}"
+                   class="border border-base-200 px-3 py-1 rounded-default text-base-600 hover:bg-base-50 dark:border-base-800 dark:text-base-300 dark:hover:bg-base-800">
+                    Siguiente →
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

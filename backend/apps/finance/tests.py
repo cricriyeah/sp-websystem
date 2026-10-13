@@ -569,6 +569,10 @@ class PanelFinancieroPermisoTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = User.objects.create_user(username='jefe', password='x', is_staff=True)
+        from django.contrib.auth.models import Group
+
+        grupo_jefe, _ = Group.objects.get_or_create(name='Jefe')
+        self.user.groups.add(grupo_jefe)
 
     @mock.patch('apps.finance.views.scope.empresa_actual')
     @mock.patch('apps.finance.views.scope.es_operador_plataforma')
@@ -577,6 +581,21 @@ class PanelFinancieroPermisoTests(TestCase):
         mock_empresa_actual.return_value = None
         request = self.factory.get('/admin/finanzas/')
         request.user = self.user
+        with self.assertRaises(PermissionDenied):
+            panel_financiero(request)
+
+    @mock.patch('apps.finance.views.scope.empresa_actual')
+    @mock.patch('apps.finance.views.scope.es_operador_plataforma')
+    def test_vendedora_con_membresia_403(self, mock_operador, mock_empresa_actual):
+        mock_operador.return_value = False
+        mock_empresa_actual.return_value = mock.Mock()
+        from django.contrib.auth.models import Group
+
+        vendedora = User.objects.create_user(username='vendedora_sin_acceso', password='x', is_staff=True)
+        grupo_vendedora, _ = Group.objects.get_or_create(name='Vendedora')
+        vendedora.groups.add(grupo_vendedora)
+        request = self.factory.get('/admin/finanzas/')
+        request.user = vendedora
         with self.assertRaises(PermissionDenied):
             panel_financiero(request)
 

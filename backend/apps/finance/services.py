@@ -23,7 +23,7 @@ Reglas que no hay que romper:
   descuentan del saldo teorico del banco.
 """
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -84,6 +84,28 @@ class Balance:
     @property
     def hay_movimiento(self):
         return bool(self.tarjeta or self.efectivo or self.transferencia or self.reembolsos)
+
+
+@dataclass
+class Movimiento:
+    """Una fila de detalle de movimiento de dinero por reserva."""
+
+    fecha: datetime
+    reserva: Reserva
+    concepto: str
+    monto: Decimal
+    moneda: str
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    @property
+    def enlace_stripe(self):
+        if self.concepto in ('tarjeta', 'reembolsos'):
+            from apps.bookings.admin import enlace_pago_stripe
+
+            return enlace_pago_stripe(self.reserva)
+        return None
 
 
 def _reservas(empresa):
@@ -163,3 +185,70 @@ def resumen(hoy=None, empresa=None):
         # cuenta bancaria y la caja.
         'acumulado': balances(empresa=empresa),
     }
+
+
+def movimientos(desde=None, hasta=None, concepto='todos', moneda=None, empresa=None):
+    """Devuelve las filas del detalle: una fila por (reserva, concepto).
+
+    Orden: más reciente primero.
+    """
+    if concepto == 'stripe':
+        conceptos_pedidos = {'tarjeta', 'reembolsos'}
+    elif concepto in {'tarjeta', 'efectivo', 'transferencia', 'reembolsos'}:
+        conceptos_pedidos = {concepto}
+    else:
+        conceptos_pedidos = {'tarjeta', 'efectivo', 'transferencia', 'reembolsos'}
+
+    filas = []
+    base_qs = _reservas(empresa).select_related('empresa')
+    if moneda:
+        base_qs = base_qs.filter(moneda=moneda)
+
+    for atributo, campo_monto, campo_fecha in MOVIMIENTOS:
+        if atributo not in conceptos_pedidos:
+            continue
+        qs = base_qs.filter(**{f'{campo_monto}__isnull': False, f'{campo_fecha}__isnull': False})
+        if desde:
+            qs = qs.filter(**{f'{campo_fecha}__date__gte': desde})
+        if hasta:
+            qs = qs.filter(**{f'{campo_fecha}__date__lte': hasta})
+
+        for reserva in qs:
+            monto = getattr(reserva, campo_monto)
+            if monto is None:
+                continue
+            filas.append(
+                Movimiento(
+                    fecha=getattr(reserva, campo_fecha),
+                    reserva=reserva,
+                    concepto=atributo,
+                    monto=abs(Decimal(str(monto))),
+                    moneda=reserva.moneda,
+                )
+            )
+
+    filas.sort(key=lambda m: (m.fecha, m.reserva.pk), reverse=True)
+    return filas
+
+
+def totales_de_movimientos(filas, concepto='todos', moneda=None):
+    """Total por moneda de una lista de movimientos (la que devuelve `movimientos`).
+
+    - Cada concepto individual: suma de sus montos.
+    - stripe: tarjeta − reembolsos («En la cuenta»).
+    - todos: entradas (tarjeta + efectivo + transferencia) − reembolsos (neto).
+
+    Son los mismos totales que `balances()` para los mismos filtros; hay una prueba que lo exige.
+    """
+    totales = {}
+    if moneda:
+        totales[moneda] = CERO
+
+    for fila in filas:
+        totales.setdefault(fila.moneda, CERO)
+        if fila.concepto == 'reembolsos' and concepto in ('stripe', 'todos'):
+            totales[fila.moneda] -= fila.monto
+        else:
+            totales[fila.moneda] += fila.monto
+
+    return dict(sorted(totales.items()))

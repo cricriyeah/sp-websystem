@@ -10,12 +10,20 @@ from datetime import date, timedelta
 
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.utils import formats
 
 from apps.tenancy import scope
+from apps.tenancy.permisos_unfold import puede_ver_finanzas
 
-from .services import balances, balances_por_dia, resumen
+from .services import (
+    balances,
+    balances_por_dia,
+    movimientos,
+    resumen,
+    totales_de_movimientos,
+)
 
 
 # Lo que ofrece el select, en el orden en que se ve. La clave es lo que viaja en
@@ -138,15 +146,15 @@ def _mes_vecino(primero, salto):
 def panel_financiero(request):
     """Tarjeta, efectivo, transferencia, salidas y balance por periodo.
 
-    El operador de plataforma ve todas las Empresas juntas; un jefe (o
-    vendedora con membresia) ve solo la suya. Ya no corta con `is_superuser`
-    — los jefes dejaron de serlo (ver apps.tenancy), el corte real es
-    membresia-o-operador.
+    El operador de plataforma ve todas las Empresas juntas; un jefe ve solo
+    la suya. Solo jefes y operadores de plataforma tienen acceso (las vendedoras
+    u otros usuarios con membresía reciben 403).
     """
+    if not puede_ver_finanzas(request):
+        raise PermissionDenied
+
     operador = scope.es_operador_plataforma(request.user)
     empresa = None if operador else scope.empresa_actual(request)
-    if not operador and empresa is None:
-        raise PermissionDenied
 
     hoy = date.today()
     periodo = request.GET.get('periodo', PERIODO_DEFAULT)
@@ -178,4 +186,121 @@ def panel_financiero(request):
         # Sin boton para adelantarse a meses que todavia no pasan.
         'mes_siguiente': siguiente if siguiente <= hoy.replace(day=1) else None,
         'dias': balances_por_dia(mes, ultimo_dia, empresa=empresa),
+    })
+
+
+CONCEPTOS_MOVIMIENTOS = {
+    'todos': 'Todos los conceptos',
+    'stripe': 'En la cuenta (Stripe)',
+    'tarjeta': 'Tarjeta',
+    'efectivo': 'Efectivo',
+    'transferencia': 'Transferencia',
+    'reembolsos': 'Reembolsos',
+}
+
+ETIQUETAS_TOTAL = {
+    'todos': 'Total neto (entradas − reembolsos)',
+    'stripe': 'Total en la cuenta (tarjeta − reembolsos)',
+    'tarjeta': 'Total tarjeta',
+    'efectivo': 'Total efectivo',
+    'transferencia': 'Total transferencia',
+    'reembolsos': 'Total reembolsos',
+}
+
+
+def _parse_fecha(valor):
+    """Parsea una fecha AAAA-MM-DD. Si es inválida o vacía, devuelve None."""
+    if not valor:
+        return None
+    try:
+        return date.fromisoformat(valor.strip())
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def _describir_filtro(concepto, desde, hasta, moneda):
+    """Construye una descripción legible del filtro en una sola línea.
+
+    Ejemplo: «Tarjeta · 1 oct 2026 — 31 oct 2026 · MXN»
+    """
+    partes = [CONCEPTOS_MOVIMIENTOS.get(concepto, 'Todos los conceptos')]
+
+    if desde and hasta:
+        if desde == hasta:
+            partes.append(formats.date_format(desde, 'j M Y'))
+        else:
+            partes.append(f"{formats.date_format(desde, 'j M Y')} — {formats.date_format(hasta, 'j M Y')}")
+    elif desde:
+        partes.append(f"Desde {formats.date_format(desde, 'j M Y')}")
+    elif hasta:
+        partes.append(f"Hasta {formats.date_format(hasta, 'j M Y')}")
+    else:
+        partes.append("Todo el histórico")
+
+    if moneda:
+        partes.append(moneda)
+
+    return ' · '.join(partes)
+
+
+def movimientos_financieros(request):
+    """Detalle de movimientos de dinero por reserva.
+
+    Muestra filas individuales de tarjeta, efectivo, transferencia y reembolsos.
+    Acceso exclusivo para jefes y operadores de plataforma.
+    """
+    if not puede_ver_finanzas(request):
+        raise PermissionDenied
+
+    operador = scope.es_operador_plataforma(request.user)
+    empresa = None if operador else scope.empresa_actual(request)
+
+    desde = _parse_fecha(request.GET.get('desde'))
+    hasta = _parse_fecha(request.GET.get('hasta'))
+
+    concepto = request.GET.get('concepto', 'todos')
+    if concepto not in CONCEPTOS_MOVIMIENTOS:
+        concepto = 'todos'
+
+    moneda = request.GET.get('moneda', '').strip().upper()
+    if moneda not in ('MXN', 'USD'):
+        moneda = None
+
+    filas_todas = movimientos(
+        desde=desde,
+        hasta=hasta,
+        concepto=concepto,
+        moneda=moneda,
+        empresa=empresa,
+    )
+
+    totales = totales_de_movimientos(
+        filas_todas,
+        concepto=concepto,
+        moneda=moneda,
+    )
+
+    paginator = Paginator(filas_todas, 50)
+    pagina = request.GET.get('pagina', 1)
+    page_obj = paginator.get_page(pagina)
+
+    filtro_desc = _describir_filtro(concepto, desde, hasta, moneda)
+    etiqueta_tot = ETIQUETAS_TOTAL.get(concepto, 'Total')
+
+    return render(request, 'finance/movimientos.html', {
+        **admin.site.each_context(request),
+        'title': 'Movimientos',
+        'filas': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'totales': totales,
+        'desde': desde,
+        'hasta': hasta,
+        'desde_str': request.GET.get('desde', ''),
+        'hasta_str': request.GET.get('hasta', ''),
+        'concepto': concepto,
+        'conceptos': CONCEPTOS_MOVIMIENTOS,
+        'moneda': moneda or '',
+        'filtro_descripcion': filtro_desc,
+        'etiqueta_total': etiqueta_tot,
     })
