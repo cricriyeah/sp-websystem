@@ -61,6 +61,13 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
         {% endif %}
     {% endif %}
 
+    {% if agenda_estado == 'sin_pangas' and not agenda_pestanas %}
+        <p data-empresa-sin-pangas class="text-base-600 dark:text-base-300" style="margin: 2rem 0; font-size: 0.95rem">
+            {{ agenda_empresa.nombre }} no reparte pangas, así que no hay nada que asignar aquí.
+            {% if puede_ver_traslados %}Sus traslados se asignan en <a href="{% url 'admin:bookings_viajetransporte_changelist' %}" style="text-decoration: underline">Traslados</a>.{% endif %}
+        </p>
+    {% endif %}
+
     {% if panorama %}
         <details data-panorama open
                  data-disponibilidad-url="{% url 'admin:bookings_agenda_disponibilidad' %}"

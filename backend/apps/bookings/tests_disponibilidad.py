@@ -263,3 +263,48 @@ class DisponibilidadDelOperadorTests(TestCase):
             'accion': 'cerrar_dia', 'fecha': self.fecha.isoformat()})
 
         self.assertEqual(respuesta.status_code, 400)
+
+
+class AgendaNoMuestraLoQueNoSeRepartePruebas(EmpresaTestCase):
+    """La cuadricula y la tabla de la Agenda usan el mismo criterio: traslados y servicios bajo
+    demanda no se reparten en pangas, asi que no salen en ninguna de las dos."""
+
+    def setUp(self):
+        crear_flota(self.empresa)
+        self.fecha = timezone.localdate() + timedelta(days=2)
+
+    def _traslado(self):
+        from apps.fleet.enums import TipoServicio
+        from apps.fleet.models import Servicio
+
+        servicio = Servicio.objects.create(
+            empresa=self.empresa, nombre='Traslado prueba', slug='traslado-prueba',
+            tipo_servicio=TipoServicio.TRANSPORTE, estrategia_cupo='bajo_demanda',
+        )
+        return _viaje(self.empresa, self.fecha, servicio=servicio, nombre_cliente='Cliente Traslado')
+
+    def test_un_traslado_no_sale_en_el_panorama(self):
+        self._traslado()
+        pesca = _viaje(self.empresa, self.fecha, nombre_cliente='Cliente Pesca')
+
+        panorama = armar_panorama(timezone.localdate(), self.empresa)
+
+        indice = panorama.dias.index(self.fecha)
+        sin_repartir = [r.pk for r in panorama.sin_repartir[indice]]
+        self.assertEqual(sin_repartir, [pesca.pk])
+        self.assertEqual(panorama.resumen.sin_panga, 1)
+
+    def test_empresa_sin_pangas_ve_el_aviso_y_el_enlace_a_traslados(self):
+        from apps.fleet.models import Embarcacion
+
+        Embarcacion.objects.filter(empresa=self.empresa).delete()
+        self._traslado()
+        self.client.force_login(self.crear_vendedora())
+
+        respuesta = self.client.get(reverse('admin:bookings_agenda_changelist'))
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'data-empresa-sin-pangas')
+        self.assertContains(respuesta, reverse('admin:bookings_viajetransporte_changelist'))
+        self.assertIsNone(respuesta.context['panorama'])
+        self.assertNotContains(respuesta, 'Cliente Traslado')

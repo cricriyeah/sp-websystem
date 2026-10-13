@@ -20,6 +20,8 @@ aqui. Lo que se guarda sigue siendo el selector de la tabla, con su validacion.
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
+from django.db.models import Q
+
 from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
 
 from .cupo.adaptador import obtener_contexto_rango
@@ -27,6 +29,18 @@ from .cupo.apartado import apartado_activo, demanda_apartada_por_rango
 from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva
 
 DIAS_DEL_PANORAMA = 7
+
+
+def sin_lo_que_no_se_reparte(queryset):
+    """Quita lo que la Agenda de pangas NO reparte: servicios bajo demanda y traslados.
+
+    Es el criterio de la tabla de la Agenda y del panorama; si cada uno lo escribiera por su
+    lado pasaba lo que pasaba: la cuadricula mostraba reservas que la lista de abajo no tenia.
+    Las reservas sin servicio (paquetes) se conservan.
+    """
+    return queryset.exclude(
+        Q(servicio__estrategia_cupo='bajo_demanda') | Q(servicio__tipo_servicio='transporte')
+    )
 
 
 @dataclass(frozen=True)
@@ -124,9 +138,9 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
     asignadas = {}
     sin_panga = {fecha: [] for fecha in fechas}
     sin_capitan = 0
-    for reserva in Reserva.objects.filter(
+    for reserva in sin_lo_que_no_se_reparte(Reserva.objects.filter(
         fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
-    ).select_related('embarcacion').order_by('hora', 'pk'):
+    )).select_related('embarcacion').order_by('hora', 'pk'):
         if reserva.embarcacion_id:
             asignadas[(reserva.fecha, reserva.embarcacion_id)] = reserva
             if reserva.estado == Reserva.Estado.ASIGNADA and not reserva.capitan_id:
@@ -136,9 +150,9 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
 
     # Cobrados que ya pasaron y nadie asigno: la agenda los lista y los marca
     # ATRASADO, asi que el resumen tiene que contarlos tambien.
-    atrasados = Reserva.objects.filter(
+    atrasados = sin_lo_que_no_se_reparte(Reserva.objects.filter(
         fecha__lt=desde, estado=Reserva.Estado.PAGADA, empresa=empresa,
-    ).count()
+    )).count()
 
     renglones = [
         Renglon(

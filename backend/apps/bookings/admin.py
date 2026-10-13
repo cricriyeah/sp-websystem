@@ -62,7 +62,7 @@ from .models import (
     Vendedora,
     ViajeTransporte,
 )
-from .panorama import armar_panorama
+from .panorama import armar_panorama, sin_lo_que_no_se_reparte
 from .orden_lectura import reservas_de_orden
 from .traslados_reglas import bloqueo_cubre_viaje, bloqueo_toca_viaje
 
@@ -1910,9 +1910,13 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
             if respuesta is not None:
                 return respuesta
         else:
-            contexto = {
-                'panorama': armar_panorama(timezone.localdate(), scope.empresa_actual(request)),
-            }
+            empresa = scope.empresa_actual(request)
+            if empresa is not None and not Embarcacion.objects.filter(empresa=empresa, activa=True).exists():
+                # Una empresa sin pangas (DLS Transporte) no reparte aqui: se lo dice y la manda a
+                # Traslados, en vez de un panorama vacio.
+                contexto = {'panorama': None, 'agenda_estado': 'sin_pangas', 'agenda_empresa': empresa}
+            else:
+                contexto = {'panorama': armar_panorama(timezone.localdate(), empresa)}
         usuario = request.user
         contexto = {
             **contexto,
@@ -1920,6 +1924,7 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
             and usuario.has_perm('bookings.change_cupodiario'),
             'puede_sacar_panga': usuario.has_perm('fleet.add_embarcacionnodisponible'),
             'puede_traer_panga': usuario.has_perm('fleet.delete_embarcacionnodisponible'),
+            'puede_ver_traslados': usuario.has_perm('bookings.view_viajetransporte'),
         }
         return super().changelist_view(request, {**(extra_context or {}), **contexto})
 
@@ -1949,12 +1954,9 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
             Embarcacion.objects.filter(activa=True).values_list('empresa_id', flat=True)
         )
         sin_panga = dict(
-            Reserva.objects.filter(estado=Reserva.Estado.PAGADA, embarcacion__isnull=True)
-            .exclude(
-                models.Q(servicio__estrategia_cupo='bajo_demanda') |
-                models.Q(servicio__tipo_servicio='transporte')
-            )
-            .values_list('empresa_id').annotate(n=models.Count('pk'))
+            sin_lo_que_no_se_reparte(
+                Reserva.objects.filter(estado=Reserva.Estado.PAGADA, embarcacion__isnull=True)
+            ).values_list('empresa_id').annotate(n=models.Count('pk'))
         )
         resto = request.GET.copy()
         resto.pop('empresa', None)
@@ -2000,11 +2002,8 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmi
             # no hay filas: ninguna empresa se reparte por defecto. Fuera del listado
             # (abrir una reserva) no aplica, ahi no viaja `?empresa=`.
             qs = qs.filter(empresa__slug=request.GET.get('empresa') or None)
-        return qs.filter(
-            estado__in=Agenda.ESTADOS_EN_AGENDA
-        ).exclude(
-            models.Q(servicio__estrategia_cupo='bajo_demanda') |
-            models.Q(servicio__tipo_servicio='transporte')
+        return sin_lo_que_no_se_reparte(
+            qs.filter(estado__in=Agenda.ESTADOS_EN_AGENDA)
         ).select_related('embarcacion', 'capitan')
 
     def get_ordering(self, request):
