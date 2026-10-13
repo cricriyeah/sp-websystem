@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -137,8 +140,53 @@ class ServicioPersonalizacionInline(TabularInline):
     fields = ['personalizacion', 'precio', 'obligatorio', 'preseleccionado', 'activo']
 
 
+AYUDA_CAMPOS_SERVICIO = {
+    'tipo_servicio': 'Tipo de actividad: define cómo opera el servicio (pesca, paseo, hospedaje, bajo demanda o transporte).',
+    'estrategia_cupo': 'Control de cupo: por recurso por día (embarcaciones), por noche (hospedaje) o bajo demanda sin tope previo.',
+    'modo_ocupacion': 'Exclusivo reserva el recurso completo para un solo grupo; compartido permite combinar varios grupos.',
+    'estrategia_precio': 'Cálculo de tarifa: por grupo (base más personas extra), por persona, tarifa fija, por noche o por ruta.',
+    'capacidad_maxima': 'Número máximo de personas por reserva. Si se deja vacío, el sistema aplica el tope predeterminado (5).',
+    'hora_apertura': 'Hora más temprana permitida para iniciar la salida. Obligatoria si el servicio pide hora.',
+    'hora_cierre': 'Hora límite para iniciar la salida. Debe ser igual o posterior a la hora de apertura.',
+    'paso_hora_minutos': 'Intervalo en minutos entre cada opción de horario que verá el cliente (ej. 15, 30 o 60 min).',
+    'solo_en_paquete': 'Si se activa, el servicio no se vende por separado ni aparece en el catálogo web; solo dentro de paquetes.',
+}
+
+
+class ServicioAdminForm(forms.ModelForm):
+    class Meta:
+        model = Servicio
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in ('paso_hora_minutos', 'porcentaje_anticipo', 'precio_persona_extra', 'personas_incluidas'):
+            if campo in self.fields:
+                self.fields[campo].required = False
+        for campo, ayuda in AYUDA_CAMPOS_SERVICIO.items():
+            if campo in self.fields:
+                self.fields[campo].help_text = ayuda
+
+    def clean_paso_hora_minutos(self):
+        valor = self.cleaned_data.get('paso_hora_minutos')
+        return valor if valor is not None else 15
+
+    def clean_porcentaje_anticipo(self):
+        valor = self.cleaned_data.get('porcentaje_anticipo')
+        return valor if valor is not None else 30
+
+    def clean_precio_persona_extra(self):
+        valor = self.cleaned_data.get('precio_persona_extra')
+        return valor if valor is not None else Decimal('0.00')
+
+    def clean_personas_incluidas(self):
+        valor = self.cleaned_data.get('personas_incluidas')
+        return valor if valor is not None else 3
+
+
 @admin.register(Servicio)
 class ServicioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    form = ServicioAdminForm
     list_display = [
         'nombre', 'tipo_servicio', 'estrategia_cupo', 'estrategia_precio',
         'modo_ocupacion', 'precio_base',
@@ -148,7 +196,70 @@ class ServicioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_editable = ['precio_base', 'activo']
     search_fields = ['nombre', 'slug', 'descripcion']
     prepopulated_fields = {'slug': ('nombre',)}
+    readonly_fields = ['creado_en', 'actualizado_en']
     inlines = [ServicioPersonalizacionInline]
+
+    fieldsets = [
+        ('Qué es', {
+            'description': 'Identificación básica del servicio y su disponibilidad general.',
+            'fields': ('nombre', 'slug', 'tipo_servicio', 'descripcion', 'activo'),
+        }),
+        ('Cupo', {
+            'description': 'Control de inventario, modo de asignación y capacidad de pasajeros.',
+            'fields': ('estrategia_cupo', 'modo_ocupacion', 'capacidad_maxima'),
+        }),
+        ('Precio', {
+            'description': 'Esquema de cobro y tarifas base en pesos (MXN).',
+            'fields': ('estrategia_precio', 'precio_base', 'precio_persona_extra', 'personas_incluidas'),
+        }),
+        ('Horario', {
+            'description': 'Ventana de salida y selección de horario por el cliente.',
+            'fields': ('pide_hora', 'paso_hora_minutos', 'hora_apertura', 'hora_cierre'),
+        }),
+        ('Anticipo y visibilidad', {
+            'description': 'Cobro fraccionado en línea y exclusividad de venta en paquetes.',
+            'fields': ('permite_anticipo', 'porcentaje_anticipo', 'solo_en_paquete'),
+        }),
+        ('Registro', {
+            'classes': ('collapse',),
+            'description': 'Marcas de tiempo de auditoría del sistema.',
+            'fields': ('creado_en', 'actualizado_en'),
+        }),
+    ]
+
+    conditional_fields = {
+        # El interruptor «pide hora» siempre se ve y es el que decide si se muestran las horas: ocultarlas
+        # por el tipo de servicio obligaria a cambiar datos en silencio (el modelo exige el rango si pide hora).
+        'paso_hora_minutos': 'pide_hora == true',
+        'hora_apertura': 'pide_hora == true',
+        'hora_cierre': 'pide_hora == true',
+        'porcentaje_anticipo': 'permite_anticipo == true',
+        'precio_persona_extra': "estrategia_precio == 'por_grupo'",
+        'personas_incluidas': "estrategia_precio == 'por_grupo'",
+    }
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if obj is None and scope.es_operador_plataforma(request.user):
+            primer_titulo, primer_opts = fieldsets[0]
+            fields = primer_opts.get('fields', ())
+            if 'empresa' not in fields:
+                fieldsets = [
+                    (primer_titulo, {**primer_opts, 'fields': ('empresa',) + tuple(fields)}),
+                    *fieldsets[1:],
+                ]
+        return fieldsets
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name in (
+            'paso_hora_minutos', 'porcentaje_anticipo',
+            'precio_persona_extra', 'personas_incluidas',
+        ):
+            kwargs['required'] = False
+        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if formfield and db_field.name in AYUDA_CAMPOS_SERVICIO:
+            formfield.help_text = AYUDA_CAMPOS_SERVICIO[db_field.name]
+        return formfield
 
 
 @admin.register(Recurso)
