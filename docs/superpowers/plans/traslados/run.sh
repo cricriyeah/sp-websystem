@@ -49,14 +49,14 @@ docker_listo() { docker info >/dev/null 2>&1; }
 postgres_concurrencia() { # levanta postgres (si hace falta) y corre las pruebas reales; 0 ok
   docker ps -a --format '{{.Names}}' | grep -qx psd-pg || {
     docker run -d --name psd-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-      -e POSTGRES_DB=pescadeportiva_test -p 127.0.0.1:5433:5432 postgres:17 >/dev/null || return 1
+      -e POSTGRES_DB=pescadeportiva_test -p 127.0.0.1:5434:5432 postgres:17 >/dev/null || return 1
     sleep 12
     docker exec psd-pg psql -U postgres -d pescadeportiva_test -v ON_ERROR_STOP=1 -c \
       "CREATE ROLE ci_rls LOGIN PASSWORD 'ci_rls_password_local' NOSUPERUSER NOBYPASSRLS CREATEDB;" >/dev/null || return 1
   }
   docker start psd-pg >/dev/null 2>&1; sleep 4
   (cd "$ROOT/backend" && DJANGO_SETTINGS_MODULE=config.settings.ci DB_NAME=pescadeportiva_test \
-    DB_USER=ci_rls DB_PASSWORD=ci_rls_password_local DB_HOST=localhost DB_PORT=5433 \
+    DB_USER=ci_rls DB_PASSWORD=ci_rls_password_local DB_HOST=localhost DB_PORT=5434 \
     timeout 2400 python manage.py test apps.tenancy.tests_rls apps.bookings.tests_traslados_modelos apps.bookings.tests_traslados_sync apps.bookings.tests_traslados_catalogos apps.bookings.tests_traslados_admin --noinput) \
     > "$LOG/postgres.out" 2>&1
 }
