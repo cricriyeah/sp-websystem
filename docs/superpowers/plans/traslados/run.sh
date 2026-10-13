@@ -9,7 +9,7 @@ LOG="$PLAN_DIR/logs"
 EV="$LOG/eventos.log"
 BRIDGE="${AGY_CMD:-$HOME/.claude/plugins/cache/agy-delegate/agy-delegate/1.6.3/scripts/agy_bridge.sh}"
 INTENTOS=3
-MODELO="${AGY_MODELO:-claude-sonnet-4-6}"
+MODELO="${AGY_MODELO:-gemini-3.8-flash-high}"
 mkdir -p "$LOG"
 
 evento() { # nivel mensaje
