@@ -58,6 +58,9 @@ def _crear_reserva_transporte(empresa, servicio, numero_personas=2):
         punto_encuentro=pe,
         zona=Zona.CENTRO,
     )
+    # El gancho de sincronizacion (tarea 2) ya crea los viajes al pagar; estas pruebas
+    # siembran los suyos a mano para controlar fecha, hora y vehiculo.
+    ViajeTransporte.objects.filter(reserva=reserva).delete()
     return reserva
 
 

@@ -775,8 +775,10 @@ class Reserva(models.Model):
         super().save(*args, **kwargs)
         if update_fields is None:
             from apps.bookings.cupo.salidas import sincronizar_salidas
+            from apps.bookings.traslados import sincronizar_viajes_seguro
 
             sincronizar_salidas(self)
+            sincronizar_viajes_seguro(self)
         self._vendedora_original = self.vendedora_id
         if self.pk and estado_previo is not None:
             era_ocupante = estado_previo in ESTADOS_QUE_OCUPAN_CUPO
@@ -1353,6 +1355,14 @@ class DetalleTransporte(models.Model):
         if self.punto_encuentro_id:
             return self.punto_encuentro.zona
         return self.zona
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        reserva = self._reserva_o_ninguna()
+        if reserva is not None:
+            from apps.bookings.traslados import sincronizar_viajes_seguro
+
+            sincronizar_viajes_seguro(reserva, detalle=self)
 
 
 class ViajeTransporte(models.Model):

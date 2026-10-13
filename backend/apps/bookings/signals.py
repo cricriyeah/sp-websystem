@@ -11,7 +11,7 @@ trabajo de operacion y no se cae porque Resend este caido.
 import logging
 
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -19,7 +19,7 @@ from apps.notifications.services import enviar_correo_asignacion
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa
 
-from .models import Reserva
+from .models import DetalleTransporte, Reserva
 
 logger = logging.getLogger(__name__)
 
@@ -70,3 +70,14 @@ def _mandar(reserva_pk, empresa_id):
             return
 
         Reserva.objects.filter(pk=reserva.pk).update(aviso_asignacion_enviado_en=timezone.now())
+
+
+@receiver(post_delete, sender=DetalleTransporte, dispatch_uid='bookings.detalle_transporte_post_delete')
+def borrar_viajes_al_borrar_detalle(sender, instance, **kwargs):
+    """Borrar el DetalleTransporte borra los viajes de transporte de esa reserva (spec §5)."""
+    reserva_id = getattr(instance, 'reserva_id', None)
+    if reserva_id:
+        from apps.bookings.traslados import borrar_viajes_reserva_seguro
+
+        borrar_viajes_reserva_seguro(reserva_id)
+
