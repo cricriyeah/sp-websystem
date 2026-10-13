@@ -94,6 +94,15 @@ def _fuera_del_alcance(caso):
         caso._alcance.__enter__()
 
 
+@contextmanager
+def _en_empresa(caso, empresa):
+    """Siembra o lee datos de OTRA empresa: con RLS real (Postgres) el alcance de la prueba no
+    puede escribir ni ver filas de otra empresa, asi que se cambia de alcance y se restaura."""
+    with _fuera_del_alcance(caso):
+        with scope.con_empresa(empresa):
+            yield
+
+
 class TrasladosAdminTests(EmpresaTestCase):
     def setUp(self):
         super().setUp()
@@ -529,14 +538,15 @@ class TrasladosAdminTests(EmpresaTestCase):
             sede=self.sede, nombre='Otra Empresa Traslados', slug='otra-empresa-traslados',
             activo=True, exclusiva=False,
         )
-        servicio_otra = _crear_servicio_transporte(otra_empresa)
-        v_otra = Vehiculo.objects.create(
-            empresa=otra_empresa, nombre='Van de Otra', lugares=6, activo=True,
-        )
-        r_otra = _crear_reserva_transporte(
-            otra_empresa, servicio_otra, nombre_cliente='Cliente Ajeno',
-        )
-        viaje_otra = r_otra.viajes_transporte.first()
+        with _en_empresa(self, otra_empresa):
+            servicio_otra = _crear_servicio_transporte(otra_empresa)
+            v_otra = Vehiculo.objects.create(
+                empresa=otra_empresa, nombre='Van de Otra', lugares=6, activo=True,
+            )
+            r_otra = _crear_reserva_transporte(
+                otra_empresa, servicio_otra, nombre_cliente='Cliente Ajeno',
+            )
+            viaje_otra = r_otra.viajes_transporte.first()
 
         # Jefe de self.empresa consulta su listado
         resp = self.client.get(self.url)
@@ -557,13 +567,15 @@ class TrasladosAdminTests(EmpresaTestCase):
             sede=self.sede, nombre='Otra Empresa Falsificada', slug='otra-empresa-falsificada',
             activo=True, exclusiva=False,
         )
-        servicio_otra = _crear_servicio_transporte(otra_empresa)
-        v_otra = Vehiculo.objects.create(empresa=otra_empresa, nombre='Van Ajena', lugares=6, activo=True)
         v_propio = Vehiculo.objects.create(empresa=self.empresa, nombre='Van Propia', lugares=6, activo=True)
-        reserva_otra = _crear_reserva_transporte(
-            otra_empresa, servicio_otra, nombre_cliente='Cliente Ajeno', sentido=TipoTraslado.REDONDO_ACTIVIDAD,
-        )
-        viaje_ajeno = reserva_otra.viajes_transporte.get(sentido=ViajeTransporte.Sentido.REGRESO)
+        with _en_empresa(self, otra_empresa):
+            servicio_otra = _crear_servicio_transporte(otra_empresa)
+            v_otra = Vehiculo.objects.create(empresa=otra_empresa, nombre='Van Ajena', lugares=6, activo=True)
+            reserva_otra = _crear_reserva_transporte(
+                otra_empresa, servicio_otra, nombre_cliente='Cliente Ajeno',
+                sentido=TipoTraslado.REDONDO_ACTIVIDAD,
+            )
+            viaje_ajeno = reserva_otra.viajes_transporte.get(sentido=ViajeTransporte.Sentido.REGRESO)
         reserva_propia = _crear_reserva_transporte(self.empresa, self.servicio, nombre_cliente='Cliente Propio')
         viaje_propio = reserva_propia.viajes_transporte.first()
 
@@ -581,7 +593,8 @@ class TrasladosAdminTests(EmpresaTestCase):
             **base, 'form-0-id': str(viaje_propio.pk), 'form-0-vehiculo': str(v_otra.pk),
         })
 
-        viaje_ajeno.refresh_from_db()
+        with _en_empresa(self, otra_empresa):
+            viaje_ajeno.refresh_from_db()
         viaje_propio.refresh_from_db()
         self.assertIsNone(viaje_ajeno.vehiculo_id)
         self.assertIsNone(viaje_ajeno.hora)
