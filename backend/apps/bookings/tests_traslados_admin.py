@@ -550,6 +550,44 @@ class TrasladosAdminTests(EmpresaTestCase):
         opciones = {valor for valor, _etiqueta in form.fields['vehiculo'].choices if valor}  # lo que se dibuja de verdad
         self.assertNotIn(v_otra.pk, opciones)
 
+    def test_un_post_falsificado_no_toca_datos_de_otra_empresa(self):
+        """Aunque se invente el cuerpo del POST: ni se asigna un vehiculo propio a un viaje ajeno,
+        ni se asigna un vehiculo ajeno a un viaje propio, ni se cambia la hora de un regreso ajeno."""
+        otra_empresa = Empresa.objects.create(
+            sede=self.sede, nombre='Otra Empresa Falsificada', slug='otra-empresa-falsificada',
+            activo=True, exclusiva=False,
+        )
+        servicio_otra = _crear_servicio_transporte(otra_empresa)
+        v_otra = Vehiculo.objects.create(empresa=otra_empresa, nombre='Van Ajena', lugares=6, activo=True)
+        v_propio = Vehiculo.objects.create(empresa=self.empresa, nombre='Van Propia', lugares=6, activo=True)
+        reserva_otra = _crear_reserva_transporte(
+            otra_empresa, servicio_otra, nombre_cliente='Cliente Ajeno', sentido=TipoTraslado.REDONDO_ACTIVIDAD,
+        )
+        viaje_ajeno = reserva_otra.viajes_transporte.get(sentido=ViajeTransporte.Sentido.REGRESO)
+        reserva_propia = _crear_reserva_transporte(self.empresa, self.servicio, nombre_cliente='Cliente Propio')
+        viaje_propio = reserva_propia.viajes_transporte.first()
+
+        base = {
+            'form-TOTAL_FORMS': '1', 'form-INITIAL_FORMS': '1',
+            'form-MIN_NUM_FORMS': '0', 'form-MAX_NUM_FORMS': '1000', '_save': 'Guardar',
+        }
+        # 1) viaje ajeno con vehiculo propio y hora nueva
+        self.client.post(self.url, {
+            **base, 'form-0-id': str(viaje_ajeno.pk),
+            'form-0-vehiculo': str(v_propio.pk), 'form-0-hora': '03:00',
+        })
+        # 2) viaje propio con un vehiculo ajeno
+        respuesta = self.client.post(self.url, {
+            **base, 'form-0-id': str(viaje_propio.pk), 'form-0-vehiculo': str(v_otra.pk),
+        })
+
+        viaje_ajeno.refresh_from_db()
+        viaje_propio.refresh_from_db()
+        self.assertIsNone(viaje_ajeno.vehiculo_id)
+        self.assertIsNone(viaje_ajeno.hora)
+        self.assertIsNone(viaje_propio.vehiculo_id)
+        self.assertEqual(respuesta.status_code, 200)  # se rechaza con error de formulario, no se guarda
+
     def test_cuenta_consultas_no_crece_por_fila(self):
         """La lista no genera consultas adicionales por fila (sin N+1)."""
         from django.db import connection
