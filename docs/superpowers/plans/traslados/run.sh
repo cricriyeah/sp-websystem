@@ -49,7 +49,7 @@ docker_listo() { docker info >/dev/null 2>&1; }
 postgres_concurrencia() { # levanta postgres (si hace falta) y corre las pruebas reales; 0 ok
   docker ps -a --format '{{.Names}}' | grep -qx psd-pg || {
     docker run -d --name psd-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-      -e POSTGRES_DB=pescadeportiva_test -p 5433:5432 postgres:17 >/dev/null || return 1
+      -e POSTGRES_DB=pescadeportiva_test -p 127.0.0.1:5433:5432 postgres:17 >/dev/null || return 1
     sleep 12
     docker exec psd-pg psql -U postgres -d pescadeportiva_test -v ON_ERROR_STOP=1 -c \
       "CREATE ROLE ci_rls LOGIN PASSWORD 'ci_rls_password_local' NOSUPERUSER NOBYPASSRLS CREATEDB;" >/dev/null || return 1
