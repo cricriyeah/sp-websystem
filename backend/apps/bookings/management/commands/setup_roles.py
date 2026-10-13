@@ -24,6 +24,9 @@ PERMISOS_VENDEDORA = [
     ('fleet', 'paquete', ['view']),
     ('bookings', 'reservapersonalizacion', ['view']),
     ('fleet', 'embarcacionnodisponible', ['add', 'change', 'delete', 'view']),
+    ('bookings', 'viajetransporte', ['view', 'change']),
+    ('fleet', 'vehiculo', ['view']),
+    ('fleet', 'vehiculonodisponible', ['add', 'change', 'delete', 'view']),
 ]
 
 # Todo lo que Vendedora no tiene: borrar, y el catalogo financiero completo
@@ -38,6 +41,7 @@ PERMISOS_JEFE = PERMISOS_VENDEDORA + [
     ('fleet', 'embarcacion', ['add', 'change', 'delete']),
     ('fleet', 'capitan', ['add', 'change', 'delete']),
     ('fleet', 'puntoencuentro', ['add', 'change', 'delete']),
+    ('fleet', 'vehiculo', ['add', 'change', 'delete']),
     ('fleet', 'transportetarifa', ['add', 'change', 'delete', 'view']),
     ('fleet', 'codigopromocional', ['add', 'change', 'delete', 'view']),
     # Catalogo multi-sede: el jefe configura sus propios servicios, recursos,

@@ -220,6 +220,14 @@ UNFOLD = {
                             'fleet.view_embarcacionnodisponible'
                         ),
                     },
+                    {
+                        'title': 'Vehículos no disponibles',
+                        'icon': 'no_crash',
+                        'link': reverse_lazy('admin:fleet_vehiculonodisponible_changelist'),
+                        'permission': lambda request: request.user.has_perm(
+                            'fleet.view_vehiculonodisponible'
+                        ),
+                    },
                 ],
             },
             {
@@ -231,6 +239,12 @@ UNFOLD = {
                         'icon': 'sailing',
                         'link': reverse_lazy('admin:fleet_embarcacion_changelist'),
                         'permission': lambda request: request.user.has_perm('fleet.view_embarcacion'),
+                    },
+                    {
+                        'title': 'Vehículos',
+                        'icon': 'directions_car',
+                        'link': reverse_lazy('admin:fleet_vehiculo_changelist'),
+                        'permission': lambda request: request.user.has_perm('fleet.view_vehiculo'),
                     },
                     {
                         'title': 'Capitanes',

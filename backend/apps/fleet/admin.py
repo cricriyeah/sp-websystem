@@ -20,6 +20,8 @@ from .models import (
     Servicio,
     ServicioPersonalizacion,
     TransporteTarifa,
+    Vehiculo,
+    VehiculoNoDisponible,
     componente_de,
     errores_de_precio_contra_transporte,
 )
@@ -97,6 +99,30 @@ class EmbarcacionNoDisponibleAdmin(EmpresaScopedAdminMixin, ModelAdmin):
     list_display = ['fecha', 'embarcacion', 'motivo', 'registrado_por']
     list_filter = ['fecha', 'embarcacion']
     autocomplete_fields = ['embarcacion']
+    readonly_fields = ['registrado_por', 'creado_en']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.registrado_por = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(Vehiculo)
+class VehiculoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    list_display = ['nombre', 'lugares', 'activo']
+    list_filter = ['activo']
+    list_editable = ['activo']
+    search_fields = ['nombre']
+
+
+@admin.register(VehiculoNoDisponible)
+class VehiculoNoDisponibleAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    """Bloqueos de vehiculos para traslados (dia completo o rango de horas)."""
+
+    campos_escopeados_por_empresa = ('vehiculo',)
+    list_display = ['fecha', 'vehiculo', 'hora_desde', 'hora_hasta', 'motivo', 'registrado_por']
+    list_filter = ['fecha', 'vehiculo']
+    autocomplete_fields = ['vehiculo']
     readonly_fields = ['registrado_por', 'creado_en']
 
     def save_model(self, request, obj, form, change):
