@@ -385,7 +385,8 @@ Con la expansión multi-servicio y paquetes turísticos:
 ## Agenda operativa
 
 `bookings.Agenda`, proxy de `Reserva` (mismo patron que `CheckoutAbandonado`). Es donde
-se reparten los viajes vendidos: que panga y que capitan le toca a cada uno.
+se reparten los viajes vendidos de mar: que panga y que capitan le toca a cada uno.
+No aplica a traslados (los vehículos de transporte terrestre se asignan en la pantalla «Traslados»).
 
 - Lista solo `pagada` y `asignada`, con `list_editable` para embarcacion y capitan: se
   reparte desde el listado, sin entrar a cada reserva.
@@ -505,9 +506,78 @@ Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra
 
 - **`fleet.TransporteTarifa`**: catálogo de precios escalonado por ruta y capacidad (`tipo_traslado`, `zona`, `personas_min`, `personas_max`, `precio` en MXN; el USD se deriva del tipo de cambio de la sede). Tabla protegida por política RLS `tenancy_alcance` bajo `empresa_id`. Admin administrable únicamente por jefes (permisos en `setup_roles`).
 - **Estrategia de precio `PorRuta`** (`apps/payments/strategies/por_ruta.py`): resuelve el monto mediante `apps.fleet.tarifa_transporte.resolver_tarifa_transporte(empresa, demanda)` según `tipo_traslado`, `zona` y `numero_personas`. La cotización ocurre siempre en el servidor; `CrearPagoView` congela el `precio_calculado` en `DetalleTransporte`.
-- **`bookings.DetalleTransporte`**: detalle operativo asociado `OneToOne` a `Reserva`. Guarda `tipo_traslado`, `punto_encuentro` (FK a `PuntoEncuentro`), `direccion_personalizada`, `zona`, `fecha_regreso` (para `redondo_aeropuerto`), `numero_personas` y `precio_calculado`. Su política RLS de Postgres se aplica vía FK referida a `reserva.empresa_id` y está verificada en el guardarraíl de `apps/tenancy/tests_rls.py`. Visible como `DetalleTransporteInline` en `ReservaAdmin`. La `Agenda` operativa de pangas filtra y omite traslados.
+- **`bookings.DetalleTransporte`**: detalle operativo asociado `OneToOne` a `Reserva`. Guarda `tipo_traslado`, `punto_encuentro` (FK a `PuntoEncuentro`), `direccion_personalizada`, `zona`, `fecha_regreso` (para `redondo_aeropuerto`), `numero_personas` y `precio_calculado`. Su política RLS de Postgres se aplica vía FK referida a `reserva.empresa_id` y está verificada en el guardarraíl de `apps/tenancy/tests_rls.py`. Visible como `DetalleTransporteInline` en `ReservaAdmin`. La `Agenda` operativa de pangas filtra y omite traslados: los vehículos se asignan por tramo en la pantalla «Traslados» (`bookings.ViajeTransporte`, ver sección siguiente).
 - **Ventana horaria y capacidad por Servicio**: `Servicio.hora_apertura` y `Servicio.hora_cierre` permiten ventanas horarias por servicio (pesca 5:00–7:00am, transporte sin ventana fija). `Servicio.capacidad_maxima` fija el tope de personas (ej. 14 para transporte).
 - **Ruta pública `GET /api/<empresa_slug>/traslados/`**: (`apps/fleet/views.py::TrasladosView`), throttled, entrega el catálogo (`servicio`, `tarifas`, `puntos_encuentro`, `publishable_key`) bajo el alcance RLS de la empresa proveedora de transporte.
+
+## Traslados con vehículos (DLS Transporte)
+
+DLS Transporte opera traslados privados (`Servicio.tipo_servicio = 'transporte'`). La venta se mantiene con `estrategia_cupo = 'bajo_demanda'` (vender no se bloquea por falta de flota previa), pero los traslados confirmados se dividen en tramos (`ViajeTransporte`) asignables a vehículos (`Vehiculo`) desde la pantalla operativa «Traslados».
+
+### Modelos y reglas de validación
+
+- **`fleet.Vehiculo`** (tabla con `empresa_id` y RLS): catálogo de vehículos (`nombre`, `lugares` ≥ 1, `activo`). Restricción `UniqueConstraint(fields=['nombre', 'empresa'])`. Baja lógica con `activo=False` (nunca se borra: `PROTECT` desde viajes), preservando el historial de asignaciones.
+- **`fleet.VehiculoNoDisponible`** (RLS por `empresa_id`): bloqueos de flota (`empresa` FK PROTECT, `vehiculo` FK PROTECT, `fecha`, `hora_desde`, `hora_hasta`, `motivo`, `registrado_por`, `creado_en`). Sin horas = día completo. Si se indica una hora deben especificarse ambas y cumplir `hora_desde < hora_hasta`.
+  - **Validación inversa en `clean()`**: rechaza el bloqueo si el vehículo ya tiene viajes no cancelados asignados que choquen (`apps.bookings.traslados_reglas::viajes_que_chocan_con_bloqueo`). Un bloqueo de día completo choca con cualquier viaje del día; un bloqueo por rango choca con viajes cuya hora caiga en `[hora_desde, hora_hasta)`; los viajes sin hora no chocan con bloqueos de rango. El vehículo debe pertenecer a la misma empresa.
+- **`bookings.ViajeTransporte`** (RLS por `empresa_id`): modela cada tramo operativo del traslado (`empresa` FK PROTECT, `reserva` FK CASCADE, `sentido` con choices `unico`/`ida`/`regreso`, `fecha`, `hora` opcional, `vehiculo` FK fleet.Vehiculo PROTECT nullable, `cancelado` bool). Restricción `UniqueConstraint(fields=['reserva', 'sentido'])`.
+  - **Validación en `clean()`**: un viaje `cancelado` no puede tener vehículo asignado; el vehículo debe ser de la misma empresa y estar activo; `reserva.numero_personas <= vehiculo.lugares`; y el vehículo no debe estar bloqueado en esa fecha/hora por ningún `VehiculoNoDisponible` (`bloqueo_cubre_viaje`: viaje sin hora solo choca con bloqueos de día completo; viaje con hora choca con día completo o rangos que la contengan).
+
+### Creación y sincronización de viajes
+
+Lógica centralizada e idempotente en `apps.bookings.traslados::sincronizar_viajes(reserva, detalle=None)`:
+- **Tramos deseados según `tipo_traslado`**:
+  1. `recepcion_aeropuerto`: 1 viaje (`unico`: `reserva.fecha`, `reserva.hora`).
+  2. `redondo_actividad`: 2 viajes (`ida`: `reserva.fecha`, `reserva.hora`; `regreso`: `reserva.fecha`, sin hora inicial).
+  3. `redondo_aeropuerto`: 2 viajes (`ida`: `reserva.fecha`, `reserva.hora`; `regreso`: `detalle.fecha_regreso`, sin hora inicial).
+- **Ciclo de vida y sincronización**:
+  - Reservas que ocupan cupo (`ESTADOS_QUE_OCUPAN_CUPO`): crea los viajes faltantes, actualiza `fecha`/`hora` de los existentes, borra tramos que ya no correspondan (ej. cambio de viaje redondo a recepción), y marca `cancelado=False`. Si la fecha de un viaje cambia, **desasigna el vehículo** (`vehiculo=None`) porque la asignación deja de ser válida; un cambio de hora conserva el vehículo. **Nunca pisa la hora del regreso** si ya fue capturada por la vendedora en la lista.
+  - Reservas sin cupo (`pendiente_pago` o `cancelada`): marca `cancelado=True` y desasigna el vehículo (`vehiculo=None`) en los viajes existentes; no crea nuevos viajes.
+  - Aplica únicamente si `servicio.tipo_servicio == 'transporte'` y existe `DetalleTransporte` (se protege si `reserva.servicio_id` es nulo o falta el detalle). Utiliza `update_or_create` por `(reserva, sentido)` para prevenir carreras de unicidad.
+- **Ganchos automáticos**:
+  1. `Reserva._guardar_reserva`: tras `super().save()` cuando `update_fields is None` (mismo punto que `sincronizar_salidas`).
+  2. `DetalleTransporte.save()` (pasando `detalle=self` para evitar lecturas de caché desactualizadas) y la señal `post_delete` de `DetalleTransporte` (`borrar_viajes_al_borrar_detalle` en `apps.bookings.signals`), que elimina los viajes asociados al borrar el detalle.
+- **Envoltura segura (`sincronizar_viajes_seguro`)**:
+  - El webhook de Stripe ejecuta `reserva.save()` dentro de una transacción atómica. Un fallo al crear o sincronizar viajes es un efecto secundario y **no puede tumbar un cobro ni fallar el webhook**.
+  - `sincronizar_viajes_seguro` abre su propio savepoint (`with transaction.atomic():`) y atrapa `Exception` (excepción deliberada a la regla general contra `except Exception`), registrando con `logger.exception`. Sin savepoint propio, cualquier error dejaría abortada la transacción principal de PostgreSQL.
+- **Herramienta de reparación y migración**:
+  - `manage.py sincronizar_viajes_transporte [--dry-run]`: recorre por empresa las reservas de transporte con cupo y detalle, ejecutando `sincronizar_viajes` en cada una.
+  - Migración de datos: crea los viajes de reservas históricas con cupo dentro de `with apps.tenancy.rls.alcance_operador_migracion(schema_editor.connection):` para no ser filtradas bajo el rol sin `BYPASSRLS`.
+
+### Pantalla «Traslados» (admin)
+
+En `/admin/bookings/viajetransporte/` (`ViajeTransporteAdmin`, Unfold, `EmpresaScopedAdminMixin`):
+- **Sin creación ni borrado manual**: `has_add_permission=False` y `has_delete_permission=False`. Los viajes los administra exclusivamente el sistema a partir de las reservas.
+- **Asignación en lista**: `list_editable = ['hora', 'vehiculo']`. La hora de ida o tramo único viene de la reserva y se muestra deshabilitada en el formulario; la hora del regreso se captura directamente en esta lista porque el checkout no la solicita.
+- **Selectores aligerados**: el selector de cada fila ofrece solo vehículos activos que caben y no están bloqueados para ese tramo (más el vehículo asignado actual, que nunca desaparece del selector). Las opciones se cargan en lote por empresa con `ContextoAsignacionVehiculo` (una sola consulta de bloqueos y vehículos) para evitar consultas N+1 en páginas de 50 filas.
+- **Resiliencia al guardar (`ViajeTransporteForm`)**: `_post_clean()` omite filas sin cambios (`not self.has_changed()`). Si otro viaje ya asignado quedó inválido con posterioridad (vehículo desactivado, bloqueo ingresado, aumento de pasajeros), no bloquea el guardado de las filas editadas. `_update_errors` reenvía errores de campos ausentes del formulario a `NON_FIELD_ERRORS` evitando errores HTTP 500.
+- **Filtros y orden**: filtro "Cuándo" (Hoy, Mañana, Próximos 7 días [por defecto], Todos). Excluye viajes cancelados. Orden: primero viajes sin vehículo asignado, luego por fecha y hora (viajes sin hora al final del día), y pk.
+- **Resumen y avisos**:
+  - Encabezado: "N sin vehículo" o "Todo asignado".
+  - Columna Aviso (alertas informativas en rojo, nunca bloquean el guardado):
+    - *"Mismo vehículo a la misma hora que #X"*: aviso de empalme cuando dos viajes coinciden en vehículo, fecha y hora.
+    - *"Falta la hora"*: tramo de regreso pendiente de hora.
+    - *"El vehículo ya no cabe o está bloqueado"*: asignación que quedó inválida por un cambio posterior.
+
+### Permisos y RLS
+
+- **Políticas RLS**: tablas `fleet_vehiculo`, `fleet_vehiculonodisponible` y `bookings_viajetransporte` protegidas por política `tenancy_alcance` en PostgreSQL bajo `empresa_id` (o bypass si `app.operador_plataforma = 'on'`), verificadas por el guardarraíl de `apps/tenancy/tests_rls.py`.
+- **Asignación de tenant**: `ViajeTransporte` se crea siempre con `empresa = reserva.empresa`.
+- **Configuración de roles (`setup_roles`)**:
+  - **Vendedora**: `viajetransporte` (`view`, `change`), `vehiculo` (`view`), `vehiculonodisponible` (`add`, `change`, `delete`, `view`).
+  - **Jefe**: permisos de Vendedora + `vehiculo` (`add`, `change`, `delete`).
+- **Navegación Unfold (`UNFOLD['SIDEBAR']`)**:
+  - Menú Operación: "Traslados" y "Vehículos no disponibles".
+  - Menú Catálogo: "Vehículos".
+
+### Fuera de alcance
+
+- Conductores / choferes (no existe modelo ni asignación de conductores).
+- Equipaje o control de volumen de maletas.
+- Rutas detalladas, mapas o rastreo satelital/GPS.
+- Notificaciones automáticas al cliente al asignar vehículo (a diferencia del correo de asignación de panga/capitán).
+- Cuadrícula o panorama de vehículos × días (el tamaño de la flota de DLS hace suficiente el listado tabular).
+- Restricción de inventario en la venta: el servicio sigue vendiéndose `bajo_demanda` (vender no se bloquea por falta de vehículo físico).
+- Unificación con la `Agenda` de pangas (se mantienen pantallas y modelos operativos separados).
 
 ## Roles: Jefes vs Vendedora
 
@@ -517,8 +587,9 @@ Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra
 - **Vendedora** = cuentas `is_staff=True`, `is_superuser=False`, agregadas al grupo Django `Vendedora`
   y con `MembresiaEmpresa(rol=VENDEDORA)`. Permisos del grupo: `Reserva` (add/change/view, sin delete —
   se cancela, no se borra), `CupoDiario` (add/change/view), `Embarcacion`/`Capitan` (view only),
-  `Vendedora` (view only, para consultar su codigo de link). El catálogo financiero
-  de `fleet.Servicio` queda reservado a jefes y operadores.
+  `Vendedora` (view only, para consultar su codigo de link); y para transporte: `ViajeTransporte` (view/change),
+  `Vehiculo` (view), `VehiculoNoDisponible` (add/change/delete/view). El catálogo financiero
+  de `fleet.Servicio` queda reservado a jefes y operadores (los jefes además tienen `Vehiculo` add/change/delete).
 - **Operador de plataforma** = cuenta en grupo Django `OperadorPlataforma`, sin `MembresiaEmpresa`.
   Acceso global multi-tenant (Sedes, Empresas, Membresias y finanzas consolidadas).
 - **Alta de vendedoras**: accion unificada "Dar de alta vendedora" en `/admin/auth/user/` (un jefe la ve
