@@ -2668,9 +2668,9 @@ class OrdenAdminTests(TestCase):
                 else:
                     self.assertContains(response, self.ordenes[1].nombre_cliente)
                 self.assertEqual('cancelar_orden' in response.context['cl'].model_admin.get_actions(
-                    response.wsgi_request), rol != 'Vendedora')
+                    response.wsgi_request), rol == 'OperadorPlataforma')
 
-    def test_vendedora_detalle_total_y_componentes_cruzan_empresas(self):
+    def test_vendedora_solo_ve_su_parte_de_la_orden(self):
         from django.db import connection
         self.client.force_login(self.usuarios['Vendedora'])
         response = self.client.get(f'/admin/bookings/orden/{self.orden.pk}/change/')
@@ -2678,14 +2678,22 @@ class OrdenAdminTests(TestCase):
         self.assertFalse(response.context['has_change_permission'])
         self.assertFalse(response.context['has_add_permission'])
         self.assertFalse(response.context['has_delete_permission'])
-        for reserva in self.reservas:
-            self.assertContains(response, reverse('admin:bookings_reserva_change', args=[reserva.pk]))
-        self.assertContains(response, '100.00')
+        # Ve el enlace a su reserva (empresa B) y no a la de empresa A
+        self.assertContains(response, reverse('admin:bookings_reserva_change', args=[self.reservas[1].pk]))
+        self.assertNotContains(response, reverse('admin:bookings_reserva_change', args=[self.reservas[0].pk]))
         self.assertContains(response, '250.00')
+        self.assertNotContains(response, '100.00')
+        self.assertContains(response, 'Tu parte')
+        readonly_fields = response.context['adminform'].model_admin.get_readonly_fields(
+            response.wsgi_request, self.orden,
+        )
+        nombres = [getattr(campo, '__name__', campo) for campo in readonly_fields]
+        self.assertIn('tu_parte', nombres)
+        self.assertNotIn('total', nombres)
         with scope.con_empresa(self.b):
             if connection.vendor == 'postgresql':
                 self.assertEqual(self.orden.reservas.count(), 1)
-            self.assertEqual(response.context['adminform'].model_admin.total(self.orden), Decimal('350.00'))
+            self.assertEqual(response.context['adminform'].model_admin._tu_parte(self.orden, response.wsgi_request), Decimal('250.00'))
         self.assertEqual(self.client.post(
             f'/admin/bookings/orden/{self.orden.pk}/change/', {'estado': 'cancelada'},
         ).status_code, 403)
@@ -2714,24 +2722,133 @@ class OrdenAdminTests(TestCase):
             revertir.assert_not_called()
 
     def test_jefe_y_operador_cancelan_con_servicio_real(self):
+        from django.contrib import admin
+        from django.core.exceptions import PermissionDenied
+        from django.test import RequestFactory
         from apps.bookings.models import Orden
         from apps.payments import ordenes
-        for rol in ('Jefe', 'OperadorPlataforma'):
-            with self.subTest(rol=rol):
-                with scope.como_operador_plataforma():
-                    Orden.objects.filter(pk=self.orden.pk).update(estado=Orden.Estado.ARMANDO)
-                self.client.force_login(self.usuarios[rol])
-                with mock.patch('apps.payments.ordenes.configurar_stripe'), mock.patch(
-                    'apps.payments.ordenes.revertir_orden', wraps=ordenes.revertir_orden,
-                ) as revertir:
-                    response = self.client.post('/admin/bookings/orden/', {
-                        'action': 'cancelar_orden', '_selected_action': [self.orden.pk],
-                    })
-                self.assertEqual(response.status_code, 302)
-                revertir.assert_called_once_with(self.orden, 'cancelada desde el admin')
-                with scope.con_empresa(self.b):
-                    self.orden.refresh_from_db()
-                    self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+        # Jefe no puede cancelar: no ejecuta revertir_orden y lanza PermissionDenied
+        self.client.force_login(self.usuarios['Jefe'])
+        with mock.patch('apps.payments.ordenes.revertir_orden') as revertir:
+            self.client.post('/admin/bookings/orden/', {
+                'action': 'cancelar_orden', '_selected_action': [self.orden.pk],
+            })
+            revertir.assert_not_called()
+            request = RequestFactory().post('/admin/bookings/orden/')
+            request.user = self.usuarios['Jefe']
+            with self.assertRaises(PermissionDenied):
+                admin.site._registry[Orden].cancelar_orden(request, Orden.objects.none())
+
+        # Solo el operador cancela con éxito
+        with scope.como_operador_plataforma():
+            Orden.objects.filter(pk=self.orden.pk).update(estado=Orden.Estado.ARMANDO)
+        self.client.force_login(self.usuarios['OperadorPlataforma'])
+        with mock.patch('apps.payments.ordenes.configurar_stripe'), mock.patch(
+            'apps.payments.ordenes.revertir_orden', wraps=ordenes.revertir_orden,
+        ) as revertir:
+            response = self.client.post('/admin/bookings/orden/', {
+                'action': 'cancelar_orden', '_selected_action': [self.orden.pk],
+            })
+        self.assertEqual(response.status_code, 302)
+        revertir.assert_called_once_with(self.orden, 'cancelada desde el admin')
+        with scope.con_empresa(self.b):
+            self.orden.refresh_from_db()
+            self.assertEqual(self.orden.estado, Orden.Estado.CANCELADA)
+
+    def test_operador_ve_total_y_todas_las_reservas(self):
+        self.client.force_login(self.usuarios['OperadorPlataforma'])
+        response = self.client.get(f'/admin/bookings/orden/{self.orden.pk}/change/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Total')
+        self.assertContains(response, '350.00')
+        for reserva in self.reservas:
+            self.assertContains(response, reverse('admin:bookings_reserva_change', args=[reserva.pk]))
+        self.assertContains(response, '100.00')
+        self.assertContains(response, '250.00')
+        readonly_fields = response.context['adminform'].model_admin.get_readonly_fields(
+            response.wsgi_request, self.orden,
+        )
+        nombres = [getattr(campo, '__name__', campo) for campo in readonly_fields]
+        self.assertIn('total', nombres)
+        self.assertNotIn('tu_parte', nombres)
+        with scope.como_operador_plataforma():
+            self.assertEqual(response.context['adminform'].model_admin.total(self.orden), Decimal('350.00'))
+
+    def test_jefe_listado_muestra_tu_parte_con_monto_propio(self):
+        self.client.force_login(self.usuarios['Jefe'])
+        response = self.client.get('/admin/bookings/orden/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Tu parte')
+        self.assertContains(response, '250.00')
+        self.assertNotContains(response, '100.00')
+        cl = response.context['cl']
+        list_display = cl.model_admin.get_list_display(response.wsgi_request)
+        nombres = [getattr(campo, '__name__', campo) for campo in list_display]
+        self.assertIn('tu_parte', nombres)
+        self.assertNotIn('total', nombres)
+
+    def test_atencion_col_jefe_solo_cuenta_su_empresa(self):
+        from apps.bookings.models import Orden
+        with scope.como_operador_plataforma():
+            self.orden.estado = Orden.Estado.CANCELADA
+            self.orden.save(update_fields=['estado'])
+        with scope.con_empresa(self.a):
+            self.reservas[0].estado = Reserva.Estado.CANCELADA
+            self.reservas[0].monto_reembolsado = Decimal('0.00')
+            self.reservas[0].save(update_fields=['estado', 'monto_reembolsado'])
+        with scope.con_empresa(self.b):
+            self.reservas[1].estado = Reserva.Estado.CANCELADA
+            self.reservas[1].monto_reembolsado = Decimal('0.00')
+            self.reservas[1].save(update_fields=['estado', 'monto_reembolsado'])
+
+        self.client.force_login(self.usuarios['Jefe'])
+        response = self.client.get('/admin/bookings/orden/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Falta devolver 250.00')
+        self.assertNotContains(response, 'Falta devolver 350.00')
+        self.assertNotContains(response, 'Falta devolver 100.00')
+
+        with scope.con_empresa(self.b):
+            self.reservas[1].monto_reembolsado = self.reservas[1].monto_pagado
+            self.reservas[1].save(update_fields=['monto_reembolsado'])
+            model_admin = response.context['cl'].model_admin
+            self.assertEqual(model_admin._atencion(self.orden, response.wsgi_request), '')
+
+    def test_confirmar_devolucion_orden_jefe_no_modifica_otra_empresa(self):
+        from apps.bookings.models import Orden
+        with scope.como_operador_plataforma():
+            self.orden.estado = Orden.Estado.CANCELADA
+            self.orden.save(update_fields=['estado'])
+        with scope.con_empresa(self.a):
+            self.reservas[0].estado = Reserva.Estado.CANCELADA
+            self.reservas[0].reembolsada = False
+            self.reservas[0].monto_reembolsado = None
+            self.reservas[0].save(update_fields=['estado', 'reembolsada', 'monto_reembolsado'])
+        with scope.con_empresa(self.b):
+            self.reservas[1].estado = Reserva.Estado.CANCELADA
+            self.reservas[1].reembolsada = False
+            self.reservas[1].monto_reembolsado = None
+            self.reservas[1].save(update_fields=['estado', 'reembolsada', 'monto_reembolsado'])
+
+        self.client.force_login(self.usuarios['Jefe'])
+        with mock.patch('apps.payments.stripe_client.configurar_stripe'):
+            response = self.client.post('/admin/bookings/orden/', {
+                'action': 'confirmar_devolucion_orden', '_selected_action': [str(self.orden.pk)],
+            })
+        self.assertEqual(response.status_code, 302)
+
+        with scope.con_empresa(self.b):
+            self.reservas[1].refresh_from_db()
+            self.assertTrue(self.reservas[1].reembolsada)
+            self.assertEqual(self.reservas[1].monto_reembolsado, Decimal('250.00'))
+            self.assertIsNotNone(self.reservas[1].reembolsada_en)
+
+        with scope.con_empresa(self.a):
+            self.reservas[0].refresh_from_db()
+            self.assertFalse(self.reservas[0].reembolsada)
+            self.assertIsNone(self.reservas[0].monto_reembolsado)
+            self.assertIsNone(self.reservas[0].reembolsada_en)
 
     def test_reserva_enlaza_a_orden_y_admite_reserva_suelta(self):
         from django.contrib import admin

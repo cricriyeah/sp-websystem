@@ -460,6 +460,38 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
         empresa = scope.empresa_actual(request)
         return queryset.filter(sede_id=empresa.sede_id) if empresa else queryset.none()
 
+    # Dinero y reservas de la orden dependen de quien mira. El admin renderiza los campos de
+    # solo lectura DESPUES de que la vista devuelve (TemplateResponse perezosa), asi que no se
+    # puede guardar el request en un contextvar: cada campo sensible se entrega como una
+    # funcion ya ligada al request de esta peticion.
+    def _campo_de_request(self, nombre, metodo, request):
+        def campo(obj):
+            return metodo(obj, request)
+        campo.__name__ = nombre
+        campo.short_description = metodo.short_description
+        return campo
+
+    def _con_campos_de_request(self, nombres, request):
+        sustitutos = {
+            'atencion_col': ('atencion_col', self._atencion),
+            'reservas_componentes': ('reservas_componentes', self._reservas),
+        }
+        if not scope.es_operador_plataforma(request.user):
+            sustitutos['total'] = ('tu_parte', self._tu_parte)
+        return [
+            self._campo_de_request(*sustitutos[n], request) if n in sustitutos else n
+            for n in nombres
+        ]
+
+    def get_list_display(self, request):
+        return self._con_campos_de_request(super().get_list_display(request), request)
+
+    def get_readonly_fields(self, request, obj=None):
+        return self._con_campos_de_request(super().get_readonly_fields(request, obj=obj), request)
+
+    def get_fields(self, request, obj=None):
+        return self._con_campos_de_request(super().get_fields(request, obj=obj), request)
+
     def has_add_permission(self, request):
         return False
 
@@ -469,9 +501,16 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def _resolver_contexto(self, request=None):
+        """(empresa, es_operador) de quien mira. Sin request conocida no asume nada: el
+        resultado es "ninguna empresa", que no muestra dinero ni reservas ajenas."""
+        if request is None or request.user.is_anonymous:
+            return None, False
+        return scope.empresa_actual(request), scope.es_operador_plataforma(request.user)
+
     def get_actions(self, request):
         actions = super().get_actions(request)
-        if not (scope.es_operador_plataforma(request.user) or request.user.groups.filter(name='Jefe').exists()):
+        if not scope.es_operador_plataforma(request.user):
             actions.pop('cancelar_orden', None)
         if not (
             scope.es_operador_plataforma(request.user)
@@ -482,8 +521,15 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
 
     @admin.display(description='Atención')
     def atencion_col(self, obj):
+        return self._atencion(obj, None)
+
+    @admin.display(description='Atención')
+    def _atencion(self, obj, request):
         # Una lectura de componentes por orden en la página; el listado pagina pocas filas.
         filas = reservas_de_orden(obj.pk)
+        empresa, es_operador = self._resolver_contexto(request)
+        if not es_operador:
+            filas = [f for f in filas if empresa and f['empresa_id'] == empresa.id]
         pagos = [
             {
                 'estado_pi': None,
@@ -528,6 +574,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
 
         confirmadas = 0
         ordenes = list(queryset)
+        empresa_usuario, es_operador = self._resolver_contexto(request)
         # El request del admin ya tiene un alcance activo. Como en revertir_orden,
         # cada reserva se escribe bajo su empresa y al final se restaura el alcance.
         prev_alcance = getattr(connection, 'alcance_actual', None)
@@ -536,6 +583,8 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
             for orden in ordenes:
                 confirmadas_en_orden = 0
                 for fila in reservas_de_orden(orden.pk):
+                    if not es_operador and (empresa_usuario is None or fila['empresa_id'] != empresa_usuario.id):
+                        continue
                     empresa = Empresa.objects.get(pk=fila['empresa_id'])
                     with scope.con_empresa(empresa):
                         reserva = Reserva.objects.get(pk=fila['reserva_id'])
@@ -566,7 +615,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
 
     @admin.action(description='Cancelar orden (revierte los cobros en Stripe)')
     def cancelar_orden(self, request, queryset):
-        if not (scope.es_operador_plataforma(request.user) or request.user.groups.filter(name='Jefe').exists()):
+        if not scope.es_operador_plataforma(request.user):
             raise PermissionDenied
         from apps.payments import ordenes
 
@@ -575,7 +624,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
                 ordenes.revertir_orden(orden, 'cancelada desde el admin')
             except ordenes.OrdenCerradaError as exc:
                 self.message_user(request, f'Orden #{orden.pk}: {exc}', level='warning')
-        self.message_user(request, 'Cancelacion de ordenes procesada.')
+        self.message_user(request, 'Cancelación de órdenes procesada.')
 
     @admin.display(description='Paquete')
     def paquete_mostrado(self, obj):
@@ -591,11 +640,34 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
         return sum((fila['monto_pagado'] or Decimal('0.00')
                     for fila in reservas_de_orden(obj.pk)), Decimal('0.00'))
 
+    @admin.display(description='Tu parte')
+    def tu_parte(self, obj):
+        return self._tu_parte(obj, None)
+
+    @admin.display(description='Tu parte')
+    def _tu_parte(self, obj, request):
+        empresa, _ = self._resolver_contexto(request)
+        if not empresa:
+            return Decimal('0.00')
+        filas = reservas_de_orden(obj.pk)
+        return sum(
+            (fila['monto_pagado'] or Decimal('0.00')
+             for fila in filas if fila['empresa_id'] == empresa.id),
+            Decimal('0.00'),
+        )
+
     @admin.display(description='Reservas de la orden')
     def reservas_componentes(self, obj):
+        return self._reservas(obj, None)
+
+    @admin.display(description='Reservas de la orden')
+    def _reservas(self, obj, request):
         # El related manager solo ve la reserva propia bajo RLS. La lectura
         # SECURITY DEFINER incluye los componentes de las empresas hermanas.
         filas = reservas_de_orden(obj.pk)
+        empresa, es_operador = self._resolver_contexto(request)
+        if not es_operador:
+            filas = [f for f in filas if empresa and f['empresa_id'] == empresa.id]
         if not filas:
             return '—'
         return format_html(

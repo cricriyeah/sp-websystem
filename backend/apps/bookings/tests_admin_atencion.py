@@ -94,6 +94,7 @@ class OrdenAdminAtencionTests(TestCase):
         ))
 
     def test_accion_confirma_componentes_de_ambas_empresas_y_audita(self):
+        self.client.force_login(self.usuarios['OperadorPlataforma'])
         with mock.patch('apps.payments.stripe_client.configurar_stripe') as stripe_client:
             respuesta = self.client.post(self.url, {
                 'action': 'confirmar_devolucion_orden', '_selected_action': [str(self.orden.pk)],
@@ -114,6 +115,25 @@ class OrdenAdminAtencionTests(TestCase):
             content_type=ContentType.objects.get_for_model(Orden),
             object_id=str(self.orden.pk),
         ).exists())
+
+    def test_accion_vendedora_solo_confirma_su_empresa(self):
+        self.client.force_login(self.usuarios['Vendedora'])
+        with mock.patch('apps.payments.stripe_client.configurar_stripe') as stripe_client:
+            respuesta = self.client.post(self.url, {
+                'action': 'confirmar_devolucion_orden', '_selected_action': [str(self.orden.pk)],
+            })
+        self.assertEqual(respuesta.status_code, 302)
+        stripe_client.assert_not_called()
+        with scope.con_empresa(self.b):
+            self.reservas[1].refresh_from_db()
+        self.assertTrue(self.reservas[1].reembolsada)
+        self.assertEqual(self.reservas[1].monto_reembolsado, self.reservas[1].monto_pagado)
+        self.assertIsNotNone(self.reservas[1].reembolsada_en)
+        with scope.con_empresa(self.a):
+            self.reservas[0].refresh_from_db()
+        self.assertFalse(self.reservas[0].reembolsada)
+        self.assertIsNone(self.reservas[0].monto_reembolsado)
+        self.assertIsNone(self.reservas[0].reembolsada_en)
 
     def test_accion_no_audita_orden_sin_devoluciones_pendientes(self):
         for reserva, empresa in zip(self.reservas, (self.a, self.b)):
