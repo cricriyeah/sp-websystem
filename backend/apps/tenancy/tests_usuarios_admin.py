@@ -322,3 +322,42 @@ class UsuariosAdminIntegrationTests(TestCase):
         self.assertContains(resp, self.vendedora_a.username)
         self.assertNotContains(resp, self.vendedora_b.username)
         self.assertNotContains(resp, self.operador.username)
+
+    def test_jefe_no_toma_cuenta_con_membresia_en_otra_empresa(self):
+        """Una vendedora con membresía en A y en B no la edita ni le cambia la contraseña el jefe de A."""
+        MembresiaEmpresa.objects.create(
+            user=self.vendedora_a, empresa=self.empresa_b, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        )
+        self.client.force_login(self.jefe_a)
+        url_pw = reverse('admin:auth_user_password_change', args=[self.vendedora_a.pk])
+        self.assertEqual(self.client.get(url_pw).status_code, 403)
+        resp = self.client.post(url_pw, {
+            'password1': 'TomaDeCuenta12345!', 'password2': 'TomaDeCuenta12345!',
+        })
+        self.assertEqual(resp.status_code, 403)
+        self.vendedora_a.refresh_from_db()
+        self.assertTrue(self.vendedora_a.check_password('password123'))
+
+        url = reverse('admin:auth_user_change', args=[self.vendedora_a.pk])
+        resp = self.client.post(url, {'username': 'vendedora_a', 'email': 'robado@evil.com'})
+        self.assertNotEqual(resp.status_code, 302)
+        self.vendedora_a.refresh_from_db()
+        self.assertNotEqual(self.vendedora_a.email, 'robado@evil.com')
+
+    def test_jefe_no_edita_a_un_superusuario_con_membresia_en_su_empresa(self):
+        """Un superusuario con membresía en la empresa del jefe no se puede editar desde el jefe."""
+        super_u = User.objects.create_user(
+            username='super_u', password='password123', is_staff=True, is_superuser=True,
+        )
+        MembresiaEmpresa.objects.create(
+            user=super_u, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        )
+        self.client.force_login(self.jefe_a)
+        url_pw = reverse('admin:auth_user_password_change', args=[super_u.pk])
+        resp = self.client.post(url_pw, {
+            'password1': 'TomaDeCuenta12345!', 'password2': 'TomaDeCuenta12345!',
+        })
+        self.assertEqual(resp.status_code, 403)
+        super_u.refresh_from_db()
+        self.assertTrue(super_u.check_password('password123'))
+

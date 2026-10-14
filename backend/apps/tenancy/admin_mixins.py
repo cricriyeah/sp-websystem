@@ -119,9 +119,14 @@ class EmpresaScopedUserAdminMixin:
         return self.get_queryset(request).filter(pk=obj.pk).exists()
 
     def has_add_permission(self, request):
-        if not scope.es_operador_plataforma(request.user):
+        if not getattr(request, 'user', None) or request.user.is_anonymous:
             return False
-        return super().has_add_permission(request)
+        if scope.es_operador_plataforma(request.user):
+            return True
+        empresa = self._empresa_del_usuario(request)
+        if self._es_jefe(request.user, empresa):
+            return True
+        return False
 
     def has_view_permission(self, request, obj=None):
         if obj is not None and not self._en_alcance(request, obj):
@@ -149,6 +154,11 @@ class EmpresaScopedUserAdminMixin:
 
         # El jefe no puede editar a otro jefe ni a un operador
         if scope.es_operador_plataforma(obj) or obj.groups.filter(name='Jefe').exists():
+            return False
+
+        # Nunca a quien tenga acceso fuera de su empresa (superusuarios o membresías en otra
+        # empresa): cambiarles la contraseña o el correo sería tomar su cuenta en otra empresa.
+        if obj.is_superuser or MembresiaEmpresa.objects.filter(user=obj).exclude(empresa=empresa).exists():
             return False
 
         # El jefe solo puede editar a las vendedoras de su empresa
