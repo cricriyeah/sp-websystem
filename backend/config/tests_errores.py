@@ -34,6 +34,11 @@ class PaginasDeErrorTests(TestCase):
         self.assertContains(respuesta, 'Volver al panel', status_code=404)
         self.assertContains(respuesta, 'Código de referencia', status_code=404)
         self.assertContains(respuesta, 'Esta página no existe', status_code=404)
+        self.assertContains(respuesta, 'Volver atrás', status_code=404)
+        # Con el layout del panel completo (cabecera y menu), no una hoja en blanco.
+        self.assertContains(respuesta, 'Sun Baja Experiences', status_code=404)
+        # El código debe mostrarse de verdad, no solo la etiqueta.
+        self.assertRegex(respuesta.content.decode(), r'<strong[^>]*>[0-9A-F]{8}</strong>')
 
     def test_404_api_no_contiene_html_del_admin(self):
         """404 bajo /api/inexistente/ -> 404 simple, no extiende el admin ni contiene su HTML."""

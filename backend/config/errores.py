@@ -3,6 +3,7 @@
 import logging
 import uuid
 
+from django.contrib import admin
 from django.http import HttpResponseServerError
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -21,6 +22,15 @@ def _datos_request(request):
     return metodo, ruta, usuario_id
 
 
+def _contexto_admin(request):
+    """El layout del panel necesita su contexto (menu, cabecera); el handler de errores
+    no lo recibe de la vista. Si falla, la pagina se muestra igual sin menu."""
+    try:
+        return admin.site.each_context(request)
+    except Exception:
+        return {}
+
+
 def error_403(request, exception=None):
     """Manejo de error 403 (Permiso denegado)."""
     codigo = uuid.uuid4().hex[:8].upper()
@@ -34,6 +44,7 @@ def error_403(request, exception=None):
         )
 
     contexto = {
+        **(_contexto_admin(request) if es_admin else {}),
         'codigo': codigo,
         'base_template': 'admin/base_site.html' if es_admin else 'base_error_simple.html',
     }
@@ -53,6 +64,7 @@ def error_404(request, exception=None):
         )
 
     contexto = {
+        **(_contexto_admin(request) if es_admin else {}),
         'codigo': codigo,
         'base_template': 'admin/base_site.html' if es_admin else 'base_error_simple.html',
     }
