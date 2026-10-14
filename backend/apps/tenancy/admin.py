@@ -11,6 +11,7 @@ from unfold.admin import ModelAdmin
 from unfold.decorators import action
 
 from . import scope
+from .acciones_fila import AccionesDeFilaMixin
 from .alta_empresa import AltaEmpresaForm, dar_de_alta_empresa, estado_de_empresa, url_del_webhook
 from .models import Empresa, MembresiaEmpresa, Sede
 
@@ -33,7 +34,7 @@ class SoloOperadorPlataformaAdminMixin:
 
 
 @admin.register(Sede)
-class SedeAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
+class SedeAdmin(SoloOperadorPlataformaAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['nombre', 'slug', 'zona_horaria', 'tipo_cambio_usd', 'activo']
     prepopulated_fields = {'slug': ('nombre',)}
     search_fields = ['nombre', 'slug']
@@ -63,7 +64,7 @@ class EmpresaAdminForm(forms.ModelForm):
 
 
 @admin.register(Empresa)
-class EmpresaAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
+class EmpresaAdmin(SoloOperadorPlataformaAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     form = EmpresaAdminForm
     list_display = ['nombre', 'sede', 'slug', 'activo', 'exclusiva', 'pendientes']
     actions_list = ['accion_alta_empresa']
@@ -122,7 +123,7 @@ class EmpresaAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
 
 
 @admin.register(MembresiaEmpresa)
-class MembresiaEmpresaAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
+class MembresiaEmpresaAdmin(SoloOperadorPlataformaAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Salvo el alta vía la acción unificada 'Dar de alta vendedora' en
     `apps/bookings/admin.py` (Task B10) -- ese flujo crea la fila directo, sin
     pasar por este admin."""

@@ -14,7 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, Validat
 from django.db import connection, models, transaction
 from django.db.models.functions import Coalesce
 from django.forms.forms import NON_FIELD_ERRORS
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
@@ -34,6 +34,7 @@ from apps.fleet.models import (
 from apps.payments.situacion import requiere_atencion, situacion_de_orden, situacion_de_reserva
 from apps.notifications.services import enlace_retomar_orden
 from apps.tenancy import scope
+from apps.tenancy.acciones_fila import AccionesDeFilaMixin
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from apps.tenancy.models import Empresa, MembresiaEmpresa
 
@@ -87,13 +88,13 @@ def telefono_marcable(telefono):
 
 
 @admin.register(CupoDiario)
-class CupoDiarioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class CupoDiarioAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['fecha', 'cupo_maximo']
     ordering = ['fecha']
 
 
 @admin.register(Vendedora)
-class VendedoraAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class VendedoraAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Quienes venden. La comision se liquida fuera del sistema: aqui solo se
     lleva el registro de que venta es de quien."""
 
@@ -424,7 +425,7 @@ class DetalleTransporteInline(admin.StackedInline):
 
 
 @admin.register(ReservaOcupacion)
-class ReservaOcupacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class ReservaOcupacionAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['recurso', 'reserva', 'fecha_inicio', 'fecha_fin', 'creado_en']
     list_filter = ['recurso', 'fecha_inicio', 'fecha_fin']
     search_fields = ['recurso__nombre', 'reserva__nombre_cliente']
@@ -432,7 +433,7 @@ class ReservaOcupacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(ReservaPaqueteComponente)
-class ReservaPaqueteComponenteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class ReservaPaqueteComponenteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['reserva', 'servicio', 'estado_cupo', 'creado_en']
     list_filter = ['estado_cupo', 'servicio']
     search_fields = ['reserva__nombre_cliente', 'servicio__nombre']
@@ -440,7 +441,7 @@ class ReservaPaqueteComponenteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(Orden)
-class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
+class OrdenAdmin(AccionesEnEspanolMixin, AccionesDeFilaMixin, ModelAdmin):
     # Paquete tiene RLS por empresa lider: un JOIN lo ocultaria junto con
     # la orden. Solo sede se puede unir sin perder ordenes compartidas.
     list_select_related = ('sede',)
@@ -684,7 +685,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, ModelAdmin):
 
 
 @admin.register(Reserva)
-class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
+class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     campos_escopeados_por_empresa = ('servicio', 'vendedora', 'embarcacion', 'capitan')
     change_form_template = 'bookings/reserva_change_form.html'
     warn_unsaved_form = True
@@ -940,6 +941,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         'confirmar_devolucion', 'cancelar_por_mal_clima',
     ]
     actions_list = ['accion_enlace_pago']
+    actions_row = ['accion_fila_editar', 'accion_fila_ver', 'accion_fila_cancelar']
     change_list_template = 'bookings/reservas_changelist.html'
     VISTAS = (
         ('proximas', 'Próximas'), ('hoy', 'Hoy'), ('manana', 'Mañana'),
@@ -1431,7 +1433,12 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 'transferencias': [(moneda, f'{monto:.2f}')
                                    for moneda, monto in sorted(transferencia_por_moneda.items())],
                 'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
-                'volver': request.get_full_path(),
+                # El formulario de confirmacion publica a esta URL; desde la fila hay que mandarlo
+                # al listado, donde corre la accion masiva con la reserva marcada.
+                'volver': (
+                    reverse('admin:bookings_reserva_changelist')
+                    if getattr(request, 'desde_fila_cancelar', False) else request.get_full_path()
+                ),
             })
 
         actualizadas = 0
@@ -1457,6 +1464,23 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             'transferencia, devuélvelo y usa "Marcar devolución ya hecha". '
             'Filtro rápido: requiere atención (devolución) = Sí.',
         )
+
+    @action(
+        description='Cancelar',
+        url_path='cancelar',
+        permissions=['change'],
+        extra_options={'display_in_dropdown': False},
+    )
+    def accion_fila_cancelar(self, request, object_id=None, *args, **kwargs):
+        object_id = object_id or kwargs.get('object_id')
+        queryset = self.get_queryset(request).filter(pk=object_id)
+        if not queryset.exists():
+            raise Http404('Reserva no encontrada')
+        request.desde_fila_cancelar = True
+        respuesta = self.cancelar_por_mal_clima(request, queryset)
+        if respuesta is None:
+            return HttpResponseRedirect(reverse('admin:bookings_reserva_changelist'))
+        return respuesta
 
     @admin.action(description='Registrar liquidacion en efectivo (el 70%% restante)')
     def registrar_liquidacion_en_efectivo(self, request, queryset):
@@ -1487,7 +1511,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
 
 
 @admin.register(CheckoutAbandonado)
-class CheckoutAbandonadoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class CheckoutAbandonadoAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Lista de recuperacion: quien empezo a reservar y no termino de pagar.
 
     Solo lectura. No es una reserva todavia, no hay nada que editar aqui — lo que
@@ -1568,7 +1592,7 @@ admin.site.unregister(Group)
 
 
 @admin.register(User)
-class UserAdmin(EmpresaScopedUserAdminMixin, BaseUserAdmin, ModelAdmin):
+class UserAdmin(EmpresaScopedUserAdminMixin, AccionesDeFilaMixin, BaseUserAdmin, ModelAdmin):
     # Los formularios de Unfold son los de Django con sus widgets. Sin ellos el
     # campo de contraseña se pinta sin estilo y el enlace para cambiarla no sale.
     form = UserChangeForm
@@ -1654,7 +1678,7 @@ class UserAdmin(EmpresaScopedUserAdminMixin, BaseUserAdmin, ModelAdmin):
 
 
 @admin.register(Group)
-class GroupAdmin(BaseGroupAdmin, ModelAdmin):
+class GroupAdmin(AccionesDeFilaMixin, BaseGroupAdmin, ModelAdmin):
     pass
 
 
@@ -1857,7 +1881,7 @@ class AgendaForm(forms.ModelForm):
 
 
 @admin.register(Agenda)
-class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, ModelAdmin):
+class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Repartir los viajes ya vendidos: que panga y que capitan le toca a cada uno.
 
     Se edita en el propio listado, que es el punto entero de la pantalla: con ocho
@@ -2381,7 +2405,7 @@ class ViajeTransporteForm(forms.ModelForm):
 
 
 @admin.register(ViajeTransporte)
-class ViajeTransporteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Pantalla Traslados: asignación de vehículos a viajes de transporte por tramo."""
 
     campos_escopeados_por_empresa = ('vehiculo',)

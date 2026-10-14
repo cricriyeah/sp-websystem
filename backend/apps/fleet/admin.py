@@ -10,6 +10,7 @@ from django.forms import BaseInlineFormSet
 from unfold.admin import ModelAdmin, TabularInline
 
 from apps.tenancy import scope
+from apps.tenancy.acciones_fila import AccionesDeFilaMixin
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin
 
 from .models import (
@@ -35,7 +36,7 @@ from .tarifa_transporte import peor_tarifa
 
 
 @admin.register(TransporteTarifa)
-class TransporteTarifaAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class TransporteTarifaAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = [
         'tipo_traslado', 'zona', 'personas_min', 'personas_max',
         'precio', 'activo',
@@ -44,7 +45,7 @@ class TransporteTarifaAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(PuntoEncuentro)
-class PuntoEncuentroAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class PuntoEncuentroAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['nombre', 'zona', 'activo']
     list_filter = ['zona', 'activo']
     list_editable = ['zona', 'activo']
@@ -52,7 +53,7 @@ class PuntoEncuentroAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(CodigoPromocional)
-class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Sin permisos para Vendedora, mismo trato que Servicio/ServicioPersonalizacion: es
     informacion financiera. El uso de cada codigo no se audita aqui — se ve
     en la lista de Reservas (columna/filtro `codigo_promocional`), la misma
@@ -74,7 +75,7 @@ class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(Embarcacion)
-class EmbarcacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class EmbarcacionAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['nombre', 'clase', 'capacidad_maxima', 'activa', 'fuera_hoy']
     list_filter = ['clase', 'activa']
     list_editable = ['activa']
@@ -92,13 +93,13 @@ class EmbarcacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(Capitan)
-class CapitanAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class CapitanAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['nombre', 'telefono']
     search_fields = ['nombre', 'telefono']
 
 
 @admin.register(EmbarcacionNoDisponible)
-class EmbarcacionNoDisponibleAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class EmbarcacionNoDisponibleAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Aqui se marca que una panga no sale un dia. Mientras no exista la agenda
     operativa, este es el unico lugar para hacerlo."""
 
@@ -114,7 +115,7 @@ class EmbarcacionNoDisponibleAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(Vehiculo)
-class VehiculoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class VehiculoAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['nombre', 'lugares', 'activo']
     list_filter = ['activo']
     list_editable = ['activo']
@@ -122,7 +123,7 @@ class VehiculoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(VehiculoNoDisponible)
-class VehiculoNoDisponibleAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class VehiculoNoDisponibleAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Bloqueos de vehiculos para traslados (dia completo o rango de horas)."""
 
     campos_escopeados_por_empresa = ('vehiculo',)
@@ -188,7 +189,7 @@ class ServicioAdminForm(forms.ModelForm):
 
 
 @admin.register(Servicio)
-class ServicioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class ServicioAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     form = ServicioAdminForm
     list_display = [
         'nombre', 'tipo_servicio', 'estrategia_cupo', 'estrategia_precio',
@@ -266,7 +267,7 @@ class ServicioAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(Recurso)
-class RecursoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class RecursoAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['nombre', 'servicio', 'capacidad_maxima', 'activo']
     list_filter = ['servicio', 'activo']
     list_editable = ['capacidad_maxima', 'activo']
@@ -274,7 +275,7 @@ class RecursoAdmin(EmpresaScopedAdminMixin, ModelAdmin):
 
 
 @admin.register(Personalizacion)
-class PersonalizacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class PersonalizacionAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['nombre', 'tipo', 'tipo_interaccion', 'cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
     list_filter = ['tipo', 'tipo_interaccion', 'cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
     list_editable = ['cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
@@ -404,7 +405,7 @@ class PaqueteServicioInline(TabularInline):
 
 
 @admin.register(Paquete)
-class PaqueteAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+class PaqueteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     empresa_campo = 'empresa_lider'
     form = PaqueteAdminForm
     exclude = ['regla_precio']
