@@ -44,26 +44,43 @@ class SidebarTenancyTests(SimpleTestCase):
                 self.assertFalse(item['permission'](mock.Mock()), titulo)
 
 
+def _request_con_usuario(es_jefe=False):
+    """Request falso con usuario autenticado; `es_jefe` decide si esta en el grupo Jefe."""
+    request = mock.Mock()
+    request.user.is_anonymous = False
+    request.user.groups.filter.return_value.exists.return_value = es_jefe
+    return request
+
+
 class FinanzasPermisoTests(SimpleTestCase):
     def test_visible_para_operador_de_plataforma(self):
         item = _item_por_titulo('Finanzas')
         with mock.patch(
             'apps.tenancy.scope.es_operador_plataforma', return_value=True
         ):
-            self.assertTrue(item['permission'](mock.Mock()))
+            self.assertTrue(item['permission'](_request_con_usuario()))
 
-    def test_visible_para_jefe_o_vendedora_con_empresa(self):
+    def test_visible_para_jefe_con_empresa(self):
         item = _item_por_titulo('Finanzas')
         with mock.patch(
             'apps.tenancy.scope.es_operador_plataforma', return_value=False
         ), mock.patch(
             'apps.tenancy.scope.empresa_actual', return_value=mock.Mock()
         ):
-            self.assertTrue(item['permission'](mock.Mock()))
+            self.assertTrue(item['permission'](_request_con_usuario(es_jefe=True)))
+
+    def test_oculto_para_vendedora_con_empresa(self):
+        item = _item_por_titulo('Finanzas')
+        with mock.patch(
+            'apps.tenancy.scope.es_operador_plataforma', return_value=False
+        ), mock.patch(
+            'apps.tenancy.scope.empresa_actual', return_value=mock.Mock()
+        ):
+            self.assertFalse(item['permission'](_request_con_usuario(es_jefe=False)))
 
     def test_oculto_sin_membresia_ni_operador(self):
         item = _item_por_titulo('Finanzas')
         with mock.patch(
             'apps.tenancy.scope.es_operador_plataforma', return_value=False
         ), mock.patch('apps.tenancy.scope.empresa_actual', return_value=None):
-            self.assertFalse(item['permission'](mock.Mock()))
+            self.assertFalse(item['permission'](_request_con_usuario(es_jefe=True)))
