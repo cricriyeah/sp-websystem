@@ -404,6 +404,8 @@ MIDDLEWARE = [
     # Al final y despues de AuthenticationMiddleware, como pide su doc: necesita
     # ver el request ya con usuario para contar los intentos.
     'axes.middleware.AxesMiddleware',
+    # Atrapa excepciones inesperadas en /admin/ y redirige con mensaje sin tirar 500
+    'apps.tenancy.middleware_errores.ErrorInesperadoAdminMiddleware',
     # Al final de todo: necesita request.user (AuthenticationMiddleware) y no debe
     # interferir con el bloqueo de fuerza bruta de Axes.
     'apps.tenancy.middleware.EmpresaScopeMiddleware',

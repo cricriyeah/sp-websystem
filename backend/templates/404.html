@@ -1,0 +1,18 @@
+{% extends base_template|default:"base_error_simple.html" %}
+
+{% block title %}Esta página no existe{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="border border-base-200 rounded-default shadow-xs dark:border-base-800" style="max-width: 36rem; padding: 1.5rem; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+    <h1 class="font-semibold text-important" style="font-size: 1.25rem; margin: 0 0 0.5rem 0;">Esta página no existe</h1>
+    <p style="color: #6b7280; font-size: 0.875rem; margin: 0 0 1.25rem 0;">
+        Código de referencia: <strong style="font-family: monospace;">{{ código }}</strong>
+    </p>
+    {% if base_template == "admin/base_site.html" or request.path|slice:":7" == "/admin/" %}
+    <div>
+        <a href="/admin/" class="bg-primary-600 text-white px-3 py-2 rounded-default" style="display: inline-block; text-decoration: none; font-weight: 500;">Volver al panel</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

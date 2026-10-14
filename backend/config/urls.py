@@ -46,3 +46,7 @@ urlpatterns = [
     path('api/', include('apps.bookings.urls')),
     path('api/', include('apps.payments.urls')),
 ]
+
+handler403 = 'config.errores.error_403'
+handler404 = 'config.errores.error_404'
+handler500 = 'config.errores.error_500'
