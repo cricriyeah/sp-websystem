@@ -81,22 +81,23 @@ class EmpresaScopedUserAdminMixin:
     def _empresa_del_usuario(self, request):
         empresa = scope.empresa_actual(request)
         if empresa is None and getattr(request, 'user', None) and request.user.is_authenticated:
-            membresia = MembresiaEmpresa.objects.filter(user=request.user).select_related('empresa').first()
+            # Sin empresa activa solo cuenta una empresa donde el usuario es JEFE: tomar
+            # cualquier membresia daria poderes de jefe donde solo es vendedora.
+            membresia = MembresiaEmpresa.objects.filter(
+                user=request.user, rol=MembresiaEmpresa.Rol.JEFE,
+            ).select_related('empresa').order_by('pk').first()
             if membresia:
                 empresa = membresia.empresa
         return empresa
 
     def _es_jefe(self, user, empresa=None):
-        if user.is_anonymous or scope.es_operador_plataforma(user):
+        """Jefe de ESTA empresa: membresia con rol JEFE en ella. El grupo Django solo da
+        permisos de modelo; no basta para ser jefe de una empresa (un grupo mal asignado no
+        puede dar poderes sobre ella)."""
+        if user.is_anonymous or scope.es_operador_plataforma(user) or empresa is None:
             return False
-        if user.groups.filter(name='Jefe').exists():
-            return True
-        if empresa is not None:
-            return MembresiaEmpresa.objects.filter(
-                user=user, empresa=empresa, rol=MembresiaEmpresa.Rol.JEFE,
-            ).exists()
         return MembresiaEmpresa.objects.filter(
-            user=user, rol=MembresiaEmpresa.Rol.JEFE,
+            user=user, empresa=empresa, rol=MembresiaEmpresa.Rol.JEFE,
         ).exists()
 
     def get_queryset(self, request):

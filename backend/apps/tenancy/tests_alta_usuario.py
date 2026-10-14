@@ -361,3 +361,20 @@ class AltaUsuarioTests(TestCase):
                 empresa=self.empresa_a,
                 codigo_vendedora='vendsrv',
             )
+
+    def test_grupo_jefe_sin_membresia_de_jefe_no_da_de_alta(self):
+        """Estar en el grupo Jefe sin ser JEFE de la empresa (solo vendedora) no da poderes de jefe."""
+        raro = User.objects.create_user(username='raro', password='password123', is_staff=True)
+        raro.groups.add(Group.objects.get(name='Jefe'))
+        MembresiaEmpresa.objects.create(
+            user=raro, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        )
+        self.client.force_login(raro)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        resp = self.client.post(self.url, {
+            'username': 'colada', 'nombre': 'Colada', 'password': 'PasswordValida123!',
+            'password_confirm': 'PasswordValida123!', 'rol': 'VENDEDORA', 'codigo': 'colada1',
+        })
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(User.objects.filter(username='colada').exists())
+
