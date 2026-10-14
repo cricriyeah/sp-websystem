@@ -81,3 +81,11 @@ Todas están declaradas en `render.qa.yaml` con `sync: false`.
   con la rama base. Aclararlo antes de dar por buena la conciliación.
 - Si Stripe Link sigue activo en el dashboard de prueba, en móvil queda un hueco
   entre el formulario de tarjeta y el botón de pago.
+
+## Después de cada deploy
+
+- Correr `python manage.py setup_roles` cuando el deploy traiga permisos nuevos o
+  cambios en los grupos (Jefe, Vendedora, OperadorPlataforma). Sin esto, las
+  cuentas existentes no reciben los permisos nuevos y ven 403 o menús vacíos.
+- `seed_catalogo_real` solo corre con `DEBUG=True`. En Render QA (`DEBUG` apagado)
+  se niega a ejecutarse; el catálogo real se carga por el admin o con un volcado.
