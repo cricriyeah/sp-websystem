@@ -37,7 +37,9 @@ from apps.tenancy import scope
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
 from apps.tenancy.models import Empresa, MembresiaEmpresa
 
-from .forms import AltaVendedoraForm
+from apps.tenancy.usuarios import crear_usuario_con_rol
+
+from .forms import AltaUsuarioForm, AltaVendedoraForm
 from .forms_alta_reserva import AltaReservaForm
 from .limites_servicio import mapa_limites
 from .precio_sugerido import sugerir_precio
@@ -1501,51 +1503,82 @@ class UserAdmin(EmpresaScopedUserAdminMixin, BaseUserAdmin, ModelAdmin):
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
 
+    def add_view(self, request, form_url='', extra_context=None):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        return HttpResponseRedirect(reverse('admin:bookings_user_alta_usuario'))
+
     def get_urls(self):
         # Antes de super(): el admin termina en un catch-all <path:object_id>/.
         return [
             path(
+                'alta/',
+                self.admin_site.admin_view(self.alta_usuario_view),
+                name='bookings_user_alta_usuario',
+            ),
+            path(
                 'dar-de-alta-vendedora/',
-                self.admin_site.admin_view(self.dar_de_alta_vendedora_view),
+                self.admin_site.admin_view(self.alta_usuario_view),
                 name='bookings_user_dar_de_alta_vendedora',
             ),
         ] + super().get_urls()
 
-    def dar_de_alta_vendedora_view(self, request):
-        """Unico flujo para crear una vendedora: cuenta + grupo + MembresiaEmpresa
-        + bookings.Vendedora en una transaccion. Un jefe la da de alta para su
-        propia Empresa; el operador de plataforma elige cual."""
+    def alta_usuario_view(self, request):
+        """Flujo único para dar de alta usuarios con rol: cuenta + grupo Django +
+        MembresiaEmpresa (+ bookings.Vendedora si el rol es Vendedora)."""
+        if not getattr(request, 'user', None) or request.user.is_anonymous:
+            raise PermissionDenied
         es_operador = scope.es_operador_plataforma(request.user)
-        if not (es_operador or request.user.groups.filter(name='Jefe').exists()):
+        empresa_actual = self._empresa_del_usuario(request)
+        es_jefe = self._es_jefe(request.user, empresa_actual)
+
+        if not (es_operador or es_jefe):
             raise PermissionDenied
 
         if request.method == 'POST':
-            form = AltaVendedoraForm(request.POST, es_operador=es_operador)
+            form = AltaUsuarioForm(
+                request.POST,
+                es_operador=es_operador,
+                empresa_fija=empresa_actual,
+            )
             if form.is_valid():
-                empresa = form.cleaned_data['empresa'] if es_operador else scope.empresa_actual(request)
-                with transaction.atomic():
-                    nuevo = User.objects.create_user(
+                empresa = form.cleaned_data['empresa'] if es_operador else empresa_actual
+                try:
+                    nuevo = crear_usuario_con_rol(
                         username=form.cleaned_data['username'],
                         password=form.cleaned_data['password'],
-                        first_name=form.cleaned_data['nombre'],
-                        is_staff=True,
+                        nombre=form.cleaned_data['nombre'],
+                        rol=form.cleaned_data['rol'],
+                        empresa=empresa,
+                        codigo_vendedora=form.cleaned_data.get('codigo'),
                     )
-                    nuevo.groups.add(Group.objects.get(name='Vendedora'))
-                    MembresiaEmpresa.objects.create(
-                        user=nuevo, empresa=empresa, rol=MembresiaEmpresa.Rol.VENDEDORA,
-                    )
-                    Vendedora.objects.create(
-                        usuario=nuevo, empresa=empresa, codigo=form.cleaned_data['codigo'],
-                    )
-                self.message_user(request, f'Vendedora {nuevo.get_username()} dada de alta.')
-                return HttpResponseRedirect(reverse('admin:auth_user_changelist'))
+                    rol_str = 'Jefe' if form.cleaned_data['rol'] == MembresiaEmpresa.Rol.JEFE else 'Vendedora'
+                    self.message_user(request, f'{rol_str} {nuevo.get_username()} dado(a) de alta.')
+                    return HttpResponseRedirect(reverse('admin:auth_user_changelist'))
+                except ValidationError as exc:
+                    if hasattr(exc, 'message_dict'):
+                        for campo, errs in exc.message_dict.items():
+                            form_field = 'codigo' if campo == 'codigo_vendedora' else campo
+                            for err in errs:
+                                form.add_error(form_field if form_field in form.fields else None, err)
+                    elif hasattr(exc, 'messages'):
+                        for err in exc.messages:
+                            form.add_error(None, err)
+                    else:
+                        form.add_error(None, str(exc))
         else:
-            form = AltaVendedoraForm(es_operador=es_operador)
+            form = AltaUsuarioForm(
+                es_operador=es_operador,
+                empresa_fija=empresa_actual,
+            )
 
         return TemplateResponse(
-            request, 'bookings/alta_vendedora.html',
-            {**self.admin_site.each_context(request), 'form': form, 'title': 'Dar de alta vendedora'},
+            request, 'bookings/alta_usuario.html',
+            {**self.admin_site.each_context(request), 'form': form, 'title': 'Alta de usuario'},
         )
+
+    # Conservar el alias histórico para llamadas directas
+    dar_de_alta_vendedora_view = alta_usuario_view
 
 
 @admin.register(Group)

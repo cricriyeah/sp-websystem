@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div style="max-width: 40rem">
+  <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem">Alta de usuario</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    {% for campo in form %}
+      <div id="div_{{ campo.id_for_label }}" style="margin-bottom: 1rem">
+        <label for="{{ campo.id_for_label }}" style="font-weight: 600; display: block; margin-bottom: 0.25rem">{{ campo.label }}</label>
+        {{ campo }}
+        {% if campo.help_text %}
+          <div style="font-size: 0.85rem; opacity: 0.7; margin-top: 0.25rem">{{ campo.help_text }}</div>
+        {% endif %}
+        {% if campo.errors %}
+          <div style="color: #dc2626; font-size: 0.85rem; margin-top: 0.25rem">{{ campo.errors }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div style="margin-top: 1.5rem">
+      <input type="submit" value="Dar de alta" class="button" style="cursor: pointer; padding: 0.5rem 1.25rem; font-weight: 600">
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var rolField = document.getElementById('id_rol');
+  var divCodigo = document.getElementById('div_id_codigo');
+
+  if (!rolField || !divCodigo) return;
+
+  function actualizarVisibilidadCodigo() {
+    var rol = rolField.value;
+    if (rol === 'JEFE' || rol === 'Jefe') {
+      divCodigo.style.display = 'none';
+    } else {
+      divCodigo.style.display = '';
+    }
+  }
+
+  rolField.addEventListener('change', actualizarVisibilidadCodigo);
+  actualizarVisibilidadCodigo();
+});
+</script>
+{% endblock %}

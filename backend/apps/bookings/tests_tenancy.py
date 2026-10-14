@@ -263,7 +263,7 @@ class AltaVendedoraTests(TestCase):
         with mock.patch('apps.bookings.admin.scope.empresa_actual', return_value=self.empresa), \
              mock.patch('apps.bookings.admin.scope.es_operador_plataforma', return_value=False):
             response = self.client.post(reverse('admin:bookings_user_dar_de_alta_vendedora'), {
-                'username': 'vendedora_nueva', 'password': 'una-clave-larga-123',
+                'username': 'vendedora_nueva', 'password': 'una-clave-larga-123', 'password_confirm': 'una-clave-larga-123',
                 'nombre': 'Nueva Vendedora', 'codigo': 'nueva10',
             })
         self.assertEqual(response.status_code, 302)
@@ -285,7 +285,7 @@ class AltaVendedoraTests(TestCase):
         with mock.patch('apps.bookings.admin.scope.empresa_actual', return_value=self.empresa), \
              mock.patch('apps.bookings.admin.scope.es_operador_plataforma', return_value=False):
             response = self.client.post(reverse('admin:bookings_user_dar_de_alta_vendedora'), {
-                'username': 'ya_existe', 'password': 'una-clave-larga-123',
+                'username': 'ya_existe', 'password': 'una-clave-larga-123', 'password_confirm': 'una-clave-larga-123',
                 'nombre': 'Nueva', 'codigo': 'otro10',
             })
         self.assertEqual(response.status_code, 200)

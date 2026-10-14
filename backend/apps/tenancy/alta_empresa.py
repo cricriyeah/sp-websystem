@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 
 from .models import Empresa, MembresiaEmpresa, Sede
+from .usuarios import crear_usuario_con_rol
 
 
 class AltaEmpresaForm(forms.Form):
@@ -80,9 +81,6 @@ def dar_de_alta_empresa(datos):
     `setup_roles`, que es idempotente: ya no hay que acordarse de hacerlo en la consola.
     """
     with transaction.atomic():
-        if not Group.objects.filter(name='Jefe').exists():
-            call_command('setup_roles', verbosity=0)
-
         sede = datos.get('sede')
         if sede is None:
             nombre_sede = datos['sede_nueva'].strip()
@@ -94,12 +92,13 @@ def dar_de_alta_empresa(datos):
             slug=datos.get('slug') or _slug_unico(Empresa, datos['nombre']),
             correos_aviso=datos.get('correos_aviso', ''),
         )
-        jefe = User.objects.create_user(
-            username=datos['jefe_usuario'], password=datos['jefe_password'],
-            first_name=datos['jefe_nombre'], is_staff=True,
+        crear_usuario_con_rol(
+            username=datos['jefe_usuario'],
+            password=datos['jefe_password'],
+            nombre=datos['jefe_nombre'],
+            rol=MembresiaEmpresa.Rol.JEFE,
+            empresa=empresa,
         )
-        jefe.groups.add(Group.objects.get(name='Jefe'))
-        MembresiaEmpresa.objects.create(user=jefe, empresa=empresa, rol=MembresiaEmpresa.Rol.JEFE)
     return empresa
 
 
@@ -137,7 +136,7 @@ def estado_de_empresa(empresa):
          'hecho': all(llaves), 'url': cambiar_empresa(), 'accion': 'Poner llaves'},
         {'texto': 'Tiene al menos una vendedora',
          'hecho': Vendedora.objects.filter(empresa=empresa, activo=True).exists(),
-         'url': reverse('admin:bookings_user_dar_de_alta_vendedora'), 'accion': 'Dar de alta vendedora'},
+         'url': reverse('admin:bookings_user_alta_usuario'), 'accion': 'Dar de alta vendedora'},
         {'texto': 'Tiene al menos un servicio activo en el catálogo',
          'hecho': servicios.exists(), 'url': reverse('admin:fleet_servicio_add'), 'accion': 'Agregar servicio'},
         {'texto': 'Tiene pangas o vehículos activos',

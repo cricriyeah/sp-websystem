@@ -592,10 +592,12 @@ En `/admin/bookings/viajetransporte/` (`ViajeTransporteAdmin`, Unfold, `EmpresaS
   de `fleet.Servicio` queda reservado a jefes y operadores (los jefes además tienen `Vehiculo` add/change/delete).
 - **Operador de plataforma** = cuenta en grupo Django `OperadorPlataforma`, sin `MembresiaEmpresa`.
   Acceso global multi-tenant (Sedes, Empresas, Membresias y finanzas consolidadas).
-- **Alta de vendedoras**: accion unificada "Dar de alta vendedora" en `/admin/auth/user/` (un jefe la ve
-  para su propia Empresa; el operador de plataforma elige la Empresa). Crea el `User`, lo agrega al grupo
-  `Vendedora`, su `MembresiaEmpresa(rol=VENDEDORA)` y su `bookings.Vendedora` en una sola transaccion atomica
-  — reemplaza el flujo manual de tres pasos sueltos de antes de la expansion multi-sede.
+- **Alta de usuario**: acción y formulario unificados "Alta de usuario" en `/admin/auth/user/alta/`
+  (servicio `apps/tenancy/usuarios.py::crear_usuario_con_rol`). El jefe ve el botón "Agregar" y crea
+  vendedoras para su propia empresa (empresa y rol fijos); el operador de plataforma elige empresa y
+  puede crear Jefes o Vendedoras; las vendedoras reciben 403. "Sistema > Usuarios > Agregar" redirige
+  a esta vista. Crea `User` (is_staff=True), asigna grupo, `MembresiaEmpresa` y, si es vendedora,
+  `bookings.Vendedora` en una sola transacción respetando RLS.
 
 ## Gotchas
 

@@ -211,9 +211,11 @@ class EmpresaScopedUserAdminMixinTests(TestCase):
                 self.admin.has_change_permission(self._request(self.jefe_a), self.vendedora_b)
             )
 
-    def test_has_add_permission_falso_para_no_operador(self):
+    def test_has_add_permission_true_para_jefe_y_falso_para_vendedora(self):
         with scope.con_empresa(self.empresa_a):
-            self.assertFalse(self.admin.has_add_permission(self._request(self.jefe_a)))
+            self.assertTrue(self.admin.has_add_permission(self._request(self.jefe_a)))
+        with scope.con_empresa(self.empresa_b):
+            self.assertFalse(self.admin.has_add_permission(self._request(self.vendedora_b)))
 
     def test_get_fieldsets_de_jefe_no_incluye_campos_de_permisos_completos(self):
         with scope.con_empresa(self.empresa_a):

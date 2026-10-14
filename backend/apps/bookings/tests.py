@@ -541,15 +541,12 @@ class AdminDeCuentasTests(TestCase):
         self.assertIn(reverse('admin:auth_group_add'), html)
         self.assertIn('addlink', html)
 
-    def test_el_alta_de_usuario_carga_y_da_de_alta_la_cuenta(self):
-        self.assertEqual(self.client.get(reverse('admin:auth_user_add')).status_code, 200)
-
-        self.client.post(reverse('admin:auth_user_add'), {
-            'username': 'vendedora_nueva',
-            'password1': 'una-contrasena-larga-9',
-            'password2': 'una-contrasena-larga-9',
-        })
-        self.assertTrue(User.objects.filter(username='vendedora_nueva').exists())
+    def test_agregar_usuario_lleva_al_formulario_unico_de_alta(self):
+        # "Agregar usuario" ya no abre el formulario generico (dejaba cuentas sin
+        # grupo ni membresia): redirige al alta unica. El alta completa la cubre
+        # apps/tenancy/tests_alta_usuario.py.
+        alta = reverse('admin:bookings_user_alta_usuario')
+        self.assertRedirects(self.client.get(reverse('admin:auth_user_add')), alta)
 
 
 class ReservasNuevasAdminTests(EmpresaTestCase):
