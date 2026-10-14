@@ -6,12 +6,13 @@ from django.db import connection
 
 from apps.bookings.models import Vendedora
 from apps.tenancy import scope
+from apps.tenancy.forms_unfold import EstiloUnfoldMixin
 from apps.tenancy.models import Empresa, MembresiaEmpresa
 
 User = get_user_model()
 
 
-class AltaUsuarioForm(forms.Form):
+class AltaUsuarioForm(EstiloUnfoldMixin, forms.Form):
     username = forms.CharField(
         max_length=150,
         label='Usuario',
@@ -71,6 +72,8 @@ class AltaUsuarioForm(forms.Form):
                 self.fields['empresa'].queryset = Empresa.objects.all()
             self.fields['empresa'].disabled = True
             self.fields['empresa'].required = False
+
+        self._aplicar_estilo_unfold()
 
     def clean_username(self):
         username = self.cleaned_data.get('username')

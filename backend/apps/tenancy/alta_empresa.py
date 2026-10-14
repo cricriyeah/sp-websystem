@@ -14,11 +14,12 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils.text import slugify
 
+from .forms_unfold import EstiloUnfoldMixin
 from .models import Empresa, MembresiaEmpresa, Sede
 from .usuarios import crear_usuario_con_rol
 
 
-class AltaEmpresaForm(forms.Form):
+class AltaEmpresaForm(EstiloUnfoldMixin, forms.Form):
     sede = forms.ModelChoiceField(
         queryset=Sede.objects.filter(activo=True), required=False, label='Sede existente',
         help_text='La ciudad donde opera. Si es una ciudad nueva, deja esto vacío y escribe su nombre abajo.',
@@ -36,6 +37,10 @@ class AltaEmpresaForm(forms.Form):
     jefe_usuario = forms.CharField(max_length=150, label='Usuario del jefe')
     jefe_nombre = forms.CharField(max_length=150, label='Nombre del jefe')
     jefe_password = forms.CharField(widget=forms.PasswordInput, label='Contraseña inicial del jefe')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._aplicar_estilo_unfold()
 
     def clean(self):
         datos = super().clean()
