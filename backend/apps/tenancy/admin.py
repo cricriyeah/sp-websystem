@@ -130,3 +130,22 @@ class MembresiaEmpresaAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
     list_display = ['user', 'empresa', 'rol']
     list_filter = ['empresa', 'rol']
     autocomplete_fields = ['user', 'empresa']
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.user_id == request.user.pk:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.user_id == request.user.pk:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        if queryset.filter(user_id=request.user.pk).exists():
+            messages.error(request, 'No puedes quitarte tu propia membresía.')
+            queryset = queryset.exclude(user_id=request.user.pk)
+            if not queryset.exists():
+                return
+        super().delete_queryset(request, queryset)
+

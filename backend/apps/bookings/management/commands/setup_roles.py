@@ -27,6 +27,8 @@ PERMISOS_VENDEDORA = [
     ('bookings', 'viajetransporte', ['view', 'change']),
     ('fleet', 'vehiculo', ['view']),
     ('fleet', 'vehiculonodisponible', ['add', 'change', 'delete', 'view']),
+    # Vista y edición de su propio usuario (con queryset acotado a sí misma en el admin)
+    ('auth', 'user', ['view', 'change']),
 ]
 
 # Todo lo que Vendedora no tiene: borrar, y el catalogo financiero completo
@@ -56,12 +58,8 @@ PERMISOS_JEFE = PERMISOS_VENDEDORA + [
     # jefe solo los consulta.
     ('bookings', 'reservaocupacion', ['view']),
     ('bookings', 'reservapaquetecomponente', ['view']),
-    # H5: solo view+change sobre auth.user -- el alta pasa por la accion
-    # "Dar de alta vendedora" (apps/bookings/admin.py), cuyo has_add_permission
-    # bloquea el "Agregar usuario" directo del UserAdmin. Cero permisos sobre
-    # auth.group: GroupAdmin queda exclusivo del operador de plataforma.
-    ('auth', 'user', ['view', 'change']),
 ]
+
 
 PERMISOS_OPERADOR = PERMISOS_JEFE + [
     ('auth', 'user', ['add', 'delete']),
