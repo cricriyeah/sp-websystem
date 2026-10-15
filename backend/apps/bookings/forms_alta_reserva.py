@@ -66,6 +66,8 @@ class AltaReservaForm(forms.ModelForm):
 
         if self.empresa is None and getattr(self.instance, 'empresa_id', None):
             self.empresa = self.instance.empresa
+        if self.empresa is None:
+            self.empresa = scope.empresa_actual(None)
 
         if self.perfil_vendedora is None and self.usuario and self.empresa:
             self.perfil_vendedora = Vendedora.objects.filter(
@@ -76,7 +78,7 @@ class AltaReservaForm(forms.ModelForm):
         es_jefe = False
         if self.usuario:
             es_operador = scope.es_operador_plataforma(self.usuario)
-            es_jefe = self.usuario.groups.filter(name='Jefe').exists()
+            es_jefe = scope.es_jefe(self.usuario, self.empresa)
 
         # Solo el operador de plataforma puede elegir la empresa
         if not es_operador and 'empresa' in self.fields:
@@ -125,7 +127,8 @@ class AltaReservaForm(forms.ModelForm):
         es_jefe = False
         if self.usuario:
             es_operador = scope.es_operador_plataforma(self.usuario)
-            es_jefe = self.usuario.groups.filter(name='Jefe').exists()
+            empresa_eval = self.empresa or getattr(self.instance, 'empresa', None) or cleaned_data.get('empresa') or scope.empresa_actual(None)
+            es_jefe = scope.es_jefe(self.usuario, empresa_eval)
 
         if not (es_operador or es_jefe):
             if self.perfil_vendedora:

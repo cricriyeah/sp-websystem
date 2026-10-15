@@ -136,3 +136,52 @@ def es_operador_plataforma(user):
     if user.is_anonymous:
         return False
     return user.groups.filter(name=NOMBRE_GRUPO_OPERADOR_PLATAFORMA).exists()
+
+
+def rol_en(user, empresa):
+    """Devuelve el valor de `MembresiaEmpresa.Rol` del usuario en esa empresa,
+    o `None` (anónimo, sin empresa o sin membresía).
+    El operador de plataforma no se trata aquí (devuelve `None` salvo que tenga membresía).
+    """
+    if user is None or getattr(user, 'is_anonymous', False) or empresa is None:
+        return None
+    from .models import MembresiaEmpresa
+
+    membresia = MembresiaEmpresa.objects.filter(user=user, empresa=empresa).first()
+    return membresia.rol if membresia else None
+
+
+def es_jefe(user, empresa):
+    """True solo si rol_en(...) == MembresiaEmpresa.Rol.JEFE.
+    El operador de plataforma no es jefe aquí.
+    """
+    from .models import MembresiaEmpresa
+
+    return rol_en(user, empresa) == MembresiaEmpresa.Rol.JEFE
+
+
+def es_jefe_actual(request):
+    """True si el usuario actual es jefe de la empresa activa del request."""
+    usuario = getattr(request, 'user', None)
+    return es_jefe(usuario, empresa_actual(request))
+
+
+def tiene_rol_actual(request):
+    """True si el usuario tiene cualquier membresía (JEFE o VENDEDORA)
+    en la empresa activa del request.
+    """
+    usuario = getattr(request, 'user', None)
+    empresa = empresa_actual(request)
+    rol = rol_en(usuario, empresa)
+    from .models import MembresiaEmpresa
+
+    return rol in (MembresiaEmpresa.Rol.JEFE, MembresiaEmpresa.Rol.VENDEDORA)
+
+
+def es_vendedora_actual(request):
+    """True si el usuario tiene membresía VENDEDORA en la empresa activa del request."""
+    usuario = getattr(request, 'user', None)
+    empresa = empresa_actual(request)
+    from .models import MembresiaEmpresa
+
+    return rol_en(usuario, empresa) == MembresiaEmpresa.Rol.VENDEDORA

@@ -515,7 +515,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, AccionesDeFilaMixin, ModelAdmin):
             actions.pop('cancelar_orden', None)
         if not (
             scope.es_operador_plataforma(request.user)
-            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+            or scope.tiene_rol_actual(request)
         ):
             actions.pop('confirmar_devolucion_orden', None)
         return actions
@@ -567,7 +567,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, AccionesDeFilaMixin, ModelAdmin):
     def confirmar_devolucion_orden(self, request, queryset):
         if not (
             scope.es_operador_plataforma(request.user)
-            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+            or scope.tiene_rol_actual(request)
         ):
             raise PermissionDenied
 
@@ -752,7 +752,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
     def get_fieldsets(self, request, obj=None):
         if obj is None:
             es_operador = scope.es_operador_plataforma(request.user)
-            es_jefe = request.user.groups.filter(name='Jefe').exists()
+            es_jefe = scope.es_jefe_actual(request)
             viaje_alta = [
                 'servicio', 'paquete', 'fecha', 'hora', 'numero_personas',
                 'aeropuerto', 'fecha_salida', 'inicio_paquete',
@@ -813,8 +813,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             return ()
         campos = list(super().get_readonly_fields(request, obj))
         if (not scope.es_operador_plataforma(request.user)
-                and request.user.groups.filter(name='Vendedora').exists()
-                and not request.user.groups.filter(name='Jefe').exists()):
+                and scope.es_vendedora_actual(request)):
             campos.extend(('stripe_payment_intent_id', 'checkout_id', 'orden',
                            'personas_por_servicio', 'vendedora'))
         return tuple(dict.fromkeys(campos))
@@ -1104,7 +1103,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         actions = super().get_actions(request)
         if not (
             scope.es_operador_plataforma(request.user)
-            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+            or scope.tiene_rol_actual(request)
         ):
             actions.pop('confirmar_devolucion', None)
         if 'marcar_como_venta_mia' in actions and self._mi_perfil_de_vendedora(request) is None:
@@ -1126,7 +1125,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         """
         if not (
             scope.es_operador_plataforma(request.user)
-            or request.user.groups.filter(name__in=['Jefe', 'Vendedora']).exists()
+            or scope.tiene_rol_actual(request)
         ):
             raise PermissionDenied
 

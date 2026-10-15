@@ -89,9 +89,12 @@ class OrdenAdminAtencionTests(TestCase):
         respuesta = self.client.get(self.url)
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, 'Falta devolver')
-        self.assertIn('confirmar_devolucion_orden', respuesta.context['cl'].model_admin.get_actions(
-            respuesta.wsgi_request,
-        ))
+        # `get_actions` decide por la membresia en la empresa activa: se evalua dentro del
+        # alcance, como ocurre dentro de la peticion real.
+        with scope.con_empresa(self.b):
+            self.assertIn('confirmar_devolucion_orden', respuesta.context['cl'].model_admin.get_actions(
+                respuesta.wsgi_request,
+            ))
 
     def test_accion_confirma_componentes_de_ambas_empresas_y_audita(self):
         self.client.force_login(self.usuarios['OperadorPlataforma'])

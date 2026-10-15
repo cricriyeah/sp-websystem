@@ -91,14 +91,12 @@ class EmpresaScopedUserAdminMixin:
         return empresa
 
     def _es_jefe(self, user, empresa=None):
-        """Jefe de ESTA empresa: membresia con rol JEFE en ella. El grupo Django solo da
+        """Jefe de ESTA empresa: delega en scope.es_jefe. El grupo Django solo da
         permisos de modelo; no basta para ser jefe de una empresa (un grupo mal asignado no
         puede dar poderes sobre ella)."""
-        if user.is_anonymous or scope.es_operador_plataforma(user) or empresa is None:
+        if user is None or getattr(user, 'is_anonymous', False) or scope.es_operador_plataforma(user) or empresa is None:
             return False
-        return MembresiaEmpresa.objects.filter(
-            user=user, empresa=empresa, rol=MembresiaEmpresa.Rol.JEFE,
-        ).exists()
+        return scope.es_jefe(user, empresa)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -154,7 +152,9 @@ class EmpresaScopedUserAdminMixin:
             return False
 
         # El jefe no puede editar a otro jefe ni a un operador
-        if scope.es_operador_plataforma(obj) or obj.groups.filter(name='Jefe').exists():
+        if scope.es_operador_plataforma(obj) or MembresiaEmpresa.objects.filter(
+            user=obj, rol=MembresiaEmpresa.Rol.JEFE,
+        ).exists():
             return False
 
         # Nunca a quien tenga acceso fuera de su empresa (superusuarios o membresías en otra

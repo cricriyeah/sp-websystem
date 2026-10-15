@@ -5,7 +5,7 @@ def puede_ver_finanzas(request) -> bool:
     """Acceso a finanzas: operador de plataforma o jefe de la empresa actual.
 
     Ya no basta con tener empresa (las vendedoras quedan excluidas): el usuario
-    debe pertenecer al grupo Django 'Jefe'. La usan el menu lateral y las vistas
+    debe tener rol JEFE en la empresa activa (membresía). La usan el menu lateral y las vistas
     de `apps.finance`, para que la regla no pueda diverger entre las dos.
     """
     from apps.tenancy import scope
@@ -15,7 +15,7 @@ def puede_ver_finanzas(request) -> bool:
         return False
     if scope.es_operador_plataforma(usuario):
         return True
-    return scope.empresa_actual(request) is not None and usuario.groups.filter(name='Jefe').exists()
+    return scope.es_jefe_actual(request)
 
 
 def es_operador(request) -> bool:

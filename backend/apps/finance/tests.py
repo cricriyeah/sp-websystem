@@ -591,13 +591,17 @@ class PanelFinancieroPermisoTests(TestCase):
         mock_empresa_actual.return_value = mock.Mock()
         from django.contrib.auth.models import Group
 
+        from apps.tenancy.models import MembresiaEmpresa
+
         vendedora = User.objects.create_user(username='vendedora_sin_acceso', password='x', is_staff=True)
         grupo_vendedora, _ = Group.objects.get_or_create(name='Vendedora')
         vendedora.groups.add(grupo_vendedora)
         request = self.factory.get('/admin/finanzas/')
         request.user = vendedora
-        with self.assertRaises(PermissionDenied):
-            panel_financiero(request)
+        # La regla es la membresia: con rol VENDEDORA en la empresa activa no hay Finanzas.
+        with mock.patch('apps.tenancy.scope.rol_en', return_value=MembresiaEmpresa.Rol.VENDEDORA):
+            with self.assertRaises(PermissionDenied):
+                panel_financiero(request)
 
     @mock.patch('apps.finance.views.scope.empresa_actual')
     @mock.patch('apps.finance.views.scope.es_operador_plataforma')
@@ -615,9 +619,12 @@ class PanelFinancieroPermisoTests(TestCase):
         mock_balances.return_value = {}
         mock_balances_por_dia.return_value = []
 
+        from apps.tenancy.models import MembresiaEmpresa
+
         request = self.factory.get('/admin/finanzas/')
         request.user = self.user
-        panel_financiero(request)
+        with mock.patch('apps.tenancy.scope.rol_en', return_value=MembresiaEmpresa.Rol.JEFE):
+            panel_financiero(request)
 
         self.assertEqual(mock_resumen.call_args.kwargs.get('empresa'), empresa)
         self.assertEqual(mock_balances.call_args.kwargs.get('empresa'), empresa)
