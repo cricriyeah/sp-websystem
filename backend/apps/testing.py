@@ -55,7 +55,8 @@ class EmpresaTestCase(TestCase):
         super()._post_teardown()
 
     def crear_jefe(self, username='jefa', **extra):
-        """Usuario con membresia JEFE de `self.empresa` + grupo Django `Jefe`.
+        """Usuario con membresia JEFE de `self.empresa` (el grupo Django `Jefe`
+        se deriva de la membresia via senal).
 
         Reemplaza `User.objects.create_superuser(...)` en toda la suite: los jefes ya
         no llevan `is_superuser` (ver plan, "Operador de plataforma: no es una
@@ -64,26 +65,26 @@ class EmpresaTestCase(TestCase):
         """
         extra.setdefault('password', 'x')
         jefe = User.objects.create_user(username, is_staff=True, **extra)
-        jefe.groups.add(Group.objects.get(name='Jefe'))
         MembresiaEmpresa.objects.create(user=jefe, empresa=self.empresa, rol=MembresiaEmpresa.Rol.JEFE)
         return jefe
 
     def crear_vendedora(self, username='vendedora', permisos=None, **extra):
         """Usuario con membresia VENDEDORA de `self.empresa`.
 
-        `permisos=None` (default) agrega el grupo `Vendedora` completo -- caso normal.
-        `permisos=[]` u otra lista deja al usuario SIN el grupo, solo con los
+        `permisos=None` (default) deja el grupo `Vendedora` que la senal pone sola.
+        `permisos=[]` u otra lista saca al usuario del grupo `Vendedora`, dejando solo los
         permisos individuales que se le pasen aparte (para probar 403 por falta de un
-        permiso puntual sin que el 403 salga en realidad por falta de alcance, que es
-        el bug que esta tarea corrige -- ver nota al inicio de este documento).
+        permiso puntual sin que el 403 salga en realidad por falta de alcance).
         """
         extra.setdefault('password', 'x')
         vendedora = User.objects.create_user(username, is_staff=True, **extra)
-        if permisos is None:
-            vendedora.groups.add(Group.objects.get(name='Vendedora'))
         MembresiaEmpresa.objects.create(
             user=vendedora, empresa=self.empresa, rol=MembresiaEmpresa.Rol.VENDEDORA,
         )
+        if permisos is not None:
+            vendedora.groups.remove(Group.objects.get(name='Vendedora'))
+            if permisos:
+                vendedora.user_permissions.add(*permisos)
         return vendedora
 
 

@@ -248,7 +248,12 @@ class EmpresaScopedUserAdminMixinTests(TestCase):
                 request, self.jefe_a, change=True, fields=flatten_fieldsets(fieldsets),
             )
             form = form_class(
-                data={'is_superuser': 'on', 'is_active': 'on', 'username': 'jefe-a'},
+                data={
+                    'is_superuser': 'on', 'is_active': 'on', 'username': 'jefe-a',
+                    # El formulario real manda la fecha de ingreso que ya trae precargada.
+                    'date_joined_0': self.jefe_a.date_joined.date().isoformat(),
+                    'date_joined_1': self.jefe_a.date_joined.time().strftime('%H:%M:%S'),
+                },
                 instance=self.jefe_a,
             )
             self.assertTrue(form.is_valid(), form.errors)

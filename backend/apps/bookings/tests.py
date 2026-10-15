@@ -2646,8 +2646,9 @@ class OrdenAdminTests(TestCase):
         self.usuarios = {}
         for grupo in ('Vendedora', 'Jefe', 'OperadorPlataforma'):
             user = User.objects.create_user(username=f'orden-{grupo}', is_staff=True)
-            user.groups.add(Group.objects.get(name=grupo))
-            if grupo != 'OperadorPlataforma':
+            if grupo == 'OperadorPlataforma':
+                user.groups.add(Group.objects.get(name=grupo))
+            else:
                 MembresiaEmpresa.objects.create(user=user, empresa=self.b, rol=(
                     MembresiaEmpresa.Rol.JEFE if grupo == 'Jefe' else MembresiaEmpresa.Rol.VENDEDORA
                 ))

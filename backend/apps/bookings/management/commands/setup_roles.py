@@ -83,6 +83,13 @@ class Command(BaseCommand):
             f"OperadorPlataforma ({operador.permissions.count()})."
         ))
 
+        from apps.tenancy.roles import sincronizar_todos
+
+        total_sync = sincronizar_todos()
+        self.stdout.write(self.style.SUCCESS(
+            f"Usuarios sincronizados: {total_sync}."
+        ))
+
     def _grupo(self, nombre, permisos):
         group, _ = Group.objects.get_or_create(name=nombre)
         perms, vistos = [], set()

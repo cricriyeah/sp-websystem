@@ -300,6 +300,8 @@ class MenuSidebarTests(EmpresaTestCase):
             empresa=self.empresa,
             rol=MembresiaEmpresa.Rol.VENDEDORA,
         )
+        # La señal de la membresía le da el grupo Vendedora; esta cuenta no debe tener permisos.
+        self.usuario_sin_permisos.groups.clear()
 
     def test_menu_muestra_items_segun_permiso(self):
         """Vendedora y Jefe ven los enlaces en la barra lateral; usuario sin permiso no los ve."""

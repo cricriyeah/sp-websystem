@@ -65,6 +65,9 @@ class RolesMembresiaTests(TestCase):
                 empresa=self.empresa_a,
                 rol=MembresiaEmpresa.Rol.JEFE,
             )
+            # La señal de la membresía pone el grupo Jefe; se quita a mano para
+            # probar que las reglas de negocio no dependen del grupo.
+            self.usuario_membresia_jefe_sin_grupo.groups.clear()
 
             # Operador de plataforma (sin membresía)
             self.operador = User.objects.create_user(

@@ -194,6 +194,10 @@ class EmpresaScopedUserAdminMixin:
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(super().get_readonly_fields(request, obj))
+        # El campo 'groups' es de solo lectura para todos (operador incluido),
+        # derivado automáticamente de MembresiaEmpresa vía señal.
+        if 'groups' not in readonly_fields:
+            readonly_fields.append('groups')
         # Un usuario no puede desactivarse a sí mismo (is_active es de solo lectura sobre sí mismo).
         # Para otros usuarios (jefe editando vendedora), is_active es editable.
         # NUNCA agregar 'password' ni 'email' a readonly_fields: la edición de contraseñas

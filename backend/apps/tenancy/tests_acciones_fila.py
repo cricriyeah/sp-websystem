@@ -126,6 +126,9 @@ class AccionesDeFilaAdminTests(TestCase):
                 empresa=self.empresa_a,
                 rol=MembresiaEmpresa.Rol.VENDEDORA,
             )
+            # La señal de la membresía agrega el grupo Vendedora; esta cuenta
+            # debe quedarse solo con el grupo de solo ver.
+            self.usuario_solo_ver.groups.set([grupo_solo_ver])
 
     def test_lista_reservas_vendedora(self):
         """Lista de Reservas de una vendedora: la respuesta contiene el texto/URL de

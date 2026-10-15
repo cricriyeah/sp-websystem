@@ -87,5 +87,7 @@ Todas están declaradas en `render.qa.yaml` con `sync: false`.
 - Correr `python manage.py setup_roles` cuando el deploy traiga permisos nuevos o
   cambios en los grupos (Jefe, Vendedora, OperadorPlataforma). Sin esto, las
   cuentas existentes no reciben los permisos nuevos y ven 403 o menús vacíos.
+  Además, `setup_roles` sincroniza automáticamente los grupos Django (Jefe/Vendedora)
+  con las membresías activas de todas las cuentas.
 - `seed_catalogo_real` solo corre con `DEBUG=True`. En Render QA (`DEBUG` apagado)
   se niega a ejecutarse; el catálogo real se carga por el admin o con un volcado.

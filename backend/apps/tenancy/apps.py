@@ -11,6 +11,7 @@ class TenancyConfig(AppConfig):
     def ready(self):
         # El import corre el @register() de los system checks (rol de BD para RLS).
         from . import checks  # noqa: F401
+        from . import signals  # noqa: F401
 
         def _limpiar_alcance_huerfano(sender, **kwargs):
             # Revision 7 (N7-C): django.test.Client dispara esta señal dentro de

@@ -261,6 +261,8 @@ class InicioTests(TestCase):
         MembresiaEmpresa.objects.create(
             user=sin_permiso, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.VENDEDORA,
         )
+        # La señal de la membresía le da el grupo Vendedora; esta cuenta no debe tener permisos.
+        sin_permiso.groups.clear()
         self.client.force_login(sin_permiso)
         self.assertEqual(self.client.get(url).status_code, 403)
 

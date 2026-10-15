@@ -13,7 +13,6 @@ Uso:  venv/Scripts/python.exe manage.py seed_perfiles_demo --password <clave>
 """
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -52,7 +51,6 @@ class Command(BaseCommand):
                     if creado:
                         usuario.set_password(password)
                         usuario.save(update_fields=['password'])
-                    usuario.groups.add(Group.objects.get(name=grupo))
                     MembresiaEmpresa.objects.get_or_create(
                         user=usuario, empresa=empresa, defaults=dict(rol=rol),
                     )

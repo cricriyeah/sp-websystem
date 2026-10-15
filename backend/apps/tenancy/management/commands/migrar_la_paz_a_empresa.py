@@ -26,7 +26,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            grupo_jefe = Group.objects.get(name='Jefe')
+            Group.objects.get(name='Jefe')
             grupo_vendedora = Group.objects.get(name='Vendedora')
             grupo_operador = Group.objects.get(name='OperadorPlataforma')
         except Group.DoesNotExist:
@@ -69,7 +69,6 @@ class Command(BaseCommand):
                 MembresiaEmpresa.objects.get_or_create(
                     user=jefe, empresa=empresa, defaults={'rol': MembresiaEmpresa.Rol.JEFE},
                 )
-                jefe.groups.add(grupo_jefe)
                 jefe.is_superuser = False
                 jefe.save(update_fields=['is_superuser'])
 

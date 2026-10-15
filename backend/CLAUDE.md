@@ -581,23 +581,16 @@ En `/admin/bookings/viajetransporte/` (`ViajeTransporteAdmin`, Unfold, `EmpresaS
 
 ## Roles: Jefes vs Vendedora
 
-- **Jefes** = cuentas `is_staff=True`, `is_superuser=False`, asociadas al grupo Django `Jefe`
-  y con `MembresiaEmpresa(rol=JEFE)`. Ven y operan su propia Empresa, incluyendo la configuracion
-  de catalogo/tarifas y el panel de finanzas (`/admin/finanzas/`).
-- **Vendedora** = cuentas `is_staff=True`, `is_superuser=False`, agregadas al grupo Django `Vendedora`
-  y con `MembresiaEmpresa(rol=VENDEDORA)`. Permisos del grupo: `Reserva` (add/change/view, sin delete —
-  se cancela, no se borra), `CupoDiario` (add/change/view), `Embarcacion`/`Capitan` (view only),
-  `Vendedora` (view only, para consultar su codigo de link); y para transporte: `ViajeTransporte` (view/change),
-  `Vehiculo` (view), `VehiculoNoDisponible` (add/change/delete/view). El catálogo financiero
-  de `fleet.Servicio` queda reservado a jefes y operadores (los jefes además tienen `Vehiculo` add/change/delete).
-- **Operador de plataforma** = cuenta en grupo Django `OperadorPlataforma`, sin `MembresiaEmpresa`.
-  Acceso global multi-tenant (Sedes, Empresas, Membresias y finanzas consolidadas).
-- **Alta de usuario**: acción y formulario unificados "Alta de usuario" en `/admin/auth/user/alta/`
-  (servicio `apps/tenancy/usuarios.py::crear_usuario_con_rol`). El jefe ve el botón "Agregar" y crea
-  vendedoras para su propia empresa (empresa y rol fijos); el operador de plataforma elige empresa y
-  puede crear Jefes o Vendedoras; las vendedoras reciben 403. "Sistema > Usuarios > Agregar" redirige
-  a esta vista. Crea `User` (is_staff=True), asigna grupo, `MembresiaEmpresa` y, si es vendedora,
-  `bookings.Vendedora` en una sola transacción respetando RLS.
+- El rol de negocio vive exclusivamente en `MembresiaEmpresa.rol`.
+- Los grupos Django `Jefe` y `Vendedora` son únicamente paquetes de permisos de modelo; no deciden reglas de negocio.
+- Los grupos `Jefe` y `Vendedora` se derivan y sincronizan solos a partir de las membresías mediante señales en `apps/tenancy/signals.py` y `apps/tenancy/roles.py`. El grupo `OperadorPlataforma` jamás se toca automáticamente (no tiene membresía).
+- Los únicos helpers para consultar roles son `apps/tenancy/scope.py`: `scope.es_jefe(...)`, `scope.es_jefe_actual(...)`, `scope.tiene_rol_actual(...)`, `scope.es_vendedora_actual(...)` y `scope.rol_en(...)`.
+- **Limitación conocida**: una cuenta con roles distintos en dos empresas (p.ej. Jefe en una y Vendedora en otra) recibe la unión de permisos de modelo porque los grupos de Django son globales y no pueden limitarse por empresa. El alcance RLS y los checks de `scope` siguen aislando las operaciones por empresa.
+- **Jefes** = cuentas `is_staff=True`, `is_superuser=False`, con `MembresiaEmpresa(rol=JEFE)` (y grupo derivado `Jefe`). Ven y operan su propia Empresa, incluyendo la configuracion de catalogo/tarifas y el panel de finanzas (`/admin/finanzas/`).
+- **Vendedora** = cuentas `is_staff=True`, `is_superuser=False`, con `MembresiaEmpresa(rol=VENDEDORA)` (y grupo derivado `Vendedora`). Permisos del grupo: `Reserva` (add/change/view, sin delete — se cancela, no se borra), `CupoDiario` (add/change/view), `Embarcacion`/`Capitan` (view only), `Vendedora` (view only, para consultar su codigo de link); y para transporte: `ViajeTransporte` (view/change), `Vehiculo` (view), `VehiculoNoDisponible` (add/change/delete/view). El catálogo financiero de `fleet.Servicio` queda reservado a jefes y operadores (los jefes además tienen `Vehiculo` add/change/delete).
+- **Operador de plataforma** = cuenta en grupo Django `OperadorPlataforma`, sin `MembresiaEmpresa`. Acceso global multi-tenant (Sedes, Empresas, Membresias y finanzas consolidadas).
+- **Alta de usuario**: acción y formulario unificados "Alta de usuario" en `/admin/auth/user/alta/` (servicio `apps/tenancy/usuarios.py::crear_usuario_con_rol`). El jefe ve el botón "Agregar" y crea vendedoras para su propia empresa (empresa y rol fijos); el operador de plataforma elige empresa y puede crear Jefes o Vendedoras; las vendedoras reciben 403. "Sistema > Usuarios > Agregar" redirige a esta vista. Crea `User` (is_staff=True), `MembresiaEmpresa` (cuya señal asigna automáticamente el grupo Django) y, si es vendedora, `bookings.Vendedora` en una sola transacción respetando RLS.
+- En el admin de usuarios (`UserAdmin`), el campo `groups` es de solo lectura para todos los perfiles (operador incluido), impidiendo reemplazos accidentales al guardar.
 
 ## Gotchas
 
