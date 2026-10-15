@@ -4,6 +4,7 @@ from io import StringIO
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
@@ -80,6 +81,32 @@ class SincronizacionGruposSenalesTests(TestCase):
         )
         self.assertTrue(self.user.groups.filter(name='Jefe').exists())
         self.assertTrue(self.user.groups.filter(name='Vendedora').exists())
+
+    def test_membresia_con_rol_distinto_al_de_otra_empresa_no_valida(self):
+        MembresiaEmpresa.objects.create(
+            user=self.user, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.JEFE,
+        )
+        mixta = MembresiaEmpresa(
+            user=self.user, empresa=self.empresa_b, rol=MembresiaEmpresa.Rol.VENDEDORA,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            mixta.full_clean()
+        self.assertIn('rol', ctx.exception.message_dict)
+
+    def test_membresia_con_el_mismo_rol_en_otra_empresa_valida(self):
+        MembresiaEmpresa.objects.create(
+            user=self.user, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.JEFE,
+        )
+        MembresiaEmpresa(
+            user=self.user, empresa=self.empresa_b, rol=MembresiaEmpresa.Rol.JEFE,
+        ).full_clean()
+
+    def test_cambiar_el_rol_de_la_unica_membresia_valida(self):
+        membresia = MembresiaEmpresa.objects.create(
+            user=self.user, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.JEFE,
+        )
+        membresia.rol = MembresiaEmpresa.Rol.VENDEDORA
+        membresia.full_clean()
 
     def test_borrar_solo_una_membresia_conserva_el_otro_grupo(self):
         m_jefe = MembresiaEmpresa.objects.create(

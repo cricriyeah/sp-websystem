@@ -101,5 +101,22 @@ class MembresiaEmpresa(models.Model):
         verbose_name = 'membresia de empresa'
         verbose_name_plural = 'membresias de empresa'
 
+    def clean(self):
+        # Los grupos Jefe/Vendedora de Django son globales: con roles distintos en dos
+        # empresas la cuenta recibiria la union de permisos de modelo (p.ej. editar el
+        # catalogo en una empresa donde solo es vendedora). Por eso un usuario tiene el
+        # mismo rol en todas sus empresas.
+        super().clean()
+        if self.user_id is None or not self.rol:
+            return
+        otro_rol = (MembresiaEmpresa.objects
+                    .filter(user_id=self.user_id).exclude(pk=self.pk).exclude(rol=self.rol)
+                    .select_related('empresa').first())
+        if otro_rol is not None:
+            raise ValidationError({'rol': (
+                f'Este usuario ya es {otro_rol.get_rol_display()} en {otro_rol.empresa}. '
+                'Un usuario debe tener el mismo rol en todas sus empresas.'
+            )})
+
     def __str__(self):
         return f'{self.user} - {self.empresa} ({self.get_rol_display()})'
