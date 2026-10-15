@@ -80,7 +80,7 @@
 | `src/app/[lang]/{sede/[slug],servicio/[empresa]/[servicio],catalogo}/loading.tsx` | Esqueletos de carga | F1 |
 | `src/components/ui/cn.ts` | `clsx` + `tailwind-merge` | F3 |
 | `src/components/ui/{caja-campo.ts,despliegue.tsx,error-de-campo.tsx}` | Movidos desde `checkout/` y `field-error` para que `ui/` no dependa de nada fuera de sí; los archivos viejos los reexportan | F3 |
-| `src/components/checkout/pago/{resumen-pedido,tarjeta-como-pagas,formulario-pago,pago-diferido}.tsx` | `stripe-panel.tsx` partido: resumen y tarjeta «Cómo pagas» sin Stripe; solo `formulario-pago` importa Stripe | F1 |
+| `src/components/checkout/pago/{resumen-pedido,tarjeta-como-pagas,nota-seguridad,tipos,formulario-pago,pago-diferido}.tsx` | `stripe-panel.tsx` partido: resumen y tarjeta «Cómo pagas» sin Stripe; solo `formulario-pago` importa Stripe | F1 |
 | `src/lib/tokens-pago.ts` | Una sola fuente de los valores que Stripe Elements necesita en concreto (hex, radio), con prueba que la compara con `globals.css` | F2 |
 | `src/components/ui/variantes.ts` | Mapas de variantes **puros, sin ningún import** (el runner los compila y los prueba sin DOM ni paquetes) | F3 |
 | `src/components/ui/{button,input,field,card,badge}.tsx` | Primitivas | F3 |
@@ -120,6 +120,11 @@ test('ignora comentarios y anclas parecidas a un hex', () => {
   assert.equal(contar(sinComentarios('/* <img src="x" /> */ const a = 1;'), 'img-cruda'), 0);
   assert.equal(contar('<a href="#add">', 'color-literal'), 0);
   assert.equal(contar('<a href="#bad">', 'color-literal'), 0);
+  assert.equal(contar('url(#grad)', 'color-literal'), 0);
+  assert.equal(contar("colorPrimary: '#281ab5'", 'color-literal'), 1);
+  assert.equal(contar('fill="#fff"', 'color-literal'), 1);
+  assert.equal(contar('bg-[#281ab5]', 'color-literal'), 1);
+  assert.equal(contar('rgba(0,0,0,.5)', 'color-literal'), 1);
 });
 
 test('capas: ui no importa fuera de ui y lib', () => {
@@ -143,8 +148,9 @@ const REGLAS = {
   'img-cruda': /<img\b/g,
   'paleta-cruda':
     /\b(?:bg|text|border|ring|from|to|via|fill|stroke|divide|outline)-(?:red|green|blue|amber|sky|gray|slate|zinc|neutral|stone|yellow|orange|emerald|teal|indigo|violet|purple|pink|rose|lime|cyan|fuchsia)-\d{2,3}\b/g,
-  // Un hex real tiene 3, 4, 6 u 8 dígitos y no es un enlace ancla (href="#add").
-  'color-literal': /(?<![\w"'=/&])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b(?!["'-])|\brgba?\(/g,
+  // Un hex real tiene 3, 4, 6 u 8 dígitos. Cuenta los que van entre comillas ("#fff", '#281ab5'),
+  // que son casi todos los reales; excluye solo anclas (href="#add"), entidades (&#xA9;) y url(#grad).
+  'color-literal': /(?<!\w|[&\/#]|href=["'])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b(?![-\w])|\brgba?\(/g,
   // Dentro de ui/: cualquier import que no sea paquete, relativo, '@/components/ui/' ni '@/lib/'.
   'capas-ui': /from\s+['"]@\/(?!components\/ui\/|lib\/)[^'"]*['"]/g,
 };
@@ -261,13 +267,13 @@ experimental: {
 
 > Corrección del crítico: `stripe-panel.tsx` es **un módulo de 611 líneas** que importa `@stripe/stripe-js` y `@stripe/react-stripe-js` arriba y exporta `NotaSeguridadStripe`, `FormularioPago` y `StripePanel`. `StripePanel` pinta el resumen vivo del pedido desde el paso 1 **y**, por portal (`createPortal` hacia `destinoTarjeta`), la tarjeta «Cómo pagas» (promo, deslinde, Turnstile). Si el resumen sigue importando del módulo entero, Stripe viaja en el chunk inicial y el `dynamic` es decorativo; si se difiere el panel completo, el resumen y el portal desaparecen en SSR y se rompen el `ref` y el `scrollIntoView` de `checkout-view.tsx:827`. Por eso esta tarea es un **refactor estructural del checkout** y lleva revisión del dueño del flujo completo.
 
-**Files:** Create `src/components/checkout/pago/resumen-pedido.tsx`, `tarjeta-como-pagas.tsx`, `formulario-pago.tsx`, `pago-diferido.tsx`; Modify `src/components/stripe-panel.tsx` (queda como fachada que reexporta), `checkout-view.tsx:23`, `pedido/pedido-paquete.tsx:22`, `traslado-view.tsx:11`.
+**Files:** Create `src/components/checkout/pago/resumen-pedido.tsx`, `tarjeta-como-pagas.tsx`, `nota-seguridad.tsx`, `tipos.ts`, `formulario-pago.tsx`, `pago-diferido.tsx`; Modify `src/components/stripe-panel.tsx` (queda como fachada que reexporta), `checkout-view.tsx:23`, `pedido/pedido-paquete.tsx:22`, `traslado-view.tsx:11`.
 
-**Interfaces — Produces:** `StripePanel` (sin Stripe: resumen + portal de la tarjeta «Cómo pagas»), `NotaSeguridadStripe` (sin Stripe), `FormularioPago` (único módulo que importa `loadStripe`, `Elements`, `PaymentElement`) y `FormularioPagoDiferido`. Las props públicas no cambian.
+**Interfaces — Produces:** `StripePanel` (sin Stripe: resumen + portal de la tarjeta «Cómo pagas»), `NotaSeguridadStripe` (en `pago/nota-seguridad.tsx`, sin Stripe: la pintan tanto `FormularioPago` como las vistas), `FormularioPago` (único módulo que importa `loadStripe`, `Elements`, `PaymentElement`) y `FormularioPagoDiferido`; los tipos compartidos `StripePanelProps`, `OrderLine` y `Phase` viven en `pago/tipos.ts` (evita un ciclo de tipos entre el resumen, la tarjeta y la fachada). Las props públicas no cambian.
 
 - [ ] **Paso 1:** leer `stripe-panel.tsx` completo y escribir en el mensaje del commit qué función va a qué archivo y qué estado compartían (`puente`, `pago`, `captchaKey`).
-- [ ] **Paso 2:** mover `PaymentForm`, `STRIPE_APARIENCIA`, `STRIPE_FUENTES`, `loadStripe`/`Elements` y `FormularioPago` a `formulario-pago.tsx`. Mover el resumen y `TarjetaComoPagas` a archivos sin imports de Stripe. `stripe-panel.tsx` queda reexportando los nombres que hoy usan las vistas.
-- [ ] **Paso 3:** `tsc`, `eslint`, `npm test`, `build`. Comprobar con `grep -rn "@stripe" src/components` que **solo** `formulario-pago.tsx` importa Stripe.
+- [ ] **Paso 2:** mover `PaymentForm`, `STRIPE_APARIENCIA`, `STRIPE_FUENTES`, `loadStripe`/`Elements` y `FormularioPago` a `formulario-pago.tsx`. Mover el resumen y `TarjetaComoPagas` a archivos sin imports de Stripe. `stripe-panel.tsx` queda como fachada que reexporta **solo** `StripePanel` y `NotaSeguridadStripe`. **No reexporta `FormularioPago` ni importa `formulario-pago.tsx`**: `@stripe/stripe-js` tiene efectos al importarse y un import estático, aunque sea indirecto, dejaría Stripe en el chunk inicial y anularía el `dynamic`. Las tres vistas dejan de importar `{ FormularioPago, StripePanel }` de `stripe-panel` (`checkout-view.tsx:23`, `pedido-paquete.tsx:22`, `traslado-view.tsx:11`) y toman `FormularioPagoDiferido` de `pago-diferido.tsx`.
+- [ ] **Paso 3:** `tsc`, `eslint`, `npm test`, `build`. Comprobar con `grep -rn "@stripe" src` que **solo** `formulario-pago.tsx` importa Stripe, y con `grep -rn "formulario-pago" src` que **solo** `pago-diferido.tsx` lo importa (y de forma dinámica).
 - [ ] **Paso 4:** crear `pago-diferido.tsx`:
 
 ```tsx
@@ -487,7 +493,7 @@ export function botonClases({ variante = 'principal', tamano = 'md' }: { variant
 - `Field({ etiqueta, error, ayuda, id, children })`: etiqueta, control y `ErrorDeCampo` (reutiliza el existente con `Despliegue`).
 - `Card`/`Badge`: contenedores con variantes (`plana | elevada`, `exito | aviso | error | neutro`).
 
-- [ ] Por componente: escribir, usar `cn` y las variantes; `Input` usa `CAJA_CAMPO`/`CAJA_CAMPO_ERROR` de `checkout/estilos.ts` (que a su vez se reescribe sobre tokens).
+- [ ] Por componente: escribir, usar `cn` y las variantes; `Input` usa `CAJA_CAMPO`/`CAJA_CAMPO_ERROR` de `ui/caja-campo` (movidos en Task 3.0; **nunca** de `checkout/estilos.ts`, que violaría la capa `ui`).
 - [ ] `Button` tiene **`type="button"` por defecto**. Antes de migrar un `<button>` hay que mirar si está dentro de un `<form>` sin `type`: ese hoy **envía** el formulario (p. ej. Enter en `campos-contacto`). Ese caso se migra con `type="submit"` explícito. Listar con `grep -rn "<button" src --include=*.tsx` y revisar los que estén dentro de `<form`.
 - Probar en **una sola pantalla**: sustituir los botones de `faq-section.tsx` (superficie pública de bajo riesgo) por `Button`. Verificar con `tsc`, `eslint`, `build`, `guardia` (baja).
 - [ ] PUNTO DEL DUEÑO: mirar la sección de preguntas frecuentes (debe verse igual).
