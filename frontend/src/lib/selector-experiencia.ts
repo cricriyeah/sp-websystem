@@ -38,20 +38,3 @@ export function resolverChips(
   return chips;
 }
 
-/**
- * Regla mecanica (spec §7): un chip abre inline el BookingBar heredado de
- * pesca SOLO si las tres condiciones se cumplen a la vez, sin importar lo
- * que diga `inlineable` en el diccionario de contenido.
- */
-export function esInlineable(
-  chip: ChipExperiencia,
-  sedeSlug: string,
-  empresaSlugPescaLegacy: string,
-): boolean {
-  return (
-    sedeSlug === 'la-paz' &&
-    chip.tipo === 'servicio' &&
-    chip.slug === 'pesca-deportiva' &&
-    chip.empresaSlug === empresaSlugPescaLegacy
-  );
-}

@@ -125,24 +125,13 @@
     "subtext": "Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS."
   },
   "booking": {
-    "day": "Día",
-    "time": "Hora",
     "timeHelp": "Salida entre 5:00 y 7:00 am",
-    "people": "Personas",
     "maxPeopleNotice": "En este servicio no se permiten más de 5 personas.",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "submit": "Agendar",
-    "dayFull": "Los días tachados ya no tienen lugar para tu grupo.",
-    "askPeople": "¿Cuántos son?",
-    "askDay": "¿Qué día?",
-    "askTime": "¿Qué hora?",
-    "stickyOpen": "Reserva tu viaje",
-    "stickyClose": "Cerrar",
-    "stickyTitle": "Reserva tu viaje",
     "reservarAqui": "Reservar aquí",
     "verDetalles": "Ver detalles",
-    "elegirOtra": "Elegir otra experiencia",
     "incluyeHospedaje": "Incluye hospedaje"
   },
   "about": {

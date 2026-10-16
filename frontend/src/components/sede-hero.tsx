@@ -13,8 +13,6 @@ type SedeHeroProps = {
   servicios: ServicioCatalogo[];
   moneda: Moneda;
   booking: Dictionary['booking'];
-  minDate: string;
-  horasDisponibles: string[];
   verTodoLabel: string;
   hrefVerTodo: string;
   precioDesdeLabel: string;
@@ -42,8 +40,6 @@ export function SedeHero({
   servicios,
   moneda,
   booking,
-  minDate,
-  horasDisponibles,
   verTodoLabel,
   hrefVerTodo,
   precioDesdeLabel,
@@ -92,8 +88,6 @@ export function SedeHero({
               servicios={servicios}
               moneda={moneda}
               booking={booking}
-              minDate={minDate}
-              horasDisponibles={horasDisponibles}
               verTodoLabel={verTodoLabel}
               hrefVerTodo={hrefVerTodo}
               precioDesdeLabel={precioDesdeLabel}

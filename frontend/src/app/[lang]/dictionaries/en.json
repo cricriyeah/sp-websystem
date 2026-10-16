@@ -125,24 +125,13 @@
     "subtext": "We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS."
   },
   "booking": {
-    "day": "Date",
-    "time": "Time",
     "timeHelp": "Departure between 5:00 and 7:00 am",
-    "people": "Guests",
     "maxPeopleNotice": "This service doesn't allow more than 5 people.",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "submit": "Book now",
-    "dayFull": "Crossed-out days have no room left for your group.",
-    "askPeople": "How many of you?",
-    "askDay": "What day?",
-    "askTime": "What time?",
-    "stickyOpen": "Book your trip",
-    "stickyClose": "Close",
-    "stickyTitle": "Book your trip",
     "reservarAqui": "Book here",
     "verDetalles": "View details",
-    "elegirOtra": "Choose another experience",
     "incluyeHospedaje": "Includes lodging"
   },
   "about": {

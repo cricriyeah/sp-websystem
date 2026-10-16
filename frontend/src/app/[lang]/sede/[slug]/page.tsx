@@ -5,8 +5,6 @@ import { getDictionary, hasLocale } from '../../dictionaries';
 import { alternativasDe } from '@/lib/site';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getPaquetesSede, getServiciosSede, type Moneda } from '@/lib/api';
-import { getMinBookableDate } from '@/lib/dates';
-import { horasDeServicio } from '@/lib/horario-servicio';
 import { hrefDetalleServicio, hrefServicio } from '@/lib/booking-href';
 import { hrefSede } from '@/lib/routes';
 import { SiteHeader } from '@/components/site-header';
@@ -20,7 +18,6 @@ import { GallerySection } from '@/components/gallery-section';
 import { ReviewsSection } from '@/components/reviews-section';
 import { FaqSection } from '@/components/faq-section';
 import { StructuredData } from '@/components/structured-data';
-import { ProveedorReserva } from '@/components/booking-state';
 import { ColaboradoresSection } from '@/components/colaboradores-section';
 import { SedePendingSection } from '@/components/sede-pending-section';
 
@@ -43,15 +40,13 @@ export default async function SedePage({ params, searchParams }: Props) {
   const query = await searchParams;
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
   const [paquetes, servicios] = await Promise.all([getPaquetesSede(slug).catch(() => []), getServiciosSede(slug).catch(() => [])]);
-  const minDate = getMinBookableDate();
   const laPaz = slug === 'la-paz';
   // La barra de reserva de La Paz es la de la pesca: sus horas son las del servicio de pesca que pide hora.
-  const horasDisponibles = horasDeServicio(servicios.find((s) => s.tipo_servicio === 'pesca' && s.pide_hora) ?? { pide_hora: false, hora_apertura: null, hora_cierre: null, paso_hora_minutos: 15 });
   const pagina = <>
     <StructuredData lang={lang} slug={slug} negocio={contenido.negocio} description={contenido.metaDescription} faqItems={laPaz ? dict.faq.items : null} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="sede" sedeSlugActual={slug} />
     <main>
-      <SedeHero lang={lang} sedeSlug={slug} contenido={{ ...contenido.hero, facts: [] }} destacadas={contenido.destacadas} paquetes={paquetes} servicios={servicios} moneda={moneda} booking={dict.booking} minDate={minDate} horasDisponibles={horasDisponibles} verTodoLabel={dict.catalog.verTodo} hrefVerTodo={hrefSede(lang, slug, 'experiencias')} precioDesdeLabel={dict.catalog.fromPrice} />
+      <SedeHero lang={lang} sedeSlug={slug} contenido={{ ...contenido.hero, facts: [] }} destacadas={contenido.destacadas} paquetes={paquetes} servicios={servicios} moneda={moneda} booking={dict.booking} verTodoLabel={dict.catalog.verTodo} hrefVerTodo={hrefSede(lang, slug, 'experiencias')} precioDesdeLabel={dict.catalog.fromPrice} />
       <AboutSection about={{ headline: contenido.colaboracion.titulo, body1: contenido.colaboracion.texto1, body2: contenido.colaboracion.texto2, photoHint: contenido.colaboracion.imagenAlt }} imagenSrc={contenido.colaboracion.imagenSrc} imagenAlt={contenido.colaboracion.imagenAlt} />
       <ColaboradoresSection sedes={[contenido]} lang={lang} copy={dict.hub} id="empresas" />
       <section id="experiencias" className="scroll-mt-28 mx-auto max-w-6xl px-6 py-12 sm:px-8 lg:px-12">
@@ -76,5 +71,5 @@ export default async function SedePage({ params, searchParams }: Props) {
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={contenido.negocio} sedeSlug={slug} />
   </>;
-  return laPaz ? <ProveedorReserva>{pagina}</ProveedorReserva> : pagina;
+  return pagina;
 }

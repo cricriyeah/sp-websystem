@@ -36,19 +36,3 @@ test('paquete destacado no lleva empresaSlug (no aplica la regla mecanica)', () 
   const chips = s.resolverChips(destacadas, [paqueteBrunch], []);
   assert.equal(chips[0].empresaSlug, null);
 });
-
-test('regla mecanica: inline solo si sede=la-paz + servicio pesca-deportiva + empresa del .env', () => {
-  const chip = { tipo: 'servicio', slug: 'pesca-deportiva', nombre: 'Pesca', empresaSlug: 'sal-y-sol' };
-  assert.equal(s.esInlineable(chip, 'la-paz', 'sal-y-sol'), true);
-  assert.equal(s.esInlineable(chip, 'la-ventana', 'sal-y-sol'), false, 'otra sede');
-  assert.equal(s.esInlineable({ ...chip, slug: 'buceo' }, 'la-paz', 'sal-y-sol'), false, 'otro servicio');
-  assert.equal(s.esInlineable({ ...chip, tipo: 'paquete' }, 'la-paz', 'sal-y-sol'), false, 'es paquete, no servicio');
-  assert.equal(s.esInlineable({ ...chip, empresaSlug: 'otra-empresa' }, 'la-paz', 'sal-y-sol'), false, 'otra empresa');
-});
-
-test('inlineable: true del diccionario no basta si la condicion mecanica no se cumple', () => {
-  // Simula el caso que el spec §7 quiere evitar: alguien marca inlineable:true
-  // en el diccionario para un chip que no es el flujo heredado de pesca.
-  const chipMalMarcado = { tipo: 'servicio', slug: 'buceo', nombre: 'Buceo', empresaSlug: 'sal-y-sol' };
-  assert.equal(s.esInlineable(chipMalMarcado, 'la-paz', 'sal-y-sol'), false);
-});
