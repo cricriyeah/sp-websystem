@@ -2,9 +2,9 @@
 
 > Léelo primero. Para las especificaciones de componentes y de la página de reserva ve [design-components.md](design-components.md). Para accesibilidad y qué hacer / qué no ve [design-guidelines.md](design-guidelines.md).
 
-Lenguaje: **costero, deportivo y moderno**, con una marca cálida (café) y tres colores que cuentan qué tipo de actividad es (mar, ciudad, outside/montaña). Titulares en la monoespaciada de consola (Consolas), cuerpo en San Francisco (la fuente del sistema de Apple), esquinas redondeadas que hacen eco del logo redondo, superficies planas sin sombras grandes. Unidad base de espaciado: 4 px. Plataformas: web responsive (móvil primero), es/en.
+Lenguaje: **costero, deportivo y moderno**, con una marca cálida (café) y tres colores que cuentan qué tipo de actividad es (mar, ciudad, outside/montaña). Titulares en **Consola Mono** (monoespaciada de consola, de código abierto), cuerpo en San Francisco (la fuente del sistema de Apple), esquinas redondeadas que hacen eco del logo redondo, superficies planas sin sombras grandes. Unidad base de espaciado: 4 px. Plataformas: web responsive (móvil primero), es/en.
 
-> Decisiones del dueño (2026-10-15): botón principal en café con texto blanco; titulares en Consolas (monoespaciada de consola); cuerpo en San Francisco; radio 12 px en controles y 16 px en tarjetas; neutros cálidos (arena y blanco), sin negro puro. Todos los contrastes de este documento se calcularon con la fórmula de WCAG 2.2 (luminancia relativa) sobre los hex indicados.
+> Decisiones del dueño (2026-10-15): botón principal en café con texto blanco; titulares en Consola Mono (dafont, SIL OFL); cuerpo en San Francisco; radio 12 px en controles y 16 px en tarjetas; neutros cálidos (arena y blanco), sin negro puro. Todos los contrastes de este documento se calcularon con la fórmula de WCAG 2.2 (luminancia relativa) sobre los hex indicados.
 
 ---
 
@@ -87,16 +87,16 @@ Los estados tienen su propio color, distinto de las tres actividades, y siempre 
 
 | Rol | Familia | Fallback |
 |---|---|---|
-| Titulares | **Consolas** (la monoespaciada de consola de Windows y Office) | `Consolas, "SF Mono", SFMono-Regular, Menlo, "Roboto Mono", ui-monospace, monospace` |
+| Titulares | **Consola Mono** (Wojciech Kalinowski; solo pesos Book 400 y Bold 700; se sirve desde el propio sitio con `next/font/local`) | `Consolas, "SF Mono", SFMono-Regular, Menlo, "Roboto Mono", ui-monospace, monospace` |
 | Cuerpo y formularios | **San Francisco** (la fuente del sistema de Apple: `-apple-system` / `system-ui`) | `-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif` |
 | Cifras de dinero | misma fuente del cuerpo con `font-variant-numeric: tabular-nums` | — |
 
-Ninguna de las dos se descarga: son fuentes que ya traen los dispositivos, así que no cuestan carga y no hay licencia que gestionar. **Cada dispositivo muestra la suya:** San Francisco solo existe en dispositivos de Apple (en Windows cae a Segoe UI y en Android a Roboto) y Consolas solo en Windows y Office (en Apple cae a SF Mono o Menlo, en Android a Roboto Mono). El aspecto exacto de los titulares cambia de un dispositivo a otro; la licencia de Apple no permite servir San Francisco desde el sitio. Sustituye a *Instrument Sans*. *Bebas Neue* y *Bella Fashion* (esta con licencia «solo uso personal») salen del proyecto.
+**Titulares:** *Consola Mono* se sirve desde el sitio, así que se ven **igual en todos los dispositivos**. Licencia SIL Open Font License 1.1 (uso web permitido; el archivo de licencia viaja con la fuente; sin nombre reservado declarado). Los archivos originales pesan ~350 KB cada uno (1 487 glifos): se convierten a WOFF2 recortados a latín con acentos, símbolos y moneda (`@`, `$`, `€`, `×`, `→`), unos 20–30 KB cada uno, y se usa `font-display: swap`. **Cuerpo:** San Francisco no se descarga (la licencia de Apple no permite servirla desde el sitio): es la fuente del sistema de Apple y en Windows cae a Segoe UI y en Android a Roboto; no cuesta carga. Sustituye a *Instrument Sans*. *Bebas Neue* y *Bella Fashion* (esta con licencia «solo uso personal») salen del proyecto.
 
 | Estilo | Móvil | Escritorio | Peso | Interlineado | Tracking |
 |---|---|---|---|---|---|
-| Display (portada) | 40 px | 64 px | 800 | 1,05 | −0,02 em |
-| **Título de página (reserva)** | **36 px** | **56 px** | 800 | 1,1 | −0,02 em |
+| Display (portada) | 40 px | 64 px | 700 | 1,05 | −0,02 em |
+| **Título de página (reserva)** | **36 px** | **56 px** | 700 | 1,1 | −0,02 em |
 | Título de sección | 28 px | 36 px | 700 | 1,15 | −0,01 em |
 | **Título de paso (tarjeta)** | **24 px** | **28 px** | 700 | 1,2 | −0,01 em |
 | Subtítulo | 20 px | 22 px | 600 | 1,3 | 0 |
@@ -106,6 +106,7 @@ Ninguna de las dos se descarga: son fuentes que ya traen los dispositivos, así 
 | Pie / aclaración | 12 px | 12 px | 400 | 1,4 | 0,01 em |
 
 - Mínimo 16 px en campos de formulario (evita el zoom automático de iOS).
+- Solo **Display, Título de página, Título de sección y Título de paso** usan Consola Mono (peso 700). Subtítulo, cuerpo, etiqueta, botón y pie usan San Francisco (pesos 400–600).
 - La monoespaciada es ancha: los titulares largos van en caja de oración (no todo mayúsculas) y con `text-wrap: balance`.
 - Los títulos de paso pasan de ~18 px a 24/28 px (petición del dueño: «más grandes»).
 
@@ -204,4 +205,4 @@ Librería actual (Phosphor), peso `bold` para acciones y `regular` para decoraci
 | `--surface`, `--surface-deep` | `cafe-bruma`, `cafe-claro` | |
 | `--border`, `--border-strong` | `borde`, `borde-control` | |
 | `--exito`/`--error`/`--aviso` (+ `-fondo`) | valores de la tabla de estados | |
-| `--font-titulo` (Bebas), `--font-acento` (Bella), `--font-cuerpo` (Instrument) | Consolas / San Francisco | Bella y Bebas se retiran |
+| `--font-titulo` (Bebas), `--font-acento` (Bella), `--font-cuerpo` (Instrument) | Consola Mono / San Francisco | Bella y Bebas se retiran |

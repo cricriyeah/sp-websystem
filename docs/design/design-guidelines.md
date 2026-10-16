@@ -151,7 +151,7 @@ Ningún gesto es el único camino: todo tiene botón.
 
 ### Tipografía
 
-- **Haz** titulares en Consolas, caja de oración, con `text-wrap: balance`.
+- **Haz** titulares en Consola Mono (solo Book y Bold), caja de oración, con `text-wrap: balance`.
 - **Haz** cuerpo en San Francisco (fuente del sistema), mínimo 16 px en campos.
 - **No uses** la mono para párrafos largos ni para cifras de dinero en tablas (ahí van `tabular-nums` de la fuente del cuerpo).
 - **No uses** más de tres tamaños de texto en una tarjeta.
@@ -175,7 +175,7 @@ Ningún gesto es el único camino: todo tiene botón.
 
 | # | Tema | Supuesto actual |
 |---|---|---|
-| 1 | Fuentes | Consolas y San Francisco no se descargan; el aspecto varía por dispositivo. Si se quiere un aspecto idéntico en todos, hay que servir una fuente propia |
+| 1 | Fuentes | Titulares: Consola Mono servida desde el sitio (igual en todos los dispositivos). Cuerpo: San Francisco del sistema (cambia a Segoe UI o Roboto fuera de Apple). Consola Mono solo tiene dos pesos, por eso los titulares son siempre 700 |
 | 2 | Pasos | 3 pasos: Viaje · Tus datos (contacto + detalles) · Pago. Verificar que contacto + detalles no pasen de ~7 campos |
 | 3 | Paquetes de varias noches | Duración fija: el cliente elige el día de inicio y el rango sale del paquete |
 | 4 | Contraste de `borde-control` sobre arena | 3,89:1 (cumple 3:1); si se usa sobre `cafe-bruma` hay que re-medir |
