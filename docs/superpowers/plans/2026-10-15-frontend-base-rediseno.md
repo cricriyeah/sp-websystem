@@ -17,7 +17,8 @@
 - Todo valor visual sale de un token; todo control de una primitiva. *(PFD R3)*
 - Una sola acción principal por paso; su jerarquía vive en la primitiva. *(PFD R1, R5)*
 - Puerta de cada tarea: `npx.cmd tsc --noEmit`, `npx.cmd eslint src tests`, `npm.cmd test`, `npm.cmd run build`, `npm.cmd run guardia`. Un commit por tarea.
-- **No ejecutar `shadcn init`**: reescribe `globals.css` y el skill documenta que rompe las fuentes en Tailwind 4. Se copia el patrón (`cn` + `cva`), no el CLI.
+- **No ejecutar `shadcn init`**: reescribe `globals.css` y el skill documenta que rompe las fuentes en Tailwind 4. Se copia el patrón (`cn` + mapas de variantes puros, sin `cva`), no el CLI.
+- **Medición de peso (Next 16):** `next build` **ya no imprime «First Load JS»** (`upgrading/version-16.md`). Todo «comparar con la línea base» se mide con `next experimental-analyze` (analizador de Turbopack) y, de respaldo, con un script que suma los chunks de cada ruta desde `.next/static/chunks` y `page_client-reference-manifest.js`. Para el chunk de Stripe hay prueba binaria sin navegador: tras `next start`, `curl` de `/es/reservar` y comprobar que ni el HTML ni los chunks iniciales de la ruta contienen `js.stripe.com` ni `@stripe`.
 - Verificación sin abrir navegador (regla del dueño): el dueño mira el sitio en cada PUNTO DEL DUEÑO.
 - **Skills obligatorias al ejecutar este plan (regla del dueño, 2026-10-16):**
   - **Al escribir código** (cualquier tarea que cree o modifique `.ts`/`.tsx`/`.css`/`next.config.ts`): cargar y seguir las skills de Vercel antes de programar — `vercel:react-best-practices` (componentes, hooks, bundle, re-renders), `vercel:nextjs` (App Router, Server/Client Components, errores, imágenes, fuentes), `vercel:next-cache-components` (si la tarea toca caché) y `vercel:shadcn` (primitivas, variantes, tokens). Tras editar varios `.tsx`, pasar la revisión de `vercel:react-best-practices`. Si una skill contradice una restricción de este plan, gana el plan y se anota el motivo en el commit.
@@ -27,40 +28,32 @@
 
 ---
 
-## 0. Enmiendas de la ronda 5 (crítico con skills de Vercel, 2026-10-16)
+## 0. Ronda 5 del crítico (skills de Vercel, 2026-10-16): dónde quedó cada hallazgo
 
-> Auditoría contra `react-best-practices`, `nextjs`, `next-cache-components`, `shadcn`, `vercel-storage` y `verification`, verificada con la doc instalada (Next 16.3.6) y el código. Veredicto: REVISION REQUIRED. **Estas enmiendas mandan sobre el texto de las tareas** donde haya contradicción; C1, S2, S7 y S8 se comprobaron en `node_modules/next/dist/docs/` y en `grep` del código.
+> Auditoría contra `react-best-practices`, `nextjs`, `next-cache-components`, `shadcn`, `vercel-storage` y `verification`, verificada con la doc instalada (Next 16.3.6) y el código. Veredicto: REVISION REQUIRED (1 crítico, 13 significativos, 11 menores). **Todos están aplicados dentro de la tarea que corresponde**; esta tabla solo da la trazabilidad.
 
-### Crítico
-- **C1 · Medición.** Next 16 **ya no imprime «First Load JS»** (`upgrading/version-16.md`). Todo «comparar First Load JS» (Tasks 0.2, 1.1, 1.2.6, 5.5, F6) se mide así: (a) `next experimental-analyze` (analizador de Turbopack); (b) respaldo: script que suma los chunks de cada ruta desde `.next/static/chunks` y `page_client-reference-manifest.js`; (c) prueba binaria para V2 sin navegador: tras `next start`, `curl` de `/es/reservar` y comprobar que el HTML y los chunks iniciales de esa ruta **no** contienen `js.stripe.com` ni `@stripe`. Task 0.2 guarda la tabla del analizador, no la de `next build`.
-
-### Significativos (se aplican en la tarea indicada)
-- **S1 · Task 1.3.** `error.tsx` es cliente y `dictionaries.ts` es `server-only`: no se puede importar el diccionario. Usar `useParams().lang` y un módulo pequeño `lib/errores-textos.ts` (solo es/en de error) o un provider con solo `dict.errores`. Igual en `global-error.tsx`.
-- **S2 · Task 1.3.** Firma real en 16.3.6: `{ error, retry }` (`reset` solo limpia estado sin repedir datos; `unstable_retry` no existe). `global-error.tsx` lleva `<html><body>` y no tiene estilos globales. `[lang]/error.tsx` **no** atrapa fallos de `[lang]/layout.tsx` (p. ej. `getDictionary`): esos caen en `global-error`.
-- **S3 · Tasks 8.0 y 8.4.** `?paso=` con `router.push/replace` repide el RSC y repite las llamadas al backend en cada paso (la página es dinámica). Usar `window.history.pushState/replaceState` (integrado con el router y `useSearchParams`, `single-page-applications.md`) y `popstate`; `router.push` solo para cambios de ruta o idioma.
-- **S4 · Task 1.2.** Añadir `precargarFormularioPago = () => import('…/formulario-pago')` y llamarlo al montar el paso de datos o al acercarse al botón de continuar a pago (regla `bundle-preload`). El esqueleto dura **hasta `onReady` del `PaymentElement`**, con `min-height` medida. Riesgo nuevo: cargar Stripe.js tarde reduce sus señales antifraude; precargar pronto lo mitiga.
-- **S5 · Tasks 1.5 y 5.4.** `autoPlay` anula `preload="metadata"`. `HeroMedia` es Server Component con `<Image>` y una isla cliente `VideoDiferido` que monta el `<video>` tras `load`/idle y solo si no hay `prefers-reduced-motion` ni `saveData`.
-- **S6 · Task 1.5.** Hay **dos** `<img>` crudas: `sede-hero.tsx` y `hub-hero.tsx:15` (LCP de la portada). Ambas pasan a `<Image fill sizes="100vw" preload>`; `guardia` baja en 2. `hub-hero` es `'use client'` solo por un `scrollIntoView`: pasarlo a Server Component con `<a href="#mapa">` estilado con `botonClases` (ya hay `data-scroll-behavior="smooth"`).
-- **S7 · Task 1.5.** En Next 16 `priority` está **deprecado**: usar `preload` (o `fetchPriority="high"`). Donde el plan dice `priority`, léase `preload`.
-- **S8 · Task 1.1.** La lista es `['@phosphor-icons/react', '@phosphor-icons/react/ssr', 'motion/react']` (el código importa `motion/react`, 20 archivos, y `…/ssr`, 5). Sigue bajo `experimental` en 16.3.6. Su beneficio es sobre todo dev, build y cold start; «≈0 en el bundle de producción» no es un fallo.
-- **S9 · F1, tarea nueva 1.8.** `motion` completo viaja en todas las páginas (20 componentes cliente, incluidos `cookie-notice` y `lang-switch` del layout). Pasar a `LazyMotion` + `m` con `domAnimation` y `strict` (`bundle-conditional`). Mismo aspecto; medir con el analizador. Se hace con las skills de Vercel y de movimiento (`apple-design` para no cambiar la física).
-- **S10 · Task 1.7.** El sondeo evalúa **primero** el camino barato sin `cacheComponents`: `fetch(url, { next: { revalidate, tags } })` en las GET del catálogo público de `request()`. Si se evalúa `cacheComponents`, debe listar sus costos: `await params/searchParams` fuera de `<Suspense>` pasa a dinámico y rompe el build en sede, servicio y `/reservar`; activa `<Activity>` en la navegación (las rutas ocultas conservan estado y limpian efectos: Turnstile, `sessionStorage`, `captchaKey`); un `searchParams` solo para `moneda` vuelve dinámica toda la sede.
-- **S11 · Task 5.1.** El reducer compartido no puede ser un solo contexto con el estado de 36 `useState` (re-renderiza todo en cada tecla). Reglas: texto de campos **local al bloque** y se confirma al reducer en `blur` o al avanzar; contextos de state y dispatch separados (o selectores con `useSyncExternalStore`); bloques con `memo`; evaluar `reactCompiler: true` (`reactCompiler.md` en 16.3) **antes** de partir. Esto es cambio de arquitectura del estado de cobro, no «refactor puro»: lleva recorridos manuales en cada commit.
-- **S12 · F3.** Añadir primitivas `Sheet` y `AlertDialog` (hoja «Ver resumen», «Cancelar y liberar mi lugar», `AvisoAccion`, calendario en móvil) sobre `<dialog>` nativo con `showModal()` o Radix/Vaul: trampa de foco, `aria-modal`, Esc, bloqueo de scroll, fondo inerte. `AlertDialog`, no `Dialog`, para confirmación destructiva (skill `shadcn`). No improvisar tres variantes sueltas.
-- **S13 · Task 8.3b.** `role="alert"` más enviar el foco a la acción principal hace que el lector anuncie doble y se salte el mensaje. Elegir una: foco queda donde está y manda `role="alert"`, o se enfoca el **contenedor** (`tabIndex={-1}`), no la acción.
-
-### Menores
-- **M1.** Contradicción `cva`: la restricción global dice «se copia el patrón (`cn` + `cva`)» y la arquitectura dice «sin `cva`». Vale la segunda: `cn` + mapas puros.
-- **M2.** `button`, `card`, `badge` y `section-shell` son Server-compatibles (sin `'use client'`, sin `motion`); `Despliegue` y `Field` son islas cliente. En React 19, `ref` va como prop (sin `forwardRef`).
-- **M3.** `Field` usa `useId()` + `aria-describedby` para error y ayuda. `Button cargando` usa `aria-busy`/`aria-disabled`, no `disabled`, para no perder el foco.
-- **M4.** Task 1.6: `preconnect(url, { crossOrigin: 'anonymous' })` (la conexión es de `fetch` CORS) y solo en `/reservar`, `/traslados` y `/servicio`, no en la portada.
-- **M5.** `request()` manda `Content-Type: application/json` incluso en GET, lo que fuerza preflight en cada `getCupo`/`getCupoRango` cross-origin. Enviarlo solo con body y pedir `Access-Control-Max-Age` al backend (pesa en el calendario completo de 8.5).
-- **M6.** Fuentes: si los titulares son siempre 700, Book no se precarga (`preload: false`) o no se usa en titulares; revisar `adjustFontFallback` porque el fallback monoespaciado de sistema no iguala las métricas de Consola Mono (CLS).
-- **M7.** `reservar`, `sede`, `servicio` y la portada hacen `await getDictionary` y `await searchParams` en serie con la API (`async-parallel`): paralelizar. `loading.tsx` reemplaza la página entera: añadir `<Suspense>` sobre las secciones que dependen de la API (hoy hay 0).
-- **M8.** Verificación sin navegador de errores y recursos: `next start` con `NEXT_PUBLIC_API_URL` a un puerto muerto y `curl` al HTML; `curl` de headers/CSP y de `<link rel=preload>` del héroe. Sustituye al «no se simula un fallo» de 1.3.
-- **M9.** El borrador de `sessionStorage` (8.0) se restaura con `useSyncExternalStore` o el patrón `useLayoutEffect` de `checkout-view.tsx:104–139`, para evitar mismatch de hidratación.
-- **M10.** 8.4: la línea de progreso es un `<ol>` con `aria-current="step"`, no `role="progressbar"`; el objetivo táctil de `min-h-10` (40 px) sube a 44/48 px como el resto del plan.
-- **M11.** Anotar que `media-src` y el video no pasan por `next/image`; `default-src 'self'` ya cubre el video local. La decisión de R2 no cambia (Vercel Blob queda solo como alternativa documentada).
+| Hallazgo | Dónde quedó |
+|---|---|
+| C1 · «First Load JS» ya no existe en Next 16 | Restricciones globales (medición), Tasks 0.2, 1.1, 1.2, 5.5, F6 |
+| S1, S2 · `error.tsx`: sin diccionario cliente; firma `{ error, retry }` | Task 1.3 |
+| S3 · `?paso=` con `history.pushState`, no `router.push` | Task 8.0 Paso 2 |
+| S4 · precargar el formulario de Stripe y esqueleto hasta `onReady` | Task 1.2 Pasos 4–5 |
+| S5, S6, S7 · héroe: isla de video, dos `<img>`, `preload` en vez de `priority` | Tasks 1.5 y 5.4 |
+| S8 · `optimizePackageImports` con los especificadores reales | Task 1.1 |
+| S9 · `LazyMotion` | Task 1.8 (nueva) |
+| S10 · caché: primero `next.revalidate`/`tags`, costos de `cacheComponents` | V7 y Task 1.7 |
+| S11 · estado de F5 sin re-render global | Task 5.1 Paso 2 |
+| S12 · `Sheet` y `AlertDialog` | Task 3.5 (nueva) |
+| S13 · foco de `AvisoAccion` | Task 8.3b Paso 3 |
+| M1 · `cva` | Restricciones globales |
+| M2, M3 · primitivas servidor/cliente, `useId`, `aria-busy` | Task 3.3 |
+| M4, M5 · preconnect con CORS, `Content-Type` en GET | Task 1.6 |
+| M6 · fuentes (Book, métricas de fallback) | Task 7.2 Paso 3 |
+| M7 · `Suspense` y paralelizar `await` | Task 1.4 |
+| M8 · verificar errores y recursos con `curl` | Tasks 1.3 y 1.5 |
+| M9 · hidratación del borrador | Task 8.0 Paso 1 |
+| M10 · `<ol>` con `aria-current`, objetivo táctil de 44 px | Tasks 8.4 y 7.3 |
+| M11 · `media-src` y video fuera de `next/image` | V9 |
 
 ---
 
@@ -76,15 +69,15 @@
 ### Qué aporta solo Vercel (hallazgos medidos)
 | # | Hallazgo medido | Regla | Impacto |
 |---|---|---|---|
-| V1 | 40 archivos importan `@phosphor-icons/react` por el barril y `next.config.ts` no tiene `optimizePackageImports` | `bundle-barrel-imports` (CRÍTICA) | −200 a −800 ms de arranque por import en frío; menos bundle |
+| V1 | 40 archivos importan `@phosphor-icons/react` por el barril y `next.config.ts` no tiene `optimizePackageImports` | `bundle-barrel-imports` (CRÍTICA) | Mejora arranque en dev, build y cold start; en el bundle de producción puede quedar en ≈0 (el tree-shaking ya recorta), y eso no es un fallo |
 | V2 | `stripe-panel.tsx` (611 líneas: Stripe + Elements + resumen + portal) se importa estático en las 3 vistas de compra | `bundle-dynamic-imports` (CRÍTICA) | Hay que **partir el módulo primero** (Task 1.2); después Stripe sale del chunk inicial y solo se baja al llegar a pagar. Los calendarios no se difieren (son del primer paso visible) |
 | V3 | Se pasa el diccionario completo (`dict`, 55,8 KB en es) a 5 componentes cliente; solo usan `checkout` (18 KB), `pedido`, `traslados`, `feedback`, `continuar` | `server-serialization` (ALTA) | Ahorro modesto (~20 KB por idioma): Task 5.5, después de partir las vistas |
 | V4 | 0 `<Suspense>`, solo 2 `loading.tsx` (reservar, traslados) y **ningún** `error.tsx`/`global-error.tsx` | `async-suspense-boundaries` (ALTA) + guía de errores de `nextjs` | Un fallo de la API tumba la página sin diseño |
 | V5 | Video de 83,5 MB servido desde `public/` (`videohero.webm`), también referenciado por 2 sedes | `rendering-*` + `next/image` | Mayor riesgo de lanzamiento |
-| V6 | 1 `<img>` cruda en `sede-hero.tsx:67` | guía `nextjs/image` | LCP y tamaños |
-| V7 | `request()` en `lib/api.ts` hace `fetch` sin política de caché | `next-cache-components` (`use cache`, `cacheLife`, `cacheTag`) | Oportunidad solo para el catálogo público; **nunca** cupo ni cotización. Entra como sondeo (spike) con decisión, no como compromiso |
+| V6 | 2 `<img>` crudas: `sede-hero.tsx:67` y `hub-hero.tsx:15` (LCP de la portada) | guía `nextjs/image` | LCP y tamaños |
+| V7 | `request()` en `lib/api.ts` hace `fetch` sin política de caché | `next-cache-components` (`use cache`, `cacheLife`, `cacheTag`) | Oportunidad solo para el catálogo público; **nunca** cupo ni cotización. Entra como sondeo (spike) con decisión, no como compromiso: primero el camino barato `fetch(url, { next: { revalidate, tags } })`; `cacheComponents` solo si compensa sus costos (Task 1.7) |
 | V8 | Fuente `Bella Fashion` con licencia «personal use only» (aviso en `fonts/LICENCIAS.md`); `Bebas Neue` y `Instrument Sans` | — | Resuelto por el sistema de diseño: titulares en **Consola Mono** (SIL OFL, servida desde el sitio) y cuerpo en la **fuente del sistema** (San Francisco en Apple); salen Bella, Bebas e Instrument (F7). Menos descargas de fuentes |
-| V9 | CSP `img-src 'self' data: blob:` | `nextjs` (imágenes remotas) | Si las fotos pasan a R2 hay que añadir el dominio a `img-src`/`media-src` y a `images.remotePatterns` |
+| V9 | CSP `img-src 'self' data: blob:` | `nextjs` (imágenes remotas) | Si las fotos pasan a R2 hay que añadir el dominio a `img-src`/`media-src` y a `images.remotePatterns` (el `<video>` no pasa por `next/image`; `default-src 'self'` ya cubre el video local) |
 
 ### Qué aporta solo PFD (Vercel no lo cubre)
 | # | Aporte | Por qué importa |
@@ -124,7 +117,9 @@
 | `src/components/checkout/pago/{resumen-pedido,tarjeta-como-pagas,nota-seguridad,tipos,formulario-pago,pago-diferido}.tsx` | `stripe-panel.tsx` partido: resumen y tarjeta «Cómo pagas» sin Stripe; solo `formulario-pago` importa Stripe | F1 |
 | `src/lib/tokens-pago.ts` | Una sola fuente de los valores que Stripe Elements necesita en concreto (hex, radio), con prueba que la compara con `globals.css` | F2 |
 | `src/components/ui/variantes.ts` | Mapas de variantes **puros, sin ningún import** (el runner los compila y los prueba sin DOM ni paquetes) | F3 |
-| `src/components/ui/{button,input,field,card,badge}.tsx` | Primitivas | F3 |
+| `src/components/ui/{button,input,field,card,badge}.tsx` | Primitivas (`button`/`card`/`badge` servibles desde servidor; `field` isla cliente) | F3 |
+| `src/components/ui/{sheet,alert-dialog}.tsx` | Hoja y confirmación destructiva accesibles | F3 |
+| `src/components/ui/video-diferido.tsx` | Isla cliente que monta el `<video>` tras `load`/idle | F1 |
 | `src/components/ui/hero-media.tsx`, `section-shell.tsx` | Héroe y sección únicos | F5 |
 | `src/components/checkout/bloques/{bloque-viaje,bloque-extras,bloque-contacto,bloque-recogida,bloque-pago}.tsx` | Un archivo por **bloque** de contenido, extraídos de las vistas gigantes (F8 solo los reagrupa en 3 pasos) | F5 |
 | `tests/variantes.test.cjs` | Prueba de las variantes | F3 |
@@ -281,7 +276,7 @@ Las regex de `color-literal` y `capas-ui` son delicadas: **la prueba del Paso 1 
 
 **Files:** Create `docs/superpowers/plans/2026-10-15-frontend-base-linea-base.md`.
 
-- [ ] **Paso 1:** `npm.cmd run build`; copiar a ese archivo la tabla «Route (app) / Size / First Load JS» tal cual la imprime Next.
+- [ ] **Paso 1:** `npm.cmd run build`; correr `npx.cmd next experimental-analyze` (Next 16 ya no imprime «First Load JS»; ver Restricciones globales) y copiar a ese archivo el tamaño de JS por ruta de `/es`, `/es/sede/[slug]`, `/es/servicio/…`, `/es/reservar` y `/es/traslados`. Guardar también el script de respaldo que suma los chunks desde `.next/static/chunks`.
 - [ ] **Paso 2:** añadir `du -sh public/videos public/photos` y el tamaño de `en.json`/`es.json`.
 - [ ] **Paso 3: commit** `docs(frontend): línea base de carga antes de la optimización`.
 
@@ -300,12 +295,12 @@ Las regex de `color-literal` y `capas-ui` son delicadas: **la prueba del Paso 1 
 
 ```ts
 experimental: {
-  optimizePackageImports: ['@phosphor-icons/react', 'motion'],
+  optimizePackageImports: ['@phosphor-icons/react', '@phosphor-icons/react/ssr', 'motion/react'],
 },
 ```
 
 (ajustar la ubicación si en 16.3 ya no es experimental).
-- [ ] **Paso 3:** `npm.cmd run build`; comparar First Load JS con la línea base; anotar el cambio en el archivo de línea base.
+- [ ] **Paso 3:** `npm.cmd run build`; medir con el analizador y anotar el cambio en el archivo de línea base. El beneficio es sobre todo arranque en dev, tiempo de build y cold start; un cambio ≈0 en el bundle de producción no es un fallo. Los especificadores reales del código son `motion/react` (20 archivos) y `@phosphor-icons/react/ssr` (5).
 - [ ] **Paso 4: commit** `perf(frontend): importar iconos y motion por módulo`.
 
 ### Task 1.2: Partir `stripe-panel.tsx` para poder diferir solo el formulario de tarjeta (V2)
@@ -333,9 +328,9 @@ export const FormularioPagoDiferido = dynamic(
 );
 ```
 
-Medir la altura real del formulario con su `PaymentElement` y poner esa altura en el *fallback* (sin salto de layout: R4).
-- [ ] **Paso 5:** en las 3 vistas, usar `FormularioPagoDiferido` en lugar de `FormularioPago`. `StripePanel`, `ref`, portal y `key={captchaKey}` no se tocan.
-- [ ] **Paso 6:** `build`; comparar First Load JS de `/reservar` y `/traslados` con la línea base: debe bajar el chunk inicial (el de Stripe sale).
+Medir la altura real del formulario con su `PaymentElement` y poner esa altura en el *fallback* (sin salto de layout: R4). El esqueleto dura **hasta `onReady` del `PaymentElement`**, no solo hasta que baja el chunk (si no, hay salto cuando aparece el iframe).
+- [ ] **Paso 5:** en las 3 vistas, usar `FormularioPagoDiferido` en lugar de `FormularioPago`. `StripePanel`, `ref`, portal y `key={captchaKey}` no se tocan. **Precarga (`bundle-preload`):** `pago-diferido.tsx` exporta también `precargarFormularioPago = () => import('@/components/checkout/pago/formulario-pago')`; se llama al montar el paso de datos o «Cómo pagas», o al acercarse al botón de continuar a pago, para que el chunk y `js.stripe.com` ya estén listos al crear la orden. Cargar Stripe.js tarde además reduce sus señales antifraude.
+- [ ] **Paso 6:** `build`, `next start` y la prueba binaria de Restricciones globales (`curl` de `/es/reservar` y `/es/traslados` sin `js.stripe.com` ni `@stripe` en HTML ni chunks iniciales); además medir con el analizador contra la línea base: el chunk inicial de esas rutas debe bajar.
 - [ ] **Paso 7: PUNTO DEL DUEÑO** — recorrer con tarjeta de prueba de Stripe los **cuatro** caminos: servicio suelto, paquete de una empresa, paquete cruza-empresa (incluido el rechazo tras retención del primer pago) y traslados; y recargar a media compra. No se avanza sin su luz verde.
 - [ ] **Paso 8: commit** `refactor(checkout): stripe-panel partido; solo el formulario de tarjeta carga Stripe, y bajo demanda`.
 
@@ -345,22 +340,22 @@ Medir la altura real del formulario con su `PaymentElement` y poner esa altura e
 
 **Files:** Create `src/app/[lang]/error.tsx`, `src/app/global-error.tsx`.
 
-- [ ] **Paso 1:** leer la guía `nextjs` de manejo de errores y `node_modules/next/dist/docs/` para la firma de `error.tsx` en 16.3 (`error`, `unstable_retry` o `reset`).
-- [ ] **Paso 2:** `error.tsx` cliente con el mensaje del diccionario `dict.errores` (añadir las claves a `es.json` y `en.json`; reiniciar `npm run dev` porque Turbopack cachea los diccionarios), botón «Reintentar» y enlace a la portada. Registrar el error con su `digest` en consola.
-- [ ] **Paso 3:** `global-error.tsx` mínimo (incluye `<html>`/`<body>`), con texto estático bilingüe.
-- [ ] **Paso 4:** verificar por tipos y `build`. No se simula un fallo en producción.
+- [ ] **Paso 1:** leer la guía `nextjs` de manejo de errores y `node_modules/next/dist/docs/` para la firma de `error.tsx` en 16.3.6: **`{ error, retry }`** (`retry()` vuelve a pedir los datos; `reset` solo limpia el estado sin repedir; `unstable_retry` no existe). `[lang]/error.tsx` **no** atrapa fallos de `[lang]/layout.tsx` (p. ej. `getDictionary`): esos caen en `global-error.tsx`.
+- [ ] **Paso 2:** `error.tsx` es Client Component y `dictionaries.ts` es `server-only`: **no puede importar el diccionario** (y traerlo al cliente metería ~56 KB por idioma). Toma el idioma con `useParams().lang` y los textos de un módulo pequeño `src/lib/errores-textos.ts` (solo es/en de error). Botón «Reintentar» que llama `retry()` y enlace a la portada. Registrar el error con su `digest` en consola.
+- [ ] **Paso 3:** `global-error.tsx` mínimo (incluye `<html>`/`<body>` y no tiene estilos globales), con texto estático bilingüe de `errores-textos.ts` y `retry()`.
+- [ ] **Paso 4:** verificar por tipos y `build`; luego **sin navegador**: `next start` con `NEXT_PUBLIC_API_URL` apuntando a un puerto muerto y `curl` al HTML de `/es/reservar` para ver el error con diseño. No se simula un fallo en producción.
 - [ ] **Paso 5: commit** `feat(frontend): páginas de error con diseño propio`.
 
 ### Task 1.4: Esqueletos de carga en las rutas con datos (V4)
 
 **Files:** Create `loading.tsx` en `src/app/[lang]/sede/[slug]/`, `servicio/[empresa]/[servicio]/` y `catalogo/`.
 
-- [ ] **Paso 1:** para cada ruta, leer su `page.tsx` y copiar la estructura de la página con `Skeleton`, al estilo de `reservar/loading.tsx`.
+- [ ] **Paso 1:** para cada ruta, leer su `page.tsx` y copiar la estructura de la página con `Skeleton`, al estilo de `reservar/loading.tsx`. Revisar también la cascada (`async-parallel`): `getDictionary`, `await searchParams` y las llamadas a la API se lanzan en paralelo (`Promise.all`) donde no dependen entre sí, y las secciones que dependen de la API van envueltas en `<Suspense>` (hoy hay 0), de modo que `loading.tsx` no reemplace la página entera.
 - [ ] **Paso 2:** `build`. **Paso 3: commit** `feat(frontend): esqueletos de carga en sede, servicio y catálogo`.
 
 ### Task 1.5: Héroe — imagen inmediata y video ligero (V5, V6, PFD R2)
 
-**Files:** Modify `src/components/sede-hero.tsx` (el `<video>` con `poster` y la `<img>` de la línea ~67); Replace `public/videos/videohero.webm`. (El `Hero` viejo de la portada ya se eliminó: nadie lo montaba. `hub-hero.tsx` no usa video.)
+**Files:** Create `src/components/ui/video-diferido.tsx`; Modify `src/components/sede-hero.tsx` (el `<video>` y la `<img>` de la línea ~67) y `src/components/hub-hero.tsx` (la `<img>` de la línea ~15); Replace `public/videos/videohero.webm`. (El `Hero` viejo de la portada ya se eliminó. `hub-hero.tsx` no usa video.)
 
 - [ ] **Paso 1: comprimir el video** (hay `ffmpeg` instalado):
 
@@ -371,19 +366,28 @@ ls -la public/videos/
 
 Objetivo: ≤ 8 MB. Si se ve mal, subir calidad hasta que el dueño lo apruebe (PUNTO DEL DUEÑO: mirar el video). Añadir también una versión `.mp4` (H.264) como segunda `<source>` solo si hay navegadores objetivo sin VP9.
 - [ ] **Paso 2:** reemplazar el archivo en las rutas de `sedes-cuerpo.ts` (2 referencias).
-- [ ] **Paso 3:** en `sede-hero.tsx` añadir `preload="metadata"` al `<video>`; el `poster` ya existe. Asegurar que la imagen del `poster` se sirva con `next/image` `priority` como capa inferior, de modo que sea el LCP real; el video se funde encima al disparar `canplay`. Mantener `prefers-reduced-motion`: sin video, solo imagen.
-- [ ] **Paso 4:** en `sede-hero.tsx:67` reemplazar `<img>` por `<Image fill sizes="100vw" priority alt="" className="object-cover" />`.
-- [ ] **Paso 5:** `npm.cmd run guardia -- ` (la regla `img-cruda` baja en 1) y actualizar la línea base con `node scripts/guardia-estilos.cjs --escribir`.
-- [ ] **Paso 6: commit** `perf(frontend): video de portada comprimido, imagen inmediata y next/image en la sede`.
+- [ ] **Paso 3:** en `sede-hero.tsx` la imagen del héroe se sirve con `next/image` y **`preload`** (en Next 16 `priority` está deprecado; `image.md`) como capa inferior: es el LCP real. El `<video>` ya no va en el HTML inicial: `ui/video-diferido.tsx` es una isla cliente que lo monta tras `load`/idle **solo si** no hay `prefers-reduced-motion` ni `saveData`, y lo funde sobre la imagen al disparar `canplay`. (`autoPlay` anula `preload="metadata"`, y el CSS no puede detener el autoplay por `reduce`.) Sin video: solo imagen.
+- [ ] **Paso 4:** en `sede-hero.tsx:67` reemplazar `<img>` por `<Image fill sizes="100vw" preload alt="" className="object-cover" />`. Lo mismo en `hub-hero.tsx:~15` (`yellowtail-pelicanos-bahia.webp`, LCP de la portada). `hub-hero.tsx` es `'use client'` solo por un `onClick` que hace `scrollIntoView`: pasarlo a Server Component con `<a href="#mapa">` estilado con `botonClases` (ya existe `data-scroll-behavior="smooth"` en `<html>`).
+- [ ] **Paso 5:** `npm.cmd run guardia -- ` (la regla `img-cruda` baja en 2) y actualizar la línea base con `node scripts/guardia-estilos.cjs --escribir`.
+- [ ] **Paso 5b (sin navegador):** `next start` y `curl` de `/es` y de una sede: el `<link rel="preload" as="image">` del héroe está en el HTML y no hay `<video>` en el HTML inicial.
+- [ ] **Paso 6: commit** `perf(frontend): video de portada comprimido, imagen inmediata y next/image en la portada y la sede`.
 - **Después, fuera de este plan:** mover el video a R2 (dominio en `img-src`/`media-src` de la CSP y en `images.remotePatterns`, hallazgo V9).
 
-### Task 1.6: Pre-conexión a la API (opcional, de bajo riesgo)
+### Task 1.6: Pre-conexión a la API y CORS (opcional, de bajo riesgo)
 
-- [ ] En `src/app/[lang]/layout.tsx` añadir `import { preconnect } from 'react-dom'` y llamar `preconnect(process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')` al inicio de `RootLayout` (regla `rendering-resource-hints`). Commit `perf(frontend): preconexión a la API`.
+- [ ] En `src/app/[lang]/layout.tsx` añadir `import { preconnect } from 'react-dom'` y llamar `preconnect(process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000', { crossOrigin: 'anonymous' })` (la conexión es de `fetch` CORS; sin `crossOrigin` el navegador abre otra) **solo en los layouts de `/reservar`, `/traslados` y `/servicio`**, no en la portada (regla `rendering-resource-hints`). Además, `request()` de `lib/api.ts` manda `Content-Type: application/json` incluso en GET, lo que fuerza un preflight en cada `getCupo`/`getCupoRango` cross-origin: enviarlo solo cuando hay body y pedir `Access-Control-Max-Age` al backend (pesa en el calendario completo de 8.5). Commit `perf(frontend): preconexión a la API`.
 
 ### Task 1.7: Sondeo de Cache Components (V7) — decisión, no código en producción
 
-- [ ] Leer `node_modules/next/dist/docs/` sobre `cacheComponents` y `use cache` en 16.3. Probar en una rama aparte con `getServicioDetalle`/`getPaqueteDetalle` y `cacheLife('minutes')`. Escribir en el archivo de línea base: qué ruta mejora, cuánto, y cómo se invalida un precio editado en el backoffice. **Sin decisión del dueño no se activa.** Cupo, cotización y pagos quedan fuera siempre.
+- [ ] Leer `node_modules/next/dist/docs/` sobre `cacheComponents` y `use cache` en 16.3. **Primero** evaluar el camino barato sin activar `cacheComponents`: `fetch(url, { next: { revalidate, tags } })` en las GET del catálogo público dentro de `request()`. Solo si no basta, probar `cacheComponents` en una rama aparte con `getServicioDetalle`/`getPaqueteDetalle` y `cacheLife('minutes')`, **listando sus costos**: todo `await params/searchParams` fuera de `<Suspense>` pasa a dinámico y rompe el build en sede, servicio y `/reservar`; activa `<Activity>` en la navegación (las rutas ocultas conservan estado y limpian efectos: Turnstile, `sessionStorage`, `captchaKey`); un `searchParams` solo para `moneda` vuelve dinámica toda la sede. Escribir en el archivo de línea base: qué ruta mejora, cuánto, y cómo se invalida un precio editado en el backoffice. **Sin decisión del dueño no se activa.** Cupo, cotización y pagos quedan fuera siempre.
+
+### Task 1.8: `LazyMotion` en lugar de `motion` completo
+
+**Files:** los ~20 componentes que importan de `motion/react` (incluidos `cookie-notice.tsx` y `lang-switch.tsx`, que están en el layout y viajan en todas las páginas); Create `src/components/ui/motion-provider.tsx`.
+
+- [ ] **Paso 1:** cargar `vercel:react-best-practices` (`bundle-conditional`, `bundle-dynamic-imports`) y `apple-design` (para no cambiar la física de los resortes). `motion-provider.tsx`: `LazyMotion` con `features={domAnimation}` y `strict`, montado en el layout.
+- [ ] **Paso 2:** sustituir `motion.*` por `m.*` en cada componente, sin tocar valores de animación. Si alguno usa `layout` o `drag`, cargar `domMax` solo ahí.
+- [ ] **Paso 3:** `tsc`, `eslint`, `npm test`, `build`; medir con el analizador contra la línea base. El aspecto no cambia. **Paso 4: commit** `perf(frontend): LazyMotion con domAnimation`.
 
 ---
 
@@ -544,9 +548,9 @@ export function botonClases({ variante = 'principal', tamano = 'md' }: { variant
 **Files:** Create `src/components/ui/{button,input,field,card,badge}.tsx`.
 
 **Interfaces — Produces:**
-- `Button(props: ButtonHTMLAttributes & BotonVariantes & { conFlecha?: boolean; cargando?: boolean })`, siempre `type="button"` salvo que se indique `type="submit"`.
+- `Button(props: ButtonHTMLAttributes & BotonVariantes & { conFlecha?: boolean; cargando?: boolean })`, siempre `type="button"` salvo que se indique `type="submit"`. `cargando` usa `aria-busy` y `aria-disabled` (no `disabled`, para no perder el foco). Sin `'use client'` ni `motion`: servible desde servidor. En React 19 `ref` es una prop normal (sin `forwardRef`).
 - `Input(props: InputHTMLAttributes & { invalido?: boolean })`, con `aria-invalid`.
-- `Field({ etiqueta, error, ayuda, id, children })`: etiqueta, control y `ErrorDeCampo` (reutiliza el existente con `Despliegue`).
+- `Field({ etiqueta, error, ayuda, children })`: genera el `id` con `useId()` y enlaza error y ayuda con `aria-describedby`; etiqueta, control y `ErrorDeCampo` (reutiliza el existente con `Despliegue`). Es isla cliente. `Card` y `Badge` también servibles desde servidor.
 - `Card`/`Badge`: contenedores con variantes (`plana | elevada`, `exito | aviso | error | neutro`).
 
 - [ ] Por componente: escribir, usar `cn` y las variantes; `Input` usa `CAJA_CAMPO`/`CAJA_CAMPO_ERROR` de `ui/caja-campo` (movidos en Task 3.0; **nunca** de `checkout/estilos.ts`, que violaría la capa `ui`). `Card` usa `bg-superficie` y `rounded-card`; `Badge` tiene las variantes de actividad `mar`, `ciudad` y `outside` (fondo `*-claro`, texto del tono oscuro, siempre con icono) y las de estado `exito`, `error`, `aviso` e `info`.
@@ -558,6 +562,15 @@ export function botonClases({ variante = 'principal', tamano = 'md' }: { variant
 ### Task 3.4: Absorber lo ya existente
 
 - [ ] `BotonPaso` pasa a ser un envoltorio de `Button variante="principal"`; `AccionTexto` y `EtiquetaModificar` usan `botonClases({ variante: 'texto' | 'acento' })`. Los nombres se conservan para no tocar los llamadores. Commit `refactor(checkout): BotonPaso y AccionTexto sobre la primitiva Button`.
+
+### Task 3.5: `Sheet` y `AlertDialog` accesibles
+
+> Las Tasks 8.3b, 8.4 y 8.5 usan una hoja («Ver resumen»), una confirmación destructiva («Cancelar y liberar mi lugar») y el calendario en móvil. La skill `shadcn` pide `AlertDialog` (no `Dialog`) para confirmación destructiva y prohíbe el `div` crudo donde existe primitiva. Se construyen una vez, aquí, no tres veces sueltas.
+
+**Files:** Create `src/components/ui/{sheet,alert-dialog}.tsx`.
+
+- [ ] Sobre `<dialog>` nativo con `showModal()` (o Radix/Vaul si se justifica con el analizador): trampa de foco, `aria-modal`, Esc, bloqueo de scroll, fondo inerte, foco que regresa al disparador. Estilos con tokens (`--radius-sheet`, `--shadow-n2` desde F7). Cargar `design-taste-frontend` antes de diseñar su forma. Variantes puras en `variantes.ts` con su prueba.
+- [ ] Probar en una sola pantalla de bajo riesgo antes de usarlas en F8. PUNTO DEL DUEÑO. Commit `feat(ui): Sheet y AlertDialog accesibles`.
 
 ---
 
@@ -600,7 +613,7 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 **Files:** Create `src/components/checkout/bloques/{bloque-viaje,bloque-extras,bloque-contacto,bloque-recogida,bloque-pago}.tsx`; Modify `checkout-view.tsx`.
 
 - [ ] **Paso 1:** leer el archivo completo y listar por paso el estado que posee y el que comparte. Dibujar el mapa de estado en el commit.
-- [ ] **Paso 2:** el estado compartido sube a un *reducer* (el patrón ya existe en `lib/pedido-estado.ts` + `use-pedido-estado.ts` para paquetes); el estado local de un paso baja a su componente. Regla `rerender-no-inline-components`: ningún componente se define dentro de otro.
+- [ ] **Paso 2:** el estado compartido sube a un *reducer* (el patrón ya existe en `lib/pedido-estado.ts` + `use-pedido-estado.ts` para paquetes); el estado local de un paso baja a su componente. **Reparto del estado (evita re-renderizar todo en cada tecla):** el texto de los campos es **local al bloque** y se confirma al reducer en `blur` o al avanzar; el contexto de *state* y el de *dispatch* van separados (o selectores con `useSyncExternalStore`); los bloques van con `memo`; antes de partir, evaluar `reactCompiler: true` (`reactCompiler.md` en 16.3; hoy hay 19 `useMemo/useCallback` y 33 `useEffect`). Reglas `rerender-defer-reads`, `rerender-memo`, `rerender-derived-state-no-effect` y `rerender-no-inline-components`. Esto es un cambio de arquitectura del estado de cobro, no un «refactor puro»: pasa por la lista de recorridos manuales en cada commit.
 - [ ] **Paso 3:** extraer un **bloque** por commit en este orden: pago, extras (hoy «detalles»), contacto, recogida (solo traslados), viaje; los 4 pasos actuales quedan como composición fina de bloques. Así F8 solo reagrupa los bloques en tres pasos, sin volver a partir las vistas. Tras cada extracción: `tsc`, `eslint`, `npm test`, `build`, `guardia`.
 - [ ] **Paso 4:** PUNTO DEL DUEÑO tras cada paso extraído (recorrer el servicio suelto completo hasta el pago de prueba).
 
@@ -616,7 +629,7 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 
 **Files:** Create `src/components/ui/hero-media.tsx`, `section-shell.tsx`; Modify `hub-hero.tsx`, `sede-hero.tsx` y las secciones about/season/included/license/colaboradores/gallery.
 
-- [ ] `HeroMedia({ imagen, video, alt, prioridad })` encapsula imagen inmediata + video diferido + degradado (el patrón de la Task 1.5). Los dos héroes (`hub-hero`, `sede-hero`) lo usan.
+- [ ] `HeroMedia({ imagen, video, alt, prioridad })` es un **Server Component**: `<Image preload>` + degradado, más la isla cliente `ui/video-diferido.tsx` de la Task 1.5 (el patrón completo vive allí). Los dos héroes (`hub-hero`, `sede-hero`) lo usan.
 - [ ] `SectionShell({ fondo: 'papel' | 'bruma' | 'bruma-profunda', titulo, regla })` encapsula el ritmo de secciones (la «paleta v3» solo admite esos tres fondos).
 - [ ] Un héroe por commit; PUNTO DEL DUEÑO al terminar (portada, sede, servicio).
 
@@ -624,7 +637,7 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 
 > Movida desde F1 por el crítico: con la vista aún entera, `dict` se pasa a sub-componentes (`checkout-view.tsx:1188` y `:1398`; `AvisoCargos`, `EncabezadoPago`, `PorQueVariosPagos` en `pedido-paquete.tsx`), y recortar el tipo se vuelve una cascada de ~10 archivos para ~20 KB. Después de F5, cada paso recibe props mínimas y el recorte es natural.
 
-- [ ] Para cada paso extraído, tipar `dict` con `Pick<Dictionary, 'checkout' | …>` según lo que use; que `tsc` dé la lista. Medir con `build`; si el ahorro es < 10 KB, descartar la tarea y anotarlo. Commit `perf(checkout): cada paso recibe solo las secciones del diccionario que usa`.
+- [ ] Para cada paso extraído, tipar `dict` con `Pick<Dictionary, 'checkout' | …>` según lo que use; que `tsc` dé la lista. Medir con el analizador; si el ahorro es < 10 KB, descartar la tarea y anotarlo. Commit `perf(checkout): cada paso recibe solo las secciones del diccionario que usa`.
 
 ---
 
@@ -633,7 +646,7 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 - [ ] `guardia`: `boton-crudo`, `input-crudo`, `img-cruda`, `paleta-cruda` y `capas-ui` en **0 salvo los exentos listados con motivo** en `EXENTOS` (`globals.css`, `opengraph-image.tsx`, `lang-switch.tsx`, `tokens-pago.ts`); umbral duro. Cualquier exento nuevo exige un motivo escrito en el código.
 - [ ] Script `"verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:guardia && npm run guardia && next build"` en `package.json`.
 - [ ] Actualizar `frontend/CLAUDE.md`: dónde viven los tokens y las primitivas, la regla «nada crudo», cómo añadir una variante y cómo correr `verificar`.
-- [ ] Línea base final de carga en el archivo de F0. Commit `docs(frontend): base cerrada`.
+- [ ] Línea base final de carga en el archivo de F0 (medida con el analizador, igual que la inicial). Commit `docs(frontend): base cerrada`.
 
 ---
 
@@ -664,7 +677,7 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 - [ ] **Paso 1: colores** (valores de `design.md`): `--accent`/`--action` → café `#7C3B02` (texto sobre acción `#FFFFFF`, 8,46:1); `--foreground` → `#1F1A14`; **`--background` → arena `#FBF7F0`** (las superficies ya son blancas por F2.4); bordes `#D9C9B4` (decorativo) y `#8A7A66` (controles, 4,15:1); estados con sus parejas; familias `azul`, `coral`, `verde` con `hondo`, `profundo`, `medio`, `claro` y `bruma`; **`--ring` → `azul` `#1B607F`** (foco). Comprobar el contraste de cada par antes del commit. `--amber`, `--indigo` y `--yellow` salen; `--hero-ink` se queda.
 - [ ] **Paso 2: forma** — `--radius-control: 12px`, `--radius-campo: 12px`, `--radius-card: 16px`, `--radius-sheet: 24px` (las tarjetas ya usan `rounded-card` desde F3/F4); chips y días del calendario en `9999px`.
 - [ ] **Paso 3: fuentes — lista cerrada de lo que se toca** (hallazgo del crítico):
-  - `layout.tsx`: quitar `Instrument_Sans`, Bebas Neue y Bella Fashion; añadir `localFont` con los dos `.woff2` de Consola Mono (`display: 'swap'`, `variable: '--font-titulo'`, pesos 400 y 700, `fallback` = la pila monoespaciada de `design.md`).
+  - `layout.tsx`: quitar `Instrument_Sans`, Bebas Neue y Bella Fashion; añadir `localFont` con los dos `.woff2` de Consola Mono (`display: 'swap'`, `variable: '--font-titulo'`, pesos 400 y 700, `fallback` = la pila monoespaciada de `design.md`). Si los titulares son siempre 700, Book no se precarga (`preload: false`) o no se usa en titulares. Un fallback monoespaciado de sistema no iguala las métricas de Consola Mono: revisar `adjustFontFallback` y medir el CLS.
   - `globals.css` `@theme inline` (líneas ~110-112): borrar `--font-sans: var(--font-cuerpo)` y `--font-script: var(--font-acento)`; declarar `--font-sans` con **la pila literal** (`-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`) y `--font-display: var(--font-titulo)`.
   - `globals.css` `body` (línea ~300): `font-family: var(--font-sans)` (ya no `--font-cuerpo`).
   - `globals.css` regla `h1, h2` (líneas ~318-324): peso 700, tracking de `design.md` (`--tracking-titulo: -0.02em`), sin el fallback Oswald/Arial Narrow; se conserva `font-synthesis: none` porque Book y Bold son reales.
@@ -684,6 +697,7 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 - [ ] **Foco:** los 5 `ring-accent` pasan a `focus-visible:ring-ring`.
 - [ ] **`text-action` (2 usos):** el icono `Warning` sobre `bg-action/10` (`checkout-view.tsx:~1313`, `grupo-servicio.tsx:~114`) pasa a `text-aviso` sobre `bg-aviso-fondo`.
 - [ ] **Titulares:** definir clases semánticas `texto-display`, `texto-pagina`, `texto-seccion` y `texto-paso` con la escala de `design.md` (40/64, 36/56, 28/36, 24/28) y aplicarlas a los h1/h2 de `sede-hero.tsx` (~38/60/76 px), `hub-hero.tsx` (~38/60/72), el h1 de `servicio/[empresa]/[servicio]/page.tsx` (`text-5xl/6xl`) y `encabezado-compra.tsx` (`text-2xl/3xl`). La monoespaciada es más ancha: los `max-w-[19ch]` calibrados para Bebas condensada (comentario en `globals.css`) se revisan por desbordamiento en móvil de 360 px, en es y en.
+- [ ] **Objetivo táctil:** las variantes `texto` y `acento` pasan de `min-h-10` (40 px, idéntico a hoy durante F3–F6) a `min-h-11` (44 px), como pide `design-guidelines.md`; se actualiza la prueba de `variantes`.
 - [ ] **Verificación:** `verificar` completo, `guardia` en 0 salvo exentos, build; revisión del dueño de portada, hub, sede, servicio, los tres checkouts, traslados, confirmación y páginas de error, en es y en. PUNTO DEL DUEÑO.
 - [ ] **Commit** `feat(marca): sombras, foco, titulares y brillos con la identidad nueva`.
 - [ ] F7 **no se despliega sola**: sale junto con F8.
@@ -700,8 +714,8 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 
 > Hallazgos (verificados): los pasos son estado de React, no historial, así que el Atrás del navegador sale de la compra (en Android, el gesto de atrás); todo lo previo a crear la reserva vive en memoria y en `sessionStorage` solo queda `checkoutId`; `lang-switch.tsx:121` hace `router.push(pathname + window.location.search)`, lo que remonta el árbol y vuelve a Viaje con la moneda recalculada por idioma; `Pendiente.ruta` guarda el idioma con que se creó; `volverHref` (`checkout-view.tsx:~1402`) manda `/${lang}?day=&time=&people=` a una portada que ya no los lee; hay dos flechas con funciones distintas en el plan.
 
-- [ ] **Paso 1: borrador (módulo puro con prueba primero).** `lib/borrador-reserva.ts` exporta `guardar(clave, estado)`, `leer(clave)` y `borrar(clave)` sobre `sessionStorage` (con `try/catch`: puede lanzar en modo privado), con `version` en el JSON y una vigencia de 4 horas; descarta lo ilegible o de otra versión. Guarda fecha(s), personas, extras, moneda, contacto, recogida, deslinde **no** (el deslinde se acepta de nuevo siempre) y el paso actual. Clave por ruta y producto (`salysol:borrador:<ruta>:<slug>`). **Autorizado por el dueño: solo en la pestaña, se borra al confirmar el pago.** Pruebas: ida y vuelta, versión distinta, vigencia vencida, JSON roto, almacenamiento no disponible.
-- [ ] **Paso 2: historial por paso.** Cada paso es una entrada de historial con `?paso=viaje|datos|pago` (`router.push` al avanzar; `router.replace` dentro del mismo paso). El Atrás del navegador vuelve al paso anterior; `popstate` actualiza el paso desde la URL. Un paso al que no se ha llegado se redirige al último válido.
+- [ ] **Paso 1: borrador (módulo puro con prueba primero).** `lib/borrador-reserva.ts` exporta `guardar(clave, estado)`, `leer(clave)` y `borrar(clave)` sobre `sessionStorage` (con `try/catch`: puede lanzar en modo privado), con `version` en el JSON y una vigencia de 4 horas; descarta lo ilegible o de otra versión. Guarda fecha(s), personas, extras, moneda, contacto, recogida, deslinde **no** (el deslinde se acepta de nuevo siempre) y el paso actual. Clave por ruta y producto (`salysol:borrador:<ruta>:<slug>`). **Autorizado por el dueño: solo en la pestaña, se borra al confirmar el pago.** Pruebas: ida y vuelta, versión distinta, vigencia vencida, JSON roto, almacenamiento no disponible. El borrador se restaura con `useSyncExternalStore` o con el patrón `useLayoutEffect` que ya usa `checkout-view.tsx:~104–139`, para evitar un mismatch de hidratación.
+- [ ] **Paso 2: historial por paso.** Cada paso es una entrada de historial con `?paso=viaje|datos|pago` con `window.history.pushState` al avanzar y `window.history.replaceState` dentro del mismo paso (se integra con el router y `useSearchParams` sin recargar: `single-page-applications.md`). **No** `router.push/replace`: `reservar/page.tsx` es dinámica y cada navegación del router repediría el RSC y repetiría `getServicioDetalle`/`getPaqueteDetalle`/`getTraslados` contra el backend en cada paso; `router.push` queda solo para cambios de ruta o de idioma. El Atrás del navegador vuelve al paso anterior; `popstate` actualiza el paso desde la URL. Un paso al que no se ha llegado se redirige al último válido.
 - [ ] **Paso 3: idioma.** Cambiar de idioma conserva `?paso=` y restaura el borrador; la moneda por idioma pasa a ser solo el **valor inicial** (el borrador manda después). `ContinuarReservacion` abre la ruta en el idioma **actual**, no en el guardado.
 - [ ] **Paso 4: una sola flecha.** La flecha de arriba a la izquierda es siempre «paso anterior»; en Viaje es «salir» al origen. `lib/origen.ts` (con prueba) resuelve el origen: parámetro `origen` explícito (sede, servicio o portada) y, si falta, la página de la sede; se eliminan `day/time/people` de `volverHref`. `?moneda=` (que llevan todos los enlaces de `booking-href.ts`) se lee en Viaje.
 - [ ] **Paso 5:** `tsc`, `eslint`, `npm test`, `build`. Recorridos: recargar en cada paso, Atrás y Adelante, cambio de idioma a media compra, entrada con query, entrada desde «Continuar reservación». **Paso 6: commit** `feat(reserva): historial por paso, borrador en la pestaña y flecha única`.
@@ -740,7 +754,7 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 
 - [ ] **Paso 1: tipos y textos (módulo puro con prueba primero).** `lib/problema-reserva.ts` define `Problema = { tipo, queOcurrio, queSeConserva, accionPrincipal, accionSecundaria? }` con `tipo` en `sin_cupo | tarjeta_rechazada | apartado_vencido | red | catalogo_caido | dato_previo`, y una función `problemaDe(error, contexto)` que lo construye. Pruebas: cada tipo produce una acción principal, nunca más de una; `dato_previo` incluye `{ paso, campo }`.
 - [ ] **Paso 2: acciones.** `sin_cupo` → «Elegir otra fecha» (a Viaje, con la fecha alternativa si el servidor la propone); `tarjeta_rechazada` → «Probar otra tarjeta» (conserva la retención del primer pago); `apartado_vencido` → «Volver a apartar mi lugar»; `red` → «Reintentar» (conserva lo capturado); `catalogo_caido` → «Escribirnos por WhatsApp» y volver al origen; `dato_previo` → «Corregir [dato] en [paso]» (Task 8.1).
-- [ ] **Paso 3: componente.** `AvisoAccion` (aviso de `design-components.md`) se monta **siempre en el mismo sitio**, encima de la barra inferior en móvil y encima del botón de la tarjeta en escritorio; `role="alert"`; el foco va a su acción principal. Reemplaza los tratamientos distintos de las cuatro rutas.
+- [ ] **Paso 3: componente.** `AvisoAccion` (aviso de `design-components.md`) se monta **siempre en el mismo sitio**, encima de la barra inferior en móvil y encima del botón de la tarjeta en escritorio; `role="alert"`. **Foco:** no se envía a la acción principal (el lector anunciaría dos veces y se saltaría el mensaje); o el foco se queda donde está y manda `role="alert"`, o se enfoca el **contenedor** del aviso (`tabIndex={-1}`), nunca la acción. Reemplaza los tratamientos distintos de las cuatro rutas.
 - [ ] **Paso 4: cuenta regresiva real.** Solo si el servidor devuelve el vencimiento del apartado (`vence_en`, que ya expone al crear y reanudar una orden): «Tu lugar está apartado, quedan 14:32» (icono de reloj). Antes de existir el apartado no se muestra nada. Al llegar a 0 pasa a `apartado_vencido`.
 - [ ] **Paso 5:** recorridos: sin cupo al pagar en cada ruta, rechazo de tarjeta en el primer y en el segundo pago, apartado vencido, red caída, servicio nulo. **Paso 6: commit** `feat(reserva): un solo aviso con acción para todos los problemas`.
 
@@ -752,7 +766,7 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 
 - [ ] **Pantallas de Pago (decisión del dueño: la barra va dentro de Stripe).** Pago se parte en sub-pantallas con **una acción cada una**: **(a) Cómo pagas** (moneda junto al total, forma de pago, promo, deslinde, verificación antibots) → botón «Continuar a la tarjeta», que crea la reserva u orden y retiene; **(b) Tarjeta de cada empresa** → «Pagar $X a [empresa]». La barra inferior de la pantalla (b) se renderiza **dentro de `<Elements>`** (mismo mecanismo de portal que ya usa `TarjetaComoPagas`) para poder llamar a `elements.submit()` y `confirmPayment`; el botón «Pagar» interno de `PaymentForm` se quita.
 - [ ] **Regla de la etiqueta (módulo puro con prueba primero).** `lib/etiqueta-boton.ts`: `etiquetaDeBoton({ paso, subpaso, montoConfirmado, empresa, cargos })`. Un **monto solo aparece cuando el servidor lo confirmó** (o la vista previa está probada como exacta): antes dice «Continuar a pago»; hospedaje por noche y todo servicio con precio por estrategia dice «Estimado» en el resumen hasta que el servidor responde. Pruebas: sin monto confirmado nunca hay cifra; con monto, el texto incluye empresa y cifra; «Pago 1 de 2» y «Pago 2 de 2».
-- [ ] **Tres segmentos y sub-pasos.** La línea de progreso mantiene tres segmentos sin números (`role="progressbar"`, «Paso 3 de 3: Pago»); «Pago 1 de 2 · [empresa] · $X» va en la **primera línea de la pantalla** (PFD R2) y no añade segmentos. En la pantalla (b) de cruza-empresa, la hoja «Ver resumen» muestra cada cargo con su estado (pendiente, retenido, cobrado) y el aviso de doble retención.
+- [ ] **Tres segmentos y sub-pasos.** La línea de progreso mantiene tres segmentos sin números (una lista `<ol>` con `aria-current="step"` en el segmento activo y el texto «Paso 3 de 3: Pago»; no `role="progressbar"`); «Pago 1 de 2 · [empresa] · $X» va en la **primera línea de la pantalla** (PFD R2) y no añade segmentos. En la pantalla (b) de cruza-empresa, la hoja «Ver resumen» muestra cada cargo con su estado (pendiente, retenido, cobrado) y el aviso de doble retención.
 - [ ] **«Atrás» tras retener dinero.** Creada la orden, la flecha de arriba pasa a «Cancelar y liberar mi lugar» con confirmación que explica la consecuencia (se libera el cupo y se revierte la retención); nunca aparece como un «atrás» silencioso.
 - [ ] **Teclado, Stripe y antibots.** Mientras un campo tiene el foco (`visualViewport`), la barra fija pasa a estática al final del contenido; los campos de texto usan `enterkeyhint="next"`. El iframe de Stripe y 3DS quedan por encima de la barra (`z-index`). El estado de la verificación antibots forma parte de la razón del botón deshabilitado («Verificando que eres una persona…»). `padding-bottom: env(safe-area-inset-bottom)`.
 - [ ] **Resto del asistente.** En < 640 px: un paso por pantalla, sin tarjetas plegables; flecha única arriba a la izquierda (Task 8.0); el asa «Ver resumen · $X» abre la hoja; el botón deshabilitado dice qué falta. El estado vive en el reducer existente y en el borrador; el cambio de paso lleva el foco al título y se anuncia con `aria-live`. Pantallas de reanudación (`retomar` o recarga) muestran **solo Pago**, con el resumen construido desde el pedido del servidor, **no** con tarjetas de Viaje y Datos rellenadas con valores inventados (`pedido-paquete.tsx:~557-574` pinta hoy `estado.inicio ?? minDate` y contacto vacío).
