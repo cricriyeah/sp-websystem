@@ -57,10 +57,10 @@
 
 1. **Héroe:** titular que diga qué se hace en Baja y a quién se compra; una línea de confianza («Reserva en línea con las empresas locales de cada sede»); un CTA «Elige tu sede». Marca nueva.
 2. **Elegir sede (primera acción):** tarjetas con foto, **qué se puede hacer** (chips por actividad, con los colores de actividad del sistema de diseño), **empresas** que operan y **precio «desde»**. El mapa interactivo pasa a ser opcional (escritorio) o se queda como ayuda secundaria.
-3. **Cómo reservas y pagas:** 3 pasos cortos y las garantías reales (pago directo a la empresa; 100 % en línea o 30 % + efectivo según empresa; reembolso completo por mal clima; cambio de fecha con 48 h). Reemplaza a los pilares genéricos.
+3. **Cómo funciona Sun Baja Experience (decisión del dueño):** explica la dinámica real: somos una empresa que reúne los servicios de distintas empresas locales en un solo lugar; cada empresa opera su servicio y cobra directo. Incluye las garantías reales (pago directo a la empresa; 100 % en línea o 30 % + efectivo según empresa; reembolso completo por mal clima; cambio de fecha con 48 h). Reemplaza a los pilares genéricos.
 4. **Mejor época por actividad y sede:** calendario cruzado (ningún competidor lo hace); solo cuando haya datos.
 5. **Paquetes y combos** (hospedaje + traslado + pesca o ballenas): solo si existen.
-6. **Quién opera:** empresas por sede, compacto, con su descripción real.
+6. **Empresas con las que colaboramos (decisión del dueño):** todas las empresas, cada una con enlace a su página oficial y sus redes, y su teléfono o WhatsApp solo si está confirmado; sin datos de relleno.
 7. **Preguntas frecuentes globales** y contacto humano por WhatsApp.
 
 ### Sede (meta: reservar; secundaria: resolver dudas)
@@ -72,7 +72,7 @@
 5. **Galería** (fotos propias): sube porque es la prueba de confianza disponible.
 6. **Temporadas y mejor época** de esa sede.
 7. **Cómo llegar / punto de encuentro**, por servicio cuando aplique.
-8. **Opiniones:** solo reseñas reales con fuente; si no hay, fila «Recién abrimos» + invitación a compartir fotos. Nunca ejemplo.
+8. **Opiniones (decisión del dueño):** se usan las reseñas que cada empresa ya publica en su propio sitio, siempre **atribuidas a la empresa** («Opinión publicada por X», con su fuente) y nunca como verificadas por Sun Baja Experience. Compuerta: antes de publicarlas, cada empresa confirma que son reales; las que no confirme se omiten. Si ninguna se confirma: fila «Recién abrimos». Nunca las de ejemplo del sitio.
 9. **Preguntas frecuentes de esa sede.**
 10. **Cierre:** el mismo CTA y WhatsApp.
 
@@ -99,3 +99,13 @@
 3. La fila «recién abrimos» genera más confianza que dejar las reseñas vacías.
 4. Quitar el mapa como selector principal no baja el clic en móvil.
 Medir con eventos del sitio (clic en tarjeta de sede, inicio de checkout, abandono por paso) y con las preguntas reales de WhatsApp de las primeras semanas.
+
+## 7. Decisiones del dueño (2026-10-16) y hallazgos de los sitios de las empresas
+
+- **La Ventana Travel:** el catálogo cargado (pesca con mosca, ballenas y orcas, hospedaje, traslado, paquetes) es lo que el cliente quiere mostrar de momento. Su sitio actual lista otras actividades (buceo, kayak, hike, paddle board, kitesurf) y es de plantilla; no se toma como fuente del catálogo.
+- **Sal y Sol Sportfishing (La Paz):** su información e imágenes ya son correctas.
+- **Hub:** lleva una sección que explica la dinámica real del sitio y otra con todas las empresas y sus enlaces (puntos 3 y 6 de arriba).
+- **Reseñas:** se usan las que ya publican las empresas, atribuidas y con confirmación previa de la empresa. *Riesgo conocido:* en los sitios revisados hay reseñas que parecen de plantilla (la única de La Ventana está fechada en 2018 y usa una foto de recurso de plantilla; las 5 de DLS repiten un nombre genérico y usan avatares de banco). Esas no pasan la compuerta si la empresa no las confirma.
+- **Contacto:** el sitio muestra solo datos confirmados. El WhatsApp de Piratas (+52 612 123 4567) parece de relleno, los enlaces de privacidad y términos de su landing van a `#`, y el botón «Reservar» de eventos de DLS vuelve a la portada: no se importan hasta que la empresa los confirme.
+- **Fotos:** solo las que cada empresa confirme como propias; las del sitio de La Ventana (Pexels) y las de relleno (Unsplash) no se usan.
+- Detalle por empresa y preguntas abiertas: `docs/marketing/contenido-empresas.md`.

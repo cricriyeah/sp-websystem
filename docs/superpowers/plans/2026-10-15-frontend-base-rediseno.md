@@ -8,11 +8,11 @@
 
 **Stack:** Next.js 16.3, React 19.2, Tailwind 4.3.3, `motion`, `@phosphor-icons/react`, Stripe. Se añaden `clsx` y `tailwind-merge`. Las variantes son mapas de strings puros (sin `cva`) para que el runner de pruebas, que compila solo `src/` y no resuelve paquetes externos, las pueda probar.
 
-**Fuentes de fundamento:** derivación PFD (R1–R5, abajo) + skills de Vercel `react-best-practices`, `nextjs`, `next-cache-components`, `shadcn`, `vercel-storage`. Mediciones del 2026-10-15 sobre la rama `qa/checkout-unificado`. **Sistema de diseño de la marca nueva (Sun Baja Experience): `docs/design/design.md`, `design-guidelines.md` y `design-components.md`** (tokens, fuentes, página de reserva); este plan lo aplica en F7 y F8.
+**Fuentes de fundamento:** derivación PFD (R1–R5, abajo) + skills de Vercel `react-best-practices`, `nextjs`, `next-cache-components`, `shadcn`, `vercel-storage`. Mediciones del 2026-10-15 sobre la rama `qa/checkout-unificado`. **Sistema de diseño de la marca nueva (Sun Baja Experience): `docs/design/design.md`, `design-guidelines.md` y `design-components.md`** (tokens, fuentes, página de reserva); este plan lo aplica en F7 y F8, y el contenido y la estructura de hub y sede en F9.
 
 ## Restricciones globales
 
-- **Checkout visible idéntico** (diferencia visual cero) hasta las fases F7 y F8, que salen **juntas en un solo lanzamiento**. Montos, cargos, plazos y textos de cobro no cambian. *(PFD R4)*
+- **Checkout visible idéntico** (diferencia visual cero) hasta las fases F7, F8 y F9, que salen **juntas en un solo lanzamiento**. Montos, cargos, plazos y textos de cobro no cambian. *(PFD R4)*
 - La marca nueva aterriza **en un solo lanzamiento**; nunca una mezcla vieja/nueva en producción. *(PFD R4)* F7 es **valores más una pasada de componentes** (fondos, sombras, titulares, foco), no solo valores.
 - Todo valor visual sale de un token; todo control de una primitiva. *(PFD R3)*
 - Una sola acción principal por paso; su jerarquía vive en la primitiva. *(PFD R1, R5)*
@@ -130,6 +130,9 @@
 | `scripts/medir-peso.cjs` | Métrica oficial de peso por ruta (crudo y gzip) | F0 |
 | `src/lib/{borrador-reserva,origen}.ts` + sus pruebas | Borrador en la pestaña y origen de la flecha | F8 (8.0) |
 | `src/lib/{problema-reserva,errores,etiqueta-boton,control-fecha}.ts` + sus pruebas, `src/components/ui/aviso-accion.tsx` | Avisos con acción, errores por campo, etiqueta del botón, control de fecha por servicio | F8 (8.1, 8.3b, 8.4, 8.5) |
+| `src/content/empresas.ts` | Datos por empresa: descripción es/en, enlace oficial, redes, contacto **confirmado**, reseñas con su fuente y estado de confirmación, fotos propias | F9 |
+| `src/lib/secciones-sede.ts` + `tests/secciones-sede.test.cjs` | Función pura: qué secciones de la sede se pintan y en qué orden según el contenido real | F9 |
+| `src/components/{garantias-reserva,hub-como-funciona,opiniones-empresas}.tsx` | «Reserva con tranquilidad», «Cómo funciona» y reseñas atribuidas | F9 |
 | `src/components/checkout/bloques/{bloque-viaje,bloque-extras,bloque-contacto,bloque-recogida,bloque-pago}.tsx` | Un archivo por **bloque** de contenido, extraídos de las vistas gigantes (F8 solo los reagrupa en 3 pasos) | F5 |
 | `tests/variantes.test.cjs` | Prueba de las variantes | F3 |
 | `src/app/fonts/ConsolaMono-{Book,Bold}.woff2` + `OFL.txt` + `FONTLOG.txt` | Fuente de titulares recortada a latín; la licencia viaja con ella | F7 |
@@ -682,7 +685,7 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 
 - [ ] `HeroMedia({ imagen, video, alt, preload })` es un **Server Component**: `<Image preload>` + degradado, más la isla cliente `ui/video-diferido.tsx` de la Task 1.5 (el patrón completo vive allí). Los dos héroes (`hub-hero`, `sede-hero`) lo usan. **Contrato visual** (F5 conserva el aspecto actual; los valores de marca entran en F7.3): contenedor `relative min-h-[100dvh]` en la portada y `min-h-[70dvh] lg:min-h-[80dvh]` en la sede (nunca `h-screen`); imagen `fill object-cover` con `objectPosition` configurable por sede; scrim como token `--scrim-hero`; texto alineado abajo a la izquierda en ≥ 1024 px; pila máxima de 4 elementos (titular `texto-display` en ≤ 2 líneas, subtexto ≤ 20 palabras, un CTA principal y uno secundario); el video entra con fundido de opacidad de 400 ms usando la misma imagen como `poster`; con reducir movimiento solo imagen.
 - [ ] `SectionShell({ fondo: 'papel' | 'bruma' | 'bruma-profunda', titulo, regla })` encapsula el ritmo de secciones (la «paleta v3» solo admite esos tres fondos hasta F7, que los renombra a `arena | blanco | cafe-bruma`; ver 7.3). Padding vertical `py-12 sm:py-16 lg:py-24`, ancho máximo 1120 con márgenes de 16, 24 y 32.
-- [ ] Un héroe por commit; PUNTO DEL DUEÑO al terminar (portada, sede, servicio).
+- [ ] Un héroe por commit; PUNTO DEL DUEÑO al terminar (portada, sede, servicio). F5.4 solo unifica los contenedores: **qué secciones lleva cada página, en qué orden y con qué texto se decide en F9.**
 
 ### Task 5.5: Diccionario por sección en los clientes (V3, ahorro modesto)
 
@@ -869,7 +872,79 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 ### Task 8.6: Cierre de F8 y lanzamiento conjunto
 
 - [ ] `verificar` completo y los **recorridos manuales de F5 más los de F8**, en escritorio **y** móvil real, es y en, con tarjeta de prueba de Stripe: servicio suelto de **pesca**, **paseo**, **hospedaje por noche**, **bajo demanda**; paquete de una empresa (con noches y con salidas en varios días); paquete cruza-empresa con rechazo en «Pago 2 de 2»; los tres tipos de traslado (el de ida y regreso con fecha de regreso vacía); y los casos: Atrás y Adelante del navegador, recargar en cada paso, cambio de idioma a media compra, entrada con query y desde «Continuar reservación», apartado vencido, sin cupo al pagar, red caída, servicio nulo, teclado abierto con barra fija. PUNTO DEL DUEÑO.
-- [ ] Un solo merge y un solo deploy de F7 + F8; si falla algo, se revierte el merge completo.
+- [ ] Un solo merge y un solo deploy de F7 + F8 (F9 se cierra en su propia Task 9.7 y sale en el mismo lanzamiento); si falla algo, se revierte el merge completo.
+
+---
+
+## F9 — Contenido y estructura de hub y sede (sale con F7 y F8)
+
+> **Fuente:** `docs/marketing/diagnostico-y-plan-contenido.md` (diagnóstico de `marketing-skills:cro` y `site-architecture`), `docs/marketing/analisis-competidores.md`, `docs/marketing/contenido-empresas.md` y `.agents/product-marketing.md`. **Decisiones del dueño (2026-10-16):** el hub explica la dinámica real (una empresa que reúne servicios de distintas empresas en un solo lugar; cada una opera y cobra directo) y lista **todas** las empresas con enlace a su página oficial y redes; el catálogo de La Ventana Travel cargado es lo que el cliente quiere mostrar; Sal y Sol ya tiene información e imágenes correctas; las reseñas de las empresas pueden usarse **atribuidas y confirmadas por cada empresa**.
+>
+> **Reglas de la fase (de `cro`):** (1) un propósito por página: hub = elegir sede, sede = reservar; (2) **ninguna sección dice «pronto»**: si no hay contenido real, no se pinta; (3) nada falso: sin reseñas de ejemplo, sin escasez inventada, sin contacto de relleno; (4) el pago, la cancelación y el clima van junto al producto; (5) **lo que incluye un servicio es de ese servicio**, nunca una promesa general; (6) es y en con el mismo orden y peso.
+>
+> **Skills al ejecutar:** `perception-first-design` para decidir jerarquía y orden; `marketing-skills:copywriting` para los textos; `design-taste-frontend` para diseñar cada componente nuevo (con los 3 documentos de `docs/design/`); las skills de Vercel al escribir código. Nada visible se programa sin la luz verde del dueño (PUNTO DEL DUEÑO).
+
+### Task 9.0: Datos de las empresas y secciones condicionales (módulo puro, prueba primero)
+
+**Files:** Create `src/content/empresas.ts`, `src/lib/secciones-sede.ts`, `tests/secciones-sede.test.cjs`; Modify `tests/run-hub-tests.cjs` (registrar la suite), `src/content/sedes-cuerpo.ts` (`descripcion` de cada empresa, hoy `''`).
+
+- [ ] **Paso 1:** `empresas.ts` exporta, por empresa (`sal-y-sol`, `transporte-la-paz`, `la-ventana-travel`, `piratas-adventures`): nombre, sede, `descripcion` es/en, `web`, `redes[]`, `contacto?` (**solo teléfono o WhatsApp confirmados**), `resenas[]` (`autor`, `texto`, `fuente` con URL, `fecha`, `confirmada: boolean` que arranca en `false`) y `fotos[]` (`src`, `alt`, `propia: boolean`). Se llena con `docs/marketing/contenido-empresas.md`; Sal y Sol, con su información ya correcta. **Quedan fuera hasta que la empresa los confirme:** el WhatsApp +52 612 123 4567 de Piratas, los enlaces de privacidad y términos que van a `#`, las reseñas de plantilla (la de La Ventana de 2018, las 5 de DLS) y las fotos de Pexels o Unsplash. Textos de descripción con `marketing-skills:copywriting`, tono tomado de Piratas.
+- [ ] **Paso 2: prueba primero.** `secciones-sede.ts` exporta `seccionesDeSede({ servicios, paquetes, empresas, resenas, fotos, faq, temporadas })` → lista ordenada de ids que se pintan. Pruebas: sin servicios ni paquetes no hay «reservar»; sin reseñas confirmadas aparece `recien-abrimos` y nunca `opiniones`; una sección sin contenido no aparece (nunca un id de «pendiente»); el orden es el de la sede propuesta (hero, reservar, tranquilidad, empresas, galería, temporadas, cómo llegar, opiniones, preguntas, cierre); la misma función sirve a es y en.
+- [ ] **Paso 3:** `tsc`, `eslint`, `npm test`. Commit `feat(contenido): datos de empresas y secciones de sede condicionales`.
+
+### Task 9.1: Sede — producto primero, un solo bloque, sin placeholders
+
+**Files:** Modify `app/[lang]/sede/[slug]/page.tsx`, `servicios-sueltos-section.tsx`, `paquete-card.tsx`, `site-header.tsx`, `site-footer.tsx`; Delete `sede-pending-section.tsx` (y su texto `destination.pendingBody`).
+
+- [ ] **Paso 1:** la página pinta solo lo que devuelve `seccionesDeSede`. Orden: héroe → **«Qué puedes reservar»** → «Reserva con tranquilidad» (9.2) → empresas → galería → temporadas → cómo llegar → opiniones (9.5) → preguntas → cierre. «Acerca de» deja de ser una sección independiente: su texto pasa a la tarjeta de cada empresa.
+- [ ] **Paso 2: «Qué puedes reservar».** Servicios y paquetes **en un solo bloque**, agrupados por actividad con los colores de actividad del sistema de diseño (`ChipActividad`, Task 3.3). Cada tarjeta muestra: empresa que lo opera, base de cobro («por persona», «por grupo», «por barco») con «desde», y **su propia lista de qué incluye** (si el servicio no la tiene cargada, no se inventa: se muestra «Pregunta qué incluye» con el enlace de contacto). Un bloque vacío (p. ej. «sin paquetes») no se pinta.
+- [ ] **Paso 3: anclas.** `site-header.tsx` y `site-footer.tsx` enlazan hoy `#nosotros`, `#experiencias`, `#servicios` y `#temporadas`. Migrarlos al nuevo conjunto de ids en el mismo commit y añadir una prueba que, dado el resultado de `seccionesDeSede`, verifique que **cada ancla enlazada existe** cuando su sección se pinta y que el enlace se omite cuando no.
+- [ ] **Paso 4:** `tsc`, `eslint`, `npm test`, `build`, `guardia`. **PUNTO DEL DUEÑO:** mirar La Paz (completa) y La Ventana y Puerto Chale (sin «pronto»), en es y en, en 360 px y en escritorio. Commit `feat(sede): producto primero y solo secciones con contenido real`.
+
+### Task 9.2: «Reserva con tranquilidad» (`GarantiasReserva`)
+
+**Files:** Create `src/components/garantias-reserva.tsx`; Modify dictionaries es/en; si hace falta, `backend` (serializador de servicios).
+
+- [ ] **Paso 1: dato real del modo de pago.** El modo está en el **servicio** (`permite_anticipo`, `porcentaje_anticipo` en `fleet/models.py`), no en la empresa. Los serializadores ya los exponen (`apps/fleet/serializers.py`); confirmar que el tipo `Servicio` del frontend (`lib/api.ts`) los trae en el listado de la sede y en el paquete, y si falta alguno, añadirlo con su prueba **antes** de mostrar nada.
+- [ ] **Paso 2: contenido.** (a) Cómo se paga: el modo que aplica a los servicios de la sede, con un ejemplo calculado con el precio real del servicio destacado («30 % ahora, $X MXN / $Y USD, y el resto en efectivo el día del viaje»; sin ejemplo si no hay precio); (b) cancelación y clima: reembolso completo solo por mal clima; (c) cambio de fecha con 48 h; (d) la nota «lo que incluye varía por servicio». Ningún texto promete equipo ni amenidades en general. Si la política difiere por empresa, se muestra por empresa.
+- [ ] **Paso 3: diseño.** `Card` plana con `AvisoEstado` de tono `info`/`exito` según el punto; sin tarjetas anidadas; cargar `design-taste-frontend`. **PUNTO DEL DUEÑO** (textos es/en incluidos). Commit `feat(sede): reserva con tranquilidad junto al producto`.
+
+### Task 9.3: Hub — titular, tarjetas de sede útiles y mapa secundario
+
+**Files:** Modify `app/[lang]/page.tsx`, `hub-grid-sedes.tsx`, `hub-mapa-sedes.tsx`, `dict.hub` es/en.
+
+- [ ] **Paso 1: héroe.** Titular que diga qué se hace en Baja y a quién se compra (marca Sun Baja Experience, no «Sal y Sol Baja Experiences»), una línea de confianza y un CTA «Elige tu sede». Texto con `marketing-skills:copywriting`; el titular de la marca nueva se confirma con el dueño.
+- [ ] **Paso 2: tarjetas de sede.** Cada tarjeta muestra foto, **qué se puede hacer** (chips de actividad), **las empresas que operan** y **precio «desde»** (de la API; sin precio no se pinta la línea). El mapa interactivo queda como ayuda secundaria en escritorio y no es el único camino; en móvil las tarjetas son el selector.
+- [ ] **Paso 3:** `tsc`, `eslint`, `npm test`, `build`, `guardia`. PUNTO DEL DUEÑO. Commit `feat(hub): titular claro y tarjetas de sede con actividades, empresas y precio`.
+
+### Task 9.4: Hub — «Cómo funciona» y «Empresas con las que colaboramos»
+
+**Files:** Create `src/components/hub-como-funciona.tsx`; Modify `colaboradores-section.tsx`, `hub-por-que.tsx` (se elimina), `dict.hub` es/en.
+
+- [ ] **Paso 1: «Cómo funciona» (reemplaza a los pilares genéricos).** Explica la dinámica real: somos una empresa que **reúne los servicios de distintas empresas locales en un solo lugar**; cada empresa opera su servicio y **cobra directo**; reservas y pagas en un solo flujo aunque combines dos empresas. Incluye las garantías reales (pago directo a la empresa, modo 100 % o anticipo según servicio, reembolso por mal clima, cambio con 48 h). Tres pasos cortos, sin tarjetas anidadas.
+- [ ] **Paso 2: empresas.** `ColaboradoresSection` lista **todas** las empresas con su descripción real, su sede y enlaces a su **página oficial y redes**; teléfono o WhatsApp solo si está confirmado en `empresas.ts`. Nada de enlaces `#` ni correos inventados.
+- [ ] **Paso 3:** PUNTO DEL DUEÑO (textos es/en). Commit `feat(hub): como funciona el sitio y empresas colaboradoras con sus enlaces`.
+
+### Task 9.5: Opiniones atribuidas y fila «Recién abrimos»
+
+**Files:** Create `src/components/opiniones-empresas.tsx`; Modify `reviews-section.tsx`, `reviews-carousel.tsx`, `dict.reviews` es/en.
+
+- [ ] **Paso 1:** se retiran las reseñas de ejemplo del diccionario. `opiniones-empresas.tsx` pinta solo reseñas con `confirmada: true`, cada una con «Opinión publicada por [empresa]» y enlace a su fuente; **nunca** presentadas como verificadas por Sun Baja Experience ni mezcladas sin decir de qué empresa son.
+- [ ] **Paso 2: compuerta de confirmación.** Antes de poner `confirmada: true`, el dueño obtiene de la empresa su confirmación de que la reseña es real; sin ella no se publica. Se hace empresa por empresa y se anota la fecha en `empresas.ts`.
+- [ ] **Paso 3:** si ninguna reseña de la sede está confirmada, `secciones-sede` devuelve `recien-abrimos`: fila honesta («Acabamos de abrir. Mira las fotos reales de nuestros viajes») con las fotos propias y una invitación a compartir las suyas; sin estrellas ni cifras.
+- [ ] **Paso 4:** PUNTO DEL DUEÑO. Commit `feat(sede): opiniones atribuidas y confirmadas, o recien abrimos`.
+
+### Task 9.6: Preguntas frecuentes y datos estructurados por sede
+
+**Files:** Modify `faq-section.tsx`, `structured-data.tsx`, `dict.faq`, `app/[lang]/sede/[slug]/page.tsx`.
+
+- [ ] La FAQ y el JSON-LD de La Paz hablan de una sola empresa. Pasar a FAQ **por sede** (pago, cancelación y clima, qué llevar, punto de encuentro, idioma, niños) con las respuestas reales de cada empresa; el JSON-LD usa solo las preguntas que se pintan. Una sede sin FAQ cargada no pinta la sección (nunca «pronto»). Las preguntas reales de WhatsApp de las primeras semanas alimentan esta sección después del lanzamiento. Commit `feat(sede): preguntas frecuentes y datos estructurados por sede`.
+
+### Task 9.7: Cierre de F9
+
+- [ ] `verificar` completo y los recorridos de F8, ahora con las páginas nuevas: hub y las tres sedes en es y en, en 360 px, 768 px y 1280 px; que ninguna sección diga «pronto»; que no aparezca ningún dato de relleno ni reseña no confirmada; que los enlaces de cabecera, pie y anclas funcionen. PUNTO DEL DUEÑO.
+- [ ] **Dependencias de contenido del dueño (bloquean el cierre, no el inicio):** confirmación de reseñas por empresa, contacto confirmado de Piratas y DLS, fotos propias de La Ventana, Puerto Chale y DLS, plazo de la garantía y descripciones finales de cada empresa.
+- [ ] Un solo merge y un solo deploy de F7 + F8 + F9.
 
 ---
 
@@ -901,10 +976,14 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 | Un monto en el botón que no coincide con el cobro | Regla de la etiqueta: monto solo cuando el servidor lo confirmó; «Estimado» antes (Task 8.4) |
 | Controles de pesca aplicados a hospedaje, bajo demanda o traslados | `controlDeFecha` por tipo de servicio, con prueba por cada tipo (Task 8.5) |
 | Falsos positivos de la compuerta (comentarios, anclas `#add`) | Se ignoran comentarios, la regex de hex exige 3/4/6/8 dígitos y la prueba es la especificación |
+| Reseñas de plantilla publicadas como reales | Cada reseña lleva autor, fuente y `confirmada`; solo se pintan las confirmadas por la empresa, siempre atribuidas a ella (Task 9.5); si ninguna, fila «Recién abrimos» |
+| Datos de relleno publicados (WhatsApp de Piratas, enlaces `#`, botón de DLS) | Solo contacto marcado como confirmado se renderiza; el resto queda fuera de `empresas.ts` hasta que la empresa lo confirme (Task 9.0) |
+| Reordenar secciones rompe los anclas de la cabecera y el pie (`#nosotros`, `#experiencias`, `#servicios`, `#temporadas`) | Task 9.1 migra `site-header.tsx` y `site-footer.tsx` en el mismo commit y una prueba revisa que cada ancla enlazada exista cuando la sección se pinta |
+| El modo de pago está en el servicio, no en la empresa (`permite_anticipo`, `porcentaje_anticipo` en `fleet/models.py`) | Task 9.2 lee el modo real de cada servicio desde la API (ya expuesto en `fleet/serializers.py`); se confirma que el frontend lo recibe antes de mostrar nada |
 
 ## Orden y dependencias
 
-`F0` → `F1` (en paralelo con `F2`) → `F3` → `F4` grupos 1-3 → `F5` → `F4` grupo 4 (ya dentro de `pasos/*`) → `F6` → `F7` + `F8` (salen juntas). F1 puede salir a producción sola (mejora el lanzamiento sin tocar el aspecto). F2 no cambia nada visible. F4 y F5 son los que más piden la revisión del dueño.
+`F0` → `F1` (en paralelo con `F2`) → `F3` → `F4` grupos 1-3 → `F5` → `F4` grupo 4 (ya dentro de `pasos/*`) → `F6` → `F7` + `F8` + `F9` (salen juntas). F9 (contenido y estructura de hub y sede) solo depende de F5.4 (contenedores) y de F3 (primitivas); su parte de datos y textos puede empezar antes. F1 puede salir a producción sola (mejora el lanzamiento sin tocar el aspecto). F2 no cambia nada visible. F4 y F5 son los que más piden la revisión del dueño.
 
 ## Autorrevisión
 

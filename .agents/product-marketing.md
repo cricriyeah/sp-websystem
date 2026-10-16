@@ -19,7 +19,7 @@ Sitio bilingüe (es/en), con el mismo peso en los dos idiomas. **Aún no está l
 
 - No todas las empresas venden lo mismo. Los tipos de servicio que se pueden reservar en el sitio: **pesca deportiva, paseos y tours (no pesca), hospedaje y paquetes, transporte y traslados**, según sede y empresa.
 - Hay paquetes que combinan servicios de una empresa y paquetes que cruzan dos empresas (por ejemplo pesca + traslado en La Paz); en estos el turista paga a cada empresa por separado dentro de un mismo checkout.
-- PENDIENTE: el dueño pasará los sitios propios de las demás empresas para adaptar su información a las secciones del sitio. Hasta entonces, precios, flotas y descripciones de La Ventana Travel y Piratas Adventures son datos de ejemplo.
+- Sitios de las empresas ya revisados (ver `docs/marketing/contenido-empresas.md`): ninguno publica precios, modo de pago, cancelación, clima, licencias ni qué incluye; el catálogo de La Ventana Travel cargado en el sistema es lo que el cliente quiere mostrar. Precios, flotas y descripciones de La Ventana Travel y Piratas Adventures siguen siendo de ejemplo hasta que cada empresa los confirme.
 
 ## 3. Cliente
 
@@ -30,7 +30,7 @@ Sitio bilingüe (es/en), con el mismo peso en los dos idiomas. **Aún no está l
 
 ## 4. Qué debe lograr cada página
 
-- **Hub (portada):** *mandar al turista a la sede correcta*, rápido y sin dudas.
+- **Hub (portada):** *mandar al turista a la sede correcta*, rápido y sin dudas. Debe explicar la dinámica real del sitio (reúne servicios de distintas empresas locales en un solo lugar; cada una opera y cobra directo) y listar todas las empresas con enlace a su página oficial y redes (decisión del dueño).
 - **Sede:** llevar a reservar el servicio que busca (meta principal) y resolver las dudas de quien aún investiga (meta secundaria). *Es una propuesta de la skill `cro`, pendiente de confirmar por el dueño.*
 - **Conversión final:** una reserva pagada en el checkout.
 
@@ -53,7 +53,8 @@ PENDIENTE: las preguntas reales que hacen los clientes por WhatsApp antes de res
 ## 7. Pruebas de confianza disponibles hoy
 
 - **Sí hay:** fotos propias de viajes y de clientes.
-- **No hay (o no confirmado):** reseñas reales (las del sitio son de ejemplo), licencias y permisos mostrables, póliza de seguro mostrable. No se debe simular ninguna: una reseña inventada es peor que ninguna.
+- **No hay (o no confirmado):** reseñas propias verificadas (las del sitio son de ejemplo), licencias y permisos mostrables, póliza de seguro mostrable. No se debe simular ninguna.
+- **Reseñas de las empresas (decisión del dueño):** se pueden mostrar las que cada empresa ya publica en su sitio, **atribuidas a esa empresa** y con su confirmación previa de que son reales; nunca como verificadas por Sun Baja Experience. Varias de las revisadas parecen de plantilla y no deben publicarse sin esa confirmación.
 - Marca nueva sin historial: la confianza debe construirse con claridad (qué pagas, a quién, qué pasa si llueve) más que con prestigio.
 
 ## 8. Competencia (a comparar; ver `docs/marketing/analisis-competidores.md`)
