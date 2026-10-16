@@ -3,6 +3,19 @@
 > Este archivo resume todas las decisiones de producto y arquitectura tomadas antes de escribir código.
 > Plazo: 1 mes. Equipo: 2 programadores.
 
+> **Actualización 2026-10-16 (el dueño revisó este documento).** El texto de abajo se escribió cuando el negocio era una sola empresa con un solo servicio. Hoy es una marca paraguas, **Sun Baja Experience**, que reúne varias empresas independientes en tres sedes. Lo que sigue vigente y lo que cambió:
+>
+> | Tema | Hoy |
+> |---|---|
+> | Estructura | Sedes: La Paz (Sal y Sol Sportfishing, DLS Transporte), La Ventana (La Ventana Travel), Puerto Chale (Piratas Adventures). Cada empresa tiene su propio catálogo, flota y cuenta de cobro. |
+> | Servicios | Ya no es solo pesca. Se venden pesca deportiva, paseos y tours (ballenas, orcas, safari marino), hospedaje y paquetes, y transporte o traslados, **según sede y empresa**. Lo de «Servicio» y «Embarcaciones» de la sección 3 describe a **Sal y Sol** (La Paz), no a todo el sistema. |
+> | Qué incluye | **Varía por empresa y por servicio, y puede cambiar con la temporada, la disponibilidad y la economía.** El sitio no promete en general equipo, amenidades ni personalizaciones; cada servicio muestra su lista. (Reemplaza lo que decía la sección 3 sobre equipo, carnada y licencia.) |
+> | Pagos | Cada empresa cobra directo con su propia cuenta de pagos (no hay cuenta central ni reparto). **Cada empresa acepta solo una de dos formas: 100 % en línea, o 30 % en línea y el resto en efectivo.** La empresa decide cuál. Hay paquetes que cruzan dos empresas: el turista paga a cada una por separado en un mismo checkout. |
+> | Cancelaciones y cambios | **Sin cambios**: reembolso completo solo por mal clima; cambio de fecha con mínimo 48 h. |
+> | Precio y moneda | Un solo precio en pesos; el dólar se deriva del tipo de cambio de la sede (ver sección 5). |
+> | Estado | **Sin lanzar.** No hay clientes, reseñas reales ni métricas. |
+> | Cliente y marketing | Ver `.agents/product-marketing.md`. |
+
 ## 1. Qué es el sistema
 
 Negocio de tours privados de pesca deportiva, con una flota de embarcaciones operadas por capitanes.
@@ -26,11 +39,11 @@ ese día en el sistema.
 | Backend / backoffice | Django (Python) | Render |
 | Base de datos | PostgreSQL (Supabase) | Supabase |
 | Web pública | Next.js | Vercel |
-| Pagos | Stripe — **cuenta estándar, NO Stripe Connect** | — |
+| Pagos | Stripe — **cuenta estándar por empresa, NO Stripe Connect** | — |
 | Notificaciones | WhatsApp Business API + Resend (email) | — |
 
 **Por qué no Stripe Connect:** los jefes gestionan el pago a cada capitán de forma separada, fuera del
-sistema. El sistema recibe el 100% del pago a la cuenta de los jefes y solo registra qué capitán/embarcación
+sistema. El sistema recibe el 100% del pago a la cuenta de la empresa que presta el servicio y solo registra qué capitán/embarcación
 atendió cada reserva, para estadística. No hay reparto automático de dinero.
 
 Estructura de repo (monorepo):
@@ -49,20 +62,20 @@ tours-pesca/
 
 ## 3. Reglas del negocio (confirmadas)
 
-### Servicio
-- Único servicio: pesca deportiva. Modalidad privada (una reserva = toda la embarcación, nunca se comparte).
+### Servicio (Sal y Sol, La Paz; las demás empresas tienen su propio catálogo)
+- En Sal y Sol el servicio es la pesca deportiva. Modalidad privada (una reserva = toda la embarcación, nunca se comparte).
 - Duración: 6 a 8 horas.
 - Ventana de salida: 5:00 a 7:00 am. **El cliente elige la hora exacta dentro de esa ventana al reservar.**
 - Opera los 365 días del año (la pesca varía por temporada, la operación no se detiene).
 - **Sin restricción de edad y sin mínimo de personas** — un viaje puede salir con una sola persona.
-- Incluye: la panga completa con capitán, hielera con hielo, 6 a 8 horas de viaje.
+- En Sal y Sol incluye: la panga completa con capitán, hielera con hielo, 6 a 8 horas de viaje.
 - **El equipo de pesca NO va incluido** (corregido por el dueño, 25 de agosto de 2026; antes este documento decía que sí). Cada cliente trae el suyo; si no tiene, se le consigue aparte avisando antes de la salida.
 - Tampoco incluye: carnada, licencia de pesca, alimentos, bebidas, traslado al muelle. Todo eso se pide por WhatsApp y se cotiza aparte, salvo el lunch, que se agrega al reservar.
 - El sitio público no lista lo que NO incluye: lo dice como «lo que llevas tú» y «lo que nos puedes pedir». Es decisión de presentación, no un cambio de lo que se entrega.
 - Punto de encuentro: Marina La Costa (Rangel y Navarro / Restaurant Marina La Costa). El cliente llega por su cuenta.
 - **No se piden datos adicionales de seguridad** (ni peso, ni si sabe nadar) — solo nombre, teléfono, correo.
 
-### Embarcaciones
+### Embarcaciones (Sal y Sol, La Paz)
 - Flota real (dato del negocio, agosto 2026): **8 pangas de máximo 3 personas y 2 de máximo 5.**
   Precio fijo, no varía por clase.
 - **El tope de personas por viaje es 5**, la panga más grande. Está en el código como
@@ -96,7 +109,7 @@ tours-pesca/
     ese día. Eso es *Cupo diario*.
 
 ### Pagos
-- El cliente elige libremente: 100% en línea, o 30% de anticipo en línea + 70% restante en efectivo.
+- **Cada empresa acepta solo una de dos formas, y es la empresa quien decide cuál:** 100% en línea, o 30% de anticipo en línea + 70% restante en efectivo. El sitio muestra la que aplica a ese servicio.
 - Confirmación automática por correo al recibir el pago. Monedas: pesos y dólares.
 
 ### Cancelaciones y cambios
@@ -181,6 +194,6 @@ Notas de implementación:
 
 ## 6. Estado de las decisiones
 
-No quedan preguntas de negocio pendientes de confirmar — todas las dudas abiertas durante el diseño
+Pendientes (2026-10-16): el plazo en días de la garantía; precios, flota y descripciones reales de La Ventana Travel y Piratas Adventures (hoy son de ejemplo, el dueño pasará sus sitios); y si la política de cancelación varía por empresa. Las dudas de la primera etapa del diseño
 (clima, datos del cliente, mínimo de personas, forma de pago, hora de salida, sustitución de capitanes)
 ya están resueltas y reflejadas arriba.
