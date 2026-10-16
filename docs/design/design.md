@@ -2,9 +2,9 @@
 
 > Léelo primero. Para las especificaciones de componentes y de la página de reserva ve [design-components.md](design-components.md). Para accesibilidad y qué hacer / qué no ve [design-guidelines.md](design-guidelines.md).
 
-Lenguaje: **costero, deportivo y moderno**, con una marca cálida (café) y tres colores que cuentan qué tipo de actividad es (mar, montaña, outside). Titulares en monoespaciada (JetBrains Mono), cuerpo en la fuente del sistema, esquinas redondeadas que hacen eco del logo redondo, superficies planas sin sombras grandes. Unidad base de espaciado: 4 px. Plataformas: web responsive (móvil primero), es/en.
+Lenguaje: **costero, deportivo y moderno**, con una marca cálida (café) y tres colores que cuentan qué tipo de actividad es (mar, ciudad, outside/montaña). Titulares en la monoespaciada de consola (Consolas), cuerpo en San Francisco (la fuente del sistema de Apple), esquinas redondeadas que hacen eco del logo redondo, superficies planas sin sombras grandes. Unidad base de espaciado: 4 px. Plataformas: web responsive (móvil primero), es/en.
 
-> Decisiones del dueño (2026-10-15): botón principal en café con texto blanco; titulares en JetBrains Mono; radio 12 px en controles y 16 px en tarjetas; neutros cálidos (arena y blanco), sin negro puro. Todos los contrastes de este documento se calcularon con la fórmula de WCAG 2.2 (luminancia relativa) sobre los hex indicados.
+> Decisiones del dueño (2026-10-15): botón principal en café con texto blanco; titulares en Consolas (monoespaciada de consola); cuerpo en San Francisco; radio 12 px en controles y 16 px en tarjetas; neutros cálidos (arena y blanco), sin negro puro. Todos los contrastes de este documento se calcularon con la fórmula de WCAG 2.2 (luminancia relativa) sobre los hex indicados.
 
 ---
 
@@ -28,8 +28,8 @@ Estos tres colores **solo** identifican el tipo de actividad (etiquetas, insigni
 | Token | Hex | Significa | Texto sobre el color | Texto sobre su claro |
 |---|---|---|---|---|
 | `azul` | `#1B607F` | Mar (pesca, paseos en lancha) | blanco, 6,94:1 | `azul` sobre `#DDE6EB`, 5,48:1 |
-| `coral` | `#F64A25` | Montaña / aventura en tierra | **tinta** `#1F1A14`, 4,87:1 (con blanco solo 3,54:1: no usar) | `coral-texto` `#8F2409` sobre `#FBC2B5`, 5,56:1 |
-| `verde` | `#343F04` | Outside / naturaleza | blanco, 11,30:1 | `verde` sobre `#DFFFA8`, 10,23:1 |
+| `coral` | `#F64A25` | Ciudad (recorridos urbanos, ciudad, vida nocturna) | **tinta** `#1F1A14`, 4,87:1 (con blanco solo 3,54:1: no usar) | `coral-texto` `#8F2409` sobre `#FBC2B5`, 5,56:1 |
+| `verde` | `#343F04` | Outside / montaña / naturaleza | blanco, 11,30:1 | `verde` sobre `#DFFFA8`, 10,23:1 |
 
 Escalas derivadas (sacadas de cada primario mezclándolo con blanco o negro):
 
@@ -41,7 +41,7 @@ Escalas derivadas (sacadas de cada primario mezclándolo con blanco o negro):
 
 `coral-texto` = `#8F2409`: el coral nunca se usa como texto sobre blanco (3,54:1 no alcanza 4,5:1); cuando haga falta texto en esa familia se usa este tono (8,66:1 sobre blanco).
 
-> **Nota (inferida):** se interpretó que el coral marca *montaña* y el verde *outside*, y que montaña y outside son familias distintas aunque cercanas. Si coral y verde deben compartir la misma categoría, hay que decidir cuál toma cada actividad antes de aplicarlos.
+> **Categorías confirmadas por el dueño:** azul = mar, coral = ciudad, verde = outside o montaña (una sola familia). Cada actividad pertenece a una.
 
 ### Superficies y neutros (cálidos, sin negro puro)
 
@@ -64,7 +64,7 @@ Los estados tienen su propio color, distinto de las tres actividades, y siempre 
 | Estado | Texto / icono | Fondo | Contraste | Notas |
 |---|---|---|---|---|
 | Éxito | `#2F5D0A` | `#E7F5D3` | 6,84:1 | Icono de palomita. Familia verde, pero distinto del `verde` de actividad |
-| Error | `#B3261E` | `#FDE7E4` | 5,52:1 (6,54:1 sobre blanco) | Icono de alerta. Es un rojo más profundo que el coral para que no se lea como «montaña» |
+| Error | `#B3261E` | `#FDE7E4` | 5,52:1 (6,54:1 sobre blanco) | Icono de alerta. Es un rojo más profundo que el coral para que no se lea como «ciudad» |
 | Aviso | `#6B3A00` | `#FEE0AC` (`cafe-claro`) | 7,39:1 | Icono de triángulo |
 | Información | `#0F3D52` | `#DDE6EB` (`azul-claro`) | 9,17:1 | Icono de «i». Familia azul, pero distinta del `azul` de actividad |
 | Enfoque | `#1B607F` (`azul`) | — | 6,94:1 blanco / 6,50:1 arena | Anillo de 2 px con desfase de 2 px |
@@ -87,11 +87,11 @@ Los estados tienen su propio color, distinto de las tres actividades, y siempre 
 
 | Rol | Familia | Fallback |
 |---|---|---|
-| Titulares | **JetBrains Mono** (pesos 600–800, variable, servida desde el propio sitio con `next/font`) | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
-| Cuerpo y formularios | **Fuente del sistema** | `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif` |
+| Titulares | **Consolas** (la monoespaciada de consola de Windows y Office) | `Consolas, "SF Mono", SFMono-Regular, Menlo, "Roboto Mono", ui-monospace, monospace` |
+| Cuerpo y formularios | **San Francisco** (la fuente del sistema de Apple: `-apple-system` / `system-ui`) | `-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif` |
 | Cifras de dinero | misma fuente del cuerpo con `font-variant-numeric: tabular-nums` | — |
 
-La fuente de sistema se elige por legibilidad y velocidad de carga (cero descargas para el cuerpo). Sustituye a *Instrument Sans*. *Bebas Neue* y *Bella Fashion* (esta con licencia «solo uso personal») salen del proyecto.
+Ninguna de las dos se descarga: son fuentes que ya traen los dispositivos, así que no cuestan carga y no hay licencia que gestionar. **Cada dispositivo muestra la suya:** San Francisco solo existe en dispositivos de Apple (en Windows cae a Segoe UI y en Android a Roboto) y Consolas solo en Windows y Office (en Apple cae a SF Mono o Menlo, en Android a Roboto Mono). El aspecto exacto de los titulares cambia de un dispositivo a otro; la licencia de Apple no permite servir San Francisco desde el sitio. Sustituye a *Instrument Sans*. *Bebas Neue* y *Bella Fashion* (esta con licencia «solo uso personal») salen del proyecto.
 
 | Estilo | Móvil | Escritorio | Peso | Interlineado | Tracking |
 |---|---|---|---|---|---|
@@ -204,4 +204,4 @@ Librería actual (Phosphor), peso `bold` para acciones y `regular` para decoraci
 | `--surface`, `--surface-deep` | `cafe-bruma`, `cafe-claro` | |
 | `--border`, `--border-strong` | `borde`, `borde-control` | |
 | `--exito`/`--error`/`--aviso` (+ `-fondo`) | valores de la tabla de estados | |
-| `--font-titulo` (Bebas), `--font-acento` (Bella), `--font-cuerpo` (Instrument) | JetBrains Mono / fuente del sistema | Bella y Bebas se retiran |
+| `--font-titulo` (Bebas), `--font-acento` (Bella), `--font-cuerpo` (Instrument) | Consolas / San Francisco | Bella y Bebas se retiran |

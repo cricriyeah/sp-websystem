@@ -245,7 +245,7 @@ El calendario ocupa el ancho completo del paso; no se abre en un popover.
 
 ### Insignia de actividad (chip)
 
-Radio completo, alto 28, 14/600. Mar: fondo `azul-claro`, texto `azul`, icono de ola. Montaña: fondo `coral-claro`, texto `coral-texto`, icono de montaña. Outside: fondo `verde-claro`, texto `verde`, icono de hoja. Siempre con icono y texto.
+Radio completo, alto 28, 14/600. Mar: fondo `azul-claro`, texto `azul`, icono de ola. Ciudad: fondo `coral-claro`, texto `coral-texto`, icono de edificios. Outside / montaña: fondo `verde-claro`, texto `verde`, icono de hoja o montaña. Siempre con icono y texto.
 
 ### Tarjeta de servicio / paquete
 
@@ -303,7 +303,6 @@ Tarjeta del paso 3: moneda, modalidad (completo o anticipo, si aplica), código 
 
 | # | Pendiente | Efecto |
 |---|---|---|
-| 1 | ¿Coral = montaña y verde = outside, o comparten categoría? | Colores de las insignias de actividad |
 | 2 | Contar los campos reales de «Tus datos» | Si pasa de ~7, se vuelve a 4 pasos |
 | 3 | Idioma del selector en la cabecera mínima | Aplicado: ES/EN a la derecha |
 | 4 | Foto y logo definitivos | Cabecera, tarjetas de servicio y héroe |
