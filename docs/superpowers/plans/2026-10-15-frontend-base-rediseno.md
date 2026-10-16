@@ -319,7 +319,7 @@ Medir la altura real del formulario con su `PaymentElement` y poner esa altura e
 
 ### Task 1.5: Héroe — imagen inmediata y video ligero (V5, V6, PFD R2)
 
-**Files:** Modify `src/components/hero.tsx:75-90`, `src/components/sede-hero.tsx:67`; Replace `public/videos/videohero.webm`.
+**Files:** Modify `src/components/sede-hero.tsx` (el `<video>` con `poster` y la `<img>` de la línea ~67); Replace `public/videos/videohero.webm`. (El `Hero` viejo de la portada ya se eliminó: nadie lo montaba. `hub-hero.tsx` no usa video.)
 
 - [ ] **Paso 1: comprimir el video** (hay `ffmpeg` instalado):
 
@@ -329,8 +329,8 @@ ls -la public/videos/
 ```
 
 Objetivo: ≤ 8 MB. Si se ve mal, subir calidad hasta que el dueño lo apruebe (PUNTO DEL DUEÑO: mirar el video). Añadir también una versión `.mp4` (H.264) como segunda `<source>` solo si hay navegadores objetivo sin VP9.
-- [ ] **Paso 2:** reemplazar el archivo en las rutas de `sedes-cuerpo.ts` (2 referencias) y `hero.tsx`.
-- [ ] **Paso 3:** en `hero.tsx` añadir `preload="metadata"` al `<video>`; el `poster` ya existe. Asegurar que la imagen del `poster` se sirva con `next/image` `priority` como capa inferior, de modo que sea el LCP real; el video se funde encima al disparar `canplay`. Mantener `prefers-reduced-motion`: sin video, solo imagen.
+- [ ] **Paso 2:** reemplazar el archivo en las rutas de `sedes-cuerpo.ts` (2 referencias).
+- [ ] **Paso 3:** en `sede-hero.tsx` añadir `preload="metadata"` al `<video>`; el `poster` ya existe. Asegurar que la imagen del `poster` se sirva con `next/image` `priority` como capa inferior, de modo que sea el LCP real; el video se funde encima al disparar `canplay`. Mantener `prefers-reduced-motion`: sin video, solo imagen.
 - [ ] **Paso 4:** en `sede-hero.tsx:67` reemplazar `<img>` por `<Image fill sizes="100vw" priority alt="" className="object-cover" />`.
 - [ ] **Paso 5:** `npm.cmd run guardia -- ` (la regla `img-cruda` baja en 1) y actualizar la línea base con `node scripts/guardia-estilos.cjs --escribir`.
 - [ ] **Paso 6: commit** `perf(frontend): video de portada comprimido, imagen inmediata y next/image en la sede`.
@@ -376,7 +376,7 @@ Objetivo: ≤ 8 MB. Si se ve mal, subir calidad hasta que el dueño lo apruebe (
 
 **Files:** los archivos con `color-literal` y `paleta-cruda` según `scripts/guardia-estilos.baseline.json` (66 literales + 13 de paleta + 3 arbitrarios en la medición).
 
-- [ ] **Paso 1:** por archivo, reemplazar cada color por su token semántico (`bg-red-400`→`bg-error`, etc.). Los rgba de degradados sobre foto (`hero.tsx`) se convierten en tokens `--scrim-*` en `globals.css`.
+- [ ] **Paso 1:** por archivo, reemplazar cada color por su token semántico (`bg-red-400`→`bg-error`, etc.). Los rgba de degradados sobre foto (`sede-hero.tsx`, `hub-hero.tsx`) se convierten en tokens `--scrim-*` en `globals.css`.
 - [ ] **Paso 2:** si un literal no tiene equivalente exacto, **no redondear**: crear el token con el valor exacto (Bujack 2022: la desviación casi igual cuesta más que la clara).
 - [ ] **Paso 3:** `guardia` (baja), actualizar línea base. **Paso 4: commit** `refactor(frontend): colores literales pasan a tokens`.
 
@@ -528,7 +528,7 @@ Recuento medido (`<button`): continuar-reservacion 7, reviews-carousel 5, grupo-
 
 Orden por riesgo creciente (PUNTO DEL DUEÑO al cerrar cada grupo):
 1. **Públicas sin dinero:** `faq-section`, `cookie-notice`, `lang-switch`, `site-header`, `sede-selector`, `reviews-carousel`, `hub-mapa-sedes`, `hub-hero`, `paquete-card`, `selector-experiencia`, `continuar-reservacion`.
-2. **Campos y selectores compartidos:** `field-popover`, `date-field` (solo su modo popover, que usa el hero), `time-field`, `people-stepper`, `select-personalizado`, `toast`. **No se migran** `checkout-calendar` ni `sticky-booking-bar`: F8 reemplaza el primero y borra el segundo (ya no se renderiza en ningún sitio).
+2. **Campos y selectores compartidos:** `field-popover`, `date-field`, `time-field`, `people-stepper`, `select-personalizado`, `toast`. **No se migra** `checkout-calendar` (ni la tira semanal que usa): F8 los reemplaza por el calendario completo. `BookingBar`, `StickyBookingBar` y el `Hero` viejo ya se eliminaron.
 3. **Checkout, tarjetas auxiliares:** `checkout-section-card`, `campos-contacto`, `tipo-traslado-cards`, `ayuda-flotante`, `reserva-plegable`, `aviso-fallo`.
 4. **Checkout, núcleo:** `grupo-servicio`, `fecha-paquete`, `checkout-view`, `traslado-view`, `stripe-panel`, `booking-confirmation`. **Se hace DESPUÉS de F5**, ya dentro de `checkout/pasos/*` (corrección del crítico: migrar y luego partir las mismas ~1 700 líneas es trabajo doble con revisión del dueño en cada pasada). Con revisión del dueño del flujo completo.
 
@@ -573,9 +573,9 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 
 ### Task 5.4: Un solo héroe y una sola sección
 
-**Files:** Create `src/components/ui/hero-media.tsx`, `section-shell.tsx`; Modify `hero.tsx`, `hub-hero.tsx`, `sede-hero.tsx` y las secciones about/season/included/license/colaboradores/gallery.
+**Files:** Create `src/components/ui/hero-media.tsx`, `section-shell.tsx`; Modify `hub-hero.tsx`, `sede-hero.tsx` y las secciones about/season/included/license/colaboradores/gallery.
 
-- [ ] `HeroMedia({ imagen, video, alt, prioridad })` encapsula imagen inmediata + video diferido + degradado (el patrón de la Task 1.5). Los tres héroes lo usan.
+- [ ] `HeroMedia({ imagen, video, alt, prioridad })` encapsula imagen inmediata + video diferido + degradado (el patrón de la Task 1.5). Los dos héroes (`hub-hero`, `sede-hero`) lo usan.
 - [ ] `SectionShell({ fondo: 'papel' | 'bruma' | 'bruma-profunda', titulo, regla })` encapsula el ritmo de secciones (la «paleta v3» solo admite esos tres fondos).
 - [ ] Un héroe por commit; PUNTO DEL DUEÑO al terminar (portada, sede, servicio).
 
@@ -618,7 +618,7 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 
 ### Task 7.2: Valores de la marca (tokens, fuentes, variantes)
 
-**Files:** Modify `src/app/globals.css`, `src/app/[lang]/layout.tsx`, `src/lib/tokens-pago.ts`, `src/components/ui/variantes.ts`, `src/app/[lang]/opengraph-image.tsx`, `src/components/stripe-panel.tsx` (o `checkout/pago/formulario-pago.tsx` tras F1.2), `src/app/[lang]/not-found.tsx`, `src/components/license-section.tsx`, `src/components/hero.tsx`, `src/components/sede-hero.tsx`.
+**Files:** Modify `src/app/globals.css`, `src/app/[lang]/layout.tsx`, `src/lib/tokens-pago.ts`, `src/components/ui/variantes.ts`, `src/app/[lang]/opengraph-image.tsx`, `src/components/stripe-panel.tsx` (o `checkout/pago/formulario-pago.tsx` tras F1.2), `src/app/[lang]/not-found.tsx`, `src/components/license-section.tsx`, `src/components/sede-hero.tsx`.
 
 - [ ] **Paso 1: colores** (valores de `design.md`): `--accent`/`--action` → café `#7C3B02` (texto sobre acción `#FFFFFF`, 8,46:1); `--foreground` → `#1F1A14`; **`--background` → arena `#FBF7F0`** (las superficies ya son blancas por F2.4); bordes `#D9C9B4` (decorativo) y `#8A7A66` (controles, 4,15:1); estados con sus parejas; familias `azul`, `coral`, `verde` con `hondo`, `profundo`, `medio`, `claro` y `bruma`; **`--ring` → `azul` `#1B607F`** (foco). Comprobar el contraste de cada par antes del commit. `--amber`, `--indigo` y `--yellow` salen; `--hero-ink` se queda.
 - [ ] **Paso 2: forma** — `--radius-control: 12px`, `--radius-campo: 12px`, `--radius-card: 16px`, `--radius-sheet: 24px` (las tarjetas ya usan `rounded-card` desde F3/F4); chips y días del calendario en `9999px`.
@@ -627,7 +627,7 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
   - `globals.css` `@theme inline` (líneas ~110-112): borrar `--font-sans: var(--font-cuerpo)` y `--font-script: var(--font-acento)`; declarar `--font-sans` con **la pila literal** (`-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`) y `--font-display: var(--font-titulo)`.
   - `globals.css` `body` (línea ~300): `font-family: var(--font-sans)` (ya no `--font-cuerpo`).
   - `globals.css` regla `h1, h2` (líneas ~318-324): peso 700, tracking de `design.md` (`--tracking-titulo: -0.02em`), sin el fallback Oswald/Arial Narrow; se conserva `font-synthesis: none` porque Book y Bold son reales.
-  - `globals.css` `.acento` (líneas ~265-280): **se elimina**, y en `hero.tsx` (líneas ~99-100) y `sede-hero.tsx` (líneas ~79-80) el titular se pinta como texto plano (`start + emphasis + end`, sin estilo especial; el contrato de `sedes-tipos.ts` no cambia).
+  - `globals.css` `.acento` (líneas ~265-280): **se elimina**, y en `sede-hero.tsx` (líneas ~79-80) el titular se pinta como texto plano (`start + emphasis + end`, sin estilo especial; el contrato de `sedes-tipos.ts` no cambia).
   - `not-found.tsx` (líneas ~25-37) y `license-section.tsx` (línea ~39): quitar `font-normal` y migrar al nuevo `--tracking-titulo`.
   - `stripe-panel.tsx` (líneas ~76, ~86) carga Instrument Sans por Google Fonts para Stripe Elements: quitar `STRIPE_FUENTES` y poner `fontFamily` de la pila del sistema en `TOKENS_PAGO` (la prueba de `tokens-pago` lo compara con `--font-sans`).
 - [ ] **Paso 4: Stripe y OG** — `TOKENS_PAGO` con los hex nuevos (comparados con `globals.css` por su prueba) y `opengraph-image.tsx` a mano (no carga fuentes; solo cambian colores).
@@ -639,10 +639,10 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 > «Solo valores» era falso para estos puntos (medidos el 2026-10-15): 16 `shadow-[...]` arbitrarias y 18 `shadow-*` sueltas, dos brillos amarillos con `rgba(255,222,0,…)`, 5 `ring-accent`, 2 `text-action` y h1/h2 con clases de tamaño sueltas.
 
 - [ ] **Sombras:** convertir las 16 arbitrarias (p. ej. `checkout-section-card.tsx:54`, `booking-confirmation.tsx:167`, `checkout-loading-shell.tsx:58`, `cookie-notice`, `field-popover`) y las 18 `shadow-*` a tres tokens `--shadow-n0` (ninguna), `--shadow-n1` (barra inferior móvil) y `--shadow-n2` (popover, toast, hoja) con los valores de `design.md`. El resumen y las tarjetas quedan en `n0`.
-- [ ] **Brillos amarillos:** `booking-bar.tsx` (líneas ~131-136) y el panel de pago (`rgba(255,222,0,…)`, líneas ~399-404 de `stripe-panel.tsx` antes del split) pasan a un token `--brillo-accion` (café, baja opacidad) o se eliminan.
+- [ ] **Brillo amarillo:** el panel de pago (`rgba(255,222,0,…)`, líneas ~399-404 de `stripe-panel.tsx` antes del split) pasa a un token `--brillo-accion` (café, baja opacidad) o se eliminan.
 - [ ] **Foco:** los 5 `ring-accent` pasan a `focus-visible:ring-ring`.
 - [ ] **`text-action` (2 usos):** el icono `Warning` sobre `bg-action/10` (`checkout-view.tsx:~1313`, `grupo-servicio.tsx:~114`) pasa a `text-aviso` sobre `bg-aviso-fondo`.
-- [ ] **Titulares:** definir clases semánticas `texto-display`, `texto-pagina`, `texto-seccion` y `texto-paso` con la escala de `design.md` (40/64, 36/56, 28/36, 24/28) y aplicarlas a los h1/h2 de `hero.tsx` (~38/60/76 px), `hub-hero.tsx` (~38/60/72), el h1 de `servicio/[empresa]/[servicio]/page.tsx` (`text-5xl/6xl`) y `encabezado-compra.tsx` (`text-2xl/3xl`). La monoespaciada es más ancha: los `max-w-[19ch]` calibrados para Bebas condensada (comentario en `globals.css`) se revisan por desbordamiento en móvil de 360 px, en es y en.
+- [ ] **Titulares:** definir clases semánticas `texto-display`, `texto-pagina`, `texto-seccion` y `texto-paso` con la escala de `design.md` (40/64, 36/56, 28/36, 24/28) y aplicarlas a los h1/h2 de `sede-hero.tsx` (~38/60/76 px), `hub-hero.tsx` (~38/60/72), el h1 de `servicio/[empresa]/[servicio]/page.tsx` (`text-5xl/6xl`) y `encabezado-compra.tsx` (`text-2xl/3xl`). La monoespaciada es más ancha: los `max-w-[19ch]` calibrados para Bebas condensada (comentario en `globals.css`) se revisan por desbordamiento en móvil de 360 px, en es y en.
 - [ ] **Verificación:** `verificar` completo, `guardia` en 0 salvo exentos, build; revisión del dueño de portada, hub, sede, servicio, los tres checkouts, traslados, confirmación y páginas de error, en es y en. PUNTO DEL DUEÑO.
 - [ ] **Commit** `feat(marca): sombras, foco, titulares y brillos con la identidad nueva`.
 - [ ] F7 **no se despliega sola**: sale junto con F8.
@@ -689,12 +689,12 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 
 ### Task 8.5: Calendario completo en la reserva (alcance recortado)
 
-**Files:** Create `src/components/ui/calendario/{calendario,leyenda,atajos}.tsx`, `src/lib/rango-paquete.ts`, `src/lib/ids.ts`, `tests/rango-paquete.test.cjs`; Modify `checkout-view.tsx`, `pedido/fecha-paquete.tsx`, `hero.tsx`, `selector-experiencia.tsx`; Delete `checkout-calendar.tsx`, `sticky-booking-bar.tsx`.
+**Files:** Create `src/components/ui/calendario/{calendario,leyenda,atajos}.tsx`, `src/lib/rango-paquete.ts`, `tests/rango-paquete.test.cjs`; Modify `checkout-view.tsx`, `pedido/fecha-paquete.tsx`, `pedido/grupo-servicio.tsx`, `traslado-view.tsx`, `date-field.tsx`; Delete `checkout-calendar.tsx`, `lib/calendario-semana.ts` y `tests/calendario-semana.test.cjs` (cuando ya no tengan usos).
 
-> Hallazgos del crítico verificados: `BookingBar` **no** está en `/reservar`: se usa en `hero.tsx:117` y `selector-experiencia.tsx:172` (la entrada de portada y sede que arma la query hacia `/reservar`); `StickyBookingBar` no se renderiza en ningún sitio, pero `hero.tsx:2` y `selector-experiencia.tsx:~16` importan su constante `ID_BARRA_PORTADA`; `lib/calendario-paquete.ts` solo calcula fechas (`sumarDias`, `nochesDelPaquete`, `fechaDeComponente`, `fechaSalida`); la única fuente de cupo por día es `getCupoRango` (`lib/api.ts:~173-188`, `DisponibilidadRango`: `lleno | sin_panga | sin_lugar | null`), de pangas por empresa y personas.
+> **BookingBar eliminada (2026-10-15, commit `5408d06c`).** El dueño confirmó que es código viejo y se borró junto con `StickyBookingBar`, `booking-state` y el `Hero` viejo. Lo que F8 reemplaza es la **tira semanal** de la página de reservar (`lib/calendario-semana.ts`, usada en `checkout-calendar`, `date-field`, `fecha-paquete`, `grupo-servicio` y `traslado-view`, incluida la fecha de regreso de traslados): en la reserva, siempre el calendario completo.
+> Hallazgos del crítico que siguen vigentes: `lib/calendario-paquete.ts` solo calcula fechas (`sumarDias`, `nochesDelPaquete`, `fechaDeComponente`, `fechaSalida`); la única fuente de cupo por día es `getCupoRango` (`lib/api.ts:~173-188`, `DisponibilidadRango`: `lleno | sin_panga | sin_lugar | null`), de pangas por empresa y personas.
 
-- [ ] **Entradas del hero y la sede no cambian:** `BookingBar` y el modo popover de `DateField` se quedan (la entrada con fecha y personas hacia `/reservar` sigue igual). Mover `ID_BARRA_PORTADA` a `lib/ids.ts` y actualizar los dos imports; borrar `sticky-booking-bar.tsx` (código muerto).
-- [ ] **En `/reservar`**, el paso Viaje monta siempre el calendario completo `ui/calendario` (fondo blanco, borde `borde`, radio 16, sin sombra; días en círculo de 44 px); `checkout-calendar.tsx` se borra y `fecha-paquete.tsx` lo usa.
+- [ ] **En `/reservar` y `/traslados`**, el paso Viaje monta siempre el calendario completo `ui/calendario` (fondo blanco, borde `borde`, radio 16, sin sombra; días en círculo de 44 px), también para la fecha de regreso de traslados (que hoy usa la tira semanal y debe seguir siendo obligatoria y sin prellenar); `checkout-calendar.tsx` y la tira semanal se borran.
 - [ ] **Rango de paquete (función pura con prueba primero):** `rangoDelPaquete(inicio, noches)` construida **sobre** `sumarDias` y `nochesDelPaquete` de `calendario-paquete.ts` (no los duplica) y `diasSinCupoEnRango(rango, disponibilidad: DisponibilidadRango)` que marca solo los días que `getCupoRango` ya declara llenos. Casos de la prueba: rango de N noches, 0 noches, un solo día, un día `lleno` dentro del rango y `null` en todos. **No hay «pocos lugares» ni corte por cupo de hospedaje o de componentes**; el cupo definitivo se valida al pagar, como hoy.
 - [ ] **Interacción:** hover, foco o primer toque en móvil = vista previa (`cafe-bruma` + borde discontinuo `cafe`); elegir = rango firme (`cafe-claro`, extremos `cafe`); en móvil el segundo toque en el mismo día confirma.
 - [ ] **Leyenda** hecha con los mismos componentes que las celdas: Disponible, Sin cupo (donde se sabe), Hoy, Tu selección, Vista previa, Rango confirmado — cada uno con color **y** forma. **Atajos:** «Borrar fecha», «Mañana», «En 2 días» (valores editables).
@@ -728,7 +728,7 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 | Fuente: Consola Mono solo tiene Book y Bold | Titulares siempre 700; subtítulos y etiquetas en la fuente del cuerpo |
 | El fondo arena exige tocar 57 usos de `bg-background` | Task 2.4 separa `--superficie` de `--background` antes de F7, sin cambio visual |
 | Viaje se sobrecarga al recibir los extras | Task 8.1 cuenta los controles por ruta; los opcionales se pliegan, no se crea un cuarto paso |
-| Quitar la barra de reserva rompe la entrada desde portada y sede | `BookingBar` y `DateField` popover se quedan; solo se quita el calendario antiguo de la ruta de reserva |
+| Quitar la tira semanal deja la fecha de regreso de traslados sin control | El calendario completo la cubre (obligatoria y sin prellenar); recorrido manual de traslados |
 | Falsos positivos de la compuerta (comentarios, anclas `#add`) | Se ignoran comentarios, la regex de hex exige 3/4/6/8 dígitos y la prueba es la especificación |
 
 ## Orden y dependencias
