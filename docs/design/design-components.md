@@ -87,7 +87,7 @@ Botón de texto «¿Tienes un código?» que despliega el campo con la misma ani
 
 ### Cabecera mínima (página de reserva)
 
-Sustituye al navbar completo: **flecha de volver** a la izquierda, **logo redondo** de 32 al centro, **selector de idioma ES/EN** a la derecha. Alto 56, fondo `arena`, sin sombra, línea inferior `borde`. No se fija al hacer scroll en escritorio; en móvil permanece visible porque contiene «volver».
+Sustituye al navbar completo: **flecha de volver** a la izquierda, **logo redondo** de 32 al centro, **selector de idioma ES/EN** a la derecha. Alto 56, fondo `arena`, sin sombra, línea inferior `borde`. En móvil queda fija (contiene «volver»); en escritorio no se fija. Define `--nav-alto`: 56 px en móvil y 0 en escritorio.
 
 ---
 
@@ -133,7 +133,7 @@ Sin tarjetas plegables: se ve **un solo paso a la vez**.
 │ ←        (logo)         ES/EN│  cabecera mínima (56)
 ├──────────────────────────────┤
 │ Reserva tu pesca  (36 mono)  │  título de la página
-│ Paso 2 · Tus datos           │  nombre del paso (20/600)
+│ Paso 2 · Tus datos           │  nombre del paso (24 mono 700)
 │ …campos del paso…            │
 │                              │
 ├──────────────────────────────┤  nivel 1 de sombra (hacia arriba)
@@ -216,8 +216,7 @@ Una fila bajo el calendario, hecha con **los mismos componentes que las celdas**
 | Estado | Apariencia | Significado |
 |---|---|---|
 | Disponible | Círculo blanco, número `tinta` | Hay lugar ese día |
-| Pocos lugares | Punto `cafe` de 6 px bajo el número, fondo `cafe-claro` | Quedan pocos lugares |
-| Sin cupo | Rayado diagonal, número `apagado` tachado | No se puede elegir |
+| Sin cupo | Rayado diagonal, número `apagado` tachado | No se puede elegir (solo donde el sistema ya lo sabe: cupo de pangas por día; el cupo definitivo se valida al pagar) |
 | Hoy | Anillo `azul` de 2 px | Fecha actual |
 | Tu selección | Relleno `cafe`, número blanco | Día elegido |
 | Vista previa | Relleno `cafe-bruma`, borde discontinuo `cafe` | Días que se tomarían (provisional) |
@@ -229,7 +228,7 @@ Contrastes: número blanco sobre `cafe` 8,46:1; `cafe-profundo` sobre `cafe-clar
 
 ### Paquetes de varias noches (duración fija)
 
-1. Al pasar el cursor o enfocar un día, se pinta la **vista previa** (provisional): desde ese día hasta el último día del paquete, con borde discontinuo. Si el rango pasa por un día sin cupo, la vista previa se corta ahí y el día inicial queda marcado como no elegible, con una línea que dice por qué.
+1. Al pasar el cursor o enfocar un día, se pinta la **vista previa** (provisional): desde ese día hasta el último día del paquete, con borde discontinuo. Si el rango incluye un día que el sistema ya sabe lleno (cupo de pangas), ese día se marca con el rayado de «Sin cupo» y una línea dice cuál es. No hay estado «pocos lugares» ni corte por cupo de hospedaje: el cupo definitivo se valida al pagar.
 2. Al elegir el día de inicio (clic, toque o `Enter`), **todos los días del rango se pintan firmes** (`cafe-claro`, extremos `cafe`) y el resumen muestra «Del 7 al 10 de nov · 3 noches».
 3. Para cambiar, se toca otro día de inicio o «Borrar fecha». En móvil, sin cursor, el primer toque muestra la vista previa y el segundo toque sobre el mismo día confirma; un toque en otro día mueve la vista previa.
 

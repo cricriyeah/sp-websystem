@@ -13,7 +13,7 @@
 ## Restricciones globales
 
 - **Checkout visible idéntico** (diferencia visual cero) hasta las fases F7 y F8, que salen **juntas en un solo lanzamiento**. Montos, cargos, plazos y textos de cobro no cambian. *(PFD R4)*
-- La marca nueva aterriza **en un solo lanzamiento**; nunca una mezcla vieja/nueva en producción. *(PFD R4)*
+- La marca nueva aterriza **en un solo lanzamiento**; nunca una mezcla vieja/nueva en producción. *(PFD R4)* F7 es **valores más una pasada de componentes** (fondos, sombras, titulares, foco), no solo valores.
 - Todo valor visual sale de un token; todo control de una primitiva. *(PFD R3)*
 - Una sola acción principal por paso; su jerarquía vive en la primitiva. *(PFD R1, R5)*
 - Puerta de cada tarea: `npx.cmd tsc --noEmit`, `npx.cmd eslint src tests`, `npm.cmd test`, `npm.cmd run build`, `npm.cmd run guardia`. Un commit por tarea.
@@ -85,7 +85,7 @@
 | `src/components/ui/variantes.ts` | Mapas de variantes **puros, sin ningún import** (el runner los compila y los prueba sin DOM ni paquetes) | F3 |
 | `src/components/ui/{button,input,field,card,badge}.tsx` | Primitivas | F3 |
 | `src/components/ui/hero-media.tsx`, `section-shell.tsx` | Héroe y sección únicos | F5 |
-| `src/components/checkout/pasos/*.tsx` | Un archivo por paso, extraídos de las vistas gigantes | F5 |
+| `src/components/checkout/bloques/{bloque-viaje,bloque-extras,bloque-contacto,bloque-recogida,bloque-pago}.tsx` | Un archivo por **bloque** de contenido, extraídos de las vistas gigantes (F8 solo los reagrupa en 3 pasos) | F5 |
 | `tests/variantes.test.cjs` | Prueba de las variantes | F3 |
 | `src/app/fonts/ConsolaMono-{Book,Bold}.woff2` + `OFL.txt` + `FONTLOG.txt` | Fuente de titulares recortada a latín; la licencia viaja con ella | F7 |
 | `src/components/reserva/{cabecera-minima,linea-progreso,barra-inferior,asa-resumen}.tsx` | Piezas del asistente móvil y de la cabecera sin navbar | F8 |
@@ -391,6 +391,17 @@ Objetivo: ≤ 8 MB. Si se ve mal, subir calidad hasta que el dueño lo apruebe (
 - [ ] **Paso 3:** `opengraph-image.tsx` queda como excepción documentada en `EXENTOS` (`ImageResponse` no lee CSS); se actualiza a mano en F7.
 - [ ] **Paso 4: commit** `refactor(pago): los valores concretos de Stripe Elements salen de una fuente probada contra los tokens`.
 
+### Task 2.4: Token de superficie y tokens de tarjeta, sin cambio visual
+
+> Hallazgo del crítico (ronda 3): hoy `--background` es blanco y `--color-card` apunta a él; 57 usos de `bg-background` mezclan fondos de página con fondos de tarjetas, campos y popovers. El diseño pone la página en **arena** y las superficies en **blanco**. Separarlos hoy, con el mismo color, deja a F7 en «solo valores».
+
+**Files:** Modify `src/app/globals.css` y los componentes que usan `bg-background` (57 sitios).
+
+- [ ] **Paso 1:** en `globals.css` añadir `--superficie: #ffffff` y `--color-superficie: var(--superficie)` (mismo valor que hoy), `--color-card: var(--superficie)`, y los tokens de forma de contenedor con **el valor actual** (las tarjetas hoy no tienen radio): `--radius-card: 0px; --radius-sheet: 0px`.
+- [ ] **Paso 2:** recorrer los 57 usos de `bg-background` (`grep -rn "bg-background" src`) y repuntar a `bg-superficie` los que son **contenedores**: tarjetas, campos, popovers, hojas, calendario, resumen, barra inferior. Los de fondo de página o de sección siguen en `bg-background`. Se hace por superficie, en el mismo commit que su migración de F4 si ya la tocó.
+- [ ] **Paso 3:** la prueba `tokens-pago` compara `colorBackground` de Stripe con `--superficie` (el formulario vive en una tarjeta), no con `--background`.
+- [ ] **Paso 4:** `build` + `guardia`; sin diferencia visual (ambos tokens valen blanco). **Paso 5: commit** `refactor(frontend): token de superficie separado del fondo de página, sin cambio visual`.
+
 ---
 
 ## F3 — Primitivas con variantes (PFD R1, R5)
@@ -497,7 +508,7 @@ export function botonClases({ variante = 'principal', tamano = 'md' }: { variant
 - `Field({ etiqueta, error, ayuda, id, children })`: etiqueta, control y `ErrorDeCampo` (reutiliza el existente con `Despliegue`).
 - `Card`/`Badge`: contenedores con variantes (`plana | elevada`, `exito | aviso | error | neutro`).
 
-- [ ] Por componente: escribir, usar `cn` y las variantes; `Input` usa `CAJA_CAMPO`/`CAJA_CAMPO_ERROR` de `ui/caja-campo` (movidos en Task 3.0; **nunca** de `checkout/estilos.ts`, que violaría la capa `ui`).
+- [ ] Por componente: escribir, usar `cn` y las variantes; `Input` usa `CAJA_CAMPO`/`CAJA_CAMPO_ERROR` de `ui/caja-campo` (movidos en Task 3.0; **nunca** de `checkout/estilos.ts`, que violaría la capa `ui`). `Card` usa `bg-superficie` y `rounded-card`; `Badge` tiene las variantes de actividad `mar`, `ciudad` y `outside` (fondo `*-claro`, texto del tono oscuro, siempre con icono) y las de estado `exito`, `error`, `aviso` e `info`.
 - [ ] `Button` tiene **`type="button"` por defecto**. Antes de migrar un `<button>` hay que mirar si está dentro de un `<form>` sin `type`: ese hoy **envía** el formulario (p. ej. Enter en `campos-contacto`). Ese caso se migra con `type="submit"` explícito. Listar con `grep -rn "<button" src --include=*.tsx` y revisar los que estén dentro de `<form`.
 - Probar en **una sola pantalla**: sustituir los botones de `faq-section.tsx` (superficie pública de bajo riesgo) por `Button`. Verificar con `tsc`, `eslint`, `build`, `guardia` (baja).
 - [ ] PUNTO DEL DUEÑO: mirar la sección de preguntas frecuentes (debe verse igual).
@@ -516,8 +527,8 @@ Recuento medido (`<button`): continuar-reservacion 7, reviews-carousel 5, grupo-
 **Regla de migración (aplica a todas las tareas):** una superficie por commit; el JSX resultante genera las mismas clases (comparar el HTML renderizado en el `build` no basta: se compara el diff de clases a mano); si una variante no existe, **se añade la variante** a `variantes.ts` con su prueba, no se deja un `<button>` crudo.
 
 Orden por riesgo creciente (PUNTO DEL DUEÑO al cerrar cada grupo):
-1. **Públicas sin dinero:** `faq-section`, `cookie-notice`, `lang-switch`, `site-header`, `sede-selector`, `reviews-carousel`, `hub-mapa-sedes`, `hub-hero`, `paquete-card`, `selector-experiencia`, `sticky-booking-bar`, `continuar-reservacion`.
-2. **Campos y selectores compartidos:** `field-popover`, `date-field`, `time-field`, `people-stepper`, `checkout-calendar`, `select-personalizado`, `toast`.
+1. **Públicas sin dinero:** `faq-section`, `cookie-notice`, `lang-switch`, `site-header`, `sede-selector`, `reviews-carousel`, `hub-mapa-sedes`, `hub-hero`, `paquete-card`, `selector-experiencia`, `continuar-reservacion`.
+2. **Campos y selectores compartidos:** `field-popover`, `date-field` (solo su modo popover, que usa el hero), `time-field`, `people-stepper`, `select-personalizado`, `toast`. **No se migran** `checkout-calendar` ni `sticky-booking-bar`: F8 reemplaza el primero y borra el segundo (ya no se renderiza en ningún sitio).
 3. **Checkout, tarjetas auxiliares:** `checkout-section-card`, `campos-contacto`, `tipo-traslado-cards`, `ayuda-flotante`, `reserva-plegable`, `aviso-fallo`.
 4. **Checkout, núcleo:** `grupo-servicio`, `fecha-paquete`, `checkout-view`, `traslado-view`, `stripe-panel`, `booking-confirmation`. **Se hace DESPUÉS de F5**, ya dentro de `checkout/pasos/*` (corrección del crítico: migrar y luego partir las mismas ~1 700 líneas es trabajo doble con revisión del dueño en cada pasada). Con revisión del dueño del flujo completo.
 
@@ -536,7 +547,7 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 > 1. Servicio suelto: elegir, datos, pagar con tarjeta de prueba.
 > 2. Paquete de una empresa: igual.
 > 3. Paquete cruza-empresa: pago 1 retenido y **rechazo en el pago 2** (aviso de retención), luego reintento.
-> 4. Traslados: los cuatro pasos, incluida la fecha de regreso.
+> 4. Traslados: todos los pasos (4 antes de F8, 3 después), incluida la fecha de regreso.
 > 5. **Recargar a media compra** (reanudación por `sessionStorage`: `checkoutId`/`ordenId`) y cambiar de idioma.
 > 6. **Enter** dentro de un formulario (no debe enviar ni dejar de enviar donde antes lo hacía).
 > 7. El token de Turnstile sobrevive al plegar y reabrir la tarjeta, y se renueva tras un rechazo (`captchaKey`).
@@ -545,16 +556,16 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 
 ### Task 5.1: Partir `checkout-view.tsx` (1 703 líneas, 36 `useState`)
 
-**Files:** Create `src/components/checkout/pasos/{paso-viaje,paso-contacto,paso-detalles,paso-pago}.tsx`; Modify `checkout-view.tsx`.
+**Files:** Create `src/components/checkout/bloques/{bloque-viaje,bloque-extras,bloque-contacto,bloque-recogida,bloque-pago}.tsx`; Modify `checkout-view.tsx`.
 
 - [ ] **Paso 1:** leer el archivo completo y listar por paso el estado que posee y el que comparte. Dibujar el mapa de estado en el commit.
 - [ ] **Paso 2:** el estado compartido sube a un *reducer* (el patrón ya existe en `lib/pedido-estado.ts` + `use-pedido-estado.ts` para paquetes); el estado local de un paso baja a su componente. Regla `rerender-no-inline-components`: ningún componente se define dentro de otro.
-- [ ] **Paso 3:** extraer un paso por commit en este orden: pago, detalles, contacto, viaje. Tras cada extracción: `tsc`, `eslint`, `npm test`, `build`, `guardia`.
+- [ ] **Paso 3:** extraer un **bloque** por commit en este orden: pago, extras (hoy «detalles»), contacto, recogida (solo traslados), viaje; los 4 pasos actuales quedan como composición fina de bloques. Así F8 solo reagrupa los bloques en tres pasos, sin volver a partir las vistas. Tras cada extracción: `tsc`, `eslint`, `npm test`, `build`, `guardia`.
 - [ ] **Paso 4:** PUNTO DEL DUEÑO tras cada paso extraído (recorrer el servicio suelto completo hasta el pago de prueba).
 
 ### Task 5.2: Partir `traslado-view.tsx` (1 006 líneas, 32 `useState`)
 
-- [ ] Mismo procedimiento. Reutiliza `PaginaCheckout`, `ContenidoViaje` y los pasos ya compartidos; el objetivo es que los cuatro pasos de traslados (Viaje · Datos · Recogida · Pago) sean componentes de `checkout/pasos/`.
+- [ ] Mismo procedimiento. Reutiliza `PaginaCheckout`, `ContenidoViaje` y los pasos ya compartidos; el objetivo es que los bloques de traslados (viaje, contacto, recogida, pago) sean componentes de `checkout/bloques/`.
 
 ### Task 5.3: Revisar `pedido-paquete.tsx` (894 líneas)
 
@@ -585,87 +596,114 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 
 ---
 
-## F7 — Marca nueva: tokens, fuentes y variantes (PFD R4)
+## F7 — Marca nueva: valores y una pasada de componentes (PFD R4)
 
-**Entradas ya entregadas:** `docs/design/design.md` (colores, tipografía, forma, elevación) y las decisiones del dueño del 2026-10-15: botón principal en café con texto blanco; titulares en Consola Mono; cuerpo en San Francisco (fuente del sistema); radio 12 px en controles y 16 px en tarjetas; neutros cálidos (arena `#FBF7F0` y blanco), sin negro puro; categorías: azul = mar, coral = ciudad, verde = outside o montaña. **Falta del dueño:** logo y fotos definitivos.
+**Entradas ya entregadas:** `docs/design/design.md` y las decisiones del dueño del 2026-10-15: botón principal café con texto blanco; titulares en Consola Mono (solo 400 y 700); cuerpo en la pila del sistema (San Francisco en Apple); radio 12 px en controles y 16 px en tarjetas; página **arena** `#FBF7F0` con tarjetas, campos y calendario **blancos**; sin negro puro; categorías azul = mar, coral = ciudad, verde = outside o montaña; **sin la palabra caligráfica** de los titulares. **Falta del dueño:** logo y fotos definitivos.
 
 ### Task 7.1: Preparar la fuente Consola Mono
 
 **Files:** Create `src/app/fonts/ConsolaMono-Book.woff2`, `ConsolaMono-Bold.woff2`, `OFL.txt`, `FONTLOG.txt`; Modify `src/app/fonts/LICENCIAS.md`.
 
 - [ ] **Paso 1:** descargar el zip de `https://www.dafont.com/es/consola-mono.font` (autor Wojciech Kalinowski, SIL Open Font License 1.1, sin nombre reservado declarado) en una carpeta **nueva y vacía**; los archivos descargados se tratan como no confiables: no se ejecuta nada de ellos.
-- [ ] **Paso 2:** recortar a latín con acentos, puntuación, símbolos de moneda y los usados en la interfaz (`@ $ € × → ← ↑ ↓ · … « » ¡ ¿`) y convertir a WOFF2 (requiere `fonttools` y `brotli`):
+- [ ] **Paso 2:** recortar a latín con acentos, puntuación, moneda y símbolos de la interfaz y convertir a WOFF2 (requiere `fonttools` y `brotli`):
 
 ```bash
 pyftsubset ConsolaMono-Bold.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,U+2010-2027,U+20AC,U+2190-2193,U+00D7" --flavor=woff2 --layout-features='*' --output-file=ConsolaMono-Bold.woff2
 pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,U+2010-2027,U+20AC,U+2190-2193,U+00D7" --flavor=woff2 --layout-features='*' --output-file=ConsolaMono-Book.woff2
 ```
 
-  Objetivo: ≤ 40 KB por archivo. Comprobar que se ven á é í ó ú ñ ü ¿ ¡ y `$4,100`.
-- [ ] **Paso 3:** copiar `SIL - Open Font License.txt` como `OFL.txt` y `FONTLOG.txt` junto a los `.woff2` (la OFL exige que la licencia acompañe a la fuente) y anotar la fuente, autor y licencia en `LICENCIAS.md`.
+  Objetivo: ≤ 40 KB por archivo. Comprobar á é í ó ú ñ ü ¿ ¡ y `$4,100`.
+- [ ] **Paso 3:** copiar `SIL - Open Font License.txt` como `OFL.txt` y `FONTLOG.txt` junto a los `.woff2` (la OFL exige que la licencia acompañe a la fuente) y anotar fuente, autor y licencia en `LICENCIAS.md`.
 - [ ] **Paso 4: commit** `chore(fonts): Consola Mono recortada y con su licencia`.
 
-### Task 7.2: Aplicar la marca (una sola rama, un solo lanzamiento)
+### Task 7.2: Valores de la marca (tokens, fuentes, variantes)
 
-**Files:** Modify `src/app/globals.css`, `src/app/[lang]/layout.tsx`, `src/lib/tokens-pago.ts`, `src/components/ui/variantes.ts`, `src/app/[lang]/opengraph-image.tsx`.
+**Files:** Modify `src/app/globals.css`, `src/app/[lang]/layout.tsx`, `src/lib/tokens-pago.ts`, `src/components/ui/variantes.ts`, `src/app/[lang]/opengraph-image.tsx`, `src/components/stripe-panel.tsx` (o `checkout/pago/formulario-pago.tsx` tras F1.2), `src/app/[lang]/not-found.tsx`, `src/components/license-section.tsx`, `src/components/hero.tsx`, `src/components/sede-hero.tsx`.
 
-- [ ] **Paso 1: colores** — en `globals.css` sustituir los valores de los tokens por los de `design.md`: `--accent`/`--action` → café `#7C3B02` (texto sobre acción `#FFFFFF`, 8,46:1), `--foreground` → `#1F1A14`, `--background` → `#FBF7F0` y superficies blancas, bordes `#D9C9B4` (decorativo) y `#8A7A66` (borde de controles, 4,15:1), estados con sus parejas de `design.md`, y las familias `azul`, `coral`, `verde` con `hondo`, `profundo`, `medio`, `claro` y `bruma`. Contraste de cada par comprobado antes del commit.
-- [ ] **Paso 2: forma** — `--radius-control: 12px`, `--radius-campo: 12px`, `--radius-card: 16px`, `--radius-sheet: 24px`; los chips y los días del calendario siguen en `9999px`.
-- [ ] **Paso 3: elevación** — sombras de `design.md` (0 sin sombra, 1 solo en la barra inferior móvil, 2 en popovers); la sombra grande del resumen se elimina.
-- [ ] **Paso 4: fuentes** — en `layout.tsx` quitar `Instrument_Sans`, `Bebas Neue` y `Bella Fashion`; añadir `localFont` con los dos `.woff2` de Consola Mono (`display: 'swap'`, `variable: '--font-titulo'`, pesos 400 y 700) y declarar el cuerpo como pila del sistema en `@theme`: `--font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;`. Titulares siempre 700.
-- [ ] **Paso 5: Stripe y OG** — actualizar `TOKENS_PAGO` (la prueba compara con `globals.css`) y `opengraph-image.tsx` a mano.
-- [ ] **Paso 6: variantes** — `variantes.ts`: la variante `principal` pasa a café con texto blanco; `secundario` borde `borde-control` y texto café; `peligro` con `error`. Las pruebas de F3 (solo la principal usa el color de acción) siguen pasando.
-- [ ] **Paso 7:** `verificar` completo (`guardia` en 0 salvo exentos), build y revisión del dueño de portada, hub, sede, servicio, los tres checkouts, traslados, confirmación y páginas de error, en es y en. PUNTO DEL DUEÑO.
-- [ ] **Paso 8:** F7 **no se despliega sola**: sale junto con F8.
+- [ ] **Paso 1: colores** (valores de `design.md`): `--accent`/`--action` → café `#7C3B02` (texto sobre acción `#FFFFFF`, 8,46:1); `--foreground` → `#1F1A14`; **`--background` → arena `#FBF7F0`** (las superficies ya son blancas por F2.4); bordes `#D9C9B4` (decorativo) y `#8A7A66` (controles, 4,15:1); estados con sus parejas; familias `azul`, `coral`, `verde` con `hondo`, `profundo`, `medio`, `claro` y `bruma`; **`--ring` → `azul` `#1B607F`** (foco). Comprobar el contraste de cada par antes del commit. `--amber`, `--indigo` y `--yellow` salen; `--hero-ink` se queda.
+- [ ] **Paso 2: forma** — `--radius-control: 12px`, `--radius-campo: 12px`, `--radius-card: 16px`, `--radius-sheet: 24px` (las tarjetas ya usan `rounded-card` desde F3/F4); chips y días del calendario en `9999px`.
+- [ ] **Paso 3: fuentes — lista cerrada de lo que se toca** (hallazgo del crítico):
+  - `layout.tsx`: quitar `Instrument_Sans`, Bebas Neue y Bella Fashion; añadir `localFont` con los dos `.woff2` de Consola Mono (`display: 'swap'`, `variable: '--font-titulo'`, pesos 400 y 700, `fallback` = la pila monoespaciada de `design.md`).
+  - `globals.css` `@theme inline` (líneas ~110-112): borrar `--font-sans: var(--font-cuerpo)` y `--font-script: var(--font-acento)`; declarar `--font-sans` con **la pila literal** (`-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`) y `--font-display: var(--font-titulo)`.
+  - `globals.css` `body` (línea ~300): `font-family: var(--font-sans)` (ya no `--font-cuerpo`).
+  - `globals.css` regla `h1, h2` (líneas ~318-324): peso 700, tracking de `design.md` (`--tracking-titulo: -0.02em`), sin el fallback Oswald/Arial Narrow; se conserva `font-synthesis: none` porque Book y Bold son reales.
+  - `globals.css` `.acento` (líneas ~265-280): **se elimina**, y en `hero.tsx` (líneas ~99-100) y `sede-hero.tsx` (líneas ~79-80) el titular se pinta como texto plano (`start + emphasis + end`, sin estilo especial; el contrato de `sedes-tipos.ts` no cambia).
+  - `not-found.tsx` (líneas ~25-37) y `license-section.tsx` (línea ~39): quitar `font-normal` y migrar al nuevo `--tracking-titulo`.
+  - `stripe-panel.tsx` (líneas ~76, ~86) carga Instrument Sans por Google Fonts para Stripe Elements: quitar `STRIPE_FUENTES` y poner `fontFamily` de la pila del sistema en `TOKENS_PAGO` (la prueba de `tokens-pago` lo compara con `--font-sans`).
+- [ ] **Paso 4: Stripe y OG** — `TOKENS_PAGO` con los hex nuevos (comparados con `globals.css` por su prueba) y `opengraph-image.tsx` a mano (no carga fuentes; solo cambian colores).
+- [ ] **Paso 5: variantes** — `variantes.ts`: `principal` café con texto blanco; `secundario` con borde `borde-control` y texto café; `peligro` con `error`. Las pruebas de F3 siguen pasando.
+- [ ] **Paso 6: commit** `feat(marca): valores de Sun Baja Experience` (todavía sin desplegar).
+
+### Task 7.3: Pasada de componentes (cambios visuales deliberados)
+
+> «Solo valores» era falso para estos puntos (medidos el 2026-10-15): 16 `shadow-[...]` arbitrarias y 18 `shadow-*` sueltas, dos brillos amarillos con `rgba(255,222,0,…)`, 5 `ring-accent`, 2 `text-action` y h1/h2 con clases de tamaño sueltas.
+
+- [ ] **Sombras:** convertir las 16 arbitrarias (p. ej. `checkout-section-card.tsx:54`, `booking-confirmation.tsx:167`, `checkout-loading-shell.tsx:58`, `cookie-notice`, `field-popover`) y las 18 `shadow-*` a tres tokens `--shadow-n0` (ninguna), `--shadow-n1` (barra inferior móvil) y `--shadow-n2` (popover, toast, hoja) con los valores de `design.md`. El resumen y las tarjetas quedan en `n0`.
+- [ ] **Brillos amarillos:** `booking-bar.tsx` (líneas ~131-136) y el panel de pago (`rgba(255,222,0,…)`, líneas ~399-404 de `stripe-panel.tsx` antes del split) pasan a un token `--brillo-accion` (café, baja opacidad) o se eliminan.
+- [ ] **Foco:** los 5 `ring-accent` pasan a `focus-visible:ring-ring`.
+- [ ] **`text-action` (2 usos):** el icono `Warning` sobre `bg-action/10` (`checkout-view.tsx:~1313`, `grupo-servicio.tsx:~114`) pasa a `text-aviso` sobre `bg-aviso-fondo`.
+- [ ] **Titulares:** definir clases semánticas `texto-display`, `texto-pagina`, `texto-seccion` y `texto-paso` con la escala de `design.md` (40/64, 36/56, 28/36, 24/28) y aplicarlas a los h1/h2 de `hero.tsx` (~38/60/76 px), `hub-hero.tsx` (~38/60/72), el h1 de `servicio/[empresa]/[servicio]/page.tsx` (`text-5xl/6xl`) y `encabezado-compra.tsx` (`text-2xl/3xl`). La monoespaciada es más ancha: los `max-w-[19ch]` calibrados para Bebas condensada (comentario en `globals.css`) se revisan por desbordamiento en móvil de 360 px, en es y en.
+- [ ] **Verificación:** `verificar` completo, `guardia` en 0 salvo exentos, build; revisión del dueño de portada, hub, sede, servicio, los tres checkouts, traslados, confirmación y páginas de error, en es y en. PUNTO DEL DUEÑO.
+- [ ] **Commit** `feat(marca): sombras, foco, titulares y brillos con la identidad nueva`.
+- [ ] F7 **no se despliega sola**: sale junto con F8.
 
 ---
 
 ## F8 — Página de reserva nueva (sale con F7)
 
-> Especificación completa: `docs/design/design-components.md`, secciones «Página de reserva», «Selección de fecha» y «Tarjeta de paso». Decisiones del dueño: se quita **solo el stepper numerado** (los pasos siguen con nombre); contacto y detalles se unen en «Tus datos» (3 pasos: **Viaje · Tus datos · Pago**); paquetes de varias noches con **duración fija**; cabecera mínima con flecha, logo e idioma.
+> Especificación: `docs/design/design-components.md` (secciones «Página de reserva», «Selección de fecha» y «Tarjeta de paso»). Decisiones del dueño: se quita **solo el stepper numerado**; **tres pasos en todas las rutas** — **Viaje** (fecha, personas, **extras**) · **Tus datos** (contacto + recogida u hotel + notas) · **Pago**; con dos empresas, «Pago 1 de 2» y «Pago 2 de 2» son sub-pasos dentro de Pago; los traslados también quedan en 3 (contacto + recogida en «Tus datos»); paquetes de varias noches con **duración fija**; cabecera mínima con flecha, logo e idioma; calendario con alcance recortado (sin «pocos lugares» ni corte por cupo de hospedaje).
 
-### Task 8.1: Verificar los campos y pasar a 3 pasos
+### Task 8.1: Tres pasos en las cuatro rutas
 
-**Files:** Modify `src/lib/pasos-checkout.ts`, `tests/pasos-checkout.test.cjs`, y las vistas ya partidas en `checkout/pasos/*` (F5).
+**Files:** Modify `src/lib/pasos-checkout.ts`, `tests/pasos-checkout.test.cjs`, `checkout-view.tsx`, `pedido/pedido-paquete.tsx`, `traslado-view.tsx`, `checkout-stepper.tsx` (se elimina el numerado), `src/app/[lang]/dictionaries/{es,en}.json` (`checkout.stepper`).
 
-- [ ] **Paso 1:** contar los campos reales de «contacto» y «detalles» en cada ruta (servicio, paquete de una empresa, cruza-empresa, traslados). Si juntos pasan de ~7 en alguna ruta, **parar y avisar al dueño** (la regla de PFD R1 es máximo ~7 por paso): esa ruta se queda en 4 pasos.
-- [ ] **Paso 2:** leer `lib/pasos-checkout.ts` y su prueba; escribir primero la prueba nueva («los pasos son viaje, datos, pago») y verla fallar; después cambiar el módulo. Los nombres de paso salen del diccionario es/en: «Viaje», «Tus datos», «Pago».
-- [ ] **Paso 3:** unir los componentes `paso-contacto` y `paso-detalles` en `paso-datos.tsx`; validación al avanzar igual que antes (los recorridos manuales de F5 aplican).
-- [ ] **Paso 4: commit** `feat(checkout): tres pasos, contacto y detalles juntos`.
+> Hallazgos del crítico verificados: `ORDEN_PASOS` es una constante global de 4 pasos (`pasos-checkout.ts:7-9`); el literal `4` aparece en `checkout-view.tsx:~1249`, `traslado-view.tsx:~595` y `pedido-paquete.tsx:~408-414, ~457, ~531-532` (`actual: 4 + indicePago`); las claves `checkout.stepper` son `trip/contact/extras/payment` y `pedido-paquete.tsx:~404-415` arma `steps`/`etiquetasCortas`; en servicio suelto «detalles» son los extras (`checkout-view.tsx:~1590-1620`) y en paquete una tarjeta por servicio (`pedido-paquete.tsx:~648-654`).
 
-### Task 8.2: Cabecera mínima y sin navbar
+- [ ] **Paso 1: prueba primero** en `tests/pasos-checkout.test.cjs`: `ORDEN_PASOS` es `['viaje','datos','pago']`, `numeroDePaso('pago') === 3`, y `estadoDeTarjeta` mantiene las reglas actuales (oculto / activo / completado / editando). Verla fallar.
+- [ ] **Paso 2:** cambiar `PasoId` y `ORDEN_PASOS` a `viaje | datos | pago` (una sola constante vale porque las cuatro rutas quedan iguales). Los sub-pasos de pago por empresa son estado propio del paso Pago (`indicePago`, `totalPagos`), no pasos nuevos: se elimina `actual: 4 + indicePago` y todo `4` literal.
+- [ ] **Paso 3:** mover los **extras** al bloque de Viaje (servicio suelto: `bloque-extras` desde «detalles»; paquete: la tarjeta por servicio) y unir `bloque-contacto` + `bloque-recogida` en «Tus datos» (los bloques existen desde F5). La validación viaja con cada bloque; `iniciarPago` revalida viaje y datos (contacto + recogida) y reabre la tarjeta que falle.
+- [ ] **Paso 4:** diccionarios: sustituir `checkout.stepper` (`trip/contact/extras/payment`) por `viaje/datos/pago` en es y en, con «Viaje», «Tus datos», «Pago» y «Paso N de 3»; reiniciar `npm run dev` (Turbopack cachea los JSON).
+- [ ] **Paso 5: límite de campos** — contar los controles de «Viaje» por ruta (fecha, personas, extras obligatorios y opcionales). Si en alguna ruta pasan de ~7, **parar y avisar al dueño** antes de seguir (PFD R1): los opcionales se pliegan bajo «Más opciones» en vez de crear un cuarto paso.
+- [ ] **Paso 6:** recorridos manuales de F5 en las cuatro rutas, incluido el rechazo en «Pago 2 de 2». **Paso 7: commit** `feat(checkout): tres pasos en todas las rutas; extras en Viaje`.
 
-**Files:** Create `src/components/reserva/cabecera-minima.tsx`; Modify `src/components/site-header.tsx` (o el layout de `/reservar` y `/traslados`).
+### Task 8.2: Cabecera mínima sin navbar y `--nav-alto`
 
-- [ ] Flecha de volver (48 × 48), logo redondo de 32 y selector ES/EN; sin navbar completo en `/reservar` y `/traslados`. Conserva el cambio de idioma sin perder la reserva (preserva la query, como hoy). `ContinuarReservacion` sigue existiendo fuera del checkout.
-- [ ] Commit `feat(reserva): cabecera mínima sin navbar`.
+**Files:** Create `src/components/reserva/cabecera-minima.tsx`; Modify el layout de `/reservar` y `/traslados`, `src/app/globals.css`.
 
-### Task 8.3: Título grande, resumen plano y sin stepper numerado
+- [ ] Flecha de volver (48 × 48), logo redondo de 32 y selector ES/EN; sin navbar completo en `/reservar` y `/traslados`; el cambio de idioma conserva la query (como hoy). `ContinuarReservacion` sigue fuera del checkout.
+- [ ] **`--nav-alto` por ruta:** `globals.css:~60-69` ya avisa que este token se desincronizó una vez. Añadir una clase `reserva-minima` en el layout de esas rutas con `--nav-alto: 56px` en móvil y `0px` en escritorio (la cabecera es fija en móvil y estática en escritorio) y `--banda-alto: 0px`. Re-verificar sus consumidores: `pagina-checkout.tsx:~40`, `checkout-loading-shell.tsx:~26,37`, `checkout-section-card.tsx:~189` (scroll-mt), `toast.tsx:~98`, `traslados/page.tsx:~62`, `pedido-paquete.tsx:~365,456,478`, `booking-confirmation.tsx:~132` (`checkout-stepper.tsx` desaparece en 8.3). La confirmación y las pantallas de fallo de la misma ruta usan la misma cabecera.
+- [ ] Commit `feat(reserva): cabecera mínima y --nav-alto por ruta`.
 
-- [ ] Título de página 36 px móvil / 56 px escritorio (Consola Mono 700); la tarjeta de resumen sin sombra (elevación 0, borde `borde`); quitar el stepper numerado. Las tarjetas de paso muestran «Paso N de 3» y su título a 28 px. Commit `feat(reserva): título grande, resumen plano y pasos con nombre`.
+### Task 8.3: Título grande, resumen plano y pasos con nombre
+
+- [ ] Título de página 36 px móvil / 56 px escritorio (`texto-pagina`); resumen en elevación 0 (ya en `n0` por F7.3); se elimina `checkout-stepper.tsx`. Las tarjetas de paso muestran «Paso N de 3» y su título en `texto-paso` (24 px móvil / 28 px escritorio, Consola Mono 700). El nombre del paso en el asistente móvil usa la misma clase (24 px).
+- [ ] Commit `feat(reserva): título grande, resumen plano y pasos con nombre`.
 
 ### Task 8.4: Asistente de un paso en móvil
 
 **Files:** Create `src/components/reserva/{linea-progreso,barra-inferior,asa-resumen}.tsx`.
 
-- [ ] En < 640 px: un paso por pantalla, sin tarjetas plegables; barra inferior fija con `padding-bottom: env(safe-area-inset-bottom)`, **línea de progreso de tres segmentos sin números** (`role="progressbar"`, «Paso 2 de 3: Tus datos») encima y el botón principal con etiqueta predictiva («Continuar a tus datos», «Pagar $X a [empresa]»). Flecha de volver arriba a la izquierda; el asa «Ver resumen · $X» abre una hoja con los cargos (incluye dos empresas). El botón deshabilitado dice qué falta.
-- [ ] El estado de cada paso vive en el reducer existente (no se pierde al cambiar de pantalla) y el cambio de paso lleva el foco al título del paso. Recorrido manual completo en móvil real. PUNTO DEL DUEÑO.
+- [ ] En < 640 px: un paso por pantalla, sin tarjetas plegables; barra inferior fija con `padding-bottom: env(safe-area-inset-bottom)`; **línea de progreso de tres segmentos sin números** (`role="progressbar"`, «Paso 2 de 3: Tus datos») encima del botón; botón principal con etiqueta predictiva («Continuar a tus datos», «Continuar a pago», «Pagar $X a [empresa]»). En el paso Pago con dos empresas se muestra «Pago 1 de 2» bajo el título (no añade segmentos). Flecha de volver arriba a la izquierda; el asa «Ver resumen · $X» abre una hoja con los cargos. El botón deshabilitado dice qué falta.
+- [ ] El estado de cada paso vive en el reducer existente; el cambio de paso lleva el foco al título. Recorrido manual en móvil real. PUNTO DEL DUEÑO.
 - [ ] Commit `feat(reserva): asistente móvil de un paso con barra inferior`.
 
-### Task 8.5: Calendario completo, siempre
+### Task 8.5: Calendario completo en la reserva (alcance recortado)
 
-**Files:** Create `src/components/ui/calendario/{calendario,leyenda,atajos}.tsx`, `src/lib/rango-paquete.ts`, `tests/rango-paquete.test.cjs`; Modify `date-field.tsx`, `checkout-calendar.tsx`, `booking-bar.tsx`, `sticky-booking-bar.tsx`.
+**Files:** Create `src/components/ui/calendario/{calendario,leyenda,atajos}.tsx`, `src/lib/rango-paquete.ts`, `src/lib/ids.ts`, `tests/rango-paquete.test.cjs`; Modify `checkout-view.tsx`, `pedido/fecha-paquete.tsx`, `hero.tsx`, `selector-experiencia.tsx`; Delete `checkout-calendar.tsx`, `sticky-booking-bar.tsx`.
 
-- [ ] **Quitar la barra de reserva** (`booking-bar` y `sticky-booking-bar`) de la ruta de reserva: siempre el calendario completo.
-- [ ] **Rango de paquete (función pura con prueba):** leer `lib/calendario-paquete.ts` (ya deriva días y salida desde `dia_estancia` y noches) y `lib/disponibilidad.ts`. Escribir primero la prueba de `rangoDelPaquete(inicio, noches, motivoNoDisponiblePorDia)`: devuelve los días del rango y, si algún día no tiene cupo, el día donde se corta y `elegible: false`. Casos: rango completo con cupo, corte por día sin cupo, 0 noches, un solo día. La vista previa y el pintado final usan la misma función.
-- [ ] **Interacción:** hover/foco/primer toque en móvil = vista previa (relleno `cafe-bruma`, borde discontinuo `cafe`); elegir = rango firme (`cafe-claro`, extremos `cafe`); segundo toque en el mismo día confirma en móvil.
-- [ ] **Leyenda** hecha con los mismos componentes que las celdas (disponible, pocos lugares, sin cupo, hoy, tu selección, vista previa, rango confirmado), cada uno con color **y** forma. **Atajos:** «Borrar fecha», «Mañana», «En 2 días» (valores editables).
-- [ ] Fondo blanco, borde `borde`, radio 16, sin sombra; días en círculo de 44 px; teclado completo (flechas, Re Pág, Av Pág, Inicio, Fin, Esc).
+> Hallazgos del crítico verificados: `BookingBar` **no** está en `/reservar`: se usa en `hero.tsx:117` y `selector-experiencia.tsx:172` (la entrada de portada y sede que arma la query hacia `/reservar`); `StickyBookingBar` no se renderiza en ningún sitio, pero `hero.tsx:2` y `selector-experiencia.tsx:~16` importan su constante `ID_BARRA_PORTADA`; `lib/calendario-paquete.ts` solo calcula fechas (`sumarDias`, `nochesDelPaquete`, `fechaDeComponente`, `fechaSalida`); la única fuente de cupo por día es `getCupoRango` (`lib/api.ts:~173-188`, `DisponibilidadRango`: `lleno | sin_panga | sin_lugar | null`), de pangas por empresa y personas.
+
+- [ ] **Entradas del hero y la sede no cambian:** `BookingBar` y el modo popover de `DateField` se quedan (la entrada con fecha y personas hacia `/reservar` sigue igual). Mover `ID_BARRA_PORTADA` a `lib/ids.ts` y actualizar los dos imports; borrar `sticky-booking-bar.tsx` (código muerto).
+- [ ] **En `/reservar`**, el paso Viaje monta siempre el calendario completo `ui/calendario` (fondo blanco, borde `borde`, radio 16, sin sombra; días en círculo de 44 px); `checkout-calendar.tsx` se borra y `fecha-paquete.tsx` lo usa.
+- [ ] **Rango de paquete (función pura con prueba primero):** `rangoDelPaquete(inicio, noches)` construida **sobre** `sumarDias` y `nochesDelPaquete` de `calendario-paquete.ts` (no los duplica) y `diasSinCupoEnRango(rango, disponibilidad: DisponibilidadRango)` que marca solo los días que `getCupoRango` ya declara llenos. Casos de la prueba: rango de N noches, 0 noches, un solo día, un día `lleno` dentro del rango y `null` en todos. **No hay «pocos lugares» ni corte por cupo de hospedaje o de componentes**; el cupo definitivo se valida al pagar, como hoy.
+- [ ] **Interacción:** hover, foco o primer toque en móvil = vista previa (`cafe-bruma` + borde discontinuo `cafe`); elegir = rango firme (`cafe-claro`, extremos `cafe`); en móvil el segundo toque en el mismo día confirma.
+- [ ] **Leyenda** hecha con los mismos componentes que las celdas: Disponible, Sin cupo (donde se sabe), Hoy, Tu selección, Vista previa, Rango confirmado — cada uno con color **y** forma. **Atajos:** «Borrar fecha», «Mañana», «En 2 días» (valores editables).
+- [ ] Teclado completo (flechas, Re Pág, Av Pág, Inicio, Fin, Esc).
 - [ ] Commit `feat(reserva): calendario completo con leyenda, atajos y rango de paquete`.
 
 ### Task 8.6: Cierre de F8 y lanzamiento conjunto
 
-- [ ] `verificar` completo; recorridos manuales de F5 en escritorio **y** móvil real, es y en, con tarjeta de prueba de Stripe en los cuatro caminos (servicio, paquete de una empresa, cruza-empresa con rechazo en el segundo pago, traslados). PUNTO DEL DUEÑO.
+- [ ] `verificar` completo; recorridos manuales de F5 en escritorio **y** móvil real, es y en, con tarjeta de prueba de Stripe en los cuatro caminos (servicio, paquete de una empresa, cruza-empresa con rechazo en «Pago 2 de 2», traslados). PUNTO DEL DUEÑO.
 - [ ] Un solo merge y un solo deploy de F7 + F8; si falla algo, se revierte el merge completo.
 
 ---
@@ -688,6 +726,9 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 | Vista previa del rango se confunde con una selección confirmada | Estilo distinto (borde discontinuo + relleno suave) y señal por forma, no solo por color; segundo toque para confirmar en móvil |
 | Perder el estado al cambiar de paso en el asistente móvil | El estado vive en el reducer existente, no en cada pantalla; recorridos manuales de F5 |
 | Fuente: Consola Mono solo tiene Book y Bold | Titulares siempre 700; subtítulos y etiquetas en la fuente del cuerpo |
+| El fondo arena exige tocar 57 usos de `bg-background` | Task 2.4 separa `--superficie` de `--background` antes de F7, sin cambio visual |
+| Viaje se sobrecarga al recibir los extras | Task 8.1 cuenta los controles por ruta; los opcionales se pliegan, no se crea un cuarto paso |
+| Quitar la barra de reserva rompe la entrada desde portada y sede | `BookingBar` y `DateField` popover se quedan; solo se quita el calendario antiguo de la ruta de reserva |
 | Falsos positivos de la compuerta (comentarios, anclas `#add`) | Se ignoran comentarios, la regex de hex exige 3/4/6/8 dígitos y la prueba es la especificación |
 
 ## Orden y dependencias
@@ -700,4 +741,4 @@ pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,
 - **Sin marcadores:** las tareas de F4/F5 son procedimentales porque cada una depende de leer el archivo real; llevan regla, orden, puerta y criterio de cierre. Las de F0–F3 llevan código.
 - **Consistencia de nombres:** `botonClases`, `FormularioPagoDiferido`, `guardia-estilos.cjs`, `TOKENS_PAGO`, `--radius-control`/`--radius-campo`.
 - **Limitación honesta:** los valores de Tailwind (Task 2.1) se copian de `node_modules`, no se citan de memoria; las alturas de los *fallbacks* (1.2) se miden al ejecutar.
-- **Crítico de arquitectura:** ejecutado el 2026-10-15 (resultado: REVISION REQUIRED, 3 críticos y 4 significativos). Aplicadas: runner de pruebas (`guardia` fuera del runner, `variantes.ts` sin imports), partir `stripe-panel.tsx` antes de diferir, exentos y regex de la compuerta, F4-núcleo después de F5, capas `ui`, tokens de forma y de pago, `@theme` aparte sin byte-a-byte, Task 1.7 movida a 5.5, recorridos manuales. Pendiente: re-despachar el crítico sobre esta versión hasta `APPROVED`.
+- **Crítico de arquitectura:** ejecutado el 2026-10-15 (resultado: REVISION REQUIRED, 3 críticos y 4 significativos). Aplicadas: runner de pruebas (`guardia` fuera del runner, `variantes.ts` sin imports), partir `stripe-panel.tsx` antes de diferir, exentos y regex de la compuerta, F4-núcleo después de F5, capas `ui`, tokens de forma y de pago, `@theme` aparte sin byte-a-byte, Task 1.7 movida a 5.5, recorridos manuales. Ronda 3 (F7/F8): REVISION REQUIRED; aplicadas con las decisiones del dueño (3 pasos con extras en Viaje y «Pago 1 de 2» como sub-paso, calendario recortado, sin palabra caligráfica, página arena con tarjetas blancas), más `--nav-alto`, `BookingBar` intacto, lista de consumidores de fuentes, pasada de sombras/foco/titulares y bloques en F5. Pendiente: ronda 4 hasta `APPROVED`.

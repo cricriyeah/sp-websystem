@@ -106,6 +106,7 @@ Los estados tienen su propio color, distinto de las tres actividades, y siempre 
 | Pie / aclaración | 12 px | 12 px | 400 | 1,4 | 0,01 em |
 
 - Mínimo 16 px en campos de formulario (evita el zoom automático de iOS).
+- Los titulares **no llevan palabra destacada en otra fuente**: la caligráfica se quitó (decisión del dueño). Para destacar algo se usa peso o color dentro de Consola Mono.
 - Solo **Display, Título de página, Título de sección y Título de paso** usan Consola Mono (peso 700). Subtítulo, cuerpo, etiqueta, botón y pie usan San Francisco (pesos 400–600).
 - La monoespaciada es ancha: los titulares largos van en caja de oración (no todo mayúsculas) y con `text-wrap: balance`.
 - Los títulos de paso pasan de ~18 px a 24/28 px (petición del dueño: «más grandes»).
