@@ -8,11 +8,11 @@
 
 **Stack:** Next.js 16.3, React 19.2, Tailwind 4.3.3, `motion`, `@phosphor-icons/react`, Stripe. Se añaden `clsx` y `tailwind-merge`. Las variantes son mapas de strings puros (sin `cva`) para que el runner de pruebas, que compila solo `src/` y no resuelve paquetes externos, las pueda probar.
 
-**Fuentes de fundamento:** derivación PFD (R1–R5, abajo) + skills de Vercel `react-best-practices`, `nextjs`, `next-cache-components`, `shadcn`, `vercel-storage`. Mediciones del 2026-10-15 sobre la rama `qa/checkout-unificado`.
+**Fuentes de fundamento:** derivación PFD (R1–R5, abajo) + skills de Vercel `react-best-practices`, `nextjs`, `next-cache-components`, `shadcn`, `vercel-storage`. Mediciones del 2026-10-15 sobre la rama `qa/checkout-unificado`. **Sistema de diseño de la marca nueva (Sun Baja Experience): `docs/design/design.md`, `design-guidelines.md` y `design-components.md`** (tokens, fuentes, página de reserva); este plan lo aplica en F7 y F8.
 
 ## Restricciones globales
 
-- **Checkout visible idéntico** (diferencia visual cero) hasta la fase F7. Montos, cargos, plazos y textos de cobro no cambian. *(PFD R4)*
+- **Checkout visible idéntico** (diferencia visual cero) hasta las fases F7 y F8, que salen **juntas en un solo lanzamiento**. Montos, cargos, plazos y textos de cobro no cambian. *(PFD R4)*
 - La marca nueva aterriza **en un solo lanzamiento**; nunca una mezcla vieja/nueva en producción. *(PFD R4)*
 - Todo valor visual sale de un token; todo control de una primitiva. *(PFD R3)*
 - Una sola acción principal por paso; su jerarquía vive en la primitiva. *(PFD R1, R5)*
@@ -42,7 +42,7 @@
 | V5 | Video de 83,5 MB servido desde `public/` (`videohero.webm`), también referenciado por 2 sedes | `rendering-*` + `next/image` | Mayor riesgo de lanzamiento |
 | V6 | 1 `<img>` cruda en `sede-hero.tsx:67` | guía `nextjs/image` | LCP y tamaños |
 | V7 | `request()` en `lib/api.ts` hace `fetch` sin política de caché | `next-cache-components` (`use cache`, `cacheLife`, `cacheTag`) | Oportunidad solo para el catálogo público; **nunca** cupo ni cotización. Entra como sondeo (spike) con decisión, no como compromiso |
-| V8 | Fuente `Bella Fashion` con licencia «personal use only» (aviso en `fonts/LICENCIAS.md`) | — | Se resuelve con la tipografía de la marca nueva (F7) |
+| V8 | Fuente `Bella Fashion` con licencia «personal use only» (aviso en `fonts/LICENCIAS.md`); `Bebas Neue` y `Instrument Sans` | — | Resuelto por el sistema de diseño: titulares en **Consola Mono** (SIL OFL, servida desde el sitio) y cuerpo en la **fuente del sistema** (San Francisco en Apple); salen Bella, Bebas e Instrument (F7). Menos descargas de fuentes |
 | V9 | CSP `img-src 'self' data: blob:` | `nextjs` (imágenes remotas) | Si las fotos pasan a R2 hay que añadir el dominio a `img-src`/`media-src` y a `images.remotePatterns` |
 
 ### Qué aporta solo PFD (Vercel no lo cubre)
@@ -87,6 +87,10 @@
 | `src/components/ui/hero-media.tsx`, `section-shell.tsx` | Héroe y sección únicos | F5 |
 | `src/components/checkout/pasos/*.tsx` | Un archivo por paso, extraídos de las vistas gigantes | F5 |
 | `tests/variantes.test.cjs` | Prueba de las variantes | F3 |
+| `src/app/fonts/ConsolaMono-{Book,Bold}.woff2` + `OFL.txt` + `FONTLOG.txt` | Fuente de titulares recortada a latín; la licencia viaja con ella | F7 |
+| `src/components/reserva/{cabecera-minima,linea-progreso,barra-inferior,asa-resumen}.tsx` | Piezas del asistente móvil y de la cabecera sin navbar | F8 |
+| `src/components/ui/calendario/{calendario,leyenda,atajos}.tsx` | Calendario completo, leyenda hecha con los mismos componentes que las celdas, y atajos | F8 |
+| `src/lib/rango-paquete.ts` + `tests/rango-paquete.test.cjs` | Función pura que calcula el rango de un paquete de varias noches y dónde se corta por falta de cupo | F8 |
 
 ---
 
@@ -581,14 +585,88 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 
 ---
 
-## F7 — Marca nueva, en un solo lanzamiento (PFD R4)
+## F7 — Marca nueva: tokens, fuentes y variantes (PFD R4)
 
-**Entradas que faltan y que debe entregar el dueño:** colores (acento, acción, superficies, estados), tipografías de titular, acento y cuerpo (con licencia que cubra uso comercial: resuelve el aviso de `Bella Fashion`), radio, sombras y foto/video definitivos del héroe.
+**Entradas ya entregadas:** `docs/design/design.md` (colores, tipografía, forma, elevación) y las decisiones del dueño del 2026-10-15: botón principal en café con texto blanco; titulares en Consola Mono; cuerpo en San Francisco (fuente del sistema); radio 12 px en controles y 16 px en tarjetas; neutros cálidos (arena `#FBF7F0` y blanco), sin negro puro; categorías: azul = mar, coral = ciudad, verde = outside o montaña. **Falta del dueño:** logo y fotos definitivos.
 
-- [ ] En una rama aparte, cambiar **solo** valores de token en `globals.css` (incluidos `--radius-control` y `--radius-campo`, que mueven la forma de botones y campos), tipografías en `layout.tsx`, `TOKENS_PAGO` en `tokens-pago.ts` (la prueba exige que coincida con `globals.css`) y las variantes de `variantes.ts` (peso de la variante principal frente a las demás: R5). La **imagen Open Graph** (`opengraph-image.tsx`) se actualiza a mano: es el único exento que no sale de un token.
-- [ ] Revisar contraste (el amarillo nunca como texto sobre papel; regla vigente) y casi-iguales a tokens (`guardia` lo prohíbe).
-- [ ] Verificación completa en es y en: portada, hub, sede, servicio, los tres checkouts, traslados, confirmación y páginas de error. PUNTO DEL DUEÑO.
-- [ ] Un solo merge y un solo deploy. Si falla algo, revertir el merge completo.
+### Task 7.1: Preparar la fuente Consola Mono
+
+**Files:** Create `src/app/fonts/ConsolaMono-Book.woff2`, `ConsolaMono-Bold.woff2`, `OFL.txt`, `FONTLOG.txt`; Modify `src/app/fonts/LICENCIAS.md`.
+
+- [ ] **Paso 1:** descargar el zip de `https://www.dafont.com/es/consola-mono.font` (autor Wojciech Kalinowski, SIL Open Font License 1.1, sin nombre reservado declarado) en una carpeta **nueva y vacía**; los archivos descargados se tratan como no confiables: no se ejecuta nada de ellos.
+- [ ] **Paso 2:** recortar a latín con acentos, puntuación, símbolos de moneda y los usados en la interfaz (`@ $ € × → ← ↑ ↓ · … « » ¡ ¿`) y convertir a WOFF2 (requiere `fonttools` y `brotli`):
+
+```bash
+pyftsubset ConsolaMono-Bold.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,U+2010-2027,U+20AC,U+2190-2193,U+00D7" --flavor=woff2 --layout-features='*' --output-file=ConsolaMono-Bold.woff2
+pyftsubset ConsolaMono-Book.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,U+2010-2027,U+20AC,U+2190-2193,U+00D7" --flavor=woff2 --layout-features='*' --output-file=ConsolaMono-Book.woff2
+```
+
+  Objetivo: ≤ 40 KB por archivo. Comprobar que se ven á é í ó ú ñ ü ¿ ¡ y `$4,100`.
+- [ ] **Paso 3:** copiar `SIL - Open Font License.txt` como `OFL.txt` y `FONTLOG.txt` junto a los `.woff2` (la OFL exige que la licencia acompañe a la fuente) y anotar la fuente, autor y licencia en `LICENCIAS.md`.
+- [ ] **Paso 4: commit** `chore(fonts): Consola Mono recortada y con su licencia`.
+
+### Task 7.2: Aplicar la marca (una sola rama, un solo lanzamiento)
+
+**Files:** Modify `src/app/globals.css`, `src/app/[lang]/layout.tsx`, `src/lib/tokens-pago.ts`, `src/components/ui/variantes.ts`, `src/app/[lang]/opengraph-image.tsx`.
+
+- [ ] **Paso 1: colores** — en `globals.css` sustituir los valores de los tokens por los de `design.md`: `--accent`/`--action` → café `#7C3B02` (texto sobre acción `#FFFFFF`, 8,46:1), `--foreground` → `#1F1A14`, `--background` → `#FBF7F0` y superficies blancas, bordes `#D9C9B4` (decorativo) y `#8A7A66` (borde de controles, 4,15:1), estados con sus parejas de `design.md`, y las familias `azul`, `coral`, `verde` con `hondo`, `profundo`, `medio`, `claro` y `bruma`. Contraste de cada par comprobado antes del commit.
+- [ ] **Paso 2: forma** — `--radius-control: 12px`, `--radius-campo: 12px`, `--radius-card: 16px`, `--radius-sheet: 24px`; los chips y los días del calendario siguen en `9999px`.
+- [ ] **Paso 3: elevación** — sombras de `design.md` (0 sin sombra, 1 solo en la barra inferior móvil, 2 en popovers); la sombra grande del resumen se elimina.
+- [ ] **Paso 4: fuentes** — en `layout.tsx` quitar `Instrument_Sans`, `Bebas Neue` y `Bella Fashion`; añadir `localFont` con los dos `.woff2` de Consola Mono (`display: 'swap'`, `variable: '--font-titulo'`, pesos 400 y 700) y declarar el cuerpo como pila del sistema en `@theme`: `--font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;`. Titulares siempre 700.
+- [ ] **Paso 5: Stripe y OG** — actualizar `TOKENS_PAGO` (la prueba compara con `globals.css`) y `opengraph-image.tsx` a mano.
+- [ ] **Paso 6: variantes** — `variantes.ts`: la variante `principal` pasa a café con texto blanco; `secundario` borde `borde-control` y texto café; `peligro` con `error`. Las pruebas de F3 (solo la principal usa el color de acción) siguen pasando.
+- [ ] **Paso 7:** `verificar` completo (`guardia` en 0 salvo exentos), build y revisión del dueño de portada, hub, sede, servicio, los tres checkouts, traslados, confirmación y páginas de error, en es y en. PUNTO DEL DUEÑO.
+- [ ] **Paso 8:** F7 **no se despliega sola**: sale junto con F8.
+
+---
+
+## F8 — Página de reserva nueva (sale con F7)
+
+> Especificación completa: `docs/design/design-components.md`, secciones «Página de reserva», «Selección de fecha» y «Tarjeta de paso». Decisiones del dueño: se quita **solo el stepper numerado** (los pasos siguen con nombre); contacto y detalles se unen en «Tus datos» (3 pasos: **Viaje · Tus datos · Pago**); paquetes de varias noches con **duración fija**; cabecera mínima con flecha, logo e idioma.
+
+### Task 8.1: Verificar los campos y pasar a 3 pasos
+
+**Files:** Modify `src/lib/pasos-checkout.ts`, `tests/pasos-checkout.test.cjs`, y las vistas ya partidas en `checkout/pasos/*` (F5).
+
+- [ ] **Paso 1:** contar los campos reales de «contacto» y «detalles» en cada ruta (servicio, paquete de una empresa, cruza-empresa, traslados). Si juntos pasan de ~7 en alguna ruta, **parar y avisar al dueño** (la regla de PFD R1 es máximo ~7 por paso): esa ruta se queda en 4 pasos.
+- [ ] **Paso 2:** leer `lib/pasos-checkout.ts` y su prueba; escribir primero la prueba nueva («los pasos son viaje, datos, pago») y verla fallar; después cambiar el módulo. Los nombres de paso salen del diccionario es/en: «Viaje», «Tus datos», «Pago».
+- [ ] **Paso 3:** unir los componentes `paso-contacto` y `paso-detalles` en `paso-datos.tsx`; validación al avanzar igual que antes (los recorridos manuales de F5 aplican).
+- [ ] **Paso 4: commit** `feat(checkout): tres pasos, contacto y detalles juntos`.
+
+### Task 8.2: Cabecera mínima y sin navbar
+
+**Files:** Create `src/components/reserva/cabecera-minima.tsx`; Modify `src/components/site-header.tsx` (o el layout de `/reservar` y `/traslados`).
+
+- [ ] Flecha de volver (48 × 48), logo redondo de 32 y selector ES/EN; sin navbar completo en `/reservar` y `/traslados`. Conserva el cambio de idioma sin perder la reserva (preserva la query, como hoy). `ContinuarReservacion` sigue existiendo fuera del checkout.
+- [ ] Commit `feat(reserva): cabecera mínima sin navbar`.
+
+### Task 8.3: Título grande, resumen plano y sin stepper numerado
+
+- [ ] Título de página 36 px móvil / 56 px escritorio (Consola Mono 700); la tarjeta de resumen sin sombra (elevación 0, borde `borde`); quitar el stepper numerado. Las tarjetas de paso muestran «Paso N de 3» y su título a 28 px. Commit `feat(reserva): título grande, resumen plano y pasos con nombre`.
+
+### Task 8.4: Asistente de un paso en móvil
+
+**Files:** Create `src/components/reserva/{linea-progreso,barra-inferior,asa-resumen}.tsx`.
+
+- [ ] En < 640 px: un paso por pantalla, sin tarjetas plegables; barra inferior fija con `padding-bottom: env(safe-area-inset-bottom)`, **línea de progreso de tres segmentos sin números** (`role="progressbar"`, «Paso 2 de 3: Tus datos») encima y el botón principal con etiqueta predictiva («Continuar a tus datos», «Pagar $X a [empresa]»). Flecha de volver arriba a la izquierda; el asa «Ver resumen · $X» abre una hoja con los cargos (incluye dos empresas). El botón deshabilitado dice qué falta.
+- [ ] El estado de cada paso vive en el reducer existente (no se pierde al cambiar de pantalla) y el cambio de paso lleva el foco al título del paso. Recorrido manual completo en móvil real. PUNTO DEL DUEÑO.
+- [ ] Commit `feat(reserva): asistente móvil de un paso con barra inferior`.
+
+### Task 8.5: Calendario completo, siempre
+
+**Files:** Create `src/components/ui/calendario/{calendario,leyenda,atajos}.tsx`, `src/lib/rango-paquete.ts`, `tests/rango-paquete.test.cjs`; Modify `date-field.tsx`, `checkout-calendar.tsx`, `booking-bar.tsx`, `sticky-booking-bar.tsx`.
+
+- [ ] **Quitar la barra de reserva** (`booking-bar` y `sticky-booking-bar`) de la ruta de reserva: siempre el calendario completo.
+- [ ] **Rango de paquete (función pura con prueba):** leer `lib/calendario-paquete.ts` (ya deriva días y salida desde `dia_estancia` y noches) y `lib/disponibilidad.ts`. Escribir primero la prueba de `rangoDelPaquete(inicio, noches, motivoNoDisponiblePorDia)`: devuelve los días del rango y, si algún día no tiene cupo, el día donde se corta y `elegible: false`. Casos: rango completo con cupo, corte por día sin cupo, 0 noches, un solo día. La vista previa y el pintado final usan la misma función.
+- [ ] **Interacción:** hover/foco/primer toque en móvil = vista previa (relleno `cafe-bruma`, borde discontinuo `cafe`); elegir = rango firme (`cafe-claro`, extremos `cafe`); segundo toque en el mismo día confirma en móvil.
+- [ ] **Leyenda** hecha con los mismos componentes que las celdas (disponible, pocos lugares, sin cupo, hoy, tu selección, vista previa, rango confirmado), cada uno con color **y** forma. **Atajos:** «Borrar fecha», «Mañana», «En 2 días» (valores editables).
+- [ ] Fondo blanco, borde `borde`, radio 16, sin sombra; días en círculo de 44 px; teclado completo (flechas, Re Pág, Av Pág, Inicio, Fin, Esc).
+- [ ] Commit `feat(reserva): calendario completo con leyenda, atajos y rango de paquete`.
+
+### Task 8.6: Cierre de F8 y lanzamiento conjunto
+
+- [ ] `verificar` completo; recorridos manuales de F5 en escritorio **y** móvil real, es y en, con tarjeta de prueba de Stripe en los cuatro caminos (servicio, paquete de una empresa, cruza-empresa con rechazo en el segundo pago, traslados). PUNTO DEL DUEÑO.
+- [ ] Un solo merge y un solo deploy de F7 + F8; si falla algo, se revierte el merge completo.
 
 ---
 
@@ -601,20 +679,24 @@ Cada tarea: sustituir, correr la puerta de siempre, `guardia` debe **bajar**, ac
 | Las 22 suites no cubren componentes | Se declara; la red es compuerta + `tsc` + `build` + revisión del dueño; se evalúa añadir pruebas de componente en un plan aparte |
 | La compuerta bloquea trabajo urgente | El trinquete permite bajar, no exige 0 hasta el cierre de F4 |
 | El tipo de `dict` recortado rompe llamadores | Lo detecta `tsc`; ahorro modesto, la tarea es la última de F1 |
-| Marca sin entregar bloquea F7 | F1–F6 no dependen de ella y mejoran el sitio por sí solas |
+| Logo o fotos definitivos sin entregar | F7 se hace con tokens y fuentes; logo y fotos se sustituyen al llegar (no bloquean el resto) |
 | Una marca que cambie la **forma** (no solo valores) rompe «F7 es solo tokens» | Forma por tokens semánticos (`--radius-control`, `--radius-campo`) y variantes; si la marca exige un layout distinto, se declara como alcance extra de F7, no como «cambio de valores» |
 | Formulario de tarjeta y OG con la identidad vieja | `tokens-pago.ts` probado contra `globals.css`; OG como exento explícito en la lista de F7 |
 | Un `<button>` dentro de un `<form>` sin `type` cambia de comportamiento al migrar | Revisión previa en Task 3.3 y migración con `type` explícito |
 | Estado de cobro perdido al partir los 36 `useState` | Reducer compartido + recorridos manuales (rechazo, recarga, Turnstile, Enter) en cada commit de F5 |
+| Contacto + detalles pasan de ~7 campos en alguna ruta | Task 8.1 cuenta los campos antes de unir; esa ruta se queda en 4 pasos y se avisa al dueño |
+| Vista previa del rango se confunde con una selección confirmada | Estilo distinto (borde discontinuo + relleno suave) y señal por forma, no solo por color; segundo toque para confirmar en móvil |
+| Perder el estado al cambiar de paso en el asistente móvil | El estado vive en el reducer existente, no en cada pantalla; recorridos manuales de F5 |
+| Fuente: Consola Mono solo tiene Book y Bold | Titulares siempre 700; subtítulos y etiquetas en la fuente del cuerpo |
 | Falsos positivos de la compuerta (comentarios, anclas `#add`) | Se ignoran comentarios, la regex de hex exige 3/4/6/8 dígitos y la prueba es la especificación |
 
 ## Orden y dependencias
 
-`F0` → `F1` (en paralelo con `F2`) → `F3` → `F4` grupos 1-3 → `F5` → `F4` grupo 4 (ya dentro de `pasos/*`) → `F6` → `F7`. F1 puede salir a producción sola (mejora el lanzamiento sin tocar el aspecto). F2 no cambia nada visible. F4 y F5 son los que más piden la revisión del dueño.
+`F0` → `F1` (en paralelo con `F2`) → `F3` → `F4` grupos 1-3 → `F5` → `F4` grupo 4 (ya dentro de `pasos/*`) → `F6` → `F7` + `F8` (salen juntas). F1 puede salir a producción sola (mejora el lanzamiento sin tocar el aspecto). F2 no cambia nada visible. F4 y F5 son los que más piden la revisión del dueño.
 
 ## Autorrevisión
 
-- **Cobertura:** R1 (F3/F4/F5), R2 (1.5, 5.4), R3 (F2, guardia), R4 (restricciones, F4, F5, F7), R5 (3.2, F7); hallazgos V1–V9 asignados a tareas o a F7/futuro (V7 como sondeo, V8 a F7, V9 anotado).
+- **Cobertura:** R1 (F3/F4/F5, 8.1, 8.4), R2 (1.5, 5.4, 8.2, 8.3), R3 (F2, guardia, 8.1), R4 (restricciones, F4, F5, F7, 8.5), R5 (3.2, F7, 8.4); los 13 puntos de la petición de reserva están en F8 (1→8.2, 2→8.3, 3→8.3, 4→8.3, 5→8.5, 6→8.5, 7→8.3, 8→8.1, 9–12→8.4, 13→8.5); hallazgos V1–V9 asignados a tareas o a F7/futuro (V7 como sondeo, V8 a F7, V9 anotado).
 - **Sin marcadores:** las tareas de F4/F5 son procedimentales porque cada una depende de leer el archivo real; llevan regla, orden, puerta y criterio de cierre. Las de F0–F3 llevan código.
 - **Consistencia de nombres:** `botonClases`, `FormularioPagoDiferido`, `guardia-estilos.cjs`, `TOKENS_PAGO`, `--radius-control`/`--radius-campo`.
 - **Limitación honesta:** los valores de Tailwind (Task 2.1) se copian de `node_modules`, no se citan de memoria; las alturas de los *fallbacks* (1.2) se miden al ejecutar.
