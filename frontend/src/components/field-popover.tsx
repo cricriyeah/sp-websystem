@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 type FieldPopoverProps = {
   label: string;
@@ -163,7 +164,8 @@ export function FieldPopover({
 
   return (
     <div ref={contenedor} className="relative flex flex-1">
-      <button
+      <Button
+        variante="libre"
         ref={disparador}
         type="button"
         onClick={alternar}
@@ -193,7 +195,7 @@ export function FieldPopover({
             {vacio ? placeholder : value}
           </span>
         </span>
-      </button>
+      </Button>
 
       <AnimatePresence>
         {open && posicion && (
