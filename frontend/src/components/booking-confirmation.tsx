@@ -18,6 +18,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { SiteHeader } from '@/components/site-header';
+import { Button } from '@/components/ui/button';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 
 type BookingConfirmationProps = {
@@ -261,14 +262,15 @@ export function BookingConfirmation({
                 </ul>
               </section>
 
-              <button
+              <Button
+                variante="libre"
                 type="button"
                 onClick={() => window.print()}
                 className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl border border-border-strong px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface print:hidden"
               >
                 <DownloadSimple size={18} />
                 {confirmation.downloadReceipt}
-              </button>
+              </Button>
             </div>
           </section>
 
