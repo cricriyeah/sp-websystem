@@ -18,4 +18,6 @@ Medido el 2026-10-17 sobre `qa/checkout-unificado` (HEAD 06d35c3f) con `node scr
 
 ## Registro de cambios
 
-(se anota aquí cada medición posterior: 1.1, 1.2b, 1.5, 1.8, 5.5)
+- 1.1 `optimizePackageImports`: bundle de producción sin cambio (idéntico en las 5 rutas), como anticipa el plan; el beneficio es dev, build y cold start.
+
+(se anota aquí cada medición posterior: 1.2b, 1.5, 1.8, 5.5)

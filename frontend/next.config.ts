@@ -38,6 +38,14 @@ const csp = [
 const esProduccion = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Iconos y motion se importan por barril: se cargan solo los modulos usados.
+    optimizePackageImports: [
+      "@phosphor-icons/react",
+      "@phosphor-icons/react/ssr",
+      "motion/react",
+    ],
+  },
   async headers() {
     return [
       {
