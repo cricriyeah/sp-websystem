@@ -17,7 +17,6 @@ import { CheckoutStepper } from '@/components/checkout-stepper';
 import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo } from '@/components/field-error';
 import { SiteHeader } from '@/components/site-header';
-import { WaitNotice } from '@/components/wait-notice';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { FormularioPagoDiferido, precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
@@ -49,6 +48,7 @@ import { FranjaResumen } from './franja-resumen';
 import { ReservaPlegable } from './reserva-plegable';
 import { FechaPaquete } from './fecha-paquete';
 import { GrupoServicio } from './grupo-servicio';
+import { PantallaEspera } from './pantalla-espera';
 import { PantallaExito } from './pantalla-exito';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
@@ -464,19 +464,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   }
 
   if (pago.fase === 'resumiendo' || pago.fase === 'capturando' || pago.fase === 'confirmando') return (
-    <div className="min-h-dvh bg-surface">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
-      <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
-        <WaitNotice
-          mensaje={pago.fase === 'resumiendo'
-            ? textos.resuming
-            : pago.fase === 'confirmando'
-              ? (pago.confirmandoLargo ? checkout.siguiendoConfirmando : checkout.confirmandoTitulo)
-              : feedback.payingWait}
-          mensajeLento={pago.fase === 'resumiendo' || pago.fase === 'confirmando' ? undefined : feedback.paySlow}
-        />
-      </div>
-    </div>
+    <PantallaEspera
+      lang={lang}
+      dict={dict}
+      sedeSlug={sedeSlug}
+      fase={pago.fase}
+      confirmandoLargo={pago.confirmandoLargo}
+    />
   );
 
   if (pago.fase === 'pagando') {
