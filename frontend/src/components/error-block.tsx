@@ -32,16 +32,16 @@ export function ErrorBlock({
   return (
     <div
       role="alert"
-      className="mt-4 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+      className="mt-4 flex flex-col gap-3 rounded-xl border border-error/30 bg-error-fondo px-4 py-3"
     >
-      <p className="flex items-start gap-2 text-sm leading-snug text-red-900">
-        <WarningCircle size={18} weight="fill" className="mt-0.5 shrink-0 text-red-600" />
+      <p className="flex items-start gap-2 text-sm leading-snug text-error">
+        <WarningCircle size={18} weight="fill" className="mt-0.5 shrink-0 text-error" />
         {mensaje}
       </p>
 
       {tieneWhatsapp && (
-        <div className="flex flex-col gap-2 border-t border-red-200/70 pt-3">
-          <p className="text-xs text-red-900/80">{ayudaTitulo}</p>
+        <div className="flex flex-col gap-2 border-t border-error/30 pt-3">
+          <p className="text-xs text-error">{ayudaTitulo}</p>
           <a
             href={whatsappHref(ayudaMensaje)}
             target="_blank"

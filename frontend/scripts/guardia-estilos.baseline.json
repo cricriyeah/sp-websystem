@@ -121,18 +121,6 @@
     "src/components/toast.tsx": 1,
     "src/components/traslado-view.tsx": 2
   },
-  "color-literal": {
-    "src/components/checkout/ayuda-flotante.tsx": 1,
-    "src/components/checkout/pago/formulario-pago.tsx": 5,
-    "src/components/checkout/pago/tarjeta-como-pagas.tsx": 4,
-    "src/components/error-block.tsx": 1,
-    "src/components/hub-hero.tsx": 3,
-    "src/components/pedido/reserva-plegable.tsx": 1,
-    "src/components/reviews-section.tsx": 1,
-    "src/components/season-section.tsx": 3,
-    "src/components/sede-hero.tsx": 3,
-    "src/components/site-footer.tsx": 1
-  },
   "input-crudo": {
     "src/components/checkout/campos-contacto.tsx": 1,
     "src/components/checkout/pago/tarjeta-como-pagas.tsx": 4,
@@ -153,12 +141,9 @@
     "src/components/servicios-sueltos-section.tsx": 5,
     "src/components/traslado-view.tsx": 1
   },
-  "paleta-cruda": {
-    "src/components/checkout/estilos.ts": 1,
-    "src/components/checkout/pago/tarjeta-como-pagas.tsx": 1,
-    "src/components/error-block.tsx": 6,
-    "src/components/field-error.tsx": 4,
-    "src/components/toast.tsx": 8
+  "color-literal": {
+    "src/components/checkout/pago/formulario-pago.tsx": 5,
+    "src/components/checkout/pago/tarjeta-como-pagas.tsx": 4
   },
   "texto-chico-en-campo": {
     "src/components/checkout/pago/tarjeta-como-pagas.tsx": 1,

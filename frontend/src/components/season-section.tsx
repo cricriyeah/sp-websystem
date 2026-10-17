@@ -106,7 +106,7 @@ export function SeasonSection({ season }: SeasonSectionProps) {
                   className="absolute inset-0"
                   style={{
                     background:
-                      'linear-gradient(to top, rgba(10,11,14,0.86) 0%, rgba(10,11,14,0.30) 52%, rgba(10,11,14,0) 100%)',
+                      'var(--scrim-temporada)',
                   }}
                 />
 

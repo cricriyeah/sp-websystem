@@ -21,7 +21,7 @@ export function HubHero({ nombreAgencia, mision, ctaLabel, mapaAnchorId }: HubHe
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(to top, rgba(10,11,14,0.88) 0%, rgba(10,11,14,0.42) 44%, rgba(10,11,14,0.10) 100%)',
+              'var(--scrim-hero)',
           }}
         />
         <div className="relative mx-auto flex min-h-[70svh] max-w-6xl flex-col justify-end px-6 pb-16 pt-[calc(6rem_+_var(--nav-alto))] sm:px-8 lg:px-12">

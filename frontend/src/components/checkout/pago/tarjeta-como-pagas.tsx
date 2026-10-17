@@ -200,7 +200,7 @@ export function TarjetaComoPagas({
                         <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
                       </Despliegue>
                       <Despliegue abierto={promoEstado === 'valido' && Boolean(promoPorcentaje)}>
-                        <p className="flex items-center justify-between gap-3 text-xs text-emerald-600">
+                        <p className="flex items-center justify-between gap-3 text-xs text-exito">
                           <span className="flex items-center gap-1.5">
                             <CheckCircle size={14} weight="fill" />
                             {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje ?? 0)))}

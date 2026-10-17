@@ -45,14 +45,14 @@ const DURACION_MS = 6000;
 const ICONOS = { exito: CheckCircle, error: Warning, info: Info } as const;
 
 const COLORES = {
-  exito: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-  error: 'border-red-200 bg-red-50 text-red-900',
+  exito: 'border-exito/30 bg-exito-fondo text-exito',
+  error: 'border-error/30 bg-error-fondo text-error',
   info: 'border-accent/40 bg-accent/10 text-foreground',
 } as const;
 
 const COLOR_ICONO = {
-  exito: 'text-emerald-600',
-  error: 'text-red-600',
+  exito: 'text-exito',
+  error: 'text-error',
   info: 'text-accent',
 } as const;
 

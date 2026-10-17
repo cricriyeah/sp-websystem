@@ -75,6 +75,9 @@
      linea y el @theme normal solo emite lo que una utilidad usa. */
   --scrim-hoja: rgb(31 26 20 / 0.4); /* tinta al 40 %: fondo atenuado detras de Sheet y AlertDialog */
   --scrim-hero: linear-gradient(to top, rgba(10, 11, 14, 0.88) 0%, rgba(10, 11, 14, 0.42) 44%, rgba(10, 11, 14, 0.1) 100%); /* degradado actual de sede-hero */
+  --scrim-temporada: linear-gradient(to top, rgba(10, 11, 14, 0.86) 0%, rgba(10, 11, 14, 0.3) 52%, rgba(10, 11, 14, 0) 100%); /* degradado de season-section sobre cada foto */
+  --tinte-indigo-resenas: radial-gradient(55% 60% at 12% 8%, rgba(40, 26, 181, 0.05), transparent 70%); /* tinte de reviews-section */
+  --tinte-indigo-pie: radial-gradient(50% 60% at 88% 0%, rgba(49, 28, 153, 0.1), transparent 70%); /* tinte de site-footer */
   --z-cabecera: 40;
   --z-barra: 50;
   --z-hoja: 60;

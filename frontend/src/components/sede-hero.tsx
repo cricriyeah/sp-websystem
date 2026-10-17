@@ -60,7 +60,7 @@ export function SedeHero({
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(to top, rgba(10,11,14,0.88) 0%, rgba(10,11,14,0.42) 44%, rgba(10,11,14,0.10) 100%)',
+              'var(--scrim-hero)',
           }}
         />
 

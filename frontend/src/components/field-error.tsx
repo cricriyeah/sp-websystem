@@ -19,7 +19,7 @@ import { Despliegue } from '@/components/checkout/despliegue';
  */
 export function FieldError({ id, mensaje }: { id: string; mensaje: string }) {
   return (
-    <p id={id} role="alert" className="mt-1.5 flex items-start gap-1.5 text-xs text-red-600">
+    <p id={id} role="alert" className="mt-1.5 flex items-start gap-1.5 text-xs text-error">
       <WarningCircle size={14} weight="fill" className="mt-px shrink-0" />
       <span className="leading-snug">{mensaje}</span>
     </p>
@@ -64,7 +64,7 @@ export function ErrorDeCampo({ id, mensaje, className }: { id: string; mensaje?:
  * Clases del campo cuando trae error. Se aplican junto a las propias del input
  * para que el borde rojo sea el mismo en todos lados.
  */
-export const CLASES_CAMPO_CON_ERROR = 'border-red-400 focus:border-red-500 focus:ring-red-200';
+export const CLASES_CAMPO_CON_ERROR = 'border-error focus:border-error focus:ring-error-fondo';
 
 /**
  * Props de accesibilidad del input con error. `aria-invalid` es lo que hace que

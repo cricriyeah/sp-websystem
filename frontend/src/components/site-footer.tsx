@@ -45,7 +45,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: 
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'radial-gradient(50% 60% at 88% 0%, rgba(49,28,153,0.10), transparent 70%)',
+          background: 'var(--tinte-indigo-pie)',
         }}
       />
       <div className="relative mx-auto max-w-6xl px-6 pt-20 sm:px-8 lg:px-12 lg:pt-24">

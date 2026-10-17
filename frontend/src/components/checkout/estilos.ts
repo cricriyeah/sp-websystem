@@ -6,5 +6,5 @@
 export const CAJA_CAMPO = 'rounded-lg border border-border bg-background';
 
 /** El mismo contenedor cuando el campo trae un error. */
-export const CAJA_CAMPO_ERROR = 'rounded-lg border border-red-400 bg-background';
+export const CAJA_CAMPO_ERROR = 'rounded-lg border border-error bg-background';
 
