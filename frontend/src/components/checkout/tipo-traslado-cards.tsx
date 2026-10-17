@@ -1,6 +1,7 @@
 'use client';
 
 import { AirplaneLanding, AirplaneTakeoff, Car, Check } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import type { TipoTraslado } from '@/lib/api';
 
 const ICONOS: Record<TipoTraslado, typeof Car> = {
@@ -40,8 +41,9 @@ export function TipoTrasladoCards({ tipos, valor, onChange, textos, precioDesde,
         const Icono = ICONOS[tipo];
         const precio = precioDesde?.(tipo) ?? null;
         return (
-          <button
+          <Button
             key={tipo}
+            variante="libre"
             type="button"
             aria-pressed={seleccionado}
             onClick={() => onChange(tipo)}
@@ -62,7 +64,7 @@ export function TipoTrasladoCards({ tipos, valor, onChange, textos, precioDesde,
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">
               {seleccionado && <Check size={16} weight="bold" className="text-accent" />}
             </span>
-          </button>
+          </Button>
         );
       })}
     </div>
