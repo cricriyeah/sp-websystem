@@ -3,9 +3,9 @@
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
-import { Despliegue } from '@/components/checkout/despliegue';
+import { Despliegue } from '@/components/ui/despliegue';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
-import { ErrorDeCampo } from '@/components/field-error';
+import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { PeopleStepper } from '@/components/people-stepper';
 import { FechaPaquete, FechaRegresoCompacta } from '@/components/pedido/fecha-paquete';
 import { TimeField } from '@/components/time-field';

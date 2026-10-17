@@ -59,3 +59,17 @@ Estado: **no se activó nada.** Sin API disponible en esta sesión no se pudo me
 
 - `public/videos/videohero.webm`: 87 608 929 bytes (2560×1440) → 5 519 643 bytes (720p, 24 fps, VP9 crf 38, sin audio). Objetivo ≤ 8 MB cumplido; la calidad la aprueba el dueño.
 - El HTML de `/es/sede/la-paz` trae `<link rel="preload" as="image">` de la foto del héroe y 0 `<video>`; el video lo monta `ui/video-diferido.tsx` tras `load`/idle (no con `prefers-reduced-motion` ni `saveData`).
+
+## Línea base final (cierre de F6, 2026-10-17)
+
+Medido con `node scripts/medir-peso.cjs` tras `npm run build` en HEAD de `qa` (F0-F6). Los chunks suben en número por el diferido de Stripe y las vistas partidas; el peso no empeora respecto de la línea inicial salvo `/es` (+40 KB crudo / +15 KB gzip), pendiente de explicar (no se investigó) antes de F9.
+
+| Ruta | Chunks JS | Crudo (KB) | Gzip (KB) |
+|---|---|---|---|
+| /es | 15 | 821.3 | 260.1 |
+| /es/sede/la-paz | 15 | 801.0 | 253.6 |
+| /es/servicio/sal-y-sol/pesca-deportiva | 15 | 765.2 | 243.3 |
+| /es/reservar | 19 | 1009.6 | 314.8 |
+| /es/traslados | 17 | 932.3 | 290.4 |
+
+`guardia`: 188 infracciones, solo reglas de la marca nueva (se cierran en 7.3); umbral duro en 0 para las siete reglas de la base.

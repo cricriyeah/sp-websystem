@@ -3,9 +3,9 @@
 import { Buildings, ListBullets, MapPin } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
-import { Despliegue } from '@/components/checkout/despliegue';
-import { CAJA_CAMPO } from '@/components/checkout/estilos';
-import { ErrorDeCampo } from '@/components/field-error';
+import { Despliegue } from '@/components/ui/despliegue';
+import { CAJA_CAMPO } from '@/components/ui/caja-campo';
+import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { FieldPopover } from '@/components/field-popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

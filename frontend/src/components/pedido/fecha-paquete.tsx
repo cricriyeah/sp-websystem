@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import { CalendarDots, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { Deslizable } from '@/components/checkout/deslizable';
-import { Despliegue } from '@/components/checkout/despliegue';
+import { Despliegue } from '@/components/ui/despliegue';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { PanelCalendario } from '@/components/date-field';
 import { Button } from '@/components/ui/button';

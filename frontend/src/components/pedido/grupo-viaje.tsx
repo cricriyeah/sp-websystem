@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { AirplaneTilt, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
-import { CAJA_CAMPO } from '@/components/checkout/estilos';
+import { CAJA_CAMPO } from '@/components/ui/caja-campo';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { PeopleStepper } from '@/components/people-stepper';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import { cantidadEfectiva, separarPersonalizaciones, type SeleccionPersonalizaci
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
-import { Despliegue } from '@/components/checkout/despliegue';
+import { Despliegue } from '@/components/ui/despliegue';
 import { FechaRegresoCompacta } from './fecha-paquete';
 
 type Props = {

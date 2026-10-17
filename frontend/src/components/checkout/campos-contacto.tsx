@@ -3,7 +3,7 @@
 import type { Ref } from 'react';
 import { EnvelopeSimple, Phone, User } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
-import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/field-error';
+import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/ui/error-de-campo';
 
 export type CampoContacto = 'fullName' | 'phone' | 'email';
 

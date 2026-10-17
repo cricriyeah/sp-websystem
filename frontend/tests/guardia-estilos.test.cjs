@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { contar, sinComentarios, relativosFuera, suben } = require('../scripts/guardia-estilos.cjs');
+const { contar, sinComentarios, relativosFuera, suben, pasanUmbral } = require('../scripts/guardia-estilos.cjs');
 
 test('cuenta controles y colores crudos', () => {
   assert.equal(contar('<button className="x">', 'boton-crudo'), 1);
@@ -59,4 +59,10 @@ test('trinquete por total de regla: mover código no sube, añadir sí', () => {
   assert.equal(suben({ 'boton-crudo': { 'a.tsx': 1 } }, { 'boton-crudo': { 'a.tsx': 1, 'b.tsx': 1 } }).length, 1);
   // una regla que no estaba en la línea base y aparece: sube
   assert.equal(suben({}, { 'img-cruda': { 'a.tsx': 1 } }).length, 1);
+});
+
+test('umbral duro: cualquier infracción de las reglas de la base falla; las de marca nueva no', () => {
+  assert.deepEqual(pasanUmbral({ 'boton-crudo': { 'a.tsx': 2 } }), [['boton-crudo', 2]]);
+  assert.deepEqual(pasanUmbral({ 'radio-crudo': { 'a.tsx': 9 }, 'bg-surface-uso': { 'a.tsx': 9 } }), []);
+  assert.deepEqual(pasanUmbral({}), []);
 });

@@ -1,4 +1,4 @@
-import { CAJA_CAMPO } from '@/components/checkout/estilos';
+import { CAJA_CAMPO } from '@/components/ui/caja-campo';
 
 /**
  * Hueco del formulario de tarjeta mientras llega Stripe: primero el chunk

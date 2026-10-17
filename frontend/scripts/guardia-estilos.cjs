@@ -35,6 +35,10 @@ const EXENTOS = {
   'src/components/checkout/ayuda-flotante.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
   'src/components/error-block.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp en el boton de ayuda' },
   'src/components/pedido/reserva-plegable.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
+  'src/components/checkout/pago/tarjeta-como-pagas.tsx': { reglas: ['color-literal'], motivo: 'el pulso de framer-motion interpola un boxShadow con rgba concreto; var() no se interpola' },
+  'src/components/checkout-calendar.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en la Task 8.5c; esa tarea quita esta entrada' },
+  'src/components/paquete-card.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en F9 (Task 9.1b)' },
+  'src/components/reviews-carousel.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en F9 (Task 9.5)' },
   'src/lib/tokens-pago.ts': { reglas: ['color-literal'], motivo: 'única fuente de lo que Stripe Elements pide en concreto' },
 };
 // Las primitivas son el único lugar donde vive el HTML crudo de estos controles.
@@ -92,7 +96,15 @@ function suben(base, actual) {
     .filter(([, antes, ahora]) => ahora > antes);
 }
 
-module.exports = { contar, sinComentarios, medir, relativosFuera, suben, EXENTOS };
+// Umbral duro (F6): estas reglas no admiten ni una infracción fuera de EXENTOS, sin importar la línea base.
+// Las reglas de la marca nueva (radio, sombra, etc.) no entran hasta la Task 7.3.
+const UMBRAL_DURO = ['boton-crudo', 'input-crudo', 'img-cruda', 'paleta-cruda', 'color-literal', 'capas-ui', 'motion-completo'];
+
+function pasanUmbral(actual) {
+  return UMBRAL_DURO.map((r) => [r, Object.values(actual[r] ?? {}).reduce((a, n) => a + n, 0)]).filter(([, n]) => n > 0);
+}
+
+module.exports = { pasanUmbral, UMBRAL_DURO, contar, sinComentarios, medir, relativosFuera, suben, EXENTOS };
 
 if (require.main === module) {
   const raiz = path.resolve(__dirname, '..');
@@ -108,5 +120,7 @@ if (require.main === module) {
   subidas.forEach(([r, a, n]) => console.error(`SUBE ${r}: ${a} -> ${n}`));
   const total = (o) => Object.values(o).reduce((a, p) => a + Object.values(p).reduce((x, y) => x + y, 0), 0);
   console.log(`Infracciones: ${total(actual)} (línea base ${total(base)})`);
-  process.exit(subidas.length > 0 ? 1 : 0);
+  const duros = pasanUmbral(actual);
+  duros.forEach(([r, n]) => console.error(`UMBRAL ${r}: ${n} (debe ser 0)`));
+  process.exit(subidas.length > 0 || duros.length > 0 ? 1 : 0);
 }

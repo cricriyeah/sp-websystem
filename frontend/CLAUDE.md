@@ -129,7 +129,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
 - Anatomía de la tarjeta de traslado (y de cualquier tarjeta con controles):
   una pregunta por bloque; los controles que se contestan dentro de una caja
   (hotel, personas, aeropuerto, listas) usan `CAJA_CAMPO` de
-  `components/checkout/estilos.ts` con `compacto` en `FieldPopover` /
+  `components/ui/caja-campo.ts` con `compacto` en `FieldPopover` /
   `PeopleStepper` (relleno de 16 px, borde izquierdo alineado con las filas de
   tipo); los grupos de opciones y la fecha llevan su pregunta como título
   arriba. Orden por causalidad: tipo → regreso (solo aeropuerto) → dónde →
@@ -190,6 +190,27 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   su nombre y archivo en `suites` de ese runner. Gate de la sección:
   `npx.cmd tsc --noEmit`, `npx.cmd eslint src tests`, `npm.cmd test` y
   `npm.cmd run build`.
+
+## Base de UI: tokens, primitivas y `guardia`
+
+- **Tokens:** viven en `src/app/globals.css` (colores, radios, sombras, z, `--nav-alto`). Stripe Elements
+  no lee CSS: sus valores concretos están en `src/lib/tokens-pago.ts` y una prueba los compara con
+  `globals.css`.
+- **Primitivas:** `src/components/ui/` (`Button`, `Input`, `Checkbox`, `Opcion`, `Field`, `Card`,
+  `Sheet`, `AlertDialog`, `Despliegue`, `ErrorDeCampo`, `HeroMedia`, `SectionShell`, `EmpresaSello`…).
+  `ui/` solo importa de `ui/` y `lib/`.
+- **Regla «nada crudo»:** fuera de `ui/` no se escribe `<button>`, `<input|select|textarea>`, `<img>`,
+  paleta de Tailwind (`bg-red-500`…), colores literales ni `motion.*` (con `LazyMotion` strict solo `m.*`).
+  Si falta una variante de `Button`/`Input`, se añade en `ui/variantes.ts` con su prueba
+  (`tests/`), no se deja el elemento crudo. `variante="libre"` y `aspecto="heredado"` no añaden clases:
+  son el puente para migrar sin cambiar el aspecto.
+- **`npm run guardia`** (`scripts/guardia-estilos.cjs`) cuenta las infracciones. Trinquete por total
+  de regla contra `scripts/guardia-estilos.baseline.json` (solo puede bajar; tras bajarlo,
+  `node scripts/guardia-estilos.cjs --escribir`) y umbral duro en 0 para `boton-crudo`, `input-crudo`,
+  `img-cruda`, `paleta-cruda`, `color-literal`, `capas-ui` y `motion-completo`, salvo lo listado con motivo
+  en `EXENTOS`. Un exento nuevo exige motivo escrito.
+- **`npm run verificar`** corre toda la puerta: `tsc`, `eslint`, `npm test`, `test:guardia`, `guardia`
+  y `next build`. Córrelo antes de cerrar cualquier tarea de frontend.
 
 ## Continuar reservación (banda global)
 

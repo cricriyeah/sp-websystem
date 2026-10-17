@@ -3,7 +3,7 @@
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { ErrorDeCampo } from '@/components/field-error';
+import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import type { Moneda, PaqueteServicioCatalogo, PuntoEncuentro } from '@/lib/api';
 import type { SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';

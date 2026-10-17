@@ -1,7 +1,7 @@
 import type { Dispatch } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
-import { ErrorDeCampo } from '@/components/field-error';
+import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { PeopleStepper } from '@/components/people-stepper';
 import { TimeField } from '@/components/time-field';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';

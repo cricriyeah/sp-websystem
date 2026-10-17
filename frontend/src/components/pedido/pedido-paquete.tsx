@@ -11,7 +11,7 @@ import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
 import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import { ErrorDeCampo } from '@/components/field-error';
+import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';

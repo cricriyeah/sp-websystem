@@ -102,14 +102,6 @@
     "src/components/sede-selector.tsx": 2,
     "src/components/servicios-sueltos-section.tsx": 5
   },
-  "color-literal": {
-    "src/components/checkout/pago/tarjeta-como-pagas.tsx": 4
-  },
-  "boton-crudo": {
-    "src/components/checkout-calendar.tsx": 3,
-    "src/components/paquete-card.tsx": 2,
-    "src/components/reviews-carousel.tsx": 5
-  },
   "surface-deep": {
     "src/components/continuar-reservacion.tsx": 2,
     "src/components/included-section.tsx": 2

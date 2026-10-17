@@ -4,7 +4,7 @@ import { Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
-import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/field-error';
+import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Moneda, ServicioPersonalizacionCatalogo } from '@/lib/api';

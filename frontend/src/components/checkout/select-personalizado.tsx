@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { ListBullets } from '@phosphor-icons/react';
-import { CAJA_CAMPO, CAJA_CAMPO_ERROR } from '@/components/checkout/estilos';
+import { CAJA_CAMPO, CAJA_CAMPO_ERROR } from '@/components/ui/caja-campo';
 import { FieldPopover } from '@/components/field-popover';
 import { Button } from '@/components/ui/button';
 
