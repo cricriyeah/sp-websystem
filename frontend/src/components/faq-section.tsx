@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { Button } from '@/components/ui/button';
 
 type FaqSectionProps = {
   faq: Dictionary['faq'];
@@ -54,13 +55,12 @@ export function FaqSection({ faq }: FaqSectionProps) {
             return (
               <div key={item.q} className="group border-b border-border-strong">
                 <h3>
-                  <button
-                    type="button"
+                  <Button
+                    variante="fila"
                     id={idPregunta}
                     aria-expanded={abierto}
                     aria-controls={idRespuesta}
                     onClick={() => setAbierta(abierto ? null : item.q)}
-                    className="flex w-full cursor-pointer items-center justify-between gap-6 py-5 text-left text-lg text-foreground"
                   >
                     <span className="transition-colors group-hover:text-accent">{item.q}</span>
                     {/* Cruz que se vuelve guion: la barra vertical se aplasta a
@@ -75,7 +75,7 @@ export function FaqSection({ faq }: FaqSectionProps) {
                         }`}
                       />
                     </span>
-                  </button>
+                  </Button>
                 </h3>
 
                 <AnimatePresence initial={false}>
