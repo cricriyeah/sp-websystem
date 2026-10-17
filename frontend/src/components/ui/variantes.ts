@@ -19,7 +19,19 @@ const VARIANTES = {
   texto: `${TEXTO} text-muted`,
   acento: `${TEXTO} text-accent`,
   peligro: `${PULSABLE} border border-error bg-error-fondo text-error`,
+  // Variantes de migración (F4): llevan las clases del botón crudo que sustituyen y NO
+  // reciben BASE (inline-flex, items-center y font-medium cambiarían su aspecto).
+  // `fila`: disparador de acordeón de ancho completo (faq-section).
+  fila: 'flex w-full cursor-pointer items-center justify-between gap-6 py-5 text-left text-lg text-foreground',
+  // `chip`: píldora de filtro (hub-mapa-sedes); el color del estado marcado va por className.
+  // rounded-full pasa a rounded-control (mismo 9999px).
+  chip: 'rounded-control border px-4 py-2 text-sm transition-colors',
+  // `libre`: sin estilo; todo llega por className (botón único con aspecto propio).
+  libre: '',
 } as const;
+
+// Las variantes de migración no heredan BASE: su aspecto es el del botón crudo original.
+const SIN_BASE: readonly string[] = ['fila', 'chip', 'libre'];
 
 const TAMANOS = { md: '', sm: 'px-4 py-1.5 text-xs', icono: 'size-10 p-0' } as const;
 
@@ -30,7 +42,7 @@ export function botonClases({
   variante = 'principal',
   tamano = 'md',
 }: { variante?: VarianteBoton; tamano?: TamanoBoton } = {}): string {
-  return [BASE, VARIANTES[variante], TAMANOS[tamano]].filter(Boolean).join(' ');
+  return [SIN_BASE.includes(variante) ? '' : BASE, VARIANTES[variante], TAMANOS[tamano]].filter(Boolean).join(' ');
 }
 
 // --- Sheet y AlertDialog (Task 3.5) ---------------------------------------------

@@ -26,7 +26,32 @@ test('sin colores crudos', () => {
   }
 });
 
-const { hojaClases, alertaClases } = require(path.join(process.env.VARIANTES_TEST_OUT, 'components/ui/variantes.js'));
+test('fila, chip y libre no heredan la base (su aspecto es el del botón crudo)', () => {
+  for (const v of ['fila', 'chip', 'libre']) {
+    const clases = botonClases({ variante: v });
+    assert.doesNotMatch(clases, /inline-flex/);
+    assert.doesNotMatch(clases, /font-medium/);
+    assert.doesNotMatch(clases, /bg-action/);
+    assert.doesNotMatch(clases, /-(red|green|blue|amber)-\d/);
+  }
+  assert.equal(botonClases({ variante: 'libre' }), '');
+  assert.match(botonClases({ variante: 'principal' }), /inline-flex/);
+});
+
+test('fila es el disparador de acordeón de ancho completo', () => {
+  const clases = botonClases({ variante: 'fila' }).split(' ');
+  for (const c of ['flex', 'w-full', 'items-center', 'justify-between', 'py-5', 'text-left', 'text-lg']) {
+    assert.ok(clases.includes(c), c);
+  }
+});
+
+test('chip toma la forma de un token, no rounded-full', () => {
+  const clases = botonClases({ variante: 'chip' });
+  assert.match(clases, /rounded-control/);
+  assert.doesNotMatch(clases, /rounded-full/);
+});
+
+const { hojaClases, alertaClases } =require(path.join(process.env.VARIANTES_TEST_OUT, 'components/ui/variantes.js'));
 
 const CRUDOS = [
   /-(red|green|blue|amber|gray|slate|zinc|neutral|stone)-\d/, // paleta cruda
