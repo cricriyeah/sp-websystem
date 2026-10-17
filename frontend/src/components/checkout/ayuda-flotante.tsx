@@ -2,6 +2,7 @@
 
 import { WhatsappLogo, X } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 
 /**
@@ -49,14 +50,15 @@ export function AyudaFlotante({
             <WhatsappLogo size={18} weight="fill" />
             {etiqueta}
           </a>
-          <button
+          <Button
+            variante="libre"
             type="button"
             onClick={onDescartar}
             aria-label={cerrarLabel}
             className="ml-1 flex h-9 w-9 items-center justify-center rounded-full transition-opacity hover:opacity-90"
           >
             <X size={14} weight="bold" />
-          </button>
+          </Button>
         </m.div>
       )}
     </AnimatePresence>
