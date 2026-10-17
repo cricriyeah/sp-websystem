@@ -8,9 +8,13 @@ export const alt = 'Sal y Sol Sportfishing';
 /**
  * Imagen que se ve al compartir el enlace en WhatsApp, Facebook o iMessage.
  *
- * Se genera con los colores de la marca en vez de usar una foto porque todavia
- * no hay fotografia propia; cuando llegue, se cambia por el archivo real y las
- * medidas ya son las correctas (1200x630).
+ * Marca de design.md, plana y sin emoji: pagina en arena, tinta para el texto, un circulo cafe
+ * que repite la forma redonda del logo (el logo definitivo no ha llegado: cuando llegue se
+ * cambia el circulo por el archivo) y los tres colores de actividad como cuenta de lo que se
+ * ofrece (mar, ciudad, outside). Sin fotografia ni degradados. ImageResponse no lee CSS ni las
+ * variables de globals.css, por eso los hex van en concreto (el archivo esta en EXENTOS de la
+ * regla color-literal de la guardia) y la fuente es la de ImageResponse, no Consola Mono: Satori
+ * no lee WOFF2. Las medidas ya son las correctas (1200x630).
  */
 export default async function Image({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -26,29 +30,15 @@ export default async function Image({ params }: { params: Promise<{ lang: string
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: 80,
-          background: 'linear-gradient(150deg, #eef8f7 0%, #86d5d6 45%, #1c858c 100%)',
+          background: '#FBF7F0', // arena
           fontFamily: 'sans-serif',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 999,
-              background: '#0b2420',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontSize: 32,
-            }}
-          >
-            🐟
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', color: '#0b2420' }}>
-            <span style={{ fontSize: 32, fontWeight: 600 }}>{dict.home.title}</span>
-            <span style={{ fontSize: 22, color: '#14403a' }}>{dict.nav.location}</span>
+          <div style={{ width: 64, height: 64, borderRadius: 999, background: '#7C3B02' }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: 32, fontWeight: 700, color: '#1F1A14' }}>{dict.home.title}</span>
+            <span style={{ fontSize: 22, color: '#4A3F33' }}>{dict.nav.location}</span>
           </div>
         </div>
 
@@ -57,17 +47,22 @@ export default async function Image({ params }: { params: Promise<{ lang: string
             style={{
               fontSize: 68,
               lineHeight: 1.1,
-              fontWeight: 600,
-              color: '#0b2420',
+              fontWeight: 700,
+              color: '#1F1A14', // tinta
               maxWidth: 900,
             }}
           >
-            {dict.hero.headlineStart} {dict.hero.headlineEmphasis} {dict.hero.headlineEnd}
+            {[dict.hero.headlineStart, dict.hero.headlineEmphasis, dict.hero.headlineEnd].filter(Boolean).join(' ')}
           </span>
-          <span style={{ fontSize: 30, color: '#14403a', maxWidth: 860 }}>
+          <span style={{ fontSize: 30, color: '#6B5D4D', maxWidth: 860 }}>
             {dict.about.facts.duration.value} · {dict.about.facts.departure.value} ·{' '}
             {dict.about.facts.capacity.value}
           </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 56, height: 12, borderRadius: 999, background: '#1B607F' }} />
+            <div style={{ width: 56, height: 12, borderRadius: 999, background: '#F64A25' }} />
+            <div style={{ width: 56, height: 12, borderRadius: 999, background: '#343F04' }} />
+          </div>
         </div>
       </div>
     ),
