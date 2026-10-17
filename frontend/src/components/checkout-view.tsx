@@ -7,7 +7,6 @@ import { BookingConfirmation } from '@/components/booking-confirmation';
 import { CheckoutCalendar } from '@/components/checkout-calendar';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { CamposContacto } from '@/components/checkout/campos-contacto';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
@@ -18,6 +17,7 @@ import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { DateField } from '@/components/date-field';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { PeopleStepper } from '@/components/people-stepper';
+import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { BloqueExtras } from '@/components/checkout/bloques/bloque-extras';
 import { BloquePago, BloqueTarjetaPago } from '@/components/checkout/bloques/bloque-pago';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
@@ -1425,12 +1425,10 @@ export function CheckoutView({
                     ? <BotonPaso onClick={confirmarContacto}>{checkout.confirmStep}</BotonPaso>
                     : undefined}
                 >
-                  <CamposContacto
-                    idPrefijo="checkout"
+                  <BloqueContacto
+                    checkout={checkout}
                     valores={contact}
                     errores={erroresCampo}
-                    etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
-                    ejemplos={checkout.contactExamples}
                     refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
                     disabled={locked}
                     onCambio={(campo, valor) => {
