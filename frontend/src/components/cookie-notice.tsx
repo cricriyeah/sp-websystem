@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { guardarConsentimiento, leerConsentimiento } from '@/lib/cookies';
+import { Button } from '@/components/ui/button';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 
 /**
@@ -85,20 +86,23 @@ export function CookieNotice({
             </p>
 
             <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
+              {/* F3 conserva el aspecto de hoy: los className sustituyen lo que la variante
+                  trae de la marca nueva (fondo blanco, borde fuerte, amarillo de accion).
+                  F7 los quita cuando la variante ya pinte esto por si sola. */}
+              <Button
+                variante="secundario"
                 onClick={() => responder('rechazado')}
-                className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-transform active:scale-[0.98]"
+                className="border-border bg-transparent px-4 py-2 hover:bg-transparent"
               >
                 {cookies.reject}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variante="principal"
                 onClick={() => responder('aceptado')}
-                className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98]"
+                className="bg-accent px-4 py-2 text-accent-foreground"
               >
                 {cookies.accept}
-              </button>
+              </Button>
             </div>
           </div>
         </m.div>
