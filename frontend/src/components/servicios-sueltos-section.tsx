@@ -57,7 +57,7 @@ export function ServiciosSueltosSection({
           return (
             <div
               key={servicio.id}
-              className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 transition-all hover:border-accent/40 hover:shadow-sm"
+              className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 transition-all hover:border-accent/40"
             >
               <div>
                 <div className="flex items-center justify-between gap-2">

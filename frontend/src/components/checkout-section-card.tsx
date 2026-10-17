@@ -53,7 +53,7 @@ type CheckoutSectionCardProps = {
 
 const ESTILOS = {
   flat: 'border-border bg-superficie',
-  elevated: 'border-border bg-superficie shadow-[0_18px_45px_rgba(11,36,32,0.16)]',
+  elevated: 'border-border bg-superficie',
 };
 
 export function CheckoutSectionCard({

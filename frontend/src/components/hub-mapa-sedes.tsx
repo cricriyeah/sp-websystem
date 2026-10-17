@@ -64,15 +64,15 @@ export function HubMapaSedes({ lang, sedes, copy }: {
                 <Button key={s.slug} variante="libre" aria-label={s.nombre} aria-pressed={abiertoSlug === s.slug}
                   onClick={() => { if (!arrastrando.current) setAbiertoSlug(s.slug); }} style={project(COORDENADAS[s.slug])}
                   className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-accent">
-                  <span className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-accent shadow-sm ${abiertoSlug === s.slug ? 'ring-4 ring-accent/25' : ''}`} />
-                  <span className={`absolute whitespace-nowrap rounded bg-superficie/95 px-2 py-1 text-xs font-semibold text-foreground shadow-sm ${s.slug === 'puerto-chale' ? 'right-9 top-0' : s.slug === 'la-paz' ? 'bottom-9 left-4' : 'left-9 top-6'}`}>{s.nombre}</span>
+                  <span className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-accent ${abiertoSlug === s.slug ? 'ring-4 ring-accent/25' : ''}`} />
+                  <span className={`absolute whitespace-nowrap rounded bg-superficie/95 px-2 py-1 text-xs font-semibold text-foreground ${s.slug === 'puerto-chale' ? 'right-9 top-0' : s.slug === 'la-paz' ? 'bottom-9 left-4' : 'left-9 top-6'}`}>{s.nombre}</span>
                 </Button>
               ))}
             </div>
           </m.div>
           </LazyMotion>
         </div>
-        <div className="absolute right-4 top-4 flex flex-col overflow-hidden rounded-xl border border-border bg-superficie shadow-sm">
+        <div className="absolute right-4 top-4 flex flex-col overflow-hidden rounded-xl border border-border bg-superficie">
           {[
             { title: copy.zoomIn, icon: Plus, action: () => cambiarZoom(0.5), disabled: zoom === 4 },
             { title: copy.zoomOut, icon: Minus, action: () => cambiarZoom(-0.5), disabled: zoom === 1 },

@@ -165,7 +165,7 @@ export function BookingConfirmation({
             las sugerencias son tarjetas cortas y se leen mejor en columna angosta. */}
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-8 print:mt-0 print:block">
           {/* --- Columna 1: el comprobante. Lo unico que se imprime. --------- */}
-          <section className="border border-border bg-superficie shadow-[0_18px_45px_rgba(11,36,32,0.10)] print:border-0 print:shadow-none">
+          <section className="border border-border bg-superficie print:border-0">
             {/* Talon del boleto. En pantalla es la cabecera con el folio; en el
                 papel hace de membrete, donde no hay SiteHeader que lo diga. */}
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 px-7 pt-7 sm:px-9 sm:pt-9 print:px-0 print:pt-0">

@@ -74,7 +74,7 @@ export function CookieNotice({
           role="region"
           aria-label={cookies.title}
         >
-          <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-2xl border border-border bg-superficie p-5 shadow-[0_18px_45px_rgba(11,36,32,0.16)] sm:flex-row sm:items-center sm:gap-6">
+          <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-2xl border border-border bg-superficie p-5 shadow-n2 sm:flex-row sm:items-center sm:gap-6">
             <p className="text-sm text-foreground">
               {cookies.body}{' '}
               <Link

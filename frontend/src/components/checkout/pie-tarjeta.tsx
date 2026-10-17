@@ -58,7 +58,7 @@ export function PieDeTarjeta({ titulo, children }: { titulo: string; children: R
       <div
         ref={pie}
         className={`-mx-6 flex items-center justify-between gap-4 border-t border-border bg-superficie px-6 pt-5 transition-shadow duration-200 sm:-mx-8 sm:px-8 lg:sticky lg:bottom-0 lg:z-10 lg:pb-4 ${
-          fijo ? 'lg:bg-superficie/95 lg:shadow-[0_-12px_30px_rgba(11,36,32,0.12)] lg:backdrop-blur-sm' : ''
+          fijo ? 'lg:bg-superficie/95 lg:shadow-n1 lg:backdrop-blur-sm' : ''
         }`}
       >
         <span

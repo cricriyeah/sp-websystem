@@ -110,7 +110,7 @@ export function ProveedorToast({
                 animate={{ opacity: 1, y: 0 }}
                 exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
                 transition={{ duration: reduce ? 0.12 : 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border px-4 py-3 text-sm shadow-lg ${COLORES[toast.tipo]}`}
+                className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border px-4 py-3 text-sm shadow-n2 ${COLORES[toast.tipo]}`}
               >
                 <Icono size={18} weight="fill" className={`mt-0.5 shrink-0 ${COLOR_ICONO[toast.tipo]}`} />
                 <p className="flex-1 leading-snug">{toast.mensaje}</p>

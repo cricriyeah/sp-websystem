@@ -73,7 +73,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
         </div>
 
         <main className="mx-auto max-w-2xl px-6 py-16 text-center sm:px-8">
-          <div className="rounded-2xl border border-border bg-superficie p-8 shadow-sm sm:p-12">
+          <div className="rounded-2xl border border-border bg-superficie p-8 sm:p-12">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-accent">
               <Warning size={32} />
             </div>
@@ -89,7 +89,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
                   href={whatsappHref(dict.traslados.unavailableMessage)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-action px-6 py-3 text-sm font-semibold text-action-foreground shadow-sm transition-transform active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-action px-6 py-3 text-sm font-semibold text-action-foreground transition-transform active:scale-[0.98]"
                 >
                   <WhatsappLogo size={20} weight="fill" />
                   {dict.traslados.unavailableCta}

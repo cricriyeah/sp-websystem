@@ -20,7 +20,7 @@ export function HubGridSedes({ lang, sedes, copy }: HubGridSedesProps) {
       {sedes.map((sede) => (
         <article
           key={sede.slug}
-          className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+          className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card"
         >
           <div className="relative h-48 w-full">
             {sede.hero.imagen && (

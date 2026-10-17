@@ -133,10 +133,10 @@
   --radius-xl: 16px;
   --radius-2xl: 16px;
 
-  /* Sombras con el valor actual: n1 = barra inferior (pie-tarjeta), n2 = popover, toast y hoja. */
+  /* Elevacion (design.md): n0 = ninguna (borde `borde`), n1 = barra inferior fija, n2 = popover, menu, toast, hoja y dialogo. */
   --shadow-n0: none;
-  --shadow-n1: 0 -12px 30px rgba(11, 36, 32, 0.12);
-  --shadow-n2: 0 16px 40px rgba(11, 36, 32, 0.18);
+  --shadow-n1: 0 -1px 0 #d9c9b4, 0 -6px 16px rgb(31 26 20 / 0.08);
+  --shadow-n2: 0 8px 24px rgb(31 26 20 / 0.14);
 
   --duracion-corta: 150ms;
   --duracion-media: 250ms;

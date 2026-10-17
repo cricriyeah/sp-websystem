@@ -39,7 +39,7 @@ export function PaqueteCard({
 
   return (
     <article
-      className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 border-accent/40 bg-superficie p-6 sm:p-8 shadow-[0_12px_40px_rgba(11,36,32,0.12)] transition-shadow hover:shadow-[0_18px_48px_rgba(11,36,32,0.18)] ${className}`}
+      className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 border-accent/40 bg-superficie p-6 sm:p-8 ${className}`}
     >
       {/* Badge superior de producto dominante (Perception-First Design) */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-4">
@@ -126,7 +126,7 @@ export function PaqueteCard({
             type="button"
             onClick={() => calculo.precioFinal !== null && onSelect(paquete, calculo.precioFinal)}
             disabled={calculo.precioFinal === null}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-md transition-transform hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>{dict.bookPackage}</span>
             <ArrowRight size={16} weight="bold" />
@@ -135,14 +135,14 @@ export function PaqueteCard({
           <button
             type="button"
             disabled
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent/50 px-5 py-3.5 text-sm font-semibold text-white shadow-md cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent/50 px-5 py-3.5 text-sm font-semibold text-white cursor-not-allowed"
           >
             <span>{dict.bookPackage}</span>
           </button>
         ) : (
           <Link
             href={bookingHref}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-md transition-transform hover:brightness-105 active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.99]"
           >
             <span>{dict.bookPackage}</span>
             <ArrowRight size={16} weight="bold" />

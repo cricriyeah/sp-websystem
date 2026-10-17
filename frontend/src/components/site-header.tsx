@@ -110,7 +110,7 @@ export function SiteHeader({
 
   return (
     <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
-      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-4 border-b border-border bg-superficie px-6 sm:px-8 lg:h-20 lg:max-w-[1440px] lg:border lg:border-border lg:px-6 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
+      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-4 border-b border-border bg-superficie px-6 sm:px-8 lg:h-20 lg:max-w-[1440px] lg:border lg:border-border lg:px-6">
         <Link
           href={hrefInicio(lang)}
           className="flex shrink-0 items-center text-foreground"
@@ -187,7 +187,7 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-superficie px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
+              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-superficie px-6 py-2 shadow-n2 sm:px-8 ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
             >
               {links.map((link) => (
                 <Link
