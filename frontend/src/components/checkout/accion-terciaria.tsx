@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { CaretDown, CaretLeft } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 
 /**
  * Acciones secundarias del checkout, sin subrayado en reposo.
@@ -45,20 +46,17 @@ export function AccionTexto({
   onClick, children, icono, abierto, tono = 'neutro', 'aria-controls': ariaControls,
 }: AccionTextoProps) {
   return (
-    <button
-      type="button"
+    <Button
+      variante={tono === 'acento' ? 'acento' : 'texto'}
       onClick={onClick}
       aria-expanded={abierto}
       aria-controls={ariaControls}
-      className={`inline-flex min-h-10 items-center gap-1.5 self-start text-xs font-medium transition-colors hover:text-foreground focus-visible:underline focus-visible:underline-offset-4 ${
-        tono === 'acento' ? 'text-accent' : 'text-muted'
-      }`}
     >
       {icono}
       <span>{children}</span>
       {abierto !== undefined && (
         <CaretDown size={12} weight="bold" className={`transition-transform duration-300 ${abierto ? 'rotate-180' : ''}`} />
       )}
-    </button>
+    </Button>
   );
 }

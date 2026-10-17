@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
-import { ArrowRight } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 
 /**
  * El único CTA primario de una tarjeta de paso. Antes había tres formas
  * distintas (redondo con pregunta, redondo suelto, cuadrado con flecha): la
  * misma función se veía diferente en cada paso.
+ *
+ * Envoltorio de `Button variante="principal"`: se conserva el nombre y las
+ * props para no tocar a los llamadores.
  */
 export function BotonPaso({
   children,
@@ -18,14 +21,8 @@ export function BotonPaso({
   disabled?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
-    >
+    <Button variante="principal" onClick={onClick} disabled={disabled} conFlecha={conFlecha}>
       {children}
-      {conFlecha && <ArrowRight size={16} weight="bold" />}
-    </button>
+    </Button>
   );
 }
