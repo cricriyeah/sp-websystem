@@ -1,8 +1,10 @@
 // frontend/src/components/sede-hero.tsx
+import Image from 'next/image';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeDestacada, SedeHeroContenido } from '@/content/sedes-tipos';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { SelectorExperiencia } from '@/components/selector-experiencia';
+import { VideoDiferido } from '@/components/ui/video-diferido';
 
 type SedeHeroProps = {
   lang: Locale;
@@ -47,20 +49,12 @@ export function SedeHero({
   return (
     <section className="relative z-10 bg-background">
       <div className="relative w-full overflow-hidden">
+        {/* La imagen es el LCP: va en el HTML con preload. El video se monta despues, encima. */}
+        {contenido.imagen ? (
+          <Image src={contenido.imagen} alt="" fill sizes="100vw" preload className="object-cover" />
+        ) : null}
         {contenido.video ? (
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            poster={contenido.imagen ?? undefined}
-            className="absolute inset-0 h-full w-full object-cover"
-          >
-            <source src={contenido.video} type="video/webm" />
-          </video>
-        ) : contenido.imagen ? (
-          // eslint-disable-next-line @next/next/no-img-element -- fondo a sangre, mismo tratamiento que el poster del video de la-paz
-          <img src={contenido.imagen} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <VideoDiferido src={contenido.video} className="absolute inset-0 h-full w-full object-cover" />
         ) : null}
         <div
           className="absolute inset-0"

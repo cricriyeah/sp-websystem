@@ -54,3 +54,8 @@ Estado: **no se activó nada.** Sin API disponible en esta sesión no se pudo me
 - **`cacheComponents` (no recomendado ahora):** exige envolver en `<Suspense>` todo `await params/searchParams` en sede, servicio y `/reservar` (si no, el build falla), activa `<Activity>` en la navegación (las rutas ocultas conservan estado y limpian efectos: Turnstile, `sessionStorage`, `captchaKey`) y un `searchParams` solo para `moneda` vuelve dinámica toda la sede. El costo supera el beneficio mientras no haya clientes.
 - **Riesgo del camino barato:** un precio o cupo viejo hasta 60 s en la sede y el detalle de servicio. El checkout vuelve a pedir el catálogo al montar y el servidor recalcula el cobro, así que el monto cobrado nunca depende de la caché.
 - **Decisión que necesito:** ¿activar el camino barato (60 s, sin ruta de invalidación) o dejarlo para después del lanzamiento?
+
+## Task 1.5 — Video de la sede
+
+- `public/videos/videohero.webm`: 87 608 929 bytes (2560×1440) → 5 519 643 bytes (720p, 24 fps, VP9 crf 38, sin audio). Objetivo ≤ 8 MB cumplido; la calidad la aprueba el dueño.
+- El HTML de `/es/sede/la-paz` trae `<link rel="preload" as="image">` de la foto del héroe y 0 `<video>`; el video lo monta `ui/video-diferido.tsx` tras `load`/idle (no con `prefers-reduced-motion` ni `saveData`).
