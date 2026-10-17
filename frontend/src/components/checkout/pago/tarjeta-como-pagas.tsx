@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { m, useReducedMotion } from 'framer-motion';
 import { CheckCircle, Lock, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
@@ -51,7 +50,6 @@ export function TarjetaComoPagas({
   // Cerrado por default: la mayoria de las reservas no lleva codigo — una
   // correccion disponible para quien la busca, no la primera decision.
   const [promoAbierto, setPromoAbierto] = useState(false);
-  const sinMovimiento = useReducedMotion();
   const pagoCreado = phase === 'payment';
   const abierta = phase !== 'payment' && phase !== 'unavailable';
 
@@ -63,37 +61,15 @@ export function TarjetaComoPagas({
   ].filter(Boolean).join(' · ');
 
   const cta = abierta ? (
-    <m.button
-      type="button"
+    <Button
       onClick={onSubmit}
-      disabled={phase === 'submitting' || submitDisabled}
-      animate={
-        waiverAccepted && phase !== 'submitting' && !submitDisabled && !sinMovimiento
-          ? {
-              scale: [1, 1.045, 1],
-              boxShadow: [
-                '0 0 0 0 rgba(255,222,0,0)',
-                '0 0 0 10px rgba(255,222,0,0.28)',
-                '0 0 0 0 rgba(255,222,0,0)',
-              ],
-            }
-          : { scale: 1, boxShadow: '0 0 0 0 rgba(255,222,0,0)' }
-      }
-      transition={
-        waiverAccepted && phase !== 'submitting' && !submitDisabled && !sinMovimiento
-          ? { duration: 1.4, repeat: 2, repeatDelay: 0.6, ease: 'easeInOut' }
-          : { duration: 0.2 }
-      }
-      // Es donde de verdad se perdian los clientes: llenaban todo y el boton se
-      // quedaba igual de quieto que el resto, sin nada que lo distinguiera como
-      // "esto es lo que sigue". El pulso (se apaga solo tras 2 vueltas, con
-      // fallback de opacidad en movimiento reducido) lo dispara `waiverAccepted`:
-      // es lo unico que el cliente tiene que decidir antes de que sirva.
-      className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground transition-opacity disabled:opacity-60"
+      disabled={submitDisabled}
+      cargando={phase === 'submitting'}
+      etiquetaCargando={checkout.submitting}
     >
-      <Lock size={16} />
-      {phase === 'submitting' ? checkout.submitting : (etiquetaBotonEnvio ?? checkout.payButton)}
-    </m.button>
+      <Lock size={20} weight="bold" aria-hidden="true" />
+      {etiquetaBotonEnvio ?? checkout.payButton}
+    </Button>
   ) : undefined;
 
   return (

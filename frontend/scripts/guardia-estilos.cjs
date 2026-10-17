@@ -35,7 +35,6 @@ const EXENTOS = {
   'src/components/checkout/ayuda-flotante.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
   'src/components/error-block.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp en el boton de ayuda' },
   'src/components/pedido/reserva-plegable.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
-  'src/components/checkout/pago/tarjeta-como-pagas.tsx': { reglas: ['color-literal'], motivo: 'el pulso de framer-motion interpola un boxShadow con rgba concreto; var() no se interpola' },
   'src/components/checkout-calendar.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en la Task 8.5c; esa tarea quita esta entrada' },
   'src/components/paquete-card.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en F9 (Task 9.1b)' },
   'src/components/reviews-carousel.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en F9 (Task 9.5)' },
