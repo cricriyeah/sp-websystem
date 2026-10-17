@@ -56,8 +56,8 @@ type PropsResumen = Pick<
   | 'onSubmit'
   | 'onCaptchaToken'
 > & {
-  /** Para llevar el resumen a la vista al pasar a "Cómo pagas". */
-  refPanel: RefObject<HTMLDivElement | null>;
+  /** Para llevar el resumen a la vista al pasar a "Cómo pagas" (traslados no lo usa). */
+  refPanel?: RefObject<HTMLDivElement | null>;
   /** El pago ya creado; con él, el resumen muestra lo que el servidor cobra. */
   pago: Pago | null;
   /** Líneas del viaje y los extras mientras todavía no hay pago. */
@@ -111,8 +111,9 @@ type PropsTarjeta = {
   destinoRef: Dispatch<SetStateAction<HTMLElement | null>>;
   /** Solo con `phase === 'payment'`: el pago creado al que se le pone la tarjeta. */
   pagoEnCurso: Pago | null;
-  apartadoHasta: string | null;
-  antesDePagar: () => Promise<string | null>;
+  /** Solo el servicio suelto aparta cupo: traslados no lo pasa. */
+  apartadoHasta?: string | null;
+  antesDePagar?: () => Promise<string | null>;
   onPagoConfirmado: (procesando: boolean) => void;
 };
 
