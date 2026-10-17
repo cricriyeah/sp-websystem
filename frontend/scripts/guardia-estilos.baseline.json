@@ -142,7 +142,6 @@
     "src/components/traslado-view.tsx": 1
   },
   "color-literal": {
-    "src/components/checkout/pago/formulario-pago.tsx": 5,
     "src/components/checkout/pago/tarjeta-como-pagas.tsx": 4
   },
   "texto-chico-en-campo": {

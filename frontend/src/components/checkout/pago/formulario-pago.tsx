@@ -12,9 +12,10 @@ import { ErrorBlock } from '@/components/error-block';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Pago } from '@/lib/api';
 import { fechaHoraDeVencimiento } from '@/lib/pendientes-texto';
+import { RADIO_PAGO, TOKENS_PAGO } from '@/lib/tokens-pago';
 
 // Stripe pinta en un iframe: no hereda las variables CSS ni la fuente del sitio,
-// así que se le pasan los mismos valores de la paleta (globals.css) para que el
+// así que se le pasan los mismos valores de la paleta (lib/tokens-pago.ts, probado contra globals.css) para que el
 // formulario de tarjeta no parezca de otra marca.
 const STRIPE_FUENTES = [
   { cssSrc: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap' },
@@ -22,13 +23,9 @@ const STRIPE_FUENTES = [
 const STRIPE_APARIENCIA = {
   theme: 'stripe' as const,
   variables: {
-    colorPrimary: '#281ab5',
-    colorText: '#16171c',
-    colorTextSecondary: '#55565f',
-    colorBackground: '#ffffff',
-    colorDanger: '#c22118',
+    ...TOKENS_PAGO,
     fontFamily: '"Instrument Sans", system-ui, sans-serif',
-    borderRadius: '8px',
+    borderRadius: RADIO_PAGO,
   },
 };
 
