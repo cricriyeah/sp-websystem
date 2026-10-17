@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node tests/run-hub-tests.cjs"
+    "test": "node tests/run-hub-tests.cjs",
+    "guardia": "node scripts/guardia-estilos.cjs",
+    "test:guardia": "node --test tests/guardia-estilos.test.cjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
