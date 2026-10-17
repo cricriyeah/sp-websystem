@@ -8,7 +8,8 @@ import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section
 import { ErrorDeCampo } from '@/components/field-error';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
-import { FormularioPago, StripePanel } from '@/components/stripe-panel';
+import { StripePanel } from '@/components/stripe-panel';
+import { FormularioPago } from '@/components/checkout/pago/formulario-pago';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
