@@ -31,6 +31,8 @@ const REGLAS = {
 const EXENTOS = {
   'src/app/[lang]/opengraph-image.tsx': { reglas: ['color-literal'], motivo: 'ImageResponse no lee CSS' },
   'src/components/lang-switch.tsx': { reglas: ['color-literal'], motivo: 'SVG de banderas con colores propios' },
+  'src/app/[lang]/error.tsx': { reglas: ['boton-crudo'], motivo: 'sin Button hasta la Task 3.3; la migracion de F4 lo quita' },
+  'src/app/global-error.tsx': { reglas: ['boton-crudo'], motivo: 'sin Button hasta la Task 3.3; la migracion de F4 lo quita' },
   'src/lib/tokens-pago.ts': { reglas: ['color-literal'], motivo: 'única fuente de lo que Stripe Elements pide en concreto' },
 };
 // Las primitivas son el único lugar donde vive el HTML crudo de estos controles.
