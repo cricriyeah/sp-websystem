@@ -37,7 +37,7 @@ Sitio bilingüe (es/en), con el mismo peso en los dos idiomas. **Aún no está l
 ## 5. Pagos, cancelación y qué incluye
 
 - **Pago:** cada empresa recibe **solo una de dos formas**: 100 % en línea, o 30 % en línea y el resto en efectivo. La empresa decide cuál; el sitio muestra la que aplica a ese servicio.
-- **Cancelación:** solo hay reembolso completo por **mal clima**; cambio de fecha permitido con **mínimo 48 horas** de anticipación. (El dueño confirmó que esta regla sigue igual.) PENDIENTE: garantía y su plazo en días; si cada empresa varía.
+- **Cancelación:** solo hay reembolso completo por **mal clima**; cambio de fecha permitido con **mínimo 48 horas** de anticipación. (El dueño confirmó que esta regla sigue igual.) Vale igual en las 4 empresas (decisión del dueño, 2026-10-16): un solo texto, sin otra protección aparte; la protección es el reembolso completo por mal clima y el cambio de fecha con 48 h.
 - **Qué incluye cada servicio varía por empresa, por servicio, por temporada, disponibilidad y economía.** Regla para el contenido: **el sitio no debe prometer de forma general que un equipo, amenidad o personalización está incluido.** Cada servicio muestra su propia lista y los extras se pueden pedir o contratar aparte.
 - Monedas: pesos y dólares; un solo precio base en pesos y el dólar se deriva del tipo de cambio de la sede.
 

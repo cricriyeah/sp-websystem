@@ -93,13 +93,13 @@ Sustituye al navbar completo: **flecha de volver** a la izquierda, **logo redond
 
 ### Línea de progreso (móvil)
 
-Tres segmentos de 4 px de alto y radio completo, 8 de espacio entre ellos, ancho total del contenido. Completado = `cafe`, actual = `cafe` con el segmento siguiente en `cafe-claro`, pendiente = `cafe-claro`. **Sin números.** Va **encima** del botón de avanzar. Para lectores de pantalla: `role="progressbar"` con «Paso 2 de 3: Tus datos».
+Tres segmentos de 4 px de alto y radio completo, 8 de espacio entre ellos, ancho total del contenido. Completado = `cafe`, actual = `cafe` con el segmento siguiente en `cafe-claro`, pendiente = `cafe-claro`. **Sin números.** Va **encima** del botón de avanzar. Para lectores de pantalla: una `<ol>` con `aria-current="step"` y el texto «Paso 2 de 3: Tus datos»; no `role="progressbar"`.
 
 ---
 
 ### Pestañas / asa «Ver resumen» (móvil)
 
-Una pestaña de 40 de alto sobre la barra inferior que dice «Ver resumen · $4,100 MXN» y abre una hoja modal con el resumen completo. Es la única manera de ver los cargos de dos empresas en móvil sin ocupar pantalla.
+Una fila de 48 de alto (área táctil; la píldora visual es de 40) sobre la barra inferior que dice «Ver resumen · $4,100 MXN» y abre una hoja modal con el resumen completo. Es la única manera de ver los cargos de dos empresas en móvil sin ocupar pantalla.
 
 ---
 
@@ -288,11 +288,11 @@ Botón con indicador de carga circular de 20 y la etiqueta «Procesando…»; el
 
 ### Cómo pagas
 
-Tarjeta del paso 3: moneda, modalidad (completo o anticipo, si aplica), código promocional, deslinde y verificación antibots; después el botón principal «Pagar $X a [empresa]» y el formulario de tarjeta de Stripe con la nota de seguridad. La apariencia de Stripe usa los hex de `tokens-pago` (café, tinta, blanco, error) y radio 12.
+El paso 3 se parte en dos sub-pantallas, cada una con **un solo botón**. (a) «Cómo pagas»: moneda, modalidad (completo o anticipo, si aplica), código promocional, deslinde y verificación antibots; su botón es «Continuar a la tarjeta», que crea la reserva u orden y retiene. (b) Tarjeta de cada empresa: formulario de Stripe con la nota de seguridad; su botón es «Pagar $X a [empresa]», y la barra inferior de (b) vive dentro de `<Elements>` (el botón interno de Stripe se quita). La apariencia de Stripe usa los hex de `tokens-pago` (café, tinta, blanco, error) y radio 12.
 
 | Propiedad | Valor |
 |---|---|
-| Botón | Principal, etiqueta con monto y empresa |
+| Botón | Principal, una acción por sub-pantalla: (a) «Continuar a la tarjeta»; (b) «Pagar $X a [empresa]» (monto solo si el servidor lo confirmó) |
 | Seguridad | Candado + «Pago seguro con Stripe» visible sin scroll |
 | Dos cobros | Cada formulario de tarjeta se muestra uno a la vez, en secuencia |
 

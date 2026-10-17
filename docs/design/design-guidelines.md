@@ -67,7 +67,7 @@ El anillo de foco es siempre visible (2 px `azul` + 2 px de desfase). Al cambiar
 ### Tecnologías de asistencia
 
 - El título del paso se anuncia al entrar (`aria-live="polite"`).
-- La línea de progreso del móvil se expone como `role="progressbar"` con `aria-valuenow`, `aria-valuemax` y un texto «Paso 2 de 3: Tus datos» (los números existen para lectores de pantalla aunque no se vean).
+- La línea de progreso del móvil es una `<ol>` con `aria-current="step"` en el segmento activo y el texto «Paso 2 de 3: Tus datos» (los números existen para lectores de pantalla aunque no se vean); no usa `role="progressbar"`.
 - Las tarjetas plegables usan `aria-expanded` y `aria-controls`.
 - El calendario es una cuadrícula (`role="grid"`) con cada día etiquetado completo («viernes, 7 de noviembre, disponible»); la **leyenda** es texto real, no una imagen.
 - Los errores se enlazan al campo con `aria-describedby` y se anuncian con `role="alert"`.
