@@ -28,6 +28,7 @@ const suites = {
   'selector-experiencia': ['src/lib/selector-experiencia.ts', 'SELECTOR_TEST_OUT'],
   'tokens-pago': ['src/lib/tokens-pago.ts', 'TOKENS_PAGO_TEST_OUT'],
   personalizaciones: ['src/lib/pricing-paquete.ts', 'PERSONALIZACIONES_TEST_OUT'],
+  variantes: ['src/components/ui/variantes.ts', 'VARIANTES_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {
