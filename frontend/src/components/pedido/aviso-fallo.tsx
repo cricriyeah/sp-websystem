@@ -1,4 +1,5 @@
 import { WhatsappLogo } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 
 type Props = {
   titulo: string;
@@ -19,10 +20,10 @@ export function AvisoFallo({ titulo, motivo, lineasDinero, etiquetaBoton, onRein
       <div className="mt-3 flex flex-col gap-2 text-xs leading-relaxed text-muted">
         {lineasDinero.map((linea) => <p key={linea}>{linea}</p>)}
       </div>
-      <button type="button" onClick={onReintentar}
+      <Button variante="libre" type="button" onClick={onReintentar}
         className="mt-5 w-full rounded-full bg-action px-6 py-2.5 text-sm font-medium text-action-foreground">
         {etiquetaBoton}
-      </button>
+      </Button>
       {ayuda && (
         <a href={ayuda.href} target="_blank" rel="noopener"
           className="mt-3 flex items-center justify-center gap-2 text-sm font-medium text-muted hover:text-foreground">
