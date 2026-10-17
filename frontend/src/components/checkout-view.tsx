@@ -20,8 +20,8 @@ import { DateField } from '@/components/date-field';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
 import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
-import { StripePanel } from '@/components/stripe-panel';
-import { FormularioPagoDiferido, precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
+import { BloquePago, BloqueTarjetaPago } from '@/components/checkout/bloques/bloque-pago';
+import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import { WaitNotice } from '@/components/wait-notice';
@@ -1628,24 +1628,22 @@ export function CheckoutView({
 
             {/* El cuarto paso. "Cómo pagas" se pinta aquí (portal del panel) al llegar al
                 paso 4; el formulario de tarjeta aparece debajo cuando se crea el pago. */}
-            {(actual === 'pago' || phase !== 'form') && <div ref={setDestinoTarjetaPago} />}
-
-            {phase === 'payment' && pago && (
-              <FormularioPagoDiferido
-                lang={lang}
-                checkout={checkout}
-                feedback={dict.feedback}
-                ayudaMensaje={ayudaMensaje}
-                pago={pago}
-                apartadoHasta={apartadoHasta}
-                antesDePagar={antesDePagar}
-                onPagoConfirmado={(procesando) => {
-                  setPagoProcesando(procesando);
-                  setConfirmandoLargo(false);
-                  setPhase('confirmando');
-                }}
-              />
-            )}
+            <BloqueTarjetaPago
+              lang={lang}
+              checkout={checkout}
+              feedback={dict.feedback}
+              ayudaMensaje={ayudaMensaje}
+              mostrarDestino={actual === 'pago' || phase !== 'form'}
+              destinoRef={setDestinoTarjetaPago}
+              pagoEnCurso={phase === 'payment' ? pago : null}
+              apartadoHasta={apartadoHasta}
+              antesDePagar={antesDePagar}
+              onPagoConfirmado={(procesando) => {
+                setPagoProcesando(procesando);
+                setConfirmandoLargo(false);
+                setPhase('confirmando');
+              }}
+            />
           </>
         }
         pedido={
@@ -1653,42 +1651,42 @@ export function CheckoutView({
           // Stripe.js y el widget de Turnstile por duplicado. En movil la zona de
           // pago se muestra al llegar al paso 4 (`pagoVisibleMovil`); antes queda
           // montada pero oculta, nunca se desmonta.
-          <div key={captchaKey} ref={refStripePanel} className="scroll-mt-28">
-            <StripePanel
-              lang={lang}
-              checkout={checkout}
-              waiverAccepted={waiverAccepted}
-              onWaiverChange={(value) => {
-                setWaiverAccepted(value);
-                if (value) setErrorWaiver(false);
-              }}
-              errorWaiver={errorWaiver}
-              lines={pago ? [{
-                label: servicio?.nombre ?? servicioNombre ?? checkout.total,
-                amount: currency.format(Number(pago.precio_total)),
-              }] : lines}
-              total={pago ? currency.format(Number(pago.precio_total)) : total === null ? '—' : currency.format(total)}
-              amountDueNow={pago ? currency.format(Number(pago.monto_a_cobrar)) : amountDueNow === null ? '—' : currency.format(amountDueNow)}
-              moneda={moneda}
-              onMonedaChange={setMoneda}
-              usdDisponible={usdDisponible}
-              formaPago={formaPagoEfectiva}
-              onFormaPagoChange={setFormaPago}
-              formaPagoDisponible={permiteAnticipo}
-              codigoPromocional={codigoPromocional}
-              onCodigoPromocionalChange={onCodigoPromocionalChange}
-              promoEstado={promoEstado}
-              promoPorcentaje={promoPorcentaje}
-              phase={phase}
-              error={error}
-              feedback={dict.feedback}
-              lineasViaje={lineasViaje}
-              destinoTarjeta={destinoTarjetaPago}
-              ayudaMensaje={ayudaMensaje}
-              onSubmit={iniciarPago}
-              onCaptchaToken={(token) => (captchaToken.current = token)}
-            />
-          </div>
+          <BloquePago
+            key={captchaKey}
+            refPanel={refStripePanel}
+            lang={lang}
+            checkout={checkout}
+            waiverAccepted={waiverAccepted}
+            onWaiverChange={(value) => {
+              setWaiverAccepted(value);
+              if (value) setErrorWaiver(false);
+            }}
+            errorWaiver={errorWaiver}
+            pago={pago}
+            lineas={lines}
+            nombreServicio={servicio?.nombre ?? servicioNombre}
+            currency={currency}
+            total={total}
+            montoAhora={amountDueNow}
+            moneda={moneda}
+            onMonedaChange={setMoneda}
+            usdDisponible={usdDisponible}
+            formaPago={formaPagoEfectiva}
+            onFormaPagoChange={setFormaPago}
+            formaPagoDisponible={permiteAnticipo}
+            codigoPromocional={codigoPromocional}
+            onCodigoPromocionalChange={onCodigoPromocionalChange}
+            promoEstado={promoEstado}
+            promoPorcentaje={promoPorcentaje}
+            phase={phase}
+            error={error}
+            feedback={dict.feedback}
+            lineasViaje={lineasViaje}
+            destinoTarjeta={destinoTarjetaPago}
+            ayudaMensaje={ayudaMensaje}
+            onSubmit={iniciarPago}
+            onCaptchaToken={(token) => (captchaToken.current = token)}
+          />
         }
       />
 
