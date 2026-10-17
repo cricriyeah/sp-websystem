@@ -32,3 +32,48 @@ export function botonClases({
 }: { variante?: VarianteBoton; tamano?: TamanoBoton } = {}): string {
   return [BASE, VARIANTES[variante], TAMANOS[tamano]].filter(Boolean).join(' ');
 }
+
+// --- Sheet y AlertDialog (Task 3.5) ---------------------------------------------
+// Ambos son un <dialog> nativo abierto con showModal(). Su movimiento (entrada,
+// salida, fondo atenuado, reducir movimiento) vive en globals.css bajo las clases
+// `hoja-dialogo` y `alerta-dialogo`, porque ::backdrop y @starting-style no se
+// pueden escribir como utilidades. Aquí va todo lo demás.
+//
+// Tailwind (preflight) pone `margin: 0` a todo, lo que anula el `margin: auto` con el
+// que el navegador centra un <dialog> modal: por eso la hoja lleva `m-0` explícito y
+// el diálogo de alerta `m-auto`.
+
+const HOJA_DIALOGO =
+  'hoja-dialogo fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto overscroll-contain ' +
+  'rounded-t-sheet bg-superficie px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] text-foreground shadow-n2';
+
+// Dentro de la hoja no hay tarjeta dentro de la hoja: quita borde, radio y sombra al
+// contenido directo (p. ej. ResumenPedido, que fuera de la hoja sí es una tarjeta).
+const HOJA_SIN_BORDE = '[&>*]:rounded-none [&>*]:border-0 [&>*]:shadow-none';
+
+export function hojaClases({ sinBorde = false }: { sinBorde?: boolean } = {}) {
+  return {
+    dialogo: HOJA_DIALOGO,
+    // Asa visual de 4 × 40; no es el área de arrastre.
+    asa: 'mx-auto mb-3 h-1 w-10 rounded-full bg-borde-control',
+    cabecera: 'mb-2 flex items-center justify-between gap-4',
+    // El h2 trae la fuente y el espaciado de titular de la base: aquí es un rótulo.
+    titulo: 'texto-subtitulo font-sans tracking-normal text-foreground',
+    // 48 × 48; -mr-2 alinea el icono de 24 con el margen de 16 de la hoja.
+    cerrar:
+      '-mr-2 inline-flex size-12 shrink-0 items-center justify-center rounded-control text-foreground transition-colors ' +
+      'hover:bg-cafe-bruma focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+    cuerpo: sinBorde ? HOJA_SIN_BORDE : '',
+  };
+}
+
+export function alertaClases() {
+  return {
+    dialogo: 'alerta-dialogo m-auto w-[min(92vw,420px)] rounded-card bg-superficie p-6 text-foreground shadow-n2',
+    titulo: 'texto-subtitulo font-sans tracking-normal text-foreground',
+    cuerpo: 'texto-cuerpo mt-2 text-tinta-suave',
+    // Apilados a ancho completo bajo 640 px; en fila a la derecha desde ahí.
+    acciones: 'mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end',
+    boton: 'w-full sm:w-auto',
+  };
+}

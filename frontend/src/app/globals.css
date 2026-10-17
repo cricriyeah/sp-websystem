@@ -370,6 +370,117 @@
        mismo— y ademas el ambar es el amarillo del logo. */
     color: var(--amber);
   }
+
+  /* --- Sheet y AlertDialog (ui/sheet.tsx, ui/alert-dialog.tsx) ---------------
+     Son un <dialog> nativo con showModal(): el navegador da la trampa de foco, el
+     fondo inerte, Esc y el regreso del foco al disparador. Aqui vive solo lo que no
+     se puede escribir como utilidad: el fondo atenuado (::backdrop), la entrada
+     (@starting-style) y la salida (el <dialog> sigue pintado mientras corre la
+     transicion porque `display` y `overlay` se animan en modo discreto). El resto
+     de la forma (posicion, radio, sombra) va en las clases de ui/variantes.ts. */
+
+  /* Bloqueo de scroll: mientras haya un dialogo modal, la pagina no se mueve. Se
+     pone en <html> y no en <body> porque html ya fija su overflow-x (clip), asi que
+     el overflow del body ya no llega al viewport. El gutter reserva el ancho de la
+     barra de desplazamiento para que la pagina no brinque al abrir. */
+  html:has(dialog:modal) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+  }
+
+  .hoja-dialogo,
+  .alerta-dialogo {
+    transition-behavior: allow-discrete;
+    transition-timing-function: var(--curva-salida);
+  }
+
+  .hoja-dialogo::backdrop,
+  .alerta-dialogo::backdrop {
+    background-color: transparent;
+    transition-property: background-color, overlay, display;
+    transition-duration: var(--duracion-media);
+    transition-timing-function: var(--curva-salida);
+    transition-behavior: allow-discrete;
+  }
+
+  .hoja-dialogo[open]::backdrop,
+  .alerta-dialogo[open]::backdrop {
+    background-color: var(--scrim-hoja);
+    transition-timing-function: var(--curva-estandar);
+  }
+
+  /* Hoja: sube desde abajo (400 ms, curva estandar) y baja mas rapido (250 ms). */
+  .hoja-dialogo {
+    transform: translateY(100%);
+    transition-property: transform, overlay, display;
+    transition-duration: var(--duracion-media);
+  }
+
+  .hoja-dialogo[open] {
+    transform: translateY(0);
+    transition-duration: var(--duracion-larga);
+    transition-timing-function: var(--curva-estandar);
+  }
+
+  /* Dialogo de alerta: aparece en su sitio con opacidad y un asentamiento minimo. */
+  .alerta-dialogo {
+    opacity: 0;
+    transform: scale(0.96);
+    transition-property: opacity, transform, overlay, display;
+    transition-duration: var(--duracion-corta);
+  }
+
+  .alerta-dialogo[open] {
+    opacity: 1;
+    transform: none;
+    transition-duration: var(--duracion-media);
+    transition-timing-function: var(--curva-estandar);
+  }
+
+  /* Estado de partida de la entrada: debe ir DESPUES de las reglas [open]. */
+  @starting-style {
+    .hoja-dialogo[open] {
+      transform: translateY(100%);
+    }
+
+    .alerta-dialogo[open] {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+
+    .hoja-dialogo[open]::backdrop,
+    .alerta-dialogo[open]::backdrop {
+      background-color: transparent;
+    }
+  }
+
+  /* Reducir movimiento: nada se desplaza ni escala, solo opacidad en 150 ms. (La
+     regla global de reduced-motion de @layer base, con !important, colapsa hoy toda
+     transicion a 0,01 ms; esto declara la intencion para cuando esa regla cambie.) */
+  @media (prefers-reduced-motion: reduce) {
+    .hoja-dialogo,
+    .alerta-dialogo {
+      opacity: 0;
+      transform: none;
+      transition-property: opacity, overlay, display;
+      transition-duration: var(--duracion-corta);
+    }
+
+    .hoja-dialogo[open],
+    .alerta-dialogo[open] {
+      opacity: 1;
+      transform: none;
+      transition-duration: var(--duracion-corta);
+    }
+
+    @starting-style {
+      .hoja-dialogo[open],
+      .alerta-dialogo[open] {
+        opacity: 0;
+        transform: none;
+      }
+    }
+  }
 }
 
 @layer base {

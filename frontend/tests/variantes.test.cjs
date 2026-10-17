@@ -25,3 +25,52 @@ test('sin colores crudos', () => {
     assert.doesNotMatch(botonClases({ variante: v }), /-(red|green|blue|amber)-\d/);
   }
 });
+
+const { hojaClases, alertaClases } = require(path.join(process.env.VARIANTES_TEST_OUT, 'components/ui/variantes.js'));
+
+const CRUDOS = [
+  /-(red|green|blue|amber|gray|slate|zinc|neutral|stone)-\d/, // paleta cruda
+  /\brounded(?:-[trblse]{1,2})?-(?:md|lg|xl|2xl|3xl)\b/, // radio crudo
+  /\bshadow-(?:\[|xs\b|sm\b|md\b|lg\b|xl\b|2xl\b)/, // sombra cruda
+  /#[0-9a-fA-F]{3,8}\b|\brgba?\(/, // color literal
+];
+
+function sinCrudos(clases) {
+  for (const regex of CRUDOS) assert.doesNotMatch(clases, regex);
+}
+
+test('la hoja usa solo tokens y la geometría del plan', () => {
+  const { dialogo, asa, cerrar } = hojaClases();
+  sinCrudos(Object.values(hojaClases({ sinBorde: true })).join(' '));
+  for (const clase of ['inset-x-0', 'bottom-0', 'max-h-[85dvh]', 'overflow-y-auto', 'overscroll-contain', 'bg-superficie', 'rounded-t-sheet', 'shadow-n2', 'hoja-dialogo']) {
+    assert.ok(dialogo.split(' ').includes(clase), clase);
+  }
+  assert.match(dialogo, /pb-\[max\(16px,env\(safe-area-inset-bottom\)\)\]/);
+  assert.match(asa, /\bh-1\b/); // 4 px
+  assert.match(asa, /\bw-10\b/); // 40 px
+  assert.match(asa, /bg-borde-control/);
+  assert.match(cerrar, /\bsize-12\b/); // 48 × 48
+});
+
+test('sinBorde solo cambia el contenido de la hoja', () => {
+  assert.equal(hojaClases().cuerpo, '');
+  assert.match(hojaClases({ sinBorde: true }).cuerpo, /border-0/);
+  assert.equal(hojaClases({ sinBorde: true }).dialogo, hojaClases().dialogo);
+});
+
+test('el diálogo de alerta es centrado, con tokens y botones apilados en móvil', () => {
+  const { dialogo, titulo, cuerpo, acciones, boton } = alertaClases();
+  sinCrudos(Object.values(alertaClases()).join(' '));
+  assert.match(dialogo, /w-\[min\(92vw,420px\)\]/);
+  assert.match(dialogo, /rounded-card/);
+  assert.match(dialogo, /bg-superficie/);
+  assert.match(dialogo, /\bp-6\b/);
+  assert.match(dialogo, /shadow-n2/);
+  assert.match(dialogo, /alerta-dialogo/);
+  assert.match(titulo, /texto-subtitulo/);
+  assert.match(cuerpo, /texto-cuerpo/);
+  assert.match(acciones, /flex-col/);
+  assert.match(acciones, /sm:flex-row/);
+  assert.match(boton, /\bw-full\b/);
+  assert.match(boton, /sm:w-auto/);
+});
