@@ -6,6 +6,8 @@ import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { CAJA_CAMPO } from '@/components/checkout/estilos';
 import { FieldPopover } from '@/components/field-popover';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { PuntoEncuentro, Zona } from '@/lib/api';
 import type { DetalleTraslado } from '@/lib/pedido-payload';
 
@@ -41,22 +43,22 @@ export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTrasla
             {(cerrar) => (
               <div className="max-h-72 w-full overflow-y-auto sm:w-80">
                 {puntos.map((punto) => (
-                  <button key={punto.id} type="button"
+                  <Button key={punto.id} variante="libre" type="button"
                     onClick={() => { onTraslado({ puntoEncuentroId: punto.id }); cerrar(); }}
                     className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                       punto.id === traslado.puntoEncuentroId ? 'bg-accent font-medium text-accent-foreground' : 'text-foreground hover:bg-background'
                     }`}>
                     <span className="truncate pr-2">{punto.nombre}</span>
-                  </button>
+                  </Button>
                 ))}
                 {/* La otra dirección es una opción más de ESTA pregunta: va donde el
                     cliente ya está buscando, no como un enlace suelto en la tarjeta. */}
-                <button type="button"
+                <Button variante="libre" type="button"
                   onClick={() => { onTraslado({ modo: 'personalizada' }); cerrar(); }}
                   className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-background">
                   <MapPin size={16} className="shrink-0 text-muted" />
                   {traslados.fields.otraDireccionOpcion}
-                </button>
+                </Button>
               </div>
             )}
           </FieldPopover>
@@ -68,7 +70,7 @@ export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTrasla
             <span className="text-muted">{traslados.fields.otraDireccion}</span>
             <span className="relative">
               <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-              <input type="text" value={traslado.direccion}
+              <Input aspecto="heredado" type="text" value={traslado.direccion}
                 onChange={(event) => onTraslado({ direccion: event.target.value })}
                 placeholder={traslados.fields.direccionPlaceholder}
                 className={`w-full ${CAJA_CAMPO} py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent`} />
@@ -84,7 +86,7 @@ export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTrasla
                 <label key={zona} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm ${
                   traslado.zonaLibre === zona ? 'border-accent bg-surface font-medium' : 'border-border text-muted'
                 }`}>
-                  <input type="radio" name={`zona-${servicioSlug}`} checked={traslado.zonaLibre === zona}
+                  <Input aspecto="heredado" type="radio" name={`zona-${servicioSlug}`} checked={traslado.zonaLibre === zona}
                     onChange={() => onTraslado({ zonaLibre: zona })} className="h-4 w-4 accent-accent" />
                   {zona === 'centro' ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
                 </label>
