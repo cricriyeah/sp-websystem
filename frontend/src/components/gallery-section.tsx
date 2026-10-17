@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { SectionShell } from '@/components/ui/section-shell';
 
 type GallerySectionProps = {
   gallery: Dictionary['gallery'];
@@ -30,14 +31,7 @@ const FOTOS = [
  */
 export function GallerySection({ gallery }: GallerySectionProps) {
   return (
-    <section id="galeria" className="scroll-mt-24 bg-background pt-24 lg:pt-32">
-      <div className="mx-auto max-w-6xl px-6 pb-10 sm:px-8 lg:px-12 lg:pb-14">
-        <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
-        <h2 className="max-w-[16ch] text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[58px]">
-          {gallery.headline}
-        </h2>
-      </div>
-
+    <SectionShell id="galeria" fondo="papel" titulo={gallery.headline} aSangre>
       <div className="grid grid-cols-2 gap-[3px] lg:grid-cols-4">
         {gallery.photoHints.map((hint, i) => (
           <div
@@ -58,6 +52,6 @@ export function GallerySection({ gallery }: GallerySectionProps) {
           </div>
         ))}
       </div>
-    </section>
+    </SectionShell>
   );
 }
