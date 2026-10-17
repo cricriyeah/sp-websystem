@@ -11,12 +11,9 @@ import { ItemPaso } from '@/components/checkout/item-paso';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
 import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
-import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import { CheckoutStepper } from '@/components/checkout-stepper';
 import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo } from '@/components/field-error';
-import { SiteHeader } from '@/components/site-header';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { FormularioPagoDiferido, precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
@@ -24,9 +21,7 @@ import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
 import { formatHour, fromLocalISODate } from '@/lib/dates';
-import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
-import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
 import { horasDePaquete } from '@/lib/horario-servicio';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
@@ -42,7 +37,6 @@ import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
-import { AvisoFallo } from './aviso-fallo';
 import { EncabezadoPago } from './encabezado-pago';
 import { FranjaResumen } from './franja-resumen';
 import { ReservaPlegable } from './reserva-plegable';
@@ -50,6 +44,7 @@ import { FechaPaquete } from './fecha-paquete';
 import { GrupoServicio } from './grupo-servicio';
 import { PantallaEspera } from './pantalla-espera';
 import { PantallaExito } from './pantalla-exito';
+import { PantallaFallo } from './pantalla-fallo';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
 
@@ -65,7 +60,7 @@ type Props = {
 };
 
 export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, retomarCheckoutId }: Props) {
-  const { checkout, booking, feedback, pedido: textos, nav, footer, traslados } = dict;
+  const { checkout, booking, feedback, pedido: textos, traslados } = dict;
   const motor = paquete.es_cruza_empresa ? 'orden' : 'reserva';
   const trasladoFijo = trasladoFijoAeropuerto(paquete);
   const [estado, despachar] = usePedidoEstado(paquete, {
@@ -417,51 +412,24 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     pago.reiniciar();
   };
 
-  if (pago.fase === 'fallo') {
-    const textosFallo = textos.fail;
-    const detalle = pago.fallo;
-    const rechazo = detalle !== null && detalle.codigo !== 'captura' && detalle.empresaSlug !== null;
-    const retenidas = rechazo ? pagosRetenidosAntes(pago.pagos, detalle.indice) : [];
-    const reintentoDirecto = motor === 'orden' && pago.falloEnVivo;
-    const titulo = detalle?.empresaSlug
-      ? (rechazo ? textosFallo.rechazoEmpresa : textosFallo.capturaEmpresa).replace('{empresa}', nombreEmpresa(detalle.empresaSlug))
-      : textosFallo.title;
-    const lineasDinero = rechazo
-      ? [
-        retenidas.length > 0
-          ? `${textosFallo.sinCobro} ${textosFallo.liberaRetencion.replace('{empresas}', retenidas.map((r) => nombreEmpresa(r.empresaSlug)).join(', '))}`
-          : textosFallo.sinCobro,
-        ...(retenidas.length > 0 ? [textosFallo.dobleRetencion.replace('{monto}',
-          formatearPrecio(retenidas.reduce((suma, r) => suma + Number(r.monto), 0), estado.moneda))] : []),
-      ]
-      : [detalle ? textosFallo.liberaGeneral : textosFallo.body];
-    // Motor reserva: el webhook cancelo y reembolso porque el lugar se fue. No hubo rechazo de tarjeta.
-    const lugarNoAsegurado = motor === 'reserva';
-    const ayuda = ofreceAyuda(pago.fallos) && tieneWhatsapp
-      ? { etiqueta: textosFallo.ayuda, href: whatsappHref(textosFallo.ayudaMensaje.replace('{paquete}', paquete.nombre)) }
-      : null;
-
-    return (
-      <div className="min-h-dvh bg-surface">
-        <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
-        <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
-        <CheckoutStepper stepper={checkout.stepper} {...(stepperPagos(pago.fallo?.indice ?? 0) ?? { actual: 4, totalMovil })} />
-        <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
-          <AvisoFallo
-            titulo={lugarNoAsegurado ? checkout.lugarNoAseguradoTitulo : titulo}
-            motivo={rechazo ? textosFallo.motivos[claveMotivoRechazo(detalle.codigo)] : null}
-            lineasDinero={lugarNoAsegurado ? [checkout.lugarNoAseguradoCuerpo] : lineasDinero}
-            etiquetaBoton={lugarNoAsegurado
-              ? checkout.eligeOtraFecha
-              : reintentoDirecto ? textosFallo.retryOtraTarjeta : textosFallo.retry}
-            onReintentar={reintentoDirecto ? () => void reintentar() : reiniciarPedido}
-            ayuda={ayuda}
-          />
-        </div>
-        <CheckoutFooter lang={lang} footer={footer} nav={nav} />
-      </div>
-    );
-  }
+  if (pago.fase === 'fallo') return (
+    <PantallaFallo
+      lang={lang}
+      dict={dict}
+      sedeSlug={sedeSlug}
+      paquete={paquete}
+      motor={motor}
+      moneda={estado.moneda}
+      pagos={pago.pagos}
+      fallo={pago.fallo}
+      falloEnVivo={pago.falloEnVivo}
+      fallos={pago.fallos}
+      nombreEmpresa={nombreEmpresa}
+      stepper={stepperPagos(pago.fallo?.indice ?? 0) ?? { actual: 4, totalMovil }}
+      onReintentarDirecto={reintentar}
+      onReiniciar={reiniciarPedido}
+    />
+  );
 
   if (pago.fase === 'resumiendo' || pago.fase === 'capturando' || pago.fase === 'confirmando') return (
     <PantallaEspera
