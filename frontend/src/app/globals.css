@@ -69,6 +69,16 @@
      ella. Cambiar el alto de la barra obliga a cambiar esto, y solo esto. */
   --banda-alto: 0px; /* alto de la banda "Continuar reservacion"; la escribe SiteHeader, 0 si no hay */
   --nav-alto: calc(80px + var(--banda-alto)); /* top-0 + h-20 (80) en movil + banda */
+
+  /* --- Tokens aditivos (Task 2.1): sin consumidores todavia, sin cambio visual.
+     Viven en :root y no en @theme porque se leen con var() desde estilos en
+     linea y el @theme normal solo emite lo que una utilidad usa. */
+  --scrim-hoja: rgb(31 26 20 / 0.4); /* tinta al 40 %: fondo atenuado detras de Sheet y AlertDialog */
+  --scrim-hero: linear-gradient(to top, rgba(10, 11, 14, 0.88) 0%, rgba(10, 11, 14, 0.42) 44%, rgba(10, 11, 14, 0.1) 100%); /* degradado actual de sede-hero */
+  --z-cabecera: 40;
+  --z-barra: 50;
+  --z-hoja: 60;
+  --z-toast: 70;
 }
 
 @media (min-width: 40rem) {
@@ -81,6 +91,52 @@
   :root {
     --nav-alto: calc(96px + var(--banda-alto)); /* lg:top-4 (16) + lg:h-20 (80) en escritorio + banda: debe coincidir con site-header.tsx, un hueco aqui deja ver el contenido bajo el stepper */
   }
+}
+
+/* Forma, movimiento y colores de marca que NO sustituyen a ningun token existente.
+   `static`: se emiten aunque ninguna utilidad los use todavia (F3 a F6 los consumen).
+   Los valores de color son los finales de docs/design/design.md; los de forma son
+   los actuales (F7 los cambia en este unico sitio). */
+@theme static {
+  --radius-control: 9999px; /* botones: hoy rounded-full */
+  --radius-campo: 0.5rem; /* campos y cajas: hoy rounded-lg (8 px). Literal, no var(--radius-lg): ese default de Tailwind no esta en este archivo y la prueba de tokens-pago (Task 2.3) no podria resolverlo */
+  --radius-casilla: 6px;
+
+  /* Sombras con el valor actual: n1 = barra inferior (pie-tarjeta), n2 = popover, toast y hoja. */
+  --shadow-n0: none;
+  --shadow-n1: 0 -12px 30px rgba(11, 36, 32, 0.12);
+  --shadow-n2: 0 16px 40px rgba(11, 36, 32, 0.18);
+
+  --duracion-corta: 150ms;
+  --duracion-media: 250ms;
+  --duracion-larga: 400ms;
+  --curva-estandar: cubic-bezier(0.2, 0, 0, 1);
+  --curva-salida: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Actividades: azul = mar, coral = ciudad, verde = outside o montana. Nunca estado ni boton. */
+  --color-azul: #1b607f;
+  --color-azul-hondo: #14485f;
+  --color-azul-profundo: #0e3040;
+  --color-azul-medio: #76a0b2;
+  --color-azul-claro: #dde6eb;
+  --color-azul-bruma: #e8eff2;
+  --color-coral: #f64a25;
+  --color-coral-hondo: #b9381c;
+  --color-coral-profundo: #7b2513;
+  --color-coral-medio: #fa927c;
+  --color-coral-claro: #fbc2b5;
+  --color-coral-bruma: #feede9;
+  --color-coral-texto: #8f2409;
+  --color-verde: #343f04;
+  --color-verde-hondo: #272f03;
+  --color-verde-profundo: #1a2002;
+  --color-verde-medio: #5d6536;
+  --color-verde-claro: #dfffa8;
+  --color-verde-bruma: #ebece6;
+
+  /* Estado informativo (el unico de design.md que no existe hoy). */
+  --color-info: #0f3d52;
+  --color-info-fondo: #dde6eb;
 }
 
 @theme inline {
@@ -106,6 +162,23 @@
   --color-error-fondo: var(--error-fondo);
   --color-aviso: var(--aviso);
   --color-aviso-fondo: var(--aviso-fondo);
+  --color-ring: var(--accent); /* foco; F7 lo pasa a azul */
+
+  /* Nombres de color de la marca (design.md) apuntando a los valores ACTUALES: los
+     componentes nuevos de F3 a F6 ya los usan y pintan igual que hoy. F7.2 Paso 1b
+     invierte la direccion (el nombre de marca lleva el valor nuevo). */
+  --color-cafe: var(--accent);
+  --color-cafe-hondo: var(--accent-deep);
+  --color-cafe-profundo: var(--accent-deep);
+  --color-tinta: var(--foreground);
+  --color-tinta-suave: var(--muted);
+  --color-apagado: var(--muted);
+  --color-borde: var(--border);
+  --color-borde-control: var(--border-strong);
+  --color-arena: var(--background);
+  --color-blanco: #ffffff;
+  --color-cafe-bruma: var(--surface);
+  --color-cafe-claro: var(--surface-deep);
 
   --font-sans: var(--font-cuerpo);
   --font-display: var(--font-titulo);
@@ -215,6 +288,18 @@
 }
 
 @layer components {
+  /* Escala de texto semantica (Task 2.1): tamanos ACTUALES de lo que cubre cada nombre.
+     Sin consumidores todavia; F7.3 fija los valores finales de design.md. */
+  .texto-display { font-size: 3.75rem; line-height: 1; }
+  .texto-pagina { font-size: 3rem; line-height: 1.1; }
+  .texto-seccion { font-size: 2.25rem; line-height: 1.15; }
+  .texto-paso { font-size: 1.125rem; line-height: 1.3; font-weight: 600; }
+  .texto-subtitulo { font-size: 1.25rem; line-height: 1.3; font-weight: 600; }
+  .texto-cuerpo { font-size: 1rem; line-height: 1.5; }
+  .texto-pequeno { font-size: 0.875rem; line-height: 1.45; }
+  .texto-etiqueta { font-size: 0.875rem; line-height: 1.2; font-weight: 600; }
+  .texto-pie { font-size: 0.75rem; line-height: 1.4; }
+
   .rev {
     animation: revelar 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
