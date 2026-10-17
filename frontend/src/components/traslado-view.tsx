@@ -3,27 +3,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
-import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
-import { ErrorDeCampo } from '@/components/field-error';
-import { PeopleStepper } from '@/components/people-stepper';
+import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { BloquePago, BloqueTarjetaPago } from '@/components/checkout/bloques/bloque-pago';
 import { BloqueRecogida } from '@/components/checkout/bloques/bloque-recogida';
+import { BloqueViajeTraslado } from '@/components/checkout/bloques/bloque-viaje-traslado';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
-import { Despliegue } from '@/components/checkout/despliegue';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { formatDay } from '@/components/checkout/formato-dia';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
-import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
 import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
-import { FechaPaquete, FechaRegresoCompacta } from '@/components/pedido/fecha-paquete';
-import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import {
   ApiError,
@@ -664,99 +658,38 @@ export function TrasladoView({
                   ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso>
                   : undefined}
               >
-                {/* Lo que define el producto va primero. */}
-                <BloqueDePaso titulo={traslados.step1Title}>
-                  <TipoTrasladoCards
-                    tipos={tiposDisponibles}
-                    valor={tipoTraslado}
-                    textos={traslados.types}
-                    etiqueta={traslados.step1Title}
-                    precioDesde={getPrecioDesde}
-                    onChange={(tipo) => {
-                      setTipoTraslado(tipo);
-                      if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
-                      else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
-                    }}
-                  />
-                </BloqueDePaso>
-
-                <ContenidoViaje
-                  fecha={
-                    <>
-                      <FechaPaquete
-                        lang={lang}
-                        label={traslados.fields.fecha}
-                        value={fecha}
-                        onChange={(f) => {
-                          setFecha(f);
-                          if (fechaRegreso && fechaRegreso <= f) setFechaRegreso(diaSiguiente(f));
-                        }}
-                        minDate={minDate}
-                        chooseLabel={pedido.chooseStart}
-                        viewMonthLabel={pedido.viewMonth}
-                        hideMonthLabel={pedido.hideMonth}
-                        previousWeekLabel={pedido.previousWeek}
-                        nextWeekLabel={pedido.nextWeek}
-                        previousMonthLabel={booking.prevMonth}
-                        nextMonthLabel={booking.nextMonth}
-                        personas={personas}
-                        fullLabel={checkout.dayFull}
-                      />
-                      {/* El regreso depende del tipo y de la fecha de inicio: aparece
-                          pegado a la fecha, y solo con "redondo con aeropuerto". */}
-                      <Despliegue abierto={tipoTraslado === 'redondo_aeropuerto'}>
-                        <div className="pt-5">
-                          <FechaRegresoCompacta
-                            lang={lang}
-                            label={traslados.fields.fechaRegreso}
-                            value={fechaRegreso}
-                            onChange={setFechaRegreso}
-                            minDate={diaSiguiente(fecha)}
-                            chooseLabel={pedido.chooseReturnDate}
-                            changeButtonLabel={checkout.changeStep}
-                            doneButtonLabel={checkout.doneEditing}
-                            viewMonthLabel={pedido.viewMonth}
-                            hideMonthLabel={pedido.hideMonth}
-                            previousWeekLabel={pedido.previousWeek}
-                            nextWeekLabel={pedido.nextWeek}
-                            previousMonthLabel={booking.prevMonth}
-                            nextMonthLabel={booking.nextMonth}
-                            personas={personas}
-                            fullLabel={checkout.dayFull}
-                          />
-                        </div>
-                      </Despliegue>
-                    </>
-                  }
-                  hora={
-                    <TimeField
-                      label={traslados.fields.hora}
-                      help={checkout.hourLabel}
-                      value={hora}
-                      onChange={setHora}
-                      availableHours={horasDisponibles}
-                    />
-                  }
-                  personas={
-                    <PeopleStepper
-                      label={traslados.fields.pasajeros}
-                      value={personas}
-                      onChange={setPersonas}
-                      maxPeople={maxCapacidad}
-                      minPeople={1}
-                      maxNotice={traslados.fields.maxPasajerosNotice.replace('{max}', String(maxCapacidad))}
-                      onMaxAttempt={() => ayuda.tropezar('tope-personas')}
-                    />
-                  }
-                  nota={
-                    <p>
-                      <span className="font-semibold text-foreground">{traslados.summary.transfer}</span>
-                      {' '}
-                      {traslados.summary.included}
-                    </p>
-                  }
+                <BloqueViajeTraslado
+                  lang={lang}
+                  traslados={traslados}
+                  checkout={checkout}
+                  pedido={pedido}
+                  booking={booking}
+                  tiposDisponibles={tiposDisponibles}
+                  tipoTraslado={tipoTraslado}
+                  getPrecioDesde={getPrecioDesde}
+                  onTipo={(tipo) => {
+                    setTipoTraslado(tipo);
+                    if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
+                    else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
+                  }}
+                  fecha={fecha}
+                  minDate={minDate}
+                  onFecha={(f) => {
+                    setFecha(f);
+                    if (fechaRegreso && fechaRegreso <= f) setFechaRegreso(diaSiguiente(f));
+                  }}
+                  fechaRegreso={fechaRegreso}
+                  minFechaRegreso={diaSiguiente(fecha)}
+                  onFechaRegreso={setFechaRegreso}
+                  hora={hora}
+                  horasDisponibles={horasDisponibles}
+                  onHora={setHora}
+                  personas={personas}
+                  maxCapacidad={maxCapacidad}
+                  onPersonas={setPersonas}
+                  onTopePersonas={() => ayuda.tropezar('tope-personas')}
+                  error={errorPaso3}
                 />
-                <ErrorDeCampo id="error-viaje" mensaje={errorPaso3} />
               </CheckoutSectionCard>
             </ItemPaso>
 
