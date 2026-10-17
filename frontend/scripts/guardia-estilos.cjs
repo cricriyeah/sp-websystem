@@ -31,8 +31,7 @@ const REGLAS = {
 const EXENTOS = {
   'src/app/[lang]/opengraph-image.tsx': { reglas: ['color-literal'], motivo: 'ImageResponse no lee CSS' },
   'src/components/lang-switch.tsx': { reglas: ['color-literal'], motivo: 'SVG de banderas con colores propios' },
-  'src/app/[lang]/error.tsx': { reglas: ['boton-crudo'], motivo: 'sin Button hasta la Task 3.3; la migracion de F4 lo quita' },
-  'src/app/global-error.tsx': { reglas: ['boton-crudo'], motivo: 'sin Button hasta la Task 3.3; la migracion de F4 lo quita' },
+  'src/app/global-error.tsx': { reglas: ['boton-crudo'], motivo: 'ultimo recurso sin estilos globales ni primitivas: Button arrastraria clsx y tailwind-merge a un documento que no carga Tailwind' },
   'src/components/checkout/ayuda-flotante.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
   'src/components/error-block.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp en el boton de ayuda' },
   'src/components/pedido/reserva-plegable.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },

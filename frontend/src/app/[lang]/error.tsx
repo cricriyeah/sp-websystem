@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { textosDeError } from '@/lib/errores-textos';
 
 /**
@@ -33,13 +34,14 @@ export default function ErrorDePagina({
       </h1>
       <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-muted">{cuerpo}</p>
       <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <button
+        <Button
+          variante="libre"
           type="button"
           onClick={() => retry()}
           className="flex items-center justify-center rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-action-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
         >
           {reintentar}
-        </button>
+        </Button>
         <Link
           href={`/${idioma}`}
           className="flex items-center justify-center rounded-full border border-border-strong px-7 py-3.5 text-sm font-medium text-foreground transition-colors hover:border-foreground"
