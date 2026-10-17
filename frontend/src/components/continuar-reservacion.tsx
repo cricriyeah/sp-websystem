@@ -8,6 +8,8 @@ import { cancelarOrdenPublica, getResumenOrden, getResumenReserva, type ResumenO
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { borrarPendiente, guardarPendiente, listarPendientes, type Pendiente } from '@/lib/pendientes';
 import { textoDeSituacion } from '@/lib/pendientes-texto';
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 type Resumen = ResumenReserva | ResumenOrden;
 type Problema = 'sinConexion' | 'errorServidor';
@@ -62,8 +64,6 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   const secuencia = useRef(0);
   const timerDeshacer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerOcultar = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dialogoRef = useRef<HTMLDivElement>(null);
-  const volverRef = useRef<HTMLButtonElement>(null);
 
   const consultar = useCallback(async (p: Pendiente) => {
     const turno = ++secuencia.current;
@@ -109,24 +109,6 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     if (timerDeshacer.current) clearTimeout(timerDeshacer.current);
     if (timerOcultar.current) clearTimeout(timerOcultar.current);
   }, []);
-
-  useEffect(() => {
-    if (!confirmando) return;
-    const anterior = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    volverRef.current?.focus();
-    const teclado = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { setConfirmando(false); return; }
-      if (event.key !== 'Tab' || !dialogoRef.current) return;
-      const focos = [...dialogoRef.current.querySelectorAll<HTMLElement>('button:not(:disabled)')];
-      if (!focos.length) return;
-      const primero = focos[0];
-      const ultimo = focos[focos.length - 1];
-      if (event.shiftKey && document.activeElement === primero) { event.preventDefault(); ultimo.focus(); }
-      else if (!event.shiftKey && document.activeElement === ultimo) { event.preventDefault(); primero.focus(); }
-    };
-    document.addEventListener('keydown', teclado);
-    return () => { document.removeEventListener('keydown', teclado); anterior?.focus(); };
-  }, [confirmando]);
 
   const siguiente = (sin: string) => {
     const restantes = pendientes.filter(p => p.checkoutId !== sin);
@@ -309,32 +291,32 @@ export function ContinuarReservacion({ lang, dict }: Props) {
           <p className="mt-1 text-xs text-muted">{fechaRelativa(activo.actualizadoEn, textos)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {principal && <button type="button" onClick={principalClick} className="min-h-11 bg-action px-4 py-2 text-sm font-semibold text-white hover:opacity-90">{principal}</button>}
-          {secundaria && <button type="button" onClick={secundariaClick} className="min-h-11 border border-border-strong px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-deep">{secundaria}</button>}
-          {otros.length > 0 && <button type="button" aria-expanded={listaAbierta} onClick={() => setListaAbierta(v => !v)} className="min-h-11 px-2 text-sm font-medium text-accent underline">{textos.yMas.replace('{n}', String(otros.length))}</button>}
+          {principal && <Button variante="libre" onClick={principalClick} className="min-h-11 bg-action px-4 py-2 text-sm font-semibold text-white hover:opacity-90">{principal}</Button>}
+          {secundaria && <Button variante="libre" onClick={secundariaClick} className="min-h-11 border border-border-strong px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-deep">{secundaria}</Button>}
+          {otros.length > 0 && <Button variante="libre" aria-expanded={listaAbierta} onClick={() => setListaAbierta(v => !v)} className="min-h-11 px-2 text-sm font-medium text-accent underline">{textos.yMas.replace('{n}', String(otros.length))}</Button>}
         </div>
       </div>
       {listaAbierta && otros.length > 0 && <div className="mx-auto mt-3 max-w-[1440px] border-t border-border pt-2">
-        {otros.map(p => <button key={p.checkoutId} type="button" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border px-2 py-2 text-left text-sm text-foreground last:border-b-0 hover:bg-surface-deep"><span>{p.productoNombre}</span><span className="shrink-0 text-xs text-muted">{fechaRelativa(p.actualizadoEn, textos)}</span></button>)}
+        {otros.map(p => <Button key={p.checkoutId} variante="libre" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border px-2 py-2 text-left text-sm text-foreground last:border-b-0 hover:bg-surface-deep"><span>{p.productoNombre}</span><span className="shrink-0 text-xs text-muted">{fechaRelativa(p.actualizadoEn, textos)}</span></Button>)}
       </div>}
     </div>
   ) : null;
 
   const deshacerAviso = deshecho && <div role="status" aria-live="polite" className="border border-border bg-surface px-5 py-3 text-sm text-foreground">
     {textos.descartada.replace('{producto}', deshecho.productoNombre)}{' '}
-    <button type="button" onClick={deshacer} className="font-semibold text-accent underline">{textos.deshacer}</button>
+    <Button variante="libre" onClick={deshacer} className="font-semibold text-accent underline">{textos.deshacer}</Button>
   </div>;
 
-  const dialogo = confirmando && resumen && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/50 p-4">
-    <div ref={dialogoRef} role="dialog" aria-modal="true" aria-labelledby="continuar-cancelar-titulo" aria-describedby="continuar-cancelar-cuerpo" className="w-full max-w-md border border-border bg-superficie p-6 shadow-2xl">
-      <h2 id="continuar-cancelar-titulo" className="text-2xl text-foreground">{textos.confirmarCancelarTitulo}</h2>
-      <p id="continuar-cancelar-cuerpo" className="mt-3 text-sm leading-relaxed text-muted">{(montoRetenido(resumen, textos.locale) ? textos.confirmarCancelarCuerpo : textos.confirmarCancelarSinMonto).replace('{monto}', montoRetenido(resumen, textos.locale) ?? '')}</p>
-      <div className="mt-6 flex flex-wrap justify-end gap-2">
-        <button ref={volverRef} type="button" disabled={cancelando} onClick={() => setConfirmando(false)} className="min-h-11 border border-border-strong px-4 py-2 text-foreground">{textos.confirmarCancelarVolver}</button>
-        <button type="button" disabled={cancelando} onClick={() => void cancelar()} className="min-h-11 bg-action px-4 py-2 font-semibold text-white disabled:opacity-50">{textos.confirmarCancelarSi}</button>
-      </div>
-    </div>
-  </div>;
+  const montoCancelar = resumen ? montoRetenido(resumen, textos.locale) : null;
+  const dialogo = <AlertDialog
+    abierto={confirmando && !!resumen}
+    titulo={textos.confirmarCancelarTitulo}
+    cuerpo={(montoCancelar ? textos.confirmarCancelarCuerpo : textos.confirmarCancelarSinMonto).replace('{monto}', montoCancelar ?? '')}
+    etiquetaSegura={textos.confirmarCancelarVolver}
+    etiquetaDestructiva={textos.confirmarCancelarSi}
+    onSegura={() => setConfirmando(false)}
+    onDestructiva={() => { if (!cancelando) void cancelar(); }}
+  />;
 
   if (!aviso && !deshacerAviso) return null;
   return <>
