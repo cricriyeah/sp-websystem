@@ -20,7 +20,7 @@ import { SiteHeader } from '@/components/site-header';
 import { WaitNotice } from '@/components/wait-notice';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
-import { FormularioPago } from '@/components/checkout/pago/formulario-pago';
+import { FormularioPagoDiferido, precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
@@ -78,6 +78,12 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const [editando, setEditando] = useState<PasoId | null>(null);
   const tarjeta = (id: PasoId) => estadoDeTarjeta(id, actual, editando);
   const ayuda = useAyudaContextual();
+
+  // Al llegar a "Cómo pagas" se pide ya el formulario de tarjeta (y con él Stripe.js):
+  // para cuando se crea el pago, el chunk está listo. Solo en el cliente.
+  useEffect(() => {
+    if (actual === 'pago') precargarFormularioPago().catch(() => {});
+  }, [actual]);
   const [gruposCompletados, setGruposCompletados] = useState(0);
   const [grupoEditando, setGrupoEditando] = useState<number | null>(null);
   // Cuando el cliente cambia de paso (confirma uno o reabre una respuesta) la
@@ -596,7 +602,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               pagos={pasosPago}
               saldo={pasosPago.length === 1 && faltaPorCobrar > 0 ? formatearPrecio(faltaPorCobrar, estado.moneda) : null}
             />
-            <FormularioPago
+            <FormularioPagoDiferido
               lang={lang}
               key={pasoPago.empresaSlug}
               checkout={checkout}

@@ -6,6 +6,7 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import { Lock } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { EsqueletoPago } from '@/components/checkout/pago/esqueleto-pago';
 import { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
 import { ErrorBlock } from '@/components/error-block';
 import { WaitNotice } from '@/components/wait-notice';
@@ -56,6 +57,8 @@ function PaymentForm({
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  // El esqueleto cubre el hueco del iframe hasta que Stripe termina de pintarlo.
+  const [listo, setListo] = useState(false);
 
   const handleConfirm = async () => {
     if (!stripe || !elements || submitting) return;
@@ -102,7 +105,20 @@ function PaymentForm({
           PaymentIntent para montarse, pero eso es un detalle tecnico que al
           cliente no le toca notar. */}
       <p className="text-sm text-muted">{puente}</p>
-      <PaymentElement />
+      {/* El contenedor reserva la altura del esqueleto hasta `onReady`; el esqueleto va
+          superpuesto (hermano del iframe, nunca su ancestro) y se desvanece en 150 ms.
+          Nada aqui lleva transform, filter ni will-change: Stripe no los tolera. */}
+      <div className={`relative ${listo ? '' : 'min-h-[19rem]'}`}>
+        <PaymentElement onReady={() => setListo(true)} onLoadError={() => setListo(true)} />
+        <div
+          aria-hidden="true"
+          className={`absolute inset-0 overflow-hidden bg-background transition-[opacity,visibility] duration-150 motion-reduce:transition-none ${
+            listo ? 'invisible opacity-0' : ''
+          }`}
+        >
+          <EsqueletoPago />
+        </div>
+      </div>
 
       {/* La espera del banco es la mas larga de todo el flujo y la que mas caro
           sale malinterpretar: si el cliente cree que se rompio y recarga, lo hace

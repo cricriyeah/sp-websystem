@@ -21,7 +21,7 @@ import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section
 import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
-import { FormularioPago } from '@/components/checkout/pago/formulario-pago';
+import { FormularioPagoDiferido, precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import { WaitNotice } from '@/components/wait-notice';
@@ -634,6 +634,12 @@ export function CheckoutView({
   const ayuda = useAyudaContextual();
   // Al cambiar de paso, la tarjeta en foco se trae a la vista solo si hace falta.
   useScrollAlFoco(`${actual}|${editando}|${phase === 'payment'}`);
+
+  // Al llegar a "Cómo pagas" se pide ya el formulario de tarjeta (y con él Stripe.js):
+  // para cuando se crea el pago, el chunk está listo. Solo en el cliente.
+  useEffect(() => {
+    if (actual === 'pago') precargarFormularioPago().catch(() => {});
+  }, [actual]);
 
   /**
    * Repone el checkout de esta pestana, si `checkoutId` ya traia una reserva
@@ -1625,7 +1631,7 @@ export function CheckoutView({
             {(actual === 'pago' || phase !== 'form') && <div ref={setDestinoTarjetaPago} />}
 
             {phase === 'payment' && pago && (
-              <FormularioPago
+              <FormularioPagoDiferido
                 lang={lang}
                 checkout={checkout}
                 feedback={dict.feedback}

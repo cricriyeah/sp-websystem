@@ -9,7 +9,7 @@ import { ErrorDeCampo } from '@/components/field-error';
 import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
-import { FormularioPago } from '@/components/checkout/pago/formulario-pago';
+import { FormularioPagoDiferido, precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
@@ -137,6 +137,12 @@ export function TrasladoView({
   const [actual, setActual] = useState<PasoId>('viaje');
   const [editando, setEditando] = useState<PasoId | null>(null);
   const ayuda = useAyudaContextual();
+
+  // Al llegar a "Cómo pagas" se pide ya el formulario de tarjeta (y con él Stripe.js):
+  // para cuando se crea el pago, el chunk está listo. Solo en el cliente.
+  useEffect(() => {
+    if (actual === 'pago') precargarFormularioPago().catch(() => {});
+  }, [actual]);
 
   const [tipoTraslado, setTipoTraslado] = useState<TipoTraslado>('redondo_aeropuerto');
 
@@ -935,7 +941,7 @@ export function TrasladoView({
             )}
 
             {phase === 'payment' && pago && (
-              <FormularioPago
+              <FormularioPagoDiferido
                 lang={lang}
                 checkout={checkout}
               feedback={feedback}

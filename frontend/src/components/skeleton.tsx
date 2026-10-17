@@ -7,9 +7,10 @@
  * conserva, y el juicio visual —que se forma en los primeros 50ms— se hace
  * contra la composicion real en vez de contra una pantalla vacia.
  *
- * **Solo donde se conoce la forma.** Para el iframe de Stripe no aplica: es de
- * un tercero, llega cuando llega, y un skeleton que no coincide con lo que
- * aparece despues produce un salto de layout — peor que no poner nada.
+ * **Solo donde se conoce la forma.** El formulario de tarjeta de Stripe tiene su
+ * propio esqueleto (`checkout/pago/esqueleto-pago.tsx`): estatico, de altura fija
+ * y sin pulso, porque el contenido de pago no se anima y el iframe es de un
+ * tercero que llega cuando llega. Este `Skeleton` pulsa: no se usa para pagos.
  *
  * La animacion se limita a quien no pidio reducir el movimiento.
  */
