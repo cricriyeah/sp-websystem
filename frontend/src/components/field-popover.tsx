@@ -172,7 +172,7 @@ export function FieldPopover({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        className={`flex flex-1 items-center gap-3 text-left transition-colors ${compacto ? 'rounded-lg px-4 py-3 hover:bg-surface' : 'px-6 py-3.5 hover:bg-background'}`}
+        className={`flex flex-1 items-center gap-3 text-left transition-colors ${compacto ? 'rounded-lg px-4 py-3 hover:bg-cafe-bruma' : 'px-6 py-3.5 hover:bg-cafe-bruma'}`}
       >
         {icon}
         {/* Sin contestar, la pregunta ocupa el lugar grande y no hay etiqueta
@@ -223,7 +223,7 @@ export function FieldPopover({
             // propio ancho fijo y quedaba angosto y descentrado contra la
             // tarjeta. Desde `sm:` el campo vuelve a ser un tercio de la barra y
             // ahi si conviene que el panel se encoja a lo que pida su contenido.
-            className={`absolute left-0 z-30 w-full overflow-y-auto border border-border bg-surface p-4 text-left shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:w-auto ${
+            className={`absolute left-0 z-30 w-full overflow-y-auto border border-border bg-superficie p-4 text-left shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:w-auto ${
               posicion.haciaArriba ? 'bottom-full mb-2 origin-bottom' : 'top-full mt-2 origin-top'
             }`}
           >

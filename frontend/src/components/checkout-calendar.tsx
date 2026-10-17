@@ -90,7 +90,7 @@ export function CheckoutCalendar({
           type="button"
           onClick={() => shiftWeek(-1)}
           disabled={!puedeRetroceder(inicio, minDate)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
         >
           <CaretLeft size={16} />
         </button>
@@ -100,7 +100,7 @@ export function CheckoutCalendar({
         <button
           type="button"
           onClick={() => shiftWeek(1)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground"
         >
           <CaretRight size={16} />
         </button>

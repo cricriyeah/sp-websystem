@@ -121,7 +121,7 @@ export function BookingConfirmation({
       .replace('{ask}', ask);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface print:bg-white">
+    <div className="flex min-h-dvh flex-col bg-background print:bg-white">
       <div className="print:hidden">
         <SiteHeader lang={lang} nav={nav} variante="sede" />
       </div>
@@ -266,7 +266,7 @@ export function BookingConfirmation({
                 variante="libre"
                 type="button"
                 onClick={() => window.print()}
-                className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl border border-border-strong px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface print:hidden"
+                className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl border border-border-strong px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-cafe-bruma print:hidden"
               >
                 <DownloadSimple size={18} />
                 {confirmation.downloadReceipt}
@@ -304,7 +304,7 @@ export function BookingConfirmation({
                           href={whatsappHref(mensajeDeSugerencia(need.ask))}
                           target="_blank"
                           rel="noopener"
-                          className="group flex gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-surface"
+                          className="group flex gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-cafe-bruma"
                         >
                           <Icono
                             size={20}

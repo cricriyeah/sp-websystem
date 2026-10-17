@@ -167,7 +167,7 @@ export function PanelCalendario({
           type="button"
           onClick={() => moverMes(-1)}
           aria-label={prevMonthLabel}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-background hover:text-foreground"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground"
         >
           <CaretLeft size={16} />
         </Button>
@@ -179,7 +179,7 @@ export function PanelCalendario({
           type="button"
           onClick={() => moverMes(1)}
           aria-label={nextMonthLabel}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-background hover:text-foreground"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground"
         >
           <CaretRight size={16} />
         </Button>

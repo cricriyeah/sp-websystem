@@ -187,7 +187,7 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-surface px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
+              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-superficie px-6 py-2 shadow-[0_16px_40px_rgba(11,36,32,0.18)] sm:px-8 ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
             >
               {links.map((link) => (
                 <Link

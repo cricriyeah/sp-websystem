@@ -47,7 +47,7 @@ export function ServiciosSueltosSection({
           {dict.standaloneSubtitle}
         </p>
       </div>
-      {servicios.length === 0 && <p className="mt-6 rounded-xl bg-surface p-6 text-sm text-muted">{dict.servicesComingSoon}</p>}
+      {servicios.length === 0 && <p className="mt-6 rounded-xl bg-cafe-bruma p-6 text-sm text-muted">{dict.servicesComingSoon}</p>}
 
       {/* Grilla de servicios sueltos (menor peso visual que los paquetes) */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -114,7 +114,7 @@ export function ServiciosSueltosSection({
                 </Link>
                 <Link
                   href={hrefDetalleServicio(servicio, lang, moneda, sedeSlug)}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-3 py-2 text-sm font-semibold text-accent hover:bg-surface"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-3 py-2 text-sm font-semibold text-accent hover:bg-cafe-bruma"
                 >
                   {dict.learnMore}
                 </Link>

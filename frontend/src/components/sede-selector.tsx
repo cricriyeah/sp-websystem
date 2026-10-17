@@ -129,7 +129,7 @@ export function SedeSelector({
         aria-haspopup="listbox"
         className={
           isHeader
-            ? 'flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:border-accent hover:text-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed'
+            ? 'flex items-center gap-1.5 rounded-full border border-border bg-superficie px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:border-accent hover:text-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed'
             : 'flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-all hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed'
         }
       >
@@ -151,7 +151,7 @@ export function SedeSelector({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 top-full z-50 mt-2 min-w-[200px] rounded-xl border border-border bg-surface p-1.5 shadow-[0_12px_32px_rgba(11,36,32,0.14)]"
+            className="absolute left-0 top-full z-50 mt-2 min-w-[200px] rounded-xl border border-border bg-superficie p-1.5 shadow-[0_12px_32px_rgba(11,36,32,0.14)]"
           >
             <div className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">
               {label}

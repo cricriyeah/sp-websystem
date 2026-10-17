@@ -38,7 +38,7 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil, rotulo, to
   return (
     <>
       {/* --- Movil: compacta y fija. --------------------------------------- */}
-      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-surface px-6 py-3 sm:px-8 lg:hidden">
+      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-background px-6 py-3 sm:px-8 lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
             {pasos.map((_, i) => {
@@ -71,7 +71,7 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil, rotulo, to
       {/* --- Escritorio: los 4 pasos a la vista. ---------------------------- */}
       {/* Fija bajo el header, como la de móvil: el progreso es información que
           debe seguir a la vista mientras el cliente baja por las tarjetas. */}
-      <div className="hidden border-b border-border bg-surface lg:sticky lg:top-[var(--nav-alto)] lg:z-30 lg:block">
+      <div className="hidden border-b border-border bg-background lg:sticky lg:top-[var(--nav-alto)] lg:z-30 lg:block">
         <div className="mx-auto max-w-6xl px-6 pt-4 pb-3 sm:px-8 lg:px-12">
         <div className="flex items-center gap-8">
         <ol className="flex min-w-0 flex-1 items-center" aria-label={stepper.stepOf.replace('{current}', String(actual)).replace('{total}', String(totalPasos))}>

@@ -98,14 +98,14 @@ export function FechaPaquete({
       <div className={`${sinEncabezado ? '' : 'mt-4 '}flex items-center justify-between gap-3`}>
         <Button variante="libre" type="button" onClick={() => moverSemana(-1)}
           disabled={!puedeRetroceder(inicioVisible, minDate)} aria-label={previousWeekLabel}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30">
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30">
           <CaretLeft size={17} />
         </Button>
         <Deslizable clave={etiquetaMes} direccion={direccion}>
           <span className="block text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</span>
         </Deslizable>
         <Button variante="libre" type="button" onClick={() => moverSemana(1)} aria-label={nextWeekLabel}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground">
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground">
           <CaretRight size={17} />
         </Button>
       </div>
@@ -121,7 +121,7 @@ export function FechaPaquete({
               className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-2 text-sm transition-colors ${
                 seleccionada ? 'border-accent bg-accent font-medium text-accent-foreground'
                   : pasada ? 'cursor-not-allowed border-border text-muted/40'
-                    : 'border-border text-foreground hover:border-accent hover:bg-surface'
+                    : 'border-border text-foreground hover:border-accent hover:bg-cafe-bruma'
               }`}>
               <span className="text-[11px] first-letter:uppercase">{formatoDia.format(fecha).replace('.', '').slice(0, 2)}</span>
               <span>{fecha.getDate()}</span>
@@ -139,7 +139,7 @@ export function FechaPaquete({
       </div>
 
       <Despliegue abierto={mesAbierto}>
-        <div id={panelId} className="mt-3 rounded-lg border border-border bg-surface p-4">
+        <div id={panelId} className="mt-3 rounded-lg border border-border bg-superficie p-4">
           <PanelCalendario
             locale={locale} value={seleccionVigente ?? minDate} seleccionado={seleccionVigente}
             onChange={elegir} minDate={minDate} personas={personas} fullLabel={fullLabel}
@@ -188,7 +188,7 @@ export function FechaRegresoCompacta({ changeButtonLabel, doneButtonLabel, ...pr
               {vigente ? formato.format(fromLocalISODate(vigente)).replace('.', '') : ''}
             </span>
           </span>
-          <span className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
+          <span className="shrink-0 rounded-full border border-border bg-cafe-bruma px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
             {abierta ? doneButtonLabel : changeButtonLabel}
           </span>
         </Button>

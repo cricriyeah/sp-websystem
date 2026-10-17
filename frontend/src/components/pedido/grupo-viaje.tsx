@@ -88,7 +88,7 @@ export function GrupoViaje({
       <div key={extra.id}>
         <label
           htmlFor={id}
-          className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
+          className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-cafe-bruma"
         >
           <span className="flex items-start gap-3">
             <Input
@@ -118,7 +118,7 @@ export function GrupoViaje({
           </div>
         </Despliegue>
         <Despliegue abierto={marcada && Boolean(extra.cantidad_editable) && estado.personas > 1}>
-          <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
+          <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-cafe-bruma px-4 py-2.5 text-sm text-foreground">
             <span className="text-muted">{checkout.licenseQuantity.question}</span>
             <span className="flex items-center gap-2">
               <Button variante="libre" type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
@@ -160,7 +160,7 @@ export function GrupoViaje({
           step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
           value={seleccion?.respuesta ?? ''} disabled={bloqueado}
           onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
-          className="border border-border bg-surface px-4 py-3 outline-none focus:border-accent" />
+          className="border border-border bg-superficie px-4 py-3 outline-none focus:border-accent" />
       </label>
     );
   };

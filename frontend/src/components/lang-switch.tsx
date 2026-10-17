@@ -134,7 +134,7 @@ export function LangSwitch({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}
-        className="flex h-9 items-center gap-2 border border-border bg-superficie px-3 text-xs font-semibold text-foreground shadow-sm transition-colors hover:border-border-strong hover:bg-surface"
+        className="flex h-9 items-center gap-2 border border-border bg-superficie px-3 text-xs font-semibold text-foreground shadow-sm transition-colors hover:border-border-strong hover:bg-cafe-bruma"
       >
         <current.Flag className="h-3.5 w-5" />
         <span className="uppercase tracking-wider">{current.value}</span>
@@ -181,8 +181,8 @@ export function LangSwitch({
                     onClick={() => select(locale.value)}
                     className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-colors
                       ${active
-                        ? 'bg-surface font-semibold text-foreground'
-                        : 'text-muted hover:bg-surface hover:text-foreground'
+                        ? 'bg-cafe-bruma font-semibold text-foreground'
+                        : 'text-muted hover:bg-cafe-bruma hover:text-foreground'
                       }`}
                   >
                     <locale.Flag className="h-3.5 w-5" />

@@ -5,58 +5,36 @@
 :root {
   color-scheme: light;
 
-  /* --- Paleta v3 -------------------------------------------------------
-     Regla que gobierna todo el sitio: los fondos de seccion son solo tres
-     (papel, bruma y bruma profunda). Ningun color de acento es fondo de
-     seccion. El color grande de la pagina lo ponen las fotos.
-     La bruma es el mismo indigo de la marca con la saturacion bajada, para
-     que fondo y acento sean el mismo color en dos volumenes y no compitan. */
-  --paper: #ffffff;
-  --mist: #f1f3fb;
-  --mist-deep: #e4e7f6;
-  --ink: #16171c;
-  --ink-soft: #55565f;
-  --line: #dde0ee;
-  --line-strong: #d1d5eb;
-  --indigo: #281ab5;
-  --indigo-deep: #311c99;
-  --yellow: #ffde00;
-  --amber: #ffb600;
+  /* --- Nombres semanticos: es lo que usan los componentes ----------------
+     Son alias de los nombres de marca de docs/design/design.md, que llevan el
+     valor (bloque `@theme static` de abajo). Un solo acento, el cafe. Regla de
+     contraste que no se rompe: texto blanco sobre cafe (8,46:1). El amarillo y
+     el indigo salieron de la marca; tests/contraste.test.cjs calcula cada par. */
+  --background: var(--color-arena);
+  --superficie: var(--color-blanco); /* contenedores (tarjeta, campo, popover, hoja, barra) */
+  --foreground: var(--color-tinta);
+  --surface: var(--color-cafe-bruma); /* solo bandas de seccion; el resto usa un token explicito */
+  --muted: var(--color-apagado);
+  --border: var(--color-borde);
+  --border-strong: var(--color-borde-control);
 
-  /* --- Nombres semanticos: es lo que usan los componentes --------------- */
-  --background: var(--paper);
-  --superficie: #ffffff; /* contenedores (tarjeta, campo, popover, hoja, barra): hoy igual a --background; F7 pone la pagina en arena y deja esta en blanco */
-  --foreground: var(--ink);
-  --surface: var(--mist);
-  --surface-deep: var(--mist-deep);
-  --muted: var(--ink-soft);
-  --border: var(--line);
-  --border-strong: var(--line-strong);
-
-  /* Un solo acento, el indigo. El amarillo NO es un segundo acento: es el
-     color de la accion y de las marcas solidas —el relleno del boton de
-     reservar, la regla que abre cada seccion, la palabra caligrafica del
-     titular sobre la foto—. La regla que no se rompe es la de contraste:
-     amarillo como relleno o sobre foto oscura, **nunca** como texto sobre
-     papel (1.1:1, ilegible). */
-  --accent: var(--indigo);
-  --accent-deep: var(--indigo-deep);
-  --accent-foreground: #ffffff;
-  --action: var(--yellow);
-  --action-foreground: var(--ink);
+  --accent: var(--color-cafe);
+  --accent-deep: var(--color-cafe-hondo);
+  --accent-foreground: var(--color-blanco);
+  --action: var(--color-cafe);
+  --action-foreground: var(--color-blanco);
 
   /* Texto sobre foto: siempre encima de un degradado oscuro, nunca directo. */
   --hero-ink: #ffffff;
   --hero-ink-soft: rgba(255, 255, 255, 0.86);
 
-  /* Estados. Fuera de la paleta a proposito: son senales del sistema, no
-     decoracion, y tienen que leerse distinto del indigo y del amarillo. */
-  --exito: #0f7a46;
-  --exito-fondo: #dcf3e6;
-  --error: #c22118;
-  --error-fondo: #fbe3e0;
-  --aviso: #8a5a00;
-  --aviso-fondo: #fff1cc;
+  /* Estados: senales del sistema, no decoracion. */
+  --exito: var(--color-exito);
+  --exito-fondo: var(--color-exito-fondo);
+  --error: var(--color-error);
+  --error-fondo: var(--color-error-fondo);
+  --aviso: var(--color-aviso);
+  --aviso-fondo: var(--color-aviso-fondo);
 
   /* Lo que hay que despejar arriba para no quedar debajo del SiteHeader: su
      separacion del borde mas su propia altura (ver site-header.tsx). La barra
@@ -77,8 +55,8 @@
   --scrim-hoja: rgb(31 26 20 / 0.4); /* tinta al 40 %: fondo atenuado detras de Sheet y AlertDialog */
   --scrim-hero: linear-gradient(to top, rgba(10, 11, 14, 0.88) 0%, rgba(10, 11, 14, 0.42) 44%, rgba(10, 11, 14, 0.1) 100%); /* degradado actual de sede-hero */
   --scrim-temporada: linear-gradient(to top, rgba(10, 11, 14, 0.86) 0%, rgba(10, 11, 14, 0.3) 52%, rgba(10, 11, 14, 0) 100%); /* degradado de season-section sobre cada foto */
-  --tinte-indigo-resenas: radial-gradient(55% 60% at 12% 8%, rgba(40, 26, 181, 0.05), transparent 70%); /* tinte de reviews-section */
-  --tinte-indigo-pie: radial-gradient(50% 60% at 88% 0%, rgba(49, 28, 153, 0.1), transparent 70%); /* tinte de site-footer */
+  --tinte-cafe-resenas: radial-gradient(55% 60% at 12% 8%, rgba(124, 59, 2, 0.05), transparent 70%); /* tinte de reviews-section (cafe al 5 %) */
+  --tinte-cafe-pie: radial-gradient(50% 60% at 88% 0%, rgba(93, 44, 2, 0.1), transparent 70%); /* tinte de site-footer (cafe-hondo al 10 %) */
   --z-cabecera: 40;
   --z-barra: 50;
   --z-hoja: 60;
@@ -97,11 +75,40 @@
   }
 }
 
-/* Forma, movimiento y colores de marca que NO sustituyen a ningun token existente.
-   `static`: se emiten aunque ninguna utilidad los use todavia (F3 a F6 los consumen).
-   Los valores de color son los finales de docs/design/design.md; los de forma son
-   los actuales (F7 los cambia en este unico sitio). */
+/* Forma, movimiento y colores de marca (docs/design/design.md).
+   `static`: se emiten aunque ninguna utilidad los use. Los nombres de marca llevan
+   el valor; los nombres antiguos de :root (--accent, --foreground...) los referencian.
+   Los valores de color son los de docs/design/design.md; los de forma son los
+   actuales (el Paso 2 de la Task 7.2 los cambia en este unico sitio). */
 @theme static {
+  /* Marca: cafe */
+  --color-cafe: #7c3b02;
+  --color-cafe-hondo: #5d2c02;
+  --color-cafe-profundo: #3e1e01;
+  --color-cafe-medio: #b08967;
+  --color-cafe-claro: #fee0ac;
+  --color-cafe-bruma: #f2ebe6;
+
+  /* Neutros calidos, sin negro puro */
+  --color-arena: #fbf7f0; /* fondo de pagina */
+  --color-blanco: #ffffff; /* tarjetas, calendario, campos */
+  --color-tinta: #1f1a14;
+  --color-tinta-suave: #4a3f33;
+  --color-apagado: #6b5d4d;
+  --color-borde: #d9c9b4; /* decorativo (1,62:1): no delimita un control */
+  --color-borde-control: #8a7a66; /* campos, casillas y botones secundarios (3:1) */
+
+  /* Estados del sistema (siempre con icono y texto) */
+  --color-exito: #2f5d0a;
+  --color-exito-fondo: #e7f5d3;
+  --color-error: #b3261e;
+  --color-error-fondo: #fde7e4;
+  --color-aviso: #6b3a00;
+  --color-aviso-fondo: var(--color-cafe-claro);
+  --color-info: #0f3d52;
+  --color-info-fondo: var(--color-azul-claro);
+  --color-ring: var(--color-azul); /* foco: anillo de 2 px con desfase de 2 px */
+
   --radius-control: 9999px; /* botones: hoy rounded-full */
   --radius-campo: 0.5rem; /* campos y cajas: hoy rounded-lg (8 px). Literal, no var(--radius-lg): ese default de Tailwind no esta en este archivo y la prueba de tokens-pago (Task 2.3) no podria resolverlo */
   --radius-casilla: 6px;
@@ -139,10 +146,6 @@
   --color-verde-medio: #5d6536;
   --color-verde-claro: #dfffa8;
   --color-verde-bruma: #ebece6;
-
-  /* Estado informativo (el unico de design.md que no existe hoy). */
-  --color-info: #0f3d52;
-  --color-info-fondo: #dde6eb;
 }
 
 @theme inline {
@@ -151,7 +154,6 @@
   --color-superficie: var(--superficie);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
-  --color-surface-deep: var(--surface-deep);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
@@ -160,32 +162,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-action: var(--action);
   --color-action-foreground: var(--action-foreground);
-  --color-amber: var(--amber);
   --color-hero-ink: var(--hero-ink);
   --color-hero-ink-soft: var(--hero-ink-soft);
-  --color-exito: var(--exito);
-  --color-exito-fondo: var(--exito-fondo);
-  --color-error: var(--error);
-  --color-error-fondo: var(--error-fondo);
-  --color-aviso: var(--aviso);
-  --color-aviso-fondo: var(--aviso-fondo);
-  --color-ring: var(--accent); /* foco; F7 lo pasa a azul */
-
-  /* Nombres de color de la marca (design.md) apuntando a los valores ACTUALES: los
-     componentes nuevos de F3 a F6 ya los usan y pintan igual que hoy. F7.2 Paso 1b
-     invierte la direccion (el nombre de marca lleva el valor nuevo). */
-  --color-cafe: var(--accent);
-  --color-cafe-hondo: var(--accent-deep);
-  --color-cafe-profundo: var(--accent-deep);
-  --color-tinta: var(--foreground);
-  --color-tinta-suave: var(--muted);
-  --color-apagado: var(--muted);
-  --color-borde: var(--border);
-  --color-borde-control: var(--border-strong);
-  --color-arena: var(--background);
-  --color-blanco: #ffffff;
-  --color-cafe-bruma: var(--surface);
-  --color-cafe-claro: var(--surface-deep);
 
   --font-sans: var(--font-cuerpo);
   --font-display: var(--font-titulo);
@@ -368,7 +346,7 @@
        ese esta reservado al boton de reservar —tenerlo tambien en el titular
        hacia que la portada tuviera dos cosas gritando el mismo color sin ser lo
        mismo— y ademas el ambar es el amarillo del logo. */
-    color: var(--amber);
+    color: var(--color-cafe-medio);
   }
 
   /* --- Sheet y AlertDialog (ui/sheet.tsx, ui/alert-dialog.tsx) ---------------

@@ -99,7 +99,7 @@ export function CheckoutSectionCard({
             {etiqueta && (
               // En pantallas angostas el renglón no tiene sitio para la empresa
               // sin pisar "Modificar": se ve completa al abrir la tarjeta.
-              <span className="hidden shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted sm:inline">
+              <span className="hidden shrink-0 rounded-full bg-cafe-bruma px-2 py-0.5 text-[11px] font-medium text-muted sm:inline">
                 {etiqueta}
               </span>
             )}
@@ -120,7 +120,7 @@ export function CheckoutSectionCard({
                 {title}
               </span>
               {etiqueta && (
-                <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
+                <span className="rounded-full bg-cafe-bruma px-2 py-0.5 text-[11px] font-medium text-muted">
                   {etiqueta}
                 </span>
               )}
@@ -152,7 +152,7 @@ export function CheckoutSectionCard({
             <Check size={13} weight="bold" aria-hidden />
           </span>
         ) : (
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-cafe-bruma px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
             {actionLabel}
             {/* Misma flecha que la del renglón colapsado: a la izquierda cerrada,
                 hacia abajo abierta. La rotación es lo que hace obvio que es la
@@ -174,7 +174,7 @@ export function CheckoutSectionCard({
         <p className="flex items-center gap-x-2 text-sm font-medium text-muted">
           {title}
           {etiqueta && (
-            <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium">{etiqueta}</span>
+            <span className="rounded-full bg-cafe-bruma px-2 py-0.5 text-[11px] font-medium">{etiqueta}</span>
           )}
         </p>
       </section>

@@ -1143,7 +1143,7 @@ export function CheckoutView({
   // reemplazarlo por la confirmacion.
   if (phase === 'recuperando') {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-surface px-6">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-background px-6">
         <WaitNotice mensaje={dict.feedback.recoveringNotice} />
       </div>
     );
@@ -1151,7 +1151,7 @@ export function CheckoutView({
 
   if (phase === 'confirmando') {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-surface px-6 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-background px-6 text-center">
         <WaitNotice
           mensaje={confirmandoLargo ? checkout.siguiendoConfirmando : checkout.confirmandoTitulo}
         />
@@ -1161,7 +1161,7 @@ export function CheckoutView({
 
   if (phase === 'cancelada') {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface px-6 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-6 text-center">
         <h1 className="text-xl font-semibold text-foreground">{checkout.lugarNoAseguradoTitulo}</h1>
         <p className="max-w-md text-sm text-foreground/80">{checkout.lugarNoAseguradoCuerpo}</p>
         <BotonPaso onClick={elegirOtraFecha}>{checkout.eligeOtraFecha}</BotonPaso>

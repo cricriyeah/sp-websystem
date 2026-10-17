@@ -259,7 +259,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   const registro = contenido?.registro ?? 'informativo';
   const estilo = registro === 'con_dinero'
     ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_10%,var(--superficie))]'
-    : registro === 'en_curso' ? 'border-border-strong bg-surface' : 'border-border bg-superficie';
+    : registro === 'en_curso' ? 'border-border-strong bg-superficie' : 'border-border bg-superficie';
   const otros = pendientes.filter(p => p.checkoutId !== activo?.checkoutId).slice(0, 3);
 
   const principalClick = () => {
@@ -292,17 +292,17 @@ export function ContinuarReservacion({ lang, dict }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {principal && <Button variante="libre" onClick={principalClick} className="min-h-11 bg-action px-4 py-2 text-sm font-semibold text-white hover:opacity-90">{principal}</Button>}
-          {secundaria && <Button variante="libre" onClick={secundariaClick} className="min-h-11 border border-border-strong px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-deep">{secundaria}</Button>}
+          {secundaria && <Button variante="libre" onClick={secundariaClick} className="min-h-11 border border-border-strong px-4 py-2 text-sm font-medium text-foreground hover:bg-cafe-bruma">{secundaria}</Button>}
           {otros.length > 0 && <Button variante="libre" aria-expanded={listaAbierta} onClick={() => setListaAbierta(v => !v)} className="min-h-11 px-2 text-sm font-medium text-accent underline">{textos.yMas.replace('{n}', String(otros.length))}</Button>}
         </div>
       </div>
       {listaAbierta && otros.length > 0 && <div className="mx-auto mt-3 max-w-[1440px] border-t border-border pt-2">
-        {otros.map(p => <Button key={p.checkoutId} variante="libre" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border px-2 py-2 text-left text-sm text-foreground last:border-b-0 hover:bg-surface-deep"><span>{p.productoNombre}</span><span className="shrink-0 text-xs text-muted">{fechaRelativa(p.actualizadoEn, textos)}</span></Button>)}
+        {otros.map(p => <Button key={p.checkoutId} variante="libre" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border px-2 py-2 text-left text-sm text-foreground last:border-b-0 hover:bg-cafe-bruma"><span>{p.productoNombre}</span><span className="shrink-0 text-xs text-muted">{fechaRelativa(p.actualizadoEn, textos)}</span></Button>)}
       </div>}
     </div>
   ) : null;
 
-  const deshacerAviso = deshecho && <div role="status" aria-live="polite" className="border border-border bg-surface px-5 py-3 text-sm text-foreground">
+  const deshacerAviso = deshecho && <div role="status" aria-live="polite" className="border border-border bg-cafe-bruma px-5 py-3 text-sm text-foreground">
     {textos.descartada.replace('{producto}', deshecho.productoNombre)}{' '}
     <Button variante="libre" onClick={deshacer} className="font-semibold text-accent underline">{textos.deshacer}</Button>
   </div>;

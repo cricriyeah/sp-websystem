@@ -29,7 +29,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
   function reset() { setZoom(1); x.set(0); y.set(0); }
   function cambiarZoom(delta: number) { setZoom(z => Math.min(4, Math.max(1, z + delta))); }
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+    <div className="overflow-hidden rounded-2xl border border-border bg-superficie">
       <div className="relative">
         <div role="region" tabIndex={0}
           aria-label={copy.mapAria}
@@ -77,7 +77,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
             { title: copy.zoomIn, icon: Plus, action: () => cambiarZoom(0.5), disabled: zoom === 4 },
             { title: copy.zoomOut, icon: Minus, action: () => cambiarZoom(-0.5), disabled: zoom === 1 },
             { title: copy.resetMap, icon: ArrowCounterClockwise, action: reset, disabled: false },
-          ].map(({ title, icon: Icon, action, disabled }) => <Button key={title} variante="libre" aria-label={title} title={title} onClick={action} disabled={disabled} className="flex h-11 w-11 items-center justify-center text-foreground hover:bg-surface disabled:opacity-30"><Icon size={19} /></Button>)}
+          ].map(({ title, icon: Icon, action, disabled }) => <Button key={title} variante="libre" aria-label={title} title={title} onClick={action} disabled={disabled} className="flex h-11 w-11 items-center justify-center text-foreground hover:bg-cafe-bruma disabled:opacity-30"><Icon size={19} /></Button>)}
         </div>
         <span className="pointer-events-none absolute left-4 top-4 rounded bg-superficie/90 px-3 py-2 text-xs text-muted">{copy.dragMap}</span>
       </div>

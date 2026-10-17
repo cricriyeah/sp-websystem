@@ -10,7 +10,8 @@
     "test": "node tests/run-hub-tests.cjs",
     "guardia": "node scripts/guardia-estilos.cjs",
     "test:guardia": "node --test tests/guardia-estilos.test.cjs",
-    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:guardia && npm run guardia && next build"
+    "test:contraste": "node --test tests/contraste.test.cjs",
+    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:contraste && npm run test:guardia && npm run guardia && next build"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

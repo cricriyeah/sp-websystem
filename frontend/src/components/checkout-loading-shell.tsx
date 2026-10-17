@@ -15,7 +15,7 @@ export function CheckoutLoadingShell({
 }) {
   const steps = Array.from({ length: stepCount }, (_, index) => index + 1);
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh bg-background">
       <div className="fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8" aria-hidden="true">
         <div className="mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between border-b border-border bg-superficie px-6 sm:px-8 lg:border lg:px-6 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
           <Skeleton className="h-11 w-32" />
@@ -34,7 +34,7 @@ export function CheckoutLoadingShell({
         </div>
       )}
 
-      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-surface/95 px-6 py-3 sm:px-8 lg:hidden" aria-hidden="true">
+      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-background/95 px-6 py-3 sm:px-8 lg:hidden" aria-hidden="true">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="flex gap-1.5">
             {steps.map((step) => <Skeleton key={step} className="h-1.5 w-1.5 rounded-full" />)}

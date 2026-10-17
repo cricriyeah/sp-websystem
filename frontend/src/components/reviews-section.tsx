@@ -31,7 +31,7 @@ export function ReviewsSection({ nav, reviews }: ReviewsSectionProps) {
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'var(--tinte-indigo-resenas)',
+          background: 'var(--tinte-cafe-resenas)',
         }}
       />
       <div className="relative mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">

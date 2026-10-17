@@ -54,7 +54,7 @@ export function ReviewsCarousel({ resenas, prevLabel, nextLabel }: ReviewsCarous
           type="button"
           onClick={() => ir(activa - 1)}
           aria-label={prevLabel}
-          className="mt-2 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground sm:flex"
+          className="mt-2 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground sm:flex"
         >
           <CaretLeft size={18} />
         </button>
@@ -73,7 +73,7 @@ export function ReviewsCarousel({ resenas, prevLabel, nextLabel }: ReviewsCarous
             >
               <div className="flex gap-1">
                 {Array.from({ length: 5 }, (_, s) => (
-                  <Star key={s} size={18} weight="fill" className="text-amber" />
+                  <Star key={s} size={18} weight="fill" className="text-cafe-medio" />
                 ))}
               </div>
               <p className="max-w-[48ch] text-2xl leading-snug font-medium tracking-tight text-foreground">
@@ -88,7 +88,7 @@ export function ReviewsCarousel({ resenas, prevLabel, nextLabel }: ReviewsCarous
           type="button"
           onClick={() => ir(activa + 1)}
           aria-label={nextLabel}
-          className="mt-2 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground sm:flex"
+          className="mt-2 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground sm:flex"
         >
           <CaretRight size={18} />
         </button>
@@ -117,7 +117,7 @@ export function ReviewsCarousel({ resenas, prevLabel, nextLabel }: ReviewsCarous
             type="button"
             onClick={() => ir(activa - 1)}
             aria-label={prevLabel}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-cafe-bruma hover:text-foreground"
           >
             <CaretLeft size={16} />
           </button>
@@ -125,7 +125,7 @@ export function ReviewsCarousel({ resenas, prevLabel, nextLabel }: ReviewsCarous
             type="button"
             onClick={() => ir(activa + 1)}
             aria-label={nextLabel}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-cafe-bruma hover:text-foreground"
           >
             <CaretRight size={16} />
           </button>

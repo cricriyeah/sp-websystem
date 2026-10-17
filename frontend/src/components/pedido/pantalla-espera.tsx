@@ -15,7 +15,7 @@ type Props = {
 export function PantallaEspera({ lang, dict, sedeSlug, fase, confirmandoLargo }: Props) {
   const { checkout, feedback, pedido: textos, nav } = dict;
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh bg-background">
       <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
       <div className="mx-auto max-w-2xl px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
         <WaitNotice

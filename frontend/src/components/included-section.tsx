@@ -64,7 +64,7 @@ export function IncludedSection({ included }: IncludedSectionProps) {
               key={item.title}
               className="flex gap-5 border-l-[3px] border-accent bg-superficie p-6 lg:p-8"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-deep">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-cafe-bruma">
                 <Icono size={24} weight="light" className="text-accent" />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -113,7 +113,7 @@ export function IncludedSection({ included }: IncludedSectionProps) {
               key={addon.title}
               className="flex items-start gap-4 bg-superficie px-5 py-4"
             >
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-deep">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cafe-bruma">
                 <Plus size={13} weight="bold" className="text-accent" />
               </span>
               <span className="flex flex-col gap-0.5">

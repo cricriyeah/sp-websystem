@@ -85,7 +85,7 @@ export function ReservaPlegable({
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
         aria-controls={id}
-        className={`group flex min-h-11 w-full items-center justify-between gap-4 border border-border bg-superficie px-5 py-2 text-left text-sm transition-colors hover:bg-surface active:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${activo ? '' : 'hidden'}`}
+        className={`group flex min-h-11 w-full items-center justify-between gap-4 border border-border bg-superficie px-5 py-2 text-left text-sm transition-colors hover:bg-cafe-bruma active:bg-cafe-bruma focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${activo ? '' : 'hidden'}`}
       >
         <span className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 font-medium tracking-tight text-foreground">{titulo}</span>

@@ -32,7 +32,7 @@ export function PaginaCheckout({
   lang, dict, sedeSlug, volverHref, volverLabel, encabezado, aviso, stepper, pasos, pedido,
 }: Props) {
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh bg-background">
       <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
 
       {/* SiteHeader es `fixed` y no reserva espacio: `--nav-alto` (globals.css)

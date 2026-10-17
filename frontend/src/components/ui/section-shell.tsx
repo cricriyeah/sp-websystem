@@ -3,15 +3,15 @@ import type { ReactNode } from 'react';
 type Fondo = 'papel' | 'bruma' | 'bruma-profunda';
 
 /**
- * Hasta F7 la paleta solo admite estos tres fondos; F7 los renombra a
+ * Hasta la Task 7.3 la paleta solo admite estos tres fondos; esa tarea los renombra a
  * `arena | blanco | cafe-bruma`. Las clases van completas para que Tailwind las vea.
- * `bruma-profunda` usa el alias `cafe-claro` (mismo valor que `surface-deep`, ver
- * globals.css) para no sumar un `bg-surface-deep` crudo sin consumidor todavía.
+ * `cafe-claro` (amarillo saturado) nunca es fondo de sección: `bruma-profunda` cae en
+ * `cafe-bruma`, como el resto de lo que fue `surface-deep`.
  */
 const FONDOS: Record<Fondo, string> = {
   papel: 'bg-background',
   bruma: 'bg-surface',
-  'bruma-profunda': 'bg-cafe-claro',
+  'bruma-profunda': 'bg-cafe-bruma',
 };
 
 const ANCHOS_TITULO = {

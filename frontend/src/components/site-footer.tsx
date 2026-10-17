@@ -45,7 +45,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: 
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'var(--tinte-indigo-pie)',
+          background: 'var(--tinte-cafe-pie)',
         }}
       />
       <div className="relative mx-auto max-w-6xl px-6 pt-20 sm:px-8 lg:px-12 lg:pt-24">

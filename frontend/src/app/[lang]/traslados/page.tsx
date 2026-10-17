@@ -60,7 +60,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
 
   if (!catalogo || !catalogo.servicio) {
     return (
-      <div className="min-h-dvh bg-surface">
+      <div className="min-h-dvh bg-background">
         <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={sedeSlugActual} />
         <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
           <Link

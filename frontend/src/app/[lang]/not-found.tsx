@@ -22,11 +22,10 @@ export default async function NotFound() {
       >
         <p
           aria-hidden="true"
-          className="font-display font-normal leading-none select-none"
+          className="font-display font-normal leading-none text-accent select-none"
           style={{
             fontSize: 'clamp(7rem, 18vw, 14rem)',
             letterSpacing: 'var(--tracking-titulo)',
-            color: 'var(--indigo)',
           }}
         >
           404
@@ -46,16 +45,14 @@ export default async function NotFound() {
         <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/es/reservar"
-            className="flex items-center justify-center rounded-full px-7 py-3.5 text-sm font-semibold transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: 'var(--action)', color: 'var(--ink)' }}
+            className="flex items-center justify-center rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-action-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
           >
             {copy.ctaBook}
           </Link>
 
           <Link
             href="/es"
-            className="flex items-center justify-center rounded-full border px-7 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-surface"
-            style={{ borderColor: 'var(--border-strong)' }}
+            className="flex items-center justify-center rounded-full border border-border-strong px-7 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-cafe-bruma"
           >
             {copy.cta}
           </Link>

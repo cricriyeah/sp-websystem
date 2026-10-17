@@ -64,7 +64,7 @@ export function PantallaFallo({
     : null;
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh bg-background">
       <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
       <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
       <CheckoutStepper stepper={checkout.stepper} {...stepper} />

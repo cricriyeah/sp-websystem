@@ -13,7 +13,7 @@ type Props = {
   nota?: ReactNode;
 };
 
-const CAJA = 'border border-border bg-surface';
+const CAJA = 'border border-border bg-superficie';
 
 /**
  * Orden fijo del paso "viaje" para todos los checkouts: cuándo (fecha) →

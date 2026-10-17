@@ -5,11 +5,11 @@
 // Sin imports: el runner de pruebas compila solo `src/` y no resuelve el alias `@/`.
 
 export const TOKENS_PAGO = {
-  colorPrimary: '#281ab5', // --accent
-  colorText: '#16171c', // --foreground
-  colorTextSecondary: '#55565f', // --muted
+  colorPrimary: '#7c3b02', // --accent (cafe)
+  colorText: '#1f1a14', // --foreground (tinta)
+  colorTextSecondary: '#6b5d4d', // --muted (apagado)
   colorBackground: '#ffffff', // --superficie (el formulario vive en una tarjeta)
-  colorDanger: '#c22118', // --error
+  colorDanger: '#b3261e', // --error
 } as const;
 
 export const RADIO_PAGO = '8px'; // --radius-campo

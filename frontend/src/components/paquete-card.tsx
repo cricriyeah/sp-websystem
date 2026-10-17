@@ -39,7 +39,7 @@ export function PaqueteCard({
 
   return (
     <article
-      className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 border-accent/40 bg-surface p-6 sm:p-8 shadow-[0_12px_40px_rgba(11,36,32,0.12)] transition-shadow hover:shadow-[0_18px_48px_rgba(11,36,32,0.18)] ${className}`}
+      className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 border-accent/40 bg-superficie p-6 sm:p-8 shadow-[0_12px_40px_rgba(11,36,32,0.12)] transition-shadow hover:shadow-[0_18px_48px_rgba(11,36,32,0.18)] ${className}`}
     >
       {/* Badge superior de producto dominante (Perception-First Design) */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-4">

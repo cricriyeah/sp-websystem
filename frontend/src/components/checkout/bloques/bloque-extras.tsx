@@ -74,7 +74,7 @@ export function BloqueExtras({
         <div key={sp.id}>
           <label
             htmlFor={`personalizacion-${sp.id}`}
-            className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
+            className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-cafe-bruma"
           >
             <span className="flex items-start gap-3">
               <Input
@@ -108,7 +108,7 @@ export function BloqueExtras({
             </div>
           )}
           {marcada && sp.cantidad_editable && people > 1 && (
-            <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
+            <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-cafe-bruma px-4 py-2.5 text-sm text-foreground">
               <span className="text-muted">{checkout.licenseQuantity.question}</span>
               <span className="flex items-center gap-2">
                 <Button
@@ -176,7 +176,7 @@ export function BloqueExtras({
           aria-invalid={Boolean(errorCodigo)}
           aria-describedby={errorCodigo ? errorId : undefined}
           onChange={(e) => onRespuesta(sp.id, e.target.value)}
-          className={`border bg-surface px-4 py-3 outline-none ${
+          className={`border bg-superficie px-4 py-3 outline-none ${
             errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
           }`}
         />

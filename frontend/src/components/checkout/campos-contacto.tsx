@@ -51,7 +51,7 @@ export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio
                 placeholder={ejemplos?.[campo]}
                 onChange={(e) => onCambio(campo, e.target.value)}
                 {...propsDeError(idError, Boolean(error))}
-                className={`w-full border bg-surface py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
+                className={`w-full border bg-superficie py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
                   error ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
                 }`}
               />

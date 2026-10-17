@@ -20,7 +20,7 @@ type Props = {
 export function PantallaExito({ lang, dict, sedeSlug, paquete, inicio, componentes, formatearFecha }: Props) {
   const { checkout, pedido: textos, nav, footer } = dict;
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh bg-background">
       <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{textos.success.title}</h1>

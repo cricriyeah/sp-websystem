@@ -111,7 +111,7 @@ export function BloqueViaje({
           {checkout.checkoutDateLabel}: {formatDay(fromLocalISODate(fechaSalida), lang)}
         </p>
       ) : (
-        <div className="border border-border bg-surface">
+        <div className="border border-border bg-superficie">
           <DateField
             lang={lang}
             label={checkout.checkoutDateLabel}
