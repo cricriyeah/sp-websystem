@@ -6,7 +6,9 @@ import { PeopleStepper } from '@/components/people-stepper';
 import { TimeField } from '@/components/time-field';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import { horasDePaquete } from '@/lib/horario-servicio';
+import { aMoneda } from '@/lib/moneda';
 import type { AccionPedido } from '@/lib/pedido-estado';
+import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { FechaPaquete } from './fecha-paquete';
 
@@ -23,9 +25,6 @@ type Props = {
   slugPrincipal: string | undefined;
   noches: number | null;
   salida: string | null;
-  anclaMostrada: string;
-  extra: number | null;
-  precioPersonas: string;
   formatearFecha: (iso: string) => string;
   errorViaje: string;
   despachar: Dispatch<AccionPedido>;
@@ -41,9 +40,17 @@ type Props = {
  */
 export function BloqueViajePaquete({
   lang, dict, paquete, minDate, inicio, hora, moneda, personasPaquete, maxPersonas, slugPrincipal, noches, salida,
-  anclaMostrada, extra, precioPersonas, formatearFecha, errorViaje, despachar, onTopePersonas,
+  formatearFecha, errorViaje, despachar, onTopePersonas,
 }: Props) {
   const { checkout, booking, pedido: textos } = dict;
+  const ancla = aMoneda(paquete.precio_ancla, moneda, paquete.tipo_cambio_usd);
+  const extra = aMoneda(paquete.precio_persona_extra, moneda, paquete.tipo_cambio_usd);
+  const anclaMostrada = formatearPrecio(ancla, moneda);
+  const precioBaseGrupo = calcularBasePaquete(paquete, moneda, personasPaquete);
+  const precioPersonas = (personasPaquete === 1 ? textos.peoplePriceOne : textos.peoplePrice)
+    .replace('{n}', String(personasPaquete))
+    .replace('{precio}', formatearPrecio(precioBaseGrupo, moneda))
+    .replace('{price}', formatearPrecio(precioBaseGrupo, moneda));
   return (
     <>
       <ContenidoViaje

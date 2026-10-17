@@ -18,7 +18,6 @@ import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendar
 import { formatHour, fromLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
-import { aMoneda } from '@/lib/moneda';
 import {
   estadoDeTarjeta, estadoVisible, numeroDePaso, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
 } from '@/lib/pasos-checkout';
@@ -27,7 +26,6 @@ import {
 } from '@/lib/pedido-paquete';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado, type DetalleTraslado } from '@/lib/pedido-payload';
 import { erroresPersonalizaciones } from '@/lib/personalizaciones';
-import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
@@ -113,14 +111,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const slugPrincipal = paquete.precio_depende_de_personas ? servicioPrincipalPaquete(paquete)?.servicio.slug : undefined;
   const primerServicio = slugPrincipal ?? paquete.servicios_asociados[0]?.servicio.slug;
   const personasPaquete = primerServicio ? estado.componentes[primerServicio]?.personas ?? 1 : 1;
-  const ancla = aMoneda(paquete.precio_ancla, estado.moneda, paquete.tipo_cambio_usd);
-  const extra = aMoneda(paquete.precio_persona_extra, estado.moneda, paquete.tipo_cambio_usd);
-  const anclaMostrada = formatearPrecio(ancla, estado.moneda);
-  const precioBaseGrupo = calcularBasePaquete(paquete, estado.moneda, personasPaquete);
-  const precioPersonas = (personasPaquete === 1 ? textos.peoplePriceOne : textos.peoplePrice)
-    .replace('{n}', String(personasPaquete))
-    .replace('{precio}', formatearPrecio(precioBaseGrupo, estado.moneda))
-    .replace('{price}', formatearPrecio(precioBaseGrupo, estado.moneda));
   const cargos = pedido?.cargos ?? [];
   const cantidadCargos = cargos.length;
   const nombreEmpresa = (slug: string) => slug === paquete.empresa_lider_slug
@@ -534,9 +524,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 slugPrincipal={slugPrincipal}
                 noches={noches}
                 salida={salida}
-                anclaMostrada={anclaMostrada}
-                extra={extra}
-                precioPersonas={precioPersonas}
                 formatearFecha={formatearFecha}
                 errorViaje={errorViaje}
                 despachar={despachar}
