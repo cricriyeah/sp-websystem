@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { CheckCircle, Info, Warning, X } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 /**
  * Avisos del sistema. Un solo lenguaje visual para todo lo que la pagina le dice
@@ -113,14 +114,15 @@ export function ProveedorToast({
               >
                 <Icono size={18} weight="fill" className={`mt-0.5 shrink-0 ${COLOR_ICONO[toast.tipo]}`} />
                 <p className="flex-1 leading-snug">{toast.mensaje}</p>
-                <button
+                <Button
+                  variante="libre"
                   type="button"
                   onClick={() => descartar(toast.id)}
                   aria-label={cerrarLabel}
                   className="-mr-1 shrink-0 rounded-full p-1 opacity-60 transition-opacity hover:opacity-100"
                 >
                   <X size={14} weight="bold" />
-                </button>
+                </Button>
               </m.div>
             );
           })}
