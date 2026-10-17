@@ -2,6 +2,7 @@
 
 import { Check, Clock } from '@phosphor-icons/react';
 import { FieldPopover } from '@/components/field-popover';
+import { Button } from '@/components/ui/button';
 import { formatHour } from '@/lib/dates';
 
 type TimeFieldProps = {
@@ -44,7 +45,8 @@ export function TimeField({
               const seleccionada = hora === value;
               return (
                 <li key={hora}>
-                  <button
+                  <Button
+                    variante="libre"
                     type="button"
                     aria-pressed={seleccionada}
                     onClick={() => {
@@ -59,7 +61,7 @@ export function TimeField({
                   >
                     {formatHour(hora)}
                     {seleccionada && <Check size={14} weight="bold" />}
-                  </button>
+                  </Button>
                 </li>
               );
             })}
