@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, UsersThree } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { MAX_PEOPLE, MIN_PEOPLE } from '@/lib/dates';
+import { Button } from '@/components/ui/button';
 
 type PeopleStepperProps = {
   label: string;
@@ -94,7 +95,8 @@ export function PeopleStepper({
             {vacio ? placeholder : value}
           </span>
           <span className="flex items-center gap-1">
-            <button
+            <Button
+              variante="libre"
               type="button"
               onClick={() => ajustar(-1)}
               disabled={disabled || (value !== null && value <= MIN_PEOPLE)}
@@ -102,8 +104,9 @@ export function PeopleStepper({
               className={botonStepper(compacto)}
             >
               <Minus size={12} />
-            </button>
-            <button
+            </Button>
+            <Button
+              variante="libre"
               type="button"
               onClick={() => ajustar(1)}
               disabled={disabled}
@@ -111,7 +114,7 @@ export function PeopleStepper({
               className={botonStepper(compacto)}
             >
               <Plus size={12} />
-            </button>
+            </Button>
           </span>
         </span>
       </span>
