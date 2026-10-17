@@ -7,6 +7,7 @@ import { Deslizable } from '@/components/checkout/deslizable';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { PanelCalendario } from '@/components/date-field';
+import { Button } from '@/components/ui/button';
 import { puedeRetroceder, semanaVisible } from '@/lib/calendario-semana';
 import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
@@ -95,18 +96,18 @@ export function FechaPaquete({
       )}
 
       <div className={`${sinEncabezado ? '' : 'mt-4 '}flex items-center justify-between gap-3`}>
-        <button type="button" onClick={() => moverSemana(-1)}
+        <Button variante="libre" type="button" onClick={() => moverSemana(-1)}
           disabled={!puedeRetroceder(inicioVisible, minDate)} aria-label={previousWeekLabel}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30">
           <CaretLeft size={17} />
-        </button>
+        </Button>
         <Deslizable clave={etiquetaMes} direccion={direccion}>
           <span className="block text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</span>
         </Deslizable>
-        <button type="button" onClick={() => moverSemana(1)} aria-label={nextWeekLabel}
+        <Button variante="libre" type="button" onClick={() => moverSemana(1)} aria-label={nextWeekLabel}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-foreground">
           <CaretRight size={17} />
-        </button>
+        </Button>
       </div>
 
       <Deslizable clave={inicioVisible} direccion={direccion} className="mt-2 grid grid-cols-7 gap-1 sm:gap-2">
@@ -115,7 +116,7 @@ export function FechaPaquete({
           const seleccionada = iso === seleccionVigente;
           const pasada = iso < minDate;
           return (
-            <button key={iso} type="button" disabled={pasada} aria-label={formatoCompleto.format(fecha)}
+            <Button key={iso} variante="libre" type="button" disabled={pasada} aria-label={formatoCompleto.format(fecha)}
               aria-pressed={seleccionada} onClick={() => elegir(iso)}
               className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-2 text-sm transition-colors ${
                 seleccionada ? 'border-accent bg-accent font-medium text-accent-foreground'
@@ -124,7 +125,7 @@ export function FechaPaquete({
               }`}>
               <span className="text-[11px] first-letter:uppercase">{formatoDia.format(fecha).replace('.', '').slice(0, 2)}</span>
               <span>{fecha.getDate()}</span>
-            </button>
+            </Button>
           );
         })}
       </Deslizable>
@@ -179,7 +180,7 @@ export function FechaRegresoCompacta({ changeButtonLabel, doneButtonLabel, ...pr
         <p className="mt-1 text-sm text-muted">{chooseLabel}</p>
       </Despliegue>
       <Despliegue abierto={Boolean(vigente)}>
-        <button type="button" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}
+        <Button variante="libre" type="button" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}
           className="group flex w-full items-center justify-between gap-3 text-left">
           <span className="min-w-0">
             <span className="block text-sm font-medium text-foreground">{label}</span>
@@ -190,7 +191,7 @@ export function FechaRegresoCompacta({ changeButtonLabel, doneButtonLabel, ...pr
           <span className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
             {abierta ? doneButtonLabel : changeButtonLabel}
           </span>
-        </button>
+        </Button>
       </Despliegue>
       <Despliegue abierto={!vigente || abierta}>
         <div className="mt-4">
