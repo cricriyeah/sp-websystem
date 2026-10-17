@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { CalendarBlank, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { FieldPopover } from '@/components/field-popover';
+import { Button } from '@/components/ui/button';
 import { fromLocalISODate, toLocalISODate } from '@/lib/dates';
 import { useDisponibilidad } from '@/lib/disponibilidad';
 import { intlLocale } from '@/lib/intl';
@@ -161,25 +162,27 @@ export function PanelCalendario({
   return (
     <div className={anchoCompleto ? 'w-full' : 'w-full sm:w-72'}>
       <div className="flex items-center justify-between gap-2">
-        <button
+        <Button
+          variante="libre"
           type="button"
           onClick={() => moverMes(-1)}
           aria-label={prevMonthLabel}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-background hover:text-foreground"
         >
           <CaretLeft size={16} />
-        </button>
+        </Button>
         <Deslizable clave={primerDia} direccion={direccion}>
           <p className="text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</p>
         </Deslizable>
-        <button
+        <Button
+          variante="libre"
           type="button"
           onClick={() => moverMes(1)}
           aria-label={nextMonthLabel}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-background hover:text-foreground"
         >
           <CaretRight size={16} />
-        </button>
+        </Button>
       </div>
 
       <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] text-muted">
@@ -209,7 +212,8 @@ export function PanelCalendario({
           const deshabilitada = pasada || sinLugar;
 
           return (
-            <button
+            <Button
+              variante="libre"
               key={iso}
               type="button"
               disabled={deshabilitada}
@@ -247,7 +251,7 @@ export function PanelCalendario({
               }`}
             >
               {i + 1}
-            </button>
+            </Button>
           );
         })}
       </Deslizable>
