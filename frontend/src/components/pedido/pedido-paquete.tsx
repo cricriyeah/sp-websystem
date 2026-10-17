@@ -14,7 +14,7 @@ import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorDeCampo } from '@/components/field-error';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
-import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
+import { fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
 import { formatHour, fromLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
@@ -25,7 +25,6 @@ import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
 } from '@/lib/pedido-paquete';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado, type DetalleTraslado } from '@/lib/pedido-payload';
-import { erroresPersonalizaciones } from '@/lib/personalizaciones';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
@@ -37,6 +36,7 @@ import { PanelPedidoPaquete } from './panel-pedido-paquete';
 import { PantallaPago } from './pantalla-pago';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
+import { erroresDeContacto, errorDeGrupoPaquete, type ErroresContacto } from './validacion-paquete';
 
 type Props = {
   lang: Locale;
@@ -79,7 +79,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   // Cambia para remontar el StripePanel con su Turnstile: el token es de un solo uso.
   const [captchaKey, setCaptchaKey] = useState(0);
   const [errorWaiver, setErrorWaiver] = useState(false);
-  const [erroresContacto, setErroresContacto] = useState<Partial<Record<'fullName' | 'phone' | 'email', string>>>({});
+  const [erroresContacto, setErroresContacto] = useState<ErroresContacto>({});
   const [errorViaje, setErrorViaje] = useState('');
   const [errorDetalles, setErrorDetalles] = useState('');
   const [codigoPromocional, setCodigoPromocional] = useState('');
@@ -220,18 +220,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   }, [motor, codigoPromocional, estado.contacto.email, paquete.empresa_lider_slug, subtotalPromo]);
 
   const validarDatos = () => {
-    const errores: typeof erroresContacto = {};
-    const nombre = estado.contacto.fullName.trim();
-    const telefono = estado.contacto.phone.trim();
-    const correo = estado.contacto.email.trim();
-    if (!nombre) errores.fullName = checkout.missingFields;
-    else if (/\d/.test(nombre) || !/\p{L}/u.test(nombre)) errores.fullName = checkout.invalidName;
-    if (!telefono) errores.phone = checkout.missingFields;
-    else if (!/^[\d\s+()\-.]+$/.test(telefono) || !/^\d{10,15}$/.test(telefono.replace(/\D/g, ''))) {
-      errores.phone = checkout.invalidPhone;
-    }
-    if (!correo) errores.email = checkout.missingFields;
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) errores.email = checkout.invalidEmail;
+    const errores = erroresDeContacto(estado.contacto, checkout);
     setErroresContacto(errores);
     return Object.keys(errores).length === 0;
   };
@@ -256,35 +245,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     setActual((a) => (a === 'contacto' ? 'detalles' : a));
   };
 
-  const errorDeGrupo = (indice: number): string => {
-    if (!estado.inicio) return traslados.errors.seleccionaFecha;
-    const item = paquete.servicios_asociados[indice];
-    const actual = estado.componentes[item.servicio.slug];
-    const errores = erroresPersonalizaciones(item.servicio.personalizaciones, actual.extras);
-    const primerError = Object.values(errores)[0];
-    if (primerError) return checkout.personalizacionErrors[primerError];
-    const t = actual.traslado;
-    if (t && trasladoFijo) {
-      if (!t.aeropuerto) return textos.airportError;
-    } else if (t) {
-      if (t.modo === 'catalogo' && t.puntoEncuentroId === null) {
-        return traslados.errors.seleccionaHospedaje;
-      }
-      if (t.modo === 'personalizada' && !t.direccion.trim()) {
-        return traslados.errors.seleccionaHospedaje;
-      }
-      if (t.tipo === 'redondo_actividad' && !zonaEfectivaDeTraslado(t, zonaDePunto)) {
-        return traslados.errors.seleccionaZona;
-      }
-      if (t.tipo === 'redondo_aeropuerto' && noches === null) {
-        if (!t.fechaRegreso) return traslados.errors.seleccionaFechaRegreso;
-        if (t.fechaRegreso <= fechaDeComponente(estado.inicio, item.dia_estancia)) {
-          return traslados.errors.seleccionaFechaRegreso;
-        }
-      }
-    }
-    return '';
-  };
+  const errorDeGrupo = (indice: number): string => errorDeGrupoPaquete({
+    indice, paquete, componentes: estado.componentes, inicio: estado.inicio, trasladoFijo, noches, zonaDePunto,
+    textos, traslados, checkout,
+  });
 
   // La actividad principal de un paquete que depende de personas se elige en
   // Viaje; si no lleva extras, no necesita una tarjeta de detalles adicional.
