@@ -7,6 +7,8 @@ import { Despliegue } from '@/components/checkout/despliegue';
 import { CAJA_CAMPO } from '@/components/checkout/estilos';
 import { ErrorDeCampo } from '@/components/field-error';
 import { FieldPopover } from '@/components/field-popover';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
 
 type Props = {
@@ -65,8 +67,9 @@ export function BloqueRecogida({
               {(cerrar) => (
                 <div className="max-h-72 w-full overflow-y-auto sm:w-80">
                   {puntosEncuentro.map((punto) => (
-                    <button
+                    <Button
                       key={punto.id}
+                      variante="libre"
                       type="button"
                       onClick={() => {
                         onPunto(punto.id);
@@ -82,10 +85,11 @@ export function BloqueRecogida({
                       <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase opacity-75">
                         {punto.zona}
                       </span>
-                    </button>
+                    </Button>
                   ))}
                   {/* La otra dirección es una opción más de ESTA pregunta. */}
-                  <button
+                  <Button
+                    variante="libre"
                     type="button"
                     onClick={() => {
                       onOtraDireccion();
@@ -95,7 +99,7 @@ export function BloqueRecogida({
                   >
                     <MapPin size={16} className="shrink-0 text-muted" />
                     {traslados.fields.otraDireccionOpcion}
-                  </button>
+                  </Button>
                 </div>
               )}
             </FieldPopover>
@@ -108,7 +112,8 @@ export function BloqueRecogida({
               <span className="text-muted">{traslados.fields.otraDireccion}</span>
               <span className="relative">
                 <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-                <input
+                <Input
+                  aspecto="heredado"
                   type="text"
                   value={direccionPersonalizada}
                   onChange={(e) => onDireccion(e.target.value)}
@@ -133,7 +138,8 @@ export function BloqueRecogida({
                       zonaPersonalizada === z ? 'border-accent bg-surface font-medium' : 'border-border text-muted'
                     }`}
                   >
-                    <input
+                    <Input
+                      aspecto="heredado"
                       type="radio"
                       name="zona-personalizada"
                       value={z}
