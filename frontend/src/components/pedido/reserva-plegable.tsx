@@ -3,6 +3,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { CaretLeft, Lock, WhatsappLogo } from '@phosphor-icons/react';
 import { DetalleAbiertoContexto, useProveedorDetalle } from '@/components/checkout/detalle-abierto';
+import { Button } from '@/components/ui/button';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 
 /**
@@ -78,7 +79,8 @@ export function ReservaPlegable({
   return (
     <DetalleAbiertoContexto.Provider value={detalle}>
     <div>
-      <button
+      <Button
+        variante="libre"
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
@@ -104,7 +106,7 @@ export function ReservaPlegable({
           weight="bold"
           className={`shrink-0 text-muted transition-transform duration-300 ${abierto ? '-rotate-90' : ''}`}
         />
-      </button>
+      </Button>
 
       {/* Altura animada con la cuadrícula (0fr → 1fr): se abre y se pliega sin
           medir nada ni desmontar los renglones. */}
