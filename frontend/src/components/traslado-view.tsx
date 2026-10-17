@@ -18,6 +18,7 @@ import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { CAJA_CAMPO } from '@/components/checkout/estilos';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
+import { formatDay } from '@/components/checkout/formato-dia';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
@@ -78,17 +79,6 @@ function diaSiguiente(iso: string): string {
   const d = fromLocalISODate(iso);
   d.setDate(d.getDate() + 1);
   return toLocalISODate(d);
-}
-
-function formatDay(date: Date, lang: Locale) {
-  const locale = intlLocale(lang);
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date);
-  const month = new Intl.DateTimeFormat(locale, { month: 'long' }).format(date);
-  const day = String(date.getDate()).padStart(2, '0');
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  return lang === 'es'
-    ? `${cap(weekday)} ${day} de ${cap(month)}`
-    : `${cap(weekday)}, ${cap(month)} ${day}`;
 }
 
 type CampoContacto = 'phone' | 'fullName' | 'email';
