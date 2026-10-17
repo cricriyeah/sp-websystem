@@ -248,7 +248,7 @@ Radio completo, alto 28, 14/600. Mar: fondo `azul-claro`, texto `azul`, icono de
 
 ### Tarjeta de servicio / paquete
 
-Blanco, borde `borde`, radio 16, foto arriba (relación 4:3, esquinas superiores 16), insignias de actividad sobre la foto, título 24/700 mono, precio en 20/700 con `tabular-nums`, botón secundario «Ver y reservar».
+Blanco, borde `borde`, radio 16, foto arriba cuando exista (relación 4:3, esquinas superiores 16), chips de actividad en el cuerpo de la tarjeta (nunca flotando sobre la foto), título 24/700 mono, precio en 20/700 con `tabular-nums`, botón secundario «Ver y reservar».
 
 ### Lista de cargos por empresa
 
