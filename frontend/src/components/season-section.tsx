@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { SectionShell } from '@/components/ui/section-shell';
 
 type SeasonSectionProps = {
   season: Dictionary['season'];
@@ -49,95 +50,89 @@ const FOTOS_TEMPORADA = [
  */
 export function SeasonSection({ season }: SeasonSectionProps) {
   return (
-    <section id="temporadas" className="scroll-mt-24 bg-background py-24 lg:py-32">
-      <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
-        <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
-        <h2 className="max-w-[16ch] text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[58px]">
-          {season.headline}
-        </h2>
-        <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-muted">{season.intro}</p>
+    <SectionShell id="temporadas" fondo="papel" titulo={season.headline}>
+      <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-muted">{season.intro}</p>
 
-        {/* Los tramos se reparten el ancho segun cuantos meses abarcan (`flexGrow`),
-            no en cuatro partes iguales: dic-mar son cuatro meses y oct-nov solo
-            dos, y pintarlos del mismo largo mentiria sobre el calendario. */}
-        <div className="mt-14">
-          <p className="text-xs font-semibold text-muted">{season.yearLabel}</p>
-          <div className="mt-3 flex gap-1.5">
-            {season.rows.map((row, i) => (
-              <div key={row.period} style={{ flexGrow: row.months.length }} className="min-w-0">
-                <div
-                  className={`h-1.5 w-full rounded-full ${
-                    i === TEMPORADA_FUERTE ? 'bg-action' : 'bg-accent/30'
-                  }`}
-                />
-                <div className="mt-2 flex">
-                  {row.months.map((mes) => (
-                    <span
-                      key={mes}
-                      className="flex-1 text-center text-[10px] whitespace-nowrap text-muted sm:text-xs"
-                    >
-                      {mes}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+      {/* Los tramos se reparten el ancho segun cuantos meses abarcan (`flexGrow`),
+          no en cuatro partes iguales: dic-mar son cuatro meses y oct-nov solo
+          dos, y pintarlos del mismo largo mentiria sobre el calendario. */}
+      <div className="mt-14">
+        <p className="text-xs font-semibold text-muted">{season.yearLabel}</p>
+        <div className="mt-3 flex gap-1.5">
           {season.rows.map((row, i) => (
-            <article key={row.period} className="flex flex-col gap-4">
-              {/* Apaisada en movil y vertical de `sm` en adelante: apiladas a lo
-                  alto, cuatro fotos verticales convierten la seccion en un
-                  scroll interminable en telefono. */}
-              <div className="relative aspect-[16/10] overflow-hidden sm:aspect-[3/4]">
-                <Image
-                  src={FOTOS_TEMPORADA[i]}
-                  alt={row.star}
-                  fill
-                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-                  className="object-cover"
-                />
-                {/* El texto nunca va directo sobre la foto: siempre sobre un
-                    degradado, la misma regla que la portada. */}
-                <div
-                  aria-hidden
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      'var(--scrim-temporada)',
-                  }}
-                />
-
-                {i === TEMPORADA_FUERTE && (
-                  <span className="absolute top-4 left-4 bg-action px-2.5 py-1 text-[11px] font-semibold text-action-foreground">
-                    {season.strongLabel}
+            <div key={row.period} style={{ flexGrow: row.months.length }} className="min-w-0">
+              <div
+                className={`h-1.5 w-full rounded-full ${
+                  i === TEMPORADA_FUERTE ? 'bg-action' : 'bg-accent/30'
+                }`}
+              />
+              <div className="mt-2 flex">
+                {row.months.map((mes) => (
+                  <span
+                    key={mes}
+                    className="flex-1 text-center text-[10px] whitespace-nowrap text-muted sm:text-xs"
+                  >
+                    {mes}
                   </span>
-                )}
-
-                <div className="absolute inset-x-0 bottom-0 p-5">
-                  <p className="text-xs font-semibold text-hero-ink-soft">{row.period}</p>
-                  <p className="mt-1 text-2xl leading-tight tracking-tight text-hero-ink">
-                    {row.star}
-                  </p>
-                </div>
+                ))}
               </div>
-
-              <div>
-                <p className="text-sm text-foreground">
-                  <span className="text-muted">{season.othersLabel}:</span> {row.others}
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{row.note}</p>
-              </div>
-            </article>
+            </div>
           ))}
         </div>
-
-        <p className="mt-12 max-w-[60ch] border-t border-border pt-6 text-base leading-relaxed text-foreground">
-          {season.note}
-        </p>
       </div>
-    </section>
+
+      <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+        {season.rows.map((row, i) => (
+          <article key={row.period} className="flex flex-col gap-4">
+            {/* Apaisada en movil y vertical de `sm` en adelante: apiladas a lo
+                alto, cuatro fotos verticales convierten la seccion en un
+                scroll interminable en telefono. */}
+            <div className="relative aspect-[16/10] overflow-hidden sm:aspect-[3/4]">
+              <Image
+                src={FOTOS_TEMPORADA[i]}
+                alt={row.star}
+                fill
+                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover"
+              />
+              {/* El texto nunca va directo sobre la foto: siempre sobre un
+                  degradado, la misma regla que la portada. */}
+              <div
+                aria-hidden
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'var(--scrim-temporada)',
+                }}
+              />
+
+              {i === TEMPORADA_FUERTE && (
+                <span className="absolute top-4 left-4 bg-action px-2.5 py-1 text-[11px] font-semibold text-action-foreground">
+                  {season.strongLabel}
+                </span>
+              )}
+
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <p className="text-xs font-semibold text-hero-ink-soft">{row.period}</p>
+                <p className="mt-1 text-2xl leading-tight tracking-tight text-hero-ink">
+                  {row.star}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-foreground">
+                <span className="text-muted">{season.othersLabel}:</span> {row.others}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{row.note}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <p className="mt-12 max-w-[60ch] border-t border-border pt-6 text-base leading-relaxed text-foreground">
+        {season.note}
+      </p>
+    </SectionShell>
   );
 }
