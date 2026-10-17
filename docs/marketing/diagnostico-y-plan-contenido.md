@@ -60,7 +60,7 @@
 3. **Cómo funciona Sun Baja Experience (decisión del dueño):** explica la dinámica real: somos una empresa que reúne los servicios de distintas empresas locales en un solo lugar; cada empresa opera su servicio y cobra directo. Incluye las condiciones reales (pago directo a la empresa; 100 % en línea o anticipo + efectivo según el servicio; reembolso completo por mal clima; cambio de fecha con 48 h; valen igual en las 4 empresas). Reemplaza a los pilares genéricos.
 4. **Mejor época por actividad y sede:** calendario cruzado (ningún competidor lo hace); solo cuando haya datos.
 5. **Paquetes y combos** (hospedaje + traslado + pesca o ballenas): solo si existen.
-6. **Empresas con las que colaboramos (decisión del dueño):** todas las empresas, cada una con enlace a su página oficial y sus redes, y su teléfono o WhatsApp solo si está confirmado; sin datos de relleno.
+6. **Quién opera cada servicio, directorio de empresas (decisión del dueño):** todas las empresas, cada una con enlace a su página oficial y sus redes, y su teléfono o WhatsApp solo si está confirmado; sin datos de relleno.
 7. **Preguntas frecuentes globales** y contacto humano por WhatsApp.
 
 ### Sede (meta: reservar; secundaria: resolver dudas)
