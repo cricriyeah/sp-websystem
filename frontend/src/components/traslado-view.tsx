@@ -11,9 +11,9 @@ import { PeopleStepper } from '@/components/people-stepper';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
+import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { BloquePago, BloqueTarjetaPago } from '@/components/checkout/bloques/bloque-pago';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { CamposContacto } from '@/components/checkout/campos-contacto';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { Despliegue } from '@/components/checkout/despliegue';
 import { CAJA_CAMPO } from '@/components/checkout/estilos';
@@ -776,12 +776,11 @@ export function TrasladoView({
                     ? <BotonPaso onClick={confirmarDatos}>{checkout.confirmStep}</BotonPaso>
                     : undefined}
                 >
-                  <CamposContacto
+                  <BloqueContacto
                     idPrefijo="traslado"
+                    checkout={checkout}
                     valores={contact}
                     errores={erroresContacto}
-                    etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
-                    ejemplos={checkout.contactExamples}
                     refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
                     disabled={locked}
                     onCambio={(campo, valor) => {

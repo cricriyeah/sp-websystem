@@ -5,6 +5,8 @@ import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { CamposContacto, type CampoContacto } from '@/components/checkout/campos-contacto';
 
 type Props = {
+  /** Prefijo de los ids de los campos y sus errores (`checkout`, `traslado`). */
+  idPrefijo: string;
   checkout: Dictionary['checkout'];
   valores: Record<CampoContacto, string>;
   errores: Partial<Record<CampoContacto, string>>;
@@ -16,15 +18,15 @@ type Props = {
 };
 
 /**
- * Contenido del paso de datos del servicio suelto: nombre, teléfono y correo.
- * Sin estado propio: `contact` y `erroresCampo` viven en `CheckoutView` (el
+ * Contenido del paso de datos (servicio suelto y traslados): nombre, teléfono
+ * y correo. Sin estado propio: `contact` y los errores viven en la vista (el
  * código promocional, la reserva y la recuperación los leen), así que plegar
  * la tarjeta no pierde lo escrito.
  */
-export function BloqueContacto({ checkout, valores, errores, refs, disabled, onCambio }: Props) {
+export function BloqueContacto({ idPrefijo, checkout, valores, errores, refs, disabled, onCambio }: Props) {
   return (
     <CamposContacto
-      idPrefijo="checkout"
+      idPrefijo={idPrefijo}
       valores={valores}
       errores={errores}
       etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}

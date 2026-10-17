@@ -1368,6 +1368,7 @@ export function CheckoutView({
                     : undefined}
                 >
                   <BloqueContacto
+                    idPrefijo="checkout"
                     checkout={checkout}
                     valores={contact}
                     errores={erroresCampo}
