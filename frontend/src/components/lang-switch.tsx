@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { CaretDown, Check } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
+import { Button } from '@/components/ui/button';
 
 type LangSwitchProps = {
   lang: Locale;
@@ -127,8 +128,8 @@ export function LangSwitch({
   return (
     <div ref={ref} className={`relative ${className}`} aria-label={label}>
       {/* ── Trigger ─────────────────────────────────────────────────────── */}
-      <button
-        type="button"
+      <Button
+        variante="libre"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -145,7 +146,7 @@ export function LangSwitch({
         >
           <CaretDown size={11} weight="bold" />
         </m.span>
-      </button>
+      </Button>
 
       {/* ── Panel desplegable ────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -173,8 +174,8 @@ export function LangSwitch({
               const active = locale.value === lang;
               return (
                 <li key={locale.value}>
-                  <button
-                    type="button"
+                  <Button
+                    variante="libre"
                     role="option"
                     aria-selected={active}
                     onClick={() => select(locale.value)}
@@ -194,7 +195,7 @@ export function LangSwitch({
                         aria-hidden="true"
                       />
                     )}
-                  </button>
+                  </Button>
                 </li>
               );
             })}
