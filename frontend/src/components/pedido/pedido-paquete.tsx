@@ -15,7 +15,7 @@ import { ErrorDeCampo } from '@/components/field-error';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
-import { formatHour, fromLocalISODate } from '@/lib/dates';
+import { fromLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import {
@@ -24,7 +24,7 @@ import {
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
 } from '@/lib/pedido-paquete';
-import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado, type DetalleTraslado } from '@/lib/pedido-payload';
+import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
@@ -34,6 +34,7 @@ import { PantallaExito } from './pantalla-exito';
 import { PantallaFallo } from './pantalla-fallo';
 import { PanelPedidoPaquete } from './panel-pedido-paquete';
 import { PantallaPago } from './pantalla-pago';
+import { armarResumenPaquete } from './resumen-paquete';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
 import { erroresDeContacto, errorDeGrupoPaquete, type ErroresContacto } from './validacion-paquete';
@@ -139,40 +140,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     hora: estado.hora,
     personas: personasPaquete,
   });
-  const empresas = [...new Set(paquete.servicios_asociados.map((c) => nombreEmpresa(c.servicio.empresa_slug)))];
-  const detalleCompra = [
-    paquete.sede,
-    empresas.join(' + '),
-    noches !== null ? checkout.purchaseNights.replace('{n}', String(noches)) : null,
-  ].filter(Boolean).join(' · ');
-  const resumenViaje = [
-    estado.inicio ? formatearFecha(estado.inicio) : null,
-    paquete.pide_hora && estado.hora ? formatHour(estado.hora) : null,
-    paquete.precio_depende_de_personas
-      ? `${personasPaquete} ${personasPaquete === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`
-      : null,
-  ].filter(Boolean).join(' · ');
-  const lineasViaje = [
-    estado.inicio ? { etiqueta: checkout.summary.date, valor: formatearFecha(estado.inicio) } : null,
-    salida && noches !== null ? { etiqueta: checkout.summary.checkOut, valor: formatearFecha(salida) } : null,
-    paquete.pide_hora && estado.hora ? { etiqueta: checkout.summary.time, valor: formatHour(estado.hora) } : null,
-    paquete.precio_depende_de_personas
-      ? { etiqueta: checkout.summary.people, valor: String(personasPaquete) }
-      : null,
-  ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
-  const lineasContacto = [
-    { etiqueta: checkout.fullName, valor: estado.contacto.fullName },
-    { etiqueta: checkout.email, valor: estado.contacto.email },
-    { etiqueta: checkout.phone, valor: estado.contacto.phone },
-  ].filter((linea) => linea.valor.trim() !== '');
-  // Dónde lo recogen: el nombre del punto elegido, o la dirección escrita a mano.
-  const lineaPunto = (traslado: DetalleTraslado | undefined) => {
-    if (!traslado) return [];
-    const valor = traslado.modo === 'catalogo'
-      ? Object.values(puntosPorEmpresa).flat().find((p) => p.id === traslado.puntoEncuentroId)?.nombre
-      : traslado.direccion;
-    return valor ? [{ etiqueta: dict.traslados.fields.puntoEncuentro, valor }] : [];
-  };
+  const { detalleCompra, resumenViaje, lineasViaje, lineasContacto, lineaPunto } = armarResumenPaquete({
+    paquete, inicio: estado.inicio, hora: estado.hora, contacto: estado.contacto, personasPaquete, salida, noches,
+    checkout, traslados, puntosPorEmpresa, nombreEmpresa, formatearFecha,
+  });
 
   const pago = usePagoPedido({
     motor,
