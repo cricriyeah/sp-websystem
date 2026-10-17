@@ -9,6 +9,7 @@ import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { EsqueletoPago } from '@/components/checkout/pago/esqueleto-pago';
 import { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
 import { ErrorBlock } from '@/components/error-block';
+import { Button } from '@/components/ui/button';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Pago } from '@/lib/api';
 import { fechaHoraDeVencimiento } from '@/lib/pendientes-texto';
@@ -131,7 +132,8 @@ function PaymentForm({
         />
       )}
 
-      <button
+      <Button
+        variante="libre"
         type="button"
         onClick={handleConfirm}
         disabled={!stripe || submitting}
@@ -139,7 +141,7 @@ function PaymentForm({
       >
         <Lock size={16} className="shrink-0" />
         {submitting ? checkout.submitting : (etiquetaBotonPago ?? checkout.confirmPay)}
-      </button>
+      </Button>
     </div>
   );
 }
