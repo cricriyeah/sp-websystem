@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { CaretLeft, Check } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { transicion } from '@/lib/movimiento';
 import { Button } from '@/components/ui/button';
 import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
 import { useDetalleAbierto } from '@/components/checkout/detalle-abierto';
@@ -107,7 +108,7 @@ export function CheckoutSectionCard({
               // Abierto, el detalle de abajo ya lo dice: el resumen se desvanece sin mover el título.
               <span
                 aria-hidden={detalleAbierto || undefined}
-                className={`min-w-0 truncate text-muted transition-opacity duration-300 motion-reduce:transition-none ${detalleAbierto ? 'opacity-0' : ''}`}
+                className={`min-w-0 truncate text-muted transition-opacity duration-[var(--duracion-media)] motion-reduce:transition-none ${detalleAbierto ? 'opacity-0' : ''}`}
               >
                 · {resumen}
               </span>
@@ -134,7 +135,7 @@ export function CheckoutSectionCard({
           size={12}
           weight="bold"
           aria-hidden
-          className={`shrink-0 text-muted transition-transform duration-300 ${detalleAbierto ? '-rotate-90' : ''}`}
+          className={`shrink-0 text-muted transition-transform duration-[var(--duracion-media)] ${detalleAbierto ? '-rotate-90' : ''}`}
         />
       )}
       {actionLabel && onAction && enRenglon && (
@@ -160,7 +161,7 @@ export function CheckoutSectionCard({
             <CaretLeft
               size={12}
               weight="bold"
-              className={`transition-transform duration-300 ${abierto ? '-rotate-90' : ''}`}
+              className={`transition-transform duration-[var(--duracion-media)] ${abierto ? '-rotate-90' : ''}`}
             />
           </span>
         )
@@ -224,7 +225,7 @@ export function CheckoutSectionCard({
         // Altura animada con la cuadrícula (0fr a 1fr): se abre y se pliega sin medir nada.
         <div
           id={verDetalle.id}
-          className={`grid transition-[grid-template-rows,opacity,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+          className={`grid transition-[grid-template-rows,opacity,visibility] duration-[var(--duracion-media)] ease-[var(--curva-estandar)] motion-reduce:transition-none ${
             detalleAbierto ? 'visible grid-rows-[1fr] opacity-100' : 'invisible grid-rows-[0fr] opacity-0'
           }`}
         >
@@ -248,7 +249,7 @@ export function CheckoutSectionCard({
             initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={transicion(sinMovimiento)}
             onAnimationStart={() => setEnTransicion(true)}
             onAnimationComplete={() => setEnTransicion(false)}
             className={enTransicion ? 'overflow-hidden' : 'overflow-visible'}

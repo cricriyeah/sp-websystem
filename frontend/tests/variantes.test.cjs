@@ -45,10 +45,10 @@ test('fila es el disparador de acordeón de ancho completo', () => {
   }
 });
 
-test('chip toma la forma de un token, no rounded-full', () => {
+test('chip es una píldora (radio-full) y no toma el radio de control', () => {
   const clases = botonClases({ variante: 'chip' });
-  assert.match(clases, /rounded-control/);
-  assert.doesNotMatch(clases, /rounded-full/);
+  assert.match(clases, /(^| )rounded-full( |$)/);
+  assert.doesNotMatch(clases, /rounded-control/);
 });
 
 const { hojaClases, alertaClases } =require(path.join(process.env.VARIANTES_TEST_OUT, 'components/ui/variantes.js'));

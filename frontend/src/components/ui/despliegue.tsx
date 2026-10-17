@@ -2,10 +2,11 @@
 
 import { useState, type ReactNode } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { transicion } from '@/lib/movimiento';
 
 /**
- * Abre y pliega un bloque sin saltos: altura y opacidad en una sola curva, la
- * misma que usa `CheckoutSectionCard`. Todo lo que aparece o desaparece dentro
+ * Abre y pliega un bloque sin saltos: altura y opacidad en una sola curva
+ * (`duracion-media`, `curva-estandar`), la misma que usa `CheckoutSectionCard`. Todo lo que aparece o desaparece dentro
  * del checkout pasa por aquí: un cambio instantáneo es un error de predicción
  * para quien mira (el contenido de abajo brinca) y una curva común hace que
  * todo el flujo se sienta de una sola pieza.
@@ -35,7 +36,7 @@ export function Despliegue({
           initial={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
           animate={sinMovimiento ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
           exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
-          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          transition={transicion(sinMovimiento)}
           onAnimationStart={() => setEnTransicion(true)}
           onAnimationComplete={() => setEnTransicion(false)}
           className={`${enTransicion ? 'overflow-hidden' : 'overflow-visible'} ${className ?? ''}`}

@@ -27,6 +27,7 @@ const suites = {
   'pendientes-texto': ['src/lib/pendientes-texto.ts', 'PENDIENTES_TEXTO_TEST_OUT'],
   'selector-experiencia': ['src/lib/selector-experiencia.ts', 'SELECTOR_TEST_OUT'],
   'tokens-pago': ['src/lib/tokens-pago.ts', 'TOKENS_PAGO_TEST_OUT'],
+  movimiento: ['src/lib/movimiento.ts', 'MOVIMIENTO_TEST_OUT'],
   personalizaciones: ['src/lib/pricing-paquete.ts', 'PERSONALIZACIONES_TEST_OUT'],
   variantes: ['src/components/ui/variantes.ts', 'VARIANTES_TEST_OUT'],
   iniciales: ['src/lib/iniciales.ts', 'INICIALES_TEST_OUT'],

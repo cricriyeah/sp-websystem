@@ -12,4 +12,4 @@ export const TOKENS_PAGO = {
   colorDanger: '#b3261e', // --error
 } as const;
 
-export const RADIO_PAGO = '8px'; // --radius-campo
+export const RADIO_PAGO = '12px'; // --radius-campo

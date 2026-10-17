@@ -55,7 +55,7 @@ export function AccionTexto({
       {icono}
       <span>{children}</span>
       {abierto !== undefined && (
-        <CaretDown size={12} weight="bold" className={`transition-transform duration-300 ${abierto ? 'rotate-180' : ''}`} />
+        <CaretDown size={12} weight="bold" className={`transition-transform duration-[var(--duracion-media)] ${abierto ? 'rotate-180' : ''}`} />
       )}
     </Button>
   );

@@ -29,7 +29,7 @@ export function PorQueVariosPagos({ dict }: { dict: Dictionary }) {
       </AccionTexto>
       <div
         id={id}
-        className={`grid transition-[grid-template-rows,opacity,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+        className={`grid transition-[grid-template-rows,opacity,visibility] duration-[var(--duracion-media)] ease-[var(--curva-estandar)] motion-reduce:transition-none ${
           abierto ? 'visible grid-rows-[1fr] opacity-100' : 'invisible grid-rows-[0fr] opacity-0'
         }`}
       >

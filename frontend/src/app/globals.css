@@ -61,6 +61,11 @@
   --z-barra: 50;
   --z-hoja: 60;
   --z-toast: 70;
+
+  /* Capas de interaccion (design.md, "Estados de interaccion"): tinta sobre el color base.
+     El hover solo existe con puntero: Tailwind 4 ya condiciona `hover:` a `@media (hover: hover)`. */
+  --capa-hover: color-mix(in srgb, var(--color-tinta) 8%, transparent);
+  --capa-pulsado: color-mix(in srgb, var(--color-tinta) 12%, transparent);
 }
 
 @media (min-width: 40rem) {
@@ -109,11 +114,24 @@
   --color-info-fondo: var(--color-azul-claro);
   --color-ring: var(--color-azul); /* foco: anillo de 2 px con desfase de 2 px */
 
-  --radius-control: 9999px; /* botones: hoy rounded-full */
-  --radius-campo: 0.5rem; /* campos y cajas: hoy rounded-lg (8 px). Literal, no var(--radius-lg): ese default de Tailwind no esta en este archivo y la prueba de tokens-pago (Task 2.3) no podria resolverlo */
+  /* Forma (design.md, "Forma"): el logo es redondo; el radio se nota sin volver pastilla todo el sitio.
+     Literales en px, no var(--radius-lg): la prueba de tokens-pago los resuelve a px. En contenedores
+     anidados el radio interior es el exterior menos su padding. */
+  --radius-xs: 4px; /* texto resaltado, insignias pequenas */
+  --radius-sm: 8px; /* etiquetas, tooltips, imagenes pequenas */
+  --radius-control: 12px; /* botones, campos, selectores, casillas de opcion */
+  --radius-campo: 12px; /* campos y cajas de campo */
   --radius-casilla: 6px;
-  --radius-card: 0px; /* tarjetas: hoy sin radio */
-  --radius-sheet: 0px; /* hojas y paneles: hoy sin radio */
+  --radius-card: 16px; /* tarjetas, resumen, paneles, popover del calendario */
+  --radius-sheet: 24px; /* hojas inferiores y barra fija de movil (solo esquinas superiores) */
+  --radius-full: 9999px; /* chips de actividad, atajos de fecha, dia del calendario (circulo) */
+
+  /* Red de seguridad: cualquier `rounded-*` heredado cae en la escala de design.md.
+     La Task 7.3 reemplaza los usos por token y la guardia (`radio-crudo`) los lleva a 0. */
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
 
   /* Sombras con el valor actual: n1 = barra inferior (pie-tarjeta), n2 = popover, toast y hoja. */
   --shadow-n0: none;
@@ -183,8 +201,8 @@
 /* El "pop" del check de confirmacion de pago (booking-confirmation.tsx). Un
    leve overshoot en 60% en vez de una curva con rebote propia: mas facil de
    leer que un cubic-bezier con overshoot, y el rebote se siente igual.
-   `prefers-reduced-motion: reduce` ya colapsa cualquier animacion a 0.01ms
-   mas abajo en este archivo — no hace falta un guard aparte aqui. */
+   `prefers-reduced-motion: reduce` la reduce a un fundido de 150 ms (al final
+   de este archivo) — no hace falta un guard aparte aqui. */
 @keyframes confirmacion-pop {
   0% {
     transform: scale(0.4);
@@ -432,9 +450,8 @@
     }
   }
 
-  /* Reducir movimiento: nada se desplaza ni escala, solo opacidad en 150 ms. (La
-     regla global de reduced-motion de @layer base, con !important, colapsa hoy toda
-     transicion a 0,01 ms; esto declara la intencion para cuando esa regla cambie.) */
+  /* Reducir movimiento: nada se desplaza ni escala, solo opacidad en 150 ms (la regla
+     global de reduced-motion de @layer base fija el mismo tiempo con !important). */
   @media (prefers-reduced-motion: reduce) {
     .hoja-dialogo,
     .alerta-dialogo {
@@ -515,13 +532,75 @@
     }
   }
 
+  /* Reducir movimiento: sin transform, clip-path ni cambio de altura; solo opacidad en 150 ms.
+     Dejar la duracion en 0,01 ms mataba tambien los fundidos, que son la unica senal que queda.
+     Las animaciones por transform y clip-path se reemplazan por fundidos al final del archivo
+     (un @keyframes sin capa no lo puede pisar uno dentro de @layer). */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
-      animation-duration: 0.01ms !important;
+      animation-duration: var(--duracion-corta) !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+      transition-duration: var(--duracion-corta) !important;
+    }
+  }
+}
+
+/* Reducir movimiento: las animaciones de arriba pasan a solo opacidad. Vive aqui, sin capa y
+   despues de los originales, porque un @keyframes sin capa gana a uno dentro de @layer y el
+   ultimo con el mismo nombre gana a los anteriores. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes revelar {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes revelar-foto {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes titulo-entra {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes barrer {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes confirmacion-pop {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* La onda es puro movimiento periferico: sin movimiento no hay nada que mostrar. */
+  @keyframes confirmacion-onda {
+    from,
+    to {
+      opacity: 0;
     }
   }
 }

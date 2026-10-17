@@ -96,7 +96,7 @@ export function ReservaPlegable({
           {/* Abierto, el detalle de abajo ya lo dice: el resumen se desvanece sin mover el chip. */}
           <span
             aria-hidden={abierto}
-            className={`min-w-0 truncate text-muted transition-opacity duration-300 motion-reduce:transition-none ${abierto ? 'opacity-0' : ''}`}
+            className={`min-w-0 truncate text-muted transition-opacity duration-[var(--duracion-media)] motion-reduce:transition-none ${abierto ? 'opacity-0' : ''}`}
           >
             · {resumen}
           </span>
@@ -104,7 +104,7 @@ export function ReservaPlegable({
         <CaretLeft
           size={12}
           weight="bold"
-          className={`shrink-0 text-muted transition-transform duration-300 ${abierto ? '-rotate-90' : ''}`}
+          className={`shrink-0 text-muted transition-transform duration-[var(--duracion-media)] ${abierto ? '-rotate-90' : ''}`}
         />
       </Button>
 
@@ -112,7 +112,7 @@ export function ReservaPlegable({
           medir nada ni desmontar los renglones. */}
       <div
         id={id}
-        className={`grid transition-[grid-template-rows,opacity,margin,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+        className={`grid transition-[grid-template-rows,opacity,margin,visibility] duration-[var(--duracion-media)] ease-[var(--curva-estandar)] motion-reduce:transition-none ${
           abierto || !activo ? `visible grid-rows-[1fr] opacity-100 ${activo ? 'mt-2' : 'mt-0'}` : 'invisible mt-0 grid-rows-[0fr] opacity-0'
         }`}
       >

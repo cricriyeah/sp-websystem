@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { DURACION, transicion } from '@/lib/movimiento';
 
 /**
  * Cambia de semana deslizando en la dirección del click: adelante entra por la
@@ -25,7 +26,7 @@ export function Deslizable({ clave, direccion, children, className }: {
     <AnimatePresence mode="wait" initial={false} custom={direccion}>
       <m.div key={clave} className={className} custom={direccion} variants={variantes}
         initial="entra" animate="centro" exit="sale"
-        transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}>
+        transition={transicion(sinMovimiento, DURACION.corta)}>
         {children}
       </m.div>
     </AnimatePresence>

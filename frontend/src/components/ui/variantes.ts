@@ -5,7 +5,7 @@
 const BASE = 'inline-flex items-center font-medium';
 
 // Copiado de BotonPaso (checkout/boton-paso.tsx): transition-transform, active:scale-[0.98]
-// y disabled:opacity-60. Único cambio: rounded-full pasa a rounded-control (mismo 9999px).
+// y disabled:opacity-60. rounded-control (12 px) sustituye a rounded-full desde la marca nueva.
 const PULSABLE = 'justify-center gap-2 rounded-control px-6 py-2.5 text-sm transition-transform active:scale-[0.98] disabled:opacity-60';
 
 // Copiado de AccionTexto (checkout/accion-terciaria.tsx): min-h-10, gap-1.5, self-start,
@@ -24,8 +24,8 @@ const VARIANTES = {
   // `fila`: disparador de acordeón de ancho completo (faq-section).
   fila: 'flex w-full cursor-pointer items-center justify-between gap-6 py-5 text-left text-lg text-foreground',
   // `chip`: píldora de filtro (hub-mapa-sedes); el color del estado marcado va por className.
-  // rounded-full pasa a rounded-control (mismo 9999px).
-  chip: 'rounded-control border px-4 py-2 text-sm transition-colors',
+  // Los chips van en píldora (design.md: radio-full).
+  chip: 'rounded-full border px-4 py-2 text-sm transition-colors',
   // `libre`: sin estilo; todo llega por className (botón único con aspecto propio).
   libre: '',
 } as const;
@@ -73,7 +73,7 @@ export function hojaClases({ sinBorde = false }: { sinBorde?: boolean } = {}) {
     titulo: 'texto-subtitulo font-sans tracking-normal text-foreground',
     // 48 × 48; -mr-2 alinea el icono de 24 con el margen de 16 de la hoja.
     cerrar:
-      '-mr-2 inline-flex size-12 shrink-0 items-center justify-center rounded-control text-foreground transition-colors ' +
+      '-mr-2 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-foreground transition-colors ' +
       'hover:bg-cafe-bruma focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
     cuerpo: sinBorde ? HOJA_SIN_BORDE : '',
   };
