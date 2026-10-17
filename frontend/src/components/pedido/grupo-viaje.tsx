@@ -7,6 +7,8 @@ import { BloqueDePaso } from '@/components/checkout-section-card';
 import { CAJA_CAMPO } from '@/components/checkout/estilos';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { PeopleStepper } from '@/components/people-stepper';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { Aeropuerto, Moneda, PaqueteServicioCatalogo } from '@/lib/api';
 import { fechaDeComponente, sumarDias } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
@@ -89,7 +91,8 @@ export function GrupoViaje({
           className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
         >
           <span className="flex items-start gap-3">
-            <input
+            <Input
+              aspecto="heredado"
               id={id}
               type="checkbox"
               checked={marcada}
@@ -118,17 +121,17 @@ export function GrupoViaje({
           <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
             <span className="text-muted">{checkout.licenseQuantity.question}</span>
             <span className="flex items-center gap-2">
-              <button type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
+              <Button variante="libre" type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
                 onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad - 1 })}
                 className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
                 <Minus size={12} />
-              </button>
+              </Button>
               <span>{checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(estado.personas))}</span>
-              <button type="button" aria-label="+" disabled={cantidad >= estado.personas || bloqueado}
+              <Button variante="libre" type="button" aria-label="+" disabled={cantidad >= estado.personas || bloqueado}
                 onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad + 1 })}
                 className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
                 <Plus size={12} />
-              </button>
+              </Button>
             </span>
           </div>
         </Despliegue>
@@ -153,7 +156,7 @@ export function GrupoViaje({
     return (
       <label key={extra.id} htmlFor={id} className="flex flex-col gap-2 text-sm text-foreground">
         <span className="font-medium">{extra.nombre}{extra.obligatorio ? ' *' : ''}</span>
-        <input id={id} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
+        <Input aspecto="heredado" id={id} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
           step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
           value={seleccion?.respuesta ?? ''} disabled={bloqueado}
           onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
