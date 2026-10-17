@@ -2,25 +2,41 @@
 // paquetes ahí. Las primitivas (button.tsx) combinan estas clases con `cn`, que fusiona
 // los conflictos en orden de cadena (los TAMANOS van después de las VARIANTES a propósito).
 
-const BASE = 'inline-flex items-center font-medium';
+// Contrato visual de `Button` (design.md, "Roles de botón", y design-components.md): 48 px de alto
+// en móvil y 44 en escritorio, radio de control (12 px), etiqueta `texto-etiqueta` y foco con el
+// anillo `ring` de 2 px y 2 px de desfase (el desfase se pinta con la superficie que lo contiene).
+// Un botón NUNCA se deshabilita con `opacity`: el deshabilitado y `aria-disabled` cambian de color
+// (`cafe-bruma` con texto `apagado`). Las etiquetas largas pasan a dos renglones (`py-3`,
+// `text-balance`) y nunca se truncan: el monto del botón de pago tiene que verse.
+const BASE =
+  'inline-flex items-center justify-center gap-2 rounded-control px-6 py-3 text-center text-balance texto-etiqueta ' +
+  'min-h-12 sm:min-h-11 transition-[background-color,transform] duration-150 ease-[var(--curva-estandar)] ' +
+  'active:scale-[0.98] motion-reduce:active:scale-100 ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ' +
+  'disabled:cursor-not-allowed aria-disabled:cursor-not-allowed';
 
-// Copiado de BotonPaso (checkout/boton-paso.tsx): transition-transform, active:scale-[0.98]
-// y disabled:opacity-60. rounded-control (12 px) sustituye a rounded-full desde la marca nueva.
-const PULSABLE = 'justify-center gap-2 rounded-control px-6 py-2.5 text-sm transition-transform active:scale-[0.98] disabled:opacity-60';
-
-// Copiado de AccionTexto (checkout/accion-terciaria.tsx): min-h-10, gap-1.5, self-start,
-// text-xs, transition-colors, hover y subrayado solo al enfocar con teclado.
-const TEXTO =
-  'min-h-10 gap-1.5 self-start text-xs transition-colors hover:text-foreground focus-visible:underline focus-visible:underline-offset-4 disabled:opacity-60';
+// Deshabilitado y `aria-disabled` (acción en curso). `aria-disabled:hover:` gana al `hover:` de la
+// variante: un botón en curso no cambia de color al pasar el puntero.
+const APAGADO = 'disabled:bg-cafe-bruma disabled:text-apagado aria-disabled:bg-cafe-bruma aria-disabled:text-apagado';
 
 const VARIANTES = {
-  principal: `${PULSABLE} bg-action text-action-foreground`,
-  secundario: `${PULSABLE} border border-border-strong bg-background text-foreground hover:bg-cafe-bruma`,
-  texto: `${TEXTO} text-muted`,
-  acento: `${TEXTO} text-accent`,
-  peligro: `${PULSABLE} border border-error bg-error-fondo text-error`,
+  principal:
+    `bg-cafe text-white hover:bg-cafe-hondo active:bg-cafe-profundo ${APAGADO} ` +
+    'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
+  secundario:
+    'border border-borde-control bg-superficie text-cafe hover:bg-cafe-bruma active:bg-cafe-claro ' +
+    `${APAGADO} disabled:border-transparent aria-disabled:border-transparent ` +
+    'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
+  // Acción de texto («Modificar», «Volver», revelar más). `self-start` evita que se estire a lo
+  // ancho dentro de una columna. Las acciones meta («Volver») le ponen `text-tinta-suave`.
+  texto:
+    'self-start min-h-11 bg-transparent px-3 text-cafe hover:bg-cafe-bruma disabled:bg-transparent aria-disabled:bg-transparent ' +
+    'disabled:text-apagado aria-disabled:text-apagado disabled:hover:bg-transparent aria-disabled:hover:bg-transparent',
+  peligro:
+    'bg-error text-white hover:bg-[color-mix(in_srgb,var(--color-error)_92%,var(--color-tinta))] ' +
+    `${APAGADO} aria-disabled:hover:bg-cafe-bruma`,
   // Variantes de migración (F4): llevan las clases del botón crudo que sustituyen y NO
-  // reciben BASE (inline-flex, items-center y font-medium cambiarían su aspecto).
+  // reciben BASE (inline-flex, items-center y la etiqueta cambiarían su aspecto).
   // `fila`: disparador de acordeón de ancho completo (faq-section).
   fila: 'flex w-full cursor-pointer items-center justify-between gap-6 py-5 text-left text-lg text-foreground',
   // `chip`: píldora de filtro (hub-mapa-sedes); el color del estado marcado va por className.
@@ -33,7 +49,8 @@ const VARIANTES = {
 // Las variantes de migración no heredan BASE: su aspecto es el del botón crudo original.
 const SIN_BASE: readonly string[] = ['fila', 'chip', 'libre'];
 
-const TAMANOS = { md: '', sm: 'px-4 py-1.5 text-xs', icono: 'size-10 p-0' } as const;
+// `md` es el de la base. `icono` es un círculo de 48 × 48 también en escritorio (icono de 24).
+const TAMANOS = { md: '', icono: 'size-12 rounded-full p-0' } as const;
 
 export type VarianteBoton = keyof typeof VARIANTES;
 export type TamanoBoton = keyof typeof TAMANOS;
@@ -41,8 +58,12 @@ export type TamanoBoton = keyof typeof TAMANOS;
 export function botonClases({
   variante = 'principal',
   tamano = 'md',
-}: { variante?: VarianteBoton; tamano?: TamanoBoton } = {}): string {
-  return [SIN_BASE.includes(variante) ? '' : BASE, VARIANTES[variante], TAMANOS[tamano]].filter(Boolean).join(' ');
+  bloque = false,
+}: { variante?: VarianteBoton; tamano?: TamanoBoton; bloque?: boolean } = {}): string {
+  // `bloque`: ancho completo (barra inferior móvil).
+  return [SIN_BASE.includes(variante) ? '' : BASE, VARIANTES[variante], TAMANOS[tamano], bloque ? 'w-full' : '']
+    .filter(Boolean)
+    .join(' ');
 }
 
 // --- Sheet y AlertDialog (Task 3.5) ---------------------------------------------

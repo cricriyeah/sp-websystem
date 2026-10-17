@@ -4,15 +4,91 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { botonClases } = require(path.join(process.env.VARIANTES_TEST_OUT, 'components/ui/variantes.js'));
 
-test('R5: solo la variante principal usa el color de acción', () => {
-  assert.match(botonClases({ variante: 'principal' }), /bg-action/);
-  for (const v of ['secundario', 'texto', 'acento', 'peligro']) {
-    assert.doesNotMatch(botonClases({ variante: v }), /bg-action/);
+const clase = (variante, nombre, opciones = {}) =>
+  botonClases({ variante, ...opciones }).split(' ').includes(nombre);
+
+const ROLES = ['principal', 'secundario', 'texto', 'peligro'];
+
+test('R5: solo la variante principal usa el color de acción (fondo cafe)', () => {
+  assert.ok(clase('principal', 'bg-cafe'));
+  assert.ok(clase('principal', 'text-white'));
+  for (const v of ['secundario', 'texto', 'peligro']) {
+    assert.ok(!clase(v, 'bg-cafe'), v);
   }
+  // Los textos de las demás variantes pueden ser cafe, pero su fondo no.
+  assert.ok(clase('secundario', 'text-cafe'));
+  assert.ok(clase('texto', 'text-cafe'));
 });
 
-test('área táctil mínima de 40 px en las acciones de texto', () => {
-  assert.match(botonClases({ variante: 'texto' }), /min-h-10/);
+test('los roles de design.md: secundario con borde de control, peligro con error, texto transparente', () => {
+  assert.ok(clase('secundario', 'border-borde-control'));
+  assert.ok(clase('secundario', 'bg-superficie'));
+  assert.ok(clase('peligro', 'bg-error'));
+  assert.ok(clase('peligro', 'text-white'));
+  assert.ok(clase('texto', 'bg-transparent'));
+  assert.ok(clase('principal', 'hover:bg-cafe-hondo'));
+  assert.ok(clase('principal', 'active:bg-cafe-profundo'));
+});
+
+test('la variante acento ya no existe (se migró a texto)', () => {
+  assert.doesNotMatch(botonClases({ variante: 'acento' }), /text-accent/);
+  assert.equal(botonClases({ variante: 'acento' }).includes('undefined'), false);
+});
+
+test('objetivo táctil: 48 px en móvil y 44 en escritorio; las acciones de texto, 44', () => {
+  for (const v of ['principal', 'secundario', 'peligro']) {
+    assert.ok(clase(v, 'min-h-12'), v);
+    assert.ok(clase(v, 'sm:min-h-11'), v);
+  }
+  assert.ok(clase('texto', 'min-h-11'));
+});
+
+test('el deshabilitado y aria-disabled cambian de color, nunca de opacidad', () => {
+  for (const v of ROLES) {
+    const clases = botonClases({ variante: v });
+    assert.doesNotMatch(clases, /opacity/, v);
+    assert.ok(clases.includes('disabled:text-apagado'), v);
+    assert.ok(clases.includes('aria-disabled:text-apagado'), v);
+  }
+  for (const v of ['principal', 'secundario', 'peligro']) {
+    assert.ok(clase(v, 'disabled:bg-cafe-bruma'), v);
+    assert.ok(clase(v, 'aria-disabled:bg-cafe-bruma'), v);
+  }
+  assert.ok(clase('secundario', 'disabled:border-transparent'));
+});
+
+test('la base lleva el foco de 2 px con desfase de 2 px, la escala 0,98 y el ancho de etiqueta largo en dos renglones', () => {
+  const base = botonClases({ variante: 'principal' }).split(' ');
+  for (const c of [
+    'inline-flex',
+    'items-center',
+    'justify-center',
+    'gap-2',
+    'rounded-control',
+    'px-6',
+    'texto-etiqueta',
+    'focus-visible:outline-2',
+    'focus-visible:outline-offset-2',
+    'focus-visible:outline-ring',
+    'active:scale-[0.98]',
+    'motion-reduce:active:scale-100',
+    'duration-150',
+    'text-balance',
+    'py-3',
+  ]) {
+    assert.ok(base.includes(c), c);
+  }
+  assert.ok(base.includes('ease-[var(--curva-estandar)]'));
+});
+
+test('tamaños: md es la base, sm ya no existe, icono es un círculo de 48 × 48 y bloque agrega ancho completo', () => {
+  assert.equal(botonClases({ tamano: 'sm' }).includes('undefined'), false);
+  assert.ok(!clase('principal', 'px-4', { tamano: 'sm' }));
+  assert.ok(clase('principal', 'size-12', { tamano: 'icono' }));
+  assert.ok(clase('principal', 'rounded-full', { tamano: 'icono' }));
+  assert.ok(clase('principal', 'p-0', { tamano: 'icono' }));
+  assert.ok(!clase('principal', 'w-full'));
+  assert.ok(clase('principal', 'w-full', { bloque: true }));
 });
 
 test('la forma sale de tokens, no de utilidades crudas', () => {
@@ -20,9 +96,11 @@ test('la forma sale de tokens, no de utilidades crudas', () => {
   assert.doesNotMatch(botonClases({ variante: 'principal' }), /rounded-full/);
 });
 
-test('sin colores crudos', () => {
-  for (const v of ['principal', 'secundario', 'texto', 'acento', 'peligro']) {
-    assert.doesNotMatch(botonClases({ variante: v }), /-(red|green|blue|amber)-\d/);
+test('sin colores crudos ni de la marca vieja', () => {
+  for (const v of ROLES) {
+    const clases = botonClases({ variante: v });
+    assert.doesNotMatch(clases, /-(red|green|blue|amber)-\d/);
+    assert.doesNotMatch(clases, /bg-action|text-action|bg-accent|text-accent|border-border-strong/);
   }
 });
 

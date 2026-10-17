@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { ListBullets } from '@phosphor-icons/react';
-import { CAJA_CAMPO, CAJA_CAMPO_ERROR } from '@/components/ui/caja-campo';
+import { CAJA_CONTENEDOR, CAJA_CONTENEDOR_ERROR } from '@/components/ui/caja-campo';
 import { FieldPopover } from '@/components/field-popover';
 import { Button } from '@/components/ui/button';
 
@@ -39,7 +39,7 @@ export function SelectPersonalizado({
   return (
     <div
       aria-disabled={disabled || undefined}
-      className={`${invalido ? CAJA_CAMPO_ERROR : CAJA_CAMPO} ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+      className={`${invalido ? CAJA_CONTENEDOR_ERROR : CAJA_CONTENEDOR} ${disabled ? 'pointer-events-none bg-cafe-bruma text-apagado' : ''}`}
     >
       <FieldPopover
         label={label}

@@ -4,7 +4,7 @@ import { Buildings, ListBullets, MapPin } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { Despliegue } from '@/components/ui/despliegue';
-import { CAJA_CAMPO } from '@/components/ui/caja-campo';
+import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { FieldPopover } from '@/components/field-popover';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export function BloqueRecogida({
     <>
       <div className="flex flex-col gap-3">
         <Despliegue abierto={modoHospedaje === 'catalogo'}>
-          <div className={CAJA_CAMPO}>
+          <div className={CAJA_CONTENEDOR}>
             <FieldPopover
               compacto
               label={traslados.fields.puntoEncuentro}
@@ -113,12 +113,11 @@ export function BloqueRecogida({
               <span className="relative">
                 <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
                 <Input
-                  aspecto="heredado"
                   type="text"
                   value={direccionPersonalizada}
                   onChange={(e) => onDireccion(e.target.value)}
                   placeholder={traslados.fields.direccionPlaceholder}
-                  className={`w-full ${CAJA_CAMPO} py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent`}
+                  className="pl-11"
                 />
               </span>
             </label>

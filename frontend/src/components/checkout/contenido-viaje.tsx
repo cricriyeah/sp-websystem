@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 
 type Props = {
   /** Calendario o selector de fecha de inicio. */
@@ -13,8 +14,6 @@ type Props = {
   nota?: ReactNode;
 };
 
-const CAJA = 'border border-border bg-superficie';
-
 /**
  * Orden fijo del paso "viaje" para todos los checkouts: cuándo (fecha) →
  * a qué hora y cuántos → hasta cuándo → aclaraciones. Cada hijo es un bloque
@@ -27,8 +26,8 @@ export function ContenidoViaje({ fecha, hora, personas, salida, nota }: Props) {
       <div>{fecha}</div>
       {campos > 0 && (
         <div className={`grid gap-3 ${campos === 2 ? 'sm:grid-cols-2' : ''}`}>
-          {hora && <div className={CAJA}>{hora}</div>}
-          {personas && <div className={CAJA}>{personas}</div>}
+          {hora && <div className={CAJA_CONTENEDOR}>{hora}</div>}
+          {personas && <div className={CAJA_CONTENEDOR}>{personas}</div>}
         </div>
       )}
       {salida && <div>{salida}</div>}

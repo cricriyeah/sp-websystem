@@ -7,6 +7,7 @@ import { formatDay } from '@/components/checkout/formato-dia';
 import { DateField } from '@/components/date-field';
 import { PeopleStepper } from '@/components/people-stepper';
 import { TimeField } from '@/components/time-field';
+import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 import { fromLocalISODate } from '@/lib/dates';
 
 type Props = {
@@ -111,7 +112,7 @@ export function BloqueViaje({
           {checkout.checkoutDateLabel}: {formatDay(fromLocalISODate(fechaSalida), lang)}
         </p>
       ) : (
-        <div className="border border-border bg-superficie">
+        <div className={CAJA_CONTENEDOR}>
           <DateField
             lang={lang}
             label={checkout.checkoutDateLabel}

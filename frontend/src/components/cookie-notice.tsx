@@ -92,14 +92,12 @@ export function CookieNotice({
               <Button
                 variante="secundario"
                 onClick={() => responder('rechazado')}
-                className="border-border bg-transparent px-4 py-2 hover:bg-transparent"
               >
                 {cookies.reject}
               </Button>
               <Button
                 variante="principal"
                 onClick={() => responder('aceptado')}
-                className="bg-accent px-4 py-2 text-accent-foreground"
               >
                 {cookies.accept}
               </Button>

@@ -1,4 +1,4 @@
-import { CAJA_CAMPO } from '@/components/ui/caja-campo';
+import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 
 /**
  * Hueco del formulario de tarjeta mientras llega Stripe: primero el chunk
@@ -26,7 +26,7 @@ function Fila({ ancho }: { ancho: string }) {
   return (
     <div className="flex flex-col gap-2">
       <span className={`block h-3 bg-muted/15 ${ancho}`} />
-      <span className={`block h-12 ${CAJA_CAMPO}`} />
+      <span className={`block h-12 ${CAJA_CONTENEDOR}`} />
     </div>
   );
 }

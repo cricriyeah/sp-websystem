@@ -291,6 +291,20 @@
   }
 }
 
+/* Indicador de accion en curso de Button (`cargando`): gira. Con reducir movimiento pulsa en
+   opacidad (1,2 s) en lugar de girar; ver la excepcion en @layer base. */
+@keyframes giro-carga {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulso-carga {
+  50% {
+    opacity: 0.4;
+  }
+}
+
 @layer components {
   /* Escala de texto semantica (Task 2.1): tamanos ACTUALES de lo que cubre cada nombre.
      Sin consumidores todavia; F7.3 fija los valores finales de design.md. */
@@ -315,6 +329,10 @@
   .rev-regla {
     animation: barrer 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
     transform-origin: left;
+  }
+
+  .icono-cargando {
+    animation: giro-carga 1s linear infinite;
   }
 
   .titulo-entra {
@@ -518,6 +536,15 @@
       animation-duration: var(--duracion-corta) !important;
       animation-iteration-count: 1 !important;
       transition-duration: var(--duracion-corta) !important;
+    }
+
+    /* Excepcion: un indicador de actividad no puede quedar en un solo destello de 150 ms.
+       Sin giro, pulsa en opacidad. Va en esta misma capa porque entre declaraciones
+       `!important` gana la capa anterior, no la que tiene mas especificidad. */
+    .icono-cargando {
+      animation-name: pulso-carga !important;
+      animation-duration: 1.2s !important;
+      animation-iteration-count: infinite !important;
     }
   }
 }

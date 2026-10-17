@@ -27,6 +27,25 @@ export function FieldError({ id, mensaje }: { id: string; mensaje: string }) {
 }
 
 /**
+ * Si el error `id` acaba de aparecer y queda fuera de pantalla (el cliente confirmó un paso desde
+ * más abajo), lo trae a la vista y lleva el foco al campo que lo causó (el que lo cita con
+ * `aria-describedby`). Si ya se ve, no mueve nada. Lo usan `ErrorDeCampo` y `Field`.
+ */
+export function useLlevarAlError(id: string, hay: boolean) {
+  const sinMovimiento = useReducedMotion();
+
+  useEffect(() => {
+    if (!hay) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    const caja = el.getBoundingClientRect();
+    if (caja.top >= 0 && caja.bottom <= window.innerHeight) return;
+    el.scrollIntoView({ block: 'center', behavior: sinMovimiento ? 'auto' : 'smooth' });
+    document.querySelector<HTMLElement>(`[aria-describedby~="${id}"]`)?.focus({ preventScroll: true });
+  }, [hay, id, sinMovimiento]);
+}
+
+/**
  * `FieldError` que entra y sale animado, para usar siempre montado:
  * `<ErrorDeCampo id=… mensaje={error} />` con `mensaje` vacío = sin error.
  *
@@ -41,17 +60,7 @@ export function ErrorDeCampo({ id, mensaje, className }: { id: string; mensaje?:
   const [ultimo, setUltimo] = useState('');
   if (mensaje && mensaje !== ultimo) setUltimo(mensaje);
   const hay = Boolean(mensaje);
-  const sinMovimiento = useReducedMotion();
-
-  useEffect(() => {
-    if (!hay) return;
-    const el = document.getElementById(id);
-    if (!el) return;
-    const caja = el.getBoundingClientRect();
-    if (caja.top >= 0 && caja.bottom <= window.innerHeight) return;
-    el.scrollIntoView({ block: 'center', behavior: sinMovimiento ? 'auto' : 'smooth' });
-    document.querySelector<HTMLElement>(`[aria-describedby~="${id}"]`)?.focus({ preventScroll: true });
-  }, [hay, id, sinMovimiento]);
+  useLlevarAlError(id, hay);
 
   return (
     <Despliegue abierto={hay} className={className}>

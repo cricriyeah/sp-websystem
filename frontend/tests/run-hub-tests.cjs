@@ -30,6 +30,7 @@ const suites = {
   movimiento: ['src/lib/movimiento.ts', 'MOVIMIENTO_TEST_OUT'],
   personalizaciones: ['src/lib/pricing-paquete.ts', 'PERSONALIZACIONES_TEST_OUT'],
   variantes: ['src/components/ui/variantes.ts', 'VARIANTES_TEST_OUT'],
+  'caja-campo': ['src/components/ui/caja-campo.ts', 'CAJA_CAMPO_TEST_OUT'],
   iniciales: ['src/lib/iniciales.ts', 'INICIALES_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { AirplaneTilt, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
-import { CAJA_CAMPO } from '@/components/ui/caja-campo';
+import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { PeopleStepper } from '@/components/people-stepper';
 import { Button } from '@/components/ui/button';
@@ -233,7 +233,7 @@ export function GrupoViaje({
   {/* Lo prellenado va al final y callado: llega resuelto del paso anterior, así
       que no merece ser lo primero que el cliente lee en la tarjeta. */}
   {esLogistica ? (
-    <div className={CAJA_CAMPO}>
+    <div className={CAJA_CONTENEDOR}>
       <PeopleStepper
         compacto
         label={servicio.tipo_servicio === 'hospedaje' ? pedido.stayPeopleQuestion : pedido.transferPeopleQuestion}
@@ -250,7 +250,7 @@ export function GrupoViaje({
     <p className="text-sm text-muted">{personasTexto}</p>
   ) : (
     <div>
-      <div className={CAJA_CAMPO}>
+      <div className={CAJA_CONTENEDOR}>
         <PeopleStepper
           compacto
           label={checkout.peopleLabel}

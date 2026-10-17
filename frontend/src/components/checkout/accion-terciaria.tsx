@@ -41,13 +41,14 @@ type AccionTextoProps = {
   'aria-controls'?: string;
 };
 
-/** Botón de texto con icono; alto mínimo de 40 px para que se pueda tocar. */
+/** Botón de texto con icono; alto mínimo de 44 px para que se pueda tocar. `neutro` va en `tinta-suave`; `acento`, en café. */
 export function AccionTexto({
   onClick, children, icono, abierto, tono = 'neutro', 'aria-controls': ariaControls,
 }: AccionTextoProps) {
   return (
     <Button
-      variante={tono === 'acento' ? 'acento' : 'texto'}
+      variante="texto"
+      className={tono === 'neutro' ? 'text-tinta-suave' : undefined}
       onClick={onClick}
       aria-expanded={abierto}
       aria-controls={ariaControls}
