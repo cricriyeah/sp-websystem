@@ -5,7 +5,6 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
 import { CamposContacto } from '@/components/checkout/campos-contacto';
-import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
@@ -14,15 +13,12 @@ import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo } from '@/components/field-error';
-import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
-import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
 import { formatHour, fromLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
-import { horasDePaquete } from '@/lib/horario-servicio';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
 import {
@@ -37,7 +33,7 @@ import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
-import { FechaPaquete } from './fecha-paquete';
+import { BloqueViajePaquete } from './bloque-viaje-paquete';
 import { GrupoServicio } from './grupo-servicio';
 import { PantallaEspera } from './pantalla-espera';
 import { PantallaExito } from './pantalla-exito';
@@ -58,7 +54,7 @@ type Props = {
 };
 
 export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, retomarCheckoutId }: Props) {
-  const { checkout, booking, feedback, pedido: textos, traslados } = dict;
+  const { checkout, feedback, pedido: textos, traslados } = dict;
   const motor = paquete.es_cruza_empresa ? 'orden' : 'reserva';
   const trasladoFijo = trasladoFijoAeropuerto(paquete);
   const [estado, despachar] = usePedidoEstado(paquete, {
@@ -527,70 +523,27 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               onAction={tarjeta('viaje') === 'activo' ? undefined : () => setEditando((e) => (e === 'viaje' ? null : 'viaje'))}
               pie={tarjeta('viaje') === 'activo' ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso> : undefined}
             >
-              <ContenidoViaje
-                fecha={
-                  <FechaPaquete
-                    lang={lang}
-                    label={textos.startLabel}
-                    value={estado.inicio}
-                    onChange={(valor) => despachar({ tipo: 'inicio', valor })}
-                    minDate={minDate}
-                    chooseLabel={textos.chooseStart}
-                    viewMonthLabel={textos.viewMonth}
-                    hideMonthLabel={textos.hideMonth}
-                    previousWeekLabel={textos.previousWeek}
-                    nextWeekLabel={textos.nextWeek}
-                    previousMonthLabel={booking.prevMonth}
-                    nextMonthLabel={booking.nextMonth}
-                    personas={personasPaquete}
-                    fullLabel={checkout.dayFull}
-                  />
-                }
-                hora={paquete.pide_hora ? (
-                  <TimeField
-                    label={checkout.hourLabel}
-                    help={booking.timeHelp}
-                    value={estado.hora}
-                    availableHours={horasDePaquete(paquete)}
-                    onChange={(valor) => despachar({ tipo: 'hora', valor })}
-                  />
-                ) : undefined}
-                personas={paquete.precio_depende_de_personas && maxPersonas !== null ? (
-                  <PeopleStepper
-                    label={textos.peopleQuestion}
-                    maxNotice={textos.maxPeoplePackage.replace('{max}', String(maxPersonas))}
-                    value={personasPaquete}
-                    maxPeople={maxPersonas}
-                    minPeople={1}
-                    onChange={(valor) => {
-                      if (slugPrincipal) despachar({ tipo: 'personasPaquete', slugPrincipal, valor });
-                    }}
-                    onMaxAttempt={() => ayuda.tropezar('tope-personas')}
-                  />
-                ) : undefined}
-                nota={
-                  <>
-                    {noches !== null && salida && (
-                      <p>{textos.nightsNote.replace('{n}', String(noches)).replace('{fecha}', formatearFecha(salida))}</p>
-                    )}
-                    {paquete.precio_depende_de_personas && (
-                      <>
-                        <p className="font-medium text-foreground">
-                          {anclaMostrada} {estado.moneda}{' '}
-                          {paquete.estrategia_precio === 'por_persona'
-                            ? textos.perPerson
-                            : textos.perGroup.replace('{n}', String(paquete.personas_precio_base))}
-                        </p>
-                        {paquete.estrategia_precio === 'por_grupo' && extra !== null && (
-                          <p>{textos.extraPerson.replace('{precio}', formatearPrecio(extra, estado.moneda))}</p>
-                        )}
-                        <p>{precioPersonas}</p>
-                      </>
-                    )}
-                  </>
-                }
+              <BloqueViajePaquete
+                lang={lang}
+                dict={dict}
+                paquete={paquete}
+                minDate={minDate}
+                inicio={estado.inicio}
+                hora={estado.hora}
+                moneda={estado.moneda}
+                personasPaquete={personasPaquete}
+                maxPersonas={maxPersonas}
+                slugPrincipal={slugPrincipal}
+                noches={noches}
+                salida={salida}
+                anclaMostrada={anclaMostrada}
+                extra={extra}
+                precioPersonas={precioPersonas}
+                formatearFecha={formatearFecha}
+                errorViaje={errorViaje}
+                despachar={despachar}
+                onTopePersonas={() => ayuda.tropezar('tope-personas')}
               />
-              <ErrorDeCampo id="pedido-viaje-error" mensaje={errorViaje} />
             </CheckoutSectionCard>
             </ItemPaso>
 
