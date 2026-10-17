@@ -4,24 +4,21 @@ import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } fr
 import { Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
-import { CheckoutCalendar } from '@/components/checkout-calendar';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
 import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
-import { DateField } from '@/components/date-field';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import { PeopleStepper } from '@/components/people-stepper';
 import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { BloqueExtras } from '@/components/checkout/bloques/bloque-extras';
 import { BloquePago, BloqueTarjetaPago } from '@/components/checkout/bloques/bloque-pago';
+import { BloqueViaje } from '@/components/checkout/bloques/bloque-viaje';
+import { formatDay } from '@/components/checkout/formato-dia';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
-import { TimeField } from '@/components/time-field';
 import { useToast } from '@/components/toast';
 import { WaitNotice } from '@/components/wait-notice';
 import {
@@ -177,17 +174,6 @@ type CampoContacto = 'fullName' | 'phone' | 'email';
  * mas arriba de otro que tambien fallo desorienta.
  */
 const ORDEN_CAMPOS: CampoContacto[] = ['phone', 'fullName', 'email'];
-
-function formatDay(date: Date, lang: Locale) {
-  const locale = intlLocale(lang);
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date);
-  const month = new Intl.DateTimeFormat(locale, { month: 'long' }).format(date);
-  const day = String(date.getDate()).padStart(2, '0');
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  return lang === 'es'
-    ? `${cap(weekday)} ${day} de ${cap(month)}`
-    : `${cap(weekday)}, ${cap(month)} ${day}`;
-}
 
 export function CheckoutView({
   lang,
@@ -1341,73 +1327,29 @@ export function CheckoutView({
                   ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso>
                   : undefined}
               >
-                <ContenidoViaje
-                  fecha={
-                    <>
-                      <CheckoutCalendar
-                        lang={lang}
-                        selected={day}
-                        onSelect={setDay}
-                        minDate={minDate}
-                        personas={people}
-                        fullLabel={checkout.dayFull}
-                        weekdaysShort={checkout.weekdaysShort}
-                      />
-                      <p className="mt-5 border-t border-border pt-5 text-sm text-foreground">
-                        {formatDay(dayDate, lang)}
-                      </p>
-                    </>
-                  }
-                  hora={pideHora ? (locked ? (
-                    <p className="px-6 py-4 text-sm text-muted">
-                      {checkout.hourLabel}: <span className="text-foreground">{horaTexto}</span>
-                    </p>
-                  ) : (
-                    <TimeField
-                      label={checkout.hourLabel}
-                      help={booking.timeHelp}
-                      value={time}
-                      onChange={setTime}
-                      availableHours={horasDisponibles}
-                    />
-                  )) : undefined}
-                  personas={
-                    <PeopleStepper
-                      label={checkout.peopleLabel}
-                      maxNotice={booking.maxPeopleNotice}
-                      value={people}
-                      onChange={cambiarPersonas}
-                      disabled={locked}
-                      onMaxAttempt={() => ayuda.tropezar('tope-personas')}
-                    />
-                  }
-                  salida={tieneHospedaje ? (locked ? (
-                    <p className="text-sm text-foreground">
-                      {checkout.checkoutDateLabel}: {formatDay(fromLocalISODate(fechaSalida), lang)}
-                    </p>
-                  ) : (
-                    <div className="border border-border bg-surface">
-                      <DateField
-                        lang={lang}
-                        label={checkout.checkoutDateLabel}
-                        value={fechaSalida}
-                        onChange={setFechaSalidaManual}
-                        minDate={defaultFechaSalida}
-                        prevMonthLabel={booking.prevMonth}
-                        nextMonthLabel={booking.nextMonth}
-                        personas={people}
-                        fullLabel={checkout.dayFull}
-                        sinCupo
-                      />
-                    </div>
-                  )) : undefined}
-                  nota={precioPersonaExtra > 0 ? (
-                    <p>
-                      {checkout.extraPeopleHint
-                        .replace('{included}', String(personasIncluidas))
-                        .replace('{price}', currency.format(precioPersonaExtra))}
-                    </p>
-                  ) : undefined}
+                <BloqueViaje
+                  lang={lang}
+                  checkout={checkout}
+                  booking={booking}
+                  locked={locked}
+                  day={day}
+                  minDate={minDate}
+                  onDia={setDay}
+                  pideHora={pideHora}
+                  time={time}
+                  horaTexto={horaTexto}
+                  horasDisponibles={horasDisponibles}
+                  onHora={setTime}
+                  people={people}
+                  onPersonas={cambiarPersonas}
+                  onTopePersonas={() => ayuda.tropezar('tope-personas')}
+                  tieneHospedaje={tieneHospedaje}
+                  fechaSalida={fechaSalida}
+                  fechaSalidaMinima={defaultFechaSalida}
+                  onFechaSalida={setFechaSalidaManual}
+                  personasIncluidas={personasIncluidas}
+                  precioPersonaExtra={precioPersonaExtra}
+                  currency={currency}
                 />
               </CheckoutSectionCard>
             </ItemPaso>
