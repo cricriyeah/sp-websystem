@@ -9,6 +9,7 @@ import { SEDES_INDICE, getSedeIndice } from '@/content/sedes-indice';
 import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { guardarSedePreferida, leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefSede } from '@/lib/routes';
+import { Button } from '@/components/ui/button';
 
 export type SedeOpcion = Pick<SedeIndiceEntry, 'slug' | 'nombre'>;
 
@@ -120,8 +121,8 @@ export function SedeSelector({
 
   return (
     <div ref={ref} className={`relative inline-block text-left ${className}`}>
-      <button
-        type="button"
+      <Button
+        variante="libre"
         disabled={!puedeAbrir}
         onClick={() => puedeAbrir && setOpen((v) => !v)}
         aria-expanded={open}
@@ -139,7 +140,7 @@ export function SedeSelector({
           size={isHeader ? 12 : 14}
           className={`shrink-0 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
-      </button>
+      </Button>
 
       <AnimatePresence>
         {open && puedeAbrir && (
@@ -158,9 +159,9 @@ export function SedeSelector({
             {sedes.map((s) => {
               const selected = sedeActiva?.slug === s.slug;
               return (
-                <button
+                <Button
                   key={s.slug}
-                  type="button"
+                  variante="libre"
                   role="option"
                   aria-selected={selected}
                   onClick={() => handleSelect(s)}
@@ -175,7 +176,7 @@ export function SedeSelector({
                     <span>{s.nombre}</span>
                   </div>
                   {selected && <Check size={14} weight="bold" className="text-accent" />}
-                </button>
+                </Button>
               );
             })}
           </m.div>
