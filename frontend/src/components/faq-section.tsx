@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 
 type FaqSectionProps = {
@@ -80,7 +80,7 @@ export function FaqSection({ faq }: FaqSectionProps) {
 
                 <AnimatePresence initial={false}>
                   {abierto && (
-                    <motion.div
+                    <m.div
                       key="respuesta"
                       id={idRespuesta}
                       role="region"
@@ -106,7 +106,7 @@ export function FaqSection({ faq }: FaqSectionProps) {
                       <p className="max-w-[65ch] pb-5 pr-10 text-base leading-relaxed text-muted">
                         {item.a}
                       </p>
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
               </div>

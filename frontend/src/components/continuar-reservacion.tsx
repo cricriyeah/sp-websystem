@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { cancelarOrdenPublica, getResumenOrden, getResumenReserva, type ResumenOrden, type ResumenReserva } from '@/lib/api';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
@@ -339,9 +339,9 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   if (!aviso && !deshacerAviso) return null;
   return <>
     <AnimatePresence initial={false}>
-      {(aviso || deshacerAviso) && <motion.div key="continuar-banda" initial={sinMovimiento ? false : { height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }} transition={{ duration: sinMovimiento ? 0 : 0.25 }} className="overflow-hidden">
+      {(aviso || deshacerAviso) && <m.div key="continuar-banda" initial={sinMovimiento ? false : { height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }} transition={{ duration: sinMovimiento ? 0 : 0.25 }} className="overflow-hidden">
         {aviso}{deshacerAviso}
-      </motion.div>}
+      </m.div>}
     </AnimatePresence>
     {dialogo}
   </>;

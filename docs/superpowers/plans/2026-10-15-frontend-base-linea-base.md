@@ -31,7 +31,19 @@ Medido el 2026-10-17 sobre `qa/checkout-unificado` (HEAD 06d35c3f) con `node scr
 
   Prueba binaria con `next start`: ni el HTML de `/es/reservar` ni el de `/es/traslados` contienen `js.stripe.com`, ni ninguno de los chunks que sus `<script src>` piden (0 coincidencias). El único chunk con `js.stripe.com` (`1rohtp7phv55s.js`, 16 754 bytes) no lo pide ninguna de las dos rutas. La bajada de bytes es pequeña (−3.0 KB crudo en reservar, −11.0 en traslados) y el número de chunks sube (13→15 y 12→13); no se investigó la causa (el peso de Stripe en el chunk inicial anterior no se midió por separado). El resultado que cuenta es que Stripe.js ya no está en lo que piden estas rutas al cargar.
 
-(se anota aquí cada medición posterior: 1.2b, 1.5, 1.8, 5.5)
+- 1.8 `LazyMotion` (`domAnimation` síncrono + `strict`) con `m.*` en 18 componentes; el mapa del hub lleva `LazyMotion` anidado con `domMax` por su `drag`. Medido el 2026-10-17 con `medir-peso.cjs` tras `npm run build` (sin commitear). «Antes» = HEAD cfb717d9 recompilado en esta sesión (no la tabla de 1.2b, que quedó desfasada por 1.3-1.7):
+
+  | Ruta | Antes crudo / gzip (HEAD) | `m` desde `motion/react` | `m` desde `framer-motion` (lo que queda) |
+  |---|---|---|---|
+  | /es | 784.3 / 246.7 | 793.7 / 249.1 | 790.3 / 249.8 |
+  | /es/sede/la-paz | 811.0 / 254.1 | 820.3 / 256.4 | 770.4 / 243.2 |
+  | /es/servicio/sal-y-sol/pesca-deportiva | 774.8 / 244.0 | 784.1 / 246.3 | 734.2 / 233.1 |
+  | /es/reservar | 1014.0 / 313.4 | 1023.2 / 315.7 | 973.3 / 302.5 |
+  | /es/traslados | 940.5 / 290.8 | 949.7 / 293.1 | 899.8 / 279.9 |
+
+  Hallazgo: seguir el plan al pie de la letra (`import { m } from 'motion/react'`) **sube** ~9 KB en todas las rutas. `node_modules/motion/dist/es/react.mjs` hace `import * as fm from 'framer-motion'; const motion = fm.motion;` a nivel de módulo y Turbopack no lo descarta: cualquier import de `motion/react` arrastra el `motion` completo (con `DragGesture` y `MeasureLayout`, comprobado en el chunk) aunque nadie lo use. Importando de `framer-motion` (misma versión 12.43.0 que ya trae `motion`; declarado en `package.json`/lock) el chunk completo desaparece de las rutas sin mapa: −40.6 KB crudo / −10.9 KB gzip en sede, servicio, reservar y traslados. El hub (`/es`) queda +6.0 KB crudo porque el mapa carga `domMax` (drag) de forma síncrona; se recuperaría cargando `HubMapaSedes` con `next/dynamic` (no hecho, fuera de la tarea).
+
+(se anota aquí cada medición posterior: 1.5, 5.5)
 
 ## Task 1.7 — Sondeo de caché del catálogo (decisión pendiente del dueño)
 

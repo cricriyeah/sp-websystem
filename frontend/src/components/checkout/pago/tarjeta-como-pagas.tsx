@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { m, useReducedMotion } from 'framer-motion';
 import { CheckCircle, Lock, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
@@ -61,7 +61,7 @@ export function TarjetaComoPagas({
   ].filter(Boolean).join(' · ');
 
   const cta = abierta ? (
-    <motion.button
+    <m.button
       type="button"
       onClick={onSubmit}
       disabled={phase === 'submitting' || submitDisabled}
@@ -91,7 +91,7 @@ export function TarjetaComoPagas({
     >
       <Lock size={16} />
       {phase === 'submitting' ? checkout.submitting : (etiquetaBotonEnvio ?? checkout.payButton)}
-    </motion.button>
+    </m.button>
   ) : undefined;
 
   return (

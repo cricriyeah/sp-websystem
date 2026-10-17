@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 
 /**
  * Abre y pliega un bloque sin saltos: altura y opacidad en una sola curva, la
@@ -30,7 +30,7 @@ export function Despliegue({
   return (
     <AnimatePresence initial={false}>
       {abierto && (
-        <motion.div
+        <m.div
           key="despliegue"
           initial={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
           animate={sinMovimiento ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
@@ -41,7 +41,7 @@ export function Despliegue({
           className={`${enTransicion ? 'overflow-hidden' : 'overflow-visible'} ${className ?? ''}`}
         >
           {children}
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

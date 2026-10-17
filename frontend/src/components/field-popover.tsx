@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 
 type FieldPopoverProps = {
   label: string;
@@ -197,7 +197,7 @@ export function FieldPopover({
 
       <AnimatePresence>
         {open && posicion && (
-          <motion.div
+          <m.div
             key="panel"
             id={panelId}
             role="dialog"
@@ -226,7 +226,7 @@ export function FieldPopover({
             }`}
           >
             {children(cerrar)}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

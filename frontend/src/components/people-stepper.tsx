@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, UsersThree } from '@phosphor-icons/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { MAX_PEOPLE, MIN_PEOPLE } from '@/lib/dates';
 
 type PeopleStepperProps = {
@@ -118,7 +118,7 @@ export function PeopleStepper({
 
       <AnimatePresence>
         {showMaxNotice && (
-          <motion.span
+          <m.span
             key="max-notice"
             initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -131,7 +131,7 @@ export function PeopleStepper({
             }`}
           >
             {maxNotice}
-          </motion.span>
+          </m.span>
         )}
       </AnimatePresence>
     </div>

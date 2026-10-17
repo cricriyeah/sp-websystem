@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { m, useReducedMotion } from 'framer-motion';
 
 /**
  * Una cifra o rótulo que cambia de valor entre pasos ("Total $8,950" →
@@ -12,7 +12,7 @@ import { motion, useReducedMotion } from 'motion/react';
 export function CifraAnimada({ valor, className, children }: { valor: string; className?: string; children: ReactNode }) {
   const sinMovimiento = useReducedMotion();
   return (
-    <motion.span
+    <m.span
       key={valor}
       initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
@@ -20,6 +20,6 @@ export function CifraAnimada({ valor, className, children }: { valor: string; cl
       className={className}
     >
       {children}
-    </motion.span>
+    </m.span>
   );
 }

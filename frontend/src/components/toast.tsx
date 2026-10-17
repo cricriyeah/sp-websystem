@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { CheckCircle, Info, Warning, X } from '@phosphor-icons/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 
 /**
  * Avisos del sistema. Un solo lenguaje visual para todo lo que la pagina le dice
@@ -101,7 +101,7 @@ export function ProveedorToast({
           {toasts.map((toast) => {
             const Icono = ICONOS[toast.tipo];
             return (
-              <motion.div
+              <m.div
                 key={toast.id}
                 // Sin desplazamiento cuando el sistema pide menos movimiento: para
                 // algunas personas una animacion que entra de lado es mareo real.
@@ -121,7 +121,7 @@ export function ProveedorToast({
                 >
                   <X size={14} weight="bold" />
                 </button>
-              </motion.div>
+              </m.div>
             );
           })}
         </AnimatePresence>

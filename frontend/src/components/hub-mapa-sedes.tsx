@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, useMotionValue } from 'motion/react';
+import { LazyMotion, domMax, m, useMotionValue } from 'framer-motion';
 import { ArrowCounterClockwise, Minus, Plus, X } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeContenido } from '@/content/sedes-tipos';
@@ -46,7 +46,10 @@ export function HubMapaSedes({ lang, sedes, copy }: {
             if (event.key === 'Home') reset();
           }}
           className="relative h-[420px] overflow-hidden outline-offset-[-3px] focus-visible:outline-2 focus-visible:outline-accent sm:h-[520px]">
-          <motion.div drag dragMomentum={false} dragElastic={0.08}
+          {/* `drag` solo existe en domMax; el proveedor global trae domAnimation.
+              Sin este anidado el mapa dejaria de arrastrarse sin lanzar error. */}
+          <LazyMotion features={domMax} strict>
+          <m.div drag dragMomentum={false} dragElastic={0.08}
             dragConstraints={{ left: -800, right: 800, top: -600, bottom: 600 }}
             onDragStart={() => { arrastrando.current = true; }}
             onPointerDown={() => { arrastrando.current = false; }}
@@ -65,7 +68,8 @@ export function HubMapaSedes({ lang, sedes, copy }: {
                 </button>
               ))}
             </div>
-          </motion.div>
+          </m.div>
+          </LazyMotion>
         </div>
         <div className="absolute right-4 top-4 flex flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm">
           {[

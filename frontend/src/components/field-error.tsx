@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { WarningCircle } from '@phosphor-icons/react';
-import { useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'framer-motion';
 import { Despliegue } from '@/components/checkout/despliegue';
 
 /**

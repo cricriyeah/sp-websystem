@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { CaretDown, Check } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 
@@ -137,20 +137,20 @@ export function LangSwitch({
       >
         <current.Flag className="h-3.5 w-5" />
         <span className="uppercase tracking-wider">{current.value}</span>
-        <motion.span
+        <m.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           className="flex items-center text-muted"
           aria-hidden="true"
         >
           <CaretDown size={11} weight="bold" />
-        </motion.span>
+        </m.span>
       </button>
 
       {/* ── Panel desplegable ────────────────────────────────────────────── */}
       <AnimatePresence>
         {open && (
-          <motion.ul
+          <m.ul
             role="listbox"
             aria-label={label}
             initial={
@@ -198,7 +198,7 @@ export function LangSwitch({
                 </li>
               );
             })}
-          </motion.ul>
+          </m.ul>
         )}
       </AnimatePresence>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'framer-motion';
 
 /**
  * Lleva al cliente a la tarjeta en foco cuando él cambia de paso (confirmó uno

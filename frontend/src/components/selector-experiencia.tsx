@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'motion/react';
+import { m, useReducedMotion } from 'framer-motion';
 import { ArrowRight, ArrowSquareOut } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeDestacada } from '@/content/sedes-tipos';
@@ -80,7 +80,7 @@ export function SelectorExperiencia({
 
   return (
     <div className="relative z-10 mt-6 w-full max-w-2xl">
-        <motion.div
+        <m.div
           initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
@@ -123,7 +123,7 @@ export function SelectorExperiencia({
             {verTodoLabel}
             <ArrowRight size={14} />
           </Link>
-        </motion.div>
+        </m.div>
     </div>
   );
 }

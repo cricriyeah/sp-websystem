@@ -1,7 +1,7 @@
 'use client';
 
 import { WhatsappLogo, X } from '@phosphor-icons/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 
 /**
@@ -30,7 +30,7 @@ export function AyudaFlotante({
   return (
     <AnimatePresence>
       {visible && (
-        <motion.div
+        <m.div
           key="ayuda-flotante"
           role="complementary"
           aria-label={etiqueta}
@@ -57,7 +57,7 @@ export function AyudaFlotante({
           >
             <X size={14} weight="bold" />
           </button>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

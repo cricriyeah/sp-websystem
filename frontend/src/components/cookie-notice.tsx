@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { guardarConsentimiento, leerConsentimiento } from '@/lib/cookies';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 
@@ -59,7 +59,7 @@ export function CookieNotice({
   return (
     <AnimatePresence>
       {visible && (
-        <motion.div
+        <m.div
           // AnimatePresence necesita una key estable para saber que este hijo se
           // fue; sin ella el aviso se queda pintado despues de responder.
           key="aviso-cookies"
@@ -101,7 +101,7 @@ export function CookieNotice({
               </button>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

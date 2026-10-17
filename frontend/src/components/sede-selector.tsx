@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { CaretDown, Check, MapPin } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE, getSedeIndice } from '@/content/sedes-indice';
@@ -143,7 +143,7 @@ export function SedeSelector({
 
       <AnimatePresence>
         {open && puedeAbrir && (
-          <motion.div
+          <m.div
             role="listbox"
             aria-label={label}
             initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
@@ -178,7 +178,7 @@ export function SedeSelector({
                 </button>
               );
             })}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

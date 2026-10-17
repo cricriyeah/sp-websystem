@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { List, X } from '@phosphor-icons/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE } from '@/content/sedes-indice';
 import type { SedeIndiceEntry } from '@/content/sedes-tipos';
@@ -180,7 +180,7 @@ export function SiteHeader({
 
         <AnimatePresence>
           {open && (
-            <motion.div
+            <m.div
               key="menu-movil"
               initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -218,7 +218,7 @@ export function SiteHeader({
               <div className="py-3">
                 <WhatsappContact nav={nav} variant="menu" />
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </header>

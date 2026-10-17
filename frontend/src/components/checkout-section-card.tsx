@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { CaretLeft, Check } from '@phosphor-icons/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
 import { useDetalleAbierto } from '@/components/checkout/detalle-abierto';
 import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
@@ -240,7 +240,7 @@ export function CheckoutSectionCard({
 
       <AnimatePresence initial={false}>
         {abierto && (
-          <motion.div
+          <m.div
             key="contenido"
             initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -252,7 +252,7 @@ export function CheckoutSectionCard({
           >
             <div className={`mt-5 ${variant === 'flat' ? 'flex flex-col gap-5' : ''}`}>{children}</div>
             {pie && <PieDeTarjeta titulo={title}>{pie}</PieDeTarjeta>}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </section>

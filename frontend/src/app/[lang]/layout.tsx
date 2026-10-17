@@ -8,6 +8,7 @@ import { CookieNotice } from '@/components/cookie-notice';
 import { LangSwitch } from '@/components/lang-switch';
 import { RefCapture } from '@/components/ref-capture';
 import { ProveedorToast } from '@/components/toast';
+import { MotionProvider } from '@/components/ui/motion-provider';
 import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from '@/lib/site';
 
 // Cuerpo, cifras y toda la interfaz de reserva.
@@ -90,18 +91,21 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
       className={`${instrumentSans.variable} ${bebasNeue.variable} ${bellaFashion.variable}`}
     >
       <body suppressHydrationWarning>
-        {/* No pinta nada: solo guarda el ?ref= de la vendedora si viene en la URL. */}
-        <RefCapture />
-        {/* Envuelve todo para que cualquier pantalla pueda avisar sin montar su
-            propio sistema: un solo lenguaje visual para todo el feedback. */}
-        <ProveedorToast cerrarLabel={dict.feedback.close}>{children}</ProveedorToast>
-        {/* Selector de idioma fijo en esquina inferior izquierda para escritorio (en movil vive en el menu) */}
-        <div className="fixed bottom-6 left-6 z-40 hidden lg:block print:hidden">
-          <LangSwitch lang={lang} label={dict.nav.switchLang} placement="top" align="left" />
-        </div>
-        {/* Va fuera del proveedor de avisos: no es feedback de una accion del
-            cliente, es un tramite que se contesta una vez y no vuelve. */}
-        <CookieNotice lang={lang} cookies={dict.cookies} />
+        {/* Un solo juego de funciones de motion para todo el sitio; ver motion-provider.tsx. */}
+        <MotionProvider>
+          {/* No pinta nada: solo guarda el ?ref= de la vendedora si viene en la URL. */}
+          <RefCapture />
+          {/* Envuelve todo para que cualquier pantalla pueda avisar sin montar su
+              propio sistema: un solo lenguaje visual para todo el feedback. */}
+          <ProveedorToast cerrarLabel={dict.feedback.close}>{children}</ProveedorToast>
+          {/* Selector de idioma fijo en esquina inferior izquierda para escritorio (en movil vive en el menu) */}
+          <div className="fixed bottom-6 left-6 z-40 hidden lg:block print:hidden">
+            <LangSwitch lang={lang} label={dict.nav.switchLang} placement="top" align="left" />
+          </div>
+          {/* Va fuera del proveedor de avisos: no es feedback de una accion del
+              cliente, es un tramite que se contesta una vez y no vuelve. */}
+          <CookieNotice lang={lang} cookies={dict.cookies} />
+        </MotionProvider>
       </body>
     </html>
   );

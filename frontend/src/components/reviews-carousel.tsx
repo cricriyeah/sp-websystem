@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CaretLeft, CaretRight, Star } from '@phosphor-icons/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 
 type Resena = { quote: string; author: string };
 
@@ -63,7 +63,7 @@ export function ReviewsCarousel({ resenas, prevLabel, nextLabel }: ReviewsCarous
             lo que viene debajo (los puntos, el CTA) al cambiar de una a otra. */}
         <div className="min-h-[220px] flex-1 overflow-hidden sm:min-h-[180px]">
           <AnimatePresence mode="wait">
-            <motion.div
+            <m.div
               key={activa}
               initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
@@ -80,7 +80,7 @@ export function ReviewsCarousel({ resenas, prevLabel, nextLabel }: ReviewsCarous
                 {actual.quote}
               </p>
               <span className="text-sm text-muted">{actual.author}</span>
-            </motion.div>
+            </m.div>
           </AnimatePresence>
         </div>
 
