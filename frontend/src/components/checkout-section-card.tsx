@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { CaretLeft, Check } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
 import { useDetalleAbierto } from '@/components/checkout/detalle-abierto';
 import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
@@ -195,16 +196,18 @@ export function CheckoutSectionCard({
           informativa: un boton que no responde al click es la misma mentira
           que un CTA que no cumple lo que promete. */}
       {onAction ? (
-        <button
+        <Button
+          variante="libre"
           type="button"
           onClick={onAction}
           aria-expanded={abierto}
           className="group flex w-full items-center justify-between gap-4 text-left"
         >
           {encabezado}
-        </button>
+        </Button>
       ) : conDetalle ? (
-        <button
+        <Button
+          variante="libre"
           type="button"
           onClick={verDetalle.alternar}
           aria-expanded={detalleAbierto}
@@ -212,7 +215,7 @@ export function CheckoutSectionCard({
           className="group flex min-h-9 w-full items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
         >
           {encabezado}
-        </button>
+        </Button>
       ) : (
         <div className="flex w-full items-center justify-between gap-4 text-left">{encabezado}</div>
       )}
