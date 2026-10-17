@@ -36,10 +36,9 @@ export default async function SedePage({ params, searchParams }: Props) {
   if (slug === 'los-cabos') permanentRedirect(hrefSede(lang, 'la-ventana'));
   const contenido = getSedeContenido(slug, lang);
   if (!contenido) notFound();
-  const dict = await getDictionary(lang);
   const query = await searchParams;
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
-  const [paquetes, servicios] = await Promise.all([getPaquetesSede(slug).catch(() => []), getServiciosSede(slug).catch(() => [])]);
+  const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug).catch(() => []), getServiciosSede(slug).catch(() => [])]);
   const laPaz = slug === 'la-paz';
   // La barra de reserva de La Paz es la de la pesca: sus horas son las del servicio de pesca que pide hora.
   const pagina = <>

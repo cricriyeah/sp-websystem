@@ -34,12 +34,11 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   const { lang, empresa, servicio: slug } = await params;
   if (!hasLocale(lang)) notFound();
   const pesca = empresa === 'sal-y-sol' && slug === 'pesca-deportiva';
-  const { data: servicio, missing } = await cargar(slug, empresa);
+  // Catalogo, query y diccionario no dependen entre si: se piden a la vez.
+  const [{ data: servicio, missing }, query, dict] = await Promise.all([cargar(slug, empresa), searchParams, getDictionary(lang)]);
   const traslado = servicio?.tipo_servicio === 'transporte' || (empresa === 'transporte-la-paz' && slug === 'traslados-la-paz');
   if (missing && !pesca && !traslado) notFound();
-  const query = await searchParams;
   const sede = getSedeContenido(typeof query.sede === 'string' ? query.sede : 'la-paz', lang);
-  const dict = await getDictionary(lang);
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   const titulo = servicio?.nombre ?? (pesca ? dict.serviceDetail.fishingTitle : traslado ? dict.traslados.title : dict.serviceDetail.metaFallback);
   const hrefReserva = servicio
