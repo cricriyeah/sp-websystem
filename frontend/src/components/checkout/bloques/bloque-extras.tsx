@@ -5,6 +5,8 @@ import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/field-error';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { Moneda, ServicioPersonalizacionCatalogo } from '@/lib/api';
 import { aMoneda } from '@/lib/moneda';
 import {
@@ -75,7 +77,8 @@ export function BloqueExtras({
             className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
           >
             <span className="flex items-start gap-3">
-              <input
+              <Input
+                aspecto="heredado"
                 id={`personalizacion-${sp.id}`}
                 type="checkbox"
                 checked={marcada}
@@ -108,7 +111,8 @@ export function BloqueExtras({
             <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-surface px-4 py-2.5 text-sm text-foreground">
               <span className="text-muted">{checkout.licenseQuantity.question}</span>
               <span className="flex items-center gap-2">
-                <button
+                <Button
+                  variante="libre"
                   type="button"
                   onClick={() => onCantidad(sp.id, -1)}
                   disabled={locked || cantidad <= 1}
@@ -116,9 +120,10 @@ export function BloqueExtras({
                   className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30"
                 >
                   <Minus size={12} />
-                </button>
+                </Button>
                 <span>{deLabel(cantidad, people)}</span>
-                <button
+                <Button
+                  variante="libre"
                   type="button"
                   onClick={() => onCantidad(sp.id, 1)}
                   disabled={locked || cantidad >= people}
@@ -126,7 +131,7 @@ export function BloqueExtras({
                   className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30"
                 >
                   <Plus size={12} />
-                </button>
+                </Button>
               </span>
             </div>
           )}
@@ -161,7 +166,8 @@ export function BloqueExtras({
           {sp.nombre}
           {sp.obligatorio ? ' *' : ''}
         </span>
-        <input
+        <Input
+          aspecto="heredado"
           id={`personalizacion-${sp.id}`}
           type={sp.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
           step={sp.tipo_interaccion === 'input_numero' ? 'any' : undefined}
