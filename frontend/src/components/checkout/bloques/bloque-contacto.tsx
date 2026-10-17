@@ -10,10 +10,10 @@ type Props = {
   checkout: Dictionary['checkout'];
   valores: Record<CampoContacto, string>;
   errores: Partial<Record<CampoContacto, string>>;
-  /** Para mandarle el foco al primer campo con error (lo hace `CheckoutView`). */
-  refs: Record<CampoContacto, Ref<HTMLInputElement>>;
-  /** Con el pago en curso los datos ya no se editan. */
-  disabled: boolean;
+  /** Para mandarle el foco al primer campo con error (lo hace `CheckoutView`); el paquete no lo usa. */
+  refs?: Record<CampoContacto, Ref<HTMLInputElement>>;
+  /** Con el pago en curso los datos ya no se editan; el paquete no bloquea la tarjeta de datos. */
+  disabled?: boolean;
   onCambio: (campo: CampoContacto, valor: string) => void;
 };
 

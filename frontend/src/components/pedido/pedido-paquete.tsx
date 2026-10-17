@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { CamposContacto } from '@/components/checkout/campos-contacto';
+import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
@@ -555,12 +555,11 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 onAction={tarjeta('contacto') === 'activo' ? undefined : () => setEditando((e) => (e === 'contacto' ? null : 'contacto'))}
                 pie={tarjeta('contacto') === 'activo' ? <BotonPaso onClick={confirmarDatos}>{checkout.confirmStep}</BotonPaso> : undefined}
               >
-                <CamposContacto
+                <BloqueContacto
                   idPrefijo="pedido"
+                  checkout={checkout}
                   valores={estado.contacto}
                   errores={erroresContacto}
-                  etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
-                    ejemplos={checkout.contactExamples}
                   onCambio={(campo, valor) => despachar({ tipo: 'contacto', cambios: { [campo]: valor } })}
                 />
               </CheckoutSectionCard>
