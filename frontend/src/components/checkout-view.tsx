@@ -20,6 +20,7 @@ import { BloqueViaje } from '@/components/checkout/bloques/bloque-viaje';
 import { formatDay } from '@/components/checkout/formato-dia';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { useToast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { WaitNotice } from '@/components/wait-notice';
 import {
   ApiError,
@@ -1279,7 +1280,8 @@ export function CheckoutView({
                 cambiar de fecha: para un turista con vuelo el jueves, el
                 siguiente dia libre puede no servirle de nada. */}
             {sinLugar.alternativa && (
-              <button
+              <Button
+                variante="libre"
                 type="button"
                 onClick={() => {
                   const nueva = sinLugar.alternativa!;
@@ -1298,7 +1300,7 @@ export function CheckoutView({
                   '{date}',
                   formatDay(fromLocalISODate(sinLugar.alternativa), lang),
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>
