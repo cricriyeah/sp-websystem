@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { preconnect } from 'react-dom';
 import { cache } from 'react';
 import { getDictionary, hasLocale } from '../../../dictionaries';
-import { ApiError, getServicioDetalle } from '@/lib/api';
+import { API_URL, ApiError, getServicioDetalle } from '@/lib/api';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { alternativasDe } from '@/lib/site';
 import { hrefServicio } from '@/lib/booking-href';
@@ -31,6 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title, alternates: alternativasDe(lang, `/servicio/${empresa}/${servicio}`) };
 }
 export default async function ServicioPage({ params, searchParams }: Props) {
+  // La conexion es de fetch CORS: sin crossOrigin el navegador abriria otra.
+  preconnect(API_URL, { crossOrigin: 'anonymous' });
   const { lang, empresa, servicio: slug } = await params;
   if (!hasLocale(lang)) notFound();
   const pesca = empresa === 'sal-y-sol' && slug === 'pesca-deportiva';

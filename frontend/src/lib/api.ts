@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 // Mismo slug que crea `tenancy.0002_crear_sede_empresa_la_paz` en el backend.
 const EMPRESA_SLUG = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol';
 
@@ -143,7 +143,8 @@ async function request<T>(path: string, init?: RequestInit, empresaSlug?: string
   try {
     res = await fetch(`${API_URL}${rutaConEmpresa}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      // Content-Type solo con body: en un GET cross-origin fuerza un preflight (OPTIONS) en cada consulta.
+      headers: { ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
     });
   } catch (causa) {
     // Sin red, `fetch` lanza un TypeError pelado. Se convierte en ApiError con

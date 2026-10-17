@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { preconnect } from 'react-dom';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
 import { PedidoPaquete } from '@/components/pedido/pedido-paquete';
-import { getPaqueteDetalle, getServicioDetalle, getTraslados, type PaqueteCatalogo, type ServicioCatalogo, type TrasladosCatalogo } from '@/lib/api';
+import { API_URL, getPaqueteDetalle, getServicioDetalle, getTraslados, type PaqueteCatalogo, type ServicioCatalogo, type TrasladosCatalogo } from '@/lib/api';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { horasDeServicio } from '@/lib/horario-servicio';
 import { alternativasDe } from '@/lib/site';
@@ -28,6 +29,8 @@ export default async function ReservarPage({
   params,
   searchParams,
 }: PageProps<'/[lang]/reservar'>) {
+  // La conexion es de fetch CORS: sin crossOrigin el navegador abriria otra.
+  preconnect(API_URL, { crossOrigin: 'anonymous' });
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
 

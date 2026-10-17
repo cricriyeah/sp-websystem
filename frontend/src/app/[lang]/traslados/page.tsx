@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { preconnect } from 'react-dom';
 import { Warning, ArrowLeft, WhatsappLogo } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale } from '../dictionaries';
-import { getTraslados, getSedes } from '@/lib/api';
+import { API_URL, getTraslados, getSedes } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { SEDES_INDICE } from '@/content/sedes-indice';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
@@ -32,6 +33,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function TrasladosPage({ params, searchParams }: PageProps) {
+  // La conexion es de fetch CORS: sin crossOrigin el navegador abriria otra.
+  preconnect(API_URL, { crossOrigin: 'anonymous' });
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
 
