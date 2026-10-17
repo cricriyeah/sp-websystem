@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ListBullets } from '@phosphor-icons/react';
 import { CAJA_CAMPO, CAJA_CAMPO_ERROR } from '@/components/checkout/estilos';
 import { FieldPopover } from '@/components/field-popover';
+import { Button } from '@/components/ui/button';
 
 type Opcion = { valor: string; etiqueta: string };
 
@@ -51,19 +52,19 @@ export function SelectPersonalizado({
         {(cerrar) => (
           <div className="max-h-72 w-full overflow-y-auto sm:w-80">
             {sinRespuestaLabel && (
-              <button type="button" onClick={() => { onChange(''); cerrar(); }}
+              <Button variante="libre" type="button" onClick={() => { onChange(''); cerrar(); }}
                 className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-background">
                 {sinRespuestaLabel}
-              </button>
+              </Button>
             )}
             {opciones.map((opcion) => (
-              <button key={opcion.valor} type="button"
+              <Button variante="libre" key={opcion.valor} type="button"
                 onClick={() => { onChange(opcion.valor); cerrar(); }}
                 className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                   opcion.valor === value ? 'bg-accent font-medium text-accent-foreground' : 'text-foreground hover:bg-background'
                 }`}>
                 <span className="truncate pr-2">{opcion.etiqueta}</span>
-              </button>
+              </Button>
             ))}
           </div>
         )}
