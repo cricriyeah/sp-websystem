@@ -1,22 +1,19 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Buildings, ListBullets, MapPin } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorDeCampo } from '@/components/field-error';
-import { FieldPopover } from '@/components/field-popover';
 import { PeopleStepper } from '@/components/people-stepper';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
-import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { BloquePago, BloqueTarjetaPago } from '@/components/checkout/bloques/bloque-pago';
+import { BloqueRecogida } from '@/components/checkout/bloques/bloque-recogida';
 import { BotonPaso } from '@/components/checkout/boton-paso';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { Despliegue } from '@/components/checkout/despliegue';
-import { CAJA_CAMPO } from '@/components/checkout/estilos';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { formatDay } from '@/components/checkout/formato-dia';
 import { ItemPaso } from '@/components/checkout/item-paso';
@@ -805,119 +802,30 @@ export function TrasladoView({
                     ? <BotonPaso conFlecha onClick={confirmarRecogida}>{checkout.confirmStep}</BotonPaso>
                     : undefined}
                 >
-                  <div className="flex flex-col gap-3">
-                    <Despliegue abierto={modoHospedaje === 'catalogo'}>
-                      <div className={CAJA_CAMPO}>
-                        <FieldPopover
-                          compacto
-                          label={traslados.fields.puntoEncuentro}
-                          value={puntoSeleccionado?.nombre ?? ''}
-                          vacio={puntoEncuentroId === null}
-                          placeholder={traslados.fields.puntoEncuentroPlaceholder}
-                          icon={<Buildings size={20} className="shrink-0 text-muted" />}
-                        >
-                          {(cerrar) => (
-                            <div className="max-h-72 w-full overflow-y-auto sm:w-80">
-                              {catalogo.puntos_encuentro.map((punto) => (
-                                <button
-                                  key={punto.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setPuntoEncuentroId(punto.id);
-                                    cerrar();
-                                  }}
-                                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                                    punto.id === puntoEncuentroId
-                                      ? 'bg-accent font-medium text-accent-foreground'
-                                      : 'text-foreground hover:bg-background'
-                                  }`}
-                                >
-                                  <span className="truncate pr-2">{punto.nombre}</span>
-                                  <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase opacity-75">
-                                    {punto.zona}
-                                  </span>
-                                </button>
-                              ))}
-                              {/* La otra dirección es una opción más de ESTA pregunta. */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setModoHospedaje('personalizada');
-                                  setPuntoEncuentroId(null);
-                                  cerrar();
-                                }}
-                                className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-background"
-                              >
-                                <MapPin size={16} className="shrink-0 text-muted" />
-                                {traslados.fields.otraDireccionOpcion}
-                              </button>
-                            </div>
-                          )}
-                        </FieldPopover>
-                      </div>
-                    </Despliegue>
-
-                    <Despliegue abierto={modoHospedaje !== 'catalogo'}>
-                      <div className="flex flex-col gap-3">
-                        <label className="flex flex-col gap-1.5 text-sm">
-                          <span className="text-muted">{traslados.fields.otraDireccion}</span>
-                          <span className="relative">
-                            <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-                            <input
-                              type="text"
-                              value={direccionPersonalizada}
-                              onChange={(e) => setDireccionPersonalizada(e.target.value)}
-                              placeholder={traslados.fields.direccionPlaceholder}
-                              className={`w-full ${CAJA_CAMPO} py-3 pr-4 pl-11 text-sm text-foreground outline-none focus:border-accent`}
-                            />
-                          </span>
-                        </label>
-                        <AccionTexto
-                          icono={<ListBullets size={14} />}
-                          onClick={() => {
-                            setModoHospedaje('catalogo');
-                            setDireccionPersonalizada('');
-                            setZonaPersonalizada('');
-                            setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
-                          }}
-                        >
-                          {traslados.fields.volverALista}
-                        </AccionTexto>
-                        <Despliegue abierto={tipoTraslado === 'redondo_actividad'}>
-                          <fieldset className="grid grid-cols-2 gap-3">
-                            <legend className="sr-only">{traslados.fields.zona}</legend>
-                            {(['centro', 'periferia'] as const).map((z) => (
-                              <label
-                                key={z}
-                                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm ${
-                                  zonaPersonalizada === z ? 'border-accent bg-surface font-medium' : 'border-border text-muted'
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="zona-personalizada"
-                                  value={z}
-                                  checked={zonaPersonalizada === z}
-                                  onChange={() => setZonaPersonalizada(z)}
-                                  className="h-4 w-4 accent-accent"
-                                />
-                                {z === 'centro' ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
-                              </label>
-                            ))}
-                          </fieldset>
-                          <p className="mt-2 text-xs text-muted">{traslados.fields.zonaRequiredNotice}</p>
-                        </Despliegue>
-                      </div>
-                    </Despliegue>
-
-                    <Despliegue abierto={tipoTraslado === 'redondo_actividad' && modoHospedaje === 'catalogo' && puntoEncuentroId !== null}>
-                      <p className="text-xs text-muted">
-                        {traslados.fields.zona}: {puntoSeleccionado?.zona === 'centro'
-                          ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
-                      </p>
-                    </Despliegue>
-                  </div>
-                  <ErrorDeCampo id="error-recogida" mensaje={errorPaso2} />
+                  <BloqueRecogida
+                    traslados={traslados}
+                    puntosEncuentro={catalogo.puntos_encuentro}
+                    puntoSeleccionado={puntoSeleccionado}
+                    puntoEncuentroId={puntoEncuentroId}
+                    modoHospedaje={modoHospedaje}
+                    direccionPersonalizada={direccionPersonalizada}
+                    zonaPersonalizada={zonaPersonalizada}
+                    tipoTraslado={tipoTraslado}
+                    error={errorPaso2}
+                    onPunto={setPuntoEncuentroId}
+                    onOtraDireccion={() => {
+                      setModoHospedaje('personalizada');
+                      setPuntoEncuentroId(null);
+                    }}
+                    onDireccion={setDireccionPersonalizada}
+                    onVolverALista={() => {
+                      setModoHospedaje('catalogo');
+                      setDireccionPersonalizada('');
+                      setZonaPersonalizada('');
+                      setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
+                    }}
+                    onZona={setZonaPersonalizada}
+                  />
                 </CheckoutSectionCard>
               </ItemPaso>
             )}
