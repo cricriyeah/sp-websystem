@@ -102,8 +102,8 @@ export function BloqueExtras({
             </span>
           </label>
           {!marcada && sp.aviso_reforzado && (
-            <div className="flex items-start gap-2 border border-t-0 border-action/40 bg-action/10 px-4 py-2.5 text-xs text-foreground">
-              <Warning size={14} className="mt-0.5 shrink-0 text-action" />
+            <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-2.5 text-xs text-foreground">
+              <Warning size={14} className="mt-0.5 shrink-0 text-aviso" />
               <p>{checkout.amenitiesModal.reinforcedWarning}</p>
             </div>
           )}
