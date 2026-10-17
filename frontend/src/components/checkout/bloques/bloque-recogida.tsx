@@ -82,7 +82,7 @@ export function BloqueRecogida({
                       }`}
                     >
                       <span className="truncate pr-2">{punto.nombre}</span>
-                      <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase opacity-75">
+                      <span className="shrink-0 texto-pie font-medium opacity-75">
                         {punto.zona}
                       </span>
                     </Button>

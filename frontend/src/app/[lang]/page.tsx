@@ -33,13 +33,13 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
       <section id="hub-mapa-destinos" className="scroll-mt-28 mx-auto max-w-[1440px] px-6 pb-12 pt-[calc(var(--nav-alto)+3rem)] sm:px-8 lg:px-12">
         <div className="mb-8 max-w-3xl">
           <p className="mb-3 text-sm font-semibold text-accent">{dict.hub.nombreAgencia}</p>
-          <h1 className="text-5xl leading-[1.05] text-foreground sm:text-6xl">{dict.hub.headline}</h1>
+          <h1 className="texto-display text-foreground">{dict.hub.headline}</h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted">{dict.hub.mision}</p>
         </div>
         <HubMapaSedes lang={lang} sedes={sedes} copy={dict.hub} />
       </section>
       <section id="sedes" className="scroll-mt-28 mx-auto max-w-[1440px] px-6 py-12 sm:px-8 lg:px-12">
-        <h2 className="mb-8 text-4xl sm:text-5xl">{dict.hub.destinationsTitle}</h2>
+        <h2 className="mb-8 texto-seccion">{dict.hub.destinationsTitle}</h2>
         <HubGridSedes lang={lang} sedes={sedes} copy={dict.hub} />
       </section>
       <HubPorQue headline={dict.hub.aboutTitle} pilares={dict.hub.pilares} />

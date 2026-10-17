@@ -1162,7 +1162,7 @@ export function CheckoutView({
   if (phase === 'cancelada') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-        <h1 className="text-xl font-semibold text-foreground">{checkout.lugarNoAseguradoTitulo}</h1>
+        <h1 className="texto-subtitulo text-foreground">{checkout.lugarNoAseguradoTitulo}</h1>
         <p className="max-w-md text-sm text-foreground/80">{checkout.lugarNoAseguradoCuerpo}</p>
         <BotonPaso onClick={elegirOtraFecha}>{checkout.eligeOtraFecha}</BotonPaso>
       </div>
@@ -1265,7 +1265,6 @@ export function CheckoutView({
         volverLabel={checkout.back}
         encabezado={
           <EncabezadoCompra
-            kicker={checkout.purchaseKicker}
             nombre={servicioNombre || servicio?.nombre || ''}
           />
         }

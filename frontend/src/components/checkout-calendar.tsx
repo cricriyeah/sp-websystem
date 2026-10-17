@@ -141,7 +141,7 @@ export function CheckoutCalendar({
                       : 'border-border text-foreground hover:border-accent/50'
               }`}
             >
-              <span className="text-[11px] opacity-80">{weekdaysShort[(date.getDay() + 6) % 7]}</span>
+              <span className="texto-pie opacity-80">{weekdaysShort[(date.getDay() + 6) % 7]}</span>
               <span className="font-medium">{date.getDate()}</span>
             </button>
           );
@@ -151,7 +151,7 @@ export function CheckoutCalendar({
       {/* No va en un `title`: Chrome no muestra el tooltip de un boton
           deshabilitado y en movil no hay hover. */}
       {Object.values(disponibilidad).some(Boolean) && (
-        <p className="mt-3 text-[11px] leading-snug text-muted">{fullLabel}</p>
+        <p className="mt-3 texto-pie leading-snug text-muted">{fullLabel}</p>
       )}
     </div>
   );

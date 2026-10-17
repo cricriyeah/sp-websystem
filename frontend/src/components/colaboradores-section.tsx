@@ -26,7 +26,7 @@ export function ColaboradoresSection({ sedes, lang, copy, id = 'colaboradores' }
   return (
     <section id={id} className="scroll-mt-28 border-t border-border bg-surface py-16">
       <div className="mx-auto max-w-[1440px] px-6 sm:px-8 lg:px-12">
-        <h2 className="text-4xl text-foreground sm:text-5xl">{copy.partnersTitle}</h2>
+        <h2 className="texto-seccion text-foreground">{copy.partnersTitle}</h2>
         <p className="mt-4 max-w-2xl text-muted">{copy.partnersIntro}</p>
         <div className="mt-10 grid gap-x-12 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
           {[...marcas].map(([slug, marca]) => (

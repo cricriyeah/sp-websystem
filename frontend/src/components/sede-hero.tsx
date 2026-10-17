@@ -55,7 +55,7 @@ export function SedeHero({
         objectPosition={contenido.posicionImagen}
       >
         <div className="mx-auto w-full max-w-6xl px-6 pt-[calc(5rem_+_var(--nav-alto))] pb-10 sm:px-8 lg:px-12 lg:pt-[calc(7rem_+_var(--nav-alto))] lg:pb-16">
-          <h1 className="titulo-entra max-w-[19ch] text-[38px] leading-[1.02] text-hero-ink sm:text-6xl lg:text-[76px] lg:leading-[0.98]">
+          <h1 className="titulo-entra max-w-[19ch] texto-display text-hero-ink">
             {contenido.titulo.start} {contenido.titulo.emphasis} {contenido.titulo.end}
           </h1>
           <p className="titulo-entra titulo-entra-tarde mt-5 max-w-[52ch] text-base leading-relaxed text-hero-ink-soft lg:mt-6 lg:text-lg">

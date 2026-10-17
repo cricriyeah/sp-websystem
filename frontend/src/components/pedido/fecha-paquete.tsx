@@ -89,7 +89,7 @@ export function FechaPaquete({
       {!sinEncabezado && (
         <>
           <p className="text-sm font-medium text-foreground">{label}</p>
-          <p className={`mt-1 text-sm first-letter:uppercase ${seleccionVigente ? 'text-foreground' : 'text-muted'}`}>
+          <p className={`mt-1 text-sm first-letter:capitalize ${seleccionVigente ? 'text-foreground' : 'text-muted'}`}>
             {seleccionVigente ? formatoCompleto.format(fromLocalISODate(seleccionVigente)) : chooseLabel}
           </p>
         </>
@@ -102,7 +102,7 @@ export function FechaPaquete({
           <CaretLeft size={17} />
         </Button>
         <Deslizable clave={etiquetaMes} direccion={direccion}>
-          <span className="block text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</span>
+          <span className="block text-sm font-medium text-foreground first-letter:capitalize">{etiquetaMes}</span>
         </Deslizable>
         <Button variante="libre" type="button" onClick={() => moverSemana(1)} aria-label={nextWeekLabel}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-cafe-bruma hover:text-foreground">
@@ -123,7 +123,7 @@ export function FechaPaquete({
                   : pasada ? 'cursor-not-allowed border-border text-muted/40'
                     : 'border-border text-foreground hover:border-accent hover:bg-cafe-bruma'
               }`}>
-              <span className="text-[11px] first-letter:uppercase">{formatoDia.format(fecha).replace('.', '').slice(0, 2)}</span>
+              <span className="texto-pie first-letter:capitalize">{formatoDia.format(fecha).replace('.', '').slice(0, 2)}</span>
               <span>{fecha.getDate()}</span>
             </Button>
           );
@@ -184,7 +184,7 @@ export function FechaRegresoCompacta({ changeButtonLabel, doneButtonLabel, ...pr
           className="group flex w-full items-center justify-between gap-3 text-left">
           <span className="min-w-0">
             <span className="block text-sm font-medium text-foreground">{label}</span>
-            <span className="mt-0.5 block truncate text-sm text-foreground first-letter:uppercase">
+            <span className="mt-0.5 block truncate text-sm text-foreground first-letter:capitalize">
               {vigente ? formato.format(fromLocalISODate(vigente)).replace('.', '') : ''}
             </span>
           </span>

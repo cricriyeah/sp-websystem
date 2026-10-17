@@ -60,7 +60,7 @@ export function SectionShell({
       {regla ? <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" /> : null}
       <h2
         id={idTitulo}
-        className={`${ANCHOS_TITULO[anchoTitulo]} text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[58px]`}
+        className={`${ANCHOS_TITULO[anchoTitulo]} texto-seccion text-foreground`}
       >
         {titulo}
       </h2>

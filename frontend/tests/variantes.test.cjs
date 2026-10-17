@@ -170,7 +170,7 @@ test('el diálogo de alerta es centrado, con tokens y botones apilados en móvil
   assert.match(dialogo, /\bp-6\b/);
   assert.match(dialogo, /shadow-n2/);
   assert.match(dialogo, /alerta-dialogo/);
-  assert.match(titulo, /texto-subtitulo/);
+  assert.match(titulo, /text-foreground/); // el tamaño (texto-subtitulo) va en el <h2>
   assert.match(cuerpo, /texto-cuerpo/);
   assert.match(acciones, /flex-col/);
   assert.match(acciones, /sm:flex-row/);

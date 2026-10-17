@@ -36,7 +36,7 @@ export function ServiciosSueltosSection({
     <section className={`${mostrarVacio ? '' : 'mt-16 border-t border-border/70 pt-12'} ${className}`}>
       {/* Encabezado secundario de camino alternativo */}
       <div className="max-w-2xl">
-        {!mostrarVacio && <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
+        {!mostrarVacio && <div className="inline-flex items-center gap-1.5 texto-pie font-semibold text-muted">
           <Compass size={14} className="text-accent" />
           <span>{dict.servicesLabel}</span>
         </div>}
@@ -61,16 +61,16 @@ export function ServiciosSueltosSection({
             >
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-md bg-muted/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-muted">
+                  <span className="rounded-md bg-muted/10 px-2 py-0.5 texto-pie font-medium text-muted first-letter:capitalize">
                     {servicio.tipo_servicio.replace('_', ' ')}
                   </span>
                   <div className="text-right">
                     {servicio.tipo_servicio === 'transporte' ? <span className="text-xs text-muted">{dict.quoteRoute}</span> : <>
-                    <span className="text-[11px] text-muted">{dict.fromPrice} </span>
+                    <span className="texto-pie text-muted">{dict.fromPrice} </span>
                     <span className="text-base font-bold text-foreground">
                       {formatearPrecio(precio, moneda)}
                     </span>
-                    <span className="ml-1 text-[10px] text-muted uppercase">{moneda}</span>
+                    <span className="ml-1 texto-pie text-muted">{moneda}</span>
                     </>}
                   </div>
                 </div>
@@ -90,13 +90,13 @@ export function ServiciosSueltosSection({
                     {servicio.personalizaciones.slice(0, 3).map((p) => (
                       <span
                         key={p.id}
-                        className="rounded bg-superficie px-1.5 py-0.5 text-[10px] text-muted border border-border/60"
+                        className="rounded bg-superficie px-1.5 py-0.5 texto-pie text-muted border border-border/60"
                       >
                         +{p.nombre}
                       </span>
                     ))}
                     {servicio.personalizaciones.length > 3 && (
-                      <span className="text-[10px] text-muted self-center">
+                      <span className="texto-pie text-muted self-center">
                         +{servicio.personalizaciones.length - 3} {dict.moreItems}
                       </span>
                     )}

@@ -25,16 +25,13 @@ export default async function NotFound() {
           className="font-display leading-none text-accent select-none"
           style={{
             fontSize: 'clamp(7rem, 18vw, 14rem)',
-            letterSpacing: 'var(--tracking-titulo)',
+            letterSpacing: '-0.02em',
           }}
         >
           404
         </p>
 
-        <h1
-          className="mt-4 font-display text-3xl leading-tight text-foreground sm:text-4xl"
-          style={{ letterSpacing: 'var(--tracking-titulo)' }}
-        >
+        <h1 className="mt-4 texto-pagina text-foreground">
           {copy.headline}
         </h1>
 

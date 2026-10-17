@@ -51,7 +51,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: 
       <div className="relative mx-auto max-w-6xl px-6 pt-20 sm:px-8 lg:px-12 lg:pt-24">
         <div className="grid gap-10 pb-16 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-12">
           <div className="flex flex-col items-start gap-5">
-            <h2 className="max-w-[13ch] text-3xl leading-[1.05] text-foreground lg:text-[38px]">
+            <h2 className="max-w-[13ch] texto-seccion text-foreground">
               {footer.headline}
             </h2>
             <Link

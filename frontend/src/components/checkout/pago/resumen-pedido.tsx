@@ -18,7 +18,7 @@ export function ResumenPedido({
           {lineasViaje.map((linea) => (
             <div key={linea.etiqueta} className="flex items-baseline justify-between gap-4 text-sm">
               <dt className="text-muted">{linea.etiqueta}</dt>
-              <dd className="text-right text-foreground first-letter:uppercase">{linea.valor}</dd>
+              <dd className="text-right text-foreground first-letter:capitalize">{linea.valor}</dd>
             </div>
           ))}
         </dl>

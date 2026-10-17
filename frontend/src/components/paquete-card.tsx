@@ -43,7 +43,7 @@ export function PaqueteCard({
     >
       {/* Badge superior de producto dominante (Perception-First Design) */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-4">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
           <Sparkle size={13} weight="fill" />
           <span>{dict.featuredBadge}</span>
         </div>
@@ -68,14 +68,14 @@ export function PaqueteCard({
       <div className="mt-6 rounded-xl border border-border/80 bg-superficie/70 p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <span className="text-xs font-medium uppercase tracking-wider text-muted">
+            <span className="text-xs font-medium text-muted">
               {dict.anchorPrice}
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-foreground sm:text-4xl">
                 {formatearPrecio(calculo.precioFinal, moneda)}
               </span>
-              <span className="text-xs font-semibold text-muted uppercase">{moneda}</span>
+              <span className="text-xs font-semibold text-muted">{moneda}</span>
             </div>
           </div>
         </div>

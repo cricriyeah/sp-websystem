@@ -70,7 +70,7 @@ export function SeasonSection({ season }: SeasonSectionProps) {
                 {row.months.map((mes) => (
                   <span
                     key={mes}
-                    className="flex-1 text-center text-[10px] whitespace-nowrap text-muted sm:text-xs"
+                    className="flex-1 text-center texto-pie whitespace-nowrap text-muted"
                   >
                     {mes}
                   </span>
@@ -107,7 +107,7 @@ export function SeasonSection({ season }: SeasonSectionProps) {
               />
 
               {i === TEMPORADA_FUERTE && (
-                <span className="absolute top-4 left-4 bg-action px-2.5 py-1 text-[11px] font-semibold text-action-foreground">
+                <span className="absolute top-4 left-4 bg-action px-2.5 py-1 texto-pie font-semibold text-action-foreground">
                   {season.strongLabel}
                 </span>
               )}

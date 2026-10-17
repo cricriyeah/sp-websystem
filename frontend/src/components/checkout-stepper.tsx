@@ -61,7 +61,7 @@ export function CheckoutStepper({ stepper, actual, steps, totalMovil, rotulo, to
           </p>
           {totalMovil && (
             <CifraAnimada valor={`${rotulo ?? ''}|${totalMovil}`} className="flex shrink-0 flex-col items-end leading-tight">
-              {rotulo && <span className="text-[10px] font-normal text-muted">{rotulo}</span>}
+              {rotulo && <span className="texto-pie font-normal text-muted">{rotulo}</span>}
               <span className="text-xs font-semibold text-foreground">{totalMovil}</span>
             </CifraAnimada>
           )}

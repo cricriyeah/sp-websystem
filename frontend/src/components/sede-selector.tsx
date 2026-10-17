@@ -153,7 +153,7 @@ export function SedeSelector({
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className="absolute left-0 top-full z-50 mt-2 min-w-[200px] rounded-xl border border-border bg-superficie p-1.5 shadow-n2"
           >
-            <div className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">
+            <div className="px-3 py-1.5 texto-pie font-medium text-muted">
               {label}
             </div>
             {sedes.map((s) => {

@@ -425,7 +425,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         volverLabel={textos.back}
         encabezado={
           <EncabezadoCompra
-            kicker={checkout.purchaseKicker}
             nombre={paquete.nombre}
             detalle={detalleCompra}
           />

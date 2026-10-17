@@ -35,7 +35,7 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
       <main className="mx-auto max-w-3xl px-6 pt-[calc(3rem_+_var(--nav-alto))] pb-12 sm:px-8 lg:px-12">
       <LegalBackLink label={page.back} fallbackHref={`/${lang}/reservar`} />
 
-      <h1 className="mt-8 font-sans text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
+      <h1 className="mt-8 texto-pagina text-foreground">
         {page.title}
       </h1>
       <p className="mt-2 text-sm text-muted">{page.updated}</p>
@@ -46,7 +46,7 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
       <div className="mt-12 flex flex-col gap-10 border-t border-border pt-10">
         {page.sections.map((section) => (
           <section key={section.title}>
-            <h2 className="font-sans text-base font-medium tracking-tight text-foreground">{section.title}</h2>
+            <h2 className="texto-subtitulo text-foreground">{section.title}</h2>
             <div className="mt-3">
               <TextoLegal texto={section.body} />
             </div>

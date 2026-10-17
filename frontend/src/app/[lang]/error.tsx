@@ -26,10 +26,7 @@ export default function ErrorDePagina({
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-6 text-center sm:px-8">
-      <h1
-        className="font-display text-3xl leading-tight text-foreground sm:text-4xl"
-        style={{ letterSpacing: 'var(--tracking-titulo)' }}
-      >
+      <h1 className="texto-pagina text-foreground">
         {titulo}
       </h1>
       <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-muted">{cuerpo}</p>

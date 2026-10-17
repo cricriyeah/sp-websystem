@@ -24,6 +24,15 @@ test('cuenta controles y colores crudos', () => {
   assert.equal(contar('className="shadow-lg"', 'sombra-cruda'), 1);
   assert.equal(contar('className="shadow-n2"', 'sombra-cruda'), 0);
   assert.equal(contar('className="bg-surface-deep"', 'surface-deep'), 1);
+  assert.equal(contar('<h1 className="texto-display">', 'titular-sin-escala'), 0);
+  assert.equal(contar('<h2 id="x" className="mt-2 texto-seccion text-foreground">', 'titular-sin-escala'), 0);
+  assert.equal(contar('<h2 className="font-sans texto-pequeno">', 'titular-sin-escala'), 0);
+  assert.equal(contar('<h1 className="text-5xl">', 'titular-sin-escala'), 1);
+  assert.equal(contar('<h2>', 'titular-sin-escala'), 1);
+  assert.equal(contar('<h1\n  className="text-3xl"\n>', 'titular-sin-escala'), 1); // etiqueta en varios renglones
+  assert.equal(contar('<h1\n  className="texto-pagina"\n>', 'titular-sin-escala'), 0);
+  assert.equal(contar('<h3 className="text-xl">', 'titular-sin-escala'), 0); // solo h1 y h2
+  assert.equal(contar('<header className="x">', 'titular-sin-escala'), 0);
   assert.equal(contar('className="bg-surface p-4"', 'bg-surface-uso'), 1);
   assert.equal(contar('className="bg-surface-deep"', 'bg-surface-uso'), 0); // surface-deep tiene su regla
   assert.equal(contar('className="bg-superficie"', 'bg-surface-uso'), 0);

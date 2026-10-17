@@ -74,7 +74,7 @@ export function AlertDialog({
       }}
       className={cn(clases.dialogo, className)}
     >
-      <h2 id={idTitulo} className={clases.titulo}>
+      <h2 id={idTitulo} className={cn('texto-subtitulo', clases.titulo)}>
         {titulo}
       </h2>
       <div id={idCuerpo} className={clases.cuerpo}>

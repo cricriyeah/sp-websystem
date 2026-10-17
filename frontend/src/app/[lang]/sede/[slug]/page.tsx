@@ -49,7 +49,7 @@ export default async function SedePage({ params, searchParams }: Props) {
       <AboutSection about={{ headline: contenido.colaboracion.titulo, body1: contenido.colaboracion.texto1, body2: contenido.colaboracion.texto2, photoHint: contenido.colaboracion.imagenAlt }} imagenSrc={contenido.colaboracion.imagenSrc} imagenAlt={contenido.colaboracion.imagenAlt} />
       <ColaboradoresSection sedes={[contenido]} lang={lang} copy={dict.hub} id="empresas" />
       <section id="experiencias" className="scroll-mt-28 mx-auto max-w-6xl px-6 py-12 sm:px-8 lg:px-12">
-        <h2 className="mb-8 text-4xl sm:text-5xl">{dict.catalog.title}</h2>
+        <h2 className="mb-8 texto-seccion">{dict.catalog.title}</h2>
         {paquetes.length ? <div className="grid items-start gap-8 md:grid-cols-2">{paquetes.map(paquete => <PaqueteCard key={paquete.id} paquete={paquete} lang={lang} dict={dict.catalog} moneda={moneda} />)}</div> : <p className="rounded-2xl bg-cafe-bruma p-8 text-muted">{dict.catalog.emptyPackages}</p>}
       </section>
       <section id="servicios" className="scroll-mt-28 mx-auto max-w-6xl px-6 py-12 sm:px-8 lg:px-12">

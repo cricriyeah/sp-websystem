@@ -38,7 +38,7 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
       <main className="mx-auto max-w-3xl px-6 pt-[calc(3rem_+_var(--nav-alto))] pb-12 sm:px-8 lg:px-12">
         <LegalBackLink label={privacy.back} fallbackHref={`/${lang}`} />
 
-        <h1 className="mt-8 font-sans text-3xl leading-[1.15] font-medium tracking-tight text-foreground sm:text-4xl">
+        <h1 className="mt-8 texto-pagina text-foreground">
           {privacy.title}
         </h1>
         <p className="mt-2 text-sm text-muted">{privacy.updated}</p>
@@ -49,7 +49,7 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
         <div className="mt-12 flex flex-col gap-10 border-t border-border pt-10">
           {privacy.sections.map((section) => (
             <section key={section.title}>
-              <h2 className="font-sans text-base font-medium tracking-tight text-foreground">
+              <h2 className="texto-subtitulo text-foreground">
                 {section.title}
               </h2>
               <div className="mt-3">

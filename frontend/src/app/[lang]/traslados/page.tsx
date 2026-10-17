@@ -77,7 +77,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-accent">
               <Warning size={32} />
             </div>
-            <h1 className="mt-6 text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="mt-6 texto-seccion text-foreground">
               {dict.traslados.unavailableTitle}
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-muted">

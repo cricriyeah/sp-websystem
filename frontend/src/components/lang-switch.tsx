@@ -137,7 +137,7 @@ export function LangSwitch({
         className="flex h-9 items-center gap-2 border border-border bg-superficie px-3 text-xs font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-cafe-bruma"
       >
         <current.Flag className="h-3.5 w-5" />
-        <span className="uppercase tracking-wider">{current.value}</span>
+        <span>{current.value.toUpperCase()}</span>
         <m.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}

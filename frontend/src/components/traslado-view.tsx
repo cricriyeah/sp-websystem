@@ -629,7 +629,6 @@ export function TrasladoView({
         volverLabel={traslados.back}
         encabezado={
           <EncabezadoCompra
-            kicker={checkout.purchaseKicker}
             nombre={traslados.title}
             detalle={traslados.subtitle}
           />

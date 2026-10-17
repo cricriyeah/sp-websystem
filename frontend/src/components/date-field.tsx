@@ -172,7 +172,7 @@ export function PanelCalendario({
           <CaretLeft size={16} />
         </Button>
         <Deslizable clave={primerDia} direccion={direccion}>
-          <p className="text-sm font-medium text-foreground first-letter:uppercase">{etiquetaMes}</p>
+          <p className="text-sm font-medium text-foreground first-letter:capitalize">{etiquetaMes}</p>
         </Deslizable>
         <Button
           variante="libre"
@@ -185,9 +185,9 @@ export function PanelCalendario({
         </Button>
       </div>
 
-      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] text-muted">
+      <div className="mt-3 grid grid-cols-7 gap-1 text-center texto-pie text-muted">
         {inicialesDeDias(locale).map((inicial, i) => (
-          <span key={i} className="py-1 first-letter:uppercase">
+          <span key={i} className="py-1 first-letter:capitalize">
             {inicial}
           </span>
         ))}
@@ -261,7 +261,7 @@ export function PanelCalendario({
           de un boton deshabilitado, y en movil no hay hover. Solo aparece si de
           verdad hay algun dia tachado en el mes que se esta viendo. */}
       {hayDiasLlenos && (
-        <p className="mt-3 border-t border-border pt-2 text-[11px] leading-snug text-muted">
+        <p className="mt-3 border-t border-border pt-2 texto-pie leading-snug text-muted">
           {fullLabel}
         </p>
       )}

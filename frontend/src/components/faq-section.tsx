@@ -41,7 +41,7 @@ export function FaqSection({ faq }: FaqSectionProps) {
             y empujaba las preguntas a una fila nueva. */}
         <div>
           <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
-          <h2 className="text-3xl leading-[1.05] text-foreground sm:text-4xl lg:text-[46px]">
+          <h2 className="texto-seccion text-foreground">
             {faq.headline}
           </h2>
         </div>

@@ -86,7 +86,7 @@ export function Sheet({ abierto, onCerrar, titulo, etiquetaCerrar, sinBorde = fa
         <>
           <div aria-hidden="true" className={clases.asa} />
           <div className={clases.cabecera}>
-            <h2 id={idTitulo} className={clases.titulo}>
+            <h2 id={idTitulo} className={cn('texto-subtitulo', clases.titulo)}>
               {titulo}
             </h2>
             <button type="button" onClick={onCerrar} aria-label={etiquetaCerrar} className={clases.cerrar}>

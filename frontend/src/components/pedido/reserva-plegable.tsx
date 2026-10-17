@@ -89,7 +89,7 @@ export function ReservaPlegable({
       >
         <span className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 font-medium tracking-tight text-foreground">{titulo}</span>
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,var(--superficie))] px-2 py-0.5 text-[11px] font-medium text-accent">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,var(--superficie))] px-2 py-0.5 texto-pie font-medium text-accent">
             <Lock size={11} weight="bold" aria-hidden />
             {etiquetaEstado}
           </span>

@@ -100,7 +100,7 @@ export function CheckoutSectionCard({
             {etiqueta && (
               // En pantallas angostas el renglón no tiene sitio para la empresa
               // sin pisar "Modificar": se ve completa al abrir la tarjeta.
-              <span className="hidden shrink-0 rounded-full bg-cafe-bruma px-2 py-0.5 text-[11px] font-medium text-muted sm:inline">
+              <span className="hidden shrink-0 rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium text-muted sm:inline">
                 {etiqueta}
               </span>
             )}
@@ -121,7 +121,7 @@ export function CheckoutSectionCard({
                 {title}
               </span>
               {etiqueta && (
-                <span className="rounded-full bg-cafe-bruma px-2 py-0.5 text-[11px] font-medium text-muted">
+                <span className="rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium text-muted">
                   {etiqueta}
                 </span>
               )}
@@ -175,7 +175,7 @@ export function CheckoutSectionCard({
         <p className="flex items-center gap-x-2 text-sm font-medium text-muted">
           {title}
           {etiqueta && (
-            <span className="rounded-full bg-cafe-bruma px-2 py-0.5 text-[11px] font-medium">{etiqueta}</span>
+            <span className="rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium">{etiqueta}</span>
           )}
         </p>
       </section>

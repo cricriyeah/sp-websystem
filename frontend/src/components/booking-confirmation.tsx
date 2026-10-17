@@ -150,7 +150,7 @@ export function BookingConfirmation({
             />
           </div>
 
-          <h1 className="mt-6 max-w-[20ch] text-3xl leading-tight text-foreground sm:text-4xl">
+          <h1 className="mt-6 max-w-[20ch] texto-seccion text-foreground">
             {procesando ? confirmation.processingHeadline : confirmation.headline}
           </h1>
 
@@ -176,7 +176,7 @@ export function BookingConfirmation({
                 <p className="mt-0.5 text-xs text-muted">{confirmation.receiptTitle}</p>
               </div>
               <div className="text-right">
-                <p className="text-[11px] tracking-wide text-muted">
+                <p className="texto-pie tracking-wide text-muted">
                   {confirmation.referenceLabel}
                 </p>
                 <p className="font-sans text-xl font-semibold tracking-tight text-accent print:text-foreground">
@@ -194,7 +194,7 @@ export function BookingConfirmation({
 
             <div className="px-7 pb-7 sm:px-9 sm:pb-9 print:px-0 print:pb-0">
               <section className="pt-6">
-                <h2 className="font-sans text-sm font-medium tracking-tight text-foreground">
+                <h2 className="texto-pequeno font-medium text-foreground">
                   {confirmation.tripHeadline}
                 </h2>
                 <dl className="mt-4 flex flex-col gap-2 text-sm">
@@ -233,7 +233,7 @@ export function BookingConfirmation({
               </section>
 
               <section className="mt-7 border-t border-border pt-6">
-                <h2 className="flex items-center gap-2 font-sans text-sm font-medium tracking-tight text-foreground">
+                <h2 className="flex items-center gap-2 texto-pequeno font-medium text-foreground">
                   <MapPin size={18} className="shrink-0 text-accent" />
                   {confirmation.meetingHeadline}
                 </h2>
@@ -248,7 +248,7 @@ export function BookingConfirmation({
               {/* Lo practico va en el papel: es la lista que el cliente revisa la
                   noche antes del viaje, cuando ya no tiene la pagina abierta. */}
               <section className="mt-7 border-t border-border pt-6">
-                <h2 className="flex items-center gap-2 font-sans text-sm font-medium tracking-tight text-foreground">
+                <h2 className="flex items-center gap-2 texto-pequeno font-medium text-foreground">
                   <Suitcase size={18} className="shrink-0 text-accent" />
                   {included.bringTitle}
                 </h2>
@@ -277,7 +277,7 @@ export function BookingConfirmation({
           {/* --- Columna 2: lo que todavia puede pedir. Nunca se imprime. ---- */}
           <div className="flex flex-col gap-6 print:hidden">
             <section className="border border-border bg-superficie p-7 sm:p-8">
-              <h2 className="flex items-center gap-2 font-sans text-sm font-medium tracking-tight text-foreground">
+              <h2 className="flex items-center gap-2 texto-pequeno font-medium text-foreground">
                 <UserCheck size={18} className="shrink-0 text-accent" />
                 {confirmation.agentHeadline}
               </h2>
@@ -286,7 +286,7 @@ export function BookingConfirmation({
 
             {tieneWhatsapp && (
               <section className="border border-border bg-superficie p-7 sm:p-8">
-                <h2 className="font-sans text-base font-medium tracking-tight text-foreground">
+                <h2 className="texto-etiqueta text-foreground">
                   {confirmation.needsHeadline}
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted">

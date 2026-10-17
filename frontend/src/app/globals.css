@@ -189,14 +189,6 @@
      con esta linea. */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: var(--font-titulo);
-
-  /* Espaciado de los titulares (design.md): -0,02 em en Display y Titulo de pagina. Va como variable y no
-     suelto en cada titular para poder afinarlo en un solo lugar. Provisional junto con la regla global
-     `h1, h2`: la Task 7.3 los borra cuando cada titular tenga su clase `texto-*`.
-
-     Ojo: NO se toca `--tracking-tight` de Tailwind. Esa la usan tambien rotulos y parrafos en la fuente
-     de cuerpo (el checkout, los avisos). */
-  --tracking-titulo: -0.02em;
 }
 
 /* El "pop" del check de confirmacion de pago (booking-confirmation.tsx). Un
@@ -306,17 +298,43 @@
 }
 
 @layer components {
-  /* Escala de texto semantica (Task 2.1): tamanos ACTUALES de lo que cubre cada nombre.
-     Sin consumidores todavia; F7.3 fija los valores finales de design.md. */
-  .texto-display { font-size: 3.75rem; line-height: 1; }
-  .texto-pagina { font-size: 3rem; line-height: 1.1; }
-  .texto-seccion { font-size: 2.25rem; line-height: 1.15; }
-  .texto-paso { font-size: 1.125rem; line-height: 1.3; font-weight: 600; }
-  .texto-subtitulo { font-size: 1.25rem; line-height: 1.3; font-weight: 600; }
+  /* Escala de texto (design.md, "Tipografia"): cada clase lleva tamano, peso, interlineado, tracking y
+     balance juntos. Corte en `sm` (640 px). Las cuatro primeras son titulares en Consola Mono Bold
+     (`--font-titulo`); el resto usa la fuente del cuerpo.
+     La monoespaciada es ancha (0,586 em por caracter): `overflow-wrap: break-word` y NO `anywhere`, que
+     reduce el tamano minimo de contenido a una letra y deja a un titulo junto a un icono en flex o grid
+     encogido a una columna; `hyphens: manual` y `min-width: 0` para que un hijo flex o grid pueda
+     encogerse y envolver. `font-synthesis: none`: Bold es real, ningun navegador inventa otra. */
+  .texto-display,
+  .texto-pagina,
+  .texto-seccion,
+  .texto-paso {
+    font-family: var(--font-titulo);
+    font-weight: 700;
+    font-synthesis: none;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+    hyphens: manual;
+    min-width: 0;
+  }
+
+  .texto-display { font-size: 2.5rem; line-height: 1.05; letter-spacing: -0.02em; }
+  .texto-pagina { font-size: 2.25rem; line-height: 1.1; letter-spacing: -0.02em; }
+  .texto-seccion { font-size: 1.75rem; line-height: 1.15; letter-spacing: -0.01em; }
+  .texto-paso { font-size: 1.5rem; line-height: 1.2; letter-spacing: -0.01em; }
+  .texto-subtitulo { font-size: 1.25rem; line-height: 1.3; font-weight: 600; text-wrap: balance; }
   .texto-cuerpo { font-size: 1rem; line-height: 1.5; }
   .texto-pequeno { font-size: 0.875rem; line-height: 1.45; }
-  .texto-etiqueta { font-size: 0.875rem; line-height: 1.2; font-weight: 600; }
-  .texto-pie { font-size: 0.75rem; line-height: 1.4; }
+  .texto-etiqueta { font-size: 1rem; line-height: 1.2; font-weight: 600; letter-spacing: 0.01em; }
+  .texto-pie { font-size: 0.75rem; line-height: 1.4; letter-spacing: 0.01em; }
+
+  @media (min-width: 40rem) {
+    .texto-display { font-size: 4rem; }
+    .texto-pagina { font-size: 3.5rem; }
+    .texto-seccion { font-size: 2.25rem; }
+    .texto-paso { font-size: 1.75rem; }
+    .texto-subtitulo { font-size: 1.375rem; }
+  }
 
   .rev {
     animation: revelar 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -500,18 +518,6 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-
-  /* Titulares: Consola Mono Bold (700, el unico peso que se incorpora). `font-synthesis: none` se conserva:
-     Bold es real, y asi ningun navegador inventa una cursiva ni una negrita sobre ella. Los h2 que en
-     realidad son rotulos chicos llevan `font-sans` explicito. Provisional: la regla y --tracking-titulo se
-     mantienen hasta la Task 7.3, que los borra solo despues de asignar clase `texto-*` a cada h1/h2. */
-  h1,
-  h2 {
-    font-family: var(--font-titulo);
-    font-weight: 700;
-    font-synthesis: none;
-    letter-spacing: var(--tracking-titulo);
   }
 
   a {

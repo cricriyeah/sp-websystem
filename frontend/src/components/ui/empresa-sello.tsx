@@ -22,7 +22,7 @@ const LETRA: Record<Tamano, string> = { 24: 'texto-pie', 32: 'text-[12.8px] lead
 const NOMBRE: Record<Tamano, string> = {
   24: 'texto-etiqueta text-foreground',
   32: 'texto-etiqueta text-foreground',
-  64: 'font-display text-2xl font-bold text-foreground',
+  64: 'texto-paso text-foreground',
 };
 
 type EmpresaSelloProps = {

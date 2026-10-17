@@ -90,8 +90,8 @@ export function hojaClases({ sinBorde = false }: { sinBorde?: boolean } = {}) {
     // Asa visual de 4 × 40; no es el área de arrastre.
     asa: 'mx-auto mb-3 h-1 w-10 rounded-full bg-borde-control',
     cabecera: 'mb-2 flex items-center justify-between gap-4',
-    // El h2 trae la fuente y el espaciado de titular de la base: aquí es un rótulo.
-    titulo: 'texto-subtitulo font-sans tracking-normal text-foreground',
+    // `texto-subtitulo` va en el <h2> de sheet.tsx (la guardia `titular-sin-escala` lo busca en la etiqueta).
+    titulo: 'text-foreground',
     // 48 × 48; -mr-2 alinea el icono de 24 con el margen de 16 de la hoja.
     cerrar:
       '-mr-2 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-foreground transition-colors ' +
@@ -103,7 +103,8 @@ export function hojaClases({ sinBorde = false }: { sinBorde?: boolean } = {}) {
 export function alertaClases() {
   return {
     dialogo: 'alerta-dialogo m-auto w-[min(92vw,420px)] rounded-card bg-superficie p-6 text-foreground shadow-n2',
-    titulo: 'texto-subtitulo font-sans tracking-normal text-foreground',
+    // `texto-subtitulo` va en el <h2> de alert-dialog.tsx (la guardia `titular-sin-escala` lo busca en la etiqueta).
+    titulo: 'text-foreground',
     cuerpo: 'texto-cuerpo mt-2 text-tinta-suave',
     // Apilados a ancho completo bajo 640 px; en fila a la derecha desde ahí.
     acciones: 'mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end',

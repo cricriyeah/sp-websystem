@@ -58,8 +58,8 @@ export function HubMapaSedes({ lang, sedes, copy }: {
             className="absolute inset-0 cursor-grab active:cursor-grabbing">
             <div className="absolute left-1/2 top-1/2 aspect-[1000/560] w-[800px] max-w-none -translate-x-1/2 -translate-y-1/2 sm:w-[920px]">
               <Image src="/ilustraciones/mapa-baja.svg" alt="" fill loading="eager" sizes="(min-width: 640px) 920px, 800px" draggable={false} className="pointer-events-none select-none" />
-              <span className="pointer-events-none absolute left-[26%] top-[60%] text-[11px] tracking-widest text-muted">{copy.pacificOcean}</span>
-              <span className="pointer-events-none absolute left-[58%] top-[36%] text-[11px] tracking-widest text-muted">{copy.seaOfCortez}</span>
+              <span className="pointer-events-none absolute left-[26%] top-[60%] texto-pie text-muted">{copy.pacificOcean}</span>
+              <span className="pointer-events-none absolute left-[58%] top-[36%] texto-pie text-muted">{copy.seaOfCortez}</span>
               {sedes.map(s => COORDENADAS[s.slug] && (
                 <Button key={s.slug} variante="libre" aria-label={s.nombre} aria-pressed={abiertoSlug === s.slug}
                   onClick={() => { if (!arrastrando.current) setAbiertoSlug(s.slug); }} style={project(COORDENADAS[s.slug])}

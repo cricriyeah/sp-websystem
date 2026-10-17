@@ -20,6 +20,8 @@ const REGLAS = {
   'mayusculas-crudas': /\b(?:uppercase|tracking-wider|tracking-widest)\b/g,
   'radio-crudo': /\brounded(?:-[trblse]{1,2})?-(?:md|lg|xl|2xl|3xl)\b/g, // incluye rounded-t-xl, rounded-b-lg…
   'sombra-cruda': /\bshadow-(?:\[|xs\b|sm\b|md\b|lg\b|xl\b|2xl\b)/g,
+  // Todo <h1>/<h2> lleva una clase de la escala `texto-*` (globals.css); sin ella la tipografia cae en la regla global provisional.
+  'titular-sin-escala': /<h[12]\b(?![^>]*\btexto-(?:display|pagina|seccion|paso|subtitulo|cuerpo|pequeno|etiqueta|pie)\b)/g,
   'surface-deep': /\bbg-surface-deep\b/g,
   // Los 77 usos de bg-surface se clasifican en la Task 2.4; cuenta hoy y baja hasta lo que quede como banda de sección.
   'bg-surface-uso': /\bbg-surface(?![-\w])/g,
@@ -31,7 +33,7 @@ const REGLAS = {
 const EXENTOS = {
   'src/app/[lang]/opengraph-image.tsx': { reglas: ['color-literal'], motivo: 'ImageResponse no lee CSS' },
   'src/components/lang-switch.tsx': { reglas: ['color-literal'], motivo: 'SVG de banderas con colores propios' },
-  'src/app/global-error.tsx': { reglas: ['boton-crudo'], motivo: 'ultimo recurso sin estilos globales ni primitivas: Button arrastraria clsx y tailwind-merge a un documento que no carga Tailwind' },
+  'src/app/global-error.tsx': { reglas: ['boton-crudo', 'titular-sin-escala'], motivo: 'ultimo recurso sin estilos globales ni primitivas: Button arrastraria clsx y tailwind-merge a un documento que no carga Tailwind, y sin la hoja no existe ninguna clase `texto-*`' },
   'src/components/checkout/ayuda-flotante.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
   'src/components/error-block.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp en el boton de ayuda' },
   'src/components/pedido/reserva-plegable.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },

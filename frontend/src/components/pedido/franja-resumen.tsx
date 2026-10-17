@@ -31,7 +31,7 @@ export function FranjaResumen({ dict, total, pagos, saldo = null }: Props) {
 
   return (
     <section className="border border-border bg-superficie p-5 sm:p-6 lg:hidden">
-      <h2 className="font-sans text-sm font-medium tracking-tight text-foreground">
+      <h2 className="texto-pequeno font-medium text-foreground">
         {dict.checkout.orderSummaryHeadline}
       </h2>
       <p className="mt-3 text-sm text-muted">{`${dict.checkout.total} ${total}`}</p>
