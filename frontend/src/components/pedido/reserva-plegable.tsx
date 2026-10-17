@@ -83,11 +83,11 @@ export function ReservaPlegable({
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
         aria-controls={id}
-        className={`group flex min-h-11 w-full items-center justify-between gap-4 border border-border bg-background px-5 py-2 text-left text-sm transition-colors hover:bg-surface active:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${activo ? '' : 'hidden'}`}
+        className={`group flex min-h-11 w-full items-center justify-between gap-4 border border-border bg-superficie px-5 py-2 text-left text-sm transition-colors hover:bg-surface active:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${activo ? '' : 'hidden'}`}
       >
         <span className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 font-medium tracking-tight text-foreground">{titulo}</span>
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,var(--background))] px-2 py-0.5 text-[11px] font-medium text-accent">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,var(--superficie))] px-2 py-0.5 text-[11px] font-medium text-accent">
             <Lock size={11} weight="bold" aria-hidden />
             {etiquetaEstado}
           </span>
@@ -123,7 +123,7 @@ export function ReservaPlegable({
             {activo && (
               <NotaBloqueada
                 nota={notaBloqueada} ctaAyuda={ctaAyuda} mensajeAyuda={mensajeAyuda}
-                className="-mt-4 border border-border bg-background px-5 py-3 sm:px-6"
+                className="-mt-4 border border-border bg-superficie px-5 py-3 sm:px-6"
               />
             )}
           </div>

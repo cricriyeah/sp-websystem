@@ -67,7 +67,7 @@ export function IncludedSection({ included }: IncludedSectionProps) {
             return (
               <div
                 key={item.title}
-                className="flex gap-5 border-l-[3px] border-accent bg-background p-6 lg:p-8"
+                className="flex gap-5 border-l-[3px] border-accent bg-superficie p-6 lg:p-8"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-deep">
                   <Icono size={24} weight="light" className="text-accent" />
@@ -116,7 +116,7 @@ export function IncludedSection({ included }: IncludedSectionProps) {
             {included.addons.map((addon) => (
               <div
                 key={addon.title}
-                className="flex items-start gap-4 bg-background px-5 py-4"
+                className="flex items-start gap-4 bg-superficie px-5 py-4"
               >
                 <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-deep">
                   <Plus size={13} weight="bold" className="text-accent" />

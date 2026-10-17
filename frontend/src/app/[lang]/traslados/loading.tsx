@@ -4,12 +4,12 @@ import { Skeleton } from '@/components/skeleton';
 export default function LoadingTraslados() {
   return (
     <CheckoutLoadingShell withTitle showSummaryMobile stepCount={5}>
-      <section className="border border-border bg-background p-6 sm:p-8" aria-hidden="true">
+      <section className="border border-border bg-superficie p-6 sm:p-8" aria-hidden="true">
         <Skeleton className="h-5 w-48" />
         <Skeleton className="mt-5 h-4 w-64 max-w-full" />
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {[1, 2, 3].map((option) => (
-            <div key={option} className="rounded-xl border border-border bg-background p-4">
+            <div key={option} className="rounded-xl border border-border bg-superficie p-4">
               <Skeleton className="h-5 w-5" />
               <Skeleton className="mt-5 h-4 w-24 max-w-full" />
               <Skeleton className="mt-2 h-3 w-full" />

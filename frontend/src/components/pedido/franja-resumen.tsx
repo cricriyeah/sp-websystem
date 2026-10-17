@@ -30,7 +30,7 @@ export function FranjaResumen({ dict, total, pagos, saldo = null }: Props) {
   const actual = pagos.find((p) => p.estado === 'actual');
 
   return (
-    <section className="border border-border bg-background p-5 sm:p-6 lg:hidden">
+    <section className="border border-border bg-superficie p-5 sm:p-6 lg:hidden">
       <h2 className="font-sans text-sm font-medium tracking-tight text-foreground">
         {dict.checkout.orderSummaryHeadline}
       </h2>

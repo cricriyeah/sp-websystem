@@ -50,8 +50,8 @@ type CheckoutSectionCardProps = {
 };
 
 const ESTILOS = {
-  flat: 'border-border bg-background',
-  elevated: 'border-border bg-background shadow-[0_18px_45px_rgba(11,36,32,0.16)]',
+  flat: 'border-border bg-superficie',
+  elevated: 'border-border bg-superficie shadow-[0_18px_45px_rgba(11,36,32,0.16)]',
 };
 
 export function CheckoutSectionCard({
@@ -169,7 +169,7 @@ export function CheckoutSectionCard({
 
   if (estado === 'suspendido') {
     return (
-      <section className="border border-dashed border-border bg-background px-5 py-3 sm:px-6">
+      <section className="border border-dashed border-border bg-superficie px-5 py-3 sm:px-6">
         <p className="flex items-center gap-x-2 text-sm font-medium text-muted">
           {title}
           {etiqueta && (

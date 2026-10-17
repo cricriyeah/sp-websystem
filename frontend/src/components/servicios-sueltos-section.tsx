@@ -90,7 +90,7 @@ export function ServiciosSueltosSection({
                     {servicio.personalizaciones.slice(0, 3).map((p) => (
                       <span
                         key={p.id}
-                        className="rounded bg-background px-1.5 py-0.5 text-[10px] text-muted border border-border/60"
+                        className="rounded bg-superficie px-1.5 py-0.5 text-[10px] text-muted border border-border/60"
                       >
                         +{p.nombre}
                       </span>

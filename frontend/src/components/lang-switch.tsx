@@ -133,7 +133,7 @@ export function LangSwitch({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}
-        className="flex h-9 items-center gap-2 border border-border bg-background px-3 text-xs font-semibold text-foreground shadow-sm transition-colors hover:border-border-strong hover:bg-surface"
+        className="flex h-9 items-center gap-2 border border-border bg-superficie px-3 text-xs font-semibold text-foreground shadow-sm transition-colors hover:border-border-strong hover:bg-surface"
       >
         <current.Flag className="h-3.5 w-5" />
         <span className="uppercase tracking-wider">{current.value}</span>
@@ -165,7 +165,7 @@ export function LangSwitch({
                 : { opacity: 0, y: isTop ? 4 : -4, scale: 0.98 }
             }
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className={`absolute z-50 min-w-[140px] border border-border bg-background shadow-[0_12px_32px_rgba(0,0,0,0.14)] ${
+            className={`absolute z-50 min-w-[140px] border border-border bg-superficie shadow-[0_12px_32px_rgba(0,0,0,0.14)] ${
               isTop ? 'bottom-full mb-2' : 'top-full mt-2'
             } ${align === 'left' ? 'left-0' : 'right-0'}`}
           >

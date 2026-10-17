@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/skeleton';
 export default function CargandoSede() {
   return (
     <div className="min-h-dvh bg-background" aria-hidden="true">
-      <div className="fixed inset-x-0 top-0 z-40 border-b border-border bg-background">
+      <div className="fixed inset-x-0 top-0 z-40 border-b border-border bg-superficie">
         <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-6 sm:px-8">
           <Skeleton className="h-11 w-32" />
           <Skeleton className="h-11 w-11" />

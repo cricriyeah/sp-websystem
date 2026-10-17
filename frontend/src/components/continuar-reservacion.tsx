@@ -276,8 +276,8 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     : problema ? null : situacion === 'no_existe' && !whatsapp ? null : contenido?.secundaria;
   const registro = contenido?.registro ?? 'informativo';
   const estilo = registro === 'con_dinero'
-    ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_10%,var(--background))]'
-    : registro === 'en_curso' ? 'border-border-strong bg-surface' : 'border-border bg-background';
+    ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_10%,var(--superficie))]'
+    : registro === 'en_curso' ? 'border-border-strong bg-surface' : 'border-border bg-superficie';
   const otros = pendientes.filter(p => p.checkoutId !== activo?.checkoutId).slice(0, 3);
 
   const principalClick = () => {
@@ -326,7 +326,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   </div>;
 
   const dialogo = confirmando && resumen && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/50 p-4">
-    <div ref={dialogoRef} role="dialog" aria-modal="true" aria-labelledby="continuar-cancelar-titulo" aria-describedby="continuar-cancelar-cuerpo" className="w-full max-w-md border border-border bg-background p-6 shadow-2xl">
+    <div ref={dialogoRef} role="dialog" aria-modal="true" aria-labelledby="continuar-cancelar-titulo" aria-describedby="continuar-cancelar-cuerpo" className="w-full max-w-md border border-border bg-superficie p-6 shadow-2xl">
       <h2 id="continuar-cancelar-titulo" className="text-2xl text-foreground">{textos.confirmarCancelarTitulo}</h2>
       <p id="continuar-cancelar-cuerpo" className="mt-3 text-sm leading-relaxed text-muted">{(montoRetenido(resumen, textos.locale) ? textos.confirmarCancelarCuerpo : textos.confirmarCancelarSinMonto).replace('{monto}', montoRetenido(resumen, textos.locale) ?? '')}</p>
       <div className="mt-6 flex flex-wrap justify-end gap-2">

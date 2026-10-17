@@ -109,7 +109,7 @@ function PaymentForm({
         <PaymentElement onReady={() => setListo(true)} onLoadError={() => setListo(true)} />
         <div
           aria-hidden="true"
-          className={`absolute inset-0 overflow-hidden bg-background transition-[opacity,visibility] duration-150 motion-reduce:transition-none ${
+          className={`absolute inset-0 overflow-hidden bg-superficie transition-[opacity,visibility] duration-150 motion-reduce:transition-none ${
             listo ? 'invisible opacity-0' : ''
           }`}
         >

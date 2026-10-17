@@ -73,7 +73,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
         </div>
 
         <main className="mx-auto max-w-2xl px-6 py-16 text-center sm:px-8">
-          <div className="rounded-2xl border border-border bg-background p-8 shadow-sm sm:p-12">
+          <div className="rounded-2xl border border-border bg-superficie p-8 shadow-sm sm:p-12">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-accent">
               <Warning size={32} />
             </div>

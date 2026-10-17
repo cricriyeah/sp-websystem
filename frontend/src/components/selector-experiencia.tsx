@@ -89,7 +89,7 @@ export function SelectorExperiencia({
             {paqueteDestacado && (
               <Link
                 href={hrefPaquete(paqueteDestacado, lang, moneda)}
-                className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-background/95 p-4 text-left shadow-[0_10px_28px_rgba(11,36,32,0.10)] transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
+                className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-superficie/95 p-4 text-left shadow-[0_10px_28px_rgba(11,36,32,0.10)] transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
               >
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted">
                   <ArrowSquareOut size={16} />
@@ -104,7 +104,7 @@ export function SelectorExperiencia({
             )}
 
             {servicioInstantaneo && (
-              <article className="flex flex-col items-start gap-3 rounded-2xl border border-accent/40 bg-background p-4 text-left shadow-sm">
+              <article className="flex flex-col items-start gap-3 rounded-2xl border border-accent/40 bg-superficie p-4 text-left shadow-sm">
                 <span className="text-base font-semibold text-foreground">{servicioInstantaneo.nombre}</span>
                 {precioServicioDesde(servicioInstantaneo, moneda) !== null && <span className="text-xs text-muted">{precioDesdeLabel} {formatearPrecio(precioServicioDesde(servicioInstantaneo, moneda)!, moneda)}</span>}
                 <div className="mt-auto flex w-full flex-wrap gap-2">

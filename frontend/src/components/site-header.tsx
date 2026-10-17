@@ -109,7 +109,7 @@ export function SiteHeader({
 
   return (
     <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
-      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-4 border-b border-border bg-background px-6 sm:px-8 lg:h-20 lg:max-w-[1440px] lg:border lg:border-border lg:px-6 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
+      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-4 border-b border-border bg-superficie px-6 sm:px-8 lg:h-20 lg:max-w-[1440px] lg:border lg:border-border lg:px-6 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
         <Link
           href={hrefInicio(lang)}
           className="flex shrink-0 items-center text-foreground"

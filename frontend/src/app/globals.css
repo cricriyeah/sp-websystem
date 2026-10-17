@@ -25,6 +25,7 @@
 
   /* --- Nombres semanticos: es lo que usan los componentes --------------- */
   --background: var(--paper);
+  --superficie: #ffffff; /* contenedores (tarjeta, campo, popover, hoja, barra): hoy igual a --background; F7 pone la pagina en arena y deja esta en blanco */
   --foreground: var(--ink);
   --surface: var(--mist);
   --surface-deep: var(--mist-deep);
@@ -104,6 +105,8 @@
   --radius-control: 9999px; /* botones: hoy rounded-full */
   --radius-campo: 0.5rem; /* campos y cajas: hoy rounded-lg (8 px). Literal, no var(--radius-lg): ese default de Tailwind no esta en este archivo y la prueba de tokens-pago (Task 2.3) no podria resolverlo */
   --radius-casilla: 6px;
+  --radius-card: 0px; /* tarjetas: hoy sin radio */
+  --radius-sheet: 0px; /* hojas y paneles: hoy sin radio */
 
   /* Sombras con el valor actual: n1 = barra inferior (pie-tarjeta), n2 = popover, toast y hoja. */
   --shadow-n0: none;
@@ -144,7 +147,8 @@
 
 @theme inline {
   --color-background: var(--background);
-  --color-card: var(--background);
+  --color-card: var(--superficie);
+  --color-superficie: var(--superficie);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-deep: var(--surface-deep);

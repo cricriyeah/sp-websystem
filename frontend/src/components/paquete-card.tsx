@@ -65,7 +65,7 @@ export function PaqueteCard({
       </div>
 
       {/* Bloque de Precio Ancla */}
-      <div className="mt-6 rounded-xl border border-border/80 bg-background/70 p-4 sm:p-5">
+      <div className="mt-6 rounded-xl border border-border/80 bg-superficie/70 p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <span className="text-xs font-medium uppercase tracking-wider text-muted">

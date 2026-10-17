@@ -8,7 +8,7 @@ export const TOKENS_PAGO = {
   colorPrimary: '#281ab5', // --accent
   colorText: '#16171c', // --foreground
   colorTextSecondary: '#55565f', // --muted
-  colorBackground: '#ffffff', // --background (pasa a --superficie en la Task 2.4)
+  colorBackground: '#ffffff', // --superficie (el formulario vive en una tarjeta)
   colorDanger: '#c22118', // --error
 } as const;
 

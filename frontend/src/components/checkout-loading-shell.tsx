@@ -17,7 +17,7 @@ export function CheckoutLoadingShell({
   return (
     <div className="min-h-dvh bg-surface">
       <div className="fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8" aria-hidden="true">
-        <div className="mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between border-b border-border bg-background px-6 sm:px-8 lg:border lg:px-6 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
+        <div className="mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between border-b border-border bg-superficie px-6 sm:px-8 lg:border lg:px-6 lg:shadow-[0_18px_45px_rgba(11,36,32,0.16)]">
           <Skeleton className="h-11 w-32" />
           <Skeleton className="h-11 w-11" />
         </div>
@@ -55,7 +55,7 @@ export function CheckoutLoadingShell({
 
       <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
         <div className="flex min-w-0 flex-col gap-6">{children}</div>
-        <section className={`min-w-0 border border-border bg-background p-6 shadow-[0_18px_45px_rgba(11,36,32,0.16)] sm:p-8 ${showSummaryMobile ? '' : 'hidden lg:block'}`} aria-hidden="true">
+        <section className={`min-w-0 border border-border bg-superficie p-6 shadow-[0_18px_45px_rgba(11,36,32,0.16)] sm:p-8 ${showSummaryMobile ? '' : 'hidden lg:block'}`} aria-hidden="true">
           <Skeleton className="h-5 w-28" />
           <div className="mt-6 flex flex-col gap-3">
             <Skeleton className="h-4 w-full" />

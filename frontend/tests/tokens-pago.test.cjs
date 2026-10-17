@@ -8,14 +8,11 @@ const { resolverToken, leerGlobalsCss } = require('./ayudas/css-tokens.cjs');
 
 const css = leerGlobalsCss();
 
-// 2.4: pasa a --superficie. Mientras no exista, el formulario vive sobre --background.
-const TOKEN_FONDO = /--superficie\s*:/.test(css) ? '--superficie' : '--background';
-
 test('los valores de Stripe Elements coinciden con los tokens de globals.css', () => {
   assert.equal(TOKENS_PAGO.colorPrimary, resolverToken(css, '--accent'));
   assert.equal(TOKENS_PAGO.colorText, resolverToken(css, '--foreground'));
   assert.equal(TOKENS_PAGO.colorTextSecondary, resolverToken(css, '--muted'));
-  assert.equal(TOKENS_PAGO.colorBackground, resolverToken(css, TOKEN_FONDO));
+  assert.equal(TOKENS_PAGO.colorBackground, resolverToken(css, '--superficie'));
   assert.equal(TOKENS_PAGO.colorDanger, resolverToken(css, '--error'));
 });
 
