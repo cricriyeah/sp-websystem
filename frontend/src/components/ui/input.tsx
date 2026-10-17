@@ -5,6 +5,11 @@ import { CAJA_CAMPO, CAJA_CAMPO_ERROR } from './caja-campo';
 type InputProps = ComponentProps<'input'> & {
   /** Pinta el borde de error y marca `aria-invalid`. Sin él, se respeta un `aria-invalid` pasado a mano. */
   invalido?: boolean;
+  /**
+   * `heredado`: sin el aspecto de la marca; todo llega por `className`. Existe solo para
+   * migrar campos de F4 con aspecto idéntico; F7 los pasa al aspecto nuevo y lo borra.
+   */
+  aspecto?: 'nuevo' | 'heredado';
 };
 
 /**
@@ -12,7 +17,7 @@ type InputProps = ComponentProps<'input'> & {
  * para que iOS no haga zoom al enfocarlo. Va dentro de `Field`, que le pone `id`,
  * `aria-describedby` y `aria-invalid`; solo, necesita su propia etiqueta.
  */
-export function Input({ invalido, type = 'text', className, ...props }: InputProps) {
+export function Input({ invalido, aspecto = 'nuevo', type = 'text', className, ...props }: InputProps) {
   const ariaInvalido = props['aria-invalid'];
   const malo = invalido ?? (ariaInvalido === true || ariaInvalido === 'true');
 
@@ -21,7 +26,8 @@ export function Input({ invalido, type = 'text', className, ...props }: InputPro
       {...props}
       type={type}
       aria-invalid={malo || undefined}
-      className={cn(
+      className={
+        aspecto === 'heredado' ? className : cn(
         malo ? CAJA_CAMPO_ERROR : CAJA_CAMPO,
         'min-h-12 w-full px-4 py-3 text-base text-foreground outline-none placeholder:text-apagado',
         malo ? 'focus:border-error' : 'focus:border-accent',

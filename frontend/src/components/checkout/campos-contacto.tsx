@@ -2,6 +2,7 @@
 
 import type { Ref } from 'react';
 import { EnvelopeSimple, Phone, User } from '@phosphor-icons/react';
+import { Input } from '@/components/ui/input';
 import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/field-error';
 
 export type CampoContacto = 'fullName' | 'phone' | 'email';
@@ -40,7 +41,8 @@ export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio
                 size={18}
                 className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
               />
-              <input
+              <Input
+                aspecto="heredado"
                 ref={refs?.[campo]}
                 type={tipo}
                 required
