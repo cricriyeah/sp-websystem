@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Instrument_Sans } from 'next/font/google';
 import localFont from 'next/font/local';
 import '../globals.css';
 import { getDictionary, hasLocale } from './dictionaries';
@@ -11,33 +10,25 @@ import { ProveedorToast } from '@/components/toast';
 import { MotionProvider } from '@/components/ui/motion-provider';
 import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from '@/lib/site';
 
-// Cuerpo, cifras y toda la interfaz de reserva.
-const instrumentSans = Instrument_Sans({
-  variable: '--font-cuerpo',
-  subsets: ['latin'],
-});
-
-// Titulares. Bebas Neue trae un solo peso y **solo caja alta** —sus minusculas
-// son las mismas mayusculas—, asi que todo titular sale en versales quiera o no.
-// La jerarquia la hace el tamano. globals.css le pone `font-synthesis: none`
-// para que ningun navegador finja una negrita que la fuente no tiene, y el
-// espaciado positivo que las versales necesitan para no amontonarse.
-const bebasNeue = localFont({
-  src: '../fonts/BebasNeue-Regular.woff2',
+// Titulares (display, titulo de pagina, de seccion y de paso): Consola Mono, solo el peso 700
+// (Book no se incorpora). Se sirve desde el sitio, recortada a latin con acentos, puntuacion,
+// moneda y flechas (src/app/fonts/LICENCIAS.md). El cuerpo y los formularios NO descargan nada:
+// usan la pila del sistema de globals.css (`--font-sans`: San Francisco en Apple, Segoe UI en
+// Windows, Roboto en Android).
+//
+// `fallback` es la pila monoespaciada de design.md y `adjustFontFallback: false`: el ajuste
+// automatico de Next solo sabe escalar Arial o Times New Roman (proporcionales), y una
+// proporcional ajustada al ancho medio no iguala los renglones de una monoespaciada. Consola Mono
+// mide 0,586 em por caracter; Menlo, SF Mono y Roboto Mono miden ~0,60 (+2 a 3 %) y Consolas
+// ~0,55 (-6 %), asi que el cambio de fuente mueve poco los cortes de renglon.
+const consolaMono = localFont({
+  src: '../fonts/ConsolaMono-Bold.woff2',
   variable: '--font-titulo',
-  weight: '400',
+  weight: '700',
   style: 'normal',
   display: 'swap',
-});
-
-// Palabras sueltas de acento dentro de un titular. Ojo: la licencia instalada
-// es «personal use only», ver src/app/fonts/LICENCIAS.md antes de lanzar.
-const bellaFashion = localFont({
-  src: '../fonts/BellaFashion-Regular.woff2',
-  variable: '--font-acento',
-  weight: '400',
-  style: 'normal',
-  display: 'swap',
+  fallback: ['Consolas', 'SF Mono', 'SFMono-Regular', 'Menlo', 'Roboto Mono', 'ui-monospace', 'monospace'],
+  adjustFontFallback: false,
 });
 
 export async function generateMetadata({ params }: LayoutProps<'/[lang]'>): Promise<Metadata> {
@@ -88,7 +79,7 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
     <html
       lang={lang}
       data-scroll-behavior="smooth"
-      className={`${instrumentSans.variable} ${bebasNeue.variable} ${bellaFashion.variable}`}
+      className={consolaMono.variable}
     >
       <body suppressHydrationWarning>
         {/* Un solo juego de funciones de motion para todo el sitio; ver motion-provider.tsx. */}

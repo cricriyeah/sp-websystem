@@ -183,19 +183,20 @@
   --color-hero-ink: var(--hero-ink);
   --color-hero-ink-soft: var(--hero-ink-soft);
 
-  --font-sans: var(--font-cuerpo);
+  /* Tipografia (design.md): el cuerpo y los formularios usan la fuente del sistema (San Francisco en Apple;
+     no se descarga). Los titulares usan Consola Mono Bold (`--font-titulo`, de next/font en layout.tsx).
+     lib/tokens-pago.ts repite la pila de --font-sans para Stripe Elements y su prueba la compara
+     con esta linea. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: var(--font-titulo);
-  --font-script: var(--font-acento);
 
-  /* Espaciado de los titulares. Bebas Neue es condensada y solo de caja alta:
-     en versales el ojo no tiene ascendentes ni descendentes para separar una
-     letra de la otra, asi que pegadas se leen como un bloque. Va como variable
-     y no suelto en cada titular para poder afinarlo en un solo lugar.
+  /* Espaciado de los titulares (design.md): -0,02 em en Display y Titulo de pagina. Va como variable y no
+     suelto en cada titular para poder afinarlo en un solo lugar. Provisional junto con la regla global
+     `h1, h2`: la Task 7.3 los borra cuando cada titular tenga su clase `texto-*`.
 
-     Ojo: NO se toca `--tracking-tight` de Tailwind. Esa la usan tambien rotulos
-     y parrafos en la fuente de cuerpo (el checkout, los avisos), donde una
-     separacion de versales se ve suelta y mal. */
-  --tracking-titulo: 0.055em;
+     Ojo: NO se toca `--tracking-tight` de Tailwind. Esa la usan tambien rotulos y parrafos en la fuente
+     de cuerpo (el checkout, los avisos). */
+  --tracking-titulo: -0.02em;
 }
 
 /* El "pop" del check de confirmacion de pago (booking-confirmation.tsx). Un
@@ -350,23 +351,6 @@
     }
   }
 
-  /* Bella Fashion es caligrafica: su altura de x es mucho menor que la del
-     titular, asi que al mismo tamano se veria encogida. Sube a 1.28em y
-     reserva abajo para que no se corte el descendente. */
-  .acento {
-    font-family: var(--font-acento), cursive;
-    font-weight: 50;
-    font-size: 0.65em;
-    line-height: 1.05;
-    padding-bottom: 0.06em;
-    /* Amarillo solo aqui dentro del titular: va sobre la foto oscura de la
-       portada, nunca sobre papel. Es el ambar y no el amarillo de la accion:
-       ese esta reservado al boton de reservar —tenerlo tambien en el titular
-       hacia que la portada tuviera dos cosas gritando el mismo color sin ser lo
-       mismo— y ademas el ambar es el amarillo del logo. */
-    color: var(--color-cafe-medio);
-  }
-
   /* --- Sheet y AlertDialog (ui/sheet.tsx, ui/alert-dialog.tsx) ---------------
      Son un <dialog> nativo con showModal(): el navegador da la trampa de foco, el
      fondo inerte, Esc y el regreso del foco al disparador. Aqui vive solo lo que no
@@ -495,28 +479,19 @@
     flex-direction: column;
     color: var(--foreground);
     background: var(--background);
-    font-family: var(--font-cuerpo), system-ui, sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Bebas Neue tiene un solo peso. `font-synthesis: none` impide que el
-     navegador invente una negrita estirando los contornos, que se ve sucia. Los
-     titulares van en 400 y la jerarquia la hace el tamano.
-
-     Solo `h1` y `h2`: es una fuente de titular y de caja alta, y a tamano de
-     subtitulo (los `h3` del sitio van en 18px) un renglon en versales se lee
-     peor que la de cuerpo. Los subtitulos heredan la de cuerpo. Los `h2` que en
-     realidad son rotulos chicos —las tarjetas del checkout, los bloques de la
-     confirmacion— llevan `font-sans` explicito por la misma razon.
-
-     El fallback es condensado a proposito (Oswald, Arial Narrow): si Bebas no
-     carga, un titular de 90px maquetado para condensada no cabe en una de
-     ancho normal y desborda la caja. */
+  /* Titulares: Consola Mono Bold (700, el unico peso que se incorpora). `font-synthesis: none` se conserva:
+     Bold es real, y asi ningun navegador inventa una cursiva ni una negrita sobre ella. Los h2 que en
+     realidad son rotulos chicos llevan `font-sans` explicito. Provisional: la regla y --tracking-titulo se
+     mantienen hasta la Task 7.3, que los borra solo despues de asignar clase `texto-*` a cada h1/h2. */
   h1,
   h2 {
-    font-family: var(--font-titulo), 'Oswald', 'Arial Narrow', Arial, sans-serif;
-    font-weight: 400;
+    font-family: var(--font-titulo);
+    font-weight: 700;
     font-synthesis: none;
     letter-spacing: var(--tracking-titulo);
   }

@@ -2,13 +2,13 @@
 
 | Archivo | Fuente | Licencia | ¿Puede salir a produccion? |
 |---|---|---|---|
-| `BebasNeue-Regular.woff2` | Bebas Neue 2.000 | SIL Open Font License 1.1 | Si |
-| `BellaFashion-Regular.woff2` | Bella Fashion, de Billy Argel | «Free for personal use only» | **No sin comprar la licencia comercial** |
+| `BebasNeue-Regular.woff2` | Bebas Neue 2.000 | SIL Open Font License 1.1 | Si (ya no se carga: retirar el archivo) |
+| `BellaFashion-Regular.woff2` | Bella Fashion, de Billy Argel | «Free for personal use only» | **No.** Ya no se carga (la palabra caligrafica salio de los titulares): retirar el archivo |
 | `ConsolaMono-Bold.woff2` | Consola Mono Bold, de Wojciech Kalinowski (dafont.com/es/consola-mono.font) | SIL Open Font License 1.1 (`OFL.txt` y `FONTLOG.txt` junto al archivo; sin nombre reservado declarado) | Si |
 
-Sal y Sol vende tours: el sitio es uso comercial. Mientras no se compre la
-licencia de Bella Fashion en billyargel.com, las palabras de acento
-(`.font-acento`) tienen que caer a la fuente de cuerpo o cambiarse por otra.
+Sal y Sol vende tours: el sitio es uso comercial. Bebas Neue y Bella Fashion ya no
+las importa `layout.tsx` (los titulares van en Consola Mono Bold y el cuerpo en la
+fuente del sistema); sus archivos siguen aqui solo hasta que se borren.
 
 Las dos vienen de archivos `.otf`/`.ttf` convertidos a woff2 con fontTools.
 Los originales estan en `~/Downloads/bebas-neue.zip` (con su OFL.txt) y

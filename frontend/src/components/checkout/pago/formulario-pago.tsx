@@ -16,16 +16,13 @@ import { fechaHoraDeVencimiento } from '@/lib/pendientes-texto';
 import { RADIO_PAGO, TOKENS_PAGO } from '@/lib/tokens-pago';
 
 // Stripe pinta en un iframe: no hereda las variables CSS ni la fuente del sitio,
-// así que se le pasan los mismos valores de la paleta (lib/tokens-pago.ts, probado contra globals.css) para que el
-// formulario de tarjeta no parezca de otra marca.
-const STRIPE_FUENTES = [
-  { cssSrc: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap' },
-];
+// así que se le pasan los mismos valores de la marca (lib/tokens-pago.ts, probado contra globals.css,
+// incluida la pila de fuentes del sistema) para que el formulario de tarjeta no parezca de otra marca.
+// No se carga ninguna fuente externa: el cuerpo usa la fuente del sistema.
 const STRIPE_APARIENCIA = {
   theme: 'stripe' as const,
   variables: {
     ...TOKENS_PAGO,
-    fontFamily: '"Instrument Sans", system-ui, sans-serif',
     borderRadius: RADIO_PAGO,
   },
 };
@@ -212,7 +209,7 @@ export function FormularioPago({
             {checkout.apartadoLinea}
           </p>
         )}
-        <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret, locale: lang, fonts: STRIPE_FUENTES, appearance: STRIPE_APARIENCIA }}>
+        <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret, locale: lang, appearance: STRIPE_APARIENCIA }}>
           <PaymentForm
             puente={puente}
             checkout={checkout}

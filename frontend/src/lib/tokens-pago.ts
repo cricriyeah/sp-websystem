@@ -10,6 +10,7 @@ export const TOKENS_PAGO = {
   colorTextSecondary: '#6b5d4d', // --muted (apagado)
   colorBackground: '#ffffff', // --superficie (el formulario vive en una tarjeta)
   colorDanger: '#b3261e', // --error
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', // --font-sans
 } as const;
 
 export const RADIO_PAGO = '12px'; // --radius-campo

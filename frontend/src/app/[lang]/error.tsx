@@ -27,7 +27,7 @@ export default function ErrorDePagina({
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-6 text-center sm:px-8">
       <h1
-        className="font-display text-3xl font-normal leading-tight text-foreground sm:text-4xl"
+        className="font-display text-3xl leading-tight text-foreground sm:text-4xl"
         style={{ letterSpacing: 'var(--tracking-titulo)' }}
       >
         {titulo}

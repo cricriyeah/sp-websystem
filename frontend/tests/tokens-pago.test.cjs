@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 const { TOKENS_PAGO, RADIO_PAGO } = require(path.join(process.env.TOKENS_PAGO_TEST_OUT, 'lib/tokens-pago.js'));
-const { resolverToken, leerGlobalsCss } = require('./ayudas/css-tokens.cjs');
+const { resolverToken, declaraciones, leerGlobalsCss } = require('./ayudas/css-tokens.cjs');
 
 const css = leerGlobalsCss();
 
@@ -14,6 +14,13 @@ test('los valores de Stripe Elements coinciden con los tokens de globals.css', (
   assert.equal(TOKENS_PAGO.colorTextSecondary, resolverToken(css, '--muted'));
   assert.equal(TOKENS_PAGO.colorBackground, resolverToken(css, '--superficie'));
   assert.equal(TOKENS_PAGO.colorDanger, resolverToken(css, '--error'));
+});
+
+test('la fuente de Stripe Elements es la pila del sistema de --font-sans, sin fuentes externas', () => {
+  const pila = declaraciones(css).get('--font-sans');
+  assert.ok(pila, '--font-sans no declarado');
+  assert.equal(TOKENS_PAGO.fontFamily, pila);
+  assert.doesNotMatch(TOKENS_PAGO.fontFamily, /Instrument|Bebas|Bella|Consola/);
 });
 
 test('el radio de Stripe Elements coincide con --radius-campo', () => {

@@ -22,7 +22,7 @@ export default async function NotFound() {
       >
         <p
           aria-hidden="true"
-          className="font-display font-normal leading-none text-accent select-none"
+          className="font-display leading-none text-accent select-none"
           style={{
             fontSize: 'clamp(7rem, 18vw, 14rem)',
             letterSpacing: 'var(--tracking-titulo)',
@@ -32,7 +32,7 @@ export default async function NotFound() {
         </p>
 
         <h1
-          className="mt-4 font-display text-3xl font-normal leading-tight text-foreground sm:text-4xl"
+          className="mt-4 font-display text-3xl leading-tight text-foreground sm:text-4xl"
           style={{ letterSpacing: 'var(--tracking-titulo)' }}
         >
           {copy.headline}
