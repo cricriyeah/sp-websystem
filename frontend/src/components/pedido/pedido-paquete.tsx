@@ -11,9 +11,7 @@ import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
 import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo } from '@/components/field-error';
-import { StripePanel } from '@/components/stripe-panel';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
@@ -32,12 +30,12 @@ import { erroresPersonalizaciones } from '@/lib/personalizaciones';
 import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
-import { AvisoCargos } from './aviso-cargos';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
 import { GrupoServicio } from './grupo-servicio';
 import { PantallaEspera } from './pantalla-espera';
 import { PantallaExito } from './pantalla-exito';
 import { PantallaFallo } from './pantalla-fallo';
+import { PanelPedidoPaquete } from './panel-pedido-paquete';
 import { PantallaPago } from './pantalla-pago';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
@@ -616,58 +614,45 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             {actual === 'pago' && <div ref={setDestinoTarjetaPago} />}
           </>
         }
-        pedido={pedido ? (
-          <StripePanel
-            key={captchaKey}
-            lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
-            waiverAccepted={waiverAccepted}
-            onWaiverChange={(valor) => { setWaiverAccepted(valor); if (valor) setErrorWaiver(false); }}
-            errorWaiver={errorWaiver}
-            lines={[
-              ...cargos.map((cargo) => ({ label: nombreEmpresa(cargo.empresaSlug),
-                amount: formatearPrecio(cantidadCargos === 1 ? pedido.total : cargo.monto, estado.moneda) })),
-              ...(descuento > 0
-                ? [{
-                    label: `${checkout.promoCode.discountLabel} (${codigoPromocional.trim().toUpperCase()})`,
-                    amount: `-${formatearPrecio(descuento, estado.moneda)}`,
-                  }]
-                : []),
-            ]}
-            lineasViaje={lineasViaje}
-            destinoTarjeta={destinoTarjetaPago}
-            total={total} amountDueNow={ahora} moneda={estado.moneda}
-            onMonedaChange={(valor) => despachar({ tipo: 'moneda', valor })} usdDisponible={conUsd}
+        pedido={
+          <PanelPedidoPaquete
+            lang={lang}
+            dict={dict}
+            paquete={paquete}
+            motor={motor}
+            pedido={pedido}
+            cargos={cargos}
+            cantidadCargos={cantidadCargos}
+            nombreEmpresa={nombreEmpresa}
+            moneda={estado.moneda}
             formaPago={estado.formaPago}
-            onFormaPagoChange={(valor) => despachar({ tipo: 'formaPago', valor })}
-            formaPagoDisponible={paquete.permite_anticipo}
+            conUsd={conUsd}
+            descuento={descuento}
             codigoPromocional={codigoPromocional}
+            promoEstado={promoEstado}
+            promoPorcentaje={promoPorcentaje}
+            lineasViaje={lineasViaje}
+            destinoTarjetaPago={destinoTarjetaPago}
+            total={total}
+            ahora={ahora}
+            ayudaMensaje={ayudaMensaje}
+            waiverAccepted={waiverAccepted}
+            errorWaiver={errorWaiver}
+            captchaKey={captchaKey}
+            actual={actual}
+            pago={pago}
+            despachar={despachar}
+            onWaiverChange={(valor) => { setWaiverAccepted(valor); if (valor) setErrorWaiver(false); }}
             onCodigoPromocionalChange={(valor) => {
               setCodigoPromocional(valor);
               setPromoEstado(valor.trim() ? 'verificando' : 'idle');
               setPromoPorcentaje(null);
               setPromoDescuento(null);
             }}
-            codigoPromocionalDisponible={motor === 'reserva'}
-            promoEstado={promoEstado} promoPorcentaje={promoPorcentaje}
-            submitDisabled={actual !== 'pago'}
-            phase={pago.fase === 'enviando' ? 'submitting' : pago.error ? 'error' : 'form'}
-            error={pago.error}
-            avisoCargos={cantidadCargos > 1 ? (
-              <div className="mt-5 border-t border-border pt-5">
-                <AvisoCargos dict={dict}
-                  cargos={cargos.map((cargo) => ({ etiqueta: nombreEmpresa(cargo.empresaSlug), monto: formatearPrecio(cargo.monto, estado.moneda) }))}
-                  total={total} />
-              </div>
-            ) : undefined}
-            etiquetaBotonEnvio={cantidadCargos > 1
-              ? textos.continueToPayment.replace('{total}', String(cantidadCargos)) : undefined}
-            onSubmit={enviar}
             onCaptchaToken={(token) => { captcha.current = token; }}
+            onSubmit={enviar}
           />
-        ) : (
-          <ErrorBlock mensaje={feedback.error.no_disponible}
-            ayudaTitulo={feedback.helpTitle} ayudaCta={feedback.helpCta} ayudaMensaje={ayudaMensaje} />
-        )}
+        }
       />
       <AyudaFlotante
         visible={ayuda.visible}
