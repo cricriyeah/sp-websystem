@@ -21,6 +21,8 @@ export type SedeIndiceEntry = {
 export type SedeHeroContenido = {
   video: string | null;
   imagen: string | null;
+  /** `object-position` para encuadrar la foto/video de esta sede; sin él, centrado. */
+  posicionImagen?: string;
   titulo: { start: string; emphasis: string; end: string };
   subtitulo: string;
   facts: { value: string; label: string }[];

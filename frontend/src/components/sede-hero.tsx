@@ -1,10 +1,9 @@
 // frontend/src/components/sede-hero.tsx
-import Image from 'next/image';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeDestacada, SedeHeroContenido } from '@/content/sedes-tipos';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { SelectorExperiencia } from '@/components/selector-experiencia';
-import { VideoDiferido } from '@/components/ui/video-diferido';
+import { HeroMedia } from '@/components/ui/hero-media';
 
 type SedeHeroProps = {
   lang: Locale;
@@ -48,47 +47,36 @@ export function SedeHero({
 }: SedeHeroProps) {
   return (
     <section className="relative z-10 bg-background">
-      <div className="relative w-full overflow-hidden">
-        {/* La imagen es el LCP: va en el HTML con preload. El video se monta despues, encima. */}
-        {contenido.imagen ? (
-          <Image src={contenido.imagen} alt="" fill sizes="100vw" preload className="object-cover" />
-        ) : null}
-        {contenido.video ? (
-          <VideoDiferido src={contenido.video} className="absolute inset-0 h-full w-full object-cover" />
-        ) : null}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'var(--scrim-hero)',
-          }}
-        />
+      <HeroMedia
+        imagen={contenido.imagen}
+        video={contenido.video}
+        alt=""
+        preload
+        objectPosition={contenido.posicionImagen}
+      >
+        <div className="mx-auto w-full max-w-6xl px-6 pt-[calc(5rem_+_var(--nav-alto))] pb-10 sm:px-8 lg:px-12 lg:pt-[calc(7rem_+_var(--nav-alto))] lg:pb-16">
+          <h1 className="titulo-entra max-w-[19ch] text-[38px] leading-[1.02] text-hero-ink sm:text-6xl lg:text-[76px] lg:leading-[0.98]">
+            {contenido.titulo.start} <span className="acento">{contenido.titulo.emphasis}</span>{' '}
+            {contenido.titulo.end}
+          </h1>
+          <p className="titulo-entra titulo-entra-tarde mt-5 max-w-[52ch] text-base leading-relaxed text-hero-ink-soft lg:mt-6 lg:text-lg">
+            {contenido.subtitulo}
+          </p>
 
-        <div className="relative flex min-h-[calc(52svh_+_var(--nav-alto))] flex-col justify-end lg:min-h-[calc(min(56svh,520px)_+_var(--nav-alto))]">
-          <div className="mx-auto w-full max-w-6xl px-6 pt-[calc(5rem_+_var(--nav-alto))] pb-10 sm:px-8 lg:px-12 lg:pt-[calc(7rem_+_var(--nav-alto))] lg:pb-16">
-            <h1 className="titulo-entra max-w-[19ch] text-[38px] leading-[1.02] text-hero-ink sm:text-6xl lg:text-[76px] lg:leading-[0.98]">
-              {contenido.titulo.start} <span className="acento">{contenido.titulo.emphasis}</span>{' '}
-              {contenido.titulo.end}
-            </h1>
-            <p className="titulo-entra titulo-entra-tarde mt-5 max-w-[52ch] text-base leading-relaxed text-hero-ink-soft lg:mt-6 lg:text-lg">
-              {contenido.subtitulo}
-            </p>
-
-            <SelectorExperiencia
-              lang={lang}
-              sedeSlug={sedeSlug}
-              destacadas={destacadas}
-              paquetes={paquetes}
-              servicios={servicios}
-              moneda={moneda}
-              booking={booking}
-              verTodoLabel={verTodoLabel}
-              hrefVerTodo={hrefVerTodo}
-              precioDesdeLabel={precioDesdeLabel}
-            />
-          </div>
+          <SelectorExperiencia
+            lang={lang}
+            sedeSlug={sedeSlug}
+            destacadas={destacadas}
+            paquetes={paquetes}
+            servicios={servicios}
+            moneda={moneda}
+            booking={booking}
+            verTodoLabel={verTodoLabel}
+            hrefVerTodo={hrefVerTodo}
+            precioDesdeLabel={precioDesdeLabel}
+          />
         </div>
-      </div>
+      </HeroMedia>
 
       {contenido.facts.length > 0 && (
         <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-6 pt-12 pb-16 sm:px-8 lg:grid-cols-4 lg:gap-x-0 lg:px-12 lg:pt-14 lg:pb-20">

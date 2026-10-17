@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 
 type Navegador = Navigator & { connection?: { saveData?: boolean } };
 
@@ -11,7 +11,15 @@ type Navegador = Navigator & { connection?: { saveData?: boolean } };
  * `canplay`. No monta nada si el visitante pidió reducir el movimiento o ahorrar
  * datos: `autoPlay` anula `preload="metadata"` y el CSS no puede detenerlo.
  */
-export function VideoDiferido({ src, className = '' }: { src: string; className?: string }) {
+export function VideoDiferido({
+  src,
+  className = '',
+  style,
+}: {
+  src: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
   const [montar, setMontar] = useState(false);
   const [listo, setListo] = useState(false);
 
@@ -51,6 +59,7 @@ export function VideoDiferido({ src, className = '' }: { src: string; className?
       playsInline
       aria-hidden="true"
       onCanPlay={() => setListo(true)}
+      style={style}
       className={`transition-opacity duration-500 motion-reduce:transition-none ${listo ? 'opacity-100' : 'opacity-0'} ${className}`}
     >
       <source src={src} type="video/webm" />
