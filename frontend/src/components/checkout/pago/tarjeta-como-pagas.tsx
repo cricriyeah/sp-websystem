@@ -10,6 +10,8 @@ import { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
 import type { StripePanelProps } from '@/components/checkout/pago/tipos';
 import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo, FieldError, propsDeError } from '@/components/field-error';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Turnstile } from '@/components/turnstile';
 import { WaitNotice } from '@/components/wait-notice';
 
@@ -124,7 +126,8 @@ export function TarjetaComoPagas({
                         aria-label={option === 'MXN' ? checkout.currency.mxn : checkout.currency.usd}
                         className="cursor-pointer px-3 py-1.5 font-medium text-muted transition-colors has-[:checked]:bg-foreground has-[:checked]:text-surface"
                       >
-                        <input
+                        <Input
+                          aspecto="heredado"
                           type="radio"
                           name="moneda"
                           checked={moneda === option}
@@ -147,7 +150,8 @@ export function TarjetaComoPagas({
                         key={option}
                         className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-surface"
                       >
-                        <input
+                        <Input
+                          aspecto="heredado"
                           type="radio"
                           name="forma-pago"
                           checked={formaPago === option}
@@ -173,21 +177,23 @@ export function TarjetaComoPagas({
                       en el amarillo de accion, para llamar la atencion sin competir con el
                       boton de pagar. */}
                   <Despliegue abierto={!promoAbierto && !codigoPromocional}>
-                    <button
+                    <Button
+                      variante="libre"
                       type="button"
                       onClick={() => setPromoAbierto(true)}
                       className="inline-flex items-center gap-2 rounded-full border border-accent bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent/20"
                     >
                       <Ticket size={18} weight="fill" />
                       {checkout.promoCode.toggle}
-                    </button>
+                    </Button>
                   </Despliegue>
                   <Despliegue abierto={promoAbierto || Boolean(codigoPromocional)}>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
                         {checkout.promoCode.label}
                       </label>
-                      <input
+                      <Input
+                        aspecto="heredado"
                         id="codigo-promocional"
                         type="text"
                         value={codigoPromocional}
@@ -206,13 +212,14 @@ export function TarjetaComoPagas({
                             {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje ?? 0)))}
                           </span>
                           {/* Reversible: quitar vacia el campo y el descuento desaparece del resumen. */}
-                          <button
+                          <Button
+                            variante="libre"
                             type="button"
                             onClick={() => { onCodigoPromocionalChange(''); setPromoAbierto(false); }}
                             className="text-muted underline-offset-2 hover:text-foreground hover:underline"
                           >
                             {checkout.promoCode.remove}
-                          </button>
+                          </Button>
                         </p>
                       </Despliegue>
                       <Despliegue abierto={promoEstado === 'invalido'}>
@@ -231,7 +238,8 @@ export function TarjetaComoPagas({
                   que el cliente ya lleno. */}
               <div>
                 <label className="flex items-start gap-2.5 text-xs leading-relaxed text-muted">
-                  <input
+                  <Input
+                    aspecto="heredado"
                     type="checkbox"
                     checked={waiverAccepted}
                     disabled={phase === 'submitting'}
