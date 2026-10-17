@@ -17,6 +17,7 @@ import { WhatsappContact } from '@/components/whatsapp-contact';
 import { LangSwitch } from '@/components/lang-switch';
 import { SedeSelector } from '@/components/sede-selector';
 import { ContinuarReservacion } from '@/components/continuar-reservacion';
+import { Button } from '@/components/ui/button';
 
 type SiteHeaderProps = {
   lang: Locale;
@@ -167,15 +168,15 @@ export function SiteHeader({
             </>
           )}
 
-          <button
-            type="button"
+          <Button
+            variante="libre"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? nav.closeMenu : nav.openMenu}
             aria-expanded={open}
             className={`flex h-11 w-11 items-center justify-center border border-border text-foreground ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
           >
             {open ? <X size={18} /> : <List size={18} />}
-          </button>
+          </Button>
         </div>
 
         <AnimatePresence>
