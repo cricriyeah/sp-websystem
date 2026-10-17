@@ -16,7 +16,7 @@ import { ErrorBlock } from '@/components/error-block';
 import { ErrorDeCampo } from '@/components/field-error';
 import { PeopleStepper } from '@/components/people-stepper';
 import { StripePanel } from '@/components/stripe-panel';
-import { FormularioPagoDiferido, precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
+import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { TimeField } from '@/components/time-field';
 import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
@@ -37,14 +37,12 @@ import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
-import { EncabezadoPago } from './encabezado-pago';
-import { FranjaResumen } from './franja-resumen';
-import { ReservaPlegable } from './reserva-plegable';
 import { FechaPaquete } from './fecha-paquete';
 import { GrupoServicio } from './grupo-servicio';
 import { PantallaEspera } from './pantalla-espera';
 import { PantallaExito } from './pantalla-exito';
 import { PantallaFallo } from './pantalla-fallo';
+import { PantallaPago } from './pantalla-pago';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
 
@@ -441,149 +439,36 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     />
   );
 
-  if (pago.fase === 'pagando') {
-    const pasoPago = pago.pagos[pago.indice];
-    if (!pasoPago) return null;
-    const n = cantidadCargos || pago.pagos.length;
-    const monto = formatearPrecio(Number(pasoPago.monto), estado.moneda);
-    const totalPago = formatearPrecio(Number(pasoPago.precioTotal ?? pasoPago.monto), estado.moneda);
-    const etiqueta = nombreEmpresa(pasoPago.empresaSlug);
-    const pasosPago = pago.pagos.map((item, indice) => ({
-      etiqueta: nombreEmpresa(item.empresaSlug),
-      monto: formatearPrecio(Number(item.monto), estado.moneda),
-      estado: (indice < pago.indice ? 'hecho' : indice === pago.indice ? 'actual' : 'pendiente') as 'hecho' | 'actual' | 'pendiente',
-    }));
-    // Lo que queda por cobrar después de este pago: los pagos que faltan y, con
-    // anticipo, el saldo de la empresa actual.
-    const faltaPorCobrar = pago.pagos.slice(pago.indice + 1).reduce((suma, p) => suma + Number(p.monto), 0)
-      + Math.max(0, Number(pasoPago.precioTotal ?? pasoPago.monto) - Number(pasoPago.monto));
-    const etiquetaBotonPago = n === 1
-      ? paquete.precio_depende_de_personas
-        ? (personasPaquete === 1 ? textos.payOne : textos.payPeople.replace('{n}', String(personasPaquete)))
-          .replace('{amount}', `${monto} ${estado.moneda}`)
-        : textos.payButtonSingle.replace('{amount}', monto)
-      : textos.payButton.replace('{amount}', monto).replace('{empresa}', etiqueta)
-        .replace('{n}', String(pago.indice + 1)).replace('{total}', String(n));
-
-    return (
-      <PaginaCheckout
-        lang={lang}
-        dict={dict}
-        sedeSlug={sedeSlug}
-        volverHref={`/${lang}/sede/${sedeSlug}`}
-        volverLabel={textos.back}
-        encabezado={
-          <EncabezadoCompra
-            kicker={checkout.purchaseKicker}
-            nombre={paquete.nombre}
-            detalle={detalleCompra}
-          />
-        }
-        stepper={stepperPagos(pago.indice, Number(pasoPago.monto)) ?? (Number(pasoPago.monto) < Number(pasoPago.precioTotal ?? pasoPago.monto)
-          // Un solo cobro con anticipo: la cifra del paso es el anticipo, no el total.
-          ? { actual: 4, totalMovil: `${monto} ${estado.moneda}`, rotulo: checkout.stepper.payNow, totalGeneral: `${totalPago} ${estado.moneda}` }
-          : { actual: 4, totalMovil })}
-        pasos={
-          <>
-            <ReservaPlegable
-              titulo={textos.yourBooking}
-              etiquetaEstado={textos.bookingSaved}
-              resumen={resumenViaje || paquete.nombre}
-              notaBloqueada={textos.lockedNote}
-              ctaAyuda={textos.lockedCta}
-              mensajeAyuda={ayudaMensaje}
-            >
-            <ItemPaso>
-              <CheckoutSectionCard
-                title={checkout.tripHeadline}
-                estado="completado"
-                resumen={resumenViaje}
-                detalle={lineasViaje}
-              >
-                {null}
-              </CheckoutSectionCard>
-            </ItemPaso>
-            <ItemPaso unida>
-              <CheckoutSectionCard
-                title={checkout.contactHeadline}
-                estado="completado"
-                resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
-                detalle={lineasContacto}
-              >
-                {null}
-              </CheckoutSectionCard>
-            </ItemPaso>
-            {paquete.servicios_asociados.map((item) => {
-              const componente = estado.componentes[item.servicio.slug];
-              const personas = componente?.personas ?? item.personas_incluidas;
-              return (
-                <ItemPaso key={item.id} unida>
-                  <CheckoutSectionCard
-                    title={item.servicio.nombre}
-                    etiqueta={cantidadCargos > 1 ? nombreEmpresa(item.servicio.empresa_slug) : undefined}
-                    estado="completado"
-                    resumen={`${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}
-                    detalle={[
-                      { etiqueta: checkout.summary.date, valor: formatearFecha(fechaDeComponente(estado.inicio ?? minDate, item.dia_estancia)) },
-                      { etiqueta: checkout.summary.people, valor: String(personas) },
-                      ...lineaPunto(componente?.traslado),
-                    ]}
-                  >
-                    {null}
-                  </CheckoutSectionCard>
-                </ItemPaso>
-              );
-            })}
-            </ReservaPlegable>
-
-            {/* "Cómo pagas" (ya con el pago creado, un renglón) se pinta aquí. */}
-            <div ref={setDestinoTarjetaPago} />
-
-            {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
-                respuestas ya dadas. En cruza-empresa se remonta por empresa
-                (cada una cobra con su propia clave y secreto). */}
-            <FranjaResumen
-              dict={dict}
-              total={total}
-              pagos={pasosPago}
-              saldo={pasosPago.length === 1 && faltaPorCobrar > 0 ? formatearPrecio(faltaPorCobrar, estado.moneda) : null}
-            />
-            <FormularioPagoDiferido
-              lang={lang}
-              key={pasoPago.empresaSlug}
-              checkout={checkout}
-              feedback={feedback}
-              ayudaMensaje={ayudaMensaje}
-              pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
-              venceEn={pasoPago.venceEn}
-              encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} total={totalConMoneda ?? undefined} />}
-              etiquetaBotonPago={etiquetaBotonPago}
-              apartadoHasta={pago.apartadoHasta}
-              antesDePagar={motor === 'reserva' ? pago.antesDePagar : undefined}
-              onPagoConfirmado={pago.onPagoConfirmado}
-              onPagoRechazado={pago.onPagoRechazado}
-            />
-          </>
-        }
-        pedido={
-          <StripePanel
-            key={pasoPago.empresaSlug}
-            lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
-            waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
-            lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={lineasViaje}
-            destinoTarjeta={destinoTarjetaPago} resumenSoloEscritorio
-            total={totalPago} amountDueNow={monto}
-            moneda={estado.moneda} onMonedaChange={() => {}} usdDisponible={false}
-            formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}
-            codigoPromocional="" onCodigoPromocionalChange={() => {}}
-            codigoPromocionalDisponible={false} promoEstado="idle" promoPorcentaje={null}
-            phase="payment" error=""
-            onSubmit={() => {}} onCaptchaToken={() => {}}
-          />
-        }
-      />
-    );
-  }
+  if (pago.fase === 'pagando') return (
+    <PantallaPago
+      lang={lang}
+      dict={dict}
+      sedeSlug={sedeSlug}
+      paquete={paquete}
+      motor={motor}
+      moneda={estado.moneda}
+      pago={pago}
+      cantidadCargos={cantidadCargos}
+      nombreEmpresa={nombreEmpresa}
+      personasPaquete={personasPaquete}
+      stepperPagos={stepperPagos}
+      totalMovil={totalMovil}
+      total={total}
+      totalConMoneda={totalConMoneda}
+      ayudaMensaje={ayudaMensaje}
+      detalleCompra={detalleCompra}
+      resumenViaje={resumenViaje}
+      lineasViaje={lineasViaje}
+      lineasContacto={lineasContacto}
+      contacto={estado.contacto}
+      componentes={estado.componentes}
+      inicio={estado.inicio ?? minDate}
+      formatearFecha={formatearFecha}
+      lineaPunto={lineaPunto}
+      destinoTarjetaPago={destinoTarjetaPago}
+      setDestinoTarjetaPago={setDestinoTarjetaPago}
+    />
+  );
 
   // Un solo foco abierto: si el cliente reabrió una respuesta, la tarjeta activa
   // se pliega a un renglón "pendiente" hasta que termine de corregirla.
