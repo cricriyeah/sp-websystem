@@ -41,7 +41,7 @@ export function NotaBloqueada({
           href={whatsappHref(mensajeAyuda)}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:self-auto"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-[#25D366] px-4 py-1.5 text-sm font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:self-auto"
         >
           <WhatsappLogo size={16} weight="fill" aria-hidden />
           {ctaAyuda}

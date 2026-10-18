@@ -55,7 +55,7 @@ export function AyudaFlotante({
             type="button"
             onClick={onDescartar}
             aria-label={cerrarLabel}
-            className="ml-1 flex h-9 w-9 items-center justify-center rounded-full transition-opacity hover:opacity-90"
+            className="ml-1 flex size-11 items-center justify-center rounded-full transition-opacity hover:opacity-90"
           >
             <X size={14} weight="bold" />
           </Button>

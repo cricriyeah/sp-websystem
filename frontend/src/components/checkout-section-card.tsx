@@ -203,7 +203,7 @@ export function CheckoutSectionCard({
           onClick={verDetalle.alternar}
           aria-expanded={detalleAbierto}
           aria-controls={verDetalle.id}
-          className="group flex min-h-9 w-full items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          className="group flex min-h-11 w-full items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
         >
           {encabezado}
         </Button>

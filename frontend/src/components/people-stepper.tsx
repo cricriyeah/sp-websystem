@@ -28,8 +28,8 @@ type PeopleStepperProps = {
 
 const botonStepper = (compacto: boolean) =>
   compacto
-    ? 'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-30'
-    : 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30';
+    ? 'flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-30'
+    : 'flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30';
 
 /**
  * Contador de personas, compartido por el booking bar y el checkout.
