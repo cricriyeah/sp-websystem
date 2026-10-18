@@ -513,6 +513,10 @@ class Personalizacion(models.Model):
         default=TipoInteraccion.CHECK,
     )
     opciones_seleccion = models.JSONField(default=list, blank=True)
+    descripcion = models.JSONField(
+        default=dict, blank=True,
+        help_text='Texto corto que el checkout muestra bajo el extra, por idioma: {"es": "…", "en": "…"}.',
+    )
     aviso_reforzado = models.BooleanField(default=False)
     cobrar_por_persona = models.BooleanField(default=False)
     cantidad_editable = models.BooleanField(default=False)
@@ -560,8 +564,34 @@ class Personalizacion(models.Model):
         if self.cantidad_editable and not self.cobrar_por_persona:
             errores['cantidad_editable'] = 'Cantidad editable requiere cobrar por persona.'
 
+        error_descripcion = self._normalizar_descripcion()
+        if error_descripcion:
+            errores['descripcion'] = error_descripcion
+
         if errores:
             raise ValidationError(errores)
+
+
+    DESCRIPCION_IDIOMAS = ('es', 'en')
+    DESCRIPCION_MAX = 160
+
+    def _normalizar_descripcion(self):
+        """Recorta los espacios de la descripción y devuelve el error, o '' si es válida."""
+        descripcion = self.descripcion
+        if not isinstance(descripcion, dict):
+            return 'La descripción debe ser un objeto con las claves es y en.'
+        if set(descripcion) - set(self.DESCRIPCION_IDIOMAS):
+            return 'La descripción solo admite las claves es y en.'
+        limpia = {}
+        for idioma, texto in descripcion.items():
+            if not isinstance(texto, str):
+                return 'Cada descripción debe ser texto.'
+            texto = texto.strip()
+            if len(texto) > self.DESCRIPCION_MAX:
+                return f'Cada descripción admite hasta {self.DESCRIPCION_MAX} caracteres.'
+            limpia[idioma] = texto
+        self.descripcion = limpia
+        return ''
 
 
 class ServicioPersonalizacion(models.Model):

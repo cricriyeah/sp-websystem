@@ -274,8 +274,39 @@ class RecursoAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     search_fields = ['nombre']
 
 
+class PersonalizacionAdminForm(forms.ModelForm):
+    """La descripción por idioma se captura en dos campos de texto: nadie edita JSON a mano."""
+    descripcion_es = forms.CharField(
+        label='Descripción (español)', required=False, max_length=Personalizacion.DESCRIPCION_MAX,
+        help_text='Texto corto que el checkout muestra bajo el extra. Déjalo vacío si no hace falta.',
+    )
+    descripcion_en = forms.CharField(
+        label='Descripción (inglés)', required=False, max_length=Personalizacion.DESCRIPCION_MAX,
+    )
+
+    class Meta:
+        model = Personalizacion
+        exclude = ['descripcion']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        descripcion = self.instance.descripcion if self.instance and isinstance(self.instance.descripcion, dict) else {}
+        self.fields['descripcion_es'].initial = descripcion.get('es', '')
+        self.fields['descripcion_en'].initial = descripcion.get('en', '')
+
+    def _post_clean(self):
+        # Antes de validar el modelo: su clean() revisa y recorta lo que armamos aquí.
+        textos = {
+            'es': (self.cleaned_data.get('descripcion_es') or '').strip(),
+            'en': (self.cleaned_data.get('descripcion_en') or '').strip(),
+        }
+        self.instance.descripcion = {idioma: texto for idioma, texto in textos.items() if texto}
+        super()._post_clean()
+
+
 @admin.register(Personalizacion)
 class PersonalizacionAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
+    form = PersonalizacionAdminForm
     list_display = ['nombre', 'tipo', 'tipo_interaccion', 'cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
     list_filter = ['tipo', 'tipo_interaccion', 'cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
     list_editable = ['cobrar_por_persona', 'cantidad_editable', 'aviso_reforzado', 'activo']
