@@ -38,32 +38,38 @@ type EntradaGrupo = {
   textos: Dictionary['pedido'];
   traslados: Dictionary['traslados'];
   checkout: Dictionary['checkout'];
+  /** `viaje`: fecha, extras, tipo de traslado y regreso. `datos`: dónde lo recogen. Sin `parte`, ambas. */
+  parte?: 'viaje' | 'datos';
 };
 
 /** Primer error de la tarjeta de un servicio del paquete ('' = completa). Función pura: no toca estado. */
 export function errorDeGrupoPaquete({
-  indice, paquete, componentes, inicio, trasladoFijo, noches, zonaDePunto, textos, traslados, checkout,
+  indice, paquete, componentes, inicio, trasladoFijo, noches, zonaDePunto, textos, traslados, checkout, parte,
 }: EntradaGrupo): string {
+  const deViaje = parte !== 'datos';
+  const deDatos = parte !== 'viaje';
   if (!inicio) return traslados.errors.seleccionaFecha;
   const item = paquete.servicios_asociados[indice];
   const actual = componentes[item.servicio.slug];
-  const errores = erroresPersonalizaciones(item.servicio.personalizaciones, actual.extras);
-  const primerError = Object.values(errores)[0];
-  if (primerError) return checkout.personalizacionErrors[primerError];
+  if (deViaje) {
+    const errores = erroresPersonalizaciones(item.servicio.personalizaciones, actual.extras);
+    const primerError = Object.values(errores)[0];
+    if (primerError) return checkout.personalizacionErrors[primerError];
+  }
   const t = actual.traslado;
   if (t && trasladoFijo) {
-    if (!t.aeropuerto) return textos.airportError;
+    if (deViaje && !t.aeropuerto) return textos.airportError;
   } else if (t) {
-    if (t.modo === 'catalogo' && t.puntoEncuentroId === null) {
+    if (deDatos && t.modo === 'catalogo' && t.puntoEncuentroId === null) {
       return traslados.errors.seleccionaHospedaje;
     }
-    if (t.modo === 'personalizada' && !t.direccion.trim()) {
+    if (deDatos && t.modo === 'personalizada' && !t.direccion.trim()) {
       return traslados.errors.seleccionaHospedaje;
     }
-    if (t.tipo === 'redondo_actividad' && !zonaEfectivaDeTraslado(t, zonaDePunto)) {
+    if (deDatos && t.tipo === 'redondo_actividad' && !zonaEfectivaDeTraslado(t, zonaDePunto)) {
       return traslados.errors.seleccionaZona;
     }
-    if (t.tipo === 'redondo_aeropuerto' && noches === null) {
+    if (deViaje && t.tipo === 'redondo_aeropuerto' && noches === null) {
       if (!t.fechaRegreso) return traslados.errors.seleccionaFechaRegreso;
       if (t.fechaRegreso <= fechaDeComponente(inicio, item.dia_estancia)) {
         return traslados.errors.seleccionaFechaRegreso;

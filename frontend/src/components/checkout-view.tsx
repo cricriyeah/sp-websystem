@@ -798,23 +798,33 @@ export function CheckoutView({
       return;
     }
 
-    setActual((a) => (a === 'contacto' ? 'detalles' : a));
-    setEditando(null);
+    continuarAPago();
   };
 
+  /** Viaje incluye los extras: no se avanza con un extra obligatorio sin contestar. */
   const confirmarViaje = () => {
-    setActual((a) => (a === 'viaje' ? 'contacto' : a));
+    const erroresDePersonalizacion = erroresPersonalizaciones(catalogoUnificado, personalizaciones);
+    setErroresPersonalizacion(erroresDePersonalizacion);
+    const primera = catalogoUnificado.find((p) => erroresDePersonalizacion[p.id]);
+    if (primera) {
+      ayuda.tropezar('validacion');
+      const campo = document.getElementById(`personalizacion-${primera.id}`);
+      campo?.focus();
+      campo?.scrollIntoView({ block: 'center' });
+      return;
+    }
+    setActual((a) => (a === 'viaje' ? 'datos' : a));
     setEditando(null);
   };
 
-  /** Extras confirmados: pasa al pago y lo trae a la vista (en móvil el panel de pago aparece aquí). */
-  const continuarAPago = () => {
+  /** Datos confirmados: pasa al pago y lo trae a la vista (en móvil el panel de pago aparece aquí). */
+  function continuarAPago() {
     setActual('pago');
     setEditando(null);
     setTimeout(() => {
       refStripePanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
-  };
+  }
 
   /** Primer paso del pago: valida, y antes de tocar la red ofrece las amenidades. */
   const iniciarPago = () => {
@@ -1110,10 +1120,15 @@ export function CheckoutView({
 
   const personasResumen = `${people} ${people === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`;
   const horaTexto = pideHora && time ? formatHour(time) : '';
+  const nombresExtras = catalogoUnificado
+    .filter((p) => personalizacionesMap.has(p.id))
+    .map((p) => p.nombre)
+    .join(', ');
   const resumenPaso1 = [
     tieneHospedaje ? `${formatDay(dayDate, lang)} → ${formatDay(fromLocalISODate(fechaSalida), lang)}` : formatDay(dayDate, lang),
     horaTexto || null,
     personasResumen,
+    nombresExtras || null,
   ].filter(Boolean).join(' · ');
   const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
   // Lo mismo que los resúmenes, pero una línea por dato, para leerlo al abrir el renglón.
@@ -1122,6 +1137,7 @@ export function CheckoutView({
     tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: formatDay(fromLocalISODate(fechaSalida), lang) } : null,
     horaTexto ? { etiqueta: checkout.summary.time, valor: horaTexto } : null,
     { etiqueta: checkout.summary.people, valor: String(people) },
+    nombresExtras ? { etiqueta: checkout.extrasStepHeadline, valor: nombresExtras } : null,
   ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
   const detallePaso2 = [
     { etiqueta: checkout.fullName, valor: contact.fullName },
@@ -1214,27 +1230,20 @@ export function CheckoutView({
   // Un solo foco abierto: si el cliente reabrió una respuesta, la tarjeta activa
   // se pliega a un renglón "pendiente" hasta que termine de corregirla.
   const hayEdicion = editando !== null;
-  const estadoPaso = (id: PasoId): EstadoTarjeta | 'oculto' => {
-    const estado = estadoDeTarjeta(id, actual, editando);
-    // Con el pago en curso los extras ya no se pueden cambiar: reabrirlos no dejaría tocar nada.
-    return estado !== 'oculto' && locked && id === 'detalles' ? 'completado' : estado;
-  };
+  const estadoPaso = (id: PasoId): EstadoTarjeta | 'oculto' => estadoDeTarjeta(id, actual, editando);
   const crudoViaje = estadoPaso('viaje') as EstadoTarjeta;
-  const crudoContacto = estadoPaso('contacto');
-  const crudoDetalles = estadoPaso('detalles');
+  const crudoDatos = estadoPaso('datos');
   const estadoViaje = estadoVisible(crudoViaje, hayEdicion);
-  const estadoContacto = crudoContacto === 'oculto' ? null : estadoVisible(crudoContacto, hayEdicion);
-  const estadoDetalles = crudoDetalles === 'oculto' ? null : estadoVisible(crudoDetalles, hayEdicion);
+  const estadoDatos = crudoDatos === 'oculto' ? null : estadoVisible(crudoDatos, hayEdicion);
   const secuencia: EstadoVisible[] = [estadoViaje];
-  if (estadoContacto) secuencia.push(estadoContacto);
-  if (estadoDetalles) secuencia.push(estadoDetalles);
+  if (estadoDatos) secuencia.push(estadoDatos);
   const reabrir = (id: PasoId) => setEditando((e) => (e === id ? null : id));
   const etiquetaAccion = (estado: EstadoTarjeta | 'oculto') =>
     estado === 'completado' ? checkout.changeStep : estado === 'editando' ? checkout.doneEditing : undefined;
 
-  // El stepper cuenta el pago como paso 4 en cuanto se confirman los extras, o
+  // El stepper cuenta el pago como paso 3 en cuanto se confirman los datos, o
   // antes si ya se mandó el formulario (en escritorio el panel siempre está a la vista).
-  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? 4 : numeroDePaso(actual);
+  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? numeroDePaso('pago') : numeroDePaso(actual);
   const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
   // Con anticipo, la cifra del paso de pago es lo que se cobra hoy, no el total.
   const stepperPago = phase === 'payment' && pago && Number(pago.monto_a_cobrar) < Number(pago.precio_total)
@@ -1328,6 +1337,7 @@ export function CheckoutView({
                   ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso>
                   : undefined}
               >
+                <div className="flex flex-col gap-6">
                 <BloqueViaje
                   lang={lang}
                   checkout={checkout}
@@ -1352,20 +1362,39 @@ export function CheckoutView({
                   precioPersonaExtra={precioPersonaExtra}
                   currency={currency}
                 />
+                {/* Los extras son parte del viaje. Bebidas se quitó del checkout: depende
+                    del tipo de bebida, un dato que el sitio no captura; la vendedora la
+                    sigue cotizando a mano. El punto de encuentro real y el aviso del
+                    agente son información de después de pagar (BookingConfirmation). */}
+                <BloqueExtras
+                  checkout={checkout}
+                  catalogo={catalogoUnificado}
+                  seleccionadas={personalizacionesMap}
+                  errores={erroresPersonalizacion}
+                  locked={locked}
+                  people={people}
+                  moneda={moneda}
+                  tipoCambioUsd={servicio?.tipo_cambio_usd}
+                  currency={currency}
+                  onAlternar={alternarPersonalizacion}
+                  onRespuesta={actualizarRespuestaPersonalizacion}
+                  onCantidad={ajustarCantidadPersonalizacion}
+                />
+                </div>
               </CheckoutSectionCard>
             </ItemPaso>
 
-            {estadoContacto && (
+            {estadoDatos && (
               <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
                 <CheckoutSectionCard
-                  title={checkout.contactHeadline}
-                  estado={estadoContacto}
+                  title={checkout.stepper.datos}
+                  estado={estadoDatos}
                   resumen={resumenPaso2}
                   detalle={detallePaso2}
-                  actionLabel={locked ? undefined : etiquetaAccion(crudoContacto)}
-                  onAction={locked || crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
-                  pie={crudoContacto === 'activo' && !locked
-                    ? <BotonPaso onClick={confirmarContacto}>{checkout.confirmStep}</BotonPaso>
+                  actionLabel={locked ? undefined : etiquetaAccion(crudoDatos)}
+                  onAction={locked || crudoDatos === 'activo' ? undefined : () => reabrir('datos')}
+                  pie={crudoDatos === 'activo' && !locked
+                    ? <BotonPaso conFlecha onClick={confirmarContacto}>{checkout.continueToPayment || checkout.confirmStep}</BotonPaso>
                     : undefined}
                 >
                   <BloqueContacto
@@ -1386,55 +1415,6 @@ export function CheckoutView({
               </ItemPaso>
             )}
 
-            {/* El punto de encuentro real y el aviso del agente ya no van aquí:
-                son información de después de pagar, viven en BookingConfirmation.
-                Bebidas se quitó del checkout: depende del tipo de bebida, un dato
-                que el sitio no captura; la vendedora la sigue cotizando a mano en
-                reservas por WhatsApp o teléfono. */}
-            {estadoDetalles && (
-              <ItemPaso unida={unidaConAnterior(secuencia, secuencia.length - 1)}>
-                <CheckoutSectionCard
-                  title={checkout.extrasStepHeadline}
-                  estado={estadoDetalles}
-                  resumen={
-                    catalogoUnificado
-                      .filter((p) => personalizacionesMap.has(p.id))
-                      .map((p) => p.nombre)
-                      .join(', ') ||
-                    checkout.noExtrasSelected
-                  }
-                  detalle={catalogoUnificado.some((p) => personalizacionesMap.has(p.id))
-                    ? [{
-                        etiqueta: checkout.extrasStepHeadline,
-                        valor: catalogoUnificado
-                          .filter((p) => personalizacionesMap.has(p.id))
-                          .map((p) => p.nombre)
-                          .join(', '),
-                      }]
-                    : undefined}
-                  actionLabel={locked ? undefined : etiquetaAccion(crudoDetalles)}
-                  onAction={locked || crudoDetalles === 'activo' ? undefined : () => reabrir('detalles')}
-                  pie={crudoDetalles === 'activo' && !locked
-                    ? <BotonPaso conFlecha onClick={continuarAPago}>{checkout.continueToPayment || checkout.confirmStep}</BotonPaso>
-                    : undefined}
-                >
-                  <BloqueExtras
-                    checkout={checkout}
-                    catalogo={catalogoUnificado}
-                    seleccionadas={personalizacionesMap}
-                    errores={erroresPersonalizacion}
-                    locked={locked}
-                    people={people}
-                    moneda={moneda}
-                    tipoCambioUsd={servicio?.tipo_cambio_usd}
-                    currency={currency}
-                    onAlternar={alternarPersonalizacion}
-                    onRespuesta={actualizarRespuestaPersonalizacion}
-                    onCantidad={ajustarCantidadPersonalizacion}
-                  />
-                </CheckoutSectionCard>
-              </ItemPaso>
-            )}
             </ReservaPlegable>
 
             {/* El cuarto paso. "Cómo pagas" se pinta aquí (portal del panel) al llegar al

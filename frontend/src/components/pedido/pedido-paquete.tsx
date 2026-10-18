@@ -28,6 +28,7 @@ import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
+import { GrupoDatos } from './grupo-datos';
 import { GrupoServicio } from './grupo-servicio';
 import { PantallaEspera } from './pantalla-espera';
 import { PantallaExito } from './pantalla-exito';
@@ -71,6 +72,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   useEffect(() => {
     if (actual === 'pago') precargarFormularioPago().catch(() => {});
   }, [actual]);
+  // Viaje reúne la fecha y una tarjeta de extras por servicio: la fecha se confirma
+  // primero y luego cada servicio, en orden. Al terminar el último se pasa a «Tus datos».
+  const [fechaConfirmada, setFechaConfirmada] = useState(false);
   const [gruposCompletados, setGruposCompletados] = useState(0);
   const [grupoEditando, setGrupoEditando] = useState<number | null>(null);
   // Cuando el cliente cambia de paso (confirma uno o reabre una respuesta) la
@@ -83,6 +87,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const [erroresContacto, setErroresContacto] = useState<ErroresContacto>({});
   const [errorViaje, setErrorViaje] = useState('');
   const [errorDetalles, setErrorDetalles] = useState('');
+  const [errorRecogida, setErrorRecogida] = useState('');
   const [codigoPromocional, setCodigoPromocional] = useState('');
   const [promoEstado, setPromoEstado] = useState<'idle' | 'verificando' | 'valido' | 'invalido'>('idle');
   const [promoPorcentaje, setPromoPorcentaje] = useState<string | null>(null);
@@ -204,21 +209,33 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     }
     setErrorViaje('');
     setEditando(null);
-    setActual((a) => (a === 'viaje' ? 'contacto' : a));
+    setFechaConfirmada(true);
+  };
+
+  /** Dónde recogen a cada servicio con traslado propio (la zona incluida): vive en «Tus datos». */
+  const errorDeRecogidas = (): { indice: number; error: string } | null => {
+    for (let indice = 0; indice < paquete.servicios_asociados.length; indice++) {
+      const error = errorDeGrupo(indice, 'datos');
+      if (error) return { indice, error };
+    }
+    return null;
   };
 
   const confirmarDatos = () => {
-    if (!validarDatos()) {
+    const contactoValido = validarDatos();
+    const recogida = errorDeRecogidas();
+    setErrorRecogida(recogida?.error ?? '');
+    if (!contactoValido || recogida) {
       ayuda.tropezar('validacion');
       return;
     }
     setEditando(null);
-    setActual((a) => (a === 'contacto' ? 'detalles' : a));
+    setActual((a) => (a === 'datos' ? 'pago' : a));
   };
 
-  const errorDeGrupo = (indice: number): string => errorDeGrupoPaquete({
+  const errorDeGrupo = (indice: number, parte?: 'viaje' | 'datos'): string => errorDeGrupoPaquete({
     indice, paquete, componentes: estado.componentes, inicio: estado.inicio, trasladoFijo, noches, zonaDePunto,
-    textos, traslados, checkout,
+    textos, traslados, checkout, parte,
   });
 
   // La actividad principal de un paquete que depende de personas se elige en
@@ -230,7 +247,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   };
 
   const confirmarGrupo = (indice: number) => {
-    const error = errorDeGrupo(indice);
+    const error = errorDeGrupo(indice, 'viaje');
     if (error) {
       ayuda.tropezar('validacion');
       if (!estado.inicio) {
@@ -246,18 +263,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     let siguiente = indice + 1;
     while (siguiente < paquete.servicios_asociados.length && grupoOculto(siguiente)) siguiente += 1;
     setGruposCompletados(siguiente);
-    if (siguiente >= paquete.servicios_asociados.length) setActual('pago');
+    if (siguiente >= paquete.servicios_asociados.length) setActual('datos');
   };
 
   const enviar = () => {
     if (actual !== 'pago') return;
-    if (!validarDatos()) {
-      setEditando('contacto');
-      ayuda.tropezar('validacion');
-      return;
-    }
     for (let indice = 0; indice < paquete.servicios_asociados.length; indice++) {
-      const error = errorDeGrupo(indice);
+      const error = errorDeGrupo(indice, 'viaje');
       if (error) {
         if (!estado.inicio) {
           setErrorViaje(error);
@@ -269,6 +281,14 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         }
         return;
       }
+    }
+    const contactoValido = validarDatos();
+    const recogida = errorDeRecogidas();
+    setErrorRecogida(recogida?.error ?? '');
+    if (!contactoValido || recogida) {
+      setEditando('datos');
+      ayuda.tropezar('validacion');
+      return;
     }
     if (!waiverAccepted) {
       ayuda.tropezar('validacion');
@@ -300,21 +320,21 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
 
   // Cruza-empresa: cada cobro es un paso del stepper y su cifra es la de ese
   // cobro (no el total del pedido), para que coincida con el botón de pagar.
-  // Con un solo cobro el stepper queda de 4 pasos, como siempre.
+  // Con un solo cobro el stepper queda de 3 pasos.
   const stepperPagos = (indicePago: number, monto?: number) => {
     if (cantidadCargos <= 1) return null;
     const dato = monto ?? cargos[indicePago]?.monto;
     return {
       steps: [
-        checkout.stepper.trip, checkout.stepper.contact, checkout.stepper.extras,
+        checkout.stepper.viaje, checkout.stepper.datos,
         ...cargos.map((cargo, i) => checkout.stepper.paymentNumbered
           .replace('{n}', String(i + 1)).replace('{empresa}', nombreEmpresa(cargo.empresaSlug))),
       ],
       etiquetasCortas: [
-        checkout.stepper.trip, checkout.stepper.contact, checkout.stepper.extras,
+        checkout.stepper.viaje, checkout.stepper.datos,
         ...cargos.map((_, i) => checkout.stepper.paymentShort.replace('{n}', String(i + 1))),
       ],
-      actual: 4 + indicePago,
+      actual: numeroDePaso('pago') + indicePago,
       totalMovil: dato !== undefined ? `${formatearPrecio(dato, estado.moneda)} ${estado.moneda}` : undefined,
       // "Pagas ahora": con varios cobros la cifra del paso no es el total.
       rotulo: dato !== undefined ? checkout.stepper.payNow : undefined,
@@ -342,7 +362,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       falloEnVivo={pago.falloEnVivo}
       fallos={pago.fallos}
       nombreEmpresa={nombreEmpresa}
-      stepper={stepperPagos(pago.fallo?.indice ?? 0) ?? { actual: 4, totalMovil }}
+      stepper={stepperPagos(pago.fallo?.indice ?? 0) ?? { actual: numeroDePaso('pago'), totalMovil }}
       onReintentarDirecto={reintentar}
       onReiniciar={reiniciarPedido}
     />
@@ -394,21 +414,26 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const hayEdicion = editando !== null || grupoEditando !== null;
   const estadoDeGrupo = (indice: number): EstadoTarjeta =>
     indice < gruposCompletados ? (grupoEditando === indice ? 'editando' : 'completado') : 'activo';
-  const estadoViaje = estadoVisible(tarjeta('viaje') as EstadoTarjeta, hayEdicion);
-  const estadoContacto: EstadoVisible = estadoVisible(
-    (tarjeta('contacto') === 'oculto' ? 'activo' : tarjeta('contacto')) as EstadoTarjeta, hayEdicion,
+  // La fecha es la primera tarjeta de Viaje: «activa» hasta confirmarla (pasar a «Tus datos»
+  // o más allá implica que ya está confirmada), «editando» si el cliente la reabre.
+  const fechaLista = fechaConfirmada || actual !== 'viaje';
+  const estadoFecha: EstadoTarjeta = !fechaLista ? 'activo' : editando === 'viaje' ? 'editando' : 'completado';
+  const estadoViaje = estadoVisible(estadoFecha, hayEdicion);
+  const estadoDatos: EstadoVisible = estadoVisible(
+    (tarjeta('datos') === 'oculto' ? 'activo' : tarjeta('datos')) as EstadoTarjeta, hayEdicion,
   );
   // Orden exacto en el que se pintan las tarjetas, para saber cuáles van pegadas.
   const secuencia: EstadoVisible[] = [estadoViaje];
-  if (tarjeta('contacto') !== 'oculto') secuencia.push(estadoContacto);
   const posicionDeGrupo = new Map<number, number>();
-  if (tarjeta('detalles') !== 'oculto') {
+  if (fechaLista) {
     paquete.servicios_asociados.forEach((_, indice) => {
       if (indice > gruposCompletados || grupoOculto(indice)) return;
       posicionDeGrupo.set(indice, secuencia.length);
       secuencia.push(estadoVisible(estadoDeGrupo(indice), hayEdicion));
     });
   }
+  const posicionDatos = secuencia.length;
+  if (tarjeta('datos') !== 'oculto') secuencia.push(estadoDatos);
 
   // El error de detalles vive en la tarjeta de grupo que está en foco (la que lo
   // causó, pegado a su CTA); si no hay ninguna en foco, va debajo de la lista.
@@ -441,9 +466,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               title={checkout.tripHeadline}
               estado={estadoViaje}
               resumen={resumenViaje}
-              actionLabel={tarjeta('viaje') === 'completado' ? checkout.changeStep : tarjeta('viaje') === 'editando' ? checkout.doneEditing : undefined}
-              onAction={tarjeta('viaje') === 'activo' ? undefined : () => setEditando((e) => (e === 'viaje' ? null : 'viaje'))}
-              pie={tarjeta('viaje') === 'activo' ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso> : undefined}
+              actionLabel={estadoFecha === 'completado' ? checkout.changeStep : estadoFecha === 'editando' ? checkout.doneEditing : undefined}
+              onAction={estadoFecha === 'activo' ? undefined : () => setEditando((e) => (e === 'viaje' ? null : 'viaje'))}
+              pie={estadoFecha === 'activo' ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso> : undefined}
             >
               <BloqueViajePaquete
                 lang={lang}
@@ -466,28 +491,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             </CheckoutSectionCard>
             </ItemPaso>
 
-            {tarjeta('contacto') !== 'oculto' && (
-              <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
-              <CheckoutSectionCard
-                title={checkout.contactHeadline}
-                estado={estadoContacto as 'activo' | 'editando' | 'completado' | 'suspendido'}
-                resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
-                actionLabel={tarjeta('contacto') === 'completado' ? checkout.changeStep : tarjeta('contacto') === 'editando' ? checkout.doneEditing : undefined}
-                onAction={tarjeta('contacto') === 'activo' ? undefined : () => setEditando((e) => (e === 'contacto' ? null : 'contacto'))}
-                pie={tarjeta('contacto') === 'activo' ? <BotonPaso onClick={confirmarDatos}>{checkout.confirmStep}</BotonPaso> : undefined}
-              >
-                <BloqueContacto
-                  idPrefijo="pedido"
-                  checkout={checkout}
-                  valores={estado.contacto}
-                  errores={erroresContacto}
-                  onCambio={(campo, valor) => despachar({ tipo: 'contacto', cambios: { [campo]: valor } })}
-                />
-              </CheckoutSectionCard>
-              </ItemPaso>
-            )}
-
-            {tarjeta('detalles') !== 'oculto' && (
+            {fechaLista && (
               <>
                 {paquete.servicios_asociados.map((componente, indice) => {
                   if (indice > gruposCompletados || grupoOculto(indice)) return null;
@@ -511,7 +515,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                       inicio={estado.inicio}
                       noches={noches}
                       salida={salida}
-                      puntos={puntosPorEmpresa[componente.servicio.empresa_slug] ?? []}
                       estadoTarjeta={estadoGrupo}
                       error={indice === indiceGrupoEnFoco ? errorDetalles : ''}
                       onAccion={() => setGrupoEditando((a) => a === indice ? null : indice)}
@@ -528,6 +531,51 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                 })}
                 <ErrorDeCampo id="pedido-detalles-error-general" mensaje={indiceGrupoEnFoco === null ? errorDetalles : ''} />
               </>
+            )}
+
+            {tarjeta('datos') !== 'oculto' && (
+              <ItemPaso unida={unidaConAnterior(secuencia, posicionDatos)}>
+              <CheckoutSectionCard
+                title={checkout.stepper.datos}
+                estado={estadoDatos as 'activo' | 'editando' | 'completado' | 'suspendido'}
+                resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
+                actionLabel={tarjeta('datos') === 'completado' ? checkout.changeStep : tarjeta('datos') === 'editando' ? checkout.doneEditing : undefined}
+                onAction={tarjeta('datos') === 'activo' ? undefined : () => setEditando((e) => (e === 'datos' ? null : 'datos'))}
+                pie={tarjeta('datos') === 'activo' ? <BotonPaso conFlecha onClick={confirmarDatos}>{checkout.continueToPayment || checkout.confirmStep}</BotonPaso> : undefined}
+              >
+                <div className="flex flex-col gap-6">
+                  <BloqueContacto
+                    idPrefijo="pedido"
+                    checkout={checkout}
+                    valores={estado.contacto}
+                    errores={erroresContacto}
+                    onCambio={(campo, valor) => despachar({ tipo: 'contacto', cambios: { [campo]: valor } })}
+                  />
+                  {paquete.servicios_asociados.map((componente) => {
+                    const slug = componente.servicio.slug;
+                    const traslado = estado.componentes[slug]?.traslado;
+                    if (!traslado || trasladoFijo) return null;
+                    return (
+                      <div key={componente.id} className="flex flex-col">
+                        <p className="texto-pequeno font-semibold text-foreground">
+                          {cantidadCargos > 1
+                            ? `${componente.servicio.nombre} · ${nombreEmpresa(componente.servicio.empresa_slug)}`
+                            : componente.servicio.nombre}
+                        </p>
+                        <GrupoDatos
+                          traslados={traslados}
+                          traslado={traslado}
+                          servicioSlug={slug}
+                          puntos={puntosPorEmpresa[componente.servicio.empresa_slug] ?? []}
+                          onTraslado={(cambios) => despachar({ tipo: 'traslado', slug, cambios })}
+                        />
+                      </div>
+                    );
+                  })}
+                  <ErrorDeCampo id="pedido-recogida-error" mensaje={errorRecogida} />
+                </div>
+              </CheckoutSectionCard>
+              </ItemPaso>
             )}
 
             {/* El cuarto paso: "Cómo pagas" se pinta aquí (portal del panel) al llegar a él. */}

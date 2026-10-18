@@ -386,10 +386,9 @@
     "changeStep": "Modify",
     "doneEditing": "Done",
     "stepper": {
-      "trip": "Trip",
-      "contact": "Details",
-      "extras": "Details",
-      "payment": "Payment",
+      "viaje": "Trip",
+      "datos": "Your details",
+      "pago": "Payment",
       "paymentNumbered": "Payment {n} · {empresa}",
       "paymentShort": "Payment {n}",
       "payNow": "Pay now",

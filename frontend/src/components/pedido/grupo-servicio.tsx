@@ -4,10 +4,9 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BotonPaso } from '@/components/checkout/boton-paso';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
-import type { Moneda, PaqueteServicioCatalogo, PuntoEncuentro } from '@/lib/api';
+import type { Moneda, PaqueteServicioCatalogo } from '@/lib/api';
 import type { SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
-import { GrupoDatos } from './grupo-datos';
 import { GrupoViaje } from './grupo-viaje';
 
 type Props = {
@@ -26,7 +25,6 @@ type Props = {
   inicio: string | null;
   noches: number | null;
   salida: string | null;
-  puntos: PuntoEncuentro[];
   estadoTarjeta: 'activo' | 'editando' | 'completado' | 'suspendido';
   /** Error de validación de ESTA tarjeta: se muestra pegado a su CTA, no entre otras tarjetas. */
   error?: string;
@@ -40,12 +38,11 @@ type Props = {
 
 export function GrupoServicio({
   lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda, tipoCambio,
-  inicio, noches, salida, puntos, estadoTarjeta,
+  inicio, noches, salida, estadoTarjeta,
   onAccion, onCompletar, onTope, onPersonas, onExtras, onTraslado, error,
 }: Props) {
-  const { checkout, pedido, traslados } = dict;
+  const { checkout, pedido } = dict;
   const servicio = componente.servicio;
-  const traslado = estado.traslado;
   const bloqueado = estadoTarjeta === 'completado';
   const personasTexto = estado.personas === 1 ? pedido.forOne : pedido.forPeople.replace('{n}', String(estado.personas));
   const resumen = precioDependeDePersonas
@@ -79,15 +76,6 @@ export function GrupoServicio({
         noches={noches}
         salida={salida}
         bloqueado={bloqueado}
-        datos={traslado && !trasladoFijo ? (
-          <GrupoDatos
-            traslados={traslados}
-            traslado={traslado}
-            servicioSlug={servicio.slug}
-            puntos={puntos}
-            onTraslado={onTraslado}
-          />
-        ) : null}
         onTope={onTope}
         onPersonas={onPersonas}
         onExtras={onExtras}

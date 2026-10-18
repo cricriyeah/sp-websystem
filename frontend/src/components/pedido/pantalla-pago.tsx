@@ -9,6 +9,7 @@ import { StripePanel } from '@/components/stripe-panel';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import { fechaDeComponente } from '@/lib/calendario-paquete';
 import type { ComponentePedido } from '@/lib/pedido-payload';
+import { numeroDePaso } from '@/lib/pasos-checkout';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { EncabezadoPago } from './encabezado-pago';
 import { FranjaResumen } from './franja-resumen';
@@ -102,8 +103,8 @@ export function PantallaPago({
       }
       stepper={stepperPagos(pago.indice, Number(pasoPago.monto)) ?? (Number(pasoPago.monto) < Number(pasoPago.precioTotal ?? pasoPago.monto)
         // Un solo cobro con anticipo: la cifra del paso es el anticipo, no el total.
-        ? { actual: 4, totalMovil: `${monto} ${moneda}`, rotulo: checkout.stepper.payNow, totalGeneral: `${totalPago} ${moneda}` }
-        : { actual: 4, totalMovil })}
+        ? { actual: numeroDePaso('pago'), totalMovil: `${monto} ${moneda}`, rotulo: checkout.stepper.payNow, totalGeneral: `${totalPago} ${moneda}` }
+        : { actual: numeroDePaso('pago'), totalMovil })}
       pasos={
         <>
           <ReservaPlegable

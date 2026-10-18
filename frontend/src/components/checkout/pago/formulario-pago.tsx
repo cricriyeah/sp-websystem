@@ -199,7 +199,7 @@ export function FormularioPago({
   const puente = cuando ? checkout.paymentBridgeUntil.replace('{cuando}', cuando) : checkout.paymentBridge;
   return (
     <>
-      <CheckoutSectionCard title={checkout.stepper.payment} estado="activo">
+      <CheckoutSectionCard title={checkout.stepper.pago} estado="activo">
         {encabezadoPago}
         {/* Linea fija del apartado: solo cuando crear-pago devolvio apartado_hasta.
             Con APARTADO_MINUTOS=0 o servicios sin cupo fisico, apartadoHasta es null y no aparece. */}

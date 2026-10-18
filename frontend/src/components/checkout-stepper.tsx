@@ -31,7 +31,7 @@ type CheckoutStepperProps = {
  * que tiene.
  */
 export function CheckoutStepper({ stepper, actual, steps, totalMovil, rotulo, totalGeneral, etiquetasCortas }: CheckoutStepperProps) {
-  const pasos = steps ?? [stepper.trip, stepper.contact, stepper.extras, stepper.payment];
+  const pasos = steps ?? [stepper.viaje, stepper.datos, stepper.pago];
   const totalPasos = pasos.length;
   const etiquetas = etiquetasCortas ?? pasos;
 

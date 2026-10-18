@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { AirplaneTilt, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
@@ -37,11 +36,6 @@ type Props = {
   salida: string | null;
   /** Con la tarjeta completada nada de esto se puede cambiar. */
   bloqueado: boolean;
-  /**
-   * `GrupoDatos` (recogida y zona): va dentro del bloque del traslado, después
-   * del tipo y del regreso, para que el orden del DOM sea el de siempre.
-   */
-  datos: ReactNode;
   onTope?: () => void;
   onPersonas: (personas: number) => void;
   onExtras: (seleccion: SeleccionPersonalizacion[]) => void;
@@ -57,7 +51,7 @@ type Props = {
  */
 export function GrupoViaje({
   lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, moneda, tipoCambio,
-  inicio, noches, salida, bloqueado, datos,
+  inicio, noches, salida, bloqueado,
   onTope, onPersonas, onExtras, onTraslado,
 }: Props) {
   const { checkout, booking, pedido, traslados } = dict;
@@ -226,7 +220,6 @@ export function GrupoViaje({
         </Despliegue>
       )}
 
-        {datos}
     </div>
   )}
 

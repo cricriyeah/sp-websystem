@@ -2,13 +2,13 @@
 // una empresa y paquete cruza-empresa. Sin React: solo decide qué tarjeta se
 // ve y en qué estado, para que los tres checkouts no lo reinventen cada uno.
 
-export type PasoId = 'viaje' | 'contacto' | 'detalles' | 'pago';
+export type PasoId = 'viaje' | 'datos' | 'pago';
 
-export const ORDEN_PASOS: readonly PasoId[] = ['viaje', 'contacto', 'detalles', 'pago'];
+export const ORDEN_PASOS: readonly PasoId[] = ['viaje', 'datos', 'pago'];
 
 export type EstadoTarjeta = 'activo' | 'editando' | 'completado';
 
-/** 1-4, el número que usa el stepper. */
+/** 1-3, el número que usa el stepper. */
 export function numeroDePaso(id: PasoId): number {
   return ORDEN_PASOS.indexOf(id) + 1;
 }

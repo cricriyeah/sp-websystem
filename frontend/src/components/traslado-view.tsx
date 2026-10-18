@@ -347,31 +347,27 @@ export function TrasladoView({
       ayuda.tropezar('validacion');
       return;
     }
-    setActual((a) => (a === 'viaje' ? 'contacto' : a));
+    setActual((a) => (a === 'viaje' ? 'datos' : a));
     setEditando(null);
   };
 
+  /** «Tus datos» junta contacto y recogida: se validan juntos antes de pasar al pago. */
   const confirmarDatos = () => {
     const errs = validarContacto();
     setErroresContacto(errs);
+    const falla = errorDeRecogida();
+    setErrorPaso2(falla);
     if (Object.keys(errs).length > 0) {
       ayuda.tropezar('validacion');
       const primero = ORDEN_CAMPOS.find((c) => errs[c]);
       if (primero) refsContacto[primero].current?.focus();
       return;
     }
-    setActual((a) => (a === 'contacto' ? 'detalles' : a));
-    setEditando(null);
-  };
-
-  const confirmarRecogida = () => {
-    const falla = errorDeRecogida();
-    setErrorPaso2(falla);
     if (falla) {
       ayuda.tropezar('validacion');
       return;
     }
-    setActual((a) => (a === 'detalles' ? 'pago' : a));
+    setActual((a) => (a === 'datos' ? 'pago' : a));
     setEditando(null);
   };
 
@@ -416,7 +412,7 @@ export function TrasladoView({
     const errs = validarContacto();
     setErroresContacto(errs);
     if (Object.keys(errs).length > 0) {
-      setEditando('contacto');
+      setEditando('datos');
       ayuda.tropezar('validacion');
       const primero = ORDEN_CAMPOS.find((c) => errs[c]);
       if (primero) refsContacto[primero].current?.focus();
@@ -425,7 +421,7 @@ export function TrasladoView({
     const fallaRecogida = errorDeRecogida();
     if (fallaRecogida) {
       setErrorPaso2(fallaRecogida);
-      setEditando('detalles');
+      setEditando('datos');
       ayuda.tropezar('validacion');
       return;
     }
@@ -568,20 +564,17 @@ export function TrasladoView({
   const hayEdicion = editando !== null;
   const estadoPaso = (id: PasoId): EstadoTarjeta | 'oculto' => estadoDeTarjeta(id, actual, editando);
   const crudoViaje = estadoPaso('viaje') as EstadoTarjeta;
-  const crudoContacto = estadoPaso('contacto');
-  const crudoRecogida = estadoPaso('detalles');
+  const crudoDatos = estadoPaso('datos');
   const estadoViaje = estadoVisible(crudoViaje, hayEdicion);
-  const estadoContacto = crudoContacto === 'oculto' ? null : estadoVisible(crudoContacto, hayEdicion);
-  const estadoRecogida = crudoRecogida === 'oculto' ? null : estadoVisible(crudoRecogida, hayEdicion);
+  const estadoDatos = crudoDatos === 'oculto' ? null : estadoVisible(crudoDatos, hayEdicion);
   const secuencia: EstadoVisible[] = [estadoViaje];
-  if (estadoContacto) secuencia.push(estadoContacto);
-  if (estadoRecogida) secuencia.push(estadoRecogida);
+  if (estadoDatos) secuencia.push(estadoDatos);
   const reabrir = (id: PasoId) => setEditando((e) => (e === id ? null : id));
   const etiquetaAccion = (estado: EstadoTarjeta | 'oculto') =>
     estado === 'completado' ? checkout.changeStep : estado === 'editando' ? checkout.doneEditing : undefined;
 
-  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? 4 : numeroDePaso(actual);
-  const stepsList = [checkout.stepper.trip, checkout.stepper.contact, traslados.stepPickup, checkout.stepper.payment];
+  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? numeroDePaso('pago') : numeroDePaso(actual);
+  const stepsList = [checkout.stepper.viaje, checkout.stepper.datos, checkout.stepper.pago];
   const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
   // Con anticipo, la cifra del paso de pago es lo que se cobra hoy, no el total.
   const stepperPago = phase === 'payment' && pago && Number(pago.monto_a_cobrar) < Number(pago.precio_total)
@@ -692,72 +685,57 @@ export function TrasladoView({
               </CheckoutSectionCard>
             </ItemPaso>
 
-            {estadoContacto && (
+            {estadoDatos && (
               <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
                 <CheckoutSectionCard
-                  title={checkout.contactHeadline}
-                  estado={estadoContacto}
-                  resumen={resumenDatos}
-                  detalle={detalleContacto}
-                  actionLabel={locked ? undefined : etiquetaAccion(crudoContacto)}
-                  onAction={locked || crudoContacto === 'activo' ? undefined : () => reabrir('contacto')}
-                  pie={crudoContacto === 'activo' && !locked
-                    ? <BotonPaso onClick={confirmarDatos}>{checkout.confirmStep}</BotonPaso>
+                  title={checkout.stepper.datos}
+                  estado={estadoDatos}
+                  resumen={[resumenDatos, resumenRecogida].filter(Boolean).join(' · ')}
+                  detalle={[...detalleContacto, ...(detalleRecogida ?? [])]}
+                  actionLabel={locked ? undefined : etiquetaAccion(crudoDatos)}
+                  onAction={locked || crudoDatos === 'activo' ? undefined : () => reabrir('datos')}
+                  pie={crudoDatos === 'activo' && !locked
+                    ? <BotonPaso conFlecha onClick={confirmarDatos}>{checkout.confirmStep}</BotonPaso>
                     : undefined}
                 >
-                  <BloqueContacto
-                    idPrefijo="traslado"
-                    checkout={checkout}
-                    valores={contact}
-                    errores={erroresContacto}
-                    refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
-                    disabled={locked}
-                    onCambio={(campo, valor) => {
-                      setContact((prev) => ({ ...prev, [campo]: valor }));
-                      if (erroresContacto[campo]) setErroresContacto((prev) => ({ ...prev, [campo]: undefined }));
-                    }}
-                  />
-                </CheckoutSectionCard>
-              </ItemPaso>
-            )}
-
-            {estadoRecogida && (
-              <ItemPaso unida={unidaConAnterior(secuencia, secuencia.length - 1)}>
-                <CheckoutSectionCard
-                  title={traslados.step2Title}
-                  estado={estadoRecogida}
-                  resumen={resumenRecogida}
-                  detalle={detalleRecogida}
-                  actionLabel={locked ? undefined : etiquetaAccion(crudoRecogida)}
-                  onAction={locked || crudoRecogida === 'activo' ? undefined : () => reabrir('detalles')}
-                  pie={crudoRecogida === 'activo' && !locked
-                    ? <BotonPaso conFlecha onClick={confirmarRecogida}>{checkout.confirmStep}</BotonPaso>
-                    : undefined}
-                >
-                  <BloqueRecogida
-                    traslados={traslados}
-                    puntosEncuentro={catalogo.puntos_encuentro}
-                    puntoSeleccionado={puntoSeleccionado}
-                    puntoEncuentroId={puntoEncuentroId}
-                    modoHospedaje={modoHospedaje}
-                    direccionPersonalizada={direccionPersonalizada}
-                    zonaPersonalizada={zonaPersonalizada}
-                    tipoTraslado={tipoTraslado}
-                    error={errorPaso2}
-                    onPunto={setPuntoEncuentroId}
-                    onOtraDireccion={() => {
-                      setModoHospedaje('personalizada');
-                      setPuntoEncuentroId(null);
-                    }}
-                    onDireccion={setDireccionPersonalizada}
-                    onVolverALista={() => {
-                      setModoHospedaje('catalogo');
-                      setDireccionPersonalizada('');
-                      setZonaPersonalizada('');
-                      setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
-                    }}
-                    onZona={setZonaPersonalizada}
-                  />
+                  <div className="flex flex-col gap-6">
+                    <BloqueContacto
+                      idPrefijo="traslado"
+                      checkout={checkout}
+                      valores={contact}
+                      errores={erroresContacto}
+                      refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
+                      disabled={locked}
+                      onCambio={(campo, valor) => {
+                        setContact((prev) => ({ ...prev, [campo]: valor }));
+                        if (erroresContacto[campo]) setErroresContacto((prev) => ({ ...prev, [campo]: undefined }));
+                      }}
+                    />
+                    <BloqueRecogida
+                      traslados={traslados}
+                      puntosEncuentro={catalogo.puntos_encuentro}
+                      puntoSeleccionado={puntoSeleccionado}
+                      puntoEncuentroId={puntoEncuentroId}
+                      modoHospedaje={modoHospedaje}
+                      direccionPersonalizada={direccionPersonalizada}
+                      zonaPersonalizada={zonaPersonalizada}
+                      tipoTraslado={tipoTraslado}
+                      error={errorPaso2}
+                      onPunto={setPuntoEncuentroId}
+                      onOtraDireccion={() => {
+                        setModoHospedaje('personalizada');
+                        setPuntoEncuentroId(null);
+                      }}
+                      onDireccion={setDireccionPersonalizada}
+                      onVolverALista={() => {
+                        setModoHospedaje('catalogo');
+                        setDireccionPersonalizada('');
+                        setZonaPersonalizada('');
+                        setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
+                      }}
+                      onZona={setZonaPersonalizada}
+                    />
+                  </div>
                 </CheckoutSectionCard>
               </ItemPaso>
             )}
