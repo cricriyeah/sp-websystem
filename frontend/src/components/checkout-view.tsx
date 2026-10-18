@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } fr
 import { useSearchParams } from 'next/navigation';
 import { Warning } from '@phosphor-icons/react';
 import { useBorrador } from '@/components/checkout/use-borrador';
+import { useCorregir } from '@/components/checkout/use-corregir';
 import { usePasoUrl } from '@/components/checkout/use-paso-url';
+import { destinoDeError } from '@/lib/campo-paso';
+import { validarTodo } from '@/lib/validar-reserva';
 import { claveBorrador } from '@/lib/borrador-reserva';
 import { pasoDeQuery } from '@/lib/paso-url';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
@@ -648,6 +651,7 @@ export function CheckoutView({
     },
   });
   const pagoEnCurso = phase === 'payment' || phase === 'submitting' || phase === 'confirmando';
+  const corregir = useCorregir(actual, setEditando);
   usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo });
   // Una sola flecha: «paso anterior» mientras haya uno y no haya un pago en curso; si no, sale al origen.
   const pasoVisible = editando ?? actual;
@@ -867,16 +871,24 @@ export function CheckoutView({
 
   /** Primer paso del pago: valida, y antes de tocar la red ofrece las amenidades. */
   const iniciarPago = () => {
+    // Todo lo que impide pagar se revisa junto y se lleva al cliente al primero, en su paso y
+    // en su campo: una tarjeta ya confirmada está plegada y un campo que no está montado no
+    // recibe foco.
     const errores = validarContacto();
     setErroresCampo(errores);
-
-    if (Object.keys(errores).length > 0) {
+    const erroresDePersonalizacion = erroresPersonalizaciones(catalogoUnificado, personalizaciones);
+    setErroresPersonalizacion(erroresDePersonalizacion);
+    const primeraPersonalizacion = catalogoUnificado.find((p) => erroresDePersonalizacion[p.id]);
+    const primerContacto = ORDEN_CAMPOS.find((campo) => errores[campo]);
+    const problema = validarTodo([
+      primeraPersonalizacion
+        ? { paso: 'viaje', campo: `personalizacion-${primeraPersonalizacion.id}`, mensaje: erroresDePersonalizacion[primeraPersonalizacion.id] }
+        : null,
+      primerContacto ? { paso: 'datos', campo: `checkout-error-${primerContacto}`, mensaje: errores[primerContacto] ?? '' } : null,
+    ]);
+    if (problema) {
       ayuda.tropezar('validacion');
-      // El foco salta al primer campo malo. Sin esto, quien navega con teclado o
-      // con lector de pantalla no tiene forma de enterarse de que hay un error:
-      // el mensaje existe visualmente y para el nadie lo dijo.
-      const primero = ORDEN_CAMPOS.find((campo) => errores[campo]);
-      if (primero) refsContacto[primero].current?.focus();
+      corregir(problema);
       return;
     }
 
@@ -888,19 +900,6 @@ export function CheckoutView({
     }
 
     if (total === null || amountDueNow === null) {
-      return;
-    }
-
-    const erroresDePersonalizacion = erroresPersonalizaciones(catalogoUnificado, personalizaciones);
-    setErroresPersonalizacion(erroresDePersonalizacion);
-    const primeraPersonalizacion = catalogoUnificado.find(
-      (p) => erroresDePersonalizacion[p.id],
-    );
-    if (primeraPersonalizacion) {
-      ayuda.tropezar('validacion');
-      const campo = document.getElementById(`personalizacion-${primeraPersonalizacion.id}`);
-      campo?.focus();
-      campo?.scrollIntoView({ block: 'center' });
       return;
     }
 
@@ -1048,6 +1047,17 @@ export function CheckoutView({
           setError(checkout.promoCode.invalid);
           setPhase('error');
           return;
+        }
+
+        // El servidor rechazó un campo concreto: se lleva al cliente a su paso y a su control.
+        if (err.status === 400) {
+          const destino = destinoDeError(err.detail, 'checkout');
+          if (destino) {
+            setError(mensajeDeError(err, checkout, dict.feedback));
+            setPhase('error');
+            corregir(destino);
+            return;
+          }
         }
       }
       setError(mensajeDeError(err, checkout, dict.feedback));

@@ -35,6 +35,8 @@ type Config = {
   codigoPromocional?: string;
   captchaToken: () => string;
   mensajeDeError: (err: unknown) => string;
+  /** El servidor rechazó un campo concreto: la vista lleva al cliente a su paso y a su control. */
+  alErrorDeCampo?: (err: unknown) => void;
   /** Texto cuando la renovacion devuelve otro importe: el cliente debe verlo antes de pagar. */
   mensajeMontoDistinto: (monto: string) => string;
 };
@@ -322,6 +324,7 @@ export function usePagoPedido(config: Config) {
       }
       // Un 503 ("Stripe no configurado") lo traduce `mensajeDeError` a `checkout.paymentUnavailable`.
       setError(c.mensajeDeError(err));
+      c.alErrorDeCampo?.(err);
       setFase('formulario');
       return false;
     }

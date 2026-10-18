@@ -3,7 +3,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useBorrador } from '@/components/checkout/use-borrador';
+import { useCorregir } from '@/components/checkout/use-corregir';
 import { usePasoUrl } from '@/components/checkout/use-paso-url';
+import { destinoDeError } from '@/lib/campo-paso';
+import { validarTodo } from '@/lib/validar-reserva';
 import { claveBorrador } from '@/lib/borrador-reserva';
 import { pasoDeQuery } from '@/lib/paso-url';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
@@ -228,6 +231,7 @@ export function TrasladoView({
     },
   });
   const pagoEnCurso = phase === 'payment' || phase === 'submitting';
+  const corregir = useCorregir(actual, setEditando);
   usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo });
   // Una sola flecha: «paso anterior» mientras haya uno y no haya un pago en curso; si no, sale al origen.
   const pasoVisible = editando ?? actual;
@@ -449,26 +453,20 @@ export function TrasladoView({
     // Lo ya confirmado se revalida: cambiar el tipo de traslado después de elegir
     // la recogida puede dejarla incompleta (p. ej. ahora pide zona).
     const fallaViaje = errorDeViaje();
-    if (fallaViaje) {
-      setErrorPaso3(fallaViaje);
-      setEditando('viaje');
-      ayuda.tropezar('validacion');
-      return;
-    }
+    setErrorPaso3(fallaViaje);
     const errs = validarContacto();
     setErroresContacto(errs);
-    if (Object.keys(errs).length > 0) {
-      setEditando('datos');
-      ayuda.tropezar('validacion');
-      const primero = ORDEN_CAMPOS.find((c) => errs[c]);
-      if (primero) refsContacto[primero].current?.focus();
-      return;
-    }
     const fallaRecogida = errorDeRecogida();
-    if (fallaRecogida) {
-      setErrorPaso2(fallaRecogida);
-      setEditando('datos');
+    setErrorPaso2(fallaRecogida);
+    const primerContacto = ORDEN_CAMPOS.find((c) => errs[c]);
+    const problema = validarTodo([
+      fallaViaje ? { paso: 'viaje', campo: '', mensaje: fallaViaje } : null,
+      primerContacto ? { paso: 'datos', campo: `traslado-error-${primerContacto}`, mensaje: errs[primerContacto] ?? '' } : null,
+      fallaRecogida ? { paso: 'datos', campo: '', mensaje: fallaRecogida } : null,
+    ]);
+    if (problema) {
       ayuda.tropezar('validacion');
+      corregir(problema);
       return;
     }
     if (!waiverAccepted) {
@@ -542,6 +540,9 @@ export function TrasladoView({
         setPhase('error');
         return;
       }
+      // El servidor rechazó un campo concreto: se lleva al cliente a su paso y a su control.
+      const destino = err instanceof ApiError && err.status === 400 ? destinoDeError(err.detail, 'traslado') : null;
+      if (destino) corregir(destino);
       setError(
         err instanceof ApiError && err.status === 502
           ? checkout.errorPaymentProvider

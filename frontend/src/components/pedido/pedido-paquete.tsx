@@ -14,7 +14,7 @@ import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
-import { validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
+import { ApiError, validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
 import { fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
@@ -30,7 +30,9 @@ import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
 import { useBorrador } from '@/components/checkout/use-borrador';
+import { useCorregir } from '@/components/checkout/use-corregir';
 import { usePasoUrl } from '@/components/checkout/use-paso-url';
+import { destinoDeError } from '@/lib/campo-paso';
 import { claveBorrador } from '@/lib/borrador-reserva';
 import { pasoDeQuery } from '@/lib/paso-url';
 import { GrupoDatos } from './grupo-datos';
@@ -71,6 +73,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const [destinoTarjetaPago, setDestinoTarjetaPago] = useState<HTMLElement | null>(null);
   const [actual, setActual] = useState<PasoId>('viaje');
   const [editando, setEditando] = useState<PasoId | null>(null);
+  const corregir = useCorregir(actual, setEditando);
   const tarjeta = (id: PasoId) => estadoDeTarjeta(id, actual, editando);
   const ayuda = useAyudaContextual();
 
@@ -168,6 +171,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     codigoPromocional: motor === 'reserva' ? codigoPromocional : undefined,
     captchaToken: () => captcha.current,
     mensajeDeError: (err) => mensajeDeError(err, checkout, feedback),
+    alErrorDeCampo: (err) => {
+      const destino = err instanceof ApiError && err.status === 400 ? destinoDeError(err.detail, 'pedido') : null;
+      if (destino) corregir(destino);
+    },
     mensajeMontoDistinto: (monto) => checkout.montoDistinto
       .replace('{monto}', formatearPrecio(Number(monto), estado.moneda)),
     armarPayload: (checkoutId) => {
@@ -317,8 +324,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     const recogida = errorDeRecogidas();
     setErrorRecogida(recogida?.error ?? '');
     if (!contactoValido || recogida) {
-      setEditando('datos');
       ayuda.tropezar('validacion');
+      const errores = erroresDeContacto(estado.contacto, checkout);
+      const primero = (['fullName', 'phone', 'email'] as const).find((campo) => errores[campo]);
+      corregir({ paso: 'datos', campo: primero ? `pedido-error-${primero}` : '' });
       return;
     }
     if (!waiverAccepted) {
