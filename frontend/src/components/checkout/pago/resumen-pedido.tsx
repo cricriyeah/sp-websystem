@@ -12,7 +12,7 @@ export function ResumenPedido({
 }: Pick<StripePanelProps, 'checkout' | 'lines' | 'lineasViaje' | 'total' | 'amountDueNow' | 'resumenSoloEscritorio'>) {
   return (
     <div className={resumenSoloEscritorio ? 'hidden lg:block' : undefined}>
-    <CheckoutSectionCard title={checkout.orderSummaryHeadline} variant="elevated">
+    <CheckoutSectionCard title={checkout.orderSummaryHeadline}>
       {lineasViaje.length > 0 && (
         <dl className="mb-4 flex flex-col gap-2 border-b border-border pb-4">
           {lineasViaje.map((linea) => (

@@ -10,12 +10,6 @@ import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
 type CheckoutSectionCardProps = {
   title: string;
   /**
-   * `flat` (pasos): tarjeta blanca al ras. `elevated` (resumen de pago): la
-   * misma tarjeta pero con sombra marcada, para que la columna del dinero se
-   * lea como una pieza aparte y no como un paso mas de la lista.
-   */
-  variant?: 'flat' | 'elevated';
-  /**
    * 'activo': tarjeta abierta, primera vez que se contesta — sin boton en el
    * encabezado, el CTA para avanzar vive adentro (`children`).
    * 'editando': abierta de nuevo despues de estar confirmada. Header lleva
@@ -51,14 +45,10 @@ type CheckoutSectionCardProps = {
   children: ReactNode;
 };
 
-const ESTILOS = {
-  flat: 'border-border bg-superficie',
-  elevated: 'border-border bg-superficie',
-};
+const ESTILOS = 'border-border bg-superficie';
 
 export function CheckoutSectionCard({
   title,
-  variant = 'flat',
   estado = 'activo',
   resumen,
   detalle,
@@ -70,7 +60,7 @@ export function CheckoutSectionCard({
 }: CheckoutSectionCardProps) {
   const abierto = estado === 'activo' || estado === 'editando';
   const confirmado = estado === 'completado' || estado === 'editando';
-  const enRenglon = estado === 'completado' && variant === 'flat';
+  const enRenglon = estado === 'completado';
   const conDetalle = enRenglon && !onAction && !!detalle && detalle.length > 0;
   const verDetalle = useDetalleAbierto();
   const detalleAbierto = conDetalle && verDetalle.abierto;
@@ -188,7 +178,7 @@ export function CheckoutSectionCard({
       // automático sepa a cuál llevar al cliente; `scroll-mt` deja libre el
       // header fijo y el stepper.
       data-tarjeta-foco={abierto ? '' : undefined}
-      className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] border lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS[variant]} ${
+      className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] border lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS} ${
         abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-2 sm:px-6' : 'p-5 sm:p-6'
       }`}
     >
@@ -254,7 +244,7 @@ export function CheckoutSectionCard({
             onAnimationComplete={() => setEnTransicion(false)}
             className={enTransicion ? 'overflow-hidden' : 'overflow-visible'}
           >
-            <div className={`mt-5 ${variant === 'flat' ? 'flex flex-col gap-5' : ''}`}>{children}</div>
+            <div className={`mt-5 flex flex-col gap-5`}>{children}</div>
             {pie && <PieDeTarjeta titulo={title}>{pie}</PieDeTarjeta>}
           </m.div>
         )}

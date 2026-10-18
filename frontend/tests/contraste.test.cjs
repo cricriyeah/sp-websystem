@@ -41,6 +41,7 @@ const PARES = [
   ['tinta', 'arena', 16.17, TEXTO, 'texto principal sobre la página'],
   ['tinta', 'blanco', 17.27, TEXTO, 'texto principal sobre tarjetas y campos'],
   ['tinta-suave', 'arena', 9.59, TEXTO, 'texto secundario sobre la página'],
+  ['tinta-suave', 'cafe-bruma', 8.68, TEXTO, 'chip neutro'],
   ['apagado', 'blanco', 6.37, TEXTO, 'ayudas y etiquetas'],
   ['apagado', 'arena', 5.96, TEXTO, 'ayudas sobre la página'],
   ['apagado', 'cafe-bruma', 5.4, TEXTO, 'texto deshabilitado'],

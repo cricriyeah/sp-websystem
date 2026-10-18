@@ -16,7 +16,7 @@ const TONOS = {
   // El coral puro no alcanza contraste como texto: se usa coral-texto.
   ciudad: 'bg-coral-claro text-coral-texto',
   outside: 'bg-verde-claro text-verde',
-  neutro: 'bg-cafe-bruma text-cafe-profundo',
+  neutro: 'bg-cafe-bruma text-tinta-suave',
 } as const;
 
 const ICONO_NEUTRO = { hospedaje: Bed, traslado: Van, paquete: Package } as const;
@@ -38,9 +38,9 @@ export function ChipActividad({ tipo, icono = 'paquete', className, children, ..
   return (
     <span
       {...props}
-      className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1 texto-pie font-medium', TONOS[tipo], className)}
+      className={cn('inline-flex h-7 items-center gap-1.5 rounded-full px-3 texto-pequeno font-semibold', TONOS[tipo], className)}
     >
-      <Icono size={14} weight="bold" aria-hidden="true" className="shrink-0" />
+      <Icono size={16} weight="bold" aria-hidden="true" className="shrink-0" />
       {children}
     </span>
   );
