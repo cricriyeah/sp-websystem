@@ -12,13 +12,14 @@
  * y sin pulso, porque el contenido de pago no se anima y el iframe es de un
  * tercero que llega cuando llega. Este `Skeleton` pulsa: no se usa para pagos.
  *
- * La animacion se limita a quien no pidio reducir el movimiento.
+ * Pulsa 1,2 s y solo para quien no pidio reducir el movimiento. Hereda el radio
+ * del elemento que reemplaza: quien lo usa pasa `rounded-*` por `className`.
  */
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={`block bg-muted/15 motion-safe:animate-pulse ${className}`}
+      className={`block bg-cafe-bruma motion-safe:animate-[pulso-esqueleto_1.2s_ease-in-out_infinite] ${className}`}
     />
   );
 }

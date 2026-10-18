@@ -61,6 +61,7 @@
   --z-barra: 50;
   --z-hoja: 60;
   --z-toast: 70;
+  --barra-alto: 0px; /* alto de la barra inferior movil; la reserva nueva (F8) lo fija en su ruta */
 
   /* Capas de interaccion (design.md, "Estados de interaccion"): tinta sobre el color base.
      El hover solo existe con puntero: Tailwind 4 ya condiciona `hover:` a `@media (hover: hover)`. */
@@ -196,6 +197,12 @@
    leer que un cubic-bezier con overshoot, y el rebote se siente igual.
    `prefers-reduced-motion: reduce` la reduce a un fundido de 150 ms (al final
    de este archivo) — no hace falta un guard aparte aqui. */
+@keyframes pulso-esqueleto {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 @keyframes confirmacion-pop {
   0% {
     transform: scale(0.4);

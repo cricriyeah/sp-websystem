@@ -41,7 +41,7 @@ type ContextoToast = {
 const Contexto = createContext<ContextoToast | null>(null);
 
 /** Cuanto vive un aviso. Lo suficiente para leerlo en el idioma mas largo. */
-const DURACION_MS = 6000;
+const DURACION_MS = 5000;
 
 const ICONOS = { exito: CheckCircle, error: Warning, info: Info } as const;
 
@@ -96,7 +96,7 @@ export function ProveedorToast({
         // SiteHeader (fixed, z-40): el toast (z-50) le gana en apilado, pero
         // termina superpuesto al logo/header en vez de aparecer despejado
         // arriba de todo. Mismo offset que usa checkout-view para su contenido.
-        className="pointer-events-none fixed inset-x-0 top-[calc(var(--nav-alto)+1rem)] z-50 flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:items-end sm:px-0"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--barra-alto)+8px)] z-[var(--z-toast)] flex sm:bottom-auto sm:top-[calc(var(--nav-alto)+1rem)] flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:items-end sm:px-0"
       >
         <AnimatePresence initial={false}>
           {toasts.map((toast) => {
