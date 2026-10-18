@@ -44,7 +44,7 @@ export function IncludedSection({ included }: IncludedSectionProps) {
   return (
     <SectionShell
       id="incluye"
-      fondo="bruma"
+      fondo="blanco"
       anchoTitulo="14ch"
       titulo={included.headline}
       lado={

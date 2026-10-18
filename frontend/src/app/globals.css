@@ -53,7 +53,7 @@
      Viven en :root y no en @theme porque se leen con var() desde estilos en
      linea y el @theme normal solo emite lo que una utilidad usa. */
   --scrim-hoja: rgb(31 26 20 / 0.4); /* tinta al 40 %: fondo atenuado detras de Sheet y AlertDialog */
-  --scrim-hero: linear-gradient(to top, rgba(10, 11, 14, 0.88) 0%, rgba(10, 11, 14, 0.42) 44%, rgba(10, 11, 14, 0.1) 100%); /* degradado actual de sede-hero */
+  --scrim-hero: linear-gradient(to top, rgb(31 26 20 / 0.72) 0%, rgb(31 26 20 / 0.35) 45%, rgb(31 26 20 / 0) 75%); /* degradado en tinta, no negro */
   --scrim-temporada: linear-gradient(to top, rgba(10, 11, 14, 0.86) 0%, rgba(10, 11, 14, 0.3) 52%, rgba(10, 11, 14, 0) 100%); /* degradado de season-section sobre cada foto */
   --tinte-cafe-resenas: radial-gradient(55% 60% at 12% 8%, rgba(124, 59, 2, 0.05), transparent 70%); /* tinte de reviews-section (cafe al 5 %) */
   --tinte-cafe-pie: radial-gradient(50% 60% at 88% 0%, rgba(93, 44, 2, 0.1), transparent 70%); /* tinte de site-footer (cafe-hondo al 10 %) */

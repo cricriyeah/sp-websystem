@@ -60,7 +60,7 @@ export function VideoDiferido({
       aria-hidden="true"
       onCanPlay={() => setListo(true)}
       style={style}
-      className={`transition-opacity duration-500 motion-reduce:transition-none ${listo ? 'opacity-100' : 'opacity-0'} ${className}`}
+      className={`transition-opacity duration-400 motion-reduce:transition-none ${listo ? 'opacity-100' : 'opacity-0'} ${className}`}
     >
       <source src={src} type="video/webm" />
     </video>

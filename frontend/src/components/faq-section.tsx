@@ -40,7 +40,6 @@ export function FaqSection({ faq }: FaqSectionProps) {
             grid, no dos celdas. Sueltos, la barra ocupaba la celda del titular
             y empujaba las preguntas a una fila nueva. */}
         <div>
-          <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
           <h2 className="texto-seccion text-foreground">
             {faq.headline}
           </h2>

@@ -31,7 +31,7 @@ const FOTOS = [
  */
 export function GallerySection({ gallery }: GallerySectionProps) {
   return (
-    <SectionShell id="galeria" fondo="papel" titulo={gallery.headline} aSangre>
+    <SectionShell id="galeria" fondo="cafe-bruma" titulo={gallery.headline} aSangre>
       <div className="grid grid-cols-2 gap-[3px] lg:grid-cols-4">
         {gallery.photoHints.map((hint, i) => (
           <div

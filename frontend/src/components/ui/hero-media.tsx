@@ -46,7 +46,7 @@ export function HeroMedia({ imagen, video, alt, preload = false, objectPosition,
       ) : null}
       <div className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
 
-      <div className="relative flex min-h-[calc(52svh_+_var(--nav-alto))] flex-col justify-end lg:min-h-[calc(min(56svh,520px)_+_var(--nav-alto))]">
+      <div className="relative flex min-h-[70dvh] flex-col justify-end lg:min-h-[80dvh]">
         {children}
       </div>
     </div>

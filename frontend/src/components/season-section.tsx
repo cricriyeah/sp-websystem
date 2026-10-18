@@ -50,7 +50,7 @@ const FOTOS_TEMPORADA = [
  */
 export function SeasonSection({ season }: SeasonSectionProps) {
   return (
-    <SectionShell id="temporadas" fondo="papel" titulo={season.headline}>
+    <SectionShell id="temporadas" fondo="arena" titulo={season.headline}>
       <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-muted">{season.intro}</p>
 
       {/* Los tramos se reparten el ancho segun cuantos meses abarcan (`flexGrow`),

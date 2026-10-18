@@ -30,7 +30,6 @@ export function AboutSection({
       </div>
 
       <div className="flex flex-col justify-center gap-6 px-6 py-16 sm:px-8 lg:px-20 lg:py-24">
-        <span aria-hidden className="rev-regla block h-[3px] w-12 bg-action" />
         <h2 className="max-w-[16ch] texto-seccion text-foreground">
           {about.headline}
         </h2>

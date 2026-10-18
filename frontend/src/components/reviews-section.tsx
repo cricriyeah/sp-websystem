@@ -35,7 +35,6 @@ export function ReviewsSection({ nav, reviews }: ReviewsSectionProps) {
         }}
       />
       <div className="relative mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
-        <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" />
         <h2 className="max-w-[16ch] texto-seccion text-foreground">
           {reviews.headline}
         </h2>

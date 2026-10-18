@@ -1,17 +1,15 @@
 import type { ReactNode } from 'react';
 
-type Fondo = 'papel' | 'bruma' | 'bruma-profunda';
+type Fondo = 'arena' | 'blanco' | 'cafe-bruma';
 
 /**
- * Hasta la Task 7.3 la paleta solo admite estos tres fondos; esa tarea los renombra a
- * `arena | blanco | cafe-bruma`. Las clases van completas para que Tailwind las vea.
- * `cafe-claro` (amarillo saturado) nunca es fondo de sección: `bruma-profunda` cae en
- * `cafe-bruma`, como el resto de lo que fue `surface-deep`.
+ * Bandas de sección, alternadas en este orden. `cafe-claro` (amarillo saturado) nunca es
+ * fondo de sección. Las clases van completas para que Tailwind las vea.
  */
 const FONDOS: Record<Fondo, string> = {
-  papel: 'bg-background',
-  bruma: 'bg-surface',
-  'bruma-profunda': 'bg-cafe-bruma',
+  arena: 'bg-background',
+  blanco: 'bg-superficie',
+  'cafe-bruma': 'bg-cafe-bruma',
 };
 
 const ANCHOS_TITULO = {
@@ -25,7 +23,7 @@ type SectionShellProps = {
   fondo: Fondo;
   /** Contenido del `<h2>` de la sección. */
   titulo: ReactNode;
-  /** Regla corta de acento sobre el título. Por defecto, sí. */
+  /** Regla de 48 × 2 sobre el título. Por defecto no; máximo 2 por página (`reservar` en la sede, `sedes` en el hub). */
   regla?: boolean;
   /** Ancho máximo del título, en caracteres. Por defecto, 16. */
   anchoTitulo?: keyof typeof ANCHOS_TITULO;
@@ -48,7 +46,7 @@ export function SectionShell({
   id,
   fondo,
   titulo,
-  regla = true,
+  regla = false,
   anchoTitulo = '16ch',
   lado,
   aSangre = false,
@@ -57,7 +55,7 @@ export function SectionShell({
   const idTitulo = `${id}-titulo`;
   const bloqueTitulo = (
     <>
-      {regla ? <span aria-hidden className="rev-regla mb-6 block h-[3px] w-12 bg-action" /> : null}
+      {regla ? <span aria-hidden className="mb-6 block h-0.5 w-12 bg-cafe-medio" /> : null}
       <h2
         id={idTitulo}
         className={`${ANCHOS_TITULO[anchoTitulo]} texto-seccion text-foreground`}
@@ -80,16 +78,16 @@ export function SectionShell({
       id={id}
       aria-labelledby={idTitulo}
       className={`scroll-mt-[calc(var(--nav-alto)+16px)] ${FONDOS[fondo]} ${
-        aSangre ? 'pt-24 lg:pt-32' : 'py-24 lg:py-32'
+        aSangre ? 'pt-12 sm:pt-16 lg:pt-24' : 'py-12 sm:py-16 lg:py-24'
       }`}
     >
       {aSangre ? (
         <>
-          <div className="mx-auto max-w-6xl px-6 pb-10 sm:px-8 lg:px-12 lg:pb-14">{encabezado}</div>
+          <div className="mx-auto max-w-[1120px] px-4 pb-10 sm:px-6 lg:px-8 lg:pb-14">{encabezado}</div>
           {children}
         </>
       ) : (
-        <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-[1120px] px-4 sm:px-6 lg:px-8">
           {encabezado}
           {children}
         </div>
