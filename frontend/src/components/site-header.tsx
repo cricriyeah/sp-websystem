@@ -110,7 +110,7 @@ export function SiteHeader({
 
   return (
     <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
-      <header className="relative mx-auto flex h-20 w-full items-center justify-between gap-4 border-b border-border bg-superficie px-6 sm:px-8 lg:h-20 lg:max-w-[1440px] lg:border lg:border-border lg:px-6">
+      <header className="relative mx-auto flex h-16 w-full items-center justify-between gap-4 border-b border-border bg-arena/95 px-4 backdrop-blur sm:px-6 lg:max-w-[1440px] lg:rounded-card lg:border lg:border-border lg:px-6">
         <Link
           href={hrefInicio(lang)}
           className="flex shrink-0 items-center text-foreground"
@@ -122,7 +122,7 @@ export function SiteHeader({
             width={1026}
             height={331}
             priority
-            className="h-11 w-auto lg:h-14"
+            className="h-10 w-auto lg:h-12"
           />
         </Link>
 
@@ -132,7 +132,7 @@ export function SiteHeader({
               <Link
                 key={link.href}
                 href={link.href}
-                className="whitespace-nowrap text-[13px] text-foreground transition-colors hover:text-accent"
+                className="inline-flex min-h-11 items-center whitespace-nowrap text-sm text-foreground transition-colors hover:text-accent"
               >
                 {link.label}
               </Link>
@@ -144,7 +144,7 @@ export function SiteHeader({
           {links.length === 1 && (
             <Link
               href={links[0].href}
-              className="hidden text-[15px] text-foreground transition-colors hover:text-accent lg:inline-flex"
+              className="hidden min-h-11 items-center text-base text-foreground transition-colors hover:text-accent lg:inline-flex"
             >
               {links[0].label}
             </Link>
@@ -187,21 +187,21 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className={`absolute inset-x-0 top-full flex flex-col border-b border-border bg-superficie px-6 py-2 shadow-n2 sm:px-8 ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
+              className={`absolute inset-x-0 top-full flex flex-col rounded-b-card border border-t-0 border-border bg-arena px-4 py-2 shadow-n2 sm:px-6 lg:mt-2 lg:rounded-card lg:border-t ${minimo ? 'lg:hidden' : '2xl:hidden'}`}
             >
               {links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="border-b border-border-strong py-3.5 text-[15px] text-foreground last:border-b-0"
+                  className="border-b border-border-strong flex min-h-11 items-center py-2 text-base text-foreground last:border-b-0"
                 >
                   {link.label}
                 </Link>
               ))}
               {!minimo && (
                 <div className="flex items-center justify-between border-b border-border-strong py-3.5">
-                  <span className="text-[15px] text-muted">{nav.sedeLabel}</span>
+                  <span className="text-base text-muted">{nav.sedeLabel}</span>
                   <SedeSelector
                     lang={lang}
                     sedes={sedesDisponibles}
@@ -213,7 +213,7 @@ export function SiteHeader({
                 </div>
               )}
               <div className="flex items-center justify-between border-b border-border-strong py-3.5 lg:hidden">
-                <span className="text-[15px] text-muted">{nav.switchLang}</span>
+                <span className="text-base text-muted">{nav.switchLang}</span>
                 <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />
               </div>
               <div className="py-3">

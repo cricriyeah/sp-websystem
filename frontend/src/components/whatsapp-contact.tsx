@@ -55,7 +55,7 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
         target="_blank"
         rel="noopener"
         aria-label={`${nav.whatsappCta}: ${numero}`}
-        className="flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+        className="flex min-h-11 items-center gap-2 rounded-control bg-accent px-5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
       >
         <WhatsappLogo size={18} weight="fill" />
         {numero}

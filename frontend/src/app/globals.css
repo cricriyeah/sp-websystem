@@ -47,7 +47,7 @@
      96px cuando la barra ya medIa 104, y el contenido arrancaba debajo de
      ella. Cambiar el alto de la barra obliga a cambiar esto, y solo esto. */
   --banda-alto: 0px; /* alto de la banda "Continuar reservacion"; la escribe SiteHeader, 0 si no hay */
-  --nav-alto: calc(80px + var(--banda-alto)); /* top-0 + h-20 (80) en movil + banda */
+  --nav-alto: calc(64px + var(--banda-alto)); /* top-0 + h-16 (64) en movil + banda */
 
   /* --- Tokens aditivos (Task 2.1): sin consumidores todavia, sin cambio visual.
      Viven en :root y no en @theme porque se leen con var() desde estilos en
@@ -71,13 +71,13 @@
 
 @media (min-width: 40rem) {
   :root {
-    --nav-alto: calc(80px + var(--banda-alto)); /* top-0 + h-20 (80) en tablet + banda */
+    --nav-alto: calc(64px + var(--banda-alto)); /* top-0 + h-16 (64) en tablet + banda */
   }
 }
 
 @media (min-width: 64rem) {
   :root {
-    --nav-alto: calc(96px + var(--banda-alto)); /* lg:top-4 (16) + lg:h-20 (80) en escritorio + banda: debe coincidir con site-header.tsx, un hueco aqui deja ver el contenido bajo el stepper */
+    --nav-alto: calc(80px + var(--banda-alto)); /* lg:top-4 (16) + h-16 (64) en escritorio + banda: debe coincidir con site-header.tsx, un hueco aqui deja ver el contenido bajo el stepper */
   }
 }
 
