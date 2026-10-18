@@ -101,7 +101,7 @@ Ningún gesto es el único camino: todo tiene botón.
 | Regla | Detalle |
 |---|---|
 | Tono | Cercano y claro, de «tú». Sin jerga ni promesas exageradas |
-| Mayúsculas | Caja de oración en botones, etiquetas y titulares. Nada todo en mayúsculas |
+| Mayúsculas | Caja de oración en botones y etiquetas. **Titulares (`texto-display/pagina/seccion/paso`) siempre en mayúsculas** (decisión del dueño, 2026-10-17) |
 | Botones | Dicen **adónde llevan o qué hacen**: «Continuar a tus datos», «Pagar $4,100 MXN a Sal y Sol». Nunca «Siguiente», «Enviar» ni «Aceptar» solos |
 | Botón deshabilitado | Siempre una línea debajo que dice qué falta: «Elige una fecha para continuar» |
 | Errores | Qué pasó y cómo arreglarlo, sin culpar: «El número de tarjeta está incompleto. Revisa los 16 dígitos» |
@@ -151,7 +151,7 @@ Ningún gesto es el único camino: todo tiene botón.
 
 ### Tipografía
 
-- **Haz** titulares en Consola Mono (solo Book y Bold), caja de oración, con `text-wrap: balance`.
+- **Haz** titulares en Consola Mono (solo Book y Bold), en mayúsculas, con `text-wrap: balance`.
 - **Haz** cuerpo en San Francisco (fuente del sistema), mínimo 16 px en campos.
 - **No uses** la mono para párrafos largos ni para cifras de dinero en tablas (ahí van `tabular-nums` de la fuente del cuerpo).
 - **No uses** más de tres tamaños de texto en una tarjeta.

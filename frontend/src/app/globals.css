@@ -319,6 +319,7 @@
     font-family: var(--font-titulo);
     font-weight: 700;
     font-synthesis: none;
+    text-transform: uppercase; /* decision del dueño (2026-10-17): los titulares siempre en mayusculas; el texto en el JSON queda en caja de oracion */
     text-wrap: balance;
     overflow-wrap: break-word;
     hyphens: manual;
