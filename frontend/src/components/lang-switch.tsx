@@ -134,7 +134,7 @@ export function LangSwitch({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}
-        className="flex h-11 items-center gap-2 rounded-control border border-border-strong bg-superficie px-3 text-sm font-semibold text-foreground transition-colors hover:bg-cafe-bruma"
+        className="flex h-11 items-center gap-2 rounded-control border border-border-strong bg-superficie px-3 text-sm font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-cafe-bruma active:scale-[0.98] active:bg-cafe-claro motion-reduce:active:scale-100"
       >
         <current.Flag className="h-3.5 w-5" />
         <span>{current.value.toUpperCase()}</span>

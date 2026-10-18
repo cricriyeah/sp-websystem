@@ -1,4 +1,5 @@
 'use client';
+import { botonClases } from '@/components/ui/variantes';
 import { useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -89,7 +90,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
       </div>
       {sede && <div aria-live="polite" className="flex flex-wrap items-center gap-4 border-t border-border bg-superficie p-5">
         <div className="min-w-0 flex-1"><p className="font-semibold">{sede.nombre}</p>{sede.empresaFundadoraNombre && <p className="text-sm text-muted">{copy.conLabel} {sede.empresaFundadoraNombre}</p>}</div>
-        <Link href={hrefSede(lang, sede.slug)} className="rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white">{copy.verDestino}</Link>
+        <Link href={hrefSede(lang, sede.slug)} className={botonClases({ variante: 'principal' })}>{copy.verDestino}</Link>
         <Button variante="libre" aria-label={copy.closeDestination} onClick={() => setAbiertoSlug(null)} className="flex h-11 w-11 items-center justify-center"><X size={20} /></Button>
       </div>}
     </div>

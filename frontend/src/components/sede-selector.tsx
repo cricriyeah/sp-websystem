@@ -129,7 +129,7 @@ export function SedeSelector({
         aria-haspopup="listbox"
         className={
           isHeader
-            ? 'flex min-h-11 items-center gap-1.5 rounded-control border border-border-strong bg-superficie px-3 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed'
+            ? 'flex min-h-11 items-center gap-1.5 rounded-control border border-border-strong bg-superficie px-3 text-sm font-medium text-foreground transition-[color,border-color,transform] duration-150 hover:border-accent hover:text-accent active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed'
             : 'flex items-center gap-2.5 rounded-control border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed'
         }
       >

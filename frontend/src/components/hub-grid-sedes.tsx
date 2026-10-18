@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { botonClases } from '@/components/ui/variantes';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeContenido } from '@/content/sedes-tipos';
@@ -44,7 +45,7 @@ export function HubGridSedes({ lang, sedes, copy }: HubGridSedesProps) {
             )}
             <Link
               href={hrefSede(lang, sede.slug)}
-              className="mt-4 inline-flex w-fit items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.98]"
+              className={`mt-4 w-fit ${botonClases({ variante: 'principal' })}`}
             >
               {copy.verDestino}
             </Link>
