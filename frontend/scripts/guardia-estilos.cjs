@@ -99,7 +99,7 @@ function suben(base, actual) {
 
 // Umbral duro (F6): estas reglas no admiten ni una infracción fuera de EXENTOS, sin importar la línea base.
 // Las de la marca nueva (F7, Task 7.3) entran con la compuerta. `bg-surface-uso` queda fuera: puede
-// quedar en bandas de sección (about, faq, colaboradores, secciones de la página de servicio).
+// quedar en bandas de sección (about, faq, secciones de la página de servicio).
 const UMBRAL_DURO = [
   'boton-crudo', 'input-crudo', 'img-cruda', 'paleta-cruda', 'color-literal', 'capas-ui', 'motion-completo',
   'texto-chico-en-campo', 'mayusculas-crudas', 'radio-crudo', 'sombra-cruda', 'surface-deep', 'titular-sin-escala',

@@ -115,7 +115,6 @@
     "opiniones": "Reviews",
     "mapa": "Map",
     "sedes": "Destinations",
-    "colaboradores": "Partners",
     "eligeSede": "Choose a destination"
   },
   "hero": {
@@ -932,9 +931,6 @@
     "verTodoDestinos": "See all destinations",
     "destinationsTitle": "Choose your destination",
     "aboutTitle": "About us",
-    "partnersTitle": "Meet our partners",
-    "partnersIntro": "Discover the businesses behind our collaborations across Baja California Sur.",
-    "websiteLabel": "Website",
     "mapAria": "Interactive Baja California map. Use arrow keys to pan and buttons to zoom.",
     "pacificOcean": "PACIFIC OCEAN",
     "seaOfCortez": "SEA OF CORTEZ",

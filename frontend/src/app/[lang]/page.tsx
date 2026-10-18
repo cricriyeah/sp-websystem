@@ -12,7 +12,6 @@ import { SiteFooter } from '@/components/site-footer';
 import { HubMapaSedes } from '@/components/hub-mapa-sedes';
 import { HubGridSedes } from '@/components/hub-grid-sedes';
 import { HubPorQue } from '@/components/hub-por-que';
-import { ColaboradoresSection } from '@/components/colaboradores-section';
 
 export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promise<Metadata> {
   const { lang } = await params;
@@ -43,7 +42,6 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
         <HubGridSedes lang={lang} sedes={sedes} copy={dict.hub} />
       </section>
       <HubPorQue headline={dict.hub.aboutTitle} pilares={dict.hub.pilares} />
-      <ColaboradoresSection sedes={sedes} lang={lang} copy={dict.hub} />
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={null} />
   </>;
