@@ -162,8 +162,14 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
 - Anatomía común de la ruta `/reservar` (servicio suelto, paquete de una
   empresa y paquete cruza-empresa): `PaginaCheckout`
   (`src/components/checkout/pagina-checkout.tsx`) pone volver → `EncabezadoCompra`
-  → stepper → [pasos | pedido]. Los pasos son siempre viaje → contacto →
-  detalles → pago (`src/lib/pasos-checkout.ts`); cada tarjeta es un
+  → stepper → [pasos | pedido]. Los pasos son siempre viaje → datos → pago
+  (`src/lib/pasos-checkout.ts`; los extras van en Viaje, contacto y recogida en
+  Tus datos). El paso vive en `?paso=` (`lib/paso-url.ts` + `use-paso-url.ts`: cada
+  paso es una entrada de historial por `pushState`, Atrás reabre el anterior) y el
+  borrador de la pestaña en `sessionStorage` (`lib/borrador-reserva.ts` +
+  `use-borrador.ts`, solo se repone con `?paso=` en la URL); la flecha es «paso
+  anterior» salvo en Viaje o con un pago en curso, donde sale al origen
+  (`lib/origen.ts`, `?origen=`). Cada tarjeta es un
   `CheckoutSectionCard` con un solo CTA en el `pie` (`BotonPaso`) y bloques
   separados por espacio, no por rayas. El panel derecho (`StripePanel`) es SOLO
   el resumen del pedido (líneas vivas del viaje, cargos, total y "pagarás
@@ -257,8 +263,9 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
 - **Resiliencia**: si la API de traslados devuelve 404 o 503 (ej. Stripe no configurado en esa empresa), la página muestra un estado accesible de servicio no disponible sin reventar. Cuenta con `loading.tsx` con esqueletos visuales durante la carga.
 - **Componente `traslado-view.tsx`**: usa la misma anatomía que el resto de los
   checkouts (`PaginaCheckout`, `EncabezadoCompra`, renglones unidos, un foco,
-  `AyudaFlotante`). Secuencia fija de 4 pasos con stepper `Viaje · Datos ·
-  Recogida · Pago`:
+  `AyudaFlotante`). Secuencia fija de 3 pasos con stepper `Viaje · Tus datos ·
+  Pago` (contacto y recogida comparten Tus datos; abajo, el desglose anterior de
+  4 pasos, que ahora son bloques):
   1. **Viaje** (`checkout.tripHeadline`), 4 bloques en este orden: tipo de traslado
      (`TipoTrasladoCards`, lo que define el producto va primero) → fecha de inicio
      (`FechaPaquete`, sin cupo) → fecha de regreso solo con `redondo_aeropuerto`

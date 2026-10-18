@@ -60,3 +60,9 @@ test('una tarjeta en edición o suspendida parte el bloque de completadas', () =
   assert.equal(p.unidaConAnterior(estados, 2), false);
   assert.equal(p.unidaConAnterior(estados, 3), false);
 });
+
+test('pasoAnterior retrocede un paso y en el primero no hay', () => {
+  assert.equal(p.pasoAnterior('pago'), 'datos');
+  assert.equal(p.pasoAnterior('datos'), 'viaje');
+  assert.equal(p.pasoAnterior('viaje'), null);
+});

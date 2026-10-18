@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Warning } from '@phosphor-icons/react';
+import { useBorrador } from '@/components/checkout/use-borrador';
+import { usePasoUrl } from '@/components/checkout/use-paso-url';
+import { claveBorrador } from '@/lib/borrador-reserva';
+import { pasoDeQuery } from '@/lib/paso-url';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
@@ -47,7 +52,7 @@ import {
   type SeleccionPersonalizacion,
 } from '@/lib/personalizaciones';
 import {
-  estadoDeTarjeta, estadoVisible, numeroDePaso, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+  estadoDeTarjeta, estadoVisible, numeroDePaso, pasoAnterior, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
@@ -156,6 +161,8 @@ type CheckoutViewProps = {
   empresaSlug?: string;
   servicioId?: number | string | null;
   servicioNombre?: string | null;
+  /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
+  volverHref: string;
   servicio?: ServicioCatalogo | null;
 };
 
@@ -188,6 +195,7 @@ export function CheckoutView({
   empresaSlug,
   servicioId,
   servicioNombre,
+  volverHref,
   servicio,
 }: CheckoutViewProps) {
   const { checkout, booking } = dict;
@@ -615,6 +623,37 @@ export function CheckoutView({
   const ayuda = useAyudaContextual();
   // Al cambiar de paso, la tarjeta en foco se trae a la vista solo si hace falta.
   useScrollAlFoco(`${actual}|${editando}|${phase === 'payment'}`);
+
+  // Borrador de la pestaña y paso en la URL (ver `use-borrador` y `use-paso-url`). Solo se repone
+  // un borrador si la URL ya trae `?paso=`: una entrada nueva desde el sitio manda sobre uno viejo.
+  const reponerBorrador = useSearchParams().get('paso') !== null;
+  const borradorListo = useBorrador({
+    clave: claveBorrador('reservar', servicio?.slug ?? servicioNombre ?? 'servicio'),
+    habilitado: phase !== 'recuperando',
+    reponer: reponerBorrador,
+    terminado: phase === 'confirmed',
+    estado: { day, time, people, personalizaciones, fechaSalidaManual, moneda, formaPago, contact, paso: actual },
+    restaurar: (guardado) => {
+      // Una reserva recuperada del servidor ya llevó al cliente a Pago: manda sobre el borrador.
+      if (actual === 'pago') return;
+      setDay(guardado.day);
+      setTime(guardado.time);
+      setPeople(guardado.people);
+      setPersonalizaciones(guardado.personalizaciones);
+      setFechaSalidaManual(guardado.fechaSalidaManual);
+      setMoneda(guardado.moneda);
+      setFormaPago(guardado.formaPago);
+      setContact(guardado.contact);
+      setActual(pasoDeQuery(guardado.paso) ?? 'viaje');
+    },
+  });
+  const pagoEnCurso = phase === 'payment' || phase === 'submitting' || phase === 'confirmando';
+  usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo });
+  // Una sola flecha: «paso anterior» mientras haya uno y no haya un pago en curso; si no, sale al origen.
+  const pasoVisible = editando ?? actual;
+  const alPasoAnterior = !pagoEnCurso && pasoAnterior(pasoVisible) !== null
+    ? () => setEditando(pasoAnterior(pasoVisible))
+    : undefined;
 
   // Al llegar a "Cómo pagas" se pide ya el formulario de tarjeta (y con él Stripe.js):
   // para cuando se crea el pago, el chunk está listo. Solo en el cliente.
@@ -1270,7 +1309,8 @@ export function CheckoutView({
         // Con lo que el cliente ya había contestado: `page.tsx` de la portada
         // lo lee y precarga el booking bar, para no hacerlo empezar de cero
         // solo por haber vuelto a revisar algo.
-        volverHref={`/${lang}?${new URLSearchParams({ day, time, people: String(people) }).toString()}`}
+        volverHref={volverHref}
+        alPasoAnterior={alPasoAnterior}
         volverLabel={checkout.back}
         encabezado={
           <EncabezadoCompra

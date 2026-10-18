@@ -32,6 +32,9 @@ const suites = {
   variantes: ['src/components/ui/variantes.ts', 'VARIANTES_TEST_OUT'],
   'caja-campo': ['src/components/ui/caja-campo.ts', 'CAJA_CAMPO_TEST_OUT'],
   iniciales: ['src/lib/iniciales.ts', 'INICIALES_TEST_OUT'],
+  'borrador-reserva': ['src/lib/borrador-reserva.ts', 'BORRADOR_TEST_OUT'],
+  origen: ['src/lib/origen.ts', 'ORIGEN_TEST_OUT'],
+  'paso-url': ['src/lib/paso-url.ts', 'PASO_URL_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

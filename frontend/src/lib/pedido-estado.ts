@@ -23,7 +23,9 @@ export type AccionPedido =
   | { tipo: 'personasPaquete'; slugPrincipal: string; valor: number }
   | { tipo: 'personasLogistica'; slug: string; slugPrincipal: string; valor: number }
   | { tipo: 'extras'; slug: string; valor: SeleccionPersonalizacion[] }
-  | { tipo: 'traslado'; slug: string; cambios: Partial<DetalleTraslado> };
+  | { tipo: 'traslado'; slug: string; cambios: Partial<DetalleTraslado> }
+  /** Repone un borrador de la pestaña: solo los servicios que el paquete todavía tiene. */
+  | { tipo: 'restaurar'; estado: EstadoPedido };
 
 export type OpcionesEstadoInicial = {
   moneda: Moneda;
@@ -100,5 +102,13 @@ export function reducirPedido(estado: EstadoPedido, accion: AccionPedido): Estad
       return conComponente(estado, accion.slug, (c) =>
         c.traslado ? { ...c, traslado: { ...c.traslado, ...accion.cambios } } : c,
       );
+    case 'restaurar':
+      return {
+        ...estado,
+        ...accion.estado,
+        componentes: Object.fromEntries(
+          Object.entries(estado.componentes).map(([slug, c]) => [slug, accion.estado.componentes?.[slug] ?? c]),
+        ),
+      };
   }
 }

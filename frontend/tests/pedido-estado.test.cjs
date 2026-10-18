@@ -111,3 +111,12 @@ test('la hora inicial es la primera del rango de la actividad principal, o ningu
   assert.equal(e.estadoInicial(paquete(true), { moneda: 'MXN', puntoInicial: () => null }).hora, '08:00');
   assert.equal(e.estadoInicial(paquete(false), { moneda: 'MXN', puntoInicial: () => null }).hora, '');
 });
+
+test('restaurar repone el borrador y conserva los servicios que el borrador no trae', () => {
+  const guardado = { ...inicial(), inicio: '2026-11-02', moneda: 'USD', componentes: { pesca: { ...inicial().componentes.pesca, personas: 5 } } };
+  const s = e.reducirPedido(inicial(), { tipo: 'restaurar', estado: guardado });
+  assert.equal(s.inicio, '2026-11-02');
+  assert.equal(s.moneda, 'USD');
+  assert.equal(s.componentes.pesca.personas, 5);
+  assert.equal(s.componentes.traslado.personas, 2);
+});

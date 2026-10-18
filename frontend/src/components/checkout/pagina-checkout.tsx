@@ -5,6 +5,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import { SiteHeader } from '@/components/site-header';
+import { Button } from '@/components/ui/button';
 
 type Props = {
   lang: Locale;
@@ -12,6 +13,11 @@ type Props = {
   sedeSlug?: string;
   volverHref: string;
   volverLabel: string;
+  /**
+   * La flecha es una sola: «paso anterior» mientras haya uno al que volver y, en el primero,
+   * «salir» al origen (`volverHref`). Sin esta función, siempre sale.
+   */
+  alPasoAnterior?: () => void;
   /** `EncabezadoCompra`. */
   encabezado: ReactNode;
   /** Aviso a todo el ancho entre el encabezado y el stepper (p. ej. día sin lugar). */
@@ -29,7 +35,7 @@ type Props = {
  * no persigue el scroll).
  */
 export function PaginaCheckout({
-  lang, dict, sedeSlug, volverHref, volverLabel, encabezado, aviso, stepper, pasos, pedido,
+  lang, dict, sedeSlug, volverHref, volverLabel, alPasoAnterior, encabezado, aviso, stepper, pasos, pedido,
 }: Props) {
   return (
     <div className="min-h-dvh bg-background">
@@ -38,13 +44,25 @@ export function PaginaCheckout({
       {/* SiteHeader es `fixed` y no reserva espacio: `--nav-alto` (globals.css)
           lo compensa. El 1.5rem es la separación de siempre. */}
       <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
-        <Link
-          href={volverHref}
-          className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft size={16} />
-          {volverLabel}
-        </Link>
+        {alPasoAnterior ? (
+          <Button
+            variante="libre"
+            type="button"
+            onClick={alPasoAnterior}
+            className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
+          >
+            <ArrowLeft size={16} />
+            {volverLabel}
+          </Button>
+        ) : (
+          <Link
+            href={volverHref}
+            className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
+          >
+            <ArrowLeft size={16} />
+            {volverLabel}
+          </Link>
+        )}
         {encabezado}
       </div>
 

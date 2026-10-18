@@ -1,3 +1,4 @@
+import { hrefDeOrigen } from '@/lib/origen';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -54,9 +55,13 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
     const sedesApi = await getSedes().catch(() => null);
     sedeSlugActual = sedesActivas(SEDES_INDICE, sedesApi)[0]?.slug;
   }
-  const hrefVolver = sedeSlugActual ? `/${lang}/sede/${sedeSlugActual}` : `/${lang}`;
-
   const catalogo = await getTraslados(empresaSlug).catch(() => null);
+  const hrefVolver = hrefDeOrigen({
+    lang,
+    origen: typeof query.origen === 'string' ? query.origen : undefined,
+    sedeSlug: (typeof query.sede === 'string' ? query.sede : undefined) ?? sedeSlugActual,
+    rutaServicio: catalogo?.servicio ? `servicio/${empresaSlug}/${catalogo.servicio.slug}` : undefined,
+  });
 
   if (!catalogo || !catalogo.servicio) {
     return (
@@ -118,6 +123,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
       catalogo={catalogo}
       empresaSlug={empresaSlug}
       sedeSlugActual={sedeSlugActual}
+      volverHref={hrefVolver}
     />
   );
 }

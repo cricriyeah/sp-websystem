@@ -33,6 +33,7 @@ type Props = {
   personasPaquete: number;
   /** Stepper de la vista con un cobro por paso (null si hay un solo cobro). */
   stepperPagos: (indicePago: number, monto?: number) => Stepper | null;
+  volverHref: string;
   totalMovil: string | undefined;
   total: string;
   totalConMoneda: string | null;
@@ -61,7 +62,7 @@ type Props = {
  */
 export function PantallaPago({
   lang, dict, sedeSlug, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
-  stepperPagos, totalMovil, total, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
+  stepperPagos, volverHref, totalMovil, total, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
   lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
@@ -93,7 +94,7 @@ export function PantallaPago({
       lang={lang}
       dict={dict}
       sedeSlug={sedeSlug}
-      volverHref={`/${lang}/sede/${sedeSlug}`}
+      volverHref={volverHref}
       volverLabel={textos.back}
       encabezado={
         <EncabezadoCompra

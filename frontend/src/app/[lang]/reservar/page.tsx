@@ -1,3 +1,4 @@
+import { hrefDeOrigen } from '@/lib/origen';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { preconnect } from 'react-dom';
@@ -51,6 +52,7 @@ export default async function ReservarPage({
   // Si se seleccionó un paquete de experiencias desde el catálogo
   const paqueteSlug = typeof query.paquete === 'string' ? query.paquete : undefined;
   const sedeSlug = typeof query.sede === 'string' ? query.sede : undefined;
+  const origenQuery = typeof query.origen === 'string' ? query.origen : undefined;
   const retomarCheckoutId = typeof query.retomar === 'string'
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.retomar)
     ? query.retomar : undefined;
@@ -89,6 +91,7 @@ export default async function ReservarPage({
         tarifasPorEmpresa={tarifasPorEmpresa}
         puntosPorEmpresa={puntosPorEmpresa}
         minDate={minDate}
+        volverHref={hrefDeOrigen({ lang, origen: origenQuery, sedeSlug: paquete.sede_slug || sedeSlug })}
         retomarCheckoutId={retomarCheckoutId}
       />
     );
@@ -136,6 +139,12 @@ export default async function ReservarPage({
       servicioId={servicio?.slug ?? null}
       servicioNombre={servicio?.nombre ?? null}
       servicio={servicio}
+      volverHref={hrefDeOrigen({
+        lang,
+        origen: origenQuery,
+        sedeSlug,
+        rutaServicio: servicio ? `servicio/${empresaSlug}/${servicio.slug}${sedeSlug ? `?sede=${sedeSlug}` : ''}` : undefined,
+      })}
     />
   );
 }

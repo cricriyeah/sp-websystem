@@ -46,9 +46,9 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   const titulo = servicio?.nombre ?? (pesca ? dict.serviceDetail.fishingTitle : traslado ? dict.traslados.title : dict.serviceDetail.metaFallback);
   const hrefReserva = servicio
-    ? hrefServicio(servicio, lang, moneda)
+    ? hrefServicio(servicio, lang, moneda, { origen: 'servicio', sede: sede?.slug })
     : pesca || traslado
-      ? hrefServicio({ slug, empresa_slug: empresa, tipo_servicio: traslado ? 'transporte' : 'pesca' }, lang, moneda)
+      ? hrefServicio({ slug, empresa_slug: empresa, tipo_servicio: traslado ? 'transporte' : 'pesca' }, lang, moneda, { origen: 'servicio', sede: sede?.slug })
       : null;
   return <>
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede?.slug} />

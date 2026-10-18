@@ -31,6 +31,19 @@ test('un paquete de una empresa y uno de dos van a la misma ruta y sin paquete_e
   assert.equal(dos, una);
 });
 
+test('el origen y la sede se anexan solo si se piden', () => {
+  assert.equal(h.hrefPaquete(paqueteBase(), 'es', 'MXN', 'portada'), '/es/reservar?paquete=brunch-y-pesca&sede=la-paz&moneda=MXN&origen=portada');
+  const servicio = { slug: 'pesca-deportiva', empresa_slug: 'sal-y-sol', tipo_servicio: 'pesca' };
+  assert.equal(
+    h.hrefServicio(servicio, 'es', 'MXN', { origen: 'servicio', sede: 'la-paz' }),
+    '/es/reservar?servicio=pesca-deportiva&empresa=sal-y-sol&moneda=MXN&sede=la-paz&origen=servicio',
+  );
+  assert.equal(
+    h.hrefServicio({ slug: 't', empresa_slug: 'transporte-la-paz', tipo_servicio: 'transporte' }, 'en', 'USD', { sede: 'la-paz' }),
+    '/en/traslados?empresa=transporte-la-paz&moneda=USD&sede=la-paz',
+  );
+});
+
 test('paquete sin sede_slug omite el parametro sede', () => {
   const href = h.hrefPaquete(paqueteBase({ sede_slug: '' }), 'en', 'USD');
   assert.equal(href, '/en/reservar?paquete=brunch-y-pesca&moneda=USD');

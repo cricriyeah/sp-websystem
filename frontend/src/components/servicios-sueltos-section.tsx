@@ -106,7 +106,7 @@ export function ServiciosSueltosSection({
 
               <div className="mt-5 grid gap-2 border-t border-border/50 pt-4">
                 <Link
-                  href={hrefServicio(servicio, lang, moneda)}
+                  href={hrefServicio(servicio, lang, moneda, { sede: sedeSlug })}
                   className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-control bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-deep"
                 >
                   <span>{dict.bookStandalone}</span>

@@ -1,6 +1,11 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useBorrador } from '@/components/checkout/use-borrador';
+import { usePasoUrl } from '@/components/checkout/use-paso-url';
+import { claveBorrador } from '@/lib/borrador-reserva';
+import { pasoDeQuery } from '@/lib/paso-url';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
@@ -43,7 +48,7 @@ import { mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
 import {
-  estadoDeTarjeta, estadoVisible, numeroDePaso, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+  estadoDeTarjeta, estadoVisible, numeroDePaso, pasoAnterior, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
@@ -82,6 +87,8 @@ type TrasladoViewProps = {
   catalogo: TrasladosCatalogo;
   empresaSlug: string;
   sedeSlugActual?: string;
+  /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
+  volverHref: string;
 };
 
 export function TrasladoView({
@@ -90,6 +97,7 @@ export function TrasladoView({
   catalogo,
   empresaSlug,
   sedeSlugActual,
+  volverHref,
 }: TrasladoViewProps) {
   const { checkout, traslados, feedback, booking, pedido } = dict;
   const { mostrar } = useToast();
@@ -188,6 +196,44 @@ export function TrasladoView({
   const [destinoTarjetaPago, setDestinoTarjetaPago] = useState<HTMLElement | null>(null);
   const [pagoProcesando, setPagoProcesando] = useState(false);
   const [error, setError] = useState('');
+
+  // Borrador de la pestaña y paso en la URL (ver `use-borrador` y `use-paso-url`). Solo se repone
+  // un borrador si la URL ya trae `?paso=`: una entrada nueva desde el sitio manda sobre uno viejo.
+  const reponerBorrador = useSearchParams().get('paso') !== null;
+  const borradorListo = useBorrador({
+    clave: claveBorrador('traslados', empresaSlug),
+    habilitado: phase !== 'recuperando',
+    reponer: reponerBorrador,
+    terminado: phase === 'confirmed',
+    estado: {
+      tipoTraslado, modoHospedaje, puntoEncuentroId, direccionPersonalizada, zonaPersonalizada,
+      fecha, fechaRegreso, hora, personas, contact, moneda, formaPagoSeleccionada, paso: actual,
+    },
+    restaurar: (guardado) => {
+      // Una reserva recuperada del servidor ya llevó al cliente a Pago: manda sobre el borrador.
+      if (actual === 'pago') return;
+      setTipoTraslado(guardado.tipoTraslado);
+      setModoHospedaje(guardado.modoHospedaje);
+      setPuntoEncuentroId(guardado.puntoEncuentroId);
+      setDireccionPersonalizada(guardado.direccionPersonalizada);
+      setZonaPersonalizada(guardado.zonaPersonalizada);
+      setFecha(guardado.fecha);
+      setFechaRegreso(guardado.fechaRegreso);
+      setHora(guardado.hora);
+      setPersonas(guardado.personas);
+      setContact(guardado.contact);
+      setMoneda(guardado.moneda);
+      setFormaPagoSeleccionada(guardado.formaPagoSeleccionada);
+      setActual(pasoDeQuery(guardado.paso) ?? 'viaje');
+    },
+  });
+  const pagoEnCurso = phase === 'payment' || phase === 'submitting';
+  usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo });
+  // Una sola flecha: «paso anterior» mientras haya uno y no haya un pago en curso; si no, sale al origen.
+  const pasoVisible = editando ?? actual;
+  const alPasoAnterior = !pagoEnCurso && pasoAnterior(pasoVisible) !== null
+    ? () => setEditando(pasoAnterior(pasoVisible))
+    : undefined;
 
   useEffect(() => {
     if (!checkoutId || !recuperable) return;
@@ -558,7 +604,6 @@ export function TrasladoView({
     return currency.format(min);
   };
 
-  const hrefVolver = sedeSlugActual ? `/${lang}/sede/${sedeSlugActual}` : `/${lang}`;
 
   // --- estados de las tarjetas (un solo foco abierto) -----------------------------------
   const hayEdicion = editando !== null;
@@ -618,7 +663,8 @@ export function TrasladoView({
         lang={lang}
         dict={dict}
         sedeSlug={sedeSlugActual}
-        volverHref={hrefVolver}
+        volverHref={volverHref}
+        alPasoAnterior={alPasoAnterior}
         volverLabel={traslados.back}
         encabezado={
           <EncabezadoCompra

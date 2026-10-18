@@ -6,6 +6,11 @@ export type PasoId = 'viaje' | 'datos' | 'pago';
 
 export const ORDEN_PASOS: readonly PasoId[] = ['viaje', 'datos', 'pago'];
 
+/** El paso previo a `id`, o `null` en el primero (ahí la flecha sale al origen). */
+export function pasoAnterior(id: PasoId): PasoId | null {
+  return ORDEN_PASOS[ORDEN_PASOS.indexOf(id) - 1] ?? null;
+}
+
 export type EstadoTarjeta = 'activo' | 'editando' | 'completado';
 
 /** 1-3, el número que usa el stepper. */

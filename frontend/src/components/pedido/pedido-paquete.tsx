@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
@@ -19,7 +20,7 @@ import { fromLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import {
-  estadoDeTarjeta, estadoVisible, numeroDePaso, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+  estadoDeTarjeta, estadoVisible, numeroDePaso, pasoAnterior, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
 } from '@/lib/pasos-checkout';
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
@@ -28,6 +29,10 @@ import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
+import { useBorrador } from '@/components/checkout/use-borrador';
+import { usePasoUrl } from '@/components/checkout/use-paso-url';
+import { claveBorrador } from '@/lib/borrador-reserva';
+import { pasoDeQuery } from '@/lib/paso-url';
 import { GrupoDatos } from './grupo-datos';
 import { GrupoServicio } from './grupo-servicio';
 import { PantallaEspera } from './pantalla-espera';
@@ -48,10 +53,12 @@ type Props = {
   tarifasPorEmpresa: Record<string, TrasladosCatalogo['tarifas']>;
   puntosPorEmpresa: Record<string, PuntoEncuentro[]>;
   minDate: string;
+  /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
+  volverHref: string;
   retomarCheckoutId?: string;
 };
 
-export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, retomarCheckoutId }: Props) {
+export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, volverHref, retomarCheckoutId }: Props) {
   const { checkout, feedback, pedido: textos, traslados } = dict;
   const motor = paquete.es_cruza_empresa ? 'orden' : 'reserva';
   const trasladoFijo = trasladoFijoAeropuerto(paquete);
@@ -174,6 +181,30 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   });
   // Al pasar a pagar (o al siguiente pago de una orden) la tarjeta de pago se trae a la vista.
   useScrollAlFoco(`pago|${pago.fase}|${pago.indice}`);
+
+  // Borrador de la pestaña y paso en la URL. Solo se repone un borrador si la URL ya trae
+  // `?paso=` (recarga, cambio de idioma, Atrás); una entrada nueva desde el sitio lo descarta.
+  const reponerBorrador = useSearchParams().get('paso') !== null;
+  const borradorListo = useBorrador({
+    clave: claveBorrador('paquete', paquete.slug),
+    habilitado: true,
+    reponer: reponerBorrador,
+    terminado: pago.fase === 'exito',
+    estado: { estado, paso: actual, fechaConfirmada, gruposCompletados },
+    restaurar: (guardado) => {
+      despachar({ tipo: 'restaurar', estado: guardado.estado });
+      setActual(pasoDeQuery(guardado.paso) ?? 'viaje');
+      setFechaConfirmada(Boolean(guardado.fechaConfirmada));
+      setGruposCompletados(Math.max(0, Math.min(Number(guardado.gruposCompletados) || 0, paquete.servicios_asociados.length)));
+    },
+  });
+  const pagoEnCurso = pago.fase !== 'formulario' && pago.fase !== 'resumiendo';
+  usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo });
+  // Una sola flecha: «paso anterior» mientras haya uno y no haya un pago en curso; si no, sale al origen.
+  const pasoVisible = editando ?? actual;
+  const alPasoAnterior = !pagoEnCurso && pasoAnterior(pasoVisible) !== null
+    ? () => setEditando(pasoAnterior(pasoVisible))
+    : undefined;
 
   const subtotalPromo = pedido?.total ?? null;
 
@@ -391,6 +422,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       nombreEmpresa={nombreEmpresa}
       personasPaquete={personasPaquete}
       stepperPagos={stepperPagos}
+      volverHref={volverHref}
       totalMovil={totalMovil}
       total={total}
       totalConMoneda={totalConMoneda}
@@ -446,7 +478,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         lang={lang}
         dict={dict}
         sedeSlug={sedeSlug}
-        volverHref={`/${lang}/sede/${sedeSlug}`}
+        volverHref={volverHref}
+        alPasoAnterior={alPasoAnterior}
         volverLabel={textos.back}
         encabezado={
           <EncabezadoCompra

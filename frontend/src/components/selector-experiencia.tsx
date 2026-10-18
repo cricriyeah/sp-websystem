@@ -108,7 +108,7 @@ export function SelectorExperiencia({
                 <span className="text-base font-semibold text-foreground">{servicioInstantaneo.nombre}</span>
                 {precioServicioDesde(servicioInstantaneo, moneda) !== null && <span className="text-sm text-muted">{precioDesdeLabel} {formatearPrecio(precioServicioDesde(servicioInstantaneo, moneda)!, moneda)}</span>}
                 <div className="mt-auto flex w-full flex-wrap gap-2">
-                  <Link href={hrefServicio(servicioInstantaneo, lang, moneda)} className="inline-flex min-h-11 items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">{booking.reservarAqui}</Link>
+                  <Link href={hrefServicio(servicioInstantaneo, lang, moneda, { sede: sedeSlug })} className="inline-flex min-h-11 items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">{booking.reservarAqui}</Link>
                   <Link href={hrefDetalleServicio(servicioInstantaneo, lang, moneda, sedeSlug)} className="inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-accent hover:bg-cafe-bruma">{booking.verDetalles}</Link>
                 </div>
               </article>
