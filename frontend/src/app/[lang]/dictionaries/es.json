@@ -115,6 +115,7 @@
     "opiniones": "Opiniones",
     "mapa": "Mapa",
     "sedes": "Sedes",
+    "colaboradores": "Colaboradores",
     "eligeSede": "Elige tu sede"
   },
   "hero": {
@@ -931,6 +932,9 @@
     "verTodoDestinos": "Ver todos los destinos",
     "destinationsTitle": "Elige tu sede",
     "aboutTitle": "Acerca de nosotros",
+    "partnersTitle": "Marcas que nos acompañan",
+    "partnersIntro": "Conoce a las empresas que forman parte de nuestras colaboraciones en Baja California Sur.",
+    "websiteLabel": "Sitio web",
     "mapAria": "Mapa interactivo de Baja California. Usa las flechas para mover y los botones para acercar.",
     "pacificOcean": "OCÉANO PACÍFICO",
     "seaOfCortez": "MAR DE CORTÉS",

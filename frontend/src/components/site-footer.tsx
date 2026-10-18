@@ -28,6 +28,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: 
     { href: '/' + lang + '#hub-mapa-destinos', label: es ? 'Mapa' : 'Map' },
     { href: '/' + lang + '#sedes', label: es ? 'Sedes' : 'Destinations' },
     { href: '/' + lang + '#nosotros', label: nav.nosotros },
+    { href: '/' + lang + '#colaboradores', label: es ? 'Colaboradores' : 'Partners' },
   ];
 
   const legales = [

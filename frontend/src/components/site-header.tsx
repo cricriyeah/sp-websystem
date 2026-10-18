@@ -105,6 +105,7 @@ export function SiteHeader({
     { href: hrefInicio(lang, 'hub-mapa-destinos'), label: nav.mapa },
     { href: hrefInicio(lang, 'sedes'), label: nav.sedes },
     { href: hrefInicio(lang, 'nosotros'), label: nav.nosotros },
+    { href: hrefInicio(lang, 'colaboradores'), label: nav.colaboradores },
   ];
 
   return (

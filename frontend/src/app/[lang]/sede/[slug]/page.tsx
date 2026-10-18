@@ -18,6 +18,7 @@ import { GallerySection } from '@/components/gallery-section';
 import { ReviewsSection } from '@/components/reviews-section';
 import { FaqSection } from '@/components/faq-section';
 import { StructuredData } from '@/components/structured-data';
+import { ColaboradoresSection } from '@/components/colaboradores-section';
 import { SedePendingSection } from '@/components/sede-pending-section';
 
 type Props = { params: Promise<{ lang: string; slug: string }>; searchParams: Promise<{ moneda?: string }> };
@@ -46,6 +47,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     <main>
       <SedeHero lang={lang} sedeSlug={slug} contenido={{ ...contenido.hero, facts: [] }} destacadas={contenido.destacadas} paquetes={paquetes} servicios={servicios} moneda={moneda} booking={dict.booking} verTodoLabel={dict.catalog.verTodo} hrefVerTodo={hrefSede(lang, slug, 'experiencias')} precioDesdeLabel={dict.catalog.fromPrice} />
       <AboutSection about={{ headline: contenido.colaboracion.titulo, body1: contenido.colaboracion.texto1, body2: contenido.colaboracion.texto2, photoHint: contenido.colaboracion.imagenAlt }} imagenSrc={contenido.colaboracion.imagenSrc} imagenAlt={contenido.colaboracion.imagenAlt} />
+      <ColaboradoresSection sedes={[contenido]} lang={lang} copy={dict.hub} id="empresas" />
       <section id="experiencias" className="scroll-mt-28 mx-auto max-w-6xl px-6 py-12 sm:px-8 lg:px-12">
         <h2 className="mb-8 texto-seccion">{dict.catalog.title}</h2>
         {paquetes.length ? <div className="grid items-start gap-8 md:grid-cols-2">{paquetes.map(paquete => <PaqueteCard key={paquete.id} paquete={paquete} lang={lang} dict={dict.catalog} moneda={moneda} />)}</div> : <p className="rounded-card bg-cafe-bruma p-8 text-muted">{dict.catalog.emptyPackages}</p>}
