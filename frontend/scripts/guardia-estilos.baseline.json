@@ -1,8 +1,71 @@
 {
+  "guion-largo": {
+    "src/app/[lang]/layout.tsx": 1,
+    "src/components/checkout/bloques/bloque-extras.tsx": 1,
+    "src/components/checkout/bloques/bloque-pago.tsx": 2,
+    "src/components/checkout-view.tsx": 1,
+    "src/components/pedido/grupo-viaje.tsx": 1,
+    "src/components/pedido/pedido-paquete.tsx": 1,
+    "src/components/traslado-view.tsx": 1,
+    "src/lib/pricing-paquete.ts": 1,
+    "src/app/[lang]/dictionaries/en.json": 4,
+    "src/app/[lang]/dictionaries/es.json": 1
+  },
+  "letra-12": {
+    "src/app/[lang]/not-found.tsx": 1,
+    "src/components/booking-confirmation.tsx": 3,
+    "src/components/checkout/accion-terciaria.tsx": 1,
+    "src/components/checkout/bloques/bloque-extras.tsx": 2,
+    "src/components/checkout/bloques/bloque-recogida.tsx": 2,
+    "src/components/checkout/contenido-viaje.tsx": 1,
+    "src/components/checkout/pago/nota-seguridad.tsx": 1,
+    "src/components/checkout/pago/tarjeta-como-pagas.tsx": 6,
+    "src/components/checkout/tipo-traslado-cards.tsx": 2,
+    "src/components/checkout-calendar.tsx": 1,
+    "src/components/checkout-section-card.tsx": 3,
+    "src/components/checkout-stepper.tsx": 4,
+    "src/components/checkout-view.tsx": 1,
+    "src/components/continuar-reservacion.tsx": 2,
+    "src/components/error-block.tsx": 1,
+    "src/components/field-popover.tsx": 1,
+    "src/components/hub-mapa-sedes.tsx": 3,
+    "src/components/lang-switch.tsx": 1,
+    "src/components/paquete-card.tsx": 5,
+    "src/components/pedido/aviso-cargos.tsx": 1,
+    "src/components/pedido/aviso-fallo.tsx": 1,
+    "src/components/pedido/encabezado-pago.tsx": 2,
+    "src/components/pedido/fecha-paquete.tsx": 1,
+    "src/components/pedido/grupo-datos.tsx": 1,
+    "src/components/pedido/grupo-viaje.tsx": 4,
+    "src/components/pedido/por-que-varios-pagos.tsx": 1,
+    "src/components/pedido/reserva-plegable.tsx": 2,
+    "src/components/people-stepper.tsx": 2,
+    "src/components/reviews-section.tsx": 1,
+    "src/components/season-section.tsx": 2,
+    "src/components/sede-selector.tsx": 1,
+    "src/components/selector-experiencia.tsx": 3,
+    "src/components/servicios-sueltos-section.tsx": 3,
+    "src/components/site-footer.tsx": 5,
+    "src/components/time-field.tsx": 1,
+    "src/components/ui/error-de-campo.tsx": 1,
+    "src/components/whatsapp-contact.tsx": 1
+  },
   "bg-surface-uso": {
     "src/app/[lang]/servicio/[empresa]/[servicio]/page.tsx": 2,
     "src/components/about-section.tsx": 1,
     "src/components/colaboradores-section.tsx": 1,
     "src/components/faq-section.tsx": 1
+  },
+  "objetivo-chico": {
+    "src/components/checkout/ayuda-flotante.tsx": 1,
+    "src/components/checkout-section-card.tsx": 1,
+    "src/components/pedido/reserva-plegable.tsx": 1
+  },
+  "letra-fuera-de-escala": {
+    "src/components/paquete-card.tsx": 1,
+    "src/components/sede-hero.tsx": 1,
+    "src/components/sede-selector.tsx": 1,
+    "src/components/site-header.tsx": 5,
+    "src/components/ui/empresa-sello.tsx": 2
   }
 }

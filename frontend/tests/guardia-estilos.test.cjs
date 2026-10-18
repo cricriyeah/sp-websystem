@@ -38,6 +38,21 @@ test('cuenta controles y colores crudos', () => {
   assert.equal(contar('className="bg-superficie"', 'bg-surface-uso'), 0);
 });
 
+test('F7b: letra fuera de escala, 12 px, raya larga y objetivo chico', () => {
+  assert.equal(contar('className="text-[13px]"', 'letra-fuera-de-escala'), 1);
+  assert.equal(contar('className="text-[15px] text-[12.8px]"', 'letra-fuera-de-escala'), 2);
+  assert.equal(contar('className="text-[14px] text-[16px] text-[12px]"', 'letra-fuera-de-escala'), 0);
+  assert.equal(contar('className="texto-pequeno"', 'letra-fuera-de-escala'), 0);
+  assert.equal(contar('className="text-xs text-[12px]"', 'letra-12'), 2);
+  assert.equal(contar('className="text-sm"', 'letra-12'), 0);
+  assert.equal(contar('const a = "uno — dos";', 'guion-largo'), 1);
+  assert.equal(contar('const a = "uno, dos";', 'guion-largo'), 0);
+  assert.equal(contar('<Button className="h-8 px-3">', 'objetivo-chico'), 1);
+  assert.equal(contar('<Link href="/x" className="size-6">', 'objetivo-chico'), 1);
+  assert.equal(contar('<Button className="h-11">', 'objetivo-chico'), 0);
+  assert.equal(contar('<div className="h-8">', 'objetivo-chico'), 0);
+});
+
 test('ignora comentarios y anclas parecidas a un hex', () => {
   assert.equal(contar(sinComentarios('// usa <button> aquí\nconst a = 1;'), 'boton-crudo'), 0);
   assert.equal(contar(sinComentarios('/* <img src="x" /> */ const a = 1;'), 'img-cruda'), 0);

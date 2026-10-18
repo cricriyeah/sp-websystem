@@ -25,6 +25,15 @@ const REGLAS = {
   'surface-deep': /\bbg-surface-deep\b/g,
   // Los 77 usos de bg-surface se clasifican en la Task 2.4; cuenta hoy y baja hasta lo que quede como banda de sección.
   'bg-surface-uso': /\bbg-surface(?![-\w])/g,
+  // F7b (pasada global, 2026-10-17). La escala de letra de design.md es 12 (pie y aclaración), 14 y 16 como
+  // contenido, más los titulares; un `text-[Npx]` fuera de esa lista es un tamaño inventado.
+  'letra-fuera-de-escala': /\btext-\[(?!(?:12|14|16|20|22|24|28|36|40|56|64)px\])[\d.]+px\]/g,
+  // 12 px solo vale para pies y aclaraciones; el resto del contenido va en 14. Solo trinquete: se revisan uno por uno.
+  'letra-12': /\btext-xs\b|\btext-\[12px\]/g,
+  // Raya larga (U+2014) en el texto visible. Los diccionarios JSON se miden aparte en medir().
+  'guion-largo': /—/g,
+  // Botón o enlace con alto o lado menor de 44 px (h-5 a h-9). Aproximada: solo ve la etiqueta de apertura.
+  'objetivo-chico': /<(?:Button|button|Link|a)\b[^>]*?\b(?:h|size|w)-(?:5|6|7|8|9)\b/g,
 };
 
 // Exentos POR REGLA y con motivo: valores que una API externa pide en concreto, no como var().
@@ -84,6 +93,12 @@ function medir(raiz) {
       const n = contar(texto, regla) + (regla === 'capas-ui' ? relativosFuera(texto, rel) : 0);
       if (n > 0) (resultado[regla] ??= {})[rel] = n;
     }
+  }
+  // Los diccionarios son JSON: el escáner de .ts/.tsx no los ve y ahí vive la mayor parte del texto visible.
+  const dicts = path.join(raiz, 'src/app/[lang]/dictionaries');
+  for (const nombre of fs.readdirSync(dicts).filter((f) => f.endsWith('.json'))) {
+    const n = contar(fs.readFileSync(path.join(dicts, nombre), 'utf8'), 'guion-largo');
+    if (n > 0) (resultado['guion-largo'] ??= {})[`src/app/[lang]/dictionaries/${nombre}`] = n;
   }
   return resultado;
 }
