@@ -33,7 +33,7 @@ export function PorQueVariosPagos({ dict }: { dict: Dictionary }) {
           abierto ? 'visible grid-rows-[1fr] opacity-100' : 'invisible grid-rows-[0fr] opacity-0'
         }`}
       >
-        <p className="min-h-0 max-w-prose overflow-hidden text-xs leading-relaxed text-muted">
+        <p className="min-h-0 max-w-prose overflow-hidden text-sm leading-relaxed text-muted">
           {dict.pedido.whyManyPaymentsBody}
         </p>
       </div>

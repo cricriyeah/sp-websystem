@@ -17,7 +17,7 @@ export function AvisoFallo({ titulo, motivo, lineasDinero, etiquetaBoton, onRein
     <div role="alert" className="border border-border bg-card p-5 sm:p-8">
       <h1 className="texto-subtitulo text-foreground">{titulo}</h1>
       {motivo && <p className="mt-1 text-sm text-foreground">{motivo}</p>}
-      <div className="mt-3 flex flex-col gap-2 text-xs leading-relaxed text-muted">
+      <div className="mt-3 flex flex-col gap-2 text-sm leading-relaxed text-muted">
         {lineasDinero.map((linea) => <p key={linea}>{linea}</p>)}
       </div>
       <Button variante="libre" type="button" onClick={onReintentar}

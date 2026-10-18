@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
  */
 export function EtiquetaModificar({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted transition-colors group-hover:text-foreground group-hover:underline group-hover:underline-offset-4 group-focus-visible:text-foreground group-focus-visible:underline group-focus-visible:underline-offset-4">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted transition-colors group-hover:text-foreground group-hover:underline group-hover:underline-offset-4 group-focus-visible:text-foreground group-focus-visible:underline group-focus-visible:underline-offset-4">
       {children}
       <CaretLeft size={13} weight="bold" />
     </span>

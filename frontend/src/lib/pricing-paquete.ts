@@ -92,7 +92,7 @@ export function calcularPrecioPaquete(
  * Formatea un número como moneda (MXN o USD).
  */
 export function formatearPrecio(monto: number | null, moneda: Moneda = 'MXN'): string {
-  if (monto === null || !Number.isFinite(monto)) return '—';
+  if (monto === null || !Number.isFinite(monto)) return '–';
   return new Intl.NumberFormat(moneda === 'USD' ? 'en-US' : 'es-MX', {
     style: 'currency',
     currency: moneda,

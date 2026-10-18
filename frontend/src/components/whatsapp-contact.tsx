@@ -33,7 +33,7 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
         rel="noopener"
         className="mt-1 flex flex-col gap-1 bg-accent px-4 py-3 text-accent-foreground"
       >
-        <span className="text-xs opacity-90">{nav.humanContact}</span>
+        <span className="text-sm opacity-90">{nav.humanContact}</span>
         <span className="flex items-center gap-2 text-sm font-medium">
           <WhatsappLogo size={18} weight="fill" />
           {numero}

@@ -91,12 +91,12 @@ export function SelectorExperiencia({
                 href={hrefPaquete(paqueteDestacado, lang, moneda)}
                 className="flex flex-col items-start gap-2 rounded-card border border-border bg-superficie/95 p-4 text-left transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
               >
-                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted">
                   <ArrowSquareOut size={16} />
                   {booking.incluyeHospedaje}
                 </span>
                 <span className="text-base font-semibold text-foreground">{paqueteDestacado.nombre}</span>
-                <span className="text-xs text-muted">
+                <span className="text-sm text-muted">
                   {precioDesdeLabel}{' '}
                   {formatearPrecio(calcularPrecioPaquete(paqueteDestacado, moneda).precioFinal, moneda)}
                 </span>
@@ -106,7 +106,7 @@ export function SelectorExperiencia({
             {servicioInstantaneo && (
               <article className="flex flex-col items-start gap-3 rounded-card border border-accent/40 bg-superficie p-4 text-left">
                 <span className="text-base font-semibold text-foreground">{servicioInstantaneo.nombre}</span>
-                {precioServicioDesde(servicioInstantaneo, moneda) !== null && <span className="text-xs text-muted">{precioDesdeLabel} {formatearPrecio(precioServicioDesde(servicioInstantaneo, moneda)!, moneda)}</span>}
+                {precioServicioDesde(servicioInstantaneo, moneda) !== null && <span className="text-sm text-muted">{precioDesdeLabel} {formatearPrecio(precioServicioDesde(servicioInstantaneo, moneda)!, moneda)}</span>}
                 <div className="mt-auto flex w-full flex-wrap gap-2">
                   <Link href={hrefServicio(servicioInstantaneo, lang, moneda)} className="inline-flex min-h-11 items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">{booking.reservarAqui}</Link>
                   <Link href={hrefDetalleServicio(servicioInstantaneo, lang, moneda, sedeSlug)} className="inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-accent hover:bg-cafe-bruma">{booking.verDetalles}</Link>

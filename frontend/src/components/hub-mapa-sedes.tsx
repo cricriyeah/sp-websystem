@@ -65,7 +65,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
                   onClick={() => { if (!arrastrando.current) setAbiertoSlug(s.slug); }} style={project(COORDENADAS[s.slug])}
                   className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-accent">
                   <span className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-accent ${abiertoSlug === s.slug ? 'ring-4 ring-accent/25' : ''}`} />
-                  <span className={`absolute whitespace-nowrap rounded bg-superficie/95 px-2 py-1 text-xs font-semibold text-foreground ${s.slug === 'puerto-chale' ? 'right-9 top-0' : s.slug === 'la-paz' ? 'bottom-9 left-4' : 'left-9 top-6'}`}>{s.nombre}</span>
+                  <span className={`absolute whitespace-nowrap rounded bg-superficie/95 px-2 py-1 text-sm font-semibold text-foreground ${s.slug === 'puerto-chale' ? 'right-9 top-0' : s.slug === 'la-paz' ? 'bottom-9 left-4' : 'left-9 top-6'}`}>{s.nombre}</span>
                 </Button>
               ))}
             </div>
@@ -79,13 +79,13 @@ export function HubMapaSedes({ lang, sedes, copy }: {
             { title: copy.resetMap, icon: ArrowCounterClockwise, action: reset, disabled: false },
           ].map(({ title, icon: Icon, action, disabled }) => <Button key={title} variante="libre" aria-label={title} title={title} onClick={action} disabled={disabled} className="flex h-11 w-11 items-center justify-center text-foreground hover:bg-cafe-bruma disabled:opacity-30"><Icon size={19} /></Button>)}
         </div>
-        <span className="pointer-events-none absolute left-4 top-4 rounded bg-superficie/90 px-3 py-2 text-xs text-muted">{copy.dragMap}</span>
+        <span className="pointer-events-none absolute left-4 top-4 rounded bg-superficie/90 px-3 py-2 text-sm text-muted">{copy.dragMap}</span>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-superficie px-5 py-3">
         <div className="flex flex-wrap gap-2">
           {sedes.map(s => <Button key={s.slug} variante="chip" onClick={() => setAbiertoSlug(s.slug)} aria-pressed={abiertoSlug === s.slug} className={abiertoSlug === s.slug ? 'border-accent bg-accent text-white' : 'border-border text-foreground hover:border-accent'}>{s.nombre}</Button>)}
         </div>
-        <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer" className="text-xs text-muted underline underline-offset-4">Natural Earth</a>
+        <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-muted underline underline-offset-4">Natural Earth</a>
       </div>
       {sede && <div aria-live="polite" className="flex flex-wrap items-center gap-4 border-t border-border bg-superficie p-5">
         <div className="min-w-0 flex-1"><p className="font-semibold">{sede.nombre}</p>{sede.empresaFundadoraNombre && <p className="text-sm text-muted">{copy.conLabel} {sede.empresaFundadoraNombre}</p>}</div>

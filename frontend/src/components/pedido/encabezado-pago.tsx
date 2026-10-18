@@ -54,7 +54,7 @@ export function EncabezadoPago({ dict, pasos, indice, total }: Props) {
             >
               <div className="flex items-center">
                 <span
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
                     hecho
                       ? 'bg-accent text-accent-foreground'
                       : actual
@@ -69,7 +69,7 @@ export function EncabezadoPago({ dict, pasos, indice, total }: Props) {
                 )}
               </div>
               <div className={`flex flex-col gap-0.5 ${ultimo ? '' : 'pr-3'}`}>
-                <span className={`text-xs font-medium ${actual ? 'text-accent' : 'text-muted'}`}>
+                <span className={`text-sm font-medium ${actual ? 'text-accent' : 'text-muted'}`}>
                   {actual ? textos.planNow : hecho ? textos.planDone : textos.planNext}
                 </span>
                 <span className={`text-sm ${actual ? 'font-medium text-foreground' : 'text-muted'}`}>{paso.etiqueta}</span>

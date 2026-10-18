@@ -95,7 +95,7 @@ export function TarjetaComoPagas({
                 <fieldset className="flex items-center justify-between gap-2" disabled={phase === 'submitting'}>
                   <legend className="sr-only">{checkout.currency.headline}</legend>
                   <span className="text-sm text-muted">{checkout.currency.headline}</span>
-                  <div className="flex overflow-hidden rounded-full border border-border text-xs">
+                  <div className="flex overflow-hidden rounded-full border border-border text-sm">
                     {(['MXN', 'USD'] as const).map((option) => (
                       <label
                         key={option}
@@ -141,7 +141,7 @@ export function TarjetaComoPagas({
                   {/* La explicacion del anticipo solo cuando se elige: casi todos
                       pagan completo y no necesitan leerla. */}
                   <Despliegue abierto={formaPago === 'anticipo'}>
-                    <p className="text-xs text-muted">{checkout.paymentMethod.depositNote}</p>
+                    <p className="text-sm text-muted">{checkout.paymentMethod.depositNote}</p>
                   </Despliegue>
                 </BloqueDePaso>
               )}
@@ -165,7 +165,7 @@ export function TarjetaComoPagas({
                   </Despliegue>
                   <Despliegue abierto={promoAbierto || Boolean(codigoPromocional)}>
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="codigo-promocional" className="text-xs font-medium text-muted">
+                      <label htmlFor="codigo-promocional" className="text-sm font-medium text-muted">
                         {checkout.promoCode.label}
                       </label>
                       <Input
@@ -179,10 +179,10 @@ export function TarjetaComoPagas({
                         className="w-full rounded-campo border border-border bg-superficie px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                       />
                       <Despliegue abierto={promoEstado === 'verificando'}>
-                        <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
+                        <p className="text-sm text-muted">{checkout.promoCode.checking}</p>
                       </Despliegue>
                       <Despliegue abierto={promoEstado === 'valido' && Boolean(promoPorcentaje)}>
-                        <p className="flex items-center justify-between gap-3 text-xs text-exito">
+                        <p className="flex items-center justify-between gap-3 text-sm text-exito">
                           <span className="flex items-center gap-1.5">
                             <CheckCircle size={14} weight="fill" />
                             {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje ?? 0)))}
@@ -213,7 +213,7 @@ export function TarjetaComoPagas({
                   cada uno vive en su pagina y abre en otra pestaña para no tirar lo
                   que el cliente ya lleno. */}
               <div>
-                <label className="flex items-start gap-2.5 text-xs leading-relaxed text-muted">
+                <label className="flex items-start gap-2.5 text-sm leading-relaxed text-muted">
                   <Input
                     aspecto="heredado"
                     type="checkbox"

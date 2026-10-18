@@ -19,7 +19,7 @@ import { Despliegue } from './despliegue';
  */
 export function FieldError({ id, mensaje }: { id: string; mensaje: string }) {
   return (
-    <p id={id} role="alert" className="mt-1.5 flex items-start gap-1.5 text-xs text-error">
+    <p id={id} role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-error">
       <WarningCircle size={14} weight="fill" className="mt-px shrink-0" />
       <span className="leading-snug">{mensaje}</span>
     </p>

@@ -41,7 +41,7 @@ export function ErrorBlock({
 
       {tieneWhatsapp && (
         <div className="flex flex-col gap-2 border-t border-error/30 pt-3">
-          <p className="text-xs text-error">{ayudaTitulo}</p>
+          <p className="text-sm text-error">{ayudaTitulo}</p>
           <a
             href={whatsappHref(ayudaMensaje)}
             target="_blank"

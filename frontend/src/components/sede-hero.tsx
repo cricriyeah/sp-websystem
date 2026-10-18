@@ -86,7 +86,7 @@ export function SedeHero({
                 i === 0 ? 'lg:pl-0' : 'lg:border-l lg:border-border'
               } ${i === contenido.facts.length - 1 ? 'lg:pr-0' : ''}`}
             >
-              <dt className="text-xl font-bold tracking-[-0.02em] text-accent lg:text-[23px]">{value}</dt>
+              <dt className="text-xl font-bold tracking-[-0.02em] text-accent lg:text-[22px]">{value}</dt>
               <dd className="text-sm text-muted">{label}</dd>
             </div>
           ))}

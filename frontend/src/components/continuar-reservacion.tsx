@@ -288,7 +288,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-relaxed text-foreground">{linea}</p>
-          <p className="mt-1 text-xs text-muted">{fechaRelativa(activo.actualizadoEn, textos)}</p>
+          <p className="mt-1 text-sm text-muted">{fechaRelativa(activo.actualizadoEn, textos)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {principal && <Button variante="libre" onClick={principalClick} className="min-h-11 bg-action px-4 py-2 text-sm font-semibold text-white hover:opacity-90">{principal}</Button>}
@@ -297,7 +297,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
         </div>
       </div>
       {listaAbierta && otros.length > 0 && <div className="mx-auto mt-3 max-w-[1440px] border-t border-border pt-2">
-        {otros.map(p => <Button key={p.checkoutId} variante="libre" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border px-2 py-2 text-left text-sm text-foreground last:border-b-0 hover:bg-cafe-bruma"><span>{p.productoNombre}</span><span className="shrink-0 text-xs text-muted">{fechaRelativa(p.actualizadoEn, textos)}</span></Button>)}
+        {otros.map(p => <Button key={p.checkoutId} variante="libre" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border px-2 py-2 text-left text-sm text-foreground last:border-b-0 hover:bg-cafe-bruma"><span>{p.productoNombre}</span><span className="shrink-0 text-sm text-muted">{fechaRelativa(p.actualizadoEn, textos)}</span></Button>)}
       </div>}
     </div>
   ) : null;

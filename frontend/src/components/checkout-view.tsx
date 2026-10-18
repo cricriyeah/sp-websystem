@@ -1194,7 +1194,7 @@ export function CheckoutView({
           recuperadoPagado !== null
             ? currency.format(recuperadoPagado)
             : amountDueNow === null
-              ? '—'
+              ? '–'
               : currency.format(amountDueNow)
         }
         saldoEnEfectivo={
@@ -1293,7 +1293,7 @@ export function CheckoutView({
                     ),
                   );
                 }}
-                className="shrink-0 self-start rounded-full bg-accent px-4 py-2 text-xs font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:self-auto"
+                className="shrink-0 self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:self-auto"
               >
                 {checkout.takeOffered.replace(
                   '{date}',

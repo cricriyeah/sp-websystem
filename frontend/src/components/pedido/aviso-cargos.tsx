@@ -11,7 +11,7 @@ export function AvisoCargos({ dict, cargos, total }: Props) {
   if (cargos.length <= 1) return null;
 
   return (
-    // Texto normal (no `text-xs text-muted`): es la regla que más sorprende al cliente
+    // Texto normal (no `text-sm text-muted`): es la regla que más sorprende al cliente
     // y tiene que leerse en el primer vistazo, antes del botón que crea el pago.
     <div className="text-sm leading-relaxed text-muted">
       <p className="font-medium text-foreground">
@@ -25,7 +25,7 @@ export function AvisoCargos({ dict, cargos, total }: Props) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs">{dict.pedido.chargesSum.replace('{total}', total)}</p>
+      <p className="mt-2 text-sm">{dict.pedido.chargesSum.replace('{total}', total)}</p>
       <div className="mt-1">
         <PorQueVariosPagos dict={dict} />
       </div>

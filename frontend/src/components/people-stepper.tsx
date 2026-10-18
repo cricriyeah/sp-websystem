@@ -85,7 +85,7 @@ export function PeopleStepper({
           vez contestado, y dejar que el contenido mande el alto hacia que la
           barra entera creciera al contestar. Ver el comentario largo alla. */}
       <span className="flex h-10 flex-1 flex-col items-start justify-center gap-0.5 text-left">
-        {!vacio && <span className="text-xs text-muted">{label}</span>}
+        {!vacio && <span className="text-sm text-muted">{label}</span>}
         <span className="flex w-full items-center justify-between">
           <span
             className={`whitespace-nowrap ${
@@ -127,7 +127,7 @@ export function PeopleStepper({
             animate={{ opacity: 1, y: 0 }}
             exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={{ duration: 0.16 }}
-            className={`absolute left-0 z-10 rounded-sm bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-cafe-bruma shadow-n2 ${
+            className={`absolute left-0 z-10 rounded-sm bg-foreground px-3 py-1.5 text-sm whitespace-nowrap text-cafe-bruma shadow-n2 ${
               // En un cuadro con scroll (compacto) el borde de abajo lo recorta pegado al pie con
               // "Confirmar": el aviso sube. En la barra de reserva sigue abajo, donde sí cabe.
               compacto ? 'bottom-full mb-1.5' : '-bottom-8'

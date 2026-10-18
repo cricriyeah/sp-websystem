@@ -93,8 +93,8 @@ export function BloquePago({
           label: nombreServicio ?? checkout.total,
           amount: currency.format(Number(pago.precio_total)),
         }] : lineas}
-        total={pago ? currency.format(Number(pago.precio_total)) : total === null ? '—' : currency.format(total)}
-        amountDueNow={pago ? currency.format(Number(pago.monto_a_cobrar)) : montoAhora === null ? '—' : currency.format(montoAhora)}
+        total={pago ? currency.format(Number(pago.precio_total)) : total === null ? '–' : currency.format(total)}
+        amountDueNow={pago ? currency.format(Number(pago.monto_a_cobrar)) : montoAhora === null ? '–' : currency.format(montoAhora)}
       />
     </div>
   );

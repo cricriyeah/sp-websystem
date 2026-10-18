@@ -540,7 +540,7 @@ export function TrasladoView({
         hora={formatHour(hora)}
         personas={personas}
         extras={[]}
-        pagado={total !== null ? currency.format(total) : '—'}
+        pagado={total !== null ? currency.format(total) : '–'}
         saldoEnEfectivo={null}
         procesando={pagoProcesando}
       />

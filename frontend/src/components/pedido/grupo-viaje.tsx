@@ -103,7 +103,7 @@ export function GrupoViaje({
             <span>
               <span className="font-medium">{extra.nombre}</span>
               {extra.preseleccionado && (
-                <span className="ml-2 text-xs font-medium text-accent">{checkout.recommendedBadge}</span>
+                <span className="ml-2 text-sm font-medium text-accent">{checkout.recommendedBadge}</span>
               )}
             </span>
           </span>
@@ -112,7 +112,7 @@ export function GrupoViaje({
           </span>
         </label>
         <Despliegue abierto={!marcada && Boolean(extra.aviso_reforzado)}>
-          <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-2.5 text-xs text-foreground">
+          <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-2.5 text-sm text-foreground">
             <Warning size={14} className="mt-0.5 shrink-0 text-aviso" />
             <p>{checkout.amenitiesModal.reinforcedWarning}</p>
           </div>
@@ -145,7 +145,7 @@ export function GrupoViaje({
             label={`${extra.nombre}${extra.obligatorio ? ' *' : ''}`}
             value={seleccion?.respuesta ?? ''}
             disabled={bloqueado}
-            sinRespuestaLabel="—"
+            sinRespuestaLabel="–"
             opciones={extra.opciones_seleccion.map((opcion) => ({ valor: opcion, etiqueta: opcion }))}
             onChange={(valor) => actualizarExtra(extra.id, valor ? { id: extra.id, respuesta: valor } : undefined)}
           />
@@ -172,7 +172,7 @@ export function GrupoViaje({
       <div>
         <p className="text-sm font-medium text-foreground">{pedido.fixedTransfer}</p>
         {inicio && salida && (
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-sm text-muted">
             {pedido.fixedTransferDates
               .replace('{llegada}', formatoFecha(fechaDeComponente(inicio, componente.dia_estancia)))
               .replace('{salida}', formatoFecha(salida))}
@@ -263,7 +263,7 @@ export function GrupoViaje({
           onMaxAttempt={onTope}
         />
       </div>
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-sm text-muted">
         {pedido.peopleIncluded.replace('{n}', String(componente.personas_incluidas))}
       </p>
     </div>

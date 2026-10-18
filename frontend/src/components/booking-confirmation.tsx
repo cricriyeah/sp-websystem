@@ -173,7 +173,7 @@ export function BookingConfirmation({
                 <p className="text-lg font-semibold text-foreground">
                   {nav.brandMain} {nav.brandAccent}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">{confirmation.receiptTitle}</p>
+                <p className="mt-0.5 text-sm text-muted">{confirmation.receiptTitle}</p>
               </div>
               <div className="text-right">
                 <p className="texto-pie tracking-wide text-muted">
@@ -314,7 +314,7 @@ export function BookingConfirmation({
                             <span className="text-sm font-medium text-foreground">
                               {need.title}
                             </span>
-                            <span className="text-xs leading-relaxed text-muted">{need.body}</span>
+                            <span className="text-sm leading-relaxed text-muted">{need.body}</span>
                           </span>
                         </a>
                       </li>
@@ -343,7 +343,7 @@ export function BookingConfirmation({
           </div>
         </div>
 
-        <p className="mt-10 text-center text-xs text-muted print:hidden">
+        <p className="mt-10 text-center text-sm text-muted print:hidden">
           {nav.brandMain} {nav.brandAccent} · {footer.city}
         </p>
       </main>

@@ -118,6 +118,7 @@ function suben(base, actual) {
 const UMBRAL_DURO = [
   'boton-crudo', 'input-crudo', 'img-cruda', 'paleta-cruda', 'color-literal', 'capas-ui', 'motion-completo',
   'texto-chico-en-campo', 'mayusculas-crudas', 'radio-crudo', 'sombra-cruda', 'surface-deep', 'titular-sin-escala',
+  'guion-largo',
 ];
 
 function pasanUmbral(actual) {

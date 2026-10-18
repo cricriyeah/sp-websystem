@@ -134,7 +134,7 @@ export function SedeSelector({
         }
       >
         <MapPin size={isHeader ? 14 : 18} className="shrink-0 text-accent" weight="fill" />
-        <span className="text-muted text-xs hidden sm:inline">{label}:</span>
+        <span className="text-muted text-sm hidden sm:inline">{label}:</span>
         <span className="font-semibold text-foreground">{nombreMostrado}</span>
         <CaretDown
           size={isHeader ? 12 : 14}

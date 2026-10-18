@@ -57,7 +57,7 @@ export function SeasonSection({ season }: SeasonSectionProps) {
           no en cuatro partes iguales: dic-mar son cuatro meses y oct-nov solo
           dos, y pintarlos del mismo largo mentiria sobre el calendario. */}
       <div className="mt-14">
-        <p className="text-xs font-semibold text-muted">{season.yearLabel}</p>
+        <p className="text-sm font-semibold text-muted">{season.yearLabel}</p>
         <div className="mt-3 flex gap-1.5">
           {season.rows.map((row, i) => (
             <div key={row.period} style={{ flexGrow: row.months.length }} className="min-w-0">
@@ -113,7 +113,7 @@ export function SeasonSection({ season }: SeasonSectionProps) {
               )}
 
               <div className="absolute inset-x-0 bottom-0 p-5">
-                <p className="text-xs font-semibold text-hero-ink-soft">{row.period}</p>
+                <p className="text-sm font-semibold text-hero-ink-soft">{row.period}</p>
                 <p className="mt-1 text-2xl leading-tight tracking-tight text-hero-ink">
                   {row.star}
                 </p>

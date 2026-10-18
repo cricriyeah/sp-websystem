@@ -89,7 +89,7 @@ export function BloqueExtras({
               <span>
                 <span className="font-medium">{sp.nombre}</span>
                 {sp.preseleccionado && (
-                  <span className="ml-2 text-xs font-medium text-accent">
+                  <span className="ml-2 text-sm font-medium text-accent">
                     {checkout.recommendedBadge}
                   </span>
                 )}
@@ -102,7 +102,7 @@ export function BloqueExtras({
             </span>
           </label>
           {!marcada && sp.aviso_reforzado && (
-            <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-2.5 text-xs text-foreground">
+            <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-2.5 text-sm text-foreground">
               <Warning size={14} className="mt-0.5 shrink-0 text-aviso" />
               <p>{checkout.amenitiesModal.reinforcedWarning}</p>
             </div>
@@ -148,7 +148,7 @@ export function BloqueExtras({
             value={valor}
             disabled={locked}
             invalido={Boolean(errorCodigo)}
-            sinRespuestaLabel="—"
+            sinRespuestaLabel="–"
             opciones={sp.opciones_seleccion.map((opcion) => ({ valor: opcion, etiqueta: opcion }))}
             onChange={(nuevo) => onRespuesta(sp.id, nuevo)}
           />

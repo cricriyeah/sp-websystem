@@ -134,7 +134,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       ? montoInicial(totalConDescuento, estado.formaPago, paquete.porcentaje_anticipo)
       : totalConDescuento,
     estado.moneda,
-  ) : '—';
+  ) : '–';
   const ayudaMensaje = mensajeDeAyuda(paquete.pide_hora ? feedback.helpMessage : feedback.helpMessageNoTime, {
     fecha: estado.inicio ?? minDate,
     hora: estado.hora,

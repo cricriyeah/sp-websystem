@@ -57,7 +57,7 @@ export default async function NotFound() {
 
         <Link
           href="/en"
-          className="mt-10 text-xs text-muted underline underline-offset-4 transition-colors hover:text-foreground"
+          className="mt-10 text-sm text-muted underline underline-offset-4 transition-colors hover:text-foreground"
         >
           Looking for the English site?
         </Link>

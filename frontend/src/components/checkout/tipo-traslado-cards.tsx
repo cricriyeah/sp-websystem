@@ -56,9 +56,9 @@ export function TipoTrasladoCards({ tipos, valor, onChange, textos, precioDesde,
             <Icono size={24} className="mt-0.5 shrink-0 text-accent" />
             <span className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="text-sm font-semibold leading-tight text-foreground">{info.title}</span>
-              <span className="text-xs leading-relaxed text-muted">{info.description}</span>
+              <span className="text-sm leading-relaxed text-muted">{info.description}</span>
               {precio && (
-                <span className="mt-1 text-xs font-medium text-accent">{desdeLabel} {precio}</span>
+                <span className="mt-1 text-sm font-medium text-accent">{desdeLabel} {precio}</span>
               )}
             </span>
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">

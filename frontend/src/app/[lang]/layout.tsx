@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: LayoutProps<'/[lang]'>): Prom
     title: {
       default: dict.meta.home.title,
       // Las paginas internas solo ponen su nombre; la marca se agrega aqui.
-      template: `%s — ${dict.home.title}`,
+      template: `%s | ${dict.home.title}`,
     },
     description: dict.meta.home.description,
     alternates: alternativasDe(lang),

@@ -138,12 +138,12 @@ export function CheckoutSectionCard({
           // "Listo" es el CTA primario de una tarjeta que se reabrió: confirma y
           // sigue. Lleva el mismo amarillo que `BotonPaso` para que se lea como
           // "el siguiente paso" y no como un control secundario.
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-action px-4 py-1.5 text-xs font-semibold text-action-foreground transition-[transform,filter] group-hover:brightness-95 group-active:scale-[0.98]">
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-action px-4 py-1.5 text-sm font-semibold text-action-foreground transition-[transform,filter] group-hover:brightness-95 group-active:scale-[0.98]">
             {actionLabel}
             <Check size={13} weight="bold" aria-hidden />
           </span>
         ) : (
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-cafe-bruma px-3 py-1.5 text-xs font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-cafe-bruma px-3 py-1.5 text-sm font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
             {actionLabel}
             {/* Misma flecha que la del renglón colapsado: a la izquierda cerrada,
                 hacia abajo abierta. La rotación es lo que hace obvio que es la
@@ -272,7 +272,7 @@ export function BloqueDePaso({
       {titulo && (
         <p className="text-sm font-medium text-foreground">
           {titulo}
-          {opcional && <span className="ml-2 text-xs font-normal text-muted">{opcional}</span>}
+          {opcional && <span className="ml-2 text-sm font-normal text-muted">{opcional}</span>}
         </p>
       )}
       {children}

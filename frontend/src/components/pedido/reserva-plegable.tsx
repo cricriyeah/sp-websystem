@@ -32,7 +32,7 @@ export function NotaBloqueada({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-3 text-xs leading-relaxed text-muted sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${className ?? ''}`}>
+    <div className={`flex flex-col gap-3 text-sm leading-relaxed text-muted sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${className ?? ''}`}>
       <p>{nota}</p>
       {tieneWhatsapp && (
         // Mismo verde y logo que el botón flotante de ayuda: es la misma acción y se debe

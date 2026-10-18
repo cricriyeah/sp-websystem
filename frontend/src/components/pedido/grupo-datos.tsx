@@ -97,7 +97,7 @@ export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTrasla
       </Despliegue>
 
       <Despliegue abierto={traslado.tipo === 'redondo_actividad' && traslado.modo === 'catalogo' && traslado.puntoEncuentroId !== null}>
-        <p className="text-xs text-muted">
+        <p className="text-sm text-muted">
           {traslados.fields.zona}: {puntos.find((p) => p.id === traslado.puntoEncuentroId)?.zona === 'centro'
             ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
         </p>

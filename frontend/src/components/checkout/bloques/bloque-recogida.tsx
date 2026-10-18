@@ -150,13 +150,13 @@ export function BloqueRecogida({
                   </label>
                 ))}
               </fieldset>
-              <p className="mt-2 text-xs text-muted">{traslados.fields.zonaRequiredNotice}</p>
+              <p className="mt-2 text-sm text-muted">{traslados.fields.zonaRequiredNotice}</p>
             </Despliegue>
           </div>
         </Despliegue>
 
         <Despliegue abierto={tipoTraslado === 'redondo_actividad' && modoHospedaje === 'catalogo' && puntoEncuentroId !== null}>
-          <p className="text-xs text-muted">
+          <p className="text-sm text-muted">
             {traslados.fields.zona}: {puntoSeleccionado?.zona === 'centro'
               ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
           </p>

@@ -31,7 +31,7 @@ export function ContenidoViaje({ fecha, hora, personas, salida, nota }: Props) {
         </div>
       )}
       {salida && <div>{salida}</div>}
-      {nota && <div className="flex flex-col gap-1 text-xs text-muted">{nota}</div>}
+      {nota && <div className="flex flex-col gap-1 text-sm text-muted">{nota}</div>}
     </>
   );
 }

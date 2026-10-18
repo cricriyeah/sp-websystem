@@ -186,7 +186,7 @@ export function FieldPopover({
             centra mientras esta vacio y se acomoda al contestar, sin mover nada
             de lo que hay alrededor. */}
         <span className="flex h-10 flex-col items-start justify-center gap-0.5">
-          {!vacio && <span className="text-xs text-muted">{label}</span>}
+          {!vacio && <span className="text-sm text-muted">{label}</span>}
           <span
             className={`whitespace-nowrap ${
               vacio ? 'text-sm font-medium text-foreground/70' : 'text-sm text-foreground'

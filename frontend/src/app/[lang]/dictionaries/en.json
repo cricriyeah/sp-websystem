@@ -161,7 +161,7 @@
   "season": {
     "headline": "Seasons & species in La Paz",
     "intro": "Our bay offers an incredible variety of game fish across every season. Here is our fishing calendar to help you choose the best time for your dream adventure.",
-    "note": "Nature brings exciting new surprises every day on the water. We love sharing honest, up-to-date local insights on recent catches—feel free to message us on WhatsApp anytime to chat about how fishing has been this week!",
+    "note": "Nature brings exciting new surprises every day on the water. We love sharing honest, up-to-date local insights on recent catches. Feel free to message us on WhatsApp anytime to chat about how fishing has been this week!",
     "yearLabel": "Month-by-month fishing calendar",
     "strongLabel": "Peak season",
     "othersLabel": "Also active",
@@ -434,7 +434,7 @@
       "otro": ""
     },
     "extrasWarnings": {
-      "licencia": "Without a license you can't fish in Mexican waters — it's legally required. We'll handle the paperwork for you.",
+      "licencia": "Without a license you can't fish in Mexican waters. It's legally required. We'll handle the paperwork for you.",
       "carnada": "",
       "brunch": "",
       "otro": ""
@@ -945,12 +945,12 @@
     "closeDestination": "Close destination",
     "porQueHeadline": "Why Sal y Sol Baja Experiences",
     "pilares": [
-      { "titulo": "Trusted local partnerships", "texto": "Each destination is run by local people — captains, guides, and operators who know their stretch of coast better than anyone." },
+      { "titulo": "Trusted local partnerships", "texto": "Each destination is run by local people: captains, guides, and operators who know their stretch of coast better than anyone." },
       { "titulo": "One place to book across Baja", "texto": "Explore and book experiences across different Baja California Sur destinations without switching sites or processes." },
       { "titulo": "Personalized attention", "texto": "The same close, personal care as always, now available at every destination in the partnership." }
     ],
     "meta": {
-      "title": "Sal y Sol Baja Experiences — Experiences in Baja California Sur",
+      "title": "Sal y Sol Baja Experiences | Experiences in Baja California Sur",
       "description": "Discover sportfishing and tourism experiences across the Baja California Sur destinations run by the Sal y Sol Baja Experiences partnership."
     }
   },
