@@ -64,7 +64,7 @@ export function IncludedSection({ included }: IncludedSectionProps) {
               key={item.title}
               className="flex gap-5 border-l-[3px] border-accent bg-superficie p-6 lg:p-8"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-cafe-bruma">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-campo bg-cafe-bruma">
                 <Icono size={24} weight="light" className="text-accent" />
               </div>
               <div className="flex flex-col gap-1.5">

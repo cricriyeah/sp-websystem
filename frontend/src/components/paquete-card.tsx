@@ -39,7 +39,7 @@ export function PaqueteCard({
 
   return (
     <article
-      className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 border-accent/40 bg-superficie p-6 sm:p-8 ${className}`}
+      className={`relative flex flex-col justify-between overflow-hidden rounded-card border-2 border-accent/40 bg-superficie p-6 sm:p-8 ${className}`}
     >
       {/* Badge superior de producto dominante (Perception-First Design) */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-4">
@@ -65,7 +65,7 @@ export function PaqueteCard({
       </div>
 
       {/* Bloque de Precio Ancla */}
-      <div className="mt-6 rounded-xl border border-border/80 bg-superficie/70 p-4 sm:p-5">
+      <div className="mt-6 rounded-campo border border-border/80 bg-superficie/70 p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <span className="text-xs font-medium text-muted">
@@ -97,10 +97,10 @@ export function PaqueteCard({
             return (
               <div
                 key={item.id}
-                className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card p-3.5"
+                className="flex items-start justify-between gap-3 rounded-campo border border-border bg-card p-3.5"
               >
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-accent/50 bg-accent/20 text-accent">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-casilla border border-accent/50 bg-accent/20 text-accent">
                     <Check size={13} weight="bold" />
                   </div>
 
@@ -126,7 +126,7 @@ export function PaqueteCard({
             type="button"
             onClick={() => calculo.precioFinal !== null && onSelect(paquete, calculo.precioFinal)}
             disabled={calculo.precioFinal === null}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-2 rounded-control bg-accent px-5 py-3.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>{dict.bookPackage}</span>
             <ArrowRight size={16} weight="bold" />
@@ -135,14 +135,14 @@ export function PaqueteCard({
           <button
             type="button"
             disabled
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent/50 px-5 py-3.5 text-sm font-semibold text-white cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-2 rounded-control bg-accent/50 px-5 py-3.5 text-sm font-semibold text-white cursor-not-allowed"
           >
             <span>{dict.bookPackage}</span>
           </button>
         ) : (
           <Link
             href={bookingHref}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2 rounded-control bg-accent px-5 py-3.5 text-sm font-semibold text-white transition-transform hover:brightness-105 active:scale-[0.99]"
           >
             <span>{dict.bookPackage}</span>
             <ArrowRight size={16} weight="bold" />

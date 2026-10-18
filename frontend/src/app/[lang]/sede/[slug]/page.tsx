@@ -50,11 +50,11 @@ export default async function SedePage({ params, searchParams }: Props) {
       <ColaboradoresSection sedes={[contenido]} lang={lang} copy={dict.hub} id="empresas" />
       <section id="experiencias" className="scroll-mt-28 mx-auto max-w-6xl px-6 py-12 sm:px-8 lg:px-12">
         <h2 className="mb-8 texto-seccion">{dict.catalog.title}</h2>
-        {paquetes.length ? <div className="grid items-start gap-8 md:grid-cols-2">{paquetes.map(paquete => <PaqueteCard key={paquete.id} paquete={paquete} lang={lang} dict={dict.catalog} moneda={moneda} />)}</div> : <p className="rounded-2xl bg-cafe-bruma p-8 text-muted">{dict.catalog.emptyPackages}</p>}
+        {paquetes.length ? <div className="grid items-start gap-8 md:grid-cols-2">{paquetes.map(paquete => <PaqueteCard key={paquete.id} paquete={paquete} lang={lang} dict={dict.catalog} moneda={moneda} />)}</div> : <p className="rounded-card bg-cafe-bruma p-8 text-muted">{dict.catalog.emptyPackages}</p>}
       </section>
       <section id="servicios" className="scroll-mt-28 mx-auto max-w-6xl px-6 py-12 sm:px-8 lg:px-12">
         <ServiciosSueltosSection servicios={servicios} lang={lang} dict={dict.catalog} moneda={moneda} mostrarVacio sedeSlug={slug} />
-        {contenido.servicioTransporte && !servicios.some(s => s.tipo_servicio === 'transporte' && s.empresa_slug === contenido.servicioTransporte?.empresaSlug) && <article className="mt-8 rounded-2xl border border-border bg-superficie p-6 sm:p-8">
+        {contenido.servicioTransporte && !servicios.some(s => s.tipo_servicio === 'transporte' && s.empresa_slug === contenido.servicioTransporte?.empresaSlug) && <article className="mt-8 rounded-card border border-border bg-superficie p-6 sm:p-8">
           <h3 className="text-2xl">{dict.traslados.title}</h3>
           <p className="mt-2 max-w-2xl text-sm text-muted">{dict.traslados.subtitle}</p>
           <div className="mt-6 flex flex-wrap gap-3">

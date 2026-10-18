@@ -29,7 +29,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
   function reset() { setZoom(1); x.set(0); y.set(0); }
   function cambiarZoom(delta: number) { setZoom(z => Math.min(4, Math.max(1, z + delta))); }
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-superficie">
+    <div className="overflow-hidden rounded-card border border-border bg-superficie">
       <div className="relative">
         <div role="region" tabIndex={0}
           aria-label={copy.mapAria}
@@ -72,7 +72,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
           </m.div>
           </LazyMotion>
         </div>
-        <div className="absolute right-4 top-4 flex flex-col overflow-hidden rounded-xl border border-border bg-superficie">
+        <div className="absolute right-4 top-4 flex flex-col overflow-hidden rounded-campo border border-border bg-superficie">
           {[
             { title: copy.zoomIn, icon: Plus, action: () => cambiarZoom(0.5), disabled: zoom === 4 },
             { title: copy.zoomOut, icon: Minus, action: () => cambiarZoom(-0.5), disabled: zoom === 1 },

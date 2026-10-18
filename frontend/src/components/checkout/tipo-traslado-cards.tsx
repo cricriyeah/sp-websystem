@@ -47,7 +47,7 @@ export function TipoTrasladoCards({ tipos, valor, onChange, textos, precioDesde,
             type="button"
             aria-pressed={seleccionado}
             onClick={() => onChange(tipo)}
-            className={`flex items-start gap-4 rounded-lg border p-4 text-left transition-colors ${
+            className={`flex items-start gap-4 rounded-campo border p-4 text-left transition-colors ${
               seleccionado
                 ? 'border-accent bg-cafe-bruma ring-1 ring-accent'
                 : 'border-border bg-superficie hover:border-border-strong'

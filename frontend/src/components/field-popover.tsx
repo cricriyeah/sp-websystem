@@ -172,7 +172,7 @@ export function FieldPopover({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        className={`flex flex-1 items-center gap-3 text-left transition-colors ${compacto ? 'rounded-lg px-4 py-3 hover:bg-cafe-bruma' : 'px-6 py-3.5 hover:bg-cafe-bruma'}`}
+        className={`flex flex-1 items-center gap-3 text-left transition-colors ${compacto ? 'rounded-campo px-4 py-3 hover:bg-cafe-bruma' : 'px-6 py-3.5 hover:bg-cafe-bruma'}`}
       >
         {icon}
         {/* Sin contestar, la pregunta ocupa el lugar grande y no hay etiqueta

@@ -75,7 +75,7 @@ export function BloqueRecogida({
                         onPunto(punto.id);
                         cerrar();
                       }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex w-full items-center justify-between rounded-campo px-3 py-2 text-left text-sm transition-colors ${
                         punto.id === puntoEncuentroId
                           ? 'bg-accent font-medium text-accent-foreground'
                           : 'text-foreground hover:bg-cafe-bruma'
@@ -95,7 +95,7 @@ export function BloqueRecogida({
                       onOtraDireccion();
                       cerrar();
                     }}
-                    className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-cafe-bruma"
+                    className="mt-1 flex w-full items-center gap-2 rounded-campo border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-cafe-bruma"
                   >
                     <MapPin size={16} className="shrink-0 text-muted" />
                     {traslados.fields.otraDireccionOpcion}
@@ -133,7 +133,7 @@ export function BloqueRecogida({
                 {(['centro', 'periferia'] as const).map((z) => (
                   <label
                     key={z}
-                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm ${
+                    className={`flex cursor-pointer items-center gap-2 rounded-campo border p-3 text-sm ${
                       zonaPersonalizada === z ? 'border-accent bg-cafe-bruma font-medium' : 'border-border text-muted'
                     }`}
                   >

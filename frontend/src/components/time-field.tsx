@@ -53,7 +53,7 @@ export function TimeField({
                       onChange(hora);
                       cerrar();
                     }}
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
+                    className={`flex w-full items-center justify-between rounded-campo px-3 py-2 text-sm transition-colors ${
                       seleccionada
                         ? 'bg-accent font-medium text-accent-foreground'
                         : 'text-foreground hover:bg-cafe-bruma'

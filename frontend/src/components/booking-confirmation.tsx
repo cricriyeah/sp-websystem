@@ -266,7 +266,7 @@ export function BookingConfirmation({
                 variante="libre"
                 type="button"
                 onClick={() => window.print()}
-                className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl border border-border-strong px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-cafe-bruma print:hidden"
+                className="mt-7 flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-cafe-bruma print:hidden"
               >
                 <DownloadSimple size={18} />
                 {confirmation.downloadReceipt}
@@ -304,7 +304,7 @@ export function BookingConfirmation({
                           href={whatsappHref(mensajeDeSugerencia(need.ask))}
                           target="_blank"
                           rel="noopener"
-                          className="group flex gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-cafe-bruma"
+                          className="group flex gap-3 rounded-campo border border-transparent p-3 transition-colors hover:border-border hover:bg-cafe-bruma"
                         >
                           <Icono
                             size={20}
@@ -326,7 +326,7 @@ export function BookingConfirmation({
                   href={whatsappHref(mensajeWhatsapp)}
                   target="_blank"
                   rel="noopener"
-                  className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.01] active:scale-[0.98]"
+                  className="mt-5 flex items-center justify-center gap-2 rounded-control bg-accent px-4 py-3 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.01] active:scale-[0.98]"
                 >
                   <WhatsappLogo size={18} weight="fill" />
                   {confirmation.needsOther}
@@ -336,7 +336,7 @@ export function BookingConfirmation({
 
             <Link
               href={`/${lang}`}
-              className="flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm text-muted transition-colors hover:text-foreground"
+              className="flex w-full items-center justify-center rounded-control px-4 py-3 text-sm text-muted transition-colors hover:text-foreground"
             >
               {confirmation.backHome}
             </Link>

@@ -9,7 +9,7 @@ export default function LoadingTraslados() {
         <Skeleton className="mt-5 h-4 w-64 max-w-full" />
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {[1, 2, 3].map((option) => (
-            <div key={option} className="rounded-xl border border-border bg-superficie p-4">
+            <div key={option} className="rounded-card border border-border bg-superficie p-4">
               <Skeleton className="h-5 w-5" />
               <Skeleton className="mt-5 h-4 w-24 max-w-full" />
               <Skeleton className="mt-2 h-3 w-full" />

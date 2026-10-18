@@ -118,7 +118,7 @@ export function FechaPaquete({
           return (
             <Button key={iso} variante="libre" type="button" disabled={pasada} aria-label={formatoCompleto.format(fecha)}
               aria-pressed={seleccionada} onClick={() => elegir(iso)}
-              className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-2 text-sm transition-colors ${
+              className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-campo border px-0.5 py-2 text-sm transition-colors ${
                 seleccionada ? 'border-accent bg-accent font-medium text-accent-foreground'
                   : pasada ? 'cursor-not-allowed border-border text-muted/40'
                     : 'border-border text-foreground hover:border-accent hover:bg-cafe-bruma'
@@ -139,7 +139,7 @@ export function FechaPaquete({
       </div>
 
       <Despliegue abierto={mesAbierto}>
-        <div id={panelId} className="mt-3 rounded-lg border border-border bg-superficie p-4">
+        <div id={panelId} className="mt-3 rounded-card border border-border bg-superficie p-4">
           <PanelCalendario
             locale={locale} value={seleccionVigente ?? minDate} seleccionado={seleccionVigente}
             onChange={elegir} minDate={minDate} personas={personas} fullLabel={fullLabel}

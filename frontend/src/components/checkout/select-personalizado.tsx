@@ -53,14 +53,14 @@ export function SelectPersonalizado({
           <div className="max-h-72 w-full overflow-y-auto sm:w-80">
             {sinRespuestaLabel && (
               <Button variante="libre" type="button" onClick={() => { onChange(''); cerrar(); }}
-                className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-cafe-bruma">
+                className="flex w-full items-center rounded-campo px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-cafe-bruma">
                 {sinRespuestaLabel}
               </Button>
             )}
             {opciones.map((opcion) => (
               <Button variante="libre" key={opcion.valor} type="button"
                 onClick={() => { onChange(opcion.valor); cerrar(); }}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                className={`flex w-full items-center justify-between rounded-campo px-3 py-2 text-left text-sm transition-colors ${
                   opcion.valor === value ? 'bg-accent font-medium text-accent-foreground' : 'text-foreground hover:bg-cafe-bruma'
                 }`}>
                 <span className="truncate pr-2">{opcion.etiqueta}</span>

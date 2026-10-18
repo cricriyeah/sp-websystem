@@ -47,7 +47,7 @@ export function ServiciosSueltosSection({
           {dict.standaloneSubtitle}
         </p>
       </div>
-      {servicios.length === 0 && <p className="mt-6 rounded-xl bg-cafe-bruma p-6 text-sm text-muted">{dict.servicesComingSoon}</p>}
+      {servicios.length === 0 && <p className="mt-6 rounded-card bg-cafe-bruma p-6 text-sm text-muted">{dict.servicesComingSoon}</p>}
 
       {/* Grilla de servicios sueltos (menor peso visual que los paquetes) */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,11 +57,11 @@ export function ServiciosSueltosSection({
           return (
             <div
               key={servicio.id}
-              className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 transition-all hover:border-accent/40"
+              className="flex flex-col justify-between rounded-card border border-border bg-card p-5 transition-all hover:border-accent/40"
             >
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-md bg-muted/10 px-2 py-0.5 texto-pie font-medium text-muted first-letter:capitalize">
+                  <span className="rounded-sm bg-muted/10 px-2 py-0.5 texto-pie font-medium text-muted first-letter:capitalize">
                     {servicio.tipo_servicio.replace('_', ' ')}
                   </span>
                   <div className="text-right">
@@ -107,14 +107,14 @@ export function ServiciosSueltosSection({
               <div className="mt-5 grid gap-2 border-t border-border/50 pt-4">
                 <Link
                   href={hrefServicio(servicio, lang, moneda)}
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-deep"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-control bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-deep"
                 >
                   <span>{dict.bookStandalone}</span>
                   <ArrowRight size={13} />
                 </Link>
                 <Link
                   href={hrefDetalleServicio(servicio, lang, moneda, sedeSlug)}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-3 py-2 text-sm font-semibold text-accent hover:bg-cafe-bruma"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-border px-3 py-2 text-sm font-semibold text-accent hover:bg-cafe-bruma"
                 >
                   {dict.learnMore}
                 </Link>
@@ -125,7 +125,7 @@ export function ServiciosSueltosSection({
       </div>
 
       {/* Nota de Cross-sell hacia Paquetes */}
-      {servicios.length > 0 && <div className="mt-6 flex items-center gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4 text-xs text-foreground">
+      {servicios.length > 0 && <div className="mt-6 flex items-center gap-3 rounded-campo border border-accent/20 bg-accent/5 p-4 text-xs text-foreground">
         <Info size={18} className="shrink-0 text-accent" weight="fill" />
         <p className="leading-relaxed text-muted">
           {dict.crossSellNotice}

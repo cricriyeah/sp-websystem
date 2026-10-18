@@ -222,7 +222,7 @@ export function PanelCalendario({
                 onChange(iso);
                 cerrar();
               }}
-              className={`flex ${anchoCompleto ? 'h-11' : 'h-9'} items-center justify-center rounded-lg text-sm transition-colors ${
+              className={`flex ${anchoCompleto ? 'h-11' : 'h-9'} items-center justify-center rounded-campo text-sm transition-colors ${
                 // Mientras no sabemos, los dias futuros se atenuan en vez de
                 // verse plenamente disponibles: asi el tachado que llega medio
                 // segundo despues no es un cambio de contenido a la vista.

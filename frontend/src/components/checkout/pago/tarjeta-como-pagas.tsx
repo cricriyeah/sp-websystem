@@ -124,7 +124,7 @@ export function TarjetaComoPagas({
                     {(['completo', 'anticipo'] as const).map((option) => (
                       <label
                         key={option}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-cafe-bruma"
+                        className="flex cursor-pointer items-center gap-3 rounded-campo border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-cafe-bruma"
                       >
                         <Input
                           aspecto="heredado"
@@ -176,7 +176,7 @@ export function TarjetaComoPagas({
                         disabled={phase === 'submitting'}
                         onChange={(e) => onCodigoPromocionalChange(e.target.value)}
                         placeholder={checkout.promoCode.placeholder}
-                        className="w-full rounded-lg border border-border bg-superficie px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                        className="w-full rounded-campo border border-border bg-superficie px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                       />
                       <Despliegue abierto={promoEstado === 'verificando'}>
                         <p className="text-xs text-muted">{checkout.promoCode.checking}</p>
