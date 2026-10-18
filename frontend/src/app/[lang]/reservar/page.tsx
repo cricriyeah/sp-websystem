@@ -27,6 +27,12 @@ export async function generateMetadata({
   };
 }
 
+/** `{ nombre, logo }` de la empresa para el sello de la cabecera; `undefined` si no está en el contenido. */
+function empresaDe(slug: string) {
+  const empresa = EMPRESAS.find((e) => e.slug === slug);
+  return empresa ? { nombre: empresa.nombre, logo: empresa.logo } : undefined;
+}
+
 export default async function ReservarPage({
   params,
   searchParams,
@@ -141,6 +147,7 @@ export default async function ReservarPage({
       servicioId={servicio?.slug ?? null}
       servicioNombre={servicio?.nombre ?? null}
       servicio={servicio}
+      empresa={empresaDe(empresaSlug)}
       volverHref={hrefDeOrigen({
         lang,
         origen: origenQuery,

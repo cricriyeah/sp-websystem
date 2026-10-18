@@ -3,7 +3,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import type { PaginaCheckout } from '@/components/checkout/pagina-checkout';
-import { SiteHeader } from '@/components/site-header';
+import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { claveMotivoRechazo, ofreceAyuda, pagosRetenidosAntes } from '@/lib/fallo-pago';
@@ -65,7 +65,7 @@ export function PantallaFallo({
 
   return (
     <div className="min-h-dvh bg-background">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
+      <CabeceraMinima lang={lang} nav={nav} volverHref={`/${lang}/sede/${sedeSlug}`} volverLabel={checkout.back} marcaFija />
       <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
       <CheckoutStepper stepper={checkout.stepper} {...stepper} />
       <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">

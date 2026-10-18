@@ -1,9 +1,9 @@
+import { EMPRESAS } from '@/content/empresas';
 import { hrefDeOrigen } from '@/lib/origen';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { preconnect } from 'react-dom';
-import { Warning, ArrowLeft, WhatsappLogo } from '@phosphor-icons/react/ssr';
+import { Warning, WhatsappLogo } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale } from '../dictionaries';
 import { API_URL, getTraslados, getSedes } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
@@ -11,7 +11,7 @@ import { SEDES_INDICE } from '@/content/sedes-indice';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { alternativasDe } from '@/lib/site';
 import { whatsappHref, tieneWhatsapp } from '@/lib/contacto';
-import { SiteHeader } from '@/components/site-header';
+import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import { SiteFooter } from '@/components/site-footer';
 
 import { TrasladoView } from '@/components/traslado-view';
@@ -63,19 +63,14 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
     rutaServicio: catalogo?.servicio ? `servicio/${empresaSlug}/${catalogo.servicio.slug}` : undefined,
   });
 
+  const empresaEnContenido = EMPRESAS.find((e) => e.slug === empresaSlug);
+  const empresaSello = empresaEnContenido ? { nombre: empresaEnContenido.nombre, logo: empresaEnContenido.logo } : undefined;
+
   if (!catalogo || !catalogo.servicio) {
     return (
       <div className="min-h-dvh bg-background">
-        <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={sedeSlugActual} />
-        <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
-          <Link
-            href={hrefVolver}
-            className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-          >
-            <ArrowLeft size={16} />
-            {dict.traslados.back}
-          </Link>
-        </div>
+        <CabeceraMinima lang={lang} nav={dict.nav} volverHref={hrefVolver} volverLabel={dict.traslados.back} empresa={empresaSello} />
+        <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
 
         <main className="mx-auto max-w-2xl px-6 py-16 text-center sm:px-8">
           <div className="rounded-card border border-border bg-superficie p-8 sm:p-12">
@@ -122,8 +117,8 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
       dict={dict}
       catalogo={catalogo}
       empresaSlug={empresaSlug}
-      sedeSlugActual={sedeSlugActual}
       volverHref={hrefVolver}
+      empresa={empresaSello}
     />
   );
 }

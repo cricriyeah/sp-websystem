@@ -89,9 +89,10 @@ type TrasladoViewProps = {
   dict: Dictionary;
   catalogo: TrasladosCatalogo;
   empresaSlug: string;
-  sedeSlugActual?: string;
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
+  /** `{ nombre, logo }` de la empresa de transporte (de `content/empresas`, server-only). */
+  empresa?: { nombre: string; logo?: string };
 };
 
 export function TrasladoView({
@@ -99,8 +100,8 @@ export function TrasladoView({
   dict,
   catalogo,
   empresaSlug,
-  sedeSlugActual,
   volverHref,
+  empresa,
 }: TrasladoViewProps) {
   const { checkout, traslados, feedback, booking, pedido } = dict;
   const { mostrar } = useToast();
@@ -663,9 +664,9 @@ export function TrasladoView({
       <PaginaCheckout
         lang={lang}
         dict={dict}
-        sedeSlug={sedeSlugActual}
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
+        empresa={empresa}
         volverLabel={traslados.back}
         encabezado={
           <EncabezadoCompra

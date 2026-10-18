@@ -169,7 +169,9 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   borrador de la pestaña en `sessionStorage` (`lib/borrador-reserva.ts` +
   `use-borrador.ts`, solo se repone con `?paso=` en la URL); la flecha es «paso
   anterior» salvo en Viaje o con un pago en curso, donde sale al origen
-  (`lib/origen.ts`, `?origen=`). Cada tarjeta es un
+  (`lib/origen.ts`, `?origen=`). La cabecera de estas rutas es `CabeceraMinima`
+  (`components/reserva/`): flecha, marca Sun Baja Experience (+ sello de la empresa si es
+  de una sola) e idioma ES | EN; sin navegación ni WhatsApp, 64 px como `SiteHeader`. Cada tarjeta es un
   `CheckoutSectionCard` con un solo CTA en el `pie` (`BotonPaso`) y bloques
   separados por espacio, no por rayas. El panel derecho (`StripePanel`) es SOLO
   el resumen del pedido (líneas vivas del viaje, cargos, total y "pagarás

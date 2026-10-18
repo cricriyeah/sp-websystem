@@ -166,6 +166,8 @@ type CheckoutViewProps = {
   servicioNombre?: string | null;
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
+  /** `{ nombre, logo }` de la empresa del servicio (de `content/empresas`, server-only). */
+  empresa?: { nombre: string; logo?: string };
   servicio?: ServicioCatalogo | null;
 };
 
@@ -199,6 +201,7 @@ export function CheckoutView({
   servicioId,
   servicioNombre,
   volverHref,
+  empresa,
   servicio,
 }: CheckoutViewProps) {
   const { checkout, booking } = dict;
@@ -1321,6 +1324,7 @@ export function CheckoutView({
         // solo por haber vuelto a revisar algo.
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
+        empresa={empresa}
         volverLabel={checkout.back}
         encabezado={
           <EncabezadoCompra

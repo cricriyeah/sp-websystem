@@ -1,6 +1,6 @@
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutFooter } from '@/components/checkout-footer';
-import { SiteHeader } from '@/components/site-header';
+import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import type { PaqueteCatalogo } from '@/lib/api';
 import { fechaDeComponente } from '@/lib/calendario-paquete';
 import type { ComponentePedido } from '@/lib/pedido-payload';
@@ -21,7 +21,7 @@ export function PantallaExito({ lang, dict, sedeSlug, paquete, inicio, component
   const { checkout, pedido: textos, nav, footer } = dict;
   return (
     <div className="min-h-dvh bg-background">
-      <SiteHeader lang={lang} nav={nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
+      <CabeceraMinima lang={lang} nav={nav} volverHref={`/${lang}/sede/${sedeSlug}`} volverLabel={checkout.back} />
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 pt-[calc(4rem_+_var(--nav-alto))] pb-20 text-center sm:px-8">
         <h1 className="texto-seccion text-foreground">{textos.success.title}</h1>
         <p className="text-sm text-muted">{textos.success.body}</p>

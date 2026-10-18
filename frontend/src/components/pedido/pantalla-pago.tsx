@@ -22,7 +22,6 @@ type Stepper = ComponentProps<typeof PaginaCheckout>['stepper'];
 type Props = {
   lang: Locale;
   dict: Dictionary;
-  sedeSlug: string;
   paquete: PaqueteCatalogo;
   motor: 'reserva' | 'orden';
   moneda: Moneda;
@@ -34,6 +33,7 @@ type Props = {
   /** Stepper de la vista con un cobro por paso (null si hay un solo cobro). */
   stepperPagos: (indicePago: number, monto?: number) => Stepper | null;
   volverHref: string;
+  empresa?: { nombre: string; logo?: string };
   totalMovil: string | undefined;
   total: string;
   totalConMoneda: string | null;
@@ -61,8 +61,8 @@ type Props = {
  * tarjeta y el panel se remontan por empresa (`key`), como siempre.
  */
 export function PantallaPago({
-  lang, dict, sedeSlug, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
-  stepperPagos, volverHref, totalMovil, total, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
+  lang, dict, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
+  stepperPagos, volverHref, empresa, totalMovil, total, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
   lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
@@ -93,8 +93,9 @@ export function PantallaPago({
     <PaginaCheckout
       lang={lang}
       dict={dict}
-      sedeSlug={sedeSlug}
       volverHref={volverHref}
+      empresa={empresa}
+      marcaFija={motor === 'orden'}
       volverLabel={textos.back}
       encabezado={
         <EncabezadoCompra

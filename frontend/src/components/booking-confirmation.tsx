@@ -17,7 +17,7 @@ import {
   WhatsappLogo,
 } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { SiteHeader } from '@/components/site-header';
+import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import { Button } from '@/components/ui/button';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 
@@ -123,7 +123,7 @@ export function BookingConfirmation({
   return (
     <div className="flex min-h-dvh flex-col bg-background print:bg-white">
       <div className="print:hidden">
-        <SiteHeader lang={lang} nav={nav} variante="sede" />
+        <CabeceraMinima lang={lang} nav={nav} volverHref={`/${lang}`} volverLabel={checkout.back} />
       </div>
 
       {/* SiteHeader es `fixed` y no reserva espacio: sin `--nav-alto` (ver

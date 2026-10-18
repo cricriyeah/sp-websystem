@@ -1,16 +1,12 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutFooter } from '@/components/checkout-footer';
 import { CheckoutStepper } from '@/components/checkout-stepper';
-import { SiteHeader } from '@/components/site-header';
-import { Button } from '@/components/ui/button';
+import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 
 type Props = {
   lang: Locale;
   dict: Dictionary;
-  sedeSlug?: string;
   volverHref: string;
   volverLabel: string;
   /**
@@ -18,6 +14,10 @@ type Props = {
    * «salir» al origen (`volverHref`). Sin esta función, siempre sale.
    */
   alPasoAnterior?: () => void;
+  /** Checkout de una sola empresa: su sello va junto a la marca (`CabeceraMinima`). */
+  empresa?: { nombre: string; logo?: string };
+  /** Hay dinero retenido: la marca de la cabecera no enlaza. */
+  marcaFija?: boolean;
   /** `EncabezadoCompra`. */
   encabezado: ReactNode;
   /** Aviso a todo el ancho entre el encabezado y el stepper (p. ej. día sin lugar). */
@@ -35,34 +35,23 @@ type Props = {
  * no persigue el scroll).
  */
 export function PaginaCheckout({
-  lang, dict, sedeSlug, volverHref, volverLabel, alPasoAnterior, encabezado, aviso, stepper, pasos, pedido,
+  lang, dict, volverHref, volverLabel, alPasoAnterior, empresa, marcaFija, encabezado, aviso, stepper, pasos, pedido,
 }: Props) {
   return (
     <div className="min-h-dvh bg-background">
-      <SiteHeader lang={lang} nav={dict.nav} variante="sede" sedeSlugActual={sedeSlug} minimo />
+      <CabeceraMinima
+        lang={lang}
+        nav={dict.nav}
+        volverHref={volverHref}
+        volverLabel={volverLabel}
+        alPasoAnterior={alPasoAnterior}
+        empresa={empresa}
+        marcaFija={marcaFija}
+      />
 
-      {/* SiteHeader es `fixed` y no reserva espacio: `--nav-alto` (globals.css)
-          lo compensa. El 1.5rem es la separación de siempre. */}
+      {/* La cabecera es `fixed` y no reserva espacio: `--nav-alto` (globals.css) la
+          compensa. El 1.5rem es la separación de siempre. */}
       <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
-        {alPasoAnterior ? (
-          <Button
-            variante="libre"
-            type="button"
-            onClick={alPasoAnterior}
-            className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-          >
-            <ArrowLeft size={16} />
-            {volverLabel}
-          </Button>
-        ) : (
-          <Link
-            href={volverHref}
-            className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
-          >
-            <ArrowLeft size={16} />
-            {volverLabel}
-          </Link>
-        )}
         {encabezado}
       </div>
 

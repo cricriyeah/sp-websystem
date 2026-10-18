@@ -16,10 +16,12 @@ export function CheckoutLoadingShell({
   const steps = Array.from({ length: stepCount }, (_, index) => index + 1);
   return (
     <div className="min-h-dvh bg-background">
+      {/* Mismo esqueleto que `CabeceraMinima`: flecha, marca e idioma a 64 px. */}
       <div className="fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8" aria-hidden="true">
-        <div className="mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between border-b border-border bg-superficie px-6 sm:px-8 lg:border lg:px-6">
-          <Skeleton className="h-11 w-32" />
-          <Skeleton className="h-11 w-11" />
+        <div className="mx-auto grid h-16 w-full max-w-[1440px] grid-cols-[48px_1fr_auto] items-center gap-2 border-b border-border bg-arena px-2 sm:px-4 lg:rounded-card lg:border">
+          <Skeleton className="size-12" />
+          <Skeleton className="mx-auto size-8 rounded-full" />
+          <Skeleton className="h-11 w-[88px]" />
         </div>
       </div>
 

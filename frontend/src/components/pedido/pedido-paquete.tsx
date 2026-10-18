@@ -424,7 +424,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     <PantallaPago
       lang={lang}
       dict={dict}
-      sedeSlug={sedeSlug}
       paquete={paquete}
       motor={motor}
       moneda={estado.moneda}
@@ -434,6 +433,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       personasPaquete={personasPaquete}
       stepperPagos={stepperPagos}
       volverHref={volverHref}
+      empresa={paquete.es_cruza_empresa ? undefined : empresas[paquete.empresa_lider_slug]}
       totalMovil={totalMovil}
       total={total}
       totalConMoneda={totalConMoneda}
@@ -488,9 +488,9 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       <PaginaCheckout
         lang={lang}
         dict={dict}
-        sedeSlug={sedeSlug}
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
+        empresa={paquete.es_cruza_empresa ? undefined : empresas[paquete.empresa_lider_slug]}
         volverLabel={textos.back}
         encabezado={
           <EncabezadoCompra
