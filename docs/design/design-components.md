@@ -87,15 +87,19 @@ Botón de texto «¿Tienes un código?» que despliega el campo con la misma ani
 
 ### Cabecera mínima (página de reserva)
 
-Sustituye al navbar completo: **flecha de volver** a la izquierda, **logo redondo** de 32 al centro, **selector de idioma ES/EN** a la derecha. Alto 56, fondo `arena`, sin sombra, línea inferior `borde`. En móvil queda fija (contiene «volver»); en escritorio no se fija. Define `--nav-alto`: 56 px en móvil y 0 en escritorio.
+Sustituye al navbar completo: **flecha de volver** (48) a la izquierda, **marca** (monograma «SB» de 32 hasta que llegue el logo; con una sola empresa, su sello de 32 al lado separado por una línea de 1) al centro y el **selector «ES | EN»** a la derecha. Sin navegación ni WhatsApp. **Implementado (2026-10-18) con la forma de la cabecera del sitio** (64 de alto, `arena` 95 %, borde, radio de tarjeta en escritorio, fija) y no como la barra plana de 56 de este texto original, para que parezca el mismo sitio; por eso `--nav-alto` no cambia. Componente `CabeceraMinima`.
 
 ### Cabecera del sitio (portada, sedes, servicio)
 
-Tarjeta flotante, no franja: radio de tarjeta (16), fondo `arena` casi opaco (95 %) con desenfoque ligero, borde `borde`, sin sombra mayor que nivel 1, separada 16 de los bordes de la pantalla en escritorio. Nunca es una caja blanca recta sobre el héroe. Alto 64 en escritorio y 56 en móvil. De izquierda a derecha: marca, enlaces de la sede (desde 1536 px; por debajo, el menú), «Destino», **selector de idioma** y WhatsApp. El menú móvil desplegable lleva el mismo radio y borde. Todo lo que se toca mide al menos 44 de alto (los enlaces de texto crecen con relleno, no de tamaño de letra). Mientras no llegue el logo definitivo en versión clara, la cabecera no se hace transparente sobre el héroe.
+Tarjeta flotante, no franja: radio de tarjeta (16), fondo `arena` casi opaco (95 %) con desenfoque ligero, borde `borde`, sin sombra mayor que nivel 1, separada 16 de los bordes de la pantalla en escritorio. Nunca es una caja blanca recta sobre el héroe. Alto 64 en escritorio y 56 en móvil. De izquierda a derecha: marca, enlaces de la sede (**desde 1280 px**; por debajo, el menú), **selector de idioma «ES | EN»**, «Destino» (el único control con borde: es la decisión principal) y WhatsApp. El idioma se ve siempre, también en móvil. El menú móvil desplegable lleva el mismo radio y borde. Todo lo que se toca mide al menos 44 de alto (los enlaces de texto crecen con relleno, no de tamaño de letra). Mientras no llegue el logo definitivo en versión clara, la cabecera no se hace transparente sobre el héroe.
 
 ### Selector de idioma
 
-Vive **dentro de la cabecera** (escritorio y menú móvil), nunca fijo sobre el contenido. Disparador de 44 de alto con bandera de 20, «ES» o «EN» en 14/600 y flecha; radio de control (12), borde `borde-control`, fondo blanco. Panel con radio de tarjeta (16), borde `borde`, sombra nivel 2, dos opciones de 44 de alto con la activa marcada por palomita `cafe` y fondo `cafe-bruma`. Cierra con clic fuera y con Esc; el cambio conserva la ruta, el `?paso=` y el borrador. En la cabecera mínima de la reserva se usa la variante «ES | EN» (ver Cabecera mínima).
+Vive **dentro de la cabecera**, nunca fijo sobre el contenido. Dos segmentos «ES | EN» de 44 × 44 (componente `SelectorIdioma`), «ES» o «EN» en 14, radio de control (12); el activo con `cafe-bruma` y texto `cafe` en 600, el otro `apagado`. Sin bandera, sin caret y sin desplegable: un toque. El cambio conserva la ruta, el query (`?paso=`, `?moneda=`, `?origen=`) y el borrador. Es el mismo en la cabecera del sitio y en la mínima de la reserva (decisión del dueño, 2026-10-18; sustituye al desplegable con banderas).
+
+### Banda «Continuar reservación»
+
+Va bajo la cabecera, **no** como losa: tarjeta de radio 16 en escritorio, fondo `arena` (nunca blanco), borde `borde` (con dinero retenido, borde `accent` y fondo teñido), 8 de separación de la cabecera y el mismo ancho. Una línea de texto del servidor (sin inferir en el navegador) y la fecha relativa; botones de 44 con radio de control (12). Nunca tapa el héroe más que lo necesario: alto ~72 en escritorio.
 
 ### Pie del sitio
 

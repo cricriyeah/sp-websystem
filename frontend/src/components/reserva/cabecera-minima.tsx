@@ -1,16 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { SelectorIdioma } from '@/components/selector-idioma';
 import { Button } from '@/components/ui/button';
 import { EmpresaSello } from '@/components/ui/empresa-sello';
-
-const IDIOMAS = [
-  { valor: 'es', texto: 'ES' },
-  { valor: 'en', texto: 'EN' },
-] as const;
 
 type Props = {
   lang: Locale;
@@ -35,15 +30,6 @@ const MARCA = 'Sun Baja Experience';
  * mismo sitio, así que `--nav-alto` no cambia. El idioma conserva `?paso=` y el borrador.
  */
 export function CabeceraMinima({ lang, nav, volverHref, volverLabel, alPasoAnterior, empresa, marcaFija = false }: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const cambiarIdioma = (idioma: Locale) => {
-    if (idioma === lang) return;
-    // `usePathname()` no trae el query: sin él se perderían `?paso=`, `?moneda=` y el origen.
-    router.push(pathname.replace(/^\/(es|en)/, `/${idioma}`) + window.location.search);
-  };
-
   const claseFlecha = 'inline-flex size-12 items-center justify-center rounded-control text-foreground transition-colors hover:bg-cafe-bruma';
   const marca = <EmpresaSello nombre={MARCA} tamano={32} />;
 
@@ -70,26 +56,7 @@ export function CabeceraMinima({ lang, nav, volverHref, volverLabel, alPasoAnter
           )}
         </div>
 
-        <div role="group" aria-label={nav.switchLang} className="flex items-center">
-          {IDIOMAS.map(({ valor, texto }) => {
-            const activo = valor === lang;
-            return (
-              <Button
-                key={valor}
-                variante="libre"
-                type="button"
-                lang={valor}
-                aria-current={activo ? 'true' : undefined}
-                onClick={() => cambiarIdioma(valor)}
-                className={`flex size-11 items-center justify-center rounded-control texto-pequeno transition-colors ${
-                  activo ? 'bg-cafe-bruma font-semibold text-cafe' : 'text-muted hover:text-foreground'
-                }`}
-              >
-                {texto}
-              </Button>
-            );
-          })}
-        </div>
+        <SelectorIdioma lang={lang} label={nav.switchLang} />
       </header>
     </div>
   );

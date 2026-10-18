@@ -37,11 +37,10 @@ const REGLAS = {
 };
 
 // Exentos POR REGLA y con motivo: valores que una API externa pide en concreto, no como var().
-// Un archivo exento de una regla sigue midiéndose en todas las demás (p. ej. lang-switch.tsx
+// Un archivo exento de una regla sigue midiéndose en todas las demás (p. ej. ayuda-flotante.tsx
 // sigue contando sus <button> y sus motion.*). `globals.css` no figura: el escáner solo lee .ts/.tsx.
 const EXENTOS = {
   'src/app/[lang]/opengraph-image.tsx': { reglas: ['color-literal'], motivo: 'ImageResponse no lee CSS' },
-  'src/components/lang-switch.tsx': { reglas: ['color-literal'], motivo: 'SVG de banderas con colores propios' },
   'src/app/global-error.tsx': { reglas: ['boton-crudo', 'titular-sin-escala'], motivo: 'ultimo recurso sin estilos globales ni primitivas: Button arrastraria clsx y tailwind-merge a un documento que no carga Tailwind, y sin la hoja no existe ninguna clase `texto-*`' },
   'src/components/checkout/ayuda-flotante.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
   'src/components/error-block.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp en el boton de ayuda' },

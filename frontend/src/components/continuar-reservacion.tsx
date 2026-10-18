@@ -258,8 +258,8 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     : problema ? null : situacion === 'no_existe' && !whatsapp ? null : contenido?.secundaria;
   const registro = contenido?.registro ?? 'informativo';
   const estilo = registro === 'con_dinero'
-    ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_10%,var(--superficie))]'
-    : registro === 'en_curso' ? 'border-border-strong bg-superficie' : 'border-border bg-superficie';
+    ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_10%,var(--background))]'
+    : registro === 'en_curso' ? 'border-border-strong bg-arena' : 'border-border bg-arena';
   const otros = pendientes.filter(p => p.checkoutId !== activo?.checkoutId).slice(0, 3);
 
   const principalClick = () => {
@@ -284,15 +284,15 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   };
 
   const aviso = activo && linea && (resumen || problema) ? (
-    <div role="status" aria-live="polite" className={`border ${estilo} px-5 py-4 sm:px-8`}>
+    <div role="status" aria-live="polite" className={`border ${estilo} px-4 py-3 sm:px-6 lg:rounded-card`}>
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-relaxed text-foreground">{linea}</p>
           <p className="mt-1 text-sm text-muted">{fechaRelativa(activo.actualizadoEn, textos)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {principal && <Button variante="libre" onClick={principalClick} className="min-h-11 bg-action px-4 py-2 text-sm font-semibold text-white hover:opacity-90">{principal}</Button>}
-          {secundaria && <Button variante="libre" onClick={secundariaClick} className="min-h-11 border border-border-strong px-4 py-2 text-sm font-medium text-foreground hover:bg-cafe-bruma">{secundaria}</Button>}
+          {principal && <Button variante="libre" onClick={principalClick} className="min-h-11 rounded-control bg-action px-4 py-2 text-sm font-semibold text-white hover:opacity-90">{principal}</Button>}
+          {secundaria && <Button variante="libre" onClick={secundariaClick} className="min-h-11 rounded-control border border-border-strong px-4 py-2 text-sm font-medium text-foreground hover:bg-cafe-bruma">{secundaria}</Button>}
           {otros.length > 0 && <Button variante="libre" aria-expanded={listaAbierta} onClick={() => setListaAbierta(v => !v)} className="min-h-11 px-2 text-sm font-medium text-accent underline">{textos.yMas.replace('{n}', String(otros.length))}</Button>}
         </div>
       </div>
@@ -302,7 +302,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     </div>
   ) : null;
 
-  const deshacerAviso = deshecho && <div role="status" aria-live="polite" className="border border-border bg-cafe-bruma px-5 py-3 text-sm text-foreground">
+  const deshacerAviso = deshecho && <div role="status" aria-live="polite" className="border border-border bg-cafe-bruma px-4 py-3 text-sm text-foreground sm:px-6 lg:mt-2 lg:rounded-card">
     {textos.descartada.replace('{producto}', deshecho.productoNombre)}{' '}
     <Button variante="libre" onClick={deshacer} className="font-semibold text-accent underline">{textos.deshacer}</Button>
   </div>;

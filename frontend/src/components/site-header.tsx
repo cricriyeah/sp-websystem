@@ -14,7 +14,7 @@ import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { WhatsappContact } from '@/components/whatsapp-contact';
-import { LangSwitch } from '@/components/lang-switch';
+import { SelectorIdioma } from '@/components/selector-idioma';
 import { SedeSelector } from '@/components/sede-selector';
 import { ContinuarReservacion } from '@/components/continuar-reservacion';
 import { Button } from '@/components/ui/button';
@@ -120,7 +120,7 @@ export function SiteHeader({
         </Link>
 
         {links.length > 1 && (
-          <nav className="hidden items-center gap-4 2xl:flex">
+          <nav className="hidden items-center gap-4 xl:flex">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -142,7 +142,7 @@ export function SiteHeader({
               {links[0].label}
             </Link>
           )}
-          <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" className="hidden lg:block" />
+          <SelectorIdioma lang={lang} label={nav.switchLang} />
           {/* En móvil el idioma vive en el menú; desde lg va en la cabecera (arriba). */}
           <SedeSelector
             lang={lang}
@@ -160,7 +160,7 @@ export function SiteHeader({
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? nav.closeMenu : nav.openMenu}
             aria-expanded={open}
-            className={`flex h-11 w-11 items-center justify-center border border-border text-foreground 2xl:hidden`}
+            className={`flex h-11 w-11 items-center justify-center border border-border rounded-control text-foreground xl:hidden`}
           >
             {open ? <X size={18} /> : <List size={18} />}
           </Button>
@@ -174,7 +174,7 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className={`absolute inset-x-0 top-full flex flex-col rounded-b-card border border-t-0 border-border bg-arena px-4 py-2 shadow-n2 sm:px-6 lg:mt-2 lg:rounded-card lg:border-t 2xl:hidden`}
+              className={`absolute inset-x-0 top-full flex flex-col rounded-b-card border border-t-0 border-border bg-arena px-4 py-2 shadow-n2 sm:px-6 lg:mt-2 lg:rounded-card lg:border-t xl:hidden`}
             >
               {links.map((link) => (
                 <Link
@@ -196,10 +196,6 @@ export function SiteHeader({
                   label={nav.sedeLabel}
                   variant="header"
                 />
-              </div>
-              <div className="flex items-center justify-between border-b border-border-strong py-3.5 lg:hidden">
-                <span className="text-base text-muted">{nav.switchLang}</span>
-                <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />
               </div>
               <div className="py-3">
                 <WhatsappContact nav={nav} variant="menu" />
