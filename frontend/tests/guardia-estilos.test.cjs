@@ -72,6 +72,6 @@ test('trinquete por total de regla: mover código no sube, añadir sí', () => {
 
 test('umbral duro: cualquier infracción de las reglas de la base falla; las de marca nueva no', () => {
   assert.deepEqual(pasanUmbral({ 'boton-crudo': { 'a.tsx': 2 } }), [['boton-crudo', 2]]);
-  assert.deepEqual(pasanUmbral({ 'radio-crudo': { 'a.tsx': 9 }, 'bg-surface-uso': { 'a.tsx': 9 } }), []);
+  assert.deepEqual(pasanUmbral({ 'radio-crudo': { 'a.tsx': 9 }, 'bg-surface-uso': { 'a.tsx': 9 } }), [['radio-crudo', 9]]); // la compuerta de marca (7.3) exige 0; bg-surface-uso puede quedar en bandas
   assert.deepEqual(pasanUmbral({}), []);
 });
