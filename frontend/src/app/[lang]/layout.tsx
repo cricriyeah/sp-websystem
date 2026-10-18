@@ -4,7 +4,6 @@ import '../globals.css';
 import { getDictionary, hasLocale } from './dictionaries';
 import { notFound } from 'next/navigation';
 import { CookieNotice } from '@/components/cookie-notice';
-import { LangSwitch } from '@/components/lang-switch';
 import { RefCapture } from '@/components/ref-capture';
 import { ProveedorToast } from '@/components/toast';
 import { MotionProvider } from '@/components/ui/motion-provider';
@@ -89,10 +88,6 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
           {/* Envuelve todo para que cualquier pantalla pueda avisar sin montar su
               propio sistema: un solo lenguaje visual para todo el feedback. */}
           <ProveedorToast cerrarLabel={dict.feedback.close}>{children}</ProveedorToast>
-          {/* Selector de idioma fijo en esquina inferior izquierda para escritorio (en movil vive en el menu) */}
-          <div className="fixed bottom-6 left-6 z-40 hidden lg:block print:hidden">
-            <LangSwitch lang={lang} label={dict.nav.switchLang} placement="top" align="left" />
-          </div>
           {/* Va fuera del proveedor de avisos: no es feedback de una accion del
               cliente, es un tramite que se contesta una vez y no vuelve. */}
           <CookieNotice lang={lang} cookies={dict.cookies} />

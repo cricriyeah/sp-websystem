@@ -149,9 +149,9 @@ export function SiteHeader({
               {links[0].label}
             </Link>
           )}
+          <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" className="hidden lg:block" />
           {minimo ? (
-            // El idioma en escritorio ya lo da el selector fijo del layout (abajo a la izquierda):
-            // repetirlo aquí lo duplicaba. En móvil sigue en el menú.
+            // En móvil el idioma vive en el menú; desde lg va en la cabecera (arriba).
             <WhatsappContact nav={nav} tone="plain" />
           ) : (
             <>
@@ -212,7 +212,7 @@ export function SiteHeader({
                   />
                 </div>
               )}
-              <div className="flex items-center justify-between border-b border-border-strong py-3.5">
+              <div className="flex items-center justify-between border-b border-border-strong py-3.5 lg:hidden">
                 <span className="text-[15px] text-muted">{nav.switchLang}</span>
                 <LangSwitch lang={lang} label={nav.switchLang} placement="bottom" align="right" />
               </div>

@@ -74,7 +74,7 @@ const LOCALES: { value: Locale; Flag: typeof MexicoFlag; label: string }[] = [
 
 /**
  * Selector de idioma personalizado con animación.
- * Esquinas rectas sin bordes redondeados.
+ * Disparador de 44 px con radio de control; panel con radio de tarjeta (design-components.md).
  * Click fuera o Escape cierra el panel.
  */
 export function LangSwitch({
@@ -134,7 +134,7 @@ export function LangSwitch({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}
-        className="flex h-9 items-center gap-2 border border-border bg-superficie px-3 text-xs font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-cafe-bruma"
+        className="flex h-11 items-center gap-2 rounded-control border border-border-strong bg-superficie px-3 text-sm font-semibold text-foreground transition-colors hover:bg-cafe-bruma"
       >
         <current.Flag className="h-3.5 w-5" />
         <span>{current.value.toUpperCase()}</span>
@@ -166,7 +166,7 @@ export function LangSwitch({
                 : { opacity: 0, y: isTop ? 4 : -4, scale: 0.98 }
             }
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className={`absolute z-50 min-w-[140px] border border-border bg-superficie shadow-n2 ${
+            className={`absolute z-50 min-w-[160px] overflow-hidden rounded-card border border-border bg-superficie shadow-n2 ${
               isTop ? 'bottom-full mb-2' : 'top-full mt-2'
             } ${align === 'left' ? 'left-0' : 'right-0'}`}
           >
@@ -179,7 +179,7 @@ export function LangSwitch({
                     role="option"
                     aria-selected={active}
                     onClick={() => select(locale.value)}
-                    className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-colors
+                    className={`flex min-h-11 w-full items-center gap-2.5 px-4 text-left text-sm transition-colors
                       ${active
                         ? 'bg-cafe-bruma font-semibold text-foreground'
                         : 'text-muted hover:bg-cafe-bruma hover:text-foreground'

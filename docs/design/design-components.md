@@ -89,6 +89,22 @@ Botón de texto «¿Tienes un código?» que despliega el campo con la misma ani
 
 Sustituye al navbar completo: **flecha de volver** a la izquierda, **logo redondo** de 32 al centro, **selector de idioma ES/EN** a la derecha. Alto 56, fondo `arena`, sin sombra, línea inferior `borde`. En móvil queda fija (contiene «volver»); en escritorio no se fija. Define `--nav-alto`: 56 px en móvil y 0 en escritorio.
 
+### Cabecera del sitio (portada, sedes, servicio)
+
+Tarjeta flotante, no franja: radio de tarjeta (16), fondo `arena` casi opaco (95 %) con desenfoque ligero, borde `borde`, sin sombra mayor que nivel 1, separada 16 de los bordes de la pantalla en escritorio. Nunca es una caja blanca recta sobre el héroe. Alto 64 en escritorio y 56 en móvil. De izquierda a derecha: marca, enlaces de la sede (desde 1536 px; por debajo, el menú), «Destino», **selector de idioma** y WhatsApp. El menú móvil desplegable lleva el mismo radio y borde. Todo lo que se toca mide al menos 44 de alto (los enlaces de texto crecen con relleno, no de tamaño de letra). Mientras no llegue el logo definitivo en versión clara, la cabecera no se hace transparente sobre el héroe.
+
+### Selector de idioma
+
+Vive **dentro de la cabecera** (escritorio y menú móvil), nunca fijo sobre el contenido. Disparador de 44 de alto con bandera de 20, «ES» o «EN» en 14/600 y flecha; radio de control (12), borde `borde-control`, fondo blanco. Panel con radio de tarjeta (16), borde `borde`, sombra nivel 2, dos opciones de 44 de alto con la activa marcada por palomita `cafe` y fondo `cafe-bruma`. Cierra con clic fuera y con Esc; el cambio conserva la ruta, el `?paso=` y el borrador. En la cabecera mínima de la reserva se usa la variante «ES | EN» (ver Cabecera mínima).
+
+### Pie del sitio
+
+Logo (o el monograma «SB» hasta el definitivo) en tamaño normal, unos 56 de alto, en la primera columna, con el titular y el botón. Columnas de enlaces con encabezado de 14/600 `apagado`. Sin wordmark gigante. Fila final con derechos y ciudad en 14 `apagado`, separada por línea `borde`.
+
+### Objetivo táctil
+
+Todo control que se toca (botón, enlace suelto, flecha, punto de carrusel, más y menos de personas, icono de cierre) ocupa al menos 44 × 44. Si lo que se ve es más chico (un punto de 8 px), el área de toque se agranda con relleno o con un elemento invisible, sin cambiar el dibujo. Entre dos objetivos contiguos, 8 de separación (los días del calendario son la excepción).
+
 ---
 
 ### Línea de progreso (móvil)
