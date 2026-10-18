@@ -79,3 +79,16 @@ Móvil (el navegador bloqueó la ventana emergente y el marco de 390 px; hay que
 2. Escribir las especificaciones de estos componentes en `design-components.md` antes de implementar, con la luz verde del dueño.
 3. Implementar la pasada de unificación (piezas globales) y luego F8 y F9, que salen juntas con F7 en un solo merge; no se despliega F7 sola; orden de despliegue en la Task 8.6 (backend primero).
 4. Pendientes que solo puede resolver el dueño: fotos de paseos, hospedaje y traslados; logo definitivo; revisión visual de F7 (titulares en mayúsculas a 360 px, etiqueta larga del botón de pago, anillo de foco, contraste de `--hero-ink` con la foto real); 9 recorridos manuales de F5 y F4 grupo 4; investigar por qué `/es` pesa unos 40 KB más que antes.
+
+## 11. Decisiones posteriores y dónde quedó cada cosa (2026-10-17)
+
+Tras leer F8 y F9 completas, esta auditoría se integró al plan (`docs/superpowers/plans/2026-10-15-frontend-base-rediseno.md`), que es la única fuente para ejecutar. Este documento queda como respaldo de las razones.
+
+- **Alcance de la pasada global:** completa, aprobada por el dueño. Quedó como fase nueva **F7b** (Tasks 7b.0 a 7b.6), antes de F8.
+- **Puerta de taste:** cuatro controles escritos en las restricciones globales del plan (taste y PFD antes del brief, el brief copia las reglas, revisión del orquestador en el navegador, guardia mecánica). La guardia nueva es la Task 7b.0.
+- **Tarjeta de oferta única, rejilla con destacada, chips de actividad:** ya estaban en la Task 9.1b (decisión del dueño del 2026-10-16); se añadió la fila de datos en Consola Mono sin separadores.
+- **Pasos del checkout con nombre:** ya estaban en 8.0a y 8.3; se añadió el nombre visible en la línea de progreso móvil.
+- **Resumen del checkout con foto o sello:** añadido a la Task 8.3, pendiente de luz verde en su PUNTO DEL DUEÑO.
+- **Quién opera:** se retira la sección de empresas **de las sedes** (commit `0223aec0`). El hub la conserva y la Task 9.4 la reemplaza por `FilaEmpresa`. Las empresas siguen mencionadas en todo lo demás.
+- **Reseñas:** manda la Task 9.5: solo reseñas confirmadas por cada empresa; sin ellas no hay sección. Esto **revierte** la decisión 3 del §7 (dejar los ejemplos sin la nota interna).
+- **Titulares en mayúsculas:** el texto de la Task 7.3 que prohibía `uppercase` se corrigió con la excepción del dueño (`fd6d41d2`).
