@@ -36,7 +36,8 @@ const suites = {
   origen: ['src/lib/origen.ts', 'ORIGEN_TEST_OUT'],
   'campo-paso': ['src/lib/campo-paso.ts', 'CAMPO_PASO_TEST_OUT'],
   'validar-reserva': ['src/lib/validar-reserva.ts', 'VALIDAR_RESERVA_TEST_OUT'],
-  'paso-url':['src/lib/paso-url.ts', 'PASO_URL_TEST_OUT'],
+  'paso-url': ['src/lib/paso-url.ts', 'PASO_URL_TEST_OUT'],
+  'texto-localizado': ['src/lib/texto-localizado.ts', 'TEXTO_LOCALIZADO_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

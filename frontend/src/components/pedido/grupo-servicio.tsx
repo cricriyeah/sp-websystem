@@ -3,6 +3,7 @@
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BotonPaso } from '@/components/checkout/boton-paso';
+import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import type { Moneda, PaqueteServicioCatalogo } from '@/lib/api';
 import type { SeleccionPersonalizacion } from '@/lib/personalizaciones';
@@ -20,6 +21,8 @@ type Props = {
   estado: ComponentePedido;
   conEncabezadoEmpresa: boolean;
   nombreEmpresa: string;
+  /** Logo de la empresa (de `content/empresas`); sin él, el sello pinta el monograma. */
+  logoEmpresa?: string;
   moneda: Moneda;
   tipoCambio: string;
   inicio: string | null;
@@ -37,7 +40,7 @@ type Props = {
 };
 
 export function GrupoServicio({
-  lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda, tipoCambio,
+  lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, logoEmpresa, moneda, tipoCambio,
   inicio, noches, salida, estadoTarjeta,
   onAccion, onCompletar, onTope, onPersonas, onExtras, onTraslado, error,
 }: Props) {
@@ -52,7 +55,7 @@ export function GrupoServicio({
   return (
     <CheckoutSectionCard
       title={servicio.nombre}
-      etiqueta={conEncabezadoEmpresa ? nombreEmpresa : undefined}
+      etiqueta={conEncabezadoEmpresa ? <EmpresaSello nombre={nombreEmpresa} logo={logoEmpresa} tamano={24} mostrarNombre /> : undefined}
       estado={estadoTarjeta}
       resumen={resumen}
       actionLabel={estadoTarjeta === 'completado' ? checkout.changeStep : estadoTarjeta === 'editando' ? checkout.doneEditing : undefined}

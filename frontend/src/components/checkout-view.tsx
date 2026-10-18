@@ -1417,6 +1417,7 @@ export function CheckoutView({
                     sigue cotizando a mano. El punto de encuentro real y el aviso del
                     agente son información de después de pagar (BookingConfirmation). */}
                 <BloqueExtras
+                  lang={lang}
                   checkout={checkout}
                   catalogo={catalogoUnificado}
                   seleccionadas={personalizacionesMap}

@@ -1,8 +1,9 @@
 'use client';
 
 import { Minus, Plus, Warning } from '@phosphor-icons/react';
-import type { Dictionary } from '@/app/[lang]/dictionaries';
+import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
+import { DescripcionExtra, textoDeExtra } from '@/components/checkout/descripcion-extra';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import {
 } from '@/lib/personalizaciones';
 
 type Props = {
+  lang: Locale;
   checkout: Dictionary['checkout'];
   catalogo: ServicioPersonalizacionCatalogo[];
   /** Lo elegido, por id del extra. */
@@ -40,6 +42,7 @@ type Props = {
  * tarjeta no pierde nada.
  */
 export function BloqueExtras({
+  lang,
   checkout,
   catalogo,
   seleccionadas,
@@ -66,6 +69,8 @@ export function BloqueExtras({
       | 'selection'
       | undefined;
     const errorId = `error-personalizacion-${sp.id}`;
+    const descripcionId = `descripcion-personalizacion-${sp.id}`;
+    const texto = textoDeExtra(sp.descripcion, lang);
     const precio = aMoneda(sp.precio, moneda, tipoCambioUsd);
 
     if (sp.tipo_interaccion === 'check') {
@@ -83,6 +88,7 @@ export function BloqueExtras({
                 type="checkbox"
                 checked={marcada}
                 disabled={locked}
+                aria-describedby={texto ? descripcionId : undefined}
                 onChange={(e) => onAlternar(sp.id, e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
               />
@@ -93,6 +99,7 @@ export function BloqueExtras({
                     {checkout.recommendedBadge}
                   </span>
                 )}
+                <DescripcionExtra id={descripcionId} texto={texto} />
               </span>
             </span>
             <span className="shrink-0 text-right text-muted">
@@ -152,6 +159,7 @@ export function BloqueExtras({
             opciones={sp.opciones_seleccion.map((opcion) => ({ valor: opcion, etiqueta: opcion }))}
             onChange={(nuevo) => onRespuesta(sp.id, nuevo)}
           />
+          <DescripcionExtra id={descripcionId} texto={texto} />
           <ErrorDeCampo id={errorId} mensaje={errorCodigo ? checkout.personalizacionErrors[errorCodigo] : ''} />
         </div>
       );
@@ -165,6 +173,7 @@ export function BloqueExtras({
         <span className="font-medium">
           {sp.nombre}
           {sp.obligatorio ? ' *' : ''}
+          <DescripcionExtra id={descripcionId} texto={texto} />
         </span>
         <Input
           aspecto="heredado"
@@ -174,7 +183,7 @@ export function BloqueExtras({
           value={valor}
           disabled={locked}
           aria-invalid={Boolean(errorCodigo)}
-          aria-describedby={errorCodigo ? errorId : undefined}
+          aria-describedby={[errorCodigo ? errorId : '', texto ? descripcionId : ''].filter(Boolean).join(' ') || undefined}
           onChange={(e) => onRespuesta(sp.id, e.target.value)}
           className={`border bg-superficie px-4 py-3 outline-none ${
             errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'

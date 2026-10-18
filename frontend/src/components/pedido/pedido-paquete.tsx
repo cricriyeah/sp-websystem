@@ -57,10 +57,12 @@ type Props = {
   minDate: string;
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
+  /** `{ nombre, logo }` por slug, de `content/empresas` (server-only: llega por prop). */
+  empresas: Record<string, { nombre: string; logo?: string }>;
   retomarCheckoutId?: string;
 };
 
-export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, volverHref, retomarCheckoutId }: Props) {
+export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa, puntosPorEmpresa, minDate, volverHref, empresas, retomarCheckoutId }: Props) {
   const { checkout, feedback, pedido: textos, traslados } = dict;
   const motor = paquete.es_cruza_empresa ? 'orden' : 'reserva';
   const trasladoFijo = trasladoFijoAeropuerto(paquete);
@@ -552,6 +554,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                       estado={estado.componentes[slug]}
                       conEncabezadoEmpresa={cantidadCargos > 1}
                       nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}
+                      logoEmpresa={empresas[componente.servicio.empresa_slug]?.logo}
                       moneda={estado.moneda}
                       tipoCambio={paquete.tipo_cambio_usd}
                       inicio={estado.inicio}

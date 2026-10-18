@@ -4,6 +4,7 @@ import { AirplaneTilt, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
 import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
+import { DescripcionExtra, textoDeExtra } from '@/components/checkout/descripcion-extra';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { PeopleStepper } from '@/components/people-stepper';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,8 @@ export function GrupoViaje({
     const sinPrecio = precio === null;
     const cantidad = cantidadEfectiva(extra, estado.personas, seleccion?.cantidad);
     const id = `pedido-extra-${servicio.slug}-${extra.id}`;
+    const descripcionId = `${id}-descripcion`;
+    const texto = textoDeExtra(extra.descripcion, lang);
 
     if (extra.tipo_interaccion === 'check') return (
       <div key={extra.id}>
@@ -90,6 +93,7 @@ export function GrupoViaje({
               id={id}
               type="checkbox"
               checked={marcada}
+              aria-describedby={texto ? descripcionId : undefined}
               disabled={bloqueado || (sinPrecio && !marcada)}
               onChange={(event) => actualizarExtra(extra.id, event.target.checked ? { id: extra.id, cantidad: 1 } : undefined)}
               className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
@@ -99,6 +103,7 @@ export function GrupoViaje({
               {extra.preseleccionado && (
                 <span className="ml-2 text-sm font-medium text-accent">{checkout.recommendedBadge}</span>
               )}
+              <DescripcionExtra id={descripcionId} texto={texto} />
             </span>
           </span>
           <span className="shrink-0 text-right text-muted">
@@ -143,14 +148,18 @@ export function GrupoViaje({
             opciones={extra.opciones_seleccion.map((opcion) => ({ valor: opcion, etiqueta: opcion }))}
             onChange={(valor) => actualizarExtra(extra.id, valor ? { id: extra.id, respuesta: valor } : undefined)}
           />
+          <DescripcionExtra id={descripcionId} texto={texto} />
         </div>
       );
     }
 
     return (
       <label key={extra.id} htmlFor={id} className="flex flex-col gap-2 text-sm text-foreground">
-        <span className="font-medium">{extra.nombre}{extra.obligatorio ? ' *' : ''}</span>
-        <Input aspecto="heredado" id={id} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
+        <span className="font-medium">
+          {extra.nombre}{extra.obligatorio ? ' *' : ''}
+          <DescripcionExtra id={descripcionId} texto={texto} />
+        </span>
+        <Input aspecto="heredado" id={id} aria-describedby={texto ? descripcionId : undefined} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
           step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
           value={seleccion?.respuesta ?? ''} disabled={bloqueado}
           onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}

@@ -316,6 +316,8 @@ export type ServicioPersonalizacionCatalogo = {
   tipo: string;
   tipo_interaccion: 'check' | 'input_texto' | 'input_numero' | 'input_seleccion';
   opciones_seleccion: string[];
+  /** Texto corto bajo el extra, por idioma (puede venir vacío). */
+  descripcion?: { es?: string; en?: string };
   aviso_reforzado: boolean;
   cobrar_por_persona: boolean;
   cantidad_editable: boolean;
@@ -337,6 +339,8 @@ export type ServicioCatalogo = {
   precio_persona_extra: string;
   tipo_cambio_usd: string;
   personas_incluidas: number;
+  /** Tope de personas por reserva; null/ausente = el tope general. Opcional hasta que el backend esté desplegado. */
+  capacidad_maxima?: number | null;
   permite_anticipo: boolean;
   porcentaje_anticipo: number;
   descripcion: string;

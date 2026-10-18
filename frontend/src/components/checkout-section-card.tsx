@@ -38,14 +38,19 @@ type CheckoutSectionCardProps = {
   /** Texto del boton del encabezado ("Cambiar" / "Listo" segun `estado`). */
   actionLabel?: string;
   onAction?: () => void;
-  /** Empresa del grupo (solo cuando el pedido tiene más de una): una sola vez, junto al título. */
-  etiqueta?: string;
+  /**
+   * Empresa del grupo (solo cuando el pedido tiene más de una): una sola vez, junto al título.
+   * Texto (se pinta como chip) o un nodo ya armado, p. ej. el `EmpresaSello` con su nombre.
+   */
+  etiqueta?: ReactNode;
   /** Fila final de la tarjeta abierta con el único CTA primario. Solo en `activo`. */
   pie?: ReactNode;
   children: ReactNode;
 };
 
 const ESTILOS = 'border-border bg-superficie';
+/** La empresa como texto: un chip. Como `EmpresaSello`, ya trae su propia forma. */
+const CHIP = 'rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium text-muted';
 
 export function CheckoutSectionCard({
   title,
@@ -90,7 +95,7 @@ export function CheckoutSectionCard({
             {etiqueta && (
               // En pantallas angostas el renglón no tiene sitio para la empresa
               // sin pisar "Modificar": se ve completa al abrir la tarjeta.
-              <span className="hidden shrink-0 rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium text-muted sm:inline">
+              <span className={`hidden shrink-0 sm:inline-flex ${typeof etiqueta === 'string' ? CHIP : ''}`}>
                 {etiqueta}
               </span>
             )}
@@ -111,7 +116,7 @@ export function CheckoutSectionCard({
                 {title}
               </span>
               {etiqueta && (
-                <span className="rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium text-muted">
+                <span className={`inline-flex ${typeof etiqueta === 'string' ? CHIP : ''}`}>
                   {etiqueta}
                 </span>
               )}
@@ -165,7 +170,7 @@ export function CheckoutSectionCard({
         <p className="flex items-center gap-x-2 text-sm font-medium text-muted">
           {title}
           {etiqueta && (
-            <span className="rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium">{etiqueta}</span>
+            <span className={`inline-flex ${typeof etiqueta === 'string' ? CHIP : ''}`}>{etiqueta}</span>
           )}
         </p>
       </section>
