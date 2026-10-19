@@ -17,8 +17,9 @@ export function ResumenPedido({
   amountDueNow,
   cargos,
   notaCargos,
+  estimado,
 }: ResumenVivo) {
-  const resumen = { checkout, lines, lineasViaje, sellos, total, amountDueNow, cargos, notaCargos };
+  const resumen = { checkout, lines, lineasViaje, sellos, total, amountDueNow, cargos, notaCargos, estimado };
   useRegistrarResumen(resumen);
   return (
     <div className="max-sm:hidden">

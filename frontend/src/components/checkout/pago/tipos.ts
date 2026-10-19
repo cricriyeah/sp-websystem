@@ -22,6 +22,8 @@ export type StripePanelProps = {
   sellos?: { nombre: string; logo?: string }[];
   /** Lo elegido en el viaje (fecha, hora, personas…), vivo desde el paso 1. */
   lineasViaje?: { etiqueta: string; valor: string }[];
+  /** El total es una vista previa por estrategia (hospedaje por noche) hasta que el servidor cobre. */
+  estimado?: boolean;
   /** Cruza-empresa ya en pago: un renglón por cobro con su estado (en lugar de los sellos). */
   cargos?: CargoVisible[];
   /** Junto a los cargos: cómo se retiene y se cobra cada uno. */

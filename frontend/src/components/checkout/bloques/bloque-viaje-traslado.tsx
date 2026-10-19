@@ -136,7 +136,7 @@ export function BloqueViajeTraslado({
       onChange={onPersonas}
       maxPeople={maxCapacidad}
       minPeople={1}
-      maxNotice={traslados.fields.maxPasajerosNotice.replace('{max}', String(maxCapacidad))}
+      maxNotice={checkout.maxPersonasTope.replace('{max}', String(maxCapacidad))}
       onMaxAttempt={onTopePersonas}
     />
   );

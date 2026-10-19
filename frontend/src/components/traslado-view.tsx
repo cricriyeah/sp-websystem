@@ -49,7 +49,6 @@ import {
   fromLocalISODate,
   generarHorasVentana,
   getMinBookableDate,
-  toLocalISODate,
 } from '@/lib/dates';
 import { mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
@@ -77,12 +76,6 @@ function nombreValido(valor: string) {
 
 function correoValido(valor: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
-}
-
-function diaSiguiente(iso: string): string {
-  const d = fromLocalISODate(iso);
-  d.setDate(d.getDate() + 1);
-  return toLocalISODate(d);
 }
 
 type CampoContacto = 'phone' | 'fullName' | 'email';
@@ -156,7 +149,9 @@ export function TrasladoView({
   const minDate = useMemo(() => getMinBookableDate(), []);
   // `null` = el cliente borró la fecha: Continuar la pide.
   const [fecha, setFecha] = useState<string | null>(minDate);
-  const [fechaRegreso, setFechaRegreso] = useState<string | null>(() => diaSiguiente(minDate));
+  // El regreso es obligatorio y empieza vacío: sin respuesta se ve la pregunta, no una fecha que el
+  // cliente no eligió.
+  const [fechaRegreso, setFechaRegreso] = useState<string | null>(null);
   const horasDisponibles = useMemo(() => {
     return generarHorasVentana(
       catalogo.servicio.hora_apertura,
@@ -725,7 +720,6 @@ export function TrasladoView({
       onTipo={(tipo) => {
         setTipoTraslado(tipo);
         if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
-        else if (!fechaRegreso && fecha) setFechaRegreso(diaSiguiente(fecha));
       }}
       fecha={fecha}
       minDate={minDate}

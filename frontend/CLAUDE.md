@@ -69,10 +69,10 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   elige una vez. `personas_incluidas` fija las personas iniciales por
   servicio y cada grupo puede ajustarlas. Los precios, topes y porcentajes
   vienen del catálogo; `src/lib/pedido-paquete.ts` calcula solo la vista
-  previa y el servidor determina el cobro real. USD se ofrece para el
-  pedido completo solo con precio ancla y tarifas de traslado en USD;
-  si falta el precio USD de un extra elegido, no se calcula el pedido.
-  No hay conversión de moneda. El anticipo de paquete solo se ofrece
+  previa y el servidor determina el cobro real. Los precios en USD se
+  derivan del tipo de cambio de la sede (`lib/moneda.ts`, `aMoneda`, igual
+  que `payments.moneda.convertir`), así que siempre existen: no hay estado
+  de «extra sin precio USD». El anticipo de paquete solo se ofrece
   para una empresa si `paquete.permite_anticipo`, con
   `paquete.porcentaje_anticipo`. `CheckoutView` y `traslado-view.tsx`
   también respetan `servicio.permite_anticipo` y su porcentaje; en caso
@@ -128,6 +128,11 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   La fecha de regreso del traslado dentro de un paquete (`FechaRegresoCompacta`) es
   obligatoria: se ve con el calendario abierto hasta que hay fecha, y entonces se pliega a
   una fila con "Modificar" (nunca un botón "Elegir", que la haría parecer opcional).
+  `PeopleStepper` (dos círculos secundarios de 48, valor 20/600) recibe el tope del
+  servicio (`capacidad_maxima`, o 5 sin ella; en paquete, `topeDeComponente`) y al tocar
+  + en el tope dice «Máximo N personas» en línea. El hospedaje `por_noche` suelto
+  muestra precio × noches (estrategia `PorNoche` del servidor) con «Estimado» junto al
+  total hasta crear el pago.
 - Las listas cortas usan `SelectPersonalizado` (sobre `FieldPopover`),
   no `<select>` nativo. Los errores que bloquean se quedan en la tarjeta,
   pegados a su campo (los toasts se auto-descartan: son para avisos): usa
@@ -289,7 +294,7 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
   1. **Viaje** (`checkout.tripHeadline`), 4 bloques en este orden: tipo de traslado
      (`TipoTrasladoCards`, lo que define el producto va primero) → fecha
      (`CalendarioReserva`, sin cupo; con `redondo_aeropuerto` un solo calendario de
-     ida y regreso) → hora y pasajeros (`ContenidoViaje`, tope =
+     ida y regreso, con el regreso obligatorio y vacío al empezar) → hora y pasajeros (`ContenidoViaje`, tope =
      `servicio.capacidad_maxima`).
   2. **Datos** (`CamposContacto`, `idPrefijo="traslado"`).
   3. **Recogida** (`traslados.step2Title`): hotel/punto de encuentro, con "Escribir

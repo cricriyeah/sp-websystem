@@ -87,7 +87,7 @@ export function BloqueViajePaquete({
         personas={paquete.precio_depende_de_personas && maxPersonas !== null ? (
           <PeopleStepper
             label={textos.peopleQuestion}
-            maxNotice={textos.maxPeoplePackage.replace('{max}', String(maxPersonas))}
+            maxNotice={checkout.maxPersonasTope.replace('{max}', String(maxPersonas))}
             value={personasPaquete}
             maxPeople={maxPersonas}
             minPeople={1}

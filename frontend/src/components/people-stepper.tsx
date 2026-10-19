@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Minus, Plus, UsersThree } from '@phosphor-icons/react';
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { MAX_PEOPLE, MIN_PEOPLE } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
+import { Despliegue } from '@/components/ui/despliegue';
 
 type PeopleStepperProps = {
   label: string;
-  /** Aviso que aparece al intentar pasar del maximo. */
+  /** «Máximo N personas»: se explica en línea al tocar + en el tope, en vez de ignorar el toque. */
   maxNotice: string;
   onMaxAttempt?: () => void;
   /** `null` = todavia no contesta. Se muestra la pregunta en vez de una cifra. */
@@ -19,21 +19,17 @@ type PeopleStepperProps = {
   placeholder?: string;
   /** Cuantas personas se asumen al pulsar + desde vacio. */
   valorInicial?: number;
-  /** Tope configurable de personas. Vacio = MAX_PEOPLE (5). */
+  /** Tope del servicio (`capacidad_maxima`). Vacio = MAX_PEOPLE (5). */
   maxPeople?: number;
   minPeople?: number;
-  /** Dentro de una tarjeta del checkout: relleno de 16 px y botones con contraste normal. */
+  /** Dentro de una caja del checkout (`CAJA_CONTENEDOR`): relleno de 16 px. */
   compacto?: boolean;
 };
 
-const botonStepper = (compacto: boolean) =>
-  compacto
-    ? 'flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-30'
-    : 'flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30';
-
 /**
- * Contador de personas, compartido por el booking bar y el checkout.
- * El tope por omisión es MAX_PEOPLE (5) de pesca o el que indique el servicio.
+ * Contador de personas del checkout (design-components.md, «Contador de personas»): dos botones
+ * secundarios circulares de 48 con el valor en 20/600 entre ellos. El tope por omisión es
+ * MAX_PEOPLE (5) de pesca o el que indique el servicio.
  */
 export function PeopleStepper({
   label,
@@ -49,15 +45,9 @@ export function PeopleStepper({
   compacto = false,
 }: PeopleStepperProps) {
   const vacio = value === null;
-  const [showMaxNotice, setShowMaxNotice] = useState(false);
-  const noticeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sinMovimiento = useReducedMotion();
+  const [enTope, setEnTope] = useState(false);
   const max = maxPeople ?? MAX_PEOPLE;
   const min = minPeople ?? MIN_PEOPLE;
-
-  useEffect(() => () => {
-    if (noticeTimeout.current) clearTimeout(noticeTimeout.current);
-  }, []);
 
   const ajustar = (delta: number) => {
     // Desde vacio, cualquiera de los dos botones contesta la pregunta con el
@@ -69,74 +59,48 @@ export function PeopleStepper({
     const siguiente = value + delta;
     if (siguiente > max) {
       onMaxAttempt?.();
-      setShowMaxNotice(true);
-      if (noticeTimeout.current) clearTimeout(noticeTimeout.current);
-      noticeTimeout.current = setTimeout(() => setShowMaxNotice(false), 2500);
+      setEnTope(true);
       onChange(max);
       return;
     }
+    setEnTope(false);
     onChange(Math.min(max, Math.max(min, siguiente)));
   };
 
   return (
-    <div className={`relative flex flex-1 items-center gap-3 ${compacto ? 'px-4 py-3' : 'px-6 py-3.5'}`}>
-      <UsersThree size={20} className="shrink-0 text-muted" />
-      {/* Alto reservado, igual que en FieldPopover: la etiqueta solo existe una
-          vez contestado, y dejar que el contenido mande el alto hacia que la
-          barra entera creciera al contestar. Ver el comentario largo alla. */}
-      <span className="flex h-10 flex-1 flex-col items-start justify-center gap-0.5 text-left">
-        {!vacio && <span className="text-sm text-muted">{label}</span>}
-        <span className="flex w-full items-center justify-between">
-          <span
-            className={`whitespace-nowrap ${
-              vacio ? 'text-sm font-medium text-foreground/70' : 'text-sm text-foreground'
-            }`}
+    <div className={compacto ? 'px-4 py-3' : 'py-1'}>
+      <div className="flex items-center gap-3">
+        <UsersThree size={20} className="shrink-0 text-muted" aria-hidden />
+        <span className="min-w-0 flex-1 text-sm font-medium text-foreground">{vacio ? placeholder : label}</span>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variante="secundario"
+            tamano="icono"
+            type="button"
+            onClick={() => ajustar(-1)}
+            disabled={disabled || (value !== null && value <= min)}
+            aria-label={`${label}: -1`}
           >
-            {vacio ? placeholder : value}
+            <Minus size={20} weight="bold" aria-hidden />
+          </Button>
+          <span className="min-w-8 text-center text-xl font-semibold tabular-nums text-foreground" aria-live="polite">
+            {vacio ? '–' : value}
           </span>
-          <span className="flex items-center gap-1">
-            <Button
-              variante="libre"
-              type="button"
-              onClick={() => ajustar(-1)}
-              disabled={disabled || (value !== null && value <= MIN_PEOPLE)}
-              aria-label="-"
-              className={botonStepper(compacto)}
-            >
-              <Minus size={12} />
-            </Button>
-            <Button
-              variante="libre"
-              type="button"
-              onClick={() => ajustar(1)}
-              disabled={disabled}
-              aria-label="+"
-              className={botonStepper(compacto)}
-            >
-              <Plus size={12} />
-            </Button>
-          </span>
-        </span>
-      </span>
-
-      <AnimatePresence>
-        {showMaxNotice && (
-          <m.span
-            key="max-notice"
-            initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4 }}
-            transition={{ duration: 0.16 }}
-            className={`absolute left-0 z-10 rounded-sm bg-foreground px-3 py-1.5 text-sm whitespace-nowrap text-cafe-bruma shadow-n2 ${
-              // En un cuadro con scroll (compacto) el borde de abajo lo recorta pegado al pie con
-              // "Confirmar": el aviso sube. En la barra de reserva sigue abajo, donde sí cabe.
-              compacto ? 'bottom-full mb-1.5' : '-bottom-8'
-            }`}
+          <Button
+            variante="secundario"
+            tamano="icono"
+            type="button"
+            onClick={() => ajustar(1)}
+            disabled={disabled}
+            aria-label={`${label}: +1`}
           >
-            {maxNotice}
-          </m.span>
-        )}
-      </AnimatePresence>
+            <Plus size={20} weight="bold" aria-hidden />
+          </Button>
+        </div>
+      </div>
+      <Despliegue abierto={enTope && value === max}>
+        <p role="status" className="pt-2 text-right texto-pequeno text-apagado">{maxNotice}</p>
+      </Despliegue>
     </div>
   );
 }

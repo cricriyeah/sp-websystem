@@ -35,6 +35,8 @@ type Props = {
   horasDisponibles: string[];
   onHora: (hora: string) => void;
   people: number;
+  /** Tope del servicio (`capacidad_maxima`, o 5 sin ella). */
+  maxPersonas: number;
   onPersonas: (cantidad: number) => void;
   onTopePersonas: () => void;
   tieneHospedaje: boolean;
@@ -69,6 +71,7 @@ export function BloqueViaje({
   horasDisponibles,
   onHora,
   people,
+  maxPersonas,
   onPersonas,
   onTopePersonas,
   tieneHospedaje,
@@ -118,8 +121,9 @@ export function BloqueViaje({
       personas={
         <PeopleStepper
           label={checkout.peopleLabel}
-          maxNotice={booking.maxPeopleNotice}
+          maxNotice={checkout.maxPersonasTope.replace('{max}', String(maxPersonas))}
           value={people}
+          maxPeople={maxPersonas}
           onChange={onPersonas}
           disabled={locked}
           onMaxAttempt={onTopePersonas}

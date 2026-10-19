@@ -7,7 +7,7 @@ import type { ResumenVivo } from '@/components/reserva/contexto-barra';
  * el total y «pagarás ahora» si difiere. Lo pintan la tarjeta del panel (escritorio y tablet) y la
  * hoja «Ver resumen» (móvil), así no pueden decir cosas distintas.
  */
-export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], total, amountDueNow, cargos = [], notaCargos }: ResumenVivo) {
+export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], total, amountDueNow, cargos = [], notaCargos, estimado = false }: ResumenVivo) {
   return (
     <>
       {cargos.length > 0 && (
@@ -47,7 +47,10 @@ export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], 
       </dl>
 
       <div className="mt-5 flex items-center justify-between border-t border-border pt-5">
-        <p className="text-sm font-medium text-foreground">{checkout.total}</p>
+        <p className="text-sm font-medium text-foreground">
+          {checkout.total}
+          {estimado && <span className="ml-2 texto-pequeno font-normal text-apagado">{checkout.barra.estimado}</span>}
+        </p>
         <p className="text-lg font-medium tracking-tight text-foreground">{total}</p>
       </div>
 

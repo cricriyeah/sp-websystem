@@ -47,7 +47,7 @@ import {
   type Pago,
   type ServicioCatalogo,
 } from '@/lib/api';
-import { formatHour, fromLocalISODate, MAX_PEOPLE, toLocalISODate } from '@/lib/dates';
+import { formatHour, fromLocalISODate, getTopePersonas, toLocalISODate } from '@/lib/dates';
 import { controlDeFecha } from '@/lib/control-fecha';
 import type { SeleccionFechas } from '@/components/ui/calendario/calendario';
 import { horasDeServicio } from '@/lib/horario-servicio';
@@ -225,7 +225,8 @@ export function CheckoutView({
   // `null` = el cliente borró la fecha: Continuar la pide (no se repone sola).
   const [day, setDay] = useState<string | null>(initialDay);
   const [time, setTime] = useState(initialTime);
-  const [people, setPeople] = useState(initialPeople);
+  const topePersonas = getTopePersonas(servicio?.capacidad_maxima);
+  const [people, setPeople] = useState(() => Math.min(initialPeople, topePersonas));
   const [personalizaciones, setPersonalizaciones] = useState<SeleccionPersonalizacion[]>(() =>
     seleccionInicial(catalogoUnificado).map((seleccion) => {
       const item = catalogoUnificado.find((p) => p.id === seleccion.id);
@@ -483,9 +484,14 @@ export function CheckoutView({
 
 
   const usdDisponible = Number(servicio?.tipo_cambio_usd) > 0;
-  const tourPrice = servicio
-    ? aMoneda(servicio.precio_base, moneda, servicio.tipo_cambio_usd)
-    : null;
+  // Hospedaje `por_noche`: la misma estrategia del servidor (`PorNoche`), precio × noches, sin
+  // cargo por persona. Es vista previa hasta crear el pago (el resumen dice «Estimado»).
+  const precioPorNoche = servicio?.estrategia_precio === 'por_noche';
+  const nochesHospedaje = day && fechaSalida
+    ? Math.max(1, Math.round((fromLocalISODate(fechaSalida).getTime() - fromLocalISODate(day).getTime()) / 86_400_000))
+    : 1;
+  const precioBase = servicio ? aMoneda(servicio.precio_base, moneda, servicio.tipo_cambio_usd) : null;
+  const tourPrice = precioBase === null ? null : precioPorNoche ? precioBase * nochesHospedaje : precioBase;
 
   const currency = useMemo(
     () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
@@ -500,7 +506,7 @@ export function CheckoutView({
     ? aMoneda(servicio.precio_persona_extra, moneda, servicio.tipo_cambio_usd) ?? 0
     : 0;
   const personasExtra = Math.max(0, people - personasIncluidas);
-  const cargoPersonas = personasExtra * (precioPersonaExtra || 0);
+  const cargoPersonas = precioPorNoche ? 0 : personasExtra * (precioPersonaExtra || 0);
 
   const cargoPersonalizacionesServicio = totalPersonalizaciones(
     catalogoUnificado, personalizaciones, people, moneda, servicio?.tipo_cambio_usd ?? '',
@@ -1407,6 +1413,7 @@ export function CheckoutView({
       horasDisponibles={horasDisponibles}
       onHora={setTime}
       people={people}
+      maxPersonas={topePersonas}
       onPersonas={cambiarPersonas}
       onTopePersonas={() => ayuda.tropezar('tope-personas')}
       tieneHospedaje={tieneHospedaje}
@@ -1652,6 +1659,7 @@ export function CheckoutView({
             error={error}
             feedback={dict.feedback}
             lineasViaje={lineasViaje}
+            estimado={precioPorNoche && phase !== 'payment'}
             sellos={empresa ? [empresa] : undefined}
             destinoTarjeta={destinoTarjetaPago}
             ayudaMensaje={ayudaMensaje}
@@ -1668,7 +1676,7 @@ export function CheckoutView({
         mensaje={ayuda.motivo === 'tope-personas'
           ? dict.feedback.floatingHelp.messageMaxPeople
               .replace('{name}', servicio?.nombre ?? servicioNombre ?? '')
-              .replace('{max}', String(MAX_PEOPLE))
+              .replace('{max}', String(topePersonas))
           : dict.feedback.floatingHelp.messageValidation
               .replace('{date}', diaTexto)
               .replace('{people}', String(people))}

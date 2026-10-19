@@ -32,9 +32,19 @@ export function trasladoFijoAeropuerto(paquete: Pick<PaqueteCatalogo, 'es_cruza_
   return !paquete.es_cruza_empresa && paquete.noches != null;
 }
 
+/**
+ * Tope de personas de un servicio del paquete: las que incluye, y además la `capacidad_maxima`
+ * del servicio si la define (opcional hasta que el backend la despliegue).
+ */
+export function topeDeComponente(componente: PaqueteCatalogo['servicios_asociados'][number]): number {
+  const capacidad = componente.servicio.capacidad_maxima;
+  return capacidad && capacidad > 0 ? Math.min(componente.personas_incluidas, capacidad) : componente.personas_incluidas;
+}
+
 /** El grupo principal se limita por la capacidad de la actividad. */
 export function maxPersonasPaquete(paquete: PaqueteCatalogo): number {
-  return servicioPrincipalPaquete(paquete)?.personas_incluidas ?? 0;
+  const principal = servicioPrincipalPaquete(paquete);
+  return principal ? topeDeComponente(principal) : 0;
 }
 
 const centavos = (n: number) => Math.round(n * 100);

@@ -16,6 +16,7 @@ import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
 import { cantidadEfectiva, separarPersonalizaciones, type SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import { formatearPrecio } from '@/lib/pricing-paquete';
+import { topeDeComponente } from '@/lib/pedido-paquete';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { Despliegue } from '@/components/ui/despliegue';
@@ -69,7 +70,7 @@ export function GrupoViaje({
   const personasTexto = estado.personas === 1 ? pedido.forOne : pedido.forPeople.replace('{n}', String(estado.personas));
   const esLogistica = precioDependeDePersonas && !esActividadPrincipal &&
     (servicio.tipo_servicio === 'hospedaje' || servicio.tipo_servicio === 'transporte');
-  const maxPersonasLogistica = Math.min(personasMax, componente.personas_incluidas);
+  const maxPersonasLogistica = Math.min(personasMax, topeDeComponente(componente));
   const { obligatorias, opcionales } = separarPersonalizaciones(servicio.personalizaciones);
   const renderExtra = (extra: (typeof servicio.personalizaciones)[number]) => {
     const seleccion = seleccionadas.get(extra.id);
@@ -237,7 +238,7 @@ export function GrupoViaje({
       <PeopleStepper
         compacto
         label={servicio.tipo_servicio === 'hospedaje' ? pedido.stayPeopleQuestion : pedido.transferPeopleQuestion}
-        maxNotice={pedido.logisticsMaxNotice.replace('{max}', String(maxPersonasLogistica))}
+        maxNotice={checkout.maxPersonasTope.replace('{max}', String(maxPersonasLogistica))}
         value={estado.personas}
         onChange={onPersonas}
         maxPeople={maxPersonasLogistica}
@@ -254,10 +255,10 @@ export function GrupoViaje({
         <PeopleStepper
           compacto
           label={checkout.peopleLabel}
-          maxNotice={pedido.maxPeoplePackage.replace('{max}', String(componente.personas_incluidas))}
+          maxNotice={checkout.maxPersonasTope.replace('{max}', String(topeDeComponente(componente)))}
           value={estado.personas}
           onChange={onPersonas}
-          maxPeople={componente.personas_incluidas}
+          maxPeople={topeDeComponente(componente)}
           minPeople={1}
           disabled={bloqueado}
           onMaxAttempt={onTope}

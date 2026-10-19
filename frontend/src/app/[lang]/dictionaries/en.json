@@ -126,7 +126,6 @@
   },
   "booking": {
     "timeHelp": "Departure between 5:00 and 7:00 am",
-    "maxPeopleNotice": "This service doesn't allow more than 5 people.",
     "submit": "Book now",
     "reservarAqui": "Book here",
     "verDetalles": "View details",
@@ -367,6 +366,7 @@
       "catalogo_caido": { "titulo": "This service is not available right now", "cuerpo": "Try again in a few minutes.", "accion": "Try again", "whatsapp": "Message us on WhatsApp", "volver": "Back" },
       "dato_previo": { "titulo": "One detail needs fixing", "cuerpo": "Check {dato} in {paso}.", "accion": "Fix {dato}" }
     },
+    "maxPersonasTope": "Maximum {max} people",
     "calendario": {
       "mesAnterior": "Previous month",
       "mesSiguiente": "Next month",
@@ -803,7 +803,6 @@
       "fechaRegreso": "Airport return date",
       "hora": "Estimated pickup time",
       "pasajeros": "Number of guests",
-      "maxPasajerosNotice": "This service doesn't allow more than {max} people.",
       "fechaRegresoInvalida": "Return date must be after arrival date."
     },
     "errors": {
@@ -861,8 +860,6 @@
     "airportPlaceholder": "Choose the airport",
     "airports": { "lap": "La Paz (LAP)", "sjd": "Los Cabos (SJD)" },
     "airportError": "Choose the airport.",
-    "logisticsMaxNotice": "This package doesn't allow more than {max} people.",
-    "maxPeoplePackage": "This package doesn't allow more than {max} people.",
     "morePeopleOffline": "For more than {max} people, contact us",
     "peoplePrice": "{n} people  {price}",
     "peoplePriceOne": "1 person  {price}",

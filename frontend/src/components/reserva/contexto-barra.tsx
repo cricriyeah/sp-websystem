@@ -6,7 +6,7 @@ import type { StripePanelProps } from '@/components/checkout/pago/tipos';
 /** Lo que la hoja «Ver resumen» necesita pintar: el mismo resumen vivo del panel del pedido. */
 export type ResumenVivo = Pick<
   StripePanelProps,
-  'checkout' | 'lines' | 'lineasViaje' | 'sellos' | 'total' | 'amountDueNow' | 'cargos' | 'notaCargos'
+  'checkout' | 'lines' | 'lineasViaje' | 'sellos' | 'total' | 'amountDueNow' | 'cargos' | 'notaCargos' | 'estimado'
 >;
 
 /** El botón único de la pantalla del asistente móvil, que la barra pinta. */

@@ -88,10 +88,16 @@ export function Calendario({
   };
   const primerMes = inicioDeMes(minDate);
 
+  // Llegada y salida o ida y regreso con solo el inicio elegido (el regreso no se prellena): el
+  // siguiente toque cierra el rango desde ese inicio.
+  const inicioPendiente = (control === 'rango_llegada_salida' || control === 'ida_y_regreso') && !seleccion.hasta
+    ? seleccion.desde
+    : null;
+  const previaVigente = previa ?? inicioPendiente;
   // Rango fijo: la vista previa sigue al dedo o al foco; en los demás rangos, del inicio al día bajo él.
   const banda = control === 'rango_fijo_paquete'
     ? bandaPrevia(control, sobre ?? previa, null, noches)
-    : bandaPrevia(control, previa, sobre, noches);
+    : bandaPrevia(control, previaVigente, sobre, noches);
   const ctx = { minDate, hoy, sinCupo, desde: seleccion.desde, hasta: seleccion.hasta, banda };
 
   const formatoLargo = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -107,7 +113,7 @@ export function Calendario({
     setAvisoSinLugar(false);
     // Con ratón o teclado la vista previa ya se vio al pasar o enfocar: el rango fijo se elige al primer clic.
     const tactil = puntero.current === 'touch';
-    const resultado = alTocar(control, control === 'rango_fijo_paquete' && !tactil ? iso : previa, iso, noches);
+    const resultado = alTocar(control, control === 'rango_fijo_paquete' && !tactil ? iso : previaVigente, iso, noches);
     setPrevia(resultado.previa);
     if (resultado.seleccion) {
       setSobre(null);
