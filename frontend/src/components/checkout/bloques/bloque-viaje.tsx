@@ -1,13 +1,14 @@
 'use client';
 
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { CheckoutCalendar } from '@/components/checkout-calendar';
+import { CalendarioReserva } from '@/components/checkout/calendario-reserva';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { formatDay } from '@/components/checkout/formato-dia';
-import { DateField } from '@/components/date-field';
 import { PeopleStepper } from '@/components/people-stepper';
 import { TimeField } from '@/components/time-field';
-import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
+import { ErrorDeCampo } from '@/components/ui/error-de-campo';
+import type { SeleccionFechas } from '@/components/ui/calendario/calendario';
+import type { ControlFecha } from '@/lib/control-fecha';
 import { fromLocalISODate } from '@/lib/dates';
 
 type Props = {
@@ -16,9 +17,18 @@ type Props = {
   booking: Dictionary['booking'];
   /** Con el pago en curso el viaje ya no se edita: hora y salida pasan a texto. */
   locked: boolean;
-  day: string;
+  /** `null` = sin fecha (el cliente la borró): Continuar la pide. */
+  day: string | null;
   minDate: string;
-  onDia: (isoDate: string) => void;
+  /** Fecha única, o llegada y salida del hospedaje `por_noche`. */
+  control: ControlFecha;
+  onFechas: (seleccion: SeleccionFechas) => void;
+  /** Solo la pesca (`por_recurso_dia`) consulta cupo por día. */
+  conCupo: boolean;
+  /** Bajo demanda: sin cupo que mostrar, se confirma al pagar. */
+  bajoDemanda: boolean;
+  empresaSlug?: string;
+  errorFecha: string;
   pideHora: boolean;
   time: string;
   horaTexto: string;
@@ -28,17 +38,15 @@ type Props = {
   onPersonas: (cantidad: number) => void;
   onTopePersonas: () => void;
   tieneHospedaje: boolean;
-  fechaSalida: string;
-  fechaSalidaMinima: string;
-  onFechaSalida: (isoDate: string) => void;
+  fechaSalida: string | null;
   personasIncluidas: number;
   precioPersonaExtra: number;
   currency: Intl.NumberFormat;
 };
 
 /**
- * Contenido del paso de viaje del servicio suelto: fecha, hora, personas,
- * salida (hospedaje) y la nota de personas extra. Sin estado propio: día,
+ * Contenido del paso de viaje del servicio suelto: fecha (o llegada y salida
+ * del hospedaje, en el mismo calendario), hora, personas y la nota de personas extra. Sin estado propio: día,
  * hora, personas y salida viven en `CheckoutView` (cupo, precio, reserva y
  * recuperación los leen), así que plegar la tarjeta no pierde nada.
  */
@@ -49,7 +57,12 @@ export function BloqueViaje({
   locked,
   day,
   minDate,
-  onDia,
+  control,
+  onFechas,
+  conCupo,
+  bajoDemanda,
+  empresaSlug,
+  errorFecha,
   pideHora,
   time,
   horaTexto,
@@ -60,8 +73,6 @@ export function BloqueViaje({
   onTopePersonas,
   tieneHospedaje,
   fechaSalida,
-  fechaSalidaMinima,
-  onFechaSalida,
   personasIncluidas,
   precioPersonaExtra,
   currency,
@@ -70,18 +81,25 @@ export function BloqueViaje({
     <ContenidoViaje
       fecha={
         <>
-          <CheckoutCalendar
+          <CalendarioReserva
             lang={lang}
-            selected={day}
-            onSelect={onDia}
+            textos={checkout.calendario}
+            control={control}
+            seleccion={{ desde: day, hasta: tieneHospedaje ? fechaSalida : null }}
+            onSeleccion={onFechas}
             minDate={minDate}
             personas={people}
-            fullLabel={checkout.dayFull}
-            weekdaysShort={checkout.weekdaysShort}
+            conCupo={conCupo}
+            empresaSlug={empresaSlug}
           />
-          <p className="mt-5 border-t border-border pt-5 text-sm text-foreground">
-            {formatDay(fromLocalISODate(day), lang)}
-          </p>
+          {bajoDemanda && <p className="mt-3 texto-pequeno text-apagado">{checkout.calendario.confirmadaAlPagar}</p>}
+          {day && (
+            <p className="mt-5 border-t border-border pt-5 text-sm text-foreground">
+              {formatDay(fromLocalISODate(day), lang)}
+              {tieneHospedaje && fechaSalida ? ` → ${formatDay(fromLocalISODate(fechaSalida), lang)}` : ''}
+            </p>
+          )}
+          <ErrorDeCampo id="checkout-error-fecha" mensaje={errorFecha} />
         </>
       }
       hora={pideHora ? (locked ? (
@@ -107,26 +125,6 @@ export function BloqueViaje({
           onMaxAttempt={onTopePersonas}
         />
       }
-      salida={tieneHospedaje ? (locked ? (
-        <p className="text-sm text-foreground">
-          {checkout.checkoutDateLabel}: {formatDay(fromLocalISODate(fechaSalida), lang)}
-        </p>
-      ) : (
-        <div className={CAJA_CONTENEDOR}>
-          <DateField
-            lang={lang}
-            label={checkout.checkoutDateLabel}
-            value={fechaSalida}
-            onChange={onFechaSalida}
-            minDate={fechaSalidaMinima}
-            prevMonthLabel={booking.prevMonth}
-            nextMonthLabel={booking.nextMonth}
-            personas={people}
-            fullLabel={checkout.dayFull}
-            sinCupo
-          />
-        </div>
-      )) : undefined}
       nota={precioPersonaExtra > 0 ? (
         <p>
           {checkout.extraPeopleHint

@@ -2,33 +2,34 @@
 
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
+import { CalendarioReserva } from '@/components/checkout/calendario-reserva';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
-import { Despliegue } from '@/components/ui/despliegue';
+import { formatDay } from '@/components/checkout/formato-dia';
 import { TipoTrasladoCards } from '@/components/checkout/tipo-traslado-cards';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
+import type { SeleccionFechas } from '@/components/ui/calendario/calendario';
 import { PeopleStepper } from '@/components/people-stepper';
-import { FechaPaquete, FechaRegresoCompacta } from '@/components/pedido/fecha-paquete';
 import { TimeField } from '@/components/time-field';
 import type { TipoTraslado } from '@/lib/api';
+import { controlDeFecha } from '@/lib/control-fecha';
+import { fromLocalISODate } from '@/lib/dates';
 
 type Props = {
   lang: Locale;
   traslados: Dictionary['traslados'];
   checkout: Dictionary['checkout'];
   pedido: Dictionary['pedido'];
-  booking: Dictionary['booking'];
   tiposDisponibles: TipoTraslado[];
   tipoTraslado: TipoTraslado;
   getPrecioDesde: (tipo: TipoTraslado) => string | null;
   /** Cambia el tipo y ajusta la fecha de regreso (solo `redondo_aeropuerto` la tiene). */
   onTipo: (tipo: TipoTraslado) => void;
-  fecha: string;
+  /** `null` = sin fecha (el cliente la borró): Continuar la pide. */
+  fecha: string | null;
   minDate: string;
-  /** Cambia la fecha y empuja el regreso si quedó antes o igual. */
-  onFecha: (fecha: string) => void;
   fechaRegreso: string | null;
-  minFechaRegreso: string;
-  onFechaRegreso: (fecha: string) => void;
+  /** Ida (y regreso, solo con «redondo con aeropuerto»), del mismo calendario. */
+  onFechas: (seleccion: SeleccionFechas) => void;
   hora: string;
   horasDisponibles: string[];
   onHora: (hora: string) => void;
@@ -46,8 +47,8 @@ type Props = {
 };
 
 /**
- * Contenido del paso de viaje de traslados: tipo → fecha (con el regreso
- * pegado a ella, solo con "redondo con aeropuerto") → hora y pasajeros → nota.
+ * Contenido del paso de viaje de traslados: tipo → fecha (un solo calendario de
+ * ida y regreso con "redondo con aeropuerto") → hora y pasajeros → nota.
  * Sin estado propio: tipo, fechas, hora y pasajeros viven en `TrasladoView`
  * (tarifa, payload y recuperación los leen), así que plegar la tarjeta no pierde
  * nada.
@@ -57,17 +58,14 @@ export function BloqueViajeTraslado({
   traslados,
   checkout,
   pedido,
-  booking,
   tiposDisponibles,
   tipoTraslado,
   getPrecioDesde,
   onTipo,
   fecha,
   minDate,
-  onFecha,
   fechaRegreso,
-  minFechaRegreso,
-  onFechaRegreso,
+  onFechas,
   hora,
   horasDisponibles,
   onHora,
@@ -88,49 +86,39 @@ export function BloqueViajeTraslado({
       onChange={onTipo}
     />
   );
+  const conRegreso = tipoTraslado === 'redondo_aeropuerto';
+  const { control } = controlDeFecha({ tipo: 'traslado', tipoTraslado });
   const fechas = (
-    <>
-      <FechaPaquete
+    <div>
+      <p className="mb-3 text-sm font-medium text-foreground">{traslados.fields.fecha}</p>
+      <CalendarioReserva
         lang={lang}
-        label={traslados.fields.fecha}
-        value={fecha}
-        onChange={onFecha}
+        textos={checkout.calendario}
+        control={control}
+        seleccion={{ desde: fecha, hasta: conRegreso ? fechaRegreso : null }}
+        onSeleccion={onFechas}
         minDate={minDate}
-        chooseLabel={pedido.chooseStart}
-        viewMonthLabel={pedido.viewMonth}
-        hideMonthLabel={pedido.hideMonth}
-        previousWeekLabel={pedido.previousWeek}
-        nextWeekLabel={pedido.nextWeek}
-        previousMonthLabel={booking.prevMonth}
-        nextMonthLabel={booking.nextMonth}
         personas={personas}
-        fullLabel={checkout.dayFull}
+        conCupo={false}
       />
-      {/* El regreso depende del tipo y de la fecha de inicio: aparece
-          pegado a la fecha, y solo con "redondo con aeropuerto". */}
-      <Despliegue abierto={tipoTraslado === 'redondo_aeropuerto'}>
-        <div className="pt-5">
-          <FechaRegresoCompacta
-            lang={lang}
-            label={traslados.fields.fechaRegreso}
-            value={fechaRegreso}
-            onChange={onFechaRegreso}
-            minDate={minFechaRegreso}
-            chooseLabel={pedido.chooseReturnDate}
-            changeButtonLabel={checkout.changeStep}
-            doneButtonLabel={checkout.doneEditing}
-            viewMonthLabel={pedido.viewMonth}
-            hideMonthLabel={pedido.hideMonth}
-            previousWeekLabel={pedido.previousWeek}
-            nextWeekLabel={pedido.nextWeek}
-            previousMonthLabel={booking.prevMonth}
-            nextMonthLabel={booking.nextMonth}
-            personas={personas}
-            fullLabel={checkout.dayFull}
-          />
-        </div>
-      </Despliegue>
-    </>
+      {/* Con ida y regreso, las dos fechas se leen por separado: el regreso es obligatorio. */}
+      {fecha && (
+        <dl className="mt-5 flex flex-col gap-1 border-t border-border pt-5 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-apagado">{traslados.fields.fecha}</dt>
+            <dd className="text-foreground first-letter:capitalize">{formatDay(fromLocalISODate(fecha), lang)}</dd>
+          </div>
+          {conRegreso && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-apagado">{traslados.fields.fechaRegreso}</dt>
+              <dd className="text-foreground first-letter:capitalize">
+                {fechaRegreso ? formatDay(fromLocalISODate(fechaRegreso), lang) : pedido.chooseReturnDate}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
+    </div>
   );
   const horaCampo = (
     <TimeField

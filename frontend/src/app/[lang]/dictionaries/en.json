@@ -127,8 +127,6 @@
   "booking": {
     "timeHelp": "Departure between 5:00 and 7:00 am",
     "maxPeopleNotice": "This service doesn't allow more than 5 people.",
-    "prevMonth": "Previous month",
-    "nextMonth": "Next month",
     "submit": "Book now",
     "reservarAqui": "Book here",
     "verDetalles": "View details",
@@ -383,6 +381,9 @@
       "antesDelMinimo": "Tomorrow can no longer be booked: choose another day.",
       "anuncioRango": "From {desde} to {hasta} · {noches} nights",
       "anuncioIdaRegreso": "Out on {desde}, back on {hasta}",
+      "sinFecha": "Choose a date",
+      "faltaFecha": "Choose a date to continue.",
+      "confirmadaAlPagar": "Booking confirmed when you pay.",
       "leyenda": {
         "disponible": "Available",
         "sinCupo": "Full",
@@ -413,22 +414,12 @@
     },
     "back": "Back",
     "dayLabel": "Day",
-    "checkoutDateLabel": "Check-out date",
     "hourLabel": "Time",
     "peopleLabel": "Guests",
     "peopleUnit": {
       "one": "guest",
       "other": "guests"
     },
-    "weekdaysShort": [
-      "Mo",
-      "Tu",
-      "We",
-      "Th",
-      "Fr",
-      "Sa",
-      "Su"
-    ],
     "tripHeadline": "Trip date & details",
     "tripConfirmQuestion": "Confirm your departure date and time?",
     "confirmStep": "Confirm",
@@ -661,7 +652,6 @@
       "needsMessage": "Hi, I'm {nombre} (reference #{folio}), I booked for {fecha}. {ask}",
       "needsOther": "I have another question about my booking"
     },
-    "dayFull": "Marked dates are fully booked for this group size.",
     "dayFullOffer": "{date} has no space left for {people} guests.",
     "takeOffered": "Check availability for {date}",
     "keepLooking": "Choose another date",
@@ -836,6 +826,7 @@
     }
   },
   "pedido": {
+    "salidasDias": "days {desde} to {hasta}",
     "pagoA": "Payment {n} of {total}: to {empresa}",
     "pagoAAyuda": "Each company charges separately. This payment goes to {empresa}.",
     "estadoCargo": {
@@ -856,10 +847,6 @@
     "startLabel": "Package start",
     "chooseStart": "Choose a date to start the package",
     "chooseReturnDate": "Choose the airport return date",
-    "viewMonth": "View full month",
-    "hideMonth": "Hide month",
-    "previousWeek": "Previous week",
-    "nextWeek": "Next week",
     "nightsNote": "{n} nights · check out on {fecha}",
     "peopleIncluded": "The package includes {n} places",
     "perPerson": "per person",

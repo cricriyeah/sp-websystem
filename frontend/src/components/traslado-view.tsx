@@ -108,7 +108,7 @@ export function TrasladoView({
   volverHref,
   empresa,
 }: TrasladoViewProps) {
-  const { checkout, traslados, feedback, booking, pedido } = dict;
+  const { checkout, traslados, feedback, pedido } = dict;
   const { mostrar } = useToast();
 
   const [checkoutId, setCheckoutId] = useState('');
@@ -154,7 +154,8 @@ export function TrasladoView({
   const [errorPaso2, setErrorPaso2] = useState('');
 
   const minDate = useMemo(() => getMinBookableDate(), []);
-  const [fecha, setFecha] = useState(minDate);
+  // `null` = el cliente borró la fecha: Continuar la pide.
+  const [fecha, setFecha] = useState<string | null>(minDate);
   const [fechaRegreso, setFechaRegreso] = useState<string | null>(() => diaSiguiente(minDate));
   const horasDisponibles = useMemo(() => {
     return generarHorasVentana(
@@ -521,6 +522,8 @@ export function TrasladoView({
       return;
     }
     if (phase === 'submitting' || phase === 'payment') return;
+    // `errorDeViaje` ya lo pidió; esto solo lo asegura para el tipo.
+    if (!fecha) return;
 
     setPhase('submitting');
     setError('');
@@ -607,9 +610,10 @@ export function TrasladoView({
     modoHospedaje === 'catalogo'
       ? (puntoSeleccionado?.nombre ?? '')
       : `${direccionPersonalizada}${zonaPersonalizada ? ` (${zonaPersonalizada})` : ''}`;
+  const fechaTexto = fecha ? formatDay(fromLocalISODate(fecha), lang) : checkout.calendario.sinFecha;
   const resumenViaje = [
     traslados.types[tipoTraslado]?.title ?? tipoTraslado,
-    formatDay(fromLocalISODate(fecha), lang),
+    fechaTexto,
     formatHour(hora),
     `${personas} ${traslados.fields.pasajeros.toLowerCase()}`,
   ].join(' · ');
@@ -627,7 +631,7 @@ export function TrasladoView({
         numeroDeConfirmacion={reservaId!}
         nombre={contact.fullName}
         email={contact.email}
-        fecha={formatDay(fromLocalISODate(fecha), lang)}
+        fecha={fechaTexto}
         hora={formatHour(hora)}
         personas={personas}
         extras={[]}
@@ -685,7 +689,7 @@ export function TrasladoView({
   const recogidaElegida = actual === 'pago' || phase !== 'form';
   const lineasViaje = [
     { etiqueta: traslados.step1Title, valor: traslados.types[tipoTraslado]?.title ?? tipoTraslado },
-    { etiqueta: checkout.summary.date, valor: formatDay(fromLocalISODate(fecha), lang) },
+    { etiqueta: checkout.summary.date, valor: fechaTexto },
     tipoTraslado === 'redondo_aeropuerto' && fechaRegreso
       ? { etiqueta: traslados.fields.fechaRegreso, valor: formatDay(fromLocalISODate(fechaRegreso), lang) }
       : null,
@@ -706,7 +710,7 @@ export function TrasladoView({
     ? [{ etiqueta: traslados.fields.puntoEncuentro, valor: resumenRecogida }]
     : undefined;
 
-  const ayudaMensaje = `Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`;
+  const ayudaMensaje = `Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha ?? ''}.`;
 
   // Los mismos bloques en las tarjetas de escritorio y en las pantallas del asistente móvil.
   const bloqueViajeTraslado = (parte?: 'tipo' | 'fecha' | 'hora-pasajeros') => (
@@ -715,24 +719,21 @@ export function TrasladoView({
       traslados={traslados}
       checkout={checkout}
       pedido={pedido}
-      booking={booking}
       tiposDisponibles={tiposDisponibles}
       tipoTraslado={tipoTraslado}
       getPrecioDesde={getPrecioDesde}
       onTipo={(tipo) => {
         setTipoTraslado(tipo);
         if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
-        else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
+        else if (!fechaRegreso && fecha) setFechaRegreso(diaSiguiente(fecha));
       }}
       fecha={fecha}
       minDate={minDate}
-      onFecha={(f) => {
-        setFecha(f);
-        if (fechaRegreso && fechaRegreso <= f) setFechaRegreso(diaSiguiente(f));
-      }}
       fechaRegreso={fechaRegreso}
-      minFechaRegreso={diaSiguiente(fecha)}
-      onFechaRegreso={setFechaRegreso}
+      onFechas={({ desde, hasta }) => {
+        setFecha(desde);
+        if (tipoTraslado === 'redondo_aeropuerto') setFechaRegreso(hasta);
+      }}
       hora={hora}
       horasDisponibles={horasDisponibles}
       onHora={setHora}
@@ -976,7 +977,7 @@ export function TrasladoView({
               .replace('{name}', catalogo.servicio.nombre)
               .replace('{max}', String(maxCapacidad))
           : feedback.floatingHelp.messageValidation
-              .replace('{date}', formatDay(fromLocalISODate(fecha), lang))
+              .replace('{date}', fechaTexto)
               .replace('{people}', String(personas))}
         onDescartar={ayuda.descartar}
       />

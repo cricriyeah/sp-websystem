@@ -361,6 +361,8 @@ export type PaqueteServicioCatalogo = {
   dia_estancia: number;
   noches: number | null;
   personas_incluidas: number;
+  /** Días seguidos con salida desde `dia_estancia` (1 = una sola). Su cupo se valida al pagar. */
+  salidas: number;
 };
 
 export type PaqueteCatalogo = {

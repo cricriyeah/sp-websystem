@@ -14,6 +14,7 @@ type Entrada = {
   noches: number | null;
   checkout: Dictionary['checkout'];
   traslados: Dictionary['traslados'];
+  pedido: Dictionary['pedido'];
   puntosPorEmpresa: Record<string, PuntoEncuentro[]>;
   nombreEmpresa: (slug: string) => string;
   formatearFecha: (iso: string) => string;
@@ -25,7 +26,7 @@ type Entrada = {
  * recogida). Derivación pura durante el render: no guarda ni lee estado.
  */
 export function armarResumenPaquete({
-  paquete, inicio, hora, contacto, personasPaquete, salida, noches, checkout, traslados, puntosPorEmpresa,
+  paquete, inicio, hora, contacto, personasPaquete, salida, noches, checkout, traslados, pedido, puntosPorEmpresa,
   nombreEmpresa, formatearFecha,
 }: Entrada) {
   const empresas = [...new Set(paquete.servicios_asociados.map((c) => nombreEmpresa(c.servicio.empresa_slug)))];
@@ -45,6 +46,15 @@ export function armarResumenPaquete({
     inicio ? { etiqueta: checkout.summary.date, valor: formatearFecha(inicio) } : null,
     salida && noches !== null ? { etiqueta: checkout.summary.checkOut, valor: formatearFecha(salida) } : null,
     paquete.pide_hora && hora ? { etiqueta: checkout.summary.time, valor: formatHour(hora) } : null,
+    // Una actividad con salidas en varios días: informativo («Actividad: días 2 a 5»).
+    ...paquete.servicios_asociados.map((c) => (c.salidas > 1
+      ? {
+          etiqueta: c.servicio.nombre,
+          valor: pedido.salidasDias
+            .replace('{desde}', String(c.dia_estancia))
+            .replace('{hasta}', String(c.dia_estancia + c.salidas - 1)),
+        }
+      : null)),
     paquete.precio_depende_de_personas
       ? { etiqueta: checkout.summary.people, valor: String(personasPaquete) }
       : null,

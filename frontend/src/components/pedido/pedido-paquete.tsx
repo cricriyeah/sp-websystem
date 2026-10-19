@@ -180,7 +180,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   });
   const { detalleCompra, resumenViaje, lineasViaje, lineasContacto, lineaPunto } = armarResumenPaquete({
     paquete, inicio: estado.inicio, hora: estado.hora, contacto: estado.contacto, personasPaquete, salida, noches,
-    checkout, traslados, puntosPorEmpresa, nombreEmpresa, formatearFecha,
+    checkout, traslados, pedido: textos, puntosPorEmpresa, nombreEmpresa, formatearFecha,
   });
 
   const pago = usePagoPedido({

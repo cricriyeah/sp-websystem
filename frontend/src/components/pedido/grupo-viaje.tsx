@@ -55,7 +55,7 @@ export function GrupoViaje({
   inicio, noches, salida, bloqueado,
   onTope, onPersonas, onExtras, onTraslado,
 }: Props) {
-  const { checkout, booking, pedido, traslados } = dict;
+  const { checkout, pedido, traslados } = dict;
   const servicio = componente.servicio;
   const traslado = estado.traslado;
   const seleccionadas = new Map(estado.extras.map((extra) => [extra.id, extra]));
@@ -216,15 +216,13 @@ export function GrupoViaje({
       {inicio && (
         <Despliegue abierto={traslado.tipo === 'redondo_aeropuerto' && noches === null}>
           <div className="pt-5">
-            <FechaRegresoCompacta lang={lang} label={traslados.fields.fechaRegreso} value={traslado.fechaRegreso}
+            <FechaRegresoCompacta lang={lang} textos={checkout.calendario} label={traslados.fields.fechaRegreso}
+              value={traslado.fechaRegreso}
               onChange={(fechaRegreso) => onTraslado({ fechaRegreso })}
               minDate={sumarDias(fechaDeComponente(inicio, componente.dia_estancia), 1)}
               chooseLabel={pedido.chooseReturnDate}
               changeButtonLabel={checkout.changeStep} doneButtonLabel={checkout.doneEditing}
-              viewMonthLabel={pedido.viewMonth} hideMonthLabel={pedido.hideMonth}
-              previousWeekLabel={pedido.previousWeek} nextWeekLabel={pedido.nextWeek}
-              previousMonthLabel={booking.prevMonth} nextMonthLabel={booking.nextMonth}
-              personas={estado.personas} fullLabel={checkout.dayFull} />
+              personas={estado.personas} />
           </div>
         </Despliegue>
       )}

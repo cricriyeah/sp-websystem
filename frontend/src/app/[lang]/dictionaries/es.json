@@ -127,8 +127,6 @@
   "booking": {
     "timeHelp": "Salida entre 5:00 y 7:00 am",
     "maxPeopleNotice": "En este servicio no se permiten más de 5 personas.",
-    "prevMonth": "Mes anterior",
-    "nextMonth": "Mes siguiente",
     "submit": "Agendar",
     "reservarAqui": "Reservar aquí",
     "verDetalles": "Ver detalles",
@@ -383,6 +381,9 @@
       "antesDelMinimo": "Para mañana ya no se puede reservar: elige otro día.",
       "anuncioRango": "Del {desde} al {hasta} · {noches} noches",
       "anuncioIdaRegreso": "Ida el {desde}, regreso el {hasta}",
+      "sinFecha": "Elige una fecha",
+      "faltaFecha": "Elige una fecha para continuar.",
+      "confirmadaAlPagar": "Reserva confirmada al pagar.",
       "leyenda": {
         "disponible": "Disponible",
         "sinCupo": "Sin cupo",
@@ -413,22 +414,12 @@
     },
     "back": "Volver",
     "dayLabel": "Día",
-    "checkoutDateLabel": "Fecha de salida (Check-out)",
     "hourLabel": "Hora",
     "peopleLabel": "Personas",
     "peopleUnit": {
       "one": "persona",
       "other": "personas"
     },
-    "weekdaysShort": [
-      "Lu",
-      "Ma",
-      "Mi",
-      "Ju",
-      "Vi",
-      "Sa",
-      "Do"
-    ],
     "tripHeadline": "Fecha y detalles de tu viaje",
     "tripConfirmQuestion": "¿Confirmas el día y la hora de tu salida?",
     "confirmStep": "Confirmar",
@@ -661,7 +652,6 @@
       "needsMessage": "Hola, soy {nombre} (folio #{folio}), reservé para el {fecha}. {ask}",
       "needsOther": "Tengo otra duda sobre mi reserva"
     },
-    "dayFull": "Las fechas marcadas ya cuentan con reservas completas para este grupo.",
     "dayFullOffer": "El {date} ya no cuenta con espacio para {people} personas.",
     "takeOffered": "Ver disponibilidad para el {date}",
     "keepLooking": "Elegir otra fecha",
@@ -836,6 +826,7 @@
     }
   },
   "pedido": {
+    "salidasDias": "días {desde} a {hasta}",
     "pagoA": "Pago {n} de {total}: a {empresa}",
     "pagoAAyuda": "Cada empresa cobra por separado. Este cobro va a la cuenta de {empresa}.",
     "estadoCargo": {
@@ -856,10 +847,6 @@
     "startLabel": "Inicio del paquete",
     "chooseStart": "Elige una fecha para iniciar el paquete",
     "chooseReturnDate": "Elige la fecha de regreso al aeropuerto",
-    "viewMonth": "Ver mes completo",
-    "hideMonth": "Ocultar mes",
-    "previousWeek": "Semana anterior",
-    "nextWeek": "Semana siguiente",
     "nightsNote": "{n} noches · sales el {fecha}",
     "peopleIncluded": "El paquete incluye {n} lugares",
     "perPerson": "por persona",

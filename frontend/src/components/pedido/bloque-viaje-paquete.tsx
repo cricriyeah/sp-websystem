@@ -1,5 +1,6 @@
 import type { Dispatch } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { CalendarioReserva } from '@/components/checkout/calendario-reserva';
 import { ContenidoViaje } from '@/components/checkout/contenido-viaje';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { PeopleStepper } from '@/components/people-stepper';
@@ -10,7 +11,8 @@ import { aMoneda } from '@/lib/moneda';
 import type { AccionPedido } from '@/lib/pedido-estado';
 import { calcularBasePaquete } from '@/lib/precio-paquete';
 import { formatearPrecio } from '@/lib/pricing-paquete';
-import { FechaPaquete } from './fecha-paquete';
+import { sumarDias } from '@/lib/calendario-paquete';
+import { controlDeFecha } from '@/lib/control-fecha';
 
 type Props = {
   lang: Locale;
@@ -43,6 +45,7 @@ export function BloqueViajePaquete({
   formatearFecha, errorViaje, despachar, onTopePersonas,
 }: Props) {
   const { checkout, booking, pedido: textos } = dict;
+  const { control } = controlDeFecha({ tipo: 'paquete', noches, pide_hora: paquete.pide_hora });
   const ancla = aMoneda(paquete.precio_ancla, moneda, paquete.tipo_cambio_usd);
   const extra = aMoneda(paquete.precio_persona_extra, moneda, paquete.tipo_cambio_usd);
   const anclaMostrada = formatearPrecio(ancla, moneda);
@@ -55,22 +58,22 @@ export function BloqueViajePaquete({
     <>
       <ContenidoViaje
         fecha={
-          <FechaPaquete
-            lang={lang}
-            label={textos.startLabel}
-            value={inicio}
-            onChange={(valor) => despachar({ tipo: 'inicio', valor })}
-            minDate={minDate}
-            chooseLabel={textos.chooseStart}
-            viewMonthLabel={textos.viewMonth}
-            hideMonthLabel={textos.hideMonth}
-            previousWeekLabel={textos.previousWeek}
-            nextWeekLabel={textos.nextWeek}
-            previousMonthLabel={booking.prevMonth}
-            nextMonthLabel={booking.nextMonth}
-            personas={personasPaquete}
-            fullLabel={checkout.dayFull}
-          />
+          <div>
+            <p className="mb-3 text-sm font-medium text-foreground">{textos.startLabel}</p>
+            {/* Con noches, el primer toque muestra la estancia completa y el segundo la confirma. El
+                cupo del paquete (salidas, noches) se valida al pagar. */}
+            <CalendarioReserva
+              lang={lang}
+              textos={checkout.calendario}
+              control={control}
+              seleccion={{ desde: inicio, hasta: inicio && noches ? sumarDias(inicio, noches) : null }}
+              onSeleccion={({ desde }) => despachar({ tipo: 'inicio', valor: desde })}
+              minDate={minDate}
+              noches={noches}
+              personas={personasPaquete}
+              conCupo={false}
+            />
+          </div>
         }
         hora={paquete.pide_hora ? (
           <TimeField

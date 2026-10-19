@@ -15,7 +15,7 @@ export type EstadoPedido = {
 
 export type AccionPedido =
   | { tipo: 'contacto'; cambios: Partial<DatosContacto> }
-  | { tipo: 'inicio'; valor: string }
+  | { tipo: 'inicio'; valor: string | null }
   | { tipo: 'hora'; valor: string }
   | { tipo: 'moneda'; valor: Moneda }
   | { tipo: 'formaPago'; valor: 'completo' | 'anticipo' }

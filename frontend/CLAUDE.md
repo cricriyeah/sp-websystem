@@ -102,9 +102,8 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   selecciona la cuenta de cobro desde `&empresa=` para servicios sueltos,
   o desde `NEXT_PUBLIC_EMPRESA_SLUG` para pesca legacy. El deslinde se
   acepta una vez, enlaza a `/[lang]/deslinde` y su nombre sale de los
-  datos de contacto. `DateField`
-  y `TimeField` usan `FieldPopover`; no añadir selectores nativos de
-  fecha. Para fechas ISO, usar `fromLocalISODate`/`toLocalISODate` de
+  datos de contacto. `TimeField` usa `FieldPopover`; no añadir selectores
+  nativos de fecha ni de hora. Para fechas ISO, usar `fromLocalISODate`/`toLocalISODate` de
   `src/lib/dates.ts` y evitar parsear fechas ISO como UTC.
 - Transiciones y piezas compartidas del checkout: todo lo que aparece, se
   pliega o cambia de sitio (código promocional y sus mensajes, mes del
@@ -114,13 +113,22 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   movimiento"). No renderices condicionalmente con `&&` algo que el cliente
   ve aparecer: el contenido de abajo brinca. El tipo de traslado se pinta con
   `components/checkout/tipo-traslado-cards.tsx` en `/traslados` y en el paquete
-  (en el paquete sin "Desde $": el traslado va incluido). `PanelCalendario`
-  tiene ancho fijo en un popover y `anchoCompleto` cuando va en línea. La fecha
-  de regreso del traslado (`FechaRegresoCompacta`) es obligatoria: se ve con
-  la tira semanal abierta hasta que hay fecha, y entonces se pliega a una fila
-  con "Modificar" (nunca un botón "Elegir", que la haría parecer opcional);
-  no se prellena. La tira cambia de semana deslizando en la dirección del
-  click. Las listas cortas usan `SelectPersonalizado` (sobre `FieldPopover`),
+  (en el paquete sin "Desde $": el traslado va incluido).
+- **Calendario de reserva.** Las cuatro rutas (servicio suelto, paquete de una empresa,
+  cruza-empresa y `/traslados`, también en el asistente móvil) montan `ui/calendario`
+  a través de `components/checkout/calendario-reserva.tsx` (`CalendarioReserva`), que
+  consulta el cupo del mes visible y el siguiente con `useDisponibilidad(desde, hasta,
+  personas, activo, empresaSlug)` (`{ dias, cargando, error, reintentar }`). El control
+  sale de `lib/control-fecha.ts`: fecha única, llegada y salida del hospedaje
+  `por_noche` (un solo calendario), rango fijo del paquete con noches, e ida y regreso
+  del traslado con aeropuerto. Solo la pesca suelta (`por_recurso_dia`) consulta cupo:
+  `/cupo/rango/` contesta por las pangas, así que hospedaje, bajo demanda («Reserva
+  confirmada al pagar»), paquetes y traslados lo validan al pagar. «Borrar fecha» deja
+  la fecha vacía en todas las rutas y Continuar la pide (`checkout.calendario.faltaFecha`).
+  La fecha de regreso del traslado dentro de un paquete (`FechaRegresoCompacta`) es
+  obligatoria: se ve con el calendario abierto hasta que hay fecha, y entonces se pliega a
+  una fila con "Modificar" (nunca un botón "Elegir", que la haría parecer opcional).
+- Las listas cortas usan `SelectPersonalizado` (sobre `FieldPopover`),
   no `<select>` nativo. Los errores que bloquean se quedan en la tarjeta,
   pegados a su campo (los toasts se auto-descartan: son para avisos): usa
   `<ErrorDeCampo id mensaje={error} />` siempre montado, que entra/sale con
@@ -142,9 +150,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   caret que gira; la otra dirección del hotel es la última opción de la lista y
   en modo manual `AccionTexto` vuelve a la lista. El subrayado queda para
   enlaces dentro de una oración (deslinde, términos). El tipo de traslado va en
-  lista (descripción completa), no en columnas. La tira semanal arranca en
-  el primer día reservable y avanza de 7 en 7 (`lib/calendario-semana.ts`):
-  sin celdas pasadas que no se pueden tocar.
+  lista (descripción completa), no en columnas.
 - Respuestas ya dadas y foco: una tarjeta `completado` es un renglón de una
   línea ("título · resumen" + "Modificar" como enlace discreto) y varias
   seguidas son tarjetas delgadas con 8 px entre sí (`ItemPaso` + `unidaConAnterior`, por posición: las
@@ -281,10 +287,10 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
   Pago` (contacto y recogida comparten Tus datos; abajo, el desglose anterior de
   4 pasos, que ahora son bloques):
   1. **Viaje** (`checkout.tripHeadline`), 4 bloques en este orden: tipo de traslado
-     (`TipoTrasladoCards`, lo que define el producto va primero) → fecha de inicio
-     (`FechaPaquete`, sin cupo) → fecha de regreso solo con `redondo_aeropuerto`
-     (`FechaRegresoCompacta`, pegada a la fecha de la que depende) → hora y
-     pasajeros (`ContenidoViaje`, tope = `servicio.capacidad_maxima`).
+     (`TipoTrasladoCards`, lo que define el producto va primero) → fecha
+     (`CalendarioReserva`, sin cupo; con `redondo_aeropuerto` un solo calendario de
+     ida y regreso) → hora y pasajeros (`ContenidoViaje`, tope =
+     `servicio.capacidad_maxima`).
   2. **Datos** (`CamposContacto`, `idPrefijo="traslado"`).
   3. **Recogida** (`traslados.step2Title`): hotel/punto de encuentro, con "Escribir
      otra dirección…" como última opción de la lista y la zona solo para

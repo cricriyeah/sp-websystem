@@ -219,7 +219,7 @@ export function FieldPopover({
             style={{ maxHeight: posicion.maxHeight }}
             // `w-full` en movil: el campo ya ocupa toda la tarjeta ahi (los campos
             // se apilan), asi que el panel toma su mismo ancho — antes el
-            // contenido (`w-72`/`w-56` en date-field/time-field) mandaba su
+            // contenido (`w-56` en time-field) mandaba su
             // propio ancho fijo y quedaba angosto y descentrado contra la
             // tarjeta. Desde `sm:` el campo vuelve a ser un tercio de la barra y
             // ahi si conviene que el panel se encoja a lo que pida su contenido.

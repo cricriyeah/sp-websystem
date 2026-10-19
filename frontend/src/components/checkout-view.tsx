@@ -48,6 +48,8 @@ import {
   type ServicioCatalogo,
 } from '@/lib/api';
 import { formatHour, fromLocalISODate, MAX_PEOPLE, toLocalISODate } from '@/lib/dates';
+import { controlDeFecha } from '@/lib/control-fecha';
+import type { SeleccionFechas } from '@/components/ui/calendario/calendario';
 import { horasDeServicio } from '@/lib/horario-servicio';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
@@ -220,7 +222,8 @@ export function CheckoutView({
   const pideHora = servicio ? servicio.pide_hora : true;
   const horasDisponibles = servicio ? horasDeServicio(servicio) : [];
 
-  const [day, setDay] = useState(initialDay);
+  // `null` = el cliente borró la fecha: Continuar la pide (no se repone sola).
+  const [day, setDay] = useState<string | null>(initialDay);
   const [time, setTime] = useState(initialTime);
   const [people, setPeople] = useState(initialPeople);
   const [personalizaciones, setPersonalizaciones] = useState<SeleccionPersonalizacion[]>(() =>
@@ -234,13 +237,25 @@ export function CheckoutView({
   );
   const [fechaSalidaManual, setFechaSalidaManual] = useState<string | null>(null);
   const defaultFechaSalida = useMemo(() => {
+    if (!day) return null;
     const d = fromLocalISODate(day);
     d.setDate(d.getDate() + 1);
     return toLocalISODate(d);
   }, [day]);
-  const fechaSalida = fechaSalidaManual && fechaSalidaManual > day ? fechaSalidaManual : defaultFechaSalida;
+  const fechaSalida = day && fechaSalidaManual && fechaSalidaManual > day ? fechaSalidaManual : defaultFechaSalida;
 
-  const tieneHospedaje = servicio?.estrategia_cupo === 'por_noche';
+  const estrategiaCupo = servicio?.estrategia_cupo ?? 'por_recurso_dia';
+  const tieneHospedaje = estrategiaCupo === 'por_noche';
+  // El cupo por día (`/cupo/` y `/cupo/rango/`) contesta por las pangas: solo vale para la pesca.
+  // Hospedaje y bajo demanda se validan al pagar.
+  const conCupo = estrategiaCupo === 'por_recurso_dia';
+  const { control: controlFecha } = controlDeFecha({ tipo: 'servicio', estrategia_cupo: estrategiaCupo, pide_hora: pideHora });
+  const [errorFecha, setErrorFecha] = useState('');
+  const elegirFechas = ({ desde, hasta }: SeleccionFechas) => {
+    setDay(desde);
+    setFechaSalidaManual(hasta);
+    if (desde) setErrorFecha('');
+  };
 
   const personalizacionesMap = useMemo(() => {
     return new Map(personalizaciones.map((p) => [p.id, p]));
@@ -416,6 +431,7 @@ export function CheckoutView({
   // asi no recibir a un grupo de 4, porque solo dos pangas de la flota lo llevan.
   useEffect(() => {
     const checkId = ++cupoCheckId.current;
+    if (!day || !conCupo) return;
 
     (async () => {
       let cupo;
@@ -448,7 +464,7 @@ export function CheckoutView({
         alternativa: cupo.proxima_disponible,
       });
     })();
-  }, [day, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice, empresaSlug, checkoutId]);
+  }, [day, conCupo, people, lang, checkout.dayFullOffer, checkout.noBoatForGroupNotice, empresaSlug, checkoutId]);
 
   const promoCheckId = useRef(0);
 
@@ -620,7 +636,8 @@ export function CheckoutView({
         ? Math.round(total * (servicio.porcentaje_anticipo / 100) * 100) / 100
         : total;
 
-  const dayDate = useMemo(() => fromLocalISODate(day), [day]);
+  const diaTexto = day ? formatDay(fromLocalISODate(day), lang) : checkout.calendario.sinFecha;
+  const salidaTexto = fechaSalida ? formatDay(fromLocalISODate(fechaSalida), lang) : '';
 
   /** Que campo esta mal y por que. Vacio = ninguno. */
   const [erroresCampo, setErroresCampo] = useState<Partial<Record<CampoContacto, string>>>({});
@@ -884,7 +901,16 @@ export function CheckoutView({
   };
 
   /** Viaje incluye los extras: no se avanza con un extra obligatorio sin contestar. */
+  /** Sin fecha no se sale de Viaje: el error queda pegado al calendario. */
+  const validarFecha = (): boolean => {
+    if (day) return true;
+    ayuda.tropezar('validacion');
+    setErrorFecha(checkout.calendario.faltaFecha);
+    return false;
+  };
+
   const confirmarViaje = (): boolean => {
+    if (!validarFecha()) return false;
     const erroresDePersonalizacion = erroresPersonalizaciones(catalogoUnificado, personalizaciones);
     setErroresPersonalizacion(erroresDePersonalizacion);
     const primera = catalogoUnificado.find((p) => erroresDePersonalizacion[p.id]);
@@ -922,7 +948,9 @@ export function CheckoutView({
     setErroresPersonalizacion(erroresDePersonalizacion);
     const primeraPersonalizacion = catalogoUnificado.find((p) => erroresDePersonalizacion[p.id]);
     const primerContacto = ORDEN_CAMPOS.find((campo) => errores[campo]);
+    if (!day) setErrorFecha(checkout.calendario.faltaFecha);
     const problema = validarTodo([
+      day ? null : { paso: 'viaje', campo: 'checkout-error-fecha', mensaje: checkout.calendario.faltaFecha },
       primeraPersonalizacion
         ? { paso: 'viaje', campo: `personalizacion-${primeraPersonalizacion.id}`, mensaje: erroresDePersonalizacion[primeraPersonalizacion.id] }
         : null,
@@ -968,7 +996,7 @@ export function CheckoutView({
         ? checkout.noBoatForGroupNotice
         : checkout.dayFullOffer;
     const mensajeDia = plantilla
-      .replace('{date}', formatDay(fromLocalISODate(day), lang))
+      .replace('{date}', diaTexto)
       .replace('{people}', String(people));
     setSinLugar({
       mensaje: `${checkout.cupoAgotado} ${mensajeDia}`,
@@ -983,6 +1011,7 @@ export function CheckoutView({
 
   const enviar = async () => {
     if (phase === 'submitting' || phase === 'payment') return;
+    if (!day) return;
 
     setPhase('submitting');
     setError('');
@@ -1018,7 +1047,7 @@ export function CheckoutView({
               : seleccion.cantidad,
           };
         }),
-        fecha_salida: tieneHospedaje ? fechaSalida : undefined,
+        fecha_salida: tieneHospedaje ? fechaSalida ?? undefined : undefined,
       }, empresaSlug);
 
       setReservaId(reserva.id);
@@ -1218,7 +1247,7 @@ export function CheckoutView({
     .map((p) => p.nombre)
     .join(', ');
   const resumenPaso1 = [
-    tieneHospedaje ? `${formatDay(dayDate, lang)} → ${formatDay(fromLocalISODate(fechaSalida), lang)}` : formatDay(dayDate, lang),
+    tieneHospedaje ? `${diaTexto} → ${salidaTexto}` : diaTexto,
     horaTexto || null,
     personasResumen,
     nombresExtras || null,
@@ -1226,8 +1255,8 @@ export function CheckoutView({
   const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
   // Lo mismo que los resúmenes, pero una línea por dato, para leerlo al abrir el renglón.
   const detallePaso1 = [
-    { etiqueta: checkout.summary.date, valor: formatDay(dayDate, lang) },
-    tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: formatDay(fromLocalISODate(fechaSalida), lang) } : null,
+    { etiqueta: checkout.summary.date, valor: diaTexto },
+    tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: salidaTexto } : null,
     horaTexto ? { etiqueta: checkout.summary.time, valor: horaTexto } : null,
     { etiqueta: checkout.summary.people, valor: String(people) },
     nombresExtras ? { etiqueta: checkout.extrasStepHeadline, valor: nombresExtras } : null,
@@ -1242,7 +1271,7 @@ export function CheckoutView({
   // de un error. Lleva su fecha, hora y grupo para que ella no tenga que
   // preguntarlos y el no tenga que redactar nada ya estando frustrado.
   const ayudaMensaje = mensajeDeAyuda(pideHora ? dict.feedback.helpMessage : dict.feedback.helpMessageNoTime, {
-    fecha: formatDay(dayDate, lang),
+    fecha: diaTexto,
     hora: horaTexto,
     personas: people,
   });
@@ -1289,7 +1318,7 @@ export function CheckoutView({
         numeroDeConfirmacion={reservaId!}
         nombre={contact.fullName}
         email={contact.email}
-        fecha={formatDay(dayDate, lang)}
+        fecha={diaTexto}
         hora={horaTexto}
         personas={people}
         // Vacio en una reserva repuesta: `EstadoReservaView` solo devuelve el
@@ -1351,8 +1380,8 @@ export function CheckoutView({
     : { actual: pasoActualStepper, totalMovil };
 
   const lineasViaje = [
-    { etiqueta: checkout.summary.date, valor: formatDay(dayDate, lang) },
-    tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: formatDay(fromLocalISODate(fechaSalida), lang) } : null,
+    { etiqueta: checkout.summary.date, valor: diaTexto },
+    tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: salidaTexto } : null,
     horaTexto ? { etiqueta: checkout.summary.time, valor: horaTexto } : null,
     { etiqueta: checkout.summary.people, valor: String(people) },
   ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
@@ -1366,7 +1395,12 @@ export function CheckoutView({
       locked={locked}
       day={day}
       minDate={minDate}
-      onDia={setDay}
+      control={controlFecha}
+      onFechas={elegirFechas}
+      conCupo={conCupo}
+      bajoDemanda={estrategiaCupo === 'bajo_demanda'}
+      empresaSlug={empresaSlug}
+      errorFecha={errorFecha}
       pideHora={pideHora}
       time={time}
       horaTexto={horaTexto}
@@ -1377,8 +1411,6 @@ export function CheckoutView({
       onTopePersonas={() => ayuda.tropezar('tope-personas')}
       tieneHospedaje={tieneHospedaje}
       fechaSalida={fechaSalida}
-      fechaSalidaMinima={defaultFechaSalida}
-      onFechaSalida={setFechaSalidaManual}
       personasIncluidas={personasIncluidas}
       precioPersonaExtra={precioPersonaExtra}
       currency={currency}
@@ -1444,7 +1476,7 @@ export function CheckoutView({
       case 'viaje':
         return { titulo: checkout.tripHeadline, contenido: bloqueViaje, accion: {
           etiqueta: checkout.barra.continuar,
-          alPulsar: () => { if (tieneExtras || confirmarViaje()) asistente.avanzar(); },
+          alPulsar: () => { if (tieneExtras ? validarFecha() : confirmarViaje()) asistente.avanzar(); },
         } };
       case 'extras':
         return { titulo: checkout.extrasStepHeadline, contenido: bloqueExtras, accion: {
@@ -1495,7 +1527,7 @@ export function CheckoutView({
             detalle={servicioNombre || servicio?.nombre || undefined}
           />
         }
-        aviso={sinLugar ? (
+        aviso={sinLugar && day ? (
           <div className="mx-auto mb-2 max-w-6xl px-6 sm:px-8 lg:px-12">
             <AvisoAccion
               problema={problemaDe('sin_cupo', { tieneWhatsapp }, {
@@ -1638,7 +1670,7 @@ export function CheckoutView({
               .replace('{name}', servicio?.nombre ?? servicioNombre ?? '')
               .replace('{max}', String(MAX_PEOPLE))
           : dict.feedback.floatingHelp.messageValidation
-              .replace('{date}', formatDay(dayDate, lang))
+              .replace('{date}', diaTexto)
               .replace('{people}', String(people))}
         onDescartar={ayuda.descartar}
       />
