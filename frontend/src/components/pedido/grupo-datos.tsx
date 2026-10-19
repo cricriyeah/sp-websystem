@@ -81,7 +81,8 @@ export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTrasla
           </AccionTexto>
           <Despliegue abierto={traslado.tipo === 'redondo_actividad'}>
             <fieldset className="grid grid-cols-2 gap-3">
-              <legend className="sr-only">{traslados.fields.zona}</legend>
+              <legend className="mb-1 texto-pequeno font-semibold text-foreground">{traslados.fields.zonaTitulo}</legend>
+              <p className="col-span-2 -mt-1 texto-pequeno text-apagado">{traslados.fields.zonaRequiredNotice}</p>
               {(['centro', 'periferia'] as Zona[]).map((zona) => (
                 <label key={zona} className={`flex cursor-pointer items-center gap-2 rounded-campo border p-3 text-sm ${
                   traslado.zonaLibre === zona ? 'border-cafe-medio bg-cafe-bruma font-medium' : 'border-border text-muted'

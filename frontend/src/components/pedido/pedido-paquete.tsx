@@ -609,12 +609,14 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
                     const traslado = estado.componentes[slug]?.traslado;
                     if (!traslado || trasladoFijo) return null;
                     return (
-                      <div key={componente.id} className="flex flex-col">
-                        <p className="texto-pequeno font-semibold text-foreground">
-                          {cantidadCargos > 1
-                            ? `${componente.servicio.nombre} · ${nombreEmpresa(componente.servicio.empresa_slug)}`
-                            : componente.servicio.nombre}
-                        </p>
+                      <div key={componente.id} className="flex flex-col border-t border-borde pt-5">
+                        <p className="texto-etiqueta text-foreground">{traslados.fields.dondeRecogemos}</p>
+                        <p className="mt-1 texto-pequeno text-apagado">{traslados.fields.recogidaAyuda}</p>
+                        {cantidadCargos > 1 && (
+                          <p className="mt-1 texto-pequeno text-apagado">
+                            {`${componente.servicio.nombre} · ${nombreEmpresa(componente.servicio.empresa_slug)}`}
+                          </p>
+                        )}
                         <GrupoDatos
                           traslados={traslados}
                           traslado={traslado}
