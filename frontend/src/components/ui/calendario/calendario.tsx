@@ -170,6 +170,15 @@ export function Calendario({
     : seleccion.desde ? formatoLargo.format(fromLocalISODate(seleccion.desde)) : '';
 
   const etiquetaMes = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(fromLocalISODate(mes));
+  // Rango abierto (llegada y salida, ida y regreso): una línea dice qué hace el siguiente toque.
+  const abierto = control === 'rango_llegada_salida' || control === 'ida_y_regreso';
+  // Con el rango ya completo no hace falta guía: el resumen de abajo dice las dos fechas.
+  const completo = Boolean(seleccion.desde && seleccion.hasta) && !previa;
+  const esperandoFin = Boolean(previaVigente);
+  const guia = !abierto || completo ? null
+    : control === 'ida_y_regreso'
+      ? (esperandoFin ? textos.guiaRegreso : textos.guiaIda)
+      : (esperandoFin ? textos.guiaSalida : textos.guiaLlegada);
 
   return (
     <div
@@ -178,6 +187,7 @@ export function Calendario({
         enTarjeta && 'lg:rounded-none lg:border-0 lg:p-0',
       )}
     >
+      {guia && <p className="texto-pequeno text-apagado" aria-live="polite">{guia}</p>}
       <Atajos
         hoy={hoy}
         minDate={minDate}
@@ -200,17 +210,18 @@ export function Calendario({
           onClick={() => cambiarMes(-1)}
           disabled={mes <= primerMes}
           aria-label={textos.mesAnterior}
-          className="flex size-12 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-cafe-bruma disabled:opacity-40"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full text-cafe transition-colors hover:bg-cafe-bruma disabled:cursor-not-allowed disabled:text-borde-control disabled:hover:bg-transparent"
         >
           <CaretLeft size={20} weight="bold" aria-hidden />
         </Button>
-        <p className="text-xl font-semibold text-foreground first-letter:capitalize" aria-live="polite">{etiquetaMes}</p>
+        {/* El mes es un titular de la marca: Consola Mono en mayúsculas, como el título del paso. */}
+        <p className="texto-mono-mayus text-xl font-bold text-foreground" aria-live="polite">{etiquetaMes}</p>
         <Button
           variante="libre"
           type="button"
           onClick={() => cambiarMes(1)}
           aria-label={textos.mesSiguiente}
-          className="flex size-12 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-cafe-bruma"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full text-cafe transition-colors hover:bg-cafe-bruma"
         >
           <CaretRight size={20} weight="bold" aria-hidden />
         </Button>
@@ -228,7 +239,7 @@ export function Calendario({
       >
         <div role="row" className="grid grid-cols-[repeat(7,minmax(0,1fr))] pb-1">
           {iniciales(locale).map((inicial, i) => (
-            <span key={i} role="columnheader" className="text-center texto-pie text-apagado first-letter:capitalize">
+            <span key={i} role="columnheader" className="text-center texto-mono-mayus texto-pie text-apagado">
               {inicial}
             </span>
           ))}

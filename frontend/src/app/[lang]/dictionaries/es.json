@@ -384,12 +384,17 @@
       "sinFecha": "Elige una fecha",
       "faltaFecha": "Elige una fecha para continuar.",
       "confirmadaAlPagar": "Reserva confirmada al pagar.",
+      "guiaIda": "Toca el día de ida.",
+      "guiaRegreso": "Ahora toca el día de regreso.",
+      "guiaLlegada": "Toca el día de llegada.",
+      "guiaSalida": "Ahora toca el día de salida.",
       "leyenda": {
-        "disponible": "Disponible",
         "sinCupo": "Sin cupo",
         "seleccion": "Tu selección",
-        "vistaPrevia": "Vista previa",
-        "rango": "Tu estancia",
+        "extremosIdaRegreso": "Ida y regreso",
+        "diasViaje": "Días del viaje",
+        "extremosEstancia": "Llegada y salida",
+        "diasEstancia": "Tu estancia",
         "hoy": "Hoy"
       }
     },
@@ -801,6 +806,7 @@
       "zonaRequiredNotice": "Para traslados de actividad a direcciones particulares se requiere indicar la zona.",
       "fecha": "Fecha de llegada / actividad",
       "fechaRegreso": "Fecha de regreso al aeropuerto",
+      "idaYRegreso": "Ida y regreso",
       "hora": "Hora estimada de recogida",
       "pasajeros": "Número de personas",
       "fechaRegresoInvalida": "La fecha de regreso debe ser posterior a la fecha de llegada."

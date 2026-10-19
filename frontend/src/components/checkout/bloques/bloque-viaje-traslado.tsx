@@ -90,7 +90,7 @@ export function BloqueViajeTraslado({
   const { control } = controlDeFecha({ tipo: 'traslado', tipoTraslado });
   const fechas = (
     <div>
-      <p className="mb-3 text-sm font-medium text-foreground">{traslados.fields.fecha}</p>
+      <p className="mb-3 text-sm font-medium text-foreground">{conRegreso ? traslados.fields.idaYRegreso : traslados.fields.fecha}</p>
       <CalendarioReserva
         lang={lang}
         textos={checkout.calendario}

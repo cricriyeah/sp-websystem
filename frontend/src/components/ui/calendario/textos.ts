@@ -18,12 +18,19 @@ export type TextosCalendario = {
   anuncioRango: string;
   /** «Ida {desde}, regreso {hasta}». */
   anuncioIdaRegreso: string;
+  /** Rango abierto: qué hace el siguiente toque («Toca el día de ida» / «Ahora toca el día de regreso»). */
+  guiaIda: string;
+  guiaRegreso: string;
+  guiaLlegada: string;
+  guiaSalida: string;
   leyenda: {
-    disponible: string;
     sinCupo: string;
     seleccion: string;
-    vistaPrevia: string;
-    rango: string;
+    /** Extremos y días del rango, según lo que se reserva. */
+    extremosIdaRegreso: string;
+    diasViaje: string;
+    extremosEstancia: string;
+    diasEstancia: string;
     hoy: string;
   };
 };

@@ -18,8 +18,8 @@ Lenguaje: **costero, deportivo y moderno**, con una marca cálida (café) y tres
 | `cafe-hondo` | `#5D2C02` | Hover del botón principal | 11,50:1 con blanco |
 | `cafe-profundo` | `#3E1E01` | Pulsado, texto sobre `cafe-claro` | 12,80:1 sobre `cafe-bruma` |
 | `cafe-medio` | `#B08967` | Ilustración, líneas decorativas | solo decorativo |
-| `cafe-claro` | `#FEE0AC` | Fondos de aviso, rango de fechas confirmado | 11,84:1 con `cafe-profundo` |
-| `cafe-bruma` | `#F1F0ED` | Superficie variante, vista previa de rango | 7,42:1 con `cafe` |
+| `cafe-claro` | `#FEE0AC` | Fondos de aviso (el rango de fechas usa `cafe-bruma` desde 2026-10-19) | 11,84:1 con `cafe-profundo` |
+| `cafe-bruma` | `#F1F0ED` | Superficie variante, banda del rango de fechas confirmado | 7,42:1 con `cafe` |
 
 ### Actividades — qué tipo de experiencia es
 

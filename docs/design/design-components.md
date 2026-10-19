@@ -224,34 +224,37 @@ Siempre visible en el paso «Viaje» (no hay barra de reserva). **Fondo blanco**
 
 | Parte | Especificación |
 |---|---|
-| Encabezado de mes | Mes y año en 20/600; flechas ‹ › de 48 × 48 a los lados; deslizar horizontal en móvil |
+| Encabezado de mes | Mes y año en Consola Mono 20/700 en mayúsculas (titular de la marca); flechas ‹ › de 48 × 48 en `cafe` a los lados; deslizar horizontal en móvil |
 | Día | Círculo de 44 × 44, número 16/500. Eco del logo |
-| Semana | Empieza en lunes (inferido); letras de día en 12 `apagado` |
+| Semana | Empieza en lunes (inferido); letras de día en Consola Mono 12 `apagado`, en mayúsculas |
+| Guía de rango | Llegada y salida, e ida y regreso: una línea 14 `apagado` arriba dice qué hace el siguiente toque («Toca el día de ida» → «Ahora toca el día de regreso»); desaparece con el rango completo |
 | Atajos | Tres chips en una fila encima del mes: **Borrar fecha** (con ×), **Mañana**, **En 2 días**. 44 de alto, radio completo, borde `borde-control`; son valores por defecto editables |
 
 El calendario nunca captura el scroll vertical.
 
 ### Leyenda de colores (guía)
 
-Una fila bajo el calendario, hecha con **los mismos componentes que las celdas**, para que cuadre con lo que se ve. Cada estado tiene color **y** forma:
+Una fila bajo el calendario, hecha con **los mismos componentes que las celdas** y siempre en círculo, para que cuadre con lo que se ve. Solo lo que no se explica solo: «Disponible» es lo normal y la vista previa se explica mientras ocurre. Cada estado tiene color **y** forma (revisado con el dueño el 2026-10-19):
 
-| Estado | Apariencia | Significado |
+| Estado | Apariencia | En la leyenda |
 |---|---|---|
-| Disponible | Círculo blanco, número `tinta` | Hay lugar ese día |
-| Sin cupo | Rayado diagonal, número `apagado` tachado | No se puede elegir (solo donde el sistema ya lo sabe: cupo de pangas por día; el cupo definitivo se valida al pagar) |
-| Hoy | Anillo `azul` de 2 px | Fecha actual |
-| Tu selección | Relleno `cafe`, número blanco | Día elegido |
-| Vista previa | Relleno `cafe-bruma`, borde discontinuo `cafe` | Días que se tomarían (provisional) |
-| Rango confirmado | Relleno `cafe-claro`, número `cafe-profundo`, extremos en `cafe` | Todos los días del paquete elegido |
+| Disponible | Círculo blanco, número `tinta` | No |
+| Sin cupo | Rayado diagonal, número `apagado` tachado | Solo donde el sistema lo sabe (cupo de pangas por día; el definitivo se valida al pagar) |
+| Hoy | **Punto `cafe` de 4 px bajo el número** (blanco sobre la selección). No es un anillo azul: el anillo azul es el foco del teclado y el azul es «mar» | Si hoy cae en el mes visible |
+| Tu selección | Relleno `cafe`, número blanco | Fecha única |
+| Vista previa | Solo borde discontinuo `cafe`, sin relleno | No |
+| Rango confirmado | Banda `cafe-bruma`, número `cafe-profundo`, extremos en `cafe` | Dos renglones con el nombre de lo que se reserva: «Ida y regreso» + «Días del viaje» (traslado) o «Llegada y salida» + «Tu estancia» (hospedaje y paquete) |
 
-Contrastes: número blanco sobre `cafe` 8,46:1; `cafe-profundo` sobre `cafe-claro` 11,84:1; `apagado` sobre blanco 6,37:1.
+El rango ya no usa `cafe-claro`: es el fondo de los avisos y leerlo como selección mezcla dos significados.
 
-**Ojo (medido):** los rellenos suaves (`cafe-claro` 1,27:1 y `cafe-bruma` 1,18:1 contra blanco) no bastan por sí solos para distinguir un estado (WCAG pide 3:1 en indicadores). Por eso el rango confirmado lleva extremos en `cafe` (8,46:1) y la vista previa lleva borde discontinuo `cafe`: la señal es el borde y los extremos, el relleno solo acompaña.
+Contrastes: número blanco sobre `cafe` 8,46:1; `cafe-profundo` sobre `cafe-bruma` 12,80:1; `apagado` sobre blanco 6,37:1.
+
+**Ojo (medido):** el relleno suave (`cafe-bruma` 1,18:1 contra blanco) no bastan por sí solos para distinguir un estado (WCAG pide 3:1 en indicadores). Por eso el rango confirmado lleva extremos en `cafe` (8,46:1) y la vista previa lleva borde discontinuo `cafe`: la señal es el borde y los extremos, el relleno solo acompaña.
 
 ### Paquetes de varias noches (duración fija)
 
 1. Al pasar el cursor o enfocar un día, se pinta la **vista previa** (provisional): desde ese día hasta el último día del paquete, con borde discontinuo. Si el rango incluye un día que el sistema ya sabe lleno (cupo de pangas), ese día se marca con el rayado de «Sin cupo» y una línea dice cuál es. No hay estado «pocos lugares» ni corte por cupo de hospedaje: el cupo definitivo se valida al pagar.
-2. Al elegir el día de inicio (clic, toque o `Enter`), **todos los días del rango se pintan firmes** (`cafe-claro`, extremos `cafe`) y el resumen muestra «Del 7 al 10 de nov · 3 noches».
+2. Al elegir el día de inicio (clic, toque o `Enter`), **todos los días del rango se pintan firmes** (banda `cafe-bruma`, extremos `cafe`) y el resumen muestra «Del 7 al 10 de nov · 3 noches».
 3. Para cambiar, se toca otro día de inicio o «Borrar fecha». En móvil, sin cursor, el primer toque muestra la vista previa y el segundo toque sobre el mismo día confirma; un toque en otro día mueve la vista previa.
 
 El tope de noches lo da el paquete (nunca se escribe en el cliente).

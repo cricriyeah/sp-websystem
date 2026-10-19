@@ -384,12 +384,17 @@
       "sinFecha": "Choose a date",
       "faltaFecha": "Choose a date to continue.",
       "confirmadaAlPagar": "Booking confirmed when you pay.",
+      "guiaIda": "Tap your outbound day.",
+      "guiaRegreso": "Now tap your return day.",
+      "guiaLlegada": "Tap your arrival day.",
+      "guiaSalida": "Now tap your departure day.",
       "leyenda": {
-        "disponible": "Available",
         "sinCupo": "Full",
         "seleccion": "Your choice",
-        "vistaPrevia": "Preview",
-        "rango": "Your stay",
+        "extremosIdaRegreso": "Outbound and return",
+        "diasViaje": "Trip days",
+        "extremosEstancia": "Arrival and departure",
+        "diasEstancia": "Your stay",
         "hoy": "Today"
       }
     },
@@ -801,6 +806,7 @@
       "zonaRequiredNotice": "Activity transfers to custom addresses require selecting a zone.",
       "fecha": "Arrival / activity date",
       "fechaRegreso": "Airport return date",
+      "idaYRegreso": "Outbound and return",
       "hora": "Estimated pickup time",
       "pasajeros": "Number of guests",
       "fechaRegresoInvalida": "Return date must be after arrival date."
