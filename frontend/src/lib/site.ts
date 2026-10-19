@@ -52,7 +52,7 @@ export function alternativasDe(lang: Locale, ruta: string = '') {
 // encuentro; las coordenadas se dejan fuera a proposito hasta tenerlas exactas:
 // un pin mal puesto manda al cliente a otro lado del malecon.
 export const NEGOCIO = {
-  nombre: 'Sal y Sol Sportfishing',
+  nombre: 'Sun Baja Experience',
   calle: 'Marina La Costa, Rangel y Navarro',
   ciudad: 'La Paz',
   estado: 'Baja California Sur',

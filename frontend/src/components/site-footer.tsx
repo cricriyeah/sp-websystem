@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
@@ -49,13 +49,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
       <div className="relative mx-auto max-w-6xl px-6 pt-20 sm:px-8 lg:px-12 lg:pt-24">
         <div className="grid gap-10 pb-16 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-12">
           <div className="flex flex-col items-start gap-5">
-            <Image
-              src="/logos/wordmark-agencia.svg"
-              alt=""
-              width={261}
-              height={123}
-              className="h-14 w-auto"
-            />
+            <EmpresaSello nombre="Sun Baja Experience" tamano={64} />
             <h2 className="max-w-[13ch] texto-seccion text-foreground">
               {footer.headline}
             </h2>

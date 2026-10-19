@@ -1,12 +1,12 @@
 {
   "home": {
-    "title": "Sal y Sol Sportfishing",
+    "title": "Sun Baja Experience",
     "description": "Reserva tu tour de pesca deportiva privado en La Paz, BCS con capitanes locales."
   },
   "meta": {
     "home": {
-      "title": "Tours de pesca deportiva en La Paz, BCS | Sal y Sol Sportfishing",
-      "description": "Vive la mejor experiencia de pesca deportiva en La Paz, BCS con capitanes locales. Salidas privadas desde Marina La Costa. Reserva en línea o escríbenos por WhatsApp."
+      "title": "Sun Baja Experience | Experiencias en Baja California Sur",
+      "description": "Reserva pesca, avistamiento de ballenas, hospedaje y traslados en Baja California Sur con las empresas locales de cada sede."
     },
     "reservar": {
       "title": "Reserva tu tour de pesca deportiva",
@@ -25,11 +25,11 @@
       "description": "Esta página no existe o cambió de lugar."
     },
     "catalogo": {
-      "title": "Experiencias y Paquetes | Sal y Sol Sportfishing",
+      "title": "Experiencias y Paquetes | Sun Baja Experience",
       "description": "Descubre nuestros paquetes de aventura y servicios de pesca por destino en BCS."
     },
     "traslados": {
-      "title": "Traslados y Transporte Privado | Sal y Sol",
+      "title": "Traslados y Transporte Privado | Sun Baja Experience",
       "description": "Reserva tu traslado privado en La Paz, BCS. Conexión aeropuerto, hoteles y marina."
     }
   },
@@ -92,8 +92,8 @@
     "back": "Atrás"
   },
   "nav": {
-    "brandMain": "Sal y Sol",
-    "brandAccent": "Sportfishing",
+    "brandMain": "Sun Baja",
+    "brandAccent": "Experience",
     "location": "La Paz, BCS",
     "inicio": "Inicio",
     "nosotros": "Nosotros",
@@ -935,7 +935,7 @@
     "whatsapp": "WhatsApp"
   },
   "hub": {
-    "nombreAgencia": "Sal y Sol Baja Experiences",
+    "nombreAgencia": "Sun Baja Experience",
     "headline": "Tu próxima experiencia empieza en Baja",
     "mision": "Una alianza de agencias locales para vivir Baja California Sur como se merece: con quienes la conocen de verdad.",
     "ctaElegirDestino": "Elige tu destino",
@@ -955,15 +955,15 @@
     "resetMap": "Restablecer mapa",
     "dragMap": "Arrastra para explorar",
     "closeDestination": "Cerrar destino",
-    "porQueHeadline": "Por qué Sal y Sol Baja Experiences",
+    "porQueHeadline": "Por qué Sun Baja Experience",
     "pilares": [
       { "titulo": "Alianzas locales de confianza", "texto": "Cada sede la opera gente de ahí: capitanes, guías y operadores que conocen su tramo de costa mejor que nadie." },
       { "titulo": "Un solo lugar para reservar en toda Baja", "texto": "Explora y reserva experiencias en distintos destinos de Baja California Sur sin cambiar de sitio ni de proceso." },
       { "titulo": "Atención personalizada", "texto": "El mismo trato cercano de siempre, ahora disponible en cada destino de la alianza." }
     ],
     "meta": {
-      "title": "Sal y Sol Baja Experiences | Experiencias en Baja California Sur",
-      "description": "Descubre experiencias de pesca deportiva y turismo en los destinos de Baja California Sur operados por la alianza Sal y Sol Baja Experiences."
+      "title": "Sun Baja Experience | Experiencias en Baja California Sur",
+      "description": "Reserva pesca, avistamiento de ballenas, hospedaje y traslados en Baja California Sur con las empresas locales de cada sede."
     }
   },
   "destination": {

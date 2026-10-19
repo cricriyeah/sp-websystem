@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Image from 'next/image';
 import { List, X } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
@@ -113,14 +112,8 @@ export function SiteHeader({
             className="flex items-center text-foreground"
             onClick={() => setOpen(false)}
           >
-            <Image
-              src="/logos/wordmark-agencia.svg"
-              alt={MARCA}
-              width={1026}
-              height={331}
-              priority
-              className="h-10 w-auto lg:h-12"
-            />
+            {/* Nuestra marca es el monograma «SB» en todas las páginas (sin wordmark de texto). */}
+            <EmpresaSello nombre={MARCA} tamano={32} />
           </Link>
           {marcaSede && (
             <>

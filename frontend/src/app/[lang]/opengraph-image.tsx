@@ -3,7 +3,7 @@ import { getDictionary, hasLocale } from './dictionaries';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = 'Sal y Sol Sportfishing';
+export const alt = 'Sun Baja Experience';
 
 /**
  * Imagen que se ve al compartir el enlace en WhatsApp, Facebook o iMessage.

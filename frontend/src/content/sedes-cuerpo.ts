@@ -373,7 +373,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'Experiencias en La Ventana, BCS | Sal y Sol Baja Experiences',
+      metaTitle: 'Experiencias en La Ventana, BCS | Sun Baja Experience',
       metaDescription:
         'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes de La Ventana Travel.',
       hero: {
@@ -392,7 +392,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'Experiences in La Ventana, BCS | Sal y Sol Baja Experiences',
+      metaTitle: 'Experiences in La Ventana, BCS | Sun Baja Experience',
       metaDescription:
         'Explore fly fishing, whale and orca watching, and multi-day packages with La Ventana Travel.',
       hero: {
@@ -413,7 +413,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Experiencias en Puerto Chale, BCS | Sal y Sol Baja Experiences',
+      metaTitle: 'Experiencias en Puerto Chale, BCS | Sun Baja Experience',
       metaDescription:
         'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
       hero: {
@@ -432,7 +432,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Experiences in Puerto Chale, BCS | Sal y Sol Baja Experiences',
+      metaTitle: 'Experiences in Puerto Chale, BCS | Sun Baja Experience',
       metaDescription:
         'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
       hero: {
