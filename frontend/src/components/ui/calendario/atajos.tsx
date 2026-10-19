@@ -12,7 +12,8 @@ type Props = {
   textos: TextosCalendario;
 };
 
-const CLASE = 'min-h-11 rounded-full border border-borde-control bg-blanco px-4 texto-pequeno font-medium text-foreground transition-[background-color,transform] hover:bg-cafe-bruma active:scale-[0.98] motion-reduce:active:scale-100 disabled:opacity-60';
+// `px-3`: los tres caben en una fila desde 320 px (con `px-4` «En 2 días» bajaba a otro renglón).
+const CLASE = 'min-h-11 rounded-full border border-borde-control bg-blanco px-3 texto-pequeno font-medium text-foreground transition-[background-color,transform] hover:bg-cafe-bruma active:scale-[0.98] motion-reduce:active:scale-100 disabled:opacity-60';
 
 /**
  * «Borrar fecha», «Mañana» y «En 2 días»: valores editables relativos a hoy, en una fila que se

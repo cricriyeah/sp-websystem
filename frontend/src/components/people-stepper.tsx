@@ -68,10 +68,11 @@ export function PeopleStepper({
   };
 
   return (
-    <div className={compacto ? 'px-4 py-3' : 'py-1'}>
+    // Dentro de su caja de campo: relleno de 16 a los lados para que los círculos no toquen el borde.
+    <div className={compacto ? 'px-4 py-3' : 'px-4 py-2'}>
       <div className="flex items-center gap-3">
         <UsersThree size={20} className="shrink-0 text-muted" aria-hidden />
-        <span className="min-w-0 flex-1 text-sm font-medium text-foreground">{vacio ? placeholder : label}</span>
+        <span className="min-w-0 flex-1 text-sm leading-snug font-medium text-foreground">{vacio ? placeholder : label}</span>
         <div className="flex shrink-0 items-center gap-2">
           <Button
             variante="secundario"
