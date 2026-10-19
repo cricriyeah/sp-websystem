@@ -30,7 +30,9 @@ export function HubPortada({ lang, textos }: Props) {
   const conMedio = Boolean(POSTER_HUB);
   const pila = (
     <div className="mx-auto w-full max-w-[1120px] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-      <h1 className={cn('max-w-[18ch] texto-display', conMedio ? 'text-hero-ink' : 'text-foreground')}>{textos.titular}</h1>
+      {/* 36 px en móvil: «RESERVA EN BAJA / CON EMPRESAS / LOCALES» cabe en 3 renglones en 328 px
+          con Consola Mono (0,586 em por carácter); desde 640 px, el tamaño display. */}
+      <h1 className={cn('max-w-[18ch] texto-display text-[2.25rem] leading-[1.1] sm:text-[4rem] sm:leading-[1.05]', conMedio ? 'text-hero-ink' : 'text-foreground')}>{textos.titular}</h1>
       <p className={cn('mt-4 max-w-[52ch] text-lg leading-relaxed', conMedio ? 'text-hero-ink-soft' : 'text-tinta-suave')}>{textos.subtexto}</p>
       <Link href={hrefInicio(lang, ANCLA_HUB.sedes)} className={cn('mt-8', botonClases({ variante: 'principal' }))}>
         {textos.ctaSedes}
