@@ -1,47 +1,56 @@
-import Image from 'next/image';
 import type { SedeCuerpoContenido } from '@/content/sedes-tipos';
+import { EmpresaSello } from '@/components/ui/empresa-sello';
+import { FotoFundido } from '@/components/ui/foto-fundido';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
 
 type GallerySectionProps = {
   id: string;
   titulo: string;
-  /** Las fotos salen del cuerpo de la sede; el `alt` de cada una viaja con ella. */
+  /** Ya filtradas por la página: aptas (`fotosAptas`) y sin las que usan el héroe o las tarjetas. */
   fotos: NonNullable<SedeCuerpoContenido['galeria']>;
+  /** Nombre y logo de cada empresa de la galería, por slug. */
+  empresas: Record<string, { nombre: string; logo?: string }>;
   fondo: Fondo;
   borde: boolean;
 };
 
 /**
- * La primera ocupa el doble de ancho y abre la reja. Ahi vivio un placeholder de
- * video que nunca se grabo; son 7 fotos justas para llenar dos filas completas
- * (1 doble + 2, y 4 abajo) sin dejar huecos.
+ * Las fotos de los viajes, cada una en su proporción real: columnas (2 hasta 1024 px, 3 desde
+ * ahí) dentro del contenido, sin recortes ni lightbox. Si la galería mezcla empresas, cada foto
+ * lleva debajo, nunca encima, el sello y el nombre de la suya.
+ *
+ * Server Component (el fundido de entrada es de `FotoFundido`).
  */
-/**
- * Titulo con el padding normal del sitio, y debajo la reja de fotos a sangre:
- * sin contenedor, para que las fotos ocupen todo el ancho disponible.
- */
-export function GallerySection({ id, titulo, fotos, fondo, borde }: GallerySectionProps) {
+export function GallerySection({ id, titulo, fotos, empresas, fondo, borde }: GallerySectionProps) {
+  const variasEmpresas = new Set(fotos.map((foto) => foto.empresaSlug)).size > 1;
+
   return (
-    <SectionShell id={id} fondo={fondo} borde={borde} titulo={titulo} aSangre>
-      <div className="grid grid-cols-2 gap-[3px] lg:grid-cols-4">
-        {fotos.map((foto, i) => (
-          <div
-            key={foto.src}
-            className={`relative min-h-[240px] lg:min-h-[460px] ${i === 0 ? 'col-span-2' : ''}`}
-          >
-            <Image
-              src={foto.src}
-              alt={foto.alt}
-              fill
-              sizes={
-                i === 0
-                  ? '(min-width: 1024px) 50vw, 100vw'
-                  : '(min-width: 1024px) 25vw, 50vw'
-              }
-              className="object-cover"
-            />
-          </div>
-        ))}
+    <SectionShell id={id} fondo={fondo} borde={borde} titulo={titulo}>
+      <div className="mt-10 columns-2 gap-3 lg:columns-3">
+        {fotos.map((foto, i) => {
+          const empresa = empresas[foto.empresaSlug];
+          return (
+            <figure key={foto.src} className="mb-3 break-inside-avoid">
+              <FotoFundido
+                src={foto.src}
+                alt={foto.alt}
+                width={foto.ancho}
+                height={foto.alto}
+                loading={i < 2 ? 'eager' : 'lazy'}
+                sizes="(min-width: 1120px) 365px, (min-width: 1024px) 33vw, 50vw"
+                className="h-auto w-full rounded-card"
+              />
+              {variasEmpresas && empresa && (
+                <figcaption className="mt-2 flex items-center gap-2 texto-pequeno text-muted">
+                  <span aria-hidden="true" className="inline-flex">
+                    <EmpresaSello nombre={empresa.nombre} logo={empresa.logo} tamano={24} />
+                  </span>
+                  {empresa.nombre}
+                </figcaption>
+              )}
+            </figure>
+          );
+        })}
       </div>
     </SectionShell>
   );

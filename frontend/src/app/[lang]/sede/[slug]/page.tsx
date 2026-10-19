@@ -7,6 +7,8 @@ import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
 import { aMoneda } from '@/lib/moneda';
+import { fotosAptas } from '@/lib/etiquetas-catalogo';
+import { claveDePaquete, claveDeServicio, imagenDeCatalogo } from '@/content/imagenes-catalogo';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_DE, enlacesDeSede, fondosDeSecciones, seccionesDeSede, type SeccionId } from '@/lib/secciones-sede';
@@ -43,7 +45,19 @@ export default async function SedePage({ params, searchParams }: Props) {
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
-  const { galeria, temporadas, faq } = contenido;
+  const { temporadas, faq } = contenido;
+  // Una foto no se repite entre el héroe, las tarjetas y la galería. Temporadas sí puede repetir
+  // mientras las fotos sean de relleno (decisión del dueño, 2026-10-19).
+  const usadas = new Set([
+    contenido.hero.imagen,
+    ...(servicios ?? []).map((s) => imagenDeCatalogo(claveDeServicio(s.empresa_slug, s.slug), lang)?.src),
+    ...(paquetes ?? []).map((p) => imagenDeCatalogo(claveDePaquete(p.slug), lang)?.src),
+  ]);
+  const galeria = contenido.galeria && fotosAptas(contenido.galeria.filter((foto) => !usadas.has(foto.src)));
+  const empresasGaleria = Object.fromEntries((galeria ?? []).map((foto) => {
+    const empresa = getEmpresa(foto.empresaSlug);
+    return [foto.empresaSlug, { nombre: empresa?.nombre ?? foto.empresaSlug, logo: empresa?.logo }];
+  }));
 
   const { porcentaje, ejemplo } = pagoDeSede(servicios ?? [], contenido.destacadas[0]);
 
@@ -56,7 +70,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     </>,
     reservar: (banda) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} {...banda} />,
     tranquilidad: (banda) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} hrefIncluye={`#${ANCLA_DE.reservar}`} {...banda} />,
-    ...(galeria && { galeria: (banda: Banda) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} {...banda} /> }),
+    ...(galeria && { galeria: (banda: Banda) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} {...banda} /> }),
     ...(temporadas && { temporadas: (banda: Banda) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} {...banda} /> }),
     ...(faq && { preguntas: (banda: Banda) => <FaqSection id={ANCLA_DE.preguntas} titulo={dict.sedeContenido.faq} preguntas={faq} {...banda} /> }),
   };
