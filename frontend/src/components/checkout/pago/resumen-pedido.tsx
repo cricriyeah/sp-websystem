@@ -1,8 +1,14 @@
-import { EmpresaSello } from '@/components/ui/empresa-sello';
-import { CheckoutSectionCard } from '@/components/checkout-section-card';
-import type { StripePanelProps } from '@/components/checkout/pago/tipos';
+'use client';
 
-/** El resumen vivo del pedido (panel derecho): líneas del viaje, cargos, total y «pagarás ahora» si difiere. */
+import { CheckoutSectionCard } from '@/components/checkout-section-card';
+import { CuerpoResumen } from '@/components/checkout/pago/cuerpo-resumen';
+import type { StripePanelProps } from '@/components/checkout/pago/tipos';
+import { useRegistrarResumen } from '@/components/reserva/contexto-barra';
+
+/**
+ * El resumen vivo del pedido (panel derecho). En móvil no se ve: lo reemplaza la hoja «Ver resumen»
+ * de la barra inferior, que pinta este mismo contenido; el panel solo lo publica para ella.
+ */
 export function ResumenPedido({
   checkout,
   lines,
@@ -10,53 +16,13 @@ export function ResumenPedido({
   sellos = [],
   total,
   amountDueNow,
-  resumenSoloEscritorio = false,
-}: Pick<StripePanelProps, 'checkout' | 'lines' | 'lineasViaje' | 'sellos' | 'total' | 'amountDueNow' | 'resumenSoloEscritorio'>) {
+}: Pick<StripePanelProps, 'checkout' | 'lines' | 'lineasViaje' | 'sellos' | 'total' | 'amountDueNow'>) {
+  useRegistrarResumen({ checkout, lines, lineasViaje, sellos, total, amountDueNow });
   return (
-    <div className={resumenSoloEscritorio ? 'hidden lg:block' : undefined}>
-    <CheckoutSectionCard title={checkout.orderSummaryHeadline}>
-      {sellos.length > 0 && (
-        // Quién opera el viaje, sin caja dentro de la caja: sello y nombre. En cruza-empresa, uno por empresa.
-        <ul className="mb-4 flex flex-col gap-3 border-b border-border pb-4">
-          {sellos.map((s) => (
-            <li key={s.nombre}>
-              <EmpresaSello nombre={s.nombre} logo={s.logo} tamano={32} mostrarNombre />
-            </li>
-          ))}
-        </ul>
-      )}
-      {lineasViaje.length > 0 && (
-        <dl className="mb-4 flex flex-col gap-2 border-b border-border pb-4">
-          {lineasViaje.map((linea) => (
-            <div key={linea.etiqueta} className="flex items-baseline justify-between gap-4 text-sm">
-              <dt className="text-muted">{linea.etiqueta}</dt>
-              <dd className="text-right text-foreground first-letter:capitalize">{linea.valor}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      <dl className="flex flex-col gap-3">
-        {lines.map((line) => (
-          <div key={line.label} className="flex items-center justify-between text-sm">
-            <dt className="text-muted">{line.label}</dt>
-            <dd className="text-foreground">{line.amount}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="mt-5 flex items-center justify-between border-t border-border pt-5">
-        <p className="text-sm font-medium text-foreground">{checkout.total}</p>
-        <p className="text-lg font-medium tracking-tight text-foreground">{total}</p>
-      </div>
-
-      {/* Solo cuando difiere del total (anticipo): si no, repetiría la cifra. */}
-      {amountDueNow !== total && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-muted">{checkout.amountDueNow}</span>
-          <span className="text-foreground">{amountDueNow}</span>
-        </div>
-      )}
-    </CheckoutSectionCard>
+    <div className="max-sm:hidden">
+      <CheckoutSectionCard title={checkout.orderSummaryHeadline}>
+        <CuerpoResumen checkout={checkout} lines={lines} lineasViaje={lineasViaje} sellos={sellos} total={total} amountDueNow={amountDueNow} />
+      </CheckoutSectionCard>
     </div>
   );
 }

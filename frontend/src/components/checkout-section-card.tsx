@@ -23,7 +23,7 @@ type CheckoutSectionCardProps = {
    *
    * El numero de paso ya no vive en esta tarjeta — antes era un circulo con
    * numero que decia lo mismo que la linea verde de abajo y ahora tambien el
-   * `CheckoutStepper` de arriba; tres senales del mismo progreso. El stepper
+   * linea de progreso de arriba; tres senales del mismo progreso. La linea
    * es la unica que queda.
    */
   estado?: 'activo' | 'editando' | 'completado' | 'suspendido';
@@ -187,6 +187,8 @@ export function CheckoutSectionCard({
       // automático sepa a cuál llevar al cliente; `scroll-mt` deja libre el
       // header fijo y el stepper.
       data-tarjeta-foco={abierto ? '' : undefined}
+      // Un paso por pantalla en móvil: lo ya contestado se oculta (la hoja «Ver resumen» y la flecha lo recuperan).
+      data-completado={enRenglon ? '' : undefined}
       className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] border lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS} ${
         abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-2 sm:px-6' : 'p-5 sm:p-6'
       }`}

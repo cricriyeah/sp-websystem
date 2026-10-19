@@ -55,6 +55,8 @@ export function usePagoPedido(config: Config) {
   const [indice, setIndice] = useState(0);
   const [error, setError] = useState('');
   // Qué clase de problema es `error`; el aviso del checkout elige título y acción con él.
+  // La orden se retomó desde el servidor (recarga o enlace): no hay formulario del cliente que mostrar.
+  const [retomado, setRetomado] = useState(false);
   const [errorTipo, setErrorTipo] = useState<TipoProblema | null>(null);
   const [motivoFallo, setMotivoFallo] = useState('');
   const [fallo, setFallo] = useState<FalloPago | null>(null);
@@ -190,6 +192,7 @@ export function usePagoPedido(config: Config) {
           );
           if (pendiente === -1) return setFase('capturando');
           setIndice(pendiente);
+          setRetomado(true);
           return setFase('pagando');
         }
         setFase('formulario'); // 'armando': se creó pero nunca se llegó a crear-pago
@@ -315,6 +318,7 @@ export function usePagoPedido(config: Config) {
         }]);
       }
       setIndice(0);
+      setRetomado(false);
       setFase('pagando');
       return true;
     } catch (err) {
@@ -449,7 +453,7 @@ export function usePagoPedido(config: Config) {
   );
 
   return {
-    fase, pagos, indice, error, errorTipo, motivoFallo, ordenId, checkoutId,
+    fase, pagos, indice, error, errorTipo, retomado, motivoFallo, ordenId, checkoutId,
     fallo, falloEnVivo, fallos, apartadoHasta, confirmandoLargo,
     enviar, antesDePagar, onPagoConfirmado, onPagoRechazado, reiniciar, reintentar,
   };

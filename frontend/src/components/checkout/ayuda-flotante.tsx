@@ -39,7 +39,7 @@ export function AyudaFlotante({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed right-4 bottom-4 z-30 flex items-center rounded-full bg-[#25D366] pl-4 text-sm font-medium text-white shadow-n2"
+          className="fixed right-4 bottom-[calc(var(--barra-alto)+1rem)] z-30 flex items-center rounded-full bg-[#25D366] pl-4 text-sm font-medium text-white shadow-n2"
         >
           <a
             href={whatsappHref(mensaje)}

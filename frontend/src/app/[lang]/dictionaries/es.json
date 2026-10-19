@@ -369,6 +369,11 @@
       "catalogo_caido": { "titulo": "Este servicio no está disponible por ahora", "cuerpo": "Intenta de nuevo en unos minutos.", "accion": "Reintentar", "whatsapp": "Escribirnos por WhatsApp", "volver": "Volver" },
       "dato_previo": { "titulo": "Falta corregir un dato", "cuerpo": "Revisa {dato} en {paso}.", "accion": "Corregir {dato}" }
     },
+    "barra": {
+      "verResumen": "Ver resumen",
+      "estimado": "Estimado",
+      "cerrar": "Cerrar"
+    },
     "tituloPagina": {
       "pesca": "Reserva tu pesca",
       "paseo": "Reserva tu paseo",

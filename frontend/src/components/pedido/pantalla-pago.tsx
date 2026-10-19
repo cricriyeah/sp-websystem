@@ -12,7 +12,6 @@ import type { ComponentePedido } from '@/lib/pedido-payload';
 import { numeroDePaso } from '@/lib/pasos-checkout';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { EncabezadoPago } from './encabezado-pago';
-import { FranjaResumen } from './franja-resumen';
 import { ReservaPlegable } from './reserva-plegable';
 import type { usePagoPedido } from './use-pago-pedido';
 
@@ -63,7 +62,7 @@ type Props = {
  */
 export function PantallaPago({
   lang, dict, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
-  stepperPagos, volverHref, empresa, sellos, totalMovil, total, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
+  stepperPagos, volverHref, empresa, sellos, totalMovil, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
   lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
@@ -78,10 +77,6 @@ export function PantallaPago({
     monto: formatearPrecio(Number(item.monto), moneda),
     estado: (indice < pago.indice ? 'hecho' : indice === pago.indice ? 'actual' : 'pendiente') as 'hecho' | 'actual' | 'pendiente',
   }));
-  // Lo que queda por cobrar después de este pago: los pagos que faltan y, con
-  // anticipo, el saldo de la empresa actual.
-  const faltaPorCobrar = pago.pagos.slice(pago.indice + 1).reduce((suma, p) => suma + Number(p.monto), 0)
-    + Math.max(0, Number(pasoPago.precioTotal ?? pasoPago.monto) - Number(pasoPago.monto));
   const etiquetaBotonPago = n === 1
     ? paquete.precio_depende_de_personas
       ? (personasPaquete === 1 ? textos.payOne : textos.payPeople.replace('{n}', String(personasPaquete)))
@@ -110,6 +105,8 @@ export function PantallaPago({
         : { actual: numeroDePaso('pago'), totalMovil })}
       pasos={
         <>
+          {/* Retomada desde el servidor: sin Viaje ni Datos inventados; solo el pago y su resumen. */}
+          {!pago.retomado && (
           <ReservaPlegable
             titulo={textos.yourBooking}
             etiquetaEstado={textos.bookingSaved}
@@ -160,6 +157,7 @@ export function PantallaPago({
             );
           })}
           </ReservaPlegable>
+          )}
 
           {/* "Cómo pagas" (ya con el pago creado, un renglón) se pinta aquí. */}
           <div ref={setDestinoTarjetaPago} />
@@ -167,12 +165,6 @@ export function PantallaPago({
           {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
               respuestas ya dadas. En cruza-empresa se remonta por empresa
               (cada una cobra con su propia clave y secreto). */}
-          <FranjaResumen
-            dict={dict}
-            total={total}
-            pagos={pasosPago}
-            saldo={pasosPago.length === 1 && faltaPorCobrar > 0 ? formatearPrecio(faltaPorCobrar, moneda) : null}
-          />
           <FormularioPagoDiferido
             lang={lang}
             key={pasoPago.empresaSlug}
@@ -195,8 +187,8 @@ export function PantallaPago({
           key={pasoPago.empresaSlug}
           lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
           waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
-          lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={lineasViaje} sellos={sellos}
-          destinoTarjeta={destinoTarjetaPago} resumenSoloEscritorio
+          lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={pago.retomado ? [] : lineasViaje} sellos={sellos}
+          destinoTarjeta={destinoTarjetaPago}
           total={totalPago} amountDueNow={monto}
           moneda={moneda} onMonedaChange={() => {}} usdDisponible={false}
           formaPago="completo" onFormaPagoChange={() => {}} formaPagoDisponible={false}

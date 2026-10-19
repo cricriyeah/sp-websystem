@@ -7,5 +7,7 @@ import type { ReactNode } from 'react';
  * compacta sin llegar a pegarse. Ver `unidaConAnterior` en `lib/pasos-checkout`.
  */
 export function ItemPaso({ unida = false, children }: { unida?: boolean; children: ReactNode }) {
-  return <div className={unida ? '-mt-4' : undefined}>{children}</div>;
+  // En móvil una tarjeta ya contestada se oculta (un paso por pantalla); su envoltorio también, para
+  // que no deje su hueco entre las demás.
+  return <div className={`max-sm:has-[[data-completado]]:hidden ${unida ? '-mt-4' : ''}`}>{children}</div>;
 }

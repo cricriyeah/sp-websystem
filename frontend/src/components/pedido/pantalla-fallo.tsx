@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutFooter } from '@/components/checkout-footer';
-import { CheckoutStepper } from '@/components/checkout-stepper';
+import { LineaProgreso } from '@/components/reserva/linea-progreso';
 import type { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
@@ -88,7 +88,12 @@ export function PantallaFallo({
     <div className="min-h-dvh bg-background">
       <CabeceraMinima lang={lang} nav={nav} volverHref={`/${lang}/sede/${sedeSlug}`} volverLabel={checkout.back} marcaFija />
       <div aria-hidden className="h-[calc(1.5rem_+_var(--nav-alto))]" />
-      <CheckoutStepper stepper={checkout.stepper} {...stepper} />
+      <LineaProgreso
+        className="mx-auto mt-4 max-w-xl px-6 sm:px-8"
+        actual={stepper.actual}
+        nombres={[checkout.stepper.viaje, checkout.stepper.datos, checkout.stepper.pago]}
+        plantilla={checkout.stepper.stepOf}
+      />
       <div className="mx-auto max-w-xl px-6 pt-8 pb-20 sm:px-8">
         <AvisoAccion
           problema={problema}

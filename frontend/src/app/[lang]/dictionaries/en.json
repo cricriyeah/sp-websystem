@@ -369,6 +369,11 @@
       "catalogo_caido": { "titulo": "This service is not available right now", "cuerpo": "Try again in a few minutes.", "accion": "Try again", "whatsapp": "Message us on WhatsApp", "volver": "Back" },
       "dato_previo": { "titulo": "One detail needs fixing", "cuerpo": "Check {dato} in {paso}.", "accion": "Fix {dato}" }
     },
+    "barra": {
+      "verResumen": "View summary",
+      "estimado": "Estimate",
+      "cerrar": "Close"
+    },
     "tituloPagina": {
       "pesca": "Book your fishing trip",
       "paseo": "Book your tour",

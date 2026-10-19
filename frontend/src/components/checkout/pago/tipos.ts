@@ -28,8 +28,6 @@ export type StripePanelProps = {
    * en otra columna (portal). `null` = todavía no se llegó al paso 4.
    */
   destinoTarjeta?: HTMLElement | null;
-  /** En móvil el resumen ya se pintó arriba del formulario de pago (`FranjaResumen`): aquí no se repite. */
-  resumenSoloEscritorio?: boolean;
   total: string;
   amountDueNow: string;
   moneda: Moneda;
