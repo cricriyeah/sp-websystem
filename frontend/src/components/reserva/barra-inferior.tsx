@@ -9,6 +9,8 @@ import { Sheet } from '@/components/ui/sheet';
 import { LineaProgreso } from './linea-progreso';
 import { useBarra, useRegistroBarra } from './contexto-barra';
 
+const ID_RAZON = 'barra-razon';
+
 type Props = {
   checkout: Dictionary['checkout'];
   actual: number;
@@ -20,13 +22,15 @@ type Props = {
 
 /**
  * Barra fija de móvil (< 640 px): el asa «Ver resumen · $X», la línea de progreso y el botón único
- * del paso (que `PieDeTarjeta` pinta aquí por portal). Mide su alto y lo publica como `--barra-alto`
+ * de la pantalla (lo publica `AsistenteMovil`; mientras una ruta siga con tarjetas en móvil, lo
+ * pinta `PieDeTarjeta` aquí por portal). Debajo del botón hay una ranura fija de 20 px para la
+ * razón de que esté deshabilitado: aparezca o no, el botón no brinca. Mide su alto y lo publica como `--barra-alto`
  * para que la página, el toast y la ayuda flotante se aparten. Es hermana del contenido que
  * cambia de paso, nunca su hija: un ancestro con `transform` rompería `position: fixed`.
  */
 export function BarraInferior({ checkout, actual, total, estimado }: Props) {
   const { setDestino } = useRegistroBarra();
-  const { resumen } = useBarra();
+  const { resumen, accion } = useBarra();
   const [hoja, setHoja] = useState(false);
   const barra = useRef<HTMLDivElement>(null);
   const textos = checkout.barra;
@@ -71,7 +75,25 @@ export function BarraInferior({ checkout, actual, total, estimado }: Props) {
           nombres={[checkout.stepper.viaje, checkout.stepper.datos, checkout.stepper.pago]}
           plantilla={checkout.stepper.stepOf}
         />
-        {/* El botón único del paso llega aquí por portal (PieDeTarjeta). */}
+        {accion ? (
+          <div className="px-4 pt-3 pb-3">
+            <Button
+              variante="principal"
+              bloque
+              onClick={accion.ejecutar}
+              disabled={accion.deshabilitado}
+              cargando={accion.cargando}
+              etiquetaCargando={accion.etiquetaCargando}
+              aria-describedby={accion.razon ? ID_RAZON : undefined}
+            >
+              {accion.etiqueta}
+            </Button>
+            <p id={ID_RAZON} aria-live="polite" className="mt-2 h-5 truncate text-center texto-pequeno text-apagado">
+              {accion.razon ?? ''}
+            </p>
+          </div>
+        ) : null}
+        {/* Rutas que todavía usan tarjetas en móvil: su botón llega por portal (PieDeTarjeta). */}
         <div ref={setDestino} className="px-4 pb-3 pt-3 empty:hidden" />
       </div>
       <Sheet abierto={hoja} onCerrar={() => setHoja(false)} titulo={checkout.orderSummaryHeadline} etiquetaCerrar={textos.cerrar} sinBorde>
