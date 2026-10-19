@@ -57,7 +57,7 @@ export default async function SedePage({ params, searchParams }: Props) {
           <p className="mt-2 max-w-2xl text-sm text-muted">{dict.traslados.subtitle}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={hrefServicio({ slug: 'traslados-la-paz', empresa_slug: contenido.servicioTransporte.empresaSlug, tipo_servicio: 'transporte' }, lang, moneda, { sede: slug })} className="rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white">{dict.destination.book}</Link>
-            <Link href={hrefDetalleServicio({ slug: 'traslados-la-paz', empresa_slug: contenido.servicioTransporte.empresaSlug }, lang, moneda, slug)} className="rounded-full border border-border px-5 py-3 text-sm font-semibold hover:border-accent">{dict.destination.learnMore}</Link>
+            <Link href={hrefDetalleServicio({ slug: 'traslados-la-paz', empresa_slug: contenido.servicioTransporte.empresaSlug }, lang, moneda, slug)} className="rounded-full border border-borde-control px-5 py-3 text-sm font-semibold text-tinta hover:bg-cafe-bruma">{dict.destination.learnMore}</Link>
           </div>
         </article>}
       </section>

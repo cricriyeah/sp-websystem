@@ -30,7 +30,7 @@ export default async function Image({ params }: { params: Promise<{ lang: string
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: 80,
-          background: '#FBF7F0', // arena
+          background: '#F8F8F6', // arena
           fontFamily: 'sans-serif',
         }}
       >

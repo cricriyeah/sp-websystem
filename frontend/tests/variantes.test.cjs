@@ -16,7 +16,7 @@ test('R5: solo la variante principal usa el color de acción (fondo cafe)', () =
     assert.ok(!clase(v, 'bg-cafe'), v);
   }
   // Los textos de las demás variantes pueden ser cafe, pero su fondo no.
-  assert.ok(clase('secundario', 'text-cafe'));
+  assert.ok(clase('secundario', 'text-tinta'));
   assert.ok(clase('texto', 'text-cafe'));
 });
 

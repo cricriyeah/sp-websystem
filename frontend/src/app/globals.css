@@ -93,16 +93,16 @@
   --color-cafe-profundo: #3e1e01;
   --color-cafe-medio: #b08967;
   --color-cafe-claro: #fee0ac;
-  --color-cafe-bruma: #f2ebe6;
+  --color-cafe-bruma: #f1f0ed; /* fondo tintado neutro */
 
   /* Neutros calidos, sin negro puro */
-  --color-arena: #fbf7f0; /* fondo de pagina */
+  --color-arena: #f8f8f6; /* fondo de pagina */
   --color-blanco: #ffffff; /* tarjetas, calendario, campos */
   --color-tinta: #1f1a14;
   --color-tinta-suave: #4a3f33;
   --color-apagado: #6b5d4d;
-  --color-borde: #d9c9b4; /* decorativo (1,62:1): no delimita un control */
-  --color-borde-control: #8a7a66; /* campos, casillas y botones secundarios (3:1) */
+  --color-borde: #e6e4df; /* decorativo (1,62:1): no delimita un control */
+  --color-borde-control: #8b8b86; /* campos, casillas y botones secundarios (3:1) */
 
   /* Estados del sistema (siempre con icono y texto) */
   --color-exito: #2f5d0a;
@@ -136,7 +136,7 @@
 
   /* Elevacion (design.md): n0 = ninguna (borde `borde`), n1 = barra inferior fija, n2 = popover, menu, toast, hoja y dialogo. */
   --shadow-n0: none;
-  --shadow-n1: 0 -1px 0 #d9c9b4, 0 -6px 16px rgb(31 26 20 / 0.08);
+  --shadow-n1: 0 -1px 0 #e6e4df, 0 -6px 16px rgb(31 26 20 / 0.08);
   --shadow-n2: 0 8px 24px rgb(31 26 20 / 0.14);
 
   --duracion-corta: 150ms;

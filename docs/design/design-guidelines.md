@@ -36,7 +36,7 @@ Pares **prohibidos**:
 |---|---|---|
 | blanco sobre `coral` | 3,54:1 | No alcanza 4,5:1 para texto normal |
 | `coral` como texto sobre blanco | 3,54:1 | Ídem |
-| `borde` (`#D9C9B4`) como contorno de un campo | 1,62:1 | No delimita el control |
+| `borde` (`#E6E4DF`) como contorno de un campo | 1,27:1 | No delimita el control |
 | `cafe` sobre `coral` | 2,39:1 | Ilegible |
 | Cualquier color de actividad usado como estado | — | Se confunde con la categoría |
 

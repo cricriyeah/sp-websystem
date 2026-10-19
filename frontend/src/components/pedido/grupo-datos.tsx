@@ -84,7 +84,7 @@ export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTrasla
               <legend className="sr-only">{traslados.fields.zona}</legend>
               {(['centro', 'periferia'] as Zona[]).map((zona) => (
                 <label key={zona} className={`flex cursor-pointer items-center gap-2 rounded-campo border p-3 text-sm ${
-                  traslado.zonaLibre === zona ? 'border-accent bg-cafe-bruma font-medium' : 'border-border text-muted'
+                  traslado.zonaLibre === zona ? 'border-cafe-medio bg-cafe-bruma font-medium' : 'border-border text-muted'
                 }`}>
                   <Input aspecto="heredado" type="radio" name={`zona-${servicioSlug}`} checked={traslado.zonaLibre === zona}
                     onChange={() => onTraslado({ zonaLibre: zona })} className="h-4 w-4 accent-accent" />

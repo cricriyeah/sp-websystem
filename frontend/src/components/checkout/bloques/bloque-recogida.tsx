@@ -134,7 +134,7 @@ export function BloqueRecogida({
                   <label
                     key={z}
                     className={`flex cursor-pointer items-center gap-2 rounded-campo border p-3 text-sm ${
-                      zonaPersonalizada === z ? 'border-accent bg-cafe-bruma font-medium' : 'border-border text-muted'
+                      zonaPersonalizada === z ? 'border-cafe-medio bg-cafe-bruma font-medium' : 'border-border text-muted'
                     }`}
                   >
                     <Input

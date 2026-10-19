@@ -24,7 +24,7 @@ const VARIANTES = {
     `bg-cafe text-white hover:bg-cafe-hondo active:bg-cafe-profundo ${APAGADO} ` +
     'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
   secundario:
-    'border border-borde-control bg-superficie text-cafe hover:bg-cafe-bruma active:bg-cafe-claro ' +
+    'border border-borde-control bg-superficie text-tinta hover:bg-cafe-bruma active:bg-borde ' +
     `${APAGADO} disabled:border-transparent aria-disabled:border-transparent ` +
     'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
   // Acción de texto («Modificar», «Volver», revelar más). `self-start` evita que se estire a lo

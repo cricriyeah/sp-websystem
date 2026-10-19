@@ -79,7 +79,7 @@ export function BloqueExtras({
         <div key={sp.id}>
           <label
             htmlFor={`personalizacion-${sp.id}`}
-            className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-cafe-bruma"
+            className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma"
           >
             <span className="flex items-start gap-3">
               <Input

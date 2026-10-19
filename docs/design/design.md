@@ -19,7 +19,7 @@ Lenguaje: **costero, deportivo y moderno**, con una marca cálida (café) y tres
 | `cafe-profundo` | `#3E1E01` | Pulsado, texto sobre `cafe-claro` | 12,80:1 sobre `cafe-bruma` |
 | `cafe-medio` | `#B08967` | Ilustración, líneas decorativas | solo decorativo |
 | `cafe-claro` | `#FEE0AC` | Fondos de aviso, rango de fechas confirmado | 11,84:1 con `cafe-profundo` |
-| `cafe-bruma` | `#F2EBE6` | Superficie variante, vista previa de rango | 7,17:1 con `cafe` |
+| `cafe-bruma` | `#F1F0ED` | Superficie variante, vista previa de rango | 7,42:1 con `cafe` |
 
 ### Actividades — qué tipo de experiencia es
 
@@ -47,13 +47,13 @@ Escalas derivadas (sacadas de cada primario mezclándolo con blanco o negro):
 
 | Token | Hex | Uso | Contraste |
 |---|---|---|---|
-| `arena` | `#FBF7F0` | Fondo de página | tinta sobre arena 16,17:1 |
+| `arena` | `#F8F8F6` | Fondo de página | tinta sobre arena 16,24:1 |
 | `blanco` | `#FFFFFF` | Tarjetas, calendario, campos | tinta sobre blanco 17,27:1 |
 | `tinta` | `#1F1A14` | Texto principal y titulares | ver arriba |
-| `tinta-suave` | `#4A3F33` | Texto secundario | 9,59:1 sobre arena |
-| `apagado` | `#6B5D4D` | Ayudas, etiquetas, texto terciario | 6,37:1 blanco / 5,96:1 arena / 5,40:1 sobre `cafe-bruma` |
-| `borde` | `#D9C9B4` | Divisores y bordes **decorativos** | 1,62:1 (no sirve para delimitar un control) |
-| `borde-control` | `#8A7A66` | Borde de campos, casillas y botones secundarios | 4,15:1 blanco / 3,89:1 arena (cumple 3:1) |
+| `tinta-suave` | `#4A3F33` | Texto secundario | 9,63:1 sobre arena |
+| `apagado` | `#6B5D4D` | Ayudas, etiquetas, texto terciario | 6,37:1 blanco / 5,99:1 arena / 5,40:1 sobre `cafe-bruma` |
+| `borde` | `#E6E4DF` | Divisores y bordes **decorativos** | 1,27:1 (no sirve para delimitar un control) |
+| `borde-control` | `#8B8B86` | Borde de campos, casillas y botones secundarios | 3,42:1 blanco / 3,22:1 arena (cumple 3:1) |
 
 **¿Blanco y negro?** Sí el blanco, no el negro puro. El blanco funciona como superficie de lectura (tarjetas, calendario, campos) y da el aire limpio y deportivo; el negro puro (`#000`) choca con el café y endurece la marca costera. Se usa `tinta` `#1F1A14` en su lugar.
 
@@ -137,7 +137,7 @@ Superficies planas: la jerarquía la hacen el color y el borde, no la sombra. La
 | Nivel | Sombra | Uso |
 |---|---|---|
 | 0 | ninguna, borde `borde` 1 px | Tarjetas, resumen de la reserva, calendario |
-| 1 | `0 -1px 0 #D9C9B4, 0 -6px 16px rgb(31 26 20 / .08)` | Barra inferior fija de móvil (sombra hacia arriba) |
+| 1 | `0 -1px 0 #E6E4DF, 0 -6px 16px rgb(31 26 20 / .08)` | Barra inferior fija de móvil (sombra hacia arriba) |
 | 2 | `0 8px 24px rgb(31 26 20 / .14)` | Popover, menú desplegable, hoja modal |
 
 Nada usa sombras mayores que el nivel 2.

@@ -124,7 +124,7 @@ export function TarjetaComoPagas({
                     {(['completo', 'anticipo'] as const).map((option) => (
                       <label
                         key={option}
-                        className="flex cursor-pointer items-center gap-3 rounded-campo border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-cafe-bruma"
+                        className="flex cursor-pointer items-center gap-3 rounded-campo border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma"
                       >
                         <Input
                           aspecto="heredado"

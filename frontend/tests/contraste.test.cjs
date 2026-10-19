@@ -33,21 +33,21 @@ const PARES = [
   // Marca: café
   ['blanco', 'cafe', 8.46, TEXTO, 'botón principal'],
   ['blanco', 'cafe-hondo', 11.5, TEXTO, 'hover del botón principal'],
-  ['cafe-profundo', 'cafe-bruma', 12.8, TEXTO, 'pulsado, texto sobre cafe-bruma'],
+  ['cafe-profundo', 'cafe-bruma', 13.25, TEXTO, 'pulsado, texto sobre cafe-bruma'],
   ['cafe-profundo', 'cafe-claro', 11.84, TEXTO, 'texto sobre aviso y rango de fechas'],
-  ['cafe', 'cafe-bruma', 7.17, TEXTO, 'enlace de acción sobre la superficie variante'],
+  ['cafe', 'cafe-bruma', 7.42, TEXTO, 'enlace de acción sobre la superficie variante'],
   ['cafe', 'blanco', 8.46, TEXTO, 'botón secundario y texto'],
   // Neutros
-  ['tinta', 'arena', 16.17, TEXTO, 'texto principal sobre la página'],
+  ['tinta', 'arena', 16.24, TEXTO, 'texto principal sobre la página'],
   ['tinta', 'blanco', 17.27, TEXTO, 'texto principal sobre tarjetas y campos'],
-  ['tinta-suave', 'arena', 9.59, TEXTO, 'texto secundario sobre la página'],
-  ['tinta-suave', 'cafe-bruma', 8.68, TEXTO, 'chip neutro'],
+  ['tinta-suave', 'arena', 9.63, TEXTO, 'texto secundario sobre la página'],
+  ['tinta-suave', 'cafe-bruma', 8.99, TEXTO, 'chip neutro'],
   ['apagado', 'blanco', 6.37, TEXTO, 'ayudas y etiquetas'],
-  ['apagado', 'arena', 5.96, TEXTO, 'ayudas sobre la página'],
-  ['apagado', 'cafe-bruma', 5.4, TEXTO, 'texto deshabilitado'],
-  ['borde-control', 'blanco', 4.15, NO_TEXTO, 'borde de campo sobre tarjeta'],
-  ['borde-control', 'arena', 3.89, NO_TEXTO, 'borde de campo sobre la página'],
-  ['borde', 'blanco', 1.62, DECORATIVO, 'solo decorativo: no delimita un control'],
+  ['apagado', 'arena', 5.99, TEXTO, 'ayudas sobre la página'],
+  ['apagado', 'cafe-bruma', 5.59, TEXTO, 'texto deshabilitado'],
+  ['borde-control', 'blanco', 3.42, NO_TEXTO, 'borde de campo sobre tarjeta'],
+  ['borde-control', 'arena', 3.22, NO_TEXTO, 'borde de campo sobre la página'],
+  ['borde', 'blanco', 1.27, DECORATIVO, 'solo decorativo: no delimita un control'],
   // Actividades
   ['blanco', 'azul', 6.94, TEXTO, 'texto sobre azul (mar)'],
   ['azul', 'azul-claro', 5.48, TEXTO, 'chip de mar'],
@@ -66,7 +66,7 @@ const PARES = [
   ['info', 'info-fondo', 9.17, TEXTO, 'información (el fondo es azul-claro)'],
   // Enfoque
   ['ring', 'blanco', 6.94, NO_TEXTO, 'anillo de foco sobre tarjeta'],
-  ['ring', 'arena', 6.5, NO_TEXTO, 'anillo de foco sobre la página'],
+  ['ring', 'arena', 6.53, NO_TEXTO, 'anillo de foco sobre la página'],
 ];
 
 for (const [primero, fondo, declarada, minimo, nota] of PARES) {
@@ -97,7 +97,7 @@ test('el borde decorativo no delimita un control, y los rellenos suaves no disti
 
 test('la superficie de lectura es blanca y la página es arena, sin negro puro', () => {
   assert.equal(resolverToken(css, '--superficie'), '#ffffff');
-  assert.equal(resolverToken(css, '--background'), '#fbf7f0');
+  assert.equal(resolverToken(css, '--background'), '#f8f8f6');
   assert.equal(resolverToken(css, '--foreground'), '#1f1a14');
   assert.notEqual(resolverToken(css, '--foreground'), '#000000');
 });
