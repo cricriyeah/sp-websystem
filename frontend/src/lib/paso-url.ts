@@ -1,6 +1,7 @@
 // El paso del checkout vive en la URL (`?paso=viaje|datos|pago`): cada paso es una entrada
 // de historial, así que Atrás vuelve al paso anterior en lugar de salir de la compra.
 import { ORDEN_PASOS, type PasoId } from './pasos-checkout';
+import { estaAntesDe, pasoDeLaPantalla, type Pantalla } from './pantallas-checkout';
 
 export function pasoDeQuery(valor: string | null | undefined): PasoId | null {
   return ORDEN_PASOS.find((id) => id === valor) ?? null;
@@ -34,4 +35,44 @@ export function conPaso(search: string, paso: PasoId): string {
   const query = new URLSearchParams(search);
   query.set('paso', paso);
   return `?${query.toString()}`;
+}
+
+// Asistente móvil: además del paso, la URL lleva la pantalla (`?paso=datos&pantalla=recogida`).
+// Cada pantalla es una entrada de historial; `?paso=` se sigue escribiendo para que el borrador
+// se reponga igual y para que al ensanchar la ventana las tarjetas abran el paso correcto.
+
+export function pantallaDeQuery(valor: string | null | undefined): string | null {
+  return valor || null;
+}
+
+/** Misma URL con `?paso=` y `?pantalla=` de `id`; conserva el resto del query. */
+export function conPantalla(search: string, pantallas: readonly Pantalla[], id: string): string {
+  const query = new URLSearchParams(search);
+  query.set('paso', pasoDeLaPantalla(pantallas, id));
+  query.set('pantalla', id);
+  return `?${query.toString()}`;
+}
+
+export type DecisionPantalla =
+  | { tipo: 'nada' }
+  | { tipo: 'mostrar'; id: string }
+  /** La URL pide una pantalla a la que no se ha llegado, que no existe o bloqueada. */
+  | { tipo: 'redirigir'; a: string };
+
+/**
+ * Qué hace el asistente cuando la URL (Atrás, Adelante, recarga) apunta a `urlId`.
+ * `alcanzada` es la pantalla más avanzada a la que llegó el cliente; `minima`, si hay un pago
+ * en curso, la primera a la que todavía se puede volver.
+ */
+export function decidirPantalla(
+  urlId: string | null,
+  pantallas: readonly Pantalla[],
+  alcanzada: string,
+  minima: string | null,
+): DecisionPantalla {
+  if (urlId === null) return { tipo: 'nada' };
+  const existe = pantallas.some((x) => x.id === urlId);
+  if (!existe || estaAntesDe(pantallas, alcanzada, urlId)) return { tipo: 'redirigir', a: alcanzada };
+  if (minima && estaAntesDe(pantallas, urlId, minima)) return { tipo: 'redirigir', a: minima };
+  return { tipo: 'mostrar', id: urlId };
 }

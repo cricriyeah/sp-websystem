@@ -35,3 +35,38 @@ test('conPaso conserva el resto del query', () => {
   assert.equal(p.conPaso('?paso=viaje&moneda=MXN', 'pago'), '?paso=pago&moneda=MXN');
   assert.equal(p.conPaso('', 'viaje'), '?paso=viaje');
 });
+
+// Asistente móvil: la pantalla viaja junto al paso (`?paso=datos&pantalla=recogida`).
+const pc = require(path.join(process.env.PASO_URL_TEST_OUT, 'lib/pantallas-checkout.js'));
+const traslado = pc.pantallasDe({ tipo: 'traslado' });
+
+test('conPantalla escribe el paso de la pantalla y conserva el resto del query', () => {
+  const query = new URLSearchParams(p.conPantalla('?moneda=usd&paso=viaje', traslado, 'recogida'));
+  assert.equal(query.get('paso'), 'datos');
+  assert.equal(query.get('pantalla'), 'recogida');
+  assert.equal(query.get('moneda'), 'usd');
+});
+
+test('una pantalla ya alcanzada se muestra tal cual', () => {
+  assert.deepEqual(p.decidirPantalla('fecha', traslado, 'contacto', null), { tipo: 'mostrar', id: 'fecha' });
+  assert.deepEqual(p.decidirPantalla('contacto', traslado, 'contacto', null), { tipo: 'mostrar', id: 'contacto' });
+});
+
+test('una pantalla a la que no se ha llegado se reescribe a la más avanzada', () => {
+  assert.deepEqual(p.decidirPantalla('como-pagas', traslado, 'fecha', null), { tipo: 'redirigir', a: 'fecha' });
+});
+
+test('una pantalla que no existe en la ruta se reescribe a la más avanzada', () => {
+  assert.deepEqual(p.decidirPantalla('extras', traslado, 'fecha', null), { tipo: 'redirigir', a: 'fecha' });
+});
+
+test('sin ?pantalla= manda el estado', () => {
+  assert.deepEqual(p.decidirPantalla(null, traslado, 'fecha', null), { tipo: 'nada' });
+});
+
+test('con un pago en curso no se vuelve antes de la pantalla mínima', () => {
+  assert.deepEqual(
+    p.decidirPantalla('contacto', traslado, 'tarjeta-0', 'tarjeta-0'),
+    { tipo: 'redirigir', a: 'tarjeta-0' },
+  );
+});
