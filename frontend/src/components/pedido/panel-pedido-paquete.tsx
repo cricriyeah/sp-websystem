@@ -108,7 +108,11 @@ export function PanelPedidoPaquete({
       onSubmit={onSubmit}
       onCaptchaToken={onCaptchaToken}
     />
-  ) : (
+  ) : actual === 'pago' ? (
     <AvisoProblema checkout={checkout} feedback={feedback} tipo="catalogo_caido" ayudaMensaje={ayudaMensaje} />
+  ) : (
+    // Antes del pago, sin precio es un pedido a medias (p. ej. falta elegir la zona de una dirección
+    // escrita), no un servicio caído: no se alarma al cliente, el resumen aparece al completarlo.
+    null
   );
 }
