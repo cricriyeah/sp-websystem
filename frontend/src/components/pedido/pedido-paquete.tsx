@@ -632,7 +632,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             )}
 
             {/* El cuarto paso: "Cómo pagas" se pinta aquí (portal del panel) al llegar a él. */}
-            {actual === 'pago' && <div ref={setDestinoTarjetaPago} />}
+            {/* Con una respuesta anterior reabierta (flecha atrás o «Modificar») solo se ve esa tarjeta. */}
+            {actual === 'pago' && editando === null && grupoEditando === null && <div ref={setDestinoTarjetaPago} />}
           </>
         }
         pedido={

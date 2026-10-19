@@ -799,7 +799,7 @@ export function TrasladoView({
               checkout={checkout}
               feedback={feedback}
               ayudaMensaje={ayudaMensaje}
-              mostrarDestino={actual === 'pago' || phase !== 'form'}
+              mostrarDestino={(actual === 'pago' || phase !== 'form') && editando === null}
               destinoRef={setDestinoTarjetaPago}
               pagoEnCurso={phase === 'payment' ? pago : null}
               onPagoConfirmado={(procesando) => {

@@ -1474,7 +1474,7 @@ export function CheckoutView({
               checkout={checkout}
               feedback={dict.feedback}
               ayudaMensaje={ayudaMensaje}
-              mostrarDestino={actual === 'pago' || phase !== 'form'}
+              mostrarDestino={(actual === 'pago' || phase !== 'form') && editando === null}
               destinoRef={setDestinoTarjetaPago}
               pagoEnCurso={phase === 'payment' ? pago : null}
               apartadoHasta={apartadoHasta}
