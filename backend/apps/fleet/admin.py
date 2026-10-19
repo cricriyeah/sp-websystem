@@ -31,6 +31,7 @@ from .models import (
     componente_de,
     errores_de_precio_contra_transporte,
 )
+from .incluye import INCLUYE_MAX_CARACTERES, INCLUYE_MAX_RENGLONES, lineas_de_texto
 from .paquete_reglas import errores_de_paquete
 from .tarifa_transporte import peor_tarifa
 
@@ -157,10 +158,34 @@ AYUDA_CAMPOS_SERVICIO = {
 }
 
 
-class ServicioAdminForm(forms.ModelForm):
+class IncluyeAdminFormMixin(forms.Form):
+    """Lo que incluye, capturado en dos cuadros de texto (un renglón por línea) en vez de JSON."""
+    incluye_es = forms.CharField(
+        label='Qué incluye (español)', required=False, widget=forms.Textarea(attrs={'rows': 4}),
+        help_text=f'Un renglón por línea, hasta {INCLUYE_MAX_RENGLONES} de {INCLUYE_MAX_CARACTERES} caracteres. '
+                  'La tarjeta y la página del servicio lo muestran tal cual.',
+    )
+    incluye_en = forms.CharField(
+        label='Qué incluye (inglés)', required=False, widget=forms.Textarea(attrs={'rows': 4}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        incluye = self.instance.incluye if self.instance and isinstance(self.instance.incluye, dict) else {}
+        self.fields['incluye_es'].initial = '\n'.join(incluye.get('es', []))
+        self.fields['incluye_en'].initial = '\n'.join(incluye.get('en', []))
+
+    def _post_clean(self):
+        # Antes de validar el modelo: su clean() revisa los límites de lo que armamos aquí.
+        lineas = {idioma: lineas_de_texto(self.cleaned_data.get(f'incluye_{idioma}')) for idioma in ('es', 'en')}
+        self.instance.incluye = {idioma: renglones for idioma, renglones in lineas.items() if renglones}
+        super()._post_clean()
+
+
+class ServicioAdminForm(IncluyeAdminFormMixin, forms.ModelForm):
     class Meta:
         model = Servicio
-        fields = '__all__'
+        exclude = ['incluye']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -206,7 +231,7 @@ class ServicioAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     fieldsets = [
         ('Qué es', {
             'description': 'Identificación básica del servicio y su disponibilidad general.',
-            'fields': ('nombre', 'slug', 'tipo_servicio', 'descripcion', 'activo'),
+            'fields': ('nombre', 'slug', 'tipo_servicio', 'descripcion', 'incluye_es', 'incluye_en', 'activo'),
         }),
         ('Cupo', {
             'description': 'Control de inventario, modo de asignación y capacidad de pasajeros.',
@@ -331,10 +356,10 @@ AYUDA_CAMPOS_PAQUETE_SERVICIO = {
 }
 
 
-class PaqueteAdminForm(forms.ModelForm):
+class PaqueteAdminForm(IncluyeAdminFormMixin, forms.ModelForm):
     class Meta:
         model = Paquete
-        fields = '__all__'
+        exclude = ['incluye']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -439,7 +464,7 @@ class PaqueteServicioInline(TabularInline):
 class PaqueteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     empresa_campo = 'empresa_lider'
     form = PaqueteAdminForm
-    exclude = ['regla_precio']
+    exclude = ['regla_precio', 'incluye']
     list_display = [
         'nombre', 'sede', 'empresa_lider', 'precio_ancla', 'estrategia_precio',
         'personas_precio_base', 'precio_persona_extra', 'pide_hora',
@@ -459,7 +484,7 @@ class PaqueteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
         }),
         ('Qué es', {
             'description': 'Identificación básica del paquete, sede y empresa líder.',
-            'fields': ('nombre', 'slug', 'descripcion', 'sede', 'empresa_lider', 'activo'),
+            'fields': ('nombre', 'slug', 'descripcion', 'incluye_es', 'incluye_en', 'sede', 'empresa_lider', 'activo'),
         }),
         ('Precio', {
             'description': 'Esquema de cobro y tarifas base en pesos (MXN).',

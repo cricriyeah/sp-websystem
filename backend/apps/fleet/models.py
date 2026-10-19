@@ -8,6 +8,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.fleet.calendario_paquete import ComponenteCalendario
+from apps.fleet.incluye import normalizar_incluye
 from apps.fleet.paquete_reglas import Componente, errores_de_paquete
 from apps.fleet.tarifa_transporte import peor_tarifa
 from apps.payments.moneda import convertir
@@ -420,6 +421,10 @@ class Servicio(models.Model):
         help_text='Cada cuántos minutos se ofrece una hora dentro del rango (5 a 240).',
     )
     descripcion = models.TextField(blank=True, default='')
+    incluye = models.JSONField(
+        default=dict, blank=True,
+        help_text='Lo que incluye, por idioma: {"es": ["…"], "en": ["…"]}. Hasta 8 renglones de 80 caracteres.',
+    )
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
@@ -450,6 +455,10 @@ class Servicio(models.Model):
 
     def clean(self):
         super().clean()
+        incluye, error = normalizar_incluye(self.incluye)
+        if error:
+            raise ValidationError({'incluye': error})
+        self.incluye = incluye
         if bool(self.hora_apertura) != bool(self.hora_cierre):
             raise ValidationError('Configura las dos horas de la ventana o ninguna.')
         if self.hora_apertura and self.hora_cierre and self.hora_apertura > self.hora_cierre:
@@ -698,6 +707,10 @@ class Paquete(models.Model):
     nombre = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150)
     descripcion = models.TextField(blank=True, default='')
+    incluye = models.JSONField(
+        default=dict, blank=True,
+        help_text='Lo que incluye, por idioma: {"es": ["…"], "en": ["…"]}. Hasta 8 renglones de 80 caracteres.',
+    )
     precio_ancla = models.DecimalField(
         max_digits=10, decimal_places=2,
         help_text='Precio ancla del paquete en pesos (MXN).'
@@ -765,6 +778,11 @@ class Paquete(models.Model):
             errores['personas_precio_base'] = 'Debe ser al menos una persona.'
         if self.precio_persona_extra is None or self.precio_persona_extra < 0:
             errores['precio_persona_extra'] = 'El cargo adicional no puede ser negativo.'
+        incluye, error_incluye = normalizar_incluye(self.incluye)
+        if error_incluye:
+            errores['incluye'] = error_incluye
+        else:
+            self.incluye = incluye
         if errores:
             raise ValidationError(errores)
         if self.sede_id and self.empresa_lider_id:
