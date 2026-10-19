@@ -137,6 +137,7 @@
   /* Elevacion (design.md): n0 = ninguna (borde `borde`), n1 = barra inferior fija, n2 = popover, menu, toast, hoja y dialogo. */
   --shadow-n0: none;
   --shadow-n1: 0 -1px 0 #e6e4df, 0 -6px 16px rgb(31 26 20 / 0.08);
+  --shadow-tarjeta: 0 1px 2px rgb(31 26 20 / 0.05), 0 2px 8px rgb(31 26 20 / 0.04); /* tarjetas en reposo */
   --shadow-n2: 0 8px 24px rgb(31 26 20 / 0.14);
 
   --duracion-corta: 150ms;
