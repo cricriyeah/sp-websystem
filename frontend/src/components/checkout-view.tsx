@@ -14,7 +14,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
-import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
+import { EncabezadoCompra, claveTituloCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
@@ -56,6 +56,7 @@ import {
 } from '@/lib/personalizaciones';
 import {
   estadoDeTarjeta, estadoVisible, numeroDePaso, pasoAnterior, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+  rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
@@ -1328,7 +1329,8 @@ export function CheckoutView({
         volverLabel={checkout.back}
         encabezado={
           <EncabezadoCompra
-            nombre={servicioNombre || servicio?.nombre || ''}
+            titulo={checkout.tituloPagina[claveTituloCompra(servicio?.tipo_servicio)]}
+            detalle={servicioNombre || servicio?.nombre || undefined}
           />
         }
         aviso={sinLugar ? (
@@ -1382,6 +1384,7 @@ export function CheckoutView({
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
               <CheckoutSectionCard
                 title={checkout.tripHeadline}
+                pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'viaje')}
                 estado={estadoViaje}
                 resumen={resumenPaso1}
                 detalle={detallePaso1}
@@ -1443,6 +1446,7 @@ export function CheckoutView({
               <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
                 <CheckoutSectionCard
                   title={checkout.stepper.datos}
+                  pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'datos')}
                   estado={estadoDatos}
                   resumen={resumenPaso2}
                   detalle={detallePaso2}
@@ -1528,6 +1532,7 @@ export function CheckoutView({
             error={error}
             feedback={dict.feedback}
             lineasViaje={lineasViaje}
+            sellos={empresa ? [empresa] : undefined}
             destinoTarjeta={destinoTarjetaPago}
             ayudaMensaje={ayudaMensaje}
             onSubmit={iniciarPago}

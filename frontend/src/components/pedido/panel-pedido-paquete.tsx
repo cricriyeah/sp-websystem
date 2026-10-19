@@ -29,6 +29,7 @@ type Props = {
   promoEstado: StripePanelProps['promoEstado'];
   promoPorcentaje: string | null;
   lineasViaje: { etiqueta: string; valor: string }[];
+  sellos?: StripePanelProps['sellos'];
   destinoTarjetaPago: HTMLElement | null;
   total: string;
   ahora: string;
@@ -54,7 +55,7 @@ type Props = {
  */
 export function PanelPedidoPaquete({
   lang, dict, paquete, motor, pedido, cargos, cantidadCargos, nombreEmpresa, moneda, formaPago, conUsd, descuento,
-  codigoPromocional, promoEstado, promoPorcentaje, lineasViaje, destinoTarjetaPago, total, ahora, ayudaMensaje,
+  codigoPromocional, promoEstado, promoPorcentaje, lineasViaje, sellos, destinoTarjetaPago, total, ahora, ayudaMensaje,
   waiverAccepted, errorWaiver, captchaKey, actual, pago, despachar,
   onWaiverChange, onCodigoPromocionalChange, onCaptchaToken, onSubmit,
 }: Props) {
@@ -77,6 +78,7 @@ export function PanelPedidoPaquete({
           : []),
       ]}
       lineasViaje={lineasViaje}
+      sellos={sellos}
       destinoTarjeta={destinoTarjetaPago}
       total={total} amountDueNow={ahora} moneda={moneda}
       onMonedaChange={(valor) => despachar({ tipo: 'moneda', valor })} usdDisponible={conUsd}

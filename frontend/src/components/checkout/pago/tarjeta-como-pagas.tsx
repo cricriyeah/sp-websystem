@@ -1,5 +1,6 @@
 'use client';
 
+import { rotuloDePaso } from '@/lib/pasos-checkout';
 import { useState } from 'react';
 import { CheckCircle, Lock, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
@@ -76,6 +77,7 @@ export function TarjetaComoPagas({
     <>
       <CheckoutSectionCard
           title={checkout.howYouPay}
+          pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'pago')}
           estado={pagoCreado ? 'completado' : 'activo'}
           resumen={resumen}
           pie={cta}

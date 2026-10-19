@@ -21,6 +21,7 @@ import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import {
   estadoDeTarjeta, estadoVisible, numeroDePaso, pasoAnterior, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+  rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
@@ -129,6 +130,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const slugPrincipal = paquete.precio_depende_de_personas ? servicioPrincipalPaquete(paquete)?.servicio.slug : undefined;
   const primerServicio = slugPrincipal ?? paquete.servicios_asociados[0]?.servicio.slug;
   const personasPaquete = primerServicio ? estado.componentes[primerServicio]?.personas ?? 1 : 1;
+  // Quién opera el viaje: una empresa por componente, sin repetir; en cruza-empresa, una por cada una.
+  const sellosDelPaquete = [...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]
+    .map((slug) => empresas[slug])
+    .filter((e): e is { nombre: string; logo?: string } => !!e);
   const cargos = pedido?.cargos ?? [];
   const cantidadCargos = cargos.length;
   const nombreEmpresa = (slug: string) => slug === paquete.empresa_lider_slug
@@ -434,6 +439,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       stepperPagos={stepperPagos}
       volverHref={volverHref}
       empresa={paquete.es_cruza_empresa ? undefined : empresas[paquete.empresa_lider_slug]}
+      sellos={sellosDelPaquete}
       totalMovil={totalMovil}
       total={total}
       totalConMoneda={totalConMoneda}
@@ -494,8 +500,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         volverLabel={textos.back}
         encabezado={
           <EncabezadoCompra
-            nombre={paquete.nombre}
-            detalle={detalleCompra}
+            titulo={checkout.tituloPagina.paquete}
+            detalle={[paquete.nombre, detalleCompra].filter(Boolean).join(' · ')}
           />
         }
         stepper={(actual === 'pago' ? stepperPagos(0) : null) ?? {
@@ -508,6 +514,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
             <CheckoutSectionCard
               title={checkout.tripHeadline}
+              pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'viaje')}
               estado={estadoViaje}
               resumen={resumenViaje}
               actionLabel={estadoFecha === 'completado' ? checkout.changeStep : estadoFecha === 'editando' ? checkout.doneEditing : undefined}
@@ -582,6 +589,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               <ItemPaso unida={unidaConAnterior(secuencia, posicionDatos)}>
               <CheckoutSectionCard
                 title={checkout.stepper.datos}
+                pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'datos')}
                 estado={estadoDatos as 'activo' | 'editando' | 'completado' | 'suspendido'}
                 resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
                 actionLabel={tarjeta('datos') === 'completado' ? checkout.changeStep : tarjeta('datos') === 'editando' ? checkout.doneEditing : undefined}
@@ -645,6 +653,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             promoEstado={promoEstado}
             promoPorcentaje={promoPorcentaje}
             lineasViaje={lineasViaje}
+            sellos={sellosDelPaquete}
             destinoTarjetaPago={destinoTarjetaPago}
             total={total}
             ahora={ahora}

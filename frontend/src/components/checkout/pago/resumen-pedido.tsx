@@ -1,3 +1,4 @@
+import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import type { StripePanelProps } from '@/components/checkout/pago/tipos';
 
@@ -6,13 +7,24 @@ export function ResumenPedido({
   checkout,
   lines,
   lineasViaje = [],
+  sellos = [],
   total,
   amountDueNow,
   resumenSoloEscritorio = false,
-}: Pick<StripePanelProps, 'checkout' | 'lines' | 'lineasViaje' | 'total' | 'amountDueNow' | 'resumenSoloEscritorio'>) {
+}: Pick<StripePanelProps, 'checkout' | 'lines' | 'lineasViaje' | 'sellos' | 'total' | 'amountDueNow' | 'resumenSoloEscritorio'>) {
   return (
     <div className={resumenSoloEscritorio ? 'hidden lg:block' : undefined}>
     <CheckoutSectionCard title={checkout.orderSummaryHeadline}>
+      {sellos.length > 0 && (
+        // Quién opera el viaje, sin caja dentro de la caja: sello y nombre. En cruza-empresa, uno por empresa.
+        <ul className="mb-4 flex flex-col gap-3 border-b border-border pb-4">
+          {sellos.map((s) => (
+            <li key={s.nombre}>
+              <EmpresaSello nombre={s.nombre} logo={s.logo} tamano={32} mostrarNombre />
+            </li>
+          ))}
+        </ul>
+      )}
       {lineasViaje.length > 0 && (
         <dl className="mb-4 flex flex-col gap-2 border-b border-border pb-4">
           {lineasViaje.map((linea) => (

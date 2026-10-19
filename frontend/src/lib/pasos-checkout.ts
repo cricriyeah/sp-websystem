@@ -18,6 +18,11 @@ export function numeroDePaso(id: PasoId): number {
   return ORDEN_PASOS.indexOf(id) + 1;
 }
 
+/** «Paso 2 de 3»: `plantilla` es `dict.checkout.stepper.stepOf` («Paso {current} de {total}»). */
+export function rotuloDePaso(plantilla: string, id: PasoId): string {
+  return plantilla.replace('{current}', String(numeroDePaso(id))).replace('{total}', String(ORDEN_PASOS.length));
+}
+
 /**
  * Estado de la tarjeta de `id` cuando el cliente va en `actual`.
  *

@@ -361,6 +361,13 @@
     "rights": "Todos los derechos reservados."
   },
   "checkout": {
+    "tituloPagina": {
+      "pesca": "Reserva tu pesca",
+      "paseo": "Reserva tu paseo",
+      "hospedaje": "Reserva tu estancia",
+      "transporte": "Reserva tu traslado",
+      "paquete": "Reserva tu paquete"
+    },
     "back": "Volver",
     "dayLabel": "Día",
     "checkoutDateLabel": "Fecha de salida (Check-out)",

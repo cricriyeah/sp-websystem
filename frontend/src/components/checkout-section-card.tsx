@@ -27,6 +27,8 @@ type CheckoutSectionCardProps = {
    * es la unica que queda.
    */
   estado?: 'activo' | 'editando' | 'completado' | 'suspendido';
+  /** «Paso N de 3», sobre el título de las tarjetas que son un paso del checkout; el título pasa a `texto-paso`. */
+  pasoRotulo?: string;
   /** Colapsado: la respuesta ya dada, en una linea. */
   resumen?: ReactNode;
   /**
@@ -55,6 +57,7 @@ const CHIP = 'rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium text-
 export function CheckoutSectionCard({
   title,
   estado = 'activo',
+  pasoRotulo,
   resumen,
   detalle,
   actionLabel,
@@ -111,8 +114,9 @@ export function CheckoutSectionCard({
           </span>
         ) : (
           <span className="flex min-w-0 flex-col">
+            {pasoRotulo && <span className="texto-pequeno font-semibold text-apagado">{pasoRotulo}</span>}
             <span className="flex min-w-0 flex-wrap items-center gap-x-2">
-              <span className="font-sans text-sm font-medium tracking-tight text-foreground">
+              <span className={pasoRotulo ? 'texto-paso text-foreground' : 'font-sans text-sm font-medium tracking-tight text-foreground'}>
                 {title}
               </span>
               {etiqueta && (

@@ -52,6 +52,7 @@ import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
 import {
   estadoDeTarjeta, estadoVisible, numeroDePaso, pasoAnterior, unidaConAnterior, type EstadoTarjeta, type EstadoVisible, type PasoId,
+  rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
@@ -670,8 +671,8 @@ export function TrasladoView({
         volverLabel={traslados.back}
         encabezado={
           <EncabezadoCompra
-            nombre={traslados.title}
-            detalle={traslados.subtitle}
+            titulo={checkout.tituloPagina.transporte}
+            detalle={traslados.title}
           />
         }
         stepper={{ ...stepperPago, steps: stepsList }}
@@ -689,6 +690,7 @@ export function TrasladoView({
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
               <CheckoutSectionCard
                 title={checkout.tripHeadline}
+                pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'viaje')}
                 estado={estadoViaje}
                 resumen={resumenViaje}
                 detalle={detalleViaje}
@@ -737,6 +739,7 @@ export function TrasladoView({
               <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
                 <CheckoutSectionCard
                   title={checkout.stepper.datos}
+                  pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'datos')}
                   estado={estadoDatos}
                   resumen={[resumenDatos, resumenRecogida].filter(Boolean).join(' · ')}
                   detalle={[...detalleContacto, ...(detalleRecogida ?? [])]}
@@ -834,6 +837,7 @@ export function TrasladoView({
             promoPorcentaje={promoPorcentaje}
             destinoTarjeta={destinoTarjetaPago}
             lineasViaje={lineasViaje}
+            sellos={empresa ? [empresa] : undefined}
             phase={phase}
             error={error}
             feedback={feedback}

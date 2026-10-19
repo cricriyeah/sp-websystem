@@ -16,6 +16,8 @@ export type StripePanelProps = {
   onWaiverChange: (value: boolean) => void;
   errorWaiver: boolean;
   lines: OrderLine[];
+  /** Quién opera lo que se compra: un sello por empresa, al abrir el resumen (sin foto de catálogo, Task 9.0). */
+  sellos?: { nombre: string; logo?: string }[];
   /** Lo elegido en el viaje (fecha, hora, personas…), vivo desde el paso 1. */
   lineasViaje?: { etiqueta: string; valor: string }[];
   /**

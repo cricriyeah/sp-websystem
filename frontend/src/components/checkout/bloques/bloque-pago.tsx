@@ -51,6 +51,7 @@ type PropsResumen = Pick<
   | 'error'
   | 'feedback'
   | 'lineasViaje'
+  | 'sellos'
   | 'destinoTarjeta'
   | 'ayudaMensaje'
   | 'onSubmit'

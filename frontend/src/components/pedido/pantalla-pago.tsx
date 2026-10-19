@@ -34,6 +34,7 @@ type Props = {
   stepperPagos: (indicePago: number, monto?: number) => Stepper | null;
   volverHref: string;
   empresa?: { nombre: string; logo?: string };
+  sellos?: { nombre: string; logo?: string }[];
   totalMovil: string | undefined;
   total: string;
   totalConMoneda: string | null;
@@ -62,7 +63,7 @@ type Props = {
  */
 export function PantallaPago({
   lang, dict, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
-  stepperPagos, volverHref, empresa, totalMovil, total, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
+  stepperPagos, volverHref, empresa, sellos, totalMovil, total, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
   lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
@@ -99,8 +100,8 @@ export function PantallaPago({
       volverLabel={textos.back}
       encabezado={
         <EncabezadoCompra
-          nombre={paquete.nombre}
-          detalle={detalleCompra}
+          titulo={checkout.tituloPagina.paquete}
+            detalle={[paquete.nombre, detalleCompra].filter(Boolean).join(' · ')}
         />
       }
       stepper={stepperPagos(pago.indice, Number(pasoPago.monto)) ?? (Number(pasoPago.monto) < Number(pasoPago.precioTotal ?? pasoPago.monto)
@@ -194,7 +195,7 @@ export function PantallaPago({
           key={pasoPago.empresaSlug}
           lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
           waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
-          lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={lineasViaje}
+          lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={lineasViaje} sellos={sellos}
           destinoTarjeta={destinoTarjetaPago} resumenSoloEscritorio
           total={totalPago} amountDueNow={monto}
           moneda={moneda} onMonedaChange={() => {}} usdDisponible={false}

@@ -361,6 +361,13 @@
     "rights": "All rights reserved."
   },
   "checkout": {
+    "tituloPagina": {
+      "pesca": "Book your fishing trip",
+      "paseo": "Book your tour",
+      "hospedaje": "Book your stay",
+      "transporte": "Book your transfer",
+      "paquete": "Book your package"
+    },
     "back": "Back",
     "dayLabel": "Day",
     "checkoutDateLabel": "Check-out date",
