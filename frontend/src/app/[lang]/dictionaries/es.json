@@ -133,30 +133,6 @@
     "verDetalles": "Ver detalles",
     "incluyeHospedaje": "Incluye hospedaje"
   },
-  "about": {
-    "headline": "Tu agencia local de confianza: apasionados por el mar y por tu experiencia",
-    "body1": "Somos una agencia de pesca deportiva conformada por gente local que conoce, respeta y ama profundamente las aguas de La Paz. Nos preocupamos por cada detalle de tu viaje para que tú y tu grupo disfruten de una jornada extraordinaria, sintiéndose en confianza y con la calidez que nos distingue.",
-    "body2": "Cada tour es 100% privado y pensado a la medida de tu grupo. Si es tu primera vez en la pesca deportiva, nuestros capitanes te enseñarán con paciencia y gusto las mejores técnicas, y si ya eres un pescador experimentado, te llevaremos a los mejores puntos de la bahía para maximizar tus capturas.",
-    "photoHint": "Capitán local sonriendo con una cabrilla recién pescada, con La Paz al fondo",
-    "facts": {
-      "duration": {
-        "value": "6 a 8 horas",
-        "label": "Duración de la aventura"
-      },
-      "departure": {
-        "value": "5:00 a 7:00 am",
-        "label": "Horario flexible a tu gusto"
-      },
-      "capacity": {
-        "value": "Hasta 5 personas",
-        "label": "Ambiente privado y familiar"
-      },
-      "season": {
-        "value": "365 días al año",
-        "label": "Salidas disponibles todo el año"
-      }
-    }
-  },
   "included": {
     "headline": "¿Qué incluye tu experiencia?",
     "intro": "Queremos que disfrutes con total tranquilidad y comodidad. Aquí te mostramos todo lo que incluye tu servicio, las recomendaciones para llevar a bordo y los servicios adicionales que podemos coordinar para ti.",
@@ -583,28 +559,6 @@
     "reject": "Rechazar",
     "more": "Ver aviso de privacidad"
   },
-  "license": {
-    "headline": "Guía para tu licencia de pesca deportiva",
-    "intro": "En México, la normativa oficial (CONAPESCA) establece que cada persona que realice pesca deportiva a bordo cuente con una licencia personal. Al ser un permiso individual emitido a tu nombre no va incluido en la tarifa base, pero con gusto te orientamos para obtenerlo de manera muy rápida y sencilla.",
-    "steps": [
-      {
-        "title": "Trámite 100% en línea",
-        "body": "Se obtiene por internet en pocos minutos de forma muy práctica, sin necesidad de filas ni complicaciones."
-      },
-      {
-        "title": "Elige la vigencia deseada",
-        "body": "Existen opciones por día, semana, mes y año. Para disfrutar de tu salida de pesca, la de un día es ideal."
-      },
-      {
-        "title": "Personal y digital",
-        "body": "Cada pescador lleva la suya a su nombre. Solo necesitas conservarla en tu celular en formato digital, no es indispensable imprimirla."
-      }
-    ],
-    "helpTitle": "¿Te gustaría que te apoyemos con el trámite?",
-    "helpBody": "¡Con todo gusto! Escríbenos antes de tu viaje y te guiaremos paso a paso para que tengas todo listo y solo te preocupes por disfrutar tu día en el mar.",
-    "cta": "Pedir asistencia por WhatsApp",
-    "whatsappMessage": "Hola, voy a salir a pescar con ustedes y me gustaría apoyo para tramitar mi licencia de CONAPESCA."
-  },
   "catalog": {
     "title": "Experiencias y Paquetes",
     "subtitle": "Aventuras completas diseñadas localmente. Elige tu destino y personaliza cada servicio a tu medida.",
@@ -904,6 +858,7 @@
   "hubContenido": {
     "titular": "Reserva en Baja con empresas locales",
     "subtexto": "Pesca, ballenas, hospedaje y traslados en cada sede. Cada empresa opera su servicio y cobra directo.",
+    "og": { "lugar": "Baja California Sur", "titular": "Reserva tu experiencia en la Baja Sur con empresas locales" },
     "ctaSedes": "Ver las sedes",
     "sedesTitulo": "Elige tu sede",
     "region": "Baja California Sur",
@@ -959,12 +914,6 @@
     "resetMap": "Restablecer mapa",
     "dragMap": "Arrastra para explorar",
     "closeDestination": "Cerrar destino",
-    "porQueHeadline": "Por qué Sun Baja Experience",
-    "pilares": [
-      { "titulo": "Alianzas locales de confianza", "texto": "Cada sede la opera gente de ahí: capitanes, guías y operadores que conocen su tramo de costa mejor que nadie." },
-      { "titulo": "Un solo lugar para reservar en toda Baja", "texto": "Explora y reserva experiencias en distintos destinos de Baja California Sur sin cambiar de sitio ni de proceso." },
-      { "titulo": "Atención personalizada", "texto": "El mismo trato cercano de siempre, ahora disponible en cada destino de la alianza." }
-    ],
     "meta": {
       "title": "Sun Baja Experience | Experiencias en Baja California Sur",
       "description": "Reserva pesca, avistamiento de ballenas, hospedaje y traslados en Baja California Sur con las empresas locales de cada sede."

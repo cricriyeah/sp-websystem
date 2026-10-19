@@ -133,30 +133,6 @@
     "verDetalles": "View details",
     "incluyeHospedaje": "Includes lodging"
   },
-  "about": {
-    "headline": "Your trusted local agency: passionate about the sea and your experience",
-    "body1": "We are a local sportfishing agency based in La Paz, run by local experts who deeply know, respect, and love these waters. We take care of every detail of your charter so that you and your party feel welcomed, supported, and free to enjoy an extraordinary day out on the sea.",
-    "body2": "Every trip is 100% private and tailored to your group. Whether you are holding a fishing rod for the very first time or are a seasoned angler, our friendly captains will guide you with patience, warmth, and skill, taking you to the most productive spots in the bay for an unforgettable adventure.",
-    "photoHint": "Smiling local captain holding a fresh catch, with La Paz in the background",
-    "facts": {
-      "duration": {
-        "value": "6 to 8 hours",
-        "label": "Adventure duration"
-      },
-      "departure": {
-        "value": "5:00 to 7:00 am",
-        "label": "Flexible departure of your choice"
-      },
-      "capacity": {
-        "value": "Up to 5 guests",
-        "label": "Private & family-friendly"
-      },
-      "season": {
-        "value": "365 days a year",
-        "label": "Departures available all year"
-      }
-    }
-  },
   "included": {
     "headline": "What is included in your experience",
     "intro": "We want you to feel completely at ease and well cared for. Here is a clear overview of what your private charter includes, recommended items to bring, and custom extras we can arrange for you.",
@@ -583,28 +559,6 @@
     "reject": "Decline",
     "more": "View privacy notice"
   },
-  "license": {
-    "headline": "Sportfishing licence guide",
-    "intro": "In Mexico, official regulations (CONAPESCA) require each angler on board to hold an individual sportfishing licence. Because it is an individual permit issued in your name, it is not included in the base fee, but we are happy to guide you to obtain it quickly and easily.",
-    "steps": [
-      {
-        "title": "100% online & quick",
-        "body": "You can get it online in just a few minutes with no hassle or lines required."
-      },
-      {
-        "title": "Choose your duration",
-        "body": "Options are available per day, week, month, or year. For a single charter trip, a 1-day permit is ideal."
-      },
-      {
-        "title": "Personal & digital",
-        "body": "Each angler carries their own permit. Keeping the digital file on your smartphone is completely sufficient; no printing required."
-      }
-    ],
-    "helpTitle": "Would you like assistance with your licence?",
-    "helpBody": "We're happy to help! Message us before your trip and we'll guide you step-by-step so everything is set for a wonderful day on the water.",
-    "cta": "Ask for assistance on WhatsApp",
-    "whatsappMessage": "Hi, I'm going fishing with you and would love some guidance on getting my CONAPESCA licence."
-  },
   "catalog": {
     "title": "Experiences & Packages",
     "subtitle": "Complete adventures curated locally. Choose your destination and customize every service to your preference.",
@@ -904,6 +858,7 @@
   "hubContenido": {
     "titular": "Book in Baja with local companies",
     "subtexto": "Fishing, whales, lodging and transfers at each location. Each company runs its service and charges directly.",
+    "og": { "lugar": "Baja California Sur", "titular": "Book your Baja Sur experience with local companies" },
     "ctaSedes": "See locations",
     "sedesTitulo": "Choose your location",
     "region": "Baja California Sur",
@@ -959,12 +914,6 @@
     "resetMap": "Reset map",
     "dragMap": "Drag to explore",
     "closeDestination": "Close destination",
-    "porQueHeadline": "Why Sun Baja Experience",
-    "pilares": [
-      { "titulo": "Trusted local partnerships", "texto": "Each destination is run by local people: captains, guides, and operators who know their stretch of coast better than anyone." },
-      { "titulo": "One place to book across Baja", "texto": "Explore and book experiences across different Baja California Sur destinations without switching sites or processes." },
-      { "titulo": "Personalized attention", "texto": "The same close, personal care as always, now available at every destination in the partnership." }
-    ],
     "meta": {
       "title": "Sun Baja Experience | Experiences in Baja California Sur",
       "description": "Book fishing, whale watching, lodging and transfers in Baja California Sur with the local companies at each location."

@@ -38,7 +38,7 @@ export default async function Image({ params }: { params: Promise<{ lang: string
           <div style={{ width: 64, height: 64, borderRadius: 999, background: '#7C3B02' }} />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 32, fontWeight: 700, color: '#1F1A14' }}>{dict.home.title}</span>
-            <span style={{ fontSize: 22, color: '#4A3F33' }}>{dict.nav.location}</span>
+            <span style={{ fontSize: 22, color: '#4A3F33' }}>{dict.hubContenido.og.lugar}</span>
           </div>
         </div>
 
@@ -52,12 +52,9 @@ export default async function Image({ params }: { params: Promise<{ lang: string
               maxWidth: 900,
             }}
           >
-            {[dict.hero.headlineStart, dict.hero.headlineEmphasis, dict.hero.headlineEnd].filter(Boolean).join(' ')}
+            {dict.hubContenido.og.titular}
           </span>
-          <span style={{ fontSize: 30, color: '#6B5D4D', maxWidth: 860 }}>
-            {dict.about.facts.duration.value} · {dict.about.facts.departure.value} ·{' '}
-            {dict.about.facts.capacity.value}
-          </span>
+          <span style={{ fontSize: 30, color: '#6B5D4D', maxWidth: 860 }}>{dict.hubContenido.subtexto}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 56, height: 12, borderRadius: 999, background: '#1B607F' }} />
             <div style={{ width: 56, height: 12, borderRadius: 999, background: '#F64A25' }} />
