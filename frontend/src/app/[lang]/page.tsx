@@ -18,7 +18,7 @@ import { HubPortada } from '@/components/hub-portada';
 import { HubGridSedes } from '@/components/hub-grid-sedes';
 import { HubMapaEscritorio } from '@/components/hub-mapa-escritorio';
 import type { VistaSedeHub } from '@/components/tarjeta-sede-hub';
-import { HubPorQue } from '@/components/hub-por-que';
+import { HubComoFunciona } from '@/components/hub-como-funciona';
 import { ColaboradoresSection } from '@/components/colaboradores-section';
 
 export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promise<Metadata> {
@@ -90,8 +90,8 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
       <section id={ANCLA_HUB.mapa} aria-label={textos.mapaTitulo} className="hidden scroll-mt-28 mx-auto max-w-[1440px] px-12 pb-12 lg:block">
         <HubMapaEscritorio lang={lang} sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, conLabel, verDestino }} />
       </section>
-      <HubPorQue id={ANCLA_HUB.comoFunciona} headline={dict.hub.aboutTitle} pilares={dict.hub.pilares} />
-      <ColaboradoresSection id={ANCLA_HUB.empresas} sedes={sedes} lang={lang} copy={dict.hub} />
+      <HubComoFunciona id={ANCLA_HUB.comoFunciona} titulo={textos.comoTitulo} texto={textos.comoTexto} pasos={textos.comoPasos} />
+      <ColaboradoresSection id={ANCLA_HUB.empresas} sedes={sedes} lang={lang} textos={textos} />
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={null} />
   </>;

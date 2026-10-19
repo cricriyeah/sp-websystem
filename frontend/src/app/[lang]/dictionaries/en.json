@@ -97,6 +97,7 @@
     "location": "La Paz, BCS",
     "inicio": "Home",
     "nosotros": "About us",
+    "comoFunciona": "How it works",
     "temporadas": "What's biting",
     "galeria": "Gallery",
     "preguntas": "FAQ",
@@ -931,7 +932,31 @@
     "conN": "With {a} and {n} more",
     "desde": "From",
     "verSede": "See {sede}",
-    "mapaTitulo": "The locations on the map"
+    "mapaTitulo": "The locations on the map",
+    "comoTitulo": "One place, several local companies",
+    "comoTexto": "We bring together, in one place, the services of each location's local companies. Each company runs its own service and charges you directly.",
+    "comoPasos": [
+      {
+        "titulo": "Pick your location and service",
+        "texto": "Each service shows which company runs it, what it costs and what it includes."
+      },
+      {
+        "titulo": "Book and pay in one go",
+        "texto": "Choose a date and group size, add your details and pay the company. If you combine services from two companies, you pay each one separately."
+      },
+      {
+        "titulo": "The company hosts you",
+        "texto": "Whoever runs your service meets you on the day. If bad weather stops the trip, you get a full refund."
+      }
+    ],
+    "empresasTitulo": "Who runs each service",
+    "empresasTexto": "Each company is independent: it runs its own service and charges directly.",
+    "verServiciosEn": "See services in {sede}",
+    "sitioOficial": "Official site",
+    "pestanaNueva": "{accion}, {empresa}, opens in a new tab",
+    "tambienConocida": "On its site: {nombre}",
+    "telefono": "Phone",
+    "whatsapp": "WhatsApp"
   },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",

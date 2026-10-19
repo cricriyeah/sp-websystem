@@ -97,6 +97,7 @@
     "location": "La Paz, BCS",
     "inicio": "Inicio",
     "nosotros": "Nosotros",
+    "comoFunciona": "Cómo funciona",
     "temporadas": "Qué se pesca",
     "galeria": "Galería",
     "preguntas": "Preguntas",
@@ -931,7 +932,31 @@
     "conN": "Con {a} y {n} más",
     "desde": "Desde",
     "verSede": "Ver {sede}",
-    "mapaTitulo": "Las sedes en el mapa"
+    "mapaTitulo": "Las sedes en el mapa",
+    "comoTitulo": "Un lugar, varias empresas",
+    "comoTexto": "Reunimos en un solo lugar los servicios de las empresas locales de cada sede. Cada empresa opera su servicio y cobra directo.",
+    "comoPasos": [
+      {
+        "titulo": "Elige tu sede y tu servicio",
+        "texto": "Cada servicio muestra qué empresa lo opera, cuánto cuesta y qué incluye."
+      },
+      {
+        "titulo": "Reserva y paga en un solo trámite",
+        "texto": "Eliges fecha y personas, dejas tus datos y pagas a la empresa. Si combinas servicios de dos empresas, pagas a cada una por separado."
+      },
+      {
+        "titulo": "La empresa te atiende",
+        "texto": "Quien opera tu servicio te recibe el día del viaje. Si el mal clima impide salir, hay reembolso completo."
+      }
+    ],
+    "empresasTitulo": "Quién opera cada servicio",
+    "empresasTexto": "Cada empresa es independiente: opera su servicio y cobra directo.",
+    "verServiciosEn": "Ver servicios en {sede}",
+    "sitioOficial": "Sitio oficial",
+    "pestanaNueva": "{accion}, {empresa}, se abre en una pestaña nueva",
+    "tambienConocida": "En su sitio: {nombre}",
+    "telefono": "Teléfono",
+    "whatsapp": "WhatsApp"
   },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",

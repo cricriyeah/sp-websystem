@@ -1,54 +1,62 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { ArrowUpRight } from '@phosphor-icons/react/ssr';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
 import { hrefSede } from '@/lib/routes';
+import { ANCLA_DE } from '@/lib/secciones-sede';
+import { FilaEmpresa, type VistaEmpresa } from '@/components/fila-empresa';
 
-/** One brand per company, even when it collaborates with several destinations. */
-export function ColaboradoresSection({ sedes, lang, copy, id }: {
-  sedes: SedeContenido[]; lang: Locale; copy: Dictionary['hub']; id: string;
+type Textos = Dictionary['hubContenido'];
+
+/**
+ * «Quién opera cada servicio», solo en el hub: una fila por empresa, aunque opere en varias
+ * sedes. Todo sale de `empresas.ts`; sin descripción no hay fila, sin redes solo el enlace
+ * interno y el sitio externo solo si el dueño lo confirmó al día.
+ *
+ * Server Component.
+ */
+export function ColaboradoresSection({ sedes, lang, textos, id }: {
+  sedes: SedeContenido[]; lang: Locale; textos: Textos; id: string;
 }) {
-  const marcas = new Map<string, { nombre: string; logo: string | null; web?: string; redes?: { nombre: string; url: string }[]; sedes: SedeContenido[] }>();
+  const filas = new Map<string, VistaEmpresa>();
   for (const sede of sedes) {
-    // La protagonista primero y luego las demás; los datos de cada una salen de `empresas.ts`.
+    // La protagonista primero y luego las demás.
     const slugs = [...(sede.empresaProtagonistaSlug ? [sede.empresaProtagonistaSlug] : []), ...sede.otrasEmpresas];
     for (const empresa of slugs.map(getEmpresa)) {
       if (!empresa) continue;
-      const existente = marcas.get(empresa.slug);
+      const enlace = { nombre: sede.nombre, href: hrefSede(lang, sede.slug, ANCLA_DE.reservar) };
+      const existente = filas.get(empresa.slug);
       if (existente) {
-        if (!existente.sedes.some(s => s.slug === sede.slug)) existente.sedes.push(sede);
-      } else marcas.set(empresa.slug, {
+        if (!existente.sedes.some((s) => s.href === enlace.href)) existente.sedes.push(enlace);
+        continue;
+      }
+      const foto = empresa.fotos.find((f) => f.propia);
+      filas.set(empresa.slug, {
+        slug: empresa.slug,
         nombre: empresa.nombre,
-        logo: empresa.logo ?? null,
-        // Solo se enlaza un sitio que el dueño confirmó al día.
+        logo: empresa.logo,
+        sedes: [enlace],
+        tambienConocidaComo: empresa.tambienConocidaComo,
+        descripcion: empresa.descripcion[lang],
+        redes: empresa.redes.filter((red) => /instagram|facebook/i.test(red.nombre)),
         web: empresa.webConfirmada ? empresa.web : undefined,
-        redes: empresa.redes,
-        sedes: [sede],
+        contacto: empresa.contacto,
+        foto: foto ? { src: foto.src, alt: foto.alt[lang] } : null,
       });
     }
   }
-  if (marcas.size === 0) return null;
+  const visibles = [...filas.values()].filter((fila) => fila.descripcion.trim());
+  if (visibles.length === 0) return null;
+
   return (
-    <section id={id} className="scroll-mt-28 border-t border-border bg-surface py-16">
-      <div className="mx-auto max-w-[1440px] px-6 sm:px-8 lg:px-12">
-        <h2 className="texto-seccion text-foreground">{copy.partnersTitle}</h2>
-        <p className="mt-4 max-w-2xl text-muted">{copy.partnersIntro}</p>
-        <div className="mt-10 grid gap-x-12 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-          {[...marcas].map(([slug, marca]) => (
-            <article key={slug} className="flex flex-col items-start gap-4 border-t border-border py-6">
-              {marca.logo ? <Image src={marca.logo} alt={marca.nombre} width={210} height={90} className="h-20 w-52 object-contain object-left" /> : <h3 className="flex min-h-20 items-center text-2xl text-foreground">{marca.nombre}</h3>}
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {marca.sedes.map(sede => <Link key={sede.slug} href={hrefSede(lang, sede.slug)} className="text-sm text-muted underline underline-offset-4 hover:text-accent">{sede.nombre}</Link>)}
-              </div>
-              <div className="flex flex-wrap gap-4 text-sm text-accent">
-                {marca.web && <a href={marca.web} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4">{copy.websiteLabel}<ArrowUpRight size={14} /></a>}
-                {marca.redes?.map(red => <a key={red.url} href={red.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4">{red.nombre}<ArrowUpRight size={14} /></a>)}
-              </div>
-            </article>
+    <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-[calc(var(--nav-alto)+16px)] border-t border-borde bg-superficie py-12 sm:py-16 lg:py-24">
+      <div className="mx-auto max-w-[1120px] px-4 sm:px-6 lg:px-8">
+        <h2 id={`${id}-titulo`} className="max-w-[16ch] texto-seccion text-foreground">{textos.empresasTitulo}</h2>
+        <p className="mt-4 max-w-[60ch] texto-cuerpo text-tinta-suave">{textos.empresasTexto}</p>
+        <ul className="mt-8 divide-y divide-borde border-t border-borde">
+          {visibles.map((empresa) => (
+            <FilaEmpresa key={empresa.slug} empresa={empresa} textos={textos} />
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

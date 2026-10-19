@@ -25,7 +25,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
     : [
         { href: hrefInicio(lang, ANCLA_HUB.mapa), label: nav.mapa },
         { href: hrefInicio(lang, ANCLA_HUB.sedes), label: nav.sedes },
-        { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.nosotros },
+        { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.comoFunciona },
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
       ];
 

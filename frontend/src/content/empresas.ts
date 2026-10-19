@@ -54,8 +54,8 @@ export const EMPRESAS: readonly Empresa[] = [
     ...marca('sal-y-sol'),
     sede: 'la-paz',
     descripcion: {
-      es: 'Pesca deportiva en la bahía de La Paz con capitanes locales. Salimos de Marina La Costa en pangas privadas para tu grupo.',
-      en: 'Sportfishing in the Bay of La Paz with local captains. Private pangas for your group, leaving from Marina La Costa.',
+      es: 'Pesca deportiva en La Paz con capitanes locales. Salidas privadas desde Marina La Costa.',
+      en: 'Sportfishing in La Paz with local captains. Private trips from Marina La Costa.',
     },
     webConfirmada: false,
     redes: [],
@@ -66,8 +66,8 @@ export const EMPRESAS: readonly Empresa[] = [
     ...marca('transporte-la-paz'),
     sede: 'la-paz',
     descripcion: {
-      es: 'Traslados privados en La Paz y Baja California Sur: del aeropuerto a tu hospedaje, a tus actividades y de regreso.',
-      en: 'Private transfers in La Paz and Baja California Sur: from the airport to your lodging, to your activities and back.',
+      es: 'Transporte turístico y privado en La Paz: traslados a aeropuerto y hospedajes, y transporte para eventos.',
+      en: 'Tourist and private transport in La Paz: airport and lodging transfers, and transport for events.',
     },
     web: 'https://www.juanviajes.com/',
     webConfirmada: true,
@@ -84,8 +84,8 @@ export const EMPRESAS: readonly Empresa[] = [
     ...marca('la-ventana-travel'),
     sede: 'la-ventana',
     descripcion: {
-      es: 'Operador local en La Ventana, Baja California Sur: pesca con mosca, avistamiento de ballenas y orcas, hospedaje y traslado desde el aeropuerto.',
-      en: 'Local outfitter in La Ventana, Baja California Sur: fly fishing, whale and orca watching, lodging and airport transfers.',
+      es: 'Pesca con mosca, avistamiento de ballenas y orcas, hospedaje, traslado de aeropuerto y paquetes de varios días.',
+      en: 'Fly fishing, whale and orca watching, lodging, airport transfers and multi-day packages.',
     },
     web: 'https://laventanatravel.com/',
     webConfirmada: true,

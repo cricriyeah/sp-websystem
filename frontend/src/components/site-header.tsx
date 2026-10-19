@@ -99,7 +99,7 @@ export function SiteHeader({
     : [
         { href: hrefInicio(lang, ANCLA_HUB.mapa), label: nav.mapa },
         { href: hrefInicio(lang, ANCLA_HUB.sedes), label: nav.sedes },
-        { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.nosotros },
+        { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.comoFunciona },
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
       ];
   if (baseSede && links.length === 0) links.push({ href: baseSede, label: nav.reservar });
