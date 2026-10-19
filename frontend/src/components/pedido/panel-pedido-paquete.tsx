@@ -109,7 +109,10 @@ export function PanelPedidoPaquete({
       onCaptchaToken={onCaptchaToken}
     />
   ) : actual === 'pago' ? (
-    <AvisoProblema checkout={checkout} feedback={feedback} tipo="catalogo_caido" ayudaMensaje={ayudaMensaje} />
+    // En móvil este aviso es la pantalla «Cómo pagas» misma (PedidoPaquete): aquí solo en escritorio.
+    <div className="max-sm:hidden">
+      <AvisoProblema checkout={checkout} feedback={feedback} tipo="catalogo_caido" ayudaMensaje={ayudaMensaje} />
+    </div>
   ) : (
     // Antes del pago, sin precio es un pedido a medias (p. ej. falta elegir la zona de una dirección
     // escrita), no un servicio caído: no se alarma al cliente, el resumen aparece al completarlo.

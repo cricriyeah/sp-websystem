@@ -9,6 +9,7 @@ import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
+import { AvisoProblema } from '@/components/checkout/aviso-problema';
 import { useToast } from '@/components/toast';
 import { AsistenteMovil } from '@/components/reserva/asistente-movil';
 import { useMovil } from '@/components/reserva/use-movil';
@@ -700,7 +701,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           alPulsar: () => { if (confirmarDatos()) asistente.avanzar(); },
         } };
       default:
-        return { titulo: checkout.howYouPay, contenido: <div ref={setDestinoTarjetaPago} /> };
+        // Sin precio en Pago el catálogo no responde: la pantalla es el aviso, sin botón que no sirve.
+        return { titulo: checkout.howYouPay, contenido: pedido
+          ? <div ref={setDestinoTarjetaPago} />
+          : <AvisoProblema checkout={checkout} feedback={feedback} tipo="catalogo_caido" ayudaMensaje={ayudaMensaje} /> };
     }
   })();
   const asistenteMovil = (
