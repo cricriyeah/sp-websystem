@@ -307,6 +307,14 @@ export type Sede = {
   slug: string;
   zona_horaria: string;
   tipo_cambio_usd: string;
+  /**
+   * Lo que pinta la tarjeta del hub, calculado en el backend (USD hacia arriba, sin por ruta).
+   * Opcional hasta que el backend lo despliegue; sin él la tarjeta no lleva chips ni «desde».
+   */
+  resumen?: {
+    desde: { monto_mxn: string; monto_usd: string; base: string; tipo: 'servicio' | 'paquete' } | null;
+    tipos: string[];
+  };
 };
 
 export type ServicioPersonalizacionCatalogo = {

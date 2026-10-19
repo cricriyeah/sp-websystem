@@ -13,6 +13,11 @@ type HeroMediaProps = {
   preload?: boolean;
   /** `object-position` de la imagen y del video, para encuadrar distinto por sede. */
   objectPosition?: string;
+  /**
+   * `pantalla` (por defecto): alto mínimo de 70-80 % de la pantalla. `contenido`: el alto lo da el
+   * contenido, con tope para que lo de abajo asome al menos 120 px (héroe del hub).
+   */
+  alto?: 'pantalla' | 'contenido';
   /** Contenido del héroe (título, subtítulo, selector…), apilado sobre el degradado. */
   children: ReactNode;
 };
@@ -26,7 +31,7 @@ type HeroMediaProps = {
  *
  * Server Component: no necesita JavaScript propio.
  */
-export function HeroMedia({ imagen, video, alt, preload = false, objectPosition, children }: HeroMediaProps) {
+export function HeroMedia({ imagen, video, alt, preload = false, objectPosition, alto = 'pantalla', children }: HeroMediaProps) {
   const posicion = objectPosition ? { objectPosition } : undefined;
   return (
     <div className="relative w-full overflow-hidden">
@@ -46,7 +51,13 @@ export function HeroMedia({ imagen, video, alt, preload = false, objectPosition,
       ) : null}
       <div className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
 
-      <div className="relative flex min-h-[70dvh] flex-col justify-end lg:min-h-[80dvh]">
+      <div
+        className={
+          alto === 'pantalla'
+            ? 'relative flex min-h-[70dvh] flex-col justify-end lg:min-h-[80dvh]'
+            : 'relative flex max-h-[calc(100svh-var(--nav-alto)-120px)] flex-col justify-end'
+        }
+      >
         {children}
       </div>
     </div>

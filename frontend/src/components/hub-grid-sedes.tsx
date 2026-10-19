@@ -1,57 +1,28 @@
-import Image from 'next/image';
-import { botonClases } from '@/components/ui/variantes';
-import Link from 'next/link';
-import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { marcaDe } from '@/content/empresas-marca';
-import type { SedeContenido } from '@/content/sedes-tipos';
-import { hrefSede } from '@/lib/routes';
+import { TarjetaSedeHub, type VistaSedeHub } from '@/components/tarjeta-sede-hub';
+import { cn } from '@/components/ui/cn';
 
 type HubGridSedesProps = {
-  lang: Locale;
-  sedes: SedeContenido[];
-  copy: Dictionary['hub'];
+  sedes: VistaSedeHub[];
+  textos: { region: string; desde: string; verSede: string };
 };
 
 /**
- * Respaldo accesible/SEO del mapa (spec §5.3): las mismas sedes en tarjetas
- * normales, sin depender de JS ni de interaccion con el SVG.
+ * Las sedes en tarjetas: en móvil son el selector (el mapa es solo de escritorio). Una columna
+ * en 360 px; dos en 768 px, y si son tres la tercera ocupa las dos para no dejar una celda
+ * vacía; tres iguales y de la misma altura desde 1280 px.
  */
-export function HubGridSedes({ lang, sedes, copy }: HubGridSedesProps) {
+export function HubGridSedes({ sedes, textos }: HubGridSedesProps) {
+  const tercera = sedes.length === 3 ? 2 : -1;
   return (
-    <div className="scroll-mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {sedes.map((sede) => (
-        <article
+    <div className="grid gap-4 md:grid-cols-2 md:gap-6 xl:auto-rows-fr xl:grid-cols-3">
+      {sedes.map((sede, i) => (
+        <TarjetaSedeHub
           key={sede.slug}
-          className="flex flex-col overflow-hidden rounded-card border border-border bg-card"
-        >
-          <div className="relative h-48 w-full">
-            {sede.hero.imagen && (
-              <Image
-                src={sede.hero.imagen}
-                alt={sede.nombre}
-                fill
-                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                className="object-cover"
-              />
-            )}
-          </div>
-          <div className="flex flex-1 flex-col gap-2 p-6">
-            <h3 className="text-xl font-bold text-foreground">
-              {sede.nombre}
-            </h3>
-            {marcaDe(sede.empresaProtagonistaSlug) && (
-              <p className="text-sm text-muted">
-                {copy.conLabel} {marcaDe(sede.empresaProtagonistaSlug)?.nombre}
-              </p>
-            )}
-            <Link
-              href={hrefSede(lang, sede.slug)}
-              className={`mt-4 w-fit ${botonClases({ variante: 'principal' })}`}
-            >
-              {copy.verDestino}
-            </Link>
-          </div>
-        </article>
+          vista={sede}
+          textos={textos}
+          horizontalEnMd={i === tercera}
+          className={cn(i === tercera && 'md:col-span-2 xl:col-span-1')}
+        />
       ))}
     </div>
   );

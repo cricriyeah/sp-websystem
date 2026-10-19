@@ -920,6 +920,19 @@
     "galeria": "Fotos de los viajes",
     "faq": "Preguntas frecuentes"
   },
+  "hubContenido": {
+    "titular": "Reserva en Baja California Sur con las empresas locales",
+    "subtexto": "Pesca, ballenas, hospedaje y traslados en cada sede. Cada empresa opera su servicio y cobra directo.",
+    "ctaSedes": "Ver las sedes",
+    "sedesTitulo": "Elige tu sede",
+    "region": "Baja California Sur",
+    "con1": "Con {a}",
+    "con2": "Con {a} y {b}",
+    "conN": "Con {a} y {n} más",
+    "desde": "Desde",
+    "verSede": "Ver {sede}",
+    "mapaTitulo": "Las sedes en el mapa"
+  },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",
     "headline": "Tu próxima experiencia empieza en Baja",

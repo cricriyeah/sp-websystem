@@ -84,7 +84,8 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
           <nav aria-label={footer.exploreLabel} className="flex flex-col gap-3">
             <span className="text-sm font-semibold text-muted">{footer.exploreLabel}</span>
             {secciones.map((link) => (
-              <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center text-base text-foreground">
+              // El mapa solo existe desde 1024 px.
+              <Link key={link.href} href={link.href} className={`${link.href.endsWith(`#${ANCLA_HUB.mapa}`) ? 'hidden lg:inline-flex' : 'inline-flex'} min-h-11 items-center text-base text-foreground`}>
                 {link.label}
               </Link>
             ))}

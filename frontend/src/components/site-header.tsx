@@ -187,7 +187,8 @@ export function SiteHeader({
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className={`absolute inset-x-0 top-full flex flex-col rounded-b-card border border-t-0 border-border bg-arena px-4 py-2 shadow-n2 sm:px-6 lg:mt-2 lg:rounded-card lg:border-t xl:hidden`}
             >
-              {links.map((link) => (
+              {/* El mapa solo existe desde 1024 px: el menú móvil no lo ofrece. */}
+              {links.filter((link) => !link.href.endsWith(`#${ANCLA_HUB.mapa}`)).map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
