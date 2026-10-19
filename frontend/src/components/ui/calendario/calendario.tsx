@@ -178,6 +178,21 @@ export function Calendario({
         enTarjeta && 'lg:rounded-none lg:border-0 lg:p-0',
       )}
     >
+      <Atajos
+        hoy={hoy}
+        minDate={minDate}
+        haySeleccion={seleccion.desde !== null}
+        onBorrar={() => {
+          setPrevia(null);
+          onSeleccion({ desde: null, hasta: null });
+        }}
+        onElegir={(iso) => {
+          setMes(inicioDeMes(iso));
+          puntero.current = 'mouse';
+          tocar(iso);
+        }}
+        textos={textos}
+      />
       <div className="flex items-center justify-between gap-2">
         <Button
           variante="libre"
@@ -185,17 +200,17 @@ export function Calendario({
           onClick={() => cambiarMes(-1)}
           disabled={mes <= primerMes}
           aria-label={textos.mesAnterior}
-          className="flex size-11 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-cafe-bruma disabled:opacity-40"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-cafe-bruma disabled:opacity-40"
         >
           <CaretLeft size={20} weight="bold" aria-hidden />
         </Button>
-        <p className="texto-etiqueta text-foreground first-letter:capitalize" aria-live="polite">{etiquetaMes}</p>
+        <p className="text-xl font-semibold text-foreground first-letter:capitalize" aria-live="polite">{etiquetaMes}</p>
         <Button
           variante="libre"
           type="button"
           onClick={() => cambiarMes(1)}
           aria-label={textos.mesSiguiente}
-          className="flex size-11 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-cafe-bruma"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-cafe-bruma"
         >
           <CaretRight size={20} weight="bold" aria-hidden />
         </Button>
@@ -277,21 +292,6 @@ export function Calendario({
         </div>
       )}
 
-      <Atajos
-        hoy={hoy}
-        minDate={minDate}
-        haySeleccion={seleccion.desde !== null}
-        onBorrar={() => {
-          setPrevia(null);
-          onSeleccion({ desde: null, hasta: null });
-        }}
-        onElegir={(iso) => {
-          setMes(inicioDeMes(iso));
-          puntero.current = 'mouse';
-          tocar(iso);
-        }}
-        textos={textos}
-      />
       <Leyenda control={control} conCupo={conCupo} marcaHoy={hoy >= mes && hoy < moverMes(mes, 1)} textos={textos.leyenda} />
     </div>
   );

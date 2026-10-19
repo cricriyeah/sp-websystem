@@ -121,6 +121,8 @@ Tres segmentos de 4 px de alto y radio completo, 8 de espacio entre ellos, ancho
 
 Una fila de 48 de alto (área táctil; la píldora visual es de 40) sobre la barra inferior que dice «Ver resumen · $4,100 MXN» y abre una hoja modal con el resumen completo. Es la única manera de ver los cargos de dos empresas en móvil sin ocupar pantalla.
 
+Implementación (2026-10-19): la fila de 48 existe (`BarraInferior`, `min-h-12`, con caret hacia arriba y «Estimado» antes del pago), pero **sin la píldora visual de 40**: la fila entera es el botón. Queda pendiente de que el dueño decida si se añade.
+
 ---
 
 ## Contención
