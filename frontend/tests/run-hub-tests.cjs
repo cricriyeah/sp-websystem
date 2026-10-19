@@ -43,6 +43,7 @@ const suites = {
   'pantallas-checkout': ['src/lib/pantallas-checkout.ts', 'PANTALLAS_CHECKOUT_TEST_OUT'],
   'control-fecha': ['src/lib/control-fecha.ts', 'CONTROL_FECHA_TEST_OUT'],
   'rango-paquete': ['src/lib/rango-paquete.ts', 'RANGO_PAQUETE_TEST_OUT'],
+  'calendario-mes': ['src/lib/calendario-mes.ts', 'CALENDARIO_MES_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

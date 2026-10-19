@@ -369,6 +369,29 @@
       "catalogo_caido": { "titulo": "This service is not available right now", "cuerpo": "Try again in a few minutes.", "accion": "Try again", "whatsapp": "Message us on WhatsApp", "volver": "Back" },
       "dato_previo": { "titulo": "One detail needs fixing", "cuerpo": "Check {dato} in {paso}.", "accion": "Fix {dato}" }
     },
+    "calendario": {
+      "mesAnterior": "Previous month",
+      "mesSiguiente": "Next month",
+      "sinLugar": "That day has no space left. Choose another.",
+      "noReservable": "Not available to book",
+      "consultando": "Checking availability…",
+      "errorCupo": "We couldn't check availability. You can choose your date and we'll confirm it at checkout.",
+      "reintentar": "Try again",
+      "borrar": "Clear date",
+      "manana": "Tomorrow",
+      "en2": "In 2 days",
+      "antesDelMinimo": "Tomorrow can no longer be booked: choose another day.",
+      "anuncioRango": "From {desde} to {hasta} · {noches} nights",
+      "anuncioIdaRegreso": "Out on {desde}, back on {hasta}",
+      "leyenda": {
+        "disponible": "Available",
+        "sinCupo": "Full",
+        "seleccion": "Your choice",
+        "vistaPrevia": "Preview",
+        "rango": "Your stay",
+        "hoy": "Today"
+      }
+    },
     "barra": {
       "verResumen": "View summary",
       "estimado": "Estimate",

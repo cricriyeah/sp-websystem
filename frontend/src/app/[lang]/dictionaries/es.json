@@ -369,6 +369,29 @@
       "catalogo_caido": { "titulo": "Este servicio no está disponible por ahora", "cuerpo": "Intenta de nuevo en unos minutos.", "accion": "Reintentar", "whatsapp": "Escribirnos por WhatsApp", "volver": "Volver" },
       "dato_previo": { "titulo": "Falta corregir un dato", "cuerpo": "Revisa {dato} en {paso}.", "accion": "Corregir {dato}" }
     },
+    "calendario": {
+      "mesAnterior": "Mes anterior",
+      "mesSiguiente": "Mes siguiente",
+      "sinLugar": "Ese día ya no tiene lugar. Elige otro.",
+      "noReservable": "No se puede reservar",
+      "consultando": "Consultando disponibilidad…",
+      "errorCupo": "No pudimos consultar el cupo. Puedes elegir tu fecha y lo confirmamos al pagar.",
+      "reintentar": "Reintentar",
+      "borrar": "Borrar fecha",
+      "manana": "Mañana",
+      "en2": "En 2 días",
+      "antesDelMinimo": "Para mañana ya no se puede reservar: elige otro día.",
+      "anuncioRango": "Del {desde} al {hasta} · {noches} noches",
+      "anuncioIdaRegreso": "Ida el {desde}, regreso el {hasta}",
+      "leyenda": {
+        "disponible": "Disponible",
+        "sinCupo": "Sin cupo",
+        "seleccion": "Tu selección",
+        "vistaPrevia": "Vista previa",
+        "rango": "Tu estancia",
+        "hoy": "Hoy"
+      }
+    },
     "barra": {
       "verResumen": "Ver resumen",
       "estimado": "Estimado",
