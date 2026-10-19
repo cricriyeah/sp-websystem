@@ -83,17 +83,11 @@ export function CheckoutSectionCard({
   const [enTransicion, setEnTransicion] = useState(false);
   const enAsistente = useEnAsistente();
 
-  // Dentro de una pantalla del asistente móvil la tarjeta no tiene marco ni título (los pone la
-  // pantalla) y una respuesta ya dada no se pinta: solo queda su contenido, y su botón si la
-  // pantalla no trae «Continuar» propio.
-  if (enAsistente.activo) {
+  // Dentro de una pantalla del asistente móvil la tarjeta no tiene marco, título ni pie: la pantalla
+  // pone el título y el botón vive en la barra. Una respuesta ya dada no se pinta.
+  if (enAsistente) {
     if (!abierto) return null;
-    return (
-      <div className="flex flex-col gap-5">
-        {children}
-        {pie && enAsistente.conPieDeTarjeta && <PieDeTarjeta titulo={title}>{pie}</PieDeTarjeta>}
-      </div>
-    );
+    return <div className="flex flex-col gap-5">{children}</div>;
   }
 
   const encabezado = (

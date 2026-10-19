@@ -376,7 +376,9 @@
       "continuar": "Continue",
       "tarjeta": "Your card details",
       "fechaTraslado": "Which day?",
-      "horaPasajeros": "Time and passengers"
+      "horaPasajeros": "Time and passengers",
+      "continuarTarjeta": "Continue to card",
+      "cargandoPago": "Loading the payment form…"
     },
     "tituloPagina": {
       "pesca": "Book your fishing trip",

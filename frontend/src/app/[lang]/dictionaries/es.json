@@ -376,7 +376,9 @@
       "continuar": "Continuar",
       "tarjeta": "Datos de tu tarjeta",
       "fechaTraslado": "¿Qué día?",
-      "horaPasajeros": "Hora y pasajeros"
+      "horaPasajeros": "Hora y pasajeros",
+      "continuarTarjeta": "Continuar a la tarjeta",
+      "cargandoPago": "Cargando el formulario de pago…"
     },
     "tituloPagina": {
       "pesca": "Reserva tu pesca",

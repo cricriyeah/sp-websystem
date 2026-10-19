@@ -13,6 +13,8 @@ import { ErrorDeCampo, FieldError, propsDeError } from '@/components/ui/error-de
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Turnstile } from '@/components/turnstile';
+import { usePublicarAccion } from '@/components/reserva/contexto-barra';
+import { useMovil } from '@/components/reserva/use-movil';
 import { WaitNotice } from '@/components/wait-notice';
 
 /**
@@ -55,6 +57,15 @@ export function TarjetaComoPagas({
   const [promoAbierto, setPromoAbierto] = useState(false);
   const pagoCreado = phase === 'payment';
   const abierta = phase !== 'payment' && phase !== 'unavailable';
+  // En móvil el botón vive en la barra inferior; en escritorio, en el pie de la tarjeta.
+  const movil = useMovil();
+  usePublicarAccion(movil && abierta ? {
+    etiqueta: etiquetaBotonEnvio ?? checkout.barra.continuarTarjeta,
+    alPulsar: onSubmit,
+    deshabilitado: submitDisabled,
+    cargando: phase === 'submitting',
+    etiquetaCargando: checkout.submitting,
+  } : null, 'contenido');
 
   const resumen = [
     moneda,
@@ -63,7 +74,7 @@ export function TarjetaComoPagas({
       : null,
   ].filter(Boolean).join(' · ');
 
-  const cta = abierta ? (
+  const cta = abierta && !movil ? (
     <Button
       onClick={onSubmit}
       disabled={submitDisabled}

@@ -5,11 +5,13 @@ import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { FormularioPagoDiferido } from '@/components/checkout/pago/pago-diferido';
+import { AsistenteMovil } from '@/components/reserva/asistente-movil';
+import { useMovil } from '@/components/reserva/use-movil';
 import { StripePanel } from '@/components/stripe-panel';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import { fechaDeComponente } from '@/lib/calendario-paquete';
 import type { ComponentePedido } from '@/lib/pedido-payload';
-import { numeroDePaso } from '@/lib/pasos-checkout';
+import { numeroDePaso, rotuloDePaso } from '@/lib/pasos-checkout';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { EncabezadoPago } from './encabezado-pago';
 import { ReservaPlegable } from './reserva-plegable';
@@ -66,6 +68,7 @@ export function PantallaPago({
   lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
+  const movil = useMovil();
   const pasoPago = pago.pagos[pago.indice];
   if (!pasoPago) return null;
   const n = cantidadCargos || pago.pagos.length;
@@ -85,6 +88,40 @@ export function PantallaPago({
     : textos.payButton.replace('{amount}', monto).replace('{empresa}', etiqueta)
       .replace('{n}', String(pago.indice + 1)).replace('{total}', String(n));
 
+  // Cruza-empresa: la secuencia de pagos vive en un solo componente que se remonta por empresa.
+  const formulario = (
+    <FormularioPagoDiferido
+      lang={lang}
+      key={pasoPago.empresaSlug}
+      checkout={checkout}
+      feedback={feedback}
+      ayudaMensaje={ayudaMensaje}
+      pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
+      venceEn={pasoPago.venceEn}
+      encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} total={totalConMoneda ?? undefined} />}
+      etiquetaBotonPago={etiquetaBotonPago}
+      apartadoHasta={pago.apartadoHasta}
+      antesDePagar={motor === 'reserva' ? pago.antesDePagar : undefined}
+      onPagoConfirmado={pago.onPagoConfirmado}
+      onPagoRechazado={pago.onPagoRechazado}
+    />
+  );
+  // Móvil: una pantalla por cobro. La primera línea dice cuál es, a quién y cuánto.
+  const pantallaMovil = (
+    <AsistenteMovil
+      id={`tarjeta-${pago.indice}`}
+      titulo={checkout.barra.tarjeta}
+      antetitulo={n > 1
+        ? `${textos.payStep.replace('{n}', String(pago.indice + 1)).replace('{total}', String(n))} · ${etiqueta} · ${monto} ${moneda}`
+        : undefined}
+      soloFundido
+      anuncio={`${rotuloDePaso(checkout.stepper.stepOf, 'pago')}: ${checkout.stepper.pago}`}
+      accion={{ etiqueta: etiquetaBotonPago, alPulsar: () => {}, deshabilitado: true, razon: checkout.barra.cargandoPago }}
+    >
+      {formulario}
+    </AsistenteMovil>
+  );
+
   return (
     <PaginaCheckout
       lang={lang}
@@ -103,7 +140,7 @@ export function PantallaPago({
         // Un solo cobro con anticipo: la cifra del paso es el anticipo, no el total.
         ? { actual: numeroDePaso('pago'), totalMovil: `${monto} ${moneda}`, rotulo: checkout.stepper.payNow, totalGeneral: `${totalPago} ${moneda}` }
         : { actual: numeroDePaso('pago'), totalMovil })}
-      pasos={
+      pasos={movil ? pantallaMovil : (
         <>
           {/* Retomada desde el servidor: sin Viaje ni Datos inventados; solo el pago y su resumen. */}
           {!pago.retomado && (
@@ -165,23 +202,9 @@ export function PantallaPago({
           {/* El pago es el cuarto paso: su tarjeta va justo debajo de las
               respuestas ya dadas. En cruza-empresa se remonta por empresa
               (cada una cobra con su propia clave y secreto). */}
-          <FormularioPagoDiferido
-            lang={lang}
-            key={pasoPago.empresaSlug}
-            checkout={checkout}
-            feedback={feedback}
-            ayudaMensaje={ayudaMensaje}
-            pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
-            venceEn={pasoPago.venceEn}
-            encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} total={totalConMoneda ?? undefined} />}
-            etiquetaBotonPago={etiquetaBotonPago}
-            apartadoHasta={pago.apartadoHasta}
-            antesDePagar={motor === 'reserva' ? pago.antesDePagar : undefined}
-            onPagoConfirmado={pago.onPagoConfirmado}
-            onPagoRechazado={pago.onPagoRechazado}
-          />
+          {formulario}
         </>
-      }
+      )}
       pedido={
         <StripePanel
           key={pasoPago.empresaSlug}

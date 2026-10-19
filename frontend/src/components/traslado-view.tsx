@@ -839,7 +839,9 @@ export function TrasladoView({
       case 'como-pagas':
         return { titulo: checkout.howYouPay, contenido: bloqueTarjetaPago(true, null) };
       default:
-        return { titulo: checkout.barra.tarjeta, contenido: bloqueTarjetaPago(false, phase === 'payment' ? pago : null) };
+        return { titulo: checkout.barra.tarjeta, contenido: bloqueTarjetaPago(false, phase === 'payment' ? pago : null), accion: {
+          etiqueta: checkout.confirmPay, alPulsar: () => {}, deshabilitado: true, razon: checkout.barra.cargandoPago,
+        } };
     }
   })();
   const asistenteMovil = (

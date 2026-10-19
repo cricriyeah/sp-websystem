@@ -18,30 +18,37 @@ export type AccionBarra = {
   etiquetaCargando?: string;
 };
 
+/** Lo que publica quien tiene el botón: la acción tal cual, sin la función estable. */
+export type AccionPublicable = Omit<AccionBarra, 'ejecutar'> & { alPulsar: () => void };
+
 type Valores = {
-  /** Sitio de la barra donde se pinta el botón único del paso (null fuera de móvil o sin barra). */
-  destino: HTMLElement | null;
   resumen: ResumenVivo | null;
+  /** El botón de la pantalla (`AsistenteMovil`): «Continuar», o un pago que todavía carga. */
   accion: AccionBarra | null;
+  /**
+   * El botón que aporta el contenido de la pantalla y que manda sobre el de la pantalla: «Cómo
+   * pagas» (crea el pago) y el formulario de Stripe (cobra; vive dentro de `<Elements>`).
+   */
+  accionContenido: AccionBarra | null;
 };
 
 type Registro = {
-  setDestino: (nodo: HTMLElement | null) => void;
   setResumen: (resumen: ResumenVivo) => void;
   setAccion: (accion: AccionBarra | null) => void;
+  setAccionContenido: (accion: AccionBarra | null) => void;
 };
 
-const ContextoValores = createContext<Valores>({ destino: null, resumen: null, accion: null });
+const ContextoValores = createContext<Valores>({ resumen: null, accion: null, accionContenido: null });
 // Aparte y estable: quien registra (el resumen del panel) no se vuelve a pintar cuando cambia un valor.
-const ContextoRegistro = createContext<Registro>({ setDestino: () => {}, setResumen: () => {}, setAccion: () => {} });
+const ContextoRegistro = createContext<Registro>({ setResumen: () => {}, setAccion: () => {}, setAccionContenido: () => {} });
 
-/** Une la barra inferior con quien le da el botón (`AsistenteMovil`, o `PieDeTarjeta` por portal) y con quien le da el resumen (`ResumenPedido`). */
+/** Une la barra inferior con quien le da el botón y con quien le da el resumen (`ResumenPedido`). */
 export function ProveedorBarra({ children }: { children: ReactNode }) {
-  const [destino, setDestino] = useState<HTMLElement | null>(null);
   const [resumen, setResumen] = useState<ResumenVivo | null>(null);
   const [accion, setAccion] = useState<AccionBarra | null>(null);
-  const registro = useMemo<Registro>(() => ({ setDestino, setResumen, setAccion }), []);
-  const valores = useMemo(() => ({ destino, resumen, accion }), [destino, resumen, accion]);
+  const [accionContenido, setAccionContenido] = useState<AccionBarra | null>(null);
+  const registro = useMemo<Registro>(() => ({ setResumen, setAccion, setAccionContenido }), []);
+  const valores = useMemo(() => ({ resumen, accion, accionContenido }), [resumen, accion, accionContenido]);
   return (
     <ContextoRegistro.Provider value={registro}>
       <ContextoValores.Provider value={valores}>{children}</ContextoValores.Provider>
@@ -51,6 +58,25 @@ export function ProveedorBarra({ children }: { children: ReactNode }) {
 
 export const useBarra = () => useContext(ContextoValores);
 export const useRegistroBarra = () => useContext(ContextoRegistro);
+
+/**
+ * Publica el botón en la barra mientras el componente está montado (`null` lo retira). La barra
+ * recibe una función estable que lee la acción vigente: publicar un objeto nuevo en cada render
+ * la volvería a pintar sin fin.
+ */
+export function usePublicarAccion(accion: AccionPublicable | null, sitio: 'pantalla' | 'contenido') {
+  const registro = useRegistroBarra();
+  const publicar = sitio === 'pantalla' ? registro.setAccion : registro.setAccionContenido;
+  const alPulsar = useRef(accion?.alPulsar);
+  useEffect(() => { alPulsar.current = accion?.alPulsar; });
+  const { etiqueta, deshabilitado, razon, cargando, etiquetaCargando } = accion ?? {};
+  useEffect(() => {
+    publicar(etiqueta === undefined ? null : {
+      etiqueta, deshabilitado, razon, cargando, etiquetaCargando, ejecutar: () => alPulsar.current?.(),
+    });
+  }, [publicar, etiqueta, deshabilitado, razon, cargando, etiquetaCargando]);
+  useEffect(() => () => publicar(null), [publicar]);
+}
 
 /** El resumen del panel del pedido se publica para la hoja; solo si cambió su contenido. */
 export function useRegistrarResumen(resumen: ResumenVivo) {

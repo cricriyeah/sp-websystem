@@ -9,6 +9,8 @@ import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { EsqueletoPago } from '@/components/checkout/pago/esqueleto-pago';
 import { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
 import { AvisoProblema } from '@/components/checkout/aviso-problema';
+import { usePublicarAccion } from '@/components/reserva/contexto-barra';
+import { useMovil } from '@/components/reserva/use-movil';
 import { Button } from '@/components/ui/button';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Pago } from '@/lib/api';
@@ -94,6 +96,19 @@ function PaymentForm({
     onPagoConfirmado(paymentIntent?.status !== 'succeeded');
   };
 
+  // En móvil el botón de cobro es el de la barra inferior. Se publica desde aquí, dentro de
+  // `<Elements>`, porque solo aquí se puede llamar a `confirmPayment`; manda sobre el botón
+  // deshabilitado que la pantalla pone mientras baja este formulario.
+  const movil = useMovil();
+  usePublicarAccion(movil ? {
+    etiqueta: etiquetaBotonPago ?? checkout.confirmPay,
+    alPulsar: () => { void handleConfirm(); },
+    deshabilitado: !stripe,
+    razon: stripe ? undefined : checkout.barra.cargandoPago,
+    cargando: submitting,
+    etiquetaCargando: checkout.submitting,
+  } : null, 'contenido');
+
   return (
     <div className="flex flex-col gap-4">
       {/* Puente entre los dos envios: sin esto, pasar de "reserva guardada"
@@ -135,6 +150,7 @@ function PaymentForm({
         />
       )}
 
+      {!movil && (
       <Button
         variante="libre"
         type="button"
@@ -145,6 +161,7 @@ function PaymentForm({
         <Lock size={16} className="shrink-0" />
         {submitting ? checkout.submitting : (etiquetaBotonPago ?? checkout.confirmPay)}
       </Button>
+      )}
     </div>
   );
 }

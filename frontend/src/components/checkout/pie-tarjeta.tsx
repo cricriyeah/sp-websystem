@@ -1,9 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { useBarra } from '@/components/reserva/contexto-barra';
-import { useMovil } from '@/components/reserva/use-movil';
 
 /**
  * Pie de una tarjeta de paso, con el único CTA primario. Un solo elemento con
@@ -30,10 +27,6 @@ export function PieDeTarjeta({ titulo, children }: { titulo: string; children: R
   const marca = useRef<HTMLDivElement>(null);
   const pie = useRef<HTMLDivElement>(null);
   const [fijo, setFijo] = useState(false);
-  // En móvil el botón único del paso vive en la barra inferior: se pinta allí por portal.
-  const movil = useMovil();
-  const { destino } = useBarra();
-  const enBarra = movil && destino !== null;
 
   // La marca vive en el sitio natural del pie (fuera de él: dentro se movería
   // con el `sticky`). Si no se ve y está por debajo de la pantalla, el pie está
@@ -47,7 +40,7 @@ export function PieDeTarjeta({ titulo, children }: { titulo: string; children: R
     });
     observador.observe(elemento);
     return () => observador.disconnect();
-  }, [enBarra]);
+  }, []);
 
   useEffect(() => {
     if (!fijo) return;
@@ -58,8 +51,6 @@ export function PieDeTarjeta({ titulo, children }: { titulo: string; children: R
       raiz.style.scrollPaddingBottom = previo;
     };
   }, [fijo]);
-
-  if (enBarra) return createPortal(<div className="[&>*]:w-full">{children}</div>, destino);
 
   return (
     <>

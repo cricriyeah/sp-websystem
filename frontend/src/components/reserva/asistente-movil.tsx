@@ -1,21 +1,13 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { DURACION, transicion } from '@/lib/movimiento';
-import { useRegistroBarra, type AccionBarra } from './contexto-barra';
+import { usePublicarAccion, type AccionPublicable } from './contexto-barra';
 
-type ContextoPantalla = {
-  activo: boolean;
-  /** La pantalla no trae botón propio: el pie de la tarjeta (su CTA) sí se pinta, en la barra. */
-  conPieDeTarjeta: boolean;
-};
-const EnAsistente = createContext<ContextoPantalla>({ activo: false, conPieDeTarjeta: true });
+const EnAsistente = createContext(false);
 
-/**
- * Dentro de una pantalla del asistente: `CheckoutSectionCard` pinta solo su contenido, y su CTA
- * solo si la pantalla no tiene «Continuar» propio.
- */
+/** Dentro de una pantalla del asistente: `CheckoutSectionCard` pinta solo su contenido. */
 export const useEnAsistente = () => useContext(EnAsistente);
 
 type Props = {
@@ -29,10 +21,10 @@ type Props = {
   /** «Paso 2 de 3: Tus datos»: se anuncia al cambiar de paso. */
   anuncio: string;
   /**
-   * El botón grande de abajo: «Continuar», o el de pagar en la última pantalla. Sin él, la barra
-   * pinta el botón que el contenido le manda por portal (`PieDeTarjeta` de las pantallas de Pago).
+   * El botón grande de abajo: «Continuar», o el de pagar mientras carga el formulario. En las
+   * pantallas de Pago el contenido publica el suyo (`usePublicarAccion`) y manda sobre este.
    */
-  accion?: Omit<AccionBarra, 'ejecutar'> & { alPulsar: () => void };
+  accion?: AccionPublicable;
   children: ReactNode;
 };
 
@@ -44,21 +36,10 @@ type Props = {
  */
 export function AsistenteMovil({ id, titulo, antetitulo, soloFundido, anuncio, accion, children }: Props) {
   const sinMovimiento = useReducedMotion();
-  const { setAccion } = useRegistroBarra();
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const primera = useRef(true);
 
-  // La barra recibe una función estable que lee la acción vigente: publicar un objeto nuevo en
-  // cada render volvería a pintar la barra sin fin.
-  const alPulsar = useRef(accion?.alPulsar);
-  useEffect(() => { alPulsar.current = accion?.alPulsar; });
-  const { etiqueta, deshabilitado, razon, cargando, etiquetaCargando } = accion ?? {};
-  useEffect(() => {
-    setAccion(etiqueta === undefined ? null : {
-      etiqueta, deshabilitado, razon, cargando, etiquetaCargando, ejecutar: () => alPulsar.current?.(),
-    });
-  }, [setAccion, etiqueta, deshabilitado, razon, cargando, etiquetaCargando]);
-  useEffect(() => () => setAccion(null), [setAccion]);
+  usePublicarAccion(accion ?? null, 'pantalla');
 
   // Cambio de pantalla: arriba de la página y foco al título (el lector lo lee). En la primera
   // pintura no se mueve nada: el cliente acaba de llegar.
@@ -72,8 +53,6 @@ export function AsistenteMovil({ id, titulo, antetitulo, soloFundido, anuncio, a
   }, [id]);
 
   const fundido = soloFundido || sinMovimiento;
-  const conPieDeTarjeta = etiqueta === undefined;
-  const contexto = useMemo(() => ({ activo: true, conPieDeTarjeta }), [conPieDeTarjeta]);
   return (
     <>
       <p className="sr-only" aria-live="polite">{anuncio}</p>
@@ -91,7 +70,7 @@ export function AsistenteMovil({ id, titulo, antetitulo, soloFundido, anuncio, a
             {titulo}
           </h2>
         </header>
-        <EnAsistente.Provider value={contexto}>{children}</EnAsistente.Provider>
+        <EnAsistente.Provider value>{children}</EnAsistente.Provider>
       </m.section>
     </>
   );
