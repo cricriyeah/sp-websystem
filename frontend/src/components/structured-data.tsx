@@ -12,6 +12,9 @@ type StructuredDataProps = {
   faqItems: { q: string; a: string }[] | null;
 };
 
+/** JSON dentro de <script>: `<` se escapa para que un texto no pueda cerrar la etiqueta (guía json-ld de Next). */
+const aJsonLd = (dato: unknown) => JSON.stringify(dato).replace(/</g, '\\u003c');
+
 /**
  * JSON-LD para Google: ficha del negocio de la sede y sus preguntas
  * frecuentes. `negocio`/`faqItems` en `null` (spec §9: hoy solo pasa para
@@ -57,13 +60,13 @@ export function StructuredData({ lang, slug, negocio, description, faqItems }: S
       {negocioJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(negocioJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: aJsonLd(negocioJsonLd) }}
         />
       )}
       {preguntasJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(preguntasJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: aJsonLd(preguntasJsonLd) }}
         />
       )}
     </>

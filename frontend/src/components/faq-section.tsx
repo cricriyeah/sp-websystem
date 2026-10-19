@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { Minus, Plus } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { CLASE_FONDO, type Fondo } from '@/components/ui/section-shell';
 
@@ -12,7 +13,11 @@ type FaqSectionProps = {
   preguntas: { q: string; a: string }[];
   fondo: Fondo;
   borde: boolean;
+  /** Cierre del bloque: «Si no encuentras tu duda…» al WhatsApp único. Sin número no se pinta. */
+  whatsapp: { texto: string; href: string } | null;
 };
+
+const MAX_PREGUNTAS = 8;
 
 /**
  * Acordeon en dos columnas: el titulo fijo a la izquierda, las preguntas a la
@@ -30,10 +35,10 @@ type FaqSectionProps = {
  * panel se enlaza de vuelta con `aria-labelledby`. Con eso un lector de pantalla
  * anuncia lo mismo que anunciaba antes.
  *
- * Solo se abre una a la vez: son catorce preguntas y con varias abiertas la
+ * Solo se abre una a la vez: son hasta ocho preguntas y con varias abiertas la
  * columna se vuelve un muro de texto donde ya no se ve que mas hay.
  */
-export function FaqSection({ id, titulo, preguntas, fondo, borde }: FaqSectionProps) {
+export function FaqSection({ id, titulo, preguntas, fondo, borde, whatsapp }: FaqSectionProps) {
   const [abierta, setAbierta] = useState<string | null>(null);
   const sinMovimiento = useReducedMotion();
   const idBase = useId();
@@ -51,7 +56,7 @@ export function FaqSection({ id, titulo, preguntas, fondo, borde }: FaqSectionPr
         </div>
 
         <div className="flex flex-col">
-          {preguntas.map((item, i) => {
+          {preguntas.slice(0, MAX_PREGUNTAS).map((item, i) => {
             const abierto = abierta === item.q;
             const idPregunta = `${idBase}-p${i}`;
             const idRespuesta = `${idBase}-r${i}`;
@@ -67,18 +72,9 @@ export function FaqSection({ id, titulo, preguntas, fondo, borde }: FaqSectionPr
                     onClick={() => setAbierta(abierto ? null : item.q)}
                   >
                     <span className="transition-colors group-hover:text-accent">{item.q}</span>
-                    {/* Cruz que se vuelve guion: la barra vertical se aplasta a
-                        cero. Es la misma pieza en los dos estados, asi que el
-                        cambio se lee como un giro y no como dos iconos
-                        distintos intercambiandose. */}
-                    <span className="relative size-5 shrink-0 text-accent transition-transform duration-200 group-hover:scale-110">
-                      <span className="absolute inset-y-1/2 left-0 h-0.5 w-full -translate-y-1/2 bg-current" />
-                      <span
-                        className={`absolute inset-x-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-current transition-transform duration-200 ${
-                          abierto ? 'scale-y-0' : 'scale-y-100'
-                        }`}
-                      />
-                    </span>
+                    {abierto
+                      ? <Minus size={20} aria-hidden="true" className="shrink-0 text-cafe" />
+                      : <Plus size={20} aria-hidden="true" className="shrink-0 text-cafe" />}
                   </Button>
                 </h3>
 
@@ -96,7 +92,7 @@ export function FaqSection({ id, titulo, preguntas, fondo, borde }: FaqSectionPr
                         sinMovimiento
                           ? { duration: 0 }
                           : {
-                              height: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+                              height: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
                               // La opacidad va mas corta que el alto para que el
                               // texto no se lea a medio desplegar.
                               opacity: { duration: 0.2 },
@@ -116,6 +112,11 @@ export function FaqSection({ id, titulo, preguntas, fondo, borde }: FaqSectionPr
               </div>
             );
           })}
+          {whatsapp && (
+            <a href={whatsapp.href} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center self-start texto-cuerpo font-semibold text-cafe">
+              {whatsapp.texto}
+            </a>
+          )}
         </div>
       </div>
     </section>

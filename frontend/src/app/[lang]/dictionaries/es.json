@@ -895,7 +895,11 @@
       "originalEn": "Original en inglés"
     },
     "galeria": "Fotos de los viajes",
-    "faq": "Preguntas frecuentes"
+    "faq": {
+      "titulo": "Preguntas frecuentes",
+      "whatsapp": "Si no encuentras tu duda, escríbenos por WhatsApp",
+      "whatsappMensaje": "Hola, tengo una pregunta sobre {sede}."
+    }
   },
   "hubContenido": {
     "titular": "Reserva en Baja con empresas locales",

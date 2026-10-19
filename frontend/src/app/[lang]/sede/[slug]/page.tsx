@@ -10,6 +10,7 @@ import { aMoneda } from '@/lib/moneda';
 import { fotosAptas } from '@/lib/etiquetas-catalogo';
 import { claveDePaquete, claveDeServicio, imagenDeCatalogo } from '@/content/imagenes-catalogo';
 import { formatearPrecio } from '@/lib/pricing-paquete';
+import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_DE, enlacesDeSede, fondosDeSecciones, seccionesDeSede, type SeccionId } from '@/lib/secciones-sede';
 import { SiteHeader } from '@/components/site-header';
@@ -46,7 +47,11 @@ export default async function SedePage({ params, searchParams }: Props) {
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
-  const { temporadas, faq } = contenido;
+  const { temporadas } = contenido;
+  // Máximo 8 preguntas: las que se pintan son las mismas que van al JSON-LD.
+  const faq = contenido.faq?.slice(0, 8);
+  const textosFaq = dict.sedeContenido.faq;
+  const whatsappFaq = tieneWhatsapp ? { texto: textosFaq.whatsapp, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null;
   // Solo las confirmadas salen del servidor: el texto de una no confirmada nunca viaja al navegador.
   const opiniones = empresas.flatMap((e) => e.resenas.filter((r) => r.confirmada).map((r) => ({
     autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: e.nombre, logo: e.logo },
@@ -78,7 +83,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     ...(galeria && { galeria: (banda: Banda) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} {...banda} /> }),
     ...(temporadas && { temporadas: (banda: Banda) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} {...banda} /> }),
     opiniones: (banda) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} {...banda} />,
-    ...(faq && { preguntas: (banda: Banda) => <FaqSection id={ANCLA_DE.preguntas} titulo={dict.sedeContenido.faq} preguntas={faq} {...banda} /> }),
+    ...(faq && { preguntas: (banda: Banda) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} {...banda} /> }),
   };
   const secciones = seccionesDeSede({
     servicios,

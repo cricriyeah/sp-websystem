@@ -895,7 +895,11 @@
       "originalEn": "Original in English"
     },
     "galeria": "Photos from the trips",
-    "faq": "Frequently asked questions"
+    "faq": {
+      "titulo": "Frequently asked questions",
+      "whatsapp": "If you cannot find your answer, message us on WhatsApp",
+      "whatsappMensaje": "Hi, I have a question about {sede}."
+    }
   },
   "hubContenido": {
     "titular": "Book in Baja with local companies",

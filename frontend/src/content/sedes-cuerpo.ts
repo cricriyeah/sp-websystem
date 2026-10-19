@@ -144,8 +144,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       faq: [
         {
-          q: '¿Qué incluye el tour?',
-          a: 'Tu tour incluye la embarcación privada para tu grupo con un capitán local certificado, hielera con hielo y de 6 a 8 horas completas de pesca. Puedes traer tu propio equipo o solicitarlo en renta con nosotros. Con gusto también coordinamos carnada fresca, servicio de lunch y asesoría para tu licencia.',
+          q: '¿Dónde veo qué incluye cada servicio?',
+          a: 'Cada servicio tiene su propia lista de lo que incluye, en su tarjeta y en su página. Revísala antes de reservar; si te queda una duda, escríbenos por WhatsApp.',
         },
         {
           q: '¿Cuántas personas caben en la embarcación?',
@@ -164,10 +164,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'Ofrecemos modalidades cómodas y seguras: puedes liquidar el 100% en línea con tarjeta, o asegurar tu fecha con un anticipo del 30% en línea y pagar el 70% restante en efectivo el día de tu salida. Aceptamos pesos mexicanos (MXN) y dólares (USD).',
         },
         {
-          q: '¿Dan factura?',
-          a: 'Por el momento no emitimos factura fiscal electrónica (CFDI). Al completar tu pago recibirás un comprobante digital detallado con el desglose de tu reservación.',
-        },
-        {
           q: '¿Qué pasa si hay mal clima?',
           a: 'Tu seguridad y tranquilidad son siempre nuestra máxima prioridad. Si la capitanía de puerto o nuestro capitán determinan que las condiciones del mar no son seguras, te ofrecemos reprogramar tu viaje con gusto o te reembolsamos el 100% de lo pagado.',
         },
@@ -178,14 +174,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         {
           q: '¿Necesito licencia de pesca?',
           a: 'Sí, la autoridad marítima mexicana (CONAPESCA) solicita que cada pescador a bordo cuente con su licencia individual. Es un trámite rápido por internet que toma solo unos minutos. En nuestra página te guiamos paso a paso, y nuestro equipo te asiste con gusto si necesitas apoyo.',
-        },
-        {
-          q: '¿Me puedo llevar lo que pesque?',
-          a: '¡Por supuesto, es tu pesca! El capitán te ayudará con gusto a limpiar tus capturas. En el caso de especies protegidas de pesca deportiva (como marlin o pez vela), promovemos la captura y liberación responsable después de tu fotografía de recuerdo para proteger la riqueza marina de La Paz.',
-        },
-        {
-          q: '¿Y si no puedo ir y no es por el clima?',
-          a: 'Entendemos que pueden surgir imprevistos de viaje. Si nos avisas con al menos 48 horas de anticipación, con gusto reprogramamos tu fecha para que no pierdas tu aventura. Nuestro compromiso es darte el mejor servicio y apoyo posible.',
         },
       ],
     },
@@ -322,8 +310,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       faq: [
         {
-          q: 'What is included in the trip?',
-          a: 'Your tour includes the private boat for your group with a certified local captain, a cooler with ice, and 6 to 8 full hours of fishing. You can bring your own gear or rent quality gear from us. We\'re also happy to coordinate fresh bait, lunch service, and licence assistance.',
+          q: 'Where can I see what each service includes?',
+          a: 'Each service has its own list of what it includes, on its card and on its page. Check it before you book; if anything is unclear, message us on WhatsApp.',
         },
         {
           q: 'How many people fit on the boat?',
@@ -342,10 +330,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'We offer convenient and secure payment options: you can pay 100% online by card, or secure your date with a 30% online deposit and settle the remaining 70% in cash on the morning of your trip. We accept MXN and USD.',
         },
         {
-          q: 'Do you provide an invoice?',
-          a: 'We do not currently issue Mexican CFDI tax invoices. However, upon completing your booking you will receive a full digital receipt detailing your reservation.',
-        },
-        {
           q: 'What happens if the weather is bad?',
           a: 'Your safety and peace of mind are always our highest priority. If the port authority or captain determines that sea conditions are unsafe to sail, we will gladly reschedule your trip or issue a 100% full refund.',
         },
@@ -356,14 +340,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         {
           q: 'Do I need a fishing licence?',
           a: 'Yes, Mexican regulations (CONAPESCA) require each angler on board to hold an individual sportfishing permit. It is a quick online process taking just a few minutes. We provide a step-by-step guide on our site, and our team will gladly assist you if needed.',
-        },
-        {
-          q: 'Can I keep what I catch?',
-          a: 'Of course, it\'s your catch! The captain will gladly assist you in cleaning your fish. For protected sportfishing species (such as marlin or sailfish), we promote responsible catch-and-release after your celebration photo to protect La Paz\'s rich marine ecosystem.',
-        },
-        {
-          q: 'What if I can\'t make it and it isn\'t the weather?',
-          a: 'We understand that travel plans can change. If you give us at least 48 hours notice, we will happily move your reservation to another available date so you don\'t miss your adventure. We\'re committed to providing you with the best flexibility and support.',
         },
       ],
     },
