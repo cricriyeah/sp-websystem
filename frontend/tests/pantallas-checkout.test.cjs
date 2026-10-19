@@ -18,16 +18,22 @@ test('servicio suelto sin extras omite esa pantalla', () => {
 });
 
 test('paquete: una pantalla por servicio y recogida solo con traslado', () => {
-  const conTraslado = p.pantallasDe({ tipo: 'paquete', servicios: 3, conTraslado: true, empresas: 1 });
+  const conTraslado = p.pantallasDe({ tipo: 'paquete', servicios: [0, 1, 2], conTraslado: true, empresas: 1 });
   assert.deepEqual(ids(conTraslado), [
     'inicio', 'servicio-0', 'servicio-1', 'servicio-2', 'contacto', 'recogida', 'como-pagas', 'tarjeta-0',
   ]);
-  const sinTraslado = p.pantallasDe({ tipo: 'paquete', servicios: 2, conTraslado: false, empresas: 1 });
+  const sinTraslado = p.pantallasDe({ tipo: 'paquete', servicios: [0, 1], conTraslado: false, empresas: 1 });
   assert.deepEqual(ids(sinTraslado), ['inicio', 'servicio-0', 'servicio-1', 'contacto', 'como-pagas', 'tarjeta-0']);
 });
 
+test('un servicio sin pantalla propia se omite y conserva el índice de los demás', () => {
+  const pantallas = p.pantallasDe({ tipo: 'paquete', servicios: [0, 2], conTraslado: false, empresas: 1 });
+  assert.deepEqual(ids(pantallas).slice(1, 3), ['servicio-0', 'servicio-2']);
+  assert.deepEqual(pantallas.filter((x) => x.tipo === 'servicio').map((x) => x.indice), [0, 2]);
+});
+
 test('cruza-empresa: una pantalla de tarjeta por empresa', () => {
-  const pantallas = p.pantallasDe({ tipo: 'paquete', servicios: 2, conTraslado: false, empresas: 2 });
+  const pantallas = p.pantallasDe({ tipo: 'paquete', servicios: [0, 1], conTraslado: false, empresas: 2 });
   assert.deepEqual(ids(pantallas).slice(-3), ['como-pagas', 'tarjeta-0', 'tarjeta-1']);
   const tarjetas = pantallas.filter((x) => x.tipo === 'tarjeta');
   assert.deepEqual(tarjetas.map((x) => x.indice), [0, 1]);
@@ -41,7 +47,7 @@ test('traslado: tipo, fecha, hora y pasajeros, datos, recogida, pago', () => {
 });
 
 test('cada pantalla cae en uno de los tres pasos, en orden', () => {
-  const pantallas = p.pantallasDe({ tipo: 'paquete', servicios: 2, conTraslado: true, empresas: 2 });
+  const pantallas = p.pantallasDe({ tipo: 'paquete', servicios: [0, 1], conTraslado: true, empresas: 2 });
   const pasos = pantallas.map((x) => x.paso);
   assert.deepEqual(pasos, ['viaje', 'viaje', 'viaje', 'datos', 'datos', 'pago', 'pago', 'pago']);
   assert.equal(p.pasoDeLaPantalla(pantallas, 'recogida'), 'datos');
@@ -49,7 +55,7 @@ test('cada pantalla cae en uno de los tres pasos, en orden', () => {
 });
 
 test('siguiente y anterior se mueven de una en una', () => {
-  const pantallas = p.pantallasDe({ tipo: 'paquete', servicios: 2, conTraslado: false, empresas: 1 });
+  const pantallas = p.pantallasDe({ tipo: 'paquete', servicios: [0, 1], conTraslado: false, empresas: 1 });
   assert.equal(p.siguiente(pantallas, 'servicio-0'), 'servicio-1');
   assert.equal(p.anterior(pantallas, 'servicio-1'), 'servicio-0');
   // Desde Tus datos, atrás cae en el último servicio, no en el primero del paso.

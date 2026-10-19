@@ -1,13 +1,21 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { DURACION, transicion } from '@/lib/movimiento';
 import { useRegistroBarra, type AccionBarra } from './contexto-barra';
 
-const EnAsistente = createContext(false);
+type ContextoPantalla = {
+  activo: boolean;
+  /** La pantalla no trae botón propio: el pie de la tarjeta (su CTA) sí se pinta, en la barra. */
+  conPieDeTarjeta: boolean;
+};
+const EnAsistente = createContext<ContextoPantalla>({ activo: false, conPieDeTarjeta: true });
 
-/** Dentro de una pantalla del asistente: `CheckoutSectionCard` pinta solo su contenido. */
+/**
+ * Dentro de una pantalla del asistente: `CheckoutSectionCard` pinta solo su contenido, y su CTA
+ * solo si la pantalla no tiene «Continuar» propio.
+ */
 export const useEnAsistente = () => useContext(EnAsistente);
 
 type Props = {
@@ -64,6 +72,8 @@ export function AsistenteMovil({ id, titulo, antetitulo, soloFundido, anuncio, a
   }, [id]);
 
   const fundido = soloFundido || sinMovimiento;
+  const conPieDeTarjeta = etiqueta === undefined;
+  const contexto = useMemo(() => ({ activo: true, conPieDeTarjeta }), [conPieDeTarjeta]);
   return (
     <>
       <p className="sr-only" aria-live="polite">{anuncio}</p>
@@ -81,7 +91,7 @@ export function AsistenteMovil({ id, titulo, antetitulo, soloFundido, anuncio, a
             {titulo}
           </h2>
         </header>
-        <EnAsistente.Provider value>{children}</EnAsistente.Provider>
+        <EnAsistente.Provider value={contexto}>{children}</EnAsistente.Provider>
       </m.section>
     </>
   );

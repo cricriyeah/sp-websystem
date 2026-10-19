@@ -29,8 +29,11 @@ export type Pantalla = {
 
 export type RutaAsistente =
   | { tipo: 'servicio'; tieneExtras: boolean }
-  /** `empresas` > 1 es cruza-empresa: una pantalla de tarjeta por cada cobro. */
-  | { tipo: 'paquete'; servicios: number; conTraslado: boolean; empresas: number }
+  /**
+   * `servicios`: índice de cada componente del paquete que lleva su propia pantalla (los que no
+   * piden nada se omiten). `empresas` > 1 es cruza-empresa: una pantalla de tarjeta por cobro.
+   */
+  | { tipo: 'paquete'; servicios: readonly number[]; conTraslado: boolean; empresas: number }
   | { tipo: 'traslado' };
 
 const PASO_DE: Record<TipoPantalla, PasoId> = {
@@ -69,7 +72,7 @@ export function pantallasDe(ruta: RutaAsistente): Pantalla[] {
     case 'paquete':
       return [
         pantalla('inicio'),
-        ...repetir('servicio', ruta.servicios),
+        ...ruta.servicios.map((indice) => pantalla('servicio', indice)),
         pantalla('contacto'),
         ...(ruta.conTraslado ? [pantalla('recogida')] : []),
         ...pago(ruta.empresas),
