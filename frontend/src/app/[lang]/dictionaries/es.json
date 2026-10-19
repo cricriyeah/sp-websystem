@@ -115,6 +115,7 @@
     "opiniones": "Opiniones",
     "mapa": "Mapa",
     "sedes": "Sedes",
+    "empresas": "Empresas",
     "colaboradores": "Colaboradores",
     "eligeSede": "Elige tu sede"
   },
@@ -973,6 +974,15 @@
     "folio": "Folio #{folio}",
     "haceMinutos": "hace {n} min",
     "haceHoras": "hace {n} h"
+  },
+  "sedeContenido": {
+    "queReservar": "Qué reservar",
+    "tranquilidad": "Reserva con tranquilidad",
+    "colaboracion": "Sun Baja Experience con {empresa}",
+    "empresas": "Quién opera cada servicio",
+    "opiniones": "Opiniones",
+    "galeria": "Galería",
+    "faq": "Preguntas frecuentes"
   },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",

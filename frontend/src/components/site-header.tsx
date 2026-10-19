@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { List, X } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { marcaDe } from '@/content/empresas-marca';
 import { SEDES_INDICE } from '@/content/sedes-indice';
 import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { getSedes } from '@/lib/api';
@@ -79,10 +80,11 @@ export function SiteHeader({
   const sedeIndiceActiva: SedeIndiceEntry | undefined =
     variante === 'sede' && slugActual ? SEDES_INDICE[slugActual] : undefined;
 
-  const brandMain = variante === 'hub' ? nav.brandMain : (sedeIndiceActiva?.empresaFundadoraNombre ?? nav.brandMain);
+  const protagonista = marcaDe(sedeIndiceActiva?.empresaProtagonistaSlug);
+  const brandMain = variante === 'hub' ? nav.brandMain : (protagonista?.nombre ?? nav.brandMain);
   const brandAccent = variante === 'hub' ? nav.brandAccent : '';
   const logoSrc =
-    variante === 'hub' ? '/logos/wordmark-agencia.svg' : (sedeIndiceActiva?.logo ?? '/logos/wordmark-agencia.svg');
+    variante === 'hub' ? '/logos/wordmark-agencia.svg' : (protagonista?.logo ?? '/logos/wordmark-agencia.svg');
 
   const anclaBase = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 

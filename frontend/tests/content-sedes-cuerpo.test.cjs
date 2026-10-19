@@ -58,8 +58,9 @@ test('Puerto Chale conserva la plantilla de La Ventana con identidad propia en a
     assert.ok(!chale.metaDescription.includes('La Ventana'));
     assert.equal(chale.hero.imagen, ventana.hero.imagen);
     assert.equal(chale.negocio, null);
-    assert.equal(chale.empresaFundadoraSlug, null);
-    assert.equal(ventana.empresaFundadoraSlug, null);
+    // Las tres protagonistas, confirmadas por el dueño (2026-10-16).
+    assert.equal(chale.empresaProtagonistaSlug, 'piratas-adventures');
+    assert.equal(ventana.empresaProtagonistaSlug, 'la-ventana-travel');
     assert.deepEqual(chale.destacadas, ventana.destacadas);
   }
   assert.equal(c.getSedeContenido('los-cabos', 'es'), undefined);
@@ -78,5 +79,7 @@ test('getSedeCuerpo no trae slug/nombre/logo del indice (solo el cuerpo crudo)',
   assert.ok(cuerpo);
   assert.equal(cuerpo.nombre, undefined);
   assert.equal(cuerpo.logo, undefined);
-  assert.equal(cuerpo.empresaFundadoraSlug, 'sal-y-sol');
+  assert.equal(cuerpo.empresaProtagonistaSlug, 'sal-y-sol');
+  // Las demás empresas son slugs: sus datos salen de empresas.ts, no se duplican.
+  assert.deepEqual(cuerpo.otrasEmpresas, ['transporte-la-paz']);
 });

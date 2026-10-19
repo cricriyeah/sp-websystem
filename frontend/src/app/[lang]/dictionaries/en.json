@@ -115,6 +115,7 @@
     "opiniones": "Reviews",
     "mapa": "Map",
     "sedes": "Destinations",
+    "empresas": "Companies",
     "colaboradores": "Partners",
     "eligeSede": "Choose a destination"
   },
@@ -973,6 +974,15 @@
     "folio": "Reference #{folio}",
     "haceMinutos": "{n} min ago",
     "haceHoras": "{n} h ago"
+  },
+  "sedeContenido": {
+    "queReservar": "What to book",
+    "tranquilidad": "Book with peace of mind",
+    "colaboracion": "Sun Baja Experience with {empresa}",
+    "empresas": "Who runs each service",
+    "opiniones": "Reviews",
+    "galeria": "Gallery",
+    "faq": "Frequently asked questions"
   },
   "hub": {
     "nombreAgencia": "Sal y Sol Baja Experiences",

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowUpRight } from '@phosphor-icons/react/ssr';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeContenido } from '@/content/sedes-tipos';
+import { getEmpresa } from '@/content/empresas';
 import { hrefSede } from '@/lib/routes';
 
 /** One brand per company, even when it collaborates with several destinations. */
@@ -11,15 +12,21 @@ export function ColaboradoresSection({ sedes, lang, copy, id = 'colaboradores' }
 }) {
   const marcas = new Map<string, { nombre: string; logo: string | null; web?: string; redes?: { nombre: string; url: string }[]; sedes: SedeContenido[] }>();
   for (const sede of sedes) {
-    const empresas = [
-      ...(sede.empresaFundadoraSlug && sede.empresaFundadoraNombre ? [{ slug: sede.empresaFundadoraSlug, nombre: sede.empresaFundadoraNombre, logo: sede.logo, enlaceExterno: sede.web, redes: sede.redes }] : []),
-      ...sede.otrasEmpresas,
-    ];
-    for (const empresa of empresas) {
+    // La protagonista primero y luego las demás; los datos de cada una salen de `empresas.ts`.
+    const slugs = [...(sede.empresaProtagonistaSlug ? [sede.empresaProtagonistaSlug] : []), ...sede.otrasEmpresas];
+    for (const empresa of slugs.map(getEmpresa)) {
+      if (!empresa) continue;
       const existente = marcas.get(empresa.slug);
       if (existente) {
         if (!existente.sedes.some(s => s.slug === sede.slug)) existente.sedes.push(sede);
-      } else marcas.set(empresa.slug, { nombre: empresa.nombre, logo: empresa.logo ?? null, web: empresa.enlaceExterno, redes: empresa.redes, sedes: [sede] });
+      } else marcas.set(empresa.slug, {
+        nombre: empresa.nombre,
+        logo: empresa.logo ?? null,
+        // Solo se enlaza un sitio que el dueño confirmó al día.
+        web: empresa.webConfirmada ? empresa.web : undefined,
+        redes: empresa.redes,
+        sedes: [sede],
+      });
     }
   }
   if (marcas.size === 0) return null;

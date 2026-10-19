@@ -6,9 +6,9 @@ const path = require('node:path');
 const r = require(path.join(process.env.RECONCILIAR_TEST_OUT, 'lib/reconciliar-sedes.js'));
 
 const indice = {
-  'la-paz': { slug: 'la-paz', nombre: 'La Paz', empresaFundadoraNombre: 'Sal y Sol Sportfishing', logo: '/logos/logo2salysol.webp' },
-  'la-ventana': { slug: 'la-ventana', nombre: 'La Ventana', empresaFundadoraNombre: null, logo: null },
-  'puerto-chale': { slug: 'puerto-chale', nombre: 'Puerto Chale', empresaFundadoraNombre: null, logo: null },
+  'la-paz': { slug: 'la-paz', nombre: 'La Paz', empresaProtagonistaSlug: 'sal-y-sol' },
+  'la-ventana': { slug: 'la-ventana', nombre: 'La Ventana', empresaProtagonistaSlug: 'la-ventana-travel' },
+  'puerto-chale': { slug: 'puerto-chale', nombre: 'Puerto Chale', empresaProtagonistaSlug: 'piratas-adventures' },
 };
 
 test('interseccion normal: solo los slugs que la API confirma activos', () => {
@@ -33,6 +33,5 @@ test('array vacio de la API (sin fallo, pero sin sedes activas): no muestra ning
 
 test('devuelve entradas del indice, no las reconstruye', () => {
   const resultado = r.sedesActivas(indice, [{ slug: 'la-paz' }]);
-  assert.equal(resultado[0].empresaFundadoraNombre, 'Sal y Sol Sportfishing');
-  assert.equal(resultado[0].logo, '/logos/logo2salysol.webp');
+  assert.equal(resultado[0], indice['la-paz']);
 });

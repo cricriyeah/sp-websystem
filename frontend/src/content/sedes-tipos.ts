@@ -7,15 +7,18 @@ import type { Locale } from '@/app/[lang]/dictionaries';
 
 export type { Locale };
 
-/** Lo minimo que un Client Component necesita para resolver marca/logo por sede. */
+/**
+ * Lo minimo que un Client Component necesita por sede. Nombre, logo, sitio y redes de la
+ * empresa protagonista NO viven aqui: salen de `empresas-marca.ts` / `empresas.ts`.
+ */
 export type SedeIndiceEntry = {
   slug: string;
   nombre: string;
-  empresaFundadoraNombre: string | null;
-  /** Ruta del logo de la empresa fundadora, o `null` para el wordmark generico de agencia. */
-  logo: string | null;
-  web?: string;
-  redes?: { nombre: string; url: string }[];
+  /**
+   * La empresa local con la que Sun Baja Experience hace esta sede: da nombre y logo a la
+   * segunda marca de la cabecera y a la frase de colaboracion. Sin ella, ninguna de las dos.
+   */
+  empresaProtagonistaSlug?: string;
 };
 
 export type SedeHeroContenido = {
@@ -53,15 +56,6 @@ export type SedeDestacada = {
   inlineable: boolean;
 };
 
-export type SedeOtraEmpresa = {
-  slug: string;
-  nombre: string;
-  descripcion: string;
-  enlaceExterno?: string;
-  logo?: string | null;
-  redes?: { nombre: string; url: string }[];
-};
-
 export type SedeServicioTransporte = {
   empresaSlug: string;
 } | null;
@@ -69,15 +63,21 @@ export type SedeServicioTransporte = {
 /** Contenido largo/pesado por sede — vive en `sedes-cuerpo.ts` (server-only). */
 export type SedeCuerpoContenido = {
   slug: string;
-  empresaFundadoraSlug: string | null;
+  /** Igual que en el indice (ver `SedeIndiceEntry`). */
+  empresaProtagonistaSlug?: string;
   negocio: SedeNegocio;
   metaTitle: string;
   metaDescription: string;
   hero: SedeHeroContenido;
   colaboracion: SedeColaboracion;
   destacadas: SedeDestacada[];
-  otrasEmpresas: SedeOtraEmpresa[];
+  /** Slugs de las demas empresas de la sede; sus datos salen de `empresas.ts`. */
+  otrasEmpresas: string[];
   servicioTransporte: SedeServicioTransporte;
+  /** Galeria propia de la sede (con medidas, para `fotosAptas`). Sin ella, no hay seccion. */
+  galeria?: { src: string; alt: string; ancho: number; alto: number; empresaSlug: string }[];
+  temporadas?: unknown[];
+  faq?: { q: string; a: string }[];
 };
 
 /**

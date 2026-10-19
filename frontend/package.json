@@ -11,7 +11,9 @@
     "guardia": "node scripts/guardia-estilos.cjs",
     "test:guardia": "node --test tests/guardia-estilos.test.cjs",
     "test:contraste": "node --test tests/contraste.test.cjs",
-    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:contraste && npm run test:guardia && npm run guardia && next build"
+    "test:fotos": "node --test tests/imagenes-catalogo-completo.test.cjs",
+    "test:contenido": "node --test tests/contenido-paridad.test.cjs",
+    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:contraste && npm run test:contenido && npm run test:guardia && npm run guardia && next build"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

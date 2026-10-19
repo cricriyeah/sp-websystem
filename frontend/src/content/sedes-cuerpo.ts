@@ -13,7 +13,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
   'la-paz': {
     es: {
       slug: 'la-paz',
-      empresaFundadoraSlug: 'sal-y-sol',
+      empresaProtagonistaSlug: 'sal-y-sol',
       negocio: {
         nombre: 'Sal y Sol Sportfishing',
         calle: 'Marina La Costa, Rangel y Navarro',
@@ -51,16 +51,14 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
       ],
-      otrasEmpresas: [
-        { slug: 'transporte-la-paz', nombre: 'DLS Transporte', descripcion: '' },
-      ],
+      otrasEmpresas: ['transporte-la-paz'],
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
       },
     },
     en: {
       slug: 'la-paz',
-      empresaFundadoraSlug: 'sal-y-sol',
+      empresaProtagonistaSlug: 'sal-y-sol',
       negocio: {
         nombre: 'Sal y Sol Sportfishing',
         calle: 'Marina La Costa, Rangel y Navarro',
@@ -98,9 +96,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
       ],
-      otrasEmpresas: [
-        { slug: 'transporte-la-paz', nombre: 'DLS Transporte', descripcion: '' },
-      ],
+      otrasEmpresas: ['transporte-la-paz'],
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
       },
@@ -109,7 +105,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
   'la-ventana': {
     es: {
       slug: 'la-ventana',
-      empresaFundadoraSlug: null,
+      empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
       metaTitle: 'Experiencias en La Ventana, BCS | Sal y Sol Baja Experiences',
       metaDescription:
@@ -132,14 +128,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagenAlt: 'Ilustración genérica de costa; imagen provisional de La Ventana',
       },
       destacadas: [],
-      otrasEmpresas: [
-        { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', descripcion: '' },
-      ],
+      otrasEmpresas: [],
       servicioTransporte: null,
     },
     en: {
       slug: 'la-ventana',
-      empresaFundadoraSlug: null,
+      empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
       metaTitle: 'Experiences in La Ventana, BCS | Sal y Sol Baja Experiences',
       metaDescription:
@@ -160,16 +154,14 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagenAlt: 'Generic coastal illustration; provisional La Ventana image',
       },
       destacadas: [],
-      otrasEmpresas: [
-        { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', descripcion: '' },
-      ],
+      otrasEmpresas: [],
       servicioTransporte: null,
     },
   },
   'puerto-chale': {
     es: {
       slug: 'puerto-chale',
-      empresaFundadoraSlug: null,
+      empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
       metaTitle: 'Experiencias en Puerto Chale, BCS | Sal y Sol Baja Experiences',
       metaDescription:
@@ -192,14 +184,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagenAlt: 'Ilustración genérica de costa; imagen provisional de Puerto Chale',
       },
       destacadas: [],
-      otrasEmpresas: [
-        { slug: 'piratas-adventures', nombre: 'Piratas Adventures', descripcion: '' },
-      ],
+      otrasEmpresas: [],
       servicioTransporte: null,
     },
     en: {
       slug: 'puerto-chale',
-      empresaFundadoraSlug: null,
+      empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
       metaTitle: 'Experiences in Puerto Chale, BCS | Sal y Sol Baja Experiences',
       metaDescription:
@@ -220,9 +210,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagenAlt: 'Generic coastal illustration; provisional Puerto Chale image',
       },
       destacadas: [],
-      otrasEmpresas: [
-        { slug: 'piratas-adventures', nombre: 'Piratas Adventures', descripcion: '' },
-      ],
+      otrasEmpresas: [],
       servicioTransporte: null,
     },
   },

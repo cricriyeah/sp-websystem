@@ -43,6 +43,10 @@ const suites = {
   'control-fecha': ['src/lib/control-fecha.ts', 'CONTROL_FECHA_TEST_OUT'],
   'rango-paquete': ['src/lib/rango-paquete.ts', 'RANGO_PAQUETE_TEST_OUT'],
   'calendario-mes': ['src/lib/calendario-mes.ts', 'CALENDARIO_MES_TEST_OUT'],
+  'etiquetas-catalogo': ['src/lib/etiquetas-catalogo.ts', 'ETIQUETAS_TEST_OUT'],
+  'imagenes-catalogo': ['src/content/imagenes-catalogo.ts', 'IMAGENES_TEST_OUT'],
+  'secciones-sede': ['src/lib/secciones-sede.ts', 'SECCIONES_TEST_OUT'],
+  empresas: ['src/content/empresas.ts', 'EMPRESAS_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

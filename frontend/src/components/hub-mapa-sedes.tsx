@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { LazyMotion, domMax, m, useMotionValue } from 'framer-motion';
 import { ArrowCounterClockwise, Minus, Plus, X } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { marcaDe } from '@/content/empresas-marca';
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { hrefSede } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
@@ -89,7 +90,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
         <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-muted underline underline-offset-4">Natural Earth</a>
       </div>
       {sede && <div aria-live="polite" className="flex flex-wrap items-center gap-4 border-t border-border bg-superficie p-5">
-        <div className="min-w-0 flex-1"><p className="font-semibold">{sede.nombre}</p>{sede.empresaFundadoraNombre && <p className="text-sm text-muted">{copy.conLabel} {sede.empresaFundadoraNombre}</p>}</div>
+        <div className="min-w-0 flex-1"><p className="font-semibold">{sede.nombre}</p>{marcaDe(sede.empresaProtagonistaSlug) && <p className="text-sm text-muted">{copy.conLabel} {marcaDe(sede.empresaProtagonistaSlug)?.nombre}</p>}</div>
         <Link href={hrefSede(lang, sede.slug)} className={botonClases({ variante: 'principal' })}>{copy.verDestino}</Link>
         <Button variante="libre" aria-label={copy.closeDestination} onClick={() => setAbiertoSlug(null)} className="flex h-11 w-11 items-center justify-center"><X size={20} /></Button>
       </div>}

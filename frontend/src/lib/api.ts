@@ -344,6 +344,11 @@ export type ServicioCatalogo = {
   permite_anticipo: boolean;
   porcentaje_anticipo: number;
   descripcion: string;
+  /**
+   * Lo que incluye, por idioma (máx. 8 renglones). Opcional hasta que el backend lo despliegue;
+   * `{}` mientras el dueño no lo escriba. Nunca se deriva de `descripcion`.
+   */
+  incluye?: { es?: string[]; en?: string[] };
   activo: boolean;
   // Rango y paso de las horas de salida que ofrece el servicio (ver lib/horario-servicio.ts).
   pide_hora: boolean;
@@ -374,6 +379,11 @@ export type PaqueteCatalogo = {
   nombre: string;
   slug: string;
   descripcion: string;
+  /**
+   * Lo que incluye, por idioma (máx. 8 renglones). Opcional hasta que el backend lo despliegue;
+   * `{}` mientras el dueño no lo escriba. Nunca se deriva de `descripcion`.
+   */
+  incluye?: { es?: string[]; en?: string[] };
   precio_ancla: string;
   tipo_cambio_usd: string;
   estrategia_precio: 'por_grupo' | 'por_persona';

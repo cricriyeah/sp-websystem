@@ -11,20 +11,17 @@ export const SEDES_INDICE: Record<string, SedeIndiceEntry> = {
   'la-paz': {
     slug: 'la-paz',
     nombre: 'La Paz',
-    empresaFundadoraNombre: 'Sal y Sol Sportfishing',
-    logo: '/logos/logo2salysol.webp',
+    empresaProtagonistaSlug: 'sal-y-sol',
   },
   'la-ventana': {
     slug: 'la-ventana',
     nombre: 'La Ventana',
-    empresaFundadoraNombre: null,
-    logo: null,
+    empresaProtagonistaSlug: 'la-ventana-travel',
   },
   'puerto-chale': {
     slug: 'puerto-chale',
     nombre: 'Puerto Chale',
-    empresaFundadoraNombre: null,
-    logo: null,
+    empresaProtagonistaSlug: 'piratas-adventures',
   },
 };
 

@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { botonClases } from '@/components/ui/variantes';
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { marcaDe } from '@/content/empresas-marca';
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { hrefSede } from '@/lib/routes';
 
@@ -38,9 +39,9 @@ export function HubGridSedes({ lang, sedes, copy }: HubGridSedesProps) {
             <h3 className="text-xl font-bold text-foreground">
               {sede.nombre}
             </h3>
-            {sede.empresaFundadoraNombre && (
+            {marcaDe(sede.empresaProtagonistaSlug) && (
               <p className="text-sm text-muted">
-                {copy.conLabel} {sede.empresaFundadoraNombre}
+                {copy.conLabel} {marcaDe(sede.empresaProtagonistaSlug)?.nombre}
               </p>
             )}
             <Link
