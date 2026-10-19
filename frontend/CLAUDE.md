@@ -192,6 +192,18 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   intentos de pasar el tope de personas. En `CheckoutView` los datos de
   contacto usan `CamposContacto` con `idPrefijo="checkout"` (ids de error
   `checkout-error-<campo>`).
+- **Asistente móvil (< 640 px).** En `/reservar` y `/traslados` las tarjetas son solo de escritorio y
+  tablet; en móvil cada ruta pinta una pantalla por vez con `AsistenteMovil`
+  (`components/reserva/`). La lista de pantallas sale de `lib/pantallas-checkout.ts`, y
+  `use-pantalla-movil` lleva la pantalla en `?pantalla=` (cada una es una entrada de historial),
+  la más avanzada junto al borrador, un `tope` (sin pago no hay tarjeta) y una `minima` (con pago
+  en curso no se vuelve). En móvil `usePasoUrl` va apagado. Las rutas arman sus bloques una vez
+  (`bloqueViaje`, `bloqueContacto`…) y los usan en las dos formas. Dentro de `AsistenteMovil`,
+  `CheckoutSectionCard` pinta solo su contenido: sin marco, título ni pie. El botón grande es de
+  la `BarraInferior`, con dos sitios: el de la pantalla («Continuar») y el del contenido, que
+  manda. «Cómo pagas» y `PaymentForm` publican el suyo con `usePublicarAccion`; el de Stripe, desde
+  dentro de `<Elements>`. «Corregir» en móvil va a la pantalla del campo (`useCorregir` con
+  `irAPantalla`). Diseño y orden: `docs/superpowers/plans/2026-10-18-f8-asistente-movil.md`.
 - Pruebas desde `frontend/`: `npm.cmd test` ejecuta
   `tests/run-hub-tests.cjs` (una suite por módulo puro). Para una sola,
   `npm.cmd test -- calendario-paquete`; al añadir un módulo, registrar

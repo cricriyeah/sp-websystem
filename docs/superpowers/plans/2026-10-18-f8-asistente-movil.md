@@ -1,7 +1,7 @@
 # F8 — Asistente móvil: una navegación nueva, aparte de las tarjetas
 
 > Fecha: 2026-10-18. Rama `feat/marca-sun-baja`, worktree `.claude/worktrees/qa`, sin push.
-> Estado: **diseño propuesto, pendiente de la luz verde del dueño** (ver «Preguntas abiertas»).
+> Estado: **implementado (2026-10-19), pendiente de la revisión del dueño en su teléfono.** Luz verde el 2026-10-19 con las tres preguntas de la sección 7 tal como estaban propuestas. Ver la sección 9.
 > Reemplaza lo que la Task 8.4a hizo para móvil. Es la base de la 8.4b.
 > Plan padre: `docs/superpowers/plans/2026-10-15-frontend-base-rediseno.md` (F8, Tasks 8.4a, 8.4b, 8.4c).
 
@@ -114,3 +114,17 @@ Reglas del dueño que aplican:
 - `npm run verificar` en verde; guardia en 21 infracciones, línea base 21.
 - Servidores locales: backend `python manage.py runserver 8000` y frontend `npm run dev` (puerto 3000), ambos desde el worktree `qa`; pueden no seguir arriba en otra sesión.
 - Nada probado en navegador móvil.
+
+## 9. Cómo quedó (2026-10-19)
+
+Commits, uno por tarea, sin push: `15ef60b7` (lista de pantallas), `b154be6b` (URL y hook), `e70022b9` (`AsistenteMovil` y barra), `7c97fa48` (servicio suelto y reversión de la 8.4a), `4142e6c0` (paquete), `fcf965f3` (traslados), `66333a4c` (Pago en dos pantallas).
+
+- **Pantallas.** `lib/pantallas-checkout.ts` arma la lista por ruta. En el paquete recibe los índices de los servicios con pantalla propia: la actividad principal sin extras de un paquete por personas se elige en la fecha y no lleva pantalla. Traslados agrega dos títulos nuevos: «¿Qué día?» y «Hora y pasajeros».
+- **URL y borrador.** En móvil la URL lleva `?paso=` y `?pantalla=`; `use-pantalla-movil` guarda también la pantalla más avanzada junto al borrador. Una pantalla no alcanzada o inexistente se reescribe a la más avanzada. Con `tope`, sin pago creado no se llega a la tarjeta; con `minima`, con un pago en curso no se vuelve atrás.
+- **Tarjetas dentro del asistente.** `AsistenteMovil` pone un contexto y `CheckoutSectionCard` pinta solo su contenido: sin marco, sin título y sin pie. Las respuestas ya dadas no se pintan. Así las rutas reutilizan sus bloques sin duplicarlos para móvil.
+- **Botón de la barra.** Hay dos sitios: el de la pantalla («Continuar», o pagar deshabilitado mientras baja Stripe) y el del contenido, que manda sobre el primero. «Cómo pagas» y el formulario de Stripe publican el suyo con `usePublicarAccion`; el de Stripe lo hace desde dentro de `<Elements>`. Ya no hay portal de `PieDeTarjeta`.
+- **Corregir.** `useCorregir` acepta `irAPantalla`: en móvil lleva a la pantalla del campo en lugar de reabrir tarjetas. Sin cupo, elegir otra fecha y reintentar hacen lo mismo.
+- **Paquete.** Cada cobro es una pantalla «Tarjeta» de `PantallaPago`, con «Pago 1 de 2 · empresa · $X» en la primera línea.
+- **Diferencia con el plan padre (8.4b).** A partir de 640 px el botón de pago sigue dentro de `PaymentForm`, como antes: el dueño confirmó que escritorio y tablet no cambian. Solo en móvil el cobro sale a la barra.
+
+Pendiente (no entró aquí): la razón del botón para la verificación antibots («Verificando que eres una persona…»); el diálogo de cancelar la orden cruza-empresa, el teclado y las cookies (8.4c); y los renglones por cargo con su estado (8.4b, presencia de la empresa).

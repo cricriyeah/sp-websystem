@@ -310,6 +310,8 @@ Botón con indicador de carga circular de 20 y la etiqueta «Procesando…»; el
 
 El paso 3 se parte en dos sub-pantallas, cada una con **un solo botón**. (a) «Cómo pagas»: moneda, modalidad (completo o anticipo, si aplica), código promocional, deslinde y verificación antibots; su botón es «Continuar a la tarjeta», que crea la reserva u orden y retiene. (b) Tarjeta de cada empresa: formulario de Stripe con la nota de seguridad; su botón es «Pagar $X a [empresa]», y la barra inferior de (b) vive dentro de `<Elements>` (el botón interno de Stripe se quita). La apariencia de Stripe usa los hex de `tokens-pago` (café, tinta, blanco, error) y radio 12.
 
+Implementación (2026-10-19): las dos sub-pantallas existen solo en el asistente móvil (< 640 px). Ahí los dos botones se publican en la barra (`usePublicarAccion`); mientras baja Stripe, la barra muestra «Pagar» deshabilitado con la razón «Cargando el formulario de pago…». A partir de 640 px «Cómo pagas» y la tarjeta siguen siendo tarjetas del paso Pago, cada una con su botón, porque escritorio y tablet no cambian (decisión del dueño).
+
 | Propiedad | Valor |
 |---|---|
 | Botón | Principal, una acción por sub-pantalla: (a) «Continuar a la tarjeta»; (b) «Pagar $X a [empresa]» (monto solo si el servidor lo confirmó) |
