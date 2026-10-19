@@ -214,36 +214,6 @@
       }
     ]
   },
-  "reviews": {
-    "headline": "Lo que dicen quienes han viajado con nosotros",
-    "intro": "Nuestra mayor satisfacción es que vivas una experiencia memorable en el mar.",
-    "exampleNote": "Testimonios de viajeros que han compartido esta aventura con nosotros. Aquí se sincronizan reseñas de Google, Facebook y WhatsApp.",
-    "prev": "Reseña anterior",
-    "next": "Reseña siguiente",
-    "items": [
-      {
-        "quote": "Salimos a las 5 de la mañana y para las 7 ya teníamos dorado en la panga. El capitán conocía cada rincón de la bahía y fue súper amable.",
-        "author": "Regina Castellanos"
-      },
-      {
-        "quote": "Fuimos en familia y hasta mi hijo de 10 años sacó su primer pez. Nos cuidaron y nos atendieron increíble de principio a fin.",
-        "author": "Héctor Villaseñor"
-      },
-      {
-        "quote": "Fue mi primera vez pescando y la experiencia superó mis expectativas. La atención del equipo fue excelente y muy profesional.",
-        "author": "Daniela Priego"
-      },
-      {
-        "quote": "El equipo estaba en perfectas condiciones y el capitán nos explicó todo con mucha paciencia y calidez. Una mañana inolvidable.",
-        "author": "Emilio Zaragoza"
-      },
-      {
-        "quote": "Vimos amanecer sobre la bahía y volvimos con la hielera llena y una sonrisa enorme. ¡Totalmente recomendado!",
-        "author": "Fernanda Cobos"
-      }
-    ],
-    "cta": "¿Ya navegaste con nosotros? Nos encantaría conocer tu experiencia por WhatsApp"
-  },
   "footer": {
     "headline": "¡Será un gusto darte la bienvenida a bordo!",
     "addressLabel": "Punto de encuentro",
@@ -917,7 +887,13 @@
     },
     "colaboracion": "Una colaboración entre Sun Baja Experience, agencia de turismo local, y {empresa}",
     "empresas": "Quién opera cada servicio",
-    "opiniones": "Opiniones",
+    "opiniones": {
+      "titulo": "Opiniones de las empresas",
+      "publicadaPor": "Opinión publicada por {empresa}",
+      "verEn": "Ver en {fuente}",
+      "originalEs": "Original en español",
+      "originalEn": "Original en inglés"
+    },
     "galeria": "Fotos de los viajes",
     "faq": "Preguntas frecuentes"
   },

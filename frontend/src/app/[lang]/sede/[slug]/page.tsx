@@ -21,6 +21,7 @@ import { ReservaTranquila, type EjemploPago } from '@/components/reserva-tranqui
 import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
 import { FaqSection } from '@/components/faq-section';
+import { OpinionesEmpresas } from '@/components/opiniones-empresas';
 import { StructuredData } from '@/components/structured-data';
 import type { Fondo } from '@/components/ui/section-shell';
 
@@ -46,6 +47,10 @@ export default async function SedePage({ params, searchParams }: Props) {
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
   const { temporadas, faq } = contenido;
+  // Solo las confirmadas salen del servidor: el texto de una no confirmada nunca viaja al navegador.
+  const opiniones = empresas.flatMap((e) => e.resenas.filter((r) => r.confirmada).map((r) => ({
+    autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: e.nombre, logo: e.logo },
+  })));
   // Una foto no se repite entre el héroe, las tarjetas y la galería. Temporadas sí puede repetir
   // mientras las fotos sean de relleno (decisión del dueño, 2026-10-19).
   const usadas = new Set([
@@ -61,7 +66,7 @@ export default async function SedePage({ params, searchParams }: Props) {
 
   const { porcentaje, ejemplo } = pagoDeSede(servicios ?? [], contenido.destacadas[0]);
 
-  // Cada sección que sabe pintarse; las opiniones (9.5) aún no tienen componente, así que no entran al cálculo de fondos ni al menú.
+  // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
   type Banda = { fondo: Fondo; borde: boolean };
   const pintar: Partial<Record<SeccionId, (banda: Banda) => ReactNode>> = {
     hero: () => <>
@@ -72,6 +77,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     tranquilidad: (banda) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} hrefIncluye={`#${ANCLA_DE.reservar}`} {...banda} />,
     ...(galeria && { galeria: (banda: Banda) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} {...banda} /> }),
     ...(temporadas && { temporadas: (banda: Banda) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} {...banda} /> }),
+    opiniones: (banda) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} {...banda} />,
     ...(faq && { preguntas: (banda: Banda) => <FaqSection id={ANCLA_DE.preguntas} titulo={dict.sedeContenido.faq} preguntas={faq} {...banda} /> }),
   };
   const secciones = seccionesDeSede({

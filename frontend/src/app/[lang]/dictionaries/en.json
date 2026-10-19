@@ -214,36 +214,6 @@
       }
     ]
   },
-  "reviews": {
-    "headline": "What our guests say",
-    "intro": "Creating great memories and happy experiences for our guests is our greatest reward.",
-    "exampleNote": "Testimonials from guests who have shared this adventure with us. Live reviews from Google, Facebook, and WhatsApp will be featured here.",
-    "prev": "Previous review",
-    "next": "Next review",
-    "items": [
-      {
-        "quote": "We left at 5 am and by 7 we already had dorado in the boat. The captain knew every corner of the bay and was super friendly.",
-        "author": "Regina Castellanos"
-      },
-      {
-        "quote": "We went as a family and even my 10-year-old caught his first fish. They took great care of us and treated us amazingly from start to finish.",
-        "author": "Héctor Villaseñor"
-      },
-      {
-        "quote": "It was my first time fishing and the experience exceeded my expectations. The crew's service was wonderful and very professional.",
-        "author": "Daniela Priego"
-      },
-      {
-        "quote": "The boat and gear were in great shape and the captain explained everything with warmth and patience. An unforgettable morning.",
-        "author": "Emilio Zaragoza"
-      },
-      {
-        "quote": "We watched the sunrise over the bay and came back with a full cooler and big smiles. Highly recommended!",
-        "author": "Fernanda Cobos"
-      }
-    ],
-    "cta": "Sailed with us recently? We'd love to hear your feedback on WhatsApp!"
-  },
   "footer": {
     "headline": "We look forward to welcoming you aboard!",
     "addressLabel": "Meeting point",
@@ -917,7 +887,13 @@
     },
     "colaboracion": "A collaboration between Sun Baja Experience, a local travel agency, and {empresa}",
     "empresas": "Who runs each service",
-    "opiniones": "Reviews",
+    "opiniones": {
+      "titulo": "Reviews from the companies",
+      "publicadaPor": "Review published by {empresa}",
+      "verEn": "See on {fuente}",
+      "originalEs": "Original in Spanish",
+      "originalEn": "Original in English"
+    },
     "galeria": "Photos from the trips",
     "faq": "Frequently asked questions"
   },
