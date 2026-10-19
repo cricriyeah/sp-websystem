@@ -38,6 +38,11 @@ type Props = {
   onTopePersonas: () => void;
   /** Error de la tarjeta de viaje (fechas). */
   error: string;
+  /**
+   * Solo una parte, para las pantallas del asistente móvil (tipo · fecha · hora y pasajeros).
+   * Sin ella, las tres en orden (la tarjeta de escritorio).
+   */
+  parte?: 'tipo' | 'fecha' | 'hora-pasajeros';
 };
 
 /**
@@ -71,95 +76,101 @@ export function BloqueViajeTraslado({
   onPersonas,
   onTopePersonas,
   error,
+  parte,
 }: Props) {
+  const tipo = (
+    <TipoTrasladoCards
+      tipos={tiposDisponibles}
+      valor={tipoTraslado}
+      textos={traslados.types}
+      etiqueta={traslados.step1Title}
+      precioDesde={getPrecioDesde}
+      onChange={onTipo}
+    />
+  );
+  const fechas = (
+    <>
+      <FechaPaquete
+        lang={lang}
+        label={traslados.fields.fecha}
+        value={fecha}
+        onChange={onFecha}
+        minDate={minDate}
+        chooseLabel={pedido.chooseStart}
+        viewMonthLabel={pedido.viewMonth}
+        hideMonthLabel={pedido.hideMonth}
+        previousWeekLabel={pedido.previousWeek}
+        nextWeekLabel={pedido.nextWeek}
+        previousMonthLabel={booking.prevMonth}
+        nextMonthLabel={booking.nextMonth}
+        personas={personas}
+        fullLabel={checkout.dayFull}
+      />
+      {/* El regreso depende del tipo y de la fecha de inicio: aparece
+          pegado a la fecha, y solo con "redondo con aeropuerto". */}
+      <Despliegue abierto={tipoTraslado === 'redondo_aeropuerto'}>
+        <div className="pt-5">
+          <FechaRegresoCompacta
+            lang={lang}
+            label={traslados.fields.fechaRegreso}
+            value={fechaRegreso}
+            onChange={onFechaRegreso}
+            minDate={minFechaRegreso}
+            chooseLabel={pedido.chooseReturnDate}
+            changeButtonLabel={checkout.changeStep}
+            doneButtonLabel={checkout.doneEditing}
+            viewMonthLabel={pedido.viewMonth}
+            hideMonthLabel={pedido.hideMonth}
+            previousWeekLabel={pedido.previousWeek}
+            nextWeekLabel={pedido.nextWeek}
+            previousMonthLabel={booking.prevMonth}
+            nextMonthLabel={booking.nextMonth}
+            personas={personas}
+            fullLabel={checkout.dayFull}
+          />
+        </div>
+      </Despliegue>
+    </>
+  );
+  const horaCampo = (
+    <TimeField
+      label={traslados.fields.hora}
+      help={checkout.hourLabel}
+      value={hora}
+      onChange={onHora}
+      availableHours={horasDisponibles}
+    />
+  );
+  const personasCampo = (
+    <PeopleStepper
+      label={traslados.fields.pasajeros}
+      value={personas}
+      onChange={onPersonas}
+      maxPeople={maxCapacidad}
+      minPeople={1}
+      maxNotice={traslados.fields.maxPasajerosNotice.replace('{max}', String(maxCapacidad))}
+      onMaxAttempt={onTopePersonas}
+    />
+  );
+  const nota = (
+    <p>
+      <span className="font-semibold text-foreground">{traslados.summary.transfer}</span>
+      {' '}
+      {traslados.summary.included}
+    </p>
+  );
+  const errorViaje = <ErrorDeCampo id="error-viaje" mensaje={error} />;
+
+  if (parte === 'tipo') return tipo;
+  if (parte === 'fecha') return <>{fechas}{errorViaje}</>;
+  if (parte === 'hora-pasajeros') return <ContenidoViaje fecha={null} hora={horaCampo} personas={personasCampo} nota={nota} />;
+
   return (
     <>
       {/* Lo que define el producto va primero. */}
-      <BloqueDePaso titulo={traslados.step1Title}>
-        <TipoTrasladoCards
-          tipos={tiposDisponibles}
-          valor={tipoTraslado}
-          textos={traslados.types}
-          etiqueta={traslados.step1Title}
-          precioDesde={getPrecioDesde}
-          onChange={onTipo}
-        />
-      </BloqueDePaso>
-
-      <ContenidoViaje
-        fecha={
-          <>
-            <FechaPaquete
-              lang={lang}
-              label={traslados.fields.fecha}
-              value={fecha}
-              onChange={onFecha}
-              minDate={minDate}
-              chooseLabel={pedido.chooseStart}
-              viewMonthLabel={pedido.viewMonth}
-              hideMonthLabel={pedido.hideMonth}
-              previousWeekLabel={pedido.previousWeek}
-              nextWeekLabel={pedido.nextWeek}
-              previousMonthLabel={booking.prevMonth}
-              nextMonthLabel={booking.nextMonth}
-              personas={personas}
-              fullLabel={checkout.dayFull}
-            />
-            {/* El regreso depende del tipo y de la fecha de inicio: aparece
-                pegado a la fecha, y solo con "redondo con aeropuerto". */}
-            <Despliegue abierto={tipoTraslado === 'redondo_aeropuerto'}>
-              <div className="pt-5">
-                <FechaRegresoCompacta
-                  lang={lang}
-                  label={traslados.fields.fechaRegreso}
-                  value={fechaRegreso}
-                  onChange={onFechaRegreso}
-                  minDate={minFechaRegreso}
-                  chooseLabel={pedido.chooseReturnDate}
-                  changeButtonLabel={checkout.changeStep}
-                  doneButtonLabel={checkout.doneEditing}
-                  viewMonthLabel={pedido.viewMonth}
-                  hideMonthLabel={pedido.hideMonth}
-                  previousWeekLabel={pedido.previousWeek}
-                  nextWeekLabel={pedido.nextWeek}
-                  previousMonthLabel={booking.prevMonth}
-                  nextMonthLabel={booking.nextMonth}
-                  personas={personas}
-                  fullLabel={checkout.dayFull}
-                />
-              </div>
-            </Despliegue>
-          </>
-        }
-        hora={
-          <TimeField
-            label={traslados.fields.hora}
-            help={checkout.hourLabel}
-            value={hora}
-            onChange={onHora}
-            availableHours={horasDisponibles}
-          />
-        }
-        personas={
-          <PeopleStepper
-            label={traslados.fields.pasajeros}
-            value={personas}
-            onChange={onPersonas}
-            maxPeople={maxCapacidad}
-            minPeople={1}
-            maxNotice={traslados.fields.maxPasajerosNotice.replace('{max}', String(maxCapacidad))}
-            onMaxAttempt={onTopePersonas}
-          />
-        }
-        nota={
-          <p>
-            <span className="font-semibold text-foreground">{traslados.summary.transfer}</span>
-            {' '}
-            {traslados.summary.included}
-          </p>
-        }
-      />
-      <ErrorDeCampo id="error-viaje" mensaje={error} />
+      <BloqueDePaso titulo={traslados.step1Title}>{tipo}</BloqueDePaso>
+      <ContenidoViaje fecha={fechas} hora={horaCampo} personas={personasCampo} nota={nota} />
+      {errorViaje}
     </>
   );
 }

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 
 type Props = {
-  /** Calendario o selector de fecha de inicio. */
+  /** Calendario o selector de fecha de inicio; `null` cuando la fecha va en otra pantalla (asistente móvil). */
   fecha: ReactNode;
   /** Selector de hora (solo si el servicio o paquete pide hora). */
   hora?: ReactNode;
@@ -23,7 +23,7 @@ export function ContenidoViaje({ fecha, hora, personas, salida, nota }: Props) {
   const campos = [hora, personas].filter(Boolean).length;
   return (
     <>
-      <div>{fecha}</div>
+      {fecha && <div>{fecha}</div>}
       {campos > 0 && (
         <div className={`grid gap-3 ${campos === 2 ? 'sm:grid-cols-2' : ''}`}>
           {hora && <div className={CAJA_CONTENEDOR}>{hora}</div>}

@@ -374,7 +374,9 @@
       "estimado": "Estimate",
       "cerrar": "Close",
       "continuar": "Continue",
-      "tarjeta": "Your card details"
+      "tarjeta": "Your card details",
+      "fechaTraslado": "Which day?",
+      "horaPasajeros": "Time and passengers"
     },
     "tituloPagina": {
       "pesca": "Book your fishing trip",

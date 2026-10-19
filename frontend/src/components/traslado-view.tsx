@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useBorrador } from '@/components/checkout/use-borrador';
 import { useCorregir } from '@/components/checkout/use-corregir';
+import { AsistenteMovil } from '@/components/reserva/asistente-movil';
+import { useMovil } from '@/components/reserva/use-movil';
+import { usePantallaMovil } from '@/components/reserva/use-pantalla-movil';
+import { anterior as pantallaAnterior, pantallasDe, primeraDelPaso } from '@/lib/pantallas-checkout';
 import { usePasoUrl } from '@/components/checkout/use-paso-url';
 import { destinoDeError } from '@/lib/campo-paso';
 import { validarTodo } from '@/lib/validar-reserva';
@@ -205,8 +209,9 @@ export function TrasladoView({
   // Borrador de la pestaña y paso en la URL (ver `use-borrador` y `use-paso-url`). Solo se repone
   // un borrador si la URL ya trae `?paso=`: una entrada nueva desde el sitio manda sobre uno viejo.
   const reponerBorrador = useSearchParams().get('paso') !== null;
+  const claveDelBorrador = claveBorrador('traslados', empresaSlug);
   const borradorListo = useBorrador({
-    clave: claveBorrador('traslados', empresaSlug),
+    clave: claveDelBorrador,
     habilitado: phase !== 'recuperando',
     reponer: reponerBorrador,
     terminado: phase === 'confirmed',
@@ -233,13 +238,39 @@ export function TrasladoView({
     },
   });
   const pagoEnCurso = phase === 'payment' || phase === 'submitting';
-  const corregir = useCorregir(actual, setEditando);
-  usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo });
+
+  // Móvil (< 640 px): asistente de una pantalla por vez (tipo, fecha, hora y pasajeros, datos,
+  // recogida, cómo pagas, tarjeta). Las respuestas viven en el mismo estado.
+  const movil = useMovil();
+  const pantallas = useMemo(() => pantallasDe({ tipo: 'traslado' }), []);
+  const asistente = usePantallaMovil({
+    pantallas,
+    habilitado: movil && borradorListo,
+    inicial: phase === 'payment' ? 'tarjeta-0' : primeraDelPaso(pantallas, actual),
+    minima: pagoEnCurso ? 'tarjeta-0' : null,
+    // Sin pago creado no hay tarjeta que pedir: la pantalla más avanzada es «Cómo pagas».
+    tope: phase === 'payment' ? null : 'como-pagas',
+    clave: claveDelBorrador,
+  });
+  const { irA } = asistente;
+  const irAPantallaDelCampo = useCallback(
+    (destino: { paso: PasoId; campo: string }) => irA(
+      destino.campo.includes('-error-') ? 'contacto'
+        : destino.paso === 'datos' ? 'recogida'
+          : destino.paso === 'viaje' ? 'fecha'
+            : primeraDelPaso(pantallas, destino.paso),
+    ),
+    [irA, pantallas],
+  );
+  const corregir = useCorregir(actual, setEditando, movil ? irAPantallaDelCampo : undefined);
+  usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo && !movil });
   // Una sola flecha: «paso anterior» mientras haya uno y no haya un pago en curso; si no, sale al origen.
   const pasoVisible = editando ?? actual;
-  const alPasoAnterior = !pagoEnCurso && pasoAnterior(pasoVisible) !== null
-    ? () => setEditando(pasoAnterior(pasoVisible))
-    : undefined;
+  const alPasoAnterior = pagoEnCurso
+    ? undefined
+    : movil
+      ? pantallaAnterior(pantallas, asistente.pantalla.id) !== null ? () => { asistente.retroceder(); } : undefined
+      : pasoAnterior(pasoVisible) !== null ? () => setEditando(pasoAnterior(pasoVisible)) : undefined;
 
   useEffect(() => {
     if (!checkoutId || !recuperable) return;
@@ -392,19 +423,20 @@ export function TrasladoView({
     return '';
   };
 
-  const confirmarViaje = () => {
+  const confirmarViaje = (): boolean => {
     const falla = errorDeViaje();
     setErrorPaso3(falla);
     if (falla) {
       ayuda.tropezar('validacion');
-      return;
+      return false;
     }
     setActual((a) => (a === 'viaje' ? 'datos' : a));
     setEditando(null);
+    return true;
   };
 
   /** «Tus datos» junta contacto y recogida: se validan juntos antes de pasar al pago. */
-  const confirmarDatos = () => {
+  const confirmarDatos = (): boolean => {
     const errs = validarContacto();
     setErroresContacto(errs);
     const falla = errorDeRecogida();
@@ -413,14 +445,26 @@ export function TrasladoView({
       ayuda.tropezar('validacion');
       const primero = ORDEN_CAMPOS.find((c) => errs[c]);
       if (primero) refsContacto[primero].current?.focus();
-      return;
+      return false;
     }
     if (falla) {
       ayuda.tropezar('validacion');
-      return;
+      return false;
     }
     setActual((a) => (a === 'datos' ? 'pago' : a));
     setEditando(null);
+    return true;
+  };
+
+  /** Solo el contacto (en móvil la recogida tiene su propia pantalla). */
+  const confirmarContacto = (): boolean => {
+    const errs = validarContacto();
+    setErroresContacto(errs);
+    const primero = ORDEN_CAMPOS.find((c) => errs[c]);
+    if (!primero) return true;
+    ayuda.tropezar('validacion');
+    refsContacto[primero].current?.focus();
+    return false;
   };
 
   const onCodigoPromocionalChange = (codigo: string) => {
@@ -530,6 +574,8 @@ export function TrasladoView({
 
       setPago(pagoResponse);
       setPhase('payment');
+      // Creado el pago, el asistente móvil pasa a la tarjeta.
+      if (movil) irA('tarjeta-0');
       mostrar('exito', feedback.saved);
     } catch (err) {
       if (err instanceof ApiError && err.status === 503) {
@@ -621,7 +667,9 @@ export function TrasladoView({
   const etiquetaAccion = (estado: EstadoTarjeta | 'oculto') =>
     estado === 'completado' ? checkout.changeStep : estado === 'editando' ? checkout.doneEditing : undefined;
 
-  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? numeroDePaso('pago') : numeroDePaso(actual);
+  const pasoActualStepper = movil
+    ? numeroDePaso(asistente.pantalla.paso)
+    : phase === 'submitting' || phase === 'payment' ? numeroDePaso('pago') : numeroDePaso(actual);
   const stepsList = [checkout.stepper.viaje, checkout.stepper.datos, checkout.stepper.pago];
   const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
   // Con anticipo, la cifra del paso de pago es lo que se cobra hoy, no el total.
@@ -660,6 +708,152 @@ export function TrasladoView({
 
   const ayudaMensaje = `Hola, necesito ayuda con mi reserva de traslado ${tipoTraslado} para ${personas} personas el ${fecha}.`;
 
+  // Los mismos bloques en las tarjetas de escritorio y en las pantallas del asistente móvil.
+  const bloqueViajeTraslado = (parte?: 'tipo' | 'fecha' | 'hora-pasajeros') => (
+    <BloqueViajeTraslado
+      lang={lang}
+      traslados={traslados}
+      checkout={checkout}
+      pedido={pedido}
+      booking={booking}
+      tiposDisponibles={tiposDisponibles}
+      tipoTraslado={tipoTraslado}
+      getPrecioDesde={getPrecioDesde}
+      onTipo={(tipo) => {
+        setTipoTraslado(tipo);
+        if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
+        else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
+      }}
+      fecha={fecha}
+      minDate={minDate}
+      onFecha={(f) => {
+        setFecha(f);
+        if (fechaRegreso && fechaRegreso <= f) setFechaRegreso(diaSiguiente(f));
+      }}
+      fechaRegreso={fechaRegreso}
+      minFechaRegreso={diaSiguiente(fecha)}
+      onFechaRegreso={setFechaRegreso}
+      hora={hora}
+      horasDisponibles={horasDisponibles}
+      onHora={setHora}
+      personas={personas}
+      maxCapacidad={maxCapacidad}
+      onPersonas={setPersonas}
+      onTopePersonas={() => ayuda.tropezar('tope-personas')}
+      error={errorPaso3}
+      parte={parte}
+    />
+  );
+  const bloqueContacto = (
+    <BloqueContacto
+      idPrefijo="traslado"
+      checkout={checkout}
+      valores={contact}
+      errores={erroresContacto}
+      refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
+      disabled={locked}
+      onCambio={(campo, valor) => {
+        setContact((prev) => ({ ...prev, [campo]: valor }));
+        if (erroresContacto[campo]) setErroresContacto((prev) => ({ ...prev, [campo]: undefined }));
+      }}
+    />
+  );
+  const bloqueRecogida = (
+    <BloqueRecogida
+      traslados={traslados}
+      puntosEncuentro={catalogo.puntos_encuentro}
+      puntoSeleccionado={puntoSeleccionado}
+      puntoEncuentroId={puntoEncuentroId}
+      modoHospedaje={modoHospedaje}
+      direccionPersonalizada={direccionPersonalizada}
+      zonaPersonalizada={zonaPersonalizada}
+      tipoTraslado={tipoTraslado}
+      error={errorPaso2}
+      onPunto={setPuntoEncuentroId}
+      onOtraDireccion={() => {
+        setModoHospedaje('personalizada');
+        setPuntoEncuentroId(null);
+      }}
+      onDireccion={setDireccionPersonalizada}
+      onVolverALista={() => {
+        setModoHospedaje('catalogo');
+        setDireccionPersonalizada('');
+        setZonaPersonalizada('');
+        setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
+      }}
+      onZona={setZonaPersonalizada}
+    />
+  );
+  const bloqueTarjetaPago = (mostrarDestino: boolean, pagoEnCurso: Pago | null) => (
+    <BloqueTarjetaPago
+      lang={lang}
+      checkout={checkout}
+      feedback={feedback}
+      ayudaMensaje={ayudaMensaje}
+      mostrarDestino={mostrarDestino}
+      destinoRef={setDestinoTarjetaPago}
+      pagoEnCurso={pagoEnCurso}
+      onPagoConfirmado={(procesando) => {
+        setPagoProcesando(procesando);
+        setPhase('confirmed');
+      }}
+    />
+  );
+
+  // Móvil: una pantalla por vez. «Cómo pagas» y la tarjeta traen su propio botón (el de la tarjeta
+  // «Cómo pagas» llega a la barra por portal; el de Stripe, dentro del formulario).
+  const pantalla = asistente.pantalla;
+  const continuar = checkout.barra.continuar;
+  const pantallaMovil = (() => {
+    switch (pantalla.tipo) {
+      case 'tipo':
+        return { titulo: traslados.step1Title, contenido: bloqueViajeTraslado('tipo'), accion: {
+          etiqueta: continuar, alPulsar: () => asistente.avanzar(),
+        } };
+      case 'fecha':
+        return { titulo: checkout.barra.fechaTraslado, contenido: bloqueViajeTraslado('fecha'), accion: {
+          etiqueta: continuar,
+          alPulsar: () => {
+            const falla = errorDeViaje();
+            setErrorPaso3(falla);
+            if (falla) ayuda.tropezar('validacion');
+            else asistente.avanzar();
+          },
+        } };
+      case 'hora-pasajeros':
+        return { titulo: checkout.barra.horaPasajeros, contenido: bloqueViajeTraslado('hora-pasajeros'), accion: {
+          etiqueta: continuar,
+          alPulsar: () => {
+            if (confirmarViaje()) asistente.avanzar();
+            else irA('fecha');
+          },
+        } };
+      case 'contacto':
+        return { titulo: checkout.stepper.datos, contenido: bloqueContacto, accion: {
+          etiqueta: continuar, alPulsar: () => { if (confirmarContacto()) asistente.avanzar(); },
+        } };
+      case 'recogida':
+        return { titulo: traslados.fields.dondeRecogemos, contenido: bloqueRecogida, accion: {
+          etiqueta: continuar, alPulsar: () => { if (confirmarDatos()) asistente.avanzar(); },
+        } };
+      case 'como-pagas':
+        return { titulo: checkout.howYouPay, contenido: bloqueTarjetaPago(true, null) };
+      default:
+        return { titulo: checkout.barra.tarjeta, contenido: bloqueTarjetaPago(false, phase === 'payment' ? pago : null) };
+    }
+  })();
+  const asistenteMovil = (
+    <AsistenteMovil
+      id={pantalla.id}
+      titulo={pantallaMovil.titulo}
+      soloFundido={pantalla.paso === 'pago'}
+      anuncio={`${rotuloDePaso(checkout.stepper.stepOf, pantalla.paso)}: ${checkout.stepper[pantalla.paso]}`}
+      accion={pantallaMovil.accion}
+    >
+      {pantallaMovil.contenido}
+    </AsistenteMovil>
+  );
+
   return (
     <>
       <PaginaCheckout
@@ -676,7 +870,7 @@ export function TrasladoView({
           />
         }
         stepper={{ ...stepperPago, steps: stepsList }}
-        pasos={
+        pasos={movil ? asistenteMovil : (
           <>
             <ReservaPlegable
               activo={phase === 'payment'}
@@ -700,38 +894,7 @@ export function TrasladoView({
                   ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso>
                   : undefined}
               >
-                <BloqueViajeTraslado
-                  lang={lang}
-                  traslados={traslados}
-                  checkout={checkout}
-                  pedido={pedido}
-                  booking={booking}
-                  tiposDisponibles={tiposDisponibles}
-                  tipoTraslado={tipoTraslado}
-                  getPrecioDesde={getPrecioDesde}
-                  onTipo={(tipo) => {
-                    setTipoTraslado(tipo);
-                    if (tipo !== 'redondo_aeropuerto') setFechaRegreso(null);
-                    else if (!fechaRegreso) setFechaRegreso(diaSiguiente(fecha));
-                  }}
-                  fecha={fecha}
-                  minDate={minDate}
-                  onFecha={(f) => {
-                    setFecha(f);
-                    if (fechaRegreso && fechaRegreso <= f) setFechaRegreso(diaSiguiente(f));
-                  }}
-                  fechaRegreso={fechaRegreso}
-                  minFechaRegreso={diaSiguiente(fecha)}
-                  onFechaRegreso={setFechaRegreso}
-                  hora={hora}
-                  horasDisponibles={horasDisponibles}
-                  onHora={setHora}
-                  personas={personas}
-                  maxCapacidad={maxCapacidad}
-                  onPersonas={setPersonas}
-                  onTopePersonas={() => ayuda.tropezar('tope-personas')}
-                  error={errorPaso3}
-                />
+                {bloqueViajeTraslado()}
               </CheckoutSectionCard>
             </ItemPaso>
 
@@ -750,42 +913,8 @@ export function TrasladoView({
                     : undefined}
                 >
                   <div className="flex flex-col gap-6">
-                    <BloqueContacto
-                      idPrefijo="traslado"
-                      checkout={checkout}
-                      valores={contact}
-                      errores={erroresContacto}
-                      refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
-                      disabled={locked}
-                      onCambio={(campo, valor) => {
-                        setContact((prev) => ({ ...prev, [campo]: valor }));
-                        if (erroresContacto[campo]) setErroresContacto((prev) => ({ ...prev, [campo]: undefined }));
-                      }}
-                    />
-                    <BloqueRecogida
-                      traslados={traslados}
-                      puntosEncuentro={catalogo.puntos_encuentro}
-                      puntoSeleccionado={puntoSeleccionado}
-                      puntoEncuentroId={puntoEncuentroId}
-                      modoHospedaje={modoHospedaje}
-                      direccionPersonalizada={direccionPersonalizada}
-                      zonaPersonalizada={zonaPersonalizada}
-                      tipoTraslado={tipoTraslado}
-                      error={errorPaso2}
-                      onPunto={setPuntoEncuentroId}
-                      onOtraDireccion={() => {
-                        setModoHospedaje('personalizada');
-                        setPuntoEncuentroId(null);
-                      }}
-                      onDireccion={setDireccionPersonalizada}
-                      onVolverALista={() => {
-                        setModoHospedaje('catalogo');
-                        setDireccionPersonalizada('');
-                        setZonaPersonalizada('');
-                        setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
-                      }}
-                      onZona={setZonaPersonalizada}
-                    />
+                    {bloqueContacto}
+                    {bloqueRecogida}
                   </div>
                 </CheckoutSectionCard>
               </ItemPaso>
@@ -794,21 +923,9 @@ export function TrasladoView({
 
             {/* El último paso: "Cómo pagas" se pinta aquí (portal del panel) y, al crearse
                 el pago, el formulario de tarjeta aparece debajo. */}
-            <BloqueTarjetaPago
-              lang={lang}
-              checkout={checkout}
-              feedback={feedback}
-              ayudaMensaje={ayudaMensaje}
-              mostrarDestino={actual === 'pago' || phase !== 'form'}
-              destinoRef={setDestinoTarjetaPago}
-              pagoEnCurso={phase === 'payment' ? pago : null}
-              onPagoConfirmado={(procesando) => {
-                setPagoProcesando(procesando);
-                setPhase('confirmed');
-              }}
-            />
+            {bloqueTarjetaPago(actual === 'pago' || phase !== 'form', phase === 'payment' ? pago : null)}
           </>
-        }
+        )}
         pedido={
           <BloquePago
             lang={lang}

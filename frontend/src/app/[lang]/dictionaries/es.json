@@ -374,7 +374,9 @@
       "estimado": "Estimado",
       "cerrar": "Cerrar",
       "continuar": "Continuar",
-      "tarjeta": "Datos de tu tarjeta"
+      "tarjeta": "Datos de tu tarjeta",
+      "fechaTraslado": "¿Qué día?",
+      "horaPasajeros": "Hora y pasajeros"
     },
     "tituloPagina": {
       "pesca": "Reserva tu pesca",
