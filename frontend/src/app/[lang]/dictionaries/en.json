@@ -813,6 +813,13 @@
     }
   },
   "pedido": {
+    "pagoA": "Payment {n} of {total}: to {empresa}",
+    "pagoAAyuda": "Each company charges separately. This payment goes to {empresa}.",
+    "estadoCargo": {
+      "pendiente": "Pending",
+      "retenido": "Held",
+      "cobrado": "Charged"
+    },
     "cancelarOrden": {
       "titulo": "Cancel your order?",
       "cuerpo": "Your order is canceled and we show you right here what happened to the hold on your card.",
@@ -872,10 +879,6 @@
     "lockedCta": "Talk to an advisor",
     "whyManyPayments": "Why more than one payment?",
     "whyManyPaymentsBody": "Your package is run by separate companies and each one charges directly to its own account, so your card is requested once per company.",
-    "planTitle": "Your order is paid in {n} payments, one per company",
-    "planNow": "Now",
-    "planNext": "Up next",
-    "planDone": "Held",
     "payStepHintLast": "This is the last company in your package. This payment completes your order.",
     "authorized": "held",
     "payButton": "Pay {amount} to {empresa}",

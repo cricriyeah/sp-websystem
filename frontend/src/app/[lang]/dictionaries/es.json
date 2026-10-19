@@ -813,6 +813,13 @@
     }
   },
   "pedido": {
+    "pagoA": "Pago {n} de {total}: a {empresa}",
+    "pagoAAyuda": "Cada empresa cobra por separado. Este cobro va a la cuenta de {empresa}.",
+    "estadoCargo": {
+      "pendiente": "Pendiente",
+      "retenido": "Retenido",
+      "cobrado": "Cobrado"
+    },
     "cancelarOrden": {
       "titulo": "¿Cancelar tu orden?",
       "cuerpo": "Se cancela tu orden y aquí mismo te mostramos qué pasó con lo retenido en tu tarjeta.",
@@ -872,10 +879,6 @@
     "lockedCta": "Hablar con un asesor",
     "whyManyPayments": "¿Por qué más de un pago?",
     "whyManyPaymentsBody": "Tu paquete lo operan empresas distintas y cada una cobra directo en su propia cuenta, por eso la tarjeta se pide una vez por empresa.",
-    "planTitle": "Tu pedido se paga en {n} pagos, uno por empresa",
-    "planNow": "Ahora",
-    "planNext": "Enseguida",
-    "planDone": "Retenido",
     "payStepHintLast": "Es la última empresa de tu paquete. Con este pago terminas.",
     "authorized": "retenido",
     "payButton": "Pagar {amount} a {empresa}",

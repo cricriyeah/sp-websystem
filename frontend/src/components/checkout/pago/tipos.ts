@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda } from '@/lib/api';
 import type { ClaveAccion, TipoProblema } from '@/lib/problema-reserva';
+import type { CargoVisible } from './renglon-cargo';
 
 export type OrderLine = {
   label: string;
@@ -21,6 +22,10 @@ export type StripePanelProps = {
   sellos?: { nombre: string; logo?: string }[];
   /** Lo elegido en el viaje (fecha, hora, personas…), vivo desde el paso 1. */
   lineasViaje?: { etiqueta: string; valor: string }[];
+  /** Cruza-empresa ya en pago: un renglón por cobro con su estado (en lugar de los sellos). */
+  cargos?: CargoVisible[];
+  /** Junto a los cargos: cómo se retiene y se cobra cada uno. */
+  notaCargos?: string;
   /**
    * Dónde se pinta la tarjeta "Cómo pagas" (moneda, modalidad, promo, deslinde y
    * el botón que crea el pago): en la columna de pasos, como el cuarto paso. El

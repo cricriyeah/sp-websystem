@@ -1,89 +1,43 @@
-import { Check } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { ListaCargos, type CargoVisible } from '@/components/checkout/pago/renglon-cargo';
 import { PorQueVariosPagos } from './por-que-varios-pagos';
-
-type Paso = {
-  etiqueta: string;
-  monto: string;
-  estado: 'hecho' | 'actual' | 'pendiente';
-};
 
 type Props = {
   dict: Dictionary;
-  pasos: Paso[];
+  cargos: CargoVisible[];
   indice: number;
   /** Total del pedido completo, ya con moneda. */
   total?: string;
 };
 
 /**
- * El plan de pagos de un pedido con varias empresas, a la vista ANTES de pagar el
- * primero: un titular que dice cuántos pagos son y por qué, y una ficha por cobro
- * (empresa y monto) con su estado. Cada cobro es un evento aparte, así que cada
- * uno es su propia pieza y no un tramo de una barra de progreso. Sin esto el
- * segundo formulario de tarjeta se lee como un error ("¿otra vez?").
+ * El plan de pagos de un pedido con varias empresas, a la vista ANTES de pagar cada uno: a quién
+ * va este cobro, por qué cada empresa cobra aparte, y un renglón por cobro con su estado. Sin
+ * esto el segundo formulario de tarjeta se lee como un error ("¿otra vez?"). En móvil la primera
+ * línea de la pantalla ya dice «Pago 1 de 2 · empresa · $X»: el titular se omite ahí.
  */
-export function EncabezadoPago({ dict, pasos, indice, total }: Props) {
-  if (pasos.length <= 1) return null;
+export function EncabezadoPago({ dict, cargos, indice, total }: Props) {
+  if (cargos.length <= 1) return null;
   const textos = dict.pedido;
-  const esUltimo = indice === pasos.length - 1;
+  const empresa = cargos[indice]?.empresa ?? '';
+  const esUltimo = indice === cargos.length - 1;
 
   return (
-    <div className="border-b border-border pb-5">
-      <p className="text-base font-medium text-foreground">
-        {textos.planTitle.replace('{n}', String(pasos.length))}
-      </p>
+    <div className="flex flex-col gap-3 border-b border-border pb-5">
+      <div className="flex flex-col gap-1">
+        <p className="texto-etiqueta text-foreground max-sm:hidden">
+          {textos.pagoA.replace('{n}', String(indice + 1)).replace('{total}', String(cargos.length)).replace('{empresa}', empresa)}
+        </p>
+        <p className="texto-pequeno text-apagado">{textos.pagoAAyuda.replace('{empresa}', empresa)}</p>
+      </div>
+      <ListaCargos cargos={cargos} />
       {total && (
-        <p className="mt-1 text-sm text-muted">
-          {textos.stripTotal.replace('{total}', total).replace('{n}', String(pasos.length))}
+        <p className="texto-pequeno text-apagado tabular-nums">
+          {textos.stripTotal.replace('{total}', total).replace('{n}', String(cargos.length))}
         </p>
       )}
-
-      {/* Mismo lenguaje que el stepper de arriba (círculos unidos por una línea, sin cajas):
-          un progreso que se lee y no se toca. Una caja con borde se leería como una opción para elegir. */}
-      <ol className="mt-5 flex items-start">
-        {pasos.map((paso, i) => {
-          const actual = paso.estado === 'actual';
-          const hecho = paso.estado === 'hecho';
-          const ultimo = i === pasos.length - 1;
-          return (
-            <li
-              key={`${paso.etiqueta}-${i}`}
-              aria-current={actual ? 'step' : undefined}
-              className={`flex min-w-0 flex-col gap-2 ${ultimo ? 'flex-none' : 'flex-1'}`}
-            >
-              <div className="flex items-center">
-                <span
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
-                    hecho
-                      ? 'bg-accent text-accent-foreground'
-                      : actual
-                        ? 'border-2 border-accent text-accent'
-                        : 'border border-border-strong text-muted'
-                  }`}
-                >
-                  {hecho ? <Check size={12} weight="bold" aria-hidden /> : i + 1}
-                </span>
-                {!ultimo && (
-                  <span aria-hidden className={`mx-3 h-px flex-1 ${hecho ? 'bg-accent' : 'bg-border'}`} />
-                )}
-              </div>
-              <div className={`flex flex-col gap-0.5 ${ultimo ? '' : 'pr-3'}`}>
-                <span className={`text-sm font-medium ${actual ? 'text-accent' : 'text-muted'}`}>
-                  {actual ? textos.planNow : hecho ? textos.planDone : textos.planNext}
-                </span>
-                <span className={`text-sm ${actual ? 'font-medium text-foreground' : 'text-muted'}`}>{paso.etiqueta}</span>
-                <span className={`text-sm ${actual ? 'font-semibold text-foreground' : 'text-muted'}`}>{paso.monto}</span>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-
-      {esUltimo && <p className="mt-3 text-sm text-muted">{textos.payStepHintLast}</p>}
-      <div className="mt-1">
-        <PorQueVariosPagos dict={dict} />
-      </div>
+      {esUltimo && <p className="texto-pequeno text-apagado">{textos.payStepHintLast}</p>}
+      <PorQueVariosPagos dict={dict} />
     </div>
   );
 }

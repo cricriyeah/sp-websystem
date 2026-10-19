@@ -13,6 +13,7 @@ import { fechaDeComponente } from '@/lib/calendario-paquete';
 import type { ComponentePedido } from '@/lib/pedido-payload';
 import { numeroDePaso, rotuloDePaso } from '@/lib/pasos-checkout';
 import { formatearPrecio } from '@/lib/pricing-paquete';
+import type { CargoVisible, EstadoCargo } from '@/components/checkout/pago/renglon-cargo';
 import { EncabezadoPago } from './encabezado-pago';
 import { ReservaPlegable } from './reserva-plegable';
 import { useCancelarOrden } from './use-cancelar-orden';
@@ -55,6 +56,8 @@ type Props = {
   destinoTarjetaPago: HTMLElement | null;
   setDestinoTarjetaPago: (nodo: HTMLElement | null) => void;
   sedeSlug: string;
+  /** `{ nombre, logo }` por slug (de `content/empresas`): el sello de cada cargo. */
+  empresas: Record<string, { nombre: string; logo?: string }>;
   /** La orden se canceló y se liberó lo retenido: vuelve al formulario con este aviso. */
   onOrdenCancelada: (linea: string) => void;
 };
@@ -70,7 +73,7 @@ export function PantallaPago({
   lang, dict, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
   stepperPagos, volverHref, empresa, sellos, totalMovil, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
   lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
-  sedeSlug, onOrdenCancelada,
+  sedeSlug, empresas, onOrdenCancelada,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
   const movil = useMovil();
@@ -90,11 +93,21 @@ export function PantallaPago({
   const monto = formatearPrecio(Number(pasoPago.monto), moneda);
   const totalPago = formatearPrecio(Number(pasoPago.precioTotal ?? pasoPago.monto), moneda);
   const etiqueta = nombreEmpresa(pasoPago.empresaSlug);
-  const pasosPago = pago.pagos.map((item, indice) => ({
-    etiqueta: nombreEmpresa(item.empresaSlug),
-    monto: formatearPrecio(Number(item.monto), moneda),
-    estado: (indice < pago.indice ? 'hecho' : indice === pago.indice ? 'actual' : 'pendiente') as 'hecho' | 'actual' | 'pendiente',
-  }));
+  // Un renglón por cobro: los anteriores quedan retenidos hasta el último; ninguno se cobra antes.
+  const cargos: CargoVisible[] = pago.pagos.map((item, indice) => {
+    const estado: EstadoCargo = indice < pago.indice ? 'retenido' : 'pendiente';
+    return {
+      empresa: nombreEmpresa(item.empresaSlug),
+      logo: empresas[item.empresaSlug]?.logo,
+      servicio: paquete.servicios_asociados
+        .filter((c) => c.servicio.empresa_slug === item.empresaSlug)
+        .map((c) => c.servicio.nombre).join(', '),
+      monto: `${formatearPrecio(Number(item.monto), moneda)} ${moneda}`,
+      estado,
+      etiquetaEstado: textos.estadoCargo[estado],
+      actual: indice === pago.indice,
+    };
+  });
   const etiquetaBotonPago = n === 1
     ? paquete.precio_depende_de_personas
       ? (personasPaquete === 1 ? textos.payOne : textos.payPeople.replace('{n}', String(personasPaquete)))
@@ -113,7 +126,7 @@ export function PantallaPago({
       ayudaMensaje={ayudaMensaje}
       pago={{ client_secret: pasoPago.clientSecret, publishable_key: pasoPago.publishableKey }}
       venceEn={pasoPago.venceEn}
-      encabezadoPago={<EncabezadoPago dict={dict} pasos={pasosPago} indice={pago.indice} total={totalConMoneda ?? undefined} />}
+      encabezadoPago={<EncabezadoPago dict={dict} cargos={cargos} indice={pago.indice} total={totalConMoneda ?? undefined} />}
       etiquetaBotonPago={etiquetaBotonPago}
       apartadoHasta={pago.apartadoHasta}
       antesDePagar={motor === 'reserva' ? pago.antesDePagar : undefined}
@@ -229,6 +242,8 @@ export function PantallaPago({
           lang={lang} checkout={checkout} feedback={feedback} ayudaMensaje={ayudaMensaje}
           waiverAccepted={true} onWaiverChange={() => {}} errorWaiver={false}
           lines={[{ label: etiqueta, amount: totalPago }]} lineasViaje={pago.retomado ? [] : lineasViaje} sellos={sellos}
+          cargos={cargos.length > 1 ? cargos : undefined}
+          notaCargos={cargos.length > 1 ? textos.chargesSum.replace('{total}', totalConMoneda ?? '') : undefined}
           destinoTarjeta={destinoTarjetaPago}
           total={totalPago} amountDueNow={monto}
           moneda={moneda} onMonedaChange={() => {}} usdDisponible={false}

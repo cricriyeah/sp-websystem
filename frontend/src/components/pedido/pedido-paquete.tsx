@@ -518,6 +518,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       destinoTarjetaPago={destinoTarjetaPago}
       setDestinoTarjetaPago={setDestinoTarjetaPago}
       sedeSlug={sedeSlug}
+      empresas={empresas}
       onOrdenCancelada={(linea) => {
         reiniciarPedido();
         avisar('info', linea);

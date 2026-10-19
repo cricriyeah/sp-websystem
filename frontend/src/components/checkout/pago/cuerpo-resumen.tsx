@@ -1,4 +1,5 @@
 import { EmpresaSello } from '@/components/ui/empresa-sello';
+import { ListaCargos } from '@/components/checkout/pago/renglon-cargo';
 import type { ResumenVivo } from '@/components/reserva/contexto-barra';
 
 /**
@@ -6,10 +7,17 @@ import type { ResumenVivo } from '@/components/reserva/contexto-barra';
  * el total y «pagarás ahora» si difiere. Lo pintan la tarjeta del panel (escritorio y tablet) y la
  * hoja «Ver resumen» (móvil), así no pueden decir cosas distintas.
  */
-export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], total, amountDueNow }: ResumenVivo) {
+export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], total, amountDueNow, cargos = [], notaCargos }: ResumenVivo) {
   return (
     <>
-      {sellos.length > 0 && (
+      {cargos.length > 0 && (
+        // Cruza-empresa en pago: cada cobro con su estado, en lugar de solo los sellos.
+        <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4">
+          <ListaCargos cargos={cargos} />
+          {notaCargos && <p className="texto-pequeno text-apagado">{notaCargos}</p>}
+        </div>
+      )}
+      {cargos.length === 0 && sellos.length > 0 && (
         // Quién opera el viaje, sin caja dentro de la caja: sello y nombre. En cruza-empresa, uno por empresa.
         <ul className="mb-4 flex flex-col gap-3 border-b border-border pb-4">
           {sellos.map((s) => (
