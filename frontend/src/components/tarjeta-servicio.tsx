@@ -77,7 +77,7 @@ export function TarjetaServicio({ vista, textos, hrefContacto, destacada, priori
           {restantes > 0 && <li className="texto-pequeno text-muted">{textos.mas.replace('{n}', String(restantes))}</li>}
         </ul>
       ) : hrefContacto ? (
-        <a href={hrefContacto} target="_blank" rel="noopener noreferrer" className="relative z-10 mt-2 inline-flex min-h-11 items-center texto-pequeno text-cafe underline underline-offset-4">
+        <a href={hrefContacto} target="_blank" rel="noopener noreferrer" className="relative z-10 mt-2 inline-flex min-h-11 items-center texto-pequeno text-cafe">
           {textos.preguntaIncluye}
         </a>
       ) : (

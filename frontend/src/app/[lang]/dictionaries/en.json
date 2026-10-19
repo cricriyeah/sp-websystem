@@ -898,7 +898,22 @@
       "whatsapp": "Message us on WhatsApp",
       "whatsappMensaje": "Hi, I'd like to know what I can book in {sede}."
     },
-    "tranquilidad": "Book with peace of mind",
+    "tranquilidad": {
+      "titulo": "Book with peace of mind",
+      "pagoTitulo": "How you pay",
+      "pagoTexto": "You pay the company that runs your service directly. Depending on the service, you pay the full amount online or {porcentaje}% now and the rest in cash on the day of the trip.",
+      "pagoTextoTotal": "You pay the company that runs your service directly, the full amount online when you book.",
+      "ejemploServicio": "For example, for {servicio}:",
+      "hoyPagas": "You pay today",
+      "resto": "The rest, on the day of the trip, in cash",
+      "climaTitulo": "If the weather is bad",
+      "climaTexto": "If bad weather keeps the trip from leaving, you get a full refund.",
+      "fechaTitulo": "Changing your date",
+      "fechaTexto": "You can change the date with at least 48 hours' notice.",
+      "incluyeTitulo": "What is included",
+      "incluyeTexto": "Each service has its own list. Check it before you book.",
+      "verIncluye": "See what each service includes"
+    },
     "colaboracion": "A collaboration between Sun Baja Experience, a local travel agency, and {empresa}",
     "empresas": "Who runs each service",
     "opiniones": "Reviews",

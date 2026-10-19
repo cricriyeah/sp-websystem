@@ -898,7 +898,22 @@
       "whatsapp": "Escribirnos por WhatsApp",
       "whatsappMensaje": "Hola, quiero saber qué se puede reservar en {sede}."
     },
-    "tranquilidad": "Reserva con tranquilidad",
+    "tranquilidad": {
+      "titulo": "Reserva con tranquilidad",
+      "pagoTitulo": "Cómo pagas",
+      "pagoTexto": "Pagas directo a la empresa que opera tu servicio. Según el servicio, pagas el total en línea o el {porcentaje} % ahora y el resto en efectivo el día del viaje.",
+      "pagoTextoTotal": "Pagas directo a la empresa que opera tu servicio, el total en línea al reservar.",
+      "ejemploServicio": "Por ejemplo, en {servicio}:",
+      "hoyPagas": "Hoy pagas",
+      "resto": "El resto, el día del viaje, en efectivo",
+      "climaTitulo": "Si hay mal clima",
+      "climaTexto": "Si el mal clima impide salir, hay reembolso completo.",
+      "fechaTitulo": "Cambio de fecha",
+      "fechaTexto": "Puedes cambiar la fecha con al menos 48 horas de anticipación.",
+      "incluyeTitulo": "Qué incluye",
+      "incluyeTexto": "Cada servicio tiene su propia lista. Revísala antes de reservar.",
+      "verIncluye": "Ver qué incluye cada servicio"
+    },
     "colaboracion": "Una colaboración entre Sun Baja Experience, agencia de turismo local, y {empresa}",
     "empresas": "Quién opera cada servicio",
     "opiniones": "Opiniones",

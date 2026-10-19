@@ -5,7 +5,9 @@ import { getDictionary, hasLocale } from '../../dictionaries';
 import { alternativasDe } from '@/lib/site';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
-import { getPaquetesSede, getServiciosSede, type Moneda } from '@/lib/api';
+import { getPaquetesSede, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
+import { aMoneda } from '@/lib/moneda';
+import { formatearPrecio } from '@/lib/pricing-paquete';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_DE, enlacesDeSede, fondosDeSecciones, seccionesDeSede, type SeccionId } from '@/lib/secciones-sede';
 import { SiteHeader } from '@/components/site-header';
@@ -13,6 +15,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { SedeHero } from '@/components/sede-hero';
 import { BandaColaboracion } from '@/components/banda-colaboracion';
 import { QuePuedesReservar } from '@/components/que-puedes-reservar';
+import { ReservaTranquila, type EjemploPago } from '@/components/reserva-tranquila';
 import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
 import { FaqSection } from '@/components/faq-section';
@@ -42,8 +45,9 @@ export default async function SedePage({ params, searchParams }: Props) {
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
   const { galeria, temporadas, faq } = contenido;
 
-  // Cada sección que sabe pintarse; «Reserva con tranquilidad» (9.2) y las opiniones (9.5)
-  // aún no tienen componente, así que no entran al cálculo de fondos ni al menú.
+  const { porcentaje, ejemplo } = pagoDeSede(servicios ?? [], contenido.destacadas[0]);
+
+  // Cada sección que sabe pintarse; las opiniones (9.5) aún no tienen componente, así que no entran al cálculo de fondos ni al menú.
   type Banda = { fondo: Fondo; borde: boolean };
   const pintar: Partial<Record<SeccionId, (banda: Banda) => ReactNode>> = {
     hero: () => <>
@@ -51,6 +55,7 @@ export default async function SedePage({ params, searchParams }: Props) {
       {marcaSede && <BandaColaboracion empresa={marcaSede} frase={dict.sedeContenido.colaboracion} />}
     </>,
     reservar: (banda) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} {...banda} />,
+    tranquilidad: (banda) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} hrefIncluye={`#${ANCLA_DE.reservar}`} {...banda} />,
     ...(galeria && { galeria: (banda: Banda) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} {...banda} /> }),
     ...(temporadas && { temporadas: (banda: Banda) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} {...banda} /> }),
     ...(faq && { preguntas: (banda: Banda) => <FaqSection id={ANCLA_DE.preguntas} titulo={dict.sedeContenido.faq} preguntas={faq} {...banda} /> }),
@@ -75,4 +80,32 @@ export default async function SedePage({ params, searchParams }: Props) {
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={contenido.negocio} sedeSlug={slug} anclas={anclas} />
   </>;
+}
+
+/** Dos montos con su moneda: «$1,350 MXN / $75 USD». */
+function enDosMonedas(mxn: number, tipoCambio: string): string {
+  const usd = aMoneda(mxn, 'USD', tipoCambio);
+  return `${formatearPrecio(mxn, 'MXN')} MXN / ${formatearPrecio(usd, 'USD')} USD`;
+}
+
+/**
+ * El modo de pago que se cuenta en «Reserva con tranquilidad»: el anticipo del servicio destacado
+ * (o, si no lo permite, el de otro servicio de la sede) y un ejemplo con su precio real. Sin
+ * precio no hay ejemplo; por ruta no hay un precio que poner.
+ */
+function pagoDeSede(servicios: ServicioCatalogo[], destacada: { tipo: string; slug: string; empresaSlug?: string } | undefined): { porcentaje: number | null; ejemplo: EjemploPago | null } {
+  const conAnticipo = (s: ServicioCatalogo) => s.permite_anticipo && s.porcentaje_anticipo > 0;
+  const destacado = destacada?.tipo === 'servicio'
+    ? servicios.find((s) => s.slug === destacada.slug && (!destacada.empresaSlug || s.empresa_slug === destacada.empresaSlug))
+    : undefined;
+  const conPorcentaje = destacado && conAnticipo(destacado) ? destacado : servicios.find(conAnticipo);
+  const porcentaje = conPorcentaje?.porcentaje_anticipo ?? null;
+  const precio = destacado && destacado.tipo_servicio !== 'transporte' ? Number(destacado.precio_base) : NaN;
+  if (!destacado || !Number.isFinite(precio) || precio <= 0) return { porcentaje, ejemplo: null };
+  if (!conAnticipo(destacado)) return { porcentaje, ejemplo: { servicio: destacado.nombre, ahora: enDosMonedas(precio, destacado.tipo_cambio_usd), resto: null } };
+  const ahora = Math.round((precio * destacado.porcentaje_anticipo) / 100);
+  return {
+    porcentaje,
+    ejemplo: { servicio: destacado.nombre, ahora: enDosMonedas(ahora, destacado.tipo_cambio_usd), resto: enDosMonedas(precio - ahora, destacado.tipo_cambio_usd) },
+  };
 }

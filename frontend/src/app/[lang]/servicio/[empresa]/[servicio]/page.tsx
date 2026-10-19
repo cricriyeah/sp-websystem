@@ -64,7 +64,7 @@ export default async function ServicioPage({ params, searchParams }: Props) {
     {incluye.length > 0
       ? <ul className="mt-4 flex flex-col gap-2">{incluye.map(renglon => <li key={renglon} className="flex items-start gap-2 texto-cuerpo text-foreground"><Check size={18} weight="bold" aria-hidden="true" className="mt-0.5 shrink-0 text-cafe" /><span>{renglon}</span></li>)}</ul>
       : tieneWhatsapp
-        ? <a href={whatsappHref(textos.whatsappMensaje.replace('{sede}', sede?.nombre ?? ''))} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-11 items-center texto-cuerpo text-cafe underline underline-offset-4">{textos.preguntaIncluye}</a>
+        ? <a href={whatsappHref(textos.whatsappMensaje.replace('{sede}', sede?.nombre ?? ''))} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-11 items-center texto-cuerpo text-cafe">{textos.preguntaIncluye}</a>
         : <p className="mt-3 texto-cuerpo text-muted">{textos.preguntaIncluye}</p>}
   </div>;
   return <>
