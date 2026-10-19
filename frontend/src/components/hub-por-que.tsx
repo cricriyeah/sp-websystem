@@ -1,13 +1,14 @@
 type Pilar = { titulo: string; texto: string };
 
 type HubPorQueProps = {
+  id: string;
   headline: string;
   pilares: Pilar[];
 };
 
-export function HubPorQue({ headline, pilares }: HubPorQueProps) {
+export function HubPorQue({ id, headline, pilares }: HubPorQueProps) {
   return (
-    <section id="nosotros" className="scroll-mt-28 mx-auto max-w-6xl px-6 py-16 sm:px-8 lg:px-12">
+    <section id={id} className="scroll-mt-28 mx-auto max-w-6xl px-6 py-16 sm:px-8 lg:px-12">
       <h2 className="max-w-[20ch] texto-seccion text-foreground">{headline}</h2>
       <div className="mt-10 grid gap-8 sm:grid-cols-3">
         {pilares.map((pilar) => (

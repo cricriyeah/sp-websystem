@@ -7,18 +7,21 @@ import Image from 'next/image';
 import { List, X } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { marcaDe } from '@/content/empresas-marca';
 import { SEDES_INDICE } from '@/content/sedes-indice';
 import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { getSedes } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
+import { ANCLA_HUB } from '@/lib/secciones-sede';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { SelectorIdioma } from '@/components/selector-idioma';
 import { SedeSelector } from '@/components/sede-selector';
 import { ContinuarReservacion } from '@/components/continuar-reservacion';
 import { Button } from '@/components/ui/button';
+import { EmpresaSello } from '@/components/ui/empresa-sello';
+
+const MARCA = 'Sun Baja Experience';
 
 type SiteHeaderProps = {
   lang: Locale;
@@ -28,6 +31,16 @@ type SiteHeaderProps = {
   variante?: 'hub' | 'sede';
   /** Si no llega, se resuelve en cliente (query, localStorage/cookie, o primera sede activa). */
   sedeSlugActual?: string;
+  /**
+   * La empresa protagonista de la sede: su sello va junto a nuestra marca. Solo la pasa la
+   * página de sede; fuera de una sede (hub, servicio, legales) va solo la nuestra.
+   */
+  marcaSede?: { nombre: string; logo?: string };
+  /**
+   * El menú de la sede, armado por su página con `enlacesDeSede(seccionesDeSede(...))`: solo
+   * las secciones que de verdad se pintan. Sin él, una página de sede lleva solo «Reservar».
+   */
+  anclas?: { ancla: string; etiqueta: string }[];
   /** Clases extra del `<header>`. Existe para el `print:hidden` del recibo. */
   className?: string;
 };
@@ -38,6 +51,8 @@ export function SiteHeader({
   continuar,
   variante = 'sede',
   sedeSlugActual,
+  marcaSede,
+  anclas,
   className = '',
 }: SiteHeaderProps) {
   const pathname = usePathname();
@@ -77,49 +92,43 @@ export function SiteHeader({
   }, [pathname, sedeSlugActual, variante]);
 
   const slugActual = sedeSlugActual ?? slugResuelto ?? sedesDisponibles[0]?.slug;
-  const sedeIndiceActiva: SedeIndiceEntry | undefined =
-    variante === 'sede' && slugActual ? SEDES_INDICE[slugActual] : undefined;
+  const baseSede = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 
-  const protagonista = marcaDe(sedeIndiceActiva?.empresaProtagonistaSlug);
-  const brandMain = variante === 'hub' ? nav.brandMain : (protagonista?.nombre ?? nav.brandMain);
-  const brandAccent = variante === 'hub' ? nav.brandAccent : '';
-  const logoSrc =
-    variante === 'hub' ? '/logos/wordmark-agencia.svg' : (protagonista?.logo ?? '/logos/wordmark-agencia.svg');
-
-  const anclaBase = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
-
-  const links = anclaBase ? [
-    { href: anclaBase + '#nosotros', label: nav.nosotros },
-    { href: anclaBase + '#experiencias', label: nav.experiencias },
-    { href: anclaBase + '#servicios', label: nav.servicios },
-    { href: anclaBase + '#temporadas', label: nav.temporadas },
-    { href: anclaBase + '#galeria', label: nav.galeria },
-    { href: anclaBase + '#resenas', label: nav.opiniones },
-    { href: anclaBase + '#preguntas', label: 'FAQs' },
-  ] : [
-    { href: hrefInicio(lang, 'hub-mapa-destinos'), label: nav.mapa },
-    { href: hrefInicio(lang, 'sedes'), label: nav.sedes },
-    { href: hrefInicio(lang, 'nosotros'), label: nav.nosotros },
-    { href: hrefInicio(lang, 'colaboradores'), label: nav.colaboradores },
-  ];
+  const links = baseSede
+    ? (anclas ?? []).map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta }))
+    : [
+        { href: hrefInicio(lang, ANCLA_HUB.mapa), label: nav.mapa },
+        { href: hrefInicio(lang, ANCLA_HUB.sedes), label: nav.sedes },
+        { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.nosotros },
+        { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
+      ];
+  if (baseSede && links.length === 0) links.push({ href: baseSede, label: nav.reservar });
 
   return (
     <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
       <header className="relative mx-auto flex h-16 w-full items-center justify-between gap-4 border-b border-border bg-arena/95 px-4 backdrop-blur sm:px-6 lg:max-w-[1440px] lg:rounded-card lg:border lg:border-border lg:px-6">
-        <Link
-          href={hrefInicio(lang)}
-          className="flex shrink-0 items-center text-foreground"
-          onClick={() => setOpen(false)}
-        >
-          <Image
-            src={logoSrc}
-            alt={`${brandMain} ${brandAccent}`.trim()}
-            width={1026}
-            height={331}
-            priority
-            className="h-10 w-auto lg:h-12"
-          />
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          <Link
+            href={hrefInicio(lang)}
+            className="flex items-center text-foreground"
+            onClick={() => setOpen(false)}
+          >
+            <Image
+              src="/logos/wordmark-agencia.svg"
+              alt={MARCA}
+              width={1026}
+              height={331}
+              priority
+              className="h-10 w-auto lg:h-12"
+            />
+          </Link>
+          {marcaSede && (
+            <>
+              <span aria-hidden="true" className="h-6 w-px bg-border" />
+              <EmpresaSello nombre={marcaSede.nombre} logo={marcaSede.logo} tamano={32} />
+            </>
+          )}
+        </div>
 
         {links.length > 1 && (
           <nav className="hidden items-center gap-4 xl:flex">

@@ -47,10 +47,55 @@ export const ANCLA_DE: Record<SeccionId, string> = {
   preguntas: 'preguntas',
 };
 
+/** Los ids fijos del hub (`/[lang]`): cabecera, pie y página los toman de aquí. */
+export const ANCLA_HUB = { mapa: 'mapa', sedes: 'sedes', comoFunciona: 'como-funciona', empresas: 'empresas' } as const;
+
+export type Fondo = 'arena' | 'blanco' | 'cafe-bruma';
+
+/**
+ * El fondo que prefiere cada sección, en orden. Arena contra blanco es 1,07:1: el ritmo no
+ * sale del tono sino del borde de arriba y de las familias de layout. Las secciones con
+ * tarjetas van en arena; las que no tienen, pueden ir en blanco.
+ */
+const PREFERENCIA: Record<SeccionId, readonly Fondo[]> = {
+  hero: ['arena'],
+  reservar: ['arena'],
+  tranquilidad: ['cafe-bruma'],
+  galeria: ['blanco', 'cafe-bruma'],
+  temporadas: ['arena', 'cafe-bruma'],
+  opiniones: ['arena', 'cafe-bruma'],
+  preguntas: ['blanco', 'arena'],
+};
+
+/**
+ * Fondo y borde de cada sección según su posición entre las que de verdad se pintan: nunca
+ * dos seguidas con el mismo fondo, y toda banda salvo la primera lleva borde arriba.
+ */
+export function fondosDeSecciones(ids: readonly SeccionId[]): Partial<Record<SeccionId, { fondo: Fondo; borde: boolean }>> {
+  const resultado: Partial<Record<SeccionId, { fondo: Fondo; borde: boolean }>> = {};
+  let anterior: Fondo | null = null;
+  ids.forEach((id, i) => {
+    // El héroe es foto o video a sangre: su fondo no se ve y no cuenta para la alternancia.
+    if (id === 'hero') {
+      resultado[id] = { fondo: 'arena', borde: i > 0 };
+      return;
+    }
+    const opciones: readonly Fondo[] = [...PREFERENCIA[id], 'arena', 'blanco', 'cafe-bruma'];
+    const fondo = opciones.find((f) => f !== anterior) ?? 'arena';
+    resultado[id] = { fondo, borde: i > 0 };
+    anterior = fondo;
+  });
+  return resultado;
+}
+
 /** Fuera del menú: el héroe (es el inicio) y tranquilidad (va pegada a reservar). */
-const SIN_ENLACE: readonly SeccionId[] = ['hero', 'tranquilidad'];
+type SinEnlace = 'hero' | 'tranquilidad';
+const SIN_ENLACE: readonly SeccionId[] = ['hero', 'tranquilidad'] satisfies SinEnlace[];
+export type SeccionNavegable = Exclude<SeccionId, SinEnlace>;
 
 /** Los enlaces del menú de la sede; la etiqueta sale de `dict.nav[claveNav]`. */
-export function enlacesDeSede(ids: readonly SeccionId[]): { ancla: string; claveNav: SeccionId }[] {
-  return ids.filter((id) => !SIN_ENLACE.includes(id)).map((id) => ({ ancla: `#${ANCLA_DE[id]}`, claveNav: id }));
+export function enlacesDeSede(ids: readonly SeccionId[]): { ancla: string; claveNav: SeccionNavegable }[] {
+  return ids
+    .filter((id): id is SeccionNavegable => !SIN_ENLACE.includes(id))
+    .map((id) => ({ ancla: `#${ANCLA_DE[id]}`, claveNav: id }));
 }

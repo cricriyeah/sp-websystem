@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 
-type Fondo = 'arena' | 'blanco' | 'cafe-bruma';
+export type Fondo = 'arena' | 'blanco' | 'cafe-bruma';
 
 /**
  * Bandas de sección, alternadas en este orden. `cafe-claro` (amarillo saturado) nunca es
  * fondo de sección. Las clases van completas para que Tailwind las vea.
  */
-const FONDOS: Record<Fondo, string> = {
+export const CLASE_FONDO: Record<Fondo, string> = {
   arena: 'bg-background',
   blanco: 'bg-superficie',
   'cafe-bruma': 'bg-cafe-bruma',
@@ -21,6 +21,8 @@ type SectionShellProps = {
   /** Ancla de la sección (`#id`); el `<h2>` toma `${id}-titulo` para `aria-labelledby`. */
   id: string;
   fondo: Fondo;
+  /** Raya de 1 px arriba: la llevan todas las bandas salvo la primera de la página. */
+  borde?: boolean;
   /** Contenido del `<h2>` de la sección. */
   titulo: ReactNode;
   /** Regla de 48 × 2 sobre el título. Por defecto no; máximo 2 por página (`reservar` en la sede, `sedes` en el hub). */
@@ -45,6 +47,7 @@ type SectionShellProps = {
 export function SectionShell({
   id,
   fondo,
+  borde = false,
   titulo,
   regla = false,
   anchoTitulo = '16ch',
@@ -77,7 +80,7 @@ export function SectionShell({
     <section
       id={id}
       aria-labelledby={idTitulo}
-      className={`scroll-mt-[calc(var(--nav-alto)+16px)] ${FONDOS[fondo]} ${
+      className={`scroll-mt-[calc(var(--nav-alto)+16px)] ${CLASE_FONDO[fondo]} ${borde ? 'border-t border-borde ' : ''}${
         aSangre ? 'pt-12 sm:pt-16 lg:pt-24' : 'py-12 sm:py-16 lg:py-24'
       }`}
     >

@@ -156,44 +156,6 @@
       }
     }
   },
-  "season": {
-    "headline": "Seasons & species in La Paz",
-    "intro": "Our bay offers an incredible variety of game fish across every season. Here is our fishing calendar to help you choose the best time for your dream adventure.",
-    "note": "Nature brings exciting new surprises every day on the water. We love sharing honest, up-to-date local insights on recent catches. Feel free to message us on WhatsApp anytime to chat about how fishing has been this week!",
-    "yearLabel": "Month-by-month fishing calendar",
-    "strongLabel": "Peak season",
-    "othersLabel": "Also active",
-    "rows": [
-      {
-        "period": "December to March",
-        "months": ["Dec", "Jan", "Feb", "Mar"],
-        "star": "Amberjack",
-        "others": "Sierra, cabrilla, snapper",
-        "note": "Cooler waters and pleasant, calm mornings. A fantastic season for families and beginners."
-      },
-      {
-        "period": "April to June",
-        "months": ["Apr", "May", "Jun"],
-        "star": "Striped marlin",
-        "others": "Roosterfish, dorado",
-        "note": "Waters begin to warm up, welcoming exciting, high-energy sport species."
-      },
-      {
-        "period": "July to September",
-        "months": ["Jul", "Aug", "Sep"],
-        "star": "Dorado",
-        "others": "Yellowfin tuna, sailfish",
-        "note": "Prime sportfishing season with peak activity and thrilling offshore action."
-      },
-      {
-        "period": "October to November",
-        "months": ["Oct", "Nov"],
-        "star": "Snapper",
-        "others": "Dorado, sailfish",
-        "note": "Great autumn weather and fantastic bite, with peaceful conditions across the bay."
-      }
-    ]
-  },
   "included": {
     "headline": "What is included in your experience",
     "intro": "We want you to feel completely at ease and well cared for. Here is a clear overview of what your private charter includes, recommended items to bring, and custom extras we can arrange for you.",
@@ -251,19 +213,6 @@
       }
     ]
   },
-  "gallery": {
-    "headline": "Unforgettable moments on the water",
-    "note": "We love celebrating our guests' joyful catches! If you've sailed with us, send over your favorite photos and we'll proudly add them to our gallery.",
-    "photoHints": [
-      "Mahi just brought aboard, in the shade of the canopy",
-      "The day's full catch on deck",
-      "Marlin landed as a team, ready for the photo and release",
-      "Family with their catch, close to shore",
-      "Two friends with their mahi",
-      "Rod bent, fighting a mahi",
-      "Heading back into the bay, pelicans alongside"
-    ]
-  },
   "reviews": {
     "headline": "What our guests say",
     "intro": "Creating great memories and happy experiences for our guests is our greatest reward.",
@@ -293,55 +242,6 @@
       }
     ],
     "cta": "Sailed with us recently? We'd love to hear your feedback on WhatsApp!"
-  },
-  "faq": {
-    "headline": "Frequently asked questions",
-    "items": [
-      {
-        "q": "What is included in the trip?",
-        "a": "Your tour includes the private boat for your group with a certified local captain, a cooler with ice, and 6 to 8 full hours of fishing. You can bring your own gear or rent quality gear from us. We're also happy to coordinate fresh bait, lunch service, and licence assistance."
-      },
-      {
-        "q": "How many people fit on the boat?",
-        "a": "We offer two private charter options: standard for up to 3 guests and large for up to 5 guests. The boat is 100% private for your group, ensuring complete comfort and personalized attention. Families with children of all ages are warmly welcome."
-      },
-      {
-        "q": "What time do we leave and how long is the trip?",
-        "a": "You can pick your preferred departure time between 5:00 and 7:00 am when booking. The tour lasts 6 to 8 hours to take full advantage of the best morning fishing conditions."
-      },
-      {
-        "q": "Where do we meet?",
-        "a": "We meet at Marina La Costa (Rangel & Navarro, La Paz, BCS), right by Restaurant Marina La Costa. Once booked, we'll send you exact location details, or we can coordinate round-trip hotel transportation for you."
-      },
-      {
-        "q": "How can I pay?",
-        "a": "We offer convenient and secure payment options: you can pay 100% online by card, or secure your date with a 30% online deposit and settle the remaining 70% in cash on the morning of your trip. We accept MXN and USD."
-      },
-      {
-        "q": "Do you provide an invoice?",
-        "a": "We do not currently issue Mexican CFDI tax invoices. However, upon completing your booking you will receive a full digital receipt detailing your reservation."
-      },
-      {
-        "q": "What happens if the weather is bad?",
-        "a": "Your safety and peace of mind are always our highest priority. If the port authority or captain determines that sea conditions are unsafe to sail, we will gladly reschedule your trip or issue a 100% full refund."
-      },
-      {
-        "q": "Can I change my booking date?",
-        "a": "Yes, absolutely! With at least 48 hours notice, we can reschedule your trip at no extra charge according to availability. If an unexpected change happens closer to your date, let us know right away and we'll do our best to find a great solution."
-      },
-      {
-        "q": "Do I need a fishing licence?",
-        "a": "Yes, Mexican regulations (CONAPESCA) require each angler on board to hold an individual sportfishing permit. It is a quick online process taking just a few minutes. We provide a step-by-step guide on our site, and our team will gladly assist you if needed."
-      },
-      {
-        "q": "Can I keep what I catch?",
-        "a": "Of course, it's your catch! The captain will gladly assist you in cleaning your fish. For protected sportfishing species (such as marlin or sailfish), we promote responsible catch-and-release after your celebration photo to protect La Paz's rich marine ecosystem."
-      },
-      {
-        "q": "What if I can't make it and it isn't the weather?",
-        "a": "We understand that travel plans can change. If you give us at least 48 hours notice, we will happily move your reservation to another available date so you don't miss your adventure. We're committed to providing you with the best flexibility and support."
-      }
-    ]
   },
   "footer": {
     "headline": "We look forward to welcoming you aboard!",
@@ -978,7 +878,7 @@
   "sedeContenido": {
     "queReservar": "What to book",
     "tranquilidad": "Book with peace of mind",
-    "colaboracion": "Sun Baja Experience with {empresa}",
+    "colaboracion": "A collaboration between Sun Baja Experience, a local travel agency, and {empresa}",
     "empresas": "Who runs each service",
     "opiniones": "Reviews",
     "galeria": "Gallery",

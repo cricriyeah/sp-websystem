@@ -41,12 +41,24 @@ export type SedeNegocio = {
   horarioCierre: string;
 } | null;
 
-export type SedeColaboracion = {
-  titulo: string;
-  texto1: string;
-  texto2: string;
-  imagenSrc: string;
-  imagenAlt: string;
+/** El calendario de especies de una sede: una fila por temporada, en orden de temporada. */
+export type SedeTemporadas = {
+  intro: string;
+  nota: string;
+  etiquetaCalendario: string;
+  etiquetaFuerte: string;
+  etiquetaOtras: string;
+  filas: {
+    periodo: string;
+    meses: string[];
+    estrella: string;
+    otras: string;
+    nota: string;
+    /** La foto estrella de la temporada. */
+    foto: string;
+    /** La temporada fuerte lleva la etiqueta y su tramo del año relleno. */
+    fuerte: boolean;
+  }[];
 };
 
 export type SedeDestacada = {
@@ -69,14 +81,13 @@ export type SedeCuerpoContenido = {
   metaTitle: string;
   metaDescription: string;
   hero: SedeHeroContenido;
-  colaboracion: SedeColaboracion;
   destacadas: SedeDestacada[];
   /** Slugs de las demas empresas de la sede; sus datos salen de `empresas.ts`. */
   otrasEmpresas: string[];
   servicioTransporte: SedeServicioTransporte;
   /** Galeria propia de la sede (con medidas, para `fotosAptas`). Sin ella, no hay seccion. */
   galeria?: { src: string; alt: string; ancho: number; alto: number; empresaSlug: string }[];
-  temporadas?: unknown[];
+  temporadas?: SedeTemporadas;
   faq?: { q: string; a: string }[];
 };
 

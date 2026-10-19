@@ -7,8 +7,8 @@ import { getEmpresa } from '@/content/empresas';
 import { hrefSede } from '@/lib/routes';
 
 /** One brand per company, even when it collaborates with several destinations. */
-export function ColaboradoresSection({ sedes, lang, copy, id = 'colaboradores' }: {
-  sedes: SedeContenido[]; lang: Locale; copy: Dictionary['hub']; id?: string;
+export function ColaboradoresSection({ sedes, lang, copy, id }: {
+  sedes: SedeContenido[]; lang: Locale; copy: Dictionary['hub']; id: string;
 }) {
   const marcas = new Map<string, { nombre: string; logo: string | null; web?: string; redes?: { nombre: string; url: string }[]; sedes: SedeContenido[] }>();
   for (const sede of sedes) {

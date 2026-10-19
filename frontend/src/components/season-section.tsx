@@ -1,33 +1,15 @@
 import Image from 'next/image';
-import type { Dictionary } from '@/app/[lang]/dictionaries';
-import { SectionShell } from '@/components/ui/section-shell';
+import type { SedeTemporadas } from '@/content/sedes-tipos';
+import { SectionShell, type Fondo } from '@/components/ui/section-shell';
 
 type SeasonSectionProps = {
-  season: Dictionary['season'];
+  id: string;
+  titulo: string;
+  /** El calendario sale del cuerpo de la sede, con la foto de cada temporada. */
+  temporadas: SedeTemporadas;
+  fondo: Fondo;
+  borde: boolean;
 };
-
-/**
- * La temporada fuerte (el 3er bloque de los 4 que manda el diccionario, jul-sep)
- * es la unica que se distingue: lleva la etiqueta amarilla y su tramo del año va
- * relleno. Coincide siempre con el orden fijo de `season.rows`.
- */
-const TEMPORADA_FUERTE = 2;
-
-/**
- * La foto estrella de cada temporada, en el mismo orden que `season.rows`. Vive
- * aqui y no en los diccionarios porque una foto no se traduce: duplicarla en
- * es.json y en.json solo abre la puerta a que las dos versiones se separen.
- *
- * Oct-nov no tiene foto propia de pargo (su especie estrella): usa una toma
- * general de la pesca del dia, que sigue siendo honesta sin prometer un pargo
- * en cuadro.
- */
-const FOTOS_TEMPORADA = [
-  '/photos/yellowtail-pelicanos-bahia.webp',
-  '/photos/marlin-en-equipo.webp',
-  '/photos/cana-doblada-dorado.webp',
-  '/photos/pesca-del-dia-cubierta.webp',
-];
 
 /**
  * Calendario de especies: una tira con los 12 meses arriba y cuatro paneles con
@@ -48,26 +30,26 @@ const FOTOS_TEMPORADA = [
  *
  * Server Component: es foto y texto, no necesita JavaScript.
  */
-export function SeasonSection({ season }: SeasonSectionProps) {
+export function SeasonSection({ id, titulo, temporadas, fondo, borde }: SeasonSectionProps) {
   return (
-    <SectionShell id="temporadas" fondo="arena" titulo={season.headline}>
-      <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-muted">{season.intro}</p>
+    <SectionShell id={id} fondo={fondo} borde={borde} titulo={titulo}>
+      <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-muted">{temporadas.intro}</p>
 
       {/* Los tramos se reparten el ancho segun cuantos meses abarcan (`flexGrow`),
           no en cuatro partes iguales: dic-mar son cuatro meses y oct-nov solo
           dos, y pintarlos del mismo largo mentiria sobre el calendario. */}
       <div className="mt-14">
-        <p className="text-sm font-semibold text-muted">{season.yearLabel}</p>
+        <p className="text-sm font-semibold text-muted">{temporadas.etiquetaCalendario}</p>
         <div className="mt-3 flex gap-1.5">
-          {season.rows.map((row, i) => (
-            <div key={row.period} style={{ flexGrow: row.months.length }} className="min-w-0">
+          {temporadas.filas.map((fila) => (
+            <div key={fila.periodo} style={{ flexGrow: fila.meses.length }} className="min-w-0">
               <div
                 className={`h-1.5 w-full rounded-full ${
-                  i === TEMPORADA_FUERTE ? 'bg-action' : 'bg-accent/30'
+                  fila.fuerte ? 'bg-action' : 'bg-accent/30'
                 }`}
               />
               <div className="mt-2 flex">
-                {row.months.map((mes) => (
+                {fila.meses.map((mes) => (
                   <span
                     key={mes}
                     className="flex-1 text-center texto-pie whitespace-nowrap text-muted"
@@ -82,15 +64,15 @@ export function SeasonSection({ season }: SeasonSectionProps) {
       </div>
 
       <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-        {season.rows.map((row, i) => (
-          <article key={row.period} className="flex flex-col gap-4">
+        {temporadas.filas.map((fila) => (
+          <article key={fila.periodo} className="flex flex-col gap-4">
             {/* Apaisada en movil y vertical de `sm` en adelante: apiladas a lo
                 alto, cuatro fotos verticales convierten la seccion en un
                 scroll interminable en telefono. */}
             <div className="relative aspect-[16/10] overflow-hidden sm:aspect-[3/4]">
               <Image
-                src={FOTOS_TEMPORADA[i]}
-                alt={row.star}
+                src={fila.foto}
+                alt={fila.estrella}
                 fill
                 sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
                 className="object-cover"
@@ -106,32 +88,32 @@ export function SeasonSection({ season }: SeasonSectionProps) {
                 }}
               />
 
-              {i === TEMPORADA_FUERTE && (
+              {fila.fuerte && (
                 <span className="absolute top-4 left-4 bg-action px-2.5 py-1 texto-pie font-semibold text-action-foreground">
-                  {season.strongLabel}
+                  {temporadas.etiquetaFuerte}
                 </span>
               )}
 
               <div className="absolute inset-x-0 bottom-0 p-5">
-                <p className="text-sm font-semibold text-hero-ink-soft">{row.period}</p>
+                <p className="text-sm font-semibold text-hero-ink-soft">{fila.periodo}</p>
                 <p className="mt-1 text-2xl leading-tight tracking-tight text-hero-ink">
-                  {row.star}
+                  {fila.estrella}
                 </p>
               </div>
             </div>
 
             <div>
               <p className="text-sm text-foreground">
-                <span className="text-muted">{season.othersLabel}:</span> {row.others}
+                <span className="text-muted">{temporadas.etiquetaOtras}:</span> {fila.otras}
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{row.note}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{fila.nota}</p>
             </div>
           </article>
         ))}
       </div>
 
       <p className="mt-12 max-w-[60ch] border-t border-border pt-6 text-base leading-relaxed text-foreground">
-        {season.note}
+        {temporadas.nota}
       </p>
     </SectionShell>
   );

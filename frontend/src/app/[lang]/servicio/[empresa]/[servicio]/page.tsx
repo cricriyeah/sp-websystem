@@ -15,6 +15,7 @@ import { aMoneda } from '@/lib/moneda';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { IncludedSection } from '@/components/included-section';
+import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 
 type Props = {
   params: Promise<{ lang: string; empresa: string; servicio: string }>;
@@ -54,7 +55,7 @@ export default async function ServicioPage({ params, searchParams }: Props) {
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede?.slug} />
     <main>
       <section className="mx-auto max-w-6xl px-6 pb-16 pt-[calc(var(--nav-alto)+3rem)] sm:px-8 lg:px-12">
-        <Link href={sede ? hrefSede(lang, sede.slug, 'servicios') : hrefInicio(lang, 'sedes')} className="text-sm text-accent underline underline-offset-4">{dict.serviceDetail.backToServices}</Link>
+        <Link href={sede ? hrefSede(lang, sede.slug, ANCLA_DE.reservar) : hrefInicio(lang, ANCLA_HUB.sedes)} className="text-sm text-accent underline underline-offset-4">{dict.serviceDetail.backToServices}</Link>
         <h1 className="mt-8 max-w-3xl texto-pagina">{titulo}</h1>
         <p className="mt-5 max-w-3xl whitespace-pre-line text-lg leading-relaxed text-muted">{servicio?.descripcion || (pesca ? dict.serviceDetail.fishingDescription : traslado ? dict.traslados.subtitle : dict.serviceDetail.unavailableDescription)}</p>
         {servicio && !traslado && <p className="mt-6 text-xl font-semibold">{dict.catalog.fromPrice} {formatearPrecio(aMoneda(servicio.precio_base, moneda, servicio.tipo_cambio_usd), moneda)} {moneda}</p>}

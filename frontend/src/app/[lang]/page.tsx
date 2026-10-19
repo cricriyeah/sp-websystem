@@ -13,6 +13,7 @@ import { HubMapaSedes } from '@/components/hub-mapa-sedes';
 import { HubGridSedes } from '@/components/hub-grid-sedes';
 import { HubPorQue } from '@/components/hub-por-que';
 import { ColaboradoresSection } from '@/components/colaboradores-section';
+import { ANCLA_HUB } from '@/lib/secciones-sede';
 
 export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promise<Metadata> {
   const { lang } = await params;
@@ -30,7 +31,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
   return <>
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
     <main>
-      <section id="hub-mapa-destinos" className="scroll-mt-28 mx-auto max-w-[1440px] px-6 pb-12 pt-[calc(var(--nav-alto)+3rem)] sm:px-8 lg:px-12">
+      <section id={ANCLA_HUB.mapa} className="scroll-mt-28 mx-auto max-w-[1440px] px-6 pb-12 pt-[calc(var(--nav-alto)+3rem)] sm:px-8 lg:px-12">
         <div className="mb-8 max-w-3xl">
           <p className="mb-3 text-sm font-semibold text-accent">{dict.hub.nombreAgencia}</p>
           <h1 className="texto-display text-foreground">{dict.hub.headline}</h1>
@@ -38,12 +39,12 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
         </div>
         <HubMapaSedes lang={lang} sedes={sedes} copy={dict.hub} />
       </section>
-      <section id="sedes" className="scroll-mt-28 mx-auto max-w-[1440px] px-6 py-12 sm:px-8 lg:px-12">
+      <section id={ANCLA_HUB.sedes} className="scroll-mt-28 mx-auto max-w-[1440px] px-6 py-12 sm:px-8 lg:px-12">
         <h2 className="mb-8 texto-seccion">{dict.hub.destinationsTitle}</h2>
         <HubGridSedes lang={lang} sedes={sedes} copy={dict.hub} />
       </section>
-      <HubPorQue headline={dict.hub.aboutTitle} pilares={dict.hub.pilares} />
-      <ColaboradoresSection sedes={sedes} lang={lang} copy={dict.hub} />
+      <HubPorQue id={ANCLA_HUB.comoFunciona} headline={dict.hub.aboutTitle} pilares={dict.hub.pilares} />
+      <ColaboradoresSection id={ANCLA_HUB.empresas} sedes={sedes} lang={lang} copy={dict.hub} />
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={null} />
   </>;

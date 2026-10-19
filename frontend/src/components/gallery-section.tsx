@@ -1,46 +1,37 @@
 import Image from 'next/image';
-import type { Dictionary } from '@/app/[lang]/dictionaries';
-import { SectionShell } from '@/components/ui/section-shell';
+import type { SedeCuerpoContenido } from '@/content/sedes-tipos';
+import { SectionShell, type Fondo } from '@/components/ui/section-shell';
 
 type GallerySectionProps = {
-  gallery: Dictionary['gallery'];
+  id: string;
+  titulo: string;
+  /** Las fotos salen del cuerpo de la sede; el `alt` de cada una viaja con ella. */
+  fotos: NonNullable<SedeCuerpoContenido['galeria']>;
+  fondo: Fondo;
+  borde: boolean;
 };
 
 /**
- * El orden de `FOTOS` esta pareado con `gallery.photoHints` uno a uno (el hint
- * es el `alt` de cada foto) — si se agrega o se quita una, hay que tocar los dos
- * arreglos juntos.
- *
  * La primera ocupa el doble de ancho y abre la reja. Ahi vivio un placeholder de
  * video que nunca se grabo; son 7 fotos justas para llenar dos filas completas
  * (1 doble + 2, y 4 abajo) sin dejar huecos.
  */
-const FOTOS = [
-  '/photos/dorado-bajo-toldo.webp',
-  '/photos/pesca-del-dia-cubierta.webp',
-  '/photos/marlin-en-equipo.webp',
-  '/photos/grupo-cabrilla-costa.webp',
-  '/photos/pareja-dorados.webp',
-  '/photos/cana-doblada-dorado.webp',
-  '/photos/yellowtail-pelicanos-bahia.webp',
-];
-
 /**
  * Titulo con el padding normal del sitio, y debajo la reja de fotos a sangre:
  * sin contenedor, para que las fotos ocupen todo el ancho disponible.
  */
-export function GallerySection({ gallery }: GallerySectionProps) {
+export function GallerySection({ id, titulo, fotos, fondo, borde }: GallerySectionProps) {
   return (
-    <SectionShell id="galeria" fondo="cafe-bruma" titulo={gallery.headline} aSangre>
+    <SectionShell id={id} fondo={fondo} borde={borde} titulo={titulo} aSangre>
       <div className="grid grid-cols-2 gap-[3px] lg:grid-cols-4">
-        {gallery.photoHints.map((hint, i) => (
+        {fotos.map((foto, i) => (
           <div
-            key={hint}
+            key={foto.src}
             className={`relative min-h-[240px] lg:min-h-[460px] ${i === 0 ? 'col-span-2' : ''}`}
           >
             <Image
-              src={FOTOS[i]}
-              alt={hint}
+              src={foto.src}
+              alt={foto.alt}
               fill
               sizes={
                 i === 0

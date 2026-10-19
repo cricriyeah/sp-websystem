@@ -3,6 +3,8 @@ import Image from 'next/image';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
+import { hrefInicio, hrefSede } from '@/lib/routes';
+import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 
 type SiteFooterProps = {
   lang: Locale;
@@ -12,25 +14,20 @@ type SiteFooterProps = {
   /** `null` en el hub y en cualquier sede sin `negocio`: el bloque de dirección/horario se omite en vez de mostrar el de otra sede. */
   negocio: SedeNegocio;
   sedeSlug?: string;
+  /** El menú de la sede (ver `SiteHeader`). Sin él, una página de sede lleva solo «Reservar». */
+  anclas?: { ancla: string; etiqueta: string }[];
 };
 
-export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: SiteFooterProps) {
-  const baseSede = sedeSlug ? `/${lang}/sede/${sedeSlug}` : null;
-  const es = lang === 'es';
-  const secciones = baseSede ? [
-    { href: baseSede + '#nosotros', label: nav.nosotros },
-    { href: baseSede + '#experiencias', label: es ? 'Experiencias y paquetes' : 'Experiences and packages' },
-    { href: baseSede + '#servicios', label: es ? 'Servicios' : 'Services' },
-    { href: baseSede + '#temporadas', label: nav.temporadas },
-    { href: baseSede + '#galeria', label: nav.galeria },
-    { href: baseSede + '#resenas', label: es ? 'Opiniones' : 'Reviews' },
-    { href: baseSede + '#preguntas', label: 'FAQs' },
-  ] : [
-    { href: '/' + lang + '#hub-mapa-destinos', label: es ? 'Mapa' : 'Map' },
-    { href: '/' + lang + '#sedes', label: es ? 'Sedes' : 'Destinations' },
-    { href: '/' + lang + '#nosotros', label: nav.nosotros },
-    { href: '/' + lang + '#colaboradores', label: es ? 'Colaboradores' : 'Partners' },
-  ];
+export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, anclas }: SiteFooterProps) {
+  const baseSede = sedeSlug ? hrefSede(lang, sedeSlug) : null;
+  const secciones = baseSede
+    ? (anclas?.length ? anclas.map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta })) : [{ href: baseSede, label: nav.reservar }])
+    : [
+        { href: hrefInicio(lang, ANCLA_HUB.mapa), label: nav.mapa },
+        { href: hrefInicio(lang, ANCLA_HUB.sedes), label: nav.sedes },
+        { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.nosotros },
+        { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
+      ];
 
   const legales = [
     { href: `/${lang}/deslinde`, label: footer.waiver },
@@ -53,7 +50,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: 
         <div className="grid gap-10 pb-16 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-12">
           <div className="flex flex-col items-start gap-5">
             <Image
-              src={sedeSlug === 'la-paz' ? '/logos/svglogosalysol2.svg' : '/logos/wordmark-agencia.svg'}
+              src="/logos/wordmark-agencia.svg"
               alt=""
               width={261}
               height={123}
@@ -63,7 +60,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: 
               {footer.headline}
             </h2>
             <Link
-              href={sedeSlug === 'la-paz' ? `/${lang}/reservar` : baseSede ? `${baseSede}#experiencias` : `/${lang}#sedes`}
+              href={sedeSlug === 'la-paz' ? `/${lang}/reservar` : sedeSlug ? hrefSede(lang, sedeSlug, ANCLA_DE.reservar) : hrefInicio(lang, ANCLA_HUB.sedes)}
               className={botonClases({ variante: 'principal' })}
             >
               {bookLabel}
@@ -107,7 +104,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug }: 
       <div className="relative mx-auto max-w-6xl px-6 pb-10 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-2 border-t border-border-strong pt-8 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-muted">
-            Sal y Sol Baja Experiences. {footer.rights}
+            Sun Baja Experience. {footer.rights}
           </span>
           {negocio && <span className="text-sm text-muted">{negocio.ciudad}, {negocio.estado}</span>}
         </div>

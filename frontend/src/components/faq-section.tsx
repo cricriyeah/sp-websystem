@@ -2,11 +2,16 @@
 
 import { useId, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { Button } from '@/components/ui/button';
+import { CLASE_FONDO, type Fondo } from '@/components/ui/section-shell';
 
 type FaqSectionProps = {
-  faq: Dictionary['faq'];
+  id: string;
+  titulo: string;
+  /** Las preguntas salen del cuerpo de la sede. */
+  preguntas: { q: string; a: string }[];
+  fondo: Fondo;
+  borde: boolean;
 };
 
 /**
@@ -28,25 +33,25 @@ type FaqSectionProps = {
  * Solo se abre una a la vez: son catorce preguntas y con varias abiertas la
  * columna se vuelve un muro de texto donde ya no se ve que mas hay.
  */
-export function FaqSection({ faq }: FaqSectionProps) {
+export function FaqSection({ id, titulo, preguntas, fondo, borde }: FaqSectionProps) {
   const [abierta, setAbierta] = useState<string | null>(null);
   const sinMovimiento = useReducedMotion();
   const idBase = useId();
 
   return (
-    <section id="preguntas" className="scroll-mt-24 bg-surface py-24 lg:py-32">
+    <section id={id} className={`scroll-mt-24 ${CLASE_FONDO[fondo]} ${borde ? 'border-t border-borde ' : ''}py-24 lg:py-32`}>
       <div className="mx-auto grid max-w-6xl gap-10 px-6 sm:px-8 lg:grid-cols-[280px_1fr] lg:gap-20 lg:px-12">
         {/* La barra y el titular van envueltos: son la primera **columna** del
             grid, no dos celdas. Sueltos, la barra ocupaba la celda del titular
             y empujaba las preguntas a una fila nueva. */}
         <div>
           <h2 className="texto-seccion text-foreground">
-            {faq.headline}
+            {titulo}
           </h2>
         </div>
 
         <div className="flex flex-col">
-          {faq.items.map((item, i) => {
+          {preguntas.map((item, i) => {
             const abierto = abierta === item.q;
             const idPregunta = `${idBase}-p${i}`;
             const idRespuesta = `${idBase}-r${i}`;

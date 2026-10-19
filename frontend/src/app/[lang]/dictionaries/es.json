@@ -156,44 +156,6 @@
       }
     }
   },
-  "season": {
-    "headline": "Temporadas y especies en La Paz",
-    "intro": "La bahía ofrece una maravillosa variedad de especies a lo largo de las estaciones. Te compartimos nuestro calendario de pesca para ayudarte a elegir el momento ideal para tu aventura.",
-    "note": "El mar siempre nos regala momentos únicos. Nos encanta asesorarte con total honestidad sobre las condiciones y la actividad reciente; escríbenos con toda confianza por WhatsApp para platicar de cómo va la pesca esta semana.",
-    "yearLabel": "Calendario de pesca mes por mes",
-    "strongLabel": "Temporada fuerte",
-    "othersLabel": "También activas",
-    "rows": [
-      {
-        "period": "Diciembre a marzo",
-        "months": ["Dic", "Ene", "Feb", "Mar"],
-        "star": "Jurel",
-        "others": "Sierra, cabrilla, pargo",
-        "note": "Aguas frescas y mañanas agradables. Una temporada ideal y muy divertida para toda la familia y principiantes."
-      },
-      {
-        "period": "Abril a junio",
-        "months": ["Abr", "May", "Jun"],
-        "star": "Marlin rayado",
-        "others": "Pez gallo, dorado",
-        "note": "El agua comienza a templarse y da la bienvenida a especies grandes y de gran emoción deportiva."
-      },
-      {
-        "period": "Julio a septiembre",
-        "months": ["Jul", "Ago", "Sep"],
-        "star": "Dorado",
-        "others": "Atún aleta amarilla, pez vela",
-        "note": "La temporada estelar de pesca deportiva. Máxima actividad y emociones garantizadas en mar abierto."
-      },
-      {
-        "period": "Octubre a noviembre",
-        "months": ["Oct", "Nov"],
-        "star": "Pargo",
-        "others": "Dorado, pez vela",
-        "note": "Excelente clima y gran pique, disfrutando de un ambiente muy relajado y tranquilo en la bahía."
-      }
-    ]
-  },
   "included": {
     "headline": "¿Qué incluye tu experiencia?",
     "intro": "Queremos que disfrutes con total tranquilidad y comodidad. Aquí te mostramos todo lo que incluye tu servicio, las recomendaciones para llevar a bordo y los servicios adicionales que podemos coordinar para ti.",
@@ -251,19 +213,6 @@
       }
     ]
   },
-  "gallery": {
-    "headline": "Momentos inolvidables con nosotros",
-    "note": "Nos encanta compartir las sonrisas y capturas de nuestros viajeros. Si saliste a pescar con nosotros, ¡mándanos tu foto para sumarla a la galería!",
-    "photoHints": [
-      "Dorado recién subido, a la sombra del toldo",
-      "La pesca del día completa en la cubierta",
-      "Marlin capturado en equipo, listo para la foto y la liberación",
-      "Familia con su captura, cerca de la costa",
-      "Dos amigos con su dorado",
-      "La caña doblada, peleando un dorado",
-      "De regreso a la bahía, con pelícanos alrededor"
-    ]
-  },
   "reviews": {
     "headline": "Lo que dicen quienes han viajado con nosotros",
     "intro": "Nuestra mayor satisfacción es que vivas una experiencia memorable en el mar.",
@@ -293,55 +242,6 @@
       }
     ],
     "cta": "¿Ya navegaste con nosotros? Nos encantaría conocer tu experiencia por WhatsApp"
-  },
-  "faq": {
-    "headline": "Preguntas frecuentes",
-    "items": [
-      {
-        "q": "¿Qué incluye el tour?",
-        "a": "Tu tour incluye la embarcación privada para tu grupo con un capitán local certificado, hielera con hielo y de 6 a 8 horas completas de pesca. Puedes traer tu propio equipo o solicitarlo en renta con nosotros. Con gusto también coordinamos carnada fresca, servicio de lunch y asesoría para tu licencia."
-      },
-      {
-        "q": "¿Cuántas personas caben en la embarcación?",
-        "a": "Contamos con dos modalidades de embarcación privada: estándar para hasta 3 personas y amplia para hasta 5 pasajeros. Toda la embarcación es 100% privada para tu grupo, garantizando comodidad y atención personalizada. Familias con niños de todas las edades son siempre bienvenidas."
-      },
-      {
-        "q": "¿A qué hora salimos y cuánto dura?",
-        "a": "Puedes elegir tu hora de salida preferida entre las 5:00 y las 7:00 am al momento de reservar. El viaje dura de 6 a 8 horas para aprovechar al máximo las mejores horas de pesca."
-      },
-      {
-        "q": "¿Dónde nos vemos?",
-        "a": "El punto de encuentro es en Marina La Costa (Rangel y Navarro, La Paz, BCS), junto al Restaurant Marina La Costa. Al reservar te enviamos la ubicación exacta y referencias, o si lo prefieres podemos cotizar y organizar tu traslado redondo."
-      },
-      {
-        "q": "¿Cómo puedo pagar?",
-        "a": "Ofrecemos modalidades cómodas y seguras: puedes liquidar el 100% en línea con tarjeta, o asegurar tu fecha con un anticipo del 30% en línea y pagar el 70% restante en efectivo el día de tu salida. Aceptamos pesos mexicanos (MXN) y dólares (USD)."
-      },
-      {
-        "q": "¿Dan factura?",
-        "a": "Por el momento no emitimos factura fiscal electrónica (CFDI). Al completar tu pago recibirás un comprobante digital detallado con el desglose de tu reservación."
-      },
-      {
-        "q": "¿Qué pasa si hay mal clima?",
-        "a": "Tu seguridad y tranquilidad son siempre nuestra máxima prioridad. Si la capitanía de puerto o nuestro capitán determinan que las condiciones del mar no son seguras, te ofrecemos reprogramar tu viaje con gusto o te reembolsamos el 100% de lo pagado."
-      },
-      {
-        "q": "¿Puedo cambiar la fecha de mi reserva?",
-        "a": "¡Claro que sí! Con al menos 48 horas de anticipación podemos reprogramar tu fecha sin costo adicional según la disponibilidad. Si surge algún imprevisto con menos tiempo, avísanos cuanto antes y buscaremos con gusto la mejor solución para apoyarte."
-      },
-      {
-        "q": "¿Necesito licencia de pesca?",
-        "a": "Sí, la autoridad marítima mexicana (CONAPESCA) solicita que cada pescador a bordo cuente con su licencia individual. Es un trámite rápido por internet que toma solo unos minutos. En nuestra página te guiamos paso a paso, y nuestro equipo te asiste con gusto si necesitas apoyo."
-      },
-      {
-        "q": "¿Me puedo llevar lo que pesque?",
-        "a": "¡Por supuesto, es tu pesca! El capitán te ayudará con gusto a limpiar tus capturas. En el caso de especies protegidas de pesca deportiva (como marlin o pez vela), promovemos la captura y liberación responsable después de tu fotografía de recuerdo para proteger la riqueza marina de La Paz."
-      },
-      {
-        "q": "¿Y si no puedo ir y no es por el clima?",
-        "a": "Entendemos que pueden surgir imprevistos de viaje. Si nos avisas con al menos 48 horas de anticipación, con gusto reprogramamos tu fecha para que no pierdas tu aventura. Nuestro compromiso es darte el mejor servicio y apoyo posible."
-      }
-    ]
   },
   "footer": {
     "headline": "¡Será un gusto darte la bienvenida a bordo!",
@@ -978,7 +878,7 @@
   "sedeContenido": {
     "queReservar": "Qué reservar",
     "tranquilidad": "Reserva con tranquilidad",
-    "colaboracion": "Sun Baja Experience con {empresa}",
+    "colaboracion": "Una colaboración entre Sun Baja Experience, agencia de turismo local, y {empresa}",
     "empresas": "Quién opera cada servicio",
     "opiniones": "Opiniones",
     "galeria": "Galería",
