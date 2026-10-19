@@ -118,3 +118,22 @@ export function plantillaDeGrupo(n: number): PlantillaGrupo {
   if (n === 5) return { columnas: 3, destacada: 'ancha' };
   return { columnas: 3, destacada: 'ninguna' };
 }
+
+/** Los grupos de «Qué puedes reservar», en el orden en que se pintan. */
+export const ORDEN_GRUPOS = ['paquetes', 'pesca', 'paseos', 'estancia'] as const;
+export type GrupoCatalogo = (typeof ORDEN_GRUPOS)[number];
+
+export function grupoDeServicio(servicio: ServicioEtiquetable): Exclude<GrupoCatalogo, 'paquetes'> {
+  if (servicio.tipo_servicio === 'pesca') return 'pesca';
+  return actividadDe(servicio) || servicio.tipo_servicio === 'bajo_demanda' ? 'paseos' : 'estancia';
+}
+
+/**
+ * Un paquete va con sus servicios si todos son del mismo grupo de mar (pesca o paseos); si mezcla
+ * grupos o incluye hospedaje o traslados, va a «Paquetes».
+ */
+export function grupoDePaquete(paquete: PaqueteEtiquetable): GrupoCatalogo {
+  const grupos = new Set(paquete.servicios_asociados.map((c) => grupoDeServicio(c.servicio)));
+  const [unico] = [...grupos];
+  return grupos.size === 1 && unico !== 'estancia' ? unico : 'paquetes';
+}

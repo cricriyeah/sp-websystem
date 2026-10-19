@@ -9,6 +9,8 @@ const PADDING = {
 
 type CardProps = ComponentProps<'div'> & {
   padding?: keyof typeof PADDING;
+  /** Sin sombra: la tarjeta de catálogo es plana (solo borde). */
+  plana?: boolean;
 };
 
 /**
@@ -16,6 +18,6 @@ type CardProps = ComponentProps<'div'> & {
  * variante base. Una `Card` no contiene otra `Card`: los subgrupos se separan
  * con espacio, no con un segundo borde. Servible desde servidor.
  */
-export function Card({ padding = 24, className, ...props }: CardProps) {
-  return <div {...props} className={cn('rounded-card border border-borde bg-superficie shadow-tarjeta', PADDING[padding], className)} />;
+export function Card({ padding = 24, plana = false, className, ...props }: CardProps) {
+  return <div {...props} className={cn('rounded-card border border-borde bg-superficie', !plana && 'shadow-tarjeta', PADDING[padding], className)} />;
 }

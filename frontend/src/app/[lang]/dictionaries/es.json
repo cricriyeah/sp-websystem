@@ -651,10 +651,8 @@
     "bookStandalone": "Reservar este servicio",
     "fromPrice": "Desde",
     "crossSellNotice": "Tip: Combina servicios en un paquete para mayor ahorro y coordinación garantizada.",
-    "emptyPackages": "No hay paquetes disponibles en este momento para este destino.",
     "emptyServices": "No hay servicios individuales adicionales en este destino.",
     "servicesLabel": "Servicios",
-    "servicesComingSoon": "Pronto podrás consultar los servicios disponibles en esta sede.",
     "quoteRoute": "Cotiza tu ruta",
     "moreItems": "más",
     "learnMore": "Conocer más"
@@ -876,7 +874,30 @@
     "haceHoras": "hace {n} h"
   },
   "sedeContenido": {
-    "queReservar": "Qué reservar",
+    "queReservar": {
+      "titulo": "Qué puedes reservar",
+      "subtexto": "Cada servicio muestra qué empresa lo opera, cuánto cuesta y qué incluye.",
+      "opera": "Opera {empresa}",
+      "incluye": "Incluye",
+      "mas": "+{n} más",
+      "preguntaIncluye": "Pregunta qué incluye",
+      "desde": "desde",
+      "aprox": "≈ {monto}",
+      "hasta": "Hasta {n} personas",
+      "tarifaRuta": "Tarifa según ruta",
+      "verYReservar": "Ver y reservar",
+      "elegirRuta": "Elegir ruta",
+      "verYReservarAria": "Ver y reservar: {nombre}, {empresa}",
+      "grupoPaquetes": "Paquetes",
+      "grupoPesca": "Pesca",
+      "grupoPaseos": "Paseos",
+      "grupoEstancia": "Estancia y traslados",
+      "vacio": "Por ahora esta sede no tiene servicios para reservar en línea",
+      "caido": "No pudimos cargar el catálogo",
+      "reintentar": "Reintentar",
+      "whatsapp": "Escribirnos por WhatsApp",
+      "whatsappMensaje": "Hola, quiero saber qué se puede reservar en {sede}."
+    },
     "tranquilidad": "Reserva con tranquilidad",
     "colaboracion": "Una colaboración entre Sun Baja Experience, agencia de turismo local, y {empresa}",
     "empresas": "Quién opera cada servicio",
@@ -925,8 +946,7 @@
     "seasonsTitle": "Temporadas y estacionalidad",
     "galleryTitle": "Galería",
     "reviewsTitle": "Opiniones",
-    "faqTitle": "Preguntas frecuentes",
-    "pendingBody": "Estamos preparando esta sección con nuestros colaboradores locales. Pronto encontrarás aquí la información de esta sede."
+    "faqTitle": "Preguntas frecuentes"
   },
   "serviceDetail": {
     "metaFallback": "Detalles del servicio",

@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/skeleton';
 
-/** Estructura de la sede: cabecera, héroe, bloque de paquetes. Es el límite de carga de toda la página. */
+/** Estructura de la sede: cabecera, héroe y tres tarjetas de «Qué puedes reservar». Es el límite de carga de toda la página. */
 export default function CargandoSede() {
   return (
     <div className="min-h-dvh bg-background" aria-hidden="true">
@@ -19,11 +19,12 @@ export default function CargandoSede() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-12 sm:px-8 lg:px-12">
+      <section className="mx-auto max-w-[1120px] px-4 py-12 sm:px-6 lg:px-8">
         <Skeleton className="mb-8 h-10 w-64" />
-        <div className="grid gap-8 md:grid-cols-2">
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-80 w-full" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="min-h-[420px] w-full" />
+          <Skeleton className="min-h-[420px] w-full" />
+          <Skeleton className="min-h-[420px] w-full md:col-span-2 lg:col-span-1" />
         </div>
       </section>
     </div>

@@ -89,3 +89,22 @@ test('plantillaDeGrupo: sin celdas vacías para cada cantidad', () => {
   assert.deepEqual(e.plantillaDeGrupo(6), { columnas: 3, destacada: 'ninguna' });
   assert.deepEqual(e.plantillaDeGrupo(9), { columnas: 3, destacada: 'ninguna' });
 });
+
+test('grupoDeServicio: pesca, paseos (también bajo demanda) y estancia y traslados', () => {
+  assert.equal(e.grupoDeServicio(servicio('pesca')), 'pesca');
+  assert.equal(e.grupoDeServicio(servicio('paseo')), 'paseos');
+  assert.equal(e.grupoDeServicio(servicio('bajo_demanda')), 'paseos');
+  assert.equal(e.grupoDeServicio(servicio('hospedaje')), 'estancia');
+  assert.equal(e.grupoDeServicio(servicio('transporte')), 'estancia');
+});
+
+test('grupoDePaquete: con un solo tipo de mar va con ese grupo; mezclado o con estancia, a paquetes', () => {
+  assert.equal(e.grupoDePaquete(paquete('pesca', 'pesca')), 'pesca');
+  assert.equal(e.grupoDePaquete(paquete('paseo')), 'paseos');
+  assert.equal(e.grupoDePaquete(paquete('pesca', 'paseo')), 'paquetes');
+  assert.equal(e.grupoDePaquete(paquete('pesca', 'hospedaje')), 'paquetes');
+});
+
+test('ORDEN_GRUPOS: paquetes primero', () => {
+  assert.deepEqual(e.ORDEN_GRUPOS, ['paquetes', 'pesca', 'paseos', 'estancia']);
+});

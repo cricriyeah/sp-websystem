@@ -651,10 +651,8 @@
     "bookStandalone": "Book this service",
     "fromPrice": "From",
     "crossSellNotice": "Tip: Combine services into a package for greater savings and seamless coordination.",
-    "emptyPackages": "No packages currently available for this destination.",
     "emptyServices": "No additional standalone services in this destination.",
     "servicesLabel": "Services",
-    "servicesComingSoon": "Services at this destination will be available soon.",
     "quoteRoute": "Get your route price",
     "moreItems": "more",
     "learnMore": "Learn more"
@@ -876,7 +874,30 @@
     "haceHoras": "{n} h ago"
   },
   "sedeContenido": {
-    "queReservar": "What to book",
+    "queReservar": {
+      "titulo": "What you can book",
+      "subtexto": "Each service shows which company runs it, what it costs and what it includes.",
+      "opera": "Run by {empresa}",
+      "incluye": "Includes",
+      "mas": "+{n} more",
+      "preguntaIncluye": "Ask what is included",
+      "desde": "from",
+      "aprox": "≈ {monto}",
+      "hasta": "Up to {n} people",
+      "tarifaRuta": "Rate depends on route",
+      "verYReservar": "View and book",
+      "elegirRuta": "Choose route",
+      "verYReservarAria": "View and book: {nombre}, {empresa}",
+      "grupoPaquetes": "Packages",
+      "grupoPesca": "Fishing",
+      "grupoPaseos": "Tours",
+      "grupoEstancia": "Lodging and transfers",
+      "vacio": "This destination has no services to book online yet",
+      "caido": "We couldn't load the catalog",
+      "reintentar": "Try again",
+      "whatsapp": "Message us on WhatsApp",
+      "whatsappMensaje": "Hi, I'd like to know what I can book in {sede}."
+    },
     "tranquilidad": "Book with peace of mind",
     "colaboracion": "A collaboration between Sun Baja Experience, a local travel agency, and {empresa}",
     "empresas": "Who runs each service",
@@ -925,8 +946,7 @@
     "seasonsTitle": "Seasons and seasonality",
     "galleryTitle": "Gallery",
     "reviewsTitle": "Reviews",
-    "faqTitle": "Frequently asked questions",
-    "pendingBody": "We are preparing this section with our local partners. Destination information will be available here soon."
+    "faqTitle": "Frequently asked questions"
   },
   "serviceDetail": {
     "metaFallback": "Service details",

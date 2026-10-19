@@ -36,6 +36,13 @@ test('todo servicio y paquete del catálogo tiene foto', () => {
   assert.deepEqual(faltan, [], `Faltan fotos: ${faltan.join(', ')}`);
 });
 
+test('ninguna foto es de relleno', () => {
+  const relleno = [...fuente.matchAll(/'((?:servicio|paquete):[^']+)':\s*\{([\s\S]*?)\n  \},/g)]
+    .filter(([, , cuerpo]) => cuerpo.includes('relleno: true'))
+    .map(([, clave]) => clave);
+  assert.deepEqual(relleno, [], `Fotos de relleno: ${relleno.join(', ')}`);
+});
+
 test('cada foto existe en public/, pesa ≤ 200 KB y tiene alt en es y en', () => {
   for (const { clave, src, es, en } of entradas) {
     const archivo = path.join(raiz, 'public', src);
