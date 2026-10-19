@@ -15,6 +15,7 @@ import { numeroDePaso, rotuloDePaso } from '@/lib/pasos-checkout';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { EncabezadoPago } from './encabezado-pago';
 import { ReservaPlegable } from './reserva-plegable';
+import { useCancelarOrden } from './use-cancelar-orden';
 import type { usePagoPedido } from './use-pago-pedido';
 
 type Linea = { etiqueta: string; valor: string };
@@ -53,6 +54,9 @@ type Props = {
   /** Nodo donde el panel pinta "Cómo pagas" (el mismo estado de la vista). */
   destinoTarjetaPago: HTMLElement | null;
   setDestinoTarjetaPago: (nodo: HTMLElement | null) => void;
+  sedeSlug: string;
+  /** La orden se canceló y se liberó lo retenido: vuelve al formulario con este aviso. */
+  onOrdenCancelada: (linea: string) => void;
 };
 
 /**
@@ -66,9 +70,20 @@ export function PantallaPago({
   lang, dict, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
   stepperPagos, volverHref, empresa, sellos, totalMovil, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
   lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
+  sedeSlug, onOrdenCancelada,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
   const movil = useMovil();
+  // Cruza-empresa con la orden creada: la flecha y Atrás piden confirmar antes de cancelarla.
+  const cancelacion = useCancelarOrden({
+    dict,
+    activo: motor === 'orden' && pago.ordenId !== null,
+    sedeSlug,
+    ordenId: pago.ordenId,
+    checkoutId: pago.checkoutId,
+    producto: paquete.nombre,
+    onLiberada: onOrdenCancelada,
+  });
   const pasoPago = pago.pagos[pago.indice];
   if (!pasoPago) return null;
   const n = cantidadCargos || pago.pagos.length;
@@ -123,10 +138,13 @@ export function PantallaPago({
   );
 
   return (
+    <>
     <PaginaCheckout
       lang={lang}
       dict={dict}
       volverHref={volverHref}
+      alPasoAnterior={motor === 'orden' && !cancelacion.cerrada ? cancelacion.abrir : undefined}
+      aviso={cancelacion.aviso ?? undefined}
       empresa={empresa}
       marcaFija={motor === 'orden'}
       volverLabel={textos.back}
@@ -140,7 +158,7 @@ export function PantallaPago({
         // Un solo cobro con anticipo: la cifra del paso es el anticipo, no el total.
         ? { actual: numeroDePaso('pago'), totalMovil: `${monto} ${moneda}`, rotulo: checkout.stepper.payNow, totalGeneral: `${totalPago} ${moneda}` }
         : { actual: numeroDePaso('pago'), totalMovil })}
-      pasos={movil ? pantallaMovil : (
+      pasos={cancelacion.cerrada ? null : movil ? pantallaMovil : (
         <>
           {/* Retomada desde el servidor: sin Viaje ni Datos inventados; solo el pago y su resumen. */}
           {!pago.retomado && (
@@ -222,5 +240,7 @@ export function PantallaPago({
         />
       }
     />
+    {cancelacion.dialogo}
+    </>
   );
 }

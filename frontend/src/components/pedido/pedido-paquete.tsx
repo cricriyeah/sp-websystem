@@ -9,6 +9,7 @@ import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
+import { useToast } from '@/components/toast';
 import { AsistenteMovil } from '@/components/reserva/asistente-movil';
 import { useMovil } from '@/components/reserva/use-movil';
 import { usePantallaMovil } from '@/components/reserva/use-pantalla-movil';
@@ -92,6 +93,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const corregir = useCorregir(actual, setEditando, movil ? corregirEnMovil : undefined);
   const tarjeta = (id: PasoId) => estadoDeTarjeta(id, actual, editando);
   const ayuda = useAyudaContextual();
+  const { mostrar: avisar } = useToast();
 
   // Al llegar a "Cómo pagas" se pide ya el formulario de tarjeta (y con él Stripe.js):
   // para cuando se crea el pago, el chunk está listo. Solo en el cliente.
@@ -515,6 +517,11 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       lineaPunto={lineaPunto}
       destinoTarjetaPago={destinoTarjetaPago}
       setDestinoTarjetaPago={setDestinoTarjetaPago}
+      sedeSlug={sedeSlug}
+      onOrdenCancelada={(linea) => {
+        reiniciarPedido();
+        avisar('info', linea);
+      }}
     />
   );
 

@@ -378,7 +378,8 @@
       "fechaTraslado": "Which day?",
       "horaPasajeros": "Time and passengers",
       "continuarTarjeta": "Continue to card",
-      "cargandoPago": "Loading the payment form…"
+      "cargandoPago": "Loading the payment form…",
+      "verificando": "Checking that you are a person…"
     },
     "tituloPagina": {
       "pesca": "Book your fishing trip",
@@ -812,6 +813,13 @@
     }
   },
   "pedido": {
+    "cancelarOrden": {
+      "titulo": "Cancel your order?",
+      "cuerpo": "Your order is canceled and we show you right here what happened to the hold on your card.",
+      "seguir": "Keep my booking",
+      "cancelar": "Cancel my order",
+      "escribir": "Message us on WhatsApp"
+    },
     "back": "Back to catalog",
     "title": "Book your package",
     "groupOf": "by {empresa}",

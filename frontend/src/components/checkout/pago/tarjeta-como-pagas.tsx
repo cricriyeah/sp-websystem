@@ -1,7 +1,7 @@
 'use client';
 
 import { rotuloDePaso } from '@/lib/pasos-checkout';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle, Lock, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
@@ -12,7 +12,7 @@ import { AvisoProblema } from '@/components/checkout/aviso-problema';
 import { ErrorDeCampo, FieldError, propsDeError } from '@/components/ui/error-de-campo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Turnstile } from '@/components/turnstile';
+import { Turnstile, turnstileEncendido } from '@/components/turnstile';
 import { usePublicarAccion } from '@/components/reserva/contexto-barra';
 import { useMovil } from '@/components/reserva/use-movil';
 import { WaitNotice } from '@/components/wait-notice';
@@ -57,12 +57,26 @@ export function TarjetaComoPagas({
   const [promoAbierto, setPromoAbierto] = useState(false);
   const pagoCreado = phase === 'payment';
   const abierta = phase !== 'payment' && phase !== 'unavailable';
+  // Turnstile responde una vez (token, o vacío si falló: el backend falla abierto). Si tarda más de
+  // 8 s, el botón se libera igual y el servidor decide.
+  const [verificado, setVerificado] = useState(!turnstileEncendido);
+  useEffect(() => {
+    if (verificado) return;
+    const espera = setTimeout(() => setVerificado(true), 8000);
+    return () => clearTimeout(espera);
+  }, [verificado]);
+  const alToken = (token: string) => {
+    setVerificado(true);
+    onCaptchaToken(token);
+  };
+
   // En móvil el botón vive en la barra inferior; en escritorio, en el pie de la tarjeta.
   const movil = useMovil();
   usePublicarAccion(movil && abierta ? {
     etiqueta: etiquetaBotonEnvio ?? checkout.barra.continuarTarjeta,
     alPulsar: onSubmit,
-    deshabilitado: submitDisabled,
+    deshabilitado: submitDisabled || !verificado,
+    razon: verificado ? undefined : checkout.barra.verificando,
     cargando: phase === 'submitting',
     etiquetaCargando: checkout.submitting,
   } : null, 'contenido');
@@ -263,7 +277,7 @@ export function TarjetaComoPagas({
                 <ErrorDeCampo id="error-waiver" mensaje={errorWaiver ? checkout.waiver.missing : ''} />
               </div>
 
-              <Turnstile onToken={onCaptchaToken} />
+              <Turnstile onToken={alToken} />
 
               {phase === 'submitting' && <WaitNotice mensaje={feedback.savingWait} />}
 

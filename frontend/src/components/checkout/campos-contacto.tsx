@@ -45,6 +45,7 @@ export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio
                 aspecto="heredado"
                 ref={refs?.[campo]}
                 type={tipo}
+                enterKeyHint="next"
                 required
                 disabled={disabled}
                 value={valores[campo]}

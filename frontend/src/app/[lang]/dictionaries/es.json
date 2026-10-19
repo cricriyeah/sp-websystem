@@ -378,7 +378,8 @@
       "fechaTraslado": "¿Qué día?",
       "horaPasajeros": "Hora y pasajeros",
       "continuarTarjeta": "Continuar a la tarjeta",
-      "cargandoPago": "Cargando el formulario de pago…"
+      "cargandoPago": "Cargando el formulario de pago…",
+      "verificando": "Verificando que eres una persona…"
     },
     "tituloPagina": {
       "pesca": "Reserva tu pesca",
@@ -812,6 +813,13 @@
     }
   },
   "pedido": {
+    "cancelarOrden": {
+      "titulo": "¿Cancelar tu orden?",
+      "cuerpo": "Se cancela tu orden y aquí mismo te mostramos qué pasó con lo retenido en tu tarjeta.",
+      "seguir": "Seguir con mi reserva",
+      "cancelar": "Cancelar mi orden",
+      "escribir": "Escribir por WhatsApp"
+    },
     "back": "Volver al catálogo",
     "title": "Reserva tu paquete",
     "groupOf": "de {empresa}",

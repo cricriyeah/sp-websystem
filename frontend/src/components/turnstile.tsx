@@ -16,6 +16,9 @@ import { useEffect, useRef } from 'react';
  */
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+
+/** Sin llave no hay verificación que esperar (en local el checkout funciona sin ella). */
+export const turnstileEncendido = SITE_KEY !== '';
 const SCRIPT_URL =
   'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 

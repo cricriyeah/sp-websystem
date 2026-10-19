@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet } from '@/components/ui/sheet';
 import { LineaProgreso } from './linea-progreso';
 import { useBarra } from './contexto-barra';
+import { useTecladoAbierto } from './use-teclado';
 
 const ID_RAZON = 'barra-razon';
 
@@ -28,6 +29,9 @@ type Props = {
  * aparezca o no, el botón no brinca. Mide su alto y lo publica como `--barra-alto`
  * para que la página, el toast y la ayuda flotante se aparten. Es hermana del contenido que
  * cambia de paso, nunca su hija: un ancestro con `transform` rompería `position: fixed`.
+ *
+ * Con el teclado abierto pasa a estática al final del contenido (y `--barra-alto` a 0): fija
+ * taparía el campo que el cliente está escribiendo.
  */
 export function BarraInferior({ checkout, actual, total, estimado }: Props) {
   const { resumen, accion: accionPantalla, accionContenido } = useBarra();
@@ -35,12 +39,13 @@ export function BarraInferior({ checkout, actual, total, estimado }: Props) {
   const [hoja, setHoja] = useState(false);
   const barra = useRef<HTMLDivElement>(null);
   const textos = checkout.barra;
+  const teclado = useTecladoAbierto();
 
   useEffect(() => {
     const elemento = barra.current;
     if (!elemento) return;
     const raiz = document.documentElement;
-    const publicar = () => raiz.style.setProperty('--barra-alto', `${elemento.offsetHeight}px`);
+    const publicar = () => raiz.style.setProperty('--barra-alto', teclado ? '0px' : `${elemento.offsetHeight}px`);
     publicar();
     const observador = new ResizeObserver(publicar);
     observador.observe(elemento);
@@ -48,13 +53,13 @@ export function BarraInferior({ checkout, actual, total, estimado }: Props) {
       observador.disconnect();
       raiz.style.setProperty('--barra-alto', '0px');
     };
-  }, []);
+  }, [teclado]);
 
   return (
     <>
       <div
         ref={barra}
-        className="fixed inset-x-0 bottom-0 z-[var(--z-barra)] border-t border-borde bg-blanco pb-[env(safe-area-inset-bottom)] sm:hidden"
+        className={`${teclado ? 'relative' : 'fixed inset-x-0 bottom-0 z-[var(--z-barra)]'} border-t border-borde bg-blanco pb-[env(safe-area-inset-bottom)] sm:hidden`}
       >
         <Button
           variante="libre"

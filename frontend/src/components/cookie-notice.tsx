@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { guardarConsentimiento, leerConsentimiento } from '@/lib/cookies';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,12 @@ const yaRespondioEnEsteNavegador = () => leerConsentimiento() !== undefined;
 
 /** En el servidor: no pintar nada. Ver la nota de arriba sobre el parpadeo. */
 const enElServidor = () => true;
+
+/**
+ * `/reservar` y `/traslados`: el aviso es fijo abajo y la barra del checkout lo taparía sin dejar
+ * contestarlo. Ahí no carga nada no esencial (no hay analítica ni pixel), así que no se pregunta.
+ */
+const RUTA_RESERVA = /^\/[a-z]{2}\/(reservar|traslados)(\/|$)/;
 export function CookieNotice({
   lang,
   cookies,
@@ -49,8 +56,9 @@ export function CookieNotice({
   // El almacen no notifica, asi que la respuesta de ahorita se recuerda aparte.
   const [respondioAhora, setRespondioAhora] = useState(false);
   const sinMovimiento = useReducedMotion();
+  const enReserva = RUTA_RESERVA.test(usePathname() ?? '');
 
-  const visible = !yaRespondio && !respondioAhora;
+  const visible = !yaRespondio && !respondioAhora && !enReserva;
 
   const responder = (decision: 'aceptado' | 'rechazado') => {
     guardarConsentimiento(decision);

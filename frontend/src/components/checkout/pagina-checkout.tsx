@@ -80,7 +80,7 @@ export function PaginaCheckout({
         <div className="min-w-0">{pedido}</div>
       </main>
 
-      <CheckoutFooter lang={lang} footer={dict.footer} nav={dict.nav} />
+      {/* Antes del pie: con el teclado abierto la barra deja de ser fija y queda bajo el contenido. */}
       {movil && (
         <BarraInferior
           checkout={dict.checkout}
@@ -89,6 +89,7 @@ export function PaginaCheckout({
           estimado={stepper.actual < 3}
         />
       )}
+      <CheckoutFooter lang={lang} footer={dict.footer} nav={dict.nav} />
     </div>
     </ProveedorBarra>
   );
