@@ -128,7 +128,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   La fecha de regreso del traslado dentro de un paquete (`FechaRegresoCompacta`) es
   obligatoria: se ve con el calendario abierto hasta que hay fecha, y entonces se pliega a
   una fila con "Modificar" (nunca un botón "Elegir", que la haría parecer opcional).
-  `PeopleStepper` (dos círculos secundarios de 48, valor 20/600) recibe el tope del
+  `PeopleStepper` (con la forma de los demás campos; no círculos grandes) recibe el tope del
   servicio (`capacidad_maxima`, o 5 sin ella; en paquete, `topeDeComponente`) y al tocar
   + en el tope dice «Máximo N personas» en línea. El hospedaje `por_noche` suelto
   muestra precio × noches (estrategia `PorNoche` del servidor) con «Estimado» junto al

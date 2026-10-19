@@ -73,7 +73,7 @@ Casilla 24 × 24 con área de 48; radio 6; marcada = relleno `cafe` con palomita
 
 ### Contador de personas
 
-Dos botones secundarios circulares de 48 con valor central en 20/600. Respeta el máximo del servicio y, al tocar el tope, explica «Máximo N personas» en lugar de ignorar el toque.
+Con la forma de los demás campos (decisión del dueño, 2026-10-19, tras probar círculos de 48 con valor en 20/600, que se veían fuera de estilo): dentro de la caja de campo, icono de personas, etiqueta `apagado` y valor en 14 de peso normal, y los botones − y + de 44 a la derecha. Respeta el máximo del servicio y, al tocar el tope, explica «Máximo N personas» en lugar de ignorar el toque.
 
 ---
 
