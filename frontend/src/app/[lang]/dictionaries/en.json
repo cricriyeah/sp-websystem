@@ -361,6 +361,14 @@
     "rights": "All rights reserved."
   },
   "checkout": {
+    "problema": {
+      "sin_cupo": { "titulo": "That spot is no longer available", "cuerpo": "What you entered is kept. Pick another date to continue.", "accion": "Choose another date" },
+      "tarjeta_rechazada": { "titulo": "Your card was declined", "cuerpo": "You were not charged.", "accion": "Try another card" },
+      "apartado_vencido": { "titulo": "Your held spot has expired", "cuerpo": "You were not charged. You can hold it again if it is still available.", "accion": "Hold my spot again" },
+      "red": { "titulo": "We could not connect", "cuerpo": "Check your connection. What you entered is kept.", "accion": "Try again" },
+      "catalogo_caido": { "titulo": "This service is not available right now", "cuerpo": "Try again in a few minutes.", "accion": "Try again", "whatsapp": "Message us on WhatsApp", "volver": "Back" },
+      "dato_previo": { "titulo": "One detail needs fixing", "cuerpo": "Check {dato} in {paso}.", "accion": "Fix {dato}" }
+    },
     "tituloPagina": {
       "pesca": "Book your fishing trip",
       "paseo": "Book your tour",
@@ -622,7 +630,7 @@
     "dayFullOffer": "{date} has no space left for {people} guests.",
     "takeOffered": "Check availability for {date}",
     "keepLooking": "Choose another date",
-    "apartadoLinea": "Your spot is held for 15 minutes.",
+    "apartadoHasta": "Your spot is held until {hora}.",
     "cupoAgotado": "Availability ran out while you were filling in your details. Your info is still saved.",
     "lugarNoAseguradoTitulo": "We couldn't secure your spot",
     "lugarNoAseguradoCuerpo": "Your payment will be fully refunded. You can choose another date if you'd like.",

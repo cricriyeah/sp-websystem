@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Warning } from '@phosphor-icons/react';
 import { useBorrador } from '@/components/checkout/use-borrador';
 import { useCorregir } from '@/components/checkout/use-corregir';
 import { usePasoUrl } from '@/components/checkout/use-paso-url';
@@ -14,6 +13,9 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BookingConfirmation } from '@/components/booking-confirmation';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
+import { AvisoAccion } from '@/components/ui/aviso-accion';
+import { problemaDe } from '@/lib/problema-reserva';
+import { tieneWhatsapp } from '@/lib/contacto';
 import { EncabezadoCompra, claveTituloCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
@@ -28,7 +30,6 @@ import { BloqueViaje } from '@/components/checkout/bloques/bloque-viaje';
 import { formatDay } from '@/components/checkout/formato-dia';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { useToast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
 import { WaitNotice } from '@/components/wait-notice';
 import {
   ApiError,
@@ -1334,40 +1335,30 @@ export function CheckoutView({
           />
         }
         aviso={sinLugar ? (
-        <div className="mx-auto mb-2 flex max-w-6xl items-start gap-3 px-6 sm:px-8 lg:px-12">
-          <div className="flex w-full flex-col gap-2 border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <Warning size={18} className="mt-0.5 shrink-0 text-accent" />
-              <p>{sinLugar.mensaje}</p>
-            </div>
-            {/* La alternativa se OFRECE, no se aplica. Es el cliente quien decide
-                cambiar de fecha: para un turista con vuelo el jueves, el
-                siguiente dia libre puede no servirle de nada. */}
-            {sinLugar.alternativa && (
-              <Button
-                variante="libre"
-                type="button"
-                onClick={() => {
-                  const nueva = sinLugar.alternativa!;
-                  setDay(nueva);
-                  avisar(
-                    'info',
-                    dict.feedback.dateChanged.replace(
-                      '{date}',
-                      formatDay(fromLocalISODate(nueva), lang),
-                    ),
-                  );
-                }}
-                className="shrink-0 self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:self-auto"
-              >
-                {checkout.takeOffered.replace(
-                  '{date}',
-                  formatDay(fromLocalISODate(sinLugar.alternativa), lang),
-                )}
-              </Button>
-            )}
+          <div className="mx-auto mb-2 max-w-6xl px-6 sm:px-8 lg:px-12">
+            <AvisoAccion
+              problema={problemaDe('sin_cupo', { tieneWhatsapp }, {
+                ...checkout.problema,
+                // La alternativa se OFRECE, no se aplica: el cliente decide si el siguiente día libre le sirve.
+                sin_cupo: {
+                  ...checkout.problema.sin_cupo,
+                  cuerpo: sinLugar.mensaje,
+                  accion: sinLugar.alternativa
+                    ? checkout.takeOffered.replace('{date}', formatDay(fromLocalISODate(sinLugar.alternativa), lang))
+                    : checkout.problema.sin_cupo.accion,
+                },
+              })}
+              alAccionar={() => {
+                const nueva = sinLugar.alternativa;
+                if (!nueva) {
+                  document.querySelector('[data-tarjeta-foco]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  return;
+                }
+                setDay(nueva);
+                avisar('info', dict.feedback.dateChanged.replace('{date}', formatDay(fromLocalISODate(nueva), lang)));
+              }}
+            />
           </div>
-        </div>
         ) : undefined}
         stepper={stepperPago}
         pasos={

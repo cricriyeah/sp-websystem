@@ -361,6 +361,14 @@
     "rights": "Todos los derechos reservados."
   },
   "checkout": {
+    "problema": {
+      "sin_cupo": { "titulo": "Ese lugar ya no está disponible", "cuerpo": "Lo que capturaste se conserva. Elige otra fecha para seguir.", "accion": "Elegir otra fecha" },
+      "tarjeta_rechazada": { "titulo": "Tu tarjeta fue rechazada", "cuerpo": "No se hizo ningún cobro.", "accion": "Probar otra tarjeta" },
+      "apartado_vencido": { "titulo": "Venció el tiempo de tu lugar apartado", "cuerpo": "No se hizo ningún cobro. Puedes volver a apartarlo si sigue disponible.", "accion": "Volver a apartar mi lugar" },
+      "red": { "titulo": "No pudimos conectarnos", "cuerpo": "Revisa tu conexión. Lo que capturaste se conserva.", "accion": "Reintentar" },
+      "catalogo_caido": { "titulo": "Este servicio no está disponible por ahora", "cuerpo": "Intenta de nuevo en unos minutos.", "accion": "Reintentar", "whatsapp": "Escribirnos por WhatsApp", "volver": "Volver" },
+      "dato_previo": { "titulo": "Falta corregir un dato", "cuerpo": "Revisa {dato} en {paso}.", "accion": "Corregir {dato}" }
+    },
     "tituloPagina": {
       "pesca": "Reserva tu pesca",
       "paseo": "Reserva tu paseo",
@@ -622,7 +630,7 @@
     "dayFullOffer": "El {date} ya no cuenta con espacio para {people} personas.",
     "takeOffered": "Ver disponibilidad para el {date}",
     "keepLooking": "Elegir otra fecha",
-    "apartadoLinea": "Tu lugar está apartado por 15 minutos.",
+    "apartadoHasta": "Tu lugar está apartado hasta las {hora}.",
     "cupoAgotado": "El cupo se agotó mientras llenabas tus datos. Tus datos siguen guardados.",
     "lugarNoAseguradoTitulo": "No fue posible asegurar tu lugar",
     "lugarNoAseguradoCuerpo": "Tu pago se reembolsa al 100%. Si deseas, puedes elegir otra fecha.",

@@ -3,16 +3,16 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { Lock } from '@phosphor-icons/react';
+import { Clock, Lock } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { EsqueletoPago } from '@/components/checkout/pago/esqueleto-pago';
 import { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
-import { ErrorBlock } from '@/components/error-block';
+import { AvisoProblema } from '@/components/checkout/aviso-problema';
 import { Button } from '@/components/ui/button';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Pago } from '@/lib/api';
-import { fechaHoraDeVencimiento } from '@/lib/pendientes-texto';
+import { fechaHoraDeVencimiento, horaDeVencimiento } from '@/lib/pendientes-texto';
 import { RADIO_PAGO, TOKENS_PAGO } from '@/lib/tokens-pago';
 
 // Stripe pinta en un iframe: no hereda las variables CSS ni la fuente del sitio,
@@ -52,6 +52,7 @@ function PaymentForm({
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [errorEsDeTarjeta, setErrorEsDeTarjeta] = useState(false);
   // El esqueleto cubre el hueco del iframe hasta que Stripe termina de pintarlo.
   const [listo, setListo] = useState(false);
 
@@ -59,6 +60,7 @@ function PaymentForm({
     if (!stripe || !elements || submitting) return;
     setSubmitting(true);
     setFormError('');
+    setErrorEsDeTarjeta(false);
 
     // Renovacion silenciosa del apartado antes de hablar con Stripe: la hace el
     // componente que conoce la reserva. Si decide que no se cobra (sin cupo, monto
@@ -79,6 +81,7 @@ function PaymentForm({
 
     if (confirmError) {
       setFormError(confirmError.message ?? checkout.errorGeneric);
+      setErrorEsDeTarjeta(confirmError.type === 'card_error');
       setSubmitting(false);
       if (confirmError.type === 'card_error') {
         onPagoRechazado?.(confirmError.message ?? checkout.errorGeneric, confirmError.decline_code ?? confirmError.code);
@@ -121,11 +124,14 @@ function PaymentForm({
       {submitting && <WaitNotice mensaje={feedback.payingWait} mensajeLento={feedback.paySlow} />}
 
       {formError && (
-        <ErrorBlock
+        <AvisoProblema
+          checkout={checkout}
+          feedback={feedback}
+          tipo={errorEsDeTarjeta ? 'tarjeta_rechazada' : 'red'}
           mensaje={formError}
-          ayudaTitulo={feedback.helpTitle}
-          ayudaCta={feedback.helpCta}
           ayudaMensaje={ayudaMensaje}
+          // «Probar otra tarjeta» limpia el aviso y deja el formulario para editar; «reintentar» vuelve a cobrar.
+          alAccionar={(clave) => (clave === 'reintentar' ? void handleConfirm() : setFormError(''))}
         />
       )}
 
@@ -179,7 +185,7 @@ export function FormularioPago({
   etiquetaBotonPago?: string;
   /**
    * ISO 8601 del vencimiento del apartado; null si no hubo apartado.
-   * Solo cuando no es null se muestra la linea «Tu lugar está apartado por 15 minutos».
+   * Solo cuando no es null se muestra «Tu lugar está apartado hasta las 4:32 p. m.».
    */
   apartadoHasta?: string | null;
   /**
@@ -196,6 +202,7 @@ export function FormularioPago({
 }) {
   const stripePromise = useMemo(() => loadStripe(pago.publishable_key), [pago.publishable_key]);
   const cuando = fechaHoraDeVencimiento(venceEn, lang === 'en' ? 'en-US' : 'es-MX');
+  const horaApartado = horaDeVencimiento(apartadoHasta, lang === 'en' ? 'en-US' : 'es-MX');
   const puente = cuando ? checkout.paymentBridgeUntil.replace('{cuando}', cuando) : checkout.paymentBridge;
   return (
     <>
@@ -203,10 +210,10 @@ export function FormularioPago({
         {encabezadoPago}
         {/* Linea fija del apartado: solo cuando crear-pago devolvio apartado_hasta.
             Con APARTADO_MINUTOS=0 o servicios sin cupo fisico, apartadoHasta es null y no aparece. */}
-        {apartadoHasta && (
-          <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-            <span aria-hidden="true">🔒</span>
-            {checkout.apartadoLinea}
+        {horaApartado && (
+          <p className="flex items-center gap-2 texto-pequeno font-semibold text-foreground">
+            <Clock size={16} weight="bold" aria-hidden />
+            {checkout.apartadoHasta.replace('{hora}', horaApartado)}
           </p>
         )}
         <Elements stripe={stripePromise} options={{ clientSecret: pago.client_secret, locale: lang, appearance: STRIPE_APARIENCIA }}>

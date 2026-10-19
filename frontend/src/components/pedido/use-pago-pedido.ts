@@ -6,6 +6,8 @@ import {
   guardarReserva, type CrearOrdenInput, type OrdenDetalle, type ReservaInput,
 } from '@/lib/api';
 import { ApiError } from '@/lib/api';
+import { clasificar } from '@/lib/errores';
+import { tipoDeFallo, type TipoProblema } from '@/lib/problema-reserva';
 import { empresaDeFalloCaptura } from '@/lib/fallo-pago';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
@@ -52,6 +54,8 @@ export function usePagoPedido(config: Config) {
   const [pagos, setPagos] = useState<PasoPago[]>([]);
   const [indice, setIndice] = useState(0);
   const [error, setError] = useState('');
+  // Qué clase de problema es `error`; el aviso del checkout elige título y acción con él.
+  const [errorTipo, setErrorTipo] = useState<TipoProblema | null>(null);
   const [motivoFallo, setMotivoFallo] = useState('');
   const [fallo, setFallo] = useState<FalloPago | null>(null);
   // true si el fallo ocurrió en esta sesión de la página (el formulario sigue en memoria);
@@ -324,6 +328,7 @@ export function usePagoPedido(config: Config) {
       }
       // Un 503 ("Stripe no configurado") lo traduce `mensajeDeError` a `checkout.paymentUnavailable`.
       setError(c.mensajeDeError(err));
+      setErrorTipo(tipoDeFallo(clasificar(err)));
       c.alErrorDeCampo?.(err);
       setFase('formulario');
       return false;
@@ -381,6 +386,7 @@ export function usePagoPedido(config: Config) {
         const codigo = (err.detail as Record<string, unknown> | null)?.['codigo'];
         if (codigo === 'sin_cupo') {
           setError(c.mensajeDeError(err));
+          setErrorTipo('sin_cupo');
           setPagos([]);
           setApartadoHasta(null);
           setFase('formulario');
@@ -404,6 +410,7 @@ export function usePagoPedido(config: Config) {
       setFase('capturando');
     } else {
       setError(mensaje);
+      setErrorTipo('tarjeta_rechazada');
       setFase('formulario');
     }
   }, [indice, pagos]);
@@ -442,7 +449,7 @@ export function usePagoPedido(config: Config) {
   );
 
   return {
-    fase, pagos, indice, error, motivoFallo, ordenId, checkoutId,
+    fase, pagos, indice, error, errorTipo, motivoFallo, ordenId, checkoutId,
     fallo, falloEnVivo, fallos, apartadoHasta, confirmandoLargo,
     enviar, antesDePagar, onPagoConfirmado, onPagoRechazado, reiniciar, reintentar,
   };

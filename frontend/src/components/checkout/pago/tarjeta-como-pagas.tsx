@@ -8,7 +8,7 @@ import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section
 import { Despliegue } from '@/components/ui/despliegue';
 import { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
 import type { StripePanelProps } from '@/components/checkout/pago/tipos';
-import { ErrorBlock } from '@/components/error-block';
+import { AvisoProblema } from '@/components/checkout/aviso-problema';
 import { ErrorDeCampo, FieldError, propsDeError } from '@/components/ui/error-de-campo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,8 @@ export function TarjetaComoPagas({
   submitDisabled = false,
   phase,
   error,
+  errorTipo,
+  onProblema,
   feedback,
   ayudaMensaje,
   onSubmit,
@@ -255,11 +257,17 @@ export function TarjetaComoPagas({
               {phase === 'submitting' && <WaitNotice mensaje={feedback.savingWait} />}
 
               {phase === 'error' && error && (
-                <ErrorBlock
+                <AvisoProblema
+                  checkout={checkout}
+                  feedback={feedback}
+                  tipo={errorTipo ?? 'red'}
                   mensaje={error}
-                  ayudaTitulo={feedback.helpTitle}
-                  ayudaCta={feedback.helpCta}
                   ayudaMensaje={ayudaMensaje}
+                  alAccionar={(clave) => {
+                    // Reintentar, otra tarjeta y volver a apartar vuelven a pedir el cobro; lo demás lo resuelve la vista.
+                    if (clave === 'reintentar' || clave === 'otra_tarjeta' || clave === 'reapartar') onSubmit();
+                    else onProblema?.(clave);
+                  }}
                 />
               )}
             </>

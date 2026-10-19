@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda } from '@/lib/api';
+import type { ClaveAccion, TipoProblema } from '@/lib/problema-reserva';
 
 export type OrderLine = {
   label: string;
@@ -47,6 +48,10 @@ export type StripePanelProps = {
   submitDisabled?: boolean;
   phase: Phase;
   error: string;
+  /** Qué clase de problema es `error` (por omisión, un fallo de red). */
+  errorTipo?: TipoProblema;
+  /** Cómo resuelve la vista cada acción del aviso (p. ej. «elegir otra fecha» reabre el viaje). */
+  onProblema?: (clave: ClaveAccion) => void;
   feedback: Dictionary['feedback'];
   /** Mensaje ya redactado para la vendedora, con la fecha y el grupo del cliente. */
   ayudaMensaje: string;

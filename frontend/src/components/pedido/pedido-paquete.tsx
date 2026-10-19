@@ -673,6 +673,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             }}
             onCaptchaToken={(token) => { captcha.current = token; }}
             onSubmit={enviar}
+            onElegirFecha={() => setEditando('viaje')}
           />
         }
       />

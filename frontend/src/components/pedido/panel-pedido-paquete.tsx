@@ -1,7 +1,7 @@
 import type { Dispatch } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { StripePanelProps } from '@/components/checkout/pago/tipos';
-import { ErrorBlock } from '@/components/error-block';
+import { AvisoProblema } from '@/components/checkout/aviso-problema';
 import { StripePanel } from '@/components/stripe-panel';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import type { AccionPedido, EstadoPedido } from '@/lib/pedido-estado';
@@ -45,6 +45,8 @@ type Props = {
   onCodigoPromocionalChange: (valor: string) => void;
   onCaptchaToken: (token: string) => void;
   onSubmit: () => void;
+  /** «Elegir otra fecha» tras un sin cupo: reabre el viaje. */
+  onElegirFecha: () => void;
 };
 
 /**
@@ -57,7 +59,7 @@ export function PanelPedidoPaquete({
   lang, dict, paquete, motor, pedido, cargos, cantidadCargos, nombreEmpresa, moneda, formaPago, conUsd, descuento,
   codigoPromocional, promoEstado, promoPorcentaje, lineasViaje, sellos, destinoTarjetaPago, total, ahora, ayudaMensaje,
   waiverAccepted, errorWaiver, captchaKey, actual, pago, despachar,
-  onWaiverChange, onCodigoPromocionalChange, onCaptchaToken, onSubmit,
+  onWaiverChange, onCodigoPromocionalChange, onCaptchaToken, onSubmit, onElegirFecha,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
   return pedido ? (
@@ -92,6 +94,8 @@ export function PanelPedidoPaquete({
       submitDisabled={actual !== 'pago'}
       phase={pago.fase === 'enviando' ? 'submitting' : pago.error ? 'error' : 'form'}
       error={pago.error}
+      errorTipo={pago.errorTipo ?? undefined}
+      onProblema={(clave) => { if (clave === 'elegir_fecha') onElegirFecha(); }}
       avisoCargos={cantidadCargos > 1 ? (
         <div className="mt-5 border-t border-border pt-5">
           <AvisoCargos dict={dict}
@@ -105,7 +109,6 @@ export function PanelPedidoPaquete({
       onCaptchaToken={onCaptchaToken}
     />
   ) : (
-    <ErrorBlock mensaje={feedback.error.no_disponible}
-      ayudaTitulo={feedback.helpTitle} ayudaCta={feedback.helpCta} ayudaMensaje={ayudaMensaje} />
+    <AvisoProblema checkout={checkout} feedback={feedback} tipo="catalogo_caido" ayudaMensaje={ayudaMensaje} />
   );
 }
