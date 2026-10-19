@@ -372,7 +372,9 @@
     "barra": {
       "verResumen": "Ver resumen",
       "estimado": "Estimado",
-      "cerrar": "Cerrar"
+      "cerrar": "Cerrar",
+      "continuar": "Continuar",
+      "tarjeta": "Datos de tu tarjeta"
     },
     "tituloPagina": {
       "pesca": "Reserva tu pesca",

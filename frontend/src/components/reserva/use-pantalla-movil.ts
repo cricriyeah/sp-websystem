@@ -22,6 +22,8 @@ type Opciones = {
   minima: string | null;
   /** Clave del borrador de la ruta: la pantalla más avanzada se guarda a su lado. */
   clave: string;
+  /** La más avanzada que se puede ver ahora (p. ej. «Cómo pagas» mientras no exista el pago). */
+  tope?: string | null;
 };
 
 export type PantallaMovil = {
@@ -39,21 +41,25 @@ export type PantallaMovil = {
 const masAvanzada = (pantallas: readonly Pantalla[], a: string, b: string) =>
   estaAntesDe(pantallas, a, b) ? b : a;
 
+const hastaElTope = (pantallas: readonly Pantalla[], tope: string | null, id: string) =>
+  tope && estaAntesDe(pantallas, tope, id) ? tope : id;
+
 /**
  * Asistente móvil: una pantalla a la vez, cada una es una entrada de historial
  * (`?paso=…&pantalla=…`, con `pushState`), así que Atrás del navegador y la flecha hacen lo
  * mismo. Ir y venir no pierde nada: las respuestas viven en el estado de la ruta y en su
  * borrador; aquí solo se guarda en qué pantalla va el cliente y hasta cuál llegó.
  */
-export function usePantallaMovil({ pantallas, habilitado, inicial, minima, clave }: Opciones): PantallaMovil {
+export function usePantallaMovil({ pantallas, habilitado, inicial, minima, clave, tope = null }: Opciones): PantallaMovil {
   const urlId = pantallaDeQuery(useSearchParams().get('pantalla'));
   const claveAlcanzada = `${clave}:pantalla`;
   const [actualCrudo, setActual] = useState<string>(inicial);
   const [alcanzadaCruda, setAlcanzada] = useState<string>(inicial);
   // La ruta puede cambiar sus pantallas (un servicio sin extras, un paquete sin traslado):
   // lo guardado se lee siempre contra la lista vigente.
-  const actual = pantallaValida(pantallas, actualCrudo);
-  const alcanzada = masAvanzada(pantallas, pantallaValida(pantallas, alcanzadaCruda), actual);
+  const limitar = (id: string) => hastaElTope(pantallas, tope, id);
+  const actual = limitar(pantallaValida(pantallas, actualCrudo));
+  const alcanzada = limitar(masAvanzada(pantallas, pantallaValida(pantallas, alcanzadaCruda), actual));
   // Lo último que el hook vio o escribió en la URL: distingue Atrás de un avance propio.
   const ultimo = useRef<string | null | undefined>(undefined);
 
@@ -65,7 +71,7 @@ export function usePantallaMovil({ pantallas, habilitado, inicial, minima, clave
     let hasta = alcanzada;
     if (primera) {
       const guardada = leerBorrador<string>(claveAlcanzada);
-      hasta = masAvanzada(pantallas, pantallaValida(pantallas, guardada), pantallaValida(pantallas, inicial));
+      hasta = hastaElTope(pantallas, tope, masAvanzada(pantallas, pantallaValida(pantallas, guardada), pantallaValida(pantallas, inicial)));
       setAlcanzada(hasta);
     }
     const decision = decidirPantalla(urlId, pantallas, hasta, minima);
@@ -76,7 +82,7 @@ export function usePantallaMovil({ pantallas, habilitado, inicial, minima, clave
     setActual(destino);
     // Alinear la URL sin sumar entrada: de otro modo Atrás se quedaría en la misma pantalla.
     if (urlId !== destino) window.history.replaceState(null, '', conPantalla(window.location.search, pantallas, destino));
-  }, [habilitado, urlId, pantallas, alcanzada, minima, inicial, claveAlcanzada]);
+  }, [habilitado, urlId, pantallas, alcanzada, minima, inicial, claveAlcanzada, tope]);
 
   useEffect(() => {
     if (habilitado) guardarBorrador(claveAlcanzada, alcanzada);

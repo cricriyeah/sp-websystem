@@ -32,10 +32,16 @@ function enfocarCuandoMonte(campo: string, intentos = 20): void {
 /**
  * «Corregir»: abre el paso al que pertenece el problema y enfoca el campo después de que
  * monte. Un paso anterior se reabre; el actual se deja abierto; Pago no abre nada.
+ * En el asistente móvil, `irAPantalla` lleva a la pantalla del campo en lugar de reabrir tarjetas.
  */
-export function useCorregir(actual: PasoId, setEditando: (paso: PasoId | null) => void) {
+export function useCorregir(
+  actual: PasoId,
+  setEditando: (paso: PasoId | null) => void,
+  irAPantalla?: (destino: Destino) => void,
+) {
   return useCallback((destino: Destino) => {
-    if (destino.paso !== 'pago') setEditando(destino.paso === actual ? null : destino.paso);
+    if (irAPantalla) irAPantalla(destino);
+    else if (destino.paso !== 'pago') setEditando(destino.paso === actual ? null : destino.paso);
     enfocarCuandoMonte(destino.campo);
-  }, [actual, setEditando]);
+  }, [actual, setEditando, irAPantalla]);
 }

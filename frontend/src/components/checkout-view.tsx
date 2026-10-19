@@ -20,6 +20,10 @@ import { EncabezadoCompra, claveTituloCompra } from '@/components/checkout/encab
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
+import { AsistenteMovil } from '@/components/reserva/asistente-movil';
+import { useMovil } from '@/components/reserva/use-movil';
+import { usePantallaMovil } from '@/components/reserva/use-pantalla-movil';
+import { anterior as pantallaAnterior, pantallasDe, primeraDelPaso } from '@/lib/pantallas-checkout';
 import { useAyudaContextual } from '@/components/checkout/use-ayuda-contextual';
 import { useScrollAlFoco } from '@/components/checkout/use-scroll-al-foco';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
@@ -635,8 +639,9 @@ export function CheckoutView({
   // Borrador de la pestaña y paso en la URL (ver `use-borrador` y `use-paso-url`). Solo se repone
   // un borrador si la URL ya trae `?paso=`: una entrada nueva desde el sitio manda sobre uno viejo.
   const reponerBorrador = useSearchParams().get('paso') !== null;
+  const claveDelBorrador = claveBorrador('reservar', servicio?.slug ?? servicioNombre ?? 'servicio');
   const borradorListo = useBorrador({
-    clave: claveBorrador('reservar', servicio?.slug ?? servicioNombre ?? 'servicio'),
+    clave: claveDelBorrador,
     habilitado: phase !== 'recuperando',
     reponer: reponerBorrador,
     terminado: phase === 'confirmed',
@@ -656,13 +661,41 @@ export function CheckoutView({
     },
   });
   const pagoEnCurso = phase === 'payment' || phase === 'submitting' || phase === 'confirmando';
-  const corregir = useCorregir(actual, setEditando);
-  usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo });
+
+  // Móvil (< 640 px): asistente de una pantalla por vez en lugar de tarjetas (ver `pantallas-checkout`).
+  // Las respuestas viven en el mismo estado; el asistente solo decide qué pantalla se ve.
+  const movil = useMovil();
+  const tieneExtras = catalogoUnificado.length > 0;
+  const pantallas = useMemo(() => pantallasDe({ tipo: 'servicio', tieneExtras }), [tieneExtras]);
+  const asistente = usePantallaMovil({
+    pantallas,
+    habilitado: movil && borradorListo,
+    inicial: phase === 'payment' ? 'tarjeta-0' : primeraDelPaso(pantallas, actual),
+    minima: pagoEnCurso ? 'tarjeta-0' : null,
+    // Sin pago creado no hay tarjeta que pedir: la pantalla más avanzada es «Cómo pagas».
+    tope: phase === 'payment' ? null : 'como-pagas',
+    clave: claveDelBorrador,
+  });
+  const { irA } = asistente;
+  const irAPantallaDelCampo = useCallback(
+    (destino: { paso: PasoId; campo: string }) =>
+      irA(destino.campo.startsWith('personalizacion-') ? 'extras' : primeraDelPaso(pantallas, destino.paso)),
+    [irA, pantallas],
+  );
+  const corregir = useCorregir(actual, setEditando, movil ? irAPantallaDelCampo : undefined);
+  usePasoUrl({ actual, editando, setEditando, bloqueado: pagoEnCurso, habilitado: borradorListo && !movil });
+  // Lo que en escritorio reabre una tarjeta (sin cupo, elegir otra fecha) en móvil lleva a su pantalla.
+  const reabrirPaso = (paso: PasoId) => {
+    if (movil) irA(primeraDelPaso(pantallas, paso));
+    else setEditando(paso);
+  };
   // Una sola flecha: «paso anterior» mientras haya uno y no haya un pago en curso; si no, sale al origen.
   const pasoVisible = editando ?? actual;
-  const alPasoAnterior = !pagoEnCurso && pasoAnterior(pasoVisible) !== null
-    ? () => setEditando(pasoAnterior(pasoVisible))
-    : undefined;
+  const alPasoAnterior = pagoEnCurso
+    ? undefined
+    : movil
+      ? pantallaAnterior(pantallas, asistente.pantalla.id) !== null ? () => { asistente.retroceder(); } : undefined
+      : pasoAnterior(pasoVisible) !== null ? () => setEditando(pasoAnterior(pasoVisible)) : undefined;
 
   // Al llegar a "Cómo pagas" se pide ya el formulario de tarjeta (y con él Stripe.js):
   // para cuando se crea el pago, el chunk está listo. Solo en el cliente.
@@ -835,7 +868,7 @@ export function CheckoutView({
    * terminar el paso) en un mismo gesto, y no se replica en el paso 3 (una
    * casilla no tiene "salir del campo" que valga como confirmacion).
    */
-  const confirmarContacto = () => {
+  const confirmarContacto = (): boolean => {
     const errores = validarContacto();
     setErroresCampo(errores);
 
@@ -843,14 +876,15 @@ export function CheckoutView({
       ayuda.tropezar('validacion');
       const primero = ORDEN_CAMPOS.find((campo) => errores[campo]);
       if (primero) refsContacto[primero].current?.focus();
-      return;
+      return false;
     }
 
     continuarAPago();
+    return true;
   };
 
   /** Viaje incluye los extras: no se avanza con un extra obligatorio sin contestar. */
-  const confirmarViaje = () => {
+  const confirmarViaje = (): boolean => {
     const erroresDePersonalizacion = erroresPersonalizaciones(catalogoUnificado, personalizaciones);
     setErroresPersonalizacion(erroresDePersonalizacion);
     const primera = catalogoUnificado.find((p) => erroresDePersonalizacion[p.id]);
@@ -859,16 +893,19 @@ export function CheckoutView({
       const campo = document.getElementById(`personalizacion-${primera.id}`);
       campo?.focus();
       campo?.scrollIntoView({ block: 'center' });
-      return;
+      return false;
     }
     setActual((a) => (a === 'viaje' ? 'datos' : a));
     setEditando(null);
+    return true;
   };
 
   /** Datos confirmados: pasa al pago y lo trae a la vista (en móvil el panel de pago aparece aquí). */
   function continuarAPago() {
     setActual('pago');
     setEditando(null);
+    // En móvil el asistente ya sube a la pantalla nueva; el panel del pedido no está a la vista.
+    if (movil) return;
     setTimeout(() => {
       refStripePanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
@@ -940,7 +977,7 @@ export function CheckoutView({
     setPago(null);
     setApartadoHasta(null);
     setActual('viaje');
-    setEditando('viaje');
+    reabrirPaso('viaje');
     setPhase('form');
   };
 
@@ -1007,6 +1044,8 @@ export function CheckoutView({
       setPago(pagoResponse);
       setApartadoHasta(pagoResponse.apartado_hasta);
       setPhase('payment');
+      // Creado el pago, el asistente móvil pasa a la tarjeta.
+      if (movil) irA('tarjeta-0');
       // La reserva ya quedo guardada aunque el pago siga pendiente: decirlo
       // separa los dos pasos, para que un fallo de tarjeta no se lea como
       // "se perdio todo lo que llene".
@@ -1163,7 +1202,7 @@ export function CheckoutView({
     setError('');
     setSinLugar(null);
     setActual('viaje');
-    setEditando('viaje');
+    reabrirPaso('viaje');
     setPhase('form');
   };
 
@@ -1297,7 +1336,9 @@ export function CheckoutView({
 
   // El stepper cuenta el pago como paso 3 en cuanto se confirman los datos, o
   // antes si ya se mandó el formulario (en escritorio el panel siempre está a la vista).
-  const pasoActualStepper = phase === 'submitting' || phase === 'payment' ? numeroDePaso('pago') : numeroDePaso(actual);
+  const pasoActualStepper = movil
+    ? numeroDePaso(asistente.pantalla.paso)
+    : phase === 'submitting' || phase === 'payment' ? numeroDePaso('pago') : numeroDePaso(actual);
   const totalMovil = total !== null ? `${currency.format(total)} ${moneda}` : undefined;
   // Con anticipo, la cifra del paso de pago es lo que se cobra hoy, no el total.
   const stepperPago = phase === 'payment' && pago && Number(pago.monto_a_cobrar) < Number(pago.precio_total)
@@ -1315,6 +1356,124 @@ export function CheckoutView({
     horaTexto ? { etiqueta: checkout.summary.time, valor: horaTexto } : null,
     { etiqueta: checkout.summary.people, valor: String(people) },
   ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null);
+
+  // Los mismos bloques en las tarjetas de escritorio y en las pantallas del asistente móvil.
+  const bloqueViaje = (
+    <BloqueViaje
+      lang={lang}
+      checkout={checkout}
+      booking={booking}
+      locked={locked}
+      day={day}
+      minDate={minDate}
+      onDia={setDay}
+      pideHora={pideHora}
+      time={time}
+      horaTexto={horaTexto}
+      horasDisponibles={horasDisponibles}
+      onHora={setTime}
+      people={people}
+      onPersonas={cambiarPersonas}
+      onTopePersonas={() => ayuda.tropezar('tope-personas')}
+      tieneHospedaje={tieneHospedaje}
+      fechaSalida={fechaSalida}
+      fechaSalidaMinima={defaultFechaSalida}
+      onFechaSalida={setFechaSalidaManual}
+      personasIncluidas={personasIncluidas}
+      precioPersonaExtra={precioPersonaExtra}
+      currency={currency}
+    />
+  );
+  const bloqueExtras = (
+    <BloqueExtras
+      lang={lang}
+      checkout={checkout}
+      catalogo={catalogoUnificado}
+      seleccionadas={personalizacionesMap}
+      errores={erroresPersonalizacion}
+      locked={locked}
+      people={people}
+      moneda={moneda}
+      tipoCambioUsd={servicio?.tipo_cambio_usd}
+      currency={currency}
+      onAlternar={alternarPersonalizacion}
+      onRespuesta={actualizarRespuestaPersonalizacion}
+      onCantidad={ajustarCantidadPersonalizacion}
+    />
+  );
+  const bloqueContacto = (
+    <BloqueContacto
+      idPrefijo="checkout"
+      checkout={checkout}
+      valores={contact}
+      errores={erroresCampo}
+      refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
+      disabled={locked}
+      onCambio={(campo, valor) => {
+        setContact((prev) => ({ ...prev, [campo]: valor }));
+        // El error se limpia al escribir: dejarlo puesto mientras el
+        // cliente corrige lo convierte en un regaño que no se calla.
+        if (erroresCampo[campo]) setErroresCampo((prev) => ({ ...prev, [campo]: undefined }));
+      }}
+    />
+  );
+  const bloqueTarjetaPago = (mostrarDestino: boolean, pagoEnCurso: Pago | null) => (
+    <BloqueTarjetaPago
+      lang={lang}
+      checkout={checkout}
+      feedback={dict.feedback}
+      ayudaMensaje={ayudaMensaje}
+      mostrarDestino={mostrarDestino}
+      destinoRef={setDestinoTarjetaPago}
+      pagoEnCurso={pagoEnCurso}
+      apartadoHasta={apartadoHasta}
+      antesDePagar={antesDePagar}
+      onPagoConfirmado={(procesando) => {
+        setPagoProcesando(procesando);
+        setConfirmandoLargo(false);
+        setPhase('confirmando');
+      }}
+    />
+  );
+
+  // Móvil: una pantalla por vez. «Cómo pagas» y la tarjeta traen su propio botón (el de la tarjeta
+  // «Cómo pagas» llega a la barra por portal; el de Stripe, dentro del formulario).
+  const pantalla = asistente.pantalla;
+  const pantallaMovil = (() => {
+    switch (pantalla.tipo) {
+      case 'viaje':
+        return { titulo: checkout.tripHeadline, contenido: bloqueViaje, accion: {
+          etiqueta: checkout.barra.continuar,
+          alPulsar: () => { if (tieneExtras || confirmarViaje()) asistente.avanzar(); },
+        } };
+      case 'extras':
+        return { titulo: checkout.extrasStepHeadline, contenido: bloqueExtras, accion: {
+          etiqueta: checkout.barra.continuar,
+          alPulsar: () => { if (confirmarViaje()) asistente.avanzar(); },
+        } };
+      case 'contacto':
+        return { titulo: checkout.stepper.datos, contenido: bloqueContacto, accion: {
+          etiqueta: checkout.barra.continuar,
+          alPulsar: () => { if (confirmarContacto()) asistente.avanzar(); },
+        } };
+      case 'como-pagas':
+        return { titulo: checkout.howYouPay, contenido: bloqueTarjetaPago(true, null) };
+      default:
+        return { titulo: checkout.barra.tarjeta, contenido: bloqueTarjetaPago(false, phase === 'payment' ? pago : null) };
+    }
+  })();
+  const nombrePaso = checkout.stepper[pantalla.paso];
+  const asistenteMovil = (
+    <AsistenteMovil
+      id={pantalla.id}
+      titulo={pantallaMovil.titulo}
+      soloFundido={pantalla.paso === 'pago'}
+      anuncio={`${rotuloDePaso(checkout.stepper.stepOf, pantalla.paso)}: ${nombrePaso}`}
+      accion={pantallaMovil.accion}
+    >
+      {pantallaMovil.contenido}
+    </AsistenteMovil>
+  );
 
   return (
     <>
@@ -1351,7 +1510,8 @@ export function CheckoutView({
               alAccionar={() => {
                 const nueva = sinLugar.alternativa;
                 if (!nueva) {
-                  document.querySelector('[data-tarjeta-foco]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  if (movil) irA('viaje');
+                  else document.querySelector('[data-tarjeta-foco]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   return;
                 }
                 setDay(nueva);
@@ -1361,7 +1521,7 @@ export function CheckoutView({
           </div>
         ) : undefined}
         stepper={stepperPago}
-        pasos={
+        pasos={movil ? asistenteMovil : (
           <>
             <ReservaPlegable
               activo={phase === 'payment'}
@@ -1386,49 +1546,12 @@ export function CheckoutView({
                   : undefined}
               >
                 <div className="flex flex-col gap-6">
-                <BloqueViaje
-                  lang={lang}
-                  checkout={checkout}
-                  booking={booking}
-                  locked={locked}
-                  day={day}
-                  minDate={minDate}
-                  onDia={setDay}
-                  pideHora={pideHora}
-                  time={time}
-                  horaTexto={horaTexto}
-                  horasDisponibles={horasDisponibles}
-                  onHora={setTime}
-                  people={people}
-                  onPersonas={cambiarPersonas}
-                  onTopePersonas={() => ayuda.tropezar('tope-personas')}
-                  tieneHospedaje={tieneHospedaje}
-                  fechaSalida={fechaSalida}
-                  fechaSalidaMinima={defaultFechaSalida}
-                  onFechaSalida={setFechaSalidaManual}
-                  personasIncluidas={personasIncluidas}
-                  precioPersonaExtra={precioPersonaExtra}
-                  currency={currency}
-                />
+                {bloqueViaje}
                 {/* Los extras son parte del viaje. Bebidas se quitó del checkout: depende
                     del tipo de bebida, un dato que el sitio no captura; la vendedora la
                     sigue cotizando a mano. El punto de encuentro real y el aviso del
                     agente son información de después de pagar (BookingConfirmation). */}
-                <BloqueExtras
-                  lang={lang}
-                  checkout={checkout}
-                  catalogo={catalogoUnificado}
-                  seleccionadas={personalizacionesMap}
-                  errores={erroresPersonalizacion}
-                  locked={locked}
-                  people={people}
-                  moneda={moneda}
-                  tipoCambioUsd={servicio?.tipo_cambio_usd}
-                  currency={currency}
-                  onAlternar={alternarPersonalizacion}
-                  onRespuesta={actualizarRespuestaPersonalizacion}
-                  onCantidad={ajustarCantidadPersonalizacion}
-                />
+                {bloqueExtras}
                 </div>
               </CheckoutSectionCard>
             </ItemPaso>
@@ -1447,20 +1570,7 @@ export function CheckoutView({
                     ? <BotonPaso conFlecha onClick={confirmarContacto}>{checkout.continueToPayment || checkout.confirmStep}</BotonPaso>
                     : undefined}
                 >
-                  <BloqueContacto
-                    idPrefijo="checkout"
-                    checkout={checkout}
-                    valores={contact}
-                    errores={erroresCampo}
-                    refs={{ phone: refPhone, fullName: refFullName, email: refEmail }}
-                    disabled={locked}
-                    onCambio={(campo, valor) => {
-                      setContact((prev) => ({ ...prev, [campo]: valor }));
-                      // El error se limpia al escribir: dejarlo puesto mientras el
-                      // cliente corrige lo convierte en un regaño que no se calla.
-                      if (erroresCampo[campo]) setErroresCampo((prev) => ({ ...prev, [campo]: undefined }));
-                    }}
-                  />
+                  {bloqueContacto}
                 </CheckoutSectionCard>
               </ItemPaso>
             )}
@@ -1469,24 +1579,9 @@ export function CheckoutView({
 
             {/* El cuarto paso. "Cómo pagas" se pinta aquí (portal del panel) al llegar al
                 paso 4; el formulario de tarjeta aparece debajo cuando se crea el pago. */}
-            <BloqueTarjetaPago
-              lang={lang}
-              checkout={checkout}
-              feedback={dict.feedback}
-              ayudaMensaje={ayudaMensaje}
-              mostrarDestino={(actual === 'pago' || phase !== 'form') && editando === null}
-              destinoRef={setDestinoTarjetaPago}
-              pagoEnCurso={phase === 'payment' ? pago : null}
-              apartadoHasta={apartadoHasta}
-              antesDePagar={antesDePagar}
-              onPagoConfirmado={(procesando) => {
-                setPagoProcesando(procesando);
-                setConfirmandoLargo(false);
-                setPhase('confirmando');
-              }}
-            />
+            {bloqueTarjetaPago(actual === 'pago' || phase !== 'form', phase === 'payment' ? pago : null)}
           </>
-        }
+        )}
         pedido={
           // Un solo StripePanel en todo el arbol — montarlo dos veces inicializaria
           // Stripe.js y el widget de Turnstile por duplicado. En movil la zona de

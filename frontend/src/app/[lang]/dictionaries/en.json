@@ -372,7 +372,9 @@
     "barra": {
       "verResumen": "View summary",
       "estimado": "Estimate",
-      "cerrar": "Close"
+      "cerrar": "Close",
+      "continuar": "Continue",
+      "tarjeta": "Your card details"
     },
     "tituloPagina": {
       "pesca": "Book your fishing trip",

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
 import { useDetalleAbierto } from '@/components/checkout/detalle-abierto';
 import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
+import { useEnAsistente } from '@/components/reserva/asistente-movil';
 
 type CheckoutSectionCardProps = {
   title: string;
@@ -80,6 +81,19 @@ export function CheckoutSectionCard({
   // caja — un box-shadow de foco, un anillo de pulso — contra el borde exacto
   // del padding, sin aviso.
   const [enTransicion, setEnTransicion] = useState(false);
+  const enAsistente = useEnAsistente();
+
+  // Dentro de una pantalla del asistente móvil la tarjeta no tiene marco ni título (los pone la
+  // pantalla) y una respuesta ya dada no se pinta: solo queda su contenido y su botón.
+  if (enAsistente) {
+    if (!abierto) return null;
+    return (
+      <div className="flex flex-col gap-5">
+        {children}
+        {pie && <PieDeTarjeta titulo={title}>{pie}</PieDeTarjeta>}
+      </div>
+    );
+  }
 
   const encabezado = (
     <>
@@ -187,8 +201,6 @@ export function CheckoutSectionCard({
       // automático sepa a cuál llevar al cliente; `scroll-mt` deja libre el
       // header fijo y el stepper.
       data-tarjeta-foco={abierto ? '' : undefined}
-      // Un paso por pantalla en móvil: lo ya contestado se oculta (la hoja «Ver resumen» y la flecha lo recuperan).
-      data-completado={enRenglon ? '' : undefined}
       className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] border lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS} ${
         abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-2 sm:px-6' : 'p-5 sm:p-6'
       }`}
