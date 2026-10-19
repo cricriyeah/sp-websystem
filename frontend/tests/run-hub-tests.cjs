@@ -39,6 +39,7 @@ const suites = {
   'paso-url': ['src/lib/paso-url.ts', 'PASO_URL_TEST_OUT'],
   'texto-localizado': ['src/lib/texto-localizado.ts', 'TEXTO_LOCALIZADO_TEST_OUT'],
   'problema-reserva': ['src/lib/problema-reserva.ts', 'PROBLEMA_TEST_OUT'],
+  'etiqueta-boton': ['src/lib/etiqueta-boton.ts', 'ETIQUETA_BOTON_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {
