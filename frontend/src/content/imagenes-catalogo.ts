@@ -59,6 +59,11 @@ const FOTOS: Record<string, Foto> = {
     alt: { es: 'Dorado recién subido, a la sombra del toldo', en: 'Mahi just brought aboard, in the shade of the canopy' },
     relleno: true,
   },
+  'paquete:pesca-traslado': {
+    src: '/photos/marlin-en-equipo.webp',
+    alt: { es: 'Marlin capturado en equipo, listo para la foto y la liberación', en: 'A marlin caught as a team, ready for the photo and release' },
+    relleno: true,
+  },
   'paquete:paquete-5-noches': {
     src: '/photos/pesca-del-dia-cubierta.webp',
     alt: { es: 'La pesca del día completa en la cubierta', en: 'The full catch of the day on deck' },

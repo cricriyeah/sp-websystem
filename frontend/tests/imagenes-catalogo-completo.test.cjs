@@ -22,6 +22,8 @@ const ESPERADAS = [
   'servicio:piratas-adventures/safari-marino',
   'servicio:piratas-adventures/avistamiento-ballenas',
   'servicio:piratas-adventures/pesca-deportiva',
+  'servicio:transporte-la-paz/traslados-la-paz',
+  'paquete:pesca-traslado',
   'paquete:paquete-5-noches',
   'paquete:paquete-7-noches',
 ];

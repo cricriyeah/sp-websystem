@@ -35,7 +35,7 @@ const EMPRESA_PESCA_LEGACY = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol'
  * en `destacadas` (editorial) — si ninguno de los dos existe en el catalogo
  * de la sede, el picker no fuerza nada y no renderiza nada.
  */
-const SLUG_PAQUETE_DESTACADO = 'fin-de-semana-la-paz';
+const SLUG_PAQUETE_DESTACADO = 'pesca-traslado';
 const SLUG_SERVICIO_INSTANTANEO = 'pesca-deportiva';
 
 function precioServicioDesde(servicio: ServicioCatalogo, moneda: Moneda): number | null {
@@ -47,8 +47,8 @@ function precioServicioDesde(servicio: ServicioCatalogo, moneda: Moneda): number
  * grid dinamico de N `destacadas` — version anterior, rechazada: La Paz solo
  * tenia 1 destacada real y el patron no representaba el catalogo real de 8
  * productos). Orden fijo, cada una con rol distinto:
- * 1. Paquete de mayor margen que incluye pesca deportiva ("Fin de Semana en
- *    La Paz") — destacado primero (anclaje: Thaler & Sunstein 2008), navega
+ * 1. El paquete de La Paz que incluye pesca deportiva ("Pesca + Traslado",
+ *    el único del catálogo real) — destacado primero (anclaje: Thaler & Sunstein 2008), navega
  *    a su checkout.
  * 2. Solo pesca deportiva — navega a su checkout.
  *
