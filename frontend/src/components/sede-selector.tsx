@@ -10,6 +10,7 @@ import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { guardarSedePreferida, leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefSede } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/components/ui/cn';
 
 export type SedeOpcion = Pick<SedeIndiceEntry, 'slug' | 'nombre'>;
 
@@ -120,7 +121,9 @@ export function SedeSelector({
   const nombreMostrado = sedeActiva?.nombre ?? placeholder ?? label;
 
   return (
-    <div ref={ref} className={`relative inline-block text-left ${className}`}>
+    // `cn` y no plantilla: con `hidden sm:inline-block` desde la cabecera, el `inline-block` propio
+    // ganaba y el selector se veía en móvil, empujando el botón de menú fuera de la pantalla.
+    <div ref={ref} className={cn('relative inline-block text-left', className)}>
       <Button
         variante="libre"
         disabled={!puedeAbrir}

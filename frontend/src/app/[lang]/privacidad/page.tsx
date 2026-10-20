@@ -60,7 +60,7 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
         </div>
       </main>
 
-      <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={null} />
+      <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={null} />
     </div>
   );
 }

@@ -46,7 +46,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
           background: 'var(--tinte-cafe-pie)',
         }}
       />
-      <div className="relative mx-auto max-w-6xl px-6 pt-20 sm:px-8 lg:px-12 lg:pt-24">
+      <div className="relative mx-auto max-w-[1120px] px-4 pt-20 sm:px-6 lg:px-8 lg:pt-24">
         <div className="grid gap-10 pb-16 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-12">
           <div className="flex flex-col items-start gap-5">
             <EmpresaSello nombre="Sun Baja Experience" tamano={64} />
@@ -54,7 +54,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
               {footer.headline}
             </h2>
             <Link
-              href={sedeSlug === 'la-paz' ? `/${lang}/reservar` : sedeSlug ? hrefSede(lang, sedeSlug, ANCLA_DE.reservar) : hrefInicio(lang, ANCLA_HUB.sedes)}
+              href={sedeSlug ? hrefSede(lang, sedeSlug, ANCLA_DE.reservar) : hrefInicio(lang, ANCLA_HUB.sedes)}
               className={botonClases({ variante: 'principal' })}
             >
               {bookLabel}
@@ -96,7 +96,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
         </div>
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6 pb-10 sm:px-8 lg:px-12">
+      <div className="relative mx-auto max-w-[1120px] px-4 pb-10 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2 border-t border-border-strong pt-8 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-muted">
             Sun Baja Experience. {footer.rights}

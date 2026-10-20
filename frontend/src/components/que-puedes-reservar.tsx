@@ -181,6 +181,11 @@ export function QuePuedesReservar({ lang, moneda, sede, servicios, paquetes, est
       destacada: primera?.tipo === 'servicio' && primera.slug === s.slug && (!primera.empresaSlug || primera.empresaSlug === s.empresa_slug),
     })),
   ];
+  // El grupo de estancia se nombra por lo que trae: en La Paz solo hay traslados y en La Ventana solo hospedaje.
+  const estancia = (servicios ?? []).filter((s) => grupoDeServicio(s) === 'estancia');
+  const conHospedaje = estancia.some((s) => s.tipo_servicio === 'hospedaje');
+  const conTraslados = estancia.some((s) => s.tipo_servicio !== 'hospedaje');
+  const tituloEstancia = conHospedaje && conTraslados ? textos.grupoEstancia : conHospedaje ? textos.grupoHospedaje : textos.grupoTraslados;
   let fotosPintadas = 0;
 
   return shell(
@@ -198,7 +203,7 @@ export function QuePuedesReservar({ lang, moneda, sede, servicios, paquetes, est
           <div key={grupo}>
             <h3 className="flex items-center gap-2 texto-subtitulo text-foreground">
               <Icono size={20} aria-hidden="true" className="shrink-0 text-tinta-suave" />
-              {textos[TITULO_GRUPO[grupo]]}
+              {grupo === 'estancia' ? tituloEstancia : textos[TITULO_GRUPO[grupo]]}
             </h3>
             <div className={cn('mt-6 grid gap-6', n === 1 ? 'max-w-[720px]' : plantilla.columnas === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3')}>
               {delGrupo.map((e, i) => {

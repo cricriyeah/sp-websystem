@@ -7,6 +7,10 @@
 // de La Ventana, Puerto Chale y DLS (dependencia del dueño, Task 9.7). Mientras llegan, esas
 // claves llevan una foto que ya existe en el sitio marcada `relleno` (decisión del dueño,
 // 2026-10-19): la tarjeta se ve completa y `test:fotos` sigue pidiendo la real.
+//
+// El relleno no puede contradecir el servicio: ballenas, safari, pesca con mosca, hospedaje y
+// traslados van SIN foto hasta tener la suya (antes mostraban pesca de altura o una ilustración
+// rotulada «Destino Los Cabos»). Por la regla «todas o ninguna», su grupo se pinta sin fotos.
 
 type Lang = 'es' | 'en';
 type Foto = { src: string; alt: Record<Lang, string>; relleno?: true };
@@ -18,41 +22,6 @@ const FOTOS: Record<string, Foto> = {
       es: 'Jurel (cola amarilla) recién pescado frente a un acantilado',
       en: 'Freshly caught yellowtail by a sea cliff',
     },
-  },
-  'servicio:la-ventana-travel/pesca-con-mosca': {
-    src: '/photos/cana-doblada-dorado.webp',
-    alt: { es: 'Caña doblada peleando un dorado', en: 'Rod bent, fighting a mahi' },
-    relleno: true,
-  },
-  'servicio:la-ventana-travel/avistamiento-ballenas-orcas': {
-    src: '/photos/yellowtail-pelicanos-bahia.webp',
-    alt: { es: 'Panga en la bahía, con pelícanos alrededor', en: 'A panga in the bay, pelicans alongside' },
-    relleno: true,
-  },
-  'servicio:la-ventana-travel/hospedaje-la-ventana': {
-    src: '/ilustraciones/costa-placeholder.webp',
-    alt: { es: 'Ilustración de la costa de Baja California Sur', en: 'Illustration of the Baja California Sur coast' },
-    relleno: true,
-  },
-  'servicio:la-ventana-travel/traslado-aeropuerto-la-ventana': {
-    src: '/ilustraciones/costa-placeholder.webp',
-    alt: { es: 'Ilustración de la costa de Baja California Sur', en: 'Illustration of the Baja California Sur coast' },
-    relleno: true,
-  },
-  'servicio:transporte-la-paz/traslados-la-paz': {
-    src: '/ilustraciones/costa-placeholder.webp',
-    alt: { es: 'Ilustración de la costa de Baja California Sur', en: 'Illustration of the Baja California Sur coast' },
-    relleno: true,
-  },
-  'servicio:piratas-adventures/safari-marino': {
-    src: '/photos/grupo-cabrilla-costa.webp',
-    alt: { es: 'Grupo con su captura, cerca de la costa', en: 'A group with their catch, close to shore' },
-    relleno: true,
-  },
-  'servicio:piratas-adventures/avistamiento-ballenas': {
-    src: '/photos/yellowtail-pelicanos-bahia.webp',
-    alt: { es: 'Panga en la bahía, con pelícanos alrededor', en: 'A panga in the bay, pelicans alongside' },
-    relleno: true,
   },
   'servicio:piratas-adventures/pesca-deportiva': {
     src: '/photos/dorado-bajo-toldo.webp',

@@ -54,7 +54,7 @@ export function SedeHero({
         preload
         objectPosition={contenido.posicionImagen}
       >
-        <div className="mx-auto w-full max-w-6xl px-6 pt-[calc(5rem_+_var(--nav-alto))] pb-10 sm:px-8 lg:px-12 lg:pt-[calc(7rem_+_var(--nav-alto))] lg:pb-16">
+        <div className="mx-auto w-full max-w-[1120px] px-4 pt-[calc(5rem_+_var(--nav-alto))] pb-10 sm:px-6 lg:px-8 lg:pt-[calc(7rem_+_var(--nav-alto))] lg:pb-16">
           <h1 className="titulo-entra max-w-[19ch] texto-display text-hero-ink">
             {contenido.titulo.start} {contenido.titulo.emphasis} {contenido.titulo.end}
           </h1>
@@ -78,7 +78,7 @@ export function SedeHero({
       </HeroMedia>
 
       {contenido.facts.length > 0 && (
-        <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-6 pt-12 pb-16 sm:px-8 lg:grid-cols-4 lg:gap-x-0 lg:px-12 lg:pt-14 lg:pb-20">
+        <dl className="mx-auto grid max-w-[1120px] grid-cols-2 gap-x-6 gap-y-8 px-4 pt-12 pb-16 sm:px-6 lg:grid-cols-4 lg:gap-x-0 lg:px-8 lg:pt-14 lg:pb-20">
           {contenido.facts.map(({ value, label }, i) => (
             <div
               key={label}

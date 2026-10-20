@@ -130,6 +130,7 @@
     "timeHelp": "Departure between 5:00 and 7:00 am",
     "submit": "Book now",
     "reservarAqui": "Book here",
+    "verQueReservar": "See what to book",
     "verDetalles": "View details",
     "incluyeHospedaje": "Includes lodging"
   },
@@ -191,7 +192,7 @@
     ]
   },
   "footer": {
-    "headline": "We look forward to welcoming you aboard!",
+    "headline": "Book your Baja Sur experience",
     "addressLabel": "Meeting point",
     "address": "Marina La Costa, Rangel y Navarro",
     "city": "La Paz, Baja California Sur",
@@ -817,6 +818,8 @@
       "grupoPesca": "Fishing",
       "grupoPaseos": "Tours",
       "grupoEstancia": "Lodging and transfers",
+      "grupoHospedaje": "Lodging",
+      "grupoTraslados": "Transfers",
       "vacio": "This destination has no services to book online yet",
       "caido": "We couldn't load the catalog",
       "reintentar": "Try again",
@@ -857,7 +860,7 @@
   },
   "hubContenido": {
     "titular": "Book in Baja with local companies",
-    "subtexto": "Fishing, whales, lodging and transfers at each location. Each company runs its service and charges directly.",
+    "subtexto": "Fishing, whale watching, lodging and transfers in Baja California Sur. Each company runs its service and charges directly.",
     "og": { "lugar": "Baja California Sur", "titular": "Book your Baja Sur experience with local companies" },
     "ctaSedes": "See locations",
     "sedesTitulo": "Choose your location",

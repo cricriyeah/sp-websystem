@@ -354,7 +354,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes de La Ventana Travel.',
       hero: {
         video: null,
-        imagen: '/ilustraciones/costa-placeholder.webp',
+        imagen: '/photos/capitan-cabrilla-bahia.webp', // relleno hasta la foto propia de La Ventana
         titulo: { start: 'Descubre', emphasis: 'La Ventana', end: 'con expertos locales' },
         subtitulo:
           'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes con hospedaje de La Ventana Travel.',
@@ -373,7 +373,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         'Explore fly fishing, whale and orca watching, and multi-day packages with La Ventana Travel.',
       hero: {
         video: null,
-        imagen: '/ilustraciones/costa-placeholder.webp',
+        imagen: '/photos/capitan-cabrilla-bahia.webp', // relleno hasta la foto propia de La Ventana
         titulo: { start: 'Discover', emphasis: 'La Ventana', end: 'with local experts' },
         subtitulo:
           'Explore fly fishing, whale and orca watching, and packages with lodging from La Ventana Travel.',
@@ -394,7 +394,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
       hero: {
         video: null,
-        imagen: '/ilustraciones/costa-placeholder.webp',
+        imagen: '/photos/pesca-del-dia-cubierta.webp', // relleno hasta la foto propia de Puerto Chale
         titulo: { start: 'Descubre', emphasis: 'Puerto Chale', end: 'con expertos locales' },
         subtitulo:
           'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
@@ -413,7 +413,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
       hero: {
         video: null,
-        imagen: '/ilustraciones/costa-placeholder.webp',
+        imagen: '/photos/pesca-del-dia-cubierta.webp', // relleno hasta la foto propia de Puerto Chale
         titulo: { start: 'Discover', emphasis: 'Puerto Chale', end: 'with local experts' },
         subtitulo:
           'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',

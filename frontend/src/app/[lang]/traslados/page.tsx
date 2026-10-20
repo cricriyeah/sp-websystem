@@ -103,7 +103,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
           lang={lang}
           footer={dict.footer}
           nav={dict.nav}
-          bookLabel={dict.booking.submit}
+          bookLabel={dict.booking.verQueReservar}
           sedeSlug={sedeSlugActual}
           negocio={sedeDeTransporte?.negocio ?? null}
         />

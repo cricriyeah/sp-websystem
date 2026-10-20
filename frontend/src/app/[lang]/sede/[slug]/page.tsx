@@ -103,7 +103,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     <main>
       {ids.map((id) => <Fragment key={id}>{pintar[id]?.(fondos[id] ?? { fondo: 'arena', borde: true })}</Fragment>)}
     </main>
-    <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={contenido.negocio} sedeSlug={slug} anclas={anclas} />
+    <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={contenido.negocio} sedeSlug={slug} anclas={anclas} />
   </>;
 }
 

@@ -45,7 +45,7 @@ export function FaqSection({ id, titulo, preguntas, fondo, borde, whatsapp }: Fa
 
   return (
     <section id={id} className={`scroll-mt-24 ${CLASE_FONDO[fondo]} ${borde ? 'border-t border-borde ' : ''}py-24 lg:py-32`}>
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 sm:px-8 lg:grid-cols-[280px_1fr] lg:gap-20 lg:px-12">
+      <div className="mx-auto grid max-w-[1120px] gap-10 px-4 sm:px-6 lg:grid-cols-[280px_1fr] lg:gap-20 lg:px-8">
         {/* La barra y el titular van envueltos: son la primera **columna** del
             grid, no dos celdas. Sueltos, la barra ocupaba la celda del titular
             y empujaba las preguntas a una fila nueva. */}

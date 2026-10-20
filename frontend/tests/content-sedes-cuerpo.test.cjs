@@ -56,7 +56,8 @@ test('Puerto Chale conserva la plantilla de La Ventana con identidad propia en a
     assert.equal(chale.hero.titulo.emphasis, 'Puerto Chale');
     assert.ok(chale.metaTitle.includes('Puerto Chale'));
     assert.ok(!chale.metaDescription.includes('La Ventana'));
-    assert.equal(chale.hero.imagen, ventana.hero.imagen);
+    // Ninguna sede usa la ilustración rotulada «Destino Los Cabos» (2026-10-19): foto de relleno propia.
+    for (const sede of [chale, ventana]) assert.ok(sede.hero.imagen.startsWith('/photos/'));
     assert.equal(chale.negocio, null);
     // Las tres protagonistas, confirmadas por el dueño (2026-10-16).
     assert.equal(chale.empresaProtagonistaSlug, 'piratas-adventures');

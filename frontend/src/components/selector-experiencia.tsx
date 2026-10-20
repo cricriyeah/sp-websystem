@@ -10,6 +10,8 @@ import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { hrefDetalleServicio, hrefPaquete, hrefServicio } from '@/lib/booking-href';
 import { aMoneda } from '@/lib/moneda';
 import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
+import { botonClases } from '@/components/ui/variantes';
+import { cn } from '@/components/ui/cn';
 
 type SelectorExperienciaProps = {
   lang: Locale;
@@ -75,7 +77,15 @@ export function SelectorExperiencia({
     (s) => s.slug === SLUG_SERVICIO_INSTANTANEO && s.empresa_slug === EMPRESA_PESCA_LEGACY,
   );
 
-  if (!paqueteDestacado && !servicioInstantaneo) return null;
+  // Sin las dos tarjetas (hoy, toda sede que no es La Paz) el héroe no se queda sin acción:
+  // el mismo botón principal del hub baja a «Qué puedes reservar».
+  if (!paqueteDestacado && !servicioInstantaneo) {
+    return (
+      <Link href={hrefVerTodo} className={cn('mt-8', botonClases({ variante: 'principal' }))}>
+        {booking.verQueReservar}
+      </Link>
+    );
+  }
 
 
   return (
@@ -87,10 +97,8 @@ export function SelectorExperiencia({
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {paqueteDestacado && (
-              <Link
-                href={hrefPaquete(paqueteDestacado, lang, moneda)}
-                className="flex flex-col items-start gap-2 rounded-card border border-border bg-superficie/95 p-4 text-left transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
-              >
+              // Misma forma que la tarjeta de la pesca: nombre, precio y el botón de reservar.
+              <article className="flex flex-col items-start gap-3 rounded-card border border-accent/40 bg-superficie p-4 text-left">
                 {/* Solo un paquete con noches lleva hospedaje; «Pesca + Traslado» no. */}
                 {paqueteDestacado.noches != null && (
                   <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted">
@@ -103,7 +111,10 @@ export function SelectorExperiencia({
                   {precioDesdeLabel}{' '}
                   {formatearPrecio(calcularPrecioPaquete(paqueteDestacado, moneda).precioFinal, moneda)}
                 </span>
-              </Link>
+                <div className="mt-auto flex w-full flex-wrap gap-2">
+                  <Link href={hrefPaquete(paqueteDestacado, lang, moneda)} className="inline-flex min-h-11 items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">{booking.reservarAqui}</Link>
+                </div>
+              </article>
             )}
 
             {servicioInstantaneo && (

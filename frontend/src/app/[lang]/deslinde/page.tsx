@@ -55,7 +55,7 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
         </div>
       </main>
 
-      <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.submit} negocio={null} />
+      <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={null} />
     </div>
   );
 }

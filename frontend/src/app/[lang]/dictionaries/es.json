@@ -130,6 +130,7 @@
     "timeHelp": "Salida entre 5:00 y 7:00 am",
     "submit": "Agendar",
     "reservarAqui": "Reservar aquí",
+    "verQueReservar": "Ver qué reservar",
     "verDetalles": "Ver detalles",
     "incluyeHospedaje": "Incluye hospedaje"
   },
@@ -191,7 +192,7 @@
     ]
   },
   "footer": {
-    "headline": "¡Será un gusto darte la bienvenida a bordo!",
+    "headline": "Reserva tu experiencia en la Baja Sur",
     "addressLabel": "Punto de encuentro",
     "address": "Marina La Costa, Rangel y Navarro",
     "city": "La Paz, Baja California Sur",
@@ -817,6 +818,8 @@
       "grupoPesca": "Pesca",
       "grupoPaseos": "Paseos",
       "grupoEstancia": "Estancia y traslados",
+      "grupoHospedaje": "Hospedaje",
+      "grupoTraslados": "Traslados",
       "vacio": "Por ahora esta sede no tiene servicios para reservar en línea",
       "caido": "No pudimos cargar el catálogo",
       "reintentar": "Reintentar",
@@ -857,7 +860,7 @@
   },
   "hubContenido": {
     "titular": "Reserva en Baja con empresas locales",
-    "subtexto": "Pesca, ballenas, hospedaje y traslados en cada sede. Cada empresa opera su servicio y cobra directo.",
+    "subtexto": "Pesca, ballenas, hospedaje y traslados en Baja California Sur. Cada empresa opera su servicio y cobra directo.",
     "og": { "lugar": "Baja California Sur", "titular": "Reserva tu experiencia en la Baja Sur con empresas locales" },
     "ctaSedes": "Ver las sedes",
     "sedesTitulo": "Elige tu sede",
