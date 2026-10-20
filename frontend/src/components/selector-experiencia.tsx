@@ -91,10 +91,13 @@ export function SelectorExperiencia({
                 href={hrefPaquete(paqueteDestacado, lang, moneda)}
                 className="flex flex-col items-start gap-2 rounded-card border border-border bg-superficie/95 p-4 text-left transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
               >
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted">
-                  <ArrowSquareOut size={16} />
-                  {booking.incluyeHospedaje}
-                </span>
+                {/* Solo un paquete con noches lleva hospedaje; «Pesca + Traslado» no. */}
+                {paqueteDestacado.noches != null && (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted">
+                    <ArrowSquareOut size={16} />
+                    {booking.incluyeHospedaje}
+                  </span>
+                )}
                 <span className="text-base font-semibold text-foreground">{paqueteDestacado.nombre}</span>
                 <span className="text-sm text-muted">
                   {precioDesdeLabel}{' '}
