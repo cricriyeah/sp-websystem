@@ -8,7 +8,6 @@ import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
 import { aMoneda } from '@/lib/moneda';
 import { fotosAptas, palabrasDeSede } from '@/lib/etiquetas-catalogo';
-import { claveDePaquete, claveDeServicio, imagenDeCatalogo } from '@/content/imagenes-catalogo';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
 import { hrefSede } from '@/lib/routes';
@@ -57,13 +56,10 @@ export default async function SedePage({ params, searchParams }: Props) {
   const opiniones = empresas.flatMap((e) => e.resenas.filter((r) => r.confirmada).map((r) => ({
     autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: e.nombre, logo: e.logo },
   })));
-  // Una foto no se repite entre el héroe, las tarjetas y la galería. Temporadas sí puede repetir
-  // mientras las fotos sean de relleno (decisión del dueño, 2026-10-19).
-  const usadas = new Set([
-    contenido.hero.imagen,
-    ...(servicios ?? []).map((s) => imagenDeCatalogo(claveDeServicio(s.empresa_slug, s.slug), lang)?.src),
-    ...(paquetes ?? []).map((p) => imagenDeCatalogo(claveDePaquete(p.slug), lang)?.src),
-  ]);
+  // La galería no repite la foto del héroe, pero sí puede repetir las de las tarjetas (decisión del dueño,
+  // 2026-10-21): una sede con pocas fotos reales no llegaría a las 3 que pide la galería. Temporadas
+  // también puede repetir mientras las fotos sean de relleno (2026-10-19).
+  const usadas = new Set([contenido.hero.imagen]);
   const galeria = contenido.galeria && fotosAptas(contenido.galeria.filter((foto) => !usadas.has(foto.src)));
   const empresasGaleria = Object.fromEntries((galeria ?? []).map((foto) => [foto.empresaSlug, { nombre: getEmpresa(foto.empresaSlug)?.nombre ?? foto.empresaSlug }]));
 
