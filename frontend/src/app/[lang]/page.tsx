@@ -58,7 +58,7 @@ function vistaDeSede(sede: SedeContenido, api: Sede | undefined, conFoto: boolea
     slug: sede.slug,
     nombre: sede.nombre,
     href: hrefSede(lang, sede.slug),
-    foto: conFoto && sede.hero.imagen ? { src: sede.hero.imagen, alt: sede.nombre } : null,
+    foto: conFoto && sede.hero.imagen ? { src: sede.hero.imagenCortina ?? sede.hero.imagen, alt: sede.nombre } : null,
     chips,
     empresas: lineaDeEmpresas(empresas, textos),
     // En /en el USD va primero y el MXN entre paréntesis.

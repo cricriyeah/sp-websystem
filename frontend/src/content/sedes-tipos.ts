@@ -23,6 +23,8 @@ export type SedeHeroContenido = {
   imagen: string | null;
   /** `object-position` para encuadrar la foto/video de esta sede; sin él, centrado. */
   posicionImagen?: string;
+  /** Foto de la cortina del hub, si debe ser otra que `imagen` (p. ej. cuando el texto blanco no se lee sobre el póster). */
+  imagenCortina?: string;
   /** `object-position` solo bajo 640 px (el encuadre del móvil); sin él vale `posicionImagen`. */
   posicionImagenMovil?: string;
   subtitulo: string;
