@@ -15,8 +15,8 @@ export function IsotipoCargando({ etiqueta, className }: { etiqueta: string; cla
       <span className="sr-only">{etiqueta}</span>
       <span aria-hidden="true" className="isotipo-oscila inline-flex size-20">
         <svg viewBox="0 0 83.66 83.66" className="size-full overflow-visible">
-          <path d={TRAZO} fill="none" stroke="var(--color-cafe)" strokeWidth="1.6" strokeLinejoin="round" />
-          <path d={TRAZO} fill="var(--color-cafe)" className="isotipo-rellena" />
+          <path d={TRAZO} fill="none" stroke="var(--color-tinta)" strokeWidth="1.6" strokeLinejoin="round" />
+          <path d={TRAZO} fill="var(--color-tinta)" className="isotipo-rellena" />
         </svg>
       </span>
     </div>

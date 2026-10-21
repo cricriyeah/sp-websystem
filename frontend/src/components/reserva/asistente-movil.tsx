@@ -70,7 +70,10 @@ export function AsistenteMovil({ id, titulo, antetitulo, soloFundido, anuncio, a
             {titulo}
           </h2>
         </header>
-        <EnAsistente.Provider value>{children}</EnAsistente.Provider>
+        {/* La tarjeta blanca es de la pantalla, no de cada bloque: así también la tiene el formulario de tarjeta. */}
+        <div className="flex flex-col gap-5 bg-superficie p-4">
+          <EnAsistente.Provider value>{children}</EnAsistente.Provider>
+        </div>
       </m.section>
     </>
   );
