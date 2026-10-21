@@ -353,6 +353,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
+        posicionImagenMovil: '68% 50%',
         subtitulo:
           'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes con hospedaje de La Ventana Travel.',
         facts: [],
@@ -371,6 +372,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
+        posicionImagenMovil: '68% 50%',
         subtitulo:
           'Explore fly fishing, whale and orca watching, and packages with lodging from La Ventana Travel.',
         facts: [],

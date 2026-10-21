@@ -28,7 +28,7 @@ type SedeHeroProps = {
 export function SedeHero({ nombre, contenido, palabras, empresa, textos }: SedeHeroProps) {
   return (
     <section>
-      <HeroMedia imagen={contenido.imagen} video={contenido.video} alt="" preload alto="completo" objectPosition={contenido.posicionImagen}>
+      <HeroMedia imagen={contenido.imagen} video={contenido.video} alt="" preload alto="completo" objectPosition={contenido.posicionImagen} objectPositionMovil={contenido.posicionImagenMovil}>
         <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-between gap-8 px-4 pb-10 pt-[calc(var(--nav-alto)+1.5rem)] text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
           {palabras.length > 0 ? <PalabraRota palabras={palabras} className="texto-gigante" /> : <span />}
           <div>

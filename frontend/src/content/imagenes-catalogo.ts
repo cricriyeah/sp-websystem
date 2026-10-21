@@ -35,6 +35,10 @@ const FOTOS: Record<string, Foto> = {
     src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-compartido.webp',
     alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
   },
+  'servicio:la-ventana-travel/pesca-con-mosca': {
+    src: '/catalogo/la-ventana-travel-pesca-con-mosca.webp',
+    alt: { es: 'Un joven peleando un pez con la caña doblada, en alta mar', en: 'A young angler fighting a fish with a bent rod, out at sea' },
+  },
   'servicio:piratas-adventures/pesca-deportiva': {
     src: '/photos/dorado-bajo-toldo.webp',
     alt: { es: 'Dorado recién subido, a la sombra del toldo', en: 'Mahi just brought aboard, in the shade of the canopy' },
@@ -46,14 +50,12 @@ const FOTOS: Record<string, Foto> = {
     relleno: true,
   },
   'paquete:paquete-5-noches': {
-    src: '/photos/pesca-del-dia-cubierta.webp',
-    alt: { es: 'La pesca del día completa en la cubierta', en: 'The full catch of the day on deck' },
-    relleno: true,
+    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-compartido.webp',
+    alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
   },
   'paquete:paquete-7-noches': {
-    src: '/photos/pareja-dorados.webp',
-    alt: { es: 'Dos amigos con su dorado', en: 'Two friends with their mahi' },
-    relleno: true,
+    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-privado.webp',
+    alt: { es: 'Una persona haciendo snorkel entre peces rayados', en: 'A person snorkeling among striped fish' },
   },
 };
 
