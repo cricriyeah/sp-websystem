@@ -10,7 +10,8 @@ import { validarTodo } from '@/lib/validar-reserva';
 import { claveBorrador } from '@/lib/borrador-reserva';
 import { pasoDeQuery } from '@/lib/paso-url';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { BookingConfirmation } from '@/components/booking-confirmation';
+import { ConfirmacionReserva } from '@/components/confirmacion-reserva';
+import { colorDeServicio } from '@/lib/color-actividad';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
 import { BotonPaso } from '@/components/checkout/boton-paso';
 import { AvisoAccion } from '@/components/ui/aviso-accion';
@@ -1306,43 +1307,51 @@ export function CheckoutView({
   }
 
   if (phase === 'confirmed') {
+    const pescaDeSalYSol = !servicio || (servicio.tipo_servicio === 'pesca' && servicio.empresa_slug === 'sal-y-sol');
     return (
-      <BookingConfirmation
+      <ConfirmacionReserva
         lang={lang}
         dict={dict}
-        // No-null: esta fase solo se alcanza despues de crearPago (pago fresco)
-        // o de recuperar una reserva ya pagada por su checkout_id — las dos
-        // rutas ponen `reservaId` antes de llegar aqui.
-        numeroDeConfirmacion={reservaId!}
-        nombre={contact.fullName}
-        email={contact.email}
-        fecha={diaTexto}
-        hora={horaTexto}
-        personas={people}
-        // Vacio en una reserva repuesta: `EstadoReservaView` solo devuelve el
-        // monto cobrado en la rama `pagada`, no el desglose, y rearmarlo con
-        // el catalogo de hoy podria enseñar un precio distinto del pagado.
-        extras={recuperadoPagado !== null ? lineasExtrasRecuperadas : lineasExtras}
-        // Un pago recuperado manda su propio monto (lo que Stripe cobro de
-        // verdad): el precio de hoy o las amenidades en el estado local pueden
-        // no ser ya las mismas con las que se pago.
-        pagado={
-          recuperadoPagado !== null
+        datos={{
+          // No-null: esta fase solo se alcanza despues de crearPago (pago fresco) o de recuperar una
+          // reserva ya pagada por su checkout_id — las dos rutas ponen `reservaId` antes de llegar aqui.
+          folio: reservaId!,
+          // Un pago repuesto del servidor ya esta acreditado.
+          procesando: recuperadoPagado !== null ? false : pagoProcesando,
+          nombre: contact.fullName,
+          email: contact.email,
+          color: colorDeServicio(servicio ?? { tipo_servicio: 'pesca' }),
+          titulo: servicio?.nombre ?? servicioNombre ?? checkout.tituloPagina,
+          empresas: empresa ? [empresa.nombre] : [],
+          fecha: diaTexto,
+          lineas: [
+            { etiqueta: checkout.summary.date, valor: diaTexto },
+            tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: salidaTexto } : null,
+            horaTexto ? { etiqueta: checkout.summary.time, valor: horaTexto } : null,
+            { etiqueta: checkout.summary.people, valor: String(people) },
+          ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null),
+          // Vacio en una reserva repuesta: `EstadoReservaView` solo devuelve el monto cobrado en la
+          // rama `pagada`, no el desglose, y rearmarlo con el catalogo de hoy podria enseñar un precio
+          // distinto del pagado.
+          extras: recuperadoPagado !== null ? lineasExtrasRecuperadas : lineasExtras,
+          // Un pago recuperado manda su propio monto (lo que Stripe cobro de verdad): el precio de hoy
+          // o las amenidades en el estado local pueden no ser ya las mismas con las que se pago.
+          pagado: recuperadoPagado !== null
             ? currency.format(recuperadoPagado)
             : amountDueNow === null
-              ? '–'
-              : currency.format(amountDueNow)
-        }
-        saldoEnEfectivo={
-          recuperadoPagado !== null
+              ? null
+              : currency.format(amountDueNow),
+          saldoEnEfectivo: recuperadoPagado !== null
             ? recuperadoSaldo !== null && recuperadoSaldo > 0
               ? currency.format(recuperadoSaldo)
               : null
             : total !== null && amountDueNow !== null && total > amountDueNow
               ? currency.format(total - amountDueNow)
-              : null
-        }
-        procesando={recuperadoPagado !== null ? false : pagoProcesando}
+              : null,
+          // El punto de encuentro y la lista de qué llevar solo existen para la pesca de Sal y Sol.
+          encuentro: pescaDeSalYSol ? { lugar: `${dict.footer.address}, ${dict.footer.city}`, hora: horaTexto || undefined } : null,
+          llevar: pescaDeSalYSol ? dict.included.bring : undefined,
+        }}
       />
     );
   }

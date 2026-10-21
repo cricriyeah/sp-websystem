@@ -21,7 +21,7 @@ type Props = {
  *
  * Sin saltos al cambiar: las fotos están todas montadas en el mismo recuadro y solo cambian de
  * opacidad (sin escala), y los textos de todas las temporadas comparten una celda de la cuadrícula, así
- * que el bloque mide siempre lo de la más larga y nada de abajo se mueve.
+ * que el bloque mide siempre lo de la más larga y nada de abajo se mueve. En móvil el texto va antes que la foto: es la respuesta a lo que se acaba de tocar.
  */
 export function TemporadasSelector({ temporadas, textos }: Props) {
   const { filas } = temporadas;
@@ -44,13 +44,17 @@ export function TemporadasSelector({ temporadas, textos }: Props) {
               aria-pressed={i === elegida}
               onClick={() => setTocada(i)}
               className={cn(
-                'flex min-h-24 flex-col items-start justify-between gap-3 p-5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                i === elegida ? 'bg-tinta text-white' : 'bg-cafe-bruma text-foreground hover:bg-borde',
+                // Móvil: un renglón por temporada (periodo a la izquierda, «ahora» a la derecha). Desde md: bloques.
+                'flex min-h-16 items-center justify-between gap-3 p-4 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:min-h-24 md:flex-col md:items-start md:p-5',
+                i === elegida ? 'bg-tinta text-white' : 'bg-superficie text-foreground hover:bg-borde',
               )}
             >
               <span className="texto-paso">{f.periodo}</span>
               <span className="texto-etiqueta">
-                {[i === hoy ? textos.ahora : null, f.fuerte ? temporadas.etiquetaFuerte : null].filter(Boolean).join(' · ') || ' '}
+                {i === hoy ? textos.ahora : ''}
+                {i === hoy && f.fuerte ? <span className="hidden md:inline">{` · ${temporadas.etiquetaFuerte}`}</span> : null}
+                {i !== hoy && f.fuerte ? <span className="hidden md:inline">{temporadas.etiquetaFuerte}</span> : null}
+                {i !== hoy && !f.fuerte ? <span className="hidden md:inline">{' '}</span> : null}
               </span>
             </Button>
           ))}
@@ -58,7 +62,7 @@ export function TemporadasSelector({ temporadas, textos }: Props) {
       </div>
 
       <div className="grid items-center gap-8 md:grid-cols-[1.3fr_1fr] lg:gap-16">
-        <div className="relative aspect-[4/3] overflow-hidden bg-cafe-bruma">
+        <div className="relative order-2 aspect-[4/3] overflow-hidden bg-superficie md:order-1">
           {filas.map((f, i) => (
             <Image
               key={f.foto}
@@ -76,7 +80,7 @@ export function TemporadasSelector({ temporadas, textos }: Props) {
         </div>
 
         {/* Todos los textos en la misma celda: la altura es la de la temporada más larga. */}
-        <div className="grid" aria-live="polite">
+        <div className="order-1 grid md:order-2" aria-live="polite">
           {filas.map((f, i) => (
             <div
               key={f.periodo}

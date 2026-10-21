@@ -453,7 +453,7 @@ export function usePagoPedido(config: Config) {
   );
 
   return {
-    fase, pagos, indice, error, errorTipo, retomado, motivoFallo, ordenId, checkoutId,
+    fase, pagos, indice, error, errorTipo, retomado, motivoFallo, ordenId, checkoutId, reservaId,
     fallo, falloEnVivo, fallos, apartadoHasta, confirmandoLargo,
     enviar, antesDePagar, onPagoConfirmado, onPagoRechazado, reiniciar, reintentar,
   };

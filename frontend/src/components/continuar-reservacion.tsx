@@ -9,6 +9,7 @@ import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { borrarPendiente, guardarPendiente, listarPendientes, type Pendiente } from '@/lib/pendientes';
 import { textoDeSituacion } from '@/lib/pendientes-texto';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import { TextoPlegable } from '@/components/texto-plegable';
 import { Button } from '@/components/ui/button';
 
 type Resumen = ResumenReserva | ResumenOrden;
@@ -284,13 +285,15 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   };
 
   const aviso = activo && linea && (resumen || problema) ? (
-    <div role="status" aria-live="polite" className={`${estilo} rounded-sheet px-5 py-3 text-hero-ink`}>
-      <div className="flex flex-col gap-x-6 gap-y-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="min-w-0 texto-cuerpo">
-          <span className="font-semibold">{linea}</span>
-          <span className="whitespace-nowrap"> · {fechaRelativa(activo.actualizadoEn, textos)}</span>
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
+    <div role="status" aria-live="polite" className={`${estilo} rounded-sheet px-5 py-2 text-hero-ink`}>
+      <div className="flex flex-col gap-x-8 gap-y-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 lg:flex-1">
+          <TextoPlegable abrir={textos.verMas} cerrar={textos.verMenos}>
+            <span className="font-semibold">{linea}</span>
+            <span> · {fechaRelativa(activo.actualizadoEn, textos)}</span>
+          </TextoPlegable>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {principal && <Button variante="campana-claro" onClick={principalClick}>{principal}</Button>}
           {secundaria && <Button variante="libre" onClick={secundariaClick} className="min-h-11 px-3 texto-cuerpo font-semibold underline">{secundaria}</Button>}
           {otros.length > 0 && <Button variante="libre" aria-expanded={listaAbierta} onClick={() => setListaAbierta(v => !v)} className="min-h-11 px-2 texto-cuerpo font-semibold underline">{textos.yMas.replace('{n}', String(otros.length))}</Button>}

@@ -14,7 +14,7 @@ import { validarTodo } from '@/lib/validar-reserva';
 import { claveBorrador } from '@/lib/borrador-reserva';
 import { pasoDeQuery } from '@/lib/paso-url';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import { BookingConfirmation } from '@/components/booking-confirmation';
+import { ConfirmacionReserva } from '@/components/confirmacion-reserva';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { AyudaFlotante } from '@/components/checkout/ayuda-flotante';
@@ -607,19 +607,32 @@ export function TrasladoView({
 
   if (phase === 'confirmed') {
     return (
-      <BookingConfirmation
+      <ConfirmacionReserva
         lang={lang}
         dict={dict}
-        numeroDeConfirmacion={reservaId!}
-        nombre={contact.fullName}
-        email={contact.email}
-        fecha={fechaTexto}
-        hora={formatHour(hora)}
-        personas={personas}
-        extras={[]}
-        pagado={total !== null ? currency.format(total) : '–'}
-        saldoEnEfectivo={null}
-        procesando={pagoProcesando}
+        datos={{
+          folio: reservaId!,
+          procesando: pagoProcesando,
+          nombre: contact.fullName,
+          email: contact.email,
+          color: 'traslado',
+          titulo: traslados.types[tipoTraslado]?.title ?? tipoTraslado,
+          empresas: empresa ? [empresa.nombre] : [],
+          fecha: fechaTexto,
+          lineas: [
+            { etiqueta: checkout.dayLabel, valor: fechaTexto },
+            tipoTraslado === 'redondo_aeropuerto' && fechaRegreso
+              ? { etiqueta: traslados.fields.fechaRegreso, valor: formatDay(fromLocalISODate(fechaRegreso), lang) }
+              : null,
+            { etiqueta: checkout.hourLabel, valor: formatHour(hora) },
+            { etiqueta: traslados.fields.pasajeros, valor: String(personas) },
+            resumenRecogida ? { etiqueta: traslados.fields.dondeRecogemos, valor: resumenRecogida } : null,
+          ].filter((linea): linea is { etiqueta: string; valor: string } => linea !== null),
+          extras: [],
+          pagado: total !== null ? currency.format(total) : null,
+          saldoEnEfectivo: null,
+          encuentro: null,
+        }}
       />
     );
   }

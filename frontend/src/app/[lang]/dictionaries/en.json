@@ -384,58 +384,28 @@
     "noBoatForGroupNotice": "We have availability for {date}, but our boats with capacity for {people} guests are already reserved. We'd love to help you find another convenient date.",
     "paymentUnavailable": "Online payments are undergoing brief maintenance. Please contact us on WhatsApp and we'll happily assist your booking.",
     "confirmation": {
-      "headline": "Great! Your booking is confirmed",
-      "processingHeadline": "We're confirming your payment with the bank",
-      "processingBody": "Your bank is securely processing the charge. As soon as it clears, you'll receive your confirmation email with all the details.",
-      "emailNotice": "We've sent an email to {email} with your booking details. If you don't see it in a few minutes, please check your spam folder.",
-      "tripHeadline": "Trip details",
-      "paidLabel": "Amount paid",
-      "pendingLabel": "Remaining balance to pay in cash on the day of the trip",
+      "headline": "Booking confirmed",
+      "processingHeadline": "Payment in progress",
+      "processingBody": "Your bank is processing the payment. As soon as it clears we will send the confirmation to {email}.",
+      "emailNotice": "We sent your receipt to {email}. If you do not see it in a few minutes, check your spam folder.",
+      "referenceLabel": "Reference",
+      "tripHeadline": "What you booked",
+      "moneyHeadline": "The money",
+      "paidLabel": "You paid today",
+      "pendingLabel": "Balance in cash on the day of the trip",
+      "chargePaid": "Charged",
+      "chargeProcessing": "In progress",
+      "nextHeadline": "What happens next",
+      "nextMar": "An advisor will message you on WhatsApp within 24 hours to assign your boat and captain, and to confirm where and when you meet.",
+      "nextEstancia": "An advisor will message you on WhatsApp within 24 hours to confirm your room and your arrival time.",
+      "nextTraslado": "An advisor will message you on WhatsApp within 24 hours to confirm your vehicle and pickup time.",
+      "nextPaquete": "An advisor will message you on WhatsApp within 24 hours to confirm the details of each service in your package.",
       "meetingHeadline": "Meeting point",
-      "agentHeadline": "What happens next?",
-      "agentBody": "An advisor from our team will reach out within 24 hours to give you a warm welcome and coordinate the final details: exact dock meeting location, directions, and your captain's name. If you need transportation or have any questions, you can message us directly anytime.",
-      "referenceLabel": "Booking reference",
-      "receiptTitle": "Booking receipt",
-      "downloadReceipt": "Download receipt",
-      "whatsappCta": "Contact our team",
-      "whatsappMessage": "Hi, I'm {nombre}. I booked for {fecha} (reference #{folio}) and would love to get in touch.",
-      "backHome": "Back to home",
-      "needsHeadline": "Would you like to add any extra services?",
-      "needsIntro": "We're here to tailor your experience. Choose any option below to message us directly:",
-      "needs": [
-        {
-          "icon": "equipo",
-          "title": "Need fishing gear?",
-          "body": "We'll gladly provide high-quality rods and reels ready on board for your day.",
-          "ask": "Hi, I'd like to arrange fishing tackle rental for my trip."
-        },
-        {
-          "icon": "carnada",
-          "title": "Would you like fresh bait?",
-          "body": "We'll have it prepared and ready at the dock when you arrive to sail.",
-          "ask": "Hi, I'd like to request fresh bait for my trip."
-        },
-        {
-          "icon": "bebidas",
-          "title": "Drinks or snacks on board?",
-          "body": "Your boat includes an ice-filled cooler so you can bring or request your favorite refreshments.",
-          "ask": "Hi, I'd like to ask about food and beverage options on board."
-        },
-        {
-          "icon": "traslado",
-          "title": "Need transportation to the dock?",
-          "body": "We can arrange comfortable and safe pickup directly from your hotel or lodging.",
-          "ask": "Hi, I'd like to quote transportation from my hotel to the dock."
-        },
-        {
-          "icon": "especial",
-          "title": "Any special requests?",
-          "body": "Kids on board, special care, or fishing preferences: we are here to accommodate you.",
-          "ask": "Hi, I have a special request for our fishing trip."
-        }
-      ],
-      "needsMessage": "Hi, I'm {nombre} (reference #{folio}), I booked for {fecha}. {ask}",
-      "needsOther": "I have another question about my booking"
+      "guaranteesHeadline": "Your booking is protected",
+      "saveReceipt": "Save receipt",
+      "whatsappCta": "Message us with your reference",
+      "whatsappMessage": "Hi, I am {nombre}. I booked for {fecha} (reference #{folio}) and would like to get in touch.",
+      "backHome": "Back to home"
     },
     "dayFullOffer": "{date} has no space left for {people} guests.",
     "takeOffered": "Check availability for {date}",
@@ -599,11 +569,6 @@
     "payButtonSingle": "Pay {amount}",
     "resuming": "You already have a booking in progress. Resuming where you left off…",
     "errorGeneric": "A temporary issue occurred while saving your booking. Please try again.",
-    "success": {
-      "title": "Your package is confirmed!",
-      "body": "We've processed payment for your package. A member of our team will contact you within 24 hours with all your trip details.",
-      "componentsHeadline": "Your package summary"
-    },
     "fail": {
       "title": "Payment could not be completed",
       "body": "We couldn't complete payment for your package. Any held amount will be released or refunded to you; you can try again.",
@@ -659,6 +624,8 @@
     "botonCancelarRetenido": "Cancel and release the hold",
     "botonEntendido": "Got it",
     "botonCerrar": "Close",
+    "verMas": "Show the full message",
+    "verMenos": "Show less",
     "botonIrReservacion": "Go to my booking",
     "confirmarCancelarTitulo": "Cancel your booking?",
     "confirmarCancelarCuerpo": "The payment of {monto} held on your card will be released. Nothing else will be charged. You can book again whenever you want.",

@@ -384,58 +384,28 @@
     "noBoatForGroupNotice": "Para el {date} tenemos disponibilidad, pero nuestras embarcaciones con capacidad para {people} personas ya están ocupadas. Con gusto te ayudamos a buscar otra fecha conveniente.",
     "paymentUnavailable": "Los pagos en línea están en mantenimiento momentáneo. Por favor contáctanos por WhatsApp y con gusto te atenderemos para reservar.",
     "confirmation": {
-      "headline": "¡Excelente! Tu reserva está confirmada",
-      "processingHeadline": "Estamos confirmando tu pago con el banco",
-      "processingBody": "Tu banco está procesando la transacción de forma segura. En cuanto se acredite recibirás tu correo de confirmación con todos los detalles.",
-      "emailNotice": "Te hemos enviado un correo a {email} con el detalle de tu reserva. Si no lo encuentras en unos minutos, por favor revisa tu carpeta de correo no deseado (spam).",
-      "tripHeadline": "Detalles de tu viaje",
-      "paidLabel": "Monto pagado",
-      "pendingLabel": "Saldo restante a liquidar en efectivo el día del viaje",
+      "headline": "Reserva confirmada",
+      "processingHeadline": "Pago en proceso",
+      "processingBody": "Tu banco está procesando el pago. En cuanto se acredite te enviamos la confirmación a {email}.",
+      "emailNotice": "Te enviamos el comprobante a {email}. Si no lo ves en unos minutos, revisa tu correo no deseado.",
+      "referenceLabel": "Folio",
+      "tripHeadline": "Lo que reservaste",
+      "moneyHeadline": "El dinero",
+      "paidLabel": "Pagaste hoy",
+      "pendingLabel": "Resto en efectivo el día del viaje",
+      "chargePaid": "Cobrado",
+      "chargeProcessing": "En proceso",
+      "nextHeadline": "Qué sigue",
+      "nextMar": "Un asesor te escribe por WhatsApp en las próximas 24 horas para asignar tu panga y tu capitán, y confirmar dónde y a qué hora se ven.",
+      "nextEstancia": "Un asesor te escribe por WhatsApp en las próximas 24 horas para confirmar tu habitación y la hora de llegada.",
+      "nextTraslado": "Un asesor te escribe por WhatsApp en las próximas 24 horas para confirmar tu vehículo y la hora de recogida.",
+      "nextPaquete": "Un asesor te escribe por WhatsApp en las próximas 24 horas para confirmar los detalles de cada servicio de tu paquete.",
       "meetingHeadline": "Punto de encuentro",
-      "agentHeadline": "¿Qué sigue ahora?",
-      "agentBody": "Un asesor de nuestro equipo se comunicará contigo en las próximas 24 horas para darte una cálida bienvenida y coordinar los detalles finales: ubicación exacta del muelle, referencias y el nombre de tu capitán. Si deseas servicio de transportación o tienes alguna duda, puedes escribirnos directamente en cualquier momento.",
-      "referenceLabel": "Folio de reserva",
-      "receiptTitle": "Recibo de reserva",
-      "downloadReceipt": "Descargar recibo",
-      "whatsappCta": "Contactar a nuestro equipo",
+      "guaranteesHeadline": "Tu reserva está protegida",
+      "saveReceipt": "Guardar comprobante",
+      "whatsappCta": "Escribirnos con tu folio",
       "whatsappMessage": "Hola, soy {nombre}. Reservé para el {fecha} (folio #{folio}) y me gustaría ponerme en contacto.",
-      "backHome": "Volver al inicio",
-      "needsHeadline": "¿Te gustaría agregar algún servicio adicional?",
-      "needsIntro": "Estamos a tu disposición para personalizar tu experiencia. Elige cualquiera de las opciones para escribirnos directamente:",
-      "needs": [
-        {
-          "icon": "equipo",
-          "title": "¿Requieres equipo de pesca?",
-          "body": "Con gusto te proveemos cañas y carretes de excelente calidad listos a bordo.",
-          "ask": "Hola, me gustaría solicitar equipo de pesca en renta para mi salida."
-        },
-        {
-          "icon": "carnada",
-          "title": "¿Deseas carnada fresca?",
-          "body": "La tendremos preparada y lista en el muelle al momento de zarpar.",
-          "ask": "Hola, me gustaría pedir carnada fresca para mi viaje."
-        },
-        {
-          "icon": "bebidas",
-          "title": "¿Bebidas o refrigerios a bordo?",
-          "body": "Tu panga incluye hielera con hielo para que disfrutes de lo que gustes traer o solicitar.",
-          "ask": "Hola, quiero consultar sobre las opciones de bebidas y comida a bordo."
-        },
-        {
-          "icon": "traslado",
-          "title": "¿Requieres transporte al muelle?",
-          "body": "Podemos organizar tu traslado cómodo y seguro desde tu hotel o estancia.",
-          "ask": "Hola, me gustaría cotizar transportación desde mi hospedaje hacia el muelle."
-        },
-        {
-          "icon": "especial",
-          "title": "¿Algún requerimiento especial?",
-          "body": "Niños a bordo, cuidados especiales o preferencias de pesca: estamos para consentirte.",
-          "ask": "Hola, tengo una solicitud especial para nuestro viaje de pesca."
-        }
-      ],
-      "needsMessage": "Hola, soy {nombre} (folio #{folio}), reservé para el {fecha}. {ask}",
-      "needsOther": "Tengo otra duda sobre mi reserva"
+      "backHome": "Volver al inicio"
     },
     "dayFullOffer": "El {date} ya no cuenta con espacio para {people} personas.",
     "takeOffered": "Ver disponibilidad para el {date}",
@@ -599,11 +569,6 @@
     "payButtonSingle": "Pagar {amount}",
     "resuming": "Ya tienes una reserva en proceso. Retomando donde te quedaste…",
     "errorGeneric": "Ocurrió un detalle temporal al guardar tu reserva. Por favor intenta de nuevo.",
-    "success": {
-      "title": "¡Tu paquete está confirmado!",
-      "body": "Ya procesamos el pago de tu paquete. Un asesor de nuestro equipo te contactará en las próximas 24 horas con todos los detalles de tu viaje.",
-      "componentsHeadline": "Resumen de tu paquete"
-    },
     "fail": {
       "title": "No se pudo completar el pago",
       "body": "No se pudo completar el pago de tu paquete. Lo que se haya retenido se libera o se te reembolsa; puedes intentar de nuevo.",
@@ -659,6 +624,8 @@
     "botonCancelarRetenido": "Cancelar y liberar lo retenido",
     "botonEntendido": "Entendido",
     "botonCerrar": "Cerrar",
+    "verMas": "Ver el mensaje completo",
+    "verMenos": "Ver menos",
     "botonIrReservacion": "Ir a mi reservación",
     "confirmarCancelarTitulo": "¿Cancelar tu reservación?",
     "confirmarCancelarCuerpo": "Se liberará el pago de {monto} retenido en tu tarjeta. No se cobrará nada más. Puedes reservar de nuevo cuando quieras.",

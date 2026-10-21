@@ -22,8 +22,9 @@ import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
 import { ApiError, validarCodigoPromocional, type PaqueteCatalogo, type PuntoEncuentro, type TrasladosCatalogo } from '@/lib/api';
-import { fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
-import { fromLocalISODate } from '@/lib/dates';
+import { fechaDeComponente, fechaSalida, nochesDelPaquete } from '@/lib/calendario-paquete';
+import { colorDePaquete } from '@/lib/color-actividad';
+import { formatHour, fromLocalISODate } from '@/lib/dates';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import {
@@ -46,7 +47,7 @@ import { pasoDeQuery } from '@/lib/paso-url';
 import { GrupoDatos } from './grupo-datos';
 import { GrupoServicio } from './grupo-servicio';
 import { PantallaEspera } from './pantalla-espera';
-import { PantallaExito } from './pantalla-exito';
+import { ConfirmacionReserva } from '@/components/confirmacion-reserva';
 import { PantallaFallo } from './pantalla-fallo';
 import { PanelPedidoPaquete } from './panel-pedido-paquete';
 import { PantallaPago } from './pantalla-pago';
@@ -409,17 +410,52 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     void pago.enviar();
   };
 
-  if (pago.fase === 'exito') return (
-    <PantallaExito
-      lang={lang}
-      dict={dict}
-      sedeSlug={sedeSlug}
-      paquete={paquete}
-      inicio={estado.inicio ?? minDate}
-      componentes={estado.componentes}
-      formatearFecha={formatearFecha}
-    />
-  );
+  if (pago.fase === 'exito') {
+    const inicioElegido = estado.inicio ?? minDate;
+    const empresasDelPaquete = [...new Set(paquete.servicios_asociados.map((c) => nombreEmpresa(c.servicio.empresa_slug)))];
+    const anticipo = estado.formaPago === 'anticipo' && paquete.permite_anticipo && totalConDescuento !== null;
+    const porPagarHoy = totalConDescuento !== null && anticipo
+      ? montoInicial(totalConDescuento, estado.formaPago, paquete.porcentaje_anticipo)
+      : totalConDescuento;
+    return (
+      <ConfirmacionReserva
+        lang={lang}
+        dict={dict}
+        datos={{
+          folio: pago.ordenId ?? pago.reservaId ?? 0,
+          procesando: false,
+          nombre: estado.contacto.fullName,
+          email: estado.contacto.email,
+          color: colorDePaquete(paquete),
+          titulo: paquete.nombre,
+          empresas: empresasDelPaquete,
+          fecha: formatearFecha(inicioElegido),
+          lineas: [
+            { etiqueta: checkout.summary.date, valor: formatearFecha(inicioElegido) },
+            ...(salida && noches !== null ? [{ etiqueta: checkout.summary.checkOut, valor: formatearFecha(salida) }] : []),
+            ...(paquete.pide_hora && estado.hora ? [{ etiqueta: checkout.summary.time, valor: formatHour(estado.hora) }] : []),
+            { etiqueta: checkout.summary.people, valor: String(personasPaquete) },
+          ],
+          componentes: paquete.servicios_asociados.map((item) => {
+            const personas = estado.componentes[item.servicio.slug]?.personas ?? item.personas_incluidas;
+            return {
+              titulo: item.servicio.nombre,
+              detalle: `${formatearFecha(fechaDeComponente(inicioElegido, item.dia_estancia))} · ${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`,
+            };
+          }),
+          extras: [],
+          cobros: cantidadCargos > 1
+            ? cargos.map((cargo) => ({ empresa: nombreEmpresa(cargo.empresaSlug), monto: `${formatearPrecio(cargo.monto, estado.moneda)} ${estado.moneda}` }))
+            : undefined,
+          pagado: porPagarHoy !== null ? `${formatearPrecio(porPagarHoy, estado.moneda)} ${estado.moneda}` : null,
+          saldoEnEfectivo: anticipo && totalConDescuento !== null && porPagarHoy !== null && totalConDescuento > porPagarHoy
+            ? `${formatearPrecio(totalConDescuento - porPagarHoy, estado.moneda)} ${estado.moneda}`
+            : null,
+          encuentro: null,
+        }}
+      />
+    );
+  }
 
   // Tras un fallo en esta misma sesión el formulario sigue en memoria: se reintenta con una
   // orden nueva directo al pago. Tras una recarga no hay datos que conservar: se vuelve al formulario.
