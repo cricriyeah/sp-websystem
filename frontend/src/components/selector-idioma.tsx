@@ -13,8 +13,11 @@ const IDIOMAS = [
  * Idioma en dos segmentos «ES | EN» de 44 px: un toque, sin bandera ni desplegable. Es el mismo
  * en la cabecera del sitio y en la del checkout. El cambio conserva la ruta y el query
  * (`?paso=`, `?moneda=`, `?origen=`) y el borrador de la reserva se repone solo.
+ *
+ * `campana` (el sitio público, F10): círculos, con el activo en negro. `estandar` es el de la cabecera del
+ * checkout, que no se rediseña.
  */
-export function SelectorIdioma({ lang, label }: { lang: Locale; label: string }) {
+export function SelectorIdioma({ lang, label, variante = 'estandar' }: { lang: Locale; label: string; variante?: 'estandar' | 'campana' }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -36,8 +39,10 @@ export function SelectorIdioma({ lang, label }: { lang: Locale; label: string })
             lang={valor}
             aria-current={activo ? 'true' : undefined}
             onClick={() => cambiar(valor)}
-            className={`flex size-11 items-center justify-center rounded-control texto-pequeno transition-colors ${
-              activo ? 'bg-cafe-bruma font-semibold text-cafe' : 'text-muted hover:text-foreground'
+            className={`flex size-11 items-center justify-center transition-colors ${
+              variante === 'campana'
+                ? `rounded-full texto-cuerpo ${activo ? 'bg-tinta font-semibold text-white' : 'hover:bg-cafe-bruma'}`
+                : `rounded-control texto-pequeno ${activo ? 'bg-cafe-bruma font-semibold text-cafe' : 'text-muted hover:text-foreground'}`
             }`}
           >
             {texto}

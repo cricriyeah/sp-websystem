@@ -105,7 +105,7 @@ export function SiteHeader({
 
   return (
     <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
-      <header className="relative mx-auto flex h-16 w-full items-center justify-between gap-4 border-b border-border bg-arena/95 px-4 backdrop-blur sm:px-6 lg:max-w-[1440px] lg:rounded-card lg:border lg:border-border lg:px-6">
+      <header className="relative mx-auto flex h-16 w-full items-center justify-between gap-4 bg-superficie px-4 shadow-tarjeta sm:px-6 lg:max-w-[1440px] lg:rounded-full lg:px-6 lg:shadow-n2">
         <div className="flex shrink-0 items-center gap-3">
           <Link
             href={hrefInicio(lang)}
@@ -116,10 +116,7 @@ export function SiteHeader({
             <EmpresaSello nombre={MARCA} tamano={32} />
           </Link>
           {marcaSede && (
-            <>
-              <span aria-hidden="true" className="h-6 w-px bg-border" />
-              <EmpresaSello nombre={marcaSede.nombre} logo={marcaSede.logo} tamano={32} />
-            </>
+            <EmpresaSello nombre={marcaSede.nombre} logo={marcaSede.logo} tamano={32} />
           )}
         </div>
 
@@ -129,7 +126,7 @@ export function SiteHeader({
               <Link
                 key={link.href}
                 href={link.href}
-                className="inline-flex min-h-11 items-center whitespace-nowrap text-sm text-foreground transition-colors hover:text-accent"
+                className="inline-flex min-h-11 items-center whitespace-nowrap texto-cuerpo transition-colors hover:text-cafe"
               >
                 {link.label}
               </Link>
@@ -141,12 +138,12 @@ export function SiteHeader({
           {links.length === 1 && (
             <Link
               href={links[0].href}
-              className="hidden min-h-11 items-center text-base text-foreground transition-colors hover:text-accent lg:inline-flex"
+              className="hidden min-h-11 items-center texto-cuerpo transition-colors hover:text-cafe lg:inline-flex"
             >
               {links[0].label}
             </Link>
           )}
-          <SelectorIdioma lang={lang} label={nav.switchLang} />
+          <SelectorIdioma lang={lang} label={nav.switchLang} variante="campana" />
           {/* En móvil el idioma vive en el menú; desde lg va en la cabecera (arriba). */}
           <SedeSelector
             lang={lang}
@@ -154,7 +151,6 @@ export function SiteHeader({
             sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
             placeholder={variante === 'hub' ? nav.eligeSede : undefined}
             label={nav.sedeLabel}
-            variant="header"
             className="hidden sm:inline-block"
           />
           <div className="hidden xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
@@ -164,7 +160,7 @@ export function SiteHeader({
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? nav.closeMenu : nav.openMenu}
             aria-expanded={open}
-            className={`flex h-11 w-11 items-center justify-center border border-border rounded-control text-foreground xl:hidden`}
+            className="flex size-11 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde xl:hidden"
           >
             {open ? <X size={18} /> : <List size={18} />}
           </Button>
@@ -178,7 +174,7 @@ export function SiteHeader({
               animate={{ opacity: 1, y: 0 }}
               exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className={`absolute inset-x-0 top-full flex flex-col rounded-b-card border border-t-0 border-border bg-arena px-4 py-2 shadow-n2 sm:px-6 lg:mt-2 lg:rounded-card lg:border-t xl:hidden`}
+              className="absolute inset-x-0 top-full flex flex-col bg-superficie px-4 py-2 shadow-n2 sm:px-6 lg:mt-2 xl:hidden"
             >
               {/* El mapa solo existe desde 1024 px: el menú móvil no lo ofrece. */}
               {links.filter((link) => !link.href.endsWith(`#${ANCLA_HUB.mapa}`)).map((link) => (
@@ -186,21 +182,20 @@ export function SiteHeader({
                   key={link.href}
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="border-b border-border-strong flex min-h-11 items-center py-2 text-base text-foreground last:border-b-0"
+                  className="flex min-h-11 items-center py-3 texto-cuerpo font-semibold"
                 >
                   {link.label}
                 </Link>
               ))}
-              <div className="flex items-center justify-between border-b border-border-strong py-3.5">
-                <span className="text-base text-muted">{nav.sedeLabel}</span>
+              <div className="flex items-center justify-between py-3.5">
+                <span className="texto-cuerpo">{nav.sedeLabel}</span>
                 <SedeSelector
                   lang={lang}
                   sedes={sedesDisponibles}
                   sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
                   placeholder={variante === 'hub' ? nav.eligeSede : undefined}
                   label={nav.sedeLabel}
-                  variant="header"
-                />
+                      />
               </div>
               <div className="py-3">
                 <WhatsappContact nav={nav} variant="menu" />

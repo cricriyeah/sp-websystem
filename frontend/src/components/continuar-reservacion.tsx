@@ -257,9 +257,8 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   const secundaria = problema === 'errorServidor' ? textos.botonIrReservacion
     : problema ? null : situacion === 'no_existe' && !whatsapp ? null : contenido?.secundaria;
   const registro = contenido?.registro ?? 'informativo';
-  const estilo = registro === 'con_dinero'
-    ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_10%,var(--background))]'
-    : registro === 'en_curso' ? 'border-border-strong bg-arena' : 'border-border bg-arena';
+  // Un tono por registro, sin rayas: con dinero de por medio, el amarillo de aviso; el resto, el gris.
+  const estilo = registro === 'con_dinero' ? 'bg-cafe-claro' : 'bg-cafe-bruma';
   const otros = pendientes.filter(p => p.checkoutId !== activo?.checkoutId).slice(0, 3);
 
   const principalClick = () => {
@@ -284,27 +283,27 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   };
 
   const aviso = activo && linea && (resumen || problema) ? (
-    <div role="status" aria-live="polite" className={`border ${estilo} px-4 py-3 sm:px-6 lg:rounded-card`}>
+    <div role="status" aria-live="polite" className={`${estilo} px-4 py-3 sm:px-6`}>
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-relaxed text-foreground">{linea}</p>
-          <p className="mt-1 text-sm text-muted">{fechaRelativa(activo.actualizadoEn, textos)}</p>
+          <p className="texto-cuerpo font-semibold">{linea}</p>
+          <p className="mt-1 texto-cuerpo">{fechaRelativa(activo.actualizadoEn, textos)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {principal && <Button variante="libre" onClick={principalClick} className="min-h-11 rounded-control bg-action px-4 py-2 text-sm font-semibold text-white hover:opacity-90">{principal}</Button>}
-          {secundaria && <Button variante="libre" onClick={secundariaClick} className="min-h-11 rounded-control border border-border-strong px-4 py-2 text-sm font-medium text-foreground hover:bg-cafe-bruma">{secundaria}</Button>}
-          {otros.length > 0 && <Button variante="libre" aria-expanded={listaAbierta} onClick={() => setListaAbierta(v => !v)} className="min-h-11 px-2 text-sm font-medium text-accent underline">{textos.yMas.replace('{n}', String(otros.length))}</Button>}
+          {principal && <Button variante="campana" onClick={principalClick}>{principal}</Button>}
+          {secundaria && <Button variante="campana-claro" onClick={secundariaClick}>{secundaria}</Button>}
+          {otros.length > 0 && <Button variante="libre" aria-expanded={listaAbierta} onClick={() => setListaAbierta(v => !v)} className="min-h-11 px-2 texto-cuerpo font-semibold text-cafe underline">{textos.yMas.replace('{n}', String(otros.length))}</Button>}
         </div>
       </div>
-      {listaAbierta && otros.length > 0 && <div className="mx-auto mt-3 max-w-[1440px] border-t border-border pt-2">
-        {otros.map(p => <Button key={p.checkoutId} variante="libre" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border px-2 py-2 text-left text-sm text-foreground last:border-b-0 hover:bg-cafe-bruma"><span>{p.productoNombre}</span><span className="shrink-0 text-sm text-muted">{fechaRelativa(p.actualizadoEn, textos)}</span></Button>)}
+      {listaAbierta && otros.length > 0 && <div className="mx-auto mt-3 max-w-[1440px] pt-2">
+        {otros.map(p => <Button key={p.checkoutId} variante="libre" onClick={() => { if (timerOcultar.current) clearTimeout(timerOcultar.current); setActivo(p); setListaAbierta(false); void consultar(p); }} className="flex min-h-11 w-full items-center justify-between gap-3 px-2 py-2 text-left texto-cuerpo hover:bg-superficie"><span>{p.productoNombre}</span><span className="shrink-0 texto-cuerpo">{fechaRelativa(p.actualizadoEn, textos)}</span></Button>)}
       </div>}
     </div>
   ) : null;
 
-  const deshacerAviso = deshecho && <div role="status" aria-live="polite" className="border border-border bg-cafe-bruma px-4 py-3 text-sm text-foreground sm:px-6 lg:mt-2 lg:rounded-card">
+  const deshacerAviso = deshecho && <div role="status" aria-live="polite" className="bg-cafe-bruma px-4 py-3 texto-cuerpo sm:px-6 lg:mt-2">
     {textos.descartada.replace('{producto}', deshecho.productoNombre)}{' '}
-    <Button variante="libre" onClick={deshacer} className="font-semibold text-accent underline">{textos.deshacer}</Button>
+    <Button variante="libre" onClick={deshacer} className="font-semibold text-cafe underline">{textos.deshacer}</Button>
   </div>;
 
   const montoCancelar = resumen ? montoRetenido(resumen, textos.locale) : null;

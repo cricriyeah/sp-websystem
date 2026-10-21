@@ -21,7 +21,6 @@ type SedeSelectorProps = {
   label?: string;
   placeholder?: string;
   onSelectSede?: (sede: SedeOpcion) => void;
-  variant?: 'header' | 'catalog';
   className?: string;
 };
 
@@ -32,7 +31,6 @@ export function SedeSelector({
   label = 'Destino',
   placeholder,
   onSelectSede,
-  variant = 'catalog',
   className = '',
 }: SedeSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -116,7 +114,6 @@ export function SedeSelector({
     }
   }
 
-  const isHeader = variant === 'header';
   const puedeAbrir = sedes.length > 0;
   const nombreMostrado = sedeActiva?.nombre ?? placeholder ?? label;
 
@@ -130,18 +127,14 @@ export function SedeSelector({
         onClick={() => puedeAbrir && setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={
-          isHeader
-            ? 'flex min-h-11 items-center gap-1.5 rounded-control border border-border-strong bg-superficie px-3 text-sm font-medium text-foreground transition-[color,border-color,transform] duration-150 hover:border-accent hover:text-accent active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed'
-            : 'flex items-center gap-2.5 rounded-control border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed'
-        }
+        className="flex min-h-11 items-center gap-2 rounded-full bg-cafe-bruma px-4 texto-cuerpo font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-borde active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <MapPin size={isHeader ? 14 : 18} className="shrink-0 text-accent" weight="fill" />
-        <span className="text-muted text-sm hidden sm:inline">{label}:</span>
+        <MapPin size={14} className="shrink-0 text-cafe" weight="fill" />
+        <span className="hidden sm:inline">{label}:</span>
         <span className="font-semibold text-foreground">{nombreMostrado}</span>
         <CaretDown
-          size={isHeader ? 12 : 14}
-          className={`shrink-0 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          size={12}
+          className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </Button>
 
@@ -154,9 +147,9 @@ export function SedeSelector({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 top-full z-50 mt-2 min-w-[200px] rounded-card border border-border bg-superficie p-1.5 shadow-n2"
+            className="absolute left-0 top-full z-50 mt-2 min-w-[200px] bg-superficie p-1.5 shadow-n2"
           >
-            <div className="px-3 py-1.5 texto-pie font-medium text-muted">
+            <div className="px-3 py-1.5 texto-pequeno font-semibold">
               {label}
             </div>
             {sedes.map((s) => {
@@ -168,17 +161,17 @@ export function SedeSelector({
                   role="option"
                   aria-selected={selected}
                   onClick={() => handleSelect(s)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left text-sm transition-colors ${
+                  className={`flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left texto-cuerpo transition-colors ${
                     selected
-                      ? 'bg-accent/10 font-semibold text-accent'
-                      : 'text-foreground hover:bg-muted/10'
+                      ? 'bg-tinta font-semibold text-white'
+                      : 'text-foreground hover:bg-cafe-bruma'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <MapPin size={14} className={selected ? 'text-accent' : 'text-muted'} />
+                    <MapPin size={14} />
                     <span>{s.nombre}</span>
                   </div>
-                  {selected && <Check size={14} weight="bold" className="text-accent" />}
+                  {selected && <Check size={14} weight="bold" />}
                 </Button>
               );
             })}
