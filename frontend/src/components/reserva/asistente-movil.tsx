@@ -71,7 +71,7 @@ export function AsistenteMovil({ id, titulo, antetitulo, soloFundido, anuncio, a
           </h2>
         </header>
         {/* La tarjeta blanca es de la pantalla, no de cada bloque: así también la tiene el formulario de tarjeta. */}
-        <div className="flex flex-col gap-5 bg-superficie p-4">
+        <div className="flex flex-col gap-5 border border-borde bg-superficie p-4">
           <EnAsistente.Provider value>{children}</EnAsistente.Provider>
         </div>
       </m.section>
