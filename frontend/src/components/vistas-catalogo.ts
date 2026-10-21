@@ -4,7 +4,7 @@
 import type { Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { getEmpresa } from '@/content/empresas';
-import { claveDePaquete, claveDeServicio, imagenDeCatalogo } from '@/content/imagenes-catalogo';
+import { claveDePaquete, claveDeServicio, imagenDeCatalogo, imagenesDeCatalogo } from '@/content/imagenes-catalogo';
 import { baseDeCobro, palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
 import { colorDePaquete, colorDeServicio } from '@/lib/color-actividad';
 import { hrefDetalleServicio } from '@/lib/booking-href';
@@ -52,6 +52,7 @@ export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: M
     color: colorDePaquete(paquete),
     palabra: palabraDePaquete(paquete.noches, lang),
     foto: imagenDeCatalogo(clave, lang),
+    fotos: imagenesDeCatalogo(clave, lang),
     precio: base
       ? { ...precioDe((m) => calcularPrecioPaquete(paquete, m).precioFinal, lang, moneda), base: base.texto, conDesde: base.conDesde }
       : null,

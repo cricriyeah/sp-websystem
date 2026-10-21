@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ColorActividad } from '@/lib/color-actividad';
+import { CarruselFotos } from '@/components/carrusel-fotos';
 import { botonClases } from '@/components/ui/variantes';
 import { cn } from '@/components/ui/cn';
 
@@ -13,6 +14,8 @@ export type VistaProducto = {
   /** La palabra del tipo («Pesca», «5 noches»): rotula el bloque de color cuando no hay foto honesta. */
   palabra: string;
   foto: { src: string; alt: string } | null;
+  /** Todas sus fotos, si son varias: la tarjeta las cambia como carrusel. */
+  fotos?: { src: string; alt: string }[];
   /** `null` = por ruta: no hay un monto que anunciar. */
   precio: { monto: string; base: string; conDesde: boolean; aprox?: string } | null;
   capacidad: number | null;
@@ -36,6 +39,13 @@ const CAMPO: Record<ColorActividad, string> = {
   estancia: 'bg-verde text-white',
 };
 
+/** Un desfase estable (0 a 1,5 s) por tarjeta, sacado de su clave: sin azar, para que servidor y cliente coincidan. */
+export function desfaseDe(clave: string): number {
+  let h = 0;
+  for (const c of clave) h = (h * 31 + c.charCodeAt(0)) % 1500;
+  return h;
+}
+
 type Props = {
   vista: VistaProducto;
   textos: TextosProducto;
@@ -51,7 +61,7 @@ type Props = {
  * Server Component.
  */
 export function TarjetaProducto({ vista, textos, prioridad = false }: Props) {
-  const { nombre, empresa, color, palabra, foto, precio, capacidad } = vista;
+  const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad } = vista;
   const info = [textos.opera.replace('{empresa}', empresa), capacidad ? textos.hasta.replace('{n}', String(capacidad)) : null].filter(Boolean).join(' · ');
 
   return (
@@ -62,14 +72,24 @@ export function TarjetaProducto({ vista, textos, prioridad = false }: Props) {
     >
       {foto ? (
         <div className="rev-foto relative aspect-[4/5] overflow-hidden bg-cafe-bruma">
-          <Image
-            src={foto.src}
-            alt={foto.alt}
-            fill
-            sizes="(min-width: 1024px) 27vw, 80vw"
-            loading={prioridad ? 'eager' : 'lazy'}
-            className="object-cover transition-transform duration-[600ms] ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-105"
-          />
+          {fotos && fotos.length > 1 ? (
+            <CarruselFotos
+              fotos={fotos}
+              sizes="(min-width: 1024px) 27vw, 80vw"
+              prioridad={prioridad}
+              desfase={desfaseDe(vista.clave)}
+              className="[@media(hover:hover)]:group-hover:scale-105"
+            />
+          ) : (
+            <Image
+              src={foto.src}
+              alt={foto.alt}
+              fill
+              sizes="(min-width: 1024px) 27vw, 80vw"
+              loading={prioridad ? 'eager' : 'lazy'}
+              className="object-cover transition-transform duration-[600ms] ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-105"
+            />
+          )}
         </div>
       ) : (
         <div aria-hidden="true" className={cn('rev-foto grid aspect-[4/5] place-items-center overflow-hidden p-6 text-center', CAMPO[color])}>

@@ -13,7 +13,9 @@
 // rotulada «Destino Los Cabos»): su tarjeta es un bloque del color de su tipo con su palabra.
 
 type Lang = 'es' | 'en';
-type Foto = { src: string; alt: Record<Lang, string>; relleno?: true };
+type FotoBase = { src: string; alt: Record<Lang, string> };
+// `mas`: las demás fotos de un paquete; la tarjeta las cambia como carrusel (la primera es `src`).
+type Foto = FotoBase & { relleno?: true; mas?: FotoBase[] };
 
 const FOTOS: Record<string, Foto> = {
   'servicio:sal-y-sol/pesca-deportiva': {
@@ -52,10 +54,30 @@ const FOTOS: Record<string, Foto> = {
   'paquete:paquete-5-noches': {
     src: '/catalogo/la-ventana-travel-paquete-5-noches.webp',
     alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
+    mas: [
+      {
+        src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp',
+        alt: { es: 'Vista aérea del Hotel Casa Arrecife, con su terraza y el mar de La Ventana al fondo', en: 'Aerial view of Hotel Casa Arrecife, with its rooftop terrace and the La Ventana sea behind it' },
+      },
+      {
+        src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
+        alt: { es: 'Dos orcas nadando bajo la superficie del mar', en: 'Two orcas swimming just below the sea surface' },
+      },
+    ],
   },
   'paquete:paquete-7-noches': {
     src: '/catalogo/la-ventana-travel-paquete-7-noches.webp',
     alt: { es: 'Una persona haciendo snorkel entre peces rayados', en: 'A person snorkeling among striped fish' },
+    mas: [
+      {
+        src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp',
+        alt: { es: 'Vista aérea del Hotel Casa Arrecife, con su terraza y el mar de La Ventana al fondo', en: 'Aerial view of Hotel Casa Arrecife, with its rooftop terrace and the La Ventana sea behind it' },
+      },
+      {
+        src: '/catalogo/la-ventana-travel-hospedaje-fogata.webp',
+        alt: { es: 'La fogata azul del patio del Hotel Casa Arrecife al atardecer', en: 'The blue fire pit in the Hotel Casa Arrecife courtyard at dusk' },
+      },
+    ],
   },
 };
 
@@ -69,4 +91,11 @@ export function imagenDeCatalogo(clave: string, lang: Lang): { src: string; alt:
     return null;
   }
   return { src: foto.src, alt: foto.alt[lang] };
+}
+
+/** Todas las fotos de un producto (la principal y las demás), en su orden; vacío si no tiene. */
+export function imagenesDeCatalogo(clave: string, lang: Lang): { src: string; alt: string }[] {
+  const foto = FOTOS[clave];
+  if (!foto) return [];
+  return [foto, ...(foto.mas ?? [])].map((f) => ({ src: f.src, alt: f.alt[lang] }));
 }

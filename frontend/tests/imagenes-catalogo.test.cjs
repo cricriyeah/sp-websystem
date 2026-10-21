@@ -22,3 +22,15 @@ test('claves del view-model de la tarjeta', () => {
   assert.equal(m.claveDePaquete('ventana-completo'), 'paquete:ventana-completo');
 });
 
+
+test('imagenesDeCatalogo: los paquetes de La Ventana traen tres fotos, empezando por la principal', () => {
+  for (const slug of ['paquete-5-noches', 'paquete-7-noches']) {
+    const clave = m.claveDePaquete(slug);
+    const fotos = m.imagenesDeCatalogo(clave, 'es');
+    assert.equal(fotos.length, 3);
+    assert.equal(fotos[0].src, m.imagenDeCatalogo(clave, 'es').src);
+    assert.equal(new Set(fotos.map((f) => f.src)).size, 3);
+    assert.ok(fotos.every((f) => f.alt));
+  }
+  assert.deepEqual(m.imagenesDeCatalogo('servicio:nadie/nada', 'es'), []);
+});

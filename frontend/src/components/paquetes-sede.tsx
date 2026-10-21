@@ -5,6 +5,8 @@ import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import { getEmpresa } from '@/content/empresas';
 import { colorDeServicio } from '@/lib/color-actividad';
 import { vistaDePaquete } from '@/components/vistas-catalogo';
+import { CarruselFotos } from '@/components/carrusel-fotos';
+import { desfaseDe } from '@/components/tarjeta-producto';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
 import { botonClases } from '@/components/ui/variantes';
 import { cn } from '@/components/ui/cn';
@@ -70,7 +72,15 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                   !vista.foto && 'grid place-items-center bg-verde p-6 text-center text-white',
                 )}
               >
-                {vista.foto ? (
+                {vista.fotos && vista.fotos.length > 1 ? (
+                  <CarruselFotos
+                    fotos={vista.fotos}
+                    sizes="(min-width: 768px) 55vw, 100vw"
+                    prioridad={i === 0}
+                    desfase={desfaseDe(vista.clave)}
+                    className="[@media(hover:hover)]:group-hover:scale-[1.04]"
+                  />
+                ) : vista.foto ? (
                   <Image
                     src={vista.foto.src}
                     alt={vista.foto.alt}
