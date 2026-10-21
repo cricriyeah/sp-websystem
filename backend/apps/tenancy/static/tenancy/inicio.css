@@ -33,7 +33,7 @@
     max-width: 100%;
     padding: .4rem .7rem;
     border-radius: .4rem;
-    color: #0f766e;
+    color: #1f1a14;
     font-weight: 600;
     overflow-wrap: anywhere;
 }
@@ -49,7 +49,7 @@
 .inicio-moneda > * { min-width: 0; overflow-wrap: anywhere; }
 .inicio-moneda strong { min-width: 3rem; }
 .inicio-moneda b { font-variant-numeric: tabular-nums; }
-.inicio-avanzado-enlace { margin-top: 1rem; border: 1px solid #0f766e; }
+.inicio-avanzado-enlace { margin-top: 1rem; border: 1px solid #1f1a14; }
 
 .inicio-saldos { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
 .inicio-saldos li { min-width: 0; border: 1px solid rgba(127, 127, 127, .28); border-radius: .5rem; }
@@ -60,7 +60,7 @@
     gap: .25rem 1rem;
     min-height: 44px;
     padding: .75rem 1rem;
-    color: #0f766e;
+    color: #1f1a14;
 }
 .inicio-saldos a > * { min-width: 0; overflow-wrap: anywhere; }
 .inicio-saldos a strong { flex: 1 1 12rem; }
@@ -75,9 +75,9 @@
 .inicio-conteos dd { margin: .2rem 0 0; font-size: 1.5rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 
 html.dark .inicio-encabezado p, html.dark .inicio-conteos dt { color: #a3a3a3; }
-html.dark .inicio-tarjeta a, html.dark .inicio-avanzado-enlace { color: #5eead4; }
-html.dark .inicio-saldos a { color: #5eead4; }
-html.dark .inicio-avanzado-enlace { border-color: #5eead4; }
+html.dark .inicio-tarjeta a, html.dark .inicio-avanzado-enlace { color: #e6e4df; }
+html.dark .inicio-saldos a { color: #e6e4df; }
+html.dark .inicio-avanzado-enlace { border-color: #e6e4df; }
 
 @media (min-width: 640px) {
     .inicio-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); }

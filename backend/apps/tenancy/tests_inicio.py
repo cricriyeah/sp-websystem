@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -295,3 +296,23 @@ class InicioTests(TestCase):
         response = self.client.get(reverse('admin:index'))
         self.assertNotContains(response, 'Entradas por día')
         self.assertNotContains(response, '<canvas')
+
+
+    # El menu lateral lleva el logo de la empresa de la cuenta (o el de la plataforma), no su nombre.
+    def test_empresa_con_logo_muestra_su_logo(self):
+        self.client.force_login(self.jefe)
+        with mock.patch('apps.tenancy.admin_branding.EMPRESAS_CON_LOGO', frozenset({'inicio-a'})):
+            response = self.client.get(reverse('admin:index'))
+        self.assertContains(response, 'tenancy/branding/inicio-a.webp')
+
+    def test_empresa_sin_logo_conserva_su_nombre(self):
+        self.client.force_login(self.jefe)
+        response = self.client.get(reverse('admin:index'))
+        self.assertNotContains(response, 'tenancy/branding/sunbaja')
+        self.assertContains(response, 'Empresa A')
+
+    def test_login_lleva_el_logo_y_el_ojo_de_la_contrasena(self):
+        self.client.logout()
+        response = self.client.get(reverse('admin:login'))
+        self.assertContains(response, 'tenancy/branding/sunbaja.svg')
+        self.assertContains(response, 'tenancy/login-password.js')

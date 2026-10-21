@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 from corsheaders.defaults import default_headers
+from django.templatetags.static import static
 from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -165,6 +166,10 @@ UNFOLD = {
     'SITE_TITLE': 'apps.tenancy.admin_branding.nombre_backoffice',
     'SITE_HEADER': 'apps.tenancy.admin_branding.nombre_backoffice',
     'SITE_SYMBOL': 'anchor',
+    # El logo reemplaza al nombre en el menu lateral: el de la empresa del jefe o la vendedora, o el de la
+    # plataforma para el operador.
+    'SITE_LOGO': 'apps.tenancy.admin_branding.logo_backoffice',
+    'STYLES': [lambda request: static('tenancy/backoffice.css')],
     'SHOW_HISTORY': True,
     'SHOW_VIEW_ON_SITE': False,
     'DASHBOARD_CALLBACK': 'apps.tenancy.inicio.contexto_inicio',
@@ -380,11 +385,13 @@ UNFOLD = {
         ],
     },
     'COLORS': {
+        # El mismo negro que el sitio (tinta, #1f1a14) en lo que destaca: botones y enlaces. Los tonos 400 y
+        # 500 son grises calidos para que el acento se vea tambien sobre el fondo oscuro.
         'primary': {
-            '50': '255 247 237', '100': '255 237 213', '200': '254 215 170',
-            '300': '253 186 116', '400': '251 146 60', '500': '234 88 12',
-            '600': '194 65 12', '700': '154 52 18', '800': '124 45 18',
-            '900': '124 45 18', '950': '67 20 7',
+            '50': '248 248 246', '100': '241 240 237', '200': '230 228 223',
+            '300': '184 180 171', '400': '168 162 158', '500': '120 113 108',
+            '600': '31 26 20', '700': '24 20 15', '800': '17 14 10',
+            '900': '10 8 6', '950': '0 0 0',
         },
     },
 }

@@ -1,0 +1,15 @@
+{% extends "admin/login.html" %}
+{% load static %}
+
+{# Misma plantilla de Unfold con el logo de Sun Baja Experience encima del titulo y el ojo de la contrasena. #}
+
+{% block content %}
+    <img src="{% static 'tenancy/branding/sunbaja.svg' %}" alt="Sun Baja Experience" class="login-logo login-logo-claro">
+    <img src="{% static 'tenancy/branding/sunbaja-blanco.svg' %}" alt="" class="login-logo login-logo-oscuro" aria-hidden="true">
+    {{ block.super }}
+{% endblock %}
+
+{% block login_after %}
+    {{ block.super }}
+    <script src="{% static 'tenancy/login-password.js' %}" defer></script>
+{% endblock %}

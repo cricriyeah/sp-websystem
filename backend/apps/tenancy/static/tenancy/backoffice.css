@@ -1,0 +1,39 @@
+/* Logo del menu lateral: el de la empresa (o el de la plataforma) en lugar de su nombre. Unfold lo pinta a 2rem
+   de alto; los logos son anchos, asi que se les da mas alto y se acota el ancho. */
+#nav-sidebar img[alt],
+aside img[alt='Home'],
+aside img[alt='Inicio'] {
+  height: 2.75rem;
+  width: auto;
+  max-width: 11rem;
+  object-fit: contain;
+  object-position: left center;
+}
+
+/* Login: logo de Sun Baja Experience encima del titulo. */
+.login-logo {
+  display: block;
+  height: 4.5rem;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto 2rem;
+}
+
+.login-logo-oscuro {
+  display: none;
+}
+
+.dark .login-logo-claro {
+  display: none;
+}
+
+.dark .login-logo-oscuro {
+  display: block;
+}
+
+/* Modo oscuro: el negro del acento no se veria sobre el fondo, asi que ahi el acento es un gris calido
+   (con texto blanco encima, mas de 7:1). */
+html.dark {
+  --color-primary-600: rgb(88 80 72);
+  --color-primary-700: rgb(106 98 90);
+}
