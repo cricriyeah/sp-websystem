@@ -7,7 +7,8 @@ import { getEmpresa } from '@/content/empresas';
 import { claveDePaquete, claveDeServicio, imagenDeCatalogo } from '@/content/imagenes-catalogo';
 import { baseDeCobro, palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
 import { colorDePaquete, colorDeServicio } from '@/lib/color-actividad';
-import { hrefDetalleServicio, hrefPaquete } from '@/lib/booking-href';
+import { hrefDetalleServicio } from '@/lib/booking-href';
+import { hrefDetallePaquete } from '@/lib/routes';
 import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
 import { aMoneda } from '@/lib/moneda';
 import type { VistaProducto } from '@/components/tarjeta-producto';
@@ -55,6 +56,6 @@ export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: M
       ? { ...precioDe((m) => calcularPrecioPaquete(paquete, m).precioFinal, lang, moneda), base: base.texto, conDesde: base.conDesde }
       : null,
     capacidad: null,
-    hrefDetalle: hrefPaquete(paquete, lang, moneda),
+    hrefDetalle: hrefDetallePaquete(lang, paquete.sede_slug, paquete.slug, moneda),
   };
 }

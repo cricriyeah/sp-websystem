@@ -12,3 +12,9 @@ export function hrefInicio(lang: Locale, ancla?: string): string {
 export function hrefSede(lang: Locale, slug: string, ancla?: string): string {
   return `/${lang}/sede/${encodeURIComponent(slug)}${anclaNormalizada(ancla)}`;
 }
+
+/** La página de un paquete de la sede (F10). La moneda viaja en `?moneda=` solo si no es la de siempre. */
+export function hrefDetallePaquete(lang: Locale, sedeSlug: string, paqueteSlug: string, moneda?: 'MXN' | 'USD'): string {
+  const ruta = `/${lang}/sede/${encodeURIComponent(sedeSlug)}/paquete/${encodeURIComponent(paqueteSlug)}`;
+  return moneda ? `${ruta}?moneda=${moneda}` : ruta;
+}

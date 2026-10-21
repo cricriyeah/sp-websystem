@@ -42,15 +42,16 @@ const ENLACE = 'inline-flex min-h-11 items-center gap-1 texto-pequeno font-semib
 
 /**
  * Una empresa del tablero del hub (F10): un bloque 3:2 de color plano con su logo, y debajo quién es,
- * dónde opera, qué hace y a dónde ir. El color es el que deja verse a su logo (ver `MARCAS`).
+ * dónde opera, qué hace y a dónde ir. El color es el que deja verse a su logo (ver `MARCAS`). Con una o dos
+ * empresas (los detalles) va `horizontal`: el bloque a la izquierda y el texto a su lado.
  *
  * Server Component.
  */
-export function TarjetaEmpresa({ empresa, textos }: { empresa: VistaEmpresa; textos: TextosEmpresa }) {
+export function TarjetaEmpresa({ empresa, textos, horizontal = false }: { empresa: VistaEmpresa; textos: TextosEmpresa; horizontal?: boolean }) {
   const externo = (accion: string) => textos.pestanaNueva.replace('{accion}', accion).replace('{empresa}', empresa.nombre);
   const logo = empresa.logoLibre ?? empresa.logo;
   return (
-    <li className="group flex flex-col gap-3">
+    <li className={cn('group', horizontal ? 'grid gap-6 md:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] md:items-center md:gap-x-14' : 'flex flex-col gap-3')}>
       <div
         className={cn(
           'relative aspect-[3/2] overflow-hidden transition-transform duration-[400ms] ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:-translate-y-1',
@@ -69,36 +70,38 @@ export function TarjetaEmpresa({ empresa, textos }: { empresa: VistaEmpresa; tex
           <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center texto-mono-mayus text-5xl font-bold text-tinta">{iniciales(empresa.nombre)}</span>
         )}
       </div>
-      <h3 className="mt-2 texto-mono-mayus text-xl font-bold leading-tight text-balance break-words text-foreground">{empresa.nombre}</h3>
-      <p className="texto-pequeno font-semibold text-foreground">{empresa.sedes.map((s) => s.nombre).join(' · ')}</p>
-      {empresa.tambienConocidaComo && (
-        <p className="texto-pequeno text-foreground">{textos.tambienConocida.replace('{nombre}', empresa.tambienConocidaComo)}</p>
-      )}
-      <p className="max-w-[60ch] texto-cuerpo text-foreground">{empresa.descripcion}</p>
-      {empresa.contacto && (
-        <p className="texto-pequeno text-foreground">
-          {empresa.contacto.tipo === 'whatsapp' ? textos.whatsapp : textos.telefono}:{' '}
-          <a href={`tel:${empresa.contacto.numero.replace(/[^\d+]/g, '')}`} className="inline-flex min-h-11 items-center font-semibold">
-            {empresa.contacto.numero}
-          </a>
-        </p>
-      )}
-      <div className="flex flex-wrap gap-x-4">
-        {empresa.sedes.map((sede) => (
-          <Link key={sede.href} href={sede.href} className={ENLACE}>{textos.verServiciosEn.replace('{sede}', sede.nombre)}</Link>
-        ))}
-        {empresa.redes.map((red) => (
-          <a key={red.url} href={red.url} target="_blank" rel="noopener noreferrer" aria-label={externo(red.nombre)} className={ENLACE}>
-            {red.nombre}
-            <ArrowUpRight size={16} aria-hidden="true" />
-          </a>
-        ))}
-        {empresa.web && (
-          <a href={empresa.web} target="_blank" rel="noopener noreferrer" aria-label={externo(textos.sitioOficial)} className={ENLACE}>
-            {textos.sitioOficial}
-            <ArrowUpRight size={16} aria-hidden="true" />
-          </a>
+      <div className="flex flex-col gap-3">
+        <h3 className="mt-2 texto-mono-mayus text-xl font-bold leading-tight text-balance break-words text-foreground">{empresa.nombre}</h3>
+        <p className="texto-pequeno font-semibold text-foreground">{empresa.sedes.map((s) => s.nombre).join(' · ')}</p>
+        {empresa.tambienConocidaComo && (
+          <p className="texto-pequeno text-foreground">{textos.tambienConocida.replace('{nombre}', empresa.tambienConocidaComo)}</p>
         )}
+        <p className="max-w-[60ch] texto-cuerpo text-foreground">{empresa.descripcion}</p>
+        {empresa.contacto && (
+          <p className="texto-pequeno text-foreground">
+            {empresa.contacto.tipo === 'whatsapp' ? textos.whatsapp : textos.telefono}:{' '}
+            <a href={`tel:${empresa.contacto.numero.replace(/[^\d+]/g, '')}`} className="inline-flex min-h-11 items-center font-semibold">
+              {empresa.contacto.numero}
+            </a>
+          </p>
+        )}
+        <div className="flex flex-wrap gap-x-4">
+          {empresa.sedes.map((sede) => (
+            <Link key={sede.href} href={sede.href} className={ENLACE}>{textos.verServiciosEn.replace('{sede}', sede.nombre)}</Link>
+          ))}
+          {empresa.redes.map((red) => (
+            <a key={red.url} href={red.url} target="_blank" rel="noopener noreferrer" aria-label={externo(red.nombre)} className={ENLACE}>
+              {red.nombre}
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+          ))}
+          {empresa.web && (
+            <a href={empresa.web} target="_blank" rel="noopener noreferrer" aria-label={externo(textos.sitioOficial)} className={ENLACE}>
+              {textos.sitioOficial}
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+          )}
+        </div>
       </div>
     </li>
   );

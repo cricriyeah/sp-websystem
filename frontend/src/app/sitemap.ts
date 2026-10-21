@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { LOCALES, rutasEstaticas, rutasSedes, absolutaEn } from '@/lib/site';
+import { LOCALES, rutasEstaticas, rutasPaquetes, rutasSedes, absolutaEn } from '@/lib/site';
 
 function entradaDe(lang: (typeof LOCALES)[number], ruta: string, ahora: Date) {
   return {
@@ -17,8 +17,8 @@ function entradaDe(lang: (typeof LOCALES)[number], ruta: string, ahora: Date) {
 }
 
 /**
- * Una entrada por pagina y por idioma. Las rutas de sede se agregan por
- * idioma a partir de una sola lista reconciliada (el índice no varía por idioma).
+ * Una entrada por pagina y por idioma. Las rutas de sede y de paquete se
+ * agregan por idioma a partir de una sola lista reconciliada (el índice no varía por idioma).
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const ahora = new Date();
@@ -27,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     rutasEstaticas.filter((ruta) => ruta !== '/reservar').map((ruta) => entradaDe(lang, ruta, ahora)),
   );
 
-  const rutas = await rutasSedes();
+  const rutas = [...(await rutasSedes()), ...(await rutasPaquetes())];
   const deSede = LOCALES.flatMap((lang) =>
     rutas.map((ruta) => entradaDe(lang, ruta, ahora)),
   );

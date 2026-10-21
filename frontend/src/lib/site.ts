@@ -1,6 +1,6 @@
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE } from '@/content/sedes-indice';
-import { getSedes } from './api';
+import { getPaquetesSede, getSedes } from './api';
 import { sedesActivas } from './reconciliar-sedes';
 
 // URL publica del sitio. Hace falta para canonicals, hreflang, sitemap y para
@@ -28,6 +28,19 @@ export const rutasEstaticas = ['', '/reservar', '/deslinde', '/privacidad'] as c
 export async function rutasSedes(): Promise<string[]> {
   const sedesApi = await getSedes().catch(() => null);
   return sedesActivas(SEDES_INDICE, sedesApi).map((sede) => `/sede/${sede.slug}`);
+}
+
+/** Las páginas de paquete de las sedes activas. Si el catálogo de una sede no responde, esa sede no aporta rutas. */
+export async function rutasPaquetes(): Promise<string[]> {
+  const sedesApi = await getSedes().catch(() => null);
+  const sedes = sedesActivas(SEDES_INDICE, sedesApi);
+  const porSede = await Promise.all(
+    sedes.map(async (sede) => {
+      const paquetes = await getPaquetesSede(sede.slug).catch(() => []);
+      return paquetes.map((paquete) => `/sede/${sede.slug}/paquete/${paquete.slug}`);
+    }),
+  );
+  return porSede.flat();
 }
 
 export const absolutaEn = (lang: Locale, ruta: string = '') => `${SITE_URL}/${lang}${ruta}`;

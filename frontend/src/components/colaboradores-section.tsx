@@ -4,6 +4,7 @@ import { getEmpresa } from '@/content/empresas';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_DE } from '@/lib/secciones-sede';
 import { TarjetaEmpresa, type VistaEmpresa } from '@/components/tarjeta-empresa';
+import { vistaDeEmpresa } from '@/components/vistas-empresa';
 
 type Textos = Dictionary['hubContenido'];
 
@@ -29,19 +30,7 @@ export function ColaboradoresSection({ sedes, lang, textos, id }: {
         if (!existente.sedes.some((s) => s.href === enlace.href)) existente.sedes.push(enlace);
         continue;
       }
-      filas.set(empresa.slug, {
-        slug: empresa.slug,
-        nombre: empresa.nombre,
-        logo: empresa.logo,
-        logoLibre: empresa.logoLibre,
-        campo: empresa.campo,
-        sedes: [enlace],
-        tambienConocidaComo: empresa.tambienConocidaComo,
-        descripcion: empresa.descripcion[lang],
-        redes: empresa.redes.filter((red) => /instagram|facebook/i.test(red.nombre)),
-        web: empresa.webConfirmada ? empresa.web : undefined,
-        contacto: empresa.contacto,
-      });
+      filas.set(empresa.slug, vistaDeEmpresa(empresa, lang, [enlace]));
     }
   }
   const visibles = [...filas.values()].filter((fila) => fila.descripcion.trim());

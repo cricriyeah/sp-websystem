@@ -94,7 +94,7 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                           {partes.map((parte) => (
                             <li key={parte.nombre}>
                               {parte.nombre}
-                              <span className="block texto-pequeno">{textosReservar.opera.replace('{empresa}', parte.empresa)}</span>
+                              <span className="block texto-cuerpo">{textosReservar.opera.replace('{empresa}', parte.empresa)}</span>
                             </li>
                           ))}
                         </ul>
