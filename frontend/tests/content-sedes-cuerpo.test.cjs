@@ -38,7 +38,7 @@ test('la-ventana existe con negocio null (temporada/incluye no viven aqui, viven
   const es = c.getSedeContenido('la-ventana', 'es');
   assert.ok(es);
   assert.equal(es.negocio, null);
-  assert.equal(es.hero.video, '/videos/videohero.webm');
+  assert.equal(es.hero.video, '/videos/ventana-hero.webm');
   assert.ok(es.hero.imagen);
   assert.deepEqual(es.hero.facts, []);
 });

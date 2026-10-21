@@ -23,6 +23,18 @@ const FOTOS: Record<string, Foto> = {
       en: 'Freshly caught yellowtail by a sea cliff',
     },
   },
+  'servicio:la-ventana-travel/avistamiento-ballenas-orcas': {
+    src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
+    alt: { es: 'Dos orcas nadando bajo la superficie del mar', en: 'Two orcas swimming just below the sea surface' },
+  },
+  'servicio:la-ventana-travel/tour-isla-cerralvo-privado': {
+    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-privado.webp',
+    alt: { es: 'Una persona haciendo snorkel entre peces rayados', en: 'A person snorkeling among striped fish' },
+  },
+  'servicio:la-ventana-travel/tour-isla-cerralvo-compartido': {
+    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-compartido.webp',
+    alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
+  },
   'servicio:piratas-adventures/pesca-deportiva': {
     src: '/photos/dorado-bajo-toldo.webp',
     alt: { es: 'Dorado recién subido, a la sombra del toldo', en: 'Mahi just brought aboard, in the shade of the canopy' },
