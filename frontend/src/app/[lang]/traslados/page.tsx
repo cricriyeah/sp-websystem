@@ -64,7 +64,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
   });
 
   const empresaEnContenido = EMPRESAS.find((e) => e.slug === empresaSlug);
-  const empresaSello = empresaEnContenido ? { nombre: empresaEnContenido.nombre, logo: empresaEnContenido.logo } : undefined;
+  const empresaSello = empresaEnContenido ? { nombre: empresaEnContenido.nombre, logo: empresaEnContenido.logo, simbolo: empresaEnContenido.simbolo } : undefined;
 
   if (!catalogo || !catalogo.servicio) {
     return (

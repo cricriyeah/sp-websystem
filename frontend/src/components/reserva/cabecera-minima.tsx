@@ -17,7 +17,7 @@ type Props = {
   /** Con un paso anterior al que volver, la flecha lo hace en vez de salir. */
   alPasoAnterior?: () => void;
   /** Checkout de una sola empresa: su logo va junto al nuestro. Con dos empresas, solo el nuestro. */
-  empresa?: { nombre: string; logo?: string };
+  empresa?: { nombre: string; logo?: string; simbolo?: string };
   /** Hay dinero retenido: la marca deja de ser un enlace para que nadie salga por ahí. */
   marcaFija?: boolean;
 };

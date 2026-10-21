@@ -36,7 +36,7 @@ type Props = {
   /** Stepper de la vista con un cobro por paso (null si hay un solo cobro). */
   stepperPagos: (indicePago: number, monto?: number) => Stepper | null;
   volverHref: string;
-  empresa?: { nombre: string; logo?: string };
+  empresa?: { nombre: string; logo?: string; simbolo?: string };
   sellos?: { nombre: string; logo?: string }[];
   totalMovil: string | undefined;
   total: string;
