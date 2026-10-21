@@ -63,6 +63,18 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   const [cancelando, setCancelando] = useState(false);
   const [deshecho, setDeshecho] = useState<Pendiente | null>(null);
   const secuencia = useRef(0);
+  // Alto real del contenido: la banda tween entre alturas en px (con `auto` saltaba) y sigue
+  // los cambios de reserva o de lista abierta.
+  const [alto, setAlto] = useState(0);
+  const observador = useRef<ResizeObserver | null>(null);
+  const medirContenido = useCallback((nodo: HTMLDivElement | null) => {
+    observador.current?.disconnect();
+    observador.current = null;
+    if (!nodo) return;
+    setAlto(nodo.offsetHeight);
+    observador.current = new ResizeObserver(() => setAlto(nodo.offsetHeight));
+    observador.current.observe(nodo);
+  }, []);
   const timerDeshacer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerOcultar = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -285,7 +297,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   };
 
   const aviso = activo && linea && (resumen || problema) ? (
-    <div role="status" aria-live="polite" className={`${estilo} rounded-sheet px-5 py-2 text-hero-ink`}>
+    <div role="status" aria-live="polite" className={`${estilo} rounded-sheet px-5 py-2 text-hero-ink transition-colors duration-300`}>
       <div className="flex flex-col gap-x-8 gap-y-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 lg:flex-1">
           <TextoPlegable abrir={textos.verMas} cerrar={textos.verMenos}>
@@ -324,8 +336,19 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   if (!aviso && !deshacerAviso) return null;
   return <>
     <AnimatePresence initial={false}>
-      {(aviso || deshacerAviso) && <m.div key="continuar-banda" initial={sinMovimiento ? false : { height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }} transition={{ duration: sinMovimiento ? 0 : 0.25 }} className="overflow-hidden">
-        {aviso}{deshacerAviso}
+      {(aviso || deshacerAviso) && <m.div
+        key="continuar-banda"
+        initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
+        animate={{ height: sinMovimiento || !alto ? 'auto' : alto, opacity: 1 }}
+        exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
+        transition={sinMovimiento ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="overflow-hidden"
+      >
+        <div ref={medirContenido}>
+          <m.div key={activo?.checkoutId ?? 'deshacer'} initial={sinMovimiento ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+            {aviso}{deshacerAviso}
+          </m.div>
+        </div>
       </m.div>}
     </AnimatePresence>
     {dialogo}

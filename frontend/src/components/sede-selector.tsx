@@ -12,9 +12,12 @@ import { hrefSede } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 
-// La lista se abre como un círculo que crece desde el botón (arriba a la derecha de su caja).
-const ABRE_CERRADO = 'circle(0% at calc(100% - 1.5rem) 0%)';
-const ABRE_ABIERTO = 'circle(150% at calc(100% - 1.5rem) 0%)';
+// Compacto: el círculo se estira a píldora hacia la izquierda y, ya abierta, la lista cae desde ella.
+// Al cerrar, el orden se invierte: primero se recoge la lista y después la píldora vuelve a círculo.
+const ANCHO_PANEL = 'min(15rem, calc(100vw - 2rem))';
+const LISTA_CERRADA = 'inset(0 -20px 100% -20px)';
+const LISTA_ABIERTA = 'inset(-20px -20px -40px -20px)';
+const CURVA = [0.16, 1, 0.3, 1] as const;
 
 export type SedeOpcion = Pick<SedeIndiceEntry, 'slug' | 'nombre'>;
 
@@ -129,17 +132,32 @@ export function SedeSelector({
     // ganaba y el selector se veía en móvil, empujando el botón de menú fuera de la pantalla.
     <div ref={ref} className={cn('relative inline-block text-left', className)}>
       {compacto ? (
-        <Button
-          variante="libre"
-          disabled={!puedeAbrir}
-          onClick={() => puedeAbrir && setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-haspopup="listbox"
-          aria-label={`${label}: ${nombreMostrado}`}
-          className="flex size-12 items-center justify-center rounded-full bg-tinta text-white transition-[background-color,transform] duration-150 hover:bg-cafe active:scale-[0.96] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado"
+        <m.div
+          initial={false}
+          animate={{ width: open ? ANCHO_PANEL : '3rem' }}
+          transition={sinMovimiento ? { duration: 0 } : { duration: 0.32, ease: CURVA, delay: open ? 0 : 0.16 }}
+          className="relative h-12 max-w-full overflow-hidden rounded-full bg-tinta text-white"
         >
-          <MapPin size={22} weight="fill" aria-hidden="true" />
-        </Button>
+            <Button
+              variante="libre"
+              disabled={!puedeAbrir}
+              onClick={() => puedeAbrir && setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-haspopup="listbox"
+              aria-label={`${label}: ${nombreMostrado}`}
+              className="flex h-full w-full items-center justify-end transition-colors duration-150 hover:bg-cafe active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado"
+            >
+              <span
+                aria-hidden="true"
+                className={cn('min-w-0 flex-1 truncate pl-5 text-left texto-cuerpo font-semibold transition-opacity duration-200', open ? 'opacity-100 delay-150' : 'opacity-0')}
+              >
+                {nombreMostrado}
+              </span>
+              <span className="flex size-12 shrink-0 items-center justify-center">
+                <MapPin size={22} weight="fill" aria-hidden="true" />
+              </span>
+            </Button>
+        </m.div>
       ) : (
         <Button
           variante="libre"
@@ -165,13 +183,14 @@ export function SedeSelector({
           <m.div
             role="listbox"
             aria-label={label}
-            initial={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: ABRE_CERRADO } : { opacity: 0, y: -4, scale: 0.98 }}
-            animate={compacto && !sinMovimiento ? { opacity: 1, clipPath: ABRE_ABIERTO } : { opacity: 1, y: 0, scale: 1 }}
-            exit={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: ABRE_CERRADO } : { opacity: 0, y: -4, scale: 0.98 }}
-            transition={compacto && !sinMovimiento ? { duration: 0.45, ease: [0.16, 1, 0.3, 1] } : { duration: 0.15, ease: 'easeOut' }}
+            initial={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
+            animate={sinMovimiento ? { opacity: 1 } : compacto ? { opacity: 1, clipPath: LISTA_ABIERTA } : { opacity: 1, y: 0, scale: 1 }}
+            exit={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
+            transition={compacto && !sinMovimiento ? { duration: 0.34, ease: CURVA, delay: 0.2 } : { duration: 0.15, ease: 'easeOut' }}
+            style={compacto ? { width: ANCHO_PANEL } : undefined}
             className={cn(
-              'absolute top-full z-50 mt-3 min-w-[15rem] rounded-sheet bg-superficie p-2 shadow-n2',
-              compacto ? 'right-0' : 'left-0',
+              'absolute right-0 top-full z-50 mt-3 rounded-sheet bg-superficie p-2 shadow-n2',
+              !compacto && 'w-max min-w-[15rem] max-w-[calc(100vw-2rem)]',
             )}
           >
             {sedes.map((s) => {

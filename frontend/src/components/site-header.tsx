@@ -183,6 +183,7 @@ export function SiteHeader({
               </Link>
             )}
             {idioma}
+            {variante !== 'hub' && <WhatsappContact nav={nav} tone="plain" />}
             <SedeSelector
               lang={lang}
               sedes={sedesDisponibles}
@@ -192,7 +193,6 @@ export function SiteHeader({
               compacto={variante !== 'hub'}
               className="hidden sm:inline-block"
             />
-            {variante !== 'hub' && <WhatsappContact nav={nav} tone="plain" />}
 
             <Button
               variante="libre"

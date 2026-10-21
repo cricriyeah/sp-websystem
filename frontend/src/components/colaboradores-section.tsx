@@ -41,7 +41,7 @@ export function ColaboradoresSection({ sedes, lang, textos, id }: {
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-12">
         <h2 id={`${id}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.empresasTitulo}</h2>
         <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.empresasTexto}</p>
-        <ul className="mt-10 grid gap-x-2 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-10 grid gap-x-8 gap-y-12 lg:gap-x-12 sm:grid-cols-2 lg:grid-cols-4">
           {visibles.map((empresa) => (
             <TarjetaEmpresa key={empresa.slug} empresa={empresa} textos={textos} />
           ))}
