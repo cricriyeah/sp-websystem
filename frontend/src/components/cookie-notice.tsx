@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
@@ -56,6 +56,7 @@ export function CookieNotice({
   // El almacen no notifica, asi que la respuesta de ahorita se recuerda aparte.
   const [respondioAhora, setRespondioAhora] = useState(false);
   const sinMovimiento = useReducedMotion();
+  const barraRef = useRef<HTMLDivElement>(null);
   const enReserva = RUTA_RESERVA.test(usePathname() ?? '');
 
   const visible = !yaRespondio && !respondioAhora && !enReserva;
@@ -65,6 +66,21 @@ export function CookieNotice({
     setRespondioAhora(true);
   };
 
+  // La barra fija de compra de los detalles (móvil) sube por encima del aviso: lee su alto de `--aviso-alto`.
+  useEffect(() => {
+    const barra = barraRef.current;
+    if (!visible || !barra) return;
+    const raiz = document.documentElement;
+    const medir = () => raiz.style.setProperty('--aviso-alto', `${barra.getBoundingClientRect().height}px`);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(barra);
+    return () => {
+      observador.disconnect();
+      raiz.style.removeProperty('--aviso-alto');
+    };
+  }, [visible]);
+
   return (
     <AnimatePresence>
       {visible && (
@@ -72,41 +88,34 @@ export function CookieNotice({
           // AnimatePresence necesita una key estable para saber que este hijo se
           // fue; sin ella el aviso se queda pintado despues de responder.
           key="aviso-cookies"
+          ref={barraRef}
           initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 24 }}
           transition={{ duration: 0.25 }}
           // z-40: por encima de la pagina, por debajo de los avisos y del modal
           // de amenidades (z-50), que si exigen respuesta.
-          className="fixed inset-x-0 bottom-0 z-40 px-4 pb-4"
+          className="fixed inset-x-0 bottom-0 z-40 bg-cafe-bruma px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-12"
           role="region"
           aria-label={cookies.title}
         >
-          <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-card border border-border bg-superficie p-5 shadow-n2 sm:flex-row sm:items-center sm:gap-6">
-            <p className="text-sm text-foreground">
+          <div className="mx-auto flex max-w-[1440px] flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+            <p className="max-w-[70ch] texto-cuerpo">
               {cookies.body}{' '}
               <Link
                 href={`/${lang}/privacidad`}
-                className="underline underline-offset-2 transition-colors hover:text-accent"
+                className="font-semibold underline underline-offset-2 transition-colors hover:text-cafe"
               >
                 {cookies.more}
               </Link>
             </p>
 
-            <div className="flex shrink-0 gap-2">
-              {/* F3 conserva el aspecto de hoy: los className sustituyen lo que la variante
-                  trae de la marca nueva (fondo blanco, borde fuerte, amarillo de accion).
-                  F7 los quita cuando la variante ya pinte esto por si sola. */}
-              <Button
-                variante="secundario"
-                onClick={() => responder('rechazado')}
-              >
+            {/* Aceptar y rechazar son el mismo botón: mismo color, tamaño y peso. */}
+            <div className="flex shrink-0 gap-2 max-sm:[&>*]:flex-1">
+              <Button variante="campana" onClick={() => responder('rechazado')}>
                 {cookies.reject}
               </Button>
-              <Button
-                variante="principal"
-                onClick={() => responder('aceptado')}
-              >
+              <Button variante="campana" onClick={() => responder('aceptado')}>
                 {cookies.accept}
               </Button>
             </div>
