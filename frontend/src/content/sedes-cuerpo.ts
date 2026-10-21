@@ -359,6 +359,16 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes con hospedaje de La Ventana Travel.',
         facts: [],
       },
+      dia: {
+        titulo: 'Tu día en La Ventana',
+        etiqueta: 'Tu día en La Ventana, momento por momento',
+        momentos: [
+          { titulo: '7:00 am', texto: 'Salimos todos los días entre 7:00 y 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
+          { titulo: 'En el mar', texto: 'Buscamos ballenas y orcas e intentamos nadar con ellos, según lo que haya en la temporada.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'Playa', texto: 'Descansamos en una playa de la isla Cerralvo, con algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+        ],
+      },
       galeria: [
         {
           src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
@@ -429,6 +439,16 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         subtitulo:
           'Explore fly fishing, whale and orca watching, and packages with lodging from La Ventana Travel.',
         facts: [],
+      },
+      dia: {
+        titulo: 'Your day in La Ventana',
+        etiqueta: 'Your day in La Ventana, moment by moment',
+        momentos: [
+          { titulo: '7:00 am', texto: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: 'Snorkel', texto: 'We give you the snorkeling gear and head to a reef to swim among the fish.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
+          { titulo: 'At sea', texto: 'We look for whales and orcas and try to swim with them, depending on the season.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'Beach', texto: 'We rest on a beach on Cerralvo island, with some food, water and soft drinks. In all, 5 to 6 hours.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+        ],
       },
       galeria: [
         {
