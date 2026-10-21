@@ -55,13 +55,12 @@ test('fecha única: un toque elige', () => {
   assert.deepEqual(c.alTocar('fecha_unica', null, '2026-11-05', null), { seleccion: { desde: '2026-11-05', hasta: null }, previa: null });
 });
 
-test('paquete con noches: el primer toque es vista previa y el segundo en el mismo día confirma', () => {
-  const primero = c.alTocar('rango_fijo_paquete', null, '2026-11-05', 3);
-  assert.deepEqual(primero, { previa: '2026-11-05' });
-  const segundo = c.alTocar('rango_fijo_paquete', '2026-11-05', '2026-11-05', 3);
-  assert.deepEqual(segundo, { seleccion: { desde: '2026-11-05', hasta: '2026-11-08' }, previa: null });
-  // Tocar otro día mueve la vista previa, no confirma.
-  assert.deepEqual(c.alTocar('rango_fijo_paquete', '2026-11-05', '2026-11-06', 3), { previa: '2026-11-06' });
+test('paquete con noches: un toque elige la llegada y la salida sale de las noches', () => {
+  assert.deepEqual(c.alTocar('rango_fijo_paquete', null, '2026-11-05', 3), { seleccion: { desde: '2026-11-05', hasta: '2026-11-08' }, previa: null });
+  // Tocar otro día lo elige también: no hay vista previa que confirmar.
+  assert.deepEqual(c.alTocar('rango_fijo_paquete', '2026-11-05', '2026-11-06', 3), { seleccion: { desde: '2026-11-06', hasta: '2026-11-09' }, previa: null });
+  // Cruza el fin de mes: la salida cae en el mes siguiente.
+  assert.deepEqual(c.alTocar('rango_fijo_paquete', null, '2026-10-30', 5), { seleccion: { desde: '2026-10-30', hasta: '2026-11-04' }, previa: null });
 });
 
 test('llegada y salida (o ida y regreso): el primer toque fija el inicio y el segundo, posterior, cierra', () => {

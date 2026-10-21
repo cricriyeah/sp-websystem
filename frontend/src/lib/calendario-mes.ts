@@ -74,16 +74,15 @@ export function estadoDeCelda(iso: string, ctx: ContextoCelda): EstadoCelda {
 export type ResultadoToque = { seleccion?: { desde: string; hasta: string | null }; previa: string | null };
 
 /**
- * Un toque en `iso`. Fecha única: elige. Paquete con noches: el primer toque es vista previa y
- * el segundo en el mismo día confirma. Llegada y salida o ida y regreso: el primer toque fija el
- * inicio y uno posterior cierra el rango; uno igual o anterior reemplaza el inicio.
+ * Un toque en `iso`. Fecha única: elige. Paquete con noches: un toque elige la llegada y la salida sale de
+ * las noches (no hay nada que confirmar: antes pedía un segundo toque y se sentía roto). Llegada y salida
+ * o ida y regreso: el primer toque fija el inicio y uno posterior cierra el rango; uno igual o anterior
+ * reemplaza el inicio.
  */
 export function alTocar(control: ControlFecha, previa: string | null, iso: string, noches: number | null): ResultadoToque {
   if (control === 'fecha_unica') return { seleccion: { desde: iso, hasta: null }, previa: null };
   if (control === 'rango_fijo_paquete') {
-    return previa === iso
-      ? { seleccion: { desde: iso, hasta: sumarDias(iso, Math.max(0, noches ?? 0)) }, previa: null }
-      : { previa: iso };
+    return { seleccion: { desde: iso, hasta: sumarDias(iso, Math.max(0, noches ?? 0)) }, previa: null };
   }
   return previa && iso > previa ? { seleccion: { desde: previa, hasta: iso }, previa: null } : { previa: iso };
 }

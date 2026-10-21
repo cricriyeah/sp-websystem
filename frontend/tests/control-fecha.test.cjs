@@ -38,9 +38,11 @@ test('paquete sin hospedaje: fecha única de inicio', () => {
   assert.deepEqual(c.controlDeFecha({ tipo: 'paquete', noches: 0, pide_hora: true }), { control: 'fecha_unica', pideHora: true });
 });
 
-test('se elige con dos toques solo en los controles de rango', () => {
-  assert.equal(c.pideDosToques('fecha_unica'), false);
-  for (const control of ['rango_llegada_salida', 'rango_fijo_paquete', 'ida_y_regreso']) {
+test('dos toques solo cuando hay dos extremos que elegir: llegada y salida, ida y regreso', () => {
+  for (const control of ['fecha_unica', 'rango_fijo_paquete']) {
+    assert.equal(c.pideDosToques(control), false, control);
+  }
+  for (const control of ['rango_llegada_salida', 'ida_y_regreso']) {
     assert.equal(c.pideDosToques(control), true, control);
   }
 });

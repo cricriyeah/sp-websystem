@@ -33,8 +33,8 @@ export function controlDeFecha(entrada: EntradaControl): { control: ControlFecha
   }
 }
 
-/** En los rangos el primer toque es vista previa y el segundo confirma; en una fecha, un toque elige. */
+/** Llegada y salida e ida y regreso piden dos toques (los dos extremos); una fecha y el rango fijo de un paquete, uno. */
 /** @public Lo usan las pruebas. */
 export function pideDosToques(control: ControlFecha): boolean {
-  return control !== 'fecha_unica';
+  return control === 'rango_llegada_salida' || control === 'ida_y_regreso';
 }

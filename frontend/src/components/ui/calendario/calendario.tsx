@@ -54,8 +54,10 @@ const iniciales = (locale: string) => {
 /**
  * El calendario completo de la reserva (sustituye la tira semanal). Siempre 6 semanas; la celda
  * entera es el área táctil (los días se exceptúan de la separación de 8 px). Fecha única: un toque
- * elige. Rangos: con el dedo, el primer toque es vista previa y el segundo confirma; con ratón o
- * teclado, pasar por encima o enfocar es la vista previa y elegir confirma. Deslizar de lado
+ * elige. Paquete con noches: un toque elige la llegada y la salida sale de las noches; si cruza el fin de
+ * mes, el calendario pasa solo al mes de la salida. Llegada y salida o ida y regreso: con el dedo, el primer
+ * toque fija el inicio y el segundo cierra; con ratón o teclado, pasar por encima o enfocar es la vista
+ * previa y elegir confirma. Deslizar de lado
  * cambia de mes; teclado completo (flechas, Re Pág, Av Pág, Inicio, Fin, Esc).
  */
 export function Calendario({
@@ -111,13 +113,18 @@ export function Calendario({
       return;
     }
     setAvisoSinLugar(false);
-    // Con ratón o teclado la vista previa ya se vio al pasar o enfocar: el rango fijo se elige al primer clic.
-    const tactil = puntero.current === 'touch';
-    const resultado = alTocar(control, control === 'rango_fijo_paquete' && !tactil ? iso : previaVigente, iso, noches);
+    const resultado = alTocar(control, previaVigente, iso, noches);
     setPrevia(resultado.previa);
     if (resultado.seleccion) {
       setSobre(null);
       onSeleccion(resultado.seleccion);
+      // Un rango que termina en otro mes (una estancia que cruza el fin de mes) lleva el calendario a ese
+      // mes: si no, la salida queda fuera de la vista y parece que no se eligió.
+      const fin = resultado.seleccion.hasta;
+      if (control === 'rango_fijo_paquete' && fin && inicioDeMes(fin) > mes) {
+        setDireccion(1);
+        setMes(inicioDeMes(fin));
+      }
     }
   };
 
