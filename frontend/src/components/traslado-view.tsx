@@ -856,6 +856,7 @@ export function TrasladoView({
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
         empresa={empresa}
+        empresasDeslinde={[empresaSlug]}
         volverLabel={traslados.back}
         encabezado={
           <EncabezadoCompra

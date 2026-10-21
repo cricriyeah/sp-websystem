@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutFooter } from '@/components/checkout-footer';
+import { DeslindeEmpresas } from '@/components/checkout/deslinde-contexto';
 import { BarraInferior } from '@/components/reserva/barra-inferior';
 import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import { ProveedorBarra } from '@/components/reserva/contexto-barra';
@@ -23,6 +24,8 @@ type Props = {
   empresa?: { nombre: string; logo?: string };
   /** Hay dinero retenido: la marca de la cabecera no enlaza. */
   marcaFija?: boolean;
+  /** Slugs de las empresas que operan lo que se compra: el deslinde que se enlaza es el de ellas. */
+  empresasDeslinde?: readonly string[];
   /** `EncabezadoCompra`. */
   encabezado: ReactNode;
   /** Aviso a todo el ancho entre el encabezado y el stepper (p. ej. día sin lugar). */
@@ -40,12 +43,13 @@ type Props = {
  * no persigue el scroll).
  */
 export function PaginaCheckout({
-  lang, dict, volverHref, volverLabel, alPasoAnterior, empresa, marcaFija, encabezado, aviso, stepper, pasos, pedido,
+  lang, dict, volverHref, volverLabel, alPasoAnterior, empresa, marcaFija, empresasDeslinde = [], encabezado, aviso, stepper, pasos, pedido,
 }: Props) {
   const movil = useMovil();
   const nombres: [string, string, string] = [dict.checkout.stepper.viaje, dict.checkout.stepper.datos, dict.checkout.stepper.pago];
   return (
     <ProveedorBarra>
+    <DeslindeEmpresas.Provider value={empresasDeslinde}>
     <div className="min-h-dvh bg-background">
       <CabeceraMinima
         lang={lang}
@@ -91,6 +95,7 @@ export function PaginaCheckout({
       )}
       <CheckoutFooter lang={lang} footer={dict.footer} nav={dict.nav} />
     </div>
+    </DeslindeEmpresas.Provider>
     </ProveedorBarra>
   );
 }

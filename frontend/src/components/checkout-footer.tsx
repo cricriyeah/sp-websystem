@@ -1,5 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
+import { useDeslindeEmpresas } from '@/components/checkout/deslinde-contexto';
+import { hrefDeslinde } from '@/lib/routes';
 
 type CheckoutFooterProps = {
   lang: Locale;
@@ -17,11 +21,12 @@ type CheckoutFooterProps = {
  * la vista sin sacar a nadie de la pagina.
  */
 export function CheckoutFooter({ lang, footer, nav }: CheckoutFooterProps) {
+  const empresas = useDeslindeEmpresas();
   return (
     <footer className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-12">
       <nav aria-label={footer.legalLabel} className="flex flex-wrap gap-x-6 gap-y-2">
         <Link
-          href={`/${lang}/deslinde`}
+          href={hrefDeslinde(lang, empresas)}
           className="inline-flex min-h-11 items-center texto-cuerpo text-foreground underline underline-offset-4 transition-colors hover:text-cafe"
         >
           {footer.waiver}

@@ -60,6 +60,6 @@ export default async function PaquetePage({ params, searchParams }: Props) {
     <main>
       <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />
     </main>
-    <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={sede.negocio} sedeSlug={sede.slug} />
+    <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={sede.negocio} sedeSlug={sede.slug} empresasDeslinde={[...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]} />
   </>;
 }

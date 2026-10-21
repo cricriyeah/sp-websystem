@@ -2,8 +2,9 @@
 
 import { useId, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { Plus } from '@phosphor-icons/react';
+import { Plus, WhatsappLogo } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { botonClases } from '@/components/ui/variantes';
 import { CLASE_FONDO, type Fondo } from '@/components/ui/section-shell';
 import { cn } from '@/components/ui/cn';
 
@@ -14,7 +15,7 @@ type FaqSectionProps = {
   preguntas: { q: string; a: string }[];
   fondo: Fondo;
   /** Cierre del bloque: «Si no encuentras tu duda…» al WhatsApp único. Sin número no se pinta. */
-  whatsapp: { texto: string; href: string } | null;
+  whatsapp: { texto: string; boton: string; href: string } | null;
 };
 
 const MAX_PREGUNTAS = 8;
@@ -93,9 +94,13 @@ export function FaqSection({ id, titulo, preguntas, fondo, whatsapp }: FaqSectio
             );
           })}
           {whatsapp && (
-            <a href={whatsapp.href} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center self-start texto-cuerpo font-semibold text-cafe">
-              {whatsapp.texto}
-            </a>
+            <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="texto-subtitulo">{whatsapp.texto}</p>
+              <a href={whatsapp.href} target="_blank" rel="noopener noreferrer" className={botonClases({ variante: 'campana' })}>
+                <WhatsappLogo size={20} weight="fill" aria-hidden="true" />
+                {whatsapp.boton}
+              </a>
+            </div>
           )}
         </div>
       </div>

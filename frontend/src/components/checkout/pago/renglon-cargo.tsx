@@ -1,11 +1,13 @@
 import { CheckCircle, Clock, Lock } from '@phosphor-icons/react';
 import { cn } from '@/components/ui/cn';
+import { EmpresaSello } from '@/components/ui/empresa-sello';
 
 export type EstadoCargo = 'pendiente' | 'retenido' | 'cobrado';
 
 /** Un cobro de un pedido con varias empresas, tal como lo ve el cliente. */
 export type CargoVisible = {
   empresa: string;
+  logo?: string;
   /** Lo que esa empresa opera del paquete (una línea). */
   servicio: string;
   /** Ya con su moneda. */
@@ -25,7 +27,7 @@ const ESTADO = {
 } as const;
 
 /**
- * Un cargo de cruza-empresa: nombre de quien cobra (sin logo), lo que opera, el monto y su estado
+ * Un cargo de cruza-empresa: logo y nombre de quien cobra, lo que opera, el monto y su estado
  * con ícono y texto. El cargo en curso va en un bloque con el borde de control de 2 px; los demás, en gris. Lo usan el encabezado de
  * cada pago y el resumen (panel y hoja «Ver resumen»), así no pueden decir cosas distintas.
  */
@@ -39,6 +41,7 @@ export function RenglonCargo({ cargo }: { cargo: CargoVisible }) {
         cargo.actual ? 'border-2 border-tinta bg-blanco' : 'bg-cafe-bruma',
       )}
     >
+      <EmpresaSello nombre={cargo.empresa} logo={cargo.logo} tamano={32} />
       <div className="min-w-0 flex-1">
         <p className="truncate texto-cuerpo font-semibold text-foreground">{cargo.empresa}</p>
         <p className="truncate texto-cuerpo">{cargo.servicio}</p>

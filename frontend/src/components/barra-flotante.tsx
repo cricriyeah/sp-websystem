@@ -22,8 +22,9 @@ type BarraFlotanteProps = {
  * La barra superior del sitio y del checkout (F10): una píldora flotante blanca, igual
  * en móvil y en escritorio. Al cargar, el fondo nace como un círculo del tamaño del logo y se
  * expande hacia la derecha mientras el contenido aparece dentro (ver `.barra-fondo` y `.barra-resto`
- * en globals.css). El fondo es un hijo aparte para poder animar su ancho sin recortar con
- * `overflow` lo que se despliega fuera de la barra (selectores, menú).
+ * en globals.css). El fondo es un hijo aparte que se revela con `clip-path` (sin tocar el layout
+ * ni recortar con `overflow` lo que se despliega fuera de la barra: selectores, menú); la sombra, otro
+ * hijo quieto que aparece al final.
  *
  * Alto: `--barra-h` (64 px en móvil, 72 en escritorio) más el margen de arriba; `--nav-alto` (globals.css) lo suma. Server Component: lo que necesita estado llega ya armado en `inicio`, `resto` y `menu`.
  */
@@ -32,10 +33,8 @@ export function BarraFlotante({ inicio, resto, menu, debajo, className }: BarraF
     <div className={cn('fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8 lg:pt-4', className)}>
       <div className="relative mx-auto flex w-full flex-col lg:max-w-[1440px]">
         <header className="relative flex h-[var(--barra-h)] items-center gap-4 px-4 sm:px-5 lg:px-7">
-          <span
-            aria-hidden="true"
-            className="barra-fondo absolute inset-y-0 left-0 w-full rounded-full bg-superficie shadow-n2"
-          />
+          <span aria-hidden="true" className="barra-sombra absolute inset-0 rounded-full shadow-n2" />
+          <span aria-hidden="true" className="barra-fondo absolute inset-0 rounded-full bg-superficie" />
           <div className="relative flex shrink-0 items-center">{inicio}</div>
           <div className="barra-resto relative flex min-w-0 flex-1 items-center justify-between gap-3 lg:gap-5">{resto}</div>
         </header>
@@ -78,16 +77,18 @@ export function LogoMarca({ girado = false, retraso = 0 }: LogoMarcaProps) {
 type LogosProps = {
   /** La empresa protagonista de la sede: va junto a nuestra marca, separada por una equis. */
   empresa?: { nombre: string; logo?: string };
+  /** Bajo 640 px no se pinta: la barra del checkout lleva además el botón de atención al cliente y no cabe todo. */
+  ocultoEnMovil?: boolean;
 };
 
 /**
  * La empresa que acompaña a la marca: su logo suelto (sin círculo ni borde) detrás de una equis, o
  * su nombre en texto si todavía no tiene logo. Nunca iniciales: el nombre es la identidad.
  */
-export function LogoEmpresaAlLado({ empresa }: LogosProps) {
+export function LogoEmpresaAlLado({ empresa, ocultoEnMovil = false }: LogosProps) {
   if (!empresa) return null;
   return (
-    <>
+    <div className={cn('flex min-w-0 items-center gap-3', ocultoEnMovil && 'max-sm:hidden')}>
       <X aria-hidden="true" size={14} weight="bold" className="shrink-0 text-foreground" />
       {empresa.logo ? (
         <Image
@@ -100,6 +101,6 @@ export function LogoEmpresaAlLado({ empresa }: LogosProps) {
       ) : (
         <span className="truncate texto-etiqueta">{empresa.nombre}</span>
       )}
-    </>
+    </div>
   );
 }

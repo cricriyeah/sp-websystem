@@ -14,7 +14,7 @@
     },
     "deslinde": {
       "title": "Liability waiver",
-      "description": "Terms and conditions for activities, transportation, and services in the destination with Sal y Sol and affiliated companies."
+      "description": "Terms and conditions for activities, transportation, and services of the company operating your booking."
     },
     "privacidad": {
       "title": "Privacy notice",
@@ -41,12 +41,12 @@
   },
   "privacy": {
     "title": "Privacy notice",
-    "updated": "Last updated: August 2026",
-    "intro": "At Sal y Sol, your trust and peace of mind come first. We use your details exclusively to coordinate your charter and deliver the best possible care and experience out on the water. Here is a clear and transparent breakdown of how we protect your information.",
+    "updated": "Last updated: October 2026",
+    "intro": "At Sun Baja Experience, your trust comes first. We are the agency that runs this website: you book services from local companies here, and this notice explains what we do with your data. Each company providing a service has its own documents; the liability waiver of each one is shown when you book.",
     "sections": [
       {
         "title": "Who is responsible for your data",
-        "body": "Sal y Sol Sportfishing, operating out of Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur, Mexico, is responsible for the personal data described in this notice.\n\nFor anything related to your data, including the requests described under «Your rights» below, contact us gladly on WhatsApp at the number shown on this site, or by email at privacidad@salysolsportfishing.com. We respond within 20 business days in accordance with applicable regulations."
+        "body": "Sun Baja Experience, a local travel agency based at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, Baja California Sur, Mexico, is responsible for the personal data described in this notice, which we collect through this website.\n\nFor anything related to your data, including the requests described under «Your rights» below, contact us gladly on WhatsApp at the number shown on this site. We respond within 20 business days in accordance with applicable regulations."
       },
       {
         "title": "What we collect",
@@ -54,7 +54,7 @@
       },
       {
         "title": "What we use it for",
-        "body": "- Confirming your booking, assigning your ideal boat, and keeping in touch to coordinate every detail of your departure.\n- Keeping the liability waiver on record for your protection and that of the crew.\n- Processing payment securely and maintaining transaction records for accounting and tax purposes.\n- Booking attribution, if you booked through a representative or referral link.\n\nAll of the above is used solely to deliver the best possible experience for you. We never sell your data or send unsolicited spam."
+        "body": "- Recording your booking, sending it to the company that runs the service, and keeping in touch to coordinate every detail of your trip.\n- Keeping on record your acceptance of the liability waiver of the company that runs your service, for your protection and that of its team.\n- Processing payment securely and maintaining transaction records for accounting and tax purposes.\n- Booking attribution, if you booked through a representative or referral link.\n\nAll of the above is used solely to deliver the best possible experience for you. We never sell your data or send unsolicited spam."
       },
       {
         "title": "Payment data",
@@ -62,7 +62,7 @@
       },
       {
         "title": "Who we share it with",
-        "body": "We share only the information strictly necessary for the operation of your trip:\n\n- Your **assigned captain** receives your name, phone number, and departure details to give you a warm welcome and great service.\n- **Stripe** securely processes your payment in encrypted form.\n- **Messaging and email services** are used solely to send confirmations and trip updates.\n\nWe do not sell or transfer your data to third parties for any external commercial purpose."
+        "body": "We share only the information strictly necessary for the operation of your trip:\n\n- The **company that runs your service** (and its captain, driver or host) receives your name, phone number and booking details to look after you. Each company protects that data to provide its service.\n- **Stripe** securely processes your payment in encrypted form.\n- **Messaging and email services** are used solely to send confirmations and trip updates.\n\nWe do not sell or transfer your data to third parties for any external commercial purpose."
       },
       {
         "title": "How long we keep it",
@@ -174,7 +174,7 @@
     "pagosTarjetas": "Credit and debit cards",
     "pagosEfectivo": "Cash, for the balance on the day of the trip",
     "pagosEfectivoCorto": "Cash",
-    "credito": "Designed and developed by crwncode studios"
+    "credito": "Designed and developed by"
   },
   "checkout": {
     "problema": {
@@ -279,21 +279,22 @@
       "privacyLinkLabel": "privacy notice",
       "missing": "Please accept the liability waiver and privacy notice to continue.",
       "page": {
+        "empresaGenerica": "the company operating your booking",
         "title": "Liability waiver and release for activities and tourism services",
         "updated": "Last updated: September 11, 2026",
-        "intro": "This is a courtesy translation. The Agreement is executed in Spanish and governed by the laws of Baja California Sur, Mexico; in case of any discrepancy between the two versions, the Spanish version prevails.\n\nThis LIABILITY WAIVER AND RELEASE FOR ACTIVITIES AND TOURISM SERVICES (the \"Agreement\") is entered into electronically on the acceptance date indicated below, between:\n\nsal y sol, as well as each of the operating companies providing ground transportation, water activities, or destination services corresponding to the booking made through this platform in Baja California Sur, Mexico, with reference address at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (jointly and severally, the \"Released Party\");\n\nand\n\nthe person identified by the name, email address and phone number captured in the booking/acceptance form on the Released Party's website (the \"Participant\").\n\n(Each individually a \"Party\" and together the \"Parties.\")",
+        "intro": "This is a courtesy translation. The Agreement is executed in Spanish and governed by the laws of Baja California Sur, Mexico; in case of any discrepancy between the two versions, the Spanish version prevails.\n\nThis LIABILITY WAIVER AND RELEASE FOR ACTIVITIES AND TOURISM SERVICES (the \"Agreement\") is entered into electronically on the acceptance date indicated below, between:\n\n{empresa}, the operating company providing ground transportation, water activities, or destination services corresponding to the booking made through this platform in Baja California Sur, Mexico, with reference address at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (the \"Released Party\");\n\nand\n\nthe person identified by the name, email address and phone number captured in the booking/acceptance form on the Released Party's website (the \"Participant\").\n\n(Each individually a \"Party\" and together the \"Parties.\")",
         "sections": [
           {
             "title": "1. Recitals",
-            "body": "1.1 Purpose of the Release. The Participant wishes to take part in sportfishing activities, ground transportation, maritime excursions, or other destination services provided, organized, or facilitated by the Released Party. As a condition of being allowed to take part in any such activities and services, the Participant enters into this liability waiver voluntarily and with full understanding of its legal consequences to protect all provider companies involved in the booked itinerary.\n\n1.2 Acknowledgment of Risks. The Participant acknowledges that maritime activities, sportfishing, and ground transportation carry inherent risks, including without limitation: for aquatic activities, swell, changing weather conditions, movement of the vessel, use of hooks and fishing gear, prolonged sun exposure, and contact with marine species; and for ground transportation, vehicular traffic, road conditions, and boarding/alighting maneuvers."
+            "body": "1.1 Purpose of the Release. The Participant wishes to take part in sportfishing activities, ground transportation, maritime excursions, or other destination services provided, organized, or facilitated by the Released Party. As a condition of being allowed to take part in any such activities and services, the Participant enters into this liability waiver voluntarily and with full understanding of its legal consequences to protect the provider company of the booked services.\n\n1.2 Acknowledgment of Risks. The Participant acknowledges that maritime activities, sportfishing, and ground transportation carry inherent risks, including without limitation: for aquatic activities, swell, changing weather conditions, movement of the vessel, use of hooks and fishing gear, prolonged sun exposure, and contact with marine species; and for ground transportation, vehicular traffic, road conditions, and boarding/alighting maneuvers."
           },
           {
             "title": "2. Definitions",
-            "body": "Unless otherwise stated, the following terms have the meanings set out below:\n\n\"Activity\" means any sportfishing tour, vessel excursion, ground transportation service, lodging, or recreational activity organized, operated, or provided by the Released Party or its affiliated companies in the destination.\n\n\"Claims\" means any and all liabilities, demands, actions, causes of action, lawsuits, damages, losses, costs or expenses of any kind or nature, known or unknown, foreseen or unforeseen.\n\n\"Effective Date\" means the date on which this Agreement is electronically accepted by the Participant in connection with the booking of activities or services.\n\n\"Participant\" means the person taking part in the activities or services who accepts this release of liability.\n\n\"Released Party\" means sal y sol and each of the operating companies providing services in the destination (including drivers, captains, and tour operators), their owners, directors, officers, employees, agents, representatives, captains, crew members and affiliates."
+            "body": "Unless otherwise stated, the following terms have the meanings set out below:\n\n\"Activity\" means any sportfishing tour, vessel excursion, ground transportation service, lodging, or recreational activity organized, operated, or provided by the Released Party in the destination.\n\n\"Claims\" means any and all liabilities, demands, actions, causes of action, lawsuits, damages, losses, costs or expenses of any kind or nature, known or unknown, foreseen or unforeseen.\n\n\"Effective Date\" means the date on which this Agreement is electronically accepted by the Participant in connection with the booking of activities or services.\n\n\"Participant\" means the person taking part in the activities or services who accepts this release of liability.\n\n\"Released Party\" means {empresa} (including its drivers, captains, and tour operators), its owners, directors, officers, employees, agents, representatives, captains, crew members and affiliates."
           },
           {
             "title": "3. Scope and application of the release",
-            "body": "3.1 When It Applies. This release shall apply at all times while the Participant takes part in any Activity or service provided. The terms and conditions contained herein protect all participating companies jointly and severally and shall remain in full force and effect during each participation with the Released Party.\n\n3.2 Assumption of Risk. The Participant expressly and specifically assumes all risks associated with taking part in activities and transportation, whether foreseeable or unforeseeable, including property damage, personal injury, illness or death arising from participation in the Activity.\n\n3.3 The Release Covers Ordinary Negligence; Gross Negligence Is Excepted. This release covers, and the Participant expressly waives, any claim arising from the ordinary negligence of the Released Party. This release does not cover, and the Released Party does not intend to release, waive or discharge liability for, gross negligence, willful misconduct or intentional acts, to the extent such a limitation is required by applicable law."
+            "body": "3.1 When It Applies. This release shall apply at all times while the Participant takes part in any Activity or service provided. The terms and conditions contained herein protect the provider company and shall remain in full force and effect during each participation with the Released Party.\n\n3.2 Assumption of Risk. The Participant expressly and specifically assumes all risks associated with taking part in activities and transportation, whether foreseeable or unforeseeable, including property damage, personal injury, illness or death arising from participation in the Activity.\n\n3.3 The Release Covers Ordinary Negligence; Gross Negligence Is Excepted. This release covers, and the Participant expressly waives, any claim arising from the ordinary negligence of the Released Party. This release does not cover, and the Released Party does not intend to release, waive or discharge liability for, gross negligence, willful misconduct or intentional acts, to the extent such a limitation is required by applicable law."
           },
           {
             "title": "4. Medical treatment and emergencies",
@@ -305,7 +306,7 @@
           },
           {
             "title": "6. Release of liability and covenant not to sue",
-            "body": "6.1 Release and Discharge. The Participant, on their own behalf and on behalf of their heirs, executors, administrators and assigns, permanently releases, waives and discharges the Released Party and each participating company from any claim, demand or cause of action arising from participation in the Activity or transportation, with the sole exception of claims arising from gross negligence, willful misconduct or intentional acts.\n\n6.2 Covenant Not to Sue. The Participant covenants not to bring any legal action, lawsuit or claim against the Released Party or any participating operator for injury, loss or damage suffered during the tour, transfer, or activity, subject to the limitations set out in this Agreement."
+            "body": "6.1 Release and Discharge. The Participant, on their own behalf and on behalf of their heirs, executors, administrators and assigns, permanently releases, waives and discharges the Released Party from any claim, demand or cause of action arising from participation in the Activity or transportation, with the sole exception of claims arising from gross negligence, willful misconduct or intentional acts.\n\n6.2 Covenant Not to Sue. The Participant covenants not to bring any legal action, lawsuit or claim against the Released Party or any participating operator for injury, loss or damage suffered during the tour, transfer, or activity, subject to the limitations set out in this Agreement."
           },
           {
             "title": "7. Governing law and miscellaneous provisions",
@@ -734,6 +735,7 @@
     "faq": {
       "titulo": "Frequently asked questions",
       "whatsapp": "If you cannot find your answer, message us on WhatsApp",
+      "whatsappBoton": "Message us on WhatsApp",
       "whatsappMensaje": "Hi, I have a question about {sede}."
     }
   },

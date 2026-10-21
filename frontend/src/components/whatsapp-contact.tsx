@@ -4,8 +4,9 @@ import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
 
 type WhatsappContactProps = {
   nav: Dictionary['nav'];
-  /** `nav` va en la barra superior; `menu` es el bloque del menu movil. */
-  variant?: 'nav' | 'menu';
+  /** `nav` va en la barra superior; `menu` es el bloque del menu movil; `icono` es el círculo con el logo,
+   * para barras donde el número no cabe (se oculta desde lg, donde sale `nav`). */
+  variant?: 'nav' | 'menu' | 'icono';
   /** Solo cambia el color de la frase, que va sobre fondos distintos. */
   tone?: 'hero' | 'plain';
 };
@@ -24,6 +25,20 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
 
   const href = whatsappHref(nav.whatsappMessage);
   const numero = whatsappVisible();
+
+  if (variant === 'icono') {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener"
+        aria-label={`${nav.humanContact}: ${numero}`}
+        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-tinta text-white transition-[background-color,transform] hover:bg-cafe active:scale-[0.96] lg:hidden"
+      >
+        <WhatsappLogo size={22} weight="fill" aria-hidden="true" />
+      </a>
+    );
+  }
 
   if (variant === 'menu') {
     return (

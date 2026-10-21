@@ -14,7 +14,7 @@
     },
     "deslinde": {
       "title": "Deslinde de responsabilidad",
-      "description": "Términos y condiciones para las actividades, traslados y servicios de la sede con Sal y Sol y empresas afiliadas."
+      "description": "Términos y condiciones para las actividades, traslados y servicios de la empresa operadora de tu reservación."
     },
     "privacidad": {
       "title": "Aviso de privacidad",
@@ -41,12 +41,12 @@
   },
   "privacy": {
     "title": "Aviso de privacidad",
-    "updated": "Última actualización: agosto de 2026",
-    "intro": "En Sal y Sol nos tomamos muy en serio tu confianza y tranquilidad. Usamos tus datos exclusivamente para coordinar tu viaje y brindarte la mejor atención y servicio en el mar. Aquí te explicamos de forma transparente cómo cuidamos tu información.",
+    "updated": "Última actualización: octubre de 2026",
+    "intro": "En Sun Baja Experience nos tomamos muy en serio tu confianza. Somos la agencia que opera este sitio web: aquí reservas servicios de empresas locales, y este aviso explica qué hacemos nosotros con tus datos. Cada empresa que presta un servicio tiene sus propios documentos; el deslinde de responsabilidad de cada una se muestra al reservar.",
     "sections": [
       {
         "title": "Quién es responsable de tus datos",
-        "body": "Sal y Sol Sportfishing, con punto de operación en Marina La Costa, Rangel y Navarro, La Paz, Baja California Sur, México, es responsable de los datos personales descritos en este aviso.\n\nPara cualquier asunto relacionado con tus datos, incluidas las solicitudes que se describen en «Tus derechos ARCO», escríbenos con gusto por WhatsApp al número que aparece en este sitio, o por correo a privacidad@salysolsportfishing.com. Respondemos en un plazo máximo de 20 días hábiles, conforme a la legislación aplicable."
+        "body": "Sun Baja Experience, agencia de turismo local con domicilio en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, Baja California Sur, México, es responsable de los datos personales descritos en este aviso, que recabamos a través de este sitio web.\n\nPara cualquier asunto relacionado con tus datos, incluidas las solicitudes que se describen en «Tus derechos ARCO», escríbenos con gusto por WhatsApp al número que aparece en este sitio. Respondemos en un plazo máximo de 20 días hábiles, conforme a la legislación aplicable."
       },
       {
         "title": "Qué datos recabamos",
@@ -54,7 +54,7 @@
       },
       {
         "title": "Para qué los usamos",
-        "body": "- Confirmar tu reserva, asignarte la embarcación ideal y comunicarnos contigo para afinar cada detalle de tu salida.\n- Conservar el deslinde de responsabilidad como respaldo para tu protección y la de la tripulación.\n- Procesar el pago de forma segura y conservar el registro de la transacción para efectos contables y fiscales.\n- Atribuir la reserva, si llegaste por recomendación o enlace de un asesor.\n\nTodo lo anterior tiene como único fin prestarte el mejor servicio posible. No comercializamos tus datos ni te enviaremos publicidad invasiva."
+        "body": "- Registrar tu reserva, enviarla a la empresa que opera el servicio y comunicarnos contigo para afinar cada detalle de tu viaje.\n- Conservar la aceptación del deslinde de responsabilidad de la empresa que opera tu servicio, como respaldo para tu protección y la de su equipo.\n- Procesar el pago de forma segura y conservar el registro de la transacción para efectos contables y fiscales.\n- Atribuir la reserva, si llegaste por recomendación o enlace de un asesor.\n\nTodo lo anterior tiene como único fin prestarte el mejor servicio posible. No comercializamos tus datos ni te enviaremos publicidad invasiva."
       },
       {
         "title": "Datos de pago",
@@ -62,7 +62,7 @@
       },
       {
         "title": "Con quién los compartimos",
-        "body": "Compartimos únicamente la información necesaria para la operación de tu viaje:\n\n- Tu **capitán asignado** recibe tu nombre, teléfono y los datos de tu salida para recibirte con la mejor atención.\n- **Stripe** procesa los pagos de forma segura y encriptada.\n- Los **servicios de mensajería y correo** se emplean exclusivamente para enviarte confirmaciones y mantenerte informado.\n\nNo vendemos ni transferimos tus datos a terceros para ningún fin comercial ajeno a tu experiencia de viaje."
+        "body": "Compartimos únicamente la información necesaria para la operación de tu viaje:\n\n- La **empresa que opera tu servicio** (y su capitán, chofer o anfitrión) recibe tu nombre, teléfono y los datos de tu reserva para atenderte. Cada empresa cuida esos datos para prestar su servicio.\n- **Stripe** procesa los pagos de forma segura y encriptada.\n- Los **servicios de mensajería y correo** se emplean exclusivamente para enviarte confirmaciones y mantenerte informado.\n\nNo vendemos ni transferimos tus datos a terceros para ningún fin comercial ajeno a tu experiencia de viaje."
       },
       {
         "title": "Cuánto tiempo los guardamos",
@@ -164,7 +164,7 @@
     "hoursLabel": "Salidas matutinas",
     "hours": "Todos los días, de 5:00 a 7:00 am",
     "officeLabel": "Atención al cliente",
-    "office": "C. Toronja 561, Indeco, Donceles 28, 23070",
+    "office": "La Paz, BCS: C. Toronja 561, Indeco, Donceles 28, 23070",
     "exploreLabel": "Tu aventura",
     "legalLabel": "Información legal",
     "waiver": "Deslinde de responsabilidad",
@@ -174,7 +174,7 @@
     "pagosTarjetas": "Tarjetas de crédito y débito",
     "pagosEfectivo": "Efectivo, para el resto el día del viaje",
     "pagosEfectivoCorto": "Efectivo",
-    "credito": "Diseñado y desarrollado por crwncode studios"
+    "credito": "Diseñado y desarrollado por"
   },
   "checkout": {
     "problema": {
@@ -279,21 +279,22 @@
       "privacyLinkLabel": "aviso de privacidad",
       "missing": "Por favor acepta el deslinde de responsabilidad y el aviso de privacidad para continuar.",
       "page": {
+        "empresaGenerica": "la empresa operadora de tu reservación",
         "title": "Exención de responsabilidad y liberación para actividades y servicios turísticos",
         "updated": "Última actualización: 11 de septiembre de 2026",
-        "intro": "Esta EXENCIÓN DE RESPONSABILIDAD Y LIBERACIÓN PARA ACTIVIDADES Y SERVICIOS TURÍSTICOS (el «Acuerdo») se celebra de forma electrónica en la fecha de aceptación indicada a continuación, entre:\n\nsal y sol, así como cada una de las empresas operadoras, prestadoras de servicios de transporte terrestre, actividades acuáticas o turísticas de la sede correspondientes a la reservación realizada a través de esta plataforma, operadas en Baja California Sur, México, con domicilio de referencia en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (conjuntamente y por separado, la «Parte Liberada»);\n\ny\n\nla persona identificada mediante el nombre, correo electrónico y teléfono capturados en el formulario de reservación/aceptación del sitio web de la Parte Liberada (el «Participante»).\n\n(Cada una, individualmente, una «Parte» y, en conjunto, las «Partes».)",
+        "intro": "Esta EXENCIÓN DE RESPONSABILIDAD Y LIBERACIÓN PARA ACTIVIDADES Y SERVICIOS TURÍSTICOS (el «Acuerdo») se celebra de forma electrónica en la fecha de aceptación indicada a continuación, entre:\n\n{empresa}, empresa operadora y prestadora de servicios de transporte terrestre, actividades acuáticas o turísticas correspondientes a la reservación realizada a través de esta plataforma, que opera en Baja California Sur, México, con domicilio de referencia en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (la «Parte Liberada»);\n\ny\n\nla persona identificada mediante el nombre, correo electrónico y teléfono capturados en el formulario de reservación/aceptación del sitio web de la Parte Liberada (el «Participante»).\n\n(Cada una, individualmente, una «Parte» y, en conjunto, las «Partes».)",
         "sections": [
           {
             "title": "1. Declaraciones",
-            "body": "1.1 Propósito de la Liberación. El Participante desea participar en actividades de pesca deportiva, traslados terrestres, excursiones marítimas u otros servicios turísticos proporcionados, organizados o facilitados por la Parte Liberada en la sede. Como condición para poder participar en cualquiera de dichas actividades y servicios, el Participante suscribe esta exención de responsabilidad de forma voluntaria y con pleno entendimiento de sus consecuencias legales para amparar a todas y cada una de las empresas prestadoras de los servicios reservados.\n\n1.2 Reconocimiento de Riesgos. El Participante reconoce que las actividades náuticas, la pesca deportiva y los traslados terrestres conllevan riesgos inherentes, incluyendo de forma enunciativa más no limitativa: en actividades acuáticas, oleaje, marejadas, condiciones climáticas cambiantes, movimiento de la embarcación, uso de anzuelos y equipo de pesca, exposición solar prolongada y contacto con fauna marina; y en traslados terrestres, tránsito vehicular, condiciones de caminos o carreteras y maniobras de abordaje y descenso."
+            "body": "1.1 Propósito de la Liberación. El Participante desea participar en actividades de pesca deportiva, traslados terrestres, excursiones marítimas u otros servicios turísticos proporcionados, organizados o facilitados por la Parte Liberada en la sede. Como condición para poder participar en cualquiera de dichas actividades y servicios, el Participante suscribe esta exención de responsabilidad de forma voluntaria y con pleno entendimiento de sus consecuencias legales para amparar a la empresa prestadora de los servicios reservados.\n\n1.2 Reconocimiento de Riesgos. El Participante reconoce que las actividades náuticas, la pesca deportiva y los traslados terrestres conllevan riesgos inherentes, incluyendo de forma enunciativa más no limitativa: en actividades acuáticas, oleaje, marejadas, condiciones climáticas cambiantes, movimiento de la embarcación, uso de anzuelos y equipo de pesca, exposición solar prolongada y contacto con fauna marina; y en traslados terrestres, tránsito vehicular, condiciones de caminos o carreteras y maniobras de abordaje y descenso."
           },
           {
             "title": "2. Definiciones",
-            "body": "Salvo que se indique lo contrario, los siguientes términos tendrán los significados que se establecen a continuación:\n\n«Actividad» significa cualquier tour de pesca deportiva, excursión en embarcación, servicio de traslado terrestre, hospedaje o actividad recreativa organizada, operada o facilitada por la Parte Liberada o sus empresas asociadas en la sede.\n\n«Reclamaciones» significa cualquier y todas las responsabilidades, demandas, acciones, causas de acción, juicios, daños, pérdidas, costos o gastos de cualquier tipo o naturaleza, conocidos o desconocidos, previstos o imprevistos.\n\n«Fecha de Vigencia» significa la fecha en que este Acuerdo es aceptado electrónicamente por el Participante en relación con la reservación de las actividades o servicios.\n\n«Participante» significa la persona que participa en las actividades o servicios y que acepta esta liberación de responsabilidad.\n\n«Parte Liberada» significa sal y sol y cada una de las empresas operadoras o prestadoras de servicios de la sede (incluyendo transportistas, capitanes y prestadores turísticos), sus propietarios, directores, funcionarios, empleados, agentes, representantes, choferes, capitanes, tripulantes y afiliadas."
+            "body": "Salvo que se indique lo contrario, los siguientes términos tendrán los significados que se establecen a continuación:\n\n«Actividad» significa cualquier tour de pesca deportiva, excursión en embarcación, servicio de traslado terrestre, hospedaje o actividad recreativa organizada, operada o facilitada por la Parte Liberada en la sede.\n\n«Reclamaciones» significa cualquier y todas las responsabilidades, demandas, acciones, causas de acción, juicios, daños, pérdidas, costos o gastos de cualquier tipo o naturaleza, conocidos o desconocidos, previstos o imprevistos.\n\n«Fecha de Vigencia» significa la fecha en que este Acuerdo es aceptado electrónicamente por el Participante en relación con la reservación de las actividades o servicios.\n\n«Participante» significa la persona que participa en las actividades o servicios y que acepta esta liberación de responsabilidad.\n\n«Parte Liberada» significa {empresa} (incluyendo a sus transportistas, capitanes y prestadores turísticos), sus propietarios, directores, funcionarios, empleados, agentes, representantes, choferes, capitanes, tripulantes y afiliadas."
           },
           {
             "title": "3. Alcance y aplicación de la liberación",
-            "body": "3.1 Momento de Aplicación. Esta liberación aplicará en todo momento en que el Participante tome parte en cualquier Actividad o servicio contratado. Los términos y condiciones aquí contenidos amparan de forma individual y conjunta a todas las empresas prestadoras involucradas y permanecerán en pleno vigor y efecto durante cada participación con la Parte Liberada.\n\n3.2 Asunción de Riesgos. El Participante asume expresa y específicamente todos los riesgos asociados con la participación en las actividades y traslados, previsibles o imprevisibles, incluyendo daños a la propiedad, lesiones personales, enfermedad o muerte derivados de la participación en la Actividad.\n\n3.3 La Liberación Incluye Negligencia Ordinaria; Se Exceptúa la Negligencia Grave. Esta liberación cubre, y el Participante renuncia expresamente a, cualquier reclamación derivada de negligencia ordinaria de la Parte Liberada. Esta liberación no cubre, y la Parte Liberada no pretende liberar, renunciar ni descargar responsabilidad por, negligencia grave, conducta dolosa o actos intencionales, en la medida en que dicha limitación sea exigida por la legislación aplicable."
+            "body": "3.1 Momento de Aplicación. Esta liberación aplicará en todo momento en que el Participante tome parte en cualquier Actividad o servicio contratado. Los términos y condiciones aquí contenidos amparan a la empresa prestadora y permanecerán en pleno vigor y efecto durante cada participación con la Parte Liberada.\n\n3.2 Asunción de Riesgos. El Participante asume expresa y específicamente todos los riesgos asociados con la participación en las actividades y traslados, previsibles o imprevisibles, incluyendo daños a la propiedad, lesiones personales, enfermedad o muerte derivados de la participación en la Actividad.\n\n3.3 La Liberación Incluye Negligencia Ordinaria; Se Exceptúa la Negligencia Grave. Esta liberación cubre, y el Participante renuncia expresamente a, cualquier reclamación derivada de negligencia ordinaria de la Parte Liberada. Esta liberación no cubre, y la Parte Liberada no pretende liberar, renunciar ni descargar responsabilidad por, negligencia grave, conducta dolosa o actos intencionales, en la medida en que dicha limitación sea exigida por la legislación aplicable."
           },
           {
             "title": "4. Tratamiento médico y emergencias",
@@ -305,7 +306,7 @@
           },
           {
             "title": "6. Liberación de responsabilidad y compromiso de no demandar",
-            "body": "6.1 Liberación y Descargo. El Participante, por sí mismo y por sus herederos, albaceas, administradores y cesionarios, libera, renuncia y descarga permanentemente a la Parte Liberada y a cada una de las empresas operadoras participantes de cualquier reclamación, demanda o causa de acción derivada de la participación en la Actividad o traslado, con excepción únicamente de aquellas reclamaciones derivadas de negligencia grave, conducta dolosa o actos intencionales.\n\n6.2 Compromiso de No Demandar. El Participante se compromete a no iniciar ninguna acción legal, demanda o reclamación contra la Parte Liberada ni contra ninguna de las empresas operadoras participantes por lesión, pérdida o daño sufrido durante el tour, traslado o actividad, sujeto a las limitaciones establecidas en este Acuerdo."
+            "body": "6.1 Liberación y Descargo. El Participante, por sí mismo y por sus herederos, albaceas, administradores y cesionarios, libera, renuncia y descarga permanentemente a la Parte Liberada de cualquier reclamación, demanda o causa de acción derivada de la participación en la Actividad o traslado, con excepción únicamente de aquellas reclamaciones derivadas de negligencia grave, conducta dolosa o actos intencionales.\n\n6.2 Compromiso de No Demandar. El Participante se compromete a no iniciar ninguna acción legal, demanda o reclamación contra la Parte Liberada por lesión, pérdida o daño sufrido durante el tour, traslado o actividad, sujeto a las limitaciones establecidas en este Acuerdo."
           },
           {
             "title": "7. Ley aplicable y disposiciones varias",
@@ -734,6 +735,7 @@
     "faq": {
       "titulo": "Preguntas frecuentes",
       "whatsapp": "Si no encuentras tu duda, escríbenos por WhatsApp",
+      "whatsappBoton": "Escribir por WhatsApp",
       "whatsappMensaje": "Hola, tengo una pregunta sobre {sede}."
     }
   },

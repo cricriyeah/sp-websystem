@@ -553,6 +553,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       destinoTarjetaPago={destinoTarjetaPago}
       setDestinoTarjetaPago={setDestinoTarjetaPago}
       sedeSlug={sedeSlug}
+      empresas={empresas}
       onOrdenCancelada={(linea) => {
         reiniciarPedido();
         avisar('info', linea);
@@ -759,6 +760,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
         empresa={paquete.es_cruza_empresa ? undefined : empresas[paquete.empresa_lider_slug]}
+        empresasDeslinde={[...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]}
         volverLabel={textos.back}
         encabezado={
           <EncabezadoCompra

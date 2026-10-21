@@ -1,8 +1,9 @@
+import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { ListaCargos } from '@/components/checkout/pago/renglon-cargo';
 import type { ResumenVivo } from '@/components/reserva/contexto-barra';
 
 /**
- * El contenido del resumen del pedido: quién opera (solo el nombre, sin logo), lo elegido en el viaje,
+ * El contenido del resumen del pedido: quién opera (su logo y su nombre), lo elegido en el viaje,
  * las líneas y, en un bloque negro, el total y «pagarás ahora» si difiere. Lo pintan la tarjeta del
  * panel (escritorio y tablet) y la hoja «Ver resumen» (móvil), así no pueden decir cosas distintas.
  */
@@ -17,10 +18,12 @@ export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], 
         </div>
       )}
       {cargos.length === 0 && sellos.length > 0 && (
-        // Quién opera el viaje: el nombre. En cruza-empresa, uno por empresa.
-        <ul className="flex flex-col gap-1">
+        // Quién opera el viaje: su logo con el nombre. En cruza-empresa, uno por empresa.
+        <ul className="flex flex-col gap-3">
           {sellos.map((s) => (
-            <li key={s.nombre} className="texto-etiqueta text-foreground">{s.nombre}</li>
+            <li key={s.nombre}>
+              <EmpresaSello nombre={s.nombre} logo={s.logo} tamano={32} mostrarNombre />
+            </li>
           ))}
         </ul>
       )}

@@ -5,11 +5,12 @@ import { ArrowLeft } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BarraFlotante, LogoEmpresaAlLado, LogoMarca } from '@/components/barra-flotante';
 import { SelectorIdioma } from '@/components/selector-idioma';
+import { WhatsappContact } from '@/components/whatsapp-contact';
 import { Button } from '@/components/ui/button';
 
 type Props = {
   lang: Locale;
-  nav: Pick<Dictionary['nav'], 'switchLang'>;
+  nav: Dictionary['nav'];
   /** Origen de «salir» (ver `lib/origen.ts`). */
   volverHref: string;
   volverLabel: string;
@@ -51,8 +52,10 @@ export function CabeceraMinima({ lang, nav, volverHref, volverLabel, alPasoAnter
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex min-w-0 items-center gap-3">
               {marcaFija ? marca : <Link href={`/${lang}`} className="inline-flex" aria-label="Sun Baja Experience">{marca}</Link>}
-              <LogoEmpresaAlLado empresa={empresa} />
+              <LogoEmpresaAlLado empresa={empresa} ocultoEnMovil />
             </div>
+            <WhatsappContact nav={nav} variant="icono" />
+            <WhatsappContact nav={nav} tone="plain" />
             <SelectorIdioma lang={lang} label={nav.switchLang} variante="campana" />
           </div>
         </>

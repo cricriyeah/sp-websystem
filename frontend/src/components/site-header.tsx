@@ -189,9 +189,10 @@ export function SiteHeader({
               sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
               placeholder={variante === 'hub' ? nav.eligeSede : undefined}
               label={nav.sedeLabel}
+              compacto={variante !== 'hub'}
               className="hidden sm:inline-block"
             />
-            <WhatsappContact nav={nav} tone="plain" />
+            {variante !== 'hub' && <WhatsappContact nav={nav} tone="plain" />}
 
             <Button
               variante="libre"

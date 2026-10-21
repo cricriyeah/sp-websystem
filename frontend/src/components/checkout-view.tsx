@@ -1528,6 +1528,7 @@ export function CheckoutView({
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
         empresa={empresa}
+        empresasDeslinde={[empresaSlug ?? process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol']}
         volverLabel={checkout.back}
         encabezado={
           <EncabezadoCompra

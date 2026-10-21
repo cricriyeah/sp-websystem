@@ -183,8 +183,8 @@ export function Calendario({
   return (
     <div
       className={cn(
-        'flex flex-col gap-4 rounded-card border border-borde bg-blanco p-2',
-        enTarjeta && 'lg:rounded-none lg:border-0 lg:p-0',
+        'flex flex-col gap-4 rounded-card bg-blanco p-4 shadow-tarjeta',
+        enTarjeta && 'lg:rounded-none lg:p-0 lg:shadow-none',
       )}
     >
       {guia && <p className="texto-pequeno text-apagado" aria-live="polite">{guia}</p>}

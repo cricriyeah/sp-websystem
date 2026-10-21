@@ -12,6 +12,10 @@ import { hrefSede } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 
+// La lista se abre como un círculo que crece desde el botón (arriba a la derecha de su caja).
+const ABRE_CERRADO = 'circle(0% at calc(100% - 1.5rem) 0%)';
+const ABRE_ABIERTO = 'circle(150% at calc(100% - 1.5rem) 0%)';
+
 export type SedeOpcion = Pick<SedeIndiceEntry, 'slug' | 'nombre'>;
 
 type SedeSelectorProps = {
@@ -21,6 +25,8 @@ type SedeSelectorProps = {
   label?: string;
   placeholder?: string;
   onSelectSede?: (sede: SedeOpcion) => void;
+  /** Un círculo negro con el icono; al tocarlo, la lista se abre desde él. Sin él, la píldora con el nombre. */
+  compacto?: boolean;
   className?: string;
 };
 
@@ -31,6 +37,7 @@ export function SedeSelector({
   label = 'Destino',
   placeholder,
   onSelectSede,
+  compacto = false,
   className = '',
 }: SedeSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -121,34 +128,51 @@ export function SedeSelector({
     // `cn` y no plantilla: con `hidden sm:inline-block` desde la cabecera, el `inline-block` propio
     // ganaba y el selector se veía en móvil, empujando el botón de menú fuera de la pantalla.
     <div ref={ref} className={cn('relative inline-block text-left', className)}>
-      <Button
-        variante="libre"
-        disabled={!puedeAbrir}
-        onClick={() => puedeAbrir && setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        className="flex min-h-12 items-center gap-2 rounded-full bg-cafe-bruma px-5 texto-cuerpo font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-borde active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado"
-      >
-        <MapPin size={18} className="shrink-0" weight="fill" aria-hidden="true" />
-        <span className="hidden sm:inline">{label}:</span>
-        <span>{nombreMostrado}</span>
-        <CaretDown
-          size={14}
-          weight="bold"
-          className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-        />
-      </Button>
+      {compacto ? (
+        <Button
+          variante="libre"
+          disabled={!puedeAbrir}
+          onClick={() => puedeAbrir && setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-label={`${label}: ${nombreMostrado}`}
+          className="flex size-12 items-center justify-center rounded-full bg-tinta text-white transition-[background-color,transform] duration-150 hover:bg-cafe active:scale-[0.96] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado"
+        >
+          <MapPin size={22} weight="fill" aria-hidden="true" />
+        </Button>
+      ) : (
+        <Button
+          variante="libre"
+          disabled={!puedeAbrir}
+          onClick={() => puedeAbrir && setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          className="flex min-h-12 items-center gap-2 rounded-full bg-cafe-bruma px-5 texto-cuerpo font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-borde active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado"
+        >
+          <MapPin size={18} className="shrink-0" weight="fill" aria-hidden="true" />
+          <span className="hidden sm:inline">{label}:</span>
+          <span>{nombreMostrado}</span>
+          <CaretDown
+            size={14}
+            weight="bold"
+            className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          />
+        </Button>
+      )}
 
       <AnimatePresence>
         {open && puedeAbrir && (
           <m.div
             role="listbox"
             aria-label={label}
-            initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 top-full z-50 mt-3 min-w-[15rem] rounded-sheet bg-superficie p-2 shadow-n2"
+            initial={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: ABRE_CERRADO } : { opacity: 0, y: -4, scale: 0.98 }}
+            animate={compacto && !sinMovimiento ? { opacity: 1, clipPath: ABRE_ABIERTO } : { opacity: 1, y: 0, scale: 1 }}
+            exit={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: ABRE_CERRADO } : { opacity: 0, y: -4, scale: 0.98 }}
+            transition={compacto && !sinMovimiento ? { duration: 0.45, ease: [0.16, 1, 0.3, 1] } : { duration: 0.15, ease: 'easeOut' }}
+            className={cn(
+              'absolute top-full z-50 mt-3 min-w-[15rem] rounded-sheet bg-superficie p-2 shadow-n2',
+              compacto ? 'right-0' : 'left-0',
+            )}
           >
             {sedes.map((s) => {
               const selected = sedeActiva?.slug === s.slug;

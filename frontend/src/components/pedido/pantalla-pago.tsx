@@ -54,6 +54,8 @@ type Props = {
   destinoTarjetaPago: HTMLElement | null;
   setDestinoTarjetaPago: (nodo: HTMLElement | null) => void;
   sedeSlug: string;
+  /** `{ nombre, logo }` por slug (de `content/empresas`): el logo de cada cargo. */
+  empresas: Record<string, { nombre: string; logo?: string }>;
   /** La orden se canceló y se liberó lo retenido: vuelve al formulario con este aviso. */
   onOrdenCancelada: (linea: string) => void;
 };
@@ -69,7 +71,7 @@ export function PantallaPago({
   lang, dict, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
   stepperPagos, volverHref, empresa, sellos, totalMovil, totalConMoneda, ayudaMensaje, detalleCompra, lineasViaje,
   lineasContacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
-  sedeSlug, onOrdenCancelada,
+  sedeSlug, empresas, onOrdenCancelada,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
   const movil = useMovil();
@@ -94,6 +96,7 @@ export function PantallaPago({
     const estado: EstadoCargo = indice < pago.indice ? 'retenido' : 'pendiente';
     return {
       empresa: nombreEmpresa(item.empresaSlug),
+      logo: empresas[item.empresaSlug]?.logo,
       servicio: paquete.servicios_asociados
         .filter((c) => c.servicio.empresa_slug === item.empresaSlug)
         .map((c) => c.servicio.nombre).join(', '),
@@ -154,6 +157,7 @@ export function PantallaPago({
       alPasoAnterior={motor === 'orden' && !cancelacion.cerrada ? cancelacion.abrir : undefined}
       aviso={cancelacion.aviso ?? undefined}
       empresa={empresa}
+      empresasDeslinde={[...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]}
       marcaFija={motor === 'orden'}
       volverLabel={textos.back}
       encabezado={

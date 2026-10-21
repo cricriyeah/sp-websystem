@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { CheckCircle, Lock, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { BloqueDePaso, CheckoutSectionCard } from '@/components/checkout-section-card';
+import { useDeslindeEmpresas } from '@/components/checkout/deslinde-contexto';
+import { hrefDeslinde } from '@/lib/routes';
 import { Despliegue } from '@/components/ui/despliegue';
 import { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
 import type { StripePanelProps } from '@/components/checkout/pago/tipos';
@@ -51,6 +53,7 @@ export function TarjetaComoPagas({
   onSubmit,
   onCaptchaToken,
 }: StripePanelProps) {
+  const empresasDeslinde = useDeslindeEmpresas();
   // Cerrado por default: la mayoria de las reservas no lleva codigo — una
   // correccion disponible para quien la busca, no la primera decision.
   const [promoAbierto, setPromoAbierto] = useState(false);
@@ -244,7 +247,7 @@ export function TarjetaComoPagas({
                   <span>
                     {checkout.waiver.accept}{' '}
                     <Link
-                      href={`/${lang}/deslinde`}
+                      href={hrefDeslinde(lang, empresasDeslinde)}
                       target="_blank"
                       rel="noopener"
                       className="font-semibold underline underline-offset-2"

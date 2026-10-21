@@ -18,3 +18,13 @@ export function hrefDetallePaquete(lang: Locale, sedeSlug: string, paqueteSlug: 
   const ruta = `/${lang}/sede/${encodeURIComponent(sedeSlug)}/paquete/${encodeURIComponent(paqueteSlug)}`;
   return moneda ? `${ruta}?moneda=${moneda}` : ruta;
 }
+
+/**
+ * El deslinde de responsabilidad es de cada empresa: con sus slugs en `?empresa=` la página lleva su nombre.
+ * Con varias (un paquete de dos empresas) los separa con comas. Sin ellas, el texto habla de «la empresa
+ * operadora de tu reservación».
+ */
+export function hrefDeslinde(lang: Locale, empresaSlugs: readonly string[] = []): string {
+  const slugs = [...new Set(empresaSlugs.filter(Boolean))];
+  return slugs.length > 0 ? `/${lang}/deslinde?empresa=${slugs.map(encodeURIComponent).join(',')}` : `/${lang}/deslinde`;
+}

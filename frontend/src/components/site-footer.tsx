@@ -5,7 +5,7 @@ import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
 import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
-import { hrefInicio, hrefSede } from '@/lib/routes';
+import { hrefDeslinde, hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 
 type SiteFooterProps = {
@@ -18,6 +18,8 @@ type SiteFooterProps = {
   sedeSlug?: string;
   /** El menú de la sede (ver `SiteHeader`). Sin él, una página de sede lleva solo «Reservar». */
   anclas?: { ancla: string; etiqueta: string }[];
+  /** Slugs de la empresa de la sede: el deslinde que se enlaza es el suyo. Sin ellos, el texto es genérico. */
+  empresasDeslinde?: readonly string[];
 };
 
 const FORMAS_DE_PAGO = [
@@ -35,7 +37,7 @@ const ENLACE = 'inline-flex min-h-11 items-center texto-cuerpo transition-colors
  * número de atención al cliente, la oficina, el punto de encuentro y los horarios), cómo pago (las
  * tarjetas y el efectivo) y qué dice lo legal.
  */
-export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, anclas }: SiteFooterProps) {
+export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, anclas, empresasDeslinde }: SiteFooterProps) {
   const baseSede = sedeSlug ? hrefSede(lang, sedeSlug) : null;
   const secciones = baseSede
     ? (anclas?.length ? anclas.map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta })) : [{ href: baseSede, label: nav.reservar }])
@@ -47,7 +49,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
       ];
 
   const legales = [
-    { href: `/${lang}/deslinde`, label: footer.waiver },
+    { href: hrefDeslinde(lang, empresasDeslinde), label: footer.waiver },
     { href: `/${lang}/privacidad`, label: footer.privacy },
   ];
 
@@ -132,21 +134,20 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
           </nav>
         </div>
 
-        {/* El logo completo, a todo el ancho y en blanco (el SVG es negro sin relleno propio). */}
-        <Image
-          src="/sunbajaexperience/logolg.svg"
-          alt="Sun Baja Experience"
-          width={286}
-          height={91}
-          sizes="(min-width: 1440px) 1344px, 100vw"
-          className="mt-16 h-auto w-full invert lg:mt-24"
-        />
+        {/* El logo completo, a todo el ancho y en blanco (los SVG son negros sin relleno propio). Va en dos
+            capas con el mismo encuadre: el isotipo da una vuelta mientras el pie entra en pantalla y las
+            letras aparecen desde la izquierda al llegar al final (globals.css, `.logo-isotipo` y
+            `.logo-letras`; sin `animation-timeline` quedan quietos y completos). */}
+        <div role="img" aria-label="Sun Baja Experience" className="relative mt-16 aspect-[286.32/91.47] w-full lg:mt-24">
+          <Image src="/sunbajaexperience/logolg-isotipo.svg" alt="" fill sizes="(min-width: 1440px) 1344px, 100vw" className="logo-isotipo invert" />
+          <Image src="/sunbajaexperience/logolg-letras.svg" alt="" fill sizes="(min-width: 1440px) 1344px, 100vw" className="logo-letras invert" />
+        </div>
 
         <div className="flex flex-col gap-2 pb-10 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <span className="texto-cuerpo">
             Sun Baja Experience. {footer.rights}
           </span>
-          <span className="texto-cuerpo">{footer.credito}</span>
+          <span className="texto-cuerpo">{footer.credito} <strong className="font-bold">crwncode studios</strong></span>
         </div>
       </div>
     </footer>

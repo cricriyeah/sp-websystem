@@ -280,10 +280,14 @@
 }
 
 /* Barra superior (barra-flotante.tsx): al cargar, el fondo nace como un circulo del tamano del logo
-   y se abre hacia la derecha; el logo da una vuelta y el resto aparece cuando el fondo ya casi llego. */
+   y se abre hacia la derecha; el logo da media vuelta y el resto aparece cuando el fondo ya casi llego.
+   Solo `clip-path`, `opacity` y `transform`: nada recalcula el layout durante la animacion. */
 @keyframes barra-abre {
   from {
-    width: var(--barra-h);
+    clip-path: inset(0 calc(100% - var(--barra-h)) 0 0 round 9999px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 9999px);
   }
 }
 
@@ -300,6 +304,20 @@
   }
   40% {
     opacity: 1;
+  }
+}
+
+/* Logo del pie: una vuelta del isotipo y las letras que entran desde la izquierda. */
+@keyframes isotipo-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes letras-entran {
+  from {
+    opacity: 0;
+    transform: translateX(-8%);
   }
 }
 
@@ -388,11 +406,18 @@
     animation: barra-abre 1000ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
   }
 
+  /* La sombra va en su propia capa quieta y aparece al final: con la sombra en el fondo, el recorte la
+     cortaria y habria que redibujar el difuminado en cada cuadro. */
+  .barra-sombra {
+    animation: barra-aparece 350ms ease-out 1000ms both;
+  }
+
   .barra-resto {
     animation: barra-aparece 450ms cubic-bezier(0.2, 0, 0, 1) 750ms both;
   }
 
   .logo-gira {
+    will-change: transform, opacity;
     animation: logo-gira 1500ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
@@ -408,6 +433,23 @@
 
   .palabra-entra {
     animation: palabra-entra 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* El logo del pie, en dos capas (footer): el isotipo gira mientras el pie entra en pantalla y las letras
+     entran desde la izquierda al llegar al final. Atadas al scroll, solo donde hay `animation-timeline`. */
+  @supports (animation-timeline: view()) {
+    .logo-isotipo {
+      transform-origin: 16% 50%;
+      animation: isotipo-gira linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 100%;
+    }
+
+    .logo-letras {
+      animation: letras-entran linear both;
+      animation-timeline: view();
+      animation-range: entry 55% entry 100%;
+    }
   }
 
   /* Donde el navegador lo soporta, cada pieza se revela al entrar en cuadro
@@ -620,11 +662,17 @@
     }
   }
 
+  /* El logo del pie no se anima con el scroll: queda completo y quieto. */
+  .logo-isotipo,
+  .logo-letras {
+    animation: none;
+  }
+
   /* El giro del logo y la apertura de la barra pasan a un fundido: la barra nace ya abierta. */
   @keyframes barra-abre {
     from,
     to {
-      width: 100%;
+      clip-path: inset(0 0 0 0 round 9999px);
     }
   }
 

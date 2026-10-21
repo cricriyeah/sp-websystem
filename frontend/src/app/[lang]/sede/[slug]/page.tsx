@@ -52,7 +52,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   // Máximo 8 preguntas: las que se pintan son las mismas que van al JSON-LD.
   const faq = contenido.faq?.slice(0, 8);
   const textosFaq = dict.sedeContenido.faq;
-  const whatsappFaq = tieneWhatsapp ? { texto: textosFaq.whatsapp, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null;
+  const whatsappFaq = tieneWhatsapp ? { texto: textosFaq.whatsapp, boton: textosFaq.whatsappBoton, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null;
   // Solo las confirmadas salen del servidor: el texto de una no confirmada nunca viaja al navegador.
   const opiniones = empresas.flatMap((e) => e.resenas.filter((r) => r.confirmada).map((r) => ({
     autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: e.nombre, logo: e.logo },
@@ -100,7 +100,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     <main>
       {ids.map((id) => <Fragment key={id}>{pintar[id]?.(fondos[id] ?? 'blanco')}</Fragment>)}
     </main>
-    <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={contenido.negocio} sedeSlug={slug} anclas={anclas} />
+    <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={contenido.negocio} sedeSlug={slug} anclas={anclas} empresasDeslinde={marcaSede ? [contenido.empresaProtagonistaSlug ?? ''] : []} />
   </>;
 }
 
