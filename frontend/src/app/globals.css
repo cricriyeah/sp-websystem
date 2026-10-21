@@ -472,6 +472,21 @@
       animation-timeline: --pie;
       animation-range: entry 60% entry 100%;
     }
+
+    /* En móvil el pie es altísimo (los grupos van apilados) y el logo queda en su último tramo: con la
+       línea de tiempo del pie entero, la animación ya terminó antes de que el logo asome. Aquí se ata a los
+       últimos píxeles del scroll de la página, que es cuando el logo sube a la pantalla. */
+    @media (max-width: 639px) {
+      .logo-isotipo {
+        animation-timeline: scroll(root block);
+        animation-range: calc(100% - 280px) calc(100% - 60px);
+      }
+
+      .logo-letras {
+        animation-timeline: scroll(root block);
+        animation-range: calc(100% - 180px) calc(100% - 10px);
+      }
+    }
   }
 
   /* Donde el navegador lo soporta, cada pieza se revela al entrar en cuadro
