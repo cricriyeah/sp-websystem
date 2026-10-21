@@ -109,13 +109,13 @@ export function BloqueExtras({
             </span>
           </label>
           {!marcada && sp.aviso_reforzado && (
-            <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-2.5 text-sm text-foreground">
-              <Warning size={14} className="mt-0.5 shrink-0 text-aviso" />
+            <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-3 text-base text-foreground sm:text-sm">
+              <Warning size={16} className="mt-0.5 shrink-0 text-aviso" />
               <p>{checkout.amenitiesModal.reinforcedWarning}</p>
             </div>
           )}
           {marcada && sp.cantidad_editable && people > 1 && (
-            <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-cafe-bruma px-4 py-2.5 text-sm text-foreground">
+            <div className="flex min-h-14 items-center justify-between gap-3 border border-t-0 border-borde-control bg-cafe-bruma px-4 py-3 text-base text-foreground sm:min-h-0 sm:text-sm">
               <span className="text-muted">{checkout.licenseQuantity.question}</span>
               <span className="flex items-center gap-2">
                 <Button
@@ -124,9 +124,9 @@ export function BloqueExtras({
                   onClick={() => onCantidad(sp.id, -1)}
                   disabled={locked || cantidad <= 1}
                   aria-label="-"
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30"
+                  className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30"
                 >
-                  <Minus size={12} />
+                  <Minus size={16} />
                 </Button>
                 <span>{deLabel(cantidad, people)}</span>
                 <Button
@@ -135,9 +135,9 @@ export function BloqueExtras({
                   onClick={() => onCantidad(sp.id, 1)}
                   disabled={locked || cantidad >= people}
                   aria-label="+"
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30"
+                  className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30"
                 >
-                  <Plus size={12} />
+                  <Plus size={16} />
                 </Button>
               </span>
             </div>
@@ -149,7 +149,7 @@ export function BloqueExtras({
     const valor = seleccion?.respuesta ?? '';
     if (sp.tipo_interaccion === 'input_seleccion') {
       return (
-        <div key={sp.id} className="flex flex-col gap-2 text-sm text-foreground">
+        <div key={sp.id} className="flex flex-col gap-1.5 text-base text-foreground sm:text-sm">
           <SelectPersonalizado
             label={`${sp.nombre}${sp.obligatorio ? ' *' : ''}`}
             value={valor}
@@ -168,7 +168,7 @@ export function BloqueExtras({
       <label
         key={sp.id}
         htmlFor={`personalizacion-${sp.id}`}
-        className="flex flex-col gap-2 text-sm text-foreground"
+        className="flex flex-col gap-1.5 text-base text-foreground sm:text-sm"
       >
         <span className="font-medium">
           {sp.nombre}

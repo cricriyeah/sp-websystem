@@ -112,25 +112,25 @@ export function GrupoViaje({
           </span>
         </label>
         <Despliegue abierto={!marcada && Boolean(extra.aviso_reforzado)}>
-          <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-2.5 text-sm text-foreground">
-            <Warning size={14} className="mt-0.5 shrink-0 text-aviso" />
+          <div className="flex items-start gap-2 border border-t-0 border-aviso/40 bg-aviso-fondo px-4 py-3 text-base text-foreground sm:text-sm">
+            <Warning size={16} className="mt-0.5 shrink-0 text-aviso" />
             <p>{checkout.amenitiesModal.reinforcedWarning}</p>
           </div>
         </Despliegue>
         <Despliegue abierto={marcada && Boolean(extra.cantidad_editable) && estado.personas > 1}>
-          <div className="flex items-center justify-between gap-3 border border-t-0 border-border bg-cafe-bruma px-4 py-2.5 text-sm text-foreground">
+          <div className="flex min-h-14 items-center justify-between gap-3 border border-t-0 border-borde-control bg-cafe-bruma px-4 py-3 text-base text-foreground sm:min-h-0 sm:text-sm">
             <span className="text-muted">{checkout.licenseQuantity.question}</span>
             <span className="flex items-center gap-2">
               <Button variante="libre" type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
                 onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad - 1 })}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
-                <Minus size={12} />
+                className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30">
+                <Minus size={16} />
               </Button>
               <span>{checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(estado.personas))}</span>
               <Button variante="libre" type="button" aria-label="+" disabled={cantidad >= estado.personas || bloqueado}
                 onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad + 1 })}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-muted disabled:opacity-30">
-                <Plus size={12} />
+                className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30">
+                <Plus size={16} />
               </Button>
             </span>
           </div>
@@ -140,7 +140,7 @@ export function GrupoViaje({
 
     if (extra.tipo_interaccion === 'input_seleccion') {
       return (
-        <div key={extra.id} className="text-sm text-foreground">
+        <div key={extra.id} className="text-base text-foreground sm:text-sm">
           <SelectPersonalizado
             label={`${extra.nombre}${extra.obligatorio ? ' *' : ''}`}
             value={seleccion?.respuesta ?? ''}
@@ -155,7 +155,7 @@ export function GrupoViaje({
     }
 
     return (
-      <label key={extra.id} htmlFor={id} className="flex flex-col gap-2 text-sm text-foreground">
+      <label key={extra.id} htmlFor={id} className="flex flex-col gap-1.5 text-base text-foreground sm:text-sm">
         <span className="font-medium">
           {extra.nombre}{extra.obligatorio ? ' *' : ''}
           <DescripcionExtra id={descripcionId} texto={texto} />

@@ -51,7 +51,7 @@ export function FechaRegresoCompacta({
               {vigente ? formato.format(fromLocalISODate(vigente)).replace('.', '') : ''}
             </span>
           </span>
-          <span className="shrink-0 rounded-full border border-border bg-cafe-bruma px-3 py-1.5 text-sm font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
+          <span className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-borde-control bg-cafe-bruma px-4 text-base font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent sm:text-sm">
             {abierta ? doneButtonLabel : changeButtonLabel}
           </span>
         </Button>

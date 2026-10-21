@@ -71,7 +71,7 @@ export function BloqueRecogida({
                         onPunto(punto.id);
                         cerrar();
                       }}
-                      className={`flex w-full items-center justify-between rounded-campo px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex w-full items-center justify-between min-h-12 rounded-campo px-4 py-3 text-left text-base transition-colors sm:min-h-0 sm:px-3 sm:py-2 sm:text-sm ${
                         punto.id === puntoEncuentroId
                           ? 'bg-accent font-medium text-accent-foreground'
                           : 'text-foreground hover:bg-cafe-bruma'
@@ -91,7 +91,7 @@ export function BloqueRecogida({
                       onOtraDireccion();
                       cerrar();
                     }}
-                    className="mt-1 flex w-full items-center gap-2 rounded-campo border-t border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-cafe-bruma"
+                    className="mt-1 flex w-full items-center gap-2 min-h-12 rounded-campo border-t border-border px-4 py-3 text-left text-base text-foreground transition-colors hover:bg-cafe-bruma sm:min-h-0 sm:px-3 sm:py-2.5 sm:text-sm"
                   >
                     <MapPin size={16} className="shrink-0 text-muted" />
                     {traslados.fields.otraDireccionOpcion}
@@ -104,7 +104,7 @@ export function BloqueRecogida({
 
         <Despliegue abierto={modoHospedaje !== 'catalogo'}>
           <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1.5 text-sm">
+            <label className="flex flex-col gap-1.5 text-base sm:text-sm">
               <span className="text-muted">{traslados.fields.otraDireccion}</span>
               <span className="relative">
                 <MapPin size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />

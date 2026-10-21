@@ -50,7 +50,7 @@ export function TipoTrasladoCards({ tipos, valor, onChange, textos, precioDesde,
             className={`flex items-start gap-4 rounded-campo border p-4 text-left transition-colors ${
               seleccionado
                 ? 'border-cafe-medio bg-cafe-bruma ring-1 ring-cafe-medio'
-                : 'border-border bg-superficie hover:border-border-strong'
+                : 'border-borde-control bg-superficie hover:border-cafe-medio'
             }`}
           >
             <Icono size={24} className="mt-0.5 shrink-0 text-accent" />
