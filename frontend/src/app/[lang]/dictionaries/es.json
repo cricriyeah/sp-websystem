@@ -800,6 +800,9 @@
     "haceHoras": "hace {n} h"
   },
   "sedeContenido": {
+    "arranque": {
+      "cta": "Reservar"
+    },
     "queReservar": {
       "titulo": "Qué puedes reservar",
       "subtexto": "Cada servicio muestra qué empresa lo opera, cuánto cuesta y qué incluye.",

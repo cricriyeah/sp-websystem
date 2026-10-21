@@ -24,7 +24,6 @@ const suites = {
   'ayuda-contextual': ['src/lib/ayuda-contextual.ts', 'AYUDA_CONTEXTUAL_TEST_OUT'],
   pendientes: ['src/lib/pendientes.ts', 'PENDIENTES_TEST_OUT'],
   'pendientes-texto': ['src/lib/pendientes-texto.ts', 'PENDIENTES_TEXTO_TEST_OUT'],
-  'selector-experiencia': ['src/lib/selector-experiencia.ts', 'SELECTOR_TEST_OUT'],
   'tokens-pago': ['src/lib/tokens-pago.ts', 'TOKENS_PAGO_TEST_OUT'],
   movimiento: ['src/lib/movimiento.ts', 'MOVIMIENTO_TEST_OUT'],
   personalizaciones: ['src/lib/pricing-paquete.ts', 'PERSONALIZACIONES_TEST_OUT'],

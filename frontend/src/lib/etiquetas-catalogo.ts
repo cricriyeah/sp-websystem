@@ -83,6 +83,24 @@ export function chipsDeSede(servicios: ServicioEtiquetable[], paquetes: PaqueteE
   );
 }
 
+/**
+ * Las palabras que rotan en el arranque de una sede, sacadas de su catálogo: una por tipo de
+ * servicio (en el orden fijo de las tarjetas) y, por cada duración distinta de paquete con
+ * estancia, «5 noches»; un paquete sin estancia entra como «Paquetes». Sin catálogo no hay palabras.
+ */
+export function palabrasDeSede(
+  servicios: ServicioEtiquetable[] | null,
+  paquetes: (PaqueteEtiquetable & { noches: number | null })[] | null,
+  lang: Lang,
+): string[] {
+  const tipos = new Set((servicios ?? []).map((s) => (s.tipo_servicio === 'bajo_demanda' ? 'paseo' : s.tipo_servicio)));
+  const palabras = ORDEN_SEDE.filter((tipo) => tipo !== 'paquete' && tipos.has(tipo)).map((tipo) => PALABRA[tipo][lang]);
+  const noches = [...new Set((paquetes ?? []).map((p) => p.noches).filter((n): n is number => n !== null && n > 0))].sort((a, b) => a - b);
+  palabras.push(...noches.map((n) => `${n} ${lang === 'es' ? 'noches' : 'nights'}`));
+  if ((paquetes ?? []).some((p) => !p.noches)) palabras.push(PALABRA.paquete[lang]);
+  return palabras;
+}
+
 /** Las tarjetas de sede del hub llevan foto solo si TODAS tienen una propia (no una ilustración). */
 export function tarjetasConFoto(sedes: { hero: { imagen: string | null } }[]): boolean {
   return sedes.length > 0 && sedes.every(({ hero }) => Boolean(hero.imagen) && !hero.imagen!.startsWith('/ilustraciones/'));

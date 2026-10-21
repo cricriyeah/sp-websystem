@@ -26,7 +26,6 @@ export type SedeHeroContenido = {
   imagen: string | null;
   /** `object-position` para encuadrar la foto/video de esta sede; sin él, centrado. */
   posicionImagen?: string;
-  titulo: { start: string; emphasis: string; end: string };
   subtitulo: string;
   facts: { value: string; label: string }[];
 };

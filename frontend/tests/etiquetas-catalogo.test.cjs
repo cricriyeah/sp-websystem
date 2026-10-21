@@ -108,3 +108,19 @@ test('grupoDePaquete: con un solo tipo de mar va con ese grupo; mezclado o con e
 test('ORDEN_GRUPOS: paquetes primero', () => {
   assert.deepEqual(e.ORDEN_GRUPOS, ['paquetes', 'pesca', 'paseos', 'estancia']);
 });
+
+test('palabrasDeSede: tipos del catálogo en orden fijo, noches por duración y paquetes sin estancia', () => {
+  const ventana = e.palabrasDeSede(
+    [servicio('hospedaje'), servicio('pesca'), servicio('paseo'), servicio('bajo_demanda')],
+    [{ ...paquete('pesca', 'hospedaje'), noches: 7 }, { ...paquete('pesca', 'hospedaje'), noches: 5 }, { ...paquete('pesca'), noches: 5 }],
+    'es',
+  );
+  assert.deepEqual(ventana, ['Pesca', 'Paseos', 'Hospedaje', '5 noches', '7 noches']);
+  const laPaz = e.palabrasDeSede([servicio('transporte'), servicio('pesca')], [{ ...paquete('pesca', 'transporte'), noches: null }], 'en');
+  assert.deepEqual(laPaz, ['Fishing', 'Transfers', 'Packages']);
+});
+
+test('palabrasDeSede: sin catálogo no hay palabras', () => {
+  assert.deepEqual(e.palabrasDeSede(null, null, 'es'), []);
+  assert.deepEqual(e.palabrasDeSede([], [], 'es'), []);
+});

@@ -31,14 +31,14 @@ test('la-paz existe en los dos idiomas con hero y negocio no nulos', () => {
   assert.equal(es.nombre, 'La Paz');
   assert.equal(es.negocio.ciudad, 'La Paz');
   assert.equal(es.hero.video, '/videos/videohero.webm');
-  assert.notEqual(es.hero.titulo.start, en.hero.titulo.start);
+  assert.notEqual(es.hero.subtitulo, en.hero.subtitulo);
 });
 
 test('la-ventana existe con negocio null (temporada/incluye no viven aqui, viven en el dict global)', () => {
   const es = c.getSedeContenido('la-ventana', 'es');
   assert.ok(es);
   assert.equal(es.negocio, null);
-  assert.equal(es.hero.video, null);
+  assert.equal(es.hero.video, '/videos/videohero.webm');
   assert.ok(es.hero.imagen);
   assert.deepEqual(es.hero.facts, []);
 });
@@ -53,7 +53,6 @@ test('Puerto Chale conserva la plantilla de La Ventana con identidad propia en a
     const chale = c.getSedeContenido('puerto-chale', lang);
     const ventana = c.getSedeContenido('la-ventana', lang);
     assert.equal(chale.nombre, 'Puerto Chale');
-    assert.equal(chale.hero.titulo.emphasis, 'Puerto Chale');
     assert.ok(chale.metaTitle.includes('Puerto Chale'));
     assert.ok(!chale.metaDescription.includes('La Ventana'));
     // Ninguna sede usa la ilustración rotulada «Destino Los Cabos» (2026-10-19): foto de relleno propia.

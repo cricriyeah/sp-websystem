@@ -29,7 +29,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videohero.webm',
         imagen: '/photos/cola-amarilla-acantilado.webp',
-        titulo: { start: 'Ven a pescar', emphasis: 'con nosotros', end: 'a la Bahía de La Paz' },
         subtitulo:
           'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
         facts: [
@@ -195,7 +194,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videohero.webm',
         imagen: '/photos/cola-amarilla-acantilado.webp',
-        titulo: { start: 'Come fishing', emphasis: 'with us', end: 'in the Bay of La Paz' },
         subtitulo:
           'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',
         facts: [
@@ -353,9 +351,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes de La Ventana Travel.',
       hero: {
-        video: null,
-        imagen: '/photos/capitan-cabrilla-bahia.webp', // relleno hasta la foto propia de La Ventana
-        titulo: { start: 'Descubre', emphasis: 'La Ventana', end: 'con expertos locales' },
+        video: '/videos/videohero.webm', // relleno hasta el video propio
+        imagen: '/photos/mar-poster.webp',
         subtitulo:
           'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes con hospedaje de La Ventana Travel.',
         facts: [],
@@ -372,9 +369,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Explore fly fishing, whale and orca watching, and multi-day packages with La Ventana Travel.',
       hero: {
-        video: null,
-        imagen: '/photos/capitan-cabrilla-bahia.webp', // relleno hasta la foto propia de La Ventana
-        titulo: { start: 'Discover', emphasis: 'La Ventana', end: 'with local experts' },
+        video: '/videos/videohero.webm', // relleno hasta el video propio
+        imagen: '/photos/mar-poster.webp',
         subtitulo:
           'Explore fly fishing, whale and orca watching, and packages with lodging from La Ventana Travel.',
         facts: [],
@@ -393,9 +389,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
       hero: {
-        video: null,
-        imagen: '/photos/pesca-del-dia-cubierta.webp', // relleno hasta la foto propia de Puerto Chale
-        titulo: { start: 'Descubre', emphasis: 'Puerto Chale', end: 'con expertos locales' },
+        video: '/videos/videohero.webm', // relleno hasta el video propio
+        imagen: '/photos/mar-poster.webp',
         subtitulo:
           'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
         facts: [],
@@ -412,9 +407,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
       hero: {
-        video: null,
-        imagen: '/photos/pesca-del-dia-cubierta.webp', // relleno hasta la foto propia de Puerto Chale
-        titulo: { start: 'Discover', emphasis: 'Puerto Chale', end: 'with local experts' },
+        video: '/videos/videohero.webm', // relleno hasta el video propio
+        imagen: '/photos/mar-poster.webp',
         subtitulo:
           'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
         facts: [],

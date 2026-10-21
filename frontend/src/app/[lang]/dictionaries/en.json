@@ -800,6 +800,9 @@
     "haceHoras": "{n} h ago"
   },
   "sedeContenido": {
+    "arranque": {
+      "cta": "Book"
+    },
     "queReservar": {
       "titulo": "What you can book",
       "subtexto": "Each service shows which company runs it, what it costs and what it includes.",

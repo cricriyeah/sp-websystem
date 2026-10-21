@@ -7,7 +7,7 @@ import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
 import { aMoneda } from '@/lib/moneda';
-import { fotosAptas } from '@/lib/etiquetas-catalogo';
+import { fotosAptas, palabrasDeSede } from '@/lib/etiquetas-catalogo';
 import { claveDePaquete, claveDeServicio, imagenDeCatalogo } from '@/content/imagenes-catalogo';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
@@ -75,7 +75,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   type Banda = { fondo: Fondo; borde: boolean };
   const pintar: Partial<Record<SeccionId, (banda: Banda) => ReactNode>> = {
     hero: () => <>
-      <SedeHero lang={lang} sedeSlug={slug} contenido={{ ...contenido.hero, facts: [] }} destacadas={contenido.destacadas} paquetes={paquetes ?? []} servicios={servicios ?? []} moneda={moneda} booking={dict.booking} verTodoLabel={dict.catalog.verTodo} hrefVerTodo={hrefSede(lang, slug, ANCLA_DE.reservar)} precioDesdeLabel={dict.catalog.fromPrice} />
+      <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={palabrasDeSede(servicios, paquetes, lang)} textos={dict.sedeContenido.arranque} />
       {marcaSede && <BandaColaboracion empresa={marcaSede} frase={dict.sedeContenido.colaboracion} />}
     </>,
     reservar: (banda) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} {...banda} />,

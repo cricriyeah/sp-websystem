@@ -1,97 +1,42 @@
-// frontend/src/components/sede-hero.tsx
-import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
-import type { SedeDestacada, SedeHeroContenido } from '@/content/sedes-tipos';
-import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
-import { SelectorExperiencia } from '@/components/selector-experiencia';
+import Link from 'next/link';
+import type { SedeHeroContenido } from '@/content/sedes-tipos';
+import { ANCLA_DE } from '@/lib/secciones-sede';
+import { PalabraRota } from '@/components/palabra-rota';
 import { HeroMedia } from '@/components/ui/hero-media';
+import { botonClases } from '@/components/ui/variantes';
 
 type SedeHeroProps = {
-  lang: Locale;
-  sedeSlug: string;
+  nombre: string;
   contenido: SedeHeroContenido;
-  destacadas: SedeDestacada[];
-  paquetes: PaqueteCatalogo[];
-  servicios: ServicioCatalogo[];
-  moneda: Moneda;
-  booking: Dictionary['booking'];
-  verTodoLabel: string;
-  hrefVerTodo: string;
-  precioDesdeLabel: string;
+  /** Lo que vende la sede, sacado de su catálogo (`palabrasDeSede`); vacío si el catálogo no respondió. */
+  palabras: string[];
+  textos: { cta: string };
 };
 
 /**
- * Hero de la pagina de sede. A diferencia de `Hero.tsx` (que sigue siendo el
- * de la portada de hoy, sin caller tras la Tarea 9), este:
- * - Acepta imagen fija además de video (las sedes pendientes no tienen video).
- * - `facts` puede venir vacío — no renderiza la fila si está vacía.
- * - Nunca monta `BookingBar` por su cuenta: el Paso 0 (`SelectorExperiencia`)
- *   es el unico camino al formulario. Revisado tras hallazgo del dueño
- *   (2026-09-16): la version anterior montaba el `BookingBar` heredado de
- *   pesca SIEMPRE visible en La Paz, duplicado con el que el chip inline del
- *   selector podia revelar — el Paso 0 quedaba decorativo, nunca gateaba
- *   nada. `ID_BARRA_PORTADA` (que vigila `StickyBookingBar`) ahora vive en el
- *   wrapper que `SelectorExperiencia` monta al abrir el chip inline, no aqui.
+ * Arranque de campaña de una sede (F10): el video del mar a pantalla completa, una palabra gigante
+ * arriba que cambia con lo que se reserva ahí, el nombre de la sede como `h1`, una frase y un solo
+ * botón que baja a lo que se puede reservar. Lo comparten las tres sedes.
+ *
+ * Server Component (la palabra que rota es una isla cliente).
  */
-export function SedeHero({
-  lang,
-  sedeSlug,
-  contenido,
-  destacadas,
-  paquetes,
-  servicios,
-  moneda,
-  booking,
-  verTodoLabel,
-  hrefVerTodo,
-  precioDesdeLabel,
-}: SedeHeroProps) {
+export function SedeHero({ nombre, contenido, palabras, textos }: SedeHeroProps) {
   return (
-    <section className="relative z-10 bg-background">
-      <HeroMedia
-        imagen={contenido.imagen}
-        video={contenido.video}
-        alt=""
-        preload
-        objectPosition={contenido.posicionImagen}
-      >
-        <div className="mx-auto w-full max-w-[1120px] px-4 pt-[calc(5rem_+_var(--nav-alto))] pb-10 sm:px-6 lg:px-8 lg:pt-[calc(7rem_+_var(--nav-alto))] lg:pb-16">
-          <h1 className="titulo-entra max-w-[19ch] texto-display text-hero-ink">
-            {contenido.titulo.start} {contenido.titulo.emphasis} {contenido.titulo.end}
-          </h1>
-          <p className="titulo-entra titulo-entra-tarde mt-5 max-w-[52ch] text-base leading-relaxed text-hero-ink-soft lg:mt-6 lg:text-lg">
-            {contenido.subtitulo}
-          </p>
-
-          <SelectorExperiencia
-            lang={lang}
-            sedeSlug={sedeSlug}
-            destacadas={destacadas}
-            paquetes={paquetes}
-            servicios={servicios}
-            moneda={moneda}
-            booking={booking}
-            verTodoLabel={verTodoLabel}
-            hrefVerTodo={hrefVerTodo}
-            precioDesdeLabel={precioDesdeLabel}
-          />
+    <section className="pt-[var(--nav-alto)]">
+      <HeroMedia imagen={contenido.imagen} video={contenido.video} alt="" preload alto="completo" objectPosition={contenido.posicionImagen}>
+        <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-between px-4 pb-10 pt-6 text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
+          {palabras.length > 0 ? <PalabraRota palabras={palabras} className="texto-gigante" /> : <span />}
+          <div>
+            <h1 className="texto-grande">{nombre}</h1>
+            <div className="mt-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
+              <p className="max-w-[52ch] text-xl leading-snug">{contenido.subtitulo}</p>
+              <Link href={`#${ANCLA_DE.reservar}`} className={botonClases({ variante: 'campana-claro' })}>
+                {textos.cta}
+              </Link>
+            </div>
+          </div>
         </div>
       </HeroMedia>
-
-      {contenido.facts.length > 0 && (
-        <dl className="mx-auto grid max-w-[1120px] grid-cols-2 gap-x-6 gap-y-8 px-4 pt-12 pb-16 sm:px-6 lg:grid-cols-4 lg:gap-x-0 lg:px-8 lg:pt-14 lg:pb-20">
-          {contenido.facts.map(({ value, label }, i) => (
-            <div
-              key={label}
-              className={`flex flex-col gap-1 lg:px-8 ${
-                i === 0 ? 'lg:pl-0' : 'lg:border-l lg:border-border'
-              } ${i === contenido.facts.length - 1 ? 'lg:pr-0' : ''}`}
-            >
-              <dt className="text-xl font-bold tracking-[-0.02em] text-accent lg:text-[22px]">{value}</dt>
-              <dd className="text-sm text-muted">{label}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
     </section>
   );
 }
