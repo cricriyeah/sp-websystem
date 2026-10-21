@@ -27,6 +27,10 @@ const FOTOS: Record<string, Foto> = {
     src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
     alt: { es: 'Dos orcas nadando bajo la superficie del mar', en: 'Two orcas swimming just below the sea surface' },
   },
+  'servicio:la-ventana-travel/hospedaje-la-ventana': {
+    src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp',
+    alt: { es: 'Vista aérea del Hotel Casa Arrecife, con su terraza y el mar de La Ventana al fondo', en: 'Aerial view of Hotel Casa Arrecife, with its rooftop terrace and the La Ventana sea behind it' },
+  },
   'servicio:la-ventana-travel/pesca-con-mosca': {
     src: '/catalogo/la-ventana-travel-pesca-con-mosca.webp',
     alt: { es: 'Un joven peleando un pez con la caña doblada, en alta mar', en: 'A young angler fighting a fish with a bent rod, out at sea' },
