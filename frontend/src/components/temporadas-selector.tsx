@@ -91,7 +91,8 @@ export function TemporadasSelector({ temporadas, textos }: Props) {
               )}
             >
               <p className="texto-grande">{f.estrella}</p>
-              <p className="mt-4 texto-subtitulo">{f.periodo}</p>
+              <p className="mt-4 max-w-[46ch] texto-cuerpo">{f.descripcion}</p>
+              <p className="mt-6 texto-subtitulo">{f.periodo}</p>
               {f.otras && (
                 <p className="mt-6 max-w-[46ch] texto-cuerpo">
                   <span className="font-semibold">{temporadas.etiquetaOtras}:</span> {f.otras}

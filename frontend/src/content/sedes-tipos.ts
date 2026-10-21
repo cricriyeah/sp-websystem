@@ -49,6 +49,8 @@ export type SedeTemporadas = {
     estrella: string;
     /** Otras especies de la temporada; vacío si la fila es solo la estrella. */
     otras: string;
+    /** Una frase bajo el título de la temporada: qué esperar. */
+    descripcion: string;
     /** La foto estrella de la temporada. */
     foto: string;
     /** La temporada fuerte lleva la etiqueta y su tramo del año relleno. */

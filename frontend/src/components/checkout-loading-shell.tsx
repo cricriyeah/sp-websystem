@@ -1,3 +1,4 @@
+import { VeloCargando } from '@/components/isotipo-cargando';
 import type { ReactNode } from 'react';
 import { Skeleton } from '@/components/skeleton';
 
@@ -16,6 +17,7 @@ export function CheckoutLoadingShell({
   const steps = Array.from({ length: stepCount }, (_, index) => index + 1);
   return (
     <div className="min-h-dvh bg-background">
+      <VeloCargando />
       {/* Mismo esqueleto que `CabeceraMinima`: la píldora de la barra, con la flecha a la izquierda y el idioma a la derecha. */}
       <div className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8 lg:pt-4" aria-hidden="true">
         <div className="mx-auto flex h-[var(--barra-h)] w-full max-w-[1440px] items-center justify-between gap-2 rounded-full bg-superficie px-4 shadow-n2 sm:px-5 lg:px-7">

@@ -70,12 +70,6 @@ export function ErrorDeCampo({ id, mensaje, className }: { id: string; mensaje?:
 }
 
 /**
- * Clases del campo cuando trae error. Se aplican junto a las propias del input
- * para que el borde rojo sea el mismo en todos lados.
- */
-export const CLASES_CAMPO_CON_ERROR = 'border-error focus:border-error focus:ring-error-fondo';
-
-/**
  * Props de accesibilidad del input con error. `aria-invalid` es lo que hace que
  * un lector de pantalla lo anuncie como invalido, y `aria-describedby` lo une
  * con el texto de abajo — sin eso, el mensaje existe visualmente pero no para

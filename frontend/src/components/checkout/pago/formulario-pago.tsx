@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Pago } from '@/lib/api';
 import { fechaHoraDeVencimiento, horaDeVencimiento } from '@/lib/pendientes-texto';
-import { RADIO_PAGO, TOKENS_PAGO } from '@/lib/tokens-pago';
+import { RADIO_PAGO, REGLAS_PAGO, TOKENS_PAGO } from '@/lib/tokens-pago';
 
 // Stripe pinta en un iframe: no hereda las variables CSS ni la fuente del sitio,
 // así que se le pasan los mismos valores de la marca (lib/tokens-pago.ts, probado contra globals.css,
@@ -26,7 +26,11 @@ const STRIPE_APARIENCIA = {
   variables: {
     ...TOKENS_PAGO,
     borderRadius: RADIO_PAGO,
+    fontSizeBase: '16px', // 16 px evita el zoom de iOS al enfocar un campo
+    spacingUnit: '5px',
+    spacingGridRow: '18px',
   },
+  rules: REGLAS_PAGO,
 };
 
 function PaymentForm({

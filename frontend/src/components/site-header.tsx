@@ -156,7 +156,7 @@ export function SiteHeader({
       resto={
         <>
           <div className="flex min-w-0 shrink-0 items-center gap-3">
-            <LogoEmpresaAlLado empresa={marcaSede} />
+            <LogoEmpresaAlLado empresa={marcaSede} ocultoEnMovil />
           </div>
 
           {links.length > 1 && (
@@ -173,7 +173,7 @@ export function SiteHeader({
             </nav>
           )}
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
             {links.length === 1 && (
               <Link
                 href={links[0].href}
@@ -199,7 +199,7 @@ export function SiteHeader({
               onClick={() => setOpen((v) => !v)}
               aria-label={open ? nav.closeMenu : nav.openMenu}
               aria-expanded={open}
-              className="flex size-12 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde xl:hidden"
+              className="flex size-12 shrink-0 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde xl:hidden"
             >
               {open ? <X size={18} /> : <List size={18} />}
             </Button>

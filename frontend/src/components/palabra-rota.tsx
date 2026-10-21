@@ -37,7 +37,7 @@ export function PalabraRota({ palabras, className }: { palabras: string[]; class
   }, [rota, palabras.length]);
 
   return (
-    <p aria-hidden="true" className={cn('overflow-hidden whitespace-nowrap', className)}>
+    <p aria-hidden="true" className={cn('-mb-[0.16em] overflow-hidden whitespace-nowrap pb-[0.16em]', className)}>
       <span className={cn('inline-block', fase === 'sale' && 'palabra-sale', fase === 'entra' && 'palabra-entra')}>
         {palabras[indice % palabras.length]}
       </span>

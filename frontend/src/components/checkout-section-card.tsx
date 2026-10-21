@@ -82,7 +82,7 @@ export function CheckoutSectionCard({
   // pone el título y el botón vive en la barra. Una respuesta ya dada no se pinta.
   if (enAsistente) {
     if (!abierto) return null;
-    return <div className="flex flex-col gap-5">{children}</div>;
+    return <div className="flex flex-col gap-5 bg-superficie p-4">{children}</div>;
   }
 
   const encabezado = (

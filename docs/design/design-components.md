@@ -15,7 +15,7 @@ Alto 48 (móvil) / 44 (escritorio). Radio `radio-control` 12. Etiqueta 16/600, c
 
 | Propiedad | Valor |
 |---|---|
-| Contraste | Principal 8,46:1; destructivo 6,54:1 |
+| Contraste | Principal 8,46:1; destructivo 6,67:1 |
 | Estados | Reposo, hover (+8 % tinta), pulsado (+12 %, escala 0,98), enfoque (anillo `azul`), deshabilitado (`cafe-bruma` + `apagado`) |
 | Objetivo táctil | 48 × 48 mínimo |
 | Un solo principal por paso | Sí |

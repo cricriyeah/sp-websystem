@@ -28,7 +28,7 @@ type PeopleStepperProps = {
 
 const botonStepper = (compacto: boolean) =>
   compacto
-    ? 'flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-30'
+    ? 'flex size-12 shrink-0 items-center justify-center rounded-full border border-borde-control sm:size-11 text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-30'
     : 'flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30';
 
 /**
@@ -84,12 +84,12 @@ export function PeopleStepper({
       {/* Alto reservado, igual que en FieldPopover: la etiqueta solo existe una
           vez contestado, y dejar que el contenido mande el alto hacia que la
           barra entera creciera al contestar. Ver el comentario largo alla. */}
-      <span className="flex h-10 flex-1 flex-col items-start justify-center gap-0.5 text-left">
+      <span className="flex h-11 flex-1 flex-col sm:h-10 items-start justify-center gap-0.5 text-left">
         {!vacio && <span className="text-sm text-muted">{label}</span>}
         <span className="flex w-full items-center justify-between">
           <span
             className={`whitespace-nowrap ${
-              vacio ? 'text-sm font-medium text-foreground/70' : 'text-sm text-foreground'
+              vacio ? 'text-base font-medium text-foreground/70 sm:text-sm' : 'text-base text-foreground sm:text-sm'
             }`}
           >
             {vacio ? placeholder : value}
@@ -103,7 +103,7 @@ export function PeopleStepper({
               aria-label="-"
               className={botonStepper(compacto)}
             >
-              <Minus size={12} />
+              <Minus size={16} />
             </Button>
             <Button
               variante="libre"
@@ -113,7 +113,7 @@ export function PeopleStepper({
               aria-label="+"
               className={botonStepper(compacto)}
             >
-              <Plus size={12} />
+              <Plus size={16} />
             </Button>
           </span>
         </span>

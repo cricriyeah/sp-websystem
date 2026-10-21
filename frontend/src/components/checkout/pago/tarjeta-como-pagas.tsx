@@ -123,7 +123,7 @@ export function TarjetaComoPagas({
                       <label
                         key={option}
                         aria-label={option === 'MXN' ? checkout.currency.mxn : checkout.currency.usd}
-                        className="inline-flex min-h-9 cursor-pointer items-center rounded-full px-4 font-semibold text-foreground transition-colors has-[:checked]:bg-tinta has-[:checked]:text-white has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+                        className="inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 font-semibold text-foreground transition-colors has-[:checked]:bg-tinta has-[:checked]:text-white has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
                       >
                         <Input
                           aspecto="heredado"
@@ -155,7 +155,7 @@ export function TarjetaComoPagas({
                           name="forma-pago"
                           checked={formaPago === option}
                           onChange={() => onFormaPagoChange(option)}
-                          className="size-5 shrink-0 accent-tinta"
+                          className="size-6 shrink-0 accent-tinta"
                         />
                         {option === 'completo' ? checkout.paymentMethod.full : checkout.paymentMethod.deposit}
                       </label>
@@ -242,7 +242,7 @@ export function TarjetaComoPagas({
                     disabled={phase === 'submitting'}
                     onChange={(e) => onWaiverChange(e.target.checked)}
                     {...propsDeError('error-waiver', errorWaiver)}
-                    className="mt-0.5 size-5 shrink-0 accent-tinta"
+                    className="mt-0.5 size-6 shrink-0 accent-tinta"
                   />
                   <span>
                     {checkout.waiver.accept}{' '}

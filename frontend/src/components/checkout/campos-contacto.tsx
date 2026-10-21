@@ -3,7 +3,7 @@
 import type { Ref } from 'react';
 import { EnvelopeSimple, Phone, User } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
-import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo, propsDeError } from '@/components/ui/error-de-campo';
+import { ErrorDeCampo, propsDeError } from '@/components/ui/error-de-campo';
 
 export type CampoContacto = 'fullName' | 'phone' | 'email';
 
@@ -34,15 +34,14 @@ export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio
         const idError = `${idPrefijo}-error-${campo}`;
         const error = errores[campo];
         return (
-          <label key={campo} className={`flex flex-col gap-1.5 text-sm ${ancho}`}>
+          <label key={campo} className={`flex flex-col gap-1.5 text-base sm:text-sm ${ancho}`}>
             <span className="text-muted">{etiquetas[campo]}</span>
             <span className="relative">
               <Icono
-                size={18}
+                size={20}
                 className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
               />
               <Input
-                aspecto="heredado"
                 ref={refs?.[campo]}
                 type={tipo}
                 enterKeyHint="next"
@@ -52,9 +51,7 @@ export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio
                 placeholder={ejemplos?.[campo]}
                 onChange={(e) => onCambio(campo, e.target.value)}
                 {...propsDeError(idError, Boolean(error))}
-                className={`w-full border bg-superficie py-3 pr-4 pl-11 text-foreground outline-none disabled:opacity-60 ${
-                  error ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
-                }`}
+                className="pl-11"
               />
             </span>
             <ErrorDeCampo id={idError} mensaje={error} />

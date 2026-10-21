@@ -61,9 +61,9 @@ const PARES = [
   ['blanco', 'verde-medio', 6.21, TEXTO, 'verde-medio con texto blanco'],
   // Estados: texto o icono sobre su fondo
   ['exito', 'exito-fondo', 6.84, TEXTO, 'éxito'],
-  ['error', 'error-fondo', 5.52, TEXTO, 'error sobre su fondo'],
-  ['error', 'blanco', 6.54, TEXTO, 'error sobre blanco'],
-  ['blanco', 'error', 6.54, TEXTO, 'botón destructivo'],
+  ['error', 'error-fondo', 5.82, TEXTO, 'error sobre su fondo'],
+  ['error', 'blanco', 6.67, TEXTO, 'error sobre blanco'],
+  ['blanco', 'error', 6.67, TEXTO, 'botón destructivo'],
   ['aviso', 'aviso-fondo', 7.39, TEXTO, 'aviso (el fondo es cafe-claro)'],
   ['info', 'info-fondo', 9.17, TEXTO, 'información (el fondo es azul-claro)'],
   // Enfoque

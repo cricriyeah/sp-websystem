@@ -1,8 +1,11 @@
+import { VeloCargando } from '@/components/isotipo-cargando';
 import { Skeleton } from '@/components/skeleton';
 
 /** Estructura del detalle de servicio y de paquete: arranque, ficha en dos columnas con el bloque de compra. */
 export default function CargandoServicio() {
   return (
+    <>
+      <VeloCargando />
     <div className="min-h-dvh bg-background" aria-hidden="true">
       <div className="fixed inset-x-0 top-0 z-40 bg-superficie shadow-tarjeta">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-12">
@@ -24,5 +27,6 @@ export default function CargandoServicio() {
         <Skeleton className="h-80 w-full bg-tinta" />
       </section>
     </div>
+    </>
   );
 }

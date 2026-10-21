@@ -1,8 +1,11 @@
+import { VeloCargando } from '@/components/isotipo-cargando';
 import { Skeleton } from '@/components/skeleton';
 
 /** Estructura de la sede: cabecera, arranque a pantalla completa y la fila de «Qué puedes reservar». Es el límite de carga de toda la página. */
 export default function CargandoSede() {
   return (
+    <>
+      <VeloCargando />
     <div className="min-h-dvh bg-background" aria-hidden="true">
       <div className="fixed inset-x-0 top-0 z-40 bg-superficie shadow-tarjeta">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-12">
@@ -22,5 +25,6 @@ export default function CargandoSede() {
         </div>
       </section>
     </div>
+    </>
   );
 }

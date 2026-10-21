@@ -5,7 +5,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
 import { DescripcionExtra, textoDeExtra } from '@/components/checkout/descripcion-extra';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
-import { CLASES_CAMPO_CON_ERROR, ErrorDeCampo } from '@/components/ui/error-de-campo';
+import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Moneda, ServicioPersonalizacionCatalogo } from '@/lib/api';
@@ -79,7 +79,7 @@ export function BloqueExtras({
         <div key={sp.id}>
           <label
             htmlFor={`personalizacion-${sp.id}`}
-            className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma"
+            className="flex min-h-14 items-start justify-between gap-3 border border-borde-control bg-superficie px-4 py-3 text-base text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma sm:min-h-0 sm:text-sm"
           >
             <span className="flex items-start gap-3">
               <Input
@@ -90,7 +90,7 @@ export function BloqueExtras({
                 disabled={locked}
                 aria-describedby={texto ? descripcionId : undefined}
                 onChange={(e) => onAlternar(sp.id, e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                className="mt-0.5 size-6 shrink-0 accent-accent sm:size-5"
               />
               <span>
                 <span className="font-medium">{sp.nombre}</span>
@@ -176,7 +176,6 @@ export function BloqueExtras({
           <DescripcionExtra id={descripcionId} texto={texto} />
         </span>
         <Input
-          aspecto="heredado"
           id={`personalizacion-${sp.id}`}
           type={sp.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
           step={sp.tipo_interaccion === 'input_numero' ? 'any' : undefined}
@@ -185,9 +184,6 @@ export function BloqueExtras({
           aria-invalid={Boolean(errorCodigo)}
           aria-describedby={[errorCodigo ? errorId : '', texto ? descripcionId : ''].filter(Boolean).join(' ') || undefined}
           onChange={(e) => onRespuesta(sp.id, e.target.value)}
-          className={`border bg-superficie px-4 py-3 outline-none ${
-            errorCodigo ? CLASES_CAMPO_CON_ERROR : 'border-border focus:border-accent'
-          }`}
         />
         <ErrorDeCampo id={errorId} mensaje={errorCodigo ? checkout.personalizacionErrors[errorCodigo] : ''} />
       </label>

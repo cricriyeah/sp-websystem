@@ -86,7 +86,7 @@ export function GrupoViaje({
       <div key={extra.id}>
         <label
           htmlFor={id}
-          className="flex items-start justify-between gap-3 border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma"
+          className="flex min-h-14 items-start justify-between gap-3 border border-borde-control bg-superficie px-4 py-3 text-base text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma sm:min-h-0 sm:text-sm"
         >
           <span className="flex items-start gap-3">
             <Input
@@ -97,7 +97,7 @@ export function GrupoViaje({
               aria-describedby={texto ? descripcionId : undefined}
               disabled={bloqueado || (sinPrecio && !marcada)}
               onChange={(event) => actualizarExtra(extra.id, event.target.checked ? { id: extra.id, cantidad: 1 } : undefined)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+              className="mt-0.5 size-6 shrink-0 accent-accent sm:size-5"
             />
             <span>
               <span className="font-medium">{extra.nombre}</span>
@@ -160,11 +160,10 @@ export function GrupoViaje({
           {extra.nombre}{extra.obligatorio ? ' *' : ''}
           <DescripcionExtra id={descripcionId} texto={texto} />
         </span>
-        <Input aspecto="heredado" id={id} aria-describedby={texto ? descripcionId : undefined} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
+        <Input id={id} aria-describedby={texto ? descripcionId : undefined} type={extra.tipo_interaccion === 'input_numero' ? 'number' : 'text'}
           step={extra.tipo_interaccion === 'input_numero' ? 'any' : undefined}
           value={seleccion?.respuesta ?? ''} disabled={bloqueado}
-          onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)}
-          className="border border-border bg-superficie px-4 py-3 outline-none focus:border-accent" />
+          onChange={(event) => actualizarExtra(extra.id, event.target.value ? { id: extra.id, respuesta: event.target.value } : undefined)} />
       </label>
     );
   };

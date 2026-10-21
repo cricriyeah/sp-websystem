@@ -32,7 +32,7 @@ export function BarraFlotante({ inicio, resto, menu, debajo, className }: BarraF
   return (
     <div className={cn('fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8 lg:pt-4', className)}>
       <div className="relative mx-auto flex w-full flex-col lg:max-w-[1440px]">
-        <header className="relative flex h-[var(--barra-h)] items-center gap-4 px-4 sm:px-5 lg:px-7">
+        <header className="relative flex h-[var(--barra-h)] items-center gap-2 pl-4 pr-2 sm:gap-4 sm:px-5 lg:px-7">
           <span aria-hidden="true" className="barra-sombra absolute inset-0 rounded-full shadow-n2" />
           <span aria-hidden="true" className="barra-fondo absolute inset-0 rounded-full bg-superficie" />
           <div className="relative flex shrink-0 items-center">{inicio}</div>

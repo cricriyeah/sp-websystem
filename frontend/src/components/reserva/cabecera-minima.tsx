@@ -31,25 +31,28 @@ type Props = {
  */
 export function CabeceraMinima({ lang, nav, volverHref, volverLabel, alPasoAnterior, empresa, marcaFija = false }: Props) {
   const claseFlecha = 'inline-flex size-11 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde';
-  const marca = <LogoMarca retraso={450} />;
+  const marca = <LogoMarca />;
 
   return (
     <BarraFlotante
       inicio={
-        alPasoAnterior ? (
-          <Button variante="libre" type="button" onClick={alPasoAnterior} aria-label={volverLabel} className={claseFlecha}>
-            <ArrowLeft size={20} />
-          </Button>
-        ) : (
-          <Link href={volverHref} aria-label={volverLabel} className={claseFlecha}>
-            <ArrowLeft size={20} />
-          </Link>
-        )
+        // La marca va con la flecha, fuera de `resto`: así su giro arranca con la barra y no cuando `resto` ya apareció.
+        <div className="flex items-center gap-3">
+          {alPasoAnterior ? (
+            <Button variante="libre" type="button" onClick={alPasoAnterior} aria-label={volverLabel} className={claseFlecha}>
+              <ArrowLeft size={20} />
+            </Button>
+          ) : (
+            <Link href={volverHref} aria-label={volverLabel} className={claseFlecha}>
+              <ArrowLeft size={20} />
+            </Link>
+          )}
+          {marcaFija ? marca : <Link href={`/${lang}`} className="inline-flex" aria-label="Sun Baja Experience">{marca}</Link>}
+        </div>
       }
       resto={
         <>
           <div className="flex min-w-0 items-center gap-3">
-            {marcaFija ? marca : <Link href={`/${lang}`} className="inline-flex" aria-label="Sun Baja Experience">{marca}</Link>}
             <LogoEmpresaAlLado empresa={empresa} ocultoEnMovil />
           </div>
           <div className="flex shrink-0 items-center gap-3">

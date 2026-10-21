@@ -64,7 +64,7 @@ Los estados tienen su propio color, distinto de las tres actividades, y siempre 
 | Estado | Texto / icono | Fondo | Contraste | Notas |
 |---|---|---|---|---|
 | Éxito | `#2F5D0A` | `#E7F5D3` | 6,84:1 | Icono de palomita. Familia verde, pero distinto del `verde` de actividad |
-| Error | `#B3261E` | `#FDE7E4` | 5,52:1 (6,54:1 sobre blanco) | Icono de alerta. Es un rojo más profundo que el coral para que no se lea como «ciudad» |
+| Error | `coral-hondo` `#A83226` | `coral-bruma` `#FCECEB` | 5,82:1 (6,67:1 sobre blanco) | Icono de alerta. Decisión del dueño (2026-10-21): los errores usan la familia coral, no un rojo aparte |
 | Aviso | `#6B3A00` | `#FEE0AC` (`cafe-claro`) | 7,39:1 | Icono de triángulo |
 | Información | `#0F3D52` | `#DDE6EB` (`azul-claro`) | 9,17:1 | Icono de «i». Familia azul, pero distinta del `azul` de actividad |
 | Enfoque | `#1B607F` (`azul`) | — | 6,94:1 blanco / 6,50:1 arena | Anillo de 2 px con desfase de 2 px |
@@ -78,7 +78,7 @@ Los estados tienen su propio color, distinto de las tres actividades, y siempre 
 | Principal | `cafe` | blanco | 8,46:1 |
 | Secundario | blanco, borde `borde-control` | `cafe` | `cafe` sobre blanco 8,46:1 |
 | Terciario / texto | transparente | `cafe` | 8,46:1 sobre blanco |
-| Destructivo | `error` `#B3261E` | blanco | 6,54:1 |
+| Destructivo | `error` `#A83226` | blanco | 6,67:1 |
 | Deshabilitado | `cafe-bruma` | `apagado` | 5,40:1 |
 
 ---
