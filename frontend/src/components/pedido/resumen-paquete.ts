@@ -35,13 +35,6 @@ export function armarResumenPaquete({
     empresas.join(' + '),
     noches !== null ? checkout.purchaseNights.replace('{n}', String(noches)) : null,
   ].filter(Boolean).join(' · ');
-  const resumenViaje = [
-    inicio ? formatearFecha(inicio) : null,
-    paquete.pide_hora && hora ? formatHour(hora) : null,
-    paquete.precio_depende_de_personas
-      ? `${personasPaquete} ${personasPaquete === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`
-      : null,
-  ].filter(Boolean).join(' · ');
   const lineasViaje = [
     inicio ? { etiqueta: checkout.summary.date, valor: formatearFecha(inicio) } : null,
     salida && noches !== null ? { etiqueta: checkout.summary.checkOut, valor: formatearFecha(salida) } : null,
@@ -72,5 +65,5 @@ export function armarResumenPaquete({
       : traslado.direccion;
     return valor ? [{ etiqueta: traslados.fields.puntoEncuentro, valor }] : [];
   };
-  return { detalleCompra, resumenViaje, lineasViaje, lineasContacto, lineaPunto };
+  return { detalleCompra, lineasViaje, lineasContacto, lineaPunto };
 }

@@ -16,7 +16,7 @@ import { BotonPaso } from '@/components/checkout/boton-paso';
 import { AvisoAccion } from '@/components/ui/aviso-accion';
 import { problemaDe } from '@/lib/problema-reserva';
 import { tieneWhatsapp } from '@/lib/contacto';
-import { EncabezadoCompra, claveTituloCompra } from '@/components/checkout/encabezado-compra';
+import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
@@ -1246,20 +1246,12 @@ export function CheckoutView({
   // al crear la reserva, asi que estar vacio no bloquea un reenvio.
   const captchaToken = useRef('');
 
-  const personasResumen = `${people} ${people === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`;
   const horaTexto = pideHora && time ? formatHour(time) : '';
   const nombresExtras = catalogoUnificado
     .filter((p) => personalizacionesMap.has(p.id))
     .map((p) => p.nombre)
     .join(', ');
-  const resumenPaso1 = [
-    tieneHospedaje ? `${diaTexto} → ${salidaTexto}` : diaTexto,
-    horaTexto || null,
-    personasResumen,
-    nombresExtras || null,
-  ].filter(Boolean).join(' · ');
-  const resumenPaso2 = `${contact.fullName} · ${contact.phone}`;
-  // Lo mismo que los resúmenes, pero una línea por dato, para leerlo al abrir el renglón.
+  // Una línea por dato, para leerlo al abrir el renglón cuando ya no se puede cambiar.
   const detallePaso1 = [
     { etiqueta: checkout.summary.date, valor: diaTexto },
     tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: salidaTexto } : null,
@@ -1530,7 +1522,7 @@ export function CheckoutView({
         volverLabel={checkout.back}
         encabezado={
           <EncabezadoCompra
-            titulo={checkout.tituloPagina[claveTituloCompra(servicio?.tipo_servicio)]}
+            titulo={checkout.tituloPagina}
             detalle={servicioNombre || servicio?.nombre || undefined}
           />
         }
@@ -1568,7 +1560,6 @@ export function CheckoutView({
               activo={phase === 'payment'}
               titulo={dict.pedido.yourBooking}
               etiquetaEstado={dict.pedido.bookingSaved}
-              resumen={resumenPaso1}
               notaBloqueada={dict.pedido.lockedNote}
               ctaAyuda={dict.pedido.lockedCta}
               mensajeAyuda={ayudaMensaje}
@@ -1576,9 +1567,8 @@ export function CheckoutView({
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
               <CheckoutSectionCard
                 title={checkout.tripHeadline}
-                pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'viaje')}
+                paso="viaje"
                 estado={estadoViaje}
-                resumen={resumenPaso1}
                 detalle={detallePaso1}
                 actionLabel={locked ? undefined : etiquetaAccion(crudoViaje)}
                 onAction={locked || crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
@@ -1601,9 +1591,8 @@ export function CheckoutView({
               <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
                 <CheckoutSectionCard
                   title={checkout.stepper.datos}
-                  pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'datos')}
+                  paso="datos"
                   estado={estadoDatos}
-                  resumen={resumenPaso2}
                   detalle={detallePaso2}
                   actionLabel={locked ? undefined : etiquetaAccion(crudoDatos)}
                   onAction={locked || crudoDatos === 'activo' ? undefined : () => reabrir('datos')}

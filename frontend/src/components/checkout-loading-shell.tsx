@@ -16,27 +16,26 @@ export function CheckoutLoadingShell({
   const steps = Array.from({ length: stepCount }, (_, index) => index + 1);
   return (
     <div className="min-h-dvh bg-background">
-      {/* Mismo esqueleto que `CabeceraMinima`: flecha, marca e idioma a 64 px. */}
-      <div className="fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8" aria-hidden="true">
-        <div className="mx-auto grid h-16 w-full max-w-[1440px] grid-cols-[48px_1fr_auto] items-center gap-2 border-b border-border bg-arena px-2 sm:px-4 lg:rounded-card lg:border">
-          <Skeleton className="size-12" />
-          <Skeleton className="mx-auto size-8 rounded-full" />
-          <Skeleton className="h-11 w-[88px]" />
+      {/* Mismo esqueleto que `CabeceraMinima`: la píldora de la barra, con la flecha a la izquierda y el idioma a la derecha. */}
+      <div className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8 lg:pt-4" aria-hidden="true">
+        <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center justify-between gap-2 rounded-full bg-superficie px-2 shadow-n2 lg:h-16 lg:px-3">
+          <Skeleton className="size-11 rounded-full" />
+          <Skeleton className="h-11 w-[88px] rounded-full" />
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-6 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1440px] px-4 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-6 lg:px-12">
         <Skeleton className="h-4 w-24" />
       </div>
 
       {withTitle && (
-        <div className="mx-auto max-w-6xl px-6 pt-6 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-12">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="mt-2 h-4 w-72 max-w-full" />
         </div>
       )}
 
-      <div className="sticky top-[var(--nav-alto)] z-30 border-b border-border bg-background/95 px-6 py-3 sm:px-8 lg:hidden" aria-hidden="true">
+      <div className="sticky top-[var(--nav-alto)] z-30 bg-background/95 px-6 py-3 sm:px-8 lg:hidden" aria-hidden="true">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="flex gap-1.5">
             {steps.map((step) => <Skeleton key={step} className="h-1.5 w-1.5 rounded-full" />)}
@@ -57,14 +56,14 @@ export function CheckoutLoadingShell({
 
       <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
         <div className="flex min-w-0 flex-col gap-6">{children}</div>
-        <section className={`min-w-0 border border-border bg-superficie p-6 sm:p-8 ${showSummaryMobile ? '' : 'hidden lg:block'}`} aria-hidden="true">
+        <section className={`min-w-0 bg-superficie p-6 shadow-tarjeta sm:p-8 ${showSummaryMobile ? '' : 'hidden lg:block'}`} aria-hidden="true">
           <Skeleton className="h-5 w-28" />
           <div className="mt-6 flex flex-col gap-3">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-4/5" />
             <Skeleton className="h-4 w-3/5" />
           </div>
-          <div className="mt-6 border-t border-border pt-6">
+          <div className="mt-6">
             <Skeleton className="h-7 w-32" />
             <Skeleton className="mt-6 h-12 w-full rounded-full" />
           </div>

@@ -229,13 +229,7 @@
       "cargandoPago": "Cargando el formulario de pago…",
       "verificando": "Verificando que eres una persona…"
     },
-    "tituloPagina": {
-      "pesca": "Reserva tu pesca",
-      "paseo": "Reserva tu paseo",
-      "hospedaje": "Reserva tu estancia",
-      "transporte": "Reserva tu traslado",
-      "paquete": "Reserva tu paquete"
-    },
+    "tituloPagina": "Reserva tu experiencia",
     "back": "Volver",
     "dayLabel": "Día",
     "hourLabel": "Hora",
@@ -526,12 +520,11 @@
       "volverALista": "Elegir de la lista",
       "dondeRecogemos": "¿Dónde te recogemos?",
       "recogidaAyuda": "Pasamos por ti a tu hotel o a la dirección que indiques.",
-      "zonaTitulo": "Zona de tu dirección",
+      "zonaDireccionNota": "Una dirección escrita se cobra con la tarifa de periferia. Si eliges tu hotel de la lista, se cobra la de su zona.",
       "direccionPlaceholder": "Calle, número, colonia o referencias",
       "zona": "Zona del traslado",
       "zonaCentro": "Zona Centro / Malecón",
       "zonaPeriferia": "Zona Periferia",
-      "zonaRequiredNotice": "Para traslados de actividad a direcciones particulares se requiere indicar la zona.",
       "fecha": "Fecha de llegada / actividad",
       "fechaRegreso": "Fecha de regreso al aeropuerto",
       "idaYRegreso": "Ida y regreso",
@@ -540,7 +533,6 @@
     },
     "errors": {
       "seleccionaHospedaje": "Elige un punto de encuentro del catálogo o escribe una dirección.",
-      "seleccionaZona": "Selecciona la zona correspondiente.",
       "seleccionaFecha": "Indica la fecha del traslado.",
       "seleccionaFechaRegreso": "El traslado redondo con aeropuerto requiere fecha de regreso.",
       "fechaRegresoPosterior": "La fecha de regreso debe ser posterior a la fecha de llegada."

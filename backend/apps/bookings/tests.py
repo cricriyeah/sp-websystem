@@ -1919,16 +1919,15 @@ class DetalleTransporteTest(EmpresaTestCase):
             dt.clean()
         self.assertIn('punto_encuentro', ctx.exception.message_dict)
 
-    def test_redondo_actividad_sin_zona_ni_punto_falla(self):
+    def test_redondo_actividad_con_direccion_y_sin_zona_se_cobra_como_periferia(self):
         dt = DetalleTransporte(
             reserva=self.reserva,
             tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
             direccion_personalizada='Calle 5 #10',
             zona='',
         )
-        with self.assertRaises(ValidationError) as ctx:
-            dt.clean()
-        self.assertIn('zona', ctx.exception.message_dict)
+        dt.clean()
+        self.assertEqual(dt.zona_efectiva(), Zona.PERIFERIA)
 
     def test_redondo_aeropuerto_sin_fecha_regreso_falla(self):
         dt = DetalleTransporte(
@@ -1998,6 +1997,28 @@ class DetalleTransporteTest(EmpresaTestCase):
             zona=Zona.PERIFERIA,
         )
         self.assertEqual(dt2.zona_efectiva(), Zona.PERIFERIA)
+
+        # 2b. Una dirección escrita siempre cuesta como periferia, aunque llegue con zona centro
+        dt2b = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+            direccion_personalizada='Casa particular #44',
+            zona=Zona.CENTRO,
+        )
+        self.assertEqual(dt2b.zona_efectiva(), Zona.PERIFERIA)
+        dt2b.full_clean()
+        dt2b.save()
+        dt2b.refresh_from_db()
+        self.assertEqual(dt2b.zona, Zona.PERIFERIA)
+
+        # 2c. Sin zona elegida ya no falla: la dirección escrita basta
+        dt2c = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD,
+            direccion_personalizada='Casa particular #45',
+        )
+        dt2c.clean()
+        self.assertEqual(dt2c.zona_efectiva(), Zona.PERIFERIA)
 
         # 3. Redondo aeropuerto -> ''
         dt3 = DetalleTransporte(
@@ -2073,8 +2094,7 @@ class TrasladoCheckoutTest(ApiTestCase):
 
     def test_xor_y_zona_requerida_sin_reserva_parcial(self):
         for cambios in ({'direccion_personalizada': 'Casa 123'},
-                        {'punto_encuentro': None},
-                        {'punto_encuentro': None, 'direccion_personalizada': 'Casa 123', 'zona': ''}):
+                        {'punto_encuentro': None}):
             with self.subTest(cambios=cambios):
                 self.assertEqual(self.post(**cambios).status_code, 400)
                 self.assertFalse(Reserva.objects.exists())

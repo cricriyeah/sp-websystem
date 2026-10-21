@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { CaretLeft, Check } from '@phosphor-icons/react';
+import { CaretDown, Check } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { transicion } from '@/lib/movimiento';
+import { numeroDePaso, type PasoId } from '@/lib/pasos-checkout';
 import { Button } from '@/components/ui/button';
-import { EtiquetaModificar } from '@/components/checkout/accion-terciaria';
+import { EtiquetaModificar, FLECHA } from '@/components/checkout/accion-terciaria';
 import { useDetalleAbierto } from '@/components/checkout/detalle-abierto';
 import { PieDeTarjeta } from '@/components/checkout/pie-tarjeta';
 import { useEnAsistente } from '@/components/reserva/asistente-movil';
@@ -22,16 +23,10 @@ type CheckoutSectionCardProps = {
    * 'suspendido': la tarjeta que estaba activa mientras el cliente corrige una
    * respuesta anterior: solo su título, sin cuerpo, hasta que termine.
    *
-   * El numero de paso ya no vive en esta tarjeta — antes era un circulo con
-   * numero que decia lo mismo que la linea verde de abajo y ahora tambien el
-   * linea de progreso de arriba; tres senales del mismo progreso. La linea
-   * es la unica que queda.
    */
   estado?: 'activo' | 'editando' | 'completado' | 'suspendido';
-  /** «Paso N de 3», sobre el título de las tarjetas que son un paso del checkout; el título pasa a `texto-paso`. */
-  pasoRotulo?: string;
-  /** Colapsado: la respuesta ya dada, en una linea. */
-  resumen?: ReactNode;
+  /** El paso del checkout que es esta tarjeta: su número va en un círculo negro antes del título. Sin él (un grupo de servicio), solo el título. */
+  paso?: PasoId;
   /**
    * Solo lectura: si el renglón completado no se puede reabrir (`onAction` sin
    * poner) pero trae `detalle`, se abre para leer cada dato en su propia línea
@@ -51,15 +46,16 @@ type CheckoutSectionCardProps = {
   children: ReactNode;
 };
 
-const ESTILOS = 'border-border bg-superficie';
+const ESTILOS = 'bg-superficie shadow-tarjeta';
+/** El número del paso: círculo negro con el número en la voz de los titulares. */
+const NUMERO = 'inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-tinta font-display texto-subtitulo text-white';
 /** La empresa como texto: un chip. Como `EmpresaSello`, ya trae su propia forma. */
-const CHIP = 'rounded-full bg-cafe-bruma px-2 py-0.5 texto-pie font-medium text-muted';
+const CHIP = 'rounded-full bg-cafe-bruma px-3 py-1 texto-pie font-semibold text-foreground';
 
 export function CheckoutSectionCard({
   title,
   estado = 'activo',
-  pasoRotulo,
-  resumen,
+  paso,
   detalle,
   actionLabel,
   onAction,
@@ -68,7 +64,6 @@ export function CheckoutSectionCard({
   children,
 }: CheckoutSectionCardProps) {
   const abierto = estado === 'activo' || estado === 'editando';
-  const confirmado = estado === 'completado' || estado === 'editando';
   const enRenglon = estado === 'completado';
   const conDetalle = enRenglon && !onAction && !!detalle && detalle.length > 0;
   const verDetalle = useDetalleAbierto();
@@ -92,85 +87,51 @@ export function CheckoutSectionCard({
 
   const encabezado = (
     <>
-      <span className="flex min-w-0 items-center gap-3">
-        {/* El check solo aparece una vez confirmado — es la unica pista de
-            "esto ya quedo" que le queda a la tarjeta abierta para editar, y
-            la que reemplaza el circulo numerado que traia antes. */}
-        {confirmado && (
-          <span className="marca-paso flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-exito-fondo text-exito">
-            <Check size={13} weight="bold" />
+      <span className="flex min-w-0 items-center gap-4">
+        {paso && (
+          <span aria-hidden="true" className={NUMERO}>
+            {numeroDePaso(paso)}
           </span>
         )}
-        {enRenglon ? (
-          <span className="flex min-w-0 items-center gap-x-2 text-sm">
-            <span className="max-w-full shrink-0 truncate font-sans font-medium tracking-tight text-foreground">{title}</span>
-            {etiqueta && (
-              // En pantallas angostas el renglón no tiene sitio para la empresa
-              // sin pisar "Modificar": se ve completa al abrir la tarjeta.
-              <span className={`hidden shrink-0 sm:inline-flex ${typeof etiqueta === 'string' ? CHIP : ''}`}>
-                {etiqueta}
-              </span>
-            )}
-            {resumen && (
-              // Abierto, el detalle de abajo ya lo dice: el resumen se desvanece sin mover el título.
-              <span
-                aria-hidden={detalleAbierto || undefined}
-                className={`min-w-0 truncate text-muted transition-opacity duration-[var(--duracion-media)] motion-reduce:transition-none ${detalleAbierto ? 'opacity-0' : ''}`}
-              >
-                · {resumen}
-              </span>
-            )}
-          </span>
-        ) : (
-          <span className="flex min-w-0 flex-col">
-            {pasoRotulo && <span className="texto-pequeno font-semibold text-apagado">{pasoRotulo}</span>}
-            <span className="flex min-w-0 flex-wrap items-center gap-x-2">
-              <span className={pasoRotulo ? 'texto-paso text-foreground' : 'font-sans text-sm font-medium tracking-tight text-foreground'}>
-                {title}
-              </span>
-              {etiqueta && (
-                <span className={`inline-flex ${typeof etiqueta === 'string' ? CHIP : ''}`}>
-                  {etiqueta}
-                </span>
-              )}
+        <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="texto-paso text-foreground">{title}</span>
+          {etiqueta && (
+            // En pantallas angostas el renglón no tiene sitio para la empresa sin pisar «Modificar»: se
+            // ve completa al abrir la tarjeta.
+            <span className={`${enRenglon ? 'hidden sm:inline-flex' : 'inline-flex'} shrink-0 ${typeof etiqueta === 'string' ? CHIP : ''}`}>
+              {etiqueta}
             </span>
-          </span>
-        )}
+          )}
+        </span>
       </span>
 
       {conDetalle && (
-        <CaretLeft
-          size={12}
+        <CaretDown
+          size={16}
           weight="bold"
           aria-hidden
-          className={`shrink-0 text-muted transition-transform duration-[var(--duracion-media)] ${detalleAbierto ? '-rotate-90' : ''}`}
+          className={`shrink-0 text-foreground transition-transform duration-[var(--duracion-media)] ${detalleAbierto ? 'rotate-180' : ''}`}
         />
       )}
       {actionLabel && onAction && enRenglon && (
-        // Secundario: un renglón de respuesta no debe competir con el CTA de la
-        // tarjeta activa. El renglón entero es el botón; la etiqueta solo lo dice.
+        // Secundario: un renglón de respuesta no debe competir con el CTA de la tarjeta activa. El
+        // renglón entero es el botón; la etiqueta solo lo dice.
         <EtiquetaModificar>{actionLabel}</EtiquetaModificar>
       )}
       {actionLabel && onAction && !enRenglon && (
         estado === 'editando' ? (
-          // "Listo" es el CTA primario de una tarjeta que se reabrió: confirma y
-          // sigue. Lleva el mismo amarillo que `BotonPaso` para que se lea como
-          // "el siguiente paso" y no como un control secundario.
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-action px-4 py-1.5 text-sm font-semibold text-action-foreground transition-[transform,filter] group-hover:brightness-95 group-active:scale-[0.98]">
+          // «Listo» es el CTA primario de una tarjeta que se reabrió: confirma y sigue. Es el mismo negro
+          // que `BotonPaso`, para que se lea como «el siguiente paso» y no como un control secundario.
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-tinta px-5 py-2.5 texto-etiqueta text-white transition-colors group-hover:bg-cafe">
             {actionLabel}
-            <Check size={13} weight="bold" aria-hidden />
+            <Check size={16} weight="bold" aria-hidden />
           </span>
         ) : (
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-cafe-bruma px-3 py-1.5 text-sm font-medium text-foreground transition-colors group-hover:border-accent group-hover:text-accent">
+          <span className="flex shrink-0 items-center gap-2 texto-etiqueta text-foreground">
             {actionLabel}
-            {/* Misma flecha que la del renglón colapsado: a la izquierda cerrada,
-                hacia abajo abierta. La rotación es lo que hace obvio que es la
-                MISMA flecha, no un icono distinto por estado. */}
-            <CaretLeft
-              size={12}
-              weight="bold"
-              className={`transition-transform duration-[var(--duracion-media)] ${abierto ? '-rotate-90' : ''}`}
-            />
+            <span className={FLECHA}>
+              <CaretDown size={16} weight="bold" className={`transition-transform duration-[var(--duracion-media)] ${abierto ? 'rotate-180' : ''}`} />
+            </span>
           </span>
         )
       )}
@@ -179,13 +140,20 @@ export function CheckoutSectionCard({
 
   if (estado === 'suspendido') {
     return (
-      <section className="border border-dashed border-border bg-superficie px-5 py-3 sm:px-6">
-        <p className="flex items-center gap-x-2 text-sm font-medium text-muted">
-          {title}
-          {etiqueta && (
-            <span className={`inline-flex ${typeof etiqueta === 'string' ? CHIP : ''}`}>{etiqueta}</span>
+      <section className={`${ESTILOS} px-5 py-4 sm:px-8`}>
+        <div className="flex items-center gap-4">
+          {paso && (
+            <span aria-hidden="true" className={NUMERO}>
+              {numeroDePaso(paso)}
+            </span>
           )}
-        </p>
+          <p className="flex flex-wrap items-center gap-x-3 texto-paso text-foreground">
+            {title}
+            {etiqueta && (
+              <span className={`inline-flex ${typeof etiqueta === 'string' ? CHIP : ''}`}>{etiqueta}</span>
+            )}
+          </p>
+        </div>
       </section>
     );
   }
@@ -196,8 +164,8 @@ export function CheckoutSectionCard({
       // automático sepa a cuál llevar al cliente; `scroll-mt` deja libre el
       // header fijo y el stepper.
       data-tarjeta-foco={abierto ? '' : undefined}
-      className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] border lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS} ${
-        abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-2 sm:px-6' : 'p-5 sm:p-6'
+      className={`scroll-mt-[calc(var(--nav-alto)+3.5rem)] lg:scroll-mt-[calc(var(--nav-alto)+5rem)] ${ESTILOS} ${
+        abierto ? 'p-6 sm:p-8' : enRenglon ? 'px-5 py-4 sm:px-8' : 'p-5 sm:p-6'
       }`}
     >
       {/* El encabezado es boton solo si de verdad hace algo. El paso 3 una
@@ -221,7 +189,7 @@ export function CheckoutSectionCard({
           onClick={verDetalle.alternar}
           aria-expanded={detalleAbierto}
           aria-controls={verDetalle.id}
-          className="group flex min-h-11 w-full items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          className="group flex min-h-11 w-full items-center justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           {encabezado}
         </Button>
@@ -238,10 +206,10 @@ export function CheckoutSectionCard({
           }`}
         >
           <div className="min-h-0 overflow-hidden">
-            <dl className="mt-2 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border pb-2 pt-3 text-sm">
+            <dl className="mt-3 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-4 gap-y-2 pb-2 texto-cuerpo">
               {detalle!.map((linea) => (
                 <div key={linea.etiqueta} className="contents">
-                  <dt className="text-muted">{linea.etiqueta}</dt>
+                  <dt className="font-semibold">{linea.etiqueta}</dt>
                   <dd className="min-w-0 break-words text-foreground">{linea.valor}</dd>
                 </div>
               ))}
@@ -288,9 +256,9 @@ export function BloqueDePaso({
   return (
     <div className="flex flex-col gap-3">
       {titulo && (
-        <p className="text-sm font-medium text-foreground">
+        <p className="texto-cuerpo font-semibold text-foreground">
           {titulo}
-          {opcional && <span className="ml-2 text-sm font-normal text-muted">{opcional}</span>}
+          {opcional && <span className="ml-2 texto-cuerpo font-normal text-foreground">{opcional}</span>}
         </p>
       )}
       {children}

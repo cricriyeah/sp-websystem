@@ -10,7 +10,6 @@ export type DetalleTraslado = {
   modo: 'catalogo' | 'personalizada';
   puntoEncuentroId: number | null;
   direccion: string;
-  zonaLibre: Zona | '';
   fechaRegreso: string | null;
   /** Solo traslado fijo de paquete con hospedaje; '' hasta que la clienta lo elige. */
   aeropuerto: Aeropuerto | '';
@@ -26,12 +25,12 @@ type ZonaDePunto = (puntoId: number | null) => Zona | '';
 
 /**
  * Misma regla que `DetalleTransporte.zona_efectiva()` del backend: la zona solo importa en
- * `redondo_actividad` (hotel del catálogo, o la zona elegida si es dirección libre); en los
+ * `redondo_actividad` (la del hotel del catálogo; una dirección escrita siempre es periferia); en los
  * tipos de aeropuerto las tarifas no llevan zona, aunque el hotel tenga una.
  */
 export function zonaEfectivaDeTraslado(t: DetalleTraslado, zonaDePunto: ZonaDePunto): Zona | '' {
   if (t.tipo !== 'redondo_actividad') return '';
-  return t.modo === 'catalogo' ? zonaDePunto(t.puntoEncuentroId) : t.zonaLibre;
+  return t.modo === 'catalogo' ? zonaDePunto(t.puntoEncuentroId) : 'periferia';
 }
 
 type ArgsComunes = {

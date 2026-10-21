@@ -46,7 +46,6 @@ export function estadoInicial(paquete: PaqueteCatalogo, opciones: OpcionesEstado
               modo: 'catalogo' as const,
               puntoEncuentroId: opciones.puntoInicial(c.servicio.empresa_slug),
               direccion: '',
-              zonaLibre: '' as const,
               fechaRegreso: null,
               aeropuerto: '' as const,
             },

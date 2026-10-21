@@ -117,12 +117,15 @@ function PaymentForm({
           cobro son dos peticiones distintas porque Stripe Elements necesita el
           PaymentIntent para montarse, pero eso es un detalle tecnico que al
           cliente no le toca notar. */}
-      <p className="text-sm text-muted">{puente}</p>
+      <p className="texto-cuerpo">{puente}</p>
       {/* El contenedor reserva la altura del esqueleto hasta `onReady`; el esqueleto va
           superpuesto (hermano del iframe, nunca su ancestro) y se desvanece en 150 ms.
-          Nada aqui lleva transform, filter ni will-change: Stripe no los tolera. */}
+          Mientras Stripe carga, su iframe va a opacidad 0: sus campos a medio pintar asomaban
+          por detrás del esqueleto. Solo opacidad: Stripe no tolera transform, filter ni will-change. */}
       <div className={`relative ${listo ? '' : 'min-h-[19rem]'}`}>
-        <PaymentElement onReady={() => setListo(true)} onLoadError={() => setListo(true)} />
+        <div className={listo ? 'opacity-100 transition-opacity duration-150 motion-reduce:transition-none' : 'pointer-events-none opacity-0'}>
+          <PaymentElement onReady={() => setListo(true)} onLoadError={() => setListo(true)} />
+        </div>
         <div
           aria-hidden="true"
           className={`absolute inset-0 overflow-hidden bg-superficie transition-[opacity,visibility] duration-150 motion-reduce:transition-none ${
@@ -152,14 +155,15 @@ function PaymentForm({
 
       {!movil && (
       <Button
-        variante="libre"
         type="button"
         onClick={handleConfirm}
-        disabled={!stripe || submitting}
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-action px-5 py-2.5 text-center text-sm font-medium leading-tight text-balance text-action-foreground transition-[opacity,transform] active:scale-[0.98] disabled:opacity-60"
+        disabled={!stripe}
+        cargando={submitting}
+        etiquetaCargando={checkout.submitting}
+        bloque
       >
-        <Lock size={16} className="shrink-0" />
-        {submitting ? checkout.submitting : (etiquetaBotonPago ?? checkout.confirmPay)}
+        <Lock size={20} weight="bold" aria-hidden="true" />
+        {etiquetaBotonPago ?? checkout.confirmPay}
       </Button>
       )}
     </div>

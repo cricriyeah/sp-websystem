@@ -13,4 +13,4 @@ export const TOKENS_PAGO = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', // --font-sans
 } as const;
 
-export const RADIO_PAGO = '12px'; // --radius-campo
+export const RADIO_PAGO = '0px'; // --radius-campo

@@ -18,22 +18,22 @@ type CheckoutFooterProps = {
  */
 export function CheckoutFooter({ lang, footer, nav }: CheckoutFooterProps) {
   return (
-    <footer className="mx-auto max-w-6xl px-6 py-10 sm:px-8 lg:px-12">
+    <footer className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-12">
       <nav aria-label={footer.legalLabel} className="flex flex-wrap gap-x-6 gap-y-2">
         <Link
           href={`/${lang}/deslinde`}
-          className="text-sm text-muted transition-colors hover:text-foreground"
+          className="inline-flex min-h-11 items-center texto-cuerpo text-foreground underline underline-offset-4 transition-colors hover:text-cafe"
         >
           {footer.waiver}
         </Link>
         <Link
           href={`/${lang}/privacidad`}
-          className="text-sm text-muted transition-colors hover:text-foreground"
+          className="inline-flex min-h-11 items-center texto-cuerpo text-foreground underline underline-offset-4 transition-colors hover:text-cafe"
         >
           {footer.privacy}
         </Link>
       </nav>
-      <p className="mt-4 text-sm text-muted">
+      <p className="mt-2 texto-cuerpo text-foreground">
         {new Date().getFullYear()} {nav.brandMain} {nav.brandAccent}. {footer.rights}
       </p>
     </footer>

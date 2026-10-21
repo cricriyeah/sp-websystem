@@ -1331,8 +1331,8 @@ class DetalleTransporte(models.Model):
         if self.punto_encuentro_id and reserva is not None and self.punto_encuentro.empresa_id != reserva.empresa_id:
             raise ValidationError({'punto_encuentro': 'Ese punto de encuentro pertenece a otra Empresa.'})
         es_actividad = self.tipo_traslado == TipoTraslado.REDONDO_ACTIVIDAD
-        if es_actividad and not (self.zona or self.punto_encuentro_id):
-            raise ValidationError({'zona': 'El redondo de actividad necesita zona (del hotel o elegida).'})
+        if es_actividad and not (self.zona or self.punto_encuentro_id or self.direccion_personalizada):
+            raise ValidationError({'zona': 'El redondo de actividad necesita un hotel del catálogo o una dirección.'})
         es_aeropuerto = self.tipo_traslado == TipoTraslado.REDONDO_AEROPUERTO
         if es_aeropuerto and not self.fecha_regreso:
             raise ValidationError({'fecha_regreso': 'El redondo con aeropuerto necesita fecha de regreso.'})
@@ -1348,15 +1348,18 @@ class DetalleTransporte(models.Model):
             return None
 
     def zona_efectiva(self):
-        """La zona que manda al precio: la del hotel si hay hotel, si no la elegida.
+        """La zona que manda al precio: la del hotel si hay hotel; una dirección escrita siempre
+        cuesta como periferia (no se puede saber a qué distancia queda, y el cliente no elige).
         Para tipos que no son redondo_actividad, '' (el precio no depende de zona)."""
         if self.tipo_traslado != TipoTraslado.REDONDO_ACTIVIDAD:
             return ''
         if self.punto_encuentro_id:
             return self.punto_encuentro.zona
-        return self.zona
+        return Zona.PERIFERIA
 
     def save(self, *args, **kwargs):
+        if self.tipo_traslado == TipoTraslado.REDONDO_ACTIVIDAD and not self.punto_encuentro_id and self.direccion_personalizada:
+            self.zona = Zona.PERIFERIA  # la zona guardada dice lo mismo que se cobra (`zona_efectiva`)
         super().save(*args, **kwargs)
         reserva = self._reserva_o_ninguna()
         if reserva is not None:

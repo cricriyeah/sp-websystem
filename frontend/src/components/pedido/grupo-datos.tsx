@@ -8,14 +8,12 @@ import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 import { FieldPopover } from '@/components/field-popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { PuntoEncuentro, Zona } from '@/lib/api';
+import type { PuntoEncuentro } from '@/lib/api';
 import type { DetalleTraslado } from '@/lib/pedido-payload';
 
 type Props = {
   traslados: Dictionary['traslados'];
   traslado: DetalleTraslado;
-  /** Slug del servicio: nombra el grupo de radios de la zona. */
-  servicioSlug: string;
   puntos: PuntoEncuentro[];
   onTraslado: (cambios: Partial<DetalleTraslado>) => void;
 };
@@ -27,7 +25,7 @@ type Props = {
  * tarjeta no pierde lo elegido. Lo pinta `GrupoViaje` dentro de su bloque del
  * traslado (prop `datos`), después del tipo y del regreso.
  */
-export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTraslado }: Props) {
+export function GrupoDatos({ traslados, traslado, puntos, onTraslado }: Props) {
   return (
     <div className="flex flex-col gap-3 pt-5">
       <Despliegue abierto={traslado.modo === 'catalogo'}>
@@ -80,19 +78,7 @@ export function GrupoDatos({ traslados, traslado, servicioSlug, puntos, onTrasla
             {traslados.fields.volverALista}
           </AccionTexto>
           <Despliegue abierto={traslado.tipo === 'redondo_actividad'}>
-            <fieldset className="grid grid-cols-2 gap-3">
-              <legend className="mb-1 texto-pequeno font-semibold text-foreground">{traslados.fields.zonaTitulo}</legend>
-              <p className="col-span-2 -mt-1 texto-pequeno text-apagado">{traslados.fields.zonaRequiredNotice}</p>
-              {(['centro', 'periferia'] as Zona[]).map((zona) => (
-                <label key={zona} className={`flex cursor-pointer items-center gap-2 rounded-campo border p-3 text-sm ${
-                  traslado.zonaLibre === zona ? 'border-cafe-medio bg-cafe-bruma font-medium' : 'border-border text-muted'
-                }`}>
-                  <Input aspecto="heredado" type="radio" name={`zona-${servicioSlug}`} checked={traslado.zonaLibre === zona}
-                    onChange={() => onTraslado({ zonaLibre: zona })} className="h-4 w-4 accent-accent" />
-                  {zona === 'centro' ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
-                </label>
-              ))}
-            </fieldset>
+            <p className="texto-cuerpo">{traslados.fields.zonaDireccionNota}</p>
           </Despliegue>
         </div>
       </Despliegue>

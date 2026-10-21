@@ -57,13 +57,13 @@ export function PieDeTarjeta({ titulo, children }: { titulo: string; children: R
       <div ref={marca} aria-hidden className="mt-6" />
       <div
         ref={pie}
-        className={`-mx-6 flex items-center justify-between gap-4 border-t border-border bg-superficie px-6 pt-5 transition-shadow duration-200 sm:-mx-8 sm:px-8 lg:sticky lg:bottom-0 lg:z-10 lg:pb-4 ${
+        className={`-mx-6 flex items-center justify-between gap-4 bg-superficie px-6 pt-5 transition-shadow duration-200 sm:-mx-8 sm:px-8 lg:sticky lg:bottom-0 lg:z-10 lg:pb-4 ${
           fijo ? 'lg:shadow-n1' : ''
         }`}
       >
         <span
           aria-hidden
-          className={`hidden min-w-0 truncate text-sm font-medium text-muted transition-opacity duration-200 lg:block ${
+          className={`hidden min-w-0 truncate texto-cuerpo font-semibold text-foreground transition-opacity duration-200 lg:block ${
             fijo ? 'opacity-100' : 'opacity-0'
           }`}
         >

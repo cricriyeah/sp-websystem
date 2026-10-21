@@ -43,10 +43,8 @@ type Props = {
   totalConMoneda: string | null;
   ayudaMensaje: string;
   detalleCompra: string;
-  resumenViaje: string;
   lineasViaje: Linea[];
   lineasContacto: Linea[];
-  contacto: { fullName: string; email: string };
   componentes: Record<string, ComponentePedido>;
   /** Fecha de inicio elegida (o la mínima): de ella salen las fechas de cada servicio. */
   inicio: string;
@@ -56,8 +54,6 @@ type Props = {
   destinoTarjetaPago: HTMLElement | null;
   setDestinoTarjetaPago: (nodo: HTMLElement | null) => void;
   sedeSlug: string;
-  /** `{ nombre, logo }` por slug (de `content/empresas`): el sello de cada cargo. */
-  empresas: Record<string, { nombre: string; logo?: string }>;
   /** La orden se canceló y se liberó lo retenido: vuelve al formulario con este aviso. */
   onOrdenCancelada: (linea: string) => void;
 };
@@ -71,9 +67,9 @@ type Props = {
  */
 export function PantallaPago({
   lang, dict, paquete, motor, moneda, pago, cantidadCargos, nombreEmpresa, personasPaquete,
-  stepperPagos, volverHref, empresa, sellos, totalMovil, totalConMoneda, ayudaMensaje, detalleCompra, resumenViaje, lineasViaje,
-  lineasContacto, contacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
-  sedeSlug, empresas, onOrdenCancelada,
+  stepperPagos, volverHref, empresa, sellos, totalMovil, totalConMoneda, ayudaMensaje, detalleCompra, lineasViaje,
+  lineasContacto, componentes, inicio, formatearFecha, lineaPunto, destinoTarjetaPago, setDestinoTarjetaPago,
+  sedeSlug, onOrdenCancelada,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
   const movil = useMovil();
@@ -98,7 +94,6 @@ export function PantallaPago({
     const estado: EstadoCargo = indice < pago.indice ? 'retenido' : 'pendiente';
     return {
       empresa: nombreEmpresa(item.empresaSlug),
-      logo: empresas[item.empresaSlug]?.logo,
       servicio: paquete.servicios_asociados
         .filter((c) => c.servicio.empresa_slug === item.empresaSlug)
         .map((c) => c.servicio.nombre).join(', '),
@@ -163,7 +158,7 @@ export function PantallaPago({
       volverLabel={textos.back}
       encabezado={
         <EncabezadoCompra
-          titulo={checkout.tituloPagina.paquete}
+          titulo={checkout.tituloPagina}
             detalle={[paquete.nombre, detalleCompra].filter(Boolean).join(' · ')}
         />
       }
@@ -178,7 +173,6 @@ export function PantallaPago({
           <ReservaPlegable
             titulo={textos.yourBooking}
             etiquetaEstado={textos.bookingSaved}
-            resumen={resumenViaje || paquete.nombre}
             notaBloqueada={textos.lockedNote}
             ctaAyuda={textos.lockedCta}
             mensajeAyuda={ayudaMensaje}
@@ -187,7 +181,6 @@ export function PantallaPago({
             <CheckoutSectionCard
               title={checkout.tripHeadline}
               estado="completado"
-              resumen={resumenViaje}
               detalle={lineasViaje}
             >
               {null}
@@ -197,7 +190,6 @@ export function PantallaPago({
             <CheckoutSectionCard
               title={checkout.contactHeadline}
               estado="completado"
-              resumen={`${contacto.fullName} · ${contacto.email}`}
               detalle={lineasContacto}
             >
               {null}
@@ -212,7 +204,6 @@ export function PantallaPago({
                   title={item.servicio.nombre}
                   etiqueta={cantidadCargos > 1 ? nombreEmpresa(item.servicio.empresa_slug) : undefined}
                   estado="completado"
-                  resumen={`${personas} ${personas === 1 ? checkout.peopleUnit.one : checkout.peopleUnit.other}`}
                   detalle={[
                     { etiqueta: checkout.summary.date, valor: formatearFecha(fechaDeComponente(inicio, item.dia_estancia)) },
                     { etiqueta: checkout.summary.people, valor: String(personas) },

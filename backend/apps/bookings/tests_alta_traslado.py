@@ -461,7 +461,8 @@ class AltaTrasladoTests(EmpresaTestCase):
         detalle.refresh_from_db()
         self.assertEqual(detalle.direccion_personalizada, 'Hotel Vista Coral')
         self.assertIsNone(detalle.punto_encuentro)
-        self.assertEqual(detalle.zona, Zona.CENTRO)
+        # Una dirección escrita se cobra siempre como periferia, aunque el formulario traiga otra zona.
+        self.assertEqual(detalle.zona, Zona.PERIFERIA)
 
     def test_post_transporte_con_pago_y_sin_precio_muestra_mensaje_especifico(self):
         self.client.force_login(self.usuario_vendedora)

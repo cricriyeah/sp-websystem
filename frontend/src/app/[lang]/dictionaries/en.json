@@ -229,13 +229,7 @@
       "cargandoPago": "Loading the payment form…",
       "verificando": "Checking that you are a person…"
     },
-    "tituloPagina": {
-      "pesca": "Book your fishing trip",
-      "paseo": "Book your tour",
-      "hospedaje": "Book your stay",
-      "transporte": "Book your transfer",
-      "paquete": "Book your package"
-    },
+    "tituloPagina": "Book your experience",
     "back": "Back",
     "dayLabel": "Day",
     "hourLabel": "Time",
@@ -526,12 +520,11 @@
       "volverALista": "Choose from the list",
       "dondeRecogemos": "Where should we pick you up?",
       "recogidaAyuda": "We will pick you up at your hotel or at the address you give us.",
-      "zonaTitulo": "Zone of your address",
+      "zonaDireccionNota": "A typed address is charged at the outskirts rate. If you pick your hotel from the list, the rate of its zone applies.",
       "direccionPlaceholder": "Street, number, neighborhood, or details",
       "zona": "Transfer zone",
       "zonaCentro": "Downtown / Malecón Area",
       "zonaPeriferia": "Suburban / Outer Area",
-      "zonaRequiredNotice": "Activity transfers to custom addresses require selecting a zone.",
       "fecha": "Arrival / activity date",
       "fechaRegreso": "Airport return date",
       "idaYRegreso": "Outbound and return",
@@ -540,7 +533,6 @@
     },
     "errors": {
       "seleccionaHospedaje": "Select a meeting point from the list or enter a custom address.",
-      "seleccionaZona": "Please select the appropriate zone.",
       "seleccionaFecha": "Please select the transfer date.",
       "seleccionaFechaRegreso": "Airport round-trip transfers require a return date.",
       "fechaRegresoPosterior": "Return date must be after arrival date."

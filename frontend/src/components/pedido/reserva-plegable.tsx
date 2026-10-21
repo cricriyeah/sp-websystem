@@ -1,7 +1,8 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { CaretLeft, Lock, WhatsappLogo } from '@phosphor-icons/react';
+import { CaretDown, Lock, WhatsappLogo } from '@phosphor-icons/react';
+import { FLECHA } from '@/components/checkout/accion-terciaria';
 import { DetalleAbiertoContexto, useProveedorDetalle } from '@/components/checkout/detalle-abierto';
 import { Button } from '@/components/ui/button';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
@@ -32,7 +33,7 @@ export function NotaBloqueada({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-3 text-sm leading-relaxed text-muted sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${className ?? ''}`}>
+    <div className={`flex flex-col gap-3 texto-cuerpo text-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${className ?? ''}`}>
       <p>{nota}</p>
       {tieneWhatsapp && (
         // Mismo verde y logo que el botón flotante de ayuda: es la misma acción y se debe
@@ -54,7 +55,6 @@ export function NotaBloqueada({
 export function ReservaPlegable({
   titulo,
   etiquetaEstado,
-  resumen,
   notaBloqueada,
   ctaAyuda,
   mensajeAyuda,
@@ -64,7 +64,6 @@ export function ReservaPlegable({
   titulo: string;
   /** El estado de la reserva ("Guardada"), junto al título. */
   etiquetaEstado: string;
-  resumen: string;
   notaBloqueada: string;
   ctaAyuda: string;
   mensajeAyuda: string;
@@ -85,27 +84,18 @@ export function ReservaPlegable({
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
         aria-controls={id}
-        className={`group flex min-h-11 w-full items-center justify-between gap-4 border border-border bg-superficie px-5 py-2 text-left text-sm transition-colors hover:bg-cafe-bruma active:bg-cafe-bruma focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${activo ? '' : 'hidden'}`}
+        className={`group flex min-h-11 w-full items-center justify-between gap-4 bg-superficie px-5 py-4 text-left shadow-tarjeta transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-8 ${activo ? '' : 'hidden'}`}
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 font-medium tracking-tight text-foreground">{titulo}</span>
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,var(--superficie))] px-2 py-0.5 texto-pie font-medium text-accent">
-            <Lock size={11} weight="bold" aria-hidden />
+        <span className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="texto-paso text-foreground">{titulo}</span>
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-cafe-bruma px-3 py-1 texto-pie font-semibold text-foreground">
+            <Lock size={12} weight="bold" aria-hidden />
             {etiquetaEstado}
           </span>
-          {/* Abierto, el detalle de abajo ya lo dice: el resumen se desvanece sin mover el chip. */}
-          <span
-            aria-hidden={abierto}
-            className={`min-w-0 truncate text-muted transition-opacity duration-[var(--duracion-media)] motion-reduce:transition-none ${abierto ? 'opacity-0' : ''}`}
-          >
-            · {resumen}
-          </span>
         </span>
-        <CaretLeft
-          size={12}
-          weight="bold"
-          className={`shrink-0 text-muted transition-transform duration-[var(--duracion-media)] ${abierto ? '-rotate-90' : ''}`}
-        />
+        <span className={FLECHA}>
+          <CaretDown size={16} weight="bold" className={`transition-transform duration-[var(--duracion-media)] ${abierto ? 'rotate-180' : ''}`} />
+        </span>
       </Button>
 
       {/* Altura animada con la cuadrícula (0fr → 1fr): se abre y se pliega sin
@@ -125,7 +115,7 @@ export function ReservaPlegable({
             {activo && (
               <NotaBloqueada
                 nota={notaBloqueada} ctaAyuda={ctaAyuda} mensajeAyuda={mensajeAyuda}
-                className="-mt-4 border border-border bg-superficie px-5 py-3 sm:px-6"
+                className="-mt-4 bg-superficie px-5 py-4 shadow-tarjeta sm:px-8"
               />
             )}
           </div>

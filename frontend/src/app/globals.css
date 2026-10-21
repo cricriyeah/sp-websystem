@@ -112,10 +112,10 @@
      anidados el radio interior es el exterior menos su padding. */
   --radius-xs: 4px; /* texto resaltado, insignias pequenas */
   --radius-sm: 8px; /* etiquetas, tooltips, imagenes pequenas */
-  --radius-control: 12px; /* botones, campos, selectores, casillas de opcion */
-  --radius-campo: 12px; /* campos y cajas de campo */
-  --radius-casilla: 6px;
-  --radius-card: 16px; /* tarjetas, resumen, paneles, popover del calendario */
+  --radius-control: 0px; /* campos, selectores y casillas de opcion: rectangulo (los botones son pildora, `rounded-full`) */
+  --radius-campo: 0px; /* campos y cajas de campo */
+  --radius-casilla: 0px;
+  --radius-card: 0px; /* tarjetas, resumen, paneles, popover del calendario */
   --radius-sheet: 24px; /* hojas inferiores y barra fija de movil (solo esquinas superiores) */
   --radius-full: 9999px; /* chips de actividad, atajos de fecha, dia del calendario (circulo) */
 

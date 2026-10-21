@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { CaretDown, CaretLeft } from '@phosphor-icons/react';
+import { CaretDown } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -9,23 +9,27 @@ import { Button } from '@/components/ui/button';
  *
  * El subrayado le dice al ojo "esto lleva a otra página", y estas acciones
  * abren o cambian algo aquí mismo. Cada rol tiene su pista propia: la flecha
- * a la izquierda de un renglón lo abre (y al abrirse gira hacia abajo), el
- * caret que gira despliega. Quedan por debajo del CTA amarillo en
- * contraste pero se reconocen como clicables por el icono, el cambio de color
- * al pasar el cursor y el subrayado que aparece al enfocar con teclado. El
- * subrayado se reserva para los enlaces dentro de una oración (deslinde,
- * términos).
+ * en círculo gris de un renglón lo abre (y al abrirse gira), el caret que
+ * gira despliega. Se reconocen como clicables por el icono y el cambio de
+ * color al pasar el cursor. El subrayado se reserva para los enlaces dentro
+ * de una oración (deslinde, términos).
  */
 
+/** El círculo gris con la flecha: la pista de que un renglón se abre (campana-gris del sitio público). */
+export const FLECHA = 'inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors group-hover:bg-borde group-focus-visible:bg-borde';
+
 /**
- * "Modificar" de un renglón de respuesta. Es solo la etiqueta: el renglón
- * entero es el botón (`group`), así que el área táctil es todo el renglón.
+ * «Modificar» de un renglón de respuesta: la etiqueta y una flecha en círculo gris. Es solo la etiqueta:
+ * el renglón entero es el botón (`group`), así que el área táctil es todo el renglón.
  */
 export function EtiquetaModificar({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted transition-colors group-hover:text-foreground group-hover:underline group-hover:underline-offset-4 group-focus-visible:text-foreground group-focus-visible:underline group-focus-visible:underline-offset-4">
-      {children}
-      <CaretLeft size={13} weight="bold" />
+    <span className="inline-flex shrink-0 items-center gap-2 texto-etiqueta text-foreground">
+      <span className="hidden sm:inline">{children}</span>
+      <span className="sr-only sm:hidden">{children}</span>
+      <span className={FLECHA}>
+        <CaretDown size={16} weight="bold" />
+      </span>
     </span>
   );
 }

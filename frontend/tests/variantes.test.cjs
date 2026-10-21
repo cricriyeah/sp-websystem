@@ -9,10 +9,11 @@ const clase = (variante, nombre, opciones = {}) =>
 
 const ROLES = ['principal', 'secundario', 'texto', 'peligro'];
 
-test('R5: solo la variante principal usa el color de acción (fondo cafe)', () => {
-  assert.ok(clase('principal', 'bg-cafe'));
+test('R5: solo la variante principal usa el color de acción (fondo negro, café en el hover)', () => {
+  assert.ok(clase('principal', 'bg-tinta'));
   assert.ok(clase('principal', 'text-white'));
   for (const v of ['secundario', 'texto', 'peligro']) {
+    assert.ok(!clase(v, 'bg-tinta'), v);
     assert.ok(!clase(v, 'bg-cafe'), v);
   }
   // Los textos de las demás variantes pueden ser cafe, pero su fondo no.
@@ -26,8 +27,8 @@ test('los roles de design.md: secundario con borde de control, peligro con error
   assert.ok(clase('peligro', 'bg-error'));
   assert.ok(clase('peligro', 'text-white'));
   assert.ok(clase('texto', 'bg-transparent'));
-  assert.ok(clase('principal', 'hover:bg-cafe-hondo'));
-  assert.ok(clase('principal', 'active:bg-cafe-profundo'));
+  assert.ok(clase('principal', 'hover:bg-cafe'));
+  assert.ok(clase('principal', 'active:bg-cafe-hondo'));
 });
 
 test('la variante acento ya no existe (se migró a texto)', () => {
@@ -64,7 +65,7 @@ test('la base lleva el foco de 2 px con desfase de 2 px, la escala 0,98 y el anc
     'items-center',
     'justify-center',
     'gap-2',
-    'rounded-control',
+    'rounded-full',
     'px-6',
     'texto-etiqueta',
     'focus-visible:outline-2',
@@ -91,9 +92,9 @@ test('tamaños: md es la base, sm ya no existe, icono es un círculo de 48 × 48
   assert.ok(clase('principal', 'w-full', { bloque: true }));
 });
 
-test('la forma sale de tokens, no de utilidades crudas', () => {
-  assert.match(botonClases({ variante: 'principal' }), /rounded-control/);
-  assert.doesNotMatch(botonClases({ variante: 'principal' }), /rounded-full/);
+test('todo botón es píldora: el radio de control es de los campos, no de los botones', () => {
+  assert.match(botonClases({ variante: 'principal' }), /rounded-full/);
+  assert.doesNotMatch(botonClases({ variante: 'principal' }), /rounded-control/);
 });
 
 test('sin colores crudos ni de la marca vieja', () => {
@@ -187,6 +188,6 @@ test('F10: las variantes de campaña son píldora, con alto táctil y sin el rad
   }
   assert.ok(clase('campana', 'bg-tinta') && clase('campana', 'hover:bg-cafe'));
   assert.ok(clase('campana-claro', 'bg-white') && clase('campana-claro', 'text-tinta'));
-  // El checkout no cambia: `principal` conserva el radio de control.
-  assert.ok(clase('principal', 'rounded-control'));
+  // El checkout usa la misma píldora negra.
+  assert.ok(clase('principal', 'rounded-full') && clase('principal', 'bg-tinta'));
 });

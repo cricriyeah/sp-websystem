@@ -22,10 +22,10 @@ export function LineaProgreso({ actual, nombres, plantilla, className }: Props) 
         {nombres.map((nombre, i) => {
           const numero = i + 1;
           return (
-            <li key={nombre} aria-current={numero === paso ? 'step' : undefined} className="h-1 flex-1 overflow-hidden rounded-full bg-cafe-claro">
+            <li key={nombre} aria-current={numero === paso ? 'step' : undefined} className="h-1.5 flex-1 overflow-hidden rounded-full bg-borde">
               <span
                 aria-hidden
-                className={`block h-full origin-left rounded-full bg-cafe transition-transform duration-[var(--duracion-media)] ease-[var(--curva-estandar)] motion-reduce:transition-none ${
+                className={`block h-full origin-left rounded-full bg-tinta transition-transform duration-[var(--duracion-media)] ease-[var(--curva-estandar)] motion-reduce:transition-none ${
                   numero <= paso ? 'scale-x-100' : 'scale-x-0'
                 }`}
               />
@@ -33,7 +33,7 @@ export function LineaProgreso({ actual, nombres, plantilla, className }: Props) 
           );
         })}
       </ol>
-      <p className="mt-2 texto-pequeno font-semibold text-foreground">{nombres[paso - 1]}</p>
+      <p className="mt-2 texto-cuerpo font-semibold text-foreground">{nombres[paso - 1]}</p>
       <p className="sr-only">{`${texto}: ${nombres[paso - 1]}`}</p>
     </div>
   );

@@ -178,7 +178,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     hora: estado.hora,
     personas: personasPaquete,
   });
-  const { detalleCompra, resumenViaje, lineasViaje, lineasContacto, lineaPunto } = armarResumenPaquete({
+  const { detalleCompra, lineasViaje, lineasContacto, lineaPunto } = armarResumenPaquete({
     paquete, inicio: estado.inicio, hora: estado.hora, contacto: estado.contacto, personasPaquete, salida, noches,
     checkout, traslados, pedido: textos, puntosPorEmpresa, nombreEmpresa, formatearFecha,
   });
@@ -349,7 +349,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   };
 
   const errorDeGrupo = (indice: number, parte?: 'viaje' | 'datos'): string => errorDeGrupoPaquete({
-    indice, paquete, componentes: estado.componentes, inicio: estado.inicio, trasladoFijo, noches, zonaDePunto,
+    indice, paquete, componentes: estado.componentes, inicio: estado.inicio, trasladoFijo, noches,
     textos, traslados, checkout, parte,
   });
 
@@ -508,10 +508,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       totalConMoneda={totalConMoneda}
       ayudaMensaje={ayudaMensaje}
       detalleCompra={detalleCompra}
-      resumenViaje={resumenViaje}
       lineasViaje={lineasViaje}
       lineasContacto={lineasContacto}
-      contacto={estado.contacto}
       componentes={estado.componentes}
       inicio={estado.inicio ?? minDate}
       formatearFecha={formatearFecha}
@@ -519,7 +517,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       destinoTarjetaPago={destinoTarjetaPago}
       setDestinoTarjetaPago={setDestinoTarjetaPago}
       sedeSlug={sedeSlug}
-      empresas={empresas}
       onOrdenCancelada={(linea) => {
         reiniciarPedido();
         avisar('info', linea);
@@ -598,7 +595,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         estado={estado.componentes[slug]}
         conEncabezadoEmpresa={cantidadCargos > 1}
         nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}
-        logoEmpresa={empresas[componente.servicio.empresa_slug]?.logo}
         moneda={estado.moneda}
         tipoCambio={paquete.tipo_cambio_usd}
         inicio={estado.inicio}
@@ -645,7 +641,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             <GrupoDatos
               traslados={traslados}
               traslado={traslado}
-              servicioSlug={slug}
               puntos={puntosPorEmpresa[componente.servicio.empresa_slug] ?? []}
               onTraslado={(cambios) => despachar({ tipo: 'traslado', slug, cambios })}
             />
@@ -731,7 +726,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         volverLabel={textos.back}
         encabezado={
           <EncabezadoCompra
-            titulo={checkout.tituloPagina.paquete}
+            titulo={checkout.tituloPagina}
             detalle={[paquete.nombre, detalleCompra].filter(Boolean).join(' · ')}
           />
         }
@@ -745,9 +740,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
             <CheckoutSectionCard
               title={checkout.tripHeadline}
-              pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'viaje')}
+              paso="viaje"
               estado={estadoViaje}
-              resumen={resumenViaje}
               actionLabel={estadoFecha === 'completado' ? checkout.changeStep : estadoFecha === 'editando' ? checkout.doneEditing : undefined}
               onAction={estadoFecha === 'activo' ? undefined : () => setEditando((e) => (e === 'viaje' ? null : 'viaje'))}
               pie={estadoFecha === 'activo' ? <BotonPaso onClick={confirmarViaje}>{checkout.confirmStep}</BotonPaso> : undefined}
@@ -775,9 +769,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
               <ItemPaso unida={unidaConAnterior(secuencia, posicionDatos)}>
               <CheckoutSectionCard
                 title={checkout.stepper.datos}
-                pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'datos')}
+                paso="datos"
                 estado={estadoDatos as 'activo' | 'editando' | 'completado' | 'suspendido'}
-                resumen={`${estado.contacto.fullName} · ${estado.contacto.email}`}
                 actionLabel={tarjeta('datos') === 'completado' ? checkout.changeStep : tarjeta('datos') === 'editando' ? checkout.doneEditing : undefined}
                 onAction={tarjeta('datos') === 'activo' ? undefined : () => setEditando((e) => (e === 'datos' ? null : 'datos'))}
                 pie={tarjeta('datos') === 'activo' ? <BotonPaso conFlecha onClick={confirmarDatos}>{checkout.continueToPayment || checkout.confirmStep}</BotonPaso> : undefined}

@@ -2,7 +2,6 @@ import type { Dictionary } from '@/app/[lang]/dictionaries';
 import type { PaqueteCatalogo } from '@/lib/api';
 import { fechaDeComponente } from '@/lib/calendario-paquete';
 import type { EstadoPedido } from '@/lib/pedido-estado';
-import { zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
 import { erroresPersonalizaciones } from '@/lib/personalizaciones';
 
 export type ErroresContacto = Partial<Record<'fullName' | 'phone' | 'email', string>>;
@@ -34,7 +33,6 @@ type EntradaGrupo = {
   inicio: string | null;
   trasladoFijo: boolean;
   noches: number | null;
-  zonaDePunto: Parameters<typeof zonaEfectivaDeTraslado>[1];
   textos: Dictionary['pedido'];
   traslados: Dictionary['traslados'];
   checkout: Dictionary['checkout'];
@@ -44,7 +42,7 @@ type EntradaGrupo = {
 
 /** Primer error de la tarjeta de un servicio del paquete ('' = completa). Función pura: no toca estado. */
 export function errorDeGrupoPaquete({
-  indice, paquete, componentes, inicio, trasladoFijo, noches, zonaDePunto, textos, traslados, checkout, parte,
+  indice, paquete, componentes, inicio, trasladoFijo, noches, textos, traslados, checkout, parte,
 }: EntradaGrupo): string {
   const deViaje = parte !== 'datos';
   const deDatos = parte !== 'viaje';
@@ -65,9 +63,6 @@ export function errorDeGrupoPaquete({
     }
     if (deDatos && t.modo === 'personalizada' && !t.direccion.trim()) {
       return traslados.errors.seleccionaHospedaje;
-    }
-    if (deDatos && t.tipo === 'redondo_actividad' && !zonaEfectivaDeTraslado(t, zonaDePunto)) {
-      return traslados.errors.seleccionaZona;
     }
     if (deViaje && t.tipo === 'redondo_aeropuerto' && noches === null) {
       if (!t.fechaRegreso) return traslados.errors.seleccionaFechaRegreso;

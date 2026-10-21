@@ -1,6 +1,5 @@
 'use client';
 
-import { rotuloDePaso } from '@/lib/pasos-checkout';
 import { useEffect, useState } from 'react';
 import { CheckCircle, Lock, Ticket, Warning } from '@phosphor-icons/react';
 import Link from 'next/link';
@@ -81,13 +80,6 @@ export function TarjetaComoPagas({
     etiquetaCargando: checkout.submitting,
   } : null, 'contenido');
 
-  const resumen = [
-    moneda,
-    formaPagoDisponible !== false
-      ? (formaPago === 'completo' ? checkout.paymentMethod.full : checkout.paymentMethod.deposit)
-      : null,
-  ].filter(Boolean).join(' · ');
-
   const cta = abierta && !movil ? (
     <Button
       onClick={onSubmit}
@@ -104,15 +96,14 @@ export function TarjetaComoPagas({
     <>
       <CheckoutSectionCard
           title={checkout.howYouPay}
-          pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'pago')}
+          paso="pago"
           estado={pagoCreado ? 'completado' : 'activo'}
-          resumen={resumen}
           pie={cta}
         >
           {phase === 'unavailable' && (
-            <div className="flex min-h-40 flex-col items-center justify-center gap-2 border border-dashed border-border p-6 text-center">
-              <Warning size={20} className="text-muted" />
-              <p className="text-sm text-muted">{checkout.paymentUnavailable}</p>
+            <div className="flex min-h-40 flex-col items-center justify-center gap-2 bg-cafe-bruma p-6 text-center">
+              <Warning size={24} />
+              <p className="texto-cuerpo">{checkout.paymentUnavailable}</p>
             </div>
           )}
 
@@ -123,13 +114,13 @@ export function TarjetaComoPagas({
               {usdDisponible && (
                 <fieldset className="flex items-center justify-between gap-2" disabled={phase === 'submitting'}>
                   <legend className="sr-only">{checkout.currency.headline}</legend>
-                  <span className="text-sm text-muted">{checkout.currency.headline}</span>
-                  <div className="flex overflow-hidden rounded-full border border-border text-sm">
+                  <span className="texto-cuerpo font-semibold">{checkout.currency.headline}</span>
+                  <div className="flex gap-1 rounded-full bg-cafe-bruma p-1 texto-cuerpo">
                     {(['MXN', 'USD'] as const).map((option) => (
                       <label
                         key={option}
                         aria-label={option === 'MXN' ? checkout.currency.mxn : checkout.currency.usd}
-                        className="cursor-pointer px-3 py-1.5 font-medium text-muted transition-colors has-[:checked]:bg-foreground has-[:checked]:text-cafe-bruma"
+                        className="inline-flex min-h-9 cursor-pointer items-center rounded-full px-4 font-semibold text-foreground transition-colors has-[:checked]:bg-tinta has-[:checked]:text-white has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
                       >
                         <Input
                           aspecto="heredado"
@@ -153,7 +144,7 @@ export function TarjetaComoPagas({
                     {(['completo', 'anticipo'] as const).map((option) => (
                       <label
                         key={option}
-                        className="flex cursor-pointer items-center gap-3 rounded-campo border border-border px-4 py-3 text-sm text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma"
+                        className="flex min-h-14 cursor-pointer items-center gap-3 border-2 border-transparent bg-cafe-bruma px-4 py-3 texto-cuerpo font-semibold text-foreground transition-colors has-[:checked]:border-tinta has-[:checked]:bg-superficie"
                       >
                         <Input
                           aspecto="heredado"
@@ -161,7 +152,7 @@ export function TarjetaComoPagas({
                           name="forma-pago"
                           checked={formaPago === option}
                           onChange={() => onFormaPagoChange(option)}
-                          className="h-4 w-4 shrink-0 accent-accent"
+                          className="size-5 shrink-0 accent-tinta"
                         />
                         {option === 'completo' ? checkout.paymentMethod.full : checkout.paymentMethod.deposit}
                       </label>
@@ -170,23 +161,21 @@ export function TarjetaComoPagas({
                   {/* La explicacion del anticipo solo cuando se elige: casi todos
                       pagan completo y no necesitan leerla. */}
                   <Despliegue abierto={formaPago === 'anticipo'}>
-                    <p className="text-sm text-muted">{checkout.paymentMethod.depositNote}</p>
+                    <p className="texto-cuerpo">{checkout.paymentMethod.depositNote}</p>
                   </Despliegue>
                 </BloqueDePaso>
               )}
 
               {codigoPromocionalDisponible !== false && (
                 <fieldset disabled={phase === 'submitting'}>
-                  {/* Boton con borde y no texto suelto: se tiene que ver a primera
-                      vista (el QA no lo encontraba), pero en el color de acento (indigo) con un tinte suave, no
-                      en el amarillo de accion, para llamar la atencion sin competir con el
-                      boton de pagar. */}
+                  {/* Botón gris en píldora y no texto suelto: se tiene que ver a primera vista (el QA no lo
+                      encontraba), pero sin competir con el botón de pagar. */}
                   <Despliegue abierto={!promoAbierto && !codigoPromocional}>
                     <Button
                       variante="libre"
                       type="button"
                       onClick={() => setPromoAbierto(true)}
-                      className="inline-flex items-center gap-2 rounded-full border border-accent bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent/20"
+                      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-cafe-bruma px-5 texto-cuerpo font-semibold text-foreground transition-colors hover:bg-borde"
                     >
                       <Ticket size={18} weight="fill" />
                       {checkout.promoCode.toggle}
@@ -194,7 +183,7 @@ export function TarjetaComoPagas({
                   </Despliegue>
                   <Despliegue abierto={promoAbierto || Boolean(codigoPromocional)}>
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="codigo-promocional" className="text-sm font-medium text-muted">
+                      <label htmlFor="codigo-promocional" className="texto-cuerpo font-semibold">
                         {checkout.promoCode.label}
                       </label>
                       <Input
@@ -205,13 +194,13 @@ export function TarjetaComoPagas({
                         disabled={phase === 'submitting'}
                         onChange={(e) => onCodigoPromocionalChange(e.target.value)}
                         placeholder={checkout.promoCode.placeholder}
-                        className="w-full rounded-campo border border-border bg-superficie px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                        className="min-h-12 w-full rounded-campo border border-borde-control bg-superficie px-4 texto-cuerpo text-foreground focus:border-tinta focus:outline-none sm:min-h-11"
                       />
                       <Despliegue abierto={promoEstado === 'verificando'}>
-                        <p className="text-sm text-muted">{checkout.promoCode.checking}</p>
+                        <p className="texto-cuerpo">{checkout.promoCode.checking}</p>
                       </Despliegue>
                       <Despliegue abierto={promoEstado === 'valido' && Boolean(promoPorcentaje)}>
-                        <p className="flex items-center justify-between gap-3 text-sm text-exito">
+                        <p className="flex items-center justify-between gap-3 texto-cuerpo text-exito">
                           <span className="flex items-center gap-1.5">
                             <CheckCircle size={14} weight="fill" />
                             {checkout.promoCode.valid.replace('{percent}', String(Number(promoPorcentaje ?? 0)))}
@@ -221,7 +210,7 @@ export function TarjetaComoPagas({
                             variante="libre"
                             type="button"
                             onClick={() => { onCodigoPromocionalChange(''); setPromoAbierto(false); }}
-                            className="text-muted underline-offset-2 hover:text-foreground hover:underline"
+                            className="inline-flex min-h-11 items-center text-foreground underline underline-offset-2 hover:text-cafe"
                           >
                             {checkout.promoCode.remove}
                           </Button>
@@ -242,7 +231,7 @@ export function TarjetaComoPagas({
                   cada uno vive en su pagina y abre en otra pestaña para no tirar lo
                   que el cliente ya lleno. */}
               <div>
-                <label className="flex items-start gap-2.5 text-sm leading-relaxed text-muted">
+                <label className="flex items-start gap-3 texto-cuerpo text-foreground">
                   <Input
                     aspecto="heredado"
                     type="checkbox"
@@ -250,7 +239,7 @@ export function TarjetaComoPagas({
                     disabled={phase === 'submitting'}
                     onChange={(e) => onWaiverChange(e.target.checked)}
                     {...propsDeError('error-waiver', errorWaiver)}
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-accent"
+                    className="mt-0.5 size-5 shrink-0 accent-tinta"
                   />
                   <span>
                     {checkout.waiver.accept}{' '}
@@ -258,7 +247,7 @@ export function TarjetaComoPagas({
                       href={`/${lang}/deslinde`}
                       target="_blank"
                       rel="noopener"
-                      className="text-foreground underline underline-offset-2"
+                      className="font-semibold underline underline-offset-2"
                     >
                       {checkout.waiver.linkLabel}
                     </Link>{' '}
@@ -267,7 +256,7 @@ export function TarjetaComoPagas({
                       href={`/${lang}/privacidad`}
                       target="_blank"
                       rel="noopener"
-                      className="text-foreground underline underline-offset-2"
+                      className="font-semibold underline underline-offset-2"
                     >
                       {checkout.waiver.privacyLinkLabel}
                     </Link>

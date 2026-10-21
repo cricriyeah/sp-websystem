@@ -20,7 +20,7 @@ const CRUZA = {
 };
 
 const traslado = (over = {}) => ({
-  tipo: 'redondo_actividad', modo: 'catalogo', puntoEncuentroId: 7, direccion: '', zonaLibre: '', fechaRegreso: null, ...over,
+  tipo: 'redondo_actividad', modo: 'catalogo', puntoEncuentroId: 7, direccion: '', fechaRegreso: null, ...over,
 });
 
 const COMPONENTES = {
@@ -37,7 +37,8 @@ const BASE = {
 test('zona efectiva: solo cuenta en redondo_actividad', () => {
   const zona = () => 'periferia';
   assert.equal(p.zonaEfectivaDeTraslado(traslado(), zona), 'periferia');
-  assert.equal(p.zonaEfectivaDeTraslado(traslado({ modo: 'personalizada', zonaLibre: 'centro' }), zona), 'centro');
+  // Una dirección escrita siempre es periferia, aunque el hotel de la lista sea del centro.
+  assert.equal(p.zonaEfectivaDeTraslado(traslado({ modo: 'personalizada' }), () => 'centro'), 'periferia');
   assert.equal(p.zonaEfectivaDeTraslado(traslado({ tipo: 'redondo_aeropuerto' }), zona), '');
   assert.equal(p.zonaEfectivaDeTraslado(traslado({ tipo: 'recepcion_aeropuerto' }), zona), '');
 });
@@ -69,8 +70,8 @@ test('aeropuerto con hotel del catálogo no manda la zona del hotel (sus tarifas
   assert.equal(r.componentes[1].punto_encuentro, 7);
 });
 
-test('dirección libre manda dirección y zona elegida solo en redondo_actividad', () => {
-  const comp = { ...COMPONENTES, traslado: { ...COMPONENTES.traslado, traslado: traslado({ modo: 'personalizada', direccion: ' Calle 1 ', zonaLibre: 'periferia', puntoEncuentroId: null }) } };
+test('dirección libre manda dirección y zona periferia solo en redondo_actividad', () => {
+  const comp = { ...COMPONENTES, traslado: { ...COMPONENTES.traslado, traslado: traslado({ modo: 'personalizada', direccion: ' Calle 1 ', puntoEncuentroId: null }) } };
   const t = p.armarPayloadOrden({ ...BASE, paquete: CRUZA, componentes: comp }).componentes[1];
   assert.equal(t.direccion_personalizada, 'Calle 1');
   assert.equal(t.zona, 'periferia');

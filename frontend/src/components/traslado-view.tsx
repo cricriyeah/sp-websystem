@@ -142,7 +142,6 @@ export function TrasladoView({
     return catalogo.puntos_encuentro[0]?.id ?? null;
   });
   const [direccionPersonalizada, setDireccionPersonalizada] = useState('');
-  const [zonaPersonalizada, setZonaPersonalizada] = useState<Zona | ''>('');
   // Error de la tarjeta de recogida (hotel o dirección).
   const [errorPaso2, setErrorPaso2] = useState('');
 
@@ -212,7 +211,7 @@ export function TrasladoView({
     reponer: reponerBorrador,
     terminado: phase === 'confirmed',
     estado: {
-      tipoTraslado, modoHospedaje, puntoEncuentroId, direccionPersonalizada, zonaPersonalizada,
+      tipoTraslado, modoHospedaje, puntoEncuentroId, direccionPersonalizada,
       fecha, fechaRegreso, hora, personas, contact, moneda, formaPagoSeleccionada, paso: actual,
     },
     restaurar: (guardado) => {
@@ -222,7 +221,6 @@ export function TrasladoView({
       setModoHospedaje(guardado.modoHospedaje);
       setPuntoEncuentroId(guardado.puntoEncuentroId);
       setDireccionPersonalizada(guardado.direccionPersonalizada);
-      setZonaPersonalizada(guardado.zonaPersonalizada);
       setFecha(guardado.fecha);
       setFechaRegreso(guardado.fechaRegreso);
       setHora(guardado.hora);
@@ -301,7 +299,6 @@ export function TrasladoView({
         setModoHospedaje(detalle.punto_encuentro_id === null ? 'personalizada' : 'catalogo');
         setPuntoEncuentroId(detalle.punto_encuentro_id);
         setDireccionPersonalizada(detalle.direccion_personalizada);
-        setZonaPersonalizada(detalle.zona);
         setFechaRegreso(detalle.fecha_regreso);
         setPersonas(detalle.numero_personas ?? estado.numero_personas);
       }
@@ -323,8 +320,9 @@ export function TrasladoView({
       const punto = catalogo.puntos_encuentro.find((p) => p.id === puntoEncuentroId);
       return punto?.zona ?? '';
     }
-    return zonaPersonalizada;
-  }, [tipoTraslado, modoHospedaje, puntoEncuentroId, zonaPersonalizada, catalogo.puntos_encuentro]);
+    // Una dirección escrita siempre se cobra como periferia (igual que `zona_efectiva` del backend).
+    return 'periferia';
+  }, [tipoTraslado, modoHospedaje, puntoEncuentroId, catalogo.puntos_encuentro]);
 
   const tarifaAplicable = useMemo(() => {
     return catalogo.tarifas.find((t) => {
@@ -415,7 +413,6 @@ export function TrasladoView({
       return puntoEncuentroId === null ? traslados.errors.seleccionaHospedaje : '';
     }
     if (!direccionPersonalizada.trim()) return traslados.errors.seleccionaHospedaje;
-    if (tipoTraslado === 'redondo_actividad' && !zonaPersonalizada) return traslados.errors.seleccionaZona;
     return '';
   };
 
@@ -530,10 +527,7 @@ export function TrasladoView({
         tipo_traslado: tipoTraslado,
         punto_encuentro: modoHospedaje === 'catalogo' ? puntoEncuentroId : undefined,
         direccion_personalizada: modoHospedaje === 'personalizada' ? direccionPersonalizada.trim() : '',
-        zona:
-          modoHospedaje === 'personalizada' && tipoTraslado === 'redondo_actividad'
-            ? (zonaPersonalizada as Zona)
-            : undefined,
+        zona: modoHospedaje === 'personalizada' && tipoTraslado === 'redondo_actividad' ? 'periferia' : undefined,
         fecha,
         hora,
         fecha_regreso: tipoTraslado === 'redondo_aeropuerto' ? fechaRegreso : null,
@@ -604,15 +598,8 @@ export function TrasladoView({
   const resumenRecogida =
     modoHospedaje === 'catalogo'
       ? (puntoSeleccionado?.nombre ?? '')
-      : `${direccionPersonalizada}${zonaPersonalizada ? ` (${zonaPersonalizada})` : ''}`;
+      : direccionPersonalizada;
   const fechaTexto = fecha ? formatDay(fromLocalISODate(fecha), lang) : checkout.calendario.sinFecha;
-  const resumenViaje = [
-    traslados.types[tipoTraslado]?.title ?? tipoTraslado,
-    fechaTexto,
-    formatHour(hora),
-    `${personas} ${traslados.fields.pasajeros.toLowerCase()}`,
-  ].join(' · ');
-  const resumenDatos = `${contact.fullName} · ${contact.phone}`;
 
   const locked = phase === 'submitting' || phase === 'payment' || phase === 'unavailable';
 
@@ -761,7 +748,6 @@ export function TrasladoView({
       puntoEncuentroId={puntoEncuentroId}
       modoHospedaje={modoHospedaje}
       direccionPersonalizada={direccionPersonalizada}
-      zonaPersonalizada={zonaPersonalizada}
       tipoTraslado={tipoTraslado}
       error={errorPaso2}
       onPunto={setPuntoEncuentroId}
@@ -773,10 +759,8 @@ export function TrasladoView({
       onVolverALista={() => {
         setModoHospedaje('catalogo');
         setDireccionPersonalizada('');
-        setZonaPersonalizada('');
         setPuntoEncuentroId(catalogo.puntos_encuentro[0]?.id ?? null);
       }}
-      onZona={setZonaPersonalizada}
     />
   );
   const bloqueTarjetaPago = (mostrarDestino: boolean, pagoEnCurso: Pago | null) => (
@@ -862,7 +846,7 @@ export function TrasladoView({
         volverLabel={traslados.back}
         encabezado={
           <EncabezadoCompra
-            titulo={checkout.tituloPagina.transporte}
+            titulo={checkout.tituloPagina}
             detalle={traslados.title}
           />
         }
@@ -873,7 +857,6 @@ export function TrasladoView({
               activo={phase === 'payment'}
               titulo={dict.pedido.yourBooking}
               etiquetaEstado={dict.pedido.bookingSaved}
-              resumen={resumenViaje}
               notaBloqueada={dict.pedido.lockedNote}
               ctaAyuda={dict.pedido.lockedCta}
               mensajeAyuda={ayudaMensaje}
@@ -881,9 +864,8 @@ export function TrasladoView({
             <ItemPaso unida={unidaConAnterior(secuencia, 0)}>
               <CheckoutSectionCard
                 title={checkout.tripHeadline}
-                pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'viaje')}
+                paso="viaje"
                 estado={estadoViaje}
-                resumen={resumenViaje}
                 detalle={detalleViaje}
                 actionLabel={locked ? undefined : etiquetaAccion(crudoViaje)}
                 onAction={locked || crudoViaje === 'activo' ? undefined : () => reabrir('viaje')}
@@ -899,9 +881,8 @@ export function TrasladoView({
               <ItemPaso unida={unidaConAnterior(secuencia, 1)}>
                 <CheckoutSectionCard
                   title={checkout.stepper.datos}
-                  pasoRotulo={rotuloDePaso(checkout.stepper.stepOf, 'datos')}
+                  paso="datos"
                   estado={estadoDatos}
-                  resumen={[resumenDatos, resumenRecogida].filter(Boolean).join(' · ')}
                   detalle={[...detalleContacto, ...(detalleRecogida ?? [])]}
                   actionLabel={locked ? undefined : etiquetaAccion(crudoDatos)}
                   onAction={locked || crudoDatos === 'activo' ? undefined : () => reabrir('datos')}

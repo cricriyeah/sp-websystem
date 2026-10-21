@@ -9,7 +9,7 @@ import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { FieldPopover } from '@/components/field-popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { PuntoEncuentro, TipoTraslado, Zona } from '@/lib/api';
+import type { PuntoEncuentro, TipoTraslado } from '@/lib/api';
 
 type Props = {
   traslados: Dictionary['traslados'];
@@ -18,7 +18,6 @@ type Props = {
   puntoEncuentroId: number | null;
   modoHospedaje: 'catalogo' | 'personalizada';
   direccionPersonalizada: string;
-  zonaPersonalizada: Zona | '';
   tipoTraslado: TipoTraslado;
   /** Error de la tarjeta de recogida (hotel o dirección). */
   error: string;
@@ -26,13 +25,12 @@ type Props = {
   onOtraDireccion: () => void;
   onDireccion: (valor: string) => void;
   onVolverALista: () => void;
-  onZona: (zona: Zona) => void;
 };
 
 /**
  * Contenido del paso de recogida de traslados: hotel o punto de encuentro (con
- * "otra dirección" como última opción), dirección manual y zona. Sin estado
- * propio: modo, punto, dirección y zona viven en `TrasladoView` (la tarifa, el
+ * "otra dirección" como última opción) y dirección manual. Sin estado
+ * propio: modo, punto y dirección viven en `TrasladoView` (la tarifa, el
  * payload y la recuperación los leen), así que plegar la tarjeta no pierde nada.
  */
 export function BloqueRecogida({
@@ -42,14 +40,12 @@ export function BloqueRecogida({
   puntoEncuentroId,
   modoHospedaje,
   direccionPersonalizada,
-  zonaPersonalizada,
   tipoTraslado,
   error,
   onPunto,
   onOtraDireccion,
   onDireccion,
   onVolverALista,
-  onZona,
 }: Props) {
   return (
     <>
@@ -128,29 +124,7 @@ export function BloqueRecogida({
               {traslados.fields.volverALista}
             </AccionTexto>
             <Despliegue abierto={tipoTraslado === 'redondo_actividad'}>
-              <fieldset className="grid grid-cols-2 gap-3">
-                <legend className="sr-only">{traslados.fields.zona}</legend>
-                {(['centro', 'periferia'] as const).map((z) => (
-                  <label
-                    key={z}
-                    className={`flex cursor-pointer items-center gap-2 rounded-campo border p-3 text-sm ${
-                      zonaPersonalizada === z ? 'border-cafe-medio bg-cafe-bruma font-medium' : 'border-border text-muted'
-                    }`}
-                  >
-                    <Input
-                      aspecto="heredado"
-                      type="radio"
-                      name="zona-personalizada"
-                      value={z}
-                      checked={zonaPersonalizada === z}
-                      onChange={() => onZona(z)}
-                      className="h-4 w-4 accent-accent"
-                    />
-                    {z === 'centro' ? traslados.fields.zonaCentro : traslados.fields.zonaPeriferia}
-                  </label>
-                ))}
-              </fieldset>
-              <p className="mt-2 text-sm text-muted">{traslados.fields.zonaRequiredNotice}</p>
+              <p className="texto-cuerpo">{traslados.fields.zonaDireccionNota}</p>
             </Despliegue>
           </div>
         </Despliegue>

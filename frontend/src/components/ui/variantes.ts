@@ -3,13 +3,13 @@
 // los conflictos en orden de cadena (los TAMANOS van después de las VARIANTES a propósito).
 
 // Contrato visual de `Button` (design.md, "Roles de botón", y design-components.md): 48 px de alto
-// en móvil y 44 en escritorio, radio de control (12 px), etiqueta `texto-etiqueta` y foco con el
+// en móvil y 44 en escritorio, píldora (`rounded-full`), etiqueta `texto-etiqueta` y foco con el
 // anillo `ring` de 2 px y 2 px de desfase (el desfase se pinta con la superficie que lo contiene).
 // Un botón NUNCA se deshabilita con `opacity`: el deshabilitado y `aria-disabled` cambian de color
 // (`cafe-bruma` con texto `apagado`). Las etiquetas largas pasan a dos renglones (`py-3`,
 // `text-balance`) y nunca se truncan: el monto del botón de pago tiene que verse.
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-control px-6 py-3 text-center text-balance texto-etiqueta ' +
+  'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-center text-balance texto-etiqueta ' +
   'min-h-12 sm:min-h-11 transition-[background-color,transform] duration-150 ease-[var(--curva-estandar)] ' +
   'active:scale-[0.98] motion-reduce:active:scale-100 ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ' +
@@ -19,12 +19,14 @@ const BASE =
 // variante: un botón en curso no cambia de color al pasar el puntero.
 const APAGADO = 'disabled:bg-cafe-bruma disabled:text-apagado aria-disabled:bg-cafe-bruma aria-disabled:text-apagado';
 
-const BASE_CAMPANA = BASE.replace('rounded-control', 'rounded-full'); // píldora: el sitio público (F10) no usa el radio de control
+// El negro de la campaña (F10): el único botón primario de todo el sitio, también el del checkout. El
+// café va solo en el hover.
+const NEGRO =
+  `bg-tinta text-white hover:bg-cafe active:bg-cafe-hondo ${APAGADO} ` +
+  'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma';
 
 const VARIANTES = {
-  principal:
-    `bg-cafe text-white hover:bg-cafe-hondo active:bg-cafe-profundo ${APAGADO} ` +
-    'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
+  principal: NEGRO,
   secundario:
     'border border-borde-control bg-superficie text-tinta hover:bg-cafe-bruma active:bg-borde ' +
     `${APAGADO} disabled:border-transparent aria-disabled:border-transparent ` +
@@ -37,12 +39,8 @@ const VARIANTES = {
   peligro:
     'bg-error text-white hover:bg-[color-mix(in_srgb,var(--color-error)_92%,var(--color-tinta))] ' +
     `${APAGADO} aria-disabled:hover:bg-cafe-bruma`,
-  // Campaña (F10): píldora negra, o blanca sobre foto. Llevan su propia base porque `botonClases` no fusiona
-  // clases (un `rounded-control` y un `rounded-full` juntos dependerían del orden de la hoja). El color de
-  // marca va solo en el hover; el checkout sigue con `principal` y `secundario`.
-  campana:
-    `bg-tinta text-white hover:bg-cafe active:bg-cafe-hondo ${APAGADO} ` +
-    'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
+  // Campaña (F10): la píldora negra del sitio público (igual que `principal`), o blanca sobre foto.
+  campana: NEGRO,
   'campana-claro':
     `bg-white text-tinta hover:bg-cafe-bruma active:bg-borde ${APAGADO} ` +
     'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
@@ -63,7 +61,6 @@ const VARIANTES = {
 
 // Las variantes de migración no heredan BASE: su aspecto es el del botón crudo original.
 const SIN_BASE: readonly string[] = ['fila', 'chip', 'libre'];
-const CAMPANA: readonly string[] = ['campana', 'campana-claro', 'campana-gris'];
 
 // `md` es el de la base. `icono` es un círculo de 48 × 48 también en escritorio (icono de 24).
 const TAMANOS = { md: '', icono: 'size-12 rounded-full p-0' } as const;
@@ -77,7 +74,7 @@ export function botonClases({
   bloque = false,
 }: { variante?: VarianteBoton; tamano?: TamanoBoton; bloque?: boolean } = {}): string {
   // `bloque`: ancho completo (barra inferior móvil).
-  const base = CAMPANA.includes(variante) ? BASE_CAMPANA : SIN_BASE.includes(variante) ? '' : BASE;
+  const base = SIN_BASE.includes(variante) ? '' : BASE;
   return [base, VARIANTES[variante], TAMANOS[tamano], bloque ? 'w-full' : '']
     .filter(Boolean)
     .join(' ');
