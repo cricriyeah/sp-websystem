@@ -109,9 +109,18 @@ DATOS_REALES = {
         incluye=INCLUYE_AVISTAMIENTO,
     ),
     ('la-ventana-travel', 'hospedaje-la-ventana'): dict(
-        descripcion='Seis estudios (suites) para 2 personas, cada uno con una cama king size. Precio por noche.',
-        incluye={'es': ['Estudio para 2 personas', 'Una cama king size'],
-                 'en': ['Studio for 2 people', 'One king size bed']},
+        nombre='Hotel Casa Arrecife',
+        descripcion='Seis estudios (suites) para 2 personas, cada uno con una cama king size. Precio por noche. '
+                    'A 1 km de la playa de La Ventana, con restaurantes a menos de 1 km, a 2.2 km del centro de '
+                    'La Ventana y a 37 km del aeropuerto de La Paz. Distancias en línea recta: el recorrido real puede variar.',
+        incluye={'es': ['Estudio para 2 personas con una cama king size',
+                        'Entrada de 14:00 a 15:00 y salida de 11:00 a 12:00',
+                        'Niños de cualquier edad son bienvenidos',
+                        'No se pueden agregar camas extra ni cunas'],
+                 'en': ['Studio for 2 people with one king size bed',
+                        'Check-in 2:00 to 3:00 pm, check-out 11:00 am to 12:00 pm',
+                        'Children of all ages are welcome',
+                        'Extra beds and cribs cannot be added']},
     ),
     ('piratas-adventures', 'safari-marino'): dict(
         nombre='Safari marino',
