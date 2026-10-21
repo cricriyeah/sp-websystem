@@ -15,9 +15,8 @@ import type { SedeContenido } from '@/content/sedes-tipos';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { HubPortada } from '@/components/hub-portada';
-import { HubGridSedes } from '@/components/hub-grid-sedes';
 import { HubMapaEscritorio } from '@/components/hub-mapa-escritorio';
-import type { VistaSedeHub } from '@/components/tarjeta-sede-hub';
+import { CortinasSedes, type VistaSedeHub } from '@/components/cortinas-sedes';
 import { HubComoFunciona } from '@/components/hub-como-funciona';
 import { ColaboradoresSection } from '@/components/colaboradores-section';
 
@@ -83,9 +82,9 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
     <main>
       <HubPortada lang={lang} textos={textos} />
-      <section id={ANCLA_HUB.sedes} className="scroll-mt-28 mx-auto max-w-[1440px] px-4 py-12 sm:px-6 lg:px-12">
-        <h2 className="mb-8 texto-seccion">{textos.sedesTitulo}</h2>
-        <HubGridSedes sedes={vistas} textos={{ region: textos.region, desde: textos.desde, verSede: textos.verSede }} />
+      <section id={ANCLA_HUB.sedes} aria-labelledby={`${ANCLA_HUB.sedes}-titulo`} className="scroll-mt-[var(--nav-alto)]">
+        <h2 id={`${ANCLA_HUB.sedes}-titulo`} className="sr-only texto-seccion">{textos.sedesTitulo}</h2>
+        <CortinasSedes sedes={vistas} textos={{ region: textos.region, desde: textos.desde, verSede: textos.verSede }} />
       </section>
       <section id={ANCLA_HUB.mapa} aria-label={textos.mapaTitulo} className="hidden scroll-mt-28 mx-auto max-w-[1440px] px-12 pb-12 lg:block">
         <HubMapaEscritorio lang={lang} sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, conLabel, verDestino }} />
