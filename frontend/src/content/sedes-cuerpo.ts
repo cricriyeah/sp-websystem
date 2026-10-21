@@ -419,6 +419,40 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           empresaSlug: 'la-ventana-travel',
         },
       ],
+      faq: [
+        {
+          q: '¿Qué incluye el paquete de 5 o de 7 noches?',
+          a: 'Hospedaje en el Hotel Casa Arrecife durante 5 o 7 noches, traslado redondo del aeropuerto y el avistamiento de ballenas y orcas todos los días de mar: del día 2 al 5 en el paquete de 5 noches y del día 2 al 7 en el de 7. El día 1 es de llegada.',
+        },
+        {
+          q: '¿Cómo es el hospedaje?',
+          a: 'El Hotel Casa Arrecife tiene seis estudios (suites), cada uno para 2 personas y con una cama king size. La entrada es de 14:00 a 15:00 y la salida de 11:00 a 12:00. Está a 1 km de la playa de La Ventana y a 2.2 km del centro.',
+        },
+        {
+          q: '¿Puedo viajar con niños? ¿Se puede agregar una cama extra o una cuna?',
+          a: 'Niños de cualquier edad son bienvenidos. Cada estudio es para 2 personas con una cama king size, y no se pueden agregar camas extra ni cunas: tenlo en cuenta al elegir cuántas habitaciones reservar.',
+        },
+        {
+          q: '¿A qué hora sale el avistamiento de ballenas y orcas y cuánto dura?',
+          a: 'Salimos todos los días entre las 7:00 y las 8:00 am, de La Ventana o de Bahía de los Sueños. La salida dura de 5 a 6 horas, e incluye algo de comer, aguas y refrescos, y el equipo para snorkelear.',
+        },
+        {
+          q: '¿Cuántas personas caben y puedo ir en un grupo privado?',
+          a: 'Las pangas llevan hasta 7 personas y las más grandes hasta 10. Puedes ir en lancha compartida, pagando por persona, o con un grupo privado de hasta 10 personas: para el grupo privado escríbenos por WhatsApp y te ayudamos a reservarlo.',
+        },
+        {
+          q: '¿Cómo funciona la pesca con mosca?',
+          a: 'Es un día de pesca con mosca (fly fishing) para 2 o 3 personas como máximo. El precio es por día y por grupo, no por persona; lo ves en su tarjeta.',
+        },
+        {
+          q: '¿La licencia de pesca está incluida?',
+          a: 'No. La licencia de pesca es un extra y se paga aparte.',
+        },
+        {
+          q: '¿Puedo cambiar la fecha o cancelar si hay mal clima?',
+          a: 'Puedes cambiar la fecha con al menos 48 horas de anticipación. Si el mal clima impide salir, hay reembolso completo.',
+        },
+      ],
       destacadas: [],
       otrasEmpresas: [],
       servicioTransporte: null,
@@ -497,6 +531,40 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           ancho: 1600,
           alto: 1280,
           empresaSlug: 'la-ventana-travel',
+        },
+      ],
+      faq: [
+        {
+          q: 'What does the 5-night or 7-night package include?',
+          a: 'Lodging at Hotel Casa Arrecife for 5 or 7 nights, a round-trip airport transfer, and whale and orca watching on every sea day: days 2 to 5 on the 5-night package and days 2 to 7 on the 7-night one. Day 1 is your arrival day.',
+        },
+        {
+          q: 'What is the lodging like?',
+          a: 'Hotel Casa Arrecife has six studios (suites), each for 2 people with one king size bed. Check-in is from 2:00 to 3:00 pm and check-out from 11:00 am to 12:00 pm. It is 1 km from La Ventana beach and 2.2 km from the town center.',
+        },
+        {
+          q: 'Can I travel with children? Can an extra bed or a crib be added?',
+          a: 'Children of all ages are welcome. Each studio is for 2 people with one king size bed, and extra beds and cribs cannot be added: keep this in mind when you choose how many rooms to book.',
+        },
+        {
+          q: 'What time does whale and orca watching leave, and how long does it last?',
+          a: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños. The trip lasts 5 to 6 hours and includes some food, water and soft drinks, and snorkeling gear.',
+        },
+        {
+          q: 'How many people fit, and can I go in a private group?',
+          a: 'The boats carry up to 7 people and the larger ones up to 10. You can go on a shared boat, paying per person, or with a private group of up to 10 people: for a private group, message us on WhatsApp and we will help you book it.',
+        },
+        {
+          q: 'How does fly fishing work?',
+          a: 'It is a day of fly fishing for 2 or 3 people at most. The price is per day and per group, not per person; you can see it on its card.',
+        },
+        {
+          q: 'Is the fishing license included?',
+          a: 'No. The fishing license is an extra and is paid separately.',
+        },
+        {
+          q: 'Can I change the date or cancel if the weather is bad?',
+          a: 'You can change the date with at least 48 hours notice. If bad weather keeps us from going out, you get a full refund.',
         },
       ],
       destacadas: [],
