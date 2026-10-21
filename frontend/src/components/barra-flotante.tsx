@@ -53,23 +53,28 @@ type LogoMarcaProps = {
 };
 
 /**
- * Nuestra marca: el logo redondo de Sun Baja Experience, sin recuadro. Gira media vuelta al cargar la
- * página (`.logo-gira`) y, con `girado`, otra media vuelta al abrir el menú: la transición vuelve por el
- * mismo camino, o sea hacia la izquierda, al cerrarlo. Dos capas porque el giro de carga es una
- * animación y el del menú una transición, y las dos usan `transform`.
+ * Nuestra marca: el logo mediano de Sun Baja Experience (isotipo y letras en dos capas con el mismo
+ * encuadre), sin recuadro. Al cargar, el isotipo gira media vuelta (`.logo-gira`) mientras la barra se
+ * expande y las letras aparecen con un fundido desde el isotipo hacia la derecha (`.logo-letras-barra`).
+ * Con `girado`, el isotipo da otra media vuelta al abrir el menú móvil: la transición vuelve por el mismo
+ * camino, o sea hacia la izquierda, al cerrarlo. El giro de carga es una animación y el del menú una
+ * transición, y las dos usan `transform`, por eso van en capas distintas.
  */
 export function LogoMarca({ girado = false, retraso = 0 }: LogoMarcaProps) {
   const estilo: CSSProperties | undefined = retraso ? { animationDelay: `${retraso}ms` } : undefined;
   return (
-    <span className="logo-gira inline-flex" style={estilo}>
-      <span
-        className={cn(
-          'inline-flex transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
-          girado && 'rotate-180',
-        )}
-      >
-        <Image src="/sunbajaexperience/logosm.svg" alt={MARCA} width={44} height={44} className="size-11" priority />
+    <span className="relative inline-flex h-11 w-24 shrink-0" style={{ '--retraso': `${retraso}ms` } as CSSProperties}>
+      <span className="logo-gira absolute left-0 top-0 inline-flex size-11" style={estilo}>
+        <span
+          className={cn(
+            'inline-flex transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+            girado && 'rotate-180',
+          )}
+        >
+          <Image src="/sunbajaexperience/logosm.svg" alt={MARCA} width={44} height={44} className="size-11" priority />
+        </span>
       </span>
+      <Image src="/sunbajaexperience/logomed-letras.svg" alt="" fill sizes="96px" className="logo-letras-barra" priority />
     </span>
   );
 }

@@ -297,6 +297,13 @@
   }
 }
 
+@keyframes letras-barra {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
 @keyframes logo-gira {
   from {
     opacity: 0;
@@ -418,6 +425,11 @@
 
   .barra-resto {
     animation: barra-aparece 450ms cubic-bezier(0.2, 0, 0, 1) 750ms both;
+  }
+
+  /* Las letras de la marca aparecen cuando el fondo de la barra ya casi llegó al otro extremo. */
+  .logo-letras-barra {
+    animation: letras-barra 700ms cubic-bezier(0.16, 1, 0.3, 1) calc(750ms + var(--retraso, 0ms)) both;
   }
 
   .logo-gira {
@@ -683,6 +695,13 @@
     from,
     to {
       clip-path: inset(0 0 0 0 round 9999px);
+    }
+  }
+
+  @keyframes letras-barra {
+    from {
+      opacity: 0;
+      transform: none;
     }
   }
 
