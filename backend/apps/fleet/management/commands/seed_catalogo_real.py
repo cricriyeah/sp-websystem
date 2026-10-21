@@ -77,15 +77,13 @@ INCLUYE_AVISTAMIENTO = {
            'Algo de comer, aguas y refrescos',
            'Equipo para snorkelear',
            'Snorkel en un arrecife',
-           'Buscamos animales para intentar nadar con ellos',
-           'Descanso en una playa de la isla Cerralvo'],
+           'Buscamos animales para intentar nadar con ellos'],
     'en': ['Daily departure, 7:00 to 8:00 am, from La Ventana or Bahía de los Sueños',
            'The tour lasts about 5 to 6 hours',
            'Some food, water and soft drinks',
            'Snorkeling gear',
            'Snorkeling at a reef',
-           'We look for animals to try to swim with them',
-           'A rest on a beach on Cerralvo island'],
+           'We look for animals to try to swim with them'],
 }
 
 DATOS_REALES = {
@@ -104,7 +102,7 @@ DATOS_REALES = {
         precio_base=Decimal('5000'), precio_persona_extra=Decimal('0'),
         personas_incluidas=1, capacidad_maxima=10,
         descripcion='Salida diaria al mar para buscar ballenas y orcas e intentar nadar con ellas, con snorkel en un '
-                    'arrecife y descanso en una playa de la isla Cerralvo. Precio por persona en lancha compartida; '
+                    'arrecife. Precio por persona en lancha compartida; '
                     'para un grupo privado (hasta 10 personas) el costo es de $20,000 MXN: consúltalo por WhatsApp.',
         incluye=INCLUYE_AVISTAMIENTO,
     ),
