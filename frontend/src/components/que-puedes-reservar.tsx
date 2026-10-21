@@ -3,18 +3,12 @@ import { Boat } from '@phosphor-icons/react/ssr';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import type { SedeDestacada } from '@/content/sedes-tipos';
-import { getEmpresa } from '@/content/empresas';
-import { claveDePaquete, claveDeServicio, imagenDeCatalogo } from '@/content/imagenes-catalogo';
-import { baseDeCobro, palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
-import { colorDePaquete, colorDeServicio } from '@/lib/color-actividad';
 import type { Seccion } from '@/lib/secciones-sede';
 import { ANCLA_DE } from '@/lib/secciones-sede';
-import { hrefDetalleServicio, hrefPaquete } from '@/lib/booking-href';
-import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
-import { aMoneda } from '@/lib/moneda';
 import { hrefSede } from '@/lib/routes';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { TarjetaProducto, type VistaProducto } from '@/components/tarjeta-producto';
+import { vistaDePaquete, vistaDeServicio } from '@/components/vistas-catalogo';
 import { AvisoEstado } from '@/components/ui/aviso-estado';
 import { FilaArrastrable } from '@/components/ui/fila-arrastrable';
 import { CLASE_FONDO, SectionShell, type Fondo } from '@/components/ui/section-shell';
@@ -36,53 +30,6 @@ type Props = {
 };
 
 type Elemento = { vista: VistaProducto; destacada: boolean };
-
-/** En `/en` el precio va primero en dólares y debajo, aproximado, en pesos. */
-function precioDe(mxn: (moneda: Moneda) => number | null, lang: Locale, moneda: Moneda) {
-  const principal: Moneda = lang === 'en' ? 'USD' : moneda;
-  const monto = `${formatearPrecio(mxn(principal), principal)} ${principal}`;
-  const aprox = principal === 'USD' ? `≈ ${formatearPrecio(mxn('MXN'), 'MXN')} MXN` : undefined;
-  return { monto, aprox };
-}
-
-function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda: Moneda, sedeSlug: string): VistaProducto {
-  const clave = claveDeServicio(servicio.empresa_slug, servicio.slug);
-  const empresa = getEmpresa(servicio.empresa_slug);
-  const base = servicio.tipo_servicio === 'transporte' ? baseDeCobro('por_ruta', lang) : baseDeCobro(servicio.estrategia_precio, lang);
-  const porRuta = !base || !base.conDesde;
-  return {
-    clave,
-    nombre: servicio.nombre,
-    empresa: empresa?.nombre ?? servicio.empresa_slug,
-    color: colorDeServicio(servicio),
-    palabra: palabraDeServicio(servicio.tipo_servicio, lang),
-    foto: imagenDeCatalogo(clave, lang),
-    precio: porRuta
-      ? null
-      : { ...precioDe((m) => aMoneda(servicio.precio_base, m, servicio.tipo_cambio_usd), lang, moneda), base: base.texto, conDesde: true },
-    capacidad: servicio.capacidad_maxima ?? null,
-    hrefDetalle: hrefDetalleServicio(servicio, lang, moneda, sedeSlug),
-  };
-}
-
-function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: Moneda): VistaProducto {
-  const clave = claveDePaquete(paquete.slug);
-  const empresa = getEmpresa(paquete.empresa_lider_slug);
-  const base = baseDeCobro(paquete.estrategia_precio, lang);
-  return {
-    clave,
-    nombre: paquete.nombre,
-    empresa: empresa?.nombre ?? paquete.empresa_lider,
-    color: colorDePaquete(paquete),
-    palabra: palabraDePaquete(paquete.noches, lang),
-    foto: imagenDeCatalogo(clave, lang),
-    precio: base
-      ? { ...precioDe((m) => calcularPrecioPaquete(paquete, m).precioFinal, lang, moneda), base: base.texto, conDesde: base.conDesde }
-      : null,
-    capacidad: null,
-    hrefDetalle: hrefPaquete(paquete, lang, moneda),
-  };
-}
 
 /**
  * «Qué puedes reservar» (F10): los servicios y paquetes de la sede en una sola fila que se arrastra,

@@ -83,3 +83,12 @@ test('getSedeCuerpo no trae slug/nombre/logo del indice (solo el cuerpo crudo)',
   // Las demás empresas son slugs: sus datos salen de empresas.ts, no se duplican.
   assert.deepEqual(cuerpo.otrasEmpresas, ['transporte-la-paz']);
 });
+
+test('«Tu día» solo en La Paz y con los mismos momentos en es y en', () => {
+  const es = c.getSedeContenido('la-paz', 'es').dia;
+  const en = c.getSedeContenido('la-paz', 'en').dia;
+  assert.ok(es && en);
+  assert.equal(es.momentos.length, en.momentos.length);
+  assert.deepEqual(es.momentos.map((m) => m.foto), en.momentos.map((m) => m.foto));
+  for (const slug of ['la-ventana', 'puerto-chale']) assert.equal(c.getSedeContenido(slug, 'es').dia, undefined);
+});

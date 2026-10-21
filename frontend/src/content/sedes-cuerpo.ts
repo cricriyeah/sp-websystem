@@ -45,6 +45,16 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
       },
+      dia: {
+        titulo: 'Tu día de pesca',
+        etiqueta: 'Tu día de pesca, momento por momento',
+        momentos: [
+          { titulo: '5:00 am', texto: 'Te espera tu capitán en Marina La Costa. Eliges la hora de salida entre 5:00 y 7:00 am.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
+          { titulo: 'A bordo', texto: 'Solo tu grupo y tu capitán en la panga. Hasta 5 personas.', foto: '/photos/capitan-cabrilla-bahia.webp' },
+          { titulo: 'Pesca', texto: 'De 6 a 8 horas en la bahía, buscando lo que pica en la temporada.', foto: '/photos/cana-doblada-dorado.webp' },
+          { titulo: 'Regresa', texto: 'Con tus fotos y tu captura. Si reservaste traslado, DLS te lleva al hotel.', foto: '/photos/grupo-cabrilla-costa.webp' },
+        ],
+      },
       galeria: [
         {
           src: '/photos/dorado-bajo-toldo.webp',
@@ -209,6 +219,16 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       otrasEmpresas: ['transporte-la-paz'],
       servicioTransporte: {
         empresaSlug: 'transporte-la-paz',
+      },
+      dia: {
+        titulo: 'Your fishing day',
+        etiqueta: 'Your fishing day, moment by moment',
+        momentos: [
+          { titulo: '5:00 am', texto: 'Your captain is waiting at Marina La Costa. You choose your departure time between 5:00 and 7:00 am.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
+          { titulo: 'On board', texto: 'Just your group and your captain on the boat. Up to 5 guests.', foto: '/photos/capitan-cabrilla-bahia.webp' },
+          { titulo: 'Fishing', texto: 'Six to eight hours on the bay, going after whatever is biting this season.', foto: '/photos/cana-doblada-dorado.webp' },
+          { titulo: 'Return', texto: 'Back with your photos and your catch. If you booked a transfer, DLS takes you to your hotel.', foto: '/photos/grupo-cabrilla-costa.webp' },
+        ],
       },
       galeria: [
         {

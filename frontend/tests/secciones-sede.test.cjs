@@ -6,7 +6,7 @@ const path = require('node:path');
 const s = require(path.join(process.env.SECCIONES_TEST_OUT, 'lib/secciones-sede.js'));
 
 const foto = { ancho: 1448, alto: 1086 };
-const base = { servicios: [{}], paquetes: [], resenas: [], fotos: [], faq: [], temporadas: null };
+const base = { servicios: [{}], paquetes: [], resenas: [], fotos: [], faq: [], temporadas: null, dia: undefined };
 const ids = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).map((x) => x.id);
 const reservar = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).find((x) => x.id === 'reservar');
 
@@ -38,13 +38,22 @@ test('galería solo con 3 fotos aptas', () => {
 
 test('orden fijo de la sede, con todo', () => {
   assert.deepEqual(
-    ids({ fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}] }),
-    ['hero', 'reservar', 'tranquilidad', 'galeria', 'temporadas', 'opiniones', 'preguntas'],
+    ids({ paquetes: [{}], dia: [{}], fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}] }),
+    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'galeria', 'temporadas', 'opiniones', 'preguntas'],
   );
 });
 
-test('enlaces del menú: un ancla por sección navegable, sin héroe ni tranquilidad', () => {
-  assert.deepEqual(s.enlacesDeSede(['hero', 'reservar', 'tranquilidad', 'preguntas']), [
+test('paquetes y día solo si hay contenido real: sin paquetes o sin momentos no se pintan', () => {
+  assert.ok(!ids({ paquetes: [] }).includes('paquetes'));
+  assert.ok(!ids({ paquetes: null }).includes('paquetes'));
+  assert.ok(ids({ paquetes: [{}] }).includes('paquetes'));
+  assert.ok(!ids({ dia: [] }).includes('dia'));
+  assert.ok(!ids({ dia: undefined }).includes('dia'));
+  assert.ok(ids({ dia: [{}] }).includes('dia'));
+});
+
+test('enlaces del menú: un ancla por sección navegable, sin héroe, paquetes, día ni tranquilidad', () => {
+  assert.deepEqual(s.enlacesDeSede(['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'preguntas']), [
     { ancla: '#reservar', claveNav: 'reservar' },
     { ancla: '#preguntas', claveNav: 'preguntas' },
   ]);

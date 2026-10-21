@@ -824,6 +824,12 @@
       "whatsapp": "Message us on WhatsApp",
       "whatsappMensaje": "Hi, I'd like to know what I can book in {sede}."
     },
+    "paquetes": {
+      "titulo": "Packages",
+      "enElMar": "At sea",
+      "enTierra": "On land",
+      "incluyePersonas": "Includes {n} guests"
+    },
     "tranquilidad": {
       "titulo": "Book with peace of mind",
       "cifraFecha": "48 h",

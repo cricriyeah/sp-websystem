@@ -18,6 +18,8 @@ import { SiteFooter } from '@/components/site-footer';
 import { SedeHero } from '@/components/sede-hero';
 import { BandaColaboracion } from '@/components/banda-colaboracion';
 import { QuePuedesReservar } from '@/components/que-puedes-reservar';
+import { PaquetesSede } from '@/components/paquetes-sede';
+import { DiaDeSede } from '@/components/dia-de-sede';
 import { ReservaTranquila, type EjemploPago } from '@/components/reserva-tranquila';
 import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
@@ -75,6 +77,8 @@ export default async function SedePage({ params, searchParams }: Props) {
       {marcaSede && <BandaColaboracion empresa={marcaSede} frase={dict.sedeContenido.colaboracion} />}
     </>,
     reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} />,
+    paquetes: (fondo) => <PaquetesSede id={ANCLA_DE.paquetes} lang={lang} moneda={moneda} paquetes={paquetes ?? []} textos={dict.sedeContenido.paquetes} textosReservar={dict.sedeContenido.queReservar} fondo={fondo} />,
+    ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),
     tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} hrefIncluye={`#${ANCLA_DE.reservar}`} fondo={fondo} />,
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
     ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} /> }),
@@ -88,6 +92,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     fotos: galeria ?? [],
     faq: faq ?? [],
     temporadas: temporadas?.filas,
+    dia: contenido.dia?.momentos,
   });
   const ids = secciones.map((s) => s.id).filter((id) => pintar[id]);
   const fondos = fondosDeSecciones(ids);

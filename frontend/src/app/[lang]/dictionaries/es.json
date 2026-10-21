@@ -824,6 +824,12 @@
       "whatsapp": "Escribirnos por WhatsApp",
       "whatsappMensaje": "Hola, quiero saber qué se puede reservar en {sede}."
     },
+    "paquetes": {
+      "titulo": "Paquetes",
+      "enElMar": "En el mar",
+      "enTierra": "En tierra",
+      "incluyePersonas": "Incluye {n} personas"
+    },
     "tranquilidad": {
       "titulo": "Reserva con tranquilidad",
       "cifraFecha": "48 h",

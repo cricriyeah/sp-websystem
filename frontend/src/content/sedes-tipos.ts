@@ -60,6 +60,14 @@ export type SedeTemporadas = {
   }[];
 };
 
+/** «Tu día»: los momentos de un viaje de la sede, en orden. Las fotos son decorativas (la palabra y la frase lo dicen). */
+export type SedeDia = {
+  titulo: string;
+  /** Nombre accesible de la fila. */
+  etiqueta: string;
+  momentos: { titulo: string; texto: string; foto: string }[];
+};
+
 export type SedeDestacada = {
   tipo: 'servicio' | 'paquete';
   slug: string;
@@ -86,6 +94,8 @@ export type SedeCuerpoContenido = {
   servicioTransporte: SedeServicioTransporte;
   /** Galeria propia de la sede (con medidas, para `fotosAptas`). Sin ella, no hay seccion. */
   galeria?: { src: string; alt: string; ancho: number; alto: number; empresaSlug: string }[];
+  /** El día del viaje, momento por momento. Sin él, no hay sección. */
+  dia?: SedeDia;
   temporadas?: SedeTemporadas;
   faq?: { q: string; a: string }[];
 };
