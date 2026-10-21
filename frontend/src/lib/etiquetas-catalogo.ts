@@ -109,9 +109,11 @@ export function fotosAptas<T extends Medida>(fotos: T[]): T[] {
   return fotos.filter((foto) => ladoLargo(foto) >= 800);
 }
 
+/** @public Lo usan las pruebas. */
 export const aptaParaSlotGrande = (foto: Medida): boolean => ladoLargo(foto) >= 1200;
 
 /** Héroe a 1440 px: con menos de 1600 de ancho se amplía (solo con `object-position` y el visto bueno del dueño). */
+/** @public Lo usan las pruebas. */
 export const aptaParaHeroe = (foto: Medida): boolean => foto.ancho >= 1600;
 
 /** Con menos de 3 fotos aptas no hay galería. */

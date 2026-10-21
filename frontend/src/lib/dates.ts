@@ -66,8 +66,7 @@ export function fromLocalISODate(iso: string): Date {
  * Tope de personas por viaje: la panga mas grande de la flota lleva 5 (pesca default).
  * Otros servicios (e.g. transporte, hospedaje) configuran su propio tope vía `capacidad_maxima`.
  */
-export const PESCA_MAX_PEOPLE = 5;
-export const MAX_PEOPLE = PESCA_MAX_PEOPLE;
+export const MAX_PEOPLE = 5;
 export const MIN_PEOPLE = 1;
 
 /**

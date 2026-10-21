@@ -3,9 +3,6 @@
 // Solo tipos: sin runtime, sin valores exportados. Un `import type` de este
 // archivo se borra por completo en compilacion, asi que es seguro importarlo
 // desde cualquier lado (Client o Server Component) sin costo de bundle.
-import type { Locale } from '@/app/[lang]/dictionaries';
-
-export type { Locale };
 
 /**
  * Lo minimo que un Client Component necesita por sede. Nombre, logo, sitio y redes de la

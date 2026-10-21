@@ -24,7 +24,3 @@ export const MARCAS: readonly MarcaEmpresa[] = [
   { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-sello.webp', logoLibre: '/logos/laventanatravel.webp', campo: 'verde' },
   { slug: 'piratas-adventures', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp', campo: 'azul' },
 ];
-
-export function marcaDe(slug: string | null | undefined): MarcaEmpresa | undefined {
-  return slug ? MARCAS.find((marca) => marca.slug === slug) : undefined;
-}

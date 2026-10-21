@@ -60,11 +60,3 @@ export function guardarConsentimiento(decision: Consentimiento) {
     // siguiente visita; no se asume un "si" que no dio.
   }
 }
-
-/**
- * La puerta para todo script no esencial. Devuelve `false` mientras no haya
- * respuesta, que es justo lo que se quiere: el silencio no autoriza nada.
- */
-export function consentimientoAceptado(): boolean {
-  return leerConsentimiento() === 'aceptado';
-}

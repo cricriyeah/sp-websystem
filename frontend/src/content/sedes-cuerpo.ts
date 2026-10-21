@@ -440,6 +440,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
   },
 };
 
+/** @public Lo usan las pruebas. */
 export function getSedeCuerpo(slug: string, lang: Locale): SedeCuerpoContenido | undefined {
   return SEDES_CUERPO[slug]?.[lang];
 }

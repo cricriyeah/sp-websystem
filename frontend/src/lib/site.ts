@@ -60,14 +60,3 @@ export function alternativasDe(lang: Locale, ruta: string = '') {
     },
   };
 }
-
-// Datos del negocio para el schema local. La direccion es la real del punto de
-// encuentro; las coordenadas se dejan fuera a proposito hasta tenerlas exactas:
-// un pin mal puesto manda al cliente a otro lado del malecon.
-export const NEGOCIO = {
-  nombre: 'Sun Baja Experience',
-  calle: 'Marina La Costa, Rangel y Navarro',
-  ciudad: 'La Paz',
-  estado: 'Baja California Sur',
-  pais: 'MX',
-};

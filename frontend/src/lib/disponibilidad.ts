@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getCupoRango, type DisponibilidadRango, type MotivoNoDisponible } from '@/lib/api';
+import { getCupoRango, type DisponibilidadRango } from '@/lib/api';
 
 type Cargado = { clave: string; dias: DisponibilidadRango; error: boolean };
 
@@ -61,12 +61,4 @@ export function useDisponibilidad(
     error: vigente?.error ?? false,
     reintentar,
   };
-}
-
-/** El motivo de ese dia, o null si cabe o si todavia no sabemos. */
-export function motivoDe(
-  dias: DisponibilidadRango,
-  iso: string,
-): MotivoNoDisponible | null {
-  return dias[iso] ?? null;
 }

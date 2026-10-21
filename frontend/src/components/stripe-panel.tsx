@@ -5,8 +5,6 @@ import { ResumenPedido } from '@/components/checkout/pago/resumen-pedido';
 import { TarjetaComoPagas } from '@/components/checkout/pago/tarjeta-como-pagas';
 import type { StripePanelProps } from '@/components/checkout/pago/tipos';
 
-export { NotaSeguridadStripe } from '@/components/checkout/pago/nota-seguridad';
-
 export function StripePanel(props: StripePanelProps) {
   const { destinoTarjeta = null } = props;
 

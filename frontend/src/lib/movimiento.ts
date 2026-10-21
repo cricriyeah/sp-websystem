@@ -6,6 +6,7 @@
 export const DURACION = { corta: 0.15, media: 0.25, larga: 0.4 } as const; // --duracion-corta|media|larga
 export type Curva = readonly [number, number, number, number];
 export const CURVA_ESTANDAR: Curva = [0.2, 0, 0, 1]; // --curva-estandar: entradas y cambios de estado
+/** @public Lo usan las pruebas. */
 export const CURVA_SALIDA: Curva = [0.4, 0, 1, 1]; // --curva-salida
 
 /**

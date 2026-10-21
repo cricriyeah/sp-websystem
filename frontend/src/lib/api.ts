@@ -12,22 +12,6 @@ export type PuntoEncuentro = {
   zona: Zona;
 };
 
-/**
- * @deprecated SP1: El transporte deja de ser personalización/selección en checkout.
- * Lo que el cliente eligio para el traslado, si eligio uno. `null` = sin
- * transporte.
- */
-export type TransporteSeleccion = {
-  punto_encuentro?: number | null;
-  direccion_personalizada?: string;
-  zona?: Zona | '';
-  // Cuantas personas del grupo usan el transporte. `null`/ausente = todo el
-  // grupo. Solo afecta si aplica el recargo de grupo (ver
-  // apps/payments/views.py, `_resolver_transporte`) — el precio base no
-  // escala por persona.
-  cantidad?: number | null;
-};
-
 export type MotivoNoDisponible = 'lleno' | 'sin_panga' | 'sin_lugar';
 
 export type Cupo = {

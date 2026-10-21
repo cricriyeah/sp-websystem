@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["scripts/*.cjs"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["tailwindcss"],
+  "ignoreFiles": [
+    "src/components/checkout/deslizable.tsx",
+    "src/components/ui/card.tsx",
+    "src/components/ui/checkbox.tsx",
+    "src/components/ui/field.tsx",
+    "src/components/ui/opcion.tsx",
+    "src/lib/etiqueta-boton.ts",
+    "src/lib/rango-paquete.ts"
+  ]
+}

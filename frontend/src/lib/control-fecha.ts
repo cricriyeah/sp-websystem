@@ -34,6 +34,7 @@ export function controlDeFecha(entrada: EntradaControl): { control: ControlFecha
 }
 
 /** En los rangos el primer toque es vista previa y el segundo confirma; en una fecha, un toque elige. */
+/** @public Lo usan las pruebas. */
 export function pideDosToques(control: ControlFecha): boolean {
   return control !== 'fecha_unica';
 }

@@ -23,13 +23,3 @@ export function Skeleton({ className = '' }: { className?: string }) {
     />
   );
 }
-
-/**
- * Skeleton de una cifra de dinero, con el ancho aproximado del texto que va a
- * reemplazarlo. Existe porque el resumen mostraba un guion `—` en el lugar del
- * precio mientras llegaba la tarifa: una ambiguedad en la pantalla donde menos
- * la quieres.
- */
-export function SkeletonPrecio({ className = '' }: { className?: string }) {
-  return <Skeleton className={`h-[1em] w-20 align-middle ${className}`} />;
-}

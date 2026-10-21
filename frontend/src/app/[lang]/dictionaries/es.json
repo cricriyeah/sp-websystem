@@ -96,7 +96,6 @@
     "brandAccent": "Experience",
     "location": "La Paz, BCS",
     "inicio": "Inicio",
-    "nosotros": "Nosotros",
     "comoFunciona": "Cómo funciona",
     "temporadas": "Qué se pesca",
     "galeria": "Galería",
@@ -120,24 +119,14 @@
     "colaboradores": "Colaboradores",
     "eligeSede": "Elige tu sede"
   },
-  "hero": {
-    "headlineStart": "Ven a pescar",
-    "headlineEmphasis": "con nosotros",
-    "headlineEnd": "a la Bahía de La Paz",
-    "subtext": "Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS."
-  },
   "booking": {
     "timeHelp": "Salida entre 5:00 y 7:00 am",
     "submit": "Agendar",
-    "reservarAqui": "Reservar aquí",
-    "verQueReservar": "Ver qué reservar",
-    "verDetalles": "Ver detalles",
-    "incluyeHospedaje": "Incluye hospedaje"
+    "verQueReservar": "Ver qué reservar"
   },
   "included": {
     "headline": "¿Qué incluye tu experiencia?",
     "intro": "Queremos que disfrutes con total tranquilidad y comodidad. Aquí te mostramos todo lo que incluye tu servicio, las recomendaciones para llevar a bordo y los servicios adicionales que podemos coordinar para ti.",
-    "includedTitle": "Incluido en tu tour",
     "included": [
       {
         "icon": "panga",
@@ -169,26 +158,6 @@
       "Una chamarra ligera o rompevientos para la brisa fresca del amanecer",
       "Pastillas para el mareo si eres sensible al movimiento (tomar antes de zarpar)",
       "Hielera para llevarte tus filetes frescos al terminar el viaje"
-    ],
-    "addonsTitle": "Servicios adicionales a tu medida",
-    "addonsIntro": "Podemos preparar con gusto cualquiera de estos extras para hacer tu viaje aún más cómodo y completo.",
-    "addons": [
-      {
-        "title": "Equipo de pesca",
-        "body": "Si no cuentas con cañas y carretes, avísanos y te preparamos equipo de calidad listo a bordo."
-      },
-      {
-        "title": "Carnada fresca",
-        "body": "Coordinamos la carnada viva o fresca para tenerla lista en el muelle antes de tu salida."
-      },
-      {
-        "title": "Lunch y bebidas a bordo",
-        "body": "Puedes agregarlo fácilmente durante tu reserva para disfrutar de ricos alimentos en el mar."
-      },
-      {
-        "title": "Traslado al muelle",
-        "body": "Con gusto organizamos tu transportación redonda desde tu hotel o estancia en La Paz."
-      }
     ]
   },
   "footer": {
@@ -275,9 +244,7 @@
       "other": "personas"
     },
     "tripHeadline": "Fecha y detalles de tu viaje",
-    "tripConfirmQuestion": "¿Confirmas el día y la hora de tu salida?",
     "confirmStep": "Confirmar",
-    "stepConfirmed": "Confirmado",
     "changeStep": "Modificar",
     "doneEditing": "Listo",
     "stepper": {
@@ -287,11 +254,9 @@
       "paymentNumbered": "Pago {n} · {empresa}",
       "paymentShort": "Pago {n}",
       "payNow": "Pagas ahora",
-      "totalLabel": "Total",
       "stepOf": "Paso {current} de {total}"
     },
     "contactHeadline": "Tus datos de contacto",
-    "contactConfirmQuestion": "¿Tus datos son correctos?",
     "phone": "Número telefónico",
     "fullName": "Nombre completo",
     "email": "Correo electrónico",
@@ -300,39 +265,15 @@
       "phone": "Ej. 612 123 4567",
       "email": "Ej. maria@correo.com"
     },
-    "meetingPointLabel": "Lugar de encuentro",
     "notice": "En cuanto se confirme tu pago, un asesor de nuestro equipo te contactará en las próximas 24 horas para darte la bienvenida y compartirte todos los detalles de tu viaje: ubicación exacta, recomendaciones y el nombre de tu capitán.",
     "extrasStepHeadline": "Personaliza tu viaje",
-    "extrasConfirmQuestion": "¿Todo listo para continuar?",
     "continueToPayment": "Continuar al pago",
     "noExtrasSelected": "Nada más seleccionado",
-    "extrasPerPerson": "por persona",
     "extrasUnavailableInCurrency": "No disponible en esta moneda",
     "extrasRequiredLabel": "Necesario para tu salida",
     "extrasOptionalLabel": "Extras",
     "recommendedBadge": "Recomendado",
     "cantidadDeLabel": "{cantidad} de {total}",
-    "extrasNames": {
-      "licencia": "Licencia de pesca",
-      "carnada": "Carnada fresca",
-      "brunch": "Paquete de brunch",
-      "otro": ""
-    },
-    "extrasDescriptions": {
-      "brunch": "Desayuno y comida. El menú cambia cada semana. Incluye bebidas (agua y refrescos) y botanas para el viaje."
-    },
-    "extrasHints": {
-      "licencia": "Obligatoria por ley para pescar en aguas mexicanas.",
-      "carnada": "La mayoría de nuestros capitanes la recomienda para tu salida.",
-      "brunch": "",
-      "otro": ""
-    },
-    "extrasWarnings": {
-      "licencia": "Sin licencia no puedes pescar en aguas mexicanas: es obligatoria por ley. Nosotros nos encargamos del trámite.",
-      "carnada": "",
-      "brunch": "",
-      "otro": ""
-    },
     "licenseQuantity": {
       "question": "¿A cuántos de tu grupo les tramitamos la licencia?"
     },
@@ -392,9 +333,6 @@
         "headline": "¿Deseas personalizar tu salida con algún extra?",
         "body": "Puedes complementar tu día en el mar con estas opciones adicionales. Se integran fácilmente a tu reserva para tu total comodidad.",
         "reinforcedWarning": "Has quitado una opción con una advertencia importante. Revisa sus condiciones antes de continuar.",
-      "necesarioLabel": "Necesario para tu salida",
-      "optionalLabel": "Extras",
-      "confirm": "Continuar al pago",
       "back": "Volver al resumen",
       "close": "Cerrar"
       },
@@ -404,7 +342,6 @@
         "selection": "Selecciona una opción válida"
       },
       "orderSummaryHeadline": "Resumen de tu reserva",
-    "purchaseKicker": "Tu compra",
     "purchaseNights": "{n} noches",
     "howYouPay": "Cómo pagas",
     "optionalTag": "Opcional",
@@ -418,7 +355,6 @@
     "extraPeopleLabel": "Personas adicionales",
     "extraPeopleHint": "El viaje base incluye hasta {included} personas. A partir de esa cantidad aplica {price} por persona adicional.",
     "total": "Total",
-    "paymentPlaceholder": "Formulario de pago seguro con Stripe.",
     "payButton": "Continuar al pago",
     "paymentMethod": {
       "headline": "Modalidad de pago",
@@ -508,7 +444,6 @@
     },
     "dayFullOffer": "El {date} ya no cuenta con espacio para {people} personas.",
     "takeOffered": "Ver disponibilidad para el {date}",
-    "keepLooking": "Elegir otra fecha",
     "apartadoHasta": "Tu lugar está apartado hasta las {hora}.",
     "cupoAgotado": "El cupo se agotó mientras llenabas tus datos. Tus datos siguen guardados.",
     "lugarNoAseguradoTitulo": "No fue posible asegurar tu lugar",
@@ -541,7 +476,6 @@
       "sin_cupo": "Esta fecha se ocupó recientemente. Por favor selecciona otra fecha disponible.",
       "desconocido": "Ocurrió un detalle temporal. Por favor intenta otra vez o contáctanos para apoyarte."
     },
-    "helpTitle": "¿Prefieres que te apoyemos personalmente?",
     "helpCta": "Escríbenos por WhatsApp",
     "helpMessage": "Hola, intenté reservar en la página para el {date} a las {time} para {people} personas y me gustaría que me ayuden a completarlo.",
     "helpMessageNoTime": "Hola, intenté reservar un paquete en la página para el {date} para {people} personas y me gustaría que me ayuden a completarlo.",
@@ -560,29 +494,6 @@
     "reject": "Rechazar",
     "more": "Ver aviso de privacidad"
   },
-  "catalog": {
-    "title": "Experiencias y Paquetes",
-    "subtitle": "Aventuras completas diseñadas localmente. Elige tu destino y personaliza cada servicio a tu medida.",
-    "selectDestination": "Selecciona tu destino",
-    "verTodo": "Ver todas las experiencias",
-    "featuredBadge": "Experiencia completa",
-    "anchorPrice": "Precio del paquete",
-    "adjustedPrice": "Precio final",
-    "customize": "Personalizar componentes",
-    "servicesIncluded": "Servicios incluidos",
-    "fixedService": "Incluido en la experiencia",
-    "bookPackage": "Reservar experiencia",
-    "standaloneTitle": "¿Buscas un servicio específico?",
-    "standaloneSubtitle": "Servicios individuales para armar tu propio itinerario en la región",
-    "bookStandalone": "Reservar este servicio",
-    "fromPrice": "Desde",
-    "crossSellNotice": "Tip: Combina servicios en un paquete para mayor ahorro y coordinación garantizada.",
-    "emptyServices": "No hay servicios individuales adicionales en este destino.",
-    "servicesLabel": "Servicios",
-    "quoteRoute": "Cotiza tu ruta",
-    "moreItems": "más",
-    "learnMore": "Conocer más"
-  },
   "traslados": {
     "title": "Servicio de Traslados y Transporte",
     "subtitle": "Traslados privados en La Paz, BCS. Aeropuerto, hoteles y puntos de encuentro.",
@@ -592,15 +503,6 @@
     "unavailableCta": "Contactar por WhatsApp",
     "back": "Volver al catálogo",
     "step1Title": "Tipo de traslado",
-    "step1Description": "Selecciona el recorrido que necesitas para tu viaje.",
-    "step2Title": "Punto de encuentro u hospedaje",
-    "step2Description": "Elige tu hotel o ingresa una dirección particular.",
-    "step3Title": "Fechas y horario",
-    "step3Description": "Indica la fecha, hora de recogida y fecha de regreso si aplica.",
-    "step4Title": "Número de pasajeros",
-    "step4Description": "Capacidad máxima según el vehículo asignado.",
-    "step5Title": "Datos de contacto y pago",
-    "stepPickup": "Recogida",
     "types": {
       "redondo_aeropuerto": {
         "title": "Redondo con aeropuerto",
@@ -633,25 +535,18 @@
       "fechaRegreso": "Fecha de regreso al aeropuerto",
       "idaYRegreso": "Ida y regreso",
       "hora": "Hora estimada de recogida",
-      "pasajeros": "Número de personas",
-      "fechaRegresoInvalida": "La fecha de regreso debe ser posterior a la fecha de llegada."
+      "pasajeros": "Número de personas"
     },
     "errors": {
-      "seleccionaTipo": "Por favor selecciona un tipo de traslado.",
       "seleccionaHospedaje": "Elige un punto de encuentro del catálogo o escribe una dirección.",
       "seleccionaZona": "Selecciona la zona correspondiente.",
       "seleccionaFecha": "Indica la fecha del traslado.",
       "seleccionaFechaRegreso": "El traslado redondo con aeropuerto requiere fecha de regreso.",
-      "fechaRegresoPosterior": "La fecha de regreso debe ser posterior a la fecha de llegada.",
-      "seleccionaHora": "Indica la hora del traslado."
+      "fechaRegresoPosterior": "La fecha de regreso debe ser posterior a la fecha de llegada."
     },
     "summary": {
       "transfer": "Traslado",
-      "pickup": "Recogida",
-      "returnDate": "Regreso",
-      "passengers": "Pasajeros",
       "total": "Total",
-      "advancePayment": "Anticipo requerido (100%)",
       "included": "Servicio privado con chofer y vehículo con aire acondicionado."
     }
   },
@@ -673,9 +568,7 @@
     },
     "back": "Volver al catálogo",
     "title": "Reserva tu paquete",
-    "groupOf": "de {empresa}",
     "startLabel": "Inicio del paquete",
-    "chooseStart": "Elige una fecha para iniciar el paquete",
     "chooseReturnDate": "Elige la fecha de regreso al aeropuerto",
     "nightsNote": "{n} noches · sales el {fecha}",
     "peopleIncluded": "El paquete incluye {n} lugares",
@@ -688,14 +581,10 @@
     "fixedTransfer": "Traslado redondo con aeropuerto",
     "fixedTransferDates": "Llegada {llegada} · salida {salida}",
     "airportLabel": "¿Desde qué aeropuerto llegan?",
-    "airportPlaceholder": "Elige el aeropuerto",
     "airports": { "lap": "La Paz (LAP)", "sjd": "Los Cabos (SJD)" },
     "airportError": "Elige el aeropuerto.",
-    "morePeopleOffline": "Para más de {max} personas, contáctanos",
     "peoplePrice": "{n} personas  {precio}",
     "peoplePriceOne": "1 persona  {precio}",
-    "totalLabel": "Total",
-    "morePeople": "¿Más de {max}? Escríbenos",
     "forPeople": "Para {n} personas",
     "forOne": "Para 1 persona",
     "payPeople": "Pagar {amount}  {n} personas",
@@ -705,12 +594,7 @@
     "chargesSum": "Suman {total}. Primero se retiene cada pago y solo entonces se cobra. Si algo falla, se libera o se te reembolsa lo retenido.",
     "continueToPayment": "Continuar al pago 1 de {total}",
     "stripTotal": "Total {total} · {n} pagos",
-    "stripNow": "estás aquí",
-    "stripNext": "enseguida",
-    "stripDeposit": "Anticipo hoy",
-    "stripBalance": "Saldo, después",
     "payStep": "Pago {n} de {total}",
-    "payStepLast": "Pago {n} de {total} · el último",
     "yourBooking": "Tu reserva",
     "bookingSaved": "Guardada",
     "lockedNote": "Tu reserva ya quedó registrada y no puede modificarse desde aquí. Si necesitas hacer un cambio, con gusto te ayudamos.",
@@ -718,7 +602,6 @@
     "whyManyPayments": "¿Por qué más de un pago?",
     "whyManyPaymentsBody": "Tu paquete lo operan empresas distintas y cada una cobra directo en su propia cuenta, por eso la tarjeta se pide una vez por empresa.",
     "payStepHintLast": "Es la última empresa de tu paquete. Con este pago terminas.",
-    "authorized": "retenido",
     "payButton": "Pagar {amount} a {empresa}",
     "payButtonSingle": "Pagar {amount}",
     "resuming": "Ya tienes una reserva en proceso. Retomando donde te quedaste…",
@@ -731,7 +614,6 @@
     "fail": {
       "title": "No se pudo completar el pago",
       "body": "No se pudo completar el pago de tu paquete. Lo que se haya retenido se libera o se te reembolsa; puedes intentar de nuevo.",
-      "motivoPrefix": "Detalle: ",
       "retry": "Intentar de nuevo",
       "rechazoEmpresa": "{empresa} no pudo procesar tu tarjeta",
       "capturaEmpresa": "No pudimos completar el cobro de {empresa}",
@@ -934,18 +816,9 @@
     "whatsapp": "WhatsApp"
   },
   "hub": {
-    "nombreAgencia": "Sun Baja Experience",
     "headline": "Tu próxima experiencia empieza en Baja",
-    "mision": "Una alianza de agencias locales para vivir Baja California Sur como se merece: con quienes la conocen de verdad.",
-    "ctaElegirDestino": "Elige tu destino",
     "verDestino": "Ver destino",
     "conLabel": "Con",
-    "verTodoDestinos": "Ver todos los destinos",
-    "destinationsTitle": "Elige tu sede",
-    "aboutTitle": "Acerca de nosotros",
-    "partnersTitle": "Marcas que nos acompañan",
-    "partnersIntro": "Conoce a las empresas que forman parte de nuestras colaboraciones en Baja California Sur.",
-    "websiteLabel": "Sitio web",
     "mapAria": "Mapa interactivo de Baja California. Usa las flechas para mover y los botones para acercar.",
     "pacificOcean": "OCÉANO PACÍFICO",
     "seaOfCortez": "MAR DE CORTÉS",
@@ -960,15 +833,8 @@
     }
   },
   "destination": {
-    "transportEyebrow": "Servicio complementario",
-    "transportTitle": "Traslados privados",
-    "transportBody": "Aeropuerto, hoteles y puntos de encuentro con tarifa según tu ruta.",
     "book": "Reservar",
-    "learnMore": "Conocer más",
-    "seasonsTitle": "Temporadas y estacionalidad",
-    "galleryTitle": "Galería",
-    "reviewsTitle": "Opiniones",
-    "faqTitle": "Preguntas frecuentes"
+    "seasonsTitle": "Temporadas y estacionalidad"
   },
   "serviceDetail": {
     "metaFallback": "Detalles del servicio",
@@ -977,13 +843,7 @@
     "fishingDescription": "Una salida privada por la bahía con capitán local. Conoce lo que incluye, prepara tu equipo y elige la fecha de tu viaje.",
     "unavailableDescription": "No pudimos cargar la información en este momento. Intenta de nuevo en unos minutos.",
     "book": "Reservar",
-    "detailsTitle": "Detalles de tu servicio",
-    "includedGuests": "Personas incluidas en la tarifa base:",
-    "beforeBookingTitle": "Antes de reservar",
-    "beforeBookingBody": "Selecciona las fechas y el tamaño de tu grupo para consultar disponibilidad y el precio final.",
-    "transferIncludedTitle": "Qué incluye tu traslado",
     "transferInstructions": "Elige el tipo de traslado, las fechas, el número de pasajeros y el punto de encuentro al reservar. La tarifa se calcula según tu selección.",
-    "customizeTitle": "Personaliza tu experiencia",
     "optionalPrice": "Opcional. Consulta el precio al reservar."
   }
 }

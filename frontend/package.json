@@ -9,11 +9,12 @@
     "lint": "eslint",
     "test": "node tests/run-hub-tests.cjs",
     "guardia": "node scripts/guardia-estilos.cjs",
+    "knip": "knip",
     "test:guardia": "node --test tests/guardia-estilos.test.cjs",
     "test:contraste": "node --test tests/contraste.test.cjs",
     "test:fotos": "node --test tests/imagenes-catalogo-completo.test.cjs",
-    "test:contenido": "node --test tests/contenido-paridad.test.cjs",
-    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:contraste && npm run test:contenido && npm run test:guardia && npm run guardia && next build"
+    "test:contenido": "node --test tests/contenido-paridad.test.cjs tests/claves-huerfanas.test.cjs",
+    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:contraste && npm run test:contenido && npm run test:guardia && npm run guardia && knip && next build"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -22,7 +23,6 @@
     "@tailwindcss/postcss": "^4.3.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.43.0",
-    "motion": "^12.43.0",
     "next": "^16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -36,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "knip": "^6.42.1",
     "typescript": "^5"
   }
 }

@@ -240,8 +240,7 @@
    entera en el servidor, para algo que la plataforma ya da gratis.
    Cada una tiene un motivo, no estan por verse bien:
      .rev        jerarquia, el contenido entra en el orden en que se lee
-     .rev-foto   la foto es la protagonista, se descubre en vez de aparecer
-     .rev-regla  marca el arranque de una seccion nueva                    */
+     .rev-foto   la foto es la protagonista, se descubre en vez de aparecer */
 @keyframes revelar {
   from {
     opacity: 0;
@@ -264,23 +263,6 @@
   }
 }
 
-/* Entrada del titular de la portada. Distinta de `.rev`: aquella espera a que
-   el bloque entre en cuadro con `animation-timeline: view()`, y el titular ya
-   esta en cuadro al cargar. Sube poco (0.14em, ligado al tamano de letra) y
-   dura medio segundo — lo justo para que se sienta vivo sin que el visitante
-   espere a leer de que va el sitio. La barra de reserva no lleva ninguna: es
-   la accion, tiene que estar lista desde el primer cuadro. */
-@keyframes titulo-entra {
-  from {
-    opacity: 0;
-    transform: translateY(0.14em);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @keyframes visor-entra {
   from {
     opacity: 0;
@@ -298,15 +280,6 @@
   from {
     opacity: 0;
     transform: translateY(40%);
-  }
-}
-
-@keyframes barrer {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
   }
 }
 
@@ -387,17 +360,8 @@
     animation: revelar-foto 1s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  .rev-regla {
-    animation: barrer 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-    transform-origin: left;
-  }
-
   .icono-cargando {
     animation: giro-carga 1s linear infinite;
-  }
-
-  .titulo-entra {
-    animation: titulo-entra 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   /* La foto del visor de la galería entra con un fundido al cambiar de foto. */
@@ -414,30 +378,11 @@
     animation: palabra-entra 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  /* El subtitulo entra detras del titular, no a la vez: el orden en que
-     aparecen es el orden en que se leen. */
-  .titulo-entra-tarde {
-    animation-delay: 0.12s;
-  }
-
-  .d1 {
-    animation-delay: 0.07s;
-  }
-
-  .d2 {
-    animation-delay: 0.14s;
-  }
-
-  .d3 {
-    animation-delay: 0.21s;
-  }
-
   /* Donde el navegador lo soporta, cada pieza se revela al entrar en cuadro
      en vez de dispararse todo junto al cargar. */
   @supports (animation-timeline: view()) {
     .rev,
-    .rev-foto,
-    .rev-regla {
+    .rev-foto {
       animation-timeline: view();
       animation-range: entry 5% cover 28%;
       animation-delay: 0s;
@@ -626,24 +571,6 @@
   }
 
   @keyframes revelar-foto {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes titulo-entra {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes barrer {
     from {
       opacity: 0;
     }

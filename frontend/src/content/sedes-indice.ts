@@ -25,6 +25,7 @@ export const SEDES_INDICE: Record<string, SedeIndiceEntry> = {
   },
 };
 
+/** @public Lo usan las pruebas. */
 export const SLUGS_CON_CONTENIDO: string[] = Object.keys(SEDES_INDICE);
 
 export function getSedeIndice(slug: string): SedeIndiceEntry | undefined {
