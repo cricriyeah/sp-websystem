@@ -39,6 +39,10 @@ const FOTOS: Record<string, Foto> = {
     src: '/catalogo/la-ventana-travel-pesca-con-mosca.webp',
     alt: { es: 'Un joven peleando un pez con la caña doblada, en alta mar', en: 'A young angler fighting a fish with a bent rod, out at sea' },
   },
+  'servicio:transporte-la-paz/traslados-la-paz': {
+    src: '/catalogo/transporte-la-paz-traslados-la-paz.webp',
+    alt: { es: 'Una van blanca de DLS Tours y Transporte Turístico estacionada en una calle de La Paz', en: 'A white DLS Tours and Tourist Transport van parked on a street in La Paz' },
+  },
   'servicio:piratas-adventures/pesca-deportiva': {
     src: '/photos/dorado-bajo-toldo.webp',
     alt: { es: 'Dorado recién subido, a la sombra del toldo', en: 'Mahi just brought aboard, in the shade of the canopy' },
