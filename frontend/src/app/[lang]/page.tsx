@@ -86,8 +86,14 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
         <h2 id={`${ANCLA_HUB.sedes}-titulo`} className="sr-only texto-seccion">{textos.sedesTitulo}</h2>
         <CortinasSedes sedes={vistas} textos={{ region: textos.region, desde: textos.desde, verSede: textos.verSede }} />
       </section>
-      <section id={ANCLA_HUB.mapa} aria-label={textos.mapaTitulo} className="hidden scroll-mt-28 mx-auto max-w-[1440px] px-12 pb-12 lg:block">
-        <HubMapaEscritorio lang={lang} sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, conLabel, verDestino }} />
+      <section id={ANCLA_HUB.mapa} aria-labelledby={`${ANCLA_HUB.mapa}-titulo`} className="hidden scroll-mt-[calc(var(--nav-alto)+16px)] bg-superficie py-28 lg:block">
+        <div className="mx-auto max-w-[1440px] px-12">
+          <h2 id={`${ANCLA_HUB.mapa}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.mapaTitulo}</h2>
+          <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.mapaTexto}</p>
+          <div className="mt-10">
+            <HubMapaEscritorio lang={lang} sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, conLabel, verDestino }} />
+          </div>
+        </div>
       </section>
       <HubComoFunciona id={ANCLA_HUB.comoFunciona} titulo={textos.comoTitulo} texto={textos.comoTexto} pasos={textos.comoPasos} />
       <ColaboradoresSection id={ANCLA_HUB.empresas} sedes={sedes} lang={lang} textos={textos} />

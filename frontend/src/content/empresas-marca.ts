@@ -8,19 +8,11 @@ export type MarcaEmpresa = {
   nombre: string;
   /** Ruta bajo /public. Sin logo, el sello pinta el monograma de las iniciales. */
   logo?: string;
-  /**
-   * Versión del logo sin fondo, para ponerla sobre un campo de color propio (tablero de empresas).
-   * Sin ella, `logo` sirve para los dos usos. El de La Ventana Travel es blanco: `logo` lo trae dentro
-   * de un disco oscuro para verse en los sellos circulares blancos.
-   */
-  logoLibre?: string;
-  /** Campo de color de su bloque en el tablero de empresas (F10): el que deja verse a su logo y dice qué hace. */
-  campo: 'cafe-claro' | 'coral' | 'verde' | 'azul';
 };
 
 export const MARCAS: readonly MarcaEmpresa[] = [
-  { slug: 'sal-y-sol', nombre: 'Sal y Sol Sportfishing', logo: '/logos/logo2salysol.webp', campo: 'cafe-claro' },
-  { slug: 'transporte-la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp', campo: 'coral' },
-  { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-sello.webp', logoLibre: '/logos/laventanatravel.webp', campo: 'verde' },
-  { slug: 'piratas-adventures', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp', campo: 'azul' },
+  { slug: 'sal-y-sol', nombre: 'Sal y Sol Sportfishing', logo: '/logos/logo2salysol.webp' },
+  { slug: 'transporte-la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp' },
+  { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-sello.webp' },
+  { slug: 'piratas-adventures', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp' },
 ];

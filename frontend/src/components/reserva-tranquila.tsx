@@ -14,7 +14,6 @@ type Props = {
   /** El `porcentaje_anticipo` de un servicio de la sede que lo permite; `null` = todos se pagan completos. */
   porcentaje: number | null;
   ejemplo: EjemploPago | null;
-  hrefIncluye: string;
   fondo: Fondo;
 };
 
@@ -30,33 +29,17 @@ function Cifra({ cifra, titulo, children }: { cifra: string; titulo: string; chi
 
 /**
  * Pago, clima y cambio de fecha como tres cifras grandes en la banda negra (F10), que cuentan desde cero
- * al entrar. Una sola política para las cuatro empresas. Debajo, el enlace a «qué incluye» cada servicio.
+ * al entrar. Una sola política para las cuatro empresas. El ejemplo de pago va aparte, a todo el ancho
+ * bajo las tres cifras: dentro de la primera columna la dejaba más alta que las otras dos.
  *
  * Server Component (las cifras que cuentan son una isla cliente).
  */
-export function ReservaTranquila({ id, textos, porcentaje, ejemplo, hrefIncluye, fondo }: Props) {
+export function ReservaTranquila({ id, textos, porcentaje, ejemplo, fondo }: Props) {
   return (
     <SectionShell id={id} fondo={fondo} titulo={textos.titulo}>
       <ul className="mt-12 grid gap-12 md:grid-cols-3 md:gap-8 lg:mt-16">
         <Cifra cifra={porcentaje === null ? textos.cifraTotal : `${porcentaje} %`} titulo={textos.pagoTitulo}>
           <p>{porcentaje === null ? textos.pagoTextoTotal : textos.pagoTexto.replace('{porcentaje}', String(porcentaje))}</p>
-          {ejemplo && (
-            <div className="mt-4">
-              <p>{textos.ejemploServicio.replace('{servicio}', ejemplo.servicio)}</p>
-              <dl className="mt-2 flex flex-wrap gap-x-8 gap-y-2">
-                <div>
-                  <dt>{textos.hoyPagas}</dt>
-                  <dd className="text-xl font-bold tabular-nums">{ejemplo.ahora}</dd>
-                </div>
-                {ejemplo.resto && (
-                  <div>
-                    <dt>{textos.resto}</dt>
-                    <dd className="text-xl font-bold tabular-nums">{ejemplo.resto}</dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-          )}
         </Cifra>
         <Cifra cifra={textos.cifraFecha} titulo={textos.fechaTitulo}>
           <p>{textos.fechaTexto}</p>
@@ -65,10 +48,23 @@ export function ReservaTranquila({ id, textos, porcentaje, ejemplo, hrefIncluye,
           <p>{textos.climaTexto}</p>
         </Cifra>
       </ul>
-      <p className="mt-12 flex flex-wrap items-center gap-x-4 texto-cuerpo">
-        {textos.incluyeTexto}
-        <a href={hrefIncluye} className="inline-flex min-h-11 items-center font-semibold text-cafe-claro">{textos.verIncluye}</a>
-      </p>
+      {ejemplo && (
+        <div className="mt-12 flex flex-col gap-x-12 gap-y-4 bg-white/10 px-6 py-6 lg:mt-16 lg:flex-row lg:items-center lg:px-10">
+          <p className="texto-subtitulo lg:max-w-[22ch]">{textos.ejemploServicio.replace('{servicio}', ejemplo.servicio)}</p>
+          <dl className="grid flex-1 gap-x-12 gap-y-4 sm:grid-cols-2">
+            <div>
+              <dt className="texto-cuerpo">{textos.hoyPagas}</dt>
+              <dd className="text-xl font-bold tabular-nums">{ejemplo.ahora}</dd>
+            </div>
+            {ejemplo.resto && (
+              <div>
+                <dt className="texto-cuerpo">{textos.resto}</dt>
+                <dd className="text-xl font-bold tabular-nums">{ejemplo.resto}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      )}
     </SectionShell>
   );
 }

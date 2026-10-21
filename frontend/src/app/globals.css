@@ -47,7 +47,7 @@
      96px cuando la barra ya medIa 104, y el contenido arrancaba debajo de
      ella. Cambiar el alto de la barra obliga a cambiar esto, y solo esto. */
   --banda-alto: 0px; /* alto de la banda "Continuar reservacion"; la escribe SiteHeader, 0 si no hay */
-  --nav-alto: calc(64px + var(--banda-alto)); /* top-0 + h-16 (64) en movil + banda */
+  --nav-alto: calc(68px + var(--banda-alto)); /* pt-3 (12) + h-14 (56) en movil + banda */
 
   /* --- Tokens aditivos (Task 2.1): sin consumidores todavia, sin cambio visual.
      Viven en :root y no en @theme porque se leen con var() desde estilos en
@@ -67,15 +67,9 @@
   --capa-pulsado: color-mix(in srgb, var(--color-tinta) 12%, transparent);
 }
 
-@media (min-width: 40rem) {
-  :root {
-    --nav-alto: calc(64px + var(--banda-alto)); /* top-0 + h-16 (64) en tablet + banda */
-  }
-}
-
 @media (min-width: 64rem) {
   :root {
-    --nav-alto: calc(80px + var(--banda-alto)); /* lg:top-4 (16) + h-16 (64) en escritorio + banda: debe coincidir con site-header.tsx, un hueco aqui deja ver el contenido bajo el stepper */
+    --nav-alto: calc(80px + var(--banda-alto)); /* lg:pt-4 (16) + lg:h-16 (64) en escritorio + banda: debe coincidir con barra-flotante.tsx, un hueco aqui deja ver el contenido bajo el stepper */
   }
 }
 
@@ -283,6 +277,30 @@
   }
 }
 
+/* Barra superior (barra-flotante.tsx): al cargar, el fondo nace como un circulo del tamano del logo
+   y se abre hacia la derecha; el logo da una vuelta y el resto aparece cuando el fondo ya casi llego. */
+@keyframes barra-abre {
+  from {
+    width: 3.5rem;
+  }
+}
+
+@keyframes barra-aparece {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes logo-gira {
+  from {
+    opacity: 0;
+    transform: rotate(-360deg) scale(0.6);
+  }
+  35% {
+    opacity: 1;
+  }
+}
+
 /* Indicador de accion en curso de Button (`cargando`): gira. Con reducir movimiento pulsa en
    opacidad (1,2 s) en lugar de girar; ver la excepcion en @layer base. */
 @keyframes giro-carga {
@@ -362,6 +380,18 @@
 
   .icono-cargando {
     animation: giro-carga 1s linear infinite;
+  }
+
+  .barra-fondo {
+    animation: barra-abre 900ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+  }
+
+  .barra-resto {
+    animation: barra-aparece 450ms cubic-bezier(0.2, 0, 0, 1) 650ms both;
+  }
+
+  .logo-gira {
+    animation: logo-gira 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   /* La foto del visor de la galería entra con un fundido al cambiar de foto. */
@@ -585,6 +615,21 @@
     }
     to {
       opacity: 1;
+    }
+  }
+
+  /* El giro del logo y la apertura de la barra pasan a un fundido: la barra nace ya abierta. */
+  @keyframes barra-abre {
+    from,
+    to {
+      width: 100%;
+    }
+  }
+
+  @keyframes logo-gira {
+    from {
+      opacity: 0;
+      transform: none;
     }
   }
 

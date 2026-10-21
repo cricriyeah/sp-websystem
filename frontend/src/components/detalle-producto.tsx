@@ -82,7 +82,7 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
 export function DetalleProducto({ vista, textos }: Props) {
   const { compra } = vista;
   const arranque = (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-4 pb-10 pt-6 text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-4 pb-10 pt-[calc(var(--nav-alto)+1.5rem)] text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
       {!vista.foto && <span aria-hidden="true" className="texto-gigante mb-auto">{vista.palabra}</span>}
       <h1 className="texto-grande">{vista.titulo}</h1>
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
@@ -94,7 +94,7 @@ export function DetalleProducto({ vista, textos }: Props) {
 
   return (
     <div className="pb-[calc(4.75rem+var(--aviso-alto,0px))] md:pb-0">
-      <section className="pt-[var(--nav-alto)]">
+      <section>
         {vista.foto ? (
           <HeroMedia imagen={vista.foto.src} video={null} alt={vista.foto.alt} preload alto="media">{arranque}</HeroMedia>
         ) : (
@@ -160,7 +160,7 @@ export function DetalleProducto({ vista, textos }: Props) {
       </section>
 
       {vista.empresas.length > 0 && (
-        <section aria-labelledby="detalle-opera" className="bg-cafe-bruma py-16 sm:py-20 lg:py-28">
+        <section aria-labelledby="detalle-opera" className="bg-superficie py-16 sm:py-20 lg:py-28">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-12">
             <h2 id="detalle-opera" className="rev texto-seccion">{textos.detalle.quienOpera}</h2>
             <ul className="mt-10 flex flex-col gap-12">

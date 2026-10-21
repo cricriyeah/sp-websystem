@@ -151,10 +151,6 @@
     ],
     "bringTitle": "Recomendaciones para traer",
     "bring": [
-      "Tu equipo de pesca preferido (o avísanos y te lo preparamos con gusto)",
-      "Tu licencia de pesca deportiva (con gusto te orientamos en el trámite)",
-      "Identificación oficial",
-      "Protector solar biodegradable, lentes de sol y gorra",
       "Una chamarra ligera o rompevientos para la brisa fresca del amanecer",
       "Pastillas para el mareo si eres sensible al movimiento (tomar antes de zarpar)",
       "Hielera para llevarte tus filetes frescos al terminar el viaje"
@@ -173,7 +169,12 @@
     "legalLabel": "Información legal",
     "waiver": "Deslinde de responsabilidad",
     "privacy": "Aviso de privacidad",
-    "rights": "Todos los derechos reservados."
+    "rights": "Todos los derechos reservados.",
+    "pagosLabel": "Formas de pago",
+    "pagosTarjetas": "Tarjetas de crédito y débito",
+    "pagosEfectivo": "Efectivo, para el resto el día del viaje",
+    "pagosEfectivoCorto": "Efectivo",
+    "credito": "Diseñado y desarrollado por crwncode studios"
   },
   "checkout": {
     "problema": {
@@ -683,7 +684,8 @@
   },
   "sedeContenido": {
     "arranque": {
-      "cta": "Reservar"
+      "cta": "Reservar",
+      "operadaPor": "Opera tu experiencia"
     },
     "queReservar": {
       "titulo": "Qué puedes reservar",
@@ -716,7 +718,7 @@
       "queEs": "Qué es",
       "queIncluye": "Qué incluye",
       "puedesAgregar": "Puedes agregar",
-      "quienOpera": "Quién opera",
+      "quienOpera": "Empresas locales que te acompañarán",
       "tambienEn": "También en {sede}",
       "carril": "Otros servicios de {sede}",
       "verSede": "Ver todo {sede}",
@@ -750,11 +752,8 @@
       "climaTitulo": "Si hay mal clima",
       "climaTexto": "Si el mal clima impide salir, hay reembolso completo.",
       "fechaTitulo": "Cambio de fecha",
-      "fechaTexto": "Puedes cambiar la fecha con al menos 48 horas de anticipación.",
-      "incluyeTexto": "Cada servicio tiene su propia lista. Revísala antes de reservar.",
-      "verIncluye": "Ver qué incluye cada servicio"
+      "fechaTexto": "Puedes cambiar la fecha con al menos 48 horas de anticipación."
     },
-    "colaboracion": "Una colaboración entre Sun Baja Experience, agencia de turismo local, y {empresa}",
     "empresas": "Quién opera cada servicio",
     "opiniones": {
       "titulo": "Opiniones de las empresas",
@@ -789,7 +788,8 @@
     "conN": "Con {a} y {n} más",
     "desde": "Desde",
     "verSede": "Ver {sede}",
-    "mapaTitulo": "Las sedes en el mapa",
+    "mapaTitulo": "Elige tu sede en el mapa",
+    "mapaTexto": "Toca una sede para ver qué empresa local la opera y a dónde ir.",
     "comoTitulo": "Un lugar, varias empresas",
     "comoTexto": "Reunimos en un solo lugar los servicios de las empresas locales de cada sede. Cada empresa opera su servicio y cobra directo.",
     "comoPasos": [

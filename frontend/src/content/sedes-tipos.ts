@@ -13,7 +13,7 @@ export type SedeIndiceEntry = {
   nombre: string;
   /**
    * La empresa local con la que Sun Baja Experience hace esta sede: da nombre y logo a la
-   * segunda marca de la cabecera y a la frase de colaboracion. Sin ella, ninguna de las dos.
+   * segunda marca de la cabecera y al sello del arranque. Sin ella, ninguna de las dos.
    */
   empresaProtagonistaSlug?: string;
 };
@@ -40,7 +40,6 @@ export type SedeNegocio = {
 /** El calendario de especies de una sede: una fila por temporada, en orden de temporada. */
 export type SedeTemporadas = {
   intro: string;
-  nota: string;
   etiquetaCalendario: string;
   etiquetaFuerte: string;
   etiquetaOtras: string;
@@ -48,8 +47,8 @@ export type SedeTemporadas = {
     periodo: string;
     meses: string[];
     estrella: string;
+    /** Otras especies de la temporada; vacío si la fila es solo la estrella. */
     otras: string;
-    nota: string;
     /** La foto estrella de la temporada. */
     foto: string;
     /** La temporada fuerte lleva la etiqueta y su tramo del año relleno. */

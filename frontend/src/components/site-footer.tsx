@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Money } from '@phosphor-icons/react/ssr';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
@@ -17,6 +18,12 @@ type SiteFooterProps = {
   /** El menú de la sede (ver `SiteHeader`). Sin él, una página de sede lleva solo «Reservar». */
   anclas?: { ancla: string; etiqueta: string }[];
 };
+
+const FORMAS_DE_PAGO = [
+  { nombre: 'Visa', src: '/pagos/visa.svg' },
+  { nombre: 'Mastercard', src: '/pagos/mastercard.svg' },
+  { nombre: 'American Express', src: '/pagos/amex.svg' },
+] as const;
 
 export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, anclas }: SiteFooterProps) {
   const baseSede = sedeSlug ? hrefSede(lang, sedeSlug) : null;
@@ -84,6 +91,24 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
           </nav>
         </div>
 
+        <div className="mt-12 flex flex-col gap-4 lg:mt-16">
+          <span className="text-sm font-semibold text-cafe-bruma">{footer.pagosLabel}</span>
+          <ul className="flex flex-wrap items-center gap-3">
+            {FORMAS_DE_PAGO.map((forma) => (
+              <li key={forma.nombre}>
+                <Image src={forma.src} alt={forma.nombre} width={48} height={32} className="h-8 w-12" />
+              </li>
+            ))}
+            <li className="inline-flex h-8 items-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-tinta">
+              <Money size={18} aria-hidden="true" />
+              {footer.pagosEfectivoCorto}
+            </li>
+          </ul>
+          <p className="text-sm">
+            {footer.pagosTarjetas}. {footer.pagosEfectivo}.
+          </p>
+        </div>
+
         {/* El logo completo, a todo el ancho y en blanco (el SVG es negro sin relleno propio). */}
         <Image
           src="/sunbajaexperience/logolg.svg"
@@ -98,7 +123,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
           <span className="text-sm">
             Sun Baja Experience. {footer.rights}
           </span>
-          {negocio && <span className="text-sm">{negocio.ciudad}, {negocio.estado}</span>}
+          <span className="text-sm">{footer.credito}</span>
         </div>
       </div>
     </footer>

@@ -151,10 +151,6 @@
     ],
     "bringTitle": "Recommendations to bring",
     "bring": [
-      "Your preferred fishing gear (or let us know and we'll gladly prepare it for you)",
-      "Sportfishing licence (we are happy to assist you with the online process)",
-      "Photo ID",
-      "Biodegradable sunscreen, sunglasses, and a hat for sun protection",
       "A light jacket or windbreaker for the crisp morning sea breeze",
       "Motion sickness medication if you are sensitive (best taken before boarding)",
       "A cooler if you wish to take your fresh fillets home"
@@ -173,7 +169,12 @@
     "legalLabel": "Legal information",
     "waiver": "Liability waiver",
     "privacy": "Privacy notice",
-    "rights": "All rights reserved."
+    "rights": "All rights reserved.",
+    "pagosLabel": "Payment methods",
+    "pagosTarjetas": "Credit and debit cards",
+    "pagosEfectivo": "Cash, for the balance on the day of the trip",
+    "pagosEfectivoCorto": "Cash",
+    "credito": "Designed and developed by crwncode studios"
   },
   "checkout": {
     "problema": {
@@ -683,7 +684,8 @@
   },
   "sedeContenido": {
     "arranque": {
-      "cta": "Book"
+      "cta": "Book",
+      "operadaPor": "Runs your experience"
     },
     "queReservar": {
       "titulo": "What you can book",
@@ -716,7 +718,7 @@
       "queEs": "What it is",
       "queIncluye": "What is included",
       "puedesAgregar": "You can add",
-      "quienOpera": "Who runs it",
+      "quienOpera": "Local companies that will be with you",
       "tambienEn": "Also in {sede}",
       "carril": "More services in {sede}",
       "verSede": "See everything in {sede}",
@@ -750,11 +752,8 @@
       "climaTitulo": "If the weather is bad",
       "climaTexto": "If bad weather keeps the trip from leaving, you get a full refund.",
       "fechaTitulo": "Changing your date",
-      "fechaTexto": "You can change the date with at least 48 hours' notice.",
-      "incluyeTexto": "Each service has its own list. Check it before you book.",
-      "verIncluye": "See what each service includes"
+      "fechaTexto": "You can change the date with at least 48 hours' notice."
     },
-    "colaboracion": "A collaboration between Sun Baja Experience, a local travel agency, and {empresa}",
     "empresas": "Who runs each service",
     "opiniones": {
       "titulo": "Reviews from the companies",
@@ -789,7 +788,8 @@
     "conN": "With {a} and {n} more",
     "desde": "From",
     "verSede": "See {sede}",
-    "mapaTitulo": "The locations on the map",
+    "mapaTitulo": "Find your base on the map",
+    "mapaTexto": "Tap a base to see which local company runs it and where to go.",
     "comoTitulo": "One place, several local companies",
     "comoTexto": "We bring together, in one place, the services of each location's local companies. Each company runs its own service and charges you directly.",
     "comoPasos": [

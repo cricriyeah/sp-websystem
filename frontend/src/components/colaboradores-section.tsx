@@ -9,7 +9,7 @@ import { vistaDeEmpresa } from '@/components/vistas-empresa';
 type Textos = Dictionary['hubContenido'];
 
 /**
- * «Quién opera cada servicio», solo en el hub: una fila por empresa, aunque opere en varias
+ * «Empresas locales que nos acompañan», solo en el hub: una fila por empresa, aunque opere en varias
  * sedes. Todo sale de `empresas.ts`; sin descripción no hay fila, sin redes solo el enlace
  * interno y el sitio externo solo si el dueño lo confirmó al día.
  *

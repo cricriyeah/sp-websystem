@@ -16,7 +16,6 @@ import { ANCLA_DE, enlacesDeSede, fondosDeSecciones, seccionesDeSede, type Secci
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { SedeHero } from '@/components/sede-hero';
-import { BandaColaboracion } from '@/components/banda-colaboracion';
 import { QuePuedesReservar } from '@/components/que-puedes-reservar';
 import { PaquetesSede } from '@/components/paquetes-sede';
 import { DiaDeSede } from '@/components/dia-de-sede';
@@ -72,14 +71,11 @@ export default async function SedePage({ params, searchParams }: Props) {
 
   // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
   const pintar: Partial<Record<SeccionId, (fondo: Fondo) => ReactNode>> = {
-    hero: () => <>
-      <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={palabrasDeSede(servicios, paquetes, lang)} textos={dict.sedeContenido.arranque} />
-      {marcaSede && <BandaColaboracion empresa={marcaSede} frase={dict.sedeContenido.colaboracion} />}
-    </>,
+    hero: () => <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={palabrasDeSede(servicios, paquetes, lang)} empresa={marcaSede} textos={dict.sedeContenido.arranque} />,
     reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} />,
     paquetes: (fondo) => <PaquetesSede id={ANCLA_DE.paquetes} lang={lang} moneda={moneda} paquetes={paquetes ?? []} textos={dict.sedeContenido.paquetes} textosReservar={dict.sedeContenido.queReservar} fondo={fondo} />,
     ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),
-    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} hrefIncluye={`#${ANCLA_DE.reservar}`} fondo={fondo} />,
+    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} fondo={fondo} />,
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
     ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} /> }),
     opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} fondo={fondo} />,

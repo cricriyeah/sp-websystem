@@ -15,7 +15,7 @@ type HeroMediaProps = {
   objectPosition?: string;
   /**
    * `pantalla` (por defecto): alto mínimo de 70-80 % de la pantalla. `contenido`: el alto lo da el
-   * contenido, con tope para que lo de abajo asome al menos 120 px. `completo` (campaña, F10): toda la pantalla bajo la barra. `media` (detalles de servicio y paquete): 70 % de la pantalla.
+   * contenido, con tope para que lo de abajo asome al menos 120 px. `completo` (campaña, F10): toda la pantalla, desde el borde de arriba: la barra flota encima, así que el contenido se aparta con `--nav-alto`. `media` (detalles de servicio y paquete): 70 % de la pantalla.
    */
   alto?: 'pantalla' | 'contenido' | 'completo' | 'media';
   /** Contenido del héroe (título, subtítulo, selector…), apilado sobre el degradado. */
@@ -56,10 +56,10 @@ export function HeroMedia({ imagen, video, alt, preload = false, objectPosition,
           alto === 'pantalla'
             ? 'relative flex min-h-[70dvh] flex-col justify-end lg:min-h-[80dvh]'
             : alto === 'completo'
-              ? 'relative flex min-h-[max(34rem,calc(100svh-var(--nav-alto)))] max-h-[62.5rem] flex-col justify-end'
+              ? 'relative flex min-h-[max(34rem,100svh)] max-h-[62.5rem] flex-col justify-end'
               : alto === 'media'
                 ? 'relative flex min-h-[max(28.75rem,min(70svh,45rem))] flex-col justify-end'
-                : 'relative flex max-h-[calc(100svh-var(--nav-alto)-120px)] flex-col justify-end'
+                : 'relative flex max-h-[calc(100svh-120px)] flex-col justify-end'
         }
       >
         {children}

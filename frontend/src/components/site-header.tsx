@@ -13,12 +13,12 @@ import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_HUB } from '@/lib/secciones-sede';
+import { BarraFlotante, LogoEmpresaAlLado, LogoMarca } from '@/components/barra-flotante';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { SelectorIdioma } from '@/components/selector-idioma';
 import { SedeSelector } from '@/components/sede-selector';
 import { ContinuarReservacion } from '@/components/continuar-reservacion';
 import { Button } from '@/components/ui/button';
-import { EmpresaSello } from '@/components/ui/empresa-sello';
 
 const MARCA = 'Sun Baja Experience';
 
@@ -103,112 +103,117 @@ export function SiteHeader({
       ];
   if (baseSede && links.length === 0) links.push({ href: baseSede, label: nav.reservar });
 
-  return (
-    <div className={`fixed inset-x-0 top-0 z-40 lg:top-4 lg:px-8 ${className}`}>
-      <header className="relative mx-auto flex h-16 w-full items-center justify-between gap-4 bg-superficie px-4 shadow-tarjeta sm:px-6 lg:max-w-[1440px] lg:rounded-full lg:px-6 lg:shadow-n2">
-        <div className="flex shrink-0 items-center gap-3">
-          <Link
-            href={hrefInicio(lang)}
-            className="flex items-center text-foreground"
-            onClick={() => setOpen(false)}
-          >
-            {/* Nuestra marca es el monograma «SB» en todas las páginas (sin wordmark de texto). */}
-            <EmpresaSello nombre={MARCA} tamano={32} />
-          </Link>
-          {marcaSede && (
-            <EmpresaSello nombre={marcaSede.nombre} logo={marcaSede.logo} tamano={32} />
-          )}
-        </div>
+  const idioma = <SelectorIdioma lang={lang} label={nav.switchLang} variante="campana" />;
+  const alPulsarEnlace = () => setOpen(false);
 
-        {links.length > 1 && (
-          <nav className="hidden items-center gap-4 xl:flex">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex min-h-11 items-center whitespace-nowrap texto-cuerpo transition-colors hover:text-cafe"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        )}
-
-        <div className="flex items-center gap-3">
-          {links.length === 1 && (
+  const menu = (
+    <AnimatePresence>
+      {open && (
+        <m.div
+          key="menu-movil"
+          initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-x-0 top-16 z-10 flex flex-col rounded-sheet lg:top-[4.5rem] bg-superficie/90 px-6 py-3 shadow-n2 backdrop-blur-xl xl:hidden"
+        >
+          {/* El mapa solo existe desde 1024 px: el menú móvil no lo ofrece. */}
+          {links.filter((link) => !link.href.endsWith(`#${ANCLA_HUB.mapa}`)).map((link) => (
             <Link
-              href={links[0].href}
-              className="hidden min-h-11 items-center texto-cuerpo transition-colors hover:text-cafe lg:inline-flex"
+              key={link.href}
+              href={link.href}
+              onClick={alPulsarEnlace}
+              className="flex min-h-11 items-center py-3 texto-cuerpo font-semibold"
             >
-              {links[0].label}
+              {link.label}
             </Link>
-          )}
-          <SelectorIdioma lang={lang} label={nav.switchLang} variante="campana" />
-          {/* En móvil el idioma vive en el menú; desde lg va en la cabecera (arriba). */}
-          <SedeSelector
-            lang={lang}
-            sedes={sedesDisponibles}
-            sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
-            placeholder={variante === 'hub' ? nav.eligeSede : undefined}
-            label={nav.sedeLabel}
-            className="hidden sm:inline-block"
-          />
-          <div className="hidden xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
+          ))}
+          <div className="flex items-center justify-between py-3.5">
+            <span className="texto-cuerpo">{nav.sedeLabel}</span>
+            <SedeSelector
+              lang={lang}
+              sedes={sedesDisponibles}
+              sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
+              placeholder={variante === 'hub' ? nav.eligeSede : undefined}
+              label={nav.sedeLabel}
+            />
+          </div>
+          <div className="py-3">
+            <WhatsappContact nav={nav} variant="menu" />
+          </div>
+        </m.div>
+      )}
+    </AnimatePresence>
+  );
 
-          <Button
-            variante="libre"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? nav.closeMenu : nav.openMenu}
-            aria-expanded={open}
-            className="flex size-11 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde xl:hidden"
-          >
-            {open ? <X size={18} /> : <List size={18} />}
-          </Button>
-        </div>
+  return (
+    <BarraFlotante
+      className={className}
+      inicio={
+        <Link href={hrefInicio(lang)} className="inline-flex" onClick={alPulsarEnlace} aria-label={MARCA}>
+          <LogoMarca girado={open} />
+        </Link>
+      }
+      resto={
+        <>
+          <div className="flex min-w-0 shrink-0 items-center gap-3">
+            <LogoEmpresaAlLado empresa={marcaSede} />
+          </div>
 
-        <AnimatePresence>
-          {open && (
-            <m.div
-              key="menu-movil"
-              initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-x-0 top-full flex flex-col bg-superficie px-4 py-2 shadow-n2 sm:px-6 lg:mt-2 xl:hidden"
-            >
-              {/* El mapa solo existe desde 1024 px: el menú móvil no lo ofrece. */}
-              {links.filter((link) => !link.href.endsWith(`#${ANCLA_HUB.mapa}`)).map((link) => (
+          {links.length > 1 && (
+            <nav className="hidden items-center gap-4 xl:flex">
+              {links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="flex min-h-11 items-center py-3 texto-cuerpo font-semibold"
+                  className="inline-flex min-h-11 items-center whitespace-nowrap texto-cuerpo transition-colors hover:text-cafe"
                 >
                   {link.label}
                 </Link>
               ))}
-              <div className="flex items-center justify-between py-3.5">
-                <span className="texto-cuerpo">{nav.sedeLabel}</span>
-                <SedeSelector
-                  lang={lang}
-                  sedes={sedesDisponibles}
-                  sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
-                  placeholder={variante === 'hub' ? nav.eligeSede : undefined}
-                  label={nav.sedeLabel}
-                      />
-              </div>
-              <div className="py-3">
-                <WhatsappContact nav={nav} variant="menu" />
-              </div>
-            </m.div>
+            </nav>
           )}
-        </AnimatePresence>
-      </header>
-      {mostrarContinuar && continuar && (
-        <div ref={bandaRef} className="mx-auto w-full lg:max-w-[1440px] lg:pt-2">
-          <ContinuarReservacion lang={lang} dict={{ continuar }} />
-        </div>
-      )}
-    </div>
+
+          <div className="ml-auto flex items-center gap-3">
+            {links.length === 1 && (
+              <Link
+                href={links[0].href}
+                className="hidden min-h-11 items-center texto-cuerpo transition-colors hover:text-cafe lg:inline-flex"
+              >
+                {links[0].label}
+              </Link>
+            )}
+            {idioma}
+            <SedeSelector
+              lang={lang}
+              sedes={sedesDisponibles}
+              sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
+              placeholder={variante === 'hub' ? nav.eligeSede : undefined}
+              label={nav.sedeLabel}
+              className="hidden sm:inline-block"
+            />
+            <div className="hidden xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
+
+            <Button
+              variante="libre"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? nav.closeMenu : nav.openMenu}
+              aria-expanded={open}
+              className="flex size-11 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde xl:hidden"
+            >
+              {open ? <X size={18} /> : <List size={18} />}
+            </Button>
+          </div>
+        </>
+      }
+      menu={menu}
+      debajo={
+        mostrarContinuar && continuar ? (
+          <div ref={bandaRef} className="mt-2 w-full">
+            <ContinuarReservacion lang={lang} dict={{ continuar }} />
+          </div>
+        ) : undefined
+      }
+    />
   );
 }

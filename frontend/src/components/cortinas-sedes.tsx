@@ -24,7 +24,7 @@ type Props = {
 
 /**
  * Las sedes como cortinas a pantalla completa (F10): cada una queda fija bajo la barra mientras la
- * siguiente sube y la cubre. Un espacio de 35 svh entre cortinas da tiempo de leer la sede y de
+ * siguiente sube y la cubre. Un espacio de 35 svh entre cortinas (no tras la última: ahí empieza la siguiente sección) da tiempo de leer la sede y de
  * tocar su botón antes de que la cubran; el nombre y el botón van a media altura, no pegados al
  * borde. En móvil son el selector de sede (el mapa es solo de escritorio).
  *
@@ -32,7 +32,7 @@ type Props = {
  */
 export function CortinasSedes({ sedes, textos }: Props) {
   return (
-    <div className="pb-[35svh]">
+    <div>
       {sedes.map((sede, i) => (
         <article
           key={sede.slug}
