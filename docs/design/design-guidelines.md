@@ -26,18 +26,18 @@ Pares aprobados (calculados):
 | `apagado` sobre blanco / arena | 6,37:1 / 5,96:1 |
 | blanco sobre `azul` | 6,94:1 |
 | blanco sobre `verde` | 11,30:1 |
-| `tinta` sobre `coral` | 4,87:1 |
-| `coral-texto` sobre `coral-claro` | 5,56:1 |
+| `tinta` sobre `coral` | 4,13:1 (solo texto grande) |
+| `coral-texto` sobre `coral-claro` | 5,72:1 |
 | `borde-control` sobre blanco / arena | 4,15:1 / 3,89:1 |
 
 Pares **prohibidos**:
 
 | Combinación | Contraste | Por qué |
 |---|---|---|
-| blanco sobre `coral` | 3,54:1 | No alcanza 4,5:1 para texto normal |
-| `coral` como texto sobre blanco | 3,54:1 | Ídem |
+| blanco sobre `coral` | 4,18:1 | No alcanza 4,5:1 para texto normal; solo texto grande (24 px o más) |
+| `coral` como texto sobre blanco | 4,18:1 | Ídem |
 | `borde` (`#E6E4DF`) como contorno de un campo | 1,27:1 | No delimita el control |
-| `cafe` sobre `coral` | 2,39:1 | Ilegible |
+| `cafe` sobre `coral` | 2,02:1 | Ilegible |
 | Cualquier color de actividad usado como estado | — | Se confunde con la categoría |
 
 ### Objetivos táctiles
@@ -118,7 +118,7 @@ Ningún gesto es el único camino: todo tiene botón.
 
 - **Haz** usar `cafe` para la acción principal de cada pantalla y para nada más.
 - **Haz** usar azul, coral y verde solo para decir el tipo de actividad (mar, ciudad, outside o montaña).
-- **Haz** poner texto oscuro (`tinta`) sobre rellenos de `coral`.
+- **Haz** poner solo texto grande (24 px o más) sobre rellenos de `coral`, en `tinta` o en blanco.
 - **No hagas** botones principales en azul, coral o verde.
 - **No uses** el color como única señal: suma icono, forma o texto.
 - **No uses** blanco o negro puros en texto: el texto es `tinta` y los fondos son `arena` o blanco.

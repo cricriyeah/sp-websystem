@@ -25,6 +25,8 @@ test('cuenta controles y colores crudos', () => {
   assert.equal(contar('className="shadow-n2"', 'sombra-cruda'), 0);
   assert.equal(contar('className="bg-surface-deep"', 'surface-deep'), 1);
   assert.equal(contar('<h1 className="texto-display">', 'titular-sin-escala'), 0);
+  assert.equal(contar('<h1 className="texto-gigante">', 'titular-sin-escala'), 0);
+  assert.equal(contar('<h2 className="texto-grande">', 'titular-sin-escala'), 0);
   assert.equal(contar('<h2 id="x" className="mt-2 texto-seccion text-foreground">', 'titular-sin-escala'), 0);
   assert.equal(contar('<h2 className="font-sans texto-pequeno">', 'titular-sin-escala'), 0);
   assert.equal(contar('<h1 className="text-5xl">', 'titular-sin-escala'), 1);

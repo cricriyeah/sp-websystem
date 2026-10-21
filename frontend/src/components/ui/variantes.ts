@@ -19,6 +19,8 @@ const BASE =
 // variante: un botón en curso no cambia de color al pasar el puntero.
 const APAGADO = 'disabled:bg-cafe-bruma disabled:text-apagado aria-disabled:bg-cafe-bruma aria-disabled:text-apagado';
 
+const BASE_CAMPANA = BASE.replace('rounded-control', 'rounded-full'); // píldora: el sitio público (F10) no usa el radio de control
+
 const VARIANTES = {
   principal:
     `bg-cafe text-white hover:bg-cafe-hondo active:bg-cafe-profundo ${APAGADO} ` +
@@ -35,6 +37,15 @@ const VARIANTES = {
   peligro:
     'bg-error text-white hover:bg-[color-mix(in_srgb,var(--color-error)_92%,var(--color-tinta))] ' +
     `${APAGADO} aria-disabled:hover:bg-cafe-bruma`,
+  // Campaña (F10): píldora negra, o blanca sobre foto. Llevan su propia base porque `botonClases` no fusiona
+  // clases (un `rounded-control` y un `rounded-full` juntos dependerían del orden de la hoja). El color de
+  // marca va solo en el hover; el checkout sigue con `principal` y `secundario`.
+  campana:
+    `bg-tinta text-white hover:bg-cafe active:bg-cafe-hondo ${APAGADO} ` +
+    'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
+  'campana-claro':
+    `bg-white text-tinta hover:bg-cafe-bruma active:bg-borde ${APAGADO} ` +
+    'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
   // Variantes de migración (F4): llevan las clases del botón crudo que sustituyen y NO
   // reciben BASE (inline-flex, items-center y la etiqueta cambiarían su aspecto).
   // `fila`: disparador de acordeón de ancho completo (faq-section).
@@ -48,6 +59,7 @@ const VARIANTES = {
 
 // Las variantes de migración no heredan BASE: su aspecto es el del botón crudo original.
 const SIN_BASE: readonly string[] = ['fila', 'chip', 'libre'];
+const CAMPANA: readonly string[] = ['campana', 'campana-claro'];
 
 // `md` es el de la base. `icono` es un círculo de 48 × 48 también en escritorio (icono de 24).
 const TAMANOS = { md: '', icono: 'size-12 rounded-full p-0' } as const;
@@ -61,7 +73,8 @@ export function botonClases({
   bloque = false,
 }: { variante?: VarianteBoton; tamano?: TamanoBoton; bloque?: boolean } = {}): string {
   // `bloque`: ancho completo (barra inferior móvil).
-  return [SIN_BASE.includes(variante) ? '' : BASE, VARIANTES[variante], TAMANOS[tamano], bloque ? 'w-full' : '']
+  const base = CAMPANA.includes(variante) ? BASE_CAMPANA : SIN_BASE.includes(variante) ? '' : BASE;
+  return [base, VARIANTES[variante], TAMANOS[tamano], bloque ? 'w-full' : '']
     .filter(Boolean)
     .join(' ');
 }

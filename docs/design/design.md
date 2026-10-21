@@ -28,7 +28,7 @@ Estos tres colores **solo** identifican el tipo de actividad (etiquetas, insigni
 | Token | Hex | Significa | Texto sobre el color | Texto sobre su claro |
 |---|---|---|---|---|
 | `azul` | `#1B607F` | Mar (pesca, paseos en lancha) | blanco, 6,94:1 | `azul` sobre `#DDE6EB`, 5,48:1 |
-| `coral` | `#F64A25` | Ciudad (recorridos urbanos, ciudad, vida nocturna) | **tinta** `#1F1A14`, 4,87:1 (con blanco solo 3,54:1: no usar) | `coral-texto` `#8F2409` sobre `#FBC2B5`, 5,56:1 |
+| `coral` | `#E04332` | Traslados y ciudad (recorridos urbanos, ciudad, vida nocturna) | **solo texto grande** (24 px o más): `tinta` 4,13:1 o blanco 4,18:1; ninguno llega a 4,5:1 | `coral-texto` `#8F2409` sobre `#F6C7C2`, 5,72:1 |
 | `verde` | `#343F04` | Outside / montaña / naturaleza | blanco, 11,30:1 | `verde` sobre `#DFFFA8`, 10,23:1 |
 
 Escalas derivadas (sacadas de cada primario mezclándolo con blanco o negro):
@@ -36,10 +36,10 @@ Escalas derivadas (sacadas de cada primario mezclándolo con blanco o negro):
 | Familia | `hondo` (−25 % luz) | `profundo` (−50 %) | `medio` (+40 % blanco) | `claro` (dado) | `bruma` (+90 % blanco) |
 |---|---|---|---|---|---|
 | azul | `#14485F` | `#0E3040` | `#76A0B2` | `#DDE6EB` | `#E8EFF2` |
-| coral | `#B9381C` | `#7B2513` | `#FA927C` | `#FBC2B5` | `#FEEDE9` |
+| coral | `#A83226` | `#702219` | `#EC8E84` | `#F6C7C2` | `#FCECEB` |
 | verde | `#272F03` | `#1A2002` | `#5D6536` (6,21:1 con blanco) | `#DFFFA8` | `#EBECE6` |
 
-`coral-texto` = `#8F2409`: el coral nunca se usa como texto sobre blanco (3,54:1 no alcanza 4,5:1); cuando haga falta texto en esa familia se usa este tono (8,66:1 sobre blanco).
+`coral-texto` = `#8F2409`: el coral nunca se usa como texto de cuerpo (blanco sobre coral da 4,18:1, no alcanza 4,5:1); cuando haga falta texto chico en esa familia se usa este tono (8,66:1 sobre blanco). El coral cambió el 2026-10-20 de `#F64A25` a `#E04332` por decisión del dueño.
 
 > **Categorías confirmadas por el dueño:** azul = mar, coral = ciudad, verde = outside o montaña (una sola familia). Cada actividad pertenece a una.
 
@@ -207,3 +207,19 @@ Librería actual (Phosphor), peso `bold` para acciones y `regular` para decoraci
 | `--border`, `--border-strong` | `borde`, `borde-control` | |
 | `--exito`/`--error`/`--aviso` (+ `-fondo`) | valores de la tabla de estados | |
 | `--font-titulo` (Bebas), `--font-acento` (Bella), `--font-cuerpo` (Instrument) | Consola Mono / San Francisco | Bella y Bebas se retiran |
+
+
+---
+
+## Sitio público «campaña» (F10, 2026-10-20)
+
+Las páginas públicas rediseñadas (hub, sedes, detalle de servicio y de paquete, pie, legales y 404) siguen el prototipo «Sun Baja Campaña». La página de reservas (checkout) no cambia y conserva todo lo de arriba.
+
+- **Formas:** solo rectángulo de esquina recta o círculo y píldora (`rounded-none`, `rounded-full`). No se usan `--radius-control` ni `--radius-card` en estas páginas. Los tokens de radio no cambian porque los comparte el checkout.
+- **Base:** negro (`tinta`), blanco y gris (`cafe-bruma`) en al menos el 85 % de la superficie.
+- **Color por actividad:** azul = mar (pesca, mosca, ballenas, safari), coral = traslados, verde = estancia (hospedaje y paquetes con noches), café = marca y acción. Entra en campos grandes (bloques de palabra, tablero de empresas, paquetes), nunca como puntos ni indicadores, y como máximo 2 acentos por pantalla. Nunca en botones ni estados.
+- **Texto:** todo en `tinta` (o `cafe-bruma` sobre fondo oscuro). No hay texto gris tenue.
+- **Tipografía de campaña:** `texto-gigante` (`clamp(72px, 13vw, 220px)`) y `texto-grande` (`clamp(40px, 5.4vw, 84px)`), Consola Mono Bold en mayúsculas, solo para una o dos palabras.
+- **Botones:** variantes `campana` (píldora negra) y `campana-claro` (blanca, sobre foto), con 44 px de alto; el café va solo en el hover. Cada tarjeta de servicio lleva su botón «Reservar →».
+- **Movimiento:** una sola curva (`--curva-estandar`); 150 ms al tocar, de 220 a 300 ms al abrir o cerrar, de 600 a 900 ms al entrar en pantalla; solo `transform` y `opacity`, con versión sin desplazamiento en `prefers-reduced-motion`.
+- **Fotos:** solo de pesca en servicios de pesca. Ballenas, safari, hospedaje y traslados van como bloque de palabra en el color de su tipo.

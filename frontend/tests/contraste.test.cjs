@@ -26,6 +26,7 @@ const color = (token) => resolverToken(css, `--color-${token}`);
 
 const TEXTO = 4.5; // texto normal
 const NO_TEXTO = 3; // iconos, bordes de campos, casillas y focos
+const TEXTO_GRANDE = 3; // 24 px o más (o 19 px en negrita): el coral solo admite esto
 const DECORATIVO = 0; // sin mínimo
 
 // [texto o elemento, fondo, razón publicada en el documento, mínimo, nota]
@@ -51,8 +52,9 @@ const PARES = [
   // Actividades
   ['blanco', 'azul', 6.94, TEXTO, 'texto sobre azul (mar)'],
   ['azul', 'azul-claro', 5.48, TEXTO, 'chip de mar'],
-  ['tinta', 'coral', 4.87, TEXTO, 'texto sobre coral (con blanco no alcanza)'],
-  ['coral-texto', 'coral-claro', 5.56, TEXTO, 'chip de ciudad'],
+  ['tinta', 'coral', 4.13, TEXTO_GRANDE, 'texto grande sobre coral (24 px o más)'],
+  ['blanco', 'coral', 4.18, TEXTO_GRANDE, 'texto grande sobre coral (24 px o más)'],
+  ['coral-texto', 'coral-claro', 5.72, TEXTO, 'chip de ciudad'],
   ['coral-texto', 'blanco', 8.66, TEXTO, 'texto de la familia coral sobre blanco'],
   ['blanco', 'verde', 11.3, TEXTO, 'texto sobre verde (outside)'],
   ['verde', 'verde-claro', 10.23, TEXTO, 'chip de outside'],

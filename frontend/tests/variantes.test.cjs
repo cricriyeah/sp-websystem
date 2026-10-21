@@ -177,3 +177,16 @@ test('el diálogo de alerta es centrado, con tokens y botones apilados en móvil
   assert.match(boton, /\bw-full\b/);
   assert.match(boton, /sm:w-auto/);
 });
+
+test('F10: las variantes de campaña son píldora, con alto táctil y sin el radio de control', () => {
+  for (const v of ['campana', 'campana-claro']) {
+    assert.ok(clase(v, 'rounded-full'), v);
+    assert.ok(!clase(v, 'rounded-control'), v);
+    assert.ok(clase(v, 'min-h-12') && clase(v, 'sm:min-h-11'), v);
+    assert.ok(!clase(v, 'bg-cafe'), `${v}: el café va solo en el hover`);
+  }
+  assert.ok(clase('campana', 'bg-tinta') && clase('campana', 'hover:bg-cafe'));
+  assert.ok(clase('campana-claro', 'bg-white') && clase('campana-claro', 'text-tinta'));
+  // El checkout no cambia: `principal` conserva el radio de control.
+  assert.ok(clase('principal', 'rounded-control'));
+});

@@ -21,7 +21,7 @@ const REGLAS = {
   'radio-crudo': /\brounded(?:-[trblse]{1,2})?-(?:md|lg|xl|2xl|3xl)\b/g, // incluye rounded-t-xl, rounded-b-lg…
   'sombra-cruda': /\bshadow-(?:\[|xs\b|sm\b|md\b|lg\b|xl\b|2xl\b)/g,
   // Todo <h1>/<h2> lleva una clase de la escala `texto-*` (globals.css); sin ella la tipografia cae en la regla global provisional.
-  'titular-sin-escala': /<h[12]\b(?![^>]*\btexto-(?:display|pagina|seccion|paso|subtitulo|cuerpo|pequeno|etiqueta|pie)\b)/g,
+  'titular-sin-escala': /<h[12]\b(?![^>]*\btexto-(?:gigante|grande|display|pagina|seccion|paso|subtitulo|cuerpo|pequeno|etiqueta|pie)\b)/g,
   'surface-deep': /\bbg-surface-deep\b/g,
   // Los 77 usos de bg-surface se clasifican en la Task 2.4; cuenta hoy y baja hasta lo que quede como banda de sección.
   'bg-surface-uso': /\bbg-surface(?![-\w])/g,

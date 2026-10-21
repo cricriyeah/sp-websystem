@@ -152,12 +152,13 @@
   --color-azul-medio: #76a0b2;
   --color-azul-claro: #dde6eb;
   --color-azul-bruma: #e8eff2;
-  --color-coral: #f64a25;
-  --color-coral-hondo: #b9381c;
-  --color-coral-profundo: #7b2513;
-  --color-coral-medio: #fa927c;
-  --color-coral-claro: #fbc2b5;
-  --color-coral-bruma: #feede9;
+  /* Coral elegido por el dueño el 2026-10-20 (antes #f64a25). Ni blanco (4,18:1) ni tinta (4,13:1) llegan a 4,5:1: solo texto grande. */
+  --color-coral: #e04332;
+  --color-coral-hondo: #a83226;
+  --color-coral-profundo: #702219;
+  --color-coral-medio: #ec8e84;
+  --color-coral-claro: #f6c7c2;
+  --color-coral-bruma: #fceceb;
   --color-coral-texto: #8f2409;
   --color-verde: #343f04;
   --color-verde-hondo: #272f03;
@@ -312,6 +313,8 @@
      reduce el tamano minimo de contenido a una letra y deja a un titulo junto a un icono en flex o grid
      encogido a una columna; `hyphens: manual` y `min-width: 0` para que un hijo flex o grid pueda
      encogerse y envolver. `font-synthesis: none`: Bold es real, ningun navegador inventa otra. */
+  .texto-gigante,
+  .texto-grande,
   .texto-display,
   .texto-pagina,
   .texto-seccion,
@@ -333,6 +336,11 @@
     font-synthesis: none;
     text-transform: uppercase;
   }
+
+  /* Campaña (F10): letra gigante de arranques, cortinas y bloques de palabra. Solo para una o dos palabras. */
+  .texto-gigante { font-size: clamp(4.5rem, 13vw, 13.75rem); line-height: 0.84; letter-spacing: -0.05em; text-wrap: nowrap; }
+  .texto-grande { font-size: clamp(2.5rem, 5.4vw, 5.25rem); line-height: 0.9; letter-spacing: -0.04em; }
+  @media (max-width: 39.99rem) { .texto-gigante { font-size: 14vw; } }
 
   .texto-display { font-size: 2.5rem; line-height: 1.05; letter-spacing: -0.02em; }
   .texto-pagina { font-size: 2.25rem; line-height: 1.1; letter-spacing: -0.02em; }
