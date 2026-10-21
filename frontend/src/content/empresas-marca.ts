@@ -12,9 +12,9 @@ export type MarcaEmpresa = {
 
 export const MARCAS: readonly MarcaEmpresa[] = [
   { slug: 'sal-y-sol', nombre: 'Sal y Sol Sportfishing', logo: '/logos/logo2salysol.webp' },
-  { slug: 'transporte-la-paz', nombre: 'DLS Transporte' },
-  { slug: 'la-ventana-travel', nombre: 'La Ventana Travel' },
-  { slug: 'piratas-adventures', nombre: 'Piratas Adventures' },
+  { slug: 'transporte-la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp' },
+  { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel.webp' },
+  { slug: 'piratas-adventures', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp' },
 ];
 
 export function marcaDe(slug: string | null | undefined): MarcaEmpresa | undefined {
