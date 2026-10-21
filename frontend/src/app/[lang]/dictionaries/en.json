@@ -279,10 +279,10 @@
       "privacyLinkLabel": "privacy notice",
       "missing": "Please accept the liability waiver and privacy notice to continue.",
       "page": {
-        "empresaGenerica": "the company operating your booking",
+        "empresaGenerica": "The company operating your booking",
         "title": "Liability waiver and release for activities and tourism services",
         "updated": "Last updated: September 11, 2026",
-        "intro": "This is a courtesy translation. The Agreement is executed in Spanish and governed by the laws of Baja California Sur, Mexico; in case of any discrepancy between the two versions, the Spanish version prevails.\n\nThis LIABILITY WAIVER AND RELEASE FOR ACTIVITIES AND TOURISM SERVICES (the \"Agreement\") is entered into electronically on the acceptance date indicated below, between:\n\n{empresa}, the operating company providing ground transportation, water activities, or destination services corresponding to the booking made through this platform in Baja California Sur, Mexico, with reference address at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (the \"Released Party\");\n\nand\n\nthe person identified by the name, email address and phone number captured in the booking/acceptance form on the Released Party's website (the \"Participant\").\n\n(Each individually a \"Party\" and together the \"Parties.\")",
+        "intro": "This is a courtesy translation. The Agreement is executed in Spanish and governed by the laws of Baja California Sur, Mexico; in case of any discrepancy between the two versions, the Spanish version prevails.\n\nThis LIABILITY WAIVER AND RELEASE FOR ACTIVITIES AND TOURISM SERVICES (the \"Agreement\") is entered into electronically on the acceptance date indicated below, between:\n\n{empresa}, provider of ground transportation, water activities, or destination services corresponding to the booking made through this platform in Baja California Sur, Mexico, with reference address at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (the \"Released Party\");\n\nand\n\nthe person identified by the name, email address and phone number captured in the booking/acceptance form on the Released Party's website (the \"Participant\").\n\n(Each individually a \"Party\" and together the \"Parties.\")",
         "sections": [
           {
             "title": "1. Recitals",

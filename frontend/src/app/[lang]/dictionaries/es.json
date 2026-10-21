@@ -279,10 +279,10 @@
       "privacyLinkLabel": "aviso de privacidad",
       "missing": "Por favor acepta el deslinde de responsabilidad y el aviso de privacidad para continuar.",
       "page": {
-        "empresaGenerica": "la empresa operadora de tu reservación",
+        "empresaGenerica": "La empresa operadora de tu reservación",
         "title": "Exención de responsabilidad y liberación para actividades y servicios turísticos",
         "updated": "Última actualización: 11 de septiembre de 2026",
-        "intro": "Esta EXENCIÓN DE RESPONSABILIDAD Y LIBERACIÓN PARA ACTIVIDADES Y SERVICIOS TURÍSTICOS (el «Acuerdo») se celebra de forma electrónica en la fecha de aceptación indicada a continuación, entre:\n\n{empresa}, empresa operadora y prestadora de servicios de transporte terrestre, actividades acuáticas o turísticas correspondientes a la reservación realizada a través de esta plataforma, que opera en Baja California Sur, México, con domicilio de referencia en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (la «Parte Liberada»);\n\ny\n\nla persona identificada mediante el nombre, correo electrónico y teléfono capturados en el formulario de reservación/aceptación del sitio web de la Parte Liberada (el «Participante»).\n\n(Cada una, individualmente, una «Parte» y, en conjunto, las «Partes».)",
+        "intro": "Esta EXENCIÓN DE RESPONSABILIDAD Y LIBERACIÓN PARA ACTIVIDADES Y SERVICIOS TURÍSTICOS (el «Acuerdo») se celebra de forma electrónica en la fecha de aceptación indicada a continuación, entre:\n\n{empresa}, prestadora de servicios de transporte terrestre, actividades acuáticas o turísticas correspondientes a la reservación realizada a través de esta plataforma, que opera en Baja California Sur, México, con domicilio de referencia en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, B.C.S. (la «Parte Liberada»);\n\ny\n\nla persona identificada mediante el nombre, correo electrónico y teléfono capturados en el formulario de reservación/aceptación del sitio web de la Parte Liberada (el «Participante»).\n\n(Cada una, individualmente, una «Parte» y, en conjunto, las «Partes».)",
         "sections": [
           {
             "title": "1. Declaraciones",
