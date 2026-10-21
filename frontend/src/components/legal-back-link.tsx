@@ -38,7 +38,7 @@ export function LegalBackLink({ label, fallbackHref }: LegalBackLinkProps) {
     <Link
       href={fallbackHref}
       onClick={alVolver}
-      className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
+      className="inline-flex min-h-11 items-center gap-2 texto-cuerpo font-semibold transition-colors hover:text-cafe"
     >
       <ArrowLeft size={16} />
       {label}

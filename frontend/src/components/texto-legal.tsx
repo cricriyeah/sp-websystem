@@ -29,13 +29,13 @@ export function TextoLegal({ texto }: { texto: string }) {
         esLista(bloque) ? (
           <ul key={i} className="flex list-disc flex-col gap-2 pl-5">
             {bloque.split(/\n/).map((linea, j) => (
-              <li key={j} className="text-base leading-relaxed text-muted">
+              <li key={j} className="texto-cuerpo">
                 <ConNegritas texto={linea.replace(/^- /, '')} />
               </li>
             ))}
           </ul>
         ) : (
-          <p key={i} className="text-base leading-relaxed text-muted">
+          <p key={i} className="texto-cuerpo">
             <ConNegritas texto={bloque} />
           </p>
         )
@@ -58,7 +58,7 @@ function ConNegritas({ texto }: { texto: string }) {
     <>
       {partes.map((parte, i) =>
         i % 2 === 1 ? (
-          <strong key={i} className="font-medium text-foreground">
+          <strong key={i} className="font-semibold">
             {parte}
           </strong>
         ) : (

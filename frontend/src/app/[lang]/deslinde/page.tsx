@@ -38,12 +38,12 @@ export default async function DeslindePage({ params }: PageProps<'/[lang]/deslin
       <h1 className="mt-8 texto-pagina text-foreground">
         {page.title}
       </h1>
-      <p className="mt-2 text-sm text-muted">{page.updated}</p>
+      <p className="mt-2 texto-cuerpo">{page.updated}</p>
       <div className="mt-6">
         <TextoLegal texto={page.intro} />
       </div>
 
-      <div className="mt-12 flex flex-col gap-10 border-t border-border pt-10">
+      <div className="mt-14 flex flex-col gap-10">
         {page.sections.map((section) => (
           <section key={section.title}>
             <h2 className="texto-subtitulo text-foreground">{section.title}</h2>

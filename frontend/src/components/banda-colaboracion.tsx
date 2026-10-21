@@ -17,7 +17,7 @@ type BandaColaboracionProps = {
 export function BandaColaboracion({ empresa, frase }: BandaColaboracionProps) {
   return (
     <div className="bg-background">
-      <p className="mx-auto flex max-w-[1120px] items-center gap-3 px-4 py-4 texto-pequeno text-tinta-suave sm:px-6 lg:px-8">
+      <p className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 py-4 texto-cuerpo sm:px-6 lg:px-12">
         <span aria-hidden="true" className="inline-flex">
           <EmpresaSello nombre={empresa.nombre} logo={empresa.logo} tamano={24} />
         </span>

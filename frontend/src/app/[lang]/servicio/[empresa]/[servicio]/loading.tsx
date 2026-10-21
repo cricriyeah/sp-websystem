@@ -1,23 +1,27 @@
 import { Skeleton } from '@/components/skeleton';
 
-/** Estructura del detalle de servicio: volver, título, descripción, precio y botón. */
+/** Estructura del detalle de servicio y de paquete: arranque, ficha en dos columnas con el bloque de compra. */
 export default function CargandoServicio() {
   return (
     <div className="min-h-dvh bg-background" aria-hidden="true">
-      <div className="fixed inset-x-0 top-0 z-40 border-b border-border bg-superficie">
-        <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-6 sm:px-8">
-          <Skeleton className="h-11 w-32" />
-          <Skeleton className="h-11 w-11" />
+      <div className="fixed inset-x-0 top-0 z-40 bg-superficie shadow-tarjeta">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-12">
+          <Skeleton className="size-11 rounded-full" />
+          <Skeleton className="h-11 w-40 rounded-full" />
         </div>
       </div>
 
-      <section className="mx-auto max-w-6xl px-6 pb-16 pt-[calc(var(--nav-alto)+3rem)] sm:px-8 lg:px-12">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="mt-8 h-14 w-3/4 max-w-3xl" />
-        <Skeleton className="mt-5 h-5 w-full max-w-3xl" />
-        <Skeleton className="mt-2 h-5 w-2/3 max-w-2xl" />
-        <Skeleton className="mt-6 h-7 w-56" />
-        <Skeleton className="mt-8 h-12 w-44 rounded-full" />
+      <Skeleton className="mt-[var(--nav-alto)] h-[max(28.75rem,min(70svh,45rem))] w-full bg-tinta" />
+
+      <section className="mx-auto grid max-w-[1440px] gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)] lg:gap-24 lg:px-12">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-6 w-full max-w-xl" />
+          <Skeleton className="h-6 w-2/3 max-w-lg" />
+          <Skeleton className="mt-8 h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+        <Skeleton className="h-80 w-full bg-tinta" />
       </section>
     </div>
   );

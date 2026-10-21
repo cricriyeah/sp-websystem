@@ -41,12 +41,12 @@ export default async function PrivacidadPage({ params }: PageProps<'/[lang]/priv
         <h1 className="mt-8 texto-pagina text-foreground">
           {privacy.title}
         </h1>
-        <p className="mt-2 text-sm text-muted">{privacy.updated}</p>
+        <p className="mt-2 texto-cuerpo">{privacy.updated}</p>
         <div className="mt-6">
           <TextoLegal texto={privacy.intro} />
         </div>
 
-        <div className="mt-12 flex flex-col gap-10 border-t border-border pt-10">
+        <div className="mt-14 flex flex-col gap-10">
           {privacy.sections.map((section) => (
             <section key={section.title}>
               <h2 className="texto-subtitulo text-foreground">

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { botonClases } from '@/components/ui/variantes';
 import { textosDeError } from '@/lib/errores-textos';
 
 /**
@@ -26,23 +27,15 @@ export default function ErrorDePagina({
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-6 text-center sm:px-8">
-      <h1 className="texto-pagina text-foreground">
+      <h1 className="texto-pagina">
         {titulo}
       </h1>
-      <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-muted">{cuerpo}</p>
+      <p className="mt-5 max-w-[46ch] texto-cuerpo">{cuerpo}</p>
       <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Button
-          variante="libre"
-          type="button"
-          onClick={() => retry()}
-          className="flex items-center justify-center rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-action-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
-        >
+        <Button variante="campana" type="button" onClick={() => retry()}>
           {reintentar}
         </Button>
-        <Link
-          href={`/${idioma}`}
-          className="flex items-center justify-center rounded-full border border-border-strong px-7 py-3.5 text-sm font-medium text-foreground transition-colors hover:border-foreground"
-        >
+        <Link href={`/${idioma}`} className={botonClases({ variante: 'campana-gris' })}>
           {inicio}
         </Link>
       </div>

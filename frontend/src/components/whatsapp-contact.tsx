@@ -31,10 +31,10 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
         href={href}
         target="_blank"
         rel="noopener"
-        className="mt-1 flex flex-col gap-1 bg-accent px-4 py-3 text-accent-foreground"
+        className="mt-1 flex flex-col gap-1 bg-cafe-bruma px-4 py-3"
       >
-        <span className="text-sm opacity-90">{nav.humanContact}</span>
-        <span className="flex items-center gap-2 text-sm font-medium">
+        <span className="texto-cuerpo">{nav.humanContact}</span>
+        <span className="flex items-center gap-2 texto-cuerpo font-semibold">
           <WhatsappLogo size={18} weight="fill" />
           {numero}
         </span>
@@ -46,7 +46,7 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
     <div className="hidden items-center gap-3 lg:flex">
       {/* La frase se cae en pantallas medianas; el numero nunca. */}
       <span
-        className={`hidden text-sm xl:inline ${tone === 'hero' ? 'text-hero-ink-soft' : 'text-muted'}`}
+        className={`hidden texto-cuerpo xl:inline ${tone === 'hero' ? 'text-hero-ink' : ''}`}
       >
         {nav.humanContact}
       </span>
@@ -55,7 +55,7 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
         target="_blank"
         rel="noopener"
         aria-label={`${nav.whatsappCta}: ${numero}`}
-        className="flex min-h-11 items-center gap-2 rounded-control bg-accent px-5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+        className="flex min-h-11 items-center gap-2 rounded-full bg-tinta px-5 texto-cuerpo font-semibold text-white transition-[background-color,transform] hover:bg-cafe active:scale-[0.98]"
       >
         <WhatsappLogo size={18} weight="fill" />
         {numero}
