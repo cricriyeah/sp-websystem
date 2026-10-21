@@ -3,7 +3,7 @@ import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_DE } from '@/lib/secciones-sede';
-import { FilaEmpresa, type VistaEmpresa } from '@/components/fila-empresa';
+import { TarjetaEmpresa, type VistaEmpresa } from '@/components/tarjeta-empresa';
 
 type Textos = Dictionary['hubContenido'];
 
@@ -29,18 +29,18 @@ export function ColaboradoresSection({ sedes, lang, textos, id }: {
         if (!existente.sedes.some((s) => s.href === enlace.href)) existente.sedes.push(enlace);
         continue;
       }
-      const foto = empresa.fotos.find((f) => f.propia);
       filas.set(empresa.slug, {
         slug: empresa.slug,
         nombre: empresa.nombre,
         logo: empresa.logo,
+        logoLibre: empresa.logoLibre,
+        campo: empresa.campo,
         sedes: [enlace],
         tambienConocidaComo: empresa.tambienConocidaComo,
         descripcion: empresa.descripcion[lang],
         redes: empresa.redes.filter((red) => /instagram|facebook/i.test(red.nombre)),
         web: empresa.webConfirmada ? empresa.web : undefined,
         contacto: empresa.contacto,
-        foto: foto ? { src: foto.src, alt: foto.alt[lang] } : null,
       });
     }
   }
@@ -48,13 +48,13 @@ export function ColaboradoresSection({ sedes, lang, textos, id }: {
   if (visibles.length === 0) return null;
 
   return (
-    <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-[calc(var(--nav-alto)+16px)] border-t border-borde bg-superficie py-12 sm:py-16 lg:py-24">
-      <div className="mx-auto max-w-[1120px] px-4 sm:px-6 lg:px-8">
-        <h2 id={`${id}-titulo`} className="max-w-[16ch] texto-seccion text-foreground">{textos.empresasTitulo}</h2>
-        <p className="mt-4 max-w-[60ch] texto-cuerpo text-tinta-suave">{textos.empresasTexto}</p>
-        <ul className="mt-8 divide-y divide-borde border-t border-borde">
+    <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-[calc(var(--nav-alto)+16px)] bg-superficie py-16 sm:py-20 lg:py-28">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-12">
+        <h2 id={`${id}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.empresasTitulo}</h2>
+        <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.empresasTexto}</p>
+        <ul className="mt-10 grid gap-x-2 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
           {visibles.map((empresa) => (
-            <FilaEmpresa key={empresa.slug} empresa={empresa} textos={textos} />
+            <TarjetaEmpresa key={empresa.slug} empresa={empresa} textos={textos} />
           ))}
         </ul>
       </div>

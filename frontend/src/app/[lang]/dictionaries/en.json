@@ -875,19 +875,19 @@
     "comoTexto": "We bring together, in one place, the services of each location's local companies. Each company runs its own service and charges you directly.",
     "comoPasos": [
       {
-        "titulo": "Pick your location and service",
+        "verbo": "Choose",
         "texto": "Each service shows which company runs it, what it costs and what it includes."
       },
       {
-        "titulo": "Book and pay in one go",
+        "verbo": "Book",
         "texto": "Choose a date and group size, add your details and pay the company. If you combine services from two companies, you pay each one separately."
       },
       {
-        "titulo": "The company hosts you",
+        "verbo": "Live the experience",
         "texto": "Whoever runs your service meets you on the day. If bad weather stops the trip, you get a full refund."
       }
     ],
-    "empresasTitulo": "Who runs each service",
+    "empresasTitulo": "Local companies that welcome you",
     "empresasTexto": "Each company is independent: it runs its own service and charges directly.",
     "verServiciosEn": "See services in {sede}",
     "sitioOficial": "Official site",

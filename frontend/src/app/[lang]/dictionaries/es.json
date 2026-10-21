@@ -875,19 +875,19 @@
     "comoTexto": "Reunimos en un solo lugar los servicios de las empresas locales de cada sede. Cada empresa opera su servicio y cobra directo.",
     "comoPasos": [
       {
-        "titulo": "Elige tu sede y tu servicio",
+        "verbo": "Elige",
         "texto": "Cada servicio muestra qué empresa lo opera, cuánto cuesta y qué incluye."
       },
       {
-        "titulo": "Reserva y paga en un solo trámite",
+        "verbo": "Reserva",
         "texto": "Eliges fecha y personas, dejas tus datos y pagas a la empresa. Si combinas servicios de dos empresas, pagas a cada una por separado."
       },
       {
-        "titulo": "La empresa te atiende",
+        "verbo": "Vive la experiencia",
         "texto": "Quien opera tu servicio te recibe el día del viaje. Si el mal clima impide salir, hay reembolso completo."
       }
     ],
-    "empresasTitulo": "Quién opera cada servicio",
+    "empresasTitulo": "Empresas locales que nos acompañan",
     "empresasTexto": "Cada empresa es independiente: opera su servicio y cobra directo.",
     "verServiciosEn": "Ver servicios en {sede}",
     "sitioOficial": "Sitio oficial",
