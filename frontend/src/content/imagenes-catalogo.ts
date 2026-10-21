@@ -10,7 +10,7 @@
 //
 // El relleno no puede contradecir el servicio: ballenas, safari, pesca con mosca, hospedaje y
 // traslados van SIN foto hasta tener la suya (antes mostraban pesca de altura o una ilustración
-// rotulada «Destino Los Cabos»). Por la regla «todas o ninguna», su grupo se pinta sin fotos.
+// rotulada «Destino Los Cabos»): su tarjeta es un bloque del color de su tipo con su palabra.
 
 type Lang = 'es' | 'en';
 type Foto = { src: string; alt: Record<Lang, string>; relleno?: true };
@@ -55,12 +55,4 @@ export function imagenDeCatalogo(clave: string, lang: Lang): { src: string; alt:
     return null;
   }
   return { src: foto.src, alt: foto.alt[lang] };
-}
-
-/**
- * «Todas o ninguna» por grupo: si a una tarjeta le falta la foto, ninguna del grupo la pinta
- * (la fila no queda dispareja). No se usa la foto de la empresa como sustituto.
- */
-export function fotosDeGrupo(claves: string[]): boolean {
-  return claves.length > 0 && claves.every((clave) => clave in FOTOS);
 }

@@ -46,6 +46,10 @@ const VARIANTES = {
   'campana-claro':
     `bg-white text-tinta hover:bg-cafe-bruma active:bg-borde ${APAGADO} ` +
     'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
+  // Flechas de las filas que se arrastran: círculo gris sobre fondo blanco.
+  'campana-gris':
+    `bg-cafe-bruma text-tinta hover:bg-borde active:bg-borde-control ${APAGADO} ` +
+    'aria-disabled:hover:bg-cafe-bruma aria-disabled:active:bg-cafe-bruma',
   // Variantes de migración (F4): llevan las clases del botón crudo que sustituyen y NO
   // reciben BASE (inline-flex, items-center y la etiqueta cambiarían su aspecto).
   // `fila`: disparador de acordeón de ancho completo (faq-section).
@@ -59,7 +63,7 @@ const VARIANTES = {
 
 // Las variantes de migración no heredan BASE: su aspecto es el del botón crudo original.
 const SIN_BASE: readonly string[] = ['fila', 'chip', 'libre'];
-const CAMPANA: readonly string[] = ['campana', 'campana-claro'];
+const CAMPANA: readonly string[] = ['campana', 'campana-claro', 'campana-gris'];
 
 // `md` es el de la base. `icono` es un círculo de 48 × 48 también en escritorio (icono de 24).
 const TAMANOS = { md: '', icono: 'size-12 rounded-full p-0' } as const;

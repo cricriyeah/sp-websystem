@@ -1,6 +1,5 @@
 // Cómo se etiqueta y se acomoda el catálogo de una sede y del hub, sin React: familia de
-// actividad, chip, base de cobro, si hay foto o galería y la plantilla de cada grupo de
-// tarjetas. Las vistas solo pintan lo que esto decide.
+// actividad, chip, base de cobro y si hay foto o galería. Las vistas solo pintan lo que esto decide.
 
 type Lang = 'es' | 'en';
 
@@ -8,7 +7,6 @@ type Lang = 'es' | 'en';
 export type Actividad = 'mar' | 'ciudad' | 'outside';
 
 type ServicioEtiquetable = { slug: string; tipo_servicio: string };
-type PaqueteEtiquetable = { servicios_asociados: { servicio: ServicioEtiquetable }[] };
 
 /**
  * Paseos que NO son de mar, por slug. Hoy todos los paseos del catálogo (avistamientos, safari
@@ -20,13 +18,6 @@ export function actividadDe(servicio: ServicioEtiquetable): Actividad | null {
   if (servicio.tipo_servicio === 'pesca') return 'mar';
   if (servicio.tipo_servicio === 'paseo') return ACTIVIDAD_POR_SERVICIO[servicio.slug] ?? 'mar';
   return null;
-}
-
-/** La actividad común de todos sus servicios, o null si difieren (o no tiene). */
-export function actividadDePaquete(paquete: PaqueteEtiquetable): Actividad | null {
-  const familias = new Set(paquete.servicios_asociados.map((c) => actividadDe(c.servicio)));
-  if (familias.size !== 1) return null;
-  return [...familias][0];
 }
 
 const BASES: Record<string, Record<Lang, string>> = {
@@ -64,16 +55,10 @@ export function chipDeServicio(servicio: ServicioEtiquetable, lang: Lang): Chip 
   return { tipo: 'neutro', icono: ICONO[servicio.tipo_servicio] ?? 'paquete', texto };
 }
 
-export function chipDePaquete(paquete: PaqueteEtiquetable, lang: Lang): Chip {
-  const actividad = actividadDePaquete(paquete);
-  const texto = PALABRA.paquete[lang];
-  return actividad ? { tipo: actividad, texto } : { tipo: 'neutro', icono: 'paquete', texto };
-}
-
 const ORDEN_SEDE = ['pesca', 'paseo', 'hospedaje', 'transporte', 'paquete'];
 
 /** Tarjeta de sede del hub: hasta 3 chips, sin repetir, en orden fijo. */
-export function chipsDeSede(servicios: ServicioEtiquetable[], paquetes: PaqueteEtiquetable[], lang: Lang): Chip[] {
+export function chipsDeSede(servicios: ServicioEtiquetable[], paquetes: readonly unknown[], lang: Lang): Chip[] {
   const tipos = new Set(servicios.map((s) => (s.tipo_servicio === 'bajo_demanda' ? 'paseo' : s.tipo_servicio)));
   if (paquetes.length > 0) tipos.add('paquete');
   return ORDEN_SEDE.filter((tipo) => tipos.has(tipo)).slice(0, 3).map((tipo) =>
@@ -83,6 +68,16 @@ export function chipsDeSede(servicios: ServicioEtiquetable[], paquetes: PaqueteE
   );
 }
 
+/** La palabra de un tipo de servicio («Pesca», «Traslados»…): rotula su bloque de color y el arranque de sede. */
+export function palabraDeServicio(tipoServicio: string, lang: Lang): string {
+  return (PALABRA[tipoServicio] ?? PALABRA.paseo)[lang];
+}
+
+/** La palabra de un paquete: «5 noches» si trae estancia, «Paquetes» si no. */
+export function palabraDePaquete(noches: number | null, lang: Lang): string {
+  return noches !== null && noches > 0 ? `${noches} ${lang === 'es' ? 'noches' : 'nights'}` : PALABRA.paquete[lang];
+}
+
 /**
  * Las palabras que rotan en el arranque de una sede, sacadas de su catálogo: una por tipo de
  * servicio (en el orden fijo de las tarjetas) y, por cada duración distinta de paquete con
@@ -90,14 +85,14 @@ export function chipsDeSede(servicios: ServicioEtiquetable[], paquetes: PaqueteE
  */
 export function palabrasDeSede(
   servicios: ServicioEtiquetable[] | null,
-  paquetes: (PaqueteEtiquetable & { noches: number | null })[] | null,
+  paquetes: { noches: number | null }[] | null,
   lang: Lang,
 ): string[] {
   const tipos = new Set((servicios ?? []).map((s) => (s.tipo_servicio === 'bajo_demanda' ? 'paseo' : s.tipo_servicio)));
-  const palabras = ORDEN_SEDE.filter((tipo) => tipo !== 'paquete' && tipos.has(tipo)).map((tipo) => PALABRA[tipo][lang]);
+  const palabras = ORDEN_SEDE.filter((tipo) => tipo !== 'paquete' && tipos.has(tipo)).map((tipo) => palabraDeServicio(tipo, lang));
   const noches = [...new Set((paquetes ?? []).map((p) => p.noches).filter((n): n is number => n !== null && n > 0))].sort((a, b) => a - b);
-  palabras.push(...noches.map((n) => `${n} ${lang === 'es' ? 'noches' : 'nights'}`));
-  if ((paquetes ?? []).some((p) => !p.noches)) palabras.push(PALABRA.paquete[lang]);
+  palabras.push(...noches.map((n) => palabraDePaquete(n, lang)));
+  if ((paquetes ?? []).some((p) => !p.noches)) palabras.push(palabraDePaquete(null, lang));
   return palabras;
 }
 
@@ -121,37 +116,3 @@ export const aptaParaHeroe = (foto: Medida): boolean => foto.ancho >= 1600;
 
 /** Con menos de 3 fotos aptas no hay galería. */
 export const hayGaleria = (fotos: Medida[]): boolean => fotosAptas(fotos).length >= 3;
-
-export type PlantillaGrupo = { columnas: 1 | 2 | 3; destacada: 'ninguna' | 'horizontal' | 'cuadrada' | 'ancha' };
-
-/**
- * Cómo se acomoda un grupo de n tarjetas sin celdas vacías: 1 ancha horizontal (máx. 720);
- * 2 en dos columnas; 3 con una destacada de 2×2 y dos al lado; 4 en 2×2; 5 con una destacada
- * de dos columnas + 1, luego 1+1+1; 6 o más en tres columnas.
- */
-export function plantillaDeGrupo(n: number): PlantillaGrupo {
-  if (n <= 1) return { columnas: 1, destacada: 'horizontal' };
-  if (n === 2 || n === 4) return { columnas: 2, destacada: 'ninguna' };
-  if (n === 3) return { columnas: 3, destacada: 'cuadrada' };
-  if (n === 5) return { columnas: 3, destacada: 'ancha' };
-  return { columnas: 3, destacada: 'ninguna' };
-}
-
-/** Los grupos de «Qué puedes reservar», en el orden en que se pintan. */
-export const ORDEN_GRUPOS = ['paquetes', 'pesca', 'paseos', 'estancia'] as const;
-export type GrupoCatalogo = (typeof ORDEN_GRUPOS)[number];
-
-export function grupoDeServicio(servicio: ServicioEtiquetable): Exclude<GrupoCatalogo, 'paquetes'> {
-  if (servicio.tipo_servicio === 'pesca') return 'pesca';
-  return actividadDe(servicio) || servicio.tipo_servicio === 'bajo_demanda' ? 'paseos' : 'estancia';
-}
-
-/**
- * Un paquete va con sus servicios si todos son del mismo grupo de mar (pesca o paseos); si mezcla
- * grupos o incluye hospedaje o traslados, va a «Paquetes».
- */
-export function grupoDePaquete(paquete: PaqueteEtiquetable): GrupoCatalogo {
-  const grupos = new Set(paquete.servicios_asociados.map((c) => grupoDeServicio(c.servicio)));
-  const [unico] = [...grupos];
-  return grupos.size === 1 && unico !== 'estancia' ? unico : 'paquetes';
-}

@@ -22,8 +22,3 @@ test('claves del view-model de la tarjeta', () => {
   assert.equal(m.claveDePaquete('ventana-completo'), 'paquete:ventana-completo');
 });
 
-test('fotosDeGrupo: todas o ninguna', () => {
-  assert.equal(m.fotosDeGrupo(['servicio:sal-y-sol/pesca-deportiva']), true);
-  assert.equal(m.fotosDeGrupo(['servicio:sal-y-sol/pesca-deportiva', 'paquete:sin-foto']), false);
-  assert.equal(m.fotosDeGrupo([]), false);
-});

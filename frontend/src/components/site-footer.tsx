@@ -39,7 +39,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
       <div className="mx-auto max-w-[1440px] px-4 pt-20 sm:px-6 lg:px-12 lg:pt-24">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-12">
           <div className="flex flex-col items-start gap-5">
-            <h2 className="max-w-[13ch] texto-seccion">
+            <h2 className="max-w-[24ch] texto-paso">
               {footer.headline}
             </h2>
             <Link

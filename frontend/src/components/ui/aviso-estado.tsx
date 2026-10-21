@@ -4,7 +4,7 @@ import { cn } from './cn';
 
 /**
  * Un estado del sistema (éxito, error, aviso, información): siempre icono y
- * texto, nunca solo color. No es un chip de actividad (`ChipActividad`).
+ * texto, nunca solo color.
  */
 const TONOS = {
   exito: { clases: 'bg-exito-fondo text-exito', Icono: CheckCircle },

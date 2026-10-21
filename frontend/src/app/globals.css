@@ -281,6 +281,12 @@
   }
 }
 
+@keyframes visor-entra {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes palabra-sale {
   to {
     opacity: 0;
@@ -392,6 +398,11 @@
 
   .titulo-entra {
     animation: titulo-entra 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* La foto del visor de la galería entra con un fundido al cambiar de foto. */
+  .rev-visor {
+    animation: visor-entra 300ms cubic-bezier(0.2, 0, 0, 1) both;
   }
 
   /* La palabra rotatoria del arranque de sede: sale hacia arriba y entra desde abajo. */

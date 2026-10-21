@@ -2,9 +2,10 @@
 
 import { useId, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { Minus, Plus } from '@phosphor-icons/react';
+import { Plus } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { CLASE_FONDO, type Fondo } from '@/components/ui/section-shell';
+import { cn } from '@/components/ui/cn';
 
 type FaqSectionProps = {
   id: string;
@@ -12,7 +13,6 @@ type FaqSectionProps = {
   /** Las preguntas salen del cuerpo de la sede. */
   preguntas: { q: string; a: string }[];
   fondo: Fondo;
-  borde: boolean;
   /** Cierre del bloque: «Si no encuentras tu duda…» al WhatsApp único. Sin número no se pinta. */
   whatsapp: { texto: string; href: string } | null;
 };
@@ -20,49 +20,31 @@ type FaqSectionProps = {
 const MAX_PREGUNTAS = 8;
 
 /**
- * Acordeon en dos columnas: el titulo fijo a la izquierda, las preguntas a la
- * derecha.
- *
- * Era `<details>`/`<summary>` nativo, que da el comportamiento gratis pero abre
- * de golpe: el navegador no anima el alto de un `<details>`, asi que la
- * respuesta aparecia entera de un cuadro al otro y empujaba las preguntas de
- * abajo sin transicion. Aqui el estado es propio para poder animar ese alto
- * (`height: auto` interpolado por la libreria) y mantener el resto del bloque
- * moviendose junto con el.
- *
- * Lo que daba el marcado nativo se repone a mano: el disparador es un `<button>`
- * real —no un `<div>` con `onClick`— con `aria-expanded` y `aria-controls`, y el
- * panel se enlaza de vuelta con `aria-labelledby`. Con eso un lector de pantalla
- * anuncia lo mismo que anunciaba antes.
- *
- * Solo se abre una a la vez: son hasta ocho preguntas y con varias abiertas la
- * columna se vuelve un muro de texto donde ya no se ve que mas hay.
+ * Preguntas frecuentes (F10): el título a la izquierda y, a la derecha, un bloque por pregunta que se abre
+ * con su altura (250 ms). El estado es propio, no un `<details>`, porque el navegador no anima el alto de un
+ * `<details>`. El disparador es un `<button>` real con `aria-expanded` y `aria-controls`, y el panel se enlaza
+ * de vuelta con `aria-labelledby`. Solo se abre una a la vez. El «+» gira a «×» al abrir.
  */
-export function FaqSection({ id, titulo, preguntas, fondo, borde, whatsapp }: FaqSectionProps) {
+export function FaqSection({ id, titulo, preguntas, fondo, whatsapp }: FaqSectionProps) {
   const [abierta, setAbierta] = useState<string | null>(null);
   const sinMovimiento = useReducedMotion();
   const idBase = useId();
+  // El bloque se distingue del fondo con un paso de tono: gris sobre blanco, blanco sobre gris.
+  const bloque = fondo === 'blanco' ? 'bg-cafe-bruma' : 'bg-superficie';
 
   return (
-    <section id={id} className={`scroll-mt-24 ${CLASE_FONDO[fondo]} ${borde ? 'border-t border-borde ' : ''}py-24 lg:py-32`}>
-      <div className="mx-auto grid max-w-[1120px] gap-10 px-4 sm:px-6 lg:grid-cols-[280px_1fr] lg:gap-20 lg:px-8">
-        {/* La barra y el titular van envueltos: son la primera **columna** del
-            grid, no dos celdas. Sueltos, la barra ocupaba la celda del titular
-            y empujaba las preguntas a una fila nueva. */}
-        <div>
-          <h2 className="texto-seccion text-foreground">
-            {titulo}
-          </h2>
-        </div>
+    <section id={id} aria-labelledby={`${id}-titulo`} className={cn('scroll-mt-[calc(var(--nav-alto)+16px)] py-16 sm:py-20 lg:py-28', CLASE_FONDO[fondo])}>
+      <div className="mx-auto grid max-w-[1440px] gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-12 lg:px-12">
+        <h2 id={`${id}-titulo`} className="rev texto-seccion">{titulo}</h2>
 
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
           {preguntas.slice(0, MAX_PREGUNTAS).map((item, i) => {
             const abierto = abierta === item.q;
             const idPregunta = `${idBase}-p${i}`;
             const idRespuesta = `${idBase}-r${i}`;
 
             return (
-              <div key={item.q} className="group border-b border-border-strong">
+              <div key={item.q} className={cn('group transition-colors duration-200', bloque)}>
                 <h3>
                   <Button
                     variante="fila"
@@ -70,11 +52,14 @@ export function FaqSection({ id, titulo, preguntas, fondo, borde, whatsapp }: Fa
                     aria-expanded={abierto}
                     aria-controls={idRespuesta}
                     onClick={() => setAbierta(abierto ? null : item.q)}
+                    className="min-h-[4.5rem] px-6 py-5 text-xl font-semibold"
                   >
-                    <span className="transition-colors group-hover:text-accent">{item.q}</span>
-                    {abierto
-                      ? <Minus size={20} aria-hidden="true" className="shrink-0 text-cafe" />
-                      : <Plus size={20} aria-hidden="true" className="shrink-0 text-cafe" />}
+                    <span className="transition-colors group-hover:text-cafe">{item.q}</span>
+                    <Plus
+                      size={28}
+                      aria-hidden="true"
+                      className={cn('shrink-0 transition-transform duration-300 ease-[var(--curva-estandar)] motion-reduce:transition-none', abierto && 'rotate-45')}
+                    />
                   </Button>
                 </h3>
 
@@ -93,19 +78,14 @@ export function FaqSection({ id, titulo, preguntas, fondo, borde, whatsapp }: Fa
                           ? { duration: 0 }
                           : {
                               height: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
-                              // La opacidad va mas corta que el alto para que el
-                              // texto no se lea a medio desplegar.
+                              // La opacidad va más corta que el alto para que el texto no se lea a medio desplegar.
                               opacity: { duration: 0.2 },
                             }
                       }
-                      // El alto se anima sobre el contenedor de afuera, asi que
-                      // el padding tiene que vivir adentro: en el de afuera se
-                      // sumaria al alto 0 y dejaria una franja abierta.
+                      // El alto se anima sobre el contenedor de afuera: el padding vive adentro.
                       className="overflow-hidden"
                     >
-                      <p className="max-w-[65ch] pb-5 pr-10 text-base leading-relaxed text-muted">
-                        {item.a}
-                      </p>
+                      <p className="max-w-[56ch] px-6 pb-6 texto-cuerpo">{item.a}</p>
                     </m.div>
                   )}
                 </AnimatePresence>

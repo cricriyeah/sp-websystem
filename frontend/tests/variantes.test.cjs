@@ -179,7 +179,7 @@ test('el diálogo de alerta es centrado, con tokens y botones apilados en móvil
 });
 
 test('F10: las variantes de campaña son píldora, con alto táctil y sin el radio de control', () => {
-  for (const v of ['campana', 'campana-claro']) {
+  for (const v of ['campana', 'campana-claro', 'campana-gris']) {
     assert.ok(clase(v, 'rounded-full'), v);
     assert.ok(!clase(v, 'rounded-control'), v);
     assert.ok(clase(v, 'min-h-12') && clase(v, 'sm:min-h-11'), v);

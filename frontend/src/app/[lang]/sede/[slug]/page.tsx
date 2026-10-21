@@ -24,7 +24,7 @@ import { GallerySection } from '@/components/gallery-section';
 import { FaqSection } from '@/components/faq-section';
 import { OpinionesEmpresas } from '@/components/opiniones-empresas';
 import { StructuredData } from '@/components/structured-data';
-import type { Fondo } from '@/components/ui/section-shell';
+import type { Fondo } from '@/lib/secciones-sede';
 
 type Props = { params: Promise<{ lang: string; slug: string }>; searchParams: Promise<{ moneda?: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -64,26 +64,22 @@ export default async function SedePage({ params, searchParams }: Props) {
     ...(paquetes ?? []).map((p) => imagenDeCatalogo(claveDePaquete(p.slug), lang)?.src),
   ]);
   const galeria = contenido.galeria && fotosAptas(contenido.galeria.filter((foto) => !usadas.has(foto.src)));
-  const empresasGaleria = Object.fromEntries((galeria ?? []).map((foto) => {
-    const empresa = getEmpresa(foto.empresaSlug);
-    return [foto.empresaSlug, { nombre: empresa?.nombre ?? foto.empresaSlug, logo: empresa?.logo }];
-  }));
+  const empresasGaleria = Object.fromEntries((galeria ?? []).map((foto) => [foto.empresaSlug, { nombre: getEmpresa(foto.empresaSlug)?.nombre ?? foto.empresaSlug }]));
 
   const { porcentaje, ejemplo } = pagoDeSede(servicios ?? [], contenido.destacadas[0]);
 
   // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
-  type Banda = { fondo: Fondo; borde: boolean };
-  const pintar: Partial<Record<SeccionId, (banda: Banda) => ReactNode>> = {
+  const pintar: Partial<Record<SeccionId, (fondo: Fondo) => ReactNode>> = {
     hero: () => <>
       <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={palabrasDeSede(servicios, paquetes, lang)} textos={dict.sedeContenido.arranque} />
       {marcaSede && <BandaColaboracion empresa={marcaSede} frase={dict.sedeContenido.colaboracion} />}
     </>,
-    reservar: (banda) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} {...banda} />,
-    tranquilidad: (banda) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} hrefIncluye={`#${ANCLA_DE.reservar}`} {...banda} />,
-    ...(galeria && { galeria: (banda: Banda) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} {...banda} /> }),
-    ...(temporadas && { temporadas: (banda: Banda) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} {...banda} /> }),
-    opiniones: (banda) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} {...banda} />,
-    ...(faq && { preguntas: (banda: Banda) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} {...banda} /> }),
+    reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} />,
+    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} hrefIncluye={`#${ANCLA_DE.reservar}`} fondo={fondo} />,
+    ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
+    ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} /> }),
+    opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} fondo={fondo} />,
+    ...(faq && { preguntas: (fondo: Fondo) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} fondo={fondo} /> }),
   };
   const secciones = seccionesDeSede({
     servicios,
@@ -101,7 +97,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     <StructuredData lang={lang} slug={slug} negocio={contenido.negocio} description={contenido.metaDescription} faqItems={faq ?? null} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="sede" sedeSlugActual={slug} marcaSede={marcaSede} anclas={anclas} />
     <main>
-      {ids.map((id) => <Fragment key={id}>{pintar[id]?.(fondos[id] ?? { fondo: 'arena', borde: true })}</Fragment>)}
+      {ids.map((id) => <Fragment key={id}>{pintar[id]?.(fondos[id] ?? 'blanco')}</Fragment>)}
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={contenido.negocio} sedeSlug={slug} anclas={anclas} />
   </>;

@@ -51,25 +51,20 @@ test('enlaces del menú: un ancla por sección navegable, sin héroe ni tranquil
   assert.equal(s.ANCLA_DE.galeria, 'galeria');
 });
 
-test('fondos por posición: reservar en arena, tranquilidad en café bruma, nunca dos iguales seguidos', () => {
+test('fondos por posición: reservar en blanco, tranquilidad en la banda negra, nunca dos iguales seguidos', () => {
   const pintadas = ['hero', 'reservar', 'tranquilidad', 'galeria', 'temporadas', 'opiniones', 'preguntas'];
   const fondos = s.fondosDeSecciones(pintadas);
-  assert.equal(fondos.reservar.fondo, 'arena');
-  assert.equal(fondos.tranquilidad.fondo, 'cafe-bruma');
-  const orden = pintadas.slice(1).map((id) => fondos[id].fondo);
+  assert.equal(fondos.hero, undefined);
+  assert.equal(fondos.reservar, 'blanco');
+  assert.equal(fondos.tranquilidad, 'tinta');
+  const orden = pintadas.slice(1).map((id) => fondos[id]);
   orden.forEach((f, i) => { if (i) assert.notEqual(f, orden[i - 1]); });
 });
 
-test('fondos sobre las secciones pintadas: sin tranquilidad, la galería no repite el de reservar', () => {
+test('fondos sobre las secciones pintadas: la banda negra solo la lleva tranquilidad', () => {
   const fondos = s.fondosDeSecciones(['hero', 'reservar', 'galeria', 'temporadas', 'preguntas']);
-  assert.deepEqual(['reservar', 'galeria', 'temporadas', 'preguntas'].map((id) => fondos[id].fondo), ['arena', 'blanco', 'arena', 'blanco']);
-});
-
-test('borde arriba en toda banda salvo la primera', () => {
-  const fondos = s.fondosDeSecciones(['hero', 'reservar', 'preguntas']);
-  assert.equal(fondos.hero.borde, false);
-  assert.equal(fondos.reservar.borde, true);
-  assert.equal(fondos.preguntas.borde, true);
+  assert.deepEqual(['reservar', 'galeria', 'temporadas', 'preguntas'].map((id) => fondos[id]), ['blanco', 'cafe-bruma', 'blanco', 'cafe-bruma']);
+  for (const f of Object.values(fondos)) assert.notEqual(f, 'tinta');
 });
 
 test('anclas fijas del hub', () => {

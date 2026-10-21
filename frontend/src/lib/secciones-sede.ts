@@ -50,41 +50,36 @@ export const ANCLA_DE: Record<SeccionId, string> = {
 /** Los ids fijos del hub (`/[lang]`): cabecera, pie y página los toman de aquí. */
 export const ANCLA_HUB = { mapa: 'mapa', sedes: 'sedes', comoFunciona: 'como-funciona', empresas: 'empresas' } as const;
 
-export type Fondo = 'arena' | 'blanco' | 'cafe-bruma';
+/** Las bandas de la página de sede: blanco, gris y la banda negra de las cifras (F10). */
+export type Fondo = 'blanco' | 'cafe-bruma' | 'tinta';
 
 /**
- * El fondo que prefiere cada sección, en orden. Arena contra blanco es 1,07:1: el ritmo no
- * sale del tono sino del borde de arriba y de las familias de layout. Las secciones con
- * tarjetas van en arena; las que no tienen, pueden ir en blanco.
+ * El fondo que prefiere cada sección, en orden. La banda negra es solo de «tranquilidad» (las cifras).
+ * El ritmo sale del cambio de tono entre bandas, sin rayas: nunca dos seguidas con el mismo.
  */
-const PREFERENCIA: Record<SeccionId, readonly Fondo[]> = {
-  hero: ['arena'],
-  reservar: ['arena'],
-  tranquilidad: ['cafe-bruma'],
+const PREFERENCIA: Record<Exclude<SeccionId, 'hero'>, readonly Fondo[]> = {
+  reservar: ['blanco'],
+  tranquilidad: ['tinta'],
   galeria: ['blanco', 'cafe-bruma'],
-  temporadas: ['arena', 'cafe-bruma'],
-  opiniones: ['arena', 'cafe-bruma'],
-  preguntas: ['blanco', 'arena'],
+  temporadas: ['blanco', 'cafe-bruma'],
+  opiniones: ['cafe-bruma', 'blanco'],
+  preguntas: ['blanco', 'cafe-bruma'],
 };
 
 /**
- * Fondo y borde de cada sección según su posición entre las que de verdad se pintan: nunca
- * dos seguidas con el mismo fondo, y toda banda salvo la primera lleva borde arriba.
+ * Fondo de cada sección según su posición entre las que de verdad se pintan. El héroe es video a
+ * sangre y no cuenta para la alternancia.
  */
-export function fondosDeSecciones(ids: readonly SeccionId[]): Partial<Record<SeccionId, { fondo: Fondo; borde: boolean }>> {
-  const resultado: Partial<Record<SeccionId, { fondo: Fondo; borde: boolean }>> = {};
+export function fondosDeSecciones(ids: readonly SeccionId[]): Partial<Record<SeccionId, Fondo>> {
+  const resultado: Partial<Record<SeccionId, Fondo>> = {};
   let anterior: Fondo | null = null;
-  ids.forEach((id, i) => {
-    // El héroe es foto o video a sangre: su fondo no se ve y no cuenta para la alternancia.
-    if (id === 'hero') {
-      resultado[id] = { fondo: 'arena', borde: i > 0 };
-      return;
-    }
-    const opciones: readonly Fondo[] = [...PREFERENCIA[id], 'arena', 'blanco', 'cafe-bruma'];
-    const fondo = opciones.find((f) => f !== anterior) ?? 'arena';
-    resultado[id] = { fondo, borde: i > 0 };
+  for (const id of ids) {
+    if (id === 'hero') continue;
+    const opciones: readonly Fondo[] = [...PREFERENCIA[id], 'blanco', 'cafe-bruma'];
+    const fondo = opciones.find((f) => f !== anterior) ?? 'blanco';
+    resultado[id] = fondo;
     anterior = fondo;
-  });
+  }
   return resultado;
 }
 
