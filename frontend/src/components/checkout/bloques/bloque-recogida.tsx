@@ -7,6 +7,7 @@ import { Despliegue } from '@/components/ui/despliegue';
 import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { FieldPopover } from '@/components/field-popover';
+import { CampoEtiquetado } from '@/components/checkout/campo-etiquetado';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { PuntoEncuentro, TipoTraslado } from '@/lib/api';
@@ -51,6 +52,7 @@ export function BloqueRecogida({
     <>
       <div className="flex flex-col gap-3">
         <Despliegue abierto={modoHospedaje === 'catalogo'}>
+          <CampoEtiquetado label={traslados.fields.puntoEncuentro}>
           <div className={CAJA_CONTENEDOR}>
             <FieldPopover
               compacto
@@ -100,6 +102,7 @@ export function BloqueRecogida({
               )}
             </FieldPopover>
           </div>
+          </CampoEtiquetado>
         </Despliegue>
 
         <Despliegue abierto={modoHospedaje !== 'catalogo'}>

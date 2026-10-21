@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ListBullets } from '@phosphor-icons/react';
 import { CAJA_CONTENEDOR, CAJA_CONTENEDOR_ERROR } from '@/components/ui/caja-campo';
 import { FieldPopover } from '@/components/field-popover';
+import { CampoEtiquetado } from '@/components/checkout/campo-etiquetado';
 import { Button } from '@/components/ui/button';
 
 type Opcion = { valor: string; etiqueta: string };
@@ -37,6 +38,7 @@ export function SelectPersonalizado({
 }: Props) {
   const actual = opciones.find((o) => o.valor === value);
   return (
+    <CampoEtiquetado label={label}>
     <div
       aria-disabled={disabled || undefined}
       className={`${invalido ? CAJA_CONTENEDOR_ERROR : CAJA_CONTENEDOR} ${disabled ? 'pointer-events-none bg-cafe-bruma text-apagado' : ''}`}
@@ -45,7 +47,7 @@ export function SelectPersonalizado({
         label={label}
         value={actual?.etiqueta ?? ''}
         vacio={!actual}
-        placeholder={placeholder ?? label}
+        placeholder={placeholder ?? '–'}
         icon={icon ?? <ListBullets size={20} className="shrink-0 text-muted" />}
         compacto
       >
@@ -70,5 +72,6 @@ export function SelectPersonalizado({
         )}
       </FieldPopover>
     </div>
+    </CampoEtiquetado>
   );
 }

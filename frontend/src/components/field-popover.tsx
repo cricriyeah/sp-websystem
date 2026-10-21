@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { CaretDown } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
@@ -174,7 +175,7 @@ export function FieldPopover({
         aria-controls={open ? panelId : undefined}
         className={`flex flex-1 items-center gap-3 text-left transition-colors ${compacto ? 'rounded-campo px-4 py-3 hover:bg-cafe-bruma' : 'px-6 py-3.5 hover:bg-cafe-bruma'}`}
       >
-        {icon}
+        {compacto ? <span className="shrink-0 [&>svg]:size-6">{icon}</span> : icon}
         {/* Sin contestar, la pregunta ocupa el lugar grande y no hay etiqueta
             chica: no tiene sentido rotular un dato que todavia no existe. Al
             contestar, la pregunta se encoge y la respuesta toma su lugar — asi
@@ -185,16 +186,17 @@ export function FieldPopover({
             de golpe** en mitad del flujo. Con el alto reservado, el contenido se
             centra mientras esta vacio y se acomoda al contestar, sin mover nada
             de lo que hay alrededor. */}
-        <span className="flex h-11 flex-col sm:h-10 items-start justify-center gap-0.5">
-          {!vacio && <span className="text-sm text-muted">{label}</span>}
+        <span className={compacto ? 'flex min-h-6 min-w-0 flex-1 items-center' : 'flex min-h-[2.875rem] flex-col items-start justify-center gap-0.5'}>
+          {!vacio && !compacto && <span className="text-sm text-muted">{label}</span>}
           <span
-            className={`whitespace-nowrap ${
+            className={`${compacto ? 'truncate' : 'whitespace-nowrap'} ${
               vacio ? 'text-base font-medium text-foreground/70 sm:text-sm' : 'text-base text-foreground sm:text-sm'
             }`}
           >
             {vacio ? placeholder : value}
           </span>
         </span>
+        {compacto && <CaretDown size={16} aria-hidden="true" className="shrink-0 text-muted" />}
       </Button>
 
       <AnimatePresence>

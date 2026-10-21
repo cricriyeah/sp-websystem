@@ -4,6 +4,7 @@ import { AirplaneTilt, Minus, Plus, Warning } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
 import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
+import { CampoEtiquetado } from '@/components/checkout/campo-etiquetado';
 import { DescripcionExtra, textoDeExtra } from '@/components/checkout/descripcion-extra';
 import { SelectPersonalizado } from '@/components/checkout/select-personalizado';
 import { PeopleStepper } from '@/components/people-stepper';
@@ -233,6 +234,7 @@ export function GrupoViaje({
   {/* Lo prellenado va al final y callado: llega resuelto del paso anterior, así
       que no merece ser lo primero que el cliente lee en la tarjeta. */}
   {esLogistica ? (
+    <CampoEtiquetado label={servicio.tipo_servicio === 'hospedaje' ? pedido.stayPeopleQuestion : pedido.transferPeopleQuestion}>
     <div className={CAJA_CONTENEDOR}>
       <PeopleStepper
         compacto
@@ -246,10 +248,12 @@ export function GrupoViaje({
         onMaxAttempt={onTope}
       />
     </div>
+    </CampoEtiquetado>
   ) : precioDependeDePersonas ? (
     <p className="text-sm text-muted">{personasTexto}</p>
   ) : (
     <div>
+      <CampoEtiquetado label={checkout.peopleLabel}>
       <div className={CAJA_CONTENEDOR}>
         <PeopleStepper
           compacto
@@ -263,6 +267,7 @@ export function GrupoViaje({
           onMaxAttempt={onTope}
         />
       </div>
+      </CampoEtiquetado>
       <p className="mt-2 text-sm text-muted">
         {pedido.peopleIncluded.replace('{n}', String(componente.personas_incluidas))}
       </p>

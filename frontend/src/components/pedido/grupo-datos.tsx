@@ -6,6 +6,7 @@ import { AccionTexto } from '@/components/checkout/accion-terciaria';
 import { Despliegue } from '@/components/ui/despliegue';
 import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
 import { FieldPopover } from '@/components/field-popover';
+import { CampoEtiquetado } from '@/components/checkout/campo-etiquetado';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { PuntoEncuentro } from '@/lib/api';
@@ -29,6 +30,7 @@ export function GrupoDatos({ traslados, traslado, puntos, onTraslado }: Props) {
   return (
     <div className="flex flex-col gap-3 pt-5">
       <Despliegue abierto={traslado.modo === 'catalogo'}>
+        <CampoEtiquetado label={traslados.fields.puntoEncuentro}>
         <div className={CAJA_CONTENEDOR}>
           <FieldPopover
             compacto
@@ -61,6 +63,7 @@ export function GrupoDatos({ traslados, traslado, puntos, onTraslado }: Props) {
             )}
           </FieldPopover>
         </div>
+        </CampoEtiquetado>
       </Despliegue>
       <Despliegue abierto={traslado.modo !== 'catalogo'}>
         <div className="flex flex-col gap-3">
