@@ -859,7 +859,7 @@
     }
   },
   "hubContenido": {
-    "titular": "Book in Baja with local companies",
+    "titularLineas": ["Head out to sea", "in Baja Sur"],
     "subtexto": "Fishing, whale watching, lodging and transfers in Baja California Sur. Each company runs its service and charges directly.",
     "og": { "lugar": "Baja California Sur", "titular": "Book your Baja Sur experience with local companies" },
     "ctaSedes": "See locations",

@@ -859,7 +859,7 @@
     }
   },
   "hubContenido": {
-    "titular": "Reserva en Baja con empresas locales",
+    "titularLineas": ["Sal al mar", "en Baja Sur"],
     "subtexto": "Pesca, ballenas, hospedaje y traslados en Baja California Sur. Cada empresa opera su servicio y cobra directo.",
     "og": { "lugar": "Baja California Sur", "titular": "Reserva tu experiencia en la Baja Sur con empresas locales" },
     "ctaSedes": "Ver las sedes",
