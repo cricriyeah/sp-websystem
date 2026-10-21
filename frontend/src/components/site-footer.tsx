@@ -54,7 +54,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
   ];
 
   return (
-    <footer id="contacto" className="scroll-mt-24 overflow-clip bg-tinta text-hero-ink">
+    <footer id="contacto" className="pie-sitio scroll-mt-24 overflow-clip bg-tinta text-hero-ink">
       <div className="mx-auto max-w-[1440px] px-4 pt-20 sm:px-6 lg:px-12 lg:pt-24">
         <div className="grid gap-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_1.1fr_1fr_0.8fr] lg:gap-12">
           <div className="flex flex-col items-start gap-6">

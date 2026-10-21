@@ -28,32 +28,34 @@ export function SelectorIdioma({ lang, label, variante = 'estandar' }: { lang: L
   };
 
   if (variante === 'campana') {
-    // Un switch: píldora con un círculo negro que se desliza bajo el idioma activo.
-    const posicion = IDIOMAS.findIndex(({ valor }) => valor === lang);
+    // Un switch de verdad: todo el control es un solo botón que pasa al otro idioma; el círculo negro se
+    // desliza bajo el idioma activo.
+    const enIngles = lang === 'en';
     return (
-      <div role="group" aria-label={label} className="relative flex items-center rounded-full bg-cafe-bruma">
+      <Button
+        variante="libre"
+        type="button"
+        role="switch"
+        aria-checked={enIngles}
+        aria-label={label}
+        onClick={() => cambiar(enIngles ? 'es' : 'en')}
+        className="relative flex items-center rounded-full bg-cafe-bruma transition-transform duration-150 active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
         <span
           aria-hidden="true"
           className="pointer-events-none absolute left-0 top-0 size-11 rounded-full bg-tinta transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
-          style={{ transform: `translateX(${posicion * 100}%)` }}
+          style={{ transform: `translateX(${enIngles ? 100 : 0}%)` }}
         />
-        {IDIOMAS.map(({ valor, texto }) => {
-          const activo = valor === lang;
-          return (
-            <Button
-              key={valor}
-              variante="libre"
-              type="button"
-              lang={valor}
-              aria-current={activo ? 'true' : undefined}
-              onClick={() => cambiar(valor)}
-              className={`relative flex size-11 items-center justify-center rounded-full texto-cuerpo transition-colors duration-300 ${activo ? 'font-semibold text-white' : 'text-foreground'}`}
-            >
-              {texto}
-            </Button>
-          );
-        })}
-      </div>
+        {IDIOMAS.map(({ valor, texto }) => (
+          <span
+            key={valor}
+            lang={valor}
+            className={`relative flex size-11 items-center justify-center texto-cuerpo transition-colors duration-300 ${valor === lang ? 'font-semibold text-white' : 'text-foreground'}`}
+          >
+            {texto}
+          </span>
+        ))}
+      </Button>
     );
   }
 

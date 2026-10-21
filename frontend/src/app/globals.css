@@ -309,8 +309,12 @@
 
 /* Logo del pie: una vuelta del isotipo y las letras que entran desde la izquierda. */
 @keyframes isotipo-gira {
-  to {
-    transform: rotate(360deg);
+  from {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.7);
+  }
+  40% {
+    opacity: 1;
   }
 }
 
@@ -438,17 +442,23 @@
   /* El logo del pie, en dos capas (footer): el isotipo gira mientras el pie entra en pantalla y las letras
      entran desde la izquierda al llegar al final. Atadas al scroll, solo donde hay `animation-timeline`. */
   @supports (animation-timeline: view()) {
+    /* La línea de tiempo es la del pie entero (que es lo último de la página): entra durante todo el
+       trayecto hasta el final del scroll, no en el tramo corto del logo. Así el giro es paulatino. */
+    .pie-sitio {
+      view-timeline: --pie block;
+    }
+
     .logo-isotipo {
       transform-origin: 16% 50%;
       animation: isotipo-gira linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 100%;
+      animation-timeline: --pie;
+      animation-range: entry 15% entry 85%;
     }
 
     .logo-letras {
       animation: letras-entran linear both;
-      animation-timeline: view();
-      animation-range: entry 55% entry 100%;
+      animation-timeline: --pie;
+      animation-range: entry 60% entry 100%;
     }
   }
 

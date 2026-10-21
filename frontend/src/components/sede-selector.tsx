@@ -14,7 +14,6 @@ import { cn } from '@/components/ui/cn';
 
 // Compacto: el círculo se estira a píldora hacia la izquierda y, ya abierta, la lista cae desde ella.
 // Al cerrar, el orden se invierte: primero se recoge la lista y después la píldora vuelve a círculo.
-const ANCHO_PANEL = 'min(15rem, calc(100vw - 2rem))';
 const LISTA_CERRADA = 'inset(0 -20px 100% -20px)';
 const LISTA_ABIERTA = 'inset(-20px -20px -40px -20px)';
 const CURVA = [0.16, 1, 0.3, 1] as const;
@@ -132,11 +131,11 @@ export function SedeSelector({
     // ganaba y el selector se veía en móvil, empujando el botón de menú fuera de la pantalla.
     <div ref={ref} className={cn('relative inline-block text-left', className)}>
       {compacto ? (
-        <m.div
-          initial={false}
-          animate={{ width: open ? ANCHO_PANEL : '3rem' }}
-          transition={sinMovimiento ? { duration: 0 } : { duration: 0.32, ease: CURVA, delay: open ? 0 : 0.16 }}
-          className="relative h-12 max-w-full overflow-hidden rounded-full bg-tinta text-white"
+        <div
+          className={cn(
+            'relative h-12 max-w-[calc(100vw-2rem)] overflow-hidden rounded-full bg-tinta text-white transition-[width] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+            open ? 'w-60' : 'w-12 delay-[160ms]',
+          )}
         >
             <Button
               variante="libre"
@@ -157,7 +156,7 @@ export function SedeSelector({
                 <MapPin size={22} weight="fill" aria-hidden="true" />
               </span>
             </Button>
-        </m.div>
+        </div>
       ) : (
         <Button
           variante="libre"
@@ -186,11 +185,10 @@ export function SedeSelector({
             initial={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
             animate={sinMovimiento ? { opacity: 1 } : compacto ? { opacity: 1, clipPath: LISTA_ABIERTA } : { opacity: 1, y: 0, scale: 1 }}
             exit={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
-            transition={compacto && !sinMovimiento ? { duration: 0.34, ease: CURVA, delay: 0.2 } : { duration: 0.15, ease: 'easeOut' }}
-            style={compacto ? { width: ANCHO_PANEL } : undefined}
+            transition={compacto && !sinMovimiento ? { duration: 0.34, ease: CURVA, delay: 0.3 } : { duration: 0.15, ease: 'easeOut' }}
             className={cn(
               'absolute right-0 top-full z-50 mt-3 rounded-sheet bg-superficie p-2 shadow-n2',
-              !compacto && 'w-max min-w-[15rem] max-w-[calc(100vw-2rem)]',
+              compacto ? 'w-60 max-w-[calc(100vw-2rem)]' : 'w-max min-w-[15rem] max-w-[calc(100vw-2rem)]',
             )}
           >
             {sedes.map((s) => {
