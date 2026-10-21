@@ -10,7 +10,7 @@ const ALTO = 'h-[560px]';
 
 const HubMapaSedes = dynamic(() => import('@/components/hub-mapa-sedes').then((m) => m.HubMapaSedes), {
   ssr: false,
-  loading: () => <Skeleton className={`${ALTO} w-full rounded-card`} />,
+  loading: () => <Skeleton className={`${ALTO} w-full`} />,
 });
 
 /**
@@ -30,6 +30,6 @@ export function HubMapaEscritorio(props: { lang: Locale; sedes: SedeMapa[]; copy
   }, []);
 
   if (escritorio === false) return null;
-  if (escritorio === null) return <Skeleton className={`${ALTO} w-full rounded-card`} />;
+  if (escritorio === null) return <Skeleton className={`${ALTO} w-full`} />;
   return <HubMapaSedes {...props} />;
 }

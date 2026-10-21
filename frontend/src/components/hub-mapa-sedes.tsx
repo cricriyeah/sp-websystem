@@ -32,7 +32,7 @@ export function HubMapaSedes({ lang, sedes, copy }: {
   function reset() { setZoom(1); x.set(0); y.set(0); }
   function cambiarZoom(delta: number) { setZoom(z => Math.min(4, Math.max(1, z + delta))); }
   return (
-    <div className="overflow-hidden rounded-card border border-border bg-superficie">
+    <div className="overflow-hidden bg-cafe-bruma">
       <div className="relative">
         <div role="region" tabIndex={0}
           aria-label={copy.mapAria}
@@ -61,39 +61,39 @@ export function HubMapaSedes({ lang, sedes, copy }: {
             className="absolute inset-0 cursor-grab active:cursor-grabbing">
             <div className="absolute left-1/2 top-1/2 aspect-[1000/560] w-[800px] max-w-none -translate-x-1/2 -translate-y-1/2 sm:w-[920px]">
               <Image src="/ilustraciones/mapa-baja.svg" alt="" fill loading="eager" sizes="(min-width: 640px) 920px, 800px" draggable={false} className="pointer-events-none select-none" />
-              <span className="pointer-events-none absolute left-[26%] top-[60%] texto-pie text-muted">{copy.pacificOcean}</span>
-              <span className="pointer-events-none absolute left-[58%] top-[36%] texto-pie text-muted">{copy.seaOfCortez}</span>
+              <span className="pointer-events-none absolute left-[26%] top-[60%] texto-pie text-foreground">{copy.pacificOcean}</span>
+              <span className="pointer-events-none absolute left-[58%] top-[36%] texto-pie text-foreground">{copy.seaOfCortez}</span>
               {sedes.map(s => COORDENADAS[s.slug] && (
                 <Button key={s.slug} variante="libre" aria-label={s.nombre} aria-pressed={abiertoSlug === s.slug}
                   onClick={() => { if (!arrastrando.current) setAbiertoSlug(s.slug); }} style={project(COORDENADAS[s.slug])}
                   className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-accent">
-                  <span className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-accent ${abiertoSlug === s.slug ? 'ring-4 ring-accent/25' : ''}`} />
-                  <span className={`absolute whitespace-nowrap rounded bg-superficie/95 px-2 py-1 text-sm font-semibold text-foreground ${s.slug === 'puerto-chale' ? 'right-9 top-0' : s.slug === 'la-paz' ? 'bottom-9 left-4' : 'left-9 top-6'}`}>{s.nombre}</span>
+                  <span className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-tinta ${abiertoSlug === s.slug ? 'ring-4 ring-tinta/30' : ''}`} />
+                  <span className={`absolute whitespace-nowrap bg-superficie px-2 py-1 text-sm font-semibold text-foreground ${s.slug === 'puerto-chale' ? 'right-9 top-0' : s.slug === 'la-paz' ? 'bottom-9 left-4' : 'left-9 top-6'}`}>{s.nombre}</span>
                 </Button>
               ))}
             </div>
           </m.div>
           </LazyMotion>
         </div>
-        <div className="absolute right-4 top-4 flex flex-col overflow-hidden rounded-campo border border-border bg-superficie">
+        <div className="absolute right-4 top-4 flex flex-col gap-2">
           {[
             { title: copy.zoomIn, icon: Plus, action: () => cambiarZoom(0.5), disabled: zoom === 4 },
             { title: copy.zoomOut, icon: Minus, action: () => cambiarZoom(-0.5), disabled: zoom === 1 },
             { title: copy.resetMap, icon: ArrowCounterClockwise, action: reset, disabled: false },
-          ].map(({ title, icon: Icon, action, disabled }) => <Button key={title} variante="libre" aria-label={title} title={title} onClick={action} disabled={disabled} className="flex h-11 w-11 items-center justify-center text-foreground hover:bg-cafe-bruma disabled:opacity-30"><Icon size={19} /></Button>)}
+          ].map(({ title, icon: Icon, action, disabled }) => <Button key={title} variante="libre" aria-label={title} title={title} onClick={action} disabled={disabled} className="flex h-11 w-11 items-center justify-center rounded-full bg-tinta text-white transition-colors hover:bg-cafe disabled:bg-cafe-claro disabled:text-tinta"><Icon size={19} /></Button>)}
         </div>
-        <span className="pointer-events-none absolute left-4 top-4 rounded bg-superficie/90 px-3 py-2 text-sm text-muted">{copy.dragMap}</span>
+        <span className="pointer-events-none absolute left-4 top-4 bg-superficie px-3 py-2 text-sm text-foreground">{copy.dragMap}</span>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-superficie px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <div className="flex flex-wrap gap-2">
-          {sedes.map(s => <Button key={s.slug} variante="chip" onClick={() => setAbiertoSlug(s.slug)} aria-pressed={abiertoSlug === s.slug} className={abiertoSlug === s.slug ? 'border-accent bg-accent text-white' : 'border-border text-foreground hover:border-accent'}>{s.nombre}</Button>)}
+          {sedes.map(s => <Button key={s.slug} variante="chip" onClick={() => setAbiertoSlug(s.slug)} aria-pressed={abiertoSlug === s.slug} className={abiertoSlug === s.slug ? 'border-tinta bg-tinta text-white' : 'border-tinta bg-superficie text-foreground hover:bg-cafe-claro'}>{s.nombre}</Button>)}
         </div>
-        <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-muted underline underline-offset-4">Natural Earth</a>
+        <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-foreground underline underline-offset-4">Natural Earth</a>
       </div>
-      {sede && <div aria-live="polite" className="flex flex-wrap items-center gap-4 border-t border-border bg-superficie p-5">
-        <div className="min-w-0 flex-1"><p className="font-semibold">{sede.nombre}</p>{sede.empresaProtagonistaNombre && <p className="text-sm text-muted">{copy.conLabel} {sede.empresaProtagonistaNombre}</p>}</div>
-        <Link href={hrefSede(lang, sede.slug)} className={botonClases({ variante: 'principal' })}>{copy.verDestino}</Link>
-        <Button variante="libre" aria-label={copy.closeDestination} onClick={() => setAbiertoSlug(null)} className="flex h-11 w-11 items-center justify-center"><X size={20} /></Button>
+      {sede && <div aria-live="polite" className="flex flex-wrap items-center gap-4 bg-superficie p-5">
+        <div className="min-w-0 flex-1"><p className="font-semibold">{sede.nombre}</p>{sede.empresaProtagonistaNombre && <p className="text-sm text-foreground">{copy.conLabel} {sede.empresaProtagonistaNombre}</p>}</div>
+        <Link href={hrefSede(lang, sede.slug)} className={botonClases({ variante: 'campana' })}>{copy.verDestino}</Link>
+        <Button variante="libre" aria-label={copy.closeDestination} onClick={() => setAbiertoSlug(null)} className="flex h-11 w-11 items-center justify-center rounded-full bg-cafe-bruma hover:bg-cafe-claro"><X size={20} /></Button>
       </div>}
     </div>
   );
