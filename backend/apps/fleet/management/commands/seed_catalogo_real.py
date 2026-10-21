@@ -11,7 +11,7 @@ Estructura de negocio:
   Puerto Chale -> Piratas Adventures (safari marino, avistamiento de ballenas, pesca)
 
 De La Ventana Travel y Piratas Adventures ya hay datos confirmados por ellos (ver `DATOS_REALES`):
-estudios, tour a Isla Cerralvo, pesca con mosca, safari marino y su flota. Lo que sigue siendo
+estudios, pesca con mosca, safari marino y su flota. Lo que sigue siendo
 PLACEHOLDER (avistamiento de ballenas, precio de la pesca de Piratas, hospedaje por noche, los
 paquetes y las lanchas "DEMO ...") se reemplaza desde el admin. Los paquetes de La Ventana
 (precio por persona, mar en varios días) sí se siembran.
@@ -71,6 +71,23 @@ SERVICIOS = [
 # Lo que La Ventana Travel y Piratas Adventures confirmaron por WhatsApp (2026-09-21 y 2026-10-09).
 # Se aplica por UPDATE sobre lo ya sembrado. `incluye`: hasta 8 renglones de 80 caracteres.
 # No hay precio de la licencia de pesca: es un extra de cada empresa, sin importe confirmado todavía.
+INCLUYE_AVISTAMIENTO = {
+    'es': ['Salida diaria, de 7:00 a 8:00 am, de La Ventana o Bahía de los Sueños',
+           'El tour dura de 5 a 6 horas aproximadamente',
+           'Algo de comer, aguas y refrescos',
+           'Equipo para snorkelear',
+           'Snorkel en un arrecife',
+           'Buscamos animales para intentar nadar con ellos',
+           'Descanso en una playa de la isla Cerralvo'],
+    'en': ['Daily departure, 7:00 to 8:00 am, from La Ventana or Bahía de los Sueños',
+           'The tour lasts about 5 to 6 hours',
+           'Some food, water and soft drinks',
+           'Snorkeling gear',
+           'Snorkeling at a reef',
+           'We look for animals to try to swim with them',
+           'A rest on a beach on Cerralvo island'],
+}
+
 DATOS_REALES = {
     ('la-ventana-travel', 'pesca-con-mosca'): dict(
         nombre='Pesca con mosca',
@@ -80,6 +97,16 @@ DATOS_REALES = {
                     'La licencia de pesca no está incluida.',
         incluye={'es': ['Un día de pesca con mosca', 'Para 2 o 3 personas como máximo'],
                  'en': ['A full day of fly fishing', 'For 2 or 3 people at most']},
+    ),
+    ('la-ventana-travel', 'avistamiento-ballenas-orcas'): dict(
+        nombre='Avistamiento de ballenas y orcas',
+        estrategia_precio='por_persona', modo_ocupacion='compartido',
+        precio_base=Decimal('5000'), precio_persona_extra=Decimal('0'),
+        personas_incluidas=1, capacidad_maxima=10,
+        descripcion='Salida diaria al mar para buscar ballenas y orcas e intentar nadar con ellas, con snorkel en un '
+                    'arrecife y descanso en una playa de la isla Cerralvo. Precio por persona en lancha compartida; '
+                    'para un grupo privado (hasta 10 personas) el costo es de $20,000 MXN: consúltalo por WhatsApp.',
+        incluye=INCLUYE_AVISTAMIENTO,
     ),
     ('la-ventana-travel', 'hospedaje-la-ventana'): dict(
         descripcion='Seis estudios (suites) para 2 personas, cada uno con una cama king size. Precio por noche.',
@@ -114,35 +141,9 @@ DATOS_REALES = {
     ),
 }
 
-INCLUYE_TOUR_CERRALVO = {
-    'es': ['Salida diaria, de 7:00 a 8:00 am, de La Ventana o Bahía de los Sueños',
-           'El tour dura de 5 a 6 horas aproximadamente',
-           'Algo de comer, aguas y refrescos',
-           'Equipo para snorkelear',
-           'Snorkel en un arrecife',
-           'Buscamos animales para intentar nadar con ellos',
-           'Descanso en una playa de la isla Cerralvo'],
-    'en': ['Daily departure, 7:00 to 8:00 am, from La Ventana or Bahía de los Sueños',
-           'The tour lasts about 5 to 6 hours',
-           'Some food, water and soft drinks',
-           'Snorkeling gear',
-           'Snorkeling at a reef',
-           'We look for animals to try to swim with them',
-           'A rest on a beach on Cerralvo island'],
-}
 
-# Servicios nuevos de La Ventana Travel: (slug, nombre, estrategia_precio, modo, precio, incluidas, capacidad, descripcion)
-TOURS_CERRALVO = (
-    ('tour-isla-cerralvo-privado', 'Tour a Isla Cerralvo, grupo privado', 'por_grupo', 'exclusivo',
-     '20000', 10, 10,
-     'Snorkel y playa en la isla Cerralvo con una panga solo para tu grupo, hasta 10 personas.'),
-    ('tour-isla-cerralvo-compartido', 'Tour a Isla Cerralvo, lancha compartida', 'por_persona', 'compartido',
-     '5000', 1, 10,
-     'Snorkel y playa en la isla Cerralvo, en una lancha que compartes con otros viajeros. Precio por persona.'),
-)
-
-# Flota de La Ventana para el tour: no hay un número fijo, se pone 5 (3 de 7 personas y 2 de 10).
-PANGAS_CERRALVO = (
+# Flota de La Ventana para sus salidas al mar: no hay un número fijo, se pone 5 (3 de 7 personas y 2 de 10).
+PANGAS_VENTANA = (
     ('Panga La Ventana 1', 7), ('Panga La Ventana 2', 7), ('Panga La Ventana 3', 7),
     ('Panga La Ventana 4', 10), ('Panga La Ventana 5', 10),
 )
@@ -344,7 +345,7 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ datos confirmados por las empresas
     def _datos_reales(self):
         """Aplica lo que La Ventana Travel y Piratas Adventures ya confirmaron: textos y precios por UPDATE
-        (corrige lo ya sembrado), el tour a Isla Cerralvo (privado y compartido), su flota y los seis
+        (corrige lo ya sembrado), su flota y los seis
         estudios del hospedaje. Los recursos "DEMO Habitación" se quitan solo si nadie los ha ocupado."""
         from django.db.models import ProtectedError
 
@@ -363,25 +364,24 @@ class Command(BaseCommand):
 
         empresa = Empresa.objects.get(slug='la-ventana-travel')
         with scope.con_empresa(empresa):
-            privado = None
-            for slug, nombre, est_precio, modo, precio, incluidas, capacidad, descripcion in TOURS_CERRALVO:
-                servicio, creado = Servicio.objects.get_or_create(
-                    empresa=empresa, slug=slug,
-                    defaults=dict(
-                        nombre=nombre, tipo_servicio=TipoServicio.PASEO,
-                        estrategia_cupo='por_recurso_dia', estrategia_precio=est_precio, modo_ocupacion=modo,
-                        precio_base=Decimal(precio), personas_incluidas=incluidas, capacidad_maxima=capacidad,
-                        porcentaje_anticipo=30, activo=True, descripcion=descripcion,
-                        incluye=INCLUYE_TOUR_CERRALVO,
-                        pide_hora=True, hora_apertura=time(7, 0), hora_cierre=time(8, 0), paso_hora_minutos=30,
-                    ),
-                )
-                privado = privado or servicio
-                self.stdout.write(f'  Servicio la-ventana-travel/{slug}: {"creado" if creado else "ok"}')
-            # El motor de cupo cuenta `Embarcacion` (de la empresa, no del servicio): las pangas sirven a los dos tours.
-            for nombre, cap in PANGAS_CERRALVO:
+            avistamiento = Servicio.objects.get(empresa=empresa, slug='avistamiento-ballenas-orcas')
+            # Los dos tours a Isla Cerralvo que sembró una versión anterior de este comando eran una lectura
+            # equivocada del mensaje de la empresa: ese tour ES el avistamiento. Se quitan si nadie los ha reservado.
+            for slug_viejo in ('tour-isla-cerralvo-privado', 'tour-isla-cerralvo-compartido'):
+                viejo = Servicio.objects.filter(empresa=empresa, slug=slug_viejo).first()
+                if viejo is None:
+                    continue
+                Recurso.objects.filter(empresa=empresa, servicio=viejo).update(servicio=avistamiento)
+                try:
+                    with transaction.atomic():
+                        viejo.delete()
+                    self.stdout.write(f'  Servicio {slug_viejo}: quitado')
+                except ProtectedError:
+                    self.stdout.write(f'  Servicio {slug_viejo}: tiene reservas, se queda (desactivar a mano)')
+            # El motor de cupo cuenta `Embarcacion` (de la empresa, no del servicio): las pangas sirven al avistamiento.
+            for nombre, cap in PANGAS_VENTANA:
                 Recurso.objects.get_or_create(
-                    empresa=empresa, nombre=nombre, defaults=dict(servicio=privado, capacidad_maxima=cap),
+                    empresa=empresa, nombre=nombre, defaults=dict(servicio=avistamiento, capacidad_maxima=cap),
                 )
                 Embarcacion.objects.get_or_create(
                     empresa=empresa, nombre=nombre,
@@ -470,9 +470,7 @@ class Command(BaseCommand):
             ('sal-y-sol', 'pesca-deportiva'): (time(5, 0), time(7, 0), 15),
             ('transporte-la-paz', 'traslados-la-paz'): (time(6, 0), time(22, 0), 30),
             ('la-ventana-travel', 'pesca-con-mosca'): (time(6, 0), time(8, 0), 30),
-            ('la-ventana-travel', 'avistamiento-ballenas-orcas'): (time(8, 0), time(10, 0), 60),
-            ('la-ventana-travel', 'tour-isla-cerralvo-privado'): (time(7, 0), time(8, 0), 30),
-            ('la-ventana-travel', 'tour-isla-cerralvo-compartido'): (time(7, 0), time(8, 0), 30),
+            ('la-ventana-travel', 'avistamiento-ballenas-orcas'): (time(7, 0), time(8, 0), 30),
             ('la-ventana-travel', 'hospedaje-la-ventana'): None,
             ('la-ventana-travel', 'traslado-aeropuerto-la-ventana'): None,
             ('piratas-adventures', 'safari-marino'): (time(9, 0), time(11, 0), 60),

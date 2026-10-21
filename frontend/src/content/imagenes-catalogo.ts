@@ -27,14 +27,6 @@ const FOTOS: Record<string, Foto> = {
     src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
     alt: { es: 'Dos orcas nadando bajo la superficie del mar', en: 'Two orcas swimming just below the sea surface' },
   },
-  'servicio:la-ventana-travel/tour-isla-cerralvo-privado': {
-    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-privado.webp',
-    alt: { es: 'Una persona haciendo snorkel entre peces rayados', en: 'A person snorkeling among striped fish' },
-  },
-  'servicio:la-ventana-travel/tour-isla-cerralvo-compartido': {
-    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-compartido.webp',
-    alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
-  },
   'servicio:la-ventana-travel/pesca-con-mosca': {
     src: '/catalogo/la-ventana-travel-pesca-con-mosca.webp',
     alt: { es: 'Un joven peleando un pez con la caña doblada, en alta mar', en: 'A young angler fighting a fish with a bent rod, out at sea' },
@@ -54,11 +46,11 @@ const FOTOS: Record<string, Foto> = {
     relleno: true,
   },
   'paquete:paquete-5-noches': {
-    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-compartido.webp',
+    src: '/catalogo/la-ventana-travel-paquete-5-noches.webp',
     alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
   },
   'paquete:paquete-7-noches': {
-    src: '/catalogo/la-ventana-travel-tour-isla-cerralvo-privado.webp',
+    src: '/catalogo/la-ventana-travel-paquete-7-noches.webp',
     alt: { es: 'Una persona haciendo snorkel entre peces rayados', en: 'A person snorkeling among striped fish' },
   },
 };
