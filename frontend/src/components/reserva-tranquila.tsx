@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
+import { WhatsappLogo } from '@phosphor-icons/react/ssr';
 import { CifraContada } from '@/components/ui/cifra-contada';
+import { botonClases } from '@/components/ui/variantes';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
 
 type Textos = Dictionary['sedeContenido']['tranquilidad'];
@@ -14,6 +16,8 @@ type Props = {
   /** El `porcentaje_anticipo` de un servicio de la sede que lo permite; `null` = todos se pagan completos. */
   porcentaje: number | null;
   ejemplo: EjemploPago | null;
+  /** Atención al cliente por WhatsApp: el número ya formateado y el enlace con el mensaje escrito. Sin número configurado, no hay bloque. */
+  atencion: { numero: string; href: string } | null;
   fondo: Fondo;
 };
 
@@ -29,12 +33,12 @@ function Cifra({ cifra, titulo, children }: { cifra: string; titulo: string; chi
 
 /**
  * Pago, clima y cambio de fecha como tres cifras grandes en la banda negra (F10), que cuentan desde cero
- * al entrar. Una sola política para las cuatro empresas. El ejemplo de pago va aparte, a todo el ancho
+ * al entrar. Una sola política para las cuatro empresas. Al final, el número de atención al cliente. El ejemplo de pago va aparte, a todo el ancho
  * bajo las tres cifras: dentro de la primera columna la dejaba más alta que las otras dos.
  *
  * Server Component (las cifras que cuentan son una isla cliente).
  */
-export function ReservaTranquila({ id, textos, porcentaje, ejemplo, fondo }: Props) {
+export function ReservaTranquila({ id, textos, porcentaje, ejemplo, atencion, fondo }: Props) {
   return (
     <SectionShell id={id} fondo={fondo} titulo={textos.titulo}>
       <ul className="mt-12 grid gap-12 md:grid-cols-3 md:gap-8 lg:mt-16">
@@ -63,6 +67,23 @@ export function ReservaTranquila({ id, textos, porcentaje, ejemplo, fondo }: Pro
               </div>
             )}
           </dl>
+        </div>
+      )}
+      {atencion && (
+        <div className="mt-12 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between lg:mt-16">
+          <div>
+            <h3 className="texto-subtitulo">{textos.atencionTitulo}</h3>
+            <p className="mt-2 max-w-[48ch] texto-cuerpo">{textos.atencionTexto}</p>
+          </div>
+          <a
+            href={atencion.href}
+            target="_blank"
+            rel="noopener"
+            className={botonClases({ variante: 'campana-claro' })}
+          >
+            <WhatsappLogo size={20} weight="fill" aria-hidden="true" />
+            {atencion.numero}
+          </a>
         </div>
       )}
     </SectionShell>

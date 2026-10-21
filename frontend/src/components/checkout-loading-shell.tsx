@@ -18,7 +18,7 @@ export function CheckoutLoadingShell({
     <div className="min-h-dvh bg-background">
       {/* Mismo esqueleto que `CabeceraMinima`: la píldora de la barra, con la flecha a la izquierda y el idioma a la derecha. */}
       <div className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8 lg:pt-4" aria-hidden="true">
-        <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center justify-between gap-2 rounded-full bg-superficie px-2 shadow-n2 lg:h-16 lg:px-3">
+        <div className="mx-auto flex h-[var(--barra-h)] w-full max-w-[1440px] items-center justify-between gap-2 rounded-full bg-superficie px-4 shadow-n2 sm:px-5 lg:px-7">
           <Skeleton className="size-11 rounded-full" />
           <Skeleton className="h-11 w-[88px] rounded-full" />
         </div>

@@ -104,7 +104,7 @@
     "catalogo": "Experiences",
     "sedeLabel": "Destination",
     "reservar": "Book now",
-    "humanContact": "Personalized support",
+    "humanContact": "Customer support",
     "whatsappCta": "Message us on WhatsApp",
     "whatsappMessage": "Hi! I'd like info about booking a sportfishing tour with you. Could you help me?",
     "openMenu": "Open menu",
@@ -744,7 +744,9 @@
       "climaTitulo": "If the weather is bad",
       "climaTexto": "If bad weather keeps the trip from leaving, you get a full refund.",
       "fechaTitulo": "Changing your date",
-      "fechaTexto": "You can change the date with at least 48 hours' notice."
+      "fechaTexto": "You can change the date with at least 48 hours' notice.",
+      "atencionTitulo": "Prefer to book with a person?",
+      "atencionTexto": "Our team helps you choose and book on WhatsApp, every day."
     },
     "empresas": "Who runs each service",
     "opiniones": {

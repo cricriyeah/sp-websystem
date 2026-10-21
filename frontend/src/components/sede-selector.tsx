@@ -127,13 +127,14 @@ export function SedeSelector({
         onClick={() => puedeAbrir && setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="flex min-h-11 items-center gap-2 rounded-full bg-cafe-bruma px-4 texto-cuerpo font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-borde active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex min-h-12 items-center gap-2 rounded-full bg-cafe-bruma px-5 texto-cuerpo font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-borde active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado"
       >
-        <MapPin size={14} className="shrink-0 text-cafe" weight="fill" />
+        <MapPin size={18} className="shrink-0" weight="fill" aria-hidden="true" />
         <span className="hidden sm:inline">{label}:</span>
-        <span className="font-semibold text-foreground">{nombreMostrado}</span>
+        <span>{nombreMostrado}</span>
         <CaretDown
-          size={12}
+          size={14}
+          weight="bold"
           className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </Button>
@@ -147,11 +148,8 @@ export function SedeSelector({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 top-full z-50 mt-2 min-w-[200px] bg-superficie p-1.5 shadow-n2"
+            className="absolute left-0 top-full z-50 mt-3 min-w-[15rem] rounded-sheet bg-superficie p-2 shadow-n2"
           >
-            <div className="px-3 py-1.5 texto-pequeno font-semibold">
-              {label}
-            </div>
             {sedes.map((s) => {
               const selected = sedeActiva?.slug === s.slug;
               return (
@@ -161,17 +159,14 @@ export function SedeSelector({
                   role="option"
                   aria-selected={selected}
                   onClick={() => handleSelect(s)}
-                  className={`flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left texto-cuerpo transition-colors ${
+                  className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-full px-4 py-2 text-left texto-cuerpo transition-colors ${
                     selected
                       ? 'bg-tinta font-semibold text-white'
                       : 'text-foreground hover:bg-cafe-bruma'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} />
-                    <span>{s.nombre}</span>
-                  </div>
-                  {selected && <Check size={14} weight="bold" />}
+                  <span>{s.nombre}</span>
+                  {selected && <Check size={16} weight="bold" aria-hidden="true" />}
                 </Button>
               );
             })}

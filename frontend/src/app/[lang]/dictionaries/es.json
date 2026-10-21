@@ -104,7 +104,7 @@
     "catalogo": "Experiencias",
     "sedeLabel": "Destino",
     "reservar": "Reservar",
-    "humanContact": "Atención personalizada",
+    "humanContact": "Atención al cliente",
     "whatsappCta": "Escríbenos por WhatsApp",
     "whatsappMessage": "¡Hola! Me gustaría información para reservar un tour de pesca deportiva con ustedes. ¿Me pueden ayudar?",
     "openMenu": "Abrir menú",
@@ -744,7 +744,9 @@
       "climaTitulo": "Si hay mal clima",
       "climaTexto": "Si el mal clima impide salir, hay reembolso completo.",
       "fechaTitulo": "Cambio de fecha",
-      "fechaTexto": "Puedes cambiar la fecha con al menos 48 horas de anticipación."
+      "fechaTexto": "Puedes cambiar la fecha con al menos 48 horas de anticipación.",
+      "atencionTitulo": "¿Prefieres reservar con una persona?",
+      "atencionTexto": "Nuestro equipo te ayuda a elegir y a reservar por WhatsApp, todos los días."
     },
     "empresas": "Quién opera cada servicio",
     "opiniones": {

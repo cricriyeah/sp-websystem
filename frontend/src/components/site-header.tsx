@@ -12,7 +12,7 @@ import { getSedes } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
-import { ANCLA_HUB } from '@/lib/secciones-sede';
+import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 import { BarraFlotante, LogoEmpresaAlLado, LogoMarca } from '@/components/barra-flotante';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { SelectorIdioma } from '@/components/selector-idioma';
@@ -37,7 +37,7 @@ type SiteHeaderProps = {
   marcaSede?: { nombre: string; logo?: string };
   /**
    * El menú de la sede, armado por su página con `enlacesDeSede(seccionesDeSede(...))`: solo
-   * las secciones que de verdad se pintan. Sin él, una página de sede lleva solo «Reservar».
+   * las secciones que de verdad se pintan. «Reservar» no va en la barra: el botón del arranque ya baja a eso.
    */
   anclas?: { ancla: string; etiqueta: string }[];
   /** Clases extra del `<header>`. Existe para el `print:hidden` del recibo. */
@@ -94,14 +94,13 @@ export function SiteHeader({
   const baseSede = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 
   const links = baseSede
-    ? (anclas ?? []).map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta }))
+    ? (anclas ?? []).filter((a) => a.ancla !== `#${ANCLA_DE.reservar}`).map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta }))
     : [
         { href: hrefInicio(lang, ANCLA_HUB.mapa), label: nav.mapa },
         { href: hrefInicio(lang, ANCLA_HUB.sedes), label: nav.sedes },
         { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.comoFunciona },
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
       ];
-  if (baseSede && links.length === 0) links.push({ href: baseSede, label: nav.reservar });
 
   const idioma = <SelectorIdioma lang={lang} label={nav.switchLang} variante="campana" />;
   const alPulsarEnlace = () => setOpen(false);
@@ -115,7 +114,7 @@ export function SiteHeader({
           animate={{ opacity: 1, y: 0 }}
           exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-x-0 top-16 z-10 flex flex-col rounded-sheet lg:top-[4.5rem] bg-superficie/90 px-6 py-3 shadow-n2 backdrop-blur-xl xl:hidden"
+          className="absolute inset-x-0 top-[calc(var(--barra-h)+0.5rem)] z-10 flex flex-col rounded-sheet bg-superficie px-6 py-3 shadow-n2 xl:hidden"
         >
           {/* El mapa solo existe desde 1024 px: el menú móvil no lo ofrece. */}
           {links.filter((link) => !link.href.endsWith(`#${ANCLA_HUB.mapa}`)).map((link) => (
@@ -192,14 +191,14 @@ export function SiteHeader({
               label={nav.sedeLabel}
               className="hidden sm:inline-block"
             />
-            <div className="hidden xl:block"><WhatsappContact nav={nav} tone="plain" /></div>
+            <WhatsappContact nav={nav} tone="plain" />
 
             <Button
               variante="libre"
               onClick={() => setOpen((v) => !v)}
               aria-label={open ? nav.closeMenu : nav.openMenu}
               aria-expanded={open}
-              className="flex size-11 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde xl:hidden"
+              className="flex size-12 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde xl:hidden"
             >
               {open ? <X size={18} /> : <List size={18} />}
             </Button>
