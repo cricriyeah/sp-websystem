@@ -1,5 +1,5 @@
+import Image from 'next/image';
 import Link from 'next/link';
-import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
@@ -35,27 +35,16 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
   ];
 
   return (
-    <footer
-      id="contacto"
-      className="relative scroll-mt-24 overflow-hidden border-t border-border bg-background"
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: 'var(--tinte-cafe-pie)',
-        }}
-      />
-      <div className="relative mx-auto max-w-[1120px] px-4 pt-20 sm:px-6 lg:px-8 lg:pt-24">
-        <div className="grid gap-10 pb-16 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-12">
+    <footer id="contacto" className="scroll-mt-24 overflow-hidden bg-tinta text-hero-ink">
+      <div className="mx-auto max-w-[1440px] px-4 pt-20 sm:px-6 lg:px-12 lg:pt-24">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-12">
           <div className="flex flex-col items-start gap-5">
-            <EmpresaSello nombre="Sun Baja Experience" tamano={64} />
-            <h2 className="max-w-[13ch] texto-seccion text-foreground">
+            <h2 className="max-w-[13ch] texto-seccion">
               {footer.headline}
             </h2>
             <Link
               href={sedeSlug ? hrefSede(lang, sedeSlug, ANCLA_DE.reservar) : hrefInicio(lang, ANCLA_HUB.sedes)}
-              className={botonClases({ variante: 'principal' })}
+              className={botonClases({ variante: 'campana-claro' })}
             >
               {bookLabel}
             </Link>
@@ -63,45 +52,53 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
 
           {negocio && (
             <div className="flex flex-col gap-3">
-              <span className="text-sm font-semibold text-muted">{footer.addressLabel}</span>
-              <span className="inline-flex min-h-11 items-center text-base text-foreground">{negocio.calle}</span>
-              <span className="text-base text-muted">
+              <span className="text-sm font-semibold text-cafe-bruma">{footer.addressLabel}</span>
+              <span className="inline-flex min-h-11 items-center text-base">{negocio.calle}</span>
+              <span className="text-base">
                 {negocio.ciudad}, {negocio.estado}
               </span>
-              <span className="mt-3 text-xs font-semibold text-muted">{footer.hoursLabel}</span>
-              <span className="inline-flex min-h-11 items-center text-base text-foreground">{footer.hours}</span>
-              <span className="mt-3 text-xs font-semibold text-muted">{footer.officeLabel}</span>
-              <span className="inline-flex min-h-11 items-center text-base text-foreground">{footer.office}</span>
+              <span className="mt-3 text-sm font-semibold text-cafe-bruma">{footer.hoursLabel}</span>
+              <span className="inline-flex min-h-11 items-center text-base">{footer.hours}</span>
+              <span className="mt-3 text-sm font-semibold text-cafe-bruma">{footer.officeLabel}</span>
+              <span className="inline-flex min-h-11 items-center text-base">{footer.office}</span>
             </div>
           )}
 
           <nav aria-label={footer.exploreLabel} className="flex flex-col gap-3">
-            <span className="text-sm font-semibold text-muted">{footer.exploreLabel}</span>
+            <span className="text-sm font-semibold text-cafe-bruma">{footer.exploreLabel}</span>
             {secciones.map((link) => (
               // El mapa solo existe desde 1024 px.
-              <Link key={link.href} href={link.href} className={`${link.href.endsWith(`#${ANCLA_HUB.mapa}`) ? 'hidden lg:inline-flex' : 'inline-flex'} min-h-11 items-center text-base text-foreground`}>
+              <Link key={link.href} href={link.href} className={`${link.href.endsWith(`#${ANCLA_HUB.mapa}`) ? 'hidden lg:inline-flex' : 'inline-flex'} min-h-11 items-center text-base transition-colors hover:text-cafe-claro`}>
                 {link.label}
               </Link>
             ))}
           </nav>
 
           <nav aria-label={footer.legalLabel} className="flex flex-col gap-3">
-            <span className="text-sm font-semibold text-muted">{footer.legalLabel}</span>
+            <span className="text-sm font-semibold text-cafe-bruma">{footer.legalLabel}</span>
             {legales.map((link) => (
-              <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center text-base text-foreground">
+              <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center text-base transition-colors hover:text-cafe-claro">
                 {link.label}
               </Link>
             ))}
           </nav>
         </div>
-      </div>
 
-      <div className="relative mx-auto max-w-[1120px] px-4 pb-10 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-2 border-t border-border-strong pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm text-muted">
+        {/* El logo completo, a todo el ancho y en blanco (el SVG es negro sin relleno propio). */}
+        <Image
+          src="/sunbajaexperience/logolg.svg"
+          alt="Sun Baja Experience"
+          width={286}
+          height={91}
+          sizes="(min-width: 1440px) 1344px, 100vw"
+          className="mt-16 h-auto w-full invert lg:mt-24"
+        />
+
+        <div className="flex flex-col gap-2 pb-10 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-sm">
             Sun Baja Experience. {footer.rights}
           </span>
-          {negocio && <span className="text-sm text-muted">{negocio.ciudad}, {negocio.estado}</span>}
+          {negocio && <span className="text-sm">{negocio.ciudad}, {negocio.estado}</span>}
         </div>
       </div>
     </footer>
