@@ -95,7 +95,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
           </div>
         </div>
       </section>
-      <HubComoFunciona id={ANCLA_HUB.comoFunciona} titulo={textos.comoTitulo} texto={textos.comoTexto} pasos={textos.comoPasos} />
+      <HubComoFunciona id={ANCLA_HUB.comoFunciona} titulo={textos.comoTitulo} texto={textos.comoTexto} pasos={textos.comoPasos} cta={{ href: `#${ANCLA_HUB.sedes}`, etiqueta: textos.comoCta }} />
       <ColaboradoresSection id={ANCLA_HUB.empresas} sedes={sedes} lang={lang} textos={textos} />
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={null} />
