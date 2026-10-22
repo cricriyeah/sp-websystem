@@ -114,3 +114,14 @@ class CoberturaDeAeropuertosTests(AeropuertoDePaqueteTests):
         from apps.tenancy.models import Aeropuerto
 
         self.assertEqual(sorted(Aeropuerto.objects.values_list('codigo', flat=True)), ['csl', 'lap', 'lto', 'sjd'])
+
+
+class SedeDesactivadaTests(AeropuertoDePaqueteTests):
+    def test_una_sede_desactivada_no_recibe_reservas(self):
+        from apps.tenancy.models import Sede
+
+        Sede.objects.filter(pk=self.sede.pk).update(activo=False)
+        self.empresa.refresh_from_db()
+        serializador, valido = self.validar(aeropuerto='lap')
+        self.assertFalse(valido)
+        self.assertIn('non_field_errors', serializador.errors)

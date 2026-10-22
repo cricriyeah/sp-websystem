@@ -5,7 +5,7 @@ import { getDictionary, hasLocale } from '../../dictionaries';
 import { alternativasDe } from '@/lib/site';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
-import { getPaquetesSede, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
+import { getPaquetesSede, getSedes, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
 import { aMoneda } from '@/lib/moneda';
 import { fotosAptas, palabrasDeSede } from '@/lib/etiquetas-catalogo';
 import { formatearPrecio } from '@/lib/pricing-paquete';
@@ -41,6 +41,10 @@ export default async function SedePage({ params, searchParams }: Props) {
   if (slug === 'los-cabos') permanentRedirect(hrefSede(lang, 'la-ventana'));
   const contenido = getSedeContenido(slug, lang);
   if (!contenido) notFound();
+  // Sede desactivada en el backoffice: su página deja de existir. Si la API no responde se falla abierto
+  // (una caída de red no apaga el sitio), igual que el hub.
+  const sedesApi = await getSedes().catch(() => null);
+  if (sedesApi && !sedesApi.some((sede) => sede.slug === slug)) notFound();
   const query = await searchParams;
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
   const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug).catch(() => null), getServiciosSede(slug).catch(() => null)]);

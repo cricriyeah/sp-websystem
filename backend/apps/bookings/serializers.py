@@ -168,6 +168,9 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Esta reserva ya no se puede modificar.')
 
         empresa = self.context.get('empresa')
+        # Una sede desactivada en el admin deja de vender: lo que ya estaba abierto no puede seguir hasta el pago.
+        if empresa is not None and not empresa.sede.activo:
+            raise serializers.ValidationError('Esta sede no está disponible por ahora.')
 
         servicio = attrs.get('servicio')
         if servicio is None and self.instance and 'servicio' not in attrs:
