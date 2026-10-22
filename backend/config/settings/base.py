@@ -3,6 +3,7 @@ Settings comunes a todos los entornos (local y production heredan de aqui).
 """
 
 import os
+import sys
 from pathlib import Path
 
 from corsheaders.defaults import default_headers
@@ -490,6 +491,10 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', '')
 
 # Minutos que dura el apartado temporal de cupo en el checkout web. 0 = apagado.
 APARTADO_MINUTOS = int(os.environ.get('APARTADO_MINUTOS', '0'))
+
+# Anticipación mínima de la reserva web, en horas antes de la salida (0 = sin regla). Ver bookings/anticipacion.py.
+# Apagada al correr las pruebas: muchas usan fechas fijas; la regla se prueba con `override_settings`.
+HORAS_MINIMAS_RESERVA = 0 if 'test' in sys.argv else int(os.environ.get('HORAS_MINIMAS_RESERVA', '0'))
 
 # Duracion de la sesion del backoffice. El default de Django son dos semanas, que
 # para un panel con dinero y datos de clientes es demasiado: una laptop olvidada

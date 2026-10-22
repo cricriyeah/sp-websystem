@@ -50,6 +50,7 @@ import {
   generarHorasVentana,
   getMinBookableDate,
 } from '@/lib/dates';
+import { horasConAnticipacion } from '@/lib/anticipacion';
 import { mensajeDeFallo } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
 import { aMoneda } from '@/lib/moneda';
@@ -145,20 +146,28 @@ export function TrasladoView({
   // Error de la tarjeta de recogida (hotel o dirección).
   const [errorPaso2, setErrorPaso2] = useState('');
 
-  const minDate = useMemo(() => getMinBookableDate(), []);
-  // `null` = el cliente borró la fecha: Continuar la pide.
-  const [fecha, setFecha] = useState<string | null>(minDate);
-  // El regreso es obligatorio y empieza vacío: sin respuesta se ve la pregunta, no una fecha que el
-  // cliente no eligió.
-  const [fechaRegreso, setFechaRegreso] = useState<string | null>(null);
-  const horasDisponibles = useMemo(() => {
+  const horasDelServicio = useMemo(() => {
     return generarHorasVentana(
       catalogo.servicio.hora_apertura,
       catalogo.servicio.hora_cierre,
       catalogo.servicio.paso_hora_minutos,
     );
   }, [catalogo.servicio.hora_apertura, catalogo.servicio.hora_cierre, catalogo.servicio.paso_hora_minutos]);
-  const [hora, setHora] = useState(horasDisponibles[0] ?? '');
+  const minDate = useMemo(() => getMinBookableDate(horasDelServicio), [horasDelServicio]);
+  // «Ahora» se fija al montar: las horas que ese día no cumplen la anticipación mínima no se ofrecen.
+  const [ahoraDeCarga] = useState(() => new Date());
+  // `null` = el cliente borró la fecha: Continuar la pide.
+  const [fecha, setFecha] = useState<string | null>(minDate);
+  // El regreso es obligatorio y empieza vacío: sin respuesta se ve la pregunta, no una fecha que el
+  // cliente no eligió.
+  const [fechaRegreso, setFechaRegreso] = useState<string | null>(null);
+  const horasDisponibles = useMemo(
+    () => (fecha ? horasConAnticipacion(fecha, horasDelServicio, ahoraDeCarga) : horasDelServicio),
+    [fecha, horasDelServicio, ahoraDeCarga],
+  );
+  const [horaElegida, setHora] = useState(horasDisponibles[0] ?? '');
+  // Al cambiar de día, una hora que dejó de cumplir la anticipación pasa a la primera que sí.
+  const hora = horasDisponibles.includes(horaElegida) ? horaElegida : (horasDisponibles[0] ?? horaElegida);
   // Error de la tarjeta de viaje (fechas).
   const [errorPaso3, setErrorPaso3] = useState('');
 

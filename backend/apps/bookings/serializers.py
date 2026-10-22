@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from apps.bookings import personalizaciones
+from apps.bookings.anticipacion import anticipacion_insuficiente
 from apps.fleet.calendario_paquete import ComponenteCalendario, fecha_ancla, fecha_salida as calcular_salida
 from apps.fleet.enums import TipoServicio, TipoTraslado
 from apps.tenancy.models import Aeropuerto
@@ -193,6 +194,14 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             attrs['hora'] = None
         elif attrs.get('hora') is None and not (self.instance and 'hora' not in attrs and self.instance.hora):
             raise serializers.ValidationError({'hora': 'Elige la hora de salida.'})
+
+        # Anticipación mínima (solo web): contra la hora de salida si el servicio la pide; sin hora, desde mañana.
+        if empresa is not None and ('fecha' in attrs or 'hora' in attrs or not self.instance):
+            fecha_reserva = attrs.get('fecha', getattr(self.instance, 'fecha', None) if self.instance else None)
+            hora_reserva = None if paquete else attrs.get('hora', getattr(self.instance, 'hora', None) if self.instance else None)
+            problema = anticipacion_insuficiente(empresa.sede, fecha_reserva, hora_reserva)
+            if problema:
+                raise serializers.ValidationError({'hora' if hora_reserva else 'fecha': problema})
 
         personalizaciones = attrs.get('personalizaciones', [])
 

@@ -40,6 +40,7 @@ const suites = {
   'etiqueta-boton': ['src/lib/etiqueta-boton.ts', 'ETIQUETA_BOTON_TEST_OUT'],
   'pantallas-checkout': ['src/lib/pantallas-checkout.ts', 'PANTALLAS_CHECKOUT_TEST_OUT'],
   'control-fecha': ['src/lib/control-fecha.ts', 'CONTROL_FECHA_TEST_OUT'],
+  'anticipacion': ['src/lib/anticipacion.ts', 'ANTICIPACION_TEST_OUT'],
   'rango-paquete': ['src/lib/rango-paquete.ts', 'RANGO_PAQUETE_TEST_OUT'],
   'calendario-mes': ['src/lib/calendario-mes.ts', 'CALENDARIO_MES_TEST_OUT'],
   'etiquetas-catalogo': ['src/lib/etiquetas-catalogo.ts', 'ETIQUETAS_TEST_OUT'],

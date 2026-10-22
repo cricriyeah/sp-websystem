@@ -1,3 +1,5 @@
+import { fechaMinimaReservable } from './anticipacion';
+
 // Fecha ISO (YYYY-MM-DD) en hora LOCAL, no UTC. date.toISOString() convierte
 // a UTC primero: en UTC-7 (America/Mazatlan) cualquier hora local despues de
 // las 5pm ya cruzo la medianoche UTC y corre la fecha un dia extra.
@@ -8,14 +10,12 @@ export function toLocalISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-// Primer dia reservable desde la web: mañana. Es una regla de la interfaz para
-// no vender una salida de 5am del mismo dia; el documento de negocio no fija un
-// minimo de anticipacion (lo que si fija son 48 horas para CAMBIAR de fecha, y
-// eso lo valida el backend en Reserva.clean).
-export function getMinBookableDate(): string {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return toLocalISODate(date);
+// Primer dia reservable desde la web, en el dia de la sede (no el del navegador). Sin horas (el servicio no
+// pide hora): mañana. Con las horas del servicio: la primera fecha en que su ultima hora aun cumple la
+// anticipacion minima (lib/anticipacion.ts, que el backend hace cumplir). Las 48 horas del negocio son para
+// CAMBIAR de fecha, no para reservar, y eso lo valida el backend en Reserva.clean.
+export function getMinBookableDate(horas: string[] = []): string {
+  return fechaMinimaReservable(horas);
 }
 
 

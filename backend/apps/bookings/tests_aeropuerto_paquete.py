@@ -52,6 +52,12 @@ class AeropuertoDePaqueteTests(FixturePaqueteEstancia, OperadorTestCase):
         self.assertFalse(valido)
         self.assertIn('aeropuerto', serializador.errors)
 
+    def test_una_fecha_pasada_se_rechaza_con_la_anticipacion_minima_encendida(self):
+        with self.settings(HORAS_MINIMAS_RESERVA=16):
+            serializador, valido = self.validar(aeropuerto='lap', fecha='2020-01-10')
+        self.assertFalse(valido)
+        self.assertIn('fecha', serializador.errors)
+
     def test_un_paquete_sin_traslado_no_pide_aeropuerto(self):
         PaqueteServicio.objects.filter(servicio=self.traslado).delete()
         serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 3, str(self.hotel.pk): 2})
@@ -125,3 +131,4 @@ class SedeDesactivadaTests(AeropuertoDePaqueteTests):
         serializador, valido = self.validar(aeropuerto='lap')
         self.assertFalse(valido)
         self.assertIn('non_field_errors', serializador.errors)
+

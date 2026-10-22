@@ -51,6 +51,7 @@ import {
 import { formatHour, fromLocalISODate, getTopePersonas, toLocalISODate } from '@/lib/dates';
 import { controlDeFecha } from '@/lib/control-fecha';
 import type { SeleccionFechas } from '@/components/ui/calendario/calendario';
+import { horasConAnticipacion } from '@/lib/anticipacion';
 import { horasDeServicio } from '@/lib/horario-servicio';
 import { mensajeDeAyuda, mensajeDeError } from '@/lib/errores';
 import { intlLocale } from '@/lib/intl';
@@ -221,11 +222,19 @@ export function CheckoutView({
   const recuperable = checkoutIdValue?.recuperable ?? false;
   const catalogoUnificado = servicio?.personalizaciones ?? [];
   const pideHora = servicio ? servicio.pide_hora : true;
-  const horasDisponibles = servicio ? horasDeServicio(servicio) : [];
+  const horasDelServicio = useMemo(() => (servicio ? horasDeServicio(servicio) : []), [servicio]);
 
   // `null` = el cliente borró la fecha: Continuar la pide (no se repone sola).
   const [day, setDay] = useState<string | null>(initialDay);
-  const [time, setTime] = useState(initialTime);
+  const [horaElegida, setTime] = useState(initialTime);
+  // Anticipación mínima: de las horas del servicio, solo las que ese día aún cumplen. «Ahora» se fija al montar.
+  const [ahoraDeCarga] = useState(() => new Date());
+  const horasDisponibles = useMemo(
+    () => (day ? horasConAnticipacion(day, horasDelServicio, ahoraDeCarga) : horasDelServicio),
+    [day, horasDelServicio, ahoraDeCarga],
+  );
+  // Al cambiar de día, una hora que dejó de cumplir la anticipación pasa a la primera que sí.
+  const time = horasDisponibles.includes(horaElegida) ? horaElegida : (horasDisponibles[0] ?? horaElegida);
   const topePersonas = getTopePersonas(servicio?.capacidad_maxima);
   const [people, setPeople] = useState(() => Math.min(initialPeople, topePersonas));
   const [personalizaciones, setPersonalizaciones] = useState<SeleccionPersonalizacion[]>(() =>

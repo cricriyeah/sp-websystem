@@ -7,6 +7,7 @@ import { getDictionary, hasLocale } from '../dictionaries';
 import { CheckoutView } from '@/components/checkout-view';
 import { PedidoPaquete } from '@/components/pedido/pedido-paquete';
 import { API_URL, getPaqueteDetalle, getServicioDetalle, getTraslados, type PaqueteCatalogo, type ServicioCatalogo, type TrasladosCatalogo } from '@/lib/api';
+import { horasConAnticipacion } from '@/lib/anticipacion';
 import { getMinBookableDate, parseBookingQuery } from '@/lib/dates';
 import { horasDeServicio } from '@/lib/horario-servicio';
 import { alternativasDe } from '@/lib/site';
@@ -50,7 +51,6 @@ export default async function ReservarPage({
     (key) => (typeof query[key] === 'string' ? query[key] : undefined),
     minDate,
   );
-  const day = parsed.day ?? minDate;
   // El enlace traia una fecha pero no sirvio (pasada, mal formada): se uso la primera disponible
   // y el cliente debe enterarse, no descubrirlo despues. Sin `day` en el enlace no hay nada que avisar.
   const fechaDescartada = typeof query.day === 'string' && query.day !== '' && parsed.day === undefined;
@@ -125,7 +125,13 @@ export default async function ReservarPage({
   // La hora inicial es la que trae la barra si cabe en las horas del servicio; si no, la primera del
   // rango. Sin servicio (o si no pide hora) no hay hora.
   const horasServicio = servicio ? horasDeServicio(servicio) : [];
-  const time = parsed.time && horasServicio.includes(parsed.time) ? parsed.time : horasServicio[0] ?? '';
+  // La primera fecha depende de las horas del servicio (anticipación mínima): si el enlace traía una anterior, se
+  // sube a la primera posible y el cliente se entera.
+  const minDateServicio = getMinBookableDate(horasServicio);
+  const diaServicio = parsed.day !== undefined && parsed.day >= minDateServicio ? parsed.day : minDateServicio;
+  const fechaDescartadaServicio = fechaDescartada || (parsed.day !== undefined && diaServicio !== parsed.day);
+  const horasDelDia = horasConAnticipacion(diaServicio, horasServicio);
+  const time = parsed.time && horasDelDia.includes(parsed.time) ? parsed.time : horasDelDia[0] ?? horasServicio[0] ?? '';
 
   // El booking bar siempre manda los tres juntos: si trae alguno explicito es
   // que el cliente acaba de elegir viaje, no que recargo esta misma pagina.
@@ -137,12 +143,12 @@ export default async function ReservarPage({
     <CheckoutView
       lang={lang}
       dict={dict}
-      initialDay={day}
+      initialDay={diaServicio}
       initialTime={time}
       initialPeople={people}
-      minDate={minDate}
+      minDate={minDateServicio}
       queryOverride={queryOverride}
-      fechaDescartada={fechaDescartada}
+      fechaDescartada={fechaDescartadaServicio}
       empresaSlug={empresaSlug}
       servicioId={servicio?.slug ?? null}
       servicioNombre={servicio?.nombre ?? null}

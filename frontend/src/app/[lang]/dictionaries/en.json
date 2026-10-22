@@ -197,7 +197,7 @@
       "borrar": "Clear date",
       "manana": "Tomorrow",
       "en2": "In 2 days",
-      "antesDelMinimo": "Tomorrow can no longer be booked: choose another day.",
+      "antesDelMinimo": "That day no longer has times that meet the minimum booking notice: choose another day.",
       "anuncioRango": "From {desde} to {hasta} · {noches} nights",
       "anuncioIdaRegreso": "Out on {desde}, back on {hasta}",
       "sinFecha": "Choose a date",
