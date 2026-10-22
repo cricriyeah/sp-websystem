@@ -125,7 +125,7 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
             textos.tarifaRuta
           )}
         </p>
-        <span aria-hidden="true" className={cn(botonClases({ variante: 'campana' }), 'group-hover:bg-cafe')}>
+        <span aria-hidden="true" className={cn(botonClases({ variante: 'campana' }), 'group-hover:bg-cafe max-sm:w-full max-sm:justify-center')}>
           {precio ? textos.reservar : textos.elegirRuta}
           <span className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:translate-x-1">→</span>
         </span>
