@@ -629,6 +629,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         esActividadPrincipal={slug === slugPrincipal}
         personasMax={personasPaquete}
         trasladoFijo={trasladoFijo}
+        aeropuertos={paquete.aeropuertos ?? []}
         estado={estado.componentes[slug]}
         conEncabezadoEmpresa={cantidadCargos > 1}
         nombreEmpresa={nombreEmpresa(componente.servicio.empresa_slug)}

@@ -13,7 +13,7 @@ from unfold.decorators import action
 from . import scope
 from .acciones_fila import AccionesDeFilaMixin
 from .alta_empresa import AltaEmpresaForm, dar_de_alta_empresa, estado_de_empresa, url_del_webhook
-from .models import Empresa, MembresiaEmpresa, Sede
+from .models import Aeropuerto, Empresa, MembresiaEmpresa, Sede
 
 
 class SoloOperadorPlataformaAdminMixin:
@@ -38,6 +38,24 @@ class SedeAdmin(SoloOperadorPlataformaAdminMixin, AccionesDeFilaMixin, ModelAdmi
     list_display = ['nombre', 'slug', 'zona_horaria', 'tipo_cambio_usd', 'activo']
     prepopulated_fields = {'slug': ('nombre',)}
     search_fields = ['nombre', 'slug']
+
+
+@admin.register(Aeropuerto)
+class AeropuertoAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
+    """Los aeropuertos que ofrece el checkout de los paquetes, y qué sedes tienen traslado a cada uno."""
+
+    list_display = ['nombre', 'codigo', 'sedes_cubiertas', 'activo']
+    list_filter = ['activo', 'sedes']
+    search_fields = ['nombre', 'codigo']
+    prepopulated_fields = {'codigo': ('nombre',)}
+    filter_horizontal = ['sedes']
+
+    @admin.display(description='Sedes que cubre')
+    def sedes_cubiertas(self, obj):
+        return ', '.join(sede.nombre for sede in obj.sedes.all()) or '—'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('sedes')
 
 
 class EmpresaAdminForm(forms.ModelForm):

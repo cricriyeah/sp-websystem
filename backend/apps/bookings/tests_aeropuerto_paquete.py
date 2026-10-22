@@ -56,3 +56,58 @@ class AeropuertoDePaqueteTests(FixturePaqueteEstancia, OperadorTestCase):
         PaqueteServicio.objects.filter(servicio=self.traslado).delete()
         serializador, valido = self.validar(personas_por_servicio={str(self.pesca.pk): 3, str(self.hotel.pk): 2})
         self.assertTrue(valido, serializador.errors)
+
+
+class CoberturaDeAeropuertosTests(AeropuertoDePaqueteTests):
+    """Cada sede declara los aeropuertos que cubre: el paquete solo ofrece y acepta esos."""
+
+    def quitar_a_la_sede(self, codigo):
+        from apps.tenancy.models import Aeropuerto
+
+        Aeropuerto.objects.get(codigo=codigo).sedes.remove(self.sede)
+
+    def test_un_aeropuerto_que_la_sede_no_cubre_se_rechaza(self):
+        self.quitar_a_la_sede('sjd')
+        serializador, valido = self.validar(aeropuerto='sjd')
+        self.assertFalse(valido)
+        self.assertIn('aeropuerto', serializador.errors)
+
+    def test_uno_que_si_cubre_sigue_valido(self):
+        self.quitar_a_la_sede('sjd')
+        serializador, valido = self.validar(aeropuerto='lap')
+        self.assertTrue(valido, serializador.errors)
+
+    def test_un_aeropuerto_inactivo_no_se_acepta(self):
+        from apps.tenancy.models import Aeropuerto
+
+        Aeropuerto.objects.filter(codigo='sjd').update(activo=False)
+        serializador, valido = self.validar(aeropuerto='sjd')
+        self.assertFalse(valido)
+
+    def test_una_sede_sin_aeropuertos_no_lo_exige(self):
+        for codigo in ('lap', 'csl', 'sjd', 'lto'):
+            self.quitar_a_la_sede(codigo)
+        serializador, valido = self.validar()
+        self.assertTrue(valido, serializador.errors)
+
+    def test_un_aeropuerto_nuevo_dado_de_alta_se_puede_elegir(self):
+        from apps.tenancy.models import Aeropuerto
+
+        nuevo = Aeropuerto.objects.create(codigo='mxl', nombre='Mexicali (MXL)')
+        nuevo.sedes.add(self.sede)
+        serializador, valido = self.validar(aeropuerto='mxl')
+        self.assertTrue(valido, serializador.errors)
+
+    def test_el_catalogo_de_paquetes_expone_los_aeropuertos_de_la_sede(self):
+        from apps.fleet.serializers import PaqueteSerializer
+
+        self.quitar_a_la_sede('sjd')
+        datos = PaqueteSerializer(self.paquete, context={'sin_componentes': True}).data
+        codigos = [a['codigo'] for a in datos['aeropuertos']]
+        self.assertEqual(sorted(codigos), ['csl', 'lap', 'lto'])
+        self.assertEqual({a['codigo']: a['nombre'] for a in datos['aeropuertos']}['lap'], 'La Paz (LAP)')
+
+    def test_los_cuatro_aeropuertos_de_la_baja_vienen_dados_de_alta(self):
+        from apps.tenancy.models import Aeropuerto
+
+        self.assertEqual(sorted(Aeropuerto.objects.values_list('codigo', flat=True)), ['csl', 'lap', 'lto', 'sjd'])

@@ -10,7 +10,7 @@ import { SelectPersonalizado } from '@/components/checkout/select-personalizado'
 import { PeopleStepper } from '@/components/people-stepper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { Aeropuerto, Moneda, PaqueteServicioCatalogo } from '@/lib/api';
+import type { Moneda, OpcionAeropuerto, PaqueteServicioCatalogo } from '@/lib/api';
 import { fechaDeComponente, sumarDias } from '@/lib/calendario-paquete';
 import { fromLocalISODate } from '@/lib/dates';
 import { intlLocale } from '@/lib/intl';
@@ -31,6 +31,8 @@ type Props = {
   esActividadPrincipal: boolean;
   personasMax: number;
   trasladoFijo: boolean;
+  /** Los aeropuertos que cubre la sede del paquete; sin ninguno, no se pregunta. */
+  aeropuertos: OpcionAeropuerto[];
   estado: ComponentePedido;
   moneda: Moneda;
   tipoCambio: string;
@@ -53,7 +55,7 @@ type Props = {
  * tarjeta, igual que cuando eran parte de `GrupoServicio`.
  */
 export function GrupoViaje({
-  lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, moneda, tipoCambio,
+  lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, aeropuertos, estado, moneda, tipoCambio,
   inicio, noches, salida, bloqueado,
   onTope, onPersonas, onExtras, onTraslado,
 }: Props) {
@@ -183,17 +185,19 @@ export function GrupoViaje({
           </p>
         )}
       </div>
-      <div className="text-sm text-foreground">
-        <SelectPersonalizado
-          label={pedido.airportLabel}
-          placeholder={pedido.airportLabel}
-          value={traslado.aeropuerto}
-          disabled={bloqueado}
-          icon={<AirplaneTilt size={20} className="shrink-0 text-muted" />}
-          opciones={(['lap', 'sjd'] as Aeropuerto[]).map((codigo) => ({ valor: codigo, etiqueta: pedido.airports[codigo] }))}
-          onChange={(valor) => onTraslado({ aeropuerto: valor as Aeropuerto | '' })}
-        />
-      </div>
+      {aeropuertos.length > 0 && (
+        <div className="text-sm text-foreground">
+          <SelectPersonalizado
+            label={pedido.airportLabel}
+            placeholder={pedido.airportPlaceholder}
+            value={traslado.aeropuerto}
+            disabled={bloqueado}
+            icon={<AirplaneTilt size={20} className="shrink-0 text-muted" />}
+            opciones={aeropuertos.map((aeropuerto) => ({ valor: aeropuerto.codigo, etiqueta: aeropuerto.nombre }))}
+            onChange={(valor) => onTraslado({ aeropuerto: valor })}
+          />
+        </div>
+      )}
     </BloqueDePaso>
   )}
 

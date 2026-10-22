@@ -15,9 +15,9 @@ from apps.fleet.models import (
     capacidades_disponibles,
     capacidades_por_fecha,
 )
-from apps.fleet.enums import Aeropuerto, TipoTraslado, Zona
+from apps.fleet.enums import TipoTraslado, Zona
 from apps.fleet.calendario_paquete import fechas_de_componente
-from apps.tenancy.models import Empresa, Sede
+from apps.tenancy.models import Aeropuerto, Empresa, Sede
 
 from .cupo import (
     DemandaCupo,
@@ -485,8 +485,9 @@ class Reserva(models.Model):
                   '`numero_personas` es el del componente operativo principal.',
     )
     aeropuerto = models.CharField(
-        max_length=3, choices=Aeropuerto.choices, blank=True, default='',
-        help_text='Paquete con hospedaje y traslado: aeropuerto del que llega la clienta (el traslado es redondo).',
+        max_length=10, blank=True, default='',
+        help_text='Paquete con hospedaje y traslado: código del aeropuerto del que llega la clienta (el traslado es '
+                  'redondo). Debe ser uno de los que cubre la sede del paquete (Sistema > Aeropuertos).',
     )
     inicio_paquete = models.DateField(
         null=True, blank=True,
@@ -822,6 +823,10 @@ class Reserva(models.Model):
             raise ValidationError({'paquete': 'No puedes seleccionar servicio y paquete a la vez.'})
         if self.fecha_salida and self.fecha_salida <= self.fecha:
             raise ValidationError({'fecha_salida': 'La fecha de salida debe ser posterior a la fecha de inicio.'})
+        if self.aeropuerto:
+            sede = self.paquete.sede if self.paquete_id else None
+            if sede is None or not Aeropuerto.de_la_sede(sede).filter(codigo=self.aeropuerto).exists():
+                raise ValidationError({'aeropuerto': 'Ese aeropuerto no está disponible para la sede de este paquete.'})
         if self.inicio_paquete:
             if self.inicio_paquete > self.fecha:
                 raise ValidationError({'inicio_paquete': 'El inicio del paquete no puede ser posterior a la actividad.'})

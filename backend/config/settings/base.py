@@ -355,6 +355,12 @@ UNFOLD = {
                         'permission': _perm_es_operador,
                     },
                     {
+                        'title': 'Aeropuertos',
+                        'icon': 'flight',
+                        'link': reverse_lazy('admin:tenancy_aeropuerto_changelist'),
+                        'permission': _perm_es_operador,
+                    },
+                    {
                         'title': 'Empresas',
                         'icon': 'store',
                         'link': reverse_lazy('admin:tenancy_empresa_changelist'),

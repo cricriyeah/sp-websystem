@@ -7,6 +7,7 @@ from rest_framework import serializers
 from apps.bookings import personalizaciones
 from apps.fleet.calendario_paquete import ComponenteCalendario, fecha_ancla, fecha_salida as calcular_salida
 from apps.fleet.enums import TipoServicio, TipoTraslado
+from apps.tenancy.models import Aeropuerto
 from apps.fleet.models import (
     Paquete,
     PaqueteServicio,
@@ -284,8 +285,12 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             con_traslado = any(ps.servicio.tipo_servicio == 'transporte' for ps in componentes_activos)
             con_hospedaje = any(ps.noches for ps in componentes_activos)
             aeropuerto = attrs.get('aeropuerto', getattr(self.instance, 'aeropuerto', '') if self.instance else '')
-            if con_traslado and con_hospedaje and not aeropuerto:
+            disponibles = set(Aeropuerto.de_la_sede(paquete.sede).values_list('codigo', flat=True))
+            # Sin aeropuertos en la sede no hay qué elegir: el traslado se reserva sin ese dato.
+            if con_traslado and con_hospedaje and disponibles and not aeropuerto:
                 raise serializers.ValidationError({'aeropuerto': 'Elige el aeropuerto.'})
+            if aeropuerto and aeropuerto not in disponibles:
+                raise serializers.ValidationError({'aeropuerto': 'Ese aeropuerto no está disponible para esta sede.'})
             attrs = self._derivar_de_paquete(attrs, fecha, componentes_activos)
         else:
             es_hospedaje = bool(servicio and servicio.estrategia_cupo == 'por_noche')

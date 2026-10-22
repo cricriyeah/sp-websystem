@@ -1,5 +1,5 @@
 import type {
-  Aeropuerto, ComponenteOrdenInput, CrearOrdenInput, Moneda, PaqueteCatalogo, ReservaInput, TipoTraslado, Zona,
+  ComponenteOrdenInput, CrearOrdenInput, Moneda, PaqueteCatalogo, ReservaInput, TipoTraslado, Zona,
 } from './api';
 import type { SeleccionPersonalizacion } from './personalizaciones';
 
@@ -12,7 +12,7 @@ export type DetalleTraslado = {
   direccion: string;
   fechaRegreso: string | null;
   /** Solo traslado fijo de paquete con hospedaje; '' hasta que la clienta lo elige. */
-  aeropuerto: Aeropuerto | '';
+  aeropuerto: string;
 };
 
 export type ComponentePedido = {
@@ -100,7 +100,7 @@ export function armarPayloadReserva(args: ArgsComunes): ReservaInput {
   const nombre = contacto.fullName.trim();
   const personasPorServicio: Record<string, number> = {};
   const personalizaciones: ReservaInput['personalizaciones'] = [];
-  let aeropuerto: Aeropuerto | '' = '';
+  let aeropuerto = '';
   for (const c of paquete.servicios_asociados) {
     const actual = componentes[c.servicio.slug];
     if (c.servicio.tipo_servicio === 'transporte' && actual.traslado?.aeropuerto) aeropuerto = actual.traslado.aeropuerto;

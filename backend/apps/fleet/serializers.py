@@ -1,6 +1,8 @@
 from decimal import Decimal
 from rest_framework import serializers
 
+from apps.tenancy.models import Aeropuerto
+
 from .models import (
     Paquete,
     PaqueteServicio,
@@ -87,6 +89,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
     es_cruza_empresa = serializers.SerializerMethodField()
     precio_depende_de_personas = serializers.BooleanField(read_only=True)
     noches = serializers.SerializerMethodField()
+    aeropuertos = serializers.SerializerMethodField()
 
     class Meta:
         model = Paquete
@@ -96,8 +99,12 @@ class PaqueteSerializer(serializers.ModelSerializer):
             'precio_ancla', 'tipo_cambio_usd', 'estrategia_precio', 'personas_precio_base',
             'precio_persona_extra', 'precio_depende_de_personas', 'pide_hora', 'regla_precio', 'activo',
             'permite_anticipo', 'porcentaje_anticipo', 'es_cruza_empresa',
-            'servicios_asociados', 'noches',
+            'servicios_asociados', 'noches', 'aeropuertos',
         ]
+
+    def get_aeropuertos(self, obj):
+        """Los aeropuertos que cubre la sede del paquete: lo que el select del checkout ofrece."""
+        return [{'codigo': a.codigo, 'nombre': a.nombre} for a in Aeropuerto.de_la_sede(obj.sede)]
 
     def get_permite_anticipo(self, obj):
         return obj.anticipo_disponible

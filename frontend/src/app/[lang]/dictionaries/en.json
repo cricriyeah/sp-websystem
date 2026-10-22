@@ -545,7 +545,7 @@
     "fixedTransfer": "Round-trip airport transfer",
     "fixedTransferDates": "Arrival {llegada} · departure {salida}",
     "airportLabel": "Which airport are you arriving at?",
-    "airports": { "lap": "La Paz (LAP)", "sjd": "Los Cabos (SJD)" },
+    "airportPlaceholder": "Choose an airport",
     "airportError": "Choose the airport.",
     "peoplePrice": "{n} people  {price}",
     "peoplePriceOne": "1 person  {price}",

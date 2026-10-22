@@ -545,7 +545,7 @@
     "fixedTransfer": "Traslado redondo con aeropuerto",
     "fixedTransferDates": "Llegada {llegada} · salida {salida}",
     "airportLabel": "¿Desde qué aeropuerto llegan?",
-    "airports": { "lap": "La Paz (LAP)", "sjd": "Los Cabos (SJD)" },
+    "airportPlaceholder": "Elige un aeropuerto",
     "airportError": "Elige el aeropuerto.",
     "peoplePrice": "{n} personas  {precio}",
     "peoplePriceOne": "1 persona  {precio}",

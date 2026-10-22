@@ -31,7 +31,8 @@ export type Cupo = {
   motivo_no_disponible: MotivoNoDisponible | null;
 };
 
-export type Aeropuerto = 'lap' | 'sjd';
+/** Un aeropuerto que la sede del paquete cubre (lo da el catálogo; ya no es una lista fija en el código). */
+export type OpcionAeropuerto = { codigo: string; nombre: string };
 
 export type ReservaInput = {
   // Identificador de la sesion de checkout que genera el navegador. El backend
@@ -66,7 +67,7 @@ export type ReservaInput = {
   // Solo para hospedaje suelto; la salida de un paquete la define el catálogo.
   fecha_salida?: string;
   // Paquete con hospedaje y traslado: aeropuerto del que llega la clienta (el traslado es redondo).
-  aeropuerto?: Aeropuerto;
+  aeropuerto?: string;
   // Seleccion de personalizaciones (brunch, licencia, carnada, etc.), sin
   // precio: el unico que lo congela es `crear-pago`, con el catalogo vigente
   // en ese momento (ver backend/apps/bookings/serializers.py). Se manda
@@ -368,6 +369,8 @@ export type PaqueteCatalogo = {
   sede_slug: string;
   empresa_lider: string;
   empresa_lider_slug: string;
+  /** Aeropuertos que cubre la sede del paquete: lo que ofrece el select. Vacío = no se pregunta. */
+  aeropuertos?: OpcionAeropuerto[];
   nombre: string;
   slug: string;
   descripcion: string;

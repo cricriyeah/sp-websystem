@@ -4,7 +4,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BotonPaso } from '@/components/checkout/boton-paso';
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
-import type { Moneda, PaqueteServicioCatalogo } from '@/lib/api';
+import type { Moneda, OpcionAeropuerto, PaqueteServicioCatalogo } from '@/lib/api';
 import type { SeleccionPersonalizacion } from '@/lib/personalizaciones';
 import type { ComponentePedido, DetalleTraslado } from '@/lib/pedido-payload';
 import { GrupoViaje } from './grupo-viaje';
@@ -15,6 +15,7 @@ type Props = {
   componente: PaqueteServicioCatalogo;
   precioDependeDePersonas: boolean;
   esActividadPrincipal: boolean;
+  aeropuertos: OpcionAeropuerto[];
   personasMax: number;
   trasladoFijo: boolean;
   estado: ComponentePedido;
@@ -38,7 +39,7 @@ type Props = {
 };
 
 export function GrupoServicio({
-  lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, estado, conEncabezadoEmpresa, nombreEmpresa, moneda, tipoCambio,
+  lang, dict, componente, precioDependeDePersonas, esActividadPrincipal, personasMax, trasladoFijo, aeropuertos, estado, conEncabezadoEmpresa, nombreEmpresa, moneda, tipoCambio,
   inicio, noches, salida, estadoTarjeta,
   onAccion, onCompletar, onTope, onPersonas, onExtras, onTraslado, error,
 }: Props) {
@@ -65,6 +66,7 @@ export function GrupoServicio({
         esActividadPrincipal={esActividadPrincipal}
         personasMax={personasMax}
         trasladoFijo={trasladoFijo}
+        aeropuertos={aeropuertos}
         estado={estado}
         moneda={moneda}
         tipoCambio={tipoCambio}

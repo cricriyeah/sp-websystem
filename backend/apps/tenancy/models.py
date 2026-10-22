@@ -27,6 +27,35 @@ class Sede(models.Model):
         return self.nombre
 
 
+class Aeropuerto(models.Model):
+    """Un aeropuerto al que un paquete puede traer a la clienta. Cada sede declara los que cubre: el paquete
+    de una sede solo ofrece (y solo acepta) los aeropuertos de esa sede. Lo administra el operador de plataforma."""
+
+    codigo = models.SlugField(
+        max_length=10, unique=True,
+        help_text='Clave corta en minúsculas, la que guarda cada reserva (por ejemplo lap, sjd). No se cambia una vez en uso.',
+    )
+    nombre = models.CharField(max_length=150, help_text='Como lo ve la clienta, por ejemplo «La Paz (LAP)».')
+    sedes = models.ManyToManyField(
+        Sede, related_name='aeropuertos', blank=True,
+        help_text='Las sedes con traslado a este aeropuerto. Sin sedes, no se ofrece en ningún lado.',
+    )
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = 'aeropuerto'
+        verbose_name_plural = 'aeropuertos'
+
+    def __str__(self):
+        return self.nombre
+
+    @classmethod
+    def de_la_sede(cls, sede):
+        """Los aeropuertos activos que cubre la sede, por nombre."""
+        return cls.objects.filter(activo=True, sedes=sede).order_by('nombre')
+
+
 class Empresa(models.Model):
     sede = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='empresas')
     nombre = models.CharField(max_length=150)

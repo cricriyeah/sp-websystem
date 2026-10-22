@@ -56,7 +56,8 @@ export function errorDeGrupoPaquete({
   }
   const t = actual.traslado;
   if (t && trasladoFijo) {
-    if (deViaje && !t.aeropuerto) return textos.airportError;
+    // Sin aeropuertos en la sede no hay qué elegir: no se exige.
+    if (deViaje && (paquete.aeropuertos ?? []).length > 0 && !t.aeropuerto) return textos.airportError;
   } else if (t) {
     if (deDatos && t.modo === 'catalogo' && t.puntoEncuentroId === null) {
       return traslados.errors.seleccionaHospedaje;
