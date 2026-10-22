@@ -217,7 +217,8 @@ class AccionesDeFilaAdminTests(TestCase):
         # POST directo a la acción de fila con confirmación
         response = self.client.post(url_cancelar, {'confirmar_cancelacion': 'si'})
         self.assertEqual(response.status_code, 302)
-        self.reserva_a.refresh_from_db()
+        with scope.como_operador_plataforma():  # la petición dejó la conexión sin alcance
+            self.reserva_a.refresh_from_db()
         self.assertEqual(self.reserva_a.estado, Reserva.Estado.CANCELADA)
         self.assertEqual(self.reserva_a.motivo_cancelacion, 'Mal clima')
 

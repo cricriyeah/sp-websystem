@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.bookings.models import Vendedora
+from apps.tenancy import scope
 from apps.tenancy.models import Empresa, MembresiaEmpresa, Sede
 from apps.tenancy.usuarios import crear_usuario_con_rol
 
@@ -46,9 +47,10 @@ class AltaUsuarioTests(TestCase):
         MembresiaEmpresa.objects.create(
             user=self.vendedora_a, empresa=self.empresa_a, rol=MembresiaEmpresa.Rol.VENDEDORA,
         )
-        Vendedora.objects.create(
-            usuario=self.vendedora_a, empresa=self.empresa_a, codigo='venda',
-        )
+        with scope.con_empresa(self.empresa_a):  # Vendedora tiene RLS: sin alcance Postgres rechaza el INSERT
+            Vendedora.objects.create(
+                usuario=self.vendedora_a, empresa=self.empresa_a, codigo='venda',
+            )
 
         self.vendedora_b = User.objects.create_user(
             username='vendedora_alta_b', password='PasswordValida123!', is_staff=True,
@@ -57,11 +59,17 @@ class AltaUsuarioTests(TestCase):
         MembresiaEmpresa.objects.create(
             user=self.vendedora_b, empresa=self.empresa_b, rol=MembresiaEmpresa.Rol.VENDEDORA,
         )
-        Vendedora.objects.create(
-            usuario=self.vendedora_b, empresa=self.empresa_b, codigo='vendb',
-        )
+        with scope.con_empresa(self.empresa_b):
+            Vendedora.objects.create(
+                usuario=self.vendedora_b, empresa=self.empresa_b, codigo='vendb',
+            )
 
         self.url = reverse('admin:bookings_user_alta_usuario')
+
+    def _vendedoras(self, **filtros):
+        """Vendedora tiene RLS: se lee como operador para comprobar lo que dejó el alta, sin alcance de empresa."""
+        with scope.como_operador_plataforma():
+            return list(Vendedora.objects.filter(**filtros))
 
     def test_operador_crea_jefe(self):
         """Operador crea Jefe: queda con is_staff, grupo Jefe, membresía JEFE,
@@ -86,7 +94,7 @@ class AltaUsuarioTests(TestCase):
         membresia = MembresiaEmpresa.objects.get(user=nuevo)
         self.assertEqual(membresia.empresa, self.empresa_a)
         self.assertEqual(membresia.rol, MembresiaEmpresa.Rol.JEFE)
-        self.assertFalse(Vendedora.objects.filter(usuario=nuevo).exists())
+        self.assertFalse(self._vendedoras(usuario=nuevo))
 
         # Puede entrar y ve su empresa
         self.client.force_login(nuevo)
@@ -121,7 +129,7 @@ class AltaUsuarioTests(TestCase):
         self.assertEqual(membresia.empresa, self.empresa_b)
         self.assertEqual(membresia.rol, MembresiaEmpresa.Rol.VENDEDORA)
 
-        vend = Vendedora.objects.get(usuario=nuevo)
+        vend = self._vendedoras(usuario=nuevo)[0]
         self.assertEqual(vend.empresa, self.empresa_b)
         self.assertEqual(vend.codigo, 'vendb01')
 
@@ -144,7 +152,7 @@ class AltaUsuarioTests(TestCase):
         membresia = MembresiaEmpresa.objects.get(user=nuevo)
         self.assertEqual(membresia.empresa, self.empresa_a)
 
-        vend = Vendedora.objects.get(usuario=nuevo)
+        vend = self._vendedoras(usuario=nuevo)[0]
         self.assertEqual(vend.empresa, self.empresa_a)
 
     def test_jefe_intenta_crear_jefe_rechazado(self):
@@ -244,9 +252,7 @@ class AltaUsuarioTests(TestCase):
             'codigo': 'venda',
         })
         self.assertEqual(resp_b.status_code, 302)
-        self.assertTrue(Vendedora.objects.filter(
-            empresa=self.empresa_b, codigo='venda',
-        ).exists())
+        self.assertTrue(self._vendedoras(empresa=self.empresa_b, codigo='venda'))
 
     def test_get_agregar_usuario_redirige_a_vista_nueva(self):
         """GET a "Sistema > Usuarios > Agregar" redirige a la vista nueva de alta para autorizados."""
@@ -306,9 +312,7 @@ class AltaUsuarioTests(TestCase):
             codigo_vendedora='vendsrv',
         )
         self.assertTrue(vend.groups.filter(name='Vendedora').exists())
-        self.assertTrue(Vendedora.objects.filter(
-            usuario=vend, empresa=self.empresa_a, codigo='vendsrv',
-        ).exists())
+        self.assertTrue(self._vendedoras(usuario=vend, empresa=self.empresa_a, codigo='vendsrv'))
 
         # 3. Rol no válido
         with self.assertRaises(DjangoValidationError):

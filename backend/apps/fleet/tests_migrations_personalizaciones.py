@@ -10,7 +10,8 @@ from apps.tenancy.rls import alcance_operador_migracion
 
 
 class ExtrasAPersonalizacionMigration0033Tests(TransactionTestCase):
-    migrate_from = [('fleet', '0032_retirar_tarifa'), ('bookings', '0045_rename_reservapersonalizacion')]
+    # Tenancy al dia: Empresa.correos_aviso es NOT NULL y el modelo historico sin ese campo no podria insertarla.
+    migrate_from = [('tenancy', '0008_aeropuertos_iniciales'), ('fleet', '0032_retirar_tarifa'), ('bookings', '0045_rename_reservapersonalizacion')]
     migrate_to = [('fleet', '0033_extrasitem_a_personalizacion')]
 
     def setUp(self):
@@ -78,12 +79,9 @@ class ExtrasAPersonalizacionMigration0033Tests(TransactionTestCase):
                 self.assertFalse(sp.obligatorio)
                 self.assertEqual(sp.servicio.empresa_id, extra.empresa_id)
             self.assertEqual(actual.get_model('fleet', 'Personalizacion')._meta.get_field('nombre').max_length, 150)
-        from django.core.management import call_command
-        for empresa in self.empresas:
-            call_command('seed_extras', empresa=empresa.slug, verbosity=0)
-            call_command('seed_extras', empresa=empresa.slug, verbosity=0)
+        # El comando `seed_extras` de hoy usa el esquema actual (p. ej. `Personalizacion.descripcion`), que no
+        # existe en este punto de la historia: aquí solo se comprueba lo que dejó la migración.
         with transaction.atomic(), alcance_operador_migracion(connection):
-            self.assertEqual(actual.get_model('fleet', 'Personalizacion').objects.count(), 8)
             for extra in originales:
                 sp = actual.get_model('fleet', 'ServicioPersonalizacion').objects.get(
                     personalizacion__empresa_id=extra.empresa_id, personalizacion__nombre=extra.nombre)
@@ -142,7 +140,8 @@ class PersonalizacionMigration0030Tests(TransactionTestCase):
     2. Los precios (precio y precio_usd) se conservan intactos.
     3. Una base con catalogo vacio migra sin errores y no recibe semillas espurias.
     """
-    migrate_from = [('fleet', '0029_servicio_hora_apertura_servicio_hora_cierre')]
+    # Tenancy al dia: Empresa.correos_aviso es NOT NULL y el modelo historico sin ese campo no podria insertarla.
+    migrate_from = [('tenancy', '0008_aeropuertos_iniciales'), ('fleet', '0029_servicio_hora_apertura_servicio_hora_cierre')]
     migrate_to = [('fleet', '0030_personalizacion_tipo_interaccion')]
 
     def _restaurar_esquema(self):
@@ -252,7 +251,8 @@ class PersonalizacionMigration0030Tests(TransactionTestCase):
 
 @skipUnless(connection.vendor == 'postgresql', 'La conservación de RLS requiere Postgres')
 class ReservaPersonalizacionPolicyRenameMigrationTests(TransactionTestCase):
-    migrate_from = [
+    # Tenancy al dia: Empresa.correos_aviso es NOT NULL y el modelo historico sin ese campo no podria insertarla.
+    migrate_from = [('tenancy', '0008_aeropuertos_iniciales'), 
         ('bookings', '0044_rls_orden_sin_current_query'),
         ('fleet', '0030_personalizacion_tipo_interaccion'),
     ]
@@ -362,7 +362,8 @@ class TarifaAServicioMigration0031Tests(TransactionTestCase):
     4. Reserva de paquete (paquete!=None, servicio=None) no se modifica.
     5. Empresa sin Tarifa con Reserva huérfana (sin producto): falla explícitamente antes de inventar precio.
     """
-    migrate_from = [
+    # Tenancy al dia: Empresa.correos_aviso es NOT NULL y el modelo historico sin ese campo no podria insertarla.
+    migrate_from = [('tenancy', '0008_aeropuertos_iniciales'), 
         ('fleet', '0030_personalizacion_tipo_interaccion'),
         ('bookings', '0044_rls_orden_sin_current_query'),
     ]

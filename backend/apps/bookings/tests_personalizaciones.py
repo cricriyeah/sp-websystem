@@ -420,7 +420,8 @@ class PersonalizacionesAdminTests(EmpresaTestCase):
         self.assertFalse(vendedora.has_perm('fleet.change_serviciopersonalizacion'))
 
 class ReservaPersonalizacionMigration0045Tests(TransactionTestCase):
-    migrate_from = [
+    # Tenancy al dia: Empresa.correos_aviso es NOT NULL y el modelo historico sin ese campo no podria insertarla.
+    migrate_from = [('tenancy', '0008_aeropuertos_iniciales'), 
         ('bookings', '0044_rls_orden_sin_current_query'),
         ('fleet', '0030_personalizacion_tipo_interaccion'),
     ]

@@ -36,7 +36,8 @@ class PaginasDeErrorTests(TestCase):
         self.assertContains(respuesta, 'Esta página no existe', status_code=404)
         self.assertContains(respuesta, 'Volver atrás', status_code=404)
         # Con el layout del panel completo (cabecera y menu), no una hoja en blanco.
-        self.assertContains(respuesta, 'Sun Baja Experiences', status_code=404)
+        # El menú lateral lleva el logo de la plataforma (SITE_LOGO) en lugar del nombre escrito.
+        self.assertContains(respuesta, 'tenancy/branding/sunbaja', status_code=404)
         # El código debe mostrarse de verdad, no solo la etiqueta.
         self.assertRegex(respuesta.content.decode(), r'<strong[^>]*>[0-9A-F]{8}</strong>')
 

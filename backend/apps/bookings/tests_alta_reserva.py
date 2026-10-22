@@ -359,9 +359,10 @@ class AltaReservaOperadorTests(TestCase):
         resp_post = self.client.post(self.url, datos)
         self.assertEqual(resp_post.status_code, 302)
 
-        reserva = Reserva.objects.get(nombre_cliente='Cliente Operador')
-        self.assertEqual(reserva.empresa, self.empresa)
-        self.assertIsNone(reserva.vendedora)
+        with scope.como_operador_plataforma():  # la petición dejó la conexión sin alcance
+            reserva = Reserva.objects.get(nombre_cliente='Cliente Operador')
+            self.assertEqual(reserva.empresa, self.empresa)
+            self.assertIsNone(reserva.vendedora)
 
 
 class EdicionReservaNoCambioTests(EmpresaTestCase):

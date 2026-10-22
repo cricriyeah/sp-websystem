@@ -238,7 +238,8 @@ class ServicioAdminCatalogoTests(EmpresaTestCase):
             resp = self.client.post(reverse('admin:fleet_servicio_add'), {**INLINE_PERSONALIZACIONES, **datos})
             self.assertEqual(resp.status_code, 302)
 
-            velero = Servicio.objects.get(slug='paseo-velero')
+            with scope.como_operador_plataforma():  # la petición dejó la conexión sin alcance
+                velero = Servicio.objects.get(slug='paseo-velero')
             self.assertEqual(velero.empresa_id, self.empresa.pk)
         finally:
             self._alcance = scope.con_empresa(self.empresa)

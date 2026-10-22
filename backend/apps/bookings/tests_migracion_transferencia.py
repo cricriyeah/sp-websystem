@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from apps.bookings.models import Reserva
 from apps.fleet.models import Servicio
+from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Sede
 
 
@@ -19,12 +20,13 @@ class ReservaTransferenciaMigration0054Tests(TransactionTestCase):
             MigrationExecutor(connection).loader.graph.leaf_nodes()))
         sede = Sede.objects.create(nombre='Migración transferencia', slug='migracion-transferencia')
         empresa = Empresa.objects.create(sede=sede, nombre='Empresa migración', slug='empresa-migracion')
-        servicio = Servicio.objects.create(empresa=empresa, nombre='Servicio migración', slug='servicio-migracion')
-        reserva = Reserva.objects.create(
-            empresa=empresa, servicio=servicio, fecha=timezone.localdate() + timedelta(days=10),
-            numero_personas=2, nombre_cliente='Cliente anterior', telefono_cliente='6121234567',
-            correo_cliente='anterior@example.com', canal_origen='whatsapp',
-        )
+        with scope.como_operador_plataforma():  # las tablas con RLS no dejan insertar sin alcance
+            servicio = Servicio.objects.create(empresa=empresa, nombre='Servicio migración', slug='servicio-migracion')
+            reserva = Reserva.objects.create(
+                empresa=empresa, servicio=servicio, fecha=timezone.localdate() + timedelta(days=10),
+                numero_personas=2, nombre_cliente='Cliente anterior', telefono_cliente='6121234567',
+                correo_cliente='anterior@example.com', canal_origen='whatsapp',
+            )
 
         executor.migrate([('bookings', '0053_tipo_cambio_reserva_orden')])
 
@@ -32,7 +34,8 @@ class ReservaTransferenciaMigration0054Tests(TransactionTestCase):
         executor.migrate([('bookings', '0054_reserva_monto_transferencia_and_more')])
         nueva = executor.loader.project_state(
             [('bookings', '0054_reserva_monto_transferencia_and_more')]).apps.get_model('bookings', 'Reserva')
-        conservada = nueva.objects.get(pk=reserva.pk)
+        with scope.como_operador_plataforma():
+            conservada = nueva.objects.get(pk=reserva.pk)
         self.assertIsNone(conservada.monto_transferencia)
         self.assertIsNone(conservada.transferencia_registrada_en)
         self.assertIsNone(conservada.transferencia_registrada_por_id)

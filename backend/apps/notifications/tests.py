@@ -493,13 +493,16 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
         """Paquete de dos empresas: cada una recibe su aviso con su parte y nada mas."""
         from apps.bookings.models import Orden
         from apps.notifications.services import notificar_orden_pagada
+        from apps.tenancy import scope
         from apps.tenancy.models import Empresa
 
         Empresa.objects.filter(pk=self.empresa_1.pk).update(correos_aviso='pesca@ejemplo.com')
         Empresa.objects.filter(pk=self.empresa_2.pk).update(correos_aviso='transporte@ejemplo.com, jefe@ejemplo.com')
         mock_post.return_value.raise_for_status.return_value = None
 
-        resultado = notificar_orden_pagada(Orden.objects.get(pk=self.orden.pk))
+        with scope.como_operador_plataforma():
+            orden = Orden.objects.get(pk=self.orden.pk)
+        resultado = notificar_orden_pagada(orden)
 
         self.assertEqual(resultado['empresas'], [True, True])
         envios = {tuple(c.kwargs['json']['to']): c.kwargs['json'] for c in mock_post.call_args_list}

@@ -2400,8 +2400,12 @@ class TrasladoPagoFixture:
         )
         reserva.full_clean()
         reserva.save()
+        # La zona que cobra sale del hotel elegido; una dirección escrita siempre cuesta como periferia.
+        en_centro = zona == 'centro' and tipo == 'redondo_actividad'
         detalle = DetalleTransporte(
-            reserva=reserva, tipo_traslado=tipo, direccion_personalizada='Casa de prueba', zona=zona,
+            reserva=reserva, tipo_traslado=tipo, zona=zona,
+            punto_encuentro=self.punto if en_centro else None,
+            direccion_personalizada='' if en_centro else 'Casa de prueba',
             fecha_regreso=reserva.fecha + timedelta(days=3) if tipo == 'redondo_aeropuerto' else None,
         )
         detalle.full_clean()
@@ -2427,7 +2431,7 @@ class EstadoReservaTrasladoTests(TrasladoPagoFixture, ApiTestCase):
         detalle = response.json()['detalle_transporte']
         self.assertEqual(detalle['tipo_traslado'], 'redondo_aeropuerto')
         self.assertEqual(detalle['direccion_personalizada'], 'Casa de prueba')
-        self.assertEqual(detalle['zona'], 'centro')
+        self.assertEqual(detalle['zona'], 'periferia')  # la dirección escrita se guarda como periferia
         self.assertEqual(detalle['fecha_regreso'], (reserva.fecha + timedelta(days=3)).isoformat())
 
 
@@ -2548,7 +2552,8 @@ class CrearPagoTrasladoTest(TrasladoPagoFixture, ApiTestCase):
                 _verificar_monto(reserva, {'currency': 'mxn', 'amount_received': 450000})
             self.assertEqual(calcular.call_args.args[1].personas, 4)
             self.assertEqual(calcular.call_args.args[1].tipo_traslado, 'redondo_aeropuerto')
-            self.assertEqual(calcular.call_args.args[1].zona, '')
+            # Una dirección escrita cuesta como periferia (también en la vuelta completa con aeropuerto).
+            self.assertEqual(calcular.call_args.args[1].zona, 'periferia')
         with self.assertLogs('apps.payments.services', level='ERROR') as logs:
             _verificar_monto(reserva, {'currency': 'mxn', 'amount_received': 449999})
         self.assertIn('Descuadre', ' '.join(logs.output))
@@ -2587,6 +2592,7 @@ class WebhookTrasladoTest(TrasladoPagoFixture, ApiTestCase):
         reserva = self.reserva()
         detalle = reserva.detalle_transporte
         detalle.punto_encuentro = self.punto
+        detalle.zona = self.punto.zona
         detalle.direccion_personalizada = ''
         detalle.full_clean()
         detalle.save()
@@ -2618,7 +2624,7 @@ class WebhookTrasladoTest(TrasladoPagoFixture, ApiTestCase):
     def test_correo_escapa_direccion_personalizada(self, post):
         from apps.notifications.services import notificar_reserva_pagada
 
-        reserva = self.reserva('redondo_actividad')
+        reserva = self.reserva('redondo_actividad', zona='periferia')
         detalle = reserva.detalle_transporte
         detalle.direccion_personalizada = 'Casa <b>Azul</b> & patio'
         detalle.save()

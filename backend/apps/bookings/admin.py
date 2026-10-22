@@ -724,7 +724,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         'aviso_asignacion_enviado_en',
         # Se congelan en CrearPagoView junto con precio_total: editarlos aqui a
         # mano los desincronizaria de ese numero y del conteo de usos del codigo.
-        'codigo_promocional', 'descuento_aplicado',
+        'codigo_promocional', 'descuento_aplicado', 'iva_monto', 'iva_tasa',
         'personas_por_servicio_legible', 'tipo_cambio',
         'apartado_hasta', 'apartado_demanda', 'alerta_reembolso_fallido_en',
     ]
@@ -798,7 +798,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente')}),
             ('Viaje', {'fields': tuple(viaje)}),
             ('Cobro', {'fields': (
-                'forma_pago', 'moneda', 'precio_total', 'monto_pagado',
+                'forma_pago', 'moneda', 'precio_total', 'iva_monto', 'iva_tasa', 'monto_pagado',
                 'monto_efectivo', 'monto_transferencia',
                 'pide_bebidas', 'pide_extras_whatsapp', 'codigo_promocional', 'descuento_aplicado',
             )}),

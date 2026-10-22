@@ -2020,14 +2020,22 @@ class DetalleTransporteTest(EmpresaTestCase):
         dt2c.clean()
         self.assertEqual(dt2c.zona_efectiva(), Zona.PERIFERIA)
 
-        # 3. Redondo aeropuerto -> ''
+        # 3. Redondo aeropuerto: la vuelta completa también cuesta según la zona del hotel
         dt3 = DetalleTransporte(
             reserva=self.reserva,
             tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
             punto_encuentro=self.punto,
             fecha_regreso=date(2026, 10, 5),
         )
-        self.assertEqual(dt3.zona_efectiva(), '')
+        self.assertEqual(dt3.zona_efectiva(), Zona.CENTRO)
+
+        # 3b. Sin hotel ni dirección (el traslado de un paquete con hospedaje) no hay zona que cobrar
+        dt3b = DetalleTransporte(
+            reserva=self.reserva,
+            tipo_traslado=TipoTraslado.REDONDO_AEROPUERTO,
+            fecha_regreso=date(2026, 10, 5),
+        )
+        self.assertEqual(dt3b.zona_efectiva(), '')
 
         # 4. Recepcion aeropuerto -> ''
         dt4 = DetalleTransporte(

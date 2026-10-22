@@ -300,12 +300,19 @@ class PaqueteServicioFormSetErroresTests(EmpresaTestCase):
             precio_ancla=Decimal('8000.00'),
             permite_anticipo=True,
         )
-        formset = self._crear_formset(paquete, [
-            {'servicio': self.s_pesca},
-            {'servicio': s_otra},
-        ])
-        self.assertFalse(formset.is_valid())
-        errores = formset.non_form_errors()
+        # El paquete junta servicios de dos empresas: validarlo exige ver las dos (RLS), como el operador.
+        self._alcance.__exit__(None, None, None)
+        try:
+            with scope.como_operador_plataforma():
+                formset = self._crear_formset(paquete, [
+                    {'servicio': self.s_pesca},
+                    {'servicio': s_otra},
+                ])
+                self.assertFalse(formset.is_valid())
+                errores = formset.non_form_errors()
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
         self.assertTrue(any('no admite anticipo' in e for e in errores))
         self.assertTrue(any('"Pesca Deportiva Local"' in e and '"Traslado Foraneo"' in e for e in errores))
 

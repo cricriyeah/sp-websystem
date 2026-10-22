@@ -111,7 +111,9 @@ class AgendaOperadorTests(TestCase):
         respuesta = self.client.get(self.url, {'empresa': 'con-pangas'})
 
         formulario = respuesta.context['cl'].formset.forms[0]
+        with scope.como_operador_plataforma():  # el queryset se evalúa aquí, ya fuera de la petición
+            capitanes = list(formulario.fields['capitan'].queryset.values_list('nombre', flat=True))
         self.assertEqual(
-            list(formulario.fields['capitan'].queryset.values_list('nombre', flat=True)),
+            capitanes,
             ['Capitan con-pangas'],
         )

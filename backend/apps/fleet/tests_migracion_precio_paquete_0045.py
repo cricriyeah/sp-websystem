@@ -10,7 +10,8 @@ from apps.tenancy.rls import alcance_operador_migracion
 
 
 class PrecioPaqueteMigration0045Tests(TransactionTestCase):
-    migrate_from = [('fleet', '0044_quitar_precios_usd')]
+    # Tenancy al dia: Empresa.correos_aviso es NOT NULL y el modelo historico sin ese campo no podria insertarla.
+    migrate_from = [('tenancy', '0008_aeropuertos_iniciales'), ('fleet', '0044_quitar_precios_usd')]
     migrate_to = [('fleet', '0045_normalizar_precio_paquete')]
 
     def setUp(self):
@@ -107,7 +108,8 @@ class PrecioPaqueteFieldsTests(TestCase):
 
 
 class PrecioPaqueteFinal0046Tests(TransactionTestCase):
-    migrate_from = [('fleet', '0045_normalizar_precio_paquete')]
+    # Tenancy al dia: Empresa.correos_aviso es NOT NULL y el modelo historico sin ese campo no podria insertarla.
+    migrate_from = [('tenancy', '0008_aeropuertos_iniciales'), ('fleet', '0045_normalizar_precio_paquete')]
     migrate_to = [('fleet', '0046_quitar_precio_por_persona')]
 
     def test_quita_solo_el_campo_antiguo_y_conserva_estrategia(self):

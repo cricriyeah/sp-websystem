@@ -1,3 +1,4 @@
+import contextlib
 from datetime import timedelta
 
 from django.urls import reverse
@@ -378,7 +379,9 @@ class TrasladoInlineFormularioTests(EmpresaTestCase):
                     guardada.context['adminform'].form.errors,
                     [(fs.formset.prefix, fs.formset.errors) for fs in guardada.context['inline_admin_formsets']],
                 ))
-                self.detalle.refresh_from_db()
+                # Sin el alcance de la empresa (el operador no lo tiene) la lectura necesita el del operador.
+                with scope.como_operador_plataforma() if usuario == operador else contextlib.nullcontext():
+                    self.detalle.refresh_from_db()
                 self.assertEqual(self.detalle.direccion_personalizada, f'Hotel {usuario.username}')
             finally:
                 if usuario == operador:
