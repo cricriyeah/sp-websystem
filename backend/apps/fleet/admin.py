@@ -231,7 +231,7 @@ class ServicioAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     fieldsets = [
         ('Qué es', {
             'description': 'Identificación básica del servicio y su disponibilidad general.',
-            'fields': ('nombre', 'slug', 'tipo_servicio', 'descripcion', 'incluye_es', 'incluye_en', 'activo'),
+            'fields': ('nombre', 'nombre_en', 'slug', 'tipo_servicio', 'descripcion', 'descripcion_en', 'incluye_es', 'incluye_en', 'activo'),
         }),
         ('Cupo', {
             'description': 'Control de inventario, modo de asignación y capacidad de pasajeros.',
@@ -484,7 +484,7 @@ class PaqueteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
         }),
         ('Qué es', {
             'description': 'Identificación básica del paquete, sede y empresa líder.',
-            'fields': ('nombre', 'slug', 'descripcion', 'incluye_es', 'incluye_en', 'sede', 'empresa_lider', 'activo'),
+            'fields': ('nombre', 'nombre_en', 'slug', 'descripcion', 'descripcion_en', 'incluye_es', 'incluye_en', 'sede', 'empresa_lider', 'activo'),
         }),
         ('Precio', {
             'description': 'Esquema de cobro y tarifas base en pesos (MXN).',

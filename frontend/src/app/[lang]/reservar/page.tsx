@@ -67,7 +67,7 @@ export default async function ReservarPage({
 
   if (paqueteSlug) {
     if (!sedeSlug) notFound();
-    paquete = await getPaqueteDetalle(sedeSlug, paqueteSlug).catch(() => null);
+    paquete = await getPaqueteDetalle(sedeSlug, paqueteSlug, lang).catch(() => null);
   }
 
   if (paqueteSlug) {
@@ -81,7 +81,7 @@ export default async function ReservarPage({
       ),
     ];
     const catalogos = await Promise.all(
-      empresasDeTraslado.map((empresa) => getTraslados(empresa).catch(() => null)),
+      empresasDeTraslado.map((empresa) => getTraslados(empresa, lang).catch(() => null)),
     );
     const tarifasPorEmpresa: Record<string, TrasladosCatalogo['tarifas']> = {};
     const puntosPorEmpresa: Record<string, TrasladosCatalogo['puntos_encuentro']> = {};
@@ -119,7 +119,7 @@ export default async function ReservarPage({
   let servicio: ServicioCatalogo | null = null;
   if (!paqueteSlug) {
     const slug = servicioSlug ?? 'pesca-deportiva';
-    servicio = await getServicioDetalle(slug, empresaSlug).catch(() => null);
+    servicio = await getServicioDetalle(slug, empresaSlug, lang).catch(() => null);
   }
 
   // La hora inicial es la que trae la barra si cabe en las horas del servicio; si no, la primera del

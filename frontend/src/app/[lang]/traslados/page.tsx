@@ -55,7 +55,7 @@ export default async function TrasladosPage({ params, searchParams }: PageProps)
     const sedesApi = await getSedes().catch(() => null);
     sedeSlugActual = sedesActivas(SEDES_INDICE, sedesApi)[0]?.slug;
   }
-  const catalogo = await getTraslados(empresaSlug).catch(() => null);
+  const catalogo = await getTraslados(empresaSlug, lang).catch(() => null);
   const hrefVolver = hrefDeOrigen({
     lang,
     origen: typeof query.origen === 'string' ? query.origen : undefined,

@@ -47,6 +47,7 @@ const suites = {
   'etiquetas-catalogo': ['src/lib/etiquetas-catalogo.ts', 'ETIQUETAS_TEST_OUT'],
   'imagenes-catalogo': ['src/content/imagenes-catalogo.ts', 'IMAGENES_TEST_OUT'],
   'color-actividad': ['src/lib/color-actividad.ts', 'COLOR_ACTIVIDAD_TEST_OUT'],
+  'idioma-catalogo': ['src/lib/idioma-catalogo.ts', 'IDIOMA_CATALOGO_TEST_OUT'],
   'temporada-actual': ['src/lib/temporada-actual.ts', 'TEMPORADA_TEST_OUT'],
   cifra: ['src/lib/cifra.ts', 'CIFRA_TEST_OUT'],
   mosaico: ['src/lib/mosaico.ts', 'MOSAICO_TEST_OUT'],

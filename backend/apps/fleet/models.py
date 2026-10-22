@@ -362,6 +362,10 @@ class Servicio(models.Model):
     """
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='servicios')
     nombre = models.CharField(max_length=150)
+    nombre_en = models.CharField(
+        'nombre en inglés', max_length=150, blank=True, default='',
+        help_text='Nombre en el sitio en inglés. Vacío = se usa el nombre en español.',
+    )
     slug = models.SlugField(max_length=150)
     tipo_servicio = models.CharField(
         max_length=20, choices=TipoServicio.choices, default=TipoServicio.PESCA,
@@ -424,6 +428,10 @@ class Servicio(models.Model):
         help_text='Cada cuántos minutos se ofrece una hora dentro del rango (5 a 240).',
     )
     descripcion = models.TextField(blank=True, default='')
+    descripcion_en = models.TextField(
+        'descripción en inglés', blank=True, default='',
+        help_text='Descripción en el sitio en inglés. Vacía = se usa la de español.',
+    )
     incluye = models.JSONField(
         default=dict, blank=True,
         help_text='Lo que incluye, por idioma: {"es": ["…"], "en": ["…"]}. Hasta 8 renglones de 80 caracteres.',
@@ -708,8 +716,16 @@ class Paquete(models.Model):
     sede = models.ForeignKey('tenancy.Sede', on_delete=models.PROTECT, related_name='paquetes')
     empresa_lider = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='paquetes_liderados')
     nombre = models.CharField(max_length=150)
+    nombre_en = models.CharField(
+        'nombre en inglés', max_length=150, blank=True, default='',
+        help_text='Nombre en el sitio en inglés. Vacío = se usa el nombre en español.',
+    )
     slug = models.SlugField(max_length=150)
     descripcion = models.TextField(blank=True, default='')
+    descripcion_en = models.TextField(
+        'descripción en inglés', blank=True, default='',
+        help_text='Descripción en el sitio en inglés. Vacía = se usa la de español.',
+    )
     incluye = models.JSONField(
         default=dict, blank=True,
         help_text='Lo que incluye, por idioma: {"es": ["…"], "en": ["…"]}. Hasta 8 renglones de 80 caracteres.',

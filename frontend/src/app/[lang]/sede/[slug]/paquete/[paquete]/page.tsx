@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { preconnect } from 'react-dom';
 import { cache } from 'react';
-import { getDictionary, hasLocale } from '../../../../dictionaries';
+import { getDictionary, hasLocale, type Locale } from '../../../../dictionaries';
 import { API_URL, ApiError, getPaqueteDetalle, getPaquetesSede, getServiciosSede } from '@/lib/api';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { alternativasDe } from '@/lib/site';
@@ -16,8 +16,8 @@ type Props = {
   searchParams: Promise<{ moneda?: string }>;
 };
 
-const cargar = cache(async (sede: string, paquete: string) => {
-  try { return await getPaqueteDetalle(sede, paquete); }
+const cargar = cache(async (sede: string, paquete: string, lang: Locale) => {
+  try { return await getPaqueteDetalle(sede, paquete, lang); }
   catch (error) {
     // Un paquete que no existe es 404; un catálogo que no responde, no: esa página no tiene qué mostrar.
     if (error instanceof ApiError && error.status === 404) return null;
@@ -28,7 +28,7 @@ const cargar = cache(async (sede: string, paquete: string) => {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lang, slug, paquete } = await params;
   if (!hasLocale(lang)) return {};
-  const datos = await cargar(slug, paquete).catch(() => null);
+  const datos = await cargar(slug, paquete, lang).catch(() => null);
   if (!datos) return {};
   const sede = getSedeContenido(slug, lang);
   return {
@@ -46,11 +46,11 @@ export default async function PaquetePage({ params, searchParams }: Props) {
   const sede = getSedeContenido(slug, lang);
   if (!sede) notFound();
   const [paquete, query, dict, servicios, paquetes] = await Promise.all([
-    cargar(slug, paqueteSlug),
+    cargar(slug, paqueteSlug, lang),
     searchParams,
     getDictionary(lang),
-    getServiciosSede(slug).catch(() => null),
-    getPaquetesSede(slug).catch(() => null),
+    getServiciosSede(slug, lang).catch(() => null),
+    getPaquetesSede(slug, lang).catch(() => null),
   ]);
   if (!paquete) notFound();
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';

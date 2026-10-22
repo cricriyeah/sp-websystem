@@ -45,7 +45,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   if (sedesApi && !sedesApi.some((sede) => sede.slug === slug)) notFound();
   const query = await searchParams;
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
-  const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug).catch(() => null), getServiciosSede(slug).catch(() => null)]);
+  const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug, lang).catch(() => null), getServiciosSede(slug, lang).catch(() => null)]);
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);

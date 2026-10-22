@@ -237,6 +237,7 @@ class Command(BaseCommand):
             self._horarios_demo()
             self._datos_reales()
             self._paquetes_la_ventana()
+            self._textos_venta()
 
         self.stdout.write(self.style.SUCCESS('Catálogo real sembrado.'))
         if produccion:
@@ -632,6 +633,24 @@ class Command(BaseCommand):
                 paquete.save()
                 paquete.validar_configuracion()
                 self.stdout.write(f'  Paquete la-ventana/{slug}: {"creado" if creado else "ok"} ({precio} MXN por persona)')
+
+    # ------------------------------------------------------------------ textos de venta
+    def _textos_venta(self):
+        """Nombre y descripción en inglés y la descripción de venta en español: los mismos textos que carga la
+        migración 0053, con su misma regla (no pisa lo que se editó en el admin)."""
+        from importlib import import_module
+
+        from apps.fleet.models import Paquete, Servicio
+
+        textos = import_module('apps.fleet.migrations.0053_textos_venta_catalogo')
+        with scope.como_operador_plataforma():
+            for (empresa, slug), campos in textos.SERVICIOS.items():
+                for servicio in Servicio.objects.filter(empresa__slug=empresa, slug=slug):
+                    textos._aplicar(servicio, campos)
+            for (sede, slug), campos in textos.PAQUETES.items():
+                for paquete in Paquete.objects.filter(sede__slug=sede, slug=slug):
+                    textos._aplicar(paquete, campos)
+        self.stdout.write('  Textos de venta (es/en) aplicados.')
 
     # ------------------------------------------------------------------ horarios (DEMO)
     def _horarios_demo(self):

@@ -735,7 +735,7 @@ class TrasladosViewTest(TestCase):
         respuesta = self.catalogo(self.empresa_b)
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json(), {
-            'servicio': {'slug': servicio.slug, 'nombre': servicio.nombre,
+            'servicio': {'slug': servicio.slug, 'nombre': servicio.nombre, 'nombre_en': '',
                          'capacidad_maxima': 14, 'porcentaje_anticipo': 30,
                          'permite_anticipo': False,
                          'empresa_slug': self.empresa_b.slug, 'tipo_cambio_usd': '18.0000', 'hora_apertura': None, 'hora_cierre': None,

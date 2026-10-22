@@ -50,12 +50,12 @@ class ServicioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Servicio
         fields = [
-            'id', 'empresa_slug', 'nombre', 'slug', 'tipo_servicio',
+            'id', 'empresa_slug', 'nombre', 'nombre_en', 'slug', 'tipo_servicio',
             'estrategia_cupo', 'estrategia_precio', 'modo_ocupacion',
             'precio_base', 'tipo_cambio_usd', 'incluye',
             'permite_anticipo', 'porcentaje_anticipo',
             'precio_persona_extra',
-            'personas_incluidas', 'capacidad_maxima', 'descripcion', 'activo',
+            'personas_incluidas', 'capacidad_maxima', 'descripcion', 'descripcion_en', 'activo',
             'pide_hora', 'hora_apertura', 'hora_cierre', 'paso_hora_minutos',
             'personalizaciones',
         ]
@@ -95,7 +95,7 @@ class PaqueteSerializer(serializers.ModelSerializer):
         model = Paquete
         fields = [
             'id', 'sede', 'sede_slug', 'empresa_lider', 'empresa_lider_slug',
-            'nombre', 'slug', 'descripcion', 'incluye',
+            'nombre', 'nombre_en', 'slug', 'descripcion', 'descripcion_en', 'incluye',
             'precio_ancla', 'tipo_cambio_usd', 'estrategia_precio', 'personas_precio_base',
             'precio_persona_extra', 'precio_depende_de_personas', 'pide_hora', 'regla_precio', 'activo',
             'permite_anticipo', 'porcentaje_anticipo', 'es_cruza_empresa',

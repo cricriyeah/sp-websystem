@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { preconnect } from 'react-dom';
 import { cache } from 'react';
-import { getDictionary, hasLocale } from '../../../dictionaries';
+import { getDictionary, hasLocale, type Locale } from '../../../dictionaries';
 import { API_URL, ApiError, getPaquetesSede, getServicioDetalle, getServiciosSede } from '@/lib/api';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { alternativasDe } from '@/lib/site';
@@ -15,15 +15,15 @@ type Props = {
   params: Promise<{ lang: string; empresa: string; servicio: string }>;
   searchParams: Promise<{ sede?: string; moneda?: string }>;
 };
-const cargar = cache(async (slug: string, empresa: string) => {
-  try { return { data: await getServicioDetalle(slug, empresa), missing: false }; }
+const cargar = cache(async (slug: string, empresa: string, lang: Locale) => {
+  try { return { data: await getServicioDetalle(slug, empresa, lang), missing: false }; }
   catch (error) { return { data: null, missing: error instanceof ApiError && error.status === 404 }; }
 });
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lang, empresa, servicio } = await params;
   if (!hasLocale(lang)) return {};
   const dict = await getDictionary(lang);
-  const result = await cargar(servicio, empresa);
+  const result = await cargar(servicio, empresa, lang);
   const title = result.data?.nombre ?? (servicio === 'pesca-deportiva' ? dict.serviceDetail.fishingTitle : dict.serviceDetail.metaFallback);
   return { title, alternates: alternativasDe(lang, `/servicio/${empresa}/${servicio}`) };
 }
@@ -34,14 +34,14 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   if (!hasLocale(lang)) notFound();
   const pesca = empresa === 'sal-y-sol' && slug === 'pesca-deportiva';
   // Catalogo, query y diccionario no dependen entre si: se piden a la vez.
-  const [{ data: servicio, missing }, query, dict] = await Promise.all([cargar(slug, empresa), searchParams, getDictionary(lang)]);
+  const [{ data: servicio, missing }, query, dict] = await Promise.all([cargar(slug, empresa, lang), searchParams, getDictionary(lang)]);
   const traslado = servicio?.tipo_servicio === 'transporte' || (empresa === 'transporte-la-paz' && slug === 'traslados-la-paz');
   if (missing && !pesca && !traslado) notFound();
   const sede = getSedeContenido(typeof query.sede === 'string' ? query.sede : 'la-paz', lang);
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   // El resto de la sede, para «También en»: si no responde, esa fila no se pinta.
   const [servicios, paquetes] = sede
-    ? await Promise.all([getServiciosSede(sede.slug).catch(() => null), getPaquetesSede(sede.slug).catch(() => null)])
+    ? await Promise.all([getServiciosSede(sede.slug, lang).catch(() => null), getPaquetesSede(sede.slug, lang).catch(() => null)])
     : [null, null];
   const vista = vistaDeDetalleServicio({ lang, moneda, dict, sede, otros: { servicios, paquetes }, empresaSlug: empresa, slug, servicio, pesca, traslado });
   return <>

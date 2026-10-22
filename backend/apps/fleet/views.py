@@ -139,6 +139,7 @@ class TrasladosView(APIView):
                 'servicio': {
                     'slug': servicio.slug,
                     'nombre': servicio.nombre,
+                    'nombre_en': servicio.nombre_en,
                     'capacidad_maxima': servicio.capacidad_maxima,
                     'porcentaje_anticipo': servicio.porcentaje_anticipo,
                     'permite_anticipo': servicio.permite_anticipo,

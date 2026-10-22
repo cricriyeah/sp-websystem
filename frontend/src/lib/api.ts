@@ -1,3 +1,7 @@
+import { enIdioma, paqueteEnIdioma } from './idioma-catalogo';
+
+type Idioma = 'es' | 'en';
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 // Mismo slug que crea `tenancy.0002_crear_sede_empresa_la_paz` en el backend.
 const EMPRESA_SLUG = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol';
@@ -328,6 +332,8 @@ export type ServicioCatalogo = {
   id: number;
   empresa_slug: string;
   nombre: string;
+  /** Nombre en inglés del backoffice; vacío = el de español. Lo resuelve `lib/idioma-catalogo.ts`. */
+  nombre_en?: string;
   slug: string;
   tipo_servicio: string;
   estrategia_cupo: string;
@@ -342,6 +348,7 @@ export type ServicioCatalogo = {
   permite_anticipo: boolean;
   porcentaje_anticipo: number;
   descripcion: string;
+  descripcion_en?: string;
   /**
    * Lo que incluye, por idioma (máx. 8 renglones). Opcional hasta que el backend lo despliegue;
    * `{}` mientras el dueño no lo escriba. Nunca se deriva de `descripcion`.
@@ -377,8 +384,10 @@ export type PaqueteCatalogo = {
   /** Aeropuertos que cubre la sede del paquete: lo que ofrece el select. Vacío = no se pregunta. */
   aeropuertos?: OpcionAeropuerto[];
   nombre: string;
+  nombre_en?: string;
   slug: string;
   descripcion: string;
+  descripcion_en?: string;
   /**
    * Lo que incluye, por idioma (máx. 8 renglones). Opcional hasta que el backend lo despliegue;
    * `{}` mientras el dueño no lo escriba. Nunca se deriva de `descripcion`.
@@ -404,17 +413,18 @@ export type PaqueteCatalogo = {
 export const getSedes = () =>
   request<Sede[]>('/api/sedes/', { signal: AbortSignal.timeout(8000) });
 
-export const getPaquetesSede = (sedeSlug: string) =>
-  request<PaqueteCatalogo[]>(`/api/sedes/${sedeSlug}/paquetes/`);
+// Con `lang`, el nombre y la descripción llegan ya en ese idioma (ver lib/idioma-catalogo.ts).
+export const getPaquetesSede = (sedeSlug: string, lang: Idioma = 'es') =>
+  request<PaqueteCatalogo[]>(`/api/sedes/${sedeSlug}/paquetes/`).then((ps) => ps.map((p) => paqueteEnIdioma(p, lang)));
 
-export const getPaqueteDetalle = (sedeSlug: string, paqueteSlug: string) =>
-  request<PaqueteCatalogo>(`/api/sedes/${sedeSlug}/paquetes/${paqueteSlug}/`);
+export const getPaqueteDetalle = (sedeSlug: string, paqueteSlug: string, lang: Idioma = 'es') =>
+  request<PaqueteCatalogo>(`/api/sedes/${sedeSlug}/paquetes/${paqueteSlug}/`).then((p) => paqueteEnIdioma(p, lang));
 
-export const getServiciosSede = (sedeSlug: string) =>
-  request<ServicioCatalogo[]>(`/api/sedes/${sedeSlug}/servicios/`);
+export const getServiciosSede = (sedeSlug: string, lang: Idioma = 'es') =>
+  request<ServicioCatalogo[]>(`/api/sedes/${sedeSlug}/servicios/`).then((ss) => ss.map((s) => enIdioma(s, lang)));
 
-export const getServicioDetalle = (servicioSlug: string, empresaSlug?: string) =>
-  request<ServicioCatalogo>(`/api/servicios/${servicioSlug}/`, undefined, empresaSlug);
+export const getServicioDetalle = (servicioSlug: string, empresaSlug?: string, lang: Idioma = 'es') =>
+  request<ServicioCatalogo>(`/api/servicios/${servicioSlug}/`, undefined, empresaSlug).then((s) => enIdioma(s, lang));
 
 export { ApiError };
 
@@ -424,6 +434,7 @@ export type TrasladosCatalogo = {
   servicio: {
     slug: string;
     nombre: string;
+    nombre_en?: string;
     capacidad_maxima: number | null;
     permite_anticipo: boolean;
     porcentaje_anticipo: number;
@@ -445,8 +456,8 @@ export type TrasladosCatalogo = {
   publishable_key: string;
 };
 
-export const getTraslados = (empresaSlug: string): Promise<TrasladosCatalogo> =>
-  request<TrasladosCatalogo>('/api/traslados/', undefined, empresaSlug);
+export const getTraslados = (empresaSlug: string, lang: Idioma = 'es'): Promise<TrasladosCatalogo> =>
+  request<TrasladosCatalogo>('/api/traslados/', undefined, empresaSlug).then((c) => ({ ...c, servicio: enIdioma(c.servicio, lang) }));
 
 export type ReservaTrasladoInput = Pick<ReservaInput,
   | 'checkout_id' | 'fecha' | 'hora' | 'numero_personas'
