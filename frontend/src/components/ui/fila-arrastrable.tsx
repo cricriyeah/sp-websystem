@@ -19,7 +19,7 @@ type Props = {
 const INICIAL: EstadoFila = { desborda: false, avance: 1, puedeAtras: false, puedeAdelante: false };
 
 /**
- * Fila de tarjetas que se arrastra: carril con `scroll-snap`, flechas en círculo y una barra de avance de
+ * Fila de tarjetas que se arrastra: carril con `scroll-snap` obligatorio (siempre se detiene en una tarjeta, nunca a la mitad de dos), flechas en círculo y una barra de avance de
  * 4 px. Las flechas van junto al título en escritorio y junto a la barra (abajo a la derecha) en el teléfono. Las flechas y la barra solo existen cuando la fila no cabe. Sin JavaScript sigue siendo un carril
  * que se desliza con el dedo. Con «reducir movimiento» las flechas saltan sin deslizar.
  */
@@ -72,7 +72,7 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
         aria-label={etiqueta}
         tabIndex={0}
         onScroll={medir}
-        className="mx-auto flex max-w-[1440px] snap-x snap-proximity gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none] sm:scroll-px-6 sm:px-6 lg:scroll-px-12 lg:px-12 [&::-webkit-scrollbar]:hidden"
+        className="mx-auto flex max-w-[1440px] snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none] sm:scroll-px-6 sm:px-6 lg:scroll-px-12 lg:px-12 [&::-webkit-scrollbar]:hidden"
       >
         {children}
       </div>
