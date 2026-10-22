@@ -91,8 +91,9 @@ INCLUYE_AVISTAMIENTO = {
            'We look for animals to try to swim with them'],
 }
 
-# Lo que confirmó el dueño el 2026-10-21 (precios SIN IVA). Sal y Sol: 8 pangas de 8, salida de 5 a 7, 12,000 por viaje
-# para 1 o 2 personas y 1,800 por cada persona extra desde la tercera. La Ventana: 5 pangas de 8, salida de 7 a 8.
+# Lo que confirmó el dueño el 2026-10-21 (precios SIN IVA). Sal y Sol: 8 pangas de 8, salida de 5 a 7, 10,800 por viaje
+# (600 USD a 18) para 1 o 2 personas y 1,350 (75 USD) por cada persona extra desde la tercera. El dueño dio estos
+# precios en dólares el 2026-10-22; antes se había anotado 12,000 / 1,800 MXN. La Ventana: 5 pangas de 8, salida de 7 a 8.
 INCLUYE_PESCA_SAL_Y_SOL = {
     'es': ['Desayuno ligero y comida a bordo', 'Aperitivos: fruta y frituras', 'Bebidas',
            'Cubre 1 o 2 personas; desde la tercera se suma un cargo por persona'],
@@ -107,7 +108,7 @@ INCLUYE_AMENIDADES_VENTANA = {
 DATOS_REALES = {
     ('sal-y-sol', 'pesca-deportiva'): dict(
         nombre='Pesca deportiva',
-        estrategia_precio='por_grupo', precio_base=Decimal('12000'), precio_persona_extra=Decimal('1800'),
+        estrategia_precio='por_grupo', precio_base=Decimal('10800'), precio_persona_extra=Decimal('1350'),
         personas_incluidas=2, capacidad_maxima=8,
         descripcion='Viaje de pesca deportiva en La Paz, de 5:00 a 7:00 am de salida, en panga para hasta 8 personas. '
                     'La licencia de pesca se tramita aparte, para las personas que elijas.',
@@ -438,7 +439,7 @@ class Command(BaseCommand):
                 defaults=dict(
                     nombre='Pesca deportiva', tipo_servicio=TipoServicio.PESCA,
                     estrategia_cupo='por_recurso_dia', estrategia_precio='por_grupo', modo_ocupacion='exclusivo',
-                    precio_base=Decimal('12000'), personas_incluidas=2, porcentaje_anticipo=30, activo=True,
+                    precio_base=Decimal('10800'), personas_incluidas=2, porcentaje_anticipo=30, activo=True,
                     pide_hora=True, hora_apertura=time(5, 0), hora_cierre=time(7, 0), paso_hora_minutos=15,
                 ),
             )

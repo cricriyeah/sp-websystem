@@ -74,12 +74,12 @@ class DatosConfirmadosTests(TestCase):
         with override_settings(DEBUG=False):
             sembrar(produccion=True)
 
-    def test_sal_y_sol_pesca_8_pangas_de_8_12000_y_1800_por_extra(self):
+    def test_sal_y_sol_pesca_8_pangas_de_8_600_usd_y_75_usd_por_extra(self):
         with scope.como_operador_plataforma():
             sal = Empresa.objects.get(slug='sal-y-sol')
             pesca = Servicio.objects.get(empresa=sal, slug='pesca-deportiva')
             self.assertEqual((pesca.precio_base, pesca.precio_persona_extra, pesca.personas_incluidas, pesca.capacidad_maxima),
-                             (12000, 1800, 2, 8))
+                             (10800, 1350, 2, 8))  # 600 y 75 USD a 18
             self.assertEqual(Embarcacion.objects.filter(empresa=sal).count(), 8)
             self.assertEqual(set(Embarcacion.objects.filter(empresa=sal).values_list('capacidad_maxima', flat=True)), {8})
             licencia = pesca.servicio_personalizaciones.get(personalizacion__nombre='Licencia de pesca')
