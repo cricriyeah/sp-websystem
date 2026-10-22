@@ -13,6 +13,8 @@ export type VistaProducto = {
   color: ColorActividad;
   /** La palabra del tipo («Pesca», «5 noches»): rotula el bloque de color cuando no hay foto honesta. */
   palabra: string;
+  /** Dos o tres frases de venta (`content/descripciones-catalogo.ts`); sin ella no se pinta. */
+  descripcion?: string | null;
   foto: { src: string; alt: string } | null;
   /** Todas sus fotos, si son varias: la tarjeta las cambia como carrusel. */
   fotos?: { src: string; alt: string }[];
@@ -65,7 +67,7 @@ type Props = {
  * Server Component.
  */
 export function TarjetaProducto({ vista, textos, prioridad = false, unica = false }: Props) {
-  const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad } = vista;
+  const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad, descripcion } = vista;
   const tamanos = unica ? '(min-width: 1024px) 42vw, 80vw' : '(min-width: 1024px) 27vw, 80vw';
   const marco = unica ? 'lg:aspect-[4/3] lg:w-[42%] lg:shrink-0' : '';
   const info = [textos.opera.replace('{empresa}', empresa), capacidad ? textos.hasta.replace('{n}', String(capacidad)) : null].filter(Boolean).join(' · ');
@@ -110,6 +112,7 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
       <div className={cn('flex flex-1 flex-col gap-3.5', unica && 'lg:justify-center lg:gap-5 lg:py-6')}>
       <p className={cn('text-lg font-semibold leading-snug', unica && 'lg:text-4xl lg:leading-tight')}>{nombre}</p>
       <p className="texto-cuerpo">{info}</p>
+      {descripcion && <p className={cn('texto-cuerpo max-w-[52ch]', !unica && 'line-clamp-3')}>{descripcion}</p>}
       <div className={cn('mt-auto flex flex-wrap items-center justify-between gap-3', unica && 'lg:mt-4 lg:justify-start lg:gap-8')}>
         <p className="font-semibold tabular-nums">
           {precio ? (

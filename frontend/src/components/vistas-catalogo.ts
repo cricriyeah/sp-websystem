@@ -5,6 +5,7 @@ import type { Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import { getEmpresa } from '@/content/empresas';
 import { claveDePaquete, claveDeServicio, imagenDeCatalogo, imagenesDeCatalogo } from '@/content/imagenes-catalogo';
+import { descripcionDeCatalogo } from '@/content/descripciones-catalogo';
 import { baseDeCobro, palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
 import { colorDePaquete, colorDeServicio } from '@/lib/color-actividad';
 import { hrefDetalleServicio } from '@/lib/booking-href';
@@ -32,6 +33,7 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
     empresa: empresa?.nombre ?? servicio.empresa_slug,
     color: colorDeServicio(servicio),
     palabra: palabraDeServicio(servicio.tipo_servicio, lang),
+    descripcion: descripcionDeCatalogo(clave, lang),
     foto: imagenDeCatalogo(clave, lang),
     precio: porRuta
       ? null
