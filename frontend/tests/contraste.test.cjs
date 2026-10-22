@@ -39,15 +39,15 @@ const PARES = [
   ['cafe', 'cafe-bruma', 7.42, TEXTO, 'enlace de acción sobre la superficie variante'],
   ['cafe', 'blanco', 8.46, TEXTO, 'botón secundario y texto'],
   // Neutros
-  ['tinta', 'arena', 16.24, TEXTO, 'texto principal sobre la página'],
+  ['tinta', 'arena', 16.07, TEXTO, 'texto principal sobre la página'],
   ['tinta', 'blanco', 17.27, TEXTO, 'texto principal sobre tarjetas y campos'],
-  ['tinta-suave', 'arena', 9.63, TEXTO, 'texto secundario sobre la página'],
+  ['tinta-suave', 'arena', 9.53, TEXTO, 'texto secundario sobre la página'],
   ['tinta-suave', 'cafe-bruma', 8.99, TEXTO, 'chip neutro'],
   ['apagado', 'blanco', 6.37, TEXTO, 'ayudas y etiquetas'],
-  ['apagado', 'arena', 5.99, TEXTO, 'ayudas sobre la página'],
+  ['apagado', 'arena', 5.93, TEXTO, 'ayudas sobre la página'],
   ['apagado', 'cafe-bruma', 5.59, TEXTO, 'texto deshabilitado'],
   ['borde-control', 'blanco', 3.42, NO_TEXTO, 'borde de campo sobre tarjeta'],
-  ['borde-control', 'arena', 3.22, NO_TEXTO, 'borde de campo sobre la página'],
+  ['borde-control', 'arena', 3.19, NO_TEXTO, 'borde de campo sobre la página'],
   ['borde', 'blanco', 1.27, DECORATIVO, 'solo decorativo: no delimita un control'],
   // Actividades
   ['blanco', 'azul', 6.94, TEXTO, 'texto sobre azul (mar)'],
@@ -68,7 +68,7 @@ const PARES = [
   ['info', 'info-fondo', 9.17, TEXTO, 'información (el fondo es azul-claro)'],
   // Enfoque
   ['ring', 'blanco', 6.94, NO_TEXTO, 'anillo de foco sobre tarjeta'],
-  ['ring', 'arena', 6.53, NO_TEXTO, 'anillo de foco sobre la página'],
+  ['ring', 'arena', 6.46, NO_TEXTO, 'anillo de foco sobre la página'],
 ];
 
 for (const [primero, fondo, declarada, minimo, nota] of PARES) {
@@ -99,7 +99,7 @@ test('el borde decorativo no delimita un control, y los rellenos suaves no disti
 
 test('la superficie de lectura es blanca y la página es arena, sin negro puro', () => {
   assert.equal(resolverToken(css, '--superficie'), '#ffffff');
-  assert.equal(resolverToken(css, '--background'), '#f8f8f6');
+  assert.equal(resolverToken(css, '--background'), '#fcf6ed');
   assert.equal(resolverToken(css, '--foreground'), '#1f1a14');
   assert.notEqual(resolverToken(css, '--foreground'), '#000000');
 });

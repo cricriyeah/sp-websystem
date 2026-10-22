@@ -47,13 +47,13 @@ Escalas derivadas (sacadas de cada primario mezclándolo con blanco o negro):
 
 | Token | Hex | Uso | Contraste |
 |---|---|---|---|
-| `arena` | `#F8F8F6` | Fondo de página | tinta sobre arena 16,24:1 |
+| `arena` | `#FCF6ED` | Fondo de página | tinta sobre arena 16,07:1 |
 | `blanco` | `#FFFFFF` | Tarjetas, calendario, campos | tinta sobre blanco 17,27:1 |
 | `tinta` | `#1F1A14` | Texto principal y titulares | ver arriba |
-| `tinta-suave` | `#4A3F33` | Texto secundario | 9,63:1 sobre arena |
-| `apagado` | `#6B5D4D` | Ayudas, etiquetas, texto terciario | 6,37:1 blanco / 5,99:1 arena / 5,40:1 sobre `cafe-bruma` |
+| `tinta-suave` | `#4A3F33` | Texto secundario | 9,53:1 sobre arena |
+| `apagado` | `#6B5D4D` | Ayudas, etiquetas, texto terciario | 6,37:1 blanco / 5,93:1 arena / 5,40:1 sobre `cafe-bruma` |
 | `borde` | `#E6E4DF` | Divisores y bordes **decorativos** | 1,27:1 (no sirve para delimitar un control) |
-| `borde-control` | `#8B8B86` | Borde de campos, casillas y botones secundarios | 3,42:1 blanco / 3,22:1 arena (cumple 3:1) |
+| `borde-control` | `#8B8B86` | Borde de campos, casillas y botones secundarios | 3,42:1 blanco / 3,19:1 arena (cumple 3:1) |
 
 **¿Blanco y negro?** Sí el blanco, no el negro puro. El blanco funciona como superficie de lectura (tarjetas, calendario, campos) y da el aire limpio y deportivo; el negro puro (`#000`) choca con el café y endurece la marca costera. Se usa `tinta` `#1F1A14` en su lugar.
 
