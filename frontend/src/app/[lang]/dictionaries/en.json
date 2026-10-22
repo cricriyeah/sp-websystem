@@ -5,8 +5,8 @@
   },
   "meta": {
     "home": {
-      "title": "Sun Baja Experience | Experiences in Baja California Sur",
-      "description": "Book fishing, whale watching, lodging and transfers in Baja California Sur with the local companies at each location."
+      "title": "Sun Baja Experience | Fishing, whales and more in Baja California Sur",
+      "description": "Book sportfishing, whale and orca watching, lodging and transfers in La Paz and La Ventana with local outfitters. Pay them directly; full refund for bad weather."
     },
     "reservar": {
       "title": "Book your fishing charter",
@@ -739,37 +739,37 @@
     }
   },
   "hubContenido": {
-    "titularLineas": ["Head out to sea", "in Baja Sur"],
-    "subtexto": "Fishing, whale watching, lodging and transfers in Baja California Sur. Each company runs its service and charges directly.",
-    "og": { "lugar": "Baja California Sur", "titular": "Book your Baja Sur experience with local companies" },
-    "ctaSedes": "See locations",
-    "sedesTitulo": "Choose your location",
+    "titularLineas": ["Out at sea", "in Baja Sur"],
+    "subtexto": "Fishing, whale watching, lodging and transfers with local outfitters in Baja California Sur. You pay the people who take you out, directly, and if the weather keeps you ashore, you get it all back.",
+    "og": { "lugar": "Baja California Sur", "titular": "Fishing, whales and open sea in Baja Sur with local outfitters" },
+    "ctaSedes": "See destinations",
+    "sedesTitulo": "Where are you headed?",
     "region": "Baja California Sur",
     "con1": "With {a}",
     "con2": "With {a} and {b}",
     "conN": "With {a} and {n} more",
     "desde": "From",
     "verSede": "See {sede}",
-    "mapaTitulo": "Find your base on the map",
-    "mapaTexto": "Tap a base to see which local company runs it and where to go.",
-    "comoTitulo": "One place, several local companies",
-    "comoTexto": "We bring together, in one place, the services of each location's local companies. Each company runs its own service and charges you directly.",
+    "mapaTitulo": "Find them on the map",
+    "mapaTexto": "Tap a destination to see who operates there and what you can book.",
+    "comoTitulo": "Book here, head out with locals",
+    "comoTexto": "Sun Baja Experience brings together what each destination's local companies offer. You compare and book here; the company takes you out and charges you directly.",
     "comoPasos": [
       {
-        "verbo": "Choose",
-        "texto": "Each service shows which company runs it, what it costs and what it includes."
+        "verbo": "Compare",
+        "texto": "Every service shows who takes you, what it costs and what's included, before you pay."
       },
       {
         "verbo": "Book",
-        "texto": "Choose a date and group size, add your details and pay the company. If you combine services from two companies, you pay each one separately."
+        "texto": "Pick a date and group size, and pay the company online. If your trip combines two companies, you'll see one charge from each."
       },
       {
-        "verbo": "Live the experience",
-        "texto": "Whoever runs your service meets you on the day. If bad weather stops the trip, you get a full refund."
+        "verbo": "Enjoy it",
+        "texto": "On the day, the company meets you. If the weather keeps you ashore, you get it all back; to change your date, give 48 hours' notice."
       }
     ],
-    "empresasTitulo": "Local companies that welcome you",
-    "empresasTexto": "Each company is independent: it runs its own service and charges directly.",
+    "empresasTitulo": "Who takes you out",
+    "empresasTexto": "Independent companies from each destination. Each runs its own service, charges you directly and has its own site and socials.",
     "verServiciosEn": "See services in {sede}",
     "sitioOficial": "Official site",
     "pestanaNueva": "{accion}, {empresa}, opens in a new tab",
@@ -790,8 +790,8 @@
     "dragMap": "Drag to explore",
     "closeDestination": "Close destination",
     "meta": {
-      "title": "Sun Baja Experience | Experiences in Baja California Sur",
-      "description": "Book fishing, whale watching, lodging and transfers in Baja California Sur with the local companies at each location."
+      "title": "Sun Baja Experience | Fishing, whales and more in Baja California Sur",
+      "description": "Book sportfishing, whale and orca watching, lodging and transfers in La Paz and La Ventana with local outfitters. Pay them directly; full refund for bad weather."
     }
   },
   "destination": {

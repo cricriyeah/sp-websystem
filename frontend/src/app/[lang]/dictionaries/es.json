@@ -5,8 +5,8 @@
   },
   "meta": {
     "home": {
-      "title": "Sun Baja Experience | Experiencias en Baja California Sur",
-      "description": "Reserva pesca, avistamiento de ballenas, hospedaje y traslados en Baja California Sur con las empresas locales de cada sede."
+      "title": "Sun Baja Experience | Pesca, ballenas y más en Baja California Sur",
+      "description": "Reserva pesca deportiva, avistamiento de ballenas y orcas, hospedaje y traslados en La Paz y La Ventana con empresas locales. Pagas directo; reembolso completo por mal clima."
     },
     "reservar": {
       "title": "Reserva tu tour de pesca deportiva",
@@ -739,37 +739,37 @@
     }
   },
   "hubContenido": {
-    "titularLineas": ["Sal al mar", "en Baja Sur"],
-    "subtexto": "Pesca, ballenas, hospedaje y traslados en Baja California Sur. Cada empresa ofrece su servicio y cobra directo.",
-    "og": { "lugar": "Baja California Sur", "titular": "Reserva tu experiencia en la Baja Sur con empresas locales" },
-    "ctaSedes": "Ver las sedes",
-    "sedesTitulo": "Elige tu sede",
+    "titularLineas": ["Mar adentro", "en Baja Sur"],
+    "subtexto": "Pesca, ballenas, hospedaje y traslados con empresas locales de Baja California Sur. Pagas directo a quien te lleva y, si el clima no deja salir, te devuelven todo.",
+    "og": { "lugar": "Baja California Sur", "titular": "Pesca, ballenas y mar en Baja Sur con empresas locales" },
+    "ctaSedes": "Ver destinos",
+    "sedesTitulo": "¿A dónde vas?",
     "region": "Baja California Sur",
     "con1": "Con {a}",
     "con2": "Con {a} y {b}",
     "conN": "Con {a} y {n} más",
     "desde": "Desde",
     "verSede": "Ver {sede}",
-    "mapaTitulo": "Elige tu sede en el mapa",
-    "mapaTexto": "Toca una sede para ver qué empresas locales hay ahí y a dónde ir.",
-    "comoTitulo": "Un lugar, varias empresas",
-    "comoTexto": "Reunimos en un solo lugar los servicios de las empresas locales de cada sede. Cada empresa ofrece su servicio y cobra directo.",
+    "mapaTitulo": "Encuéntralos en el mapa",
+    "mapaTexto": "Toca un destino para ver qué empresas operan ahí y qué puedes reservar.",
+    "comoTitulo": "Reservas aquí, sales con gente de allá",
+    "comoTexto": "Sun Baja Experience junta en un solo sitio lo que ofrecen las empresas locales de cada destino. Tú comparas y reservas aquí; la empresa te lleva y te cobra directo.",
     "comoPasos": [
       {
-        "verbo": "Elige",
-        "texto": "Cada servicio muestra qué empresa lo ofrece, cuánto cuesta y qué incluye."
+        "verbo": "Compara",
+        "texto": "Cada servicio dice qué empresa te lleva, cuánto cuesta y qué incluye, antes de pagar."
       },
       {
         "verbo": "Reserva",
-        "texto": "Eliges fecha y personas, dejas tus datos y pagas a la empresa. Si combinas servicios de dos empresas, pagas a cada una por separado."
+        "texto": "Eliges fecha y personas, y pagas en línea a la empresa. Si tu viaje junta dos empresas, verás un cobro de cada una."
       },
       {
-        "verbo": "Vive la experiencia",
-        "texto": "La empresa de tu servicio te recibe el día del viaje. Si el mal clima impide salir, hay reembolso completo."
+        "verbo": "Vívelo",
+        "texto": "El día de tu salida te recibe la empresa. Si el clima no deja salir, te devuelven todo; para cambiar de fecha, avisa con 48 horas."
       }
     ],
-    "empresasTitulo": "Empresas locales que nos acompañan",
-    "empresasTexto": "Cada empresa es independiente: ofrece su servicio y cobra directo.",
+    "empresasTitulo": "Quién te lleva",
+    "empresasTexto": "Empresas independientes de cada destino. Cada una opera su servicio, te cobra directo y tiene su propio sitio y redes.",
     "verServiciosEn": "Ver servicios en {sede}",
     "sitioOficial": "Sitio oficial",
     "pestanaNueva": "{accion}, {empresa}, se abre en una pestaña nueva",
@@ -790,8 +790,8 @@
     "dragMap": "Arrastra para explorar",
     "closeDestination": "Cerrar destino",
     "meta": {
-      "title": "Sun Baja Experience | Experiencias en Baja California Sur",
-      "description": "Reserva pesca, avistamiento de ballenas, hospedaje y traslados en Baja California Sur con las empresas locales de cada sede."
+      "title": "Sun Baja Experience | Pesca, ballenas y más en Baja California Sur",
+      "description": "Reserva pesca deportiva, avistamiento de ballenas y orcas, hospedaje y traslados en La Paz y La Ventana con empresas locales. Pagas directo; reembolso completo por mal clima."
     }
   },
   "destination": {
