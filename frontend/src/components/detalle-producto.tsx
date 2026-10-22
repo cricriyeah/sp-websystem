@@ -7,6 +7,7 @@ import { FilaArrastrable } from '@/components/ui/fila-arrastrable';
 import { HeroMedia } from '@/components/ui/hero-media';
 import { botonClases } from '@/components/ui/variantes';
 import { cn } from '@/components/ui/cn';
+import { LegalBackLink } from '@/components/legal-back-link';
 
 /** Un renglón de una lista del detalle: su título y, si lo hay, una línea que lo explica. */
 export type ItemLista = { titulo: string; detalle?: string };
@@ -82,8 +83,11 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
 export function DetalleProducto({ vista, textos }: Props) {
   const { compra } = vista;
   const arranque = (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-4 pb-10 pt-[calc(var(--nav-alto)+1.5rem)] text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
-      {!vista.foto && <span aria-hidden="true" className="texto-gigante mb-auto">{vista.palabra}</span>}
+    <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-4 pb-10 pt-[calc(var(--nav-alto)+0.5rem)] text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
+      <div className="mb-auto flex flex-col items-start gap-6">
+        <LegalBackLink label={textos.detalle.atras} fallbackHref={vista.volver.href} />
+        {!vista.foto && <span aria-hidden="true" className="texto-gigante">{vista.palabra}</span>}
+      </div>
       <h1 className="texto-grande">{vista.titulo}</h1>
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
         <p className="max-w-[52ch] text-xl leading-snug">{vista.linea}</p>

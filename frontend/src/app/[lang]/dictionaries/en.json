@@ -676,6 +676,7 @@
       "incluyePersonas": "Includes {n} guests"
     },
     "detalle": {
+      "atras": "Back",
       "queEs": "What it is",
       "queIncluye": "What is included",
       "puedesAgregar": "You can add",
