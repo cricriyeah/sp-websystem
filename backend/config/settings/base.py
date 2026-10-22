@@ -490,7 +490,7 @@ TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', '')
 
 # Minutos que dura el apartado temporal de cupo en el checkout web. 0 = apagado.
-APARTADO_MINUTOS = int(os.environ.get('APARTADO_MINUTOS', '0'))
+APARTADO_MINUTOS = 0 if 'test' in sys.argv else int(os.environ.get('APARTADO_MINUTOS', '0'))
 
 # Anticipación mínima de la reserva web, en horas antes de la salida (0 = sin regla). Ver bookings/anticipacion.py.
 # Apagada al correr las pruebas: muchas usan fechas fijas; la regla se prueba con `override_settings`.
