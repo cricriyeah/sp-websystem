@@ -349,6 +349,7 @@
     },
     "tourLabel": "Tour de pesca privado",
     "extraPeopleLabel": "Personas adicionales",
+    "ivaLabel": "IVA",
     "extraPeopleHint": "El viaje base incluye hasta {included} personas. A partir de esa cantidad aplica {price} por persona adicional.",
     "total": "Total",
     "payButton": "Continuar al pago",

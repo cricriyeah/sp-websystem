@@ -11,5 +11,13 @@
     {"estrategia": "por_grupo", "base": "1000.25", "personas_base": 2, "extra": "20.10", "personas": 3, "moneda": "MXN", "tipo_cambio": "18.0000", "esperado": "1020.35"},
     {"estrategia": "por_persona", "base": "800.25", "personas_base": 1, "extra": "0.00", "personas": 3, "moneda": "MXN", "tipo_cambio": "18.0000", "esperado": "2400.75"},
     {"estrategia": "por_persona", "base": "6500.00", "personas_base": 1, "extra": "0.00", "personas": 2, "moneda": "USD", "tipo_cambio": "18.0000", "esperado": "724.00"}
+  ],
+  "iva": [
+    {"neto": "4500.00", "tasa": "0.16", "iva": "720.00", "total": "5220.00"},
+    {"neto": "3333.33", "tasa": "0.16", "iva": "533.33", "total": "3866.66"},
+    {"neto": "100.03", "tasa": "0.16", "iva": "16.00", "total": "116.03"},
+    {"neto": "12000.00", "tasa": "0.16", "iva": "1920.00", "total": "13920.00"},
+    {"neto": "250.00", "tasa": "0.08", "iva": "20.00", "total": "270.00"},
+    {"neto": "4500.00", "tasa": "0", "iva": "0.00", "total": "4500.00"}
   ]
 }

@@ -15,7 +15,8 @@ export type SeleccionComponente = {
   traslado?: { tipo: TipoTraslado; zona: Zona | '' };
 };
 
-export type CargoEmpresa = { empresaSlug: string; monto: number; extras: number };
+/** `monto` es el neto de `calcularPedido`; la vista lo reemplaza por el cobro con IVA y anota el `iva` incluido. */
+export type CargoEmpresa = { empresaSlug: string; monto: number; extras: number; iva?: number };
 export type ResultadoPedido = { cargos: CargoEmpresa[]; total: number };
 
 /** El mismo componente operativo que usa el payload para numero_personas. */

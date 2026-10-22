@@ -28,10 +28,12 @@ class OrdenPaqueteBase(TestCase):
                 empresa=self.transp, nombre='Traslado', slug='traslado-op-s', tipo_servicio='transporte',
                 estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta',
             )
-            TransporteTarifa.objects.create(
-                empresa=self.transp, tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD, zona='centro',
-                personas_min=1, personas_max=None, precio=Decimal('1500.00'),
-            )
+            # Una dirección escrita (el payload manda `direccion_personalizada`) cuesta como periferia.
+            for zona in ('centro', 'periferia'):
+                TransporteTarifa.objects.create(
+                    empresa=self.transp, tipo_traslado=TipoTraslado.REDONDO_ACTIVIDAD, zona=zona,
+                    personas_min=1, personas_max=None, precio=Decimal('1500.00'),
+                )
             self.paquete = Paquete.objects.create(
                 sede=self.sede, empresa_lider=self.pesca, nombre='Pesca + Traslado', slug='pesca-traslado-op',
                 precio_ancla=Decimal('7500.00'), permite_anticipo=False,

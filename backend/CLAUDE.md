@@ -205,6 +205,15 @@ Igual con las notificaciones: `RESEND_API_KEY`, `RESEND_FROM`, `WHATSAPP_TOKEN`,
 `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE` (default `reserva_confirmada`),
 `WHATSAPP_TEMPLATE_LANG` (default `es_MX`).
 
+- **IVA** (`settings.IVA_TASA`, env `IVA_TASA`, default 0.16; 0 al correr pruebas, que lo fijan con
+  `override_settings`). Los precios del catalogo van SIN IVA y se suma al final: `pricing.con_iva(neto)`
+  devuelve `(iva, total)` sobre el precio ya con descuento; Stripe cobra el total y el anticipo es el % de
+  ese total. `Reserva.precio_total` es el total CON IVA; `iva_monto` e `iva_tasa` guardan el desglose
+  (vacios en reservas anteriores y en las que captura la vendedora a mano, que no llevan IVA automatico).
+  Subtotal sin IVA = `precio_total - iva_monto + descuento_aplicado`. En una orden cruza-empresa el IVA se
+  calcula por empresa sobre su parte (cada cuenta de Stripe cobra su neto + su IVA). Espejo en el
+  frontend: `src/lib/iva.ts` (`NEXT_PUBLIC_IVA_TASA`); paridad en `shared/precios_paridad.json`.
+
 ## Panel de finanzas (apps/finance)
 
 Pantalla unica de dinero, en `/admin/finanzas/` (`apps/finance/views.py`, montada en

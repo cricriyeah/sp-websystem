@@ -1,6 +1,8 @@
 // Cómo se etiqueta y se acomoda el catálogo de una sede y del hub, sin React: familia de
 // actividad, chip, base de cobro y si hay foto o galería. Las vistas solo pintan lo que esto decide.
 
+import { TASA_IVA } from './iva';
+
 type Lang = 'es' | 'en';
 
 /** Familia de actividad (color del chip). Hospedaje, traslados y paquetes mixtos no tienen. */
@@ -28,11 +30,15 @@ const BASES: Record<string, Record<Lang, string>> = {
   por_ruta: { es: 'según ruta', en: 'by route' },
 };
 
-/** Junto al precio: «desde $X por persona». No existe «por barco» en el backend. */
-export function baseDeCobro(estrategia: string, lang: Lang): { texto: string; conDesde: boolean } | null {
+/** Junto al precio: «desde $X por persona + IVA». No existe «por barco» en el backend. */
+export function baseDeCobro(
+  estrategia: string, lang: Lang, tasaIva: number = TASA_IVA,
+): { texto: string; conDesde: boolean } | null {
   const base = BASES[estrategia];
+  // El catálogo va sin IVA: se suma al final del checkout. Según ruta no muestra precio, así que no lo anuncia.
+  const masIva = tasaIva > 0 && estrategia !== 'por_ruta' ? ' + IVA' : '';
   // Según ruta no lleva «desde»: el precio depende de la ruta, no hay un mínimo que anunciar.
-  return base ? { texto: base[lang], conDesde: estrategia !== 'por_ruta' } : null;
+  return base ? { texto: base[lang] + masIva, conDesde: estrategia !== 'por_ruta' } : null;
 }
 
 export type Chip = { tipo: Actividad | 'neutro'; icono?: 'hospedaje' | 'traslado' | 'paquete'; texto: string };

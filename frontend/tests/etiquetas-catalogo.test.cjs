@@ -25,8 +25,11 @@ test('baseDeCobro: cada estrategia en es y en; según ruta va sin «desde»', ()
     por_ruta: ['según ruta', 'by route'],
   };
   for (const [estrategia, [es, en]] of Object.entries(casos)) {
-    assert.deepEqual(e.baseDeCobro(estrategia, 'es'), { texto: es, conDesde: estrategia !== 'por_ruta' });
-    assert.deepEqual(e.baseDeCobro(estrategia, 'en'), { texto: en, conDesde: estrategia !== 'por_ruta' });
+    // Los precios del catálogo van sin IVA (16 %): se anuncia junto a la base, salvo en «según ruta».
+    const iva = estrategia === 'por_ruta' ? '' : ' + IVA';
+    assert.deepEqual(e.baseDeCobro(estrategia, 'es'), { texto: es + iva, conDesde: estrategia !== 'por_ruta' });
+    assert.deepEqual(e.baseDeCobro(estrategia, 'en'), { texto: en + iva, conDesde: estrategia !== 'por_ruta' });
+    assert.equal(e.baseDeCobro(estrategia, 'es', 0).texto, es);
   }
   assert.equal(e.baseDeCobro('desconocida', 'es'), null);
 });

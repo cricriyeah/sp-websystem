@@ -51,13 +51,15 @@ Orden obligatorio. El push a `main` dispara el deploy del backend (`render.yaml`
    | `FRONTEND_URL` | `https://www.salysoltours.com` |
    | `HORAS_MINIMAS_RESERVA` | `16` |
    | `APARTADO_MINUTOS` | `0` al principio; `15` cuando se pruebe |
+   | `IVA_TASA` | `0.16` (el IVA se suma al final del cobro; los precios del catálogo van sin IVA) |
    | `STRIPE_*` | **llaves de prueba** (`sk_test_`) en el primer deploy |
    | `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_BCC` | correo de confirmación y copia al negocio |
    | `SENTRY_DSN` | en el **grupo**, para que los cron también reporten |
 
 5. **Variables en Vercel** (proyecto del sitio): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`
    (`https://www.salysoltours.com`), `NEXT_PUBLIC_EMPRESA_SLUG=sal-y-sol`, `NEXT_PUBLIC_WHATSAPP_NUMBER` (el real) y,
-   si quieres, `NEXT_PUBLIC_HORAS_MINIMAS_RESERVA=16`.
+   si quieres, `NEXT_PUBLIC_HORAS_MINIMAS_RESERVA=16` y `NEXT_PUBLIC_IVA_TASA=0.16` (debe coincidir con `IVA_TASA` del
+   backend; el valor por defecto de ambos ya es 0.16).
 
 ## C. El despliegue (Claude, solo con tu "dale")
 

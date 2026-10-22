@@ -50,6 +50,7 @@ import {
 } from '@/lib/api';
 import { formatHour, fromLocalISODate, getTopePersonas, toLocalISODate } from '@/lib/dates';
 import { controlDeFecha } from '@/lib/control-fecha';
+import { conIva, porcentajeIva } from '@/lib/iva';
 import type { SeleccionFechas } from '@/components/ui/calendario/calendario';
 import { horasConAnticipacion } from '@/lib/anticipacion';
 import { horasDeServicio } from '@/lib/horario-servicio';
@@ -410,6 +411,7 @@ export function CheckoutView({
   >([]);
   const [recuperadoCodigoPromocional, setRecuperadoCodigoPromocional] = useState<string | null>(null);
   const [recuperadoDescuento, setRecuperadoDescuento] = useState<number | null>(null);
+  const [recuperadoIva, setRecuperadoIva] = useState<number | null>(null);
   const [pago, setPago] = useState<Pago | null>(null);
   /** ISO 8601 del vencimiento del apartado devuelto por el ultimo crear-pago exitoso. null = sin apartado. */
   const [apartadoHasta, setApartadoHasta] = useState<string | null>(null);
@@ -574,9 +576,19 @@ export function CheckoutView({
         )
       : 0;
 
+  // El IVA se suma al final, sobre el precio ya con descuento; el anticipo se calcula sobre este total.
+  const netoSinIva = subtotalSinDescuento === null ? null : subtotalSinDescuento - descuentoPromocional;
+  const { iva: ivaEstimado, total: totalConIva } = netoSinIva === null
+    ? { iva: 0, total: null }
+    : conIva(netoSinIva);
+  const lineaIva = (monto: number) => ({
+    label: `${checkout.ivaLabel} (${porcentajeIva()} %)`,
+    amount: currency.format(monto),
+  });
+
   /**
-   * Las lineas de lo que se compro aparte del viaje (mas el descuento, si
-   * aplica). Se arman una sola vez y las usan los dos lugares que las
+   * Las lineas de lo que se compro aparte del viaje (mas el descuento y el
+   * IVA, si aplican). Se arman una sola vez y las usan los dos lugares que las
    * enseñan — el resumen de pago y el ticket de la confirmacion — para que
    * no puedan decir cosas distintas.
    */
@@ -603,6 +615,7 @@ export function CheckoutView({
           },
         ]
       : []),
+    ...(ivaEstimado > 0 ? [lineaIva(ivaEstimado)] : []),
   ];
 
   /**
@@ -627,6 +640,7 @@ export function CheckoutView({
           },
         ]
       : []),
+    ...(recuperadoIva !== null && recuperadoIva > 0 ? [lineaIva(recuperadoIva)] : []),
   ];
 
   const lines = tourPrice === null
@@ -644,7 +658,7 @@ export function CheckoutView({
         ...lineasExtras,
       ];
 
-  const total = subtotalSinDescuento === null ? null : subtotalSinDescuento - descuentoPromocional;
+  const total = totalConIva;
   const amountDueNow =
     total === null
       ? null
@@ -794,6 +808,7 @@ export function CheckoutView({
         setRecuperadoDescuento(
           estado.descuento_aplicado !== null ? Number(estado.descuento_aplicado) : null,
         );
+        setRecuperadoIva(estado.iva !== null ? Number(estado.iva) : null);
         setPhase('confirmed');
         return;
       }

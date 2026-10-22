@@ -6,6 +6,7 @@ import { FormularioPagoDiferido } from '@/components/checkout/pago/pago-diferido
 import type { OrderLine, StripePanelProps } from '@/components/checkout/pago/tipos';
 import { StripePanel } from '@/components/stripe-panel';
 import type { Pago } from '@/lib/api';
+import { porcentajeIva } from '@/lib/iva';
 
 /*
  * Bloque de pago del servicio suelto. Dos mitades porque el pago vive en dos
@@ -91,10 +92,15 @@ export function BloquePago({
       <StripePanel
         {...panel}
         checkout={checkout}
-        lines={pago ? [{
-          label: nombreServicio ?? checkout.total,
-          amount: currency.format(Number(pago.precio_total)),
-        }] : lineas}
+        lines={pago ? [
+          {
+            label: nombreServicio ?? checkout.total,
+            amount: currency.format(Number(pago.precio_total) - Number(pago.iva)),
+          },
+          ...(Number(pago.iva) > 0
+            ? [{ label: `${checkout.ivaLabel} (${porcentajeIva()} %)`, amount: currency.format(Number(pago.iva)) }]
+            : []),
+        ] : lineas}
         total={pago ? currency.format(Number(pago.precio_total)) : total === null ? '–' : currency.format(total)}
         amountDueNow={pago ? currency.format(Number(pago.monto_a_cobrar)) : montoAhora === null ? '–' : currency.format(montoAhora)}
       />

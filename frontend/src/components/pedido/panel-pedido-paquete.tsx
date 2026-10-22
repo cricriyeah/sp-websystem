@@ -6,6 +6,7 @@ import { StripePanel } from '@/components/stripe-panel';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import type { AccionPedido, EstadoPedido } from '@/lib/pedido-estado';
 import type { ResultadoPedido } from '@/lib/pedido-paquete';
+import { porcentajeIva } from '@/lib/iva';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { AvisoCargos } from './aviso-cargos';
 import type { usePagoPedido } from './use-pago-pedido';
@@ -62,6 +63,7 @@ export function PanelPedidoPaquete({
   onWaiverChange, onCodigoPromocionalChange, onCaptchaToken, onSubmit, onElegirFecha,
 }: Props) {
   const { checkout, feedback, pedido: textos } = dict;
+  const iva = Math.round(cargos.reduce((suma, cargo) => suma + Math.round((cargo.iva ?? 0) * 100), 0)) / 100;
   return pedido ? (
     <StripePanel
       key={captchaKey}
@@ -71,12 +73,15 @@ export function PanelPedidoPaquete({
       errorWaiver={errorWaiver}
       lines={[
         ...cargos.map((cargo) => ({ label: nombreEmpresa(cargo.empresaSlug),
-          amount: formatearPrecio(cantidadCargos === 1 ? pedido.total : cargo.monto, moneda) })),
+          amount: formatearPrecio(cantidadCargos === 1 ? pedido.total : cargo.monto - (cargo.iva ?? 0), moneda) })),
         ...(descuento > 0
           ? [{
               label: `${checkout.promoCode.discountLabel} (${codigoPromocional.trim().toUpperCase()})`,
               amount: `-${formatearPrecio(descuento, moneda)}`,
             }]
+          : []),
+        ...(iva > 0
+          ? [{ label: `${checkout.ivaLabel} (${porcentajeIva()} %)`, amount: formatearPrecio(iva, moneda) }]
           : []),
       ]}
       lineasViaje={lineasViaje}

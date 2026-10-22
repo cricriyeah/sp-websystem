@@ -96,7 +96,10 @@ export type Pago = {
   client_secret: string;
   publishable_key: string;
   monto_a_cobrar: string;
+  /** Total con IVA: lo que cuesta todo; `monto_a_cobrar` es lo de hoy (menor con anticipo). */
   precio_total: string;
+  /** IVA incluido en `precio_total`. */
+  iva: string;
   moneda: string;
   /** ISO 8601 hasta cuando dura el apartado, o null si no hubo apartado (APARTADO_MINUTOS=0 o servicio sin cupo fisico). */
   apartado_hasta: string | null;
@@ -245,6 +248,8 @@ export type EstadoReservaPagada = {
   transporte: { monto: string; numero_personas: number | null } | null;
   codigo_promocional: string | null;
   descuento_aplicado: string | null;
+  /** IVA incluido en `precio_total`; null en reservas anteriores al IVA. */
+  iva: string | null;
 };
 
 export type EstadoReservaCancelada = { estado: 'cancelada' };

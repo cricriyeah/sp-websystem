@@ -24,6 +24,8 @@ Que se cobra en linea y que no:
 """
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.conf import settings
+
 # El precio del tour es por viaje, no por persona. Hasta esta cantidad de
 # personas no cambia nada; de ahi en adelante se suma `Servicio.precio_persona_extra`
 # por cada una. El corte es 3 porque es la capacidad de la embarcacion chica:
@@ -105,6 +107,24 @@ def cargo_por_descuento(precio_total, porcentaje_descuento):
     centavos igual que el resto de los cargos."""
     descuento = Decimal(precio_total) * Decimal(porcentaje_descuento) / 100
     return descuento.quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+
+
+def tasa_iva():
+    """Tasa de IVA vigente como fraccion (0.16). Se lee de `settings.IVA_TASA`."""
+    return Decimal(str(settings.IVA_TASA))
+
+
+def calcular_iva(neto, tasa=None):
+    """IVA de `neto` (precio ya con descuento, sin impuesto), a centavos."""
+    tasa = tasa_iva() if tasa is None else Decimal(str(tasa))
+    return (Decimal(neto) * tasa).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+
+
+def con_iva(neto, tasa=None):
+    """(iva, total): el IVA va al final y el total es lo que se cobra (el anticipo se calcula sobre este total)."""
+    neto = Decimal(neto).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+    iva = calcular_iva(neto, tasa)
+    return iva, neto + iva
 
 
 def monto_inicial(precio_total, forma_pago, porcentaje=None):

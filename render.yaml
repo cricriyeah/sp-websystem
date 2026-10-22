@@ -41,6 +41,10 @@ services:
       # Anticipación mínima de la reserva web, en horas antes de la salida (backend/apps/bookings/anticipacion.py).
       - key: HORAS_MINIMAS_RESERVA
         value: "16"
+      # IVA que se suma al final del cobro (fraccion; 0.16 = 16 %). Los precios del catalogo van sin IVA.
+      # El frontend lleva su espejo en NEXT_PUBLIC_IVA_TASA (Vercel) y deben coincidir.
+      - key: IVA_TASA
+        value: "0.16"
       # Apartado temporal de cupo mientras el cliente paga. 0 = apagado; subir a 15 tras probarlo con dos navegadores.
       - key: APARTADO_MINUTOS
         value: "0"

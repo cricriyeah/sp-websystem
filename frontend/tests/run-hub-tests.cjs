@@ -14,6 +14,7 @@ const suites = {
   'calendario-paquete': ['src/lib/calendario-paquete.ts', 'CALENDARIO_TEST_OUT'],
   'tarifa-transporte': ['src/lib/tarifa-transporte.ts', 'TARIFA_TEST_OUT'],
   moneda: ['src/lib/moneda.ts', 'MONEDA_TEST_OUT'],
+  iva: ['src/lib/iva.ts', 'IVA_TEST_OUT'],
   'pedido-paquete': ['src/lib/pedido-paquete.ts', 'PEDIDO_PAQUETE_TEST_OUT'],
   'pedido-payload': ['src/lib/pedido-payload.ts', 'PEDIDO_PAYLOAD_TEST_OUT'],
   'campo-validacion': ['src/lib/campo-validacion.ts', 'CAMPO_VALIDACION_TEST_OUT'],

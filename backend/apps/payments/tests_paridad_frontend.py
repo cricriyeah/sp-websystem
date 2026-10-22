@@ -5,7 +5,7 @@ from pathlib import Path
 from django.test import SimpleTestCase
 
 from apps.payments.moneda import convertir
-from apps.payments.pricing import calcular_total
+from apps.payments.pricing import calcular_total, con_iva
 
 
 CASOS = json.loads((Path(__file__).resolve().parents[3] / 'shared' / 'precios_paridad.json').read_text())
@@ -19,6 +19,13 @@ class ParidadFrontendTests(SimpleTestCase):
                     convertir(Decimal(caso['monto']), caso['moneda'], Decimal(caso['tipo_cambio'])),
                     Decimal(caso['esperado']),
                 )
+
+    def test_iva(self):
+        for caso in CASOS['iva']:
+            with self.subTest(caso=caso):
+                iva, total = con_iva(Decimal(caso['neto']), Decimal(caso['tasa']))
+                self.assertEqual(iva, Decimal(caso['iva']))
+                self.assertEqual(total, Decimal(caso['total']))
 
     def test_paquetes(self):
         for caso in CASOS['paquetes']:

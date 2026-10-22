@@ -40,8 +40,10 @@ from .ordenes import ORDEN_TIMEOUT_AUTORIZACION, OrdenCerradaError
 from .pricing import (
     a_centavos,
     cargo_por_descuento,
+    con_iva,
     monto_inicial,
     precio_paquete_total,
+    tasa_iva,
 )
 from .stripe_client import configurar_stripe
 from .services import aplicar_disputa, aplicar_pago_exitoso, aplicar_reembolso
@@ -173,7 +175,10 @@ class CrearPagoView(APIView):
         if error:
             return Response({'detail': error}, status=400)
 
-        precio_total = subtotal - descuento
+        # El IVA se suma al final, sobre el precio ya con descuento; el anticipo
+        # (si lo hay) se calcula sobre el total con IVA.
+        tasa = tasa_iva()
+        iva, precio_total = con_iva(subtotal - descuento, tasa)
         monto_a_cobrar = monto_inicial(precio_total, forma_pago, porcentaje=porcentaje)
 
         if not empresa.stripe_secret_key:
@@ -200,6 +205,8 @@ class CrearPagoView(APIView):
             'extras_a_borrar': extras_a_borrar,
             'extras_a_congelar': extras_a_congelar,
             'precio_total': precio_total,
+            'iva': iva,
+            'iva_tasa': tasa,
             'monto_a_cobrar': monto_a_cobrar,
             'forma_pago': forma_pago,
             'codigo_promocional': codigo_promocional,
@@ -427,6 +434,8 @@ class CrearPagoView(APIView):
 
         monto_a_cobrar = contexto['monto_a_cobrar']
         precio_total = contexto['precio_total']
+        iva = contexto['iva']
+        iva_tasa = contexto['iva_tasa']
         forma_pago = contexto['forma_pago']
         codigo_promocional = contexto['codigo_promocional']
         descuento = contexto['descuento']
@@ -462,12 +471,14 @@ class CrearPagoView(APIView):
             congelar_personalizaciones(extras_a_borrar, extras_a_congelar)
 
             reserva.precio_total = precio_total
+            reserva.iva_monto = iva
+            reserva.iva_tasa = iva_tasa
             reserva.forma_pago = forma_pago
             reserva.stripe_payment_intent_id = intent.id
             reserva.codigo_promocional = codigo_promocional
             reserva.descuento_aplicado = descuento if codigo_promocional else None
             reserva.save(update_fields=[
-                'precio_total', 'forma_pago', 'stripe_payment_intent_id',
+                'precio_total', 'iva_monto', 'iva_tasa', 'forma_pago', 'stripe_payment_intent_id',
                 'codigo_promocional', 'descuento_aplicado',
             ])
 
@@ -477,6 +488,8 @@ class CrearPagoView(APIView):
             'publishable_key': empresa.stripe_publishable_key,
             'monto_a_cobrar': str(monto_a_cobrar),
             'precio_total': str(precio_total),
+            'iva': str(iva),
+            'iva_tasa': str(iva_tasa),
             'moneda': reserva.moneda,
             'apartado_hasta': apartado_hasta.isoformat() if apartado_hasta else None,
         })
@@ -736,6 +749,7 @@ class EstadoReservaView(APIView):
                 'forma_pago': reserva.forma_pago,
                 'monto_pagado': str(reserva.monto_pagado) if reserva.monto_pagado is not None else None,
                 'precio_total': str(reserva.precio_total) if reserva.precio_total is not None else None,
+                'iva': str(reserva.iva_monto) if reserva.iva_monto is not None else None,
                 'personalizaciones': personalizaciones,
                 'codigo_promocional': (
                     reserva.codigo_promocional.codigo if reserva.codigo_promocional_id else None
@@ -1266,7 +1280,12 @@ class CrearPagoOrdenView(APIView):
             )
             for empresa_id, cargo in extras_por_empresa.items():
                 reparto[empresa_id] = reparto.get(empresa_id, Decimal('0.00')) + cargo
-            pagos = crear_pagos_orden(orden, reparto)
+            # IVA al final, por empresa: cada cuenta de Stripe cobra su neto + su IVA.
+            tasa = tasa_iva()
+            ivas = {}
+            for empresa_id, neto in list(reparto.items()):
+                ivas[empresa_id], reparto[empresa_id] = con_iva(neto, tasa)
+            pagos = crear_pagos_orden(orden, reparto, ivas=ivas, tasa_iva=tasa)
             for empresa, a_borrar, a_congelar in por_congelar:
                 with scope.con_empresa(empresa), transaction.atomic():
                     congelar_personalizaciones(a_borrar, a_congelar)

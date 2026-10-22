@@ -34,6 +34,7 @@ import {
 import {
   calcularPedido, maxPersonasPaquete, montoInicial, servicioPrincipalPaquete, trasladoFijoAeropuerto, usdDisponible,
 } from '@/lib/pedido-paquete';
+import { conIva } from '@/lib/iva';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
 import { leerRef } from '@/lib/ref';
 import { formatearPrecio } from '@/lib/pricing-paquete';
@@ -151,8 +152,8 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const sellosDelPaquete = [...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]
     .map((slug) => empresas[slug])
     .filter((e): e is { nombre: string; logo?: string } => !!e);
-  const cargos = pedido?.cargos ?? [];
-  const cantidadCargos = cargos.length;
+  const cargosNetos = pedido?.cargos ?? [];
+  const cantidadCargos = cargosNetos.length;
   const nombreEmpresa = (slug: string) => slug === paquete.empresa_lider_slug
     ? paquete.empresa_lider
     : slug.split('-').map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1)).join(' ');
@@ -164,7 +165,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const descuento = pedido && motor === 'reserva' && promoEstado === 'valido' && promoPorcentaje
     ? Math.min(pedido.total, promoDescuento && promoDescuento.base === pedido.total ? promoDescuento.valor : Math.round(pedido.total * Number(promoPorcentaje) / 100 * 100) / 100)
     : 0;
-  const totalConDescuento = pedido ? pedido.total - descuento : null;
+  // El IVA se suma al final de lo que cobra cada empresa; con una sola, sobre el precio ya con descuento.
+  // El anticipo se calcula sobre el total con IVA. El servidor repite esta cuenta al crear el pago.
+  const cargos = cargosNetos.map((cargo) => {
+    const { iva, total: monto } = conIva(cantidadCargos === 1 && pedido ? pedido.total - descuento : cargo.monto);
+    return { ...cargo, monto, iva };
+  });
+  const totalConDescuento = pedido ? cargos.reduce((suma, cargo) => suma + Math.round(cargo.monto * 100), 0) / 100 : null;
   const total = formatearPrecio(totalConDescuento, estado.moneda);
   const totalConMoneda = totalConDescuento === null ? null : `${total} ${estado.moneda}`;
   const totalMovil = paquete.precio_depende_de_personas ? totalConMoneda ?? undefined : undefined;

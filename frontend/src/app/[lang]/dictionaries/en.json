@@ -349,6 +349,7 @@
     },
     "tourLabel": "Private fishing charter",
     "extraPeopleLabel": "Additional guests",
+    "ivaLabel": "VAT (IVA)",
     "extraPeopleHint": "The base trip covers up to {included} guests. Beyond that it is {price} per additional guest.",
     "total": "Total",
     "payButton": "Continue to payment",

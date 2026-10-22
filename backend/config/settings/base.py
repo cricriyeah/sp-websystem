@@ -4,6 +4,7 @@ Settings comunes a todos los entornos (local y production heredan de aqui).
 
 import os
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 from corsheaders.defaults import default_headers
@@ -495,6 +496,10 @@ APARTADO_MINUTOS = 0 if 'test' in sys.argv else int(os.environ.get('APARTADO_MIN
 # Anticipación mínima de la reserva web, en horas antes de la salida (0 = sin regla). Ver bookings/anticipacion.py.
 # Apagada al correr las pruebas: muchas usan fechas fijas; la regla se prueba con `override_settings`.
 HORAS_MINIMAS_RESERVA = 0 if 'test' in sys.argv else int(os.environ.get('HORAS_MINIMAS_RESERVA', '0'))
+
+# IVA que se suma al final del cobro en linea (fraccion: 0.16 = 16 %). Los precios del catalogo van sin IVA.
+# Apagado al correr las pruebas (muchas fijan montos exactos); el IVA se prueba con `override_settings`.
+IVA_TASA = Decimal('0') if 'test' in sys.argv else Decimal(os.environ.get('IVA_TASA', '0.16'))
 
 # Duracion de la sesion del backoffice. El default de Django son dos semanas, que
 # para un panel con dinero y datos de clientes es demasiado: una laptop olvidada

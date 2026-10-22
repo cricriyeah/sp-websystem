@@ -31,8 +31,15 @@ class OrdenCerradaError(Exception):
     """La orden ya está capturada o cancelada; no admite más pagos ni modificaciones."""
 
 
-def crear_pagos_orden(orden: Orden, reparto: dict[int, Decimal]) -> list[dict[str, Any]]:
-    """Idempotente. `reparto` = {empresa_id: Decimal} de pricing.monto_por_empresa.
+def crear_pagos_orden(
+    orden: Orden,
+    reparto: dict[int, Decimal],
+    ivas: dict[int, Decimal] | None = None,
+    tasa_iva: Decimal | None = None,
+) -> list[dict[str, Any]]:
+    """Idempotente. `reparto` = {empresa_id: Decimal} de pricing.monto_por_empresa,
+    ya con IVA; `ivas` = {empresa_id: IVA incluido en ese monto} y `tasa_iva` la fraccion
+    aplicada, que se guardan en la reserva de cada empresa.
     Crea (o reutiliza) un PaymentIntent por cada Reserva de la orden, en la
     cuenta Stripe de su empresa, por su monto del reparto, con
     capture_method='manual' y payment_method_types=['card'] (SOLO tarjeta —
@@ -100,11 +107,14 @@ def crear_pagos_orden(orden: Orden, reparto: dict[int, Decimal]) -> list[dict[st
             Reserva.objects.filter(pk=reserva_id).update(
                 stripe_payment_intent_id=intent.id,
                 precio_total=monto,
+                iva_monto=(ivas or {}).get(empresa_id),
+                iva_tasa=tasa_iva,
             )
 
         resultado.append({
             'empresa_slug': empresa.slug,
             'monto': str(monto),
+            'iva': str((ivas or {}).get(empresa_id, Decimal('0.00'))),
             'client_secret': intent.client_secret,
             'publishable_key': empresa.stripe_publishable_key,
         })

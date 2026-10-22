@@ -558,7 +558,12 @@ class Reserva(models.Model):
         help_text='Pesos por dolar de la sede, congelado al pasar la reserva a USD. Vacio en MXN.',
     )
     forma_pago = models.CharField(max_length=10, choices=FormaPago.choices, blank=True)
+    # Con IVA ya incluido (es lo que se cobra). El desglose vive aparte: `iva_monto` es lo que
+    # se sumo al final y `iva_tasa` la fraccion vigente al pagar (0.16). Vacios en reservas
+    # anteriores al IVA y en las que captura la vendedora a mano.
     precio_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    iva_monto = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, editable=False)
+    iva_tasa = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True, editable=False)
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     stripe_payment_intent_id = models.CharField(max_length=100, blank=True)
 
@@ -571,9 +576,9 @@ class Reserva(models.Model):
         related_name='reservas',
     )
     # Monto ya restado de precio_total (que es SIEMPRE el total final, post
-    # descuento — es lo que de verdad cobro Stripe). El subtotal antes del
-    # descuento se recupera como precio_total + descuento_aplicado, para no
-    # tener un tercer numero que pueda desincronizarse de los otros dos.
+    # descuento y con IVA — es lo que de verdad cobro Stripe). El subtotal antes del
+    # descuento y sin IVA se recupera como precio_total - iva_monto + descuento_aplicado,
+    # para no tener un cuarto numero que pueda desincronizarse de los otros.
     descuento_aplicado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     # Cuando entro el cobro con tarjeta. Es la fecha con la que ese dinero cuenta
@@ -859,7 +864,7 @@ class Reserva(models.Model):
             if self.codigo_promocional_id:
                 validar_codigo_promocional_en_pago(
                     self.codigo_promocional, self.moneda,
-                    (self.precio_total or 0) + (self.descuento_aplicado or 0),
+                    (self.precio_total or 0) - (self.iva_monto or 0) + (self.descuento_aplicado or 0),
                     self.correo_cliente, self.empresa, excluir_pk=self.pk, tipo_cambio=self.tipo_cambio,
                 )
         if self.estado != self.Estado.CANCELADA and (self.cancelada_por_id or self.cancelada_en):

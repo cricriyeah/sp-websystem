@@ -9,6 +9,7 @@ import { useMovil } from '@/components/reserva/use-movil';
 import { usePantallaMovil } from '@/components/reserva/use-pantalla-movil';
 import { anterior as pantallaAnterior, pantallasDe, primeraDelPaso } from '@/lib/pantallas-checkout';
 import { usePasoUrl } from '@/components/checkout/use-paso-url';
+import { conIva, porcentajeIva } from '@/lib/iva';
 import { destinoDeError } from '@/lib/campo-paso';
 import { validarTodo } from '@/lib/validar-reserva';
 import { claveBorrador } from '@/lib/borrador-reserva';
@@ -357,7 +358,9 @@ export function TrasladoView({
     return 0;
   }, [promoEstado, promoPorcentaje, promoDescuento, precioBase]);
 
-  const total = precioBase !== null ? Math.max(0, precioBase - descuento) : null;
+  // El IVA se suma al final, sobre el precio ya con descuento; el anticipo se calcula sobre este total.
+  const netoSinIva = precioBase !== null ? Math.max(0, precioBase - descuento) : null;
+  const { iva: ivaEstimado, total } = netoSinIva === null ? { iva: 0, total: null } : conIva(netoSinIva);
   const amountDueNow = total === null
     ? null
     : formaPago === 'anticipo'
@@ -391,8 +394,15 @@ export function TrasladoView({
         detail: codigoPromocional.toUpperCase(),
       });
     }
+    if (ivaEstimado > 0) {
+      resultado.push({
+        label: `${checkout.ivaLabel} (${porcentajeIva()} %)`,
+        amount: currency.format(ivaEstimado),
+        detail: '',
+      });
+    }
     return resultado;
-  }, [precioBase, descuento, tipoTraslado, personas, traslados, checkout, promoPorcentaje, codigoPromocional, currency]);
+  }, [precioBase, descuento, ivaEstimado, tipoTraslado, personas, traslados, checkout, promoPorcentaje, codigoPromocional, currency]);
 
   const validarContacto = (): Partial<Record<CampoContacto, string>> => {
     const errs: Partial<Record<CampoContacto, string>> = {};
