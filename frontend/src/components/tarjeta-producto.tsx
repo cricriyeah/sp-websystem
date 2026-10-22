@@ -158,8 +158,8 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
                 {precio.conDesde && <span className="block texto-pequeno">{textos.desde}</span>}
                 <span className="block text-2xl font-bold leading-tight">{precio.monto}</span>
                 <span className="block texto-pequeno">
+                  {precio.aprox && `${precio.aprox} · `}
                   {precio.base}
-                  {precio.aprox && ` · ${precio.aprox}`}
                 </span>
               </>
             ) : (

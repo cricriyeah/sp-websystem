@@ -113,9 +113,9 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                         <>
                           <span className="block texto-paso font-bold">{vista.precio.monto}</span>
                           <span className="block texto-pequeno">
+                            {vista.precio.aprox && `${vista.precio.aprox} · `}
                             {vista.precio.base}
                             {porGrupo && ` · ${porGrupo}`}
-                            {vista.precio.aprox && ` · ${vista.precio.aprox}`}
                           </span>
                         </>
                       )}

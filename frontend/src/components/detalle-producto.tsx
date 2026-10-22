@@ -64,8 +64,8 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
         {precio.monto}
       </strong>
       <span className={cn('block', grande && 'mt-3')}>
+        {precio.aprox && `${precio.aprox} · `}
         {precio.base}
-        {precio.aprox && ` · ${precio.aprox}`}
       </span>
     </>
   );
