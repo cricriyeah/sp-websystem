@@ -59,6 +59,9 @@ services:
       # Solo de la web: los cron no atienden peticiones ni cobran.
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      # URL publica del sitio para los enlaces de retomar que manda el backend (https://www.salysoltours.com).
+      - key: FRONTEND_URL
+        sync: false
       - key: STRIPE_PUBLISHABLE_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
