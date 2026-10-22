@@ -1,11 +1,9 @@
 'use client';
 import { botonClases } from '@/components/ui/variantes';
 import { useRef, useState } from 'react';
-import { Despliegue } from '@/components/ui/despliegue';
-import { DURACION } from '@/lib/movimiento';
 import Image from 'next/image';
-import { LazyMotion, domMax, m, useMotionValue } from 'framer-motion';
-import { ArrowCounterClockwise, Minus, Plus, X } from '@phosphor-icons/react';
+import { LazyMotion, domMax, m, useMotionValue, useReducedMotion } from 'framer-motion';
+import { ArrowCounterClockwise, Minus, Plus } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { Button } from '@/components/ui/button';
 
@@ -28,39 +26,58 @@ export type SedeMapa = {
   /** Foto genérica de Baja, solo del hub (nunca de las cortinas ni de la página de la sede). */
   foto: { src: string; alt: string } | null;
 };
-export type CopyMapa = Pick<Dictionary['hub'], 'mapAria' | 'pacificOcean' | 'seaOfCortez' | 'zoomIn' | 'zoomOut' | 'resetMap' | 'dragMap' | 'closeDestination'> & {
+export type CopyMapa = Pick<Dictionary['hub'], 'mapAria' | 'pacificOcean' | 'seaOfCortez' | 'zoomIn' | 'zoomOut' | 'resetMap' | 'dragMap'> & {
   verSede: string;
 };
 
-// Después de `Despliegue` (duracion-media, 250 ms) el panel ya tiene su alto final.
-const MS_DESPLIEGUE = DURACION.media * 1000 + 50;
+// La sede que se ve abierta al llegar (dueño, 2026-10-22).
+const SEDE_INICIAL = 'la-paz';
 
 export function HubMapaSedes({ sedes, copy }: {
   sedes: SedeMapa[]; copy: CopyMapa;
 }) {
-  const [abiertoSlug, setAbiertoSlug] = useState<string | null>(null);
-  // La última sede abierta: el panel la sigue mostrando mientras se pliega.
-  const [mostrada, setMostrada] = useState<SedeMapa | null>(null);
-  const panel = useRef<HTMLDivElement>(null);
+  // Siempre hay una sede abierta: La Paz al llegar; las píldoras cambian cuál.
+  const [abiertoSlug, setAbiertoSlug] = useState(() => (sedes.some((s) => s.slug === SEDE_INICIAL) ? SEDE_INICIAL : sedes[0]?.slug));
   const [zoom, setZoom] = useState(1);
   const x = useMotionValue(0), y = useMotionValue(0);
   const arrastrando = useRef(false);
+  const sinMovimiento = useReducedMotion();
   const sede = sedes.find(s => s.slug === abiertoSlug);
   function reset() { setZoom(1); x.set(0); y.set(0); }
-  /** Abre el panel y, si se desplegó fuera de la pantalla, lo trae a la vista (sin animación con «reducir movimiento»). */
-  function abrir(s: SedeMapa) {
-    setAbiertoSlug(s.slug);
-    setMostrada(s);
-    window.setTimeout(() => {
-      const el = panel.current;
-      if (!el || el.getBoundingClientRect().bottom <= window.innerHeight) return;
-      const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      el.scrollIntoView({ block: 'end', behavior: reducido ? 'auto' : 'smooth' });
-    }, MS_DESPLIEGUE);
-  }
+  function abrir(s: SedeMapa) { setAbiertoSlug(s.slug); }
   function cambiarZoom(delta: number) { setZoom(z => Math.min(4, Math.max(1, z + delta))); }
   return (
     <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+        <div className="flex flex-wrap gap-2">
+          {sedes.map(s => <Button key={s.slug} variante="chip" onClick={() => abrir(s)} aria-pressed={abiertoSlug === s.slug} className={abiertoSlug === s.slug ? 'border-tinta bg-tinta text-white' : 'border-tinta bg-superficie text-foreground hover:bg-cafe-claro'}>{s.nombre}</Button>)}
+        </div>
+        <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-foreground underline underline-offset-4">Natural Earth</a>
+      </div>
+      <div aria-live="polite" className="mb-4">
+        {sede && (
+          // Al cambiar de sede la tarjeta se abre de izquierda a derecha; con «reducir movimiento», solo aparece.
+          <m.div
+            key={sede.slug}
+            initial={sinMovimiento ? { opacity: 0 } : { clipPath: 'inset(0 100% 0 0)' }}
+            animate={sinMovimiento ? { opacity: 1 } : { clipPath: 'inset(0 0% 0 0)' }}
+            transition={{ duration: sinMovimiento ? 0.15 : 0.6, ease: [0.2, 0, 0, 1] }}
+            className="relative grid bg-tinta text-hero-ink lg:grid-cols-12"
+          >
+            <div className="relative min-h-[20rem] lg:col-span-5">
+              {sede.foto && <Image src={sede.foto.src} alt={sede.foto.alt} fill sizes="40vw" className="object-cover" />}
+            </div>
+            <div className="flex flex-col gap-5 p-8 lg:col-span-7 lg:p-10">
+              <p className="texto-seccion">{sede.nombre}</p>
+              {sede.subtitulo && <p className="max-w-[52ch] text-lg leading-snug">{sede.subtitulo}</p>}
+              <a href={sede.href} className={`mt-auto self-start ${botonClases({ variante: 'campana-claro' })}`}>
+                {copy.verSede.replace('{sede}', sede.nombre)}
+                <span aria-hidden="true">↓</span>
+              </a>
+            </div>
+          </m.div>
+        )}
+      </div>
       <div className="relative overflow-hidden bg-azul">
         <div role="region" tabIndex={0}
           aria-label={copy.mapAria}
@@ -111,32 +128,6 @@ export function HubMapaSedes({ sedes, copy }: {
           ].map(({ title, icon: Icon, action, disabled }) => <Button key={title} variante="libre" aria-label={title} title={title} onClick={action} disabled={disabled} className="flex h-11 w-11 items-center justify-center rounded-full bg-tinta text-white transition-colors hover:bg-cafe disabled:bg-cafe-claro disabled:text-tinta"><Icon size={19} /></Button>)}
         </div>
         <span className="pointer-events-none absolute left-4 top-4 bg-superficie px-3 py-2 text-sm text-foreground">{copy.dragMap}</span>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-        <div className="flex flex-wrap gap-2">
-          {sedes.map(s => <Button key={s.slug} variante="chip" onClick={() => abrir(s)} aria-pressed={abiertoSlug === s.slug} className={abiertoSlug === s.slug ? 'border-tinta bg-tinta text-white' : 'border-tinta bg-superficie text-foreground hover:bg-cafe-claro'}>{s.nombre}</Button>)}
-        </div>
-        <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-foreground underline underline-offset-4">Natural Earth</a>
-      </div>
-      <div ref={panel} aria-live="polite">
-        <Despliegue abierto={Boolean(sede)}>
-          {mostrada && (
-            <div className="relative grid bg-tinta text-hero-ink lg:grid-cols-12">
-              <div className="relative min-h-[20rem] lg:col-span-5">
-                {mostrada.foto && <Image src={mostrada.foto.src} alt={mostrada.foto.alt} fill sizes="40vw" className="object-cover" />}
-              </div>
-              <div className="flex flex-col gap-5 p-8 pr-20 lg:col-span-7 lg:p-10 lg:pr-20">
-                <p className="texto-seccion">{mostrada.nombre}</p>
-                {mostrada.subtitulo && <p className="max-w-[52ch] text-lg leading-snug">{mostrada.subtitulo}</p>}
-                <a href={mostrada.href} className={`mt-auto self-start ${botonClases({ variante: 'campana-claro' })}`}>
-                  {copy.verSede.replace('{sede}', mostrada.nombre)}
-                  <span aria-hidden="true">↓</span>
-                </a>
-              </div>
-              <Button variante="libre" aria-label={copy.closeDestination} onClick={() => setAbiertoSlug(null)} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25"><X size={20} /></Button>
-            </div>
-          )}
-        </Despliegue>
       </div>
     </div>
   );

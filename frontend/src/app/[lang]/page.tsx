@@ -105,7 +105,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
     subtitulo: sedes[i].hero.subtitulo,
     foto: FOTO_MAPA[vista.slug] ? { src: FOTO_MAPA[vista.slug].src, alt: FOTO_MAPA[vista.slug].alt[lang] } : null,
   }));
-  const { mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination } = dict.hub;
+  const { mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap } = dict.hub;
 
   return <>
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
@@ -116,7 +116,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
           <h2 id={`${ANCLA_HUB.mapa}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.mapaTitulo}</h2>
           <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.mapaTexto}</p>
           <div className="mt-10">
-            <HubMapaEscritorio sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, verSede: textos.verSede }} />
+            <HubMapaEscritorio sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, verSede: textos.verSede }} />
           </div>
         </div>
       </section>
