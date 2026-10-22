@@ -38,6 +38,12 @@ services:
         value: config.settings.production
       - key: PYTHON_VERSION
         value: "3.14"
+      # Anticipación mínima de la reserva web, en horas antes de la salida (backend/apps/bookings/anticipacion.py).
+      - key: HORAS_MINIMAS_RESERVA
+        value: "16"
+      # Apartado temporal de cupo mientras el cliente paga. 0 = apagado; subir a 15 tras probarlo con dos navegadores.
+      - key: APARTADO_MINUTOS
+        value: "0"
       # Un salto de proxy: el balanceador de Render. Ver
       # backend/apps/bookings/serializers.py (constancia del deslinde).
       - key: TRUSTED_PROXY_COUNT

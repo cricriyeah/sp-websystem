@@ -20,8 +20,8 @@ Orden obligatorio. El push a `main` dispara el deploy del backend (`render.yaml`
 
 - [ ] Suite completa del backend contra Postgres en el commit final (`config.settings.ci`, puerto 5434; Docker encendido).
 - [ ] `npm run verificar` en verde.
-- [ ] Comando idempotente que aplica en producción el catálogo real de La Ventana (hotel, avistamiento, pesca con
-      mosca, pangas, estudios). El seed local no sirve allá: exige `DEBUG` y pone llaves de Stripe falsas.
+- [x] `seed_catalogo_real --produccion`: aplica en la base real el catálogo (La Ventana con hotel, avistamiento, pesca con
+      mosca, pangas y estudios, más lo de las otras empresas) sin DEBUG, sin llaves falsas y sin datos DEMO. Con pruebas.
 - [ ] Rama limpia: nada de prototipos, logs ni archivos de trabajo en lo que se sube.
 - [ ] `render.yaml` con las variables nuevas declaradas (`HORAS_MINIMAS_RESERVA`, `APARTADO_MINUTOS`).
 
@@ -81,7 +81,11 @@ Luego, en este orden:
 1. Sistema → **Aeropuertos**: deben estar LAP, CSL, SJD y LTO.
 2. **Alta de empresa** para cada una de las cuatro (jefe, vendedora, llaves de Stripe, flota o vehículos). La pantalla
    muestra la URL del webhook de cada una.
-3. Aplicar el catálogo real de La Ventana (comando del punto A) y capturar a mano lo que falte de las otras sedes.
+3. Sembrar el catálogo real con `python manage.py seed_catalogo_real --produccion` (idempotente; exige que las cuatro
+   empresas ya existan; no crea llaves de Stripe, ni lanchas ni habitaciones «DEMO», ni borra nada). Al final imprime el
+   **relleno sin confirmar** que dejó: noche de hospedaje (2,500), tarifas del traslado de La Ventana (3,500 / 6,500),
+   precio por persona de los paquetes, pesca de Piratas Adventures y los horarios salvo los de Sal y Sol. Corregirlos en
+   el admin **antes de vender**. La flota (pangas, vehículos) también se captura a mano.
 4. `python manage.py revisar_cupo --dias 90` (debe salir vacío con una base nueva).
 
 ## E. Stripe: primero en prueba, después dinero real

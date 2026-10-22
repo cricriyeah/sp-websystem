@@ -21,6 +21,11 @@ cabañas, snorkel, paquetes demo, TODAS las reservas y órdenes de prueba) y con
 empresa demo Tours Cabo en La Ventana Travel. Hazlo una sola vez, antes de sembrar.
 
 Uso:  venv/Scripts/python.exe manage.py seed_catalogo_real [--limpiar-demo]
+
+`--produccion` lo hace apto para la base real (las empresas ya dadas de alta con «Alta de empresa»): no exige DEBUG,
+no crea empresas ni llaves de Stripe, no siembra lanchas ni habitaciones «DEMO» y no borra nada. Solo crea o
+actualiza servicios, textos, precios, horarios, estudios y paquetes, y al final imprime lo que sigue siendo relleno
+sin confirmar. La flota real (pangas de Sal y Sol, vehículos de DLS) se captura en el admin.
 """
 from datetime import time
 from decimal import Decimal
@@ -161,13 +166,20 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            '--produccion', action='store_true',
+            help='Para la base real: sin DEBUG, sin empresas ni llaves nuevas, sin lanchas ni habitaciones DEMO.',
+        )
+        parser.add_argument(
             '--limpiar-demo', action='store_true',
             help='Borra el demo de seed_local_demo (incluidas TODAS las reservas) y renombra Tours Cabo.',
         )
 
     def handle(self, *args, **options):
-        if not settings.DEBUG:
-            raise CommandError('Solo para local (DEBUG=True).')
+        produccion = options['produccion']
+        if not settings.DEBUG and not produccion:
+            raise CommandError('Solo para local (DEBUG=True). Para la base real usa --produccion.')
+        if produccion and options['limpiar_demo']:
+            raise CommandError('--limpiar-demo borra reservas: no se combina con --produccion.')
 
         # Los alcances de tenancy no se anidan: cada bloque entra y sale del suyo.
         with transaction.atomic():
@@ -175,18 +187,31 @@ class Command(BaseCommand):
                 with scope.como_operador_plataforma():
                     self._limpiar_demo()
             with scope.como_operador_plataforma():
-                self._empresas()
-            self._servicios()
-            self._hotel_y_traslado_la_ventana()
+                if produccion:
+                    self._exigir_empresas()
+                else:
+                    self._empresas()
+            self._servicios(con_demo=not produccion)
+            self._hotel_y_traslado_la_ventana(con_demo=not produccion)
+            # Los horarios van antes de los datos reales: `_datos_reales` valida cada servicio completo y uno que
+            # pide hora sin rango no pasa (en una base nueva los servicios nacen sin él).
+            self._horarios_demo()
             self._datos_reales()
             self._paquetes_la_ventana()
-            self._horarios_demo()
 
         self.stdout.write(self.style.SUCCESS('Catálogo real sembrado.'))
-        self.stdout.write(
-            'Placeholders: avistamiento de ballenas, precio de la pesca de Piratas Adventures, '
-            'precio del hospedaje, paquetes y llaves de Stripe de Piratas Adventures (sk_test_CAMBIAME).'
-        )
+        if produccion:
+            self.stdout.write(
+                'Relleno SIN confirmar que quedó en la base (revisar en el admin antes de vender): precio de la noche de '
+                'hospedaje (2,500), tarifas del traslado de La Ventana (3,500 / 6,500), precio por persona de los paquetes, '
+                'precio de la pesca de Piratas Adventures y los horarios de cada servicio salvo Sal y Sol. '
+                'La flota (pangas, vehículos) y las llaves de Stripe de cada empresa se capturan en el admin.'
+            )
+        else:
+            self.stdout.write(
+                'Placeholders: precio de la pesca de Piratas Adventures, '
+                'precio del hospedaje, paquetes y llaves de Stripe de Piratas Adventures (sk_test_CAMBIAME).'
+            )
 
     # ------------------------------------------------------------------ limpieza
     def _limpiar_demo(self):
@@ -243,6 +268,16 @@ class Command(BaseCommand):
             self.stdout.write('  Tours Cabo -> La Ventana Travel')
 
     # ------------------------------------------------------------------ empresas
+    def _exigir_empresas(self):
+        """En la base real las empresas ya existen (Alta de empresa, con sus llaves de Stripe): aquí no se crean."""
+        faltan = [slug for slug in EMPRESAS_REALES if not Empresa.objects.filter(slug=slug).exists()]
+        if faltan:
+            raise CommandError(
+                'Faltan empresas: ' + ', '.join(faltan) + '. Dalas de alta primero en el admin (Empresas > Alta de empresa).'
+            )
+        for slug in EMPRESAS_REALES:
+            self.stdout.write(f'  Empresa {slug}: ok')
+
     def _empresas(self):
         for slug, (nombre, slug_sede) in EMPRESAS_REALES.items():
             sede = Sede.objects.get(slug=slug_sede)
@@ -261,7 +296,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  Empresa {slug}: {"creada" if creada else "ok"}')
 
     # ------------------------------------------------------------------ servicios
-    def _servicios(self):
+    def _servicios(self, con_demo=True):
         from apps.fleet.models import Embarcacion, Recurso, Servicio
 
         for (slug_empresa, slug, nombre, tipo, est_precio, precio,
@@ -279,7 +314,8 @@ class Command(BaseCommand):
                         porcentaje_anticipo=30, activo=True, descripcion=descripcion,
                     ),
                 )
-                for nombre_recurso, cap in recursos:
+                # Las lanchas «DEMO» son de la base local: en la real la flota se captura en el admin.
+                for nombre_recurso, cap in (recursos if con_demo else []):
                     Recurso.objects.get_or_create(
                         empresa=empresa, nombre=nombre_recurso,
                         defaults=dict(servicio=servicio, capacidad_maxima=cap),
@@ -294,7 +330,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'  Servicio {slug_empresa}/{slug}: {"creado" if creado else "ok"}')
 
     # ------------------------------------------------------------------ hotel y traslado de La Ventana Travel
-    def _hotel_y_traslado_la_ventana(self):
+    def _hotel_y_traslado_la_ventana(self, con_demo=True):
         """Componentes de los paquetes de La Ventana Travel (una sola empresa):
         hospedaje con habitaciones y traslado de aeropuerto. TODO es placeholder:
         el número de habitaciones, su capacidad y las tarifas no se han confirmado
@@ -317,8 +353,8 @@ class Command(BaseCommand):
             )
             self.stdout.write(f'  Servicio la-ventana-travel/hospedaje-la-ventana: {"creado" if creado else "ok"}')
             for nombre, capacidad in (
-                ('DEMO Habitación 1', 2), ('DEMO Habitación 2', 2),
-                ('DEMO Habitación 3', 2), ('DEMO Habitación 4', 4),
+                (('DEMO Habitación 1', 2), ('DEMO Habitación 2', 2),
+                 ('DEMO Habitación 3', 2), ('DEMO Habitación 4', 4)) if con_demo else ()
             ):
                 Recurso.objects.get_or_create(
                     empresa=empresa, nombre=nombre,
