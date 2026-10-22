@@ -91,21 +91,44 @@ INCLUYE_AVISTAMIENTO = {
            'We look for animals to try to swim with them'],
 }
 
+# Lo que confirmó el dueño el 2026-10-21 (precios SIN IVA). Sal y Sol: 8 pangas de 8, salida de 5 a 7, 12,000 por viaje
+# para 1 o 2 personas y 1,800 por cada persona extra desde la tercera. La Ventana: 5 pangas de 8, salida de 7 a 8.
+INCLUYE_PESCA_SAL_Y_SOL = {
+    'es': ['Desayuno ligero y comida a bordo', 'Aperitivos: fruta y frituras', 'Bebidas',
+           'Cubre 1 o 2 personas; desde la tercera se suma un cargo por persona'],
+    'en': ['Light breakfast and lunch on board', 'Snacks: fruit and chips', 'Drinks',
+           'Covers 1 or 2 people; from the third on, a per-person charge applies'],
+}
+INCLUYE_AMENIDADES_VENTANA = {
+    'es': ['Comida ligera, aperitivos y bebidas incluidos', 'Equipo para snorkelear'],
+    'en': ['Light meal, snacks and drinks included', 'Snorkeling gear'],
+}
+
 DATOS_REALES = {
+    ('sal-y-sol', 'pesca-deportiva'): dict(
+        nombre='Pesca deportiva',
+        estrategia_precio='por_grupo', precio_base=Decimal('12000'), precio_persona_extra=Decimal('1800'),
+        personas_incluidas=2, capacidad_maxima=8,
+        descripcion='Viaje de pesca deportiva en La Paz, de 5:00 a 7:00 am de salida, en panga para hasta 8 personas. '
+                    'La licencia de pesca se tramita aparte, para las personas que elijas.',
+        incluye=INCLUYE_PESCA_SAL_Y_SOL,
+    ),
     ('la-ventana-travel', 'pesca-con-mosca'): dict(
         nombre='Pesca con mosca',
         estrategia_precio='por_grupo', precio_base=Decimal('12000'), precio_persona_extra=Decimal('0'),
-        personas_incluidas=2, capacidad_maxima=3,
-        descripcion='Un día de pesca con mosca (fly fishing) en La Ventana, para 2 o 3 personas. '
-                    'La licencia de pesca no está incluida.',
-        incluye={'es': ['Un día de pesca con mosca', 'Para 2 o 3 personas como máximo'],
-                 'en': ['A full day of fly fishing', 'For 2 or 3 people at most']},
+        personas_incluidas=3, capacidad_maxima=3,
+        descripcion='Un día de pesca con mosca (fly fishing) en La Ventana, para un grupo de hasta 3 personas, '
+                    'sin cargo por persona extra. La licencia de pesca no está incluida.',
+        incluye={'es': ['Un día de pesca con mosca', 'Salida de 7:00 a 8:00 am', 'Para 3 personas como máximo',
+                        *INCLUYE_AMENIDADES_VENTANA['es']],
+                 'en': ['A full day of fly fishing', 'Departure from 7:00 to 8:00 am', 'For 3 people at most',
+                        *INCLUYE_AMENIDADES_VENTANA['en']]},
     ),
     ('la-ventana-travel', 'avistamiento-ballenas-orcas'): dict(
         nombre='Avistamiento de ballenas y orcas',
         estrategia_precio='por_persona', modo_ocupacion='compartido',
         precio_base=Decimal('5000'), precio_persona_extra=Decimal('0'),
-        personas_incluidas=1, capacidad_maxima=10,
+        personas_incluidas=1, capacidad_maxima=8,
         descripcion='Salida diaria al mar para buscar ballenas y orcas e intentar nadar con ellas, con snorkel en un '
                     'arrecife. Precio por persona en lancha compartida; '
                     'para un grupo privado (hasta 10 personas) el costo es de $20,000 MXN: consúltalo por WhatsApp.',
@@ -113,6 +136,7 @@ DATOS_REALES = {
     ),
     ('la-ventana-travel', 'hospedaje-la-ventana'): dict(
         nombre='Hotel Casa Arrecife',
+        solo_en_paquete=True,  # no se vende como servicio aparte: solo dentro de los paquetes
         descripcion='Seis estudios (suites) para 2 personas, cada uno con una cama king size. Precio por noche. '
                     'A 1 km de la playa de La Ventana, con restaurantes a menos de 1 km, a 2.2 km del centro de '
                     'La Ventana y a 37 km del aeropuerto de La Paz. Distancias en línea recta: el recorrido real puede variar.',
@@ -155,9 +179,20 @@ DATOS_REALES = {
 
 
 # Flota de La Ventana para sus salidas al mar: no hay un número fijo, se pone 5 (3 de 7 personas y 2 de 10).
-PANGAS_VENTANA = (
-    ('Panga La Ventana 1', 7), ('Panga La Ventana 2', 7), ('Panga La Ventana 3', 7),
-    ('Panga La Ventana 4', 10), ('Panga La Ventana 5', 10),
+PANGAS_VENTANA = tuple((f'Panga La Ventana {n}', 8) for n in range(1, 6))
+
+# Flota de Sal y Sol: 8 pangas de 8. Los nombres son genéricos; se renombran en el admin.
+PANGAS_SAL_Y_SOL = tuple((f'Panga {n}', 8) for n in range(1, 9))
+
+# Tarifas de DLS Transporte (sin IVA). La vuelta completa cuesta según la zona del hotel: centro 3,500; Puerta Cortés o
+# periferia 3,800. La recepción en aeropuerto es de 2,700. Para el redondo de actividad el dueño no dio precio propio:
+# se aplica la misma vuelta completa por zona (CONFIRMAR).
+TARIFAS_DLS = (
+    ('recepcion_aeropuerto', '', Decimal('2700')),
+    ('redondo_aeropuerto', 'centro', Decimal('3500')),
+    ('redondo_aeropuerto', 'periferia', Decimal('3800')),
+    ('redondo_actividad', 'centro', Decimal('3500')),
+    ('redondo_actividad', 'periferia', Decimal('3800')),
 )
 
 
@@ -193,6 +228,8 @@ class Command(BaseCommand):
                     self._empresas()
             self._servicios(con_demo=not produccion)
             self._hotel_y_traslado_la_ventana(con_demo=not produccion)
+            self._la_paz(con_flota=produccion)
+            self._desactivar_sedes()
             # Los horarios van antes de los datos reales: `_datos_reales` valida cada servicio completo y uno que
             # pide hora sin rango no pasa (en una base nueva los servicios nacen sin él).
             self._horarios_demo()
@@ -385,6 +422,88 @@ class Command(BaseCommand):
                     defaults=dict(personas_max=p_max, precio=precio, activo=True),
                 )
 
+    # ------------------------------------------------------------------ La Paz: Sal y Sol y DLS Transporte
+    def _la_paz(self, con_flota):
+        """Sal y Sol (pesca deportiva, su licencia y, en la base real, sus 8 pangas) y DLS Transporte (traslados y
+        tarifas). Sin hoteles ni vehículos: los puntos de encuentro y la flota de DLS se capturan en el admin."""
+        from apps.fleet.enums import TipoServicio
+        from apps.fleet.models import (
+            Embarcacion, Paquete, Personalizacion, Recurso, Servicio, ServicioPersonalizacion, TransporteTarifa,
+        )
+
+        sal = Empresa.objects.get(slug='sal-y-sol')
+        with scope.con_empresa(sal):
+            pesca, _ = Servicio.objects.get_or_create(
+                empresa=sal, slug='pesca-deportiva',
+                defaults=dict(
+                    nombre='Pesca deportiva', tipo_servicio=TipoServicio.PESCA,
+                    estrategia_cupo='por_recurso_dia', estrategia_precio='por_grupo', modo_ocupacion='exclusivo',
+                    precio_base=Decimal('12000'), personas_incluidas=2, porcentaje_anticipo=30, activo=True,
+                    pide_hora=True, hora_apertura=time(5, 0), hora_cierre=time(7, 0), paso_hora_minutos=15,
+                ),
+            )
+            licencia, _ = Personalizacion.objects.get_or_create(
+                empresa=sal, nombre='Licencia de pesca',
+                defaults=dict(tipo='licencia', cobrar_por_persona=True, cantidad_editable=True),
+            )
+            enlace, _ = ServicioPersonalizacion.objects.get_or_create(
+                servicio=pesca, personalizacion=licencia, defaults=dict(precio=Decimal('300')),
+            )
+            enlace.precio = Decimal('300')
+            enlace.activo = True
+            enlace.save(update_fields=['precio', 'activo'])
+            # El lunch ya va incluido en el viaje: el brunch como extra de pago deja de ofrecerse.
+            ServicioPersonalizacion.objects.filter(
+                servicio=pesca, personalizacion__nombre='Brunch a bordo',
+            ).update(activo=False)
+            if con_flota:
+                for nombre, capacidad in PANGAS_SAL_Y_SOL:
+                    Recurso.objects.get_or_create(
+                        empresa=sal, nombre=nombre, defaults=dict(servicio=pesca, capacidad_maxima=capacidad),
+                    )
+                    Embarcacion.objects.get_or_create(
+                        empresa=sal, nombre=nombre,
+                        defaults=dict(clase='grande', capacidad_maxima=capacidad),
+                    )
+            self.stdout.write('  Sal y Sol: pesca deportiva, licencia y flota al día')
+
+        dls = Empresa.objects.get(slug='transporte-la-paz')
+        with scope.con_empresa(dls):
+            Servicio.objects.get_or_create(
+                empresa=dls, slug='traslados-la-paz',
+                defaults=dict(
+                    nombre='Traslados Privados La Paz', tipo_servicio=TipoServicio.TRANSPORTE,
+                    estrategia_cupo='bajo_demanda', estrategia_precio='por_ruta', modo_ocupacion='exclusivo',
+                    capacidad_maxima=14, permite_anticipo=False, activo=False,
+                    descripcion='Traslados privados en La Paz: del aeropuerto al hotel y de regreso, y del hotel a la actividad.',
+                ),
+            )
+            vigentes = set()
+            for tipo, zona, precio in TARIFAS_DLS:
+                tarifa, _ = TransporteTarifa.objects.get_or_create(
+                    empresa=dls, tipo_traslado=tipo, zona=zona, personas_min=1,
+                    defaults=dict(personas_max=None, precio=precio, activo=True),
+                )
+                tarifa.personas_max = None
+                tarifa.precio = precio
+                tarifa.activo = True
+                tarifa.save(update_fields=['personas_max', 'precio', 'activo'])
+                vigentes.add(tarifa.pk)
+            # DLS Transporte queda apagado por ahora, y con él su paquete con Sal y Sol (Pesca + Traslado).
+            Servicio.objects.filter(empresa=dls, slug='traslados-la-paz').update(activo=False)
+            # Las tarifas de relleno de antes (por rangos de personas, sin zona) ya no valen.
+            TransporteTarifa.objects.filter(empresa=dls).exclude(pk__in=vigentes).update(activo=False)
+            self.stdout.write('  DLS Transporte: tarifas por zona al día; servicio DESACTIVADO por ahora')
+        with scope.como_operador_plataforma():
+            Paquete.objects.filter(slug='pesca-traslado').update(activo=False)
+            self.stdout.write('  Paquete pesca-traslado (Sal y Sol + DLS) desactivado')
+
+    def _desactivar_sedes(self):
+        """Puerto Chale queda apagada por ahora: sin página, sin selector y sin reservas."""
+        with scope.como_operador_plataforma():
+            n = Sede.objects.filter(slug='puerto-chale').update(activo=False)
+        self.stdout.write(f'  Sede puerto-chale desactivada ({n})')
+
     # ------------------------------------------------------------------ datos confirmados por las empresas
     def _datos_reales(self):
         """Aplica lo que La Ventana Travel y Piratas Adventures ya confirmaron: textos y precios por UPDATE
@@ -462,7 +581,7 @@ class Command(BaseCommand):
         """Paquetes A (5 noches) y B (7 noches): llegada el día 1 sin mar, avistamiento
         todos los días de mar seguidos, precio POR PERSONA. USD = MXN / 18 redondeado
         hacia abajo a centavos (tipo de cambio fijo demo; el real se actualizará).
-        Capacidad demo: 10 personas = suma de las habitaciones DEMO."""
+        Capacidad: 12 en el hotel (6 estudios de 2) y 8 en el mar (pangas de 8)."""
         from apps.fleet.models import Paquete, PaqueteServicio, Servicio
 
         empresa = Empresa.objects.get(slug='la-ventana-travel')
@@ -485,19 +604,31 @@ class Command(BaseCommand):
                                     f'avistamiento de ballenas y orcas del día 2 al {noches}.',
                     ),
                 )
+                # Lo que incluye el paquete: las mismas amenidades que la pesca con mosca; el hospedaje no lleva comida.
+                paquete.incluye = {
+                    'es': [f'{noches} noches de hospedaje en el Hotel Casa Arrecife', 'Traslado redondo del aeropuerto al hotel',
+                           f'Salidas al mar para ver ballenas y orcas, del día 2 al {noches}',
+                           *INCLUYE_AMENIDADES_VENTANA['es'], 'El hospedaje no incluye comida'],
+                    'en': [f'{noches} nights at Hotel Casa Arrecife', 'Round-trip airport transfer',
+                           f'Sea trips to see whales and orcas, from day 2 to day {noches}',
+                           *INCLUYE_AMENIDADES_VENTANA['en'], 'Lodging does not include meals'],
+                }
                 for orden, servicio, extra in (
                     (1, traslado, dict(dia_estancia=1)),
                     (2, hotel, dict(dia_estancia=1, noches=noches)),
                     (3, avistamiento, dict(dia_estancia=2, salidas=noches - 1)),
                 ):
-                    PaqueteServicio.objects.get_or_create(
+                    componente, _ = PaqueteServicio.objects.get_or_create(
                         paquete=paquete, servicio=servicio,
-                        defaults=dict(orden=orden, personas_incluidas=10, **extra),
+                        defaults=dict(orden=orden, personas_incluidas=12 if servicio is hotel else 8, **extra),
                     )
+                    componente.personas_incluidas = 12 if servicio is hotel else 8
+                    componente.save(update_fields=['personas_incluidas'])
                 if paquete.pide_hora:
                     paquete.pide_hora = False
                     paquete.save(update_fields=['pide_hora'])
                 paquete.full_clean()
+                paquete.save()
                 paquete.validar_configuracion()
                 self.stdout.write(f'  Paquete la-ventana/{slug}: {"creado" if creado else "ok"} ({precio} MXN por persona)')
 
@@ -512,7 +643,7 @@ class Command(BaseCommand):
         horarios = {
             ('sal-y-sol', 'pesca-deportiva'): (time(5, 0), time(7, 0), 15),
             ('transporte-la-paz', 'traslados-la-paz'): (time(6, 0), time(22, 0), 30),
-            ('la-ventana-travel', 'pesca-con-mosca'): (time(6, 0), time(8, 0), 30),
+            ('la-ventana-travel', 'pesca-con-mosca'): (time(7, 0), time(8, 0), 30),
             ('la-ventana-travel', 'avistamiento-ballenas-orcas'): (time(7, 0), time(8, 0), 30),
             ('la-ventana-travel', 'hospedaje-la-ventana'): None,
             ('la-ventana-travel', 'traslado-aeropuerto-la-ventana'): None,

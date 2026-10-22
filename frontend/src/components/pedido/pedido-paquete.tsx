@@ -131,7 +131,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const salida = estado.inicio ? fechaSalida(estado.inicio, componentes) : null;
   const noches = nochesDelPaquete(componentes);
 
-  // Misma regla que el backend (DetalleTransporte.zona_efectiva): solo redondo_actividad usa zona.
+  // Misma regla que el backend (DetalleTransporte.zona_efectiva): usan zona los redondos (actividad y aeropuerto).
   const zonaDePunto = (id: number | null) => Object.values(puntosPorEmpresa).flat().find((p) => p.id === id)?.zona ?? '';
   const selecciones = useMemo(
     () => Object.fromEntries(Object.entries(estado.componentes).map(([slug, c]) => [slug, {

@@ -24,13 +24,15 @@ export type ComponentePedido = {
 type ZonaDePunto = (puntoId: number | null) => Zona | '';
 
 /**
- * Misma regla que `DetalleTransporte.zona_efectiva()` del backend: la zona solo importa en
- * `redondo_actividad` (la del hotel del catálogo; una dirección escrita siempre es periferia); en los
- * tipos de aeropuerto las tarifas no llevan zona, aunque el hotel tenga una.
+ * Misma regla que `DetalleTransporte.zona_efectiva()` del backend: la zona importa en la vuelta completa
+ * (`redondo_actividad` y `redondo_aeropuerto`): la del hotel del catálogo; una dirección escrita siempre es
+ * periferia. La recepción en aeropuerto es de precio único. Sin hotel elegido (el traslado de un paquete con
+ * hospedaje, cuyo hotel ya es el del paquete) no hay zona.
  */
 export function zonaEfectivaDeTraslado(t: DetalleTraslado, zonaDePunto: ZonaDePunto): Zona | '' {
-  if (t.tipo !== 'redondo_actividad') return '';
-  return t.modo === 'catalogo' ? zonaDePunto(t.puntoEncuentroId) : 'periferia';
+  if (t.tipo !== 'redondo_actividad' && t.tipo !== 'redondo_aeropuerto') return '';
+  if (t.modo === 'catalogo') return zonaDePunto(t.puntoEncuentroId);
+  return t.tipo === 'redondo_actividad' || t.direccion.trim() ? 'periferia' : '';
 }
 
 type ArgsComunes = {

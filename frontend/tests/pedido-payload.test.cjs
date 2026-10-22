@@ -34,12 +34,15 @@ const BASE = {
   ref: 'amigo', zonaDePunto: () => 'centro',
 };
 
-test('zona efectiva: solo cuenta en redondo_actividad', () => {
+test('zona efectiva: cuenta en la vuelta completa (actividad y aeropuerto), no en la recepción', () => {
   const zona = () => 'periferia';
   assert.equal(p.zonaEfectivaDeTraslado(traslado(), zona), 'periferia');
   // Una dirección escrita siempre es periferia, aunque el hotel de la lista sea del centro.
   assert.equal(p.zonaEfectivaDeTraslado(traslado({ modo: 'personalizada' }), () => 'centro'), 'periferia');
-  assert.equal(p.zonaEfectivaDeTraslado(traslado({ tipo: 'redondo_aeropuerto' }), zona), '');
+  assert.equal(p.zonaEfectivaDeTraslado(traslado({ tipo: 'redondo_aeropuerto' }), zona), 'periferia');
+  assert.equal(p.zonaEfectivaDeTraslado(traslado({ tipo: 'redondo_aeropuerto', modo: 'personalizada', direccion: 'Calle 5' }), () => 'centro'), 'periferia');
+  // Sin hotel ni dirección (el traslado de un paquete con hospedaje) no hay zona que cobrar.
+  assert.equal(p.zonaEfectivaDeTraslado(traslado({ tipo: 'redondo_aeropuerto', modo: 'personalizada', direccion: '' }), zona), '');
   assert.equal(p.zonaEfectivaDeTraslado(traslado({ tipo: 'recepcion_aeropuerto' }), zona), '');
 });
 
@@ -63,10 +66,10 @@ test('la hora elegida para pescar no se envia al traslado', () => {
   assert.equal('hora' in r.componentes[1], false);
 });
 
-test('aeropuerto con hotel del catálogo no manda la zona del hotel (sus tarifas no llevan zona)', () => {
+test('aeropuerto con hotel del catálogo manda la zona del hotel (la vuelta completa se cobra por zona)', () => {
   const comp = { ...COMPONENTES, traslado: { ...COMPONENTES.traslado, traslado: traslado({ tipo: 'redondo_aeropuerto' }) } };
   const r = p.armarPayloadOrden({ ...BASE, paquete: CRUZA, componentes: comp });
-  assert.equal(r.componentes[1].zona, '');
+  assert.equal(r.componentes[1].zona, 'centro');
   assert.equal(r.componentes[1].punto_encuentro, 7);
 });
 

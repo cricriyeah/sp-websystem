@@ -1355,7 +1355,13 @@ class DetalleTransporte(models.Model):
     def zona_efectiva(self):
         """La zona que manda al precio: la del hotel si hay hotel; una dirección escrita siempre
         cuesta como periferia (no se puede saber a qué distancia queda, y el cliente no elige).
-        Para tipos que no son redondo_actividad, '' (el precio no depende de zona)."""
+        Cuenta en la vuelta completa (redondo con aeropuerto y redondo de actividad); la recepción es de precio
+        único, así que ahí es ''. Si no hay hotel ni dirección (el traslado de un paquete con hospedaje, cuyo
+        hotel ya es el del paquete) no hay zona que cobrar en el redondo con aeropuerto."""
+        if self.tipo_traslado == TipoTraslado.REDONDO_AEROPUERTO:
+            if self.punto_encuentro_id:
+                return self.punto_encuentro.zona
+            return Zona.PERIFERIA if self.direccion_personalizada else ''
         if self.tipo_traslado != TipoTraslado.REDONDO_ACTIVIDAD:
             return ''
         if self.punto_encuentro_id:
@@ -1363,7 +1369,8 @@ class DetalleTransporte(models.Model):
         return Zona.PERIFERIA
 
     def save(self, *args, **kwargs):
-        if self.tipo_traslado == TipoTraslado.REDONDO_ACTIVIDAD and not self.punto_encuentro_id and self.direccion_personalizada:
+        con_zona = self.tipo_traslado in (TipoTraslado.REDONDO_ACTIVIDAD, TipoTraslado.REDONDO_AEROPUERTO)
+        if con_zona and not self.punto_encuentro_id and self.direccion_personalizada:
             self.zona = Zona.PERIFERIA  # la zona guardada dice lo mismo que se cobra (`zona_efectiva`)
         super().save(*args, **kwargs)
         reserva = self._reserva_o_ninguna()

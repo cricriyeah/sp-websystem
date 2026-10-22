@@ -13,16 +13,19 @@ def resolver_tarifa_transporte(tarifas, *, tipo_traslado, zona, personas):
     [personas_min, personas_max] contiene `personas`. Lanza
     TarifaTransporteNoConfigurada si no hay ninguna."""
     zona_norm = zona or ''
-    for t in tarifas:
-        if t.tipo_traslado != tipo_traslado:
-            continue
-        if t.zona != zona_norm:
-            continue
-        if personas < t.personas_min:
-            continue
-        if t.personas_max is not None and personas > t.personas_max:
-            continue
-        return t
+    tarifas = list(tarifas)
+    # La tarifa de la zona del hotel; si la empresa no distingue zonas en ese tipo (tarifa con zona vacía), esa.
+    for zona_buscada in ((zona_norm, '') if zona_norm else ('',)):
+        for t in tarifas:
+            if t.tipo_traslado != tipo_traslado:
+                continue
+            if t.zona != zona_buscada:
+                continue
+            if personas < t.personas_min:
+                continue
+            if t.personas_max is not None and personas > t.personas_max:
+                continue
+            return t
     raise TarifaTransporteNoConfigurada(
         f'No hay tarifa de transporte para tipo={tipo_traslado} zona={zona_norm!r} personas={personas}.'
     )

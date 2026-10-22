@@ -64,3 +64,37 @@ class SembradoDeProduccionTests(TestCase):
             ventana = Empresa.objects.get(slug='la-ventana-travel')
             self.assertEqual(Servicio.objects.filter(empresa=ventana, slug='pesca-con-mosca').count(), 1)
             self.assertEqual(Embarcacion.objects.filter(empresa=ventana).count(), 5)
+
+
+class DatosConfirmadosTests(TestCase):
+    """Lo que el dueño confirmó el 2026-10-21 (precios sin IVA)."""
+
+    def setUp(self):
+        dar_de_alta_las_empresas()
+        with override_settings(DEBUG=False):
+            sembrar(produccion=True)
+
+    def test_sal_y_sol_pesca_8_pangas_de_8_12000_y_1800_por_extra(self):
+        with scope.como_operador_plataforma():
+            sal = Empresa.objects.get(slug='sal-y-sol')
+            pesca = Servicio.objects.get(empresa=sal, slug='pesca-deportiva')
+            self.assertEqual((pesca.precio_base, pesca.precio_persona_extra, pesca.personas_incluidas, pesca.capacidad_maxima),
+                             (12000, 1800, 2, 8))
+            self.assertEqual(Embarcacion.objects.filter(empresa=sal).count(), 8)
+            self.assertEqual(set(Embarcacion.objects.filter(empresa=sal).values_list('capacidad_maxima', flat=True)), {8})
+            licencia = pesca.servicio_personalizaciones.get(personalizacion__nombre='Licencia de pesca')
+            self.assertEqual(licencia.precio, 300)
+
+    def test_la_ventana_5_pangas_de_8_y_mosca_12000_para_3(self):
+        with scope.como_operador_plataforma():
+            ventana = Empresa.objects.get(slug='la-ventana-travel')
+            mosca = Servicio.objects.get(empresa=ventana, slug='pesca-con-mosca')
+            self.assertEqual((mosca.precio_base, mosca.capacidad_maxima, mosca.precio_persona_extra), (12000, 3, 0))
+            self.assertEqual(Embarcacion.objects.filter(empresa=ventana).count(), 5)
+            self.assertTrue(Servicio.objects.get(empresa=ventana, slug='hospedaje-la-ventana').solo_en_paquete)
+
+    def test_dls_y_puerto_chale_quedan_apagados(self):
+        with scope.como_operador_plataforma():
+            dls = Empresa.objects.get(slug='transporte-la-paz')
+            self.assertFalse(Servicio.objects.get(empresa=dls, slug='traslados-la-paz').activo)
+            self.assertFalse(Sede.objects.get(slug='puerto-chale').activo)

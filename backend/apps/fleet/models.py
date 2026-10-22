@@ -39,10 +39,13 @@ class TransporteTarifa(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['empresa', 'tipo_traslado', 'zona', 'personas_min'],
                                     name='transportetarifa_unica'),
+            # La zona manda al precio de la vuelta completa: el redondo de actividad siempre la lleva, el redondo con
+            # aeropuerto puede llevarla o no (según la empresa), y la recepción en aeropuerto nunca.
             models.CheckConstraint(
-                name='transportetarifa_zona_solo_actividad',
+                name='transportetarifa_zona_por_tipo',
                 condition=(models.Q(tipo_traslado='redondo_actividad') & ~models.Q(zona='')) |
-                          (~models.Q(tipo_traslado='redondo_actividad') & models.Q(zona='')),
+                          (models.Q(tipo_traslado='recepcion_aeropuerto') & models.Q(zona='')) |
+                          models.Q(tipo_traslado='redondo_aeropuerto'),
             ),
         ]
 
@@ -53,8 +56,8 @@ class TransporteTarifa(models.Model):
     def clean(self):
         if self.tipo_traslado == TipoTraslado.REDONDO_ACTIVIDAD and not self.zona:
             raise ValidationError({'zona': 'Redondo actividad requiere zona.'})
-        if self.tipo_traslado != TipoTraslado.REDONDO_ACTIVIDAD and self.zona:
-            raise ValidationError({'zona': 'Solo redondo actividad lleva zona.'})
+        if self.tipo_traslado == TipoTraslado.RECEPCION_AEROPUERTO and self.zona:
+            raise ValidationError({'zona': 'La recepción en aeropuerto tiene precio único: no lleva zona.'})
         if self.personas_max is not None and self.personas_max < self.personas_min:
             raise ValidationError({'personas_max': 'Debe ser ≥ personas_min.'})
 

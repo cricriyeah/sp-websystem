@@ -81,7 +81,7 @@ test('getSedeCuerpo no trae slug/nombre/logo del indice (solo el cuerpo crudo)',
   assert.equal(cuerpo.logo, undefined);
   assert.equal(cuerpo.empresaProtagonistaSlug, 'sal-y-sol');
   // Las demás empresas son slugs: sus datos salen de empresas.ts, no se duplican.
-  assert.deepEqual(cuerpo.otrasEmpresas, ['transporte-la-paz']);
+  assert.deepEqual(cuerpo.otrasEmpresas, []); // DLS Transporte desactivado por ahora
 });
 
 test('«Tu día» en La Paz y La Ventana con los mismos momentos en es y en; Puerto Chale sin él', () => {

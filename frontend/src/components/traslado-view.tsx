@@ -323,9 +323,11 @@ export function TrasladoView({
     if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
   }, [phase, checkoutId]);
 
+  // La zona cuenta en la vuelta completa (redondo con aeropuerto y de actividad); la recepción es de precio único.
   const zonaEfectiva = useMemo<Zona | ''>(() => {
-    if (tipoTraslado !== 'redondo_actividad') return '';
-    if (modoHospedaje === 'catalogo' && puntoEncuentroId !== null) {
+    if (tipoTraslado !== 'redondo_actividad' && tipoTraslado !== 'redondo_aeropuerto') return '';
+    if (modoHospedaje === 'catalogo') {
+      if (puntoEncuentroId === null) return tipoTraslado === 'redondo_actividad' ? 'periferia' : '';
       const punto = catalogo.puntos_encuentro.find((p) => p.id === puntoEncuentroId);
       return punto?.zona ?? '';
     }
@@ -334,13 +336,13 @@ export function TrasladoView({
   }, [tipoTraslado, modoHospedaje, puntoEncuentroId, catalogo.puntos_encuentro]);
 
   const tarifaAplicable = useMemo(() => {
-    return catalogo.tarifas.find((t) => {
-      if (t.tipo_traslado !== tipoTraslado) return false;
-      if (tipoTraslado === 'redondo_actividad' && t.zona !== zonaEfectiva) return false;
-      if (personas < t.personas_min) return false;
-      if (t.personas_max !== null && personas > t.personas_max) return false;
-      return true;
-    });
+    const cabe = (t: TrasladosCatalogo['tarifas'][number]) =>
+      t.tipo_traslado === tipoTraslado
+      && personas >= t.personas_min
+      && (t.personas_max === null || personas <= t.personas_max);
+    // La tarifa de la zona del hotel; si la empresa no distingue zonas en ese tipo (zona vacía), esa (como el backend).
+    return catalogo.tarifas.find((t) => cabe(t) && t.zona === zonaEfectiva)
+      ?? (zonaEfectiva ? catalogo.tarifas.find((t) => cabe(t) && t.zona === '') : undefined);
   }, [catalogo.tarifas, tipoTraslado, zonaEfectiva, personas]);
 
   const precioBase = useMemo(() => {
@@ -536,7 +538,7 @@ export function TrasladoView({
         tipo_traslado: tipoTraslado,
         punto_encuentro: modoHospedaje === 'catalogo' ? puntoEncuentroId : undefined,
         direccion_personalizada: modoHospedaje === 'personalizada' ? direccionPersonalizada.trim() : '',
-        zona: modoHospedaje === 'personalizada' && tipoTraslado === 'redondo_actividad' ? 'periferia' : undefined,
+        zona: modoHospedaje === 'personalizada' && (tipoTraslado === 'redondo_actividad' || tipoTraslado === 'redondo_aeropuerto') ? 'periferia' : undefined,
         fecha,
         hora,
         fecha_regreso: tipoTraslado === 'redondo_aeropuerto' ? fechaRegreso : null,
