@@ -100,7 +100,7 @@ export function Calendario({
   const banda = control === 'rango_fijo_paquete'
     ? bandaPrevia(control, sobre ?? previa, null, noches)
     : bandaPrevia(control, previaVigente, sobre, noches);
-  const ctx = { minDate, hoy, sinCupo, desde: seleccion.desde, hasta: seleccion.hasta, banda };
+  const ctx = { minDate, hoy, sinCupo, desde: seleccion.desde, hasta: seleccion.hasta, banda, conservarSeleccion: control === 'rango_fijo_paquete' };
 
   const formatoLargo = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' });
   const formatoCorto = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' });

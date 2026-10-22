@@ -99,7 +99,7 @@ export default async function ReservarPage({
         puntosPorEmpresa={puntosPorEmpresa}
         minDate={minDate}
         volverHref={hrefDeOrigen({ lang, origen: origenQuery, sedeSlug: paquete.sede_slug || sedeSlug })}
-        empresas={Object.fromEntries(EMPRESAS.map((e) => [e.slug, { nombre: e.nombre, logo: e.logo }]))}
+        empresas={Object.fromEntries(EMPRESAS.map((e) => [e.slug, { nombre: e.nombre, logo: e.logo, simbolo: e.simbolo }]))}
         retomarCheckoutId={retomarCheckoutId}
       />
     );

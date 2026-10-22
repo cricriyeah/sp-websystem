@@ -40,6 +40,11 @@ export type ContextoCelda = {
   hasta: string | null;
   /** Días de la vista previa, en orden. */
   banda: readonly string[];
+  /**
+   * La vista previa no esconde lo ya elegido: se dibuja encima solo donde cae. Para el rango fijo, cuya vista
+   * previa sigue al cursor; si no, al pasar el mouse tras elegir parecería que no se eligió nada.
+   */
+  conservarSeleccion?: boolean;
 };
 
 export type EstadoCelda = {
@@ -57,6 +62,7 @@ export function estadoDeCelda(iso: string, ctx: ContextoCelda): EstadoCelda {
   // Mientras se elige de nuevo, la vista previa manda sobre lo ya elegido.
   if (ctx.banda.length > 0) {
     const dentro = ctx.banda.includes(iso);
+    if (!dentro && ctx.conservarSeleccion) return estadoFirme(iso, ctx, base, hoy);
     return {
       base, hoy,
       marca: dentro ? 'vista_previa' : 'ninguna',
@@ -64,6 +70,11 @@ export function estadoDeCelda(iso: string, ctx: ContextoCelda): EstadoCelda {
       finBanda: dentro && ctx.banda[ctx.banda.length - 1] === iso,
     };
   }
+  return estadoFirme(iso, ctx, base, hoy);
+}
+
+/** Lo ya elegido, sin vista previa: el rango con sus extremos o el día suelto. */
+function estadoFirme(iso: string, ctx: ContextoCelda, base: BaseCelda, hoy: boolean): EstadoCelda {
   if (ctx.desde && ctx.hasta && iso >= ctx.desde && iso <= ctx.hasta) {
     const extremo = iso === ctx.desde || iso === ctx.hasta;
     return { base, hoy, marca: extremo ? 'extremo' : 'rango', inicioBanda: iso === ctx.desde, finBanda: iso === ctx.hasta };

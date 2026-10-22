@@ -51,6 +51,19 @@ test('selección, rango firme con extremos y banda de vista previa', () => {
   assert.equal(c.estadoDeCelda('2026-11-12', previa).finBanda, true);
 });
 
+test('rango fijo: la vista previa del cursor no esconde la estancia ya elegida', () => {
+  // Paquete de 3 noches elegido del 5 al 8; el cursor pasa por el 20 y dibuja su vista previa.
+  const elegido = { ...base, desde: '2026-11-05', hasta: '2026-11-08', banda: ['2026-11-20', '2026-11-21', '2026-11-22', '2026-11-23'], conservarSeleccion: true };
+  assert.equal(c.estadoDeCelda('2026-11-05', elegido).marca, 'extremo');
+  assert.equal(c.estadoDeCelda('2026-11-06', elegido).marca, 'rango');
+  assert.equal(c.estadoDeCelda('2026-11-08', elegido).finBanda, true);
+  assert.equal(c.estadoDeCelda('2026-11-21', elegido).marca, 'vista_previa');
+  // Donde la vista previa cae sobre la estancia elegida, se ve la vista previa.
+  const encima = { ...elegido, banda: ['2026-11-06', '2026-11-07', '2026-11-08', '2026-11-09'] };
+  assert.equal(c.estadoDeCelda('2026-11-07', encima).marca, 'vista_previa');
+  assert.equal(c.estadoDeCelda('2026-11-05', encima).marca, 'extremo');
+});
+
 test('fecha única: un toque elige', () => {
   assert.deepEqual(c.alTocar('fecha_unica', null, '2026-11-05', null), { seleccion: { desde: '2026-11-05', hasta: null }, previa: null });
 });
