@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { FotoAleatoria } from '@/components/foto-aleatoria';
 import { botonClases } from '@/components/ui/variantes';
 
 type Props = {
@@ -10,10 +10,14 @@ type Props = {
 };
 
 /**
- * Foto de la sección. DE RELLENO (decisión del dueño, 2026-10-19: usar lo que ya hay hasta subir las reales).
- * Decorativa: los pasos dicen todo.
+ * Fotos del hub (decisión del dueño, 2026-10-22): una al azar en cada visita. Solo van en el hub, nunca en
+ * las cortinas ni en las páginas de sede. Decorativas: los pasos dicen todo.
  */
-const FOTO = '/photos/cana-doblada-dorado.webp';
+const FOTOS = [
+  'pez-en-el-anzuelo', 'cardon-junto-al-mar', 'cardones-contra-el-cielo', 'pescador-con-cana', 'roca-frente-al-mar',
+  'brazos-abiertos-al-mar', 'caminata-en-la-sierra', 'salto-al-mar', 'cardones-al-atardecer', 'corriendo-a-las-olas',
+  'pangas-en-la-playa', 'caminando-por-la-costa', 'cana-frente-al-mar', 'pesca-al-atardecer',
+].map((nombre) => `/sunbajaexperience/fotos/${nombre}.webp`);
 
 /**
  * Cómo funciona el sitio: un lugar que reúne a las empresas locales; cada una opera y cobra directo.
@@ -28,7 +32,7 @@ export function HubComoFunciona({ id, titulo, texto, pasos, cta }: Props) {
     <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-[calc(var(--nav-alto)+16px)] bg-superficie py-16 sm:py-20 lg:py-28">
       <div className="mx-auto grid max-w-[1440px] items-start gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-12">
         <div className="relative aspect-[4/3] overflow-hidden bg-tinta lg:sticky lg:top-[calc(var(--nav-alto)+1.5rem)] lg:col-span-6 lg:aspect-[4/5]">
-          <Image src={FOTO} alt="" fill sizes="(min-width: 1024px) 50vw, 100vw" loading="lazy" className="object-cover" />
+          <FotoAleatoria fotos={FOTOS} sizes="(min-width: 1024px) 50vw, 100vw" />
         </div>
 
         <div className="lg:col-span-5 lg:col-start-8">
