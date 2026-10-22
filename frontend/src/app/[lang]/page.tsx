@@ -16,6 +16,7 @@ import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { HubPortada } from '@/components/hub-portada';
 import { HubMapaEscritorio } from '@/components/hub-mapa-escritorio';
+import type { SedeMapa } from '@/components/hub-mapa-sedes';
 import { CortinasSedes, type VistaSedeHub } from '@/components/cortinas-sedes';
 import { HubComoFunciona } from '@/components/hub-como-funciona';
 import { ColaboradoresSection } from '@/components/colaboradores-section';
@@ -28,6 +29,13 @@ export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promis
 }
 
 type Textos = Awaited<ReturnType<typeof getDictionary>>['hubContenido'];
+
+/** Foto del panel de cada sede en el mapa: fotos genéricas de Baja del hub, nunca de las cortinas ni de la sede. */
+const FOTO_MAPA: Record<string, { src: string; alt: Record<Locale, string> }> = {
+  'la-paz': { src: '/sunbajaexperience/fotos/pangas-en-la-playa.webp', alt: { es: 'Pangas en la arena frente al mar', en: 'Pangas on the sand by the sea' } },
+  'la-ventana': { src: '/sunbajaexperience/fotos/corriendo-a-las-olas.webp', alt: { es: 'Una persona corre hacia las olas', en: 'Someone running into the waves' } },
+  'puerto-chale': { src: '/sunbajaexperience/fotos/cardon-junto-al-mar.webp', alt: { es: 'Un cardón junto al mar', en: 'A cardón cactus by the sea' } },
+};
 
 /** «Con A», «Con A y B», «Con A y N más». */
 function lineaDeEmpresas(nombres: string[], textos: Textos): string | null {
@@ -75,8 +83,18 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
   const textos = dict.hubContenido;
   const conFoto = tarjetasConFoto(sedes);
   const vistas = sedes.map((sede) => vistaDeSede(sede, sedesApi?.find((s) => s.slug === sede.slug), conFoto, lang, textos));
-  const sedesMapa = sedes.map((sede) => ({ slug: sede.slug, nombre: sede.nombre, empresaProtagonistaNombre: getEmpresa(sede.empresaProtagonistaSlug)?.nombre }));
-  const { mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, conLabel, verDestino } = dict.hub;
+  // El panel del mapa repite lo de la cortina (empresas, tipos, «desde») y suma la frase de la sede y una foto del hub.
+  const sedesMapa: SedeMapa[] = vistas.map((vista, i) => ({
+    slug: vista.slug,
+    nombre: vista.nombre,
+    href: vista.href,
+    empresas: vista.empresas,
+    subtitulo: sedes[i].hero.subtitulo,
+    tipos: vista.chips.map((chip) => chip.texto).join(' · '),
+    desde: vista.desde,
+    foto: FOTO_MAPA[vista.slug] ? { src: FOTO_MAPA[vista.slug].src, alt: FOTO_MAPA[vista.slug].alt[lang] } : null,
+  }));
+  const { mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination } = dict.hub;
 
   return <>
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
@@ -91,7 +109,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
           <h2 id={`${ANCLA_HUB.mapa}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.mapaTitulo}</h2>
           <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.mapaTexto}</p>
           <div className="mt-10">
-            <HubMapaEscritorio lang={lang} sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, conLabel, verDestino }} />
+            <HubMapaEscritorio sedes={sedesMapa} copy={{ mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap, closeDestination, desde: textos.desde, verSede: textos.verSede }} />
           </div>
         </div>
       </section>

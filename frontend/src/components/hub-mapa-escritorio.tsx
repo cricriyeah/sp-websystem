@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import type { Locale } from '@/app/[lang]/dictionaries';
 import type { CopyMapa, SedeMapa } from '@/components/hub-mapa-sedes';
 import { Skeleton } from '@/components/skeleton';
 
@@ -18,7 +17,7 @@ const HubMapaSedes = dynamic(() => import('@/components/hub-mapa-sedes').then((m
  * monta. En móvil no se pide nada (las tarjetas son el selector). Mientras decide, el esqueleto
  * guarda el alto para que nada brinque.
  */
-export function HubMapaEscritorio(props: { lang: Locale; sedes: SedeMapa[]; copy: CopyMapa }) {
+export function HubMapaEscritorio(props: { sedes: SedeMapa[]; copy: CopyMapa }) {
   const [escritorio, setEscritorio] = useState<boolean | null>(null);
 
   useEffect(() => {
