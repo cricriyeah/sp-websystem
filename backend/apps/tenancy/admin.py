@@ -42,13 +42,20 @@ class SedeAdmin(SoloOperadorPlataformaAdminMixin, AccionesDeFilaMixin, ModelAdmi
 
 @admin.register(Aeropuerto)
 class AeropuertoAdmin(SoloOperadorPlataformaAdminMixin, ModelAdmin):
-    """Los aeropuertos que ofrece el checkout de los paquetes, y qué sedes tienen traslado a cada uno."""
+    """Los aeropuertos de la Baja que ofrece el checkout de los paquetes: LAP, CSL, SJD y LTO, los únicos que existen.
+    No se crean ni se borran aquí; solo se ajusta qué sedes tienen traslado a cada uno y si está activo."""
 
     list_display = ['nombre', 'codigo', 'sedes_cubiertas', 'activo']
     list_filter = ['activo', 'sedes']
     search_fields = ['nombre', 'codigo']
-    prepopulated_fields = {'codigo': ('nombre',)}
+    readonly_fields = ['codigo', 'nombre']
     filter_horizontal = ['sedes']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     @admin.display(description='Sedes que cubre')
     def sedes_cubiertas(self, obj):

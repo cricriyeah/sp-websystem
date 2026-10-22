@@ -2,9 +2,9 @@ from django.db import migrations
 
 from apps.tenancy.rls import alcance_operador_migracion
 
-# Los aeropuertos de la Baja que se pueden elegir (el dueño confirmó que son estos cuatro; antes eran dos fijos
-# en el código). Se dan de alta cubriendo TODAS las sedes que ya existen: en la Baja se llega a cualquiera sin
-# importar la distancia. El operador puede quitar la cobertura de una sede en el admin.
+# Los aeropuertos de la Baja: el dueño confirmó que estos cuatro son los únicos que existen (antes eran dos fijos
+# en el código). Se dan de alta cubriendo todas las sedes que ya existen, que es lo que el sitio ofrecía hasta
+# ahora; el operador ajusta en el admin qué sedes tienen traslado a cada uno.
 INICIALES = (
     ('lap', 'La Paz (LAP)'),
     ('csl', 'Cabo San Lucas (CSL)'),

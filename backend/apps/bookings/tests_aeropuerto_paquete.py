@@ -90,13 +90,16 @@ class CoberturaDeAeropuertosTests(AeropuertoDePaqueteTests):
         serializador, valido = self.validar()
         self.assertTrue(valido, serializador.errors)
 
-    def test_un_aeropuerto_nuevo_dado_de_alta_se_puede_elegir(self):
+    def test_el_admin_no_deja_crear_ni_borrar_aeropuertos(self):
+        from django.contrib import admin as django_admin
+        from django.test import RequestFactory
+
         from apps.tenancy.models import Aeropuerto
 
-        nuevo = Aeropuerto.objects.create(codigo='mxl', nombre='Mexicali (MXL)')
-        nuevo.sedes.add(self.sede)
-        serializador, valido = self.validar(aeropuerto='mxl')
-        self.assertTrue(valido, serializador.errors)
+        modelo_admin = django_admin.site._registry[Aeropuerto]
+        peticion = RequestFactory().get('/')
+        self.assertFalse(modelo_admin.has_add_permission(peticion))
+        self.assertFalse(modelo_admin.has_delete_permission(peticion, Aeropuerto.objects.first()))
 
     def test_el_catalogo_de_paquetes_expone_los_aeropuertos_de_la_sede(self):
         from apps.fleet.serializers import PaqueteSerializer
