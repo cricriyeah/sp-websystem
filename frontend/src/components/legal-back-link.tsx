@@ -9,6 +9,8 @@ type LegalBackLinkProps = {
   label: string;
   /** A donde ir si esta pestaña no tiene de donde regresar. */
   fallbackHref: string;
+  /** Reemplaza el aspecto de texto (el detalle lo usa como píldora oscura sobre la foto). */
+  className?: string;
 };
 
 /**
@@ -24,7 +26,7 @@ type LegalBackLinkProps = {
  * (pestaña nueva recién abierta, o se entró por un link externo,
  * `history.length` es 1) se sigue el `href` normal hacia el fallback.
  */
-export function LegalBackLink({ label, fallbackHref }: LegalBackLinkProps) {
+export function LegalBackLink({ label, fallbackHref, className }: LegalBackLinkProps) {
   const router = useRouter();
 
   function alVolver(evento: MouseEvent<HTMLAnchorElement>) {
@@ -38,7 +40,7 @@ export function LegalBackLink({ label, fallbackHref }: LegalBackLinkProps) {
     <Link
       href={fallbackHref}
       onClick={alVolver}
-      className="inline-flex min-h-11 items-center gap-2 texto-cuerpo font-semibold transition-colors hover:text-cafe"
+      className={className ?? 'inline-flex min-h-11 items-center gap-2 texto-cuerpo font-semibold transition-colors hover:text-cafe'}
     >
       <ArrowLeft size={16} />
       {label}

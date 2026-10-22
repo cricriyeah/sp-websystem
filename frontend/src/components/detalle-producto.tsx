@@ -85,7 +85,11 @@ export function DetalleProducto({ vista, textos }: Props) {
   const arranque = (
     <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-4 pb-10 pt-[calc(var(--nav-alto)+0.5rem)] text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
       <div className="mb-auto flex flex-col items-start gap-6">
-        <LegalBackLink label={textos.detalle.atras} fallbackHref={vista.volver.href} />
+        <LegalBackLink
+          label={textos.detalle.atras}
+          fallbackHref={vista.volver.href}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-tinta px-5 texto-cuerpo font-semibold text-white transition-colors hover:bg-cafe focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        />
         {!vista.foto && <span aria-hidden="true" className="texto-gigante">{vista.palabra}</span>}
       </div>
       <h1 className="texto-grande">{vista.titulo}</h1>
