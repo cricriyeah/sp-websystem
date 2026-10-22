@@ -671,8 +671,11 @@
     },
     "paquetes": {
       "titulo": "Packages",
-      "enElMar": "At sea",
-      "enTierra": "On land",
+      "noches": "{n} nights",
+      "dias": "{n} days in {sede}",
+      "llegada": "Arrival",
+      "mar": "At sea, day {desde} to {hasta}",
+      "salida": "Departure",
       "incluyePersonas": "Includes {n} guests"
     },
     "detalle": {

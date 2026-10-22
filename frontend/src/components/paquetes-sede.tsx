@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Check, UserCircle } from '@phosphor-icons/react/ssr';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
-import { getEmpresa } from '@/content/empresas';
 import { colorDeServicio } from '@/lib/color-actividad';
 import { vistaDePaquete } from '@/components/vistas-catalogo';
 import { CarruselFotos } from '@/components/carrusel-fotos';
@@ -24,41 +24,49 @@ type Props = {
   fondo: Fondo;
 };
 
-type Parte = { nombre: string; empresa: string };
+// Un renglón de «incluye» que en realidad dice lo que NO incluye: va como nota bajo el precio, sin palomita.
+const EXCLUSION = /no incluye|not include/i;
+// El renglón de los días en el mar («del día 2 al 5»): la franja ya lo dice.
+const RENGLON_DIAS = /d[ií]a \d+ al \d+|day \d+ to (day )?\d+/i;
+// Renglones de «incluye» por tarjeta: 4 en escritorio, 3 en el teléfono. La lista completa está en el detalle.
+const MAX_INCLUYE = 4;
 
-/** Los servicios del paquete en dos mitades: lo que pasa en el mar y lo que pasa en tierra, sin repetir. */
-function partesDe(paquete: PaqueteCatalogo): { mar: Parte[]; tierra: Parte[] } {
-  const vistos = new Set<number>();
-  const partes = { mar: [] as Parte[], tierra: [] as Parte[] };
-  for (const componente of [...paquete.servicios_asociados].sort((a, b) => a.orden - b.orden)) {
-    if (vistos.has(componente.servicio_id)) continue;
-    vistos.add(componente.servicio_id);
-    const { servicio } = componente;
-    const parte = { nombre: servicio.nombre, empresa: getEmpresa(servicio.empresa_slug)?.nombre ?? servicio.empresa_slug };
-    partes[colorDeServicio(servicio) === 'mar' ? 'mar' : 'tierra'].push(parte);
-  }
-  return partes;
+/**
+ * Los días de la estancia: llega el día 1, sale al mar del día 2 a la última noche y se va el día siguiente.
+ * Es la regla de los paquetes de La Ventana; solo se pinta si el paquete tiene noches y algo de mar.
+ */
+function franjaDe(paquete: PaqueteCatalogo): { dias: number; marHasta: number } | null {
+  const noches = paquete.noches ?? 0;
+  const conMar = paquete.servicios_asociados.some((c) => colorDeServicio(c.servicio) === 'mar');
+  return noches >= 2 && conMar ? { dias: noches + 1, marHasta: noches } : null;
 }
 
 /**
- * Los paquetes de la sede (F10), cada uno en una tarjeta con foto: qué pasa en el mar y qué pasa en tierra
- * (sale de los servicios del paquete, con su empresa), el precio y el botón «Reservar →». Toda la tarjeta es
- * un solo enlace a la página del paquete. Sin foto propia, el bloque lleva el color de su tipo con su palabra.
+ * Los paquetes de la sede, cada uno en una tarjeta con foto. La cifra de noches manda (es lo que distingue un
+ * paquete del otro); debajo, los días en la sede, quién te lleva, la franja de días (llegada, mar, salida), lo
+ * que incluye y el precio con «Reservar →». Lo que el paquete no incluye va como nota bajo el precio. La foto
+ * va siempre del mismo lado para que las tarjetas se comparen renglón con renglón. Toda la tarjeta es un solo
+ * enlace a la página del paquete; ahí está el nombre del backoffice y la lista completa.
  *
  * Server Component.
  */
 export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReservar, fondo }: Props) {
-  // El paso de tono: la tarjeta es gris sobre blanco y blanca sobre gris; sus cajas, al revés.
+  // El paso de tono: la tarjeta es gris sobre blanco y blanca sobre gris.
   const tarjeta = fondo === 'cafe-bruma' ? 'bg-superficie' : 'bg-cafe-bruma';
-  const caja = fondo === 'cafe-bruma' ? 'bg-cafe-bruma' : 'bg-superficie';
 
   return (
     <SectionShell id={id} fondo={fondo} titulo={textos.titulo}>
       <div className="mt-10 flex flex-col gap-4">
         {paquetes.map((paquete, i) => {
           const vista = vistaDePaquete(paquete, lang, moneda);
-          const { mar, tierra } = partesDe(paquete);
-          const incluye = paquete.estrategia_precio === 'por_grupo' ? textos.incluyePersonas.replace('{n}', String(paquete.personas_precio_base)) : null;
+          const franja = franjaDe(paquete);
+          const renglones = paquete.incluye?.[lang] ?? [];
+          const exclusiones = renglones.filter((r) => EXCLUSION.test(r));
+          const incluye = renglones
+            .filter((r) => !EXCLUSION.test(r) && !(franja && RENGLON_DIAS.test(r)))
+            .slice(0, MAX_INCLUYE);
+          const porGrupo =
+            paquete.estrategia_precio === 'por_grupo' ? textos.incluyePersonas.replace('{n}', String(paquete.personas_precio_base)) : null;
           return (
             <Link
               key={paquete.slug}
@@ -93,39 +101,84 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                   <span aria-hidden="true" className="texto-seccion">{vista.palabra}</span>
                 )}
               </div>
-              <div className="flex flex-col gap-6 p-6 sm:p-8 lg:p-12">
-                <h3 className="texto-paso">{vista.nombre}</h3>
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  {([[textos.enElMar, mar], [textos.enTierra, tierra]] as const).map(([titulo, partes]) =>
-                    partes.length > 0 && (
-                      <div key={titulo} className={cn('p-5', caja)}>
-                        <h4 className="texto-subtitulo">{titulo}</h4>
-                        <ul className="mt-3 flex flex-col gap-2 texto-cuerpo">
-                          {partes.map((parte) => (
-                            <li key={parte.nombre}>
-                              {parte.nombre}
-                              <span className="block texto-cuerpo">{textosReservar.opera.replace('{empresa}', parte.empresa)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ),
-                  )}
-                </div>
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-4">
-                  <p className="texto-cuerpo tabular-nums">
-                    {vista.precio && (
-                      <>
-                        <strong className="texto-paso block">{vista.precio.monto}</strong>
-                        {vista.precio.base}
-                        {incluye && ` · ${incluye}`}
-                      </>
-                    )}
+
+              <div className="flex flex-col gap-7 p-6 sm:p-8 lg:p-12">
+                <div>
+                  <h3 className="texto-grande">{paquete.noches ? textos.noches.replace('{n}', String(paquete.noches)) : vista.nombre}</h3>
+                  {paquete.noches ? (
+                    <p className="mt-3 texto-subtitulo">{textos.dias.replace('{n}', String(paquete.noches + 1)).replace('{sede}', paquete.sede)}</p>
+                  ) : null}
+                  <p className="mt-3 flex items-center gap-2 texto-cuerpo">
+                    <UserCircle size={20} weight="regular" aria-hidden="true" className="shrink-0" />
+                    {textosReservar.opera.replace('{empresa}', vista.empresa)}
                   </p>
-                  <span aria-hidden="true" className={cn(botonClases({ variante: 'campana' }), 'group-hover:bg-cafe')}>
-                    {textosReservar.reservar}
-                    <span className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:translate-x-1">→</span>
-                  </span>
+                </div>
+
+                {franja && (
+                  <div>
+                    <div aria-hidden="true" className="flex gap-1">
+                      {Array.from({ length: franja.dias }, (_, d) => d + 1).map((dia) => (
+                        <span
+                          key={dia}
+                          className={cn(
+                            'grid h-10 flex-1 place-items-center texto-pequeno font-semibold tabular-nums text-white',
+                            dia === 1 || dia === franja.dias ? 'bg-verde' : 'bg-azul',
+                          )}
+                        >
+                          {dia}
+                        </span>
+                      ))}
+                    </div>
+                    <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 texto-pequeno">
+                      {(
+                        [
+                          ['bg-verde', textos.llegada],
+                          ['bg-azul', textos.mar.replace('{desde}', '2').replace('{hasta}', String(franja.marHasta))],
+                          ['bg-verde', textos.salida],
+                        ] as const
+                      ).map(([color, texto]) => (
+                        <li key={texto} className="flex items-center gap-2">
+                          <span aria-hidden="true" className={cn('size-2.5 shrink-0', color)} />
+                          {texto}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {incluye.length > 0 && (
+                  <ul className="flex flex-col gap-2 texto-cuerpo">
+                    {incluye.map((renglon, r) => (
+                      <li key={renglon} className={cn('flex items-start gap-2', r >= 3 && 'max-sm:hidden')}>
+                        <Check size={18} weight="bold" aria-hidden="true" className="mt-0.5 shrink-0 text-cafe" />
+                        {renglon}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="mt-auto flex flex-col gap-3 pt-2">
+                  <div className="flex flex-wrap items-end justify-between gap-4">
+                    <p className="tabular-nums">
+                      {vista.precio && (
+                        <>
+                          <span className="block texto-paso font-bold">{vista.precio.monto}</span>
+                          <span className="block texto-pequeno">
+                            {vista.precio.base}
+                            {porGrupo && ` · ${porGrupo}`}
+                            {vista.precio.aprox && ` · ${vista.precio.aprox}`}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                    <span aria-hidden="true" className={cn(botonClases({ variante: 'campana' }), 'group-hover:bg-cafe max-sm:w-full max-sm:justify-center')}>
+                      {textosReservar.reservar}
+                      <span className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:translate-x-1">→</span>
+                    </span>
+                  </div>
+                  {exclusiones.map((nota) => (
+                    <p key={nota} className="texto-pequeno text-tinta-suave">{nota}</p>
+                  ))}
                 </div>
               </div>
             </Link>
