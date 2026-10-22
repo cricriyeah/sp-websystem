@@ -650,7 +650,7 @@
     },
     "queReservar": {
       "titulo": "Book right now",
-      "opera": "Run by {empresa}",
+      "opera": "With {empresa}",
       "incluye": "Includes",
       "preguntaIncluye": "Ask what is included",
       "reservar": "Book",
@@ -684,7 +684,7 @@
       "carril": "More services in {sede}",
       "verSede": "See everything in {sede}",
       "reservarServicio": "Book {nombre}",
-      "etiquetaOpera": "Run by",
+      "etiquetaOpera": "With",
       "etiquetaIncluye": "Includes",
       "etiquetaMaximo": "Maximum",
       "etiquetaEstancia": "Stay",

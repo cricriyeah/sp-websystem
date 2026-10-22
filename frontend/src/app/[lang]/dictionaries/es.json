@@ -565,7 +565,7 @@
     "lockedNote": "Tu reserva ya quedó registrada y no puede modificarse desde aquí. Si necesitas hacer un cambio, con gusto te ayudamos.",
     "lockedCta": "Hablar con un asesor",
     "whyManyPayments": "¿Por qué más de un pago?",
-    "whyManyPaymentsBody": "Tu paquete lo operan empresas distintas y cada una cobra directo en su propia cuenta, por eso la tarjeta se pide una vez por empresa.",
+    "whyManyPaymentsBody": "Tu paquete lo ofrecen empresas distintas y cada una cobra directo en su propia cuenta, por eso la tarjeta se pide una vez por empresa.",
     "payStepHintLast": "Es la última empresa de tu paquete. Con este pago terminas.",
     "payButton": "Pagar {amount} a {empresa}",
     "payButtonSingle": "Pagar {amount}",
@@ -650,7 +650,7 @@
     },
     "queReservar": {
       "titulo": "Reserva ahora mismo",
-      "opera": "Opera {empresa}",
+      "opera": "Te lleva {empresa}",
       "incluye": "Incluye",
       "preguntaIncluye": "Pregunta qué incluye",
       "reservar": "Reservar",
@@ -684,7 +684,7 @@
       "carril": "Otros servicios de {sede}",
       "verSede": "Ver todo {sede}",
       "reservarServicio": "Reservar {nombre}",
-      "etiquetaOpera": "Opera",
+      "etiquetaOpera": "Te lleva",
       "etiquetaIncluye": "Incluye",
       "etiquetaMaximo": "Máximo",
       "etiquetaEstancia": "Estancia",
@@ -705,8 +705,8 @@
       "cifraFecha": "48 h",
       "cifraTotal": "100 %",
       "pagoTitulo": "Cómo pagas",
-      "pagoTexto": "Pagas directo a la empresa que opera tu servicio. Según el servicio, pagas el total en línea o el {porcentaje} % ahora y el resto en efectivo el día del viaje.",
-      "pagoTextoTotal": "Pagas directo a la empresa que opera tu servicio, el total en línea al reservar.",
+      "pagoTexto": "Pagas directo a la empresa a cargo de tu servicio. Según el servicio, pagas el total en línea o el {porcentaje} % ahora y el resto en efectivo el día del viaje.",
+      "pagoTextoTotal": "Pagas directo a la empresa a cargo de tu servicio, el total en línea al reservar.",
       "resto": "El resto, el día del viaje, en efectivo",
       "climaTitulo": "Si hay mal clima",
       "climaTexto": "Si el mal clima impide salir, hay reembolso completo.",
@@ -715,7 +715,7 @@
       "atencionTitulo": "¿Prefieres reservar con una persona?",
       "atencionTexto": "Nuestro equipo te ayuda a elegir y a reservar por WhatsApp, todos los días."
     },
-    "empresas": "Quién opera cada servicio",
+    "empresas": "Quién está detrás de cada servicio",
     "opiniones": {
       "titulo": "Opiniones de las empresas",
       "publicadaPor": "Opinión publicada por {empresa}",
@@ -740,7 +740,7 @@
   },
   "hubContenido": {
     "titularLineas": ["Sal al mar", "en Baja Sur"],
-    "subtexto": "Pesca, ballenas, hospedaje y traslados en Baja California Sur. Cada empresa opera su servicio y cobra directo.",
+    "subtexto": "Pesca, ballenas, hospedaje y traslados en Baja California Sur. Cada empresa ofrece su servicio y cobra directo.",
     "og": { "lugar": "Baja California Sur", "titular": "Reserva tu experiencia en la Baja Sur con empresas locales" },
     "ctaSedes": "Ver las sedes",
     "sedesTitulo": "Elige tu sede",
@@ -751,13 +751,13 @@
     "desde": "Desde",
     "verSede": "Ver {sede}",
     "mapaTitulo": "Elige tu sede en el mapa",
-    "mapaTexto": "Toca una sede para ver qué empresa local la opera y a dónde ir.",
+    "mapaTexto": "Toca una sede para ver qué empresas locales hay ahí y a dónde ir.",
     "comoTitulo": "Un lugar, varias empresas",
-    "comoTexto": "Reunimos en un solo lugar los servicios de las empresas locales de cada sede. Cada empresa opera su servicio y cobra directo.",
+    "comoTexto": "Reunimos en un solo lugar los servicios de las empresas locales de cada sede. Cada empresa ofrece su servicio y cobra directo.",
     "comoPasos": [
       {
         "verbo": "Elige",
-        "texto": "Cada servicio muestra qué empresa lo opera, cuánto cuesta y qué incluye."
+        "texto": "Cada servicio muestra qué empresa lo ofrece, cuánto cuesta y qué incluye."
       },
       {
         "verbo": "Reserva",
@@ -765,11 +765,11 @@
       },
       {
         "verbo": "Vive la experiencia",
-        "texto": "Quien opera tu servicio te recibe el día del viaje. Si el mal clima impide salir, hay reembolso completo."
+        "texto": "La empresa de tu servicio te recibe el día del viaje. Si el mal clima impide salir, hay reembolso completo."
       }
     ],
     "empresasTitulo": "Empresas locales que nos acompañan",
-    "empresasTexto": "Cada empresa es independiente: opera su servicio y cobra directo.",
+    "empresasTexto": "Cada empresa es independiente: ofrece su servicio y cobra directo.",
     "verServiciosEn": "Ver servicios en {sede}",
     "sitioOficial": "Sitio oficial",
     "pestanaNueva": "{accion}, {empresa}, se abre en una pestaña nueva",
