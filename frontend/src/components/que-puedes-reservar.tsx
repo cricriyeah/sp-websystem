@@ -96,7 +96,7 @@ export function QuePuedesReservar({ lang, moneda, sede, servicios, paquetes, est
         textos={{ anterior: textos.flechaAnterior, siguiente: textos.flechaSiguiente }}
       >
         {elementos.map(({ vista }) => (
-          <TarjetaProducto key={vista.clave} vista={vista} textos={textosTarjeta} prioridad={Boolean(vista.foto) && fotosPintadas++ < 2} />
+          <TarjetaProducto key={vista.clave} vista={vista} textos={textosTarjeta} prioridad={Boolean(vista.foto) && fotosPintadas++ < 2} unica={elementos.length === 1} />
         ))}
       </FilaArrastrable>
     </section>

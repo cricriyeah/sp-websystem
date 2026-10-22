@@ -51,31 +51,40 @@ type Props = {
   textos: TextosProducto;
   /** Las dos primeras fotos de la fila cargan de inmediato; el resto, al acercarse. */
   prioridad?: boolean;
+  /** Es la única de la fila: en escritorio va horizontal (foto a la izquierda, datos a la derecha) en vez de
+   * estirarse a todo el ancho con la foto vertical. En el teléfono no cambia. */
+  unica?: boolean;
 };
 
 /**
  * La tarjeta de «Qué puedes reservar» (F10), igual para servicio y paquete: foto 4:5 (o un bloque del color
  * de su tipo con su palabra, cuando no hay foto honesta), nombre, quién lo opera, precio y un botón
- * «Reservar →». Toda la tarjeta es un solo enlace. Crece hasta llenar la fila si caben todas.
+ * «Reservar →». Toda la tarjeta es un solo enlace. Crece hasta llenar la fila si caben todas; sola, en
+ * escritorio se pone horizontal.
  *
  * Server Component.
  */
-export function TarjetaProducto({ vista, textos, prioridad = false }: Props) {
+export function TarjetaProducto({ vista, textos, prioridad = false, unica = false }: Props) {
   const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad } = vista;
+  const tamanos = unica ? '(min-width: 1024px) 42vw, 80vw' : '(min-width: 1024px) 27vw, 80vw';
+  const marco = unica ? 'lg:aspect-[4/3] lg:w-[42%] lg:shrink-0' : '';
   const info = [textos.opera.replace('{empresa}', empresa), capacidad ? textos.hasta.replace('{n}', String(capacidad)) : null].filter(Boolean).join(' · ');
 
   return (
     <Link
       href={vista.hrefDetalle}
       aria-label={textos.reservarAria.replace('{nombre}', nombre).replace('{empresa}', empresa)}
-      className="group rev flex flex-[1_0_clamp(16.25rem,27vw,26.25rem)] snap-start flex-col gap-3.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+      className={cn(
+        'group rev flex flex-[1_0_clamp(16.25rem,27vw,26.25rem)] snap-start flex-col gap-3.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
+        unica && 'lg:flex-row lg:items-stretch lg:gap-12',
+      )}
     >
       {foto ? (
-        <div className="rev-foto relative aspect-[4/5] overflow-hidden bg-cafe-bruma">
+        <div className={cn('rev-foto relative aspect-[4/5] overflow-hidden bg-cafe-bruma', marco)}>
           {fotos && fotos.length > 1 ? (
             <CarruselFotos
               fotos={fotos}
-              sizes="(min-width: 1024px) 27vw, 80vw"
+              sizes={tamanos}
               prioridad={prioridad}
               desfase={desfaseDe(vista.clave)}
               className="[@media(hover:hover)]:group-hover:scale-105"
@@ -85,22 +94,23 @@ export function TarjetaProducto({ vista, textos, prioridad = false }: Props) {
               src={foto.src}
               alt={foto.alt}
               fill
-              sizes="(min-width: 1024px) 27vw, 80vw"
+              sizes={tamanos}
               loading={prioridad ? 'eager' : 'lazy'}
               className="object-cover transition-transform duration-[600ms] ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-105"
             />
           )}
         </div>
       ) : (
-        <div aria-hidden="true" className={cn('rev-foto grid aspect-[4/5] place-items-center overflow-hidden p-6 text-center', CAMPO[color])}>
+        <div aria-hidden="true" className={cn('rev-foto grid aspect-[4/5] place-items-center overflow-hidden p-6 text-center', CAMPO[color], marco)}>
           <span className="texto-seccion block transition-transform duration-[400ms] ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:-translate-y-1.5">
             {palabra}
           </span>
         </div>
       )}
-      <p className="text-lg font-semibold leading-snug">{nombre}</p>
+      <div className={cn('flex flex-1 flex-col gap-3.5', unica && 'lg:justify-center lg:gap-5 lg:py-6')}>
+      <p className={cn('text-lg font-semibold leading-snug', unica && 'lg:text-4xl lg:leading-tight')}>{nombre}</p>
       <p className="texto-cuerpo">{info}</p>
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+      <div className={cn('mt-auto flex flex-wrap items-center justify-between gap-3', unica && 'lg:mt-4 lg:justify-start lg:gap-8')}>
         <p className="font-semibold tabular-nums">
           {precio ? (
             <>
@@ -116,6 +126,7 @@ export function TarjetaProducto({ vista, textos, prioridad = false }: Props) {
           {precio ? textos.reservar : textos.elegirRuta}
           <span className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:translate-x-1">→</span>
         </span>
+      </div>
       </div>
     </Link>
   );

@@ -649,7 +649,7 @@
       "operadaPor": "With"
     },
     "queReservar": {
-      "titulo": "What you can book",
+      "titulo": "Book right now",
       "opera": "Run by {empresa}",
       "incluye": "Includes",
       "preguntaIncluye": "Ask what is included",
@@ -707,8 +707,6 @@
       "pagoTitulo": "How you pay",
       "pagoTexto": "You pay the company that runs your service directly. Depending on the service, you pay the full amount online or {porcentaje}% now and the rest in cash on the day of the trip.",
       "pagoTextoTotal": "You pay the company that runs your service directly, the full amount online when you book.",
-      "ejemploServicio": "For example, for {servicio}:",
-      "hoyPagas": "You pay today",
       "resto": "The rest, on the day of the trip, in cash",
       "climaTitulo": "If the weather is bad",
       "climaTexto": "If bad weather keeps the trip from leaving, you get a full refund.",

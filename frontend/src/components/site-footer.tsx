@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Money, WhatsappLogo } from '@phosphor-icons/react/ssr';
+import { LogoPie } from '@/components/logo-pie';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
@@ -134,14 +135,8 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
           </nav>
         </div>
 
-        {/* El logo completo, a todo el ancho y en blanco (los SVG son negros sin relleno propio). Va en dos
-            capas con el mismo encuadre: el isotipo da una vuelta mientras el pie entra en pantalla y las
-            letras aparecen desde la izquierda al llegar al final (globals.css, `.logo-isotipo` y
-            `.logo-letras`; sin `animation-timeline` quedan quietos y completos). */}
-        <div role="img" aria-label="Sun Baja Experience" className="relative mt-16 aspect-[286.32/91.47] w-full lg:mt-24">
-          <Image src="/sunbajaexperience/logolg-isotipo.svg" alt="" fill sizes="(min-width: 1440px) 1344px, 100vw" className="logo-isotipo invert" />
-          <Image src="/sunbajaexperience/logolg-letras.svg" alt="" fill sizes="(min-width: 1440px) 1344px, 100vw" className="logo-letras invert" />
-        </div>
+        {/* El logo completo, a todo el ancho y en blanco; anima al llegar al final (ver `LogoPie`). */}
+        <LogoPie />
 
         <div className="flex flex-col gap-2 pb-10 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <span className="texto-cuerpo">

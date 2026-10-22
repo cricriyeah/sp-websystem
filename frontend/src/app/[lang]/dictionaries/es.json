@@ -103,7 +103,7 @@
     "contacto": "Contacto",
     "catalogo": "Experiencias",
     "sedeLabel": "Destino",
-    "reservar": "Reservar",
+    "reservar": "Reserva ahora",
     "humanContact": "Atención al cliente",
     "whatsappCta": "Escríbenos por WhatsApp",
     "whatsappMessage": "¡Hola! Me gustaría información para reservar un tour de pesca deportiva con ustedes. ¿Me pueden ayudar?",
@@ -649,7 +649,7 @@
       "operadaPor": "Con"
     },
     "queReservar": {
-      "titulo": "Qué puedes reservar",
+      "titulo": "Reserva ahora mismo",
       "opera": "Opera {empresa}",
       "incluye": "Incluye",
       "preguntaIncluye": "Pregunta qué incluye",
@@ -707,8 +707,6 @@
       "pagoTitulo": "Cómo pagas",
       "pagoTexto": "Pagas directo a la empresa que opera tu servicio. Según el servicio, pagas el total en línea o el {porcentaje} % ahora y el resto en efectivo el día del viaje.",
       "pagoTextoTotal": "Pagas directo a la empresa que opera tu servicio, el total en línea al reservar.",
-      "ejemploServicio": "Por ejemplo, en {servicio}:",
-      "hoyPagas": "Hoy pagas",
       "resto": "El resto, el día del viaje, en efectivo",
       "climaTitulo": "Si hay mal clima",
       "climaTexto": "Si el mal clima impide salir, hay reembolso completo.",

@@ -6,9 +6,7 @@ import { alternativasDe } from '@/lib/site';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getSedes, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
-import { aMoneda } from '@/lib/moneda';
 import { fotosAptas, palabrasDeSede } from '@/lib/etiquetas-catalogo';
-import { formatearPrecio } from '@/lib/pricing-paquete';
 import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_DE, enlacesDeSede, fondosDeSecciones, seccionesDeSede, type SeccionId } from '@/lib/secciones-sede';
@@ -18,7 +16,7 @@ import { SedeHero } from '@/components/sede-hero';
 import { QuePuedesReservar } from '@/components/que-puedes-reservar';
 import { PaquetesSede } from '@/components/paquetes-sede';
 import { DiaDeSede } from '@/components/dia-de-sede';
-import { ReservaTranquila, type EjemploPago } from '@/components/reserva-tranquila';
+import { ReservaTranquila } from '@/components/reserva-tranquila';
 import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
 import { FaqSection } from '@/components/faq-section';
@@ -67,7 +65,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   const galeria = contenido.galeria && fotosAptas(contenido.galeria.filter((foto) => !usadas.has(foto.src)));
   const empresasGaleria = Object.fromEntries((galeria ?? []).map((foto) => [foto.empresaSlug, { nombre: getEmpresa(foto.empresaSlug)?.nombre ?? foto.empresaSlug }]));
 
-  const { porcentaje, ejemplo } = pagoDeSede(servicios ?? [], contenido.destacadas[0]);
+  const porcentaje = porcentajeDeSede(servicios ?? [], contenido.destacadas[0]);
 
   // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
   const pintar: Partial<Record<SeccionId, (fondo: Fondo) => ReactNode>> = {
@@ -75,7 +73,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} />,
     paquetes: (fondo) => <PaquetesSede id={ANCLA_DE.paquetes} lang={lang} moneda={moneda} paquetes={paquetes ?? []} textos={dict.sedeContenido.paquetes} textosReservar={dict.sedeContenido.queReservar} fondo={fondo} />,
     ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),
-    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} ejemplo={ejemplo} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} />,
+    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} />,
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
     ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} /> }),
     opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} fondo={fondo} />,
@@ -104,30 +102,15 @@ export default async function SedePage({ params, searchParams }: Props) {
   </>;
 }
 
-/** Dos montos con su moneda: «$1,350 MXN / $75 USD». */
-function enDosMonedas(mxn: number, tipoCambio: string): string {
-  const usd = aMoneda(mxn, 'USD', tipoCambio);
-  return `${formatearPrecio(mxn, 'MXN')} MXN / ${formatearPrecio(usd, 'USD')} USD`;
-}
-
 /**
  * El modo de pago que se cuenta en «Reserva con tranquilidad»: el anticipo del servicio destacado
- * (o, si no lo permite, el de otro servicio de la sede) y un ejemplo con su precio real. Sin
- * precio no hay ejemplo; por ruta no hay un precio que poner.
+ * (o, si no lo permite, el de otro servicio de la sede); `null` si todos se pagan completos.
  */
-function pagoDeSede(servicios: ServicioCatalogo[], destacada: { tipo: string; slug: string; empresaSlug?: string } | undefined): { porcentaje: number | null; ejemplo: EjemploPago | null } {
+function porcentajeDeSede(servicios: ServicioCatalogo[], destacada: { tipo: string; slug: string; empresaSlug?: string } | undefined): number | null {
   const conAnticipo = (s: ServicioCatalogo) => s.permite_anticipo && s.porcentaje_anticipo > 0;
   const destacado = destacada?.tipo === 'servicio'
     ? servicios.find((s) => s.slug === destacada.slug && (!destacada.empresaSlug || s.empresa_slug === destacada.empresaSlug))
     : undefined;
   const conPorcentaje = destacado && conAnticipo(destacado) ? destacado : servicios.find(conAnticipo);
-  const porcentaje = conPorcentaje?.porcentaje_anticipo ?? null;
-  const precio = destacado && destacado.tipo_servicio !== 'transporte' ? Number(destacado.precio_base) : NaN;
-  if (!destacado || !Number.isFinite(precio) || precio <= 0) return { porcentaje, ejemplo: null };
-  if (!conAnticipo(destacado)) return { porcentaje, ejemplo: { servicio: destacado.nombre, ahora: enDosMonedas(precio, destacado.tipo_cambio_usd), resto: null } };
-  const ahora = Math.round((precio * destacado.porcentaje_anticipo) / 100);
-  return {
-    porcentaje,
-    ejemplo: { servicio: destacado.nombre, ahora: enDosMonedas(ahora, destacado.tipo_cambio_usd), resto: enDosMonedas(precio - ahora, destacado.tipo_cambio_usd) },
-  };
+  return conPorcentaje?.porcentaje_anticipo ?? null;
 }

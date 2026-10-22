@@ -12,7 +12,7 @@ import { getSedes } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
-import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
+import { ANCLA_HUB } from '@/lib/secciones-sede';
 import { BarraFlotante, LogoEmpresaAlLado, LogoMarca } from '@/components/barra-flotante';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { SelectorIdioma } from '@/components/selector-idioma';
@@ -37,7 +37,7 @@ type SiteHeaderProps = {
   marcaSede?: { nombre: string; logo?: string };
   /**
    * El menú de la sede, armado por su página con `enlacesDeSede(seccionesDeSede(...))`: solo
-   * las secciones que de verdad se pintan. «Reservar» no va en la barra: el botón del arranque ya baja a eso.
+   * las secciones que de verdad se pintan. «Reserva ahora» va primero y baja a la sección de reservar.
    */
   anclas?: { ancla: string; etiqueta: string }[];
   /** Clases extra del `<header>`. Existe para el `print:hidden` del recibo. */
@@ -94,7 +94,7 @@ export function SiteHeader({
   const baseSede = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 
   const links = baseSede
-    ? (anclas ?? []).filter((a) => a.ancla !== `#${ANCLA_DE.reservar}`).map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta }))
+    ? (anclas ?? []).map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta }))
     : [
         { href: hrefInicio(lang, ANCLA_HUB.mapa), label: nav.mapa },
         { href: hrefInicio(lang, ANCLA_HUB.sedes), label: nav.sedes },

@@ -511,6 +511,22 @@
     }
   }
 
+  /* Sin `animation-timeline` (Safari de iPhone hasta iOS 18) el logo del pie se anima por tiempo al verse:
+     `LogoPie` marca `data-anima` (espera = oculto, ya = corre). Sin JavaScript no hay marca y queda completo. */
+  [data-anima='espera'] .logo-isotipo,
+  [data-anima='espera'] .logo-letras {
+    opacity: 0;
+  }
+
+  [data-anima='ya'] .logo-isotipo {
+    transform-origin: 16% 50%;
+    animation: isotipo-gira 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  [data-anima='ya'] .logo-letras {
+    animation: letras-entran 900ms cubic-bezier(0.16, 1, 0.3, 1) 650ms both;
+  }
+
   /* Donde el navegador lo soporta, cada pieza se revela al entrar en cuadro
      en vez de dispararse todo junto al cargar. */
   @supports (animation-timeline: view()) {
