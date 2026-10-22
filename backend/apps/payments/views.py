@@ -813,6 +813,12 @@ class StripeWebhookView(APIView):
     def post(self, request, empresa_slug):
         empresa = scope.resolver_empresa_de_dinero(empresa_slug)
 
+        # Sin secreto configurado no hay firma que verificar: con una llave vacía cualquiera podría firmar un
+        # evento falso (HMAC con clave vacía) y marcar reservas como pagadas. Se rechaza sin procesar nada.
+        if not empresa.stripe_webhook_secret:
+            logger.error('Webhook de %s sin stripe_webhook_secret configurado: evento rechazado', empresa_slug)
+            return Response(status=400)
+
         try:
             evento = stripe.Webhook.construct_event(
                 request.body,

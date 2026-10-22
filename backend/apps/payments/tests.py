@@ -1908,6 +1908,22 @@ class StripeWebhookViewUsaLaEmpresaDelSlugTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+    @mock.patch('apps.payments.views.aplicar_pago_exitoso')
+    @mock.patch('apps.payments.views.scope.resolver_empresa_de_dinero')
+    @mock.patch('apps.payments.views.stripe.Webhook.construct_event')
+    def test_sin_webhook_secret_rechaza_sin_verificar_ni_aplicar(self, mock_construct, mock_resolver, mock_aplicar):
+        mock_resolver.return_value = mock.Mock(stripe_webhook_secret='', activo=True)
+        request = self.factory.post(
+            '/api/sal-y-sol/stripe/webhook/', data=b'{}',
+            content_type='application/json', HTTP_STRIPE_SIGNATURE='firma-con-llave-vacia',
+        )
+        with self.assertLogs('apps.payments.views', level='ERROR'):
+            response = StripeWebhookView.as_view()(request, empresa_slug='sal-y-sol')
+        self.assertEqual(response.status_code, 400)
+        mock_construct.assert_not_called()
+        mock_aplicar.assert_not_called()
+
+
 class EstadoReservaViewFiltraPorEmpresaTests(TestCase):
     @mock.patch('apps.payments.views.scope.con_empresa')
     @mock.patch('apps.payments.views.scope.resolver_empresa_publica')
@@ -2362,6 +2378,7 @@ class TrasladoPagoFixture:
 
         self.empresa.stripe_secret_key = 'sk_test_traslados'
         self.empresa.stripe_publishable_key = 'pk_test_traslados'
+        self.empresa.stripe_webhook_secret = 'whsec_traslados'
         self.empresa.save()
         self.servicio = Servicio.objects.create(
             empresa=self.empresa, nombre='Traslados', slug='traslados',

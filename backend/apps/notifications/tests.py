@@ -356,6 +356,7 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
             sede=self.sede,
             stripe_secret_key='sk_test_n1',
             stripe_publishable_key='pk_test_n1',
+            stripe_webhook_secret='whsec_test_n1',
         )
         self.empresa_2 = Empresa.objects.create(
             nombre='Empresa Transporte Notif',
@@ -363,6 +364,7 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
             sede=self.sede,
             stripe_secret_key='sk_test_n2',
             stripe_publishable_key='pk_test_n2',
+            stripe_webhook_secret='whsec_test_n2',
         )
         with scope.como_operador_plataforma():
             self.servicio_1 = Servicio.objects.create(
