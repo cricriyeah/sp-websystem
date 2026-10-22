@@ -698,8 +698,7 @@
       "notaExtraMax": "The price includes {n} guests and adds {monto} for each extra guest, up to {max}.",
       "cobroPorEmpresa": "Each company charges its own part: you will see one payment per company.",
       "extraPrecio": "+{monto}",
-      "porPersona": "per person",
-      "atras": "Back to the location"
+      "porPersona": "per person"
     },
     "tranquilidad": {
       "titulo": "Book with peace of mind",

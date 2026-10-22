@@ -698,8 +698,7 @@
       "notaExtraMax": "El precio incluye {n} personas y suma {monto} por cada persona extra, hasta {max}.",
       "cobroPorEmpresa": "Cada empresa cobra su parte: verás un pago por empresa.",
       "extraPrecio": "+{monto}",
-      "porPersona": "por persona",
-      "atras": "Volver a la sede"
+      "porPersona": "por persona"
     },
     "tranquilidad": {
       "titulo": "Reserva con tranquilidad",
