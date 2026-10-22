@@ -29,6 +29,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videohero.webm',
         imagen: '/photos/cola-amarilla-acantilado.webp',
+        palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
           'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
         facts: [
@@ -194,6 +195,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videohero.webm',
         imagen: '/photos/cola-amarilla-acantilado.webp',
+        palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
           'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',
         facts: [
@@ -355,6 +357,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagen: '/photos/ventana-poster.webp',
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
+        palabras: ['Pesca', 'Orcas', 'Ballenas', 'Snorkel', 'Mar', 'Aventura'],
         subtitulo:
           'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes con hospedaje de La Ventana Travel.',
         facts: [],
@@ -469,6 +472,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagen: '/photos/ventana-poster.webp',
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
+        palabras: ['Fishing', 'Orcas', 'Whales', 'Snorkel', 'Sea', 'Adventure'],
         subtitulo:
           'Explore fly fishing, whale and orca watching, and packages with lodging from La Ventana Travel.',
         facts: [],

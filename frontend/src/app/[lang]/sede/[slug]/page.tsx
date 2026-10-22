@@ -69,7 +69,7 @@ export default async function SedePage({ params, searchParams }: Props) {
 
   // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
   const pintar: Partial<Record<SeccionId, (fondo: Fondo) => ReactNode>> = {
-    hero: () => <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={palabrasDeSede(servicios, paquetes, lang)} empresa={marcaSede} textos={dict.sedeContenido.arranque} />,
+    hero: () => <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={contenido.hero.palabras ?? palabrasDeSede(servicios, paquetes, lang)} empresa={marcaSede} textos={dict.sedeContenido.arranque} />,
     reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} />,
     paquetes: (fondo) => <PaquetesSede id={ANCLA_DE.paquetes} lang={lang} moneda={moneda} paquetes={paquetes ?? []} textos={dict.sedeContenido.paquetes} textosReservar={dict.sedeContenido.queReservar} fondo={fondo} />,
     ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),

@@ -27,6 +27,9 @@ export type SedeHeroContenido = {
   imagenCortina?: string;
   /** `object-position` solo bajo 640 px (el encuadre del móvil); sin él vale `posicionImagen`. */
   posicionImagenMovil?: string;
+  /** Las palabras gigantes que rotan en el arranque. Sin ellas salen del catálogo (una por tipo de servicio),
+   * y una sede con un solo tipo se queda quieta. */
+  palabras?: string[];
   subtitulo: string;
   facts: { value: string; label: string }[];
 };
