@@ -12,14 +12,26 @@ import { hrefDetalleServicio } from '@/lib/booking-href';
 import { hrefDetallePaquete } from '@/lib/routes';
 import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
 import { aMoneda } from '@/lib/moneda';
+import { formatHour } from '@/lib/dates';
 import type { VistaProducto } from '@/components/tarjeta-producto';
 
 /** En `/en` el precio va primero en dólares y debajo, aproximado, en pesos. */
 function precioDe(mxn: (moneda: Moneda) => number | null, lang: Locale, moneda: Moneda) {
   const principal: Moneda = lang === 'en' ? 'USD' : moneda;
   const monto = `${formatearPrecio(mxn(principal), principal)} ${principal}`;
-  const aprox = principal === 'USD' ? `≈ ${formatearPrecio(mxn('MXN'), 'MXN')} MXN` : undefined;
+  // La otra moneda, aproximada, para quien piensa en la suya: pesos bajo los dólares y dólares bajo los pesos.
+  const otra: Moneda = principal === 'USD' ? 'MXN' : 'USD';
+  const enOtra = mxn(otra);
+  const aprox = enOtra === null ? undefined : `≈ ${formatearPrecio(enOtra, otra)} ${otra}`;
   return { monto, aprox };
+}
+
+/** «5:00 - 7:00 am» (o «9:00 am - 1:00 pm»): la ventana de salida, solo si el servicio pide hora. */
+function horarioDe(servicio: ServicioCatalogo): string | null {
+  if (!servicio.pide_hora || !servicio.hora_apertura || !servicio.hora_cierre) return null;
+  const desde = formatHour(servicio.hora_apertura);
+  const hasta = formatHour(servicio.hora_cierre);
+  return desde.slice(-2) === hasta.slice(-2) ? `${desde.slice(0, -3)} - ${hasta}` : `${desde} - ${hasta}`;
 }
 
 export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda: Moneda, sedeSlug: string): VistaProducto {
@@ -34,6 +46,8 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
     color: colorDeServicio(servicio),
     palabra: palabraDeServicio(servicio.tipo_servicio, lang),
     descripcion: descripcionDeCatalogo(clave, lang),
+    horario: horarioDe(servicio),
+    incluye: (servicio.incluye?.[lang] ?? []).slice(0, 3),
     foto: imagenDeCatalogo(clave, lang),
     precio: porRuta
       ? null
@@ -53,6 +67,7 @@ export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: M
     empresa: empresa?.nombre ?? paquete.empresa_lider,
     color: colorDePaquete(paquete),
     palabra: palabraDePaquete(paquete.noches, lang),
+    incluye: (paquete.incluye?.[lang] ?? []).slice(0, 3),
     foto: imagenDeCatalogo(clave, lang),
     fotos: imagenesDeCatalogo(clave, lang),
     precio: base

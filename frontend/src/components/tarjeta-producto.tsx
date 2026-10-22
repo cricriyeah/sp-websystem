@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Check, Clock, UserCircle, UsersThree } from '@phosphor-icons/react/ssr';
 import type { ColorActividad } from '@/lib/color-actividad';
 import { CarruselFotos } from '@/components/carrusel-fotos';
 import { botonClases } from '@/components/ui/variantes';
@@ -15,6 +16,10 @@ export type VistaProducto = {
   palabra: string;
   /** Dos o tres frases de venta (`content/descripciones-catalogo.ts`); sin ella no se pinta. */
   descripcion?: string | null;
+  /** Ventana de salida («5:00 - 7:00 am»), solo si el servicio pide hora. */
+  horario?: string | null;
+  /** Los primeros renglones de lo que incluye (máx. 3); solo los muestra la tarjeta única. */
+  incluye?: string[];
   foto: { src: string; alt: string } | null;
   /** Todas sus fotos, si son varias: la tarjeta las cambia como carrusel. */
   fotos?: { src: string; alt: string }[];
@@ -32,6 +37,8 @@ export type TextosProducto = {
   reservar: string;
   elegirRuta: string;
   reservarAria: string;
+  /** Rótulo de la lista de lo que incluye (tarjeta única). */
+  incluye?: string;
 };
 
 // Clases completas para que Tailwind las vea. Azul = mar, coral = traslados, verde = estancia.
@@ -53,32 +60,38 @@ type Props = {
   textos: TextosProducto;
   /** Las dos primeras fotos de la fila cargan de inmediato; el resto, al acercarse. */
   prioridad?: boolean;
-  /** Es la única de la fila: en escritorio va horizontal (foto a la izquierda, datos a la derecha) en vez de
-   * estirarse a todo el ancho con la foto vertical. En el teléfono no cambia. */
+  /** Es la única de la fila: en escritorio va a todo el ancho, foto a la izquierda y los datos sobre un panel
+   * tintado a la derecha, con lo que incluye. En el teléfono es la misma tarjeta vertical, con lo que incluye. */
   unica?: boolean;
 };
 
 /**
- * La tarjeta de «Qué puedes reservar» (F10), igual para servicio y paquete: foto 4:5 (o un bloque del color
- * de su tipo con su palabra, cuando no hay foto honesta), nombre, quién lo opera, precio y un botón
- * «Reservar →». Toda la tarjeta es un solo enlace. Crece hasta llenar la fila si caben todas; sola, en
- * escritorio se pone horizontal.
+ * La tarjeta de «Reserva ahora mismo» (F10), igual para servicio y paquete: foto 4:5 (o un bloque del color
+ * de su tipo con su palabra, cuando no hay foto honesta), nombre, quién te lleva, cupo y horario con ícono,
+ * descripción, el precio como bloque propio (cifra grande y debajo su base y la otra moneda) y el botón
+ * «Reservar →». Toda la tarjeta es un solo enlace. En una fila, las tarjetas cierran a la misma altura y los
+ * precios quedan alineados para compararlos.
  *
  * Server Component.
  */
 export function TarjetaProducto({ vista, textos, prioridad = false, unica = false }: Props) {
-  const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad, descripcion } = vista;
-  const tamanos = unica ? '(min-width: 1024px) 42vw, 80vw' : '(min-width: 1024px) 27vw, 80vw';
-  const marco = unica ? 'lg:aspect-[4/3] lg:w-[42%] lg:shrink-0' : '';
-  const info = [textos.opera.replace('{empresa}', empresa), capacidad ? textos.hasta.replace('{n}', String(capacidad)) : null].filter(Boolean).join(' · ');
+  const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad, descripcion, horario, incluye = [] } = vista;
+  const tamanos = unica ? '(min-width: 1024px) 55vw, 90vw' : '(min-width: 1024px) 27vw, 80vw';
+  const marco = unica ? 'lg:aspect-auto lg:h-full lg:min-h-[30rem]' : '';
+  const datos = [
+    { icono: UserCircle, texto: textos.opera.replace('{empresa}', empresa) },
+    capacidad ? { icono: UsersThree, texto: textos.hasta.replace('{n}', String(capacidad)) } : null,
+    horario ? { icono: Clock, texto: horario } : null,
+  ].filter((d): d is { icono: typeof UserCircle; texto: string } => d !== null);
+  const conIncluye = unica && incluye.length > 0;
 
   return (
     <Link
       href={vista.hrefDetalle}
       aria-label={textos.reservarAria.replace('{nombre}', nombre).replace('{empresa}', empresa)}
       className={cn(
-        'group rev flex flex-[1_0_clamp(16.25rem,27vw,26.25rem)] snap-start flex-col gap-3.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
-        unica && 'lg:flex-row lg:items-stretch lg:gap-12',
+        'group rev flex flex-[1_0_clamp(16.25rem,27vw,26.25rem)] snap-start flex-col gap-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
+        unica && 'lg:grid lg:grid-cols-[55fr_45fr] lg:gap-0 lg:bg-cafe-bruma',
       )}
     >
       {foto ? (
@@ -109,27 +122,55 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
           </span>
         </div>
       )}
-      <div className={cn('flex flex-1 flex-col gap-3.5', unica && 'lg:justify-center lg:gap-5 lg:py-6')}>
-      <p className={cn('text-lg font-semibold leading-snug', unica && 'lg:text-4xl lg:leading-tight')}>{nombre}</p>
-      <p className="texto-cuerpo">{info}</p>
-      {descripcion && <p className={cn('texto-cuerpo max-w-[52ch]', !unica && 'line-clamp-3')}>{descripcion}</p>}
-      <div className={cn('mt-auto flex flex-wrap items-center justify-between gap-3', unica && 'lg:mt-4 lg:justify-start lg:gap-8')}>
-        <p className="font-semibold tabular-nums">
-          {precio ? (
-            <>
-              {precio.conDesde && <span className="font-normal">{textos.desde} </span>}
-              {precio.monto} <span className="font-normal">{precio.base}</span>
-              {precio.aprox && <span className="block font-normal">{precio.aprox}</span>}
-            </>
-          ) : (
-            textos.tarifaRuta
-          )}
-        </p>
-        <span aria-hidden="true" className={cn(botonClases({ variante: 'campana' }), 'group-hover:bg-cafe max-sm:w-full max-sm:justify-center')}>
-          {precio ? textos.reservar : textos.elegirRuta}
-          <span className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:translate-x-1">→</span>
-        </span>
-      </div>
+
+      <div className={cn('flex flex-1 flex-col gap-4', unica && 'lg:justify-center lg:gap-6 lg:p-12 xl:p-16')}>
+        <p className={cn('text-lg font-semibold leading-snug', unica && 'lg:text-4xl lg:leading-tight')}>{nombre}</p>
+
+        <ul className="flex flex-wrap gap-x-5 gap-y-2 texto-cuerpo">
+          {datos.map(({ icono: Icono, texto }) => (
+            <li key={texto} className="flex items-center gap-2">
+              <Icono size={20} weight="regular" aria-hidden="true" className="shrink-0" />
+              {texto}
+            </li>
+          ))}
+        </ul>
+
+        {descripcion && <p className={cn('texto-cuerpo max-w-[52ch]', !unica && 'line-clamp-2')}>{descripcion}</p>}
+
+        {conIncluye && (
+          <div>
+            {textos.incluye && <p className="texto-etiqueta">{textos.incluye}</p>}
+            <ul className="mt-3 flex flex-col gap-2 texto-cuerpo">
+              {incluye.map((renglon) => (
+                <li key={renglon} className="flex items-start gap-2">
+                  <Check size={18} weight="bold" aria-hidden="true" className="mt-0.5 shrink-0 text-cafe" />
+                  {renglon}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className={cn('mt-auto flex flex-wrap items-end justify-between gap-4 pt-2', unica && 'lg:mt-2 lg:justify-start lg:gap-10')}>
+          <div className="tabular-nums">
+            {precio ? (
+              <>
+                {precio.conDesde && <span className="block texto-pequeno">{textos.desde}</span>}
+                <span className="block text-2xl font-bold leading-tight">{precio.monto}</span>
+                <span className="block texto-pequeno">
+                  {precio.base}
+                  {precio.aprox && ` · ${precio.aprox}`}
+                </span>
+              </>
+            ) : (
+              <span className="block font-semibold">{textos.tarifaRuta}</span>
+            )}
+          </div>
+          <span aria-hidden="true" className={cn(botonClases({ variante: 'campana' }), 'group-hover:bg-cafe max-sm:w-full max-sm:justify-center')}>
+            {precio ? textos.reservar : textos.elegirRuta}
+            <span className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:translate-x-1">→</span>
+          </span>
+        </div>
       </div>
     </Link>
   );
