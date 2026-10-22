@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import { Despliegue } from '@/components/ui/despliegue';
 import { DURACION } from '@/lib/movimiento';
 import Image from 'next/image';
-import Link from 'next/link';
 import { LazyMotion, domMax, m, useMotionValue } from 'framer-motion';
 import { ArrowCounterClockwise, Minus, Plus, X } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
@@ -19,20 +18,17 @@ const project = ([lon, lat]: [number, number]) => ({
   top: `${(28 + (33 - lat) * 48) / 5.6}%`,
 });
 
-/** Lo que muestra el panel de una sede: lo mismo que su cortina (empresas, tipos, «desde») más su frase y una foto del hub. */
+/** Lo que muestra el panel de una sede: dónde queda y qué es. Lo que se reserva y el precio están en su cortina. */
 export type SedeMapa = {
   slug: string;
   nombre: string;
+  /** El ancla de su cortina en el hub (`#sede-<slug>`). */
   href: string;
-  empresas: string | null;
   subtitulo: string;
-  tipos: string;
-  desde: { monto: string; aprox?: string; base: string } | null;
   /** Foto genérica de Baja, solo del hub (nunca de las cortinas ni de la página de la sede). */
   foto: { src: string; alt: string } | null;
 };
 export type CopyMapa = Pick<Dictionary['hub'], 'mapAria' | 'pacificOcean' | 'seaOfCortez' | 'zoomIn' | 'zoomOut' | 'resetMap' | 'dragMap' | 'closeDestination'> & {
-  desde: string;
   verSede: string;
 };
 
@@ -130,28 +126,12 @@ export function HubMapaSedes({ sedes, copy }: {
                 {mostrada.foto && <Image src={mostrada.foto.src} alt={mostrada.foto.alt} fill sizes="40vw" className="object-cover" />}
               </div>
               <div className="flex flex-col gap-5 p-8 pr-20 lg:col-span-7 lg:p-10 lg:pr-20">
-                <div>
-                  <p className="texto-seccion">{mostrada.nombre}</p>
-                  {mostrada.empresas && <p className="mt-1 texto-cuerpo">{mostrada.empresas}</p>}
-                </div>
-                {mostrada.subtitulo && <p className="max-w-[52ch] texto-cuerpo">{mostrada.subtitulo}</p>}
-                {mostrada.tipos && <p className="font-semibold">{mostrada.tipos}</p>}
-                <div className="mt-auto flex flex-wrap items-end justify-between gap-4 pt-2">
-                  {mostrada.desde && (
-                    <p className="tabular-nums">
-                      <span className="block texto-pequeno">{copy.desde}</span>
-                      <span className="block text-2xl font-bold leading-tight">{mostrada.desde.monto}</span>
-                      <span className="block texto-pequeno">
-                        {mostrada.desde.aprox && `${mostrada.desde.aprox} · `}
-                        {mostrada.desde.base}
-                      </span>
-                    </p>
-                  )}
-                  <Link href={mostrada.href} className={botonClases({ variante: 'campana-claro' })}>
-                    {copy.verSede.replace('{sede}', mostrada.nombre)}
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                </div>
+                <p className="texto-seccion">{mostrada.nombre}</p>
+                {mostrada.subtitulo && <p className="max-w-[52ch] text-lg leading-snug">{mostrada.subtitulo}</p>}
+                <a href={mostrada.href} className={`mt-auto self-start ${botonClases({ variante: 'campana-claro' })}`}>
+                  {copy.verSede.replace('{sede}', mostrada.nombre)}
+                  <span aria-hidden="true">↓</span>
+                </a>
               </div>
               <Button variante="libre" aria-label={copy.closeDestination} onClick={() => setAbiertoSlug(null)} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25"><X size={20} /></Button>
             </div>
