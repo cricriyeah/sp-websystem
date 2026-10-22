@@ -87,7 +87,7 @@
   --color-cafe-profundo: #3e1e01;
   --color-cafe-medio: #b08967;
   --color-cafe-claro: #fee0ac;
-  --color-cafe-bruma: #f1f0ed; /* fondo tintado neutro */
+  --color-cafe-bruma: #fcf6ed; /* fondo tintado: el mismo arena del fondo de página (dueño, 2026-10-22) */
 
   /* Neutros calidos, sin negro puro */
   --color-arena: #fcf6ed; /* fondo de pagina */

@@ -19,7 +19,7 @@ Lenguaje: **costero, deportivo y moderno**, con una marca cálida (café) y tres
 | `cafe-profundo` | `#3E1E01` | Pulsado, texto sobre `cafe-claro` | 12,80:1 sobre `cafe-bruma` |
 | `cafe-medio` | `#B08967` | Ilustración, líneas decorativas | solo decorativo |
 | `cafe-claro` | `#FEE0AC` | Fondos de aviso (el rango de fechas usa `cafe-bruma` desde 2026-10-19) | 11,84:1 con `cafe-profundo` |
-| `cafe-bruma` | `#F1F0ED` | Superficie variante, banda del rango de fechas confirmado | 7,42:1 con `cafe` |
+| `cafe-bruma` | `#FCF6ED` | Superficie variante (el mismo arena de la página desde 2026-10-22), banda del rango de fechas confirmado | 7,87:1 con `cafe` |
 
 ### Actividades — qué tipo de experiencia es
 
