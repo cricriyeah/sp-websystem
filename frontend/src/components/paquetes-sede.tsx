@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Check, UserCircle } from '@phosphor-icons/react/ssr';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
-import { colorDeServicio } from '@/lib/color-actividad';
 import { vistaDePaquete } from '@/components/vistas-catalogo';
 import { CarruselFotos } from '@/components/carrusel-fotos';
 import { desfaseDe } from '@/components/tarjeta-producto';
@@ -24,29 +23,16 @@ type Props = {
   fondo: Fondo;
 };
 
-// Un renglón de «incluye» que en realidad dice lo que NO incluye: va como nota bajo el precio, sin palomita.
+// Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; queda para el detalle.
 const EXCLUSION = /no incluye|not include/i;
-// El renglón de los días en el mar («del día 2 al 5»): la franja ya lo dice.
-const RENGLON_DIAS = /d[ií]a \d+ al \d+|day \d+ to (day )?\d+/i;
 // Renglones de «incluye» por tarjeta: 4 en escritorio, 3 en el teléfono. La lista completa está en el detalle.
 const MAX_INCLUYE = 4;
 
 /**
- * Los días de la estancia: llega el día 1, sale al mar del día 2 a la última noche y se va el día siguiente.
- * Es la regla de los paquetes de La Ventana; solo se pinta si el paquete tiene noches y algo de mar.
- */
-function franjaDe(paquete: PaqueteCatalogo): { dias: number; marHasta: number } | null {
-  const noches = paquete.noches ?? 0;
-  const conMar = paquete.servicios_asociados.some((c) => colorDeServicio(c.servicio) === 'mar');
-  return noches >= 2 && conMar ? { dias: noches + 1, marHasta: noches } : null;
-}
-
-/**
  * Los paquetes de la sede, cada uno en una tarjeta con foto. La cifra de noches manda (es lo que distingue un
- * paquete del otro); debajo, los días en la sede, quién te lleva, la franja de días (llegada, mar, salida), lo
- * que incluye y el precio con «Reservar →». Lo que el paquete no incluye va como nota bajo el precio. La foto
- * va siempre del mismo lado para que las tarjetas se comparen renglón con renglón. Toda la tarjeta es un solo
- * enlace a la página del paquete; ahí está el nombre del backoffice y la lista completa.
+ * paquete del otro); debajo, los días en la sede, quién te lleva, lo que incluye y el precio con «Reservar →».
+ * La foto va siempre del mismo lado para que las tarjetas se comparen renglón con renglón. Toda la tarjeta es
+ * un solo enlace a la página del paquete; ahí está el nombre del backoffice y la lista completa.
  *
  * Server Component.
  */
@@ -59,12 +45,7 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
       <div className="mt-10 flex flex-col gap-4">
         {paquetes.map((paquete, i) => {
           const vista = vistaDePaquete(paquete, lang, moneda);
-          const franja = franjaDe(paquete);
-          const renglones = paquete.incluye?.[lang] ?? [];
-          const exclusiones = renglones.filter((r) => EXCLUSION.test(r));
-          const incluye = renglones
-            .filter((r) => !EXCLUSION.test(r) && !(franja && RENGLON_DIAS.test(r)))
-            .slice(0, MAX_INCLUYE);
+          const incluye = (paquete.incluye?.[lang] ?? []).filter((r) => !EXCLUSION.test(r)).slice(0, MAX_INCLUYE);
           const porGrupo =
             paquete.estrategia_precio === 'por_grupo' ? textos.incluyePersonas.replace('{n}', String(paquete.personas_precio_base)) : null;
           return (
@@ -114,38 +95,6 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                   </p>
                 </div>
 
-                {franja && (
-                  <div>
-                    <div aria-hidden="true" className="flex gap-1">
-                      {Array.from({ length: franja.dias }, (_, d) => d + 1).map((dia) => (
-                        <span
-                          key={dia}
-                          className={cn(
-                            'grid h-10 flex-1 place-items-center texto-pequeno font-semibold tabular-nums text-white',
-                            dia === 1 || dia === franja.dias ? 'bg-verde' : 'bg-azul',
-                          )}
-                        >
-                          {dia}
-                        </span>
-                      ))}
-                    </div>
-                    <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 texto-pequeno">
-                      {(
-                        [
-                          ['bg-verde', textos.llegada],
-                          ['bg-azul', textos.mar.replace('{desde}', '2').replace('{hasta}', String(franja.marHasta))],
-                          ['bg-verde', textos.salida],
-                        ] as const
-                      ).map(([color, texto]) => (
-                        <li key={texto} className="flex items-center gap-2">
-                          <span aria-hidden="true" className={cn('size-2.5 shrink-0', color)} />
-                          {texto}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 {incluye.length > 0 && (
                   <ul className="flex flex-col gap-2 texto-cuerpo">
                     {incluye.map((renglon, r) => (
@@ -157,7 +106,7 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                   </ul>
                 )}
 
-                <div className="mt-auto flex flex-col gap-3 pt-2">
+                <div className="mt-auto pt-2">
                   <div className="flex flex-wrap items-end justify-between gap-4">
                     <p className="tabular-nums">
                       {vista.precio && (
@@ -176,9 +125,6 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                       <span className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:translate-x-1">→</span>
                     </span>
                   </div>
-                  {exclusiones.map((nota) => (
-                    <p key={nota} className="texto-pequeno text-tinta-suave">{nota}</p>
-                  ))}
                 </div>
               </div>
             </Link>

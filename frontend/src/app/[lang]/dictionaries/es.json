@@ -673,9 +673,6 @@
       "titulo": "Paquetes",
       "noches": "{n} noches",
       "dias": "{n} días en {sede}",
-      "llegada": "Llegada",
-      "mar": "En el mar, día {desde} al {hasta}",
-      "salida": "Salida",
       "incluyePersonas": "Incluye {n} personas"
     },
     "detalle": {
