@@ -22,8 +22,8 @@ empresa demo Tours Cabo en La Ventana Travel. Hazlo una sola vez, antes de sembr
 
 Uso:  venv/Scripts/python.exe manage.py seed_catalogo_real [--limpiar-demo]
 
-`--produccion` lo hace apto para la base real (las empresas ya dadas de alta con «Alta de empresa»): no exige DEBUG,
-no crea empresas ni llaves de Stripe, no siembra lanchas ni habitaciones «DEMO» y no borra nada. Solo crea o
+`--produccion` lo hace apto para la base real: no exige DEBUG, crea solo las empresas que falten (nombre y sede, sin
+llaves de Stripe ni jefe; las que ya existen no se tocan), no siembra lanchas ni habitaciones «DEMO» y no borra nada. Solo crea o
 actualiza servicios, textos, precios, horarios, estudios y paquetes, y al final imprime lo que sigue siendo relleno
 sin confirmar. La flota real (pangas de Sal y Sol, vehículos de DLS) se captura en el admin.
 """
@@ -224,7 +224,7 @@ class Command(BaseCommand):
                     self._limpiar_demo()
             with scope.como_operador_plataforma():
                 if produccion:
-                    self._exigir_empresas()
+                    self._empresas_de_produccion()
                 else:
                     self._empresas()
             self._servicios(con_demo=not produccion)
@@ -306,15 +306,14 @@ class Command(BaseCommand):
             self.stdout.write('  Tours Cabo -> La Ventana Travel')
 
     # ------------------------------------------------------------------ empresas
-    def _exigir_empresas(self):
-        """En la base real las empresas ya existen (Alta de empresa, con sus llaves de Stripe): aquí no se crean."""
-        faltan = [slug for slug in EMPRESAS_REALES if not Empresa.objects.filter(slug=slug).exists()]
-        if faltan:
-            raise CommandError(
-                'Faltan empresas: ' + ', '.join(faltan) + '. Dalas de alta primero en el admin (Empresas > Alta de empresa).'
-            )
-        for slug in EMPRESAS_REALES:
-            self.stdout.write(f'  Empresa {slug}: ok')
+    def _empresas_de_produccion(self):
+        """En la base real crea las empresas que falten, solo con nombre y sede: sin llaves de Stripe, sin jefe ni
+        vendedora (eso se captura en el admin: Empresas > la empresa, y Alta de usuario). Las que ya existen no se
+        tocan: si alguien las dio de alta con otro nombre o sus llaves, se respeta."""
+        for slug, (nombre, slug_sede) in EMPRESAS_REALES.items():
+            sede = Sede.objects.get(slug=slug_sede)
+            _, creada = Empresa.objects.get_or_create(slug=slug, defaults=dict(sede=sede, nombre=nombre, activo=True))
+            self.stdout.write(f'  Empresa {slug}: {"creada (sin llaves ni jefe)" if creada else "ok"}')
 
     def _empresas(self):
         for slug, (nombre, slug_sede) in EMPRESAS_REALES.items():

@@ -83,8 +83,8 @@ Luego, en este orden:
 1. Sistema → **Aeropuertos**: deben estar LAP, CSL, SJD y LTO.
 2. **Alta de empresa** para cada una de las cuatro (jefe, vendedora, llaves de Stripe, flota o vehículos). La pantalla
    muestra la URL del webhook de cada una.
-3. Sembrar el catálogo real con `python manage.py seed_catalogo_real --produccion` (idempotente; exige que las cuatro
-   empresas ya existan; no crea llaves de Stripe, ni lanchas ni habitaciones «DEMO», ni borra nada). Al final imprime el
+3. Sembrar el catálogo real con `python manage.py seed_catalogo_real --produccion` (idempotente; crea las empresas que
+   falten solo con nombre y sede, y respeta las que ya existen; no crea llaves de Stripe, ni lanchas ni habitaciones «DEMO», ni borra nada). Al final imprime el
    **relleno sin confirmar** que dejó: noche de hospedaje (2,500), tarifas del traslado de La Ventana (3,500 / 6,500),
    precio por persona de los paquetes, pesca de Piratas Adventures y los horarios salvo los de Sal y Sol. Corregirlos en
    el admin **antes de vender**. La flota (pangas, vehículos) también se captura a mano.

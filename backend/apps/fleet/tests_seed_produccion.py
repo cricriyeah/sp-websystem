@@ -30,13 +30,26 @@ class SembradoDeProduccionTests(TestCase):
             with self.assertRaises(CommandError):
                 sembrar()
 
-    def test_produccion_exige_que_las_empresas_ya_existan(self):
+    def test_produccion_crea_las_empresas_que_faltan_sin_llaves(self):
         with override_settings(DEBUG=False):
-            with self.assertRaises(CommandError) as ctx:
-                sembrar(produccion=True)
-        self.assertIn('Alta de empresa', str(ctx.exception))
+            sembrar(produccion=True)
         with scope.como_operador_plataforma():
-            self.assertFalse(Empresa.objects.filter(slug='piratas-adventures').exists())
+            for slug, (nombre, slug_sede) in EMPRESAS_REALES.items():
+                empresa = Empresa.objects.get(slug=slug)
+                self.assertEqual((empresa.nombre, empresa.sede.slug), (nombre, slug_sede))
+                self.assertEqual(empresa.stripe_secret_key, '')
+                self.assertFalse(empresa.membresias.exists())
+
+    def test_produccion_respeta_la_empresa_que_ya_existe(self):
+        with scope.como_operador_plataforma():
+            sede = Sede.objects.get(slug='la-paz')
+            Empresa.objects.create(slug='transporte-la-paz', sede=sede, nombre='DLS a mi manera',
+                                   stripe_secret_key='sk_test_mia')
+        with override_settings(DEBUG=False):
+            sembrar(produccion=True)
+        with scope.como_operador_plataforma():
+            dls = Empresa.objects.get(slug='transporte-la-paz')
+            self.assertEqual((dls.nombre, dls.stripe_secret_key), ('DLS a mi manera', 'sk_test_mia'))
 
     def test_produccion_no_se_combina_con_limpiar_demo(self):
         with self.assertRaises(CommandError):
