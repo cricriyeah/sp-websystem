@@ -109,8 +109,9 @@ DATOS_REALES = {
     ('sal-y-sol', 'pesca-deportiva'): dict(
         nombre='Pesca deportiva',
         estrategia_precio='por_grupo', precio_base=Decimal('10800'), precio_persona_extra=Decimal('1350'),
-        personas_incluidas=2, capacidad_maxima=8,
-        descripcion='Viaje de pesca deportiva en La Paz, de 5:00 a 7:00 am de salida, en panga para hasta 8 personas. '
+        # La panga lleva 8, pero un viaje de pesca va con 5 como máximo (dueño, 2026-10-22).
+        personas_incluidas=2, capacidad_maxima=5,
+        descripcion='Viaje de pesca deportiva en La Paz, de 5:00 a 7:00 am de salida, en panga para hasta 5 personas. '
                     'La licencia de pesca se tramita aparte, para las personas que elijas.',
         incluye=INCLUYE_PESCA_SAL_Y_SOL,
     ),

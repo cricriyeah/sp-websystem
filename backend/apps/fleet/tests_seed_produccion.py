@@ -92,7 +92,7 @@ class DatosConfirmadosTests(TestCase):
             sal = Empresa.objects.get(slug='sal-y-sol')
             pesca = Servicio.objects.get(empresa=sal, slug='pesca-deportiva')
             self.assertEqual((pesca.precio_base, pesca.precio_persona_extra, pesca.personas_incluidas, pesca.capacidad_maxima),
-                             (10800, 1350, 2, 8))  # 600 y 75 USD a 18
+                             (10800, 1350, 2, 5))  # 600 y 75 USD a 18; 5 por viaje aunque la panga lleve 8
             self.assertEqual(Embarcacion.objects.filter(empresa=sal).count(), 8)
             self.assertEqual(set(Embarcacion.objects.filter(empresa=sal).values_list('capacidad_maxima', flat=True)), {8})
             licencia = pesca.servicio_personalizaciones.get(personalizacion__nombre='Licencia de pesca')
