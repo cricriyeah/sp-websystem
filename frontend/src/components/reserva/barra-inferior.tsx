@@ -59,7 +59,7 @@ export function BarraInferior({ checkout, actual, total, estimado }: Props) {
     <>
       <div
         ref={barra}
-        className={`${teclado ? 'relative' : 'fixed inset-x-0 bottom-0 z-[var(--z-barra)]'} border-t border-borde bg-blanco pb-[env(safe-area-inset-bottom)] sm:hidden`}
+        className={`${teclado ? 'relative' : 'fixed inset-x-0 bottom-0 z-[var(--z-barra)]'} border-t border-borde bg-blanco pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden`}
       >
         <Button
           variante="libre"
@@ -82,7 +82,7 @@ export function BarraInferior({ checkout, actual, total, estimado }: Props) {
           plantilla={checkout.stepper.stepOf}
         />
         {accion ? (
-          <div className="px-4 pt-3 pb-3">
+          <div className="px-4 pt-3">
             <Button
               variante="principal"
               bloque
@@ -94,7 +94,7 @@ export function BarraInferior({ checkout, actual, total, estimado }: Props) {
             >
               {accion.etiqueta}
             </Button>
-            <p id={ID_RAZON} aria-live="polite" className="mt-2 h-5 truncate text-center texto-pequeno text-apagado">
+            <p id={ID_RAZON} aria-live="polite" className="mt-1 h-5 truncate text-center texto-pequeno text-apagado">
               {accion.razon ?? ''}
             </p>
           </div>
