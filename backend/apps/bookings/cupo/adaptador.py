@@ -22,18 +22,55 @@ class ContextoCupoRango:
     topes_por_fecha: dict[date, int]
 
 
+def solo_demanda_de_mar(queryset):
+    """Deja de un queryset de `Reserva` solo las que salen al mar en panga.
+
+    Es la UNICA definicion de "grupo que gasta panga": la usan el contexto de un dia, el
+    de un rango, el panorama y la Agenda, para que no puedan contar distinto. Antes cada
+    uno contaba toda reserva con `fecha` en el dia, y una cama de hotel o un traslado
+    gastaba un viaje del tope diario y una panga en `caben(...)`.
+
+    Cuentan:
+    - un servicio suelto con estrategia `por_recurso_dia` (pesca, paseo, safari: todos
+      comparten la flota de su empresa);
+    - una reserva sin servicio ni paquete: pesca anterior al catalogo de servicios, que
+      `Reserva.clean()` sigue tratando como `por_recurso_dia`;
+    - un paquete con algun componente `por_recurso_dia`. Las salidas de varios dias
+      cuentan por `ReservaSalida` (el llamador ya excluye por `salidas__isnull`); aqui
+      solo se decide si el paquete tiene mar.
+
+    No cuentan `por_noche` (hospedaje) ni `bajo_demanda` (traslados, tours sin limite).
+    El paquete se resuelve con `Exists` y no con un join: un paquete con dos
+    componentes de mar duplicaria su fila y contaria dos grupos.
+    """
+    from django.db.models import Exists, OuterRef, Q
+
+    from apps.fleet.models import PaqueteServicio
+
+    paquete_con_mar = Exists(
+        PaqueteServicio.objects.filter(
+            paquete_id=OuterRef('paquete_id'), servicio__estrategia_cupo='por_recurso_dia',
+        )
+    )
+    return queryset.filter(
+        Q(servicio__estrategia_cupo='por_recurso_dia')
+        | Q(servicio__isnull=True, paquete__isnull=True)
+        | (Q(servicio__isnull=True) & Q(paquete_con_mar))
+    )
+
+
 def obtener_contexto_cupo(fecha: date, empresa, excluir_pk: int | None = None) -> ContextoCupo:
     """Obtiene el contexto de cupo para un día resolviendo reservas y flota de La Paz."""
     from apps.bookings.models import CUPO_MAXIMO_DEFAULT, ESTADOS_QUE_OCUPAN_CUPO, CupoDiario, Reserva, ReservaSalida
     from apps.fleet.models import capacidades_disponibles
     from .apartado import apartado_activo, demanda_apartada_del_dia
 
-    ocupadas = Reserva.objects.filter(
+    ocupadas = solo_demanda_de_mar(Reserva.objects.filter(
         fecha=fecha,
         estado__in=ESTADOS_QUE_OCUPAN_CUPO,
         empresa=empresa,
         salidas__isnull=True,
-    )
+    ))
     salidas = ReservaSalida.objects.filter(
         fecha=fecha, empresa=empresa, reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
     )
@@ -67,12 +104,12 @@ def obtener_contexto_rango(
     fechas = [desde + timedelta(days=i) for i in range((hasta - desde).days + 1)]
 
     grupos_por_fecha = defaultdict(list)
-    reservas_qs = Reserva.objects.filter(
+    reservas_qs = solo_demanda_de_mar(Reserva.objects.filter(
         fecha__range=(desde, hasta),
         estado__in=ESTADOS_QUE_OCUPAN_CUPO,
         empresa=empresa,
         salidas__isnull=True,
-    )
+    ))
     salidas_qs = ReservaSalida.objects.filter(
         fecha__range=(desde, hasta), empresa=empresa, reserva__estado__in=ESTADOS_QUE_OCUPAN_CUPO,
     )

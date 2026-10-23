@@ -19,6 +19,7 @@ from apps.bookings.models import (
     caben,
     cupo_maximo_del_dia,
 )
+from apps.bookings.cupo import solo_demanda_de_mar
 from apps.fleet.models import capacidades_por_fecha
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa
@@ -49,9 +50,9 @@ class Command(BaseCommand):
 
     def _revisar_empresa(self, empresa, desde, hasta):
         grupos_por_fecha = {}
-        for fecha, personas in Reserva.objects.filter(
+        for fecha, personas in solo_demanda_de_mar(Reserva.objects.filter(
             fecha__range=(desde, hasta), estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
-        ).values_list('fecha', 'numero_personas'):
+        )).values_list('fecha', 'numero_personas'):
             grupos_por_fecha.setdefault(fecha, []).append(personas)
 
         capacidades = capacidades_por_fecha(desde, hasta, empresa)

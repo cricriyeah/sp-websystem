@@ -24,7 +24,7 @@ from django.db.models import Q
 
 from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
 
-from .cupo.adaptador import obtener_contexto_rango
+from .cupo.adaptador import obtener_contexto_rango, solo_demanda_de_mar
 from .cupo.apartado import apartado_activo, demanda_apartada_por_rango
 from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva
 
@@ -32,15 +32,16 @@ DIAS_DEL_PANORAMA = 7
 
 
 def sin_lo_que_no_se_reparte(queryset):
-    """Quita lo que la Agenda de pangas NO reparte: servicios bajo demanda y traslados.
+    """Deja solo lo que la Agenda de pangas SI reparte: viajes al mar.
 
     Es el criterio de la tabla de la Agenda y del panorama; si cada uno lo escribiera por su
     lado pasaba lo que pasaba: la cuadricula mostraba reservas que la lista de abajo no tenia.
-    Las reservas sin servicio (paquetes) se conservan.
+    "Viaje al mar" es la misma definicion que usa el cupo (`solo_demanda_de_mar`): quita
+    hospedaje, servicios bajo demanda y paquetes sin actividad de mar. Ademas quita todo
+    servicio de tipo transporte, que se reparte en «Traslados» y no en pangas. Las reservas
+    sin servicio ni paquete (pesca anterior al catalogo) se conservan.
     """
-    return queryset.exclude(
-        Q(servicio__estrategia_cupo='bajo_demanda') | Q(servicio__tipo_servicio='transporte')
-    )
+    return solo_demanda_de_mar(queryset).exclude(Q(servicio__tipo_servicio='transporte'))
 
 
 @dataclass(frozen=True)

@@ -1206,12 +1206,10 @@ class Agenda(Reserva):
 
     @classmethod
     def por_repartir(cls):
-        return cls.objects.filter(
-            estado__in=cls.ESTADOS_EN_AGENDA
-        ).exclude(
-            models.Q(servicio__estrategia_cupo='bajo_demanda') |
-            models.Q(servicio__tipo_servicio='transporte')
-        )
+        # Mismo criterio que la tabla de la Agenda y el panorama: viajes al mar.
+        from .panorama import sin_lo_que_no_se_reparte
+
+        return sin_lo_que_no_se_reparte(cls.objects.filter(estado__in=cls.ESTADOS_EN_AGENDA))
 
 
 class ReservaPersonalizacion(models.Model):

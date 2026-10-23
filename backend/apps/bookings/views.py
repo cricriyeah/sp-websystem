@@ -22,6 +22,7 @@ from .cupo import (
     apartado_activo,
     demanda_apartada_del_dia,
     reservas_con_apartado_vigente,
+    solo_demanda_de_mar,
 )
 from .captcha import verificar_turnstile
 from .serializers import CupoSerializer, ReservaCheckoutSerializer, TrasladoCheckoutSerializer, ip_del_cliente
@@ -86,9 +87,10 @@ class CupoDisponibleView(APIView):
             excluir_pk = _resolver_excluir_pk_apartado(request, empresa)
             motivo = evaluar_cupo(fecha, personas, empresa, excluir_pk=excluir_pk)
 
-            ocupadas_qs = Reserva.objects.filter(
+            # Solo lo que sale al mar: una cama de hotel no es un viaje ocupado.
+            ocupadas_qs = solo_demanda_de_mar(Reserva.objects.filter(
                 fecha=fecha, estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
-            )
+            ))
             if excluir_pk is not None:
                 ocupadas_qs = ocupadas_qs.exclude(pk=excluir_pk)
             ocupadas = ocupadas_qs.count()
