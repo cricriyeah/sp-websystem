@@ -873,12 +873,36 @@ class Reserva(models.Model):
             raise ValidationError(
                 {'deslinde_aceptado': 'La reserva web requiere aceptar el deslinde de responsabilidad.'}
             )
+        self._validar_ocupaciones_al_reactivar()
         self._validar_ventana_horaria()
         self._validar_tope_personas()
         self._validar_capacidad_embarcacion()
         self._validar_una_salida_por_dia()
         self._validar_cambio_de_fecha()
         self._validar_consistencia_de_empresa()
+
+    def _validar_ocupaciones_al_reactivar(self):
+        """Una cancelada que vuelve a pagada recupera las habitaciones que tenia. Si otra venta ya
+        se quedo con alguna, `save()` no puede reactivarla (la base lo rechaza con un 500): se avisa aqui."""
+        if not self.pk or self.estado not in ESTADOS_QUE_OCUPAN_CUPO:
+            return
+        estado_previo = getattr(self, '_estado_original', None)
+        if estado_previo is None or estado_previo in ESTADOS_QUE_OCUPAN_CUPO:
+            return
+        for ocupacion in self.ocupaciones.select_related('recurso'):
+            otra = ReservaOcupacion.objects.filter(
+                recurso_id=ocupacion.recurso_id, ocupa_cupo=True, empresa_id=self.empresa_id,
+                fecha_inicio__lt=ocupacion.fecha_fin, fecha_fin__gt=ocupacion.fecha_inicio,
+            ).exclude(reserva_id=self.pk).first()
+            if otra is not None:
+                raise ValidationError({
+                    'estado': ValidationError(
+                        f'Ya no hay habitación esas fechas: {ocupacion.recurso.nombre} está ocupada por la '
+                        f'reserva #{otra.reserva_id}. Con la reserva todavía cancelada, cambia la habitación '
+                        f'en «Ocupaciones del viaje», guarda, y vuelve a reactivarla.',
+                        code='sin_cupo',
+                    ),
+                })
 
     def _validar_ventana_horaria(self):
         if self.servicio_id:

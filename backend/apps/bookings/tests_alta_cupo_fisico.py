@@ -182,3 +182,96 @@ class PaqueteManualTests(AltaManualBase):
 
         self.assertEqual(respuesta.status_code, 200)
         self.assertFalse(Reserva.objects.filter(nombre_cliente='Paquete Tarde').exists())
+
+
+class ReactivarReservaCanceladaTests(AltaManualBase):
+    """Auditoria 2026-10-23: reactivar una cancelada cuya habitacion ya se vendio daba 500 en Postgres
+    (EXCLUDE) y en sqlite dejaba la habitacion vendida dos veces."""
+
+    def setUp(self):
+        super().setUp()
+        self.habitacion_b = Recurso.objects.create(
+            empresa=self.empresa, servicio=self.hotel, nombre='Cabaña 2', capacidad_maxima=4,
+        )
+
+    def vender(self, nombre, **extra):
+        respuesta = self.client.post(self.url, self.datos_hospedaje(nombre_cliente=nombre, **extra))
+        self.assertEqual(respuesta.status_code, 302)
+        return Reserva.objects.get(nombre_cliente=nombre)
+
+    def cancelar(self, reserva):
+        reserva.estado = Reserva.Estado.CANCELADA
+        reserva.motivo_cancelacion = 'Mal clima'
+        reserva.save()
+
+    def reactivar(self, reserva, **extra):
+        datos = {
+            'nombre_cliente': reserva.nombre_cliente, 'telefono_cliente': reserva.telefono_cliente,
+            'correo_cliente': reserva.correo_cliente, 'fecha': reserva.fecha.isoformat(),
+            'fecha_salida': reserva.fecha_salida.isoformat() if reserva.fecha_salida else '',
+            'inicio_paquete': reserva.inicio_paquete.isoformat() if reserva.inicio_paquete else '',
+            'numero_personas': str(reserva.numero_personas), 'servicio': str(reserva.servicio_id or ''),
+            'paquete': str(reserva.paquete_id or ''), 'canal_origen': reserva.canal_origen,
+            'estado': Reserva.Estado.PAGADA, 'moneda': reserva.moneda, 'forma_pago': reserva.forma_pago,
+            'precio_total': str(reserva.precio_total or ''),
+            'ocupaciones-TOTAL_FORMS': '0', 'ocupaciones-INITIAL_FORMS': '0',
+            'componentes-TOTAL_FORMS': '0', 'componentes-INITIAL_FORMS': '0',
+            **extra,
+        }
+        return self.client.post(reverse('admin:bookings_reserva_change', args=[reserva.pk]), datos)
+
+    def test_reactivar_con_su_habitacion_libre_la_vuelve_a_apartar(self):
+        primera = self.vender('Primera')
+        self.cancelar(primera)
+
+        respuesta = self.reactivar(primera)
+
+        self.assertEqual(respuesta.status_code, 302)
+        primera.refresh_from_db()
+        self.assertEqual(primera.estado, Reserva.Estado.PAGADA)
+        ocupacion = primera.ocupaciones.get()
+        self.assertTrue(ocupacion.ocupa_cupo)
+        self.assertEqual(ocupacion.recurso, self.habitacion)
+
+    def test_reactivar_con_su_habitacion_ya_vendida_avisa_en_espanol_sin_tocar_nada(self):
+        primera = self.vender('Primera')
+        self.cancelar(primera)
+        segunda = self.vender('Segunda')  # la habitacion que dejo libre la cancelada
+        self.assertEqual(segunda.ocupaciones.get().recurso, self.habitacion)
+
+        respuesta = self.reactivar(primera)
+
+        self.assertEqual(respuesta.status_code, 200)  # formulario con error, no 500
+        errores = respuesta.context['adminform'].form.errors
+        self.assertIn('Ya no hay habitación esas fechas', str(errores['estado']))
+        self.assertIn('Cabaña 1', str(errores['estado']))
+        primera.refresh_from_db()
+        self.assertEqual(primera.estado, Reserva.Estado.CANCELADA)
+        self.assertFalse(primera.ocupaciones.get().ocupa_cupo)
+        # y la habitacion sigue siendo de la segunda: nadie queda vendido dos veces
+        self.assertEqual(
+            ReservaOcupacion.objects.filter(recurso=self.habitacion, ocupa_cupo=True).count(), 1,
+        )
+
+    def test_reactivar_un_paquete_cancelado_vuelve_a_dejar_sus_componentes_en_ok(self):
+        paquete = Paquete.objects.create(
+            sede=self.sede, empresa_lider=self.empresa, nombre='Fin de semana', slug='finde-r',
+            precio_ancla=Decimal('9500.00'),
+        )
+        PaqueteServicio.objects.create(paquete=paquete, servicio=self.pesca, orden=1, dia_estancia=2, personas_incluidas=3)
+        PaqueteServicio.objects.create(paquete=paquete, servicio=self.hotel, orden=2, noches=3, personas_incluidas=3)
+        respuesta = self.client.post(self.url, self.datos(
+            nombre_cliente='Paquete R', paquete=str(paquete.pk), fecha=self.llegada.isoformat(),
+            numero_personas='3', precio_total='9500.00',
+        ))
+        self.assertEqual(respuesta.status_code, 302)
+        reserva = Reserva.objects.get(nombre_cliente='Paquete R')
+        self.cancelar(reserva)
+        self.assertEqual({c.estado_cupo for c in reserva.componentes.all()}, {'liberado'})
+
+        respuesta = self.reactivar(reserva)
+
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual({c.estado_cupo for c in reserva.componentes.all()}, {'ok'})
+        self.assertEqual(reserva.componentes.count(), 2)
+        self.assertTrue(reserva.ocupaciones.get().ocupa_cupo)
