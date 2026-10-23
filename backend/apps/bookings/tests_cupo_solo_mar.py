@@ -33,6 +33,7 @@ from apps.bookings.models import (
 )
 from apps.bookings.panorama import armar_panorama
 from apps.fleet.models import Paquete, PaqueteServicio, Recurso, Servicio
+from apps.tenancy import scope
 from apps.testing import ApiTestCase, crear_flota, crear_servicio_pesca
 
 
@@ -368,3 +369,27 @@ class AgendaSoloMarTests(BaseCupoSoloMar):
         self.reserva(self.traslado)
 
         self.assertEqual(list(Agenda.por_repartir().values_list('pk', flat=True)), [pesca.pk])
+
+
+class RevisarCupoSoloMarTests(BaseCupoSoloMar):
+    def test_la_auditoria_no_marca_un_dia_por_camas_y_traslados(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        fecha = date.today() + timedelta(days=3)
+        self.reserva(self.pesca, fecha)
+        for _ in range(6):  # sumados a la pesca serian 7 "viajes" contra 5 pangas
+            self.reserva(self.hotel, fecha, fecha_salida=fecha + timedelta(days=1))
+        self.reserva(self.traslado, fecha)
+
+        # El comando abre su propio scope por empresa: no es reentrante con el del test.
+        salida = StringIO()
+        self._alcance.__exit__(None, None, None)
+        try:
+            call_command('revisar_cupo', '--dias', '10', stdout=salida)
+        finally:
+            self._alcance = scope.con_empresa(self.empresa)
+            self._alcance.__enter__()
+
+        self.assertNotIn('No cierra', salida.getvalue())

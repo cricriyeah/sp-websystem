@@ -346,6 +346,16 @@ Una actividad repetida dentro de un paquete ocupa cupo en cada fecha de `Reserva
 El motor cuenta esas salidas junto con las reservas sueltas y excluye `Reserva.fecha`
 cuando la reserva ya tiene salidas, para evitar duplicar el primer dia.
 
+**Que cuenta contra la capacidad de pangas.** Solo lo que sale al mar: servicio suelto
+`por_recurso_dia` (pesca, paseo, safari: comparten la flota de la empresa), reserva sin servicio
+ni paquete (pesca anterior al catalogo) y paquete con algun componente `por_recurso_dia` (por su
+`Reserva.fecha`, o por cada `ReservaSalida` si tiene salidas). Hospedaje (`por_noche`), traslados y
+tours `bajo_demanda` y paquetes sin actividad de mar **no** gastan viaje del tope diario ni panga en
+`caben(...)`. La regla vive en una sola funcion, `cupo.solo_demanda_de_mar(queryset)`, usada por
+`obtener_contexto_cupo`/`_rango`, `/api/cupo/`, `revisar_cupo`, el panorama y la Agenda
+(`sin_lo_que_no_se_reparte`, `Agenda.por_repartir`): no escribir otro filtro por su lado. El apartado
+temporal ya solo guarda demanda de mar (sus retratos).
+
 **El catalogo `Embarcacion` tiene que estar completo en produccion.** Con la flota
 incompleta `capacidades_disponibles` devuelve una lista corta y el sitio deja de vender:
 fallo seguro y no silencioso, pero fallo.
