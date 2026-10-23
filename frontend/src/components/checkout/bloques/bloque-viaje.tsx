@@ -41,9 +41,8 @@ type Props = {
   onTopePersonas: () => void;
   tieneHospedaje: boolean;
   fechaSalida: string | null;
-  personasIncluidas: number;
-  precioPersonaExtra: number;
-  currency: Intl.NumberFormat;
+  /** Qué cubre el precio y qué cuesta sumar a alguien, ya en texto (`lib/regla-personas`); cambia con el número. */
+  reglaPersonas?: string | null;
 };
 
 /**
@@ -76,9 +75,7 @@ export function BloqueViaje({
   onTopePersonas,
   tieneHospedaje,
   fechaSalida,
-  personasIncluidas,
-  precioPersonaExtra,
-  currency,
+  reglaPersonas,
 }: Props) {
   return (
     <ContenidoViaje
@@ -129,13 +126,7 @@ export function BloqueViaje({
           onMaxAttempt={onTopePersonas}
         />
       }
-      nota={precioPersonaExtra > 0 ? (
-        <p>
-          {checkout.extraPeopleHint
-            .replace('{included}', String(personasIncluidas))
-            .replace('{price}', currency.format(precioPersonaExtra))}
-        </p>
-      ) : undefined}
+      nota={reglaPersonas ? <p aria-live="polite">{reglaPersonas}</p> : undefined}
     />
   );
 }

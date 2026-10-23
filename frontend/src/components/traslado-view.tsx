@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ProveedorCambioPrecio } from '@/components/checkout/cambio-precio';
+import { textoRegla } from '@/lib/regla-personas';
 import { useSearchParams } from 'next/navigation';
 import { useBorrador } from '@/components/checkout/use-borrador';
 import { useCorregir } from '@/components/checkout/use-corregir';
@@ -377,6 +379,16 @@ export function TrasladoView({
       }),
     [lang, moneda],
   );
+  const formatearCambio = useCallback((monto: number) => `${currency.format(monto)} ${moneda}`, [currency, moneda]);
+  // Las tarifas del tipo y la zona elegidos, por rango de pasajeros: «1–4 pasajeros: $2,700 · desde 5: $3,500».
+  const reglaPasajeros = useMemo(() => {
+    const delTipo = catalogo.tarifas.filter((t) => t.tipo_traslado === tipoTraslado);
+    const deLaZona = delTipo.filter((t) => t.zona === zonaEfectiva);
+    const rangos = (deLaZona.length > 0 ? deLaZona : delTipo.filter((t) => t.zona === ''))
+      .map((t) => ({ min: t.personas_min, max: t.personas_max ?? maxCapacidad, precio: aMoneda(t.precio, moneda, catalogo.servicio.tipo_cambio_usd) }))
+      .filter((r): r is { min: number; max: number; precio: number } => r.precio !== null);
+    return rangos.length > 0 ? textoRegla({ tipo: 'rangos', rangos }, personas, formatearCambio, checkout.reglaPersonas) : null;
+  }, [catalogo.tarifas, catalogo.servicio.tipo_cambio_usd, tipoTraslado, zonaEfectiva, maxCapacidad, moneda, personas, formatearCambio, checkout.reglaPersonas]);
   const lines = useMemo(() => {
     if (precioBase === null) return [];
     const tipoTitulo = traslados.types[tipoTraslado]?.title ?? tipoTraslado;
@@ -764,6 +776,7 @@ export function TrasladoView({
       maxCapacidad={maxCapacidad}
       onPersonas={setPersonas}
       onTopePersonas={() => ayuda.tropezar('tope-personas')}
+      reglaPersonas={reglaPasajeros}
       error={errorPaso3}
       parte={parte}
     />
@@ -878,6 +891,7 @@ export function TrasladoView({
   );
 
   return (
+    <ProveedorCambioPrecio total={total} formatear={formatearCambio} textos={checkout.cambioPrecio}>
     <>
       <PaginaCheckout
         lang={lang}
@@ -1000,5 +1014,6 @@ export function TrasladoView({
         onDescartar={ayuda.descartar}
       />
     </>
+    </ProveedorCambioPrecio>
   );
 }

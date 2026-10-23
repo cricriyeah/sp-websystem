@@ -1,3 +1,4 @@
+import { CifraViva } from '@/components/ui/cifra-viva';
 import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { ListaCargos } from '@/components/checkout/pago/renglon-cargo';
 import type { ResumenVivo } from '@/components/reserva/contexto-barra';
@@ -52,13 +53,13 @@ export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], 
             {checkout.total}
             {estimado && <span className="ml-2 font-normal">{checkout.barra.estimado}</span>}
           </p>
-          <p className="texto-paso tabular-nums">{total}</p>
+          <p className="texto-paso tabular-nums"><CifraViva valor={total} /></p>
         </div>
         {/* Solo cuando difiere del total (anticipo): si no, repetiría la cifra. */}
         {amountDueNow !== total && (
           <div className="flex items-center justify-between gap-4 texto-cuerpo">
             <span>{checkout.amountDueNow}</span>
-            <span className="font-semibold tabular-nums">{amountDueNow}</span>
+            <span className="font-semibold tabular-nums"><CifraViva valor={amountDueNow} /></span>
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ import { BotonPaso } from '@/components/checkout/boton-paso';
 import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
+import { ProveedorCambioPrecio } from '@/components/checkout/cambio-precio';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { AvisoProblema } from '@/components/checkout/aviso-problema';
 import { useToast } from '@/components/toast';
@@ -186,6 +187,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     ? `${ahora} ${estado.moneda}`
     : paquete.precio_depende_de_personas ? totalConMoneda ?? undefined : undefined;
   const rotuloMovil = conAnticipo ? checkout.stepper.payNow : undefined;
+  const formatearCambio = useCallback((monto: number) => `${formatearPrecio(monto, estado.moneda)} ${estado.moneda}`, [estado.moneda]);
   const ayudaMensaje = mensajeDeAyuda(paquete.pide_hora ? feedback.helpMessage : feedback.helpMessageNoTime, {
     fecha: estado.inicio ?? minDate,
     hora: estado.hora,
@@ -766,6 +768,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   );
 
   return (
+    <ProveedorCambioPrecio total={totalConDescuento} formatear={formatearCambio} textos={checkout.cambioPrecio}>
     <>
       <PaginaCheckout
         lang={lang}
@@ -892,5 +895,6 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         onDescartar={ayuda.descartar}
       />
     </>
+    </ProveedorCambioPrecio>
   );
 }

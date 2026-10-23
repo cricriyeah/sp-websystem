@@ -52,6 +52,7 @@ const suites = {
   cifra: ['src/lib/cifra.ts', 'CIFRA_TEST_OUT'],
   mosaico: ['src/lib/mosaico.ts', 'MOSAICO_TEST_OUT'],
   'fila-arrastrable': ['src/lib/fila-arrastrable.ts', 'FILA_ARRASTRABLE_TEST_OUT'],
+  'regla-personas': ['src/lib/regla-personas.ts', 'REGLA_PERSONAS_TEST_OUT'],
   'secciones-sede': ['src/lib/secciones-sede.ts', 'SECCIONES_TEST_OUT'],
   empresas: ['src/content/empresas.ts', 'EMPRESAS_TEST_OUT'],
 };

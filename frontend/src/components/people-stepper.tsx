@@ -5,6 +5,7 @@ import { Minus, Plus, UsersThree } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { MAX_PEOPLE, MIN_PEOPLE } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
+import { useCambioPrecio } from '@/components/checkout/cambio-precio';
 
 type PeopleStepperProps = {
   label: string;
@@ -30,8 +31,8 @@ type PeopleStepperProps = {
 // (la barra de reserva), 36 px: la etiqueta y los botones tienen que caber juntos en el alto reservado.
 const botonStepper = (compacto: boolean) =>
   compacto
-    ? 'flex size-10 shrink-0 items-center justify-center rounded-full border border-borde-control text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-30'
-    : 'flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border disabled:opacity-30';
+    ? 'flex size-10 shrink-0 items-center justify-center rounded-full border border-borde-control text-foreground transition-[color,border-color,scale] duration-150 hover:border-accent hover:text-accent active:scale-90 motion-reduce:active:scale-100 disabled:opacity-30'
+    : 'flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition-[background-color,scale] duration-150 hover:bg-border active:scale-90 motion-reduce:active:scale-100 disabled:opacity-30';
 
 /**
  * Contador de personas, compartido por el booking bar y el checkout.
@@ -56,12 +57,18 @@ export function PeopleStepper({
   const sinMovimiento = useReducedMotion();
   const max = maxPeople ?? MAX_PEOPLE;
   const min = minPeople ?? MIN_PEOPLE;
+  // Cuánto cambió el precio con este toque, junto al contador (si la ruta lo mide: `ProveedorCambioPrecio`).
+  const cambio = useCambioPrecio('-top-3 right-2');
+  // Hacia dónde entra el número nuevo: desde abajo al sumar, desde arriba al restar.
+  const [sentido, setSentido] = useState<1 | -1>(1);
 
   useEffect(() => () => {
     if (noticeTimeout.current) clearTimeout(noticeTimeout.current);
   }, []);
 
   const ajustar = (delta: number) => {
+    cambio.marcar();
+    setSentido(delta > 0 ? 1 : -1);
     // Desde vacio, cualquiera de los dos botones contesta la pregunta con el
     // grupo mas comun en vez de obligar a subir de uno en uno desde cero.
     if (value === null) {
@@ -91,11 +98,23 @@ export function PeopleStepper({
         <span className="flex min-w-0 flex-col justify-center gap-0.5">
           {!vacio && !compacto && <span className="text-sm text-muted">{label}</span>}
           <span
-            className={`whitespace-nowrap ${
+            className={`relative inline-grid overflow-hidden whitespace-nowrap ${
               vacio ? 'text-base font-medium text-foreground/70 sm:text-sm' : 'text-base text-foreground sm:text-sm'
             }`}
           >
-            {vacio ? placeholder : value}
+            <AnimatePresence initial={false} mode="popLayout" custom={sentido}>
+              <m.span
+                key={vacio ? 'vacio' : value}
+                custom={sentido}
+                initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: `${sentido * 70}%` }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: `${sentido * -70}%` }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="col-start-1 row-start-1 tabular-nums"
+              >
+                {vacio ? placeholder : value}
+              </m.span>
+            </AnimatePresence>
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-1">
@@ -122,6 +141,7 @@ export function PeopleStepper({
         </span>
       </span>
 
+      {cambio.pildora}
       <AnimatePresence>
         {showMaxNotice && (
           <m.span

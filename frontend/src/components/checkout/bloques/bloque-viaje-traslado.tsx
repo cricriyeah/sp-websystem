@@ -34,6 +34,8 @@ type Props = {
   horasDisponibles: string[];
   onHora: (hora: string) => void;
   personas: number;
+  /** Las tarifas por rango de pasajeros, ya en texto; cambia con el número. */
+  reglaPersonas?: string | null;
   maxCapacidad: number;
   onPersonas: (cantidad: number) => void;
   onTopePersonas: () => void;
@@ -70,6 +72,7 @@ export function BloqueViajeTraslado({
   horasDisponibles,
   onHora,
   personas,
+  reglaPersonas,
   maxCapacidad,
   onPersonas,
   onTopePersonas,
@@ -145,6 +148,7 @@ export function BloqueViajeTraslado({
       <span className="font-semibold text-foreground">{traslados.summary.transfer}</span>
       {' '}
       {traslados.summary.included}
+      {reglaPersonas && <span aria-live="polite" className="mt-1 block">{reglaPersonas}</span>}
     </p>
   );
   const errorViaje = <ErrorDeCampo id="error-viaje" mensaje={error} />;

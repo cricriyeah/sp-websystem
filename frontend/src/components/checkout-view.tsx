@@ -20,6 +20,7 @@ import { tieneWhatsapp } from '@/lib/contacto';
 import { EncabezadoCompra } from '@/components/checkout/encabezado-compra';
 import { ItemPaso } from '@/components/checkout/item-paso';
 import { ReservaPlegable } from '@/components/pedido/reserva-plegable';
+import { ProveedorCambioPrecio } from '@/components/checkout/cambio-precio';
 import { PaginaCheckout } from '@/components/checkout/pagina-checkout';
 import { AsistenteMovil } from '@/components/reserva/asistente-movil';
 import { useMovil } from '@/components/reserva/use-movil';
@@ -31,6 +32,7 @@ import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { BloqueContacto } from '@/components/checkout/bloques/bloque-contacto';
 import { BloqueExtras } from '@/components/checkout/bloques/bloque-extras';
 import { BloquePago, BloqueTarjetaPago } from '@/components/checkout/bloques/bloque-pago';
+import { textoRegla, type ReglaPersonas } from '@/lib/regla-personas';
 import { BloqueViaje } from '@/components/checkout/bloques/bloque-viaje';
 import { formatDay } from '@/components/checkout/formato-dia';
 import { precargarFormularioPago } from '@/components/checkout/pago/pago-diferido';
@@ -509,6 +511,8 @@ export function CheckoutView({
     () => new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: moneda }),
     [lang, moneda],
   );
+  // El monto con su moneda, para la píldora del cambio de precio y la regla por personas.
+  const formatearCambio = useCallback((monto: number) => `${currency.format(monto)} ${moneda}`, [currency, moneda]);
 
   // El precio es por viaje (la reserva es de la embarcacion completa), pero
   // pasando de las personas incluidas se suma un cargo por cada una. El servidor
@@ -1418,6 +1422,14 @@ export function CheckoutView({
         }
       : { actual: pasoActualStepper, totalMovil };
 
+  // Qué cubre el precio y qué cuesta sumar a alguien, bajo el contador (cambia con el número).
+  const regla: ReglaPersonas | null = servicio?.estrategia_precio === 'por_grupo'
+    ? { tipo: 'grupo', incluidas: personasIncluidas, extra: precioPersonaExtra, maximo: topePersonas }
+    : servicio?.estrategia_precio === 'por_persona' && precioBase !== null
+      ? { tipo: 'persona', precio: precioBase }
+      : null;
+  const reglaPersonas = regla ? textoRegla(regla, people, formatearCambio, checkout.reglaPersonas) : null;
+
   const lineasViaje = [
     { etiqueta: checkout.summary.date, valor: diaTexto },
     tieneHospedaje ? { etiqueta: checkout.summary.checkOut, valor: salidaTexto } : null,
@@ -1451,9 +1463,7 @@ export function CheckoutView({
       onTopePersonas={() => ayuda.tropezar('tope-personas')}
       tieneHospedaje={tieneHospedaje}
       fechaSalida={fechaSalida}
-      personasIncluidas={personasIncluidas}
-      precioPersonaExtra={precioPersonaExtra}
-      currency={currency}
+      reglaPersonas={reglaPersonas}
     />
   );
   const bloqueExtras = (
@@ -1550,6 +1560,7 @@ export function CheckoutView({
   );
 
   return (
+    <ProveedorCambioPrecio total={total} formatear={formatearCambio} textos={checkout.cambioPrecio}>
     <>
       <PaginaCheckout
         lang={lang}
@@ -1714,5 +1725,6 @@ export function CheckoutView({
         onDescartar={ayuda.descartar}
       />
     </>
+    </ProveedorCambioPrecio>
   );
 }

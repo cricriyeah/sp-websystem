@@ -2,6 +2,7 @@
 
 import { AirplaneLanding, AirplaneTakeoff, Car, Check } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { useCambioPrecio } from '@/components/checkout/cambio-precio';
 import type { TipoTraslado } from '@/lib/api';
 
 const ICONOS: Record<TipoTraslado, typeof Car> = {
@@ -33,8 +34,11 @@ type Props = {
  * necesita leer para escoger. En fila ocupa el ancho completo y se lee entera.
  */
 export function TipoTrasladoCards({ tipos, valor, onChange, textos, precioDesde, desdeLabel = 'Desde', etiqueta }: Props) {
+  // Cambiar el tipo cambia la tarifa: la píldora del cambio sale en la esquina del grupo.
+  const cambio = useCambioPrecio();
   return (
-    <div role="group" aria-label={etiqueta} className="flex flex-col gap-3">
+    <div role="group" aria-label={etiqueta} className="relative flex flex-col gap-3">
+      {cambio.pildora}
       {tipos.map((tipo) => {
         const seleccionado = valor === tipo;
         const info = textos[tipo];
@@ -46,7 +50,7 @@ export function TipoTrasladoCards({ tipos, valor, onChange, textos, precioDesde,
             variante="libre"
             type="button"
             aria-pressed={seleccionado}
-            onClick={() => onChange(tipo)}
+            onClick={() => { if (tipo !== valor) cambio.marcar(); onChange(tipo); }}
             className={`flex items-start gap-4 rounded-campo border p-4 text-left transition-colors ${
               seleccionado
                 ? 'border-cafe-medio bg-cafe-bruma ring-1 ring-cafe-medio'

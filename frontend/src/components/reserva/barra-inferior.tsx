@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { CifraViva } from '@/components/ui/cifra-viva';
 import { CaretUp } from '@phosphor-icons/react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { CuerpoResumen } from '@/components/checkout/pago/cuerpo-resumen';
@@ -73,7 +74,7 @@ export function BarraInferior({ checkout, actual, total, rotulo, estimado }: Pro
           <span className="tabular-nums">
             {textos.verResumen}
             {/* Con anticipo la cifra es lo que se cobra hoy, y lo dice («Pagas ahora»). */}
-            {total ? ` · ${rotulo ? `${rotulo} ` : ''}${total}` : ''}
+            {total ? <>{` · ${rotulo ? `${rotulo} ` : ''}`}<CifraViva valor={total} /></> : ''}
             {estimado && total && !rotulo ? <span className="ml-2 texto-pequeno font-normal text-apagado">{textos.estimado}</span> : null}
           </span>
           <CaretUp size={16} weight="bold" aria-hidden />

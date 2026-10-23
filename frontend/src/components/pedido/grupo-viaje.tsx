@@ -1,6 +1,7 @@
 'use client';
 
 import { AirplaneTilt, Minus, Plus, Warning } from '@phosphor-icons/react';
+import { ConCambioPrecio } from '@/components/checkout/cambio-precio';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { BloqueDePaso } from '@/components/checkout-section-card';
 import { CAJA_CONTENEDOR } from '@/components/ui/caja-campo';
@@ -86,7 +87,9 @@ export function GrupoViaje({
     const texto = textoDeExtra(extra.descripcion, lang);
 
     if (extra.tipo_interaccion === 'check') return (
-      <div key={extra.id}>
+      <ConCambioPrecio key={extra.id}>{({ marcar, pildora }) => (
+      <div className="relative">
+        {pildora}
         <label
           htmlFor={id}
           className="flex min-h-14 items-start justify-between gap-3 border border-borde-control bg-superficie px-4 py-3 text-base text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma sm:min-h-0 sm:text-sm"
@@ -99,7 +102,7 @@ export function GrupoViaje({
               checked={marcada}
               aria-describedby={texto ? descripcionId : undefined}
               disabled={bloqueado || (sinPrecio && !marcada)}
-              onChange={(event) => actualizarExtra(extra.id, event.target.checked ? { id: extra.id, cantidad: 1 } : undefined)}
+              onChange={(event) => { marcar(); actualizarExtra(extra.id, event.target.checked ? { id: extra.id, cantidad: 1 } : undefined); }}
               className="mt-0.5 size-6 shrink-0 accent-accent sm:size-5"
             />
             <span>
@@ -125,13 +128,13 @@ export function GrupoViaje({
             <span className="text-muted">{checkout.licenseQuantity.question}</span>
             <span className="flex shrink-0 items-center gap-2">
               <Button variante="libre" type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
-                onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad - 1 })}
+                onClick={() => { marcar(); actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad - 1 }); }}
                 className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30">
                 <Minus size={16} />
               </Button>
               <span className="min-w-16 whitespace-nowrap text-center tabular-nums">{checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(estado.personas))}</span>
               <Button variante="libre" type="button" aria-label="+" disabled={cantidad >= estado.personas || bloqueado}
-                onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad + 1 })}
+                onClick={() => { marcar(); actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad + 1 }); }}
                 className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30">
                 <Plus size={16} />
               </Button>
@@ -139,6 +142,7 @@ export function GrupoViaje({
           </div>
         </Despliegue>
       </div>
+      )}</ConCambioPrecio>
     );
 
     if (extra.tipo_interaccion === 'input_seleccion') {
@@ -252,6 +256,7 @@ export function GrupoViaje({
         onMaxAttempt={onTope}
       />
     </div>
+    <p className="mt-2 text-sm text-muted">{checkout.reglaPersonas.incluido}</p>
     </CampoEtiquetado>
   ) : precioDependeDePersonas ? (
     <p className="text-sm text-muted">{personasTexto}</p>

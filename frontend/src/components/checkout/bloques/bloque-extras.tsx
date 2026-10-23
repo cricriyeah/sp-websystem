@@ -8,6 +8,7 @@ import { SelectPersonalizado } from '@/components/checkout/select-personalizado'
 import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ConCambioPrecio } from '@/components/checkout/cambio-precio';
 import type { Moneda, ServicioPersonalizacionCatalogo } from '@/lib/api';
 import { aMoneda } from '@/lib/moneda';
 import {
@@ -76,7 +77,9 @@ export function BloqueExtras({
     if (sp.tipo_interaccion === 'check') {
       const cantidad = cantidadEfectiva(sp, people, seleccion?.cantidad);
       return (
-        <div key={sp.id}>
+        <ConCambioPrecio key={sp.id}>{({ marcar, pildora }) => (
+        <div className="relative">
+          {pildora}
           <label
             htmlFor={`personalizacion-${sp.id}`}
             className="flex min-h-14 items-start justify-between gap-3 border border-borde-control bg-superficie px-4 py-3 text-base text-foreground transition-colors has-[:checked]:border-cafe-medio has-[:checked]:bg-cafe-bruma sm:min-h-0 sm:text-sm"
@@ -89,7 +92,7 @@ export function BloqueExtras({
                 checked={marcada}
                 disabled={locked}
                 aria-describedby={texto ? descripcionId : undefined}
-                onChange={(e) => onAlternar(sp.id, e.target.checked)}
+                onChange={(e) => { marcar(); onAlternar(sp.id, e.target.checked); }}
                 className="mt-0.5 size-6 shrink-0 accent-accent sm:size-5"
               />
               <span>
@@ -121,7 +124,7 @@ export function BloqueExtras({
                 <Button
                   variante="libre"
                   type="button"
-                  onClick={() => onCantidad(sp.id, -1)}
+                  onClick={() => { marcar(); onCantidad(sp.id, -1); }}
                   disabled={locked || cantidad <= 1}
                   aria-label="-"
                   className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30"
@@ -132,7 +135,7 @@ export function BloqueExtras({
                 <Button
                   variante="libre"
                   type="button"
-                  onClick={() => onCantidad(sp.id, 1)}
+                  onClick={() => { marcar(); onCantidad(sp.id, 1); }}
                   disabled={locked || cantidad >= people}
                   aria-label="+"
                   className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30"
@@ -143,6 +146,7 @@ export function BloqueExtras({
             </div>
           )}
         </div>
+        )}</ConCambioPrecio>
       );
     }
 

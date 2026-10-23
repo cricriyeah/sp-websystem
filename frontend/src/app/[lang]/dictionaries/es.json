@@ -187,6 +187,19 @@
       "dato_previo": { "titulo": "Falta corregir un dato", "cuerpo": "Revisa {dato} en {paso}.", "accion": "Corregir {dato}" }
     },
     "maxPersonasTope": "Máximo {max} personas",
+    "cambioPrecio": {
+      "sinCosto": "Sin costo",
+      "anuncio": "Total: {total}"
+    },
+    "reglaPersonas": {
+      "grupoCubre": "El precio cubre hasta {n} personas · desde la {m}.ª, +{precio} + IVA por persona",
+      "grupoExtra": "Personas extra: {k} × {precio} = +{monto} + IVA",
+      "grupoFijo": "Mismo precio de 1 a {max} personas",
+      "persona": "{precio} por persona × {n} = {monto} + IVA",
+      "rango": "{min}–{max} pasajeros: {precio} + IVA",
+      "rangoSiguiente": "desde {k}: {precio}",
+      "incluido": "Incluido en el paquete, sin costo por persona"
+    },
     "calendario": {
       "mesAnterior": "Mes anterior",
       "mesSiguiente": "Mes siguiente",
@@ -352,7 +365,6 @@
     "tourLabel": "Tour de pesca privado",
     "extraPeopleLabel": "Personas adicionales",
     "ivaLabel": "IVA",
-    "extraPeopleHint": "El viaje base incluye hasta {included} personas. A partir de esa cantidad aplica {price} por persona adicional.",
     "total": "Total",
     "payButton": "Continuar al pago",
     "paymentMethod": {

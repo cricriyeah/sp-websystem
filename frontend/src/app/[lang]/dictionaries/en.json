@@ -187,6 +187,19 @@
       "dato_previo": { "titulo": "One detail needs fixing", "cuerpo": "Check {dato} in {paso}.", "accion": "Fix {dato}" }
     },
     "maxPersonasTope": "Maximum {max} people",
+    "cambioPrecio": {
+      "sinCosto": "No extra cost",
+      "anuncio": "Total: {total}"
+    },
+    "reglaPersonas": {
+      "grupoCubre": "The price covers up to {n} people · from person {m}, +{precio} + VAT each",
+      "grupoExtra": "Extra people: {k} × {precio} = +{monto} + VAT",
+      "grupoFijo": "Same price for 1 to {max} people",
+      "persona": "{precio} per person × {n} = {monto} + VAT",
+      "rango": "{min}–{max} passengers: {precio} + VAT",
+      "rangoSiguiente": "from {k}: {precio}",
+      "incluido": "Included in the package, no per-person cost"
+    },
     "calendario": {
       "mesAnterior": "Previous month",
       "mesSiguiente": "Next month",
@@ -352,7 +365,6 @@
     "tourLabel": "Private fishing charter",
     "extraPeopleLabel": "Additional guests",
     "ivaLabel": "VAT (IVA)",
-    "extraPeopleHint": "The base trip covers up to {included} guests. Beyond that it is {price} per additional guest.",
     "total": "Total",
     "payButton": "Continue to payment",
     "paymentMethod": {
