@@ -23,7 +23,7 @@ const CLASE = 'min-h-11 whitespace-nowrap rounded-full border border-borde-contr
  */
 export function Atajos({ hoy, minDate, haySeleccion, onBorrar, onElegir, textos }: Props) {
   const lista = atajosDe(hoy, minDate);
-  const bloqueado = lista.some((a) => a.antesDelMinimo);
+  const bloqueados = lista.filter((a) => a.antesDelMinimo).length;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-1.5">
@@ -46,7 +46,8 @@ export function Atajos({ hoy, minDate, haySeleccion, onBorrar, onElegir, textos 
           </Button>
         ))}
       </div>
-      {bloqueado && <p className="texto-pequeno text-apagado">{textos.antesDelMinimo}</p>}
+      {/* Nombra el día que ya no se puede («Mañana…»): «En 2 días» solo se bloquea si mañana también. */}
+      {bloqueados > 0 && <p className="texto-pequeno text-apagado">{bloqueados > 1 ? textos.antesDelMinimoAmbos : textos.antesDelMinimo}</p>}
     </div>
   );
 }

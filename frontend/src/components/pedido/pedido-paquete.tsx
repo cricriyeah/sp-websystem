@@ -174,13 +174,18 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const totalConDescuento = pedido ? cargos.reduce((suma, cargo) => suma + Math.round(cargo.monto * 100), 0) / 100 : null;
   const total = formatearPrecio(totalConDescuento, estado.moneda);
   const totalConMoneda = totalConDescuento === null ? null : `${total} ${estado.moneda}`;
-  const totalMovil = paquete.precio_depende_de_personas ? totalConMoneda ?? undefined : undefined;
   const ahora = totalConDescuento !== null ? formatearPrecio(
     paquete.permite_anticipo
       ? montoInicial(totalConDescuento, estado.formaPago, paquete.porcentaje_anticipo)
       : totalConDescuento,
     estado.moneda,
   ) : '–';
+  // Con anticipo elegido, la barra de móvil dice lo que se cobra hoy («Pagas ahora $X»), no el total.
+  const conAnticipo = paquete.permite_anticipo && estado.formaPago === 'anticipo' && totalConDescuento !== null;
+  const totalMovil = conAnticipo
+    ? `${ahora} ${estado.moneda}`
+    : paquete.precio_depende_de_personas ? totalConMoneda ?? undefined : undefined;
+  const rotuloMovil = conAnticipo ? checkout.stepper.payNow : undefined;
   const ayudaMensaje = mensajeDeAyuda(paquete.pide_hora ? feedback.helpMessage : feedback.helpMessageNoTime, {
     fecha: estado.inicio ?? minDate,
     hora: estado.hora,
@@ -777,7 +782,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           />
         }
         stepper={(!movil && actual === 'pago' ? stepperPagos(0) : null) ?? {
-          actual: numeroDePaso(movil ? asistente.pantalla.paso : actual), totalMovil,
+          actual: numeroDePaso(movil ? asistente.pantalla.paso : actual), totalMovil, rotulo: rotuloMovil,
           steps: cantidadCargos > 1 ? stepperPagos(0)?.steps : undefined,
           etiquetasCortas: cantidadCargos > 1 ? stepperPagos(0)?.etiquetasCortas : undefined,
         }}

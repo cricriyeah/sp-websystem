@@ -1408,7 +1408,15 @@ export function CheckoutView({
         rotulo: checkout.stepper.payNow,
         totalGeneral: `${currency.format(Number(pago.precio_total))} ${moneda}`,
       }
-    : { actual: pasoActualStepper, totalMovil };
+    // Antes de crear el pago, el anticipo elegido en «Cómo pagas» ya cambia la cifra (en móvil, la de la barra).
+    : amountDueNow !== null && total !== null && amountDueNow < total
+      ? {
+          actual: pasoActualStepper,
+          totalMovil: `${currency.format(amountDueNow)} ${moneda}`,
+          rotulo: checkout.stepper.payNow,
+          totalGeneral: `${currency.format(total)} ${moneda}`,
+        }
+      : { actual: pasoActualStepper, totalMovil };
 
   const lineasViaje = [
     { etiqueta: checkout.summary.date, valor: diaTexto },

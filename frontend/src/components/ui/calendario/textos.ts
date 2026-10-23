@@ -12,8 +12,10 @@ export type TextosCalendario = {
   borrar: string;
   manana: string;
   en2: string;
-  /** Razón visible de un atajo deshabilitado. */
+  /** Razón visible cuando «Mañana» está deshabilitado, nombrando el día («Mañana ya no se puede reservar…»). */
   antesDelMinimo: string;
+  /** Lo mismo cuando también «En 2 días» lo está. */
+  antesDelMinimoAmbos: string;
   /** «Del {desde} al {hasta} · {noches} noches». */
   anuncioRango: string;
   /** «Ida {desde}, regreso {hasta}». */

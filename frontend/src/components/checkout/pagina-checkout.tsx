@@ -90,6 +90,7 @@ export function PaginaCheckout({
           checkout={dict.checkout}
           actual={stepper.actual}
           total={stepper.totalMovil}
+          rotulo={stepper.rotulo}
           estimado={stepper.actual < 3}
         />
       )}

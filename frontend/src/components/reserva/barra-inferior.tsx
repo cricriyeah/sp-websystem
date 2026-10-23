@@ -17,6 +17,8 @@ type Props = {
   actual: number;
   /** Cifra que acompaña al asa (total del pedido, o lo que se paga en este paso). */
   total?: string;
+  /** «Pagas ahora» cuando la cifra no es el total (anticipo o varios cobros). */
+  rotulo?: string;
   /** Antes de que el servidor confirme el cobro, la cifra es una estimación y lo dice. */
   estimado: boolean;
 };
@@ -33,7 +35,7 @@ type Props = {
  * Con el teclado abierto pasa a estática al final del contenido (y `--barra-alto` a 0): fija
  * taparía el campo que el cliente está escribiendo.
  */
-export function BarraInferior({ checkout, actual, total, estimado }: Props) {
+export function BarraInferior({ checkout, actual, total, rotulo, estimado }: Props) {
   const { resumen, accion: accionPantalla, accionContenido } = useBarra();
   const accion = accionContenido ?? accionPantalla;
   const [hoja, setHoja] = useState(false);
@@ -70,8 +72,9 @@ export function BarraInferior({ checkout, actual, total, estimado }: Props) {
         >
           <span className="tabular-nums">
             {textos.verResumen}
-            {total ? ` · ${total}` : ''}
-            {estimado && total ? <span className="ml-2 texto-pequeno font-normal text-apagado">{textos.estimado}</span> : null}
+            {/* Con anticipo la cifra es lo que se cobra hoy, y lo dice («Pagas ahora»). */}
+            {total ? ` · ${rotulo ? `${rotulo} ` : ''}${total}` : ''}
+            {estimado && total && !rotulo ? <span className="ml-2 texto-pequeno font-normal text-apagado">{textos.estimado}</span> : null}
           </span>
           <CaretUp size={16} weight="bold" aria-hidden />
         </Button>
