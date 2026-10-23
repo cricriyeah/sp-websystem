@@ -20,6 +20,8 @@ export type VistaProducto = {
   horario?: string | null;
   /** Los primeros renglones de lo que incluye (máx. 3); solo los muestra la tarjeta única. */
   incluye?: string[];
+  /** Los paquetes lo muestran también en una fila de varias tarjetas (como en la sección de paquetes). */
+  incluyeSiempre?: boolean;
   foto: { src: string; alt: string } | null;
   /** Todas sus fotos, si son varias: la tarjeta las cambia como carrusel. */
   fotos?: { src: string; alt: string }[];
@@ -83,7 +85,7 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
     capacidad ? { icono: UsersThree, texto: textos.hasta.replace('{n}', String(capacidad)) } : null,
     horario ? { icono: Clock, texto: horario } : null,
   ].filter((d): d is { icono: typeof UserCircle; texto: string } => d !== null);
-  const conIncluye = unica && incluye.length > 0;
+  const conIncluye = (unica || Boolean(vista.incluyeSiempre)) && incluye.length > 0;
 
   return (
     <Link
@@ -140,10 +142,10 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
 
         {conIncluye && (
           <div>
-            {textos.incluye && <p className="texto-etiqueta">{textos.incluye}</p>}
-            <ul className="mt-3 flex flex-col gap-2 texto-cuerpo">
-              {incluye.map((renglon) => (
-                <li key={renglon} className="flex items-start gap-2">
+            {unica && textos.incluye && <p className="mb-3 texto-etiqueta">{textos.incluye}</p>}
+            <ul className="flex flex-col gap-2 texto-cuerpo">
+              {incluye.map((renglon, r) => (
+                <li key={renglon} className={cn('flex items-start gap-2', r >= 3 && 'max-sm:hidden')}>
                   <Check size={18} weight="bold" aria-hidden="true" className="mt-0.5 shrink-0 text-cafe" />
                   {renglon}
                 </li>

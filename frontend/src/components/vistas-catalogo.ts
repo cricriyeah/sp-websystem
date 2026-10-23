@@ -57,6 +57,15 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
   };
 }
 
+// Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; queda para el detalle.
+const EXCLUSION = /no incluye|not include/i;
+
+/** Los renglones de «incluye» de la tarjeta de un paquete: 4 (3 en el teléfono, lo esconde quien pinta); la lista
+ * completa está en el detalle. La comparten la sección de paquetes y «Reserva ahora mismo». */
+export function incluyeDePaquete(paquete: PaqueteCatalogo, lang: Locale): string[] {
+  return (paquete.incluye?.[lang] ?? []).filter((r) => !EXCLUSION.test(r)).slice(0, 4);
+}
+
 export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: Moneda): VistaProducto {
   const clave = claveDePaquete(paquete.slug);
   const empresa = getEmpresa(paquete.empresa_lider_slug);
@@ -69,7 +78,8 @@ export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: M
     palabra: palabraDePaquete(paquete.noches, lang),
     // La del backoffice (ya en el idioma de la página); un texto propio del sitio, si lo hay, manda.
     descripcion: descripcionDeCatalogo(clave, lang) ?? (paquete.descripcion?.trim() || null),
-    incluye: (paquete.incluye?.[lang] ?? []).slice(0, 3),
+    incluye: incluyeDePaquete(paquete, lang),
+    incluyeSiempre: true,
     foto: imagenDeCatalogo(clave, lang),
     fotos: imagenesDeCatalogo(clave, lang),
     precio: base

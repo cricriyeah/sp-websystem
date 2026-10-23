@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Check, UserCircle } from '@phosphor-icons/react/ssr';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
-import { vistaDePaquete } from '@/components/vistas-catalogo';
+import { incluyeDePaquete, vistaDePaquete } from '@/components/vistas-catalogo';
 import { CarruselFotos } from '@/components/carrusel-fotos';
 import { desfaseDe } from '@/components/tarjeta-producto';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
@@ -23,10 +23,6 @@ type Props = {
   fondo: Fondo;
 };
 
-// Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; queda para el detalle.
-const EXCLUSION = /no incluye|not include/i;
-// Renglones de «incluye» por tarjeta: 4 en escritorio, 3 en el teléfono. La lista completa está en el detalle.
-const MAX_INCLUYE = 4;
 
 /**
  * Los paquetes de la sede, cada uno en una tarjeta con foto. La cifra de noches manda (es lo que distingue un
@@ -45,7 +41,7 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
       <div className="mt-10 flex flex-col gap-4">
         {paquetes.map((paquete, i) => {
           const vista = vistaDePaquete(paquete, lang, moneda);
-          const incluye = (paquete.incluye?.[lang] ?? []).filter((r) => !EXCLUSION.test(r)).slice(0, MAX_INCLUYE);
+          const incluye = incluyeDePaquete(paquete, lang);
           const porGrupo =
             paquete.estrategia_precio === 'por_grupo' ? textos.incluyePersonas.replace('{n}', String(paquete.personas_precio_base)) : null;
           return (
