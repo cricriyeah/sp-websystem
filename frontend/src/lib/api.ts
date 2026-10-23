@@ -315,6 +315,8 @@ export type ServicioPersonalizacionCatalogo = {
   id: number;
   personalizacion_id: number;
   nombre: string;
+  /** Nombre en inglés; vacío = el de español. Lo resuelve `lib/idioma-catalogo.ts`. */
+  nombre_en?: string;
   tipo: string;
   tipo_interaccion: 'check' | 'input_texto' | 'input_numero' | 'input_seleccion';
   opciones_seleccion: string[];
@@ -354,6 +356,11 @@ export type ServicioCatalogo = {
    * `{}` mientras el dueño no lo escriba. Nunca se deriva de `descripcion`.
    */
   incluye?: { es?: string[]; en?: string[] };
+  /** La ficha del detalle: cuánto dura y de dónde sale (vacío = no se muestra). Opcional hasta desplegar el backend. */
+  duracion?: string;
+  duracion_en?: string;
+  punto_salida?: string;
+  punto_salida_en?: string;
   activo: boolean;
   // Rango y paso de las horas de salida que ofrece el servicio (ver lib/horario-servicio.ts).
   pide_hora: boolean;

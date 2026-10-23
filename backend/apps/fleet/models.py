@@ -434,7 +434,25 @@ class Servicio(models.Model):
     )
     incluye = models.JSONField(
         default=dict, blank=True,
-        help_text='Lo que incluye, por idioma: {"es": ["…"], "en": ["…"]}. Hasta 8 renglones de 80 caracteres.',
+        help_text='Lo que incluye, por idioma: {"es": ["…"], "en": ["…"]}. Hasta 8 renglones de 80 caracteres. '
+                  'Solo lo que recibe el cliente: el horario, la duración, el punto de salida y el cupo van en sus campos.',
+    )
+    # La ficha de la página de detalle: datos que el turista busca primero, cada uno en su campo.
+    duracion = models.CharField(
+        'duración', max_length=40, blank=True, default='',
+        help_text='Cuánto dura, como se lee en la ficha: «5–6 h», «Día completo». Vacío = no se muestra.',
+    )
+    duracion_en = models.CharField(
+        'duración en inglés', max_length=40, blank=True, default='',
+        help_text='«5–6 h», «Full day». Vacío = se usa la de español.',
+    )
+    punto_salida = models.CharField(
+        'sales de', max_length=80, blank=True, default='',
+        help_text='De dónde sale el cliente: «Marina La Costa». Vacío = no se muestra.',
+    )
+    punto_salida_en = models.CharField(
+        'sales de (inglés)', max_length=80, blank=True, default='',
+        help_text='Vacío = se usa el de español.',
     )
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -526,6 +544,10 @@ class Personalizacion(models.Model):
 
     empresa = models.ForeignKey('tenancy.Empresa', on_delete=models.PROTECT, related_name='personalizaciones')
     nombre = models.CharField(max_length=150)
+    nombre_en = models.CharField(
+        'nombre en inglés', max_length=150, blank=True, default='',
+        help_text='Nombre en el sitio en inglés. Vacío = se usa el nombre en español.',
+    )
     tipo = models.CharField(max_length=50, default='otro')
     tipo_interaccion = models.CharField(
         max_length=20,

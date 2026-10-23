@@ -4,17 +4,34 @@
 // use `nombre` y `descripcion` sin saber de idiomas. Módulo puro, sin imports: lo prueba el runner.
 
 type Lang = 'es' | 'en';
-type Traducible = { nombre: string; nombre_en?: string; descripcion?: string; descripcion_en?: string };
+type Extra = { nombre: string; nombre_en?: string };
+type Traducible = {
+  nombre: string; nombre_en?: string; descripcion?: string; descripcion_en?: string;
+  // La ficha del servicio (duración y punto de salida) y los nombres de sus extras.
+  duracion?: string; duracion_en?: string; punto_salida?: string; punto_salida_en?: string;
+  personalizaciones?: Extra[];
+};
 type ConComponentes<S> = { servicios_asociados: { servicio: S }[] };
+
+/** El inglés si lo hay; si no, el español. Solo para campos que el objeto trae. */
+function campo<T extends Traducible>(objeto: T, es: 'descripcion' | 'duracion' | 'punto_salida') {
+  if (objeto[es] === undefined) return {};
+  const en = objeto[`${es}_en`]?.trim();
+  return { [es]: en || objeto[es] };
+}
 
 export function enIdioma<T extends Traducible>(objeto: T, lang: Lang): T {
   if (lang !== 'en') return objeto;
   const nombre = objeto.nombre_en?.trim();
-  const descripcion = objeto.descripcion_en?.trim();
   return {
     ...objeto,
     nombre: nombre || objeto.nombre,
-    ...(objeto.descripcion !== undefined ? { descripcion: descripcion || objeto.descripcion } : {}),
+    ...campo(objeto, 'descripcion'),
+    ...campo(objeto, 'duracion'),
+    ...campo(objeto, 'punto_salida'),
+    ...(objeto.personalizaciones
+      ? { personalizaciones: objeto.personalizaciones.map((extra) => ({ ...extra, nombre: extra.nombre_en?.trim() || extra.nombre })) }
+      : {}),
   };
 }
 

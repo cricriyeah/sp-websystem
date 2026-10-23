@@ -233,6 +233,10 @@ class ServicioAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
             'description': 'Identificación básica del servicio y su disponibilidad general.',
             'fields': ('nombre', 'nombre_en', 'slug', 'tipo_servicio', 'descripcion', 'descripcion_en', 'incluye_es', 'incluye_en', 'activo'),
         }),
+        ('Ficha', {
+            'description': 'Los datos que la página de detalle muestra en grande junto al horario y el cupo.',
+            'fields': ('duracion', 'duracion_en', 'punto_salida', 'punto_salida_en'),
+        }),
         ('Cupo', {
             'description': 'Control de inventario, modo de asignación y capacidad de pasajeros.',
             'fields': ('estrategia_cupo', 'modo_ocupacion', 'capacidad_maxima'),

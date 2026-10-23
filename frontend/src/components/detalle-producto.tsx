@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Check, Dot, Minus, Plus } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import type { ColorActividad } from '@/lib/color-actividad';
 import { TarjetaEmpresa, type TextosEmpresa, type VistaEmpresa } from '@/components/tarjeta-empresa';
@@ -12,6 +13,10 @@ import { LegalBackLink } from '@/components/legal-back-link';
 /** Un renglón de una lista del detalle: su título y, si lo hay, una línea que lo explica. */
 export type ItemLista = { titulo: string; detalle?: string };
 export type BloqueLista = { titulo: string; items: ItemLista[] };
+/** Un dato de la ficha: la cifra o el lugar en grande y debajo qué es («5–6 h» · «Duración»). */
+export type DatoFicha = { etiqueta: string; valor: string };
+/** Un extra con su precio aparte, para leerlo como costo opcional y no como algo incluido. */
+export type ExtraDetalle = { nombre: string; detalle?: string; precio: { monto: string; base?: string } };
 
 export type VistaDetalle = {
   titulo: string;
@@ -24,7 +29,15 @@ export type VistaDetalle = {
   /** Una línea bajo el título: quién lo opera. */
   linea: string;
   volver: { href: string; etiqueta: string };
-  bloques: BloqueLista[];
+  /** «Así es tu día» (servicio) o «Así es tu viaje» (paquete). */
+  tituloQueEs: string;
+  /** Horario, duración, cupo y punto de salida (o noches, días de mar y recogida): solo los que existen. */
+  ficha: DatoFicha[];
+  /** Lo que recibe el cliente; las exclusiones del backoffice van aparte, sin palomita. */
+  incluye: { titulo: string; items: ItemLista[]; noIncluye: string[] };
+  extras: { titulo: string; items: ExtraDetalle[] };
+  /** Listas sin lugar fijo (el «qué llevar» de la pesca cuando el catálogo no responde). */
+  otros: BloqueLista[];
   /** Cuando una lista de «Qué incluye» no existe todavía: el enlace para preguntarlo por WhatsApp. */
   preguntaIncluye: { etiqueta: string; href: string } | null;
   compra: {
@@ -74,8 +87,8 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
 
 /**
  * El detalle de un servicio o de un paquete (F10), el mismo diseño para los dos: arranque con foto (o con un
- * campo del color de su tipo y su palabra), ficha en dos columnas con lo que es, lo que incluye y lo que se puede
- * agregar, el bloque de compra que se queda fijo al lado (en el teléfono, una barra fija abajo), quién lo opera
+ * campo del color de su tipo y su palabra), en dos columnas lo que es con su ficha de datos, lo que incluye (lista
+ * con palomitas, las exclusiones aparte) y lo que se puede sumar (filas de precio), el bloque de compra que se queda fijo al lado (en el teléfono, una barra fija abajo), quién lo opera
  * y los demás servicios de la sede. Lo que no tiene contenido real no se pinta.
  *
  * Server Component.
@@ -113,20 +126,83 @@ export function DetalleProducto({ vista, textos }: Props) {
       <section className="bg-superficie py-16 sm:py-20 lg:py-28">
         <div className="mx-auto grid max-w-[1440px] items-start gap-12 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)] lg:gap-24 lg:px-12">
           <div className="flex flex-col gap-12 lg:gap-16">
-            {vista.lead && (
+            {(vista.lead || vista.ficha.length > 0) && (
               <div>
-                <h2 className="rev texto-seccion">{textos.detalle.queEs}</h2>
-                <p className="mt-5 max-w-[52ch] whitespace-pre-line text-xl leading-snug">{vista.lead}</p>
+                <h2 className="rev texto-seccion">{vista.tituloQueEs}</h2>
+                {vista.lead && <p className="mt-5 max-w-[52ch] whitespace-pre-line text-xl leading-snug">{vista.lead}</p>}
+                {/* La ficha: lo que el turista busca primero (a qué hora, cuánto dura, cuántos caben, de dónde sale),
+                    en la letra de los titulares sobre un campo arena; la etiqueta, chica, debajo de cada dato. */}
+                {vista.ficha.length > 0 && (
+                  <dl className="rev mt-8 grid grid-cols-2 gap-x-6 gap-y-7 bg-cafe-bruma p-6 sm:p-8">
+                    {vista.ficha.map((dato) => (
+                      <div key={dato.etiqueta} className="flex flex-col-reverse gap-1.5">
+                        <dt className="texto-pequeno">{dato.etiqueta}</dt>
+                        <dd className="texto-mono-mayus text-xl font-bold leading-tight text-balance">{dato.valor}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
               </div>
             )}
-            {vista.bloques.map((bloque) => (
+            {vista.incluye.items.length > 0 && (
+              <div>
+                <h2 className="rev texto-seccion">{vista.incluye.titulo}</h2>
+                <ul className="mt-6 grid gap-x-10 gap-y-4 sm:grid-cols-2">
+                  {vista.incluye.items.map((item) => (
+                    <li key={item.titulo} className="rev flex items-start gap-3">
+                      <Check size={22} weight="bold" aria-hidden="true" className="mt-0.5 shrink-0 text-cafe" />
+                      <span>
+                        <span className="block text-lg font-semibold leading-snug">{item.titulo}</span>
+                        {item.detalle && <span className="mt-1 block texto-cuerpo">{item.detalle}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {vista.incluye.noIncluye.length > 0 && (
+                  <ul className="mt-6 flex flex-col gap-2 texto-cuerpo">
+                    {vista.incluye.noIncluye.map((renglon) => (
+                      <li key={renglon} className="flex items-start gap-3">
+                        <Minus size={22} weight="bold" aria-hidden="true" className="mt-px shrink-0" />
+                        {renglon}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {vista.extras.items.length > 0 && (
+              <div>
+                <h2 className="rev texto-seccion">{vista.extras.titulo}</h2>
+                {/* Cada extra como una fila de precio: el «+» y el monto a la derecha dicen que cuesta aparte. */}
+                <ul className="mt-6 flex flex-col gap-2">
+                  {vista.extras.items.map((extra) => (
+                    <li key={extra.nombre} className="rev flex items-center justify-between gap-6 bg-cafe-bruma px-5 py-4">
+                      <span className="flex items-start gap-3">
+                        <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-tinta text-white">
+                          <Plus size={16} weight="bold" />
+                        </span>
+                        <span>
+                          <span className="block text-lg font-semibold leading-snug">{extra.nombre}</span>
+                          {extra.detalle && <span className="mt-1 block texto-cuerpo">{extra.detalle}</span>}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right tabular-nums">
+                        <span className="block text-lg font-semibold">{extra.precio.monto}</span>
+                        {extra.precio.base && <span className="block texto-pequeno">{extra.precio.base}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {vista.otros.map((bloque) => (
               <div key={bloque.titulo}>
                 <h2 className="rev texto-seccion">{bloque.titulo}</h2>
-                <ul className="mt-5 flex flex-col gap-2">
+                <ul className="mt-6 grid gap-x-10 gap-y-3 sm:grid-cols-2">
                   {bloque.items.map((item) => (
-                    <li key={item.titulo} className="rev bg-cafe-bruma px-5 py-4 font-semibold">
+                    <li key={item.titulo} className="rev flex items-start gap-2 text-lg">
+                      <Dot size={28} weight="bold" aria-hidden="true" className="-mt-0.5 shrink-0 text-cafe" />
                       {item.titulo}
-                      {item.detalle && <span className="mt-1 block font-normal texto-cuerpo">{item.detalle}</span>}
                     </li>
                   ))}
                 </ul>

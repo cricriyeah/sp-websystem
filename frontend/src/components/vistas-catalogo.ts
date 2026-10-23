@@ -57,8 +57,9 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
   };
 }
 
-// Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; queda para el detalle.
+// Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; el detalle lo dice aparte.
 const EXCLUSION = /no incluye|not include/i;
+export const esExclusion = (renglon: string) => EXCLUSION.test(renglon);
 
 /** Los renglones de «incluye» de la tarjeta de un paquete: 4 (3 en el teléfono, lo esconde quien pinta); la lista
  * completa está en el detalle. La comparten la sección de paquetes y «Reserva ahora mismo». */

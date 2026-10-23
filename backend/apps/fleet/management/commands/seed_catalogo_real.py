@@ -76,29 +76,22 @@ SERVICIOS = [
 # Lo que La Ventana Travel y Piratas Adventures confirmaron por WhatsApp (2026-09-21 y 2026-10-09).
 # Se aplica por UPDATE sobre lo ya sembrado. `incluye`: hasta 8 renglones de 80 caracteres.
 # No hay precio de la licencia de pesca: es un extra de cada empresa, sin importe confirmado todavía.
+# Solo lo que recibe el cliente: horario, duración, punto de salida y cupo van en sus campos (la ficha del detalle).
 INCLUYE_AVISTAMIENTO = {
-    'es': ['Salida diaria, de 7:00 a 8:00 am, de La Ventana o Bahía de los Sueños',
-           'El tour dura de 5 a 6 horas aproximadamente',
-           'Algo de comer, aguas y refrescos',
-           'Equipo para snorkelear',
-           'Snorkel en un arrecife',
-           'Buscamos animales para intentar nadar con ellos'],
-    'en': ['Daily departure, 7:00 to 8:00 am, from La Ventana or Bahía de los Sueños',
-           'The tour lasts about 5 to 6 hours',
-           'Some food, water and soft drinks',
-           'Snorkeling gear',
-           'Snorkeling at a reef',
-           'We look for animals to try to swim with them'],
+    'es': ['Algo de comer, aguas y refrescos', 'Equipo para snorkelear', 'Snorkel en un arrecife',
+           'Intento de nado con ballenas u orcas, si el mar lo permite'],
+    'en': ['Some food, water and soft drinks', 'Snorkeling gear', 'Snorkeling at a reef',
+           'A try at swimming with whales or orcas, sea permitting'],
 }
 
 # Lo que confirmó el dueño el 2026-10-21 (precios SIN IVA). Sal y Sol: 8 pangas de 8, salida de 5 a 7, 10,800 por viaje
 # (600 USD a 18) para 1 o 2 personas y 1,350 (75 USD) por cada persona extra desde la tercera. El dueño dio estos
 # precios en dólares el 2026-10-22; antes se había anotado 12,000 / 1,800 MXN. La Ventana: 5 pangas de 8, salida de 7 a 8.
 INCLUYE_PESCA_SAL_Y_SOL = {
-    'es': ['Desayuno ligero y comida a bordo', 'Aperitivos: fruta y frituras', 'Bebidas',
-           'Cubre 1 o 2 personas; desde la tercera se suma un cargo por persona'],
-    'en': ['Light breakfast and lunch on board', 'Snacks: fruit and chips', 'Drinks',
-           'Covers 1 or 2 people; from the third on, a per-person charge applies'],
+    'es': ['Panga privada con capitán local', 'Desayuno ligero y comida a bordo', 'Aperitivos: fruta y frituras',
+           'Bebidas'],
+    'en': ['Private panga with a local captain', 'Light breakfast and lunch on board', 'Snacks: fruit and chips',
+           'Drinks'],
 }
 INCLUYE_AMENIDADES_VENTANA = {
     'es': ['Comida ligera, aperitivos y bebidas incluidos', 'Equipo para snorkelear'],
@@ -114,6 +107,7 @@ DATOS_REALES = {
         descripcion='Viaje de pesca deportiva en La Paz, de 5:00 a 7:00 am de salida, en panga para hasta 5 personas. '
                     'La licencia de pesca se tramita aparte, para las personas que elijas.',
         incluye=INCLUYE_PESCA_SAL_Y_SOL,
+        duracion='6–7 h', duracion_en='6–7 h', punto_salida='Marina La Costa', punto_salida_en='Marina La Costa',
     ),
     ('la-ventana-travel', 'pesca-con-mosca'): dict(
         nombre='Pesca con mosca',
@@ -121,10 +115,10 @@ DATOS_REALES = {
         personas_incluidas=3, capacidad_maxima=3,
         descripcion='Un día de pesca con mosca (fly fishing) en La Ventana, para un grupo de hasta 3 personas, '
                     'sin cargo por persona extra. La licencia de pesca no está incluida.',
-        incluye={'es': ['Un día de pesca con mosca', 'Salida de 7:00 a 8:00 am', 'Para 3 personas como máximo',
-                        *INCLUYE_AMENIDADES_VENTANA['es']],
-                 'en': ['A full day of fly fishing', 'Departure from 7:00 to 8:00 am', 'For 3 people at most',
-                        *INCLUYE_AMENIDADES_VENTANA['en']]},
+        incluye={'es': ['Panga para ti y hasta dos acompañantes', 'Comida ligera, aperitivos y bebidas',
+                        'Equipo para snorkelear'],
+                 'en': ['A panga for you and up to two companions', 'Light meal, snacks and drinks', 'Snorkeling gear']},
+        duracion='Día completo', duracion_en='Full day',
     ),
     ('la-ventana-travel', 'avistamiento-ballenas-orcas'): dict(
         nombre='Avistamiento de ballenas y orcas',
@@ -135,6 +129,8 @@ DATOS_REALES = {
                     'arrecife. Precio por persona en lancha compartida; '
                     'para un grupo privado (hasta 10 personas) el costo es de $20,000 MXN: consúltalo por WhatsApp.',
         incluye=INCLUYE_AVISTAMIENTO,
+        duracion='5–6 h', duracion_en='5–6 h', punto_salida='La Ventana o Bahía de los Sueños',
+        punto_salida_en='La Ventana or Bahía de los Sueños',
     ),
     ('la-ventana-travel', 'hospedaje-la-ventana'): dict(
         nombre='Hotel Casa Arrecife',
@@ -446,7 +442,7 @@ class Command(BaseCommand):
             )
             licencia, _ = Personalizacion.objects.get_or_create(
                 empresa=sal, nombre='Licencia de pesca',
-                defaults=dict(tipo='licencia', cobrar_por_persona=True, cantidad_editable=True),
+                defaults=dict(tipo='licencia', nombre_en='Fishing license', cobrar_por_persona=True, cantidad_editable=True),
             )
             enlace, _ = ServicioPersonalizacion.objects.get_or_create(
                 servicio=pesca, personalizacion=licencia, defaults=dict(precio=Decimal('300')),

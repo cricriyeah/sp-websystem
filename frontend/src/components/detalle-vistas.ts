@@ -14,10 +14,10 @@ import { aMoneda } from '@/lib/moneda';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
-import type { BloqueLista, ItemLista, TextosDetalle, VistaDetalle } from '@/components/detalle-producto';
+import type { BloqueLista, DatoFicha, ExtraDetalle, ItemLista, TextosDetalle, VistaDetalle } from '@/components/detalle-producto';
 import type { VistaEmpresa } from '@/components/tarjeta-empresa';
 import { vistaDeEmpresa } from '@/components/vistas-empresa';
-import { vistaDePaquete, vistaDeServicio } from '@/components/vistas-catalogo';
+import { esExclusion, vistaDePaquete, vistaDeServicio } from '@/components/vistas-catalogo';
 
 type Comun = {
   lang: Locale;
@@ -28,27 +28,36 @@ type Comun = {
   otros: { servicios: ServicioCatalogo[] | null; paquetes: PaqueteCatalogo[] | null };
 };
 
-/** «+$450 MXN» (y «por persona» si el extra se cobra por cada una). */
-function textoDeExtra(extra: ServicioPersonalizacionCatalogo, tipoCambio: string, { lang, moneda, dict }: Comun): string {
+/** «+$450 MXN» y, aparte, «por persona» si el extra se cobra por cada una. */
+function precioDeExtra(extra: ServicioPersonalizacionCatalogo, tipoCambio: string, { moneda, dict }: Comun) {
   const detalle = dict.sedeContenido.detalle;
-  const descripcion = extra.descripcion?.[lang];
-  const monto = Number(extra.precio) > 0
-    ? `${detalle.extraPrecio.replace('{monto}', `${formatearPrecio(aMoneda(extra.precio, moneda, tipoCambio), moneda)} ${moneda}`)}${extra.cobrar_por_persona ? ` ${detalle.porPersona}` : ''}`
-    : dict.serviceDetail.optionalPrice;
-  return [descripcion, monto].filter(Boolean).join(' · ');
+  if (!(Number(extra.precio) > 0)) return { monto: dict.serviceDetail.optionalPrice };
+  return {
+    monto: detalle.extraPrecio.replace('{monto}', `${formatearPrecio(aMoneda(extra.precio, moneda, tipoCambio), moneda)} ${moneda}`),
+    base: extra.cobrar_por_persona ? detalle.porPersona : undefined,
+  };
 }
 
-function itemsDeExtras(servicios: ServicioCatalogo[], comun: Comun): ItemLista[] {
+function extrasDe(servicios: ServicioCatalogo[], comun: Comun): ExtraDetalle[] {
   const vistos = new Set<number>();
-  const items: ItemLista[] = [];
+  const extras: ExtraDetalle[] = [];
   for (const servicio of servicios) {
     for (const extra of servicio.personalizaciones) {
       if (extra.obligatorio || vistos.has(extra.personalizacion_id)) continue;
       vistos.add(extra.personalizacion_id);
-      items.push({ titulo: extra.nombre, detalle: textoDeExtra(extra, servicio.tipo_cambio_usd, comun) });
+      extras.push({
+        nombre: extra.nombre,
+        detalle: extra.descripcion?.[comun.lang] || undefined,
+        precio: precioDeExtra(extra, servicio.tipo_cambio_usd, comun),
+      });
     }
   }
-  return items;
+  return extras;
+}
+
+/** El «incluye» del backoffice, con las exclusiones («el hospedaje no incluye comida») aparte. */
+function partirIncluye(renglones: string[]) {
+  return { incluye: renglones.filter((r) => !esExclusion(r)), noIncluye: renglones.filter(esExclusion) };
 }
 
 /** Cuánto suma cada persona extra, en la moneda de la página; `null` si no suma nada. */
@@ -118,26 +127,32 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
   const clave = claveDeServicio(empresaSlug, slug);
 
   // La lista propia del servicio; sin ella, la pesca y el traslado conservan lo que ya tenían escrito.
-  const propia = servicio?.incluye?.[lang] ?? [];
-  const incluye: ItemLista[] = propia.length > 0
-    ? propia.map((titulo) => ({ titulo }))
+  const propia = partirIncluye(servicio?.incluye?.[lang] ?? []);
+  const incluye: ItemLista[] = propia.incluye.length > 0
+    ? propia.incluye.map((titulo) => ({ titulo }))
     : pesca
       ? dict.included.included.map((item) => ({ titulo: item.title, detalle: item.body }))
       : traslado
         ? [{ titulo: dict.traslados.summary.included }]
         : [];
-  const bloques: BloqueLista[] = [];
-  if (incluye.length > 0) bloques.push({ titulo: detalle.queIncluye, items: incluye });
-  if (pesca && propia.length === 0) bloques.push({ titulo: dict.included.bringTitle, items: dict.included.bring.map((titulo) => ({ titulo })) });
-  const extras = itemsDeExtras(servicio ? [servicio] : [], entrada);
-  if (extras.length > 0) bloques.push({ titulo: detalle.puedesAgregar, items: extras });
+  const otros: BloqueLista[] = [];
+  if (pesca && propia.incluye.length === 0) otros.push({ titulo: dict.included.bringTitle, items: dict.included.bring.map((titulo) => ({ titulo })) });
 
   const vista = servicio ? vistaDeServicio(servicio, lang, moneda, sede?.slug ?? '') : null;
   const porGrupo = servicio?.estrategia_precio === 'por_grupo';
+  // La ficha: lo que el turista busca primero, en grande. Solo lo que el servicio tiene.
+  const ficha: DatoFicha[] = [
+    ...(vista?.horario ? [{ etiqueta: detalle.ficha.salida, valor: vista.horario }] : []),
+    ...(servicio?.duracion ? [{ etiqueta: detalle.ficha.duracion, valor: servicio.duracion }] : []),
+    ...(servicio?.capacidad_maxima
+      ? [{ etiqueta: detalle.ficha.personas, valor: detalle.ficha.hasta.replace('{n}', String(servicio.capacidad_maxima)) }]
+      : []),
+    ...(servicio?.punto_salida ? [{ etiqueta: detalle.ficha.salesDe, valor: servicio.punto_salida }] : []),
+  ];
+  // El cupo máximo ya va en la ficha: el bloque de compra se queda con quién, cuántos cubre el precio y cómo pagas.
   const datos = [
     { etiqueta: detalle.etiquetaOpera, valor: nombreEmpresa },
     ...(servicio && porGrupo ? [{ etiqueta: detalle.etiquetaIncluye, valor: detalle.personas.replace('{n}', String(servicio.personas_incluidas)) }] : []),
-    ...(servicio?.capacidad_maxima ? [{ etiqueta: detalle.etiquetaMaximo, valor: detalle.personas.replace('{n}', String(servicio.capacidad_maxima)) }] : []),
     ...(servicio ? [datosDePago(servicio.permite_anticipo, servicio.porcentaje_anticipo, entrada)] : []),
   ];
   const puedeReservar = servicio !== null || pesca || traslado;
@@ -150,8 +165,12 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
     foto: imagenDeCatalogo(clave, lang),
     linea: textos.opera.replace('{empresa}', nombreEmpresa),
     volver: volverASede(entrada),
-    bloques,
-    preguntaIncluye: servicio && !traslado && !pesca && propia.length === 0 && tieneWhatsapp
+    tituloQueEs: detalle.queEs,
+    ficha,
+    incluye: { titulo: detalle.queIncluye, items: incluye, noIncluye: propia.noIncluye },
+    extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicio ? [servicio] : [], entrada) },
+    otros,
+    preguntaIncluye: servicio && !traslado && !pesca && propia.incluye.length === 0 && tieneWhatsapp
       ? { etiqueta: textos.preguntaIncluye, href: whatsappHref(textos.whatsappMensaje.replace('{sede}', sede?.nombre ?? '')) }
       : null,
     compra: {
@@ -182,22 +201,25 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
   const slugsEmpresa = [paquete.empresa_lider_slug, ...servicios.map((s) => s.empresa_slug)];
   const nombresEmpresa = [...new Set(slugsEmpresa)].map((slug) => getEmpresa(slug)?.nombre ?? slug);
 
-  // Lo que dice el paquete de sí mismo y, debajo, los servicios que lo forman con quién opera cada uno.
-  const incluye: ItemLista[] = [
-    ...(paquete.incluye?.[lang] ?? []).map((titulo) => ({ titulo })),
-    ...servicios.map((s) => ({ titulo: s.nombre, detalle: textos.opera.replace('{empresa}', getEmpresa(s.empresa_slug)?.nombre ?? s.empresa_slug) })),
-  ];
-  const bloques: BloqueLista[] = [];
-  if (incluye.length > 0) bloques.push({ titulo: detalle.queIncluye, items: incluye });
-  const extras = itemsDeExtras(servicios, entrada);
-  if (extras.length > 0) bloques.push({ titulo: detalle.puedesAgregar, items: extras });
+  // Lo que dice el paquete de sí mismo; sin lista propia, los servicios que lo forman con quién opera cada uno.
+  const propia = partirIncluye(paquete.incluye?.[lang] ?? []);
+  const incluye: ItemLista[] = propia.incluye.length > 0
+    ? propia.incluye.map((titulo) => ({ titulo }))
+    : servicios.map((s) => ({ titulo: s.nombre, detalle: textos.opera.replace('{empresa}', getEmpresa(s.empresa_slug)?.nombre ?? s.empresa_slug) }));
 
   const vista = vistaDePaquete(paquete, lang, moneda);
   const porGrupo = paquete.estrategia_precio === 'por_grupo';
+  // La ficha del paquete: cuántas noches, cuántos días de mar y si te recogen en el aeropuerto.
+  const salidasAlMar = componentes.find((c) => c.servicio.tipo_servicio === 'pesca' || c.servicio.tipo_servicio === 'paseo')?.salidas ?? 0;
+  const conTraslado = componentes.some((c) => c.servicio.tipo_servicio === 'transporte');
+  const ficha: DatoFicha[] = [
+    ...(paquete.noches ? [{ etiqueta: detalle.ficha.estancia, valor: detalle.noches.replace('{n}', String(paquete.noches)) }] : []),
+    ...(salidasAlMar > 0 ? [{ etiqueta: detalle.ficha.alMar, valor: detalle.ficha.salidas.replace('{n}', String(salidasAlMar)) }] : []),
+    ...(conTraslado ? [{ etiqueta: detalle.ficha.recogida, valor: detalle.ficha.aeropuerto }] : []),
+  ];
   const datos = [
     { etiqueta: detalle.etiquetaOpera, valor: nombresEmpresa.join(' · ') },
     ...(porGrupo ? [{ etiqueta: detalle.etiquetaIncluye, valor: detalle.personas.replace('{n}', String(paquete.personas_precio_base)) }] : []),
-    ...(paquete.noches ? [{ etiqueta: detalle.etiquetaEstancia, valor: detalle.noches.replace('{n}', String(paquete.noches)) }] : []),
     datosDePago(paquete.permite_anticipo, paquete.porcentaje_anticipo, entrada),
   ];
 
@@ -209,7 +231,11 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
     foto: imagenDeCatalogo(clave, lang),
     linea: textos.opera.replace('{empresa}', nombresEmpresa.join(' · ')),
     volver: volverASede(entrada),
-    bloques,
+    tituloQueEs: detalle.queEsPaquete,
+    ficha,
+    incluye: { titulo: detalle.queIncluyePaquete, items: incluye, noIncluye: propia.noIncluye },
+    extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicios, entrada) },
+    otros: [],
     preguntaIncluye: null,
     compra: {
       precio: vista.precio,

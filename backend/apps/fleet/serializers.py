@@ -22,6 +22,7 @@ class PuntoEncuentroSerializer(serializers.ModelSerializer):
 
 class ServicioPersonalizacionSerializer(serializers.ModelSerializer):
     nombre = serializers.CharField(source='personalizacion.nombre', read_only=True)
+    nombre_en = serializers.CharField(source='personalizacion.nombre_en', read_only=True)
     tipo = serializers.CharField(source='personalizacion.tipo', read_only=True)
     tipo_interaccion = serializers.CharField(source='personalizacion.tipo_interaccion', read_only=True)
     opciones_seleccion = serializers.JSONField(source='personalizacion.opciones_seleccion', read_only=True)
@@ -33,7 +34,7 @@ class ServicioPersonalizacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServicioPersonalizacion
         fields = [
-            'id', 'personalizacion_id', 'nombre', 'tipo',
+            'id', 'personalizacion_id', 'nombre', 'nombre_en', 'tipo',
             'tipo_interaccion', 'opciones_seleccion', 'descripcion', 'aviso_reforzado',
             'cobrar_por_persona', 'cantidad_editable',
             'precio', 'obligatorio', 'preseleccionado',
@@ -56,6 +57,7 @@ class ServicioSerializer(serializers.ModelSerializer):
             'permite_anticipo', 'porcentaje_anticipo',
             'precio_persona_extra',
             'personas_incluidas', 'capacidad_maxima', 'descripcion', 'descripcion_en', 'activo',
+            'duracion', 'duracion_en', 'punto_salida', 'punto_salida_en',
             'pide_hora', 'hora_apertura', 'hora_cierre', 'paso_hora_minutos',
             'personalizaciones',
         ]

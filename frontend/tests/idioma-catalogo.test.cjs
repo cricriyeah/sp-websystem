@@ -34,3 +34,15 @@ test('paqueteEnIdioma: traduce el paquete y sus servicios', () => {
   assert.equal(r.servicios_asociados[0].orden, 1);
   assert.equal(m.paqueteEnIdioma(paquete, 'es'), paquete);
 });
+
+test('enIdioma: traduce la ficha y los nombres de los extras, con el español de respaldo', () => {
+  const pesca = {
+    nombre: 'Pesca', duracion: 'Día completo', duracion_en: 'Full day', punto_salida: 'Marina La Costa', punto_salida_en: '',
+    personalizaciones: [{ nombre: 'Licencia de pesca', nombre_en: 'Fishing license' }, { nombre: 'Carnada', nombre_en: '' }],
+  };
+  const r = m.enIdioma(pesca, 'en');
+  assert.equal(r.duracion, 'Full day');
+  assert.equal(r.punto_salida, 'Marina La Costa');
+  assert.deepEqual(r.personalizaciones.map((e) => e.nombre), ['Fishing license', 'Carnada']);
+  assert.equal('duracion' in m.enIdioma({ nombre: 'x' }, 'en'), false);
+});
