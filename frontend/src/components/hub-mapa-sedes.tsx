@@ -43,6 +43,7 @@ export function HubMapaSedes({ sedes, copy }: {
   const arrastrando = useRef(false);
   const sinMovimiento = useReducedMotion();
   const sede = sedes.find(s => s.slug === abiertoSlug);
+  const contra = 1 / zoom;
   function reset() { setZoom(1); x.set(0); y.set(0); }
   function abrir(s: SedeMapa) { setAbiertoSlug(s.slug); }
   function cambiarZoom(delta: number) { setZoom(z => Math.min(4, Math.max(1, z + delta))); }
@@ -106,11 +107,12 @@ export function HubMapaSedes({ sedes, copy }: {
             className="absolute inset-0 cursor-grab active:cursor-grabbing">
             <div className="absolute left-1/2 top-1/2 aspect-[1000/560] w-[800px] max-w-none -translate-x-1/2 -translate-y-1/2 sm:w-[920px]">
               <Image src="/ilustraciones/mapa-baja.svg" alt="" fill loading="eager" sizes="(min-width: 640px) 920px, 800px" draggable={false} className="pointer-events-none select-none" />
-              <span className="pointer-events-none absolute left-[26%] top-[60%] texto-pie text-hero-ink">{copy.pacificOcean}</span>
-              <span className="pointer-events-none absolute left-[58%] top-[36%] texto-pie text-hero-ink">{copy.seaOfCortez}</span>
+              {/* Puntos, etiquetas y nombres de los mares se contraescalan: el mapa se acerca, ellos no crecen. */}
+              <span style={{ scale: contra }} className="pointer-events-none absolute left-[26%] top-[60%] origin-top-left texto-pie text-hero-ink">{copy.pacificOcean}</span>
+              <span style={{ scale: contra }} className="pointer-events-none absolute left-[58%] top-[36%] origin-top-left texto-pie text-hero-ink">{copy.seaOfCortez}</span>
               {sedes.map(s => COORDENADAS[s.slug] && (
                 <Button key={s.slug} variante="libre" aria-label={s.nombre} aria-pressed={abiertoSlug === s.slug}
-                  onClick={() => { if (!arrastrando.current) abrir(s); }} style={project(COORDENADAS[s.slug])}
+                  onClick={() => { if (!arrastrando.current) abrir(s); }} style={{ ...project(COORDENADAS[s.slug]), scale: contra }}
                   className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-accent">
                   <span className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-tinta ${abiertoSlug === s.slug ? 'ring-4 ring-tinta/30' : ''}`} />
                   <span className={`absolute whitespace-nowrap bg-superficie px-2 py-1 text-sm font-semibold text-foreground ${s.slug === 'puerto-chale' ? 'right-9 top-0' : s.slug === 'la-paz' ? 'bottom-9 left-4' : 'left-9 top-6'}`}>{s.nombre}</span>
