@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django import forms
 
+from apps.fleet.calendario_paquete import fecha_ancla, fecha_salida as calcular_salida
 from apps.fleet.enums import TipoServicio
 from apps.tenancy import scope
 from apps.bookings.models import Reserva, Vendedora
@@ -49,7 +50,6 @@ class AltaReservaForm(forms.ModelForm):
             'numero_personas',
             'aeropuerto',
             'fecha_salida',
-            'inicio_paquete',
             'moneda',
             'precio_total',
             'embarcacion',
@@ -100,6 +100,11 @@ class AltaReservaForm(forms.ModelForm):
                 if self.perfil_vendedora and not self.initial.get('vendedora'):
                     self.fields['vendedora'].initial = self.perfil_vendedora
 
+        self.fields['fecha'].help_text = (
+            'Servicio suelto: el día del servicio, o de llegada si es hospedaje. '
+            'Paquete: el día en que empieza; la fecha de la actividad y la salida las calcula el sistema.'
+        )
+
         # Mostrar límites del servicio en cada opción del selector
         if 'servicio' in self.fields:
             if es_operador:
@@ -139,6 +144,9 @@ class AltaReservaForm(forms.ModelForm):
         else:
             vendedora_elegida = cleaned_data.get('vendedora')
             self.instance.vendedora = vendedora_elegida
+
+        # 3b. Paquete: las fechas salen de su definición y del día de inicio, como en el checkout
+        self._derivar_fechas_de_paquete(cleaned_data)
 
         # 4. Precio: si viene vacío, sugerir precio con las reglas de negocio
         precio_total = cleaned_data.get('precio_total')
@@ -214,3 +222,30 @@ class AltaReservaForm(forms.ModelForm):
                 cleaned_data['monto_transferencia'] = monto_recibido
 
         return cleaned_data
+
+    def _derivar_fechas_de_paquete(self, cleaned_data):
+        """En un paquete, `fecha` que teclea la vendedora es el día de inicio.
+
+        De ahí salen `inicio_paquete`, la fecha de la actividad (`Reserva.fecha`) y la salida del
+        hospedaje, con las mismas funciones que usa el checkout (`calendario_paquete`). Antes la
+        vendedora tecleaba las tres a mano y podía dejarlas inconsistentes con el paquete.
+        """
+        paquete = cleaned_data.get('paquete')
+        inicio = cleaned_data.get('fecha')
+        if paquete is None or inicio is None:
+            self.instance.inicio_paquete = None
+            return
+        calendario = paquete.componentes_calendario()
+        salida = calcular_salida(inicio, calendario)
+        tecleada = cleaned_data.get('fecha_salida')
+        if tecleada and tecleada != salida:
+            self.add_error(
+                'fecha_salida',
+                f'La salida la define el paquete: empezando el {inicio:%d/%m/%Y} sale el {salida:%d/%m/%Y}. '
+                'Déjala vacía.' if salida else
+                'Este paquete no incluye hospedaje: no lleva fecha de salida. Déjala vacía.',
+            )
+            return
+        self.instance.inicio_paquete = inicio
+        cleaned_data['fecha'] = fecha_ancla(inicio, calendario)
+        cleaned_data['fecha_salida'] = salida

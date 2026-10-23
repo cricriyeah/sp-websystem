@@ -11,7 +11,8 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
-from django.db import connection, models, transaction
+from django.contrib import messages
+from django.db import IntegrityError, connection, models, transaction
 from django.db.models.functions import Coalesce
 from django.forms.forms import NON_FIELD_ERRORS
 from django.http import Http404, HttpResponseRedirect, JsonResponse
@@ -26,6 +27,8 @@ from unfold.admin import ModelAdmin
 from unfold.decorators import action
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
+from apps.bookings.cupo import SinCupoError
+from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
 from apps.fleet.enums import TipoServicio
 from apps.fleet.models import (
     Embarcacion, EmbarcacionNoDisponible, Paquete, PuntoEncuentro, Recurso, Servicio,
@@ -71,6 +74,14 @@ from .traslados_reglas import bloqueo_cubre_viaje, bloqueo_toca_viaje
 
 # Lada de Mexico, para completar los telefonos que el cliente escribio a 10 digitos.
 LADA_PAIS = '52'
+
+
+class CupoAgotadoAlGuardar(Exception):
+    """Otra venta se quedo con la habitacion entre que el formulario valido y se guardo.
+
+    `ReservaAdmin.save_model` la lanza para deshacer la transaccion del admin; `changeform_view`
+    la convierte en un aviso en espanol en vez de un 500.
+    """
 
 
 def telefono_marcable(telefono):
@@ -753,9 +764,10 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         if obj is None:
             es_operador = scope.es_operador_plataforma(request.user)
             es_jefe = scope.es_jefe_actual(request)
+            # `inicio_paquete` no se teclea: sale del día de inicio y de la definición del paquete.
             viaje_alta = [
                 'servicio', 'paquete', 'fecha', 'hora', 'numero_personas',
-                'aeropuerto', 'fecha_salida', 'inicio_paquete',
+                'aeropuerto', 'fecha_salida',
             ]
             if es_operador:
                 viaje_alta.insert(0, 'empresa')
@@ -830,7 +842,28 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             else:
                 obj.transferencia_registrada_en = None
                 obj.transferencia_registrada_por = None
-        super().save_model(request, obj, form, change)
+
+        if not self._entra_a_ocupar_cupo(obj, change):
+            super().save_model(request, obj, form, change)
+            return
+
+        # Una reserva que entra ya pagada (o vuelve a pagada) aparta habitacion y componentes
+        # con la misma funcion que el webhook de Stripe: antes esto solo corria al pagar en la
+        # web, y la misma habitacion se podia vender otra vez.
+        try:
+            with transaction.atomic():
+                super().save_model(request, obj, form, change)
+                reservar_cupo_al_confirmar(obj)
+        except (SinCupoError, IntegrityError) as exc:
+            motivo = str(exc) if isinstance(exc, SinCupoError) else 'Ya no hay habitación esas fechas.'
+            raise CupoAgotadoAlGuardar(motivo) from exc
+
+    @staticmethod
+    def _entra_a_ocupar_cupo(obj, change):
+        """Alta ya pagada, o una reserva que pasa de cancelada/pendiente a pagada."""
+        if obj.estado not in ESTADOS_QUE_OCUPAN_CUPO or obj.orden_id is not None:
+            return False
+        return not change or getattr(obj, '_estado_original', None) not in ESTADOS_QUE_OCUPAN_CUPO
 
     def save_formset(self, request, form, formset, change):
         if formset.model == DetalleTransporte and not change:
@@ -934,7 +967,12 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                     'asignacion': asignacion,
                     'asignacion_urgente': 'Sin panga' in str(asignacion),
                 }
-        return super().changeform_view(request, object_id, form_url, contexto)
+        try:
+            return super().changeform_view(request, object_id, form_url, contexto)
+        except CupoAgotadoAlGuardar as exc:
+            # El admin ya deshizo la transaccion: no quedo reserva a medias.
+            self.message_user(request, f'No se guardó la reserva. {exc}', level=messages.ERROR)
+            return HttpResponseRedirect(request.get_full_path())
     actions = [
         'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
         'confirmar_devolucion', 'cancelar_por_mal_clima',
