@@ -819,6 +819,19 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return tuple(dict.fromkeys(campos))
 
     def save_model(self, request, obj, form, change):
+        # Efectivo: Finanzas descarta todo movimiento sin fecha, asi que un monto
+        # escrito aqui sin sello no existia para el panel. Se sella UNA vez (la
+        # fecha del primer registro, que tambien pudo dejar «Registrar liquidacion en
+        # efectivo»); corregir el monto despues no la mueve. Si se quita el efectivo
+        # se borra el sello, para que un monto nuevo lleve su propia fecha.
+        if obj.monto_efectivo is not None and obj.monto_efectivo > 0:
+            if obj.efectivo_cobrado_en is None:
+                obj.efectivo_cobrado_en = timezone.now()
+                obj.efectivo_cobrado_por = request.user
+        elif obj.efectivo_cobrado_en is not None and 'monto_efectivo' in form.changed_data:
+            obj.efectivo_cobrado_en = None
+            obj.efectivo_cobrado_por = None
+
         if not change:
             if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
                 obj.transferencia_registrada_en = timezone.now()
