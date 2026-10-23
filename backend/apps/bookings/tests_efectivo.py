@@ -22,6 +22,7 @@ class SelloDeEfectivoEnElFormularioTests(EmpresaTestCase):
         self.reserva = crear_reserva(
             self.empresa, estado=Reserva.Estado.PAGADA, forma_pago=Reserva.FormaPago.ANTICIPO,
             precio_total=Decimal('4500.00'), monto_pagado=Decimal('1350.00'),
+            pagada_en=timezone.now(),
         )
         self.url = reverse('admin:bookings_reserva_change', args=[self.reserva.pk])
         self.vendedora = self.crear_vendedora()
@@ -123,3 +124,19 @@ class SelloDeEfectivoEnElFormularioTests(EmpresaTestCase):
 
         self.assertIsNone(reserva.efectivo_cobrado_en)
         self.assertIsNone(reserva.efectivo_cobrado_por)
+
+    def test_el_panel_y_el_detalle_de_finanzas_muestran_el_efectivo_aparte_de_la_tarjeta(self):
+        self.guardar(monto_efectivo='3150.00')
+        self.client.force_login(self.crear_jefe())
+
+        panel = self.client.get(reverse('finanzas'))
+        self.assertEqual(panel.status_code, 200)
+        saldo = panel.context['acumulado']['MXN']
+        self.assertEqual(saldo.tarjeta, Decimal('1350.00'))
+        self.assertEqual(saldo.efectivo, Decimal('3150.00'))
+        self.assertContains(panel, 'En efectivo (caja)')
+        self.assertContains(panel, '3,150.00')
+
+        detalle = self.client.get(reverse('finanzas_movimientos'), {'concepto': 'efectivo'})
+        filas = detalle.context['filas']
+        self.assertEqual([(f.concepto, f.monto) for f in filas], [('efectivo', Decimal('3150.00'))])
