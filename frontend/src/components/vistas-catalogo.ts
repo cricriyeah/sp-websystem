@@ -15,6 +15,10 @@ import { aMoneda } from '@/lib/moneda';
 import { formatHour } from '@/lib/dates';
 import type { VistaProducto } from '@/components/tarjeta-producto';
 
+// Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; el detalle lo dice aparte.
+const EXCLUSION = /no incluye|not include/i;
+export const esExclusion = (renglon: string) => EXCLUSION.test(renglon);
+
 /** En `/en` el precio va primero en dólares y debajo, aproximado, en pesos. */
 function precioDe(mxn: (moneda: Moneda) => number | null, lang: Locale, moneda: Moneda) {
   const principal: Moneda = lang === 'en' ? 'USD' : moneda;
@@ -45,9 +49,12 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
     empresa: empresa?.nombre ?? servicio.empresa_slug,
     color: colorDeServicio(servicio),
     palabra: palabraDeServicio(servicio.tipo_servicio, lang),
-    descripcion: descripcionDeCatalogo(clave, lang),
+    // Igual que el paquete: un texto propio del sitio manda; si no, la descripción del backoffice (ya en el idioma).
+    descripcion: descripcionDeCatalogo(clave, lang) ?? (servicio.descripcion?.trim() || null),
     horario: horarioDe(servicio),
-    incluye: (servicio.incluye?.[lang] ?? []).slice(0, 3),
+    // Los mismos renglones que un paquete, para que las tarjetas de una fila tengan la misma anatomía (sin huecos).
+    incluye: (servicio.incluye?.[lang] ?? []).filter((r) => !esExclusion(r)).slice(0, 4),
+    incluyeSiempre: true,
     foto: imagenDeCatalogo(clave, lang),
     precio: porRuta
       ? null
@@ -57,9 +64,6 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
   };
 }
 
-// Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; el detalle lo dice aparte.
-const EXCLUSION = /no incluye|not include/i;
-export const esExclusion = (renglon: string) => EXCLUSION.test(renglon);
 
 /** Los renglones de «incluye» de la tarjeta de un paquete: 4 (3 en el teléfono, lo esconde quien pinta); la lista
  * completa está en el detalle. La comparten la sección de paquetes y «Reserva ahora mismo». */
