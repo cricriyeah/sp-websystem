@@ -1,0 +1,71 @@
+{% comment %}
+Semana: siete columnas de lunes a domingo, una franja de estancias arriba (barras que cruzan
+sus dias) y debajo los eventos de cada dia, un renglon cada uno.
+
+Todo es una sola rejilla CSS para que las barras y las columnas queden alineadas: fila 1 la
+cabecera de cada dia, una fila por carril de barras y, al fondo, los eventos. Las columnas
+llevan su tono (sabado y domingo, hoy) en un fondo que cruza todas las filas.
+
+Cada evento es un enlace a la reserva: sin JavaScript abre su ficha; con JavaScript abre el
+popover con el detalle que viaja en el `<template>` de al lado.
+{% endcomment %}
+{% load l10n %}
+<div class="cal-envoltura">
+<div class="cal-semana" style="grid-template-rows: {{ semana.filas }}">
+    {% for d in semana.dias %}
+        <div class="cal-fondo{% if d.fin_de_semana %} cal-fondo--finde{% endif %}{% if d.es_hoy %} cal-fondo--hoy{% endif %}"
+             style="grid-column: {{ d.col }}; grid-row: 1 / -1"></div>
+    {% endfor %}
+
+    {% for d in semana.dias %}
+        <div class="cal-cab" style="grid-column: {{ d.col }}; grid-row: 1">
+            <a href="{{ d.url_dia }}" class="cal-cab-dia{% if d.es_hoy %} cal-cab-dia--hoy{% endif %}">
+                <span class="cal-cab-nombre">{{ d.fecha|date:"D" }}</span> <span class="cal-cab-numero">{{ d.fecha|date:"j" }}</span>
+            </a>
+            {% if d.tira %}
+                <div data-tira class="cal-tira">
+                    <span class="cal-tira-pista"><span class="cal-tira-relleno" style="width: {{ d.tira_pct|unlocalize }}%"></span></span>
+                    <span class="cal-tira-texto">{{ d.tira.ocupadas }} de {{ d.tira.capacidad }} pangas{% if d.cerrado %} · Cerrado{% elif d.lleno %} · Lleno{% endif %}</span>
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    {% for b in semana.barras %}
+        {% with e=b.estancia %}
+            <a href="{% url 'admin:bookings_reserva_change' e.reserva.pk %}" data-evento data-detalle="det-{{ e.clave }}"
+               class="cal-barra cal-ev cal-ev--{{ e.estilo }}{% if b.continua_antes %} cal-barra--antes{% endif %}{% if b.continua_despues %} cal-barra--despues{% endif %}"
+               style="grid-column: {{ b.col }} / span {{ b.span }}; grid-row: {{ b.carril|add:1 }}">
+                {% if mostrar_empresa %}<span data-empresa-corta class="cal-empresa-corta">{{ e.empresa_corta }}</span>{% endif %}
+                <span class="cal-texto">{{ e.etiqueta }}</span>
+                {% if e.marca == 'sin_panga' %}<span class="cal-marca">Sin panga</span>{% elif e.marca == 'atrasada' %}<span class="cal-marca">Atrasada</span>{% endif %}
+            </a>
+        {% endwith %}
+    {% endfor %}
+
+    {% for d in semana.dias %}
+        <div class="cal-eventos" style="grid-column: {{ d.col }}; grid-row: {{ semana.fila_eventos }}">
+            {% for ev in d.eventos %}
+                <a href="{% url 'admin:bookings_reserva_change' ev.reserva.pk %}" data-evento data-detalle="det-{{ ev.clave }}"
+                   class="cal-ev cal-ev--{{ ev.estilo }}">
+                    {% if ev.hora %}<span class="cal-hora">{{ ev.hora|time:"G:i" }}</span>{% endif %}
+                    {% if mostrar_empresa %}<span data-empresa-corta class="cal-empresa-corta">{{ ev.empresa_corta }}</span>{% endif %}
+                    <span class="cal-texto">{{ ev.reserva.nombre_cliente }} <span class="cal-personas">· {{ ev.reserva.numero_personas }}</span></span>
+                    {% if ev.sentido == 'ida' %}<span class="cal-marca">Ida</span>{% elif ev.sentido == 'regreso' %}<span class="cal-marca">Regreso</span>{% endif %}
+                    {% if ev.marca == 'sin_panga' %}<span class="cal-marca">Sin panga</span>{% elif ev.marca == 'atrasada' %}<span class="cal-marca">Atrasada</span>{% endif %}
+                </a>
+            {% endfor %}
+            {% if d.n_mas %}
+                <a href="{{ d.url_dia }}" class="cal-mas">+{{ d.n_mas }} más</a>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    {% if vacio %}
+        <p data-vacio class="cal-vacio" style="grid-column: 1 / -1; grid-row: {{ semana.fila_eventos }}">Sin reservas {{ vacio_texto }}</p>
+    {% endif %}
+</div>
+</div>
+
+{% for b in semana.barras %}{% include "bookings/_calendario_detalle.html" with p=b.estancia %}{% endfor %}
+{% for d in semana.dias %}{% for ev in d.eventos %}{% include "bookings/_calendario_detalle.html" with p=ev %}{% endfor %}{% endfor %}

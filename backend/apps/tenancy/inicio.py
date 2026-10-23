@@ -57,7 +57,7 @@ def _tarjetas(conteos):
     return [
         {
             'clave': 'manana', 'titulo': 'Viajes de mañana sin panga',
-            'numero': conteos['manana'], 'accion': 'Abrir Agenda',
+            'numero': conteos['manana'], 'accion': 'Asignar pangas',
             'url': _url('admin:bookings_agenda_changelist', cuando='manana'),
         },
         {

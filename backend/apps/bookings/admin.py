@@ -1709,11 +1709,50 @@ class EmpresaAgendaFilter(admin.SimpleListFilter):
         return queryset
 
 
+class PeriodoAgendaFilter(admin.SimpleListFilter):
+    """Registra `?periodo=AAAA-MM-DD_AAAA-MM-DD` como parametro conocido de la Agenda.
+
+    Es el enlace que arma el Calendario ("3 pagadas sin panga" y «Asignar panga»):
+    el rango de fechas que se estaba mirando. Igual que `EmpresaAgendaFilter`, no se
+    dibuja y Django solo le deja consumir su parametro; el filtrado real esta en
+    `CuandoFilter`, que ya decide que ventana de fechas aplica.
+    """
+
+    title = 'periodo'
+    parameter_name = 'periodo'
+
+    def lookups(self, request, model_admin):
+        return []
+
+    def has_output(self):
+        return False
+
+    def queryset(self, request, queryset):
+        return queryset
+
+
+def periodo_pedido(request):
+    """`(desde, hasta)` de `?periodo=`, o None si falta o esta roto.
+
+    Una URL mal pegada no tiene por que devolver un error: se ignora y la agenda abre
+    en la semana de siempre. Un rango al reves tambien se ignora.
+    """
+    try:
+        desde, hasta = (date.fromisoformat(parte) for parte in request.GET.get('periodo', '').split('_'))
+    except ValueError:
+        return None
+    return (desde, hasta) if desde <= hasta else None
+
+
 class CuandoFilter(admin.SimpleListFilter):
-    """Los dos modos de usar la agenda, que son dos rangos de fechas y nada mas.
+    """Los modos de usar la agenda, que son rangos de fechas y nada mas.
 
     "Cerrar el dia" y "repartir la semana" no son dos pantallas: es la misma tabla
-    mirando distintos dias.
+    mirando distintos dias. "Atrasadas" son los viajes cobrados cuya fecha ya paso y
+    nadie repartio: el enlace del Calendario cuando dice "1 atrasada".
+
+    Con `?periodo=` (ver `PeriodoAgendaFilter`) la tabla mira ese rango en lugar de la
+    ventana de la semana, que es lo que pide el Calendario.
     """
 
     title = 'cuando'
@@ -1723,11 +1762,17 @@ class CuandoFilter(admin.SimpleListFilter):
         return [
             ('manana', 'Manana'),
             ('semana', 'Proximos 7 dias'),
+            ('atrasadas', 'Atrasadas'),
             ('recientes', f'Recien llegadas ({HORAS_RECIEN_LLEGADA}h)'),
         ]
 
     def queryset(self, request, queryset):
         hoy = timezone.localdate()
+        periodo = periodo_pedido(request)
+
+        if self.value() == 'atrasadas':
+            atrasadas = queryset.filter(estado=Reserva.Estado.PAGADA, fecha__lt=hoy)
+            return atrasadas.filter(fecha__range=periodo) if periodo else atrasadas
 
         if self.value() == 'recientes':
             # Lo ultimo que entro al sistema, **sin** la ventana de fechas: una
@@ -1741,6 +1786,9 @@ class CuandoFilter(admin.SimpleListFilter):
             # Cerrar el dia se hace la tarde anterior: si la salida es a las 6am,
             # a esa hora ya nadie esta asignando pangas.
             return queryset.filter(fecha=hoy + timedelta(days=1))
+
+        if periodo and self.value() is None:
+            return queryset.filter(fecha__range=periodo)
 
         # Por defecto, repartir la semana. Los atrasados sin repartir entran a
         # proposito: un viaje cobrado que ya paso y nadie asigno es un error que
@@ -2019,8 +2067,8 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesD
 
     def get_list_filter(self, request):
         if scope.es_operador_plataforma(request.user):
-            return [EmpresaAgendaFilter, CuandoFilter]
-        return [CuandoFilter]
+            return [EmpresaAgendaFilter, CuandoFilter, PeriodoAgendaFilter]
+        return [CuandoFilter, PeriodoAgendaFilter]
 
     def changelist_view(self, request, extra_context=None):
         """Mete el panorama de la semana en el contexto del listado.
@@ -2458,7 +2506,7 @@ class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAd
             resumen_texto = f'{sin_vehiculo} sin vehículo' if sin_vehiculo > 0 else 'Todo asignado'
             extra = {
                 **(extra_context or {}),
-                'title': 'Traslados',
+                'title': 'Asignar vehículos',
                 'sin_vehiculo': sin_vehiculo,
                 'resumen_traslados': resumen_texto,
             }

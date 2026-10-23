@@ -1,0 +1,57 @@
+{% comment %}
+El detalle de una reserva para el popover de Semana y Dia. Va dentro de un `<template>`:
+inerte hasta que `calendario.js` lo copia al popover, asi que no pesa en la pantalla ni lo
+leen los lectores de pantalla dos veces. Solo lectura: nada se edita aqui, para eso esta
+«Abrir reserva».
+
+`p` es un Evento o una Estancia; los dos traen la reserva y su estilo.
+{% endcomment %}
+{% with r=p.reserva %}
+<template id="det-{{ p.clave }}">
+    <div class="cal-det">
+        <p class="cal-det-cliente">{{ r.nombre_cliente }}</p>
+        <p class="cal-det-telefono">{{ r.telefono_cliente }}</p>
+        <dl class="cal-det-datos">
+            <dt>Servicio</dt>
+            <dd>{% if r.servicio %}{{ r.servicio.nombre }}{% elif r.paquete %}{{ r.paquete.nombre }}{% else %}—{% endif %}</dd>
+
+            {% if p.inicio %}
+                <dt>Estancia</dt>
+                <dd>{{ p.inicio|date:"j M" }} al {{ p.fin|date:"j M" }}{% if p.noches %} · {{ p.noches }} noche{{ p.noches|pluralize }}{% endif %}{% if p.dias_de_mar %} · {{ p.dias_de_mar }} al mar{% endif %}</dd>
+            {% else %}
+                <dt>Cuándo</dt>
+                <dd>{{ p.fecha|date:"D j M" }}{% if p.hora %} · {{ p.hora|time:"G:i" }}{% endif %}</dd>
+            {% endif %}
+
+            <dt>Personas</dt>
+            <dd>{{ r.numero_personas }}</dd>
+
+            <dt>Estado</dt>
+            <dd><span class="cal-pill cal-ev--{{ p.estilo }}">{{ r.get_estado_display }}</span>{% if p.marca == 'sin_panga' %} <span class="cal-pill cal-ev--sin_panga">Sin panga</span>{% elif p.marca == 'atrasada' %} <span class="cal-pill cal-ev--atrasada">Atrasada</span>{% endif %}</dd>
+
+            {% if p.tramo %}
+                <dt>Vehículo</dt>
+                <dd>{{ p.tramo.vehiculo|default:"Sin vehículo" }}{% if p.sentido == 'ida' %} · Ida{% elif p.sentido == 'regreso' %} · Regreso{% endif %}</dd>
+            {% elif p.tipo == 'mar' or p.tipo == 'dia_de_mar' or p.dias_de_mar %}
+                <dt>Panga</dt>
+                <dd>{% if r.embarcacion %}{{ r.embarcacion.nombre }}{% if r.capitan %} · {{ r.capitan.nombre }}{% endif %}{% else %}Sin asignar{% endif %}</dd>
+            {% endif %}
+
+            <dt>Pagado</dt>
+            <dd>{{ p.pagado|floatformat:2 }}{% if r.precio_total is not None %} de {{ r.precio_total|floatformat:2 }}{% endif %} {{ r.moneda }}</dd>
+
+            <dt>Canal</dt>
+            <dd>{{ r.get_canal_origen_display }}</dd>
+
+            <dt>Vendedora</dt>
+            <dd>{% if r.vendedora %}{{ r.vendedora }}{% else %}—{% endif %}</dd>
+        </dl>
+        <p class="cal-det-acciones">
+            <a href="{% url 'admin:bookings_reserva_change' r.pk %}" class="cal-boton cal-boton--primario">Abrir reserva</a>
+            {% if p.marca %}
+                <a href="{% url 'admin:bookings_agenda_changelist' %}?periodo={{ r.fecha|date:'Y-m-d' }}_{{ r.fecha|date:'Y-m-d' }}{% if es_operador %}&amp;empresa={{ r.empresa.slug }}{% endif %}" data-asignar-panga class="cal-boton">Asignar panga</a>
+            {% endif %}
+        </p>
+    </div>
+</template>
+{% endwith %}

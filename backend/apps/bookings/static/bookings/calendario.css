@@ -1,0 +1,302 @@
+/* Calendario del backoffice (/admin/calendario/).
+
+   El admin sirve el styles.css de Unfold ya compilado: una clase de Tailwind que Unfold no usa
+   no existe. Por eso la geometria y los colores de estado viven aqui, como variables CSS.
+
+   Reglas de la pantalla: esquinas de 4px; sin degradados; sin sombras salvo el popover; el color
+   fuerte es solo de "Sin panga" (ambar) y "Atrasada" (rojo palido); lo asignado va callado. */
+
+.cal {
+  --cal-tinta: #1f1a14;
+  --cal-gris: #6b6560;
+  --cal-azul: #1b607f;
+  --cal-fondo: #ffffff;
+  --cal-linea: #e5e2dc;
+  --cal-finde: #f6f5f2;
+  --cal-hover: #f1efea;
+  --cal-radio: 4px;
+
+  --cal-asignada-fondo: #e8eff2;
+  --cal-asignada-texto: #1f1a14;
+  --cal-completada-fondo: #ecebe8;
+  --cal-completada-texto: #6b6560;
+  --cal-sin-panga-fondo: #fffbeb;
+  --cal-sin-panga-texto: #92400e;
+  --cal-sin-panga-borde: #fde68a;
+  --cal-atrasada-fondo: #ffedea;
+  --cal-atrasada-texto: #831c1e;
+  --cal-atrasada-borde: #f5c2bc;
+  --cal-cancelada-borde: #b8b4ab;
+  --cal-cancelada-texto: #8a857d;
+
+  color: var(--cal-tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+.dark .cal {
+  --cal-tinta: #f1efea;
+  --cal-gris: #a8a29e;
+  --cal-azul: #6aa9c4;
+  --cal-fondo: transparent;
+  --cal-linea: #3a3631;
+  --cal-finde: rgba(255, 255, 255, 0.035);
+  --cal-hover: rgba(255, 255, 255, 0.07);
+
+  --cal-asignada-fondo: #22343d;
+  --cal-asignada-texto: #e8eff2;
+  --cal-completada-fondo: #2a2724;
+  --cal-completada-texto: #a8a29e;
+  --cal-sin-panga-fondo: #3b2e0b;
+  --cal-sin-panga-texto: #fde68a;
+  --cal-sin-panga-borde: #6b5311;
+  --cal-atrasada-fondo: #4a1d1b;
+  --cal-atrasada-texto: #fecaca;
+  --cal-atrasada-borde: #7a2e2b;
+  --cal-cancelada-borde: #6b6560;
+  --cal-cancelada-texto: #8a857d;
+}
+
+.cal a { text-decoration: none; color: inherit; }
+.cal a:focus-visible,
+.cal select:focus-visible,
+.cal button:focus-visible { outline: 2px solid var(--cal-azul); outline-offset: 1px; }
+
+/* ---- Cabecera ---- */
+
+.cal-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.cal-hallazgo { margin-top: 0.25rem; }
+.cal-hallazgo a { text-decoration: underline; text-underline-offset: 2px; }
+.cal-hallazgo-atrasada { color: var(--cal-atrasada-texto); }
+
+.cal-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.cal-empresa { display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+.cal-etiqueta { font-size: 0.75rem; color: var(--cal-gris); }
+.cal-periodo { min-width: 8.5rem; font-weight: 500; text-align: center; }
+.cal-nav, .cal-segmentado { display: inline-flex; gap: 0; }
+.cal-nav { gap: 0.25rem; }
+
+.cal-boton,
+.cal-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--cal-linea);
+  border-radius: var(--cal-radio);
+  background: var(--cal-fondo);
+  color: var(--cal-tinta);
+  font-size: 0.8125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.cal-boton--cuadro { width: 32px; padding: 0; font-size: 1.1rem; }
+.cal-boton:hover { background: var(--cal-hover); }
+.cal-boton--activo { background: var(--cal-tinta); border-color: var(--cal-tinta); color: var(--cal-fondo); }
+.dark .cal-boton--activo { color: #1f1a14; }
+.cal-boton--activo:hover { background: var(--cal-tinta); }
+.cal-boton--primario { background: var(--cal-tinta); border-color: var(--cal-tinta); color: var(--cal-fondo); }
+.dark .cal-boton--primario { color: #1f1a14; }
+.cal-boton--primario:hover { background: var(--cal-tinta); opacity: 0.9; }
+.cal-segmentado .cal-boton { border-radius: 0; margin-left: -1px; }
+.cal-segmentado .cal-boton:first-child { border-radius: var(--cal-radio) 0 0 var(--cal-radio); margin-left: 0; }
+.cal-segmentado .cal-boton:last-child { border-radius: 0 var(--cal-radio) var(--cal-radio) 0; }
+
+.cal-subfila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; font-size: 0.8125rem; }
+.cal-interruptor { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--cal-gris); }
+.cal-interruptor-caja { width: 14px; height: 14px; border: 1px solid var(--cal-cancelada-borde); border-radius: 3px; background: var(--cal-fondo); }
+.cal-interruptor[aria-checked="true"] { color: var(--cal-tinta); }
+.cal-interruptor[aria-checked="true"] .cal-interruptor-caja { background: var(--cal-tinta); border-color: var(--cal-tinta); }
+
+.cal-leyenda { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; color: var(--cal-gris); }
+.cal-leyenda li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.cal-muestra { display: inline-block; width: 14px; height: 10px; }
+
+/* ---- Estados: una marca por tipo; el color fuerte es de lo que pide una decision ---- */
+
+.cal-ev--asignada { background: var(--cal-asignada-fondo); color: var(--cal-asignada-texto); }
+.cal-ev--completada { background: var(--cal-completada-fondo); color: var(--cal-completada-texto); }
+.cal-ev--sin_panga { background: var(--cal-sin-panga-fondo); color: var(--cal-sin-panga-texto); box-shadow: inset 0 0 0 1px var(--cal-sin-panga-borde); }
+.cal-ev--atrasada { background: var(--cal-atrasada-fondo); color: var(--cal-atrasada-texto); box-shadow: inset 0 0 0 1px var(--cal-atrasada-borde); }
+.cal-ev--cancelada { background: transparent; color: var(--cal-cancelada-texto); outline: 1px dashed var(--cal-cancelada-borde); outline-offset: -1px; text-decoration: line-through; }
+.cal-muestra.cal-ev--cancelada { text-decoration: none; }
+
+.cal-ev {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  height: 22px;
+  padding: 0 0.4rem;
+  border-radius: var(--cal-radio);
+  font-size: 0.75rem;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+a.cal-ev:hover { filter: brightness(0.96); }
+.cal-hora { font-weight: 600; }
+.cal-empresa-corta { font-size: 0.6875rem; letter-spacing: 0.02em; text-transform: uppercase; opacity: 0.75; }
+.cal-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cal-personas { opacity: 0.8; }
+.cal-marca { margin-left: auto; padding-left: 0.25rem; font-size: 0.6875rem; font-weight: 600; }
+.cal-pill { display: inline-block; padding: 1px 0.5rem; border-radius: var(--cal-radio); font-size: 0.75rem; }
+
+/* ---- Rejillas (Semana y Mes) ---- */
+
+.cal-envoltura { overflow-x: auto; }
+.cal-semana, .cal-mes { min-width: 40rem; }
+
+.cal-semana {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--cal-linea);
+  border-radius: var(--cal-radio);
+  background: var(--cal-fondo);
+}
+
+.cal-fondo { border-left: 1px solid var(--cal-linea); }
+.cal-fondo:first-child { border-left: 0; }
+.cal-fondo--finde { background: var(--cal-finde); }
+.cal-fondo--hoy { box-shadow: inset 0 1px 0 var(--cal-azul); }
+
+.cal-cab { z-index: 1; padding: 0.35rem 0.5rem 0.25rem; }
+.cal-cab-dia { display: inline-block; color: var(--cal-gris); font-size: 0.8125rem; }
+.cal-cab-dia:hover { text-decoration: underline; }
+.cal-cab-numero { font-weight: 500; }
+.cal-cab-dia--hoy { color: var(--cal-tinta); font-weight: 700; }
+.cal-cab-nombre { text-transform: uppercase; font-size: 0.6875rem; letter-spacing: 0.04em; }
+
+.cal-tira { margin-top: 0.3rem; }
+.cal-tira-pista { display: block; height: 4px; border-radius: 2px; background: var(--cal-linea); overflow: hidden; }
+.cal-tira-relleno { display: block; height: 100%; background: var(--cal-azul); }
+.cal-tira-texto { display: block; margin-top: 0.15rem; font-size: 0.6875rem; color: var(--cal-gris); }
+.cal-tira--grande { max-width: 22rem; margin: 0.25rem 0 1rem; }
+.cal-tira--grande .cal-tira-pista { height: 8px; border-radius: 4px; }
+.cal-tira--grande .cal-tira-texto { font-size: 0.8125rem; }
+
+.cal-barra { z-index: 1; margin: 1px 4px; }
+.cal-barra--antes { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.cal-barra--despues { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+.cal-eventos { z-index: 1; display: flex; flex-direction: column; gap: 2px; padding: 0.25rem 4px 0.5rem; min-width: 0; }
+.cal-mas { padding: 0 0.4rem; font-size: 0.75rem; color: var(--cal-gris); }
+a.cal-mas:hover { color: var(--cal-tinta); text-decoration: underline; }
+
+.cal-vacio { z-index: 1; align-self: center; margin: 0; padding: 2rem 1rem; text-align: center; color: var(--cal-gris); pointer-events: none; }
+
+/* ---- Mes ---- */
+
+.cal-mes { position: relative; border: 1px solid var(--cal-linea); border-radius: var(--cal-radio); background: var(--cal-fondo); overflow: hidden; }
+.cal-mes-cab { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--cal-linea); }
+.cal-mes-cab span { padding: 0.4rem 0.5rem; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cal-gris); }
+
+.cal-mes-semana {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto 26px 26px minmax(3.4rem, auto);
+  border-top: 1px solid var(--cal-linea);
+}
+.cal-mes-cab + .cal-mes-semana { border-top: 0; }
+
+.cal-celda { border-left: 1px solid var(--cal-linea); }
+.cal-celda:first-child { border-left: 0; }
+.cal-celda--finde { background: var(--cal-finde); }
+.cal-celda--otro { background: var(--cal-finde); }
+.cal-celda--hoy { box-shadow: inset 0 1px 0 var(--cal-azul); }
+.cal-celda:hover { background: var(--cal-hover); }
+
+.cal-mes-numero, .cal-mes-lineas, .cal-mes .cal-barra { pointer-events: none; z-index: 1; }
+.cal-mes-numero { display: flex; justify-content: space-between; padding: 0.35rem 0.5rem 0.2rem; font-size: 0.8125rem; color: var(--cal-gris); }
+.cal-mes-numero--hoy { color: var(--cal-tinta); font-weight: 700; }
+.cal-mes-numero--otro { opacity: 0.45; }
+.cal-lleno { font-size: 0.6875rem; font-weight: 600; color: var(--cal-sin-panga-texto); }
+.cal-mes-lineas { display: flex; flex-direction: column; gap: 2px; padding: 0 4px 0.4rem; min-width: 0; }
+.cal-mes-lineas--otro { opacity: 0.55; }
+.cal-linea { height: 20px; line-height: 20px; padding: 0 0.35rem; display: block; overflow: hidden; text-overflow: ellipsis; }
+.cal-vacio--mes { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); background: var(--cal-fondo); }
+
+.cal-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---- Dia ---- */
+
+.cal-lista-dia { margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 600; text-transform: capitalize; }
+.cal-grupo { margin: 1.25rem 0 0.4rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cal-gris); }
+.cal-filas { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.cal-fila {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1.6fr) 4.5rem minmax(0, 1.2fr) minmax(0, 1.2fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--cal-radio);
+  font-size: 0.8125rem;
+}
+.cal-fila-cliente a { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.cal-fila-nota { margin-left: 0.4rem; font-size: 0.75rem; opacity: 0.8; }
+.cal-abrir { text-decoration: underline; text-underline-offset: 2px; }
+.cal-vacio--dia { padding: 1.5rem 0; text-align: left; }
+
+/* ---- Popover (Semana y Dia) ---- */
+
+.cal-popover {
+  position: absolute;
+  z-index: 60;
+  width: 21rem;
+  max-width: calc(100vw - 1rem);
+  padding: 1rem;
+  border: 1px solid var(--cal-linea);
+  border-radius: var(--cal-radio);
+  background: #ffffff;
+  color: #1f1a14;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  font-size: 0.8125rem;
+}
+.dark .cal-popover { background: #211e1b; color: #f1efea; }
+.cal-popover[hidden], .cal-velo[hidden] { display: none; }
+.cal-velo { display: none; }
+
+.cal-det-cliente { margin: 0; font-size: 1rem; font-weight: 600; padding-right: 1.5rem; }
+.cal-det-telefono { margin: 0 0 0.75rem; color: var(--cal-gris); }
+.cal-det-datos { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.35rem 0.5rem; margin: 0 0 1rem; }
+.cal-det-datos dt { color: var(--cal-gris); }
+.cal-det-datos dd { margin: 0; }
+.cal-det-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; }
+.cal-det-cerrar { position: absolute; top: 0.5rem; right: 0.5rem; width: 28px; height: 28px; border: 0; border-radius: var(--cal-radio); background: transparent; color: var(--cal-gris); font-size: 1.25rem; line-height: 1; cursor: pointer; }
+.cal-det-cerrar:hover { background: var(--cal-hover); }
+
+/* ---- Telefono ---- */
+
+@media (max-width: 639px) {
+  .cal-cabecera { align-items: flex-start; }
+  .cal-periodo { min-width: 0; }
+
+  /* El popover pasa a hoja que sube desde abajo. */
+  .cal-popover {
+    position: fixed;
+    left: 0 !important;
+    right: 0;
+    bottom: 0;
+    top: auto !important;
+    width: auto;
+    max-width: none;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 12px 12px 0 0;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+  .cal-velo:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 59; background: rgba(0, 0, 0, 0.4); }
+
+  .cal-fila { grid-template-columns: 3rem minmax(0, 1fr); row-gap: 0.15rem; }
+  .cal-fila > :nth-child(n + 3) { grid-column: 2; }
+}
