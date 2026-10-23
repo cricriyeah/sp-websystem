@@ -91,8 +91,9 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
     <Link
       href={vista.hrefDetalle}
       aria-label={textos.reservarAria.replace('{nombre}', nombre).replace('{empresa}', empresa)}
+      // En el teléfono cada tarjeta ocupa el ancho de la fila: se ve una a la vez y la siguiente llega deslizando.
       className={cn(
-        'group rev flex flex-[1_0_clamp(16.25rem,27vw,26.25rem)] snap-start flex-col gap-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
+        'group rev flex flex-[1_0_clamp(16.25rem,27vw,26.25rem)] snap-start flex-col gap-4 max-sm:basis-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
         unica && 'lg:grid lg:grid-cols-[55fr_45fr] lg:gap-0 lg:bg-cafe-bruma',
       )}
     >

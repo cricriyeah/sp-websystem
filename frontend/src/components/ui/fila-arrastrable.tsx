@@ -72,7 +72,7 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
         aria-label={etiqueta}
         tabIndex={0}
         onScroll={medir}
-        className="mx-auto flex max-w-[1440px] snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none] sm:scroll-px-6 sm:px-6 lg:scroll-px-12 lg:px-12 [&::-webkit-scrollbar]:hidden"
+        className="mx-auto flex max-w-[1440px] snap-x snap-mandatory gap-4 overflow-x-auto sm:gap-3 scroll-px-4 px-4 pb-1 [scrollbar-width:none] sm:scroll-px-6 sm:px-6 lg:scroll-px-12 lg:px-12 [&::-webkit-scrollbar]:hidden"
       >
         {children}
       </div>
