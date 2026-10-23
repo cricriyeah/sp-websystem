@@ -168,6 +168,9 @@ UNFOLD = {
     'SITE_TITLE': 'apps.tenancy.admin_branding.nombre_backoffice',
     'SITE_HEADER': 'apps.tenancy.admin_branding.nombre_backoffice',
     'SITE_SYMBOL': 'anchor',
+    # «Ver sitio» del menú de la cuenta y «Volver al sitio» del login llevan al sitio público, no a la raíz del
+    # backend (por defecto unfold usa "/", que aquí es la API).
+    'SITE_URL': os.environ.get('FRONTEND_URL', '') or '/',
     # El logo reemplaza al nombre en el menu lateral: el de la empresa del jefe o la vendedora, o el de la
     # plataforma para el operador.
     'SITE_LOGO': 'apps.tenancy.admin_branding.logo_backoffice',
