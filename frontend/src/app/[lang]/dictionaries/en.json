@@ -117,7 +117,8 @@
     "sedes": "Destinations",
     "empresas": "Companies",
     "colaboradores": "Partners",
-    "eligeSede": "Choose a destination"
+    "eligeSede": "Choose a destination",
+    "todosLosDestinos": "All destinations"
   },
   "booking": {
     "timeHelp": "Departure between 5:00 and 7:00 am",
@@ -729,7 +730,8 @@
       "cerrar": "Close",
       "anterior": "Previous photo",
       "siguiente": "Next photo",
-      "contador": "{n} of {total}"
+      "contador": "{n} of {total}",
+      "pista": "Tap to enlarge"
     },
     "faq": {
       "titulo": "Frequently asked questions",

@@ -144,6 +144,7 @@ export function SiteHeader({
               sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
               placeholder={variante === 'hub' ? nav.eligeSede : undefined}
               label={nav.sedeLabel}
+              inicioLabel={variante === 'hub' ? undefined : nav.todosLosDestinos}
               anchoCompleto
             />
           </div>
@@ -200,6 +201,7 @@ export function SiteHeader({
               sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
               placeholder={variante === 'hub' ? nav.eligeSede : undefined}
               label={nav.sedeLabel}
+              inicioLabel={variante === 'hub' ? undefined : nav.todosLosDestinos}
               compacto={variante !== 'hub'}
               className="hidden sm:inline-block"
             />

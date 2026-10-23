@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { CaretDown, Check, MapPin } from '@phosphor-icons/react';
+import { CaretDown, Check, House, MapPin } from '@phosphor-icons/react';
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE, getSedeIndice } from '@/content/sedes-indice';
 import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { guardarSedePreferida, leerSedePreferidaCliente } from '@/lib/sede';
-import { hrefSede } from '@/lib/routes';
+import { hrefInicio, hrefSede } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 
@@ -29,6 +29,8 @@ type SedeSelectorProps = {
   onSelectSede?: (sede: SedeOpcion) => void;
   /** Un círculo negro con el icono; al tocarlo, la lista se abre desde él. Sin él, la píldora con el nombre. */
   compacto?: boolean;
+  /** Si llega, la lista cierra con una opción que vuelve a la portada con todos los destinos. */
+  inicioLabel?: string;
   /** Ocupa todo el ancho de su contenedor (menú móvil): la píldora y la lista. */
   anchoCompleto?: boolean;
   className?: string;
@@ -43,6 +45,7 @@ export function SedeSelector({
   onSelectSede,
   compacto = false,
   anchoCompleto = false,
+  inicioLabel,
   className = '',
 }: SedeSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -214,6 +217,19 @@ export function SedeSelector({
                 </Button>
               );
             })}
+            {inicioLabel && <div aria-hidden="true" className="mx-4 my-1 h-px bg-borde" />}
+            {inicioLabel && (
+              <Button
+                variante="libre"
+                role="option"
+                aria-selected={false}
+                onClick={() => { setOpen(false); router.push(hrefInicio(lang)); }}
+                className="flex min-h-12 w-full items-center gap-3 rounded-full px-4 py-2 text-left texto-cuerpo text-foreground transition-colors hover:bg-cafe-bruma"
+              >
+                <House size={16} weight="bold" aria-hidden="true" />
+                <span>{inicioLabel}</span>
+              </Button>
+            )}
           </m.div>
         )}
       </AnimatePresence>

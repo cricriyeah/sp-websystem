@@ -17,9 +17,18 @@ type Props = {
 };
 
 const INICIAL: EstadoFila = { desborda: false, avance: 1, puedeAtras: false, puedeAdelante: false };
-// El amago del teléfono: la fila se corre lo justo para que asome la orilla de la siguiente tarjeta y regresa.
-const AMAGO_PX = 56;
-const AMAGO_MS = 900;
+// El amago del teléfono: la fila se corre lo justo para que asome la orilla de la siguiente tarjeta, se detiene
+// un instante y regresa asentándose. Cada tramo lleva su propia curva (la de la animación es lineal): sale
+// acelerando y frenando, y vuelve con un pequeño rebase de 6 px, como si la soltara un resorte.
+const AMAGO_PX = 64;
+const AMAGO_MS = 1600;
+const AMAGO_CUADROS: Keyframe[] = [
+  { transform: 'translateX(0)', easing: 'cubic-bezier(0.45, 0, 0.2, 1)' },
+  { transform: `translateX(-${AMAGO_PX}px)`, offset: 0.38 },
+  { transform: `translateX(-${AMAGO_PX}px)`, offset: 0.5, easing: 'cubic-bezier(0.3, 0, 0.15, 1)' },
+  { transform: 'translateX(6px)', offset: 0.84, easing: 'cubic-bezier(0.4, 0, 0.4, 1)' },
+  { transform: 'translateX(0)' },
+];
 
 /**
  * Fila de tarjetas que se arrastra: carril con `scroll-snap` obligatorio (siempre se detiene en una tarjeta, nunca a la mitad de dos), flechas en círculo y una barra de avance de
@@ -51,10 +60,7 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
       if (!entrada?.isIntersecting) return;
       observador.disconnect();
       if (el.scrollLeft > 2 || el.scrollWidth - el.clientWidth <= 2) return;
-      el.animate(
-        [{ transform: 'translateX(0)' }, { transform: `translateX(-${AMAGO_PX}px)`, offset: 0.4 }, { transform: 'translateX(0)' }],
-        { duration: AMAGO_MS, delay: 300, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
-      );
+      el.animate(AMAGO_CUADROS, { duration: AMAGO_MS, delay: 400, easing: 'linear' });
     }, { threshold: 0.6 });
     observador.observe(el);
     return () => observador.disconnect();

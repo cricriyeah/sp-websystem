@@ -117,7 +117,8 @@
     "sedes": "Sedes",
     "empresas": "Empresas",
     "colaboradores": "Colaboradores",
-    "eligeSede": "Elige tu sede"
+    "eligeSede": "Elige tu sede",
+    "todosLosDestinos": "Todos los destinos"
   },
   "booking": {
     "timeHelp": "Salida entre 5:00 y 7:00 am",
@@ -729,7 +730,8 @@
       "cerrar": "Cerrar",
       "anterior": "Foto anterior",
       "siguiente": "Foto siguiente",
-      "contador": "{n} de {total}"
+      "contador": "{n} de {total}",
+      "pista": "Toca para agrandar"
     },
     "faq": {
       "titulo": "Preguntas frecuentes",

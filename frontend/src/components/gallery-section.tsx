@@ -9,7 +9,7 @@ type GallerySectionProps = {
   fotos: NonNullable<SedeCuerpoContenido['galeria']>;
   /** Nombre de cada empresa de la galería, por slug. */
   empresas: Record<string, { nombre: string }>;
-  textosVisor: { cerrar: string; anterior: string; siguiente: string; contador: string };
+  textosVisor: { cerrar: string; anterior: string; siguiente: string; contador: string; pista: string };
   fondo: Fondo;
 };
 
