@@ -440,6 +440,16 @@ class HallazgoTests(SembrarPaquete, CalendarioBase):
 
         self.assertEqual(self.armar().hallazgo, self.armar(canceladas=True).hallazgo)
 
+    def test_el_hallazgo_puede_acotarse_a_un_rango_menor_que_lo_dibujado(self):
+        # La vista Mes dibuja semanas completas, pero "este mes" no cuenta los dias grises.
+        self.reserva(fecha=dia(20))
+        self.reserva(fecha=dia(24))
+
+        cal = self.armar(hallazgo_de=(dia(22), dia(25)))
+
+        self.assertEqual(len(cal.eventos), 2)
+        self.assertEqual(cal.hallazgo.total, 1)
+
     def test_todo_asignado_cuando_nada_pide_panga(self):
         self.reserva(fecha=dia(22), estado=Reserva.Estado.ASIGNADA, embarcacion=self.panga)
         self.hospedaje(dia(21), dia(23))

@@ -2506,7 +2506,7 @@ class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAd
             resumen_texto = f'{sin_vehiculo} sin vehículo' if sin_vehiculo > 0 else 'Todo asignado'
             extra = {
                 **(extra_context or {}),
-                'title': 'Traslados',
+                'title': 'Asignar vehículos',
                 'sin_vehiculo': sin_vehiculo,
                 'resumen_traslados': resumen_texto,
             }

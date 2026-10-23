@@ -1201,8 +1201,8 @@ class Agenda(Reserva):
         # va primero. De paso, los viajes atrasados quedan hasta arriba solos por
         # ser los mas viejos: lo que esta mal aparece sin que nadie lo ordene.
         ordering = ['fecha', 'hora']
-        verbose_name = 'agenda'
-        verbose_name_plural = 'agenda'
+        verbose_name = 'asignar pangas'
+        verbose_name_plural = 'asignar pangas'
 
     @classmethod
     def por_repartir(cls):
@@ -1420,7 +1420,7 @@ class ViajeTransporte(models.Model):
     class Meta:
         ordering = ['fecha', 'hora', 'pk']
         verbose_name = 'viaje de transporte'
-        verbose_name_plural = 'viajes de transporte'
+        verbose_name_plural = 'asignar vehículos'
         constraints = [
             models.UniqueConstraint(fields=['reserva', 'sentido'], name='viajetransporte_unico_por_sentido'),
         ]

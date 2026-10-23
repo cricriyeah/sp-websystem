@@ -48,6 +48,8 @@ TRASLADO = 'traslado'
 HOSPEDAJE = 'hospedaje'
 PAQUETE = 'paquete'
 
+_PARTICULAS = {'y', 'de', 'del', 'la', 'el', 'los', 'las'}
+
 # Ida antes que regreso cuando comparten dia y hora.
 _ORDEN_DE_SENTIDO = {'unico': 0, 'ida': 1, 'regreso': 2}
 
@@ -72,6 +74,15 @@ class Pieza:
     def pagado(self):
         return _pagado(self.reserva)
 
+    @property
+    def empresa_corta(self):
+        """Primera palabra con sentido del nombre de la empresa: «Sal», «DLS», «Ventana».
+
+        Con «Todas» la empresa va como texto al inicio del renglon, nunca como color.
+        """
+        palabras = [p for p in self.reserva.empresa.nombre.split() if p.lower() not in _PARTICULAS]
+        return palabras[0] if palabras else self.reserva.empresa.nombre
+
 
 @dataclass(frozen=True)
 class Evento(Pieza):
@@ -85,6 +96,11 @@ class Evento(Pieza):
     @property
     def sentido(self):
         return self.tramo.sentido if self.tramo else ''
+
+    @property
+    def clave(self):
+        """Identifica este renglon en la pagina: lo usa el popover para encontrar su detalle."""
+        return f'e-{self.tipo}-{self.reserva.pk}-{self.fecha:%Y%m%d}-{self.sentido or "x"}'
 
 
 @dataclass(frozen=True)
@@ -101,6 +117,20 @@ class Estancia(Pieza):
     @property
     def ultimo_dia(self):
         return self.fin - timedelta(days=1)
+
+    @property
+    def clave(self):
+        return f'x-{self.tipo}-{self.reserva.pk}'
+
+    @property
+    def etiqueta(self):
+        """«Pérez · 5 noches · 3 al mar»: cuanto dura y cuanto mar lleva, en una linea."""
+        partes = [self.reserva.nombre_cliente]
+        if self.noches:
+            partes.append(f'{self.noches} noche' + ('s' if self.noches != 1 else ''))
+        if self.dias_de_mar:
+            partes.append(f'{self.dias_de_mar} al mar')
+        return ' · '.join(partes)
 
 
 @dataclass(frozen=True)
@@ -214,11 +244,16 @@ def _reservas_del_periodo(desde, hasta, empresa, canceladas):
     return reservas, filtradas
 
 
-def armar_calendario(desde, hasta, empresa=None, *, canceladas=False, dias_de_mar=False, hoy=None):
+def armar_calendario(
+    desde, hasta, empresa=None, *, canceladas=False, dias_de_mar=False, hoy=None, hallazgo_de=None,
+):
     """Eventos, estancias y hallazgo de `desde` a `hasta` (inclusive), de una empresa o de todas.
 
     `dias_de_mar` solo se pide en la vista Dia: ahi cada dia de mar de un paquete es un
     renglon propio. En Semana y Mes el paquete es solo su barra.
+
+    `hallazgo_de=(desde, hasta)` acota el hallazgo a otro rango que el que se dibuja: la vista Mes
+    dibuja semanas completas, pero "este mes" no cuenta los dias grises de los meses vecinos.
 
     Cuatro consultas fijas para cualquier numero de reservas (reservas, salidas, tramos y
     componentes de paquete) mas una para saber cuales reparte la Agenda; ninguna por fila.
@@ -234,8 +269,11 @@ def armar_calendario(desde, hasta, empresa=None, *, canceladas=False, dias_de_ma
     eventos, estancias = [], []
     presentes = {}  # reserva.pk -> marca, solo las que cuentan para el hallazgo
 
-    def presente(reserva, marca):
-        if reserva.estado != Reserva.Estado.CANCELADA:
+    h_desde, h_hasta = hallazgo_de or (desde, hasta)
+
+    def presente(reserva, marca, ini, fin):
+        """Cuenta la reserva en el hallazgo si su pieza (de `ini` a `fin`, inclusive) toca ese rango."""
+        if reserva.estado != Reserva.Estado.CANCELADA and ini <= h_hasta and fin >= h_desde:
             presentes[reserva.pk] = marca
 
     for reserva in reservas:
@@ -253,7 +291,7 @@ def armar_calendario(desde, hasta, empresa=None, *, canceladas=False, dias_de_ma
             fin = max(fin, inicio + timedelta(days=1))
             if inicio <= hasta and fin > desde:
                 estancias.append(Estancia(reserva, estilo, marca, inicio, fin, PAQUETE, noches, len(dias_mar)))
-                presente(reserva, marca)
+                presente(reserva, marca, inicio, fin - timedelta(days=1))
             if dias_de_mar:
                 for dia in dias_mar:
                     if desde <= dia <= hasta:
@@ -267,15 +305,15 @@ def armar_calendario(desde, hasta, empresa=None, *, canceladas=False, dias_de_ma
                     reserva, 'cancelada' if cancelado else estilo, marca, tramo.fecha, tramo.hora, TRASLADO, tramo,
                 ))
                 if not tramo.cancelado:
-                    presente(reserva, marca)
+                    presente(reserva, marca, tramo.fecha, tramo.fecha)
         elif servicio is not None and servicio.estrategia_cupo == 'por_noche':
             inicio, fin = reserva.fecha, reserva.fecha_fin_servicio
             if inicio <= hasta and fin > desde:
                 estancias.append(Estancia(reserva, estilo, marca, inicio, fin, HOSPEDAJE, reserva.noches, 0))
-                presente(reserva, marca)
+                presente(reserva, marca, inicio, fin - timedelta(days=1))
         elif desde <= reserva.fecha <= hasta:
             eventos.append(Evento(reserva, estilo, marca, reserva.fecha, reserva.hora, MAR))
-            presente(reserva, marca)
+            presente(reserva, marca, reserva.fecha, reserva.fecha)
 
     eventos.sort(key=lambda e: (
         e.fecha, e.hora is None, e.hora or time.min, e.reserva.pk, _ORDEN_DE_SENTIDO.get(e.sentido, 0),

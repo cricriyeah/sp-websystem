@@ -1,0 +1,87 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% comment %}
+Calendario del backoffice: solo lectura. Reservas por dia, semana o mes con su estado.
+La pregunta de la pantalla: que tenemos en estos dias y cual de esas reservas necesita algo.
+
+El admin sirve el `styles.css` de unfold ya compilado: una clase de Tailwind que unfold no
+use no existe y el navegador la ignora sin decir nada. Por eso la geometria y los colores
+de estado viven en `static/bookings/calendario.css` (variables CSS, con modo oscuro), y
+aqui solo se usan las pocas clases de unfold que el panel de finanzas ya usa.
+{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'bookings/calendario.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'bookings/calendario.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="cal" data-calendario-vista="{{ vista }}">
+
+    <header class="cal-cabecera">
+        <div class="cal-titulo">
+            <h1 class="font-semibold text-base-800 text-2xl dark:text-base-200">Calendario</h1>
+            <p data-hallazgo class="cal-hallazgo text-base-500 text-sm dark:text-base-400">
+                {% if hallazgo.total %}{{ frase_periodo|capfirst }}: {{ hallazgo.total }} reserva{{ hallazgo.total|pluralize }}{% if hallazgo.todo_asignado %}, todas asignadas{% else %}{% if hallazgo.sin_panga %} · <a href="{{ sin_panga_url }}">{{ hallazgo.sin_panga }} pagada{{ hallazgo.sin_panga|pluralize }} sin panga</a>{% endif %}{% if hallazgo.atrasadas %} · <a href="{{ atrasadas_url }}" class="cal-hallazgo-atrasada">{{ hallazgo.atrasadas }} atrasada{{ hallazgo.atrasadas|pluralize }}</a>{% endif %}{% endif %}{% else %}Sin reservas {{ frase_periodo }}{% endif %}
+            </p>
+        </div>
+
+        <div class="cal-controles">
+            {% if es_operador %}
+                <form method="get" action="" class="cal-empresa">
+                    <input type="hidden" name="vista" value="{{ vista }}">
+                    <input type="hidden" name="desde" value="{{ ancla|date:'Y-m-d' }}">
+                    {% if canceladas %}<input type="hidden" name="canceladas" value="1">{% endif %}
+                    <label for="cal-empresa" class="cal-etiqueta">Empresa</label>
+                    <select id="cal-empresa" name="empresa" data-auto-enviar class="cal-select">
+                        {% for e in empresas %}
+                            <option value="{{ e.slug }}"{% if empresa and e.pk == empresa.pk %} selected{% endif %}>{{ e.nombre }}</option>
+                        {% endfor %}
+                        <option value="todas"{% if not empresa %} selected{% endif %}>Todas</option>
+                    </select>
+                    <noscript><button type="submit" class="cal-boton">Ver</button></noscript>
+                </form>
+            {% endif %}
+
+            <div class="cal-nav" role="group" aria-label="Periodo">
+                <a href="{{ anterior_url }}" class="cal-boton cal-boton--cuadro" aria-label="Periodo anterior">&lsaquo;</a>
+                <a href="{{ hoy_url }}" class="cal-boton">Hoy</a>
+                <a href="{{ siguiente_url }}" class="cal-boton cal-boton--cuadro" aria-label="Periodo siguiente">&rsaquo;</a>
+            </div>
+            <span class="cal-periodo">{{ periodo_etiqueta }}</span>
+
+            <div class="cal-segmentado" role="group" aria-label="Vista">
+                {% for v in vistas %}
+                    <a href="{{ v.url }}" class="cal-boton{% if v.activa %} cal-boton--activo{% endif %}"{% if v.activa %} aria-current="page"{% endif %}>{{ v.nombre }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </header>
+
+    <div class="cal-subfila">
+        <a href="{{ canceladas_url }}" class="cal-interruptor" role="switch" aria-checked="{% if canceladas %}true{% else %}false{% endif %}">
+            <span class="cal-interruptor-caja"></span>Mostrar canceladas
+        </a>
+        {% if leyenda %}
+            <ul class="cal-leyenda" aria-label="Leyenda">
+                {% for item in leyenda %}
+                    <li><span class="cal-muestra cal-ev--{{ item.estilo }}"></span>{{ item.nombre }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    {% if vista == 'semana' %}
+        {% include "bookings/_calendario_semana.html" %}
+    {% elif vista == 'mes' %}
+        {% include "bookings/_calendario_mes.html" %}
+    {% else %}
+        {% include "bookings/_calendario_dia.html" %}
+    {% endif %}
+
+    {% if vista != 'mes' %}
+        <div id="cal-popover" class="cal-popover" role="dialog" aria-label="Detalle de la reserva" tabindex="-1" hidden></div>
+        <div id="cal-velo" class="cal-velo" hidden></div>
+    {% endif %}
+</div>
+{% endblock %}

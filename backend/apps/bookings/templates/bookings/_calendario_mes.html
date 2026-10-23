@@ -1,0 +1,57 @@
+{% comment %}
+Mes: semanas de lunes a domingo. Con 35 celdas y varios renglones clicables cada una serian
+mas de cien blancos de clic, asi que aqui el blanco es el DIA: cada celda es un enlace a ese
+dia en la vista Dia y lo que lleva dentro (dos renglones de texto, dos barras de estancia y
+un "+N mas") no se toca. Por eso no hay popover ni tira de pangas en esta vista; lo unico
+que se marca es "Lleno" en el dia que ya no admite otra salida.
+
+Cada semana es su propia rejilla: fila 1 el numero del dia, filas 2 y 3 las barras de
+estancia (a lo mucho dos) y fila 4 los renglones. El enlace de la celda cruza las cuatro
+filas por debajo y lo demas lo deja pasar (`pointer-events: none`).
+{% endcomment %}
+<div class="cal-envoltura">
+<div class="cal-mes">
+    <div class="cal-mes-cab">
+        {% for d in mes.semanas.0.dias %}<span>{{ d.fecha|date:"D" }}</span>{% endfor %}
+    </div>
+
+    {% for semana in mes.semanas %}
+        <div class="cal-mes-semana">
+            {% for d in semana.dias %}
+                <a href="{{ d.url_dia }}" class="cal-celda{% if d.fin_de_semana %} cal-celda--finde{% endif %}{% if d.es_hoy %} cal-celda--hoy{% endif %}{% if d.otro_mes %} cal-celda--otro{% endif %}"
+                   style="grid-column: {{ d.col }}; grid-row: 1 / 5"
+                   aria-label="Ver el {{ d.fecha|date:'j \d\e F' }}"></a>
+            {% endfor %}
+
+            {% for d in semana.dias %}
+                <div class="cal-mes-numero{% if d.es_hoy %} cal-mes-numero--hoy{% endif %}{% if d.otro_mes %} cal-mes-numero--otro{% endif %}"
+                     style="grid-column: {{ d.col }}; grid-row: 1">
+                    {{ d.fecha|date:"j" }}
+                    {% if d.lleno %}<span class="cal-lleno">Lleno</span>{% endif %}
+                </div>
+            {% endfor %}
+
+            {% for b in semana.barras %}
+                <div class="cal-barra cal-ev cal-ev--{{ b.estancia.estilo }}{% if b.continua_antes %} cal-barra--antes{% endif %}{% if b.continua_despues %} cal-barra--despues{% endif %}"
+                     data-barra style="grid-column: {{ b.col }} / span {{ b.span }}; grid-row: {{ b.carril|add:1 }}">
+                    {% if mostrar_empresa %}<span data-empresa-corta class="cal-empresa-corta">{{ b.estancia.empresa_corta }}</span>{% endif %}
+                    <span class="cal-texto">{{ b.estancia.etiqueta }}</span>
+                </div>
+            {% endfor %}
+
+            {% for d in semana.dias %}
+                <div class="cal-mes-lineas{% if d.otro_mes %} cal-mes-lineas--otro{% endif %}" style="grid-column: {{ d.col }}; grid-row: 4">
+                    {% for ev in d.lineas %}
+                        <div data-linea class="cal-linea cal-ev cal-ev--{{ ev.estilo }}">{% if mostrar_empresa %}<span data-empresa-corta class="cal-empresa-corta">{{ ev.empresa_corta }}</span> {% endif %}{% if ev.hora %}{{ ev.hora|time:"G:i" }} {% endif %}{{ ev.reserva.nombre_cliente }} · {{ ev.reserva.numero_personas }}{% if ev.sentido == 'ida' %} · Ida{% elif ev.sentido == 'regreso' %} · Regreso{% endif %}{% if ev.marca == 'sin_panga' %}<span class="cal-sr"> (sin panga)</span>{% elif ev.marca == 'atrasada' %}<span class="cal-sr"> (atrasada)</span>{% endif %}</div>
+                    {% endfor %}
+                    {% if d.n_mas %}<div class="cal-mas">+{{ d.n_mas }} más</div>{% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    {% if vacio %}
+        <p data-vacio class="cal-vacio cal-vacio--mes">Sin reservas {{ vacio_texto }}</p>
+    {% endif %}
+</div>
+</div>

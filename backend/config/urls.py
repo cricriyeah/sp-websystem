@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.bookings.vistas_calendario import calendario
 from apps.finance.views import movimientos_financieros, panel_financiero
 from apps.fleet.views import TrasladosView
 from apps.tenancy.inicio import vista_avanzada, vista_saldos
@@ -38,7 +39,9 @@ urlpatterns = [
     # decide la vista (ver apps/finance/views.py).
     path('admin/finanzas/movimientos/', admin.site.admin_view(movimientos_financieros), name='finanzas_movimientos'),
     path('admin/finanzas/', admin.site.admin_view(panel_financiero), name='finanzas'),
-    path('admin/avanzado/', admin.site.admin_view(vista_avanzada), name='admin_avanzado'),
+    # Calendario de solo lectura: `admin_view` pone el login; el permiso (ver reservas) lo decide la vista.
+    path('admin/calendario/', admin.site.admin_view(calendario), name='calendario'),
+    path('admin/avanzado/',admin.site.admin_view(vista_avanzada), name='admin_avanzado'),
     path('admin/saldos-por-cobrar/', admin.site.admin_view(vista_saldos), name='saldos_por_cobrar'),
     path('admin/', admin.site.urls),
     path('api/<slug:empresa_slug>/traslados/', TrasladosView.as_view(), name='traslados'),

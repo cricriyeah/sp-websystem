@@ -191,6 +191,12 @@ UNFOLD = {
                 'title': 'Operacion',
                 'items': [
                     {
+                        'title': 'Calendario',
+                        'icon': 'calendar_month',
+                        'link': reverse_lazy('calendario'),
+                        'permission': lambda request: request.user.has_perm('bookings.view_reserva'),
+                    },
+                    {
                         'title': 'Reservas',
                         'icon': 'event',
                         'link': reverse_lazy('admin:bookings_reserva_changelist'),
@@ -203,13 +209,13 @@ UNFOLD = {
                         'permission': lambda request: request.user.has_perm('bookings.view_orden'),
                     },
                     {
-                        'title': 'Agenda',
+                        'title': 'Asignar pangas',
                         'icon': 'assignment_turned_in',
                         'link': reverse_lazy('admin:bookings_agenda_changelist'),
                         'permission': lambda request: request.user.has_perm('bookings.view_agenda'),
                     },
                     {
-                        'title': 'Traslados',
+                        'title': 'Asignar vehículos',
                         'icon': 'commute',
                         'link': reverse_lazy('admin:bookings_viajetransporte_changelist'),
                         'permission': lambda request: request.user.has_perm('bookings.view_viajetransporte'),

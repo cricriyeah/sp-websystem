@@ -395,7 +395,10 @@ Con la expansión multi-servicio y paquetes turísticos:
 
 `bookings.Agenda`, proxy de `Reserva` (mismo patron que `CheckoutAbandonado`). Es donde
 se reparten los viajes vendidos de mar: que panga y que capitan le toca a cada uno.
-No aplica a traslados (los vehículos de transporte terrestre se asignan en la pantalla «Traslados»).
+**En el menu se llama «Asignar pangas»** (antes «Agenda»; su pareja es «Asignar vehiculos»,
+antes «Traslados»): cambia solo el titulo y el `verbose_name` de los proxies, no las URLs ni
+los codenames de permisos. El jefe que busca «que hay estos dias» va al Calendario (abajo).
+No aplica a traslados (los vehículos de transporte terrestre se asignan en la pantalla «Asignar vehículos»).
 
 - Lista solo `pagada` y `asignada`, con `list_editable` para embarcacion y capitan: se
   reparte desde el listado, sin entrar a cada reserva.
@@ -410,6 +413,10 @@ No aplica a traslados (los vehículos de transporte terrestre se asignan en la p
   anterior) y **Proximos 7 dias** (repartir la semana, incluye los atrasados que siguen
   en `pagada`). Sin filtro abre en la semana.
 - Los permisos son propios del proxy: `manage.py setup_roles` se los da a la vendedora.
+- Dos parametros mas, que arma el Calendario: `?periodo=AAAA-MM-DD_AAAA-MM-DD` (mira ese rango
+  en lugar de la ventana de la semana; roto o al reves se ignora) y `?cuando=atrasadas` (las
+  `pagada` sin panga de fecha pasada; con `periodo`, solo las de ese rango). `PeriodoAgendaFilter`
+  solo registra el parametro; el filtrado esta en `CuandoFilter`.
 - **Pantalla de asignar** (rama `feat/agenda-asignar`). Reservas es el registro de todo; la
   Agenda es solo para asignar panga:
   - Una linea de resumen arriba ("N atrasados · N sin panga · N sin capitan", o "Todo
@@ -426,6 +433,42 @@ No aplica a traslados (los vehículos de transporte terrestre se asignan en la p
   - `static/bookings/panorama.js`: tocar un viaje sin panga marca en verde las pangas
     libres de ese dia cuyo valor exista en el selector de su fila, y tocar una llena el
     selector. No guarda; Guardar sigue siendo el boton de la tabla.
+
+## Calendario (apps/bookings/calendario.py, vistas_calendario.py)
+
+Pantalla de **solo lectura** en `/admin/calendario/` (primera de "Operacion" en el menu), montada en
+`config/urls.py` **antes** de `admin/` como las de finanzas. Permiso: `bookings.view_reserva`
+(vendedora, jefe y operador). Cada quien ve su empresa; el operador de plataforma elige una (abre en
+la primera por nombre) o "Todas". No hay tabla de calendario ni cambia cobro, cupo ni estados: todo
+sale de `Reserva`, sus `ReservaSalida` y sus `ViajeTransporte`, con consultas fijas (no una por fila).
+
+- **Estado en la URL**: `vista` (`dia`|`semana`|`mes`, por defecto `semana`), `desde` (cualquier
+  fecha ISO del periodo; la semana empieza en lunes), `empresa` (solo operador: slug o `todas`) y
+  `canceladas=1`. Un parametro roto cae en su valor por defecto.
+- **Qué se ve**: `pagada`, `asignada` y `completada`; la `cancelada` solo con el interruptor; la
+  `pendiente_pago` **nunca** (cada checkout abandonado deja una; para eso esta "Checkouts abandonados").
+  Pesca y paseos son un evento con hora; hospedaje y paquete de una empresa son una **estancia**
+  (barra); cada tramo de `ViajeTransporte` (ida/regreso/unico, sin los `cancelado`) es un evento.
+- **Una reserva, una marca por vista.** El paquete es SOLO su barra ("Pérez · 5 noches · 3 al mar")
+  en Semana y Mes; sus dias de mar son renglones propios unicamente en la vista Dia ("Al mar"). El
+  hallazgo de la linea bajo el titulo cuenta **reservas**, nunca eventos ni tramos, y nunca las
+  canceladas aunque se muestren.
+- **"Sin panga" y "atrasada"**: pagada sin embarcacion, de fecha de hoy o futura / pasada. Salen del
+  mismo criterio que la Agenda (`panorama.sin_lo_que_no_se_reparte`), estrechado: hospedaje, traslados
+  y paquetes sin nada de mar nunca piden panga (un paquete con dias de mar sin panga si, como el
+  viaje de mar). Color fuerte solo para esas dos marcas; lo asignado va callado.
+- **Hallazgo = enlace** a «Asignar pangas» (`?periodo=` y, para las atrasadas, `&cuando=atrasadas`);
+  con todo asignado no lleva enlace. Limite: la Agenda filtra por `Reserva.fecha`, asi que un paquete
+  cuyo dia de mar cae fuera del periodo cuenta en el hallazgo pero no sale en esa lista.
+- **Tira de pangas** ("6 de 10 pangas", Semana y Dia) y "Lleno" (Mes): solo con una empresa elegida
+  que tenga pangas. Sale de `obtener_contexto_rango` y `motivo_sin_lugar` (el motor de cupo), no de
+  una regla aparte: capacidad = lo menor entre las pangas a flote y el tope del dia.
+- **Mes**: el blanco del clic es el dia (toda la celda enlaza a la vista Dia); los renglones no
+  son enlaces. El popover (detalle + «Abrir reserva» y «Asignar panga») existe solo en Semana y Dia
+  y sin JavaScript cada evento sigue siendo un enlace a su reserva.
+- **Estilos**: `static/bookings/calendario.css` (variables CSS, modo oscuro) y `calendario.js`. Unfold
+  sirve su Tailwind ya compilado: una clase que no use no existe, asi que la geometria no va en
+  clases utilitarias nuevas.
 
 ## Cancelacion y reembolso
 
@@ -515,13 +558,13 @@ Con el hito SP1 de transporte multi-empresa, los traslados dejan de ser un extra
 
 - **`fleet.TransporteTarifa`**: catálogo de precios escalonado por ruta y capacidad (`tipo_traslado`, `zona`, `personas_min`, `personas_max`, `precio` en MXN; el USD se deriva del tipo de cambio de la sede). Tabla protegida por política RLS `tenancy_alcance` bajo `empresa_id`. Admin administrable únicamente por jefes (permisos en `setup_roles`).
 - **Estrategia de precio `PorRuta`** (`apps/payments/strategies/por_ruta.py`): resuelve el monto mediante `apps.fleet.tarifa_transporte.resolver_tarifa_transporte(empresa, demanda)` según `tipo_traslado`, `zona` y `numero_personas`. La cotización ocurre siempre en el servidor; `CrearPagoView` congela el `precio_calculado` en `DetalleTransporte`.
-- **`bookings.DetalleTransporte`**: detalle operativo asociado `OneToOne` a `Reserva`. Guarda `tipo_traslado`, `punto_encuentro` (FK a `PuntoEncuentro`), `direccion_personalizada`, `zona`, `fecha_regreso` (para `redondo_aeropuerto`), `numero_personas` y `precio_calculado`. Su política RLS de Postgres se aplica vía FK referida a `reserva.empresa_id` y está verificada en el guardarraíl de `apps/tenancy/tests_rls.py`. Visible como `DetalleTransporteInline` en `ReservaAdmin`. La `Agenda` operativa de pangas filtra y omite traslados: los vehículos se asignan por tramo en la pantalla «Traslados» (`bookings.ViajeTransporte`, ver sección siguiente).
+- **`bookings.DetalleTransporte`**: detalle operativo asociado `OneToOne` a `Reserva`. Guarda `tipo_traslado`, `punto_encuentro` (FK a `PuntoEncuentro`), `direccion_personalizada`, `zona`, `fecha_regreso` (para `redondo_aeropuerto`), `numero_personas` y `precio_calculado`. Su política RLS de Postgres se aplica vía FK referida a `reserva.empresa_id` y está verificada en el guardarraíl de `apps/tenancy/tests_rls.py`. Visible como `DetalleTransporteInline` en `ReservaAdmin`. La `Agenda` operativa de pangas filtra y omite traslados: los vehículos se asignan por tramo en la pantalla «Asignar vehículos» (`bookings.ViajeTransporte`, ver sección siguiente).
 - **Ventana horaria y capacidad por Servicio**: `Servicio.hora_apertura` y `Servicio.hora_cierre` permiten ventanas horarias por servicio (pesca 5:00–7:00am, transporte sin ventana fija). `Servicio.capacidad_maxima` fija el tope de personas (ej. 14 para transporte).
 - **Ruta pública `GET /api/<empresa_slug>/traslados/`**: (`apps/fleet/views.py::TrasladosView`), throttled, entrega el catálogo (`servicio`, `tarifas`, `puntos_encuentro`, `publishable_key`) bajo el alcance RLS de la empresa proveedora de transporte.
 
 ## Traslados con vehículos (DLS Transporte)
 
-DLS Transporte opera traslados privados (`Servicio.tipo_servicio = 'transporte'`). La venta se mantiene con `estrategia_cupo = 'bajo_demanda'` (vender no se bloquea por falta de flota previa), pero los traslados confirmados se dividen en tramos (`ViajeTransporte`) asignables a vehículos (`Vehiculo`) desde la pantalla operativa «Traslados».
+DLS Transporte opera traslados privados (`Servicio.tipo_servicio = 'transporte'`). La venta se mantiene con `estrategia_cupo = 'bajo_demanda'` (vender no se bloquea por falta de flota previa), pero los traslados confirmados se dividen en tramos (`ViajeTransporte`) asignables a vehículos (`Vehiculo`) desde la pantalla operativa «Asignar vehículos».
 
 ### Modelos y reglas de validación
 
@@ -552,7 +595,7 @@ Lógica centralizada e idempotente en `apps.bookings.traslados::sincronizar_viaj
   - `manage.py sincronizar_viajes_transporte [--dry-run]`: recorre por empresa las reservas de transporte con cupo y detalle, ejecutando `sincronizar_viajes` en cada una.
   - Migración de datos: crea los viajes de reservas históricas con cupo dentro de `with apps.tenancy.rls.alcance_operador_migracion(schema_editor.connection):` para no ser filtradas bajo el rol sin `BYPASSRLS`.
 
-### Pantalla «Traslados» (admin)
+### Pantalla «Asignar vehículos» (admin; antes «Traslados»)
 
 En `/admin/bookings/viajetransporte/` (`ViajeTransporteAdmin`, Unfold, `EmpresaScopedAdminMixin`):
 - **Sin creación ni borrado manual**: `has_add_permission=False` y `has_delete_permission=False`. Los viajes los administra exclusivamente el sistema a partir de las reservas.
@@ -575,7 +618,7 @@ En `/admin/bookings/viajetransporte/` (`ViajeTransporteAdmin`, Unfold, `EmpresaS
   - **Vendedora**: `viajetransporte` (`view`, `change`), `vehiculo` (`view`), `vehiculonodisponible` (`add`, `change`, `delete`, `view`).
   - **Jefe**: permisos de Vendedora + `vehiculo` (`add`, `change`, `delete`).
 - **Navegación Unfold (`UNFOLD['SIDEBAR']`)**:
-  - Menú Operación: "Traslados" y "Vehículos no disponibles".
+  - Menú Operación: "Calendario", "Asignar pangas", "Asignar vehículos" y "Vehículos no disponibles".
   - Menú Catálogo: "Vehículos".
 
 ### Fuera de alcance

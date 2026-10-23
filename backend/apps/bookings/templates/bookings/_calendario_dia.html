@@ -1,0 +1,85 @@
+{% comment %}
+Dia: una lista, no una rejilla, agrupada por lo que se hace con cada cosa: "Al mar" (pesca,
+paseos y cada dia de mar de un paquete, que es donde se reparte), "Estancias" (hospedajes y
+paquetes que estan ese dia) y "Traslados". Cada renglon: hora, cliente, personas, panga y
+capitan (o vehiculo), estado y "Abrir". Arriba, la tira de pangas en grande.
+{% endcomment %}
+{% load l10n %}
+<section class="cal-lista">
+    <h2 class="cal-lista-dia">{{ dia.fecha|date:"l j \d\e F" }}</h2>
+
+    {% if dia.tira %}
+        <div data-tira class="cal-tira cal-tira--grande">
+            <span class="cal-tira-pista"><span class="cal-tira-relleno" style="width: {{ dia.tira_pct|unlocalize }}%"></span></span>
+            <span class="cal-tira-texto">{{ dia.tira.ocupadas }} de {{ dia.tira.capacidad }} pangas ocupadas{% if dia.cerrado %} · Cerrado{% elif dia.lleno %} · Lleno{% endif %}</span>
+        </div>
+    {% endif %}
+
+    {% if vacio %}
+        <p data-vacio class="cal-vacio cal-vacio--dia">Sin reservas {{ vacio_texto }}</p>
+    {% endif %}
+
+    {% if dia.mar %}
+        <h3 class="cal-grupo">Al mar</h3>
+        <ul class="cal-filas">
+            {% for ev in dia.mar %}
+                <li data-evento class="cal-fila cal-ev--{{ ev.estilo }}">
+                    <span class="cal-hora">{% if ev.hora %}{{ ev.hora|time:"G:i" }}{% else %}—{% endif %}</span>
+                    <span class="cal-fila-cliente">
+                        {% if mostrar_empresa %}<span data-empresa-corta class="cal-empresa-corta">{{ ev.empresa_corta }}</span>{% endif %}
+                        <a href="{% url 'admin:bookings_reserva_change' ev.reserva.pk %}" data-detalle="det-{{ ev.clave }}">{{ ev.reserva.nombre_cliente }}</a>
+                        {% if ev.tipo == 'dia_de_mar' %}<span class="cal-fila-nota">Paquete</span>{% endif %}
+                    </span>
+                    <span>{{ ev.reserva.numero_personas }} pers.</span>
+                    <span>{% if ev.reserva.embarcacion %}{{ ev.reserva.embarcacion.nombre }}{% if ev.reserva.capitan %} · {{ ev.reserva.capitan.nombre }}{% endif %}{% else %}Sin panga{% endif %}</span>
+                    <span class="cal-fila-estado">{{ ev.reserva.get_estado_display }}{% if ev.marca == 'atrasada' %} · Atrasada{% endif %}</span>
+                    <a href="{% url 'admin:bookings_reserva_change' ev.reserva.pk %}" class="cal-abrir">Abrir</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if dia.estancias %}
+        <h3 class="cal-grupo">Estancias</h3>
+        <ul class="cal-filas">
+            {% for e in dia.estancias %}
+                <li data-evento class="cal-fila cal-ev--{{ e.estilo }}">
+                    <span class="cal-hora">—</span>
+                    <span class="cal-fila-cliente">
+                        {% if mostrar_empresa %}<span data-empresa-corta class="cal-empresa-corta">{{ e.empresa_corta }}</span>{% endif %}
+                        <a href="{% url 'admin:bookings_reserva_change' e.reserva.pk %}" data-detalle="det-{{ e.clave }}">{{ e.reserva.nombre_cliente }}</a>
+                        <span class="cal-fila-nota">{{ e.inicio|date:"j M" }} al {{ e.fin|date:"j M" }}{% if e.noches %} · {{ e.noches }} noche{{ e.noches|pluralize }}{% endif %}{% if e.dias_de_mar %} · {{ e.dias_de_mar }} al mar{% endif %}</span>
+                    </span>
+                    <span>{{ e.reserva.numero_personas }} pers.</span>
+                    <span>{% if e.dias_de_mar %}{% if e.reserva.embarcacion %}{{ e.reserva.embarcacion.nombre }}{% if e.reserva.capitan %} · {{ e.reserva.capitan.nombre }}{% endif %}{% else %}Sin panga{% endif %}{% endif %}</span>
+                    <span class="cal-fila-estado">{{ e.reserva.get_estado_display }}</span>
+                    <a href="{% url 'admin:bookings_reserva_change' e.reserva.pk %}" class="cal-abrir">Abrir</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if dia.traslados %}
+        <h3 class="cal-grupo">Traslados</h3>
+        <ul class="cal-filas">
+            {% for ev in dia.traslados %}
+                <li data-evento class="cal-fila cal-ev--{{ ev.estilo }}">
+                    <span class="cal-hora">{% if ev.hora %}{{ ev.hora|time:"G:i" }}{% else %}—{% endif %}</span>
+                    <span class="cal-fila-cliente">
+                        {% if mostrar_empresa %}<span data-empresa-corta class="cal-empresa-corta">{{ ev.empresa_corta }}</span>{% endif %}
+                        <a href="{% url 'admin:bookings_reserva_change' ev.reserva.pk %}" data-detalle="det-{{ ev.clave }}">{{ ev.reserva.nombre_cliente }}</a>
+                        {% if ev.sentido == 'ida' %}<span class="cal-fila-nota">Ida</span>{% elif ev.sentido == 'regreso' %}<span class="cal-fila-nota">Regreso</span>{% endif %}
+                    </span>
+                    <span>{{ ev.reserva.numero_personas }} pers.</span>
+                    <span>{{ ev.tramo.vehiculo|default:"Sin vehículo" }}</span>
+                    <span class="cal-fila-estado">{{ ev.reserva.get_estado_display }}</span>
+                    <a href="{% url 'admin:bookings_reserva_change' ev.reserva.pk %}" class="cal-abrir">Abrir</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+
+{% for ev in dia.mar %}{% include "bookings/_calendario_detalle.html" with p=ev %}{% endfor %}
+{% for e in dia.estancias %}{% include "bookings/_calendario_detalle.html" with p=e %}{% endfor %}
+{% for ev in dia.traslados %}{% include "bookings/_calendario_detalle.html" with p=ev %}{% endfor %}
