@@ -3,10 +3,19 @@ import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_DE } from '@/lib/secciones-sede';
+import { cn } from '@/components/ui/cn';
 import { TarjetaEmpresa, type VistaEmpresa } from '@/components/tarjeta-empresa';
 import { vistaDeEmpresa } from '@/components/vistas-empresa';
 
 type Textos = Dictionary['hubContenido'];
+
+// Con menos de 4 empresas, las que hay se reparten todo el ancho en vez de dejar columnas vacías.
+const COLUMNAS: Record<number, string> = {
+  1: '',
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-2 lg:grid-cols-3',
+  4: 'sm:grid-cols-2 lg:grid-cols-4',
+};
 
 /**
  * «Empresas locales que nos acompañan», solo en el hub: una fila por empresa, aunque opere en varias
@@ -42,7 +51,7 @@ export function ColaboradoresSection({ sedes, lang, textos, id }: {
         <h2 id={`${id}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.empresasTitulo}</h2>
         <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.empresasTexto}</p>
         {/* 16 px entre los grupos de una tarjeta (cada una ocupa tres filas en subrejilla) y 48 px entre tarjetas. */}
-        <ul className="mt-10 grid gap-x-8 gap-y-4 lg:gap-x-12 sm:grid-cols-2 lg:grid-cols-4 [&>li]:mb-8">
+        <ul className={cn('mt-10 grid gap-x-8 gap-y-4 lg:gap-x-12 [&>li]:mb-8', COLUMNAS[Math.min(visibles.length, 4)])}>
           {visibles.map((empresa) => (
             <TarjetaEmpresa key={empresa.slug} empresa={empresa} textos={textos} />
           ))}
