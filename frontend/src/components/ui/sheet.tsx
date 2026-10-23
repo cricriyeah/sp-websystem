@@ -31,6 +31,7 @@ type SheetProps = {
  */
 export function Sheet({ abierto, onCerrar, titulo, etiquetaCerrar, sinBorde = false, className, children }: SheetProps) {
   const dialogo = useRef<HTMLDialogElement>(null);
+  const tituloRef = useRef<HTMLHeadingElement>(null);
   const idTitulo = useId();
   const clases = hojaClases({ sinBorde });
 
@@ -44,7 +45,12 @@ export function Sheet({ abierto, onCerrar, titulo, etiquetaCerrar, sinBorde = fa
     abiertoActual.current = abierto;
     const el = dialogo.current;
     if (!el) return;
-    if (abierto && !el.open) el.showModal();
+    if (abierto && !el.open) {
+      el.showModal();
+      // `showModal` enfoca el primer control (la X) y en móvil aparece el aro de foco. React no pone el atributo
+      // `autofocus` en el DOM, así que el foco se lleva al título a mano.
+      tituloRef.current?.focus();
+    }
     if (!abierto && el.open) el.close();
   }, [abierto, montado]);
 
@@ -86,8 +92,7 @@ export function Sheet({ abierto, onCerrar, titulo, etiquetaCerrar, sinBorde = fa
         <>
           <div aria-hidden="true" className={clases.asa} />
           <div className={clases.cabecera}>
-            {/* `autoFocus`: al abrir, `showModal` lleva el foco al título y no a la X (sin aro de foco al tocar). */}
-            <h2 id={idTitulo} tabIndex={-1} autoFocus className={cn('texto-subtitulo outline-none', clases.titulo)}>
+            <h2 ref={tituloRef} id={idTitulo} tabIndex={-1} className={cn('texto-subtitulo outline-none', clases.titulo)}>
               {titulo}
             </h2>
             <button type="button" onClick={onCerrar} aria-label={etiquetaCerrar} className={clases.cerrar}>
