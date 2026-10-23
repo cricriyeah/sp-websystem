@@ -106,10 +106,14 @@ export function hojaClases({ sinBorde = false }: { sinBorde?: boolean } = {}) {
     cabecera: 'mb-2 flex items-center justify-between gap-4',
     // `texto-subtitulo` va en el <h2> de sheet.tsx (la guardia `titular-sin-escala` lo busca en la etiqueta).
     titulo: 'text-foreground',
-    // 48 × 48; -mr-2 alinea el icono de 24 con el margen de 16 de la hoja.
+    // Área de toque de 48 × 48; lo que se ve es el círculo oscuro de 36 (`cerrarCirculo`). -mr-2 lo alinea con el
+    // margen de 16 de la hoja. El foco de teclado se marca con un aro tinta, no azul.
     cerrar:
-      '-mr-2 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-foreground transition-colors ' +
-      'hover:bg-cafe-bruma focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+      'group -mr-2 inline-flex size-12 shrink-0 items-center justify-center rounded-full ' +
+      'focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-tinta',
+    cerrarCirculo:
+      'inline-flex size-9 items-center justify-center rounded-full bg-tinta text-white transition-[background-color,scale] ' +
+      'duration-150 group-hover:bg-cafe group-active:scale-90 motion-reduce:group-active:scale-100',
     cuerpo: sinBorde ? HOJA_SIN_BORDE : '',
   };
 }

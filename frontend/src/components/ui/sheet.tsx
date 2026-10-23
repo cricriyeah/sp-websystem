@@ -86,11 +86,14 @@ export function Sheet({ abierto, onCerrar, titulo, etiquetaCerrar, sinBorde = fa
         <>
           <div aria-hidden="true" className={clases.asa} />
           <div className={clases.cabecera}>
-            <h2 id={idTitulo} className={cn('texto-subtitulo', clases.titulo)}>
+            {/* `autoFocus`: al abrir, `showModal` lleva el foco al título y no a la X (sin aro de foco al tocar). */}
+            <h2 id={idTitulo} tabIndex={-1} autoFocus className={cn('texto-subtitulo outline-none', clases.titulo)}>
               {titulo}
             </h2>
             <button type="button" onClick={onCerrar} aria-label={etiquetaCerrar} className={clases.cerrar}>
-              <X size={24} weight="bold" aria-hidden="true" />
+              <span className={clases.cerrarCirculo}>
+                <X size={18} weight="bold" aria-hidden="true" />
+              </span>
             </button>
           </div>
           <div className={clases.cuerpo}>{children}</div>
