@@ -181,7 +181,13 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   restante del anticipo y lo que el agente haya cotizado aparte (bebidas, transporte),
   por eso puede superar el saldo del tour y no se valida contra el. `saldo_pendiente`
   ya lo descuenta. La accion de admin "Registrar liquidacion en efectivo" rellena el
-  saldo exacto y sella quien y cuando; para un monto distinto se edita a mano.
+  saldo exacto y sella quien y cuando; para un monto distinto se edita a mano. Pide
+  confirmacion, solo toca reservas `pagada`/`asignada` no reembolsadas con saldo > 0 y
+  recalcula el saldo con la fila bloqueada (`apps/bookings/cobros.py`), asi que repetir el
+  clic o dos clics a la vez no cobran de mas. Tambien sale como boton «Cobrar saldo en
+  efectivo» en el resumen de la reserva (entra por la misma accion). Cualquier efectivo
+  escrito en el formulario se sella una sola vez (`save_model`): corregir el monto no mueve
+  la fecha del primer registro; quitarlo la borra.
 - **Transferencia**: `monto_transferencia` guarda una entrada independiente de Stripe
   y de caja. Descuenta `saldo_pendiente`; `monto_pagado` sigue siendo solo lo cobrado
   por Stripe para verificar montos y reembolsos de tarjeta. El admin sella fecha y

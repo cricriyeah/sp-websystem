@@ -26,6 +26,14 @@
                 <div><dt>Cobro</dt><dd>{{ resumen_reserva.cobro }}</dd></div>
                 <div><dt>Asignación</dt><dd{% if resumen_reserva.asignacion_urgente %} class="reserva-asignacion-urgente"{% endif %}>{{ resumen_reserva.asignacion }}</dd></div>
             </dl>
+            {% if resumen_reserva.cobrar_saldo %}
+                <form method="post" action="{{ resumen_reserva.cobrar_saldo.url }}" style="margin-top: 0.75rem">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="{{ resumen_reserva.cobrar_saldo.accion }}">
+                    <input type="hidden" name="_selected_action" value="{{ resumen_reserva.cobrar_saldo.pk }}">
+                    <button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default font-semibold">Cobrar saldo en efectivo ({{ resumen_reserva.cobrar_saldo.texto }})</button>
+                </form>
+            {% endif %}
         </section>
     {% endif %}
 {% endblock %}
