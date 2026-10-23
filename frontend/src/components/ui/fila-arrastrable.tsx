@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from '@phosphor-icons/react';
-import { destinoDeFila, estadoDeFila, type EstadoFila } from '@/lib/fila-arrastrable';
+import { destinoDeFila, estadoDeFila, indiceDeFila, type EstadoFila } from '@/lib/fila-arrastrable';
 import { Button } from './button';
 
 type Props = {
@@ -17,21 +17,48 @@ type Props = {
 };
 
 const INICIAL: EstadoFila = { desborda: false, avance: 1, puedeAtras: false, puedeAdelante: false };
+// El amago del teléfono: la fila se corre lo justo para que asome la orilla de la siguiente tarjeta y regresa.
+const AMAGO_PX = 56;
+const AMAGO_MS = 900;
 
 /**
  * Fila de tarjetas que se arrastra: carril con `scroll-snap` obligatorio (siempre se detiene en una tarjeta, nunca a la mitad de dos), flechas en círculo y una barra de avance de
- * 4 px. Las flechas van junto al título en escritorio y junto a la barra (abajo a la derecha) en el teléfono. Las flechas y la barra solo existen cuando la fila no cabe. Sin JavaScript sigue siendo un carril
+ * 4 px. Las flechas van junto al título (en el teléfono con un contador «1 / 3» y un amago de deslizamiento la primera vez que se ve). Las flechas y la barra solo existen cuando la fila no cabe. Sin JavaScript sigue siendo un carril
  * que se desliza con el dedo. Con «reducir movimiento» las flechas saltan sin deslizar.
  */
 export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
   const carril = useRef<HTMLDivElement>(null);
   const reducido = useReducedMotion();
   const [estado, setEstado] = useState<EstadoFila>(INICIAL);
+  const [posicion, setPosicion] = useState({ actual: 0, total: 0 });
 
   const medir = useCallback(() => {
     const el = carril.current;
-    if (el) setEstado(estadoDeFila(el));
+    if (!el) return;
+    setEstado(estadoDeFila(el));
+    const tarjetas = Array.from(el.children) as HTMLElement[];
+    const origen = tarjetas[0]?.offsetLeft ?? 0;
+    setPosicion({ actual: indiceDeFila(el.scrollLeft, tarjetas.map((t) => t.offsetLeft - origen)), total: tarjetas.length });
   }, []);
+
+  // En el teléfono cada tarjeta ocupa la fila y la siguiente no asoma: la primera vez que la fila entra a la
+  // pantalla se corre un poco y regresa, para enseñar que se desliza. Una vez por montaje, nunca con «reducir
+  // movimiento», ni si ya se deslizó o no hay más tarjetas.
+  useEffect(() => {
+    const el = carril.current;
+    if (!el || reducido || !window.matchMedia('(max-width: 639px)').matches) return;
+    const observador = new IntersectionObserver(([entrada]) => {
+      if (!entrada?.isIntersecting) return;
+      observador.disconnect();
+      if (el.scrollLeft > 2 || el.scrollWidth - el.clientWidth <= 2) return;
+      el.animate(
+        [{ transform: 'translateX(0)' }, { transform: `translateX(-${AMAGO_PX}px)`, offset: 0.4 }, { transform: 'translateX(0)' }],
+        { duration: AMAGO_MS, delay: 300, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+      );
+    }, { threshold: 0.6 });
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [reducido]);
 
   useEffect(() => {
     const el = carril.current;
@@ -63,8 +90,16 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
     <div>
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-end justify-between gap-6 px-4 pb-8 sm:px-6 lg:px-12">
         {cabeza}
-        {/* En escritorio, a la derecha del título; en el teléfono bajan junto a la barra, al alcance del pulgar. */}
-        {estado.desborda && <div className="flex gap-2 max-sm:hidden">{flechas}</div>}
+        {/* Junto al título, donde ya va la vista al llegar a la sección; en el teléfono con el contador «1 / 3»
+            (las tarjetas ocupan la fila y nada más dice que hay otras). */}
+        {estado.desborda && (
+          <div className="flex items-center gap-2 max-sm:ml-auto">
+            <span className="mr-2 texto-pequeno font-semibold tabular-nums text-foreground sm:hidden" aria-hidden="true">
+              {posicion.actual + 1} / {posicion.total}
+            </span>
+            {flechas}
+          </div>
+        )}
       </div>
       <div
         ref={carril}
@@ -84,7 +119,6 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
               style={{ transform: `scaleX(${estado.avance})` }}
             />
           </div>
-          <div className="flex gap-2 sm:hidden">{flechas}</div>
         </div>
       )}
     </div>

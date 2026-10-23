@@ -31,3 +31,15 @@ export function destinoDeFila({ scrollLeft, scrollWidth, clientWidth }: MedidasF
   const destino = scrollLeft + sentido * clientWidth * 0.8;
   return Math.min(Math.max(0, destino), Math.max(0, scrollWidth - clientWidth));
 }
+
+/**
+ * La tarjeta que encabeza lo que se ve (0 = la primera), para el contador «1 / 3» del teléfono: la de inicio
+ * más cercana al recorrido. `inicios` son los bordes izquierdos de las tarjetas medidos desde la primera.
+ */
+export function indiceDeFila(scrollLeft: number, inicios: number[]): number {
+  let mejor = 0;
+  for (let i = 1; i < inicios.length; i++) {
+    if (Math.abs(inicios[i] - scrollLeft) < Math.abs(inicios[mejor] - scrollLeft)) mejor = i;
+  }
+  return mejor;
+}

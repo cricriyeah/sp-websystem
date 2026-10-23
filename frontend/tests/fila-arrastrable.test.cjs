@@ -31,3 +31,13 @@ test('destinoDeFila: avanza el 80 % del carril y no pasa de los extremos', () =>
   assert.equal(f.destinoDeFila({ ...m, scrollLeft: 1400 }, 1), 1500);
   assert.equal(f.destinoDeFila({ ...m, scrollLeft: 300 }, -1), 0);
 });
+
+test('indiceDeFila: la tarjeta cuyo inicio queda más cerca del recorrido', () => {
+  const inicios = [0, 398, 796];
+  assert.equal(f.indiceDeFila(0, inicios), 0);
+  assert.equal(f.indiceDeFila(150, inicios), 0);
+  assert.equal(f.indiceDeFila(250, inicios), 1);
+  assert.equal(f.indiceDeFila(796, inicios), 2);
+  assert.equal(f.indiceDeFila(900, inicios), 2);
+  assert.equal(f.indiceDeFila(0, []), 0);
+});
