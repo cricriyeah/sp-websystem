@@ -61,6 +61,11 @@ estar exento.
   despues de guardar la reserva como `pagada`. Cada canal se activa solo si sus env
   vars estan puestas y **nunca lanza**: el cobro ya ocurrio, una notificacion caida no
   debe hacer que Stripe reintente el webhook.
+  **El punto de encuentro de los correos** (confirmacion, asignacion de panga/capitan y paquetes)
+  sale de `Servicio.punto_salida` (el «Sales de» de la ficha del servicio, el mismo dato que ve el
+  cliente en el sitio), nunca de texto fijo en el codigo. Vacio = el correo dice
+  `SIN_PUNTO_DE_ENCUENTRO` («Te lo confirmamos por WhatsApp») y un hospedaje no lleva renglon; la
+  lista de Servicios del admin marca «FALTA» en rojo los servicios de mar sin dato.
 - `fleet.Servicio`: pesca usa el servicio `pesca-deportiva` de cada Empresa y la
   estrategia `por_grupo`. `precio_base` y `precio_persona_extra` se guardan en MXN;
   el USD se deriva del tipo de cambio de la sede y cada importe se redondea hacia
