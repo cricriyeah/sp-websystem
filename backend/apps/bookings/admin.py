@@ -2426,8 +2426,12 @@ class ViajeTransporteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._aligerar_selectores()
         # La hora de la ida o del tramo unico viene de la reserva (y la sincronizacion la
-        # repone); solo la del regreso se captura aqui, porque el checkout no la pide.
-        if self.instance.pk and self.instance.sentido != ViajeTransporte.Sentido.REGRESO:
+        # repone); solo la del regreso se captura aqui, porque el checkout no la pide. En un
+        # paquete ningun tramo trae hora (es la del vuelo): los dos se capturan aqui.
+        if (
+            self.instance.pk and self.instance.sentido != ViajeTransporte.Sentido.REGRESO
+            and not self.instance.reserva.paquete_id
+        ):
             self.fields['hora'].disabled = True
         # Solo al mostrar. Al guardar el formulario queda con todas las opciones a
         # propósito: si una ya no sirve, el modelo contesta con el motivo específico.
@@ -2586,6 +2590,9 @@ class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAd
         try:
             detalle = obj.reserva.detalle_transporte
         except (ObjectDoesNotExist, AttributeError):
+            # Traslado de un paquete: no hay detalle, solo el aeropuerto que eligio la clienta.
+            if obj.reserva.paquete_id and obj.reserva.aeropuerto:
+                return f'Aeropuerto {obj.reserva.aeropuerto.upper()}'
             return '—'
         if detalle is None:
             return '—'
@@ -2619,9 +2626,12 @@ class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAd
                 referencias = ', '.join(f'#{r_id}' for r_id in sorted(set(otros_reserva)))
                 avisos.append(f'Mismo vehículo a la misma hora que {referencias}')
 
-        # 2. Regreso sin hora
-        if obj.sentido == ViajeTransporte.Sentido.REGRESO and not obj.hora:
-            avisos.append('Falta la hora')
+        # 2. Sin hora: en un paquete es la hora del vuelo (cualquier tramo); en un traslado suelto, la del regreso
+        if not obj.hora:
+            if obj.reserva.paquete_id:
+                avisos.append('Falta la hora de vuelo')
+            elif obj.sentido == ViajeTransporte.Sentido.REGRESO:
+                avisos.append('Falta la hora')
 
         # 3. Asignación que quedó inválida (ya no cabe o está bloqueado)
         if obj.vehiculo_id:
