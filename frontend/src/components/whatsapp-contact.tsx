@@ -46,7 +46,7 @@ export function WhatsappContact({ nav, variant = 'nav', tone = 'hero' }: Whatsap
         href={href}
         target="_blank"
         rel="noopener"
-        className="mt-1 flex flex-col gap-1 bg-cafe-bruma px-4 py-3"
+        className="mt-1 flex flex-col gap-1 rounded-sheet bg-cafe-bruma px-4 py-3"
       >
         <span className="texto-cuerpo">{nav.humanContact}</span>
         <span className="flex items-center gap-2 texto-cuerpo font-semibold">

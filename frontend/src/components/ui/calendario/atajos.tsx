@@ -12,8 +12,9 @@ type Props = {
   textos: TextosCalendario;
 };
 
-// `px-3`: los tres caben en una fila desde 320 px (con `px-4` «En 2 días» bajaba a otro renglón).
-const CLASE = 'min-h-11 rounded-full border border-borde-control bg-blanco px-3 texto-pequeno font-medium text-foreground transition-[background-color,transform] hover:bg-cafe-bruma active:scale-[0.98] motion-reduce:active:scale-100 disabled:opacity-60';
+// `px-2.5` y 6 px entre ellos: los tres caben en una fila en un iPhone 11 aun con «Borrar fecha» (con `px-3`
+// y 8 px bajaba a otro renglón). Si de verdad no caben (320 px), se parten en renglones, nunca se cortan.
+const CLASE = 'min-h-11 whitespace-nowrap rounded-full border border-borde-control bg-blanco px-2.5 texto-pequeno font-medium text-foreground transition-[background-color,transform] hover:bg-cafe-bruma active:scale-[0.98] motion-reduce:active:scale-100 disabled:opacity-60';
 
 /**
  * «Borrar fecha», «Mañana» y «En 2 días»: valores editables relativos a hoy, en una fila que se
@@ -25,11 +26,11 @@ export function Atajos({ hoy, minDate, haySeleccion, onBorrar, onElegir, textos 
   const bloqueado = lista.some((a) => a.antesDelMinimo);
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {haySeleccion && (
           <Button variante="libre" type="button" onClick={onBorrar} className={`${CLASE} flex items-center gap-1`}>
             {textos.borrar}
-            <X size={16} weight="bold" aria-hidden />
+            <X size={14} weight="bold" aria-hidden />
           </Button>
         )}
         {lista.map((atajo) => (

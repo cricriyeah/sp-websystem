@@ -90,6 +90,15 @@ export function SiteHeader({
     return () => { montado = false; };
   }, [pathname, sedeSlugActual, variante]);
 
+  // Con el menú abierto, bajar por la página lo cierra (con su animación de salida).
+  useEffect(() => {
+    if (!open) return;
+    const inicio = window.scrollY;
+    const alDesplazar = () => { if (window.scrollY - inicio > 24) setOpen(false); };
+    window.addEventListener('scroll', alDesplazar, { passive: true });
+    return () => window.removeEventListener('scroll', alDesplazar);
+  }, [open]);
+
   const slugActual = sedeSlugActual ?? slugResuelto ?? sedesDisponibles[0]?.slug;
   const baseSede = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 
@@ -127,7 +136,7 @@ export function SiteHeader({
               {link.label}
             </Link>
           ))}
-          <div className="flex items-center justify-between py-3.5">
+          <div className="flex flex-col gap-2 py-3.5">
             <span className="texto-cuerpo">{nav.sedeLabel}</span>
             <SedeSelector
               lang={lang}
@@ -135,6 +144,7 @@ export function SiteHeader({
               sedeSeleccionadaSlug={variante === 'hub' ? undefined : slugActual}
               placeholder={variante === 'hub' ? nav.eligeSede : undefined}
               label={nav.sedeLabel}
+              anchoCompleto
             />
           </div>
           <div className="py-3">

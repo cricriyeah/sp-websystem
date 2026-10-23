@@ -67,6 +67,8 @@ export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: M
     empresa: empresa?.nombre ?? paquete.empresa_lider,
     color: colorDePaquete(paquete),
     palabra: palabraDePaquete(paquete.noches, lang),
+    // La del backoffice (ya en el idioma de la página); un texto propio del sitio, si lo hay, manda.
+    descripcion: descripcionDeCatalogo(clave, lang) ?? (paquete.descripcion?.trim() || null),
     incluye: (paquete.incluye?.[lang] ?? []).slice(0, 3),
     foto: imagenDeCatalogo(clave, lang),
     fotos: imagenesDeCatalogo(clave, lang),

@@ -298,7 +298,13 @@ export function Calendario({
       </p>
       <p className="sr-only" aria-live="polite">{anuncio}</p>
 
-      {conCupo && cargando && !errorCupo && <p className="texto-pequeno text-apagado">{textos.consultando}</p>}
+      {/* Siempre montado y con su alto: al cambiar personas se vuelve a consultar el cupo, y si el renglón
+          apareciera y desapareciera, todo lo de abajo brincaría. Solo cambia su opacidad. */}
+      {conCupo && !errorCupo && (
+        <p aria-hidden={!cargando} className={cn('texto-pequeno text-apagado transition-opacity duration-200', cargando ? 'opacity-100' : 'opacity-0')}>
+          {textos.consultando}
+        </p>
+      )}
       {conCupo && errorCupo && (
         <div role="status" className="flex flex-col items-start gap-2 rounded-control bg-info-fondo p-3 texto-pequeno text-info">
           <p>{textos.errorCupo}</p>

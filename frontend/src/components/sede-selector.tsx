@@ -29,6 +29,8 @@ type SedeSelectorProps = {
   onSelectSede?: (sede: SedeOpcion) => void;
   /** Un círculo negro con el icono; al tocarlo, la lista se abre desde él. Sin él, la píldora con el nombre. */
   compacto?: boolean;
+  /** Ocupa todo el ancho de su contenedor (menú móvil): la píldora y la lista. */
+  anchoCompleto?: boolean;
   className?: string;
 };
 
@@ -40,6 +42,7 @@ export function SedeSelector({
   placeholder,
   onSelectSede,
   compacto = false,
+  anchoCompleto = false,
   className = '',
 }: SedeSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -129,7 +132,7 @@ export function SedeSelector({
   return (
     // `cn` y no plantilla: con `hidden sm:inline-block` desde la cabecera, el `inline-block` propio
     // ganaba y el selector se veía en móvil, empujando el botón de menú fuera de la pantalla.
-    <div ref={ref} className={cn('relative inline-block text-left', className)}>
+    <div ref={ref} className={cn('relative inline-block text-left', anchoCompleto && 'block w-full', className)}>
       {compacto ? (
         <div
           className={cn(
@@ -164,7 +167,7 @@ export function SedeSelector({
           onClick={() => puedeAbrir && setOpen((v) => !v)}
           aria-expanded={open}
           aria-haspopup="listbox"
-          className="flex min-h-12 items-center gap-2 rounded-full bg-cafe-bruma px-5 texto-cuerpo font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-borde active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado"
+          className={cn('flex min-h-12 items-center gap-2 rounded-full bg-cafe-bruma px-5 texto-cuerpo font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-borde active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-cafe-bruma disabled:text-apagado', anchoCompleto && 'w-full')}
         >
           <MapPin size={18} className="shrink-0" weight="fill" aria-hidden="true" />
           <span className="hidden sm:inline">{label}:</span>
@@ -172,7 +175,7 @@ export function SedeSelector({
           <CaretDown
             size={14}
             weight="bold"
-            className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            className={cn('shrink-0 transition-transform duration-200', open && 'rotate-180', anchoCompleto && 'ml-auto')}
           />
         </Button>
       )}
@@ -188,7 +191,7 @@ export function SedeSelector({
             transition={compacto && !sinMovimiento ? { duration: 0.34, ease: CURVA, delay: 0.3 } : { duration: 0.15, ease: 'easeOut' }}
             className={cn(
               'absolute right-0 top-full z-50 mt-3 rounded-sheet bg-superficie p-2 shadow-n2',
-              compacto ? 'w-60 max-w-[calc(100vw-2rem)]' : 'w-max min-w-[15rem] max-w-[calc(100vw-2rem)]',
+              compacto ? 'w-60 max-w-[calc(100vw-2rem)]' : anchoCompleto ? 'left-0 w-full' : 'w-max min-w-[15rem] max-w-[calc(100vw-2rem)]',
             )}
           >
             {sedes.map((s) => {

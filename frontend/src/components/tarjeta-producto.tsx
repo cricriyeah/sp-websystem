@@ -124,7 +124,8 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
       )}
 
       <div className={cn('flex flex-1 flex-col gap-4', unica && 'lg:justify-center lg:gap-6 lg:p-12 xl:p-16')}>
-        <p className={cn('text-lg font-semibold leading-snug', unica && 'lg:text-4xl lg:leading-tight')}>{nombre}</p>
+        {/* La única de su fila (la pesca de La Paz) lleva el nombre con la fuente de los titulares. */}
+        <p className={cn(unica ? 'texto-paso lg:text-4xl lg:leading-tight' : 'text-lg font-semibold leading-snug')}>{nombre}</p>
 
         <ul className="flex flex-wrap gap-x-5 gap-y-2 texto-cuerpo">
           {datos.map(({ icono: Icono, texto }) => (

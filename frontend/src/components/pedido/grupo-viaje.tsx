@@ -121,15 +121,15 @@ export function GrupoViaje({
           </div>
         </Despliegue>
         <Despliegue abierto={marcada && Boolean(extra.cantidad_editable) && estado.personas > 1}>
-          <div className="flex min-h-14 items-center justify-between gap-3 border border-t-0 border-borde-control bg-cafe-bruma px-4 py-3 text-base text-foreground sm:min-h-0 sm:text-sm">
+          <div className="flex flex-col gap-3 border border-t-0 border-borde-control bg-cafe-bruma px-4 py-3 text-base text-foreground sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
             <span className="text-muted">{checkout.licenseQuantity.question}</span>
-            <span className="flex items-center gap-2">
+            <span className="flex shrink-0 items-center gap-2">
               <Button variante="libre" type="button" aria-label="-" disabled={cantidad <= 1 || bloqueado}
                 onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad - 1 })}
                 className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30">
                 <Minus size={16} />
               </Button>
-              <span>{checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(estado.personas))}</span>
+              <span className="min-w-16 whitespace-nowrap text-center tabular-nums">{checkout.cantidadDeLabel.replace('{cantidad}', String(cantidad)).replace('{total}', String(estado.personas))}</span>
               <Button variante="libre" type="button" aria-label="+" disabled={cantidad >= estado.personas || bloqueado}
                 onClick={() => actualizarExtra(extra.id, { id: extra.id, cantidad: cantidad + 1 })}
                 className="flex size-11 items-center justify-center rounded-full border border-borde-control text-foreground disabled:opacity-30">

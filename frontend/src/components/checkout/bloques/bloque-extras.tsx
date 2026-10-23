@@ -115,9 +115,9 @@ export function BloqueExtras({
             </div>
           )}
           {marcada && sp.cantidad_editable && people > 1 && (
-            <div className="flex min-h-14 items-center justify-between gap-3 border border-t-0 border-borde-control bg-cafe-bruma px-4 py-3 text-base text-foreground sm:min-h-0 sm:text-sm">
+            <div className="flex flex-col gap-3 border border-t-0 border-borde-control bg-cafe-bruma px-4 py-3 text-base text-foreground sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
               <span className="text-muted">{checkout.licenseQuantity.question}</span>
-              <span className="flex items-center gap-2">
+              <span className="flex shrink-0 items-center gap-2">
                 <Button
                   variante="libre"
                   type="button"
@@ -128,7 +128,7 @@ export function BloqueExtras({
                 >
                   <Minus size={16} />
                 </Button>
-                <span>{deLabel(cantidad, people)}</span>
+                <span className="min-w-16 whitespace-nowrap text-center tabular-nums">{deLabel(cantidad, people)}</span>
                 <Button
                   variante="libre"
                   type="button"

@@ -63,7 +63,7 @@ export function CarruselFotos({ fotos, sizes, prioridad = false, desfase = 0, cl
           sizes={sizes}
           loading={prioridad && i === 0 ? 'eager' : 'lazy'}
           className={cn(
-            'object-cover transition-[opacity,transform] duration-[900ms] ease-[var(--curva-estandar)] motion-reduce:transition-none',
+            'object-cover transition-[opacity,scale,transform] duration-[900ms] ease-[var(--curva-estandar)] motion-reduce:transition-none',
             i === indice ? 'opacity-100' : 'opacity-0',
             className,
           )}
