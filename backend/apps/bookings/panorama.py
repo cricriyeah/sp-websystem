@@ -122,8 +122,13 @@ class Panorama:
         return list(zip(self.ocupadas, self.a_flote))
 
 
-def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
-    """La cuadricula completa a partir de `desde`, en tres consultas, para una Empresa."""
+def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA, hoy=None):
+    """La cuadricula completa a partir de `desde`, en tres consultas, para una Empresa.
+
+    `hoy` solo sirve para contar los atrasados: sin el, `desde` hace de hoy (la cuadricula
+    de siempre arranca hoy). Con la cuadricula en una semana futura, atrasado sigue siendo
+    lo que paso antes de hoy, no lo que queda antes de la cuadricula.
+    """
     fechas = [desde + timedelta(days=i) for i in range(dias)]
     hasta = fechas[-1]
 
@@ -152,7 +157,7 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA):
     # Cobrados que ya pasaron y nadie asigno: la agenda los lista y los marca
     # ATRASADO, asi que el resumen tiene que contarlos tambien.
     atrasados = sin_lo_que_no_se_reparte(Reserva.objects.filter(
-        fecha__lt=desde, estado=Reserva.Estado.PAGADA, empresa=empresa,
+        fecha__lt=hoy or desde, estado=Reserva.Estado.PAGADA, empresa=empresa,
     )).count()
 
     renglones = [

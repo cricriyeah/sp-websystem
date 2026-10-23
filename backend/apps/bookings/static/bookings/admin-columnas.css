@@ -174,6 +174,23 @@
   color: inherit;
   text-decoration: underline;
 }
+/* "Desde / Hasta" de la Agenda de pangas: mismo recuadro que el selector de dia de Reservas. */
+.agenda-dia-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+.agenda-dia-boton {
+  padding: 0.15rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: #b7410e;
+  border: 1px solid #b7410e;
+  border-radius: 6px;
+  cursor: pointer;
+}
 .agenda-pestana-nota {
   font-size: 0.75rem;
 }

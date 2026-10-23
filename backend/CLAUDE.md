@@ -427,6 +427,17 @@ No aplica a traslados (los vehículos de transporte terrestre se asignan en la p
   en lugar de la ventana de la semana; roto o al reves se ignora) y `?cuando=atrasadas` (las
   `pagada` sin panga de fecha pasada; con `periodo`, solo las de ese rango). `PeriodoAgendaFilter`
   solo registra el parametro; el filtrado esta en `CuandoFilter`.
+- **Llegar a cualquier fecha.** `modo_de_la_agenda(request)` es la unica respuesta a "que mira la
+  tabla" (`semana` por defecto, `periodo`, `manana`, `atrasadas`, `recientes`, `busqueda`); la usan
+  el filtro y la barra de fechas. La barra (en el bloque `filters` de la plantilla, fuera del
+  formulario POST de la tabla) tiene flechas Anterior/Siguiente que saltan el largo del rango
+  mirado (7 dias desde la vista de siempre), "Esta semana" y un formulario "Desde / Hasta"
+  (`?desde=&hasta=`) que `changelist_view` convierte por redireccion en `?periodo=`.
+  **El buscador sin rango mira todas las fechas** (antes se intersectaba con la semana en curso y
+  no encontraba al cliente del mes siguiente); con un rango, o con `cuando=manana`, se queda dentro.
+  El panorama arranca en el primer dia del rango si es futuro (`inicio_del_panorama`; un rango
+  pasado o que cruza hoy lo deja en hoy) y `armar_panorama(..., hoy=)` cuenta como atrasado solo
+  lo anterior a hoy, no lo anterior al inicio de la cuadricula.
 - **Pantalla de asignar** (rama `feat/agenda-asignar`). Reservas es el registro de todo; la
   Agenda es solo para asignar panga:
   - Una linea de resumen arriba ("N atrasados · N sin panga · N sin capitan", o "Todo

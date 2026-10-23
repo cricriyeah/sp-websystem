@@ -65,7 +65,7 @@ from .models import (
     Vendedora,
     ViajeTransporte,
 )
-from .panorama import armar_panorama, sin_lo_que_no_se_reparte
+from .panorama import DIAS_DEL_PANORAMA, armar_panorama, sin_lo_que_no_se_reparte
 from .orden_lectura import reservas_de_orden
 from .traslados_reglas import bloqueo_cubre_viaje, bloqueo_toca_viaje
 
@@ -1744,6 +1744,33 @@ def periodo_pedido(request):
     return (desde, hasta) if desde <= hasta else None
 
 
+def busqueda_pedida(request):
+    """El texto de `?q=` (buscador de la Agenda), sin espacios sobrantes."""
+    return (request.GET.get('q') or '').strip()
+
+
+def modo_de_la_agenda(request):
+    """Que esta mirando la tabla: una sola respuesta para el filtro y para la pantalla.
+
+    `atrasadas`, `recientes` y `manana` son los modos de `?cuando=`. `semana` es la
+    ventana de siempre (hoy a hoy+7, mas los atrasados sin repartir), tambien cuando se
+    pide con `?cuando=semana`. `periodo` es un rango de `?periodo=`. `busqueda` es
+    escribir en el buscador sin haber elegido nada: se buscan todas las fechas, porque
+    una busqueda atada a la semana en curso nunca encontraba al cliente del mes que viene.
+
+    Con un rango elegido (o `cuando=manana`) la busqueda se queda dentro de el.
+    """
+    cuando = request.GET.get(CuandoFilter.parameter_name)
+    if cuando in ('atrasadas', 'recientes', 'manana', 'semana'):
+        return cuando
+    if not cuando:
+        if periodo_pedido(request):
+            return 'periodo'
+        if busqueda_pedida(request):
+            return 'busqueda'
+    return 'semana'
+
+
 class CuandoFilter(admin.SimpleListFilter):
     """Los modos de usar la agenda, que son rangos de fechas y nada mas.
 
@@ -1752,7 +1779,8 @@ class CuandoFilter(admin.SimpleListFilter):
     nadie repartio: el enlace del Calendario cuando dice "1 atrasada".
 
     Con `?periodo=` (ver `PeriodoAgendaFilter`) la tabla mira ese rango en lugar de la
-    ventana de la semana, que es lo que pide el Calendario.
+    ventana de la semana, que es lo que pide el Calendario y las flechas de la pantalla.
+    Con el buscador y sin rango, mira todas las fechas (ver `modo_de_la_agenda`).
     """
 
     title = 'cuando'
@@ -1769,12 +1797,13 @@ class CuandoFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         hoy = timezone.localdate()
         periodo = periodo_pedido(request)
+        modo = modo_de_la_agenda(request)
 
-        if self.value() == 'atrasadas':
+        if modo == 'atrasadas':
             atrasadas = queryset.filter(estado=Reserva.Estado.PAGADA, fecha__lt=hoy)
             return atrasadas.filter(fecha__range=periodo) if periodo else atrasadas
 
-        if self.value() == 'recientes':
+        if modo == 'recientes':
             # Lo ultimo que entro al sistema, **sin** la ventana de fechas: una
             # reserva que llego hoy para diciembre tiene que aparecer. Por eso es
             # una opcion de este filtro y no un filtro aparte, que se sumaria a la
@@ -1782,13 +1811,18 @@ class CuandoFilter(admin.SimpleListFilter):
             return queryset.filter(
                 creado_en__gte=timezone.now() - timedelta(hours=HORAS_RECIEN_LLEGADA))
 
-        if self.value() == 'manana':
+        if modo == 'manana':
             # Cerrar el dia se hace la tarde anterior: si la salida es a las 6am,
             # a esa hora ya nadie esta asignando pangas.
             return queryset.filter(fecha=hoy + timedelta(days=1))
 
-        if periodo and self.value() is None:
+        if modo == 'periodo':
             return queryset.filter(fecha__range=periodo)
+
+        if modo == 'busqueda':
+            # El buscador filtra despues, sobre esto: sin ventana, encuentra a un cliente
+            # de cualquier fecha (pasado, repartido o no, o de dentro de tres meses).
+            return queryset
 
         # Por defecto, repartir la semana. Los atrasados sin repartir entran a
         # proposito: un viaje cobrado que ya paso y nadie asigno es un error que
@@ -1798,6 +1832,87 @@ class CuandoFilter(admin.SimpleListFilter):
             models.Q(fecha__range=(hoy, hoy + timedelta(days=7)))
             | models.Q(fecha__lt=hoy, estado=Reserva.Estado.PAGADA)
         )
+
+
+def _fecha_corta(fecha, hoy):
+    """"2 nov", o "2 nov 2027" si no es de este año."""
+    return date_format(fecha, 'j M' if fecha.year == hoy.year else 'j M Y')
+
+
+def _rango_corto(desde, hasta, hoy):
+    if desde == hasta:
+        return _fecha_corta(desde, hoy)
+    return f'{_fecha_corta(desde, hoy)} – {_fecha_corta(hasta, hoy)}'
+
+
+def inicio_del_panorama(request, hoy):
+    """Donde arranca la cuadricula de pangas: en el primer dia del rango elegido.
+
+    La cuadricula es la que dice que panga queda libre ESE dia, asi que tiene que
+    acompanar a la tabla: mirando la semana 3, repartir con la cuadricula de hoy no
+    sirve. Un rango que ya paso (o que cruza hoy) no la lleva al pasado: cerrar un dia
+    o sacar una panga de un dia que ya paso se rechaza.
+    """
+    if modo_de_la_agenda(request) == 'periodo':
+        desde, hasta = periodo_pedido(request)
+        if hasta >= hoy:
+            return max(desde, hoy)
+    return hoy
+
+
+def navegacion_de_periodo(request, hoy):
+    """Lo que dibuja la barra de fechas de la Agenda: etiqueta, flechas y atajo.
+
+    Las flechas saltan de a la longitud del rango que se esta mirando (una semana, un
+    mes, un dia...); desde la vista de siempre, de a siete dias. Siempre llevan a
+    `?periodo=`, el mismo enlace que arma el Calendario, asi que no hay una forma de
+    mirar fechas aparte. Conservan la empresa (el operador mira una a la vez) y el
+    buscador cuando hay rango; sin rango la busqueda mira todas las fechas y saltar de
+    semana no cambiaria nada, por eso se suelta.
+    """
+    modo = modo_de_la_agenda(request)
+    periodo = periodo_pedido(request) if modo in ('periodo', 'atrasadas') else None
+    desde, hasta = periodo or (hoy, hoy + timedelta(days=6))
+    largo = (hasta - desde).days + 1
+
+    soltar = {'periodo', 'desde', 'hasta', 'p', 'cuando', 'o'}
+    if modo == 'busqueda':
+        soltar.add('q')
+    resto = request.GET.copy()
+    for clave in soltar:
+        resto.pop(clave, None)
+    if modo == 'atrasadas':
+        # Es el unico modo que se combina con un rango (las atrasadas de esa semana).
+        resto['cuando'] = 'atrasadas'
+
+    def enlace(a_partir_de, hasta_el):
+        consulta = {**resto.dict(), 'periodo': f'{a_partir_de.isoformat()}_{hasta_el.isoformat()}'}
+        return f'{request.path}?{urlencode(consulta)}'
+
+    etiquetas = {
+        'semana': 'Próximos 7 días',
+        'manana': 'Mañana',
+        'atrasadas': 'Atrasadas' + (f' · {_rango_corto(desde, hasta, hoy)}' if periodo else ''),
+        'recientes': 'Recién llegadas',
+        'busqueda': 'Todas las fechas',
+        'periodo': _rango_corto(desde, hasta, hoy),
+    }
+    volver = request.GET.copy()
+    for clave in soltar | {"q"}:
+        volver.pop(clave, None)
+
+    return {
+        'modo': modo,
+        'etiqueta': etiquetas[modo],
+        'desde': desde.isoformat() if periodo else '',
+        'hasta': hasta.isoformat() if periodo else '',
+        'anterior': enlace(desde - timedelta(days=largo), desde - timedelta(days=1)),
+        'siguiente': enlace(hasta + timedelta(days=1), hasta + timedelta(days=largo)),
+        'esta_semana': request.path + (f'?{volver.urlencode()}' if volver else ''),
+        'busqueda': busqueda_pedida(request),
+        # Para el formulario "Desde / Hasta": lo demas (empresa, buscador, atrasadas) viaja oculto.
+        'otros_parametros': [(clave, valor) for clave, valores in resto.lists() for valor in valores],
+    }
 
 
 class ContextoAsignacion:
@@ -2070,19 +2185,60 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesD
             return [EmpresaAgendaFilter, CuandoFilter, PeriodoAgendaFilter]
         return [CuandoFilter, PeriodoAgendaFilter]
 
+    @staticmethod
+    def _redireccion_del_formulario_de_fechas(request):
+        """El formulario "Desde / Hasta" manda `?desde=&hasta=`; se vuelve `?periodo=`.
+
+        Asi hay un solo enlace para mirar fechas (el del Calendario y las flechas) y la
+        URL que queda en el navegador se puede pegar tal cual. Solo `desde` es una
+        semana; solo `hasta`, la semana que termina ahi; un rango al reves se acomoda;
+        fechas rotas se ignoran y la agenda abre en la semana de siempre. Se suelta la
+        pagina (el rango nuevo empieza en la primera) y todo modo salvo `atrasadas`,
+        que es el unico que se combina con un rango.
+        """
+        def fecha(nombre):
+            try:
+                return date.fromisoformat(request.GET.get(nombre, ''))
+            except ValueError:
+                return None
+
+        desde, hasta = fecha('desde'), fecha('hasta')
+        if desde and not hasta:
+            hasta = desde + timedelta(days=6)
+        elif hasta and not desde:
+            desde = hasta - timedelta(days=6)
+        elif desde and hasta and desde > hasta:
+            desde, hasta = hasta, desde
+
+        consulta = request.GET.copy()
+        for clave in ('desde', 'hasta', 'periodo', 'p'):
+            consulta.pop(clave, None)
+        if consulta.get(CuandoFilter.parameter_name) != 'atrasadas':
+            consulta.pop(CuandoFilter.parameter_name, None)
+        if desde:
+            consulta['periodo'] = f'{desde.isoformat()}_{hasta.isoformat()}'
+        return HttpResponseRedirect(f'{request.path}?{consulta.urlencode()}' if consulta else request.path)
+
     def changelist_view(self, request, extra_context=None):
         """Mete el panorama de la semana en el contexto del listado.
 
-        Siempre los proximos 7 dias, **sin seguir el filtro de fechas**. En el
-        modo "Manana" quedaria una sola columna y en "Recien llegadas" no hay
-        ventana de fechas que dibujar; ademas es justo cerrando el dia de manana
-        cuando mas sirve ver la semana completa alrededor.
+        Arranca en el primer dia del rango que se esta mirando (`inicio_del_panorama`) y,
+        sin rango, hoy: asi la cuadricula acompana a la tabla al repartir una semana
+        futura. Siempre son 7 dias, **sin seguir el resto del filtro de fechas**: en el
+        modo "Manana" quedaria una sola columna y en "Recien llegadas" no hay ventana de
+        fechas que dibujar; ademas es justo cerrando el dia de manana cuando mas sirve ver
+        la semana completa alrededor.
 
         El operador de plataforma no pertenece a una empresa: elige cual mirar
         (`_contexto_operador`). Sin eso el panorama salia vacio y decia "Todo asignado".
         """
+        if request.method == 'GET' and ('desde' in request.GET or 'hasta' in request.GET):
+            return self._redireccion_del_formulario_de_fechas(request)
+
+        hoy = timezone.localdate()
+        inicio = inicio_del_panorama(request, hoy)
         if scope.es_operador_plataforma(request.user):
-            respuesta, contexto = self._contexto_operador(request)
+            respuesta, contexto = self._contexto_operador(request, inicio, hoy)
             if respuesta is not None:
                 return respuesta
         else:
@@ -2092,10 +2248,15 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesD
                 # Traslados, en vez de un panorama vacio.
                 contexto = {'panorama': None, 'agenda_estado': 'sin_pangas', 'agenda_empresa': empresa}
             else:
-                contexto = {'panorama': armar_panorama(timezone.localdate(), empresa)}
+                contexto = {'panorama': armar_panorama(inicio, empresa, hoy=hoy)}
         usuario = request.user
         contexto = {
             **contexto,
+            'agenda_periodo': navegacion_de_periodo(request, hoy),
+            'panorama_rango': (
+                _rango_corto(inicio, inicio + timedelta(days=DIAS_DEL_PANORAMA - 1), hoy)
+                if inicio != hoy else ''
+            ),
             'puede_cerrar_dia': usuario.has_perm('bookings.add_cupodiario')
             and usuario.has_perm('bookings.change_cupodiario'),
             'puede_sacar_panga': usuario.has_perm('fleet.add_embarcacionnodisponible'),
@@ -2104,7 +2265,7 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesD
         }
         return super().changelist_view(request, {**(extra_context or {}), **contexto})
 
-    def _contexto_operador(self, request):
+    def _contexto_operador(self, request, inicio, hoy):
         """`(redireccion, contexto)`: pestañas de empresa, la elegida y su panorama.
 
         La ultima empresa elegida se recuerda en la sesion y se vuelve a poner en la
@@ -2164,7 +2325,7 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesD
             'agenda_estado': estado,
             'agenda_empresa': elegida,
             'panorama': (
-                armar_panorama(timezone.localdate(), elegida) if estado == 'normal' else None
+                armar_panorama(inicio, elegida, hoy=hoy) if estado == 'normal' else None
             ),
         }
 
