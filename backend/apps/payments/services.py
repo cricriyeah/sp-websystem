@@ -9,6 +9,7 @@ quien llama (el webhook, por el slug de la URL; conciliar_pagos, iterando).
 """
 import logging
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import stripe
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -399,34 +400,115 @@ def _reserva_del_cargo(objeto, empresa):
     )
 
 
+MOTIVO_REEMBOLSO_DESDE_STRIPE = (
+    'Reembolso completo hecho desde el panel de Stripe. '
+    'La reserva se cancelo sola al registrarse la devolucion.'
+)
+
+# Estados en los que un reembolso total cancela la reserva: la salida todavia no
+# ocurre y la reserva esta ocupando cupo, panga y capitan. Una `completada` ya
+# viajo (se anota el dinero, no se reescribe la historia) y una `cancelada` ya
+# soltó todo.
+ESTADOS_QUE_SE_CANCELAN_AL_REEMBOLSAR = (Reserva.Estado.PAGADA, Reserva.Estado.ASIGNADA)
+
+
 @transaction.atomic
 def aplicar_reembolso(charge, empresa):
-    """Marca la reserva como reembolsada cuando el dinero se devuelve.
+    """Registra un reembolso hecho en Stripe (`charge.refunded`).
 
     Cubre los reembolsos hechos a mano desde el panel de Stripe: sin esto, los
-    jefes devuelven el dinero y la reserva sigue figurando como cobrada.
+    jefes devuelven el dinero y la reserva sigue figurando como cobrada, con su
+    cupo, su panga y su capitan ocupados.
+
+    - **Parcial** (se devolvio menos de lo cobrado): solo anota cuanto salio. La
+      reserva sigue en pie; ni se cancela ni se marca `reembolsada`.
+    - **Total**: la deja igual que la accion «Cancelar por mal clima» + reembolso
+      (cancelada, `reembolsada`, cupo y panga liberados).
+
+    `amount_refunded` del cargo es acumulado, asi que el evento es idempotente
+    por construccion: el que no sube lo ya anotado (un reintento de Stripe, o uno
+    atrasado que llega despues de otro mayor) no cambia nada. Un evento que si
+    sube el monto es un reembolso nuevo y actualiza `reembolsada_en`.
     """
     reserva = _reserva_del_cargo(charge, empresa)
     if reserva is None:
         logger.warning('Reembolso de %s sin reserva asociada', charge['id'])
         return None
 
+    if reserva.estado == Reserva.Estado.PENDIENTE_PAGO:
+        # El reembolso le gano la carrera a `payment_intent.succeeded`: todavia no
+        # hay cobro registrado y anotar la salida sin su entrada descuadraria
+        # finanzas. Queda en el log para que se concilie a mano.
+        logger.error(
+            'Reembolso del cargo %s llego antes que el pago de la reserva %s (sigue pendiente_pago); '
+            'no se registra.', charge['id'], reserva.pk,
+        )
+        return None
+
+    devuelto = _monto_devuelto(charge, reserva)
+    if devuelto <= (reserva.monto_reembolsado or Decimal('0.00')):
+        logger.info('Reembolso del cargo %s ya registrado en la reserva %s', charge['id'], reserva.pk)
+        return reserva
+
+    reserva.monto_reembolsado = devuelto
+    reserva.reembolsada_en = timezone.now()
+
+    if not _es_reembolso_total(charge, reserva, devuelto):
+        reserva.save(update_fields=['monto_reembolsado', 'reembolsada_en'])
+        logger.info(
+            'Reserva %s: reembolso parcial de %s por el cargo %s', reserva.pk, devuelto, charge['id'],
+        )
+        return reserva
+
     reserva.reembolsada = True
-    reserva.monto_reembolsado = _monto_devuelto(charge, reserva)
-    reserva.reembolsada_en = reserva.reembolsada_en or timezone.now()
-    reserva.save(update_fields=['reembolsada', 'monto_reembolsado', 'reembolsada_en'])
-    logger.info('Reserva %s marcada como reembolsada por el cargo %s', reserva.pk, charge['id'])
+    if reserva.estado in ESTADOS_QUE_SE_CANCELAN_AL_REEMBOLSAR:
+        reserva.estado = Reserva.Estado.CANCELADA
+        reserva.motivo_cancelacion = reserva.motivo_cancelacion or MOTIVO_REEMBOLSO_DESDE_STRIPE
+        reserva.cancelada_en = timezone.now()
+        reserva.apartado_hasta = None
+        reserva.apartado_demanda = None
+        # Guardado completo (no `update_fields`): es lo que libera las ocupaciones
+        # de hospedaje, los componentes del paquete y los viajes de transporte, y
+        # lo que hace que el aviso de asignacion ya no le toque a esta reserva.
+        # Sin `full_clean()`: el dinero ya salio de Stripe y ninguna validacion
+        # puede impedir que la reserva lo refleje.
+        reserva.save()
+    else:
+        reserva.save(update_fields=['monto_reembolsado', 'reembolsada_en', 'reembolsada'])
+    logger.info('Reserva %s: reembolso total por el cargo %s (%s)', reserva.pk, charge['id'], reserva.estado)
     return reserva
+
+
+def _campo_del_cargo(charge, nombre):
+    """Un dato del `Charge`, o None. Llega como dict o como StripeObject segun
+    la entrada, y un StripeObject no siempre tiene `.get`."""
+    try:
+        return charge[nombre]
+    except (KeyError, TypeError, AttributeError):
+        return None
 
 
 def _monto_devuelto(charge, reserva):
     """Lo que Stripe reporta devuelto en ese cargo. `amount_refunded` es
     acumulado (cubre reembolsos parciales); si no viene, se asume que se
     devolvio todo lo cobrado."""
-    try:
-        return de_centavos(charge['amount_refunded'])
-    except (KeyError, TypeError):
-        return reserva.monto_pagado
+    devuelto = _campo_del_cargo(charge, 'amount_refunded')
+    if devuelto is None:
+        return reserva.monto_pagado or Decimal('0.00')
+    return de_centavos(devuelto)
+
+
+def _es_reembolso_total(charge, reserva, devuelto):
+    """True si ya se devolvio todo lo cobrado. Stripe pone `refunded=true` solo
+    cuando el cargo se devolvio completo; ademas se compara contra lo que esta
+    reserva cobro, que es lo que importa si el cargo trae otro monto."""
+    if _campo_del_cargo(charge, 'refunded') is True:
+        return True
+    cobrado = reserva.monto_pagado
+    if not cobrado:
+        centavos = _campo_del_cargo(charge, 'amount_captured') or _campo_del_cargo(charge, 'amount')
+        cobrado = de_centavos(centavos) if centavos else None
+    return bool(cobrado) and devuelto >= cobrado
 
 
 @transaction.atomic

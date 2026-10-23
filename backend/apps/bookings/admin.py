@@ -1335,18 +1335,27 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             )
         if obj.estado == Reserva.Estado.PENDIENTE_PAGO:
             return 'Sin pagar'
+        devuelto = obj.monto_reembolsado if (obj.monto_reembolsado or 0) > 0 else None
+        if obj.estado == Reserva.Estado.CANCELADA:
+            # Una cancelada ya no va a cobrarse: decir lo que "debe" (el 70% del anticipo,
+            # o un "descuadre" contra un precio que ya no aplica) mandaria a cobrar un viaje
+            # que no existe. Lo unico que cuenta es lo que se devolvio.
+            return f'Devuelto {monto(devuelto)} {obj.moneda}' if devuelto else 'Cancelada'
+        # Un reembolso parcial no cambia el saldo (por que se devolvio una parte no se sabe:
+        # un descuento, un lugar menos), pero tiene que verse en la fila.
+        nota = f' · devuelto {monto(devuelto)} {obj.moneda}' if devuelto else ''
         saldo = obj.saldo_pendiente
         if saldo is None:
             return '—'
         if saldo <= 0:
-            return 'Pagado'
+            return f'Pagado{nota}'
         if obj.forma_pago == Reserva.FormaPago.ANTICIPO:
-            texto = f'Debe {monto(saldo)} {obj.moneda} en efectivo'
+            texto = f'Debe {monto(saldo)} {obj.moneda} en efectivo{nota}'
             if obj.fecha <= timezone.localdate():
                 return format_html('<span class="reservas-cobro-urgente">{}</span>', texto)
             return texto
         return format_html('<span class="reservas-cobro-urgente">{}</span>',
-                           f'Descuadre de {monto(saldo)} {obj.moneda}')
+                           f'Descuadre de {monto(saldo)} {obj.moneda}{nota}')
 
     @staticmethod
     def _mi_perfil_de_vendedora(request):

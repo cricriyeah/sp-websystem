@@ -166,8 +166,15 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
 - La logica de aplicar un pago vive en `apps/payments/services.py`
   (`aplicar_pago_exitoso`), no en la vista: tiene dos entradas y las dos deben
   decidir igual.
-- El webhook tambien escucha `charge.refunded` (un reembolso hecho a mano desde el
-  panel de Stripe marca `reembolsada`) y `charge.dispute.created` / `.closed` /
+- El webhook tambien escucha `charge.refunded` (`services.aplicar_reembolso`). Un reembolso
+  **total** hecho desde el panel de Stripe deja la reserva como «Cancelar por mal clima» +
+  reembolso (estado `cancelada`, `reembolsada`, cupo/panga/capitan/habitacion liberados, sin
+  correo de asignacion; `cancelada_por` queda vacio y el motivo dice que vino de Stripe). Uno
+  **parcial** solo anota `monto_reembolsado`: no cancela ni marca `reembolsada`, y la columna
+  Cobro lo muestra («· devuelto X»). `amount_refunded` es acumulado: un evento que no sube lo ya
+  anotado (repetido o atrasado) no cambia nada; uno que lo sube actualiza `reembolsada_en`. Una
+  `completada` reembolsada por completo conserva su estado; un reembolso que llega antes que
+  el pago (reserva aun `pendiente_pago`) se ignora y queda en el log. Tambien escucha `charge.dispute.created` / `.closed` /
   `.funds_reinstated` (levantan y bajan `en_disputa`). Una disputa **no** cambia el
   estado de la reserva: que hacer con un viaje en contracargo lo decide una persona.
 - **Efectivo**: `monto_efectivo` guarda lo que se recibio el dia del viaje — el 70%
