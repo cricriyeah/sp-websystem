@@ -154,6 +154,14 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   cupo lleva `code='sin_cupo'`**; con mensaje en forma de diccionario el codigo va en el error
   interior (`ValidationError({'fecha': ValidationError(msg, code='sin_cupo')})`) porque Django
   ignora `code=` cuando el mensaje es un diccionario.
+- **Codigos promocionales**: pertenecen a UNA empresa (`(codigo, empresa)` es unico; el mismo texto
+  puede existir en otra) y solo aplican en el checkout de esa empresa. No aplican a un paquete
+  cruza-empresa (`Orden`): ni el backend ni el checkout los leen ahi. La respuesta publica es
+  generica a proposito; el motivo (`motivo_codigo_no_aplica`: desactivado, aun no empieza, vencido,
+  bajo el minimo, agotado, agotado por cliente) es la unica regla de validez y la ve el admin en la
+  columna «Hoy» de la lista de codigos (con la empresa, para el operador). Los limites se dejan
+  **vacios** para no tener limite: un `0` en usos maximos se leia como «cero usos» (codigo agotado
+  desde el inicio) y `CodigoPromocional.clean()` ya lo rechaza.
 - El webhook es la unica fuente de verdad: nada se marca pagado desde el navegador.
   Corre en `transaction.atomic` con `select_for_update` para que dos entregas
   simultaneas del mismo evento no dupliquen nada.

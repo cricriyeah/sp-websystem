@@ -62,13 +62,48 @@ class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, Model
     fuente que ya cuenta contra `usos_maximos`."""
 
     list_display = [
-        'codigo', 'porcentaje_descuento', 'activo', 'usos_maximos',
+        'codigo', 'porcentaje_descuento', 'activo', 'aplica_hoy', 'usos_maximos',
         'usos_maximos_por_cliente', 'fecha_inicio', 'fecha_fin',
     ]
     list_filter = ['activo']
     list_editable = ['porcentaje_descuento', 'activo']
     search_fields = ['codigo', 'descripcion']
     readonly_fields = ['creado_por', 'creado_en', 'actualizado_en']
+
+    # Lo que el cliente nunca ve (la respuesta publica es generica a proposito) lo ve quien
+    # administra los codigos: por que un codigo no aplica.
+    MOTIVOS = {
+        'desactivado': 'Desactivado',
+        'aun_no_empieza': 'Aún no empieza',
+        'vencido': 'Venció',
+        'agotado': 'Agotado',
+    }
+
+    def get_list_display(self, request):
+        columnas = list(super().get_list_display(request))
+        if scope.es_operador_plataforma(request.user):
+            # Un codigo es de UNA empresa: el operador ve todas y tiene que ver de cual es cada uno.
+            columnas.insert(1, 'empresa')
+        return columnas
+
+    def get_list_filter(self, request):
+        filtros = list(super().get_list_filter(request))
+        if scope.es_operador_plataforma(request.user):
+            filtros.insert(0, 'empresa')
+        return filtros
+
+    @admin.display(description='Hoy')
+    def aplica_hoy(self, obj):
+        """«Aplica», o el motivo. No incluye el limite por cliente ni el minimo: dependen de quien compra."""
+        # Import aqui: bookings importa fleet, no al reves.
+        from apps.bookings.models import motivo_codigo_no_aplica
+
+        motivo = motivo_codigo_no_aplica(obj, '')
+        if motivo is None:
+            return format_html('<span style="color:#15803d;font-weight:600">{}</span>', 'Aplica')
+        return format_html(
+            '<span style="color:#dc2626;font-weight:600">{}</span>', self.MOTIVOS.get(motivo, motivo),
+        )
 
     def save_model(self, request, obj, form, change):
         if not change:

@@ -146,8 +146,16 @@ class CodigoPromocional(models.Model):
         super().save(*args, **kwargs)
 
     def clean(self):
+        errores = {}
         if self.fecha_inicio and self.fecha_fin and self.fecha_inicio >= self.fecha_fin:
-            raise ValidationError({'fecha_fin': 'Debe ser posterior a la fecha de inicio.'})
+            errores['fecha_fin'] = 'Debe ser posterior a la fecha de inicio.'
+        # Un 0 se lee como «cero usos»: el codigo nacia agotado y el checkout solo decia «no es
+        # valido». Para no poner limite el campo se deja vacio; sin esto era facil poner un 0.
+        for campo in ('usos_maximos', 'usos_maximos_por_cliente'):
+            if getattr(self, campo) == 0:
+                errores[campo] = 'Un 0 deja el código agotado desde el principio. Déjalo vacío para no poner límite, o pon 1 o más.'
+        if errores:
+            raise ValidationError(errores)
 
     def monto_minimo_en(self, moneda, tipo_cambio=None):
         return convertir(self.monto_minimo, moneda, tipo_cambio)

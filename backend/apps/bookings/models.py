@@ -289,7 +289,23 @@ def codigo_promocional_valido(
 
     Deliberadamente no dice POR QUE no aplica (inactivo, vencido, agotado, ya
     usado por este cliente, no alcanza el minimo): distinguirlo le daria
-    pistas a quien prueba codigos al azar sobre cual de esos motivos fue.
+    pistas a quien prueba codigos al azar sobre cual de esos motivos fue. El
+    motivo existe en `motivo_codigo_no_aplica`, que solo ve el admin."""
+    return motivo_codigo_no_aplica(
+        promo, correo_cliente, monto_viaje=monto_viaje, moneda=moneda,
+        excluir_pk=excluir_pk, tipo_cambio=tipo_cambio,
+    ) is None
+
+
+def motivo_codigo_no_aplica(
+    promo, correo_cliente, monto_viaje=None, moneda=None, excluir_pk=None, tipo_cambio=None,
+):
+    """None si el codigo aplica; si no, el nombre del motivo: `desactivado`,
+    `aun_no_empieza`, `vencido`, `bajo_el_minimo`, `agotado` o `agotado_por_cliente`.
+
+    Es la unica regla de validez: `codigo_promocional_valido` (checkout, webhook) solo
+    pregunta si hay motivo, y la lista de codigos del admin lo muestra para que quien
+    creo un codigo sepa por que no aplica, que al cliente no se le dice.
 
     Sin lock: quien necesita el lock antes de contar (la confirmacion del
     pago) lo toma antes de llamar aqui, igual que `evaluar_cupo` vs
@@ -301,32 +317,32 @@ def codigo_promocional_valido(
     puede desincronizar de la reserva real, contar la reserva no.
     """
     if not promo.activo:
-        return False
+        return 'desactivado'
 
     ahora = timezone.now()
     if promo.fecha_inicio and ahora < promo.fecha_inicio:
-        return False
+        return 'aun_no_empieza'
     if promo.fecha_fin and ahora > promo.fecha_fin:
-        return False
+        return 'vencido'
 
     if monto_viaje is not None:
         minimo = promo.monto_minimo_en(moneda or 'MXN', tipo_cambio)
         if minimo is not None and monto_viaje < minimo:
-            return False
+            return 'bajo_el_minimo'
 
     usados = Reserva.objects.filter(codigo_promocional=promo, estado__in=ESTADOS_QUE_OCUPAN_CUPO)
     if excluir_pk is not None:
         usados = usados.exclude(pk=excluir_pk)
 
     if promo.usos_maximos is not None and usados.count() >= promo.usos_maximos:
-        return False
+        return 'agotado'
 
     if promo.usos_maximos_por_cliente is not None and correo_cliente:
         usados_de_este_cliente = usados.filter(correo_cliente__iexact=correo_cliente.strip())
         if usados_de_este_cliente.count() >= promo.usos_maximos_por_cliente:
-            return False
+            return 'agotado_por_cliente'
 
-    return True
+    return None
 
 
 def evaluar_codigo_promocional(codigo_str, correo_cliente, empresa):
