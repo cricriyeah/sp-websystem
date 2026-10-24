@@ -13,7 +13,7 @@ Envuelto en try/except DatabaseError: en el deploy que instala esta pieza, el
 check corre durante `collectstatic`/`migrate` antes de que la tabla
 `tenancy_empresa` exista.
 """
-from django.core.checks import Error, register
+from django.core.checks import Error, Warning, register
 from django.db.utils import DatabaseError
 
 # (atributo de Empresa, prefijo que le pone Stripe, codigo, como se llama en el dashboard).
@@ -63,3 +63,56 @@ def revisar_llaves_de_stripe(app_configs, **kwargs):
                 ))
 
     return errores
+
+
+# Valor con el que el seed crea una Empresa nueva (`seed_catalogo_real`): pasa el prefijo
+# `sk_`/`whsec_`, pero no es una llave de verdad.
+MARCA_DE_RELLENO = 'CAMBIAME'
+
+
+@register()
+def revisar_llaves_de_relleno(app_configs, **kwargs):
+    """Avisa (sin tumbar el arranque) de las Empresas activas que siguen con llaves de
+    relleno y de mezclar llaves de prueba y de produccion entre empresas.
+
+    Es un `Warning` y no un `Error` a proposito: una Empresa apagada o aun sin Stripe es
+    un estado normal de un lanzamiento por etapas, y un `Error` impediria el despliegue.
+    Una Empresa con la llave de relleno responde 503 al cobrar y su webhook se rechaza:
+    el cliente no puede pagar. Como el chequeo anterior, **nunca imprime el valor**.
+    """
+    from apps.tenancy.models import Empresa
+
+    try:
+        empresas = list(Empresa.objects.filter(activo=True))
+    except DatabaseError:
+        return []
+
+    avisos = []
+    modos = {}
+    for empresa in empresas:
+        for atributo, _prefijo, _codigo, de_donde_sale in LLAVES_DE_STRIPE:
+            valor = getattr(empresa, atributo, '') or ''
+            if MARCA_DE_RELLENO in valor.upper():
+                avisos.append(Warning(
+                    f'Empresa "{empresa.slug}": {atributo} sigue con el valor de relleno del seed.',
+                    hint=(
+                        f'Pon {de_donde_sale} real en el admin (Empresas -> {empresa.slug}) '
+                        f'antes de venderle a un cliente. Ver docs/deploy/GO-LIVE.md.'
+                    ),
+                    id='payments.W001',
+                ))
+        secreta = empresa.stripe_secret_key or ''
+        if secreta.startswith('sk_') and MARCA_DE_RELLENO not in secreta.upper():
+            modos[empresa.slug] = 'prueba' if secreta.startswith(('sk_test_', 'rk_test_')) else 'produccion'
+
+    if len(set(modos.values())) > 1:
+        en_prueba = sorted(slug for slug, modo in modos.items() if modo == 'prueba')
+        en_produccion = sorted(slug for slug, modo in modos.items() if modo == 'produccion')
+        avisos.append(Warning(
+            'Hay Empresas activas con llaves de prueba y otras con llaves de produccion '
+            f'(prueba: {", ".join(en_prueba)}; produccion: {", ".join(en_produccion)}).',
+            hint='Un cobro de prueba en una empresa y real en otra suele ser un olvido al lanzar.',
+            id='payments.W002',
+        ))
+
+    return avisos
