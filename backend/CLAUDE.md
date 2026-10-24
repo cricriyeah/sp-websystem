@@ -262,10 +262,24 @@ Muestra entradas (tarjeta / efectivo / transferencia), salidas (reembolsos), bal
 del año, historico por dia con navegacion de meses, y los tres saldos teoricos contra
 los que se cuadra: lo que deberia haber en la cuenta de Stripe, en caja y en el banco.
 
-**No hay tabla de movimientos.** Todo sale de `Reserva` agregando por fecha
-(`apps/finance/services.py`), porque cada peso ya deja su rastro en la reserva que lo
-genero y un libro paralelo solo puede acabar descuadrado con ella. Cuatro movimientos
-posibles por reserva, cada uno con monto y fecha propios:
+**Todo sale de `Reserva`, salvo que el dinero llegue en dos momentos.** Tarjeta y contracargo ocurren de
+una vez y se agregan por su columna y su fecha. Efectivo, transferencia y reembolsos pueden moverse en
+dos o mas momentos (una vendedora anota $500 el lunes y completa $700 el viernes; un segundo reembolso
+parcial), y la reserva solo guarda UN total y la fecha del primer registro: ese total caia entero en la
+primera fecha. Por eso esos tres conceptos tienen `bookings.MovimientoDinero`: una fila por cada
+cambio de monto, con SU fecha. Reglas:
+
+- `Reserva.save()` escribe las filas solo (`_registrar_movimientos_de_dinero`), comparando contra la
+  foto que `from_db` tomo al cargar la reserva. Cubre el formulario del admin, el cobro del saldo, el
+  webhook de reembolso y las acciones del admin; no hay que acordarse de llamarla.
+- Una correccion hacia abajo es una fila **negativa** con la fecha de la correccion: no reescribe el
+  pasado. El total de la reserva y la suma de sus filas coinciden.
+- Finanzas suma las filas de esos tres conceptos y, para las reservas que aun no tienen filas de un
+  concepto (anteriores a la tabla), sigue leyendo su columna y su fecha de primer registro. La primera
+  vez que cambia un monto de una reserva anterior se escribe su fila base con la fecha de siempre, mas
+  la del cambio. No hay migracion de datos.
+- Un primer registro **sin fecha** no cuenta (no tiene dia); el admin siempre la pone.
+- La tabla lleva RLS por empresa (`0065`). Quien movio el dinero va en `registrado_por`.
 
 | Movimiento | Monto | Fecha | Quien la sella |
 |---|---|---|---|

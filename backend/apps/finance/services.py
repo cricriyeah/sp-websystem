@@ -26,10 +26,10 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Exists, F, OuterRef, Sum
 from django.db.models.functions import TruncDate
 
-from apps.bookings.models import Reserva
+from apps.bookings.models import CONCEPTOS_DE_DINERO, MovimientoDinero, Reserva
 
 CERO = Decimal('0.00')
 
@@ -103,6 +103,19 @@ class Movimiento:
         return getattr(self, item)
 
     @property
+    def es_salida(self):
+        return self.concepto in ('reembolsos', 'contracargos')
+
+    @property
+    def monto_abs(self):
+        return abs(self.monto)
+
+    @property
+    def signo(self):
+        """«−» cuando el renglon resta del balance: una salida, o una correccion hacia abajo de una entrada."""
+        return '−' if (self.monto > 0) == self.es_salida else ''
+
+    @property
     def enlace_stripe(self):
         if self.concepto in ('tarjeta', 'reembolsos', 'contracargos'):
             from apps.bookings.admin import enlace_pago_stripe
@@ -135,6 +148,47 @@ def _sumar(qs, campo_monto, campo_fecha, desde=None, hasta=None, agrupar_por_dia
     return qs.values(*agrupacion).annotate(total=Sum(campo_monto))
 
 
+# Estos tres conceptos se fechan con `MovimientoDinero` (una fila por cada vez que el monto cambio); las
+# reservas que todavia no tienen filas de un concepto se leen de sus columnas, como siempre.
+CONCEPTOS_CON_FILAS = {concepto for concepto, *_ in CONCEPTOS_DE_DINERO}
+
+
+def _filas_de_movimiento(empresa):
+    qs = MovimientoDinero.objects.all()
+    return qs.filter(empresa=empresa) if empresa is not None else qs
+
+
+def _sumar_movimiento(atributo, campo_monto, campo_fecha, empresa, desde=None, hasta=None, agrupar_por_dia=False):
+    """Suma un movimiento por moneda (y por dia): las filas de `MovimientoDinero` mas las reservas
+    sin filas de ese concepto, que siguen contando por su columna y su fecha de primer registro."""
+    if atributo not in CONCEPTOS_CON_FILAS:
+        return list(_sumar(_reservas(empresa), campo_monto, campo_fecha, desde, hasta, agrupar_por_dia))
+
+    filas = _filas_de_movimiento(empresa).filter(concepto=atributo)
+    if desde:
+        filas = filas.filter(fecha__date__gte=desde)
+    if hasta:
+        filas = filas.filter(fecha__date__lte=hasta)
+    agrupacion = {'moneda': F('reserva__moneda')}
+    if agrupar_por_dia:
+        agrupacion['dia'] = TruncDate('fecha')
+    delcampo = filas.values(**agrupacion).annotate(total=Sum('monto'))
+
+    sin_filas = _reservas(empresa).exclude(
+        Exists(MovimientoDinero.objects.filter(reserva=OuterRef('pk'), concepto=atributo))
+    )
+    legado = _sumar(sin_filas, campo_monto, campo_fecha, desde, hasta, agrupar_por_dia)
+
+    combinado = {}
+    for fila in [*delcampo, *legado]:
+        clave = (fila.get('dia'), fila['moneda'])
+        if clave in combinado:
+            combinado[clave]['total'] = (combinado[clave]['total'] or CERO) + (fila['total'] or CERO)
+        else:
+            combinado[clave] = dict(fila)
+    return list(combinado.values())
+
+
 def balances(desde=None, hasta=None, empresa=None):
     """Balance por moneda del periodo. Sin fechas, todo el historico. Sin
     `empresa`, todas las Empresas juntas (uso: operador de plataforma).
@@ -144,7 +198,7 @@ def balances(desde=None, hasta=None, empresa=None):
     """
     resultado = {}
     for atributo, campo_monto, campo_fecha in MOVIMIENTOS:
-        for fila in _sumar(_reservas(empresa), campo_monto, campo_fecha, desde, hasta):
+        for fila in _sumar_movimiento(atributo, campo_monto, campo_fecha, empresa, desde, hasta):
             balance = resultado.setdefault(fila['moneda'], Balance(moneda=fila['moneda']))
             setattr(balance, atributo, fila['total'] or CERO)
     return dict(sorted(resultado.items()))
@@ -158,8 +212,8 @@ def balances_por_dia(desde, hasta, empresa=None):
     """
     resultado = {}
     for atributo, campo_monto, campo_fecha in MOVIMIENTOS:
-        filas = _sumar(
-            _reservas(empresa), campo_monto, campo_fecha, desde, hasta, agrupar_por_dia=True
+        filas = _sumar_movimiento(
+            atributo, campo_monto, campo_fecha, empresa, desde, hasta, agrupar_por_dia=True
         )
         for fila in filas:
             del_dia = resultado.setdefault(fila['dia'], {})
@@ -211,6 +265,21 @@ def movimientos(desde=None, hasta=None, concepto='todos', moneda=None, empresa=N
         if atributo not in conceptos_pedidos:
             continue
         qs = base_qs.filter(**{f'{campo_monto}__isnull': False, f'{campo_fecha}__isnull': False})
+        if atributo in CONCEPTOS_CON_FILAS:
+            # Con filas: una por cada vez que el monto cambio, con su fecha. Sin filas: la columna.
+            del_libro = _filas_de_movimiento(empresa).filter(concepto=atributo).select_related('reserva__empresa')
+            if moneda:
+                del_libro = del_libro.filter(reserva__moneda=moneda)
+            if desde:
+                del_libro = del_libro.filter(fecha__date__gte=desde)
+            if hasta:
+                del_libro = del_libro.filter(fecha__date__lte=hasta)
+            for fila in del_libro:
+                filas.append(Movimiento(
+                    fecha=fila.fecha, reserva=fila.reserva, concepto=atributo,
+                    monto=fila.monto, moneda=fila.reserva.moneda,
+                ))
+            qs = qs.exclude(Exists(MovimientoDinero.objects.filter(reserva=OuterRef('pk'), concepto=atributo)))
         if desde:
             qs = qs.filter(**{f'{campo_fecha}__date__gte': desde})
         if hasta:

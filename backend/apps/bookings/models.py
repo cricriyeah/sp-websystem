@@ -772,9 +772,60 @@ class Reserva(models.Model):
             instance._vendedora_original = instance.vendedora_id
         if 'estado' in field_names:
             instance._estado_original = instance.estado
+        if all(campo in field_names for _, campo, fecha, _por in CONCEPTOS_DE_DINERO for campo in (campo, fecha)):
+            instance._dinero_original = instance._foto_de_dinero()
         if CAMPOS_QUE_DECIDEN_EL_CUPO <= set(field_names):
             instance._cupo_original = instance._firma_de_cupo()
         return instance
+
+    def _foto_de_dinero(self):
+        """{concepto: (monto, fecha del primer registro)} tal como esta ahora en el objeto."""
+        return {
+            concepto: (getattr(self, campo) or Decimal('0.00'), getattr(self, fecha))
+            for concepto, campo, fecha, _por in CONCEPTOS_DE_DINERO
+        }
+
+    def _registrar_movimientos_de_dinero(self, update_fields):
+        """Escribe en `MovimientoDinero` lo que cambio de efectivo, transferencia y reembolsos.
+
+        Compara contra la foto que se tomo al cargar la reserva (`from_db`); una reserva nueva parte de
+        cero. Va en `save()` y no en el admin porque el dinero lo mueven varias entradas (formulario,
+        cobro del saldo, webhook de reembolso, acciones del admin) y todas deben dejar la misma huella.
+        """
+        antes = getattr(self, '_dinero_original', None) or {}
+        usuario = getattr(self, '_usuario_dinero', None)
+        for concepto, campo, fecha_campo, por_campo in CONCEPTOS_DE_DINERO:
+            if update_fields is not None and campo not in update_fields:
+                continue
+            monto_antes, fecha_antes = antes.get(concepto, (Decimal('0.00'), None))
+            delta = (getattr(self, campo) or Decimal('0.00')) - monto_antes
+            if not delta:
+                continue
+            quien = usuario or (getattr(self, por_campo) if por_campo else None)
+            ahora = timezone.now()
+            filas = []
+            if not self.movimientos_dinero.filter(concepto=concepto).exists():
+                if monto_antes:
+                    # Dinero registrado antes de que existiera la tabla: su fila base lleva la fecha
+                    # con la que ya contaba Finanzas. Sin esa fecha no tenia dia y no se inventa uno.
+                    if fecha_antes is not None:
+                        filas.append((monto_antes, fecha_antes))
+                    filas.append((delta, ahora))
+                elif getattr(self, fecha_campo) is not None:
+                    # Primer registro: lleva su fecha. Sin fecha no tiene dia y Finanzas no lo cuenta.
+                    filas.append((delta, getattr(self, fecha_campo)))
+            else:
+                filas.append((delta, ahora))
+            if not filas:
+                continue
+            MovimientoDinero.objects.bulk_create([
+                MovimientoDinero(
+                    empresa_id=self.empresa_id, reserva=self, concepto=concepto, monto=monto,
+                    fecha=fecha, registrado_por=quien,
+                )
+                for monto, fecha in filas
+            ])
+        self._dinero_original = self._foto_de_dinero()
 
     def _firma_de_cupo(self):
         """Lo que la reserva le pide al cupo. Si no cambia entre cargarla y guardarla, el cupo que
@@ -855,6 +906,7 @@ class Reserva(models.Model):
             sincronizar_salidas(self)
             sincronizar_viajes_seguro(self)
             self._sincronizar_habitaciones_si_cambio()
+        self._registrar_movimientos_de_dinero(update_fields)
         self._vendedora_original = self.vendedora_id
         if self.pk and estado_previo is not None:
             era_ocupante = estado_previo in ESTADOS_QUE_OCUPAN_CUPO
@@ -1221,6 +1273,52 @@ class ReservaOcupacion(models.Model):
                     f'El recurso {nombre} ya está ocupado en el rango '
                     f'[{ocupacion.fecha_inicio} a {ocupacion.fecha_fin}) por la reserva #{ocupacion.reserva_id}.'
                 )
+
+
+# (concepto, campo del monto, campo de la fecha del primer registro, campo de quien lo registro) de los
+# tres movimientos de dinero que se pueden registrar en dos o mas momentos. Tarjeta y contracargo
+# ocurren de una sola vez (los sella el webhook) y siguen en sus columnas.
+CONCEPTOS_DE_DINERO = (
+    ('efectivo', 'monto_efectivo', 'efectivo_cobrado_en', 'efectivo_cobrado_por'),
+    ('transferencia', 'monto_transferencia', 'transferencia_registrada_en', 'transferencia_registrada_por'),
+    ('reembolsos', 'monto_reembolsado', 'reembolsada_en', None),
+)
+
+
+class MovimientoDinero(models.Model):
+    """Una entrada o salida de dinero de una reserva, con su monto y SU fecha.
+
+    La reserva guarda el total (`monto_efectivo`, `monto_transferencia`, `monto_reembolsado`) y la
+    fecha del primer registro; si el dinero llega en dos momentos, ese total cae entero en la primera
+    fecha. Finanzas fecha cada peso con estas filas. `Reserva.save()` las escribe sola al detectar un
+    cambio de monto: una correccion hacia abajo es una fila negativa con la fecha de la correccion,
+    no reescribe el pasado. Las reservas anteriores a la tabla se leen de sus columnas y reciben su
+    fila base la primera vez que cambia un monto.
+    """
+
+    class Concepto(models.TextChoices):
+        EFECTIVO = 'efectivo', 'Efectivo'
+        TRANSFERENCIA = 'transferencia', 'Transferencia'
+        REEMBOLSOS = 'reembolsos', 'Reembolsos'
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='movimientos_dinero')
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='movimientos_dinero')
+    concepto = models.CharField(max_length=20, choices=Concepto.choices)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha = models.DateTimeField()
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha', '-pk']
+        verbose_name = 'movimiento de dinero'
+        verbose_name_plural = 'movimientos de dinero'
+        indexes = [models.Index(fields=['concepto', 'fecha'], name='movdinero_concepto_fecha')]
+
+    def __str__(self):
+        return f'{self.get_concepto_display()} {self.monto} · reserva #{self.reserva_id}'
 
 
 class ReservaSalida(models.Model):

@@ -833,6 +833,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return tuple(dict.fromkeys(campos))
 
     def save_model(self, request, obj, form, change):
+        # Quien mueve el dinero queda en cada fila de `MovimientoDinero` que escriba Reserva.save().
+        obj._usuario_dinero = request.user
         # Efectivo: Finanzas descarta todo movimiento sin fecha, asi que un monto
         # escrito aqui sin sello no existia para el panel. Se sella UNA vez (la
         # fecha del primer registro, que tambien pudo dejar «Registrar liquidacion en
