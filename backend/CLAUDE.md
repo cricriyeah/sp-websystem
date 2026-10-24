@@ -272,6 +272,10 @@ cambio de monto, con SU fecha. Reglas:
 - `Reserva.save()` escribe las filas solo (`_registrar_movimientos_de_dinero`), comparando contra la
   foto que `from_db` tomo al cargar la reserva. Cubre el formulario del admin, el cobro del saldo, el
   webhook de reembolso y las acciones del admin; no hay que acordarse de llamarla.
+- Con filas ya escritas, la diferencia es el monto actual menos la SUMA de sus filas (no una foto del
+  objeto): `refresh_from_db`, dos personas editando o un campo fuera de `update_fields` no duplican ni
+  pierden filas. Un monto sin fecha de primer registro queda en una fila de `fecha` nula (no cuenta, pero
+  la suma sigue igual a la columna) y se fecha cuando llega el sello.
 - Una correccion hacia abajo es una fila **negativa** con la fecha de la correccion: no reescribe el
   pasado. El total de la reserva y la suma de sus filas coinciden.
 - Finanzas suma las filas de esos tres conceptos y, para las reservas que aun no tienen filas de un

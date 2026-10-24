@@ -788,43 +788,58 @@ class Reserva(models.Model):
     def _registrar_movimientos_de_dinero(self, update_fields):
         """Escribe en `MovimientoDinero` lo que cambio de efectivo, transferencia y reembolsos.
 
-        Compara contra la foto que se tomo al cargar la reserva (`from_db`); una reserva nueva parte de
-        cero. Va en `save()` y no en el admin porque el dinero lo mueven varias entradas (formulario,
-        cobro del saldo, webhook de reembolso, acciones del admin) y todas deben dejar la misma huella.
+        Si la reserva ya tiene filas de un concepto, la diferencia es el monto actual menos la SUMA de
+        sus filas: asi el libro sigue a la columna aunque el objeto traiga una foto vieja
+        (`refresh_from_db`, dos personas editando, un campo fuera de `update_fields`) y nunca duplica
+        una fila. Si todavia no tiene (reserva anterior al libro o dinero nuevo), compara contra la foto
+        que tomo `from_db` y, en las anteriores, escribe primero su fila base con la fecha de siempre.
+        Un monto sin fecha de primer registro queda en una fila SIN fecha: no cuenta en Finanzas (como
+        antes) pero mantiene la suma igual a la columna, y se fecha cuando llega el sello.
+
+        Va en `save()` y no en el admin porque el dinero lo mueven varias entradas (formulario, cobro
+        del saldo, webhook de reembolso, acciones del admin) y todas deben dejar la misma huella.
         """
         antes = getattr(self, '_dinero_original', None) or {}
+        conceptos = [c for c in CONCEPTOS_DE_DINERO if update_fields is None or c[1] in update_fields]
+        cero = Decimal('0.00')
+        actuales = {c[0]: (getattr(self, c[1]) or cero) for c in conceptos}
+        if not any(actuales.values()) and not any(antes.get(c[0], (cero, None))[0] for c in conceptos):
+            self._dinero_original = self._foto_de_dinero()
+            return
+
+        registrado = {
+            fila['concepto']: fila for fila in self.movimientos_dinero.values('concepto').annotate(
+                total=models.Sum('monto'), sin_fecha=models.Count('pk', filter=models.Q(fecha__isnull=True)),
+            )
+        }
         usuario = getattr(self, '_usuario_dinero', None)
-        for concepto, campo, fecha_campo, por_campo in CONCEPTOS_DE_DINERO:
-            if update_fields is not None and campo not in update_fields:
-                continue
-            monto_antes, fecha_antes = antes.get(concepto, (Decimal('0.00'), None))
-            delta = (getattr(self, campo) or Decimal('0.00')) - monto_antes
-            if not delta:
-                continue
+        ahora = timezone.now()
+        for concepto, campo, fecha_campo, por_campo in conceptos:
+            actual = actuales[concepto]
+            sello = getattr(self, fecha_campo)
             quien = usuario or (getattr(self, por_campo) if por_campo else None)
-            ahora = timezone.now()
-            filas = []
-            if not self.movimientos_dinero.filter(concepto=concepto).exists():
-                if monto_antes:
-                    # Dinero registrado antes de que existiera la tabla: su fila base lleva la fecha
-                    # con la que ya contaba Finanzas. Sin esa fecha no tenia dia y no se inventa uno.
-                    if fecha_antes is not None:
-                        filas.append((monto_antes, fecha_antes))
-                    filas.append((delta, ahora))
-                elif getattr(self, fecha_campo) is not None:
-                    # Primer registro: lleva su fecha. Sin fecha no tiene dia y Finanzas no lo cuenta.
-                    filas.append((delta, getattr(self, fecha_campo)))
+            if concepto in registrado:
+                delta = actual - (registrado[concepto]['total'] or cero)
+                filas = [(delta, ahora)] if delta else []
+                if sello is not None and registrado[concepto]['sin_fecha']:
+                    self.movimientos_dinero.filter(concepto=concepto, fecha__isnull=True).update(fecha=sello)
             else:
-                filas.append((delta, ahora))
-            if not filas:
-                continue
-            MovimientoDinero.objects.bulk_create([
-                MovimientoDinero(
-                    empresa_id=self.empresa_id, reserva=self, concepto=concepto, monto=monto,
-                    fecha=fecha, registrado_por=quien,
-                )
-                for monto, fecha in filas
-            ])
+                monto_antes, fecha_antes = antes.get(concepto, (cero, None))
+                delta = actual - monto_antes
+                if not delta:
+                    continue
+                if monto_antes:
+                    filas = [(monto_antes, fecha_antes), (delta, ahora)]
+                else:
+                    filas = [(delta, sello)]
+            if filas:
+                MovimientoDinero.objects.bulk_create([
+                    MovimientoDinero(
+                        empresa_id=self.empresa_id, reserva=self, concepto=concepto, monto=monto,
+                        fecha=fecha, registrado_por=quien,
+                    )
+                    for monto, fecha in filas
+                ])
         self._dinero_original = self._foto_de_dinero()
 
     def _firma_de_cupo(self):
@@ -898,15 +913,18 @@ class Reserva(models.Model):
             update_fields = kwargs.get('update_fields')
             if update_fields is not None and 'vendedora' in update_fields:
                 kwargs['update_fields'] = [*update_fields, 'vendedora_asignada_en']
-        super().save(*args, **kwargs)
-        if update_fields is None:
-            from apps.bookings.cupo.salidas import sincronizar_salidas
-            from apps.bookings.traslados import sincronizar_viajes_seguro
+        # Todo o nada: si mover las habitaciones falla (ya no hay lugar en las fechas nuevas) la reserva
+        # no se queda con la fecha nueva y la ocupacion vieja.
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if update_fields is None:
+                from apps.bookings.cupo.salidas import sincronizar_salidas
+                from apps.bookings.traslados import sincronizar_viajes_seguro
 
-            sincronizar_salidas(self)
-            sincronizar_viajes_seguro(self)
-            self._sincronizar_habitaciones_si_cambio()
-        self._registrar_movimientos_de_dinero(update_fields)
+                sincronizar_salidas(self)
+                sincronizar_viajes_seguro(self)
+                self._sincronizar_habitaciones_si_cambio()
+            self._registrar_movimientos_de_dinero(update_fields)
         self._vendedora_original = self.vendedora_id
         if self.pk and estado_previo is not None:
             era_ocupante = estado_previo in ESTADOS_QUE_OCUPAN_CUPO
@@ -1305,7 +1323,9 @@ class MovimientoDinero(models.Model):
     reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='movimientos_dinero')
     concepto = models.CharField(max_length=20, choices=Concepto.choices)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha = models.DateTimeField()
+    # Nula: dinero anotado sin fecha de primer registro. Mantiene la suma igual a la columna de la
+    # reserva, pero Finanzas no lo cuenta hasta que tenga dia.
+    fecha = models.DateTimeField(null=True, blank=True)
     registrado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
     )

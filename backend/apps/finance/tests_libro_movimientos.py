@@ -139,3 +139,74 @@ class LibroDeMovimientosTests(EmpresaTestCase):
         fila = MovimientoDinero.objects.get(reserva=reserva)
         self.assertEqual(fila.empresa_id, self.empresa.pk)
         self.assertEqual(fila.fecha, LUNES)
+
+
+class LibroRobustoTests(EmpresaTestCase):
+    """Fotos viejas, dos objetos a la vez y campos fuera de `update_fields` no desfasan el libro."""
+
+    def suma(self, reserva, concepto='efectivo'):
+        from django.db.models import Sum
+
+        return MovimientoDinero.objects.filter(reserva=reserva, concepto=concepto).aggregate(t=Sum('monto'))['t']
+
+    def test_objeto_recargado_despues_de_que_otro_cambio_el_monto_no_duplica(self):
+        reserva = crear_reserva(self.empresa, monto_efectivo=Decimal('500.00'), efectivo_cobrado_en=LUNES)
+        uno, dos = recargar(reserva), recargar(reserva)
+
+        dos.monto_efectivo = Decimal('1200.00')
+        with en(VIERNES):
+            dos.save()
+        uno.refresh_from_db()
+        uno.nombre_cliente = 'Otro nombre'
+        with en(VIERNES):
+            uno.save()
+
+        self.assertEqual(recargar(reserva).monto_efectivo, Decimal('1200.00'))
+        self.assertEqual(self.suma(reserva), Decimal('1200.00'))
+
+    def test_dos_objetos_con_la_misma_foto_no_escriben_dos_veces(self):
+        reserva = crear_reserva(self.empresa, monto_efectivo=Decimal('500.00'), efectivo_cobrado_en=LUNES)
+        uno, dos = recargar(reserva), recargar(reserva)
+
+        for objeto in (uno, dos):
+            objeto.monto_efectivo = Decimal('1200.00')
+            with en(VIERNES):
+                objeto.save()
+
+        self.assertEqual(self.suma(reserva), Decimal('1200.00'))
+
+    def test_un_monto_fuera_de_update_fields_se_registra_en_el_siguiente_guardado_completo(self):
+        reserva = recargar(crear_reserva(self.empresa, monto_efectivo=Decimal('500.00'), efectivo_cobrado_en=LUNES))
+
+        reserva.monto_efectivo = Decimal('900.00')
+        reserva.save(update_fields=['nombre_cliente'])
+        with en(VIERNES):
+            reserva.save()
+
+        self.assertEqual(self.suma(reserva), Decimal('900.00'))
+
+    def test_un_guardado_con_foto_vieja_deja_el_libro_igual_a_la_columna(self):
+        reserva = crear_reserva(self.empresa, monto_efectivo=Decimal('500.00'), efectivo_cobrado_en=LUNES)
+        vieja, nueva = recargar(reserva), recargar(reserva)
+        nueva.monto_efectivo = Decimal('1200.00')
+        with en(VIERNES):
+            nueva.save()
+
+        with en(VIERNES):
+            vieja.save()  # pisa la columna con 500: el libro la sigue
+
+        self.assertEqual(recargar(reserva).monto_efectivo, Decimal('500.00'))
+        self.assertEqual(self.suma(reserva), Decimal('500.00'))
+
+    def test_dinero_sin_fecha_no_cuenta_hasta_que_llega_el_sello(self):
+        reserva = crear_reserva(self.empresa, monto_efectivo=Decimal('300.00'))  # sin sello
+        fila = MovimientoDinero.objects.get(reserva=reserva)
+        self.assertIsNone(fila.fecha)
+        self.assertEqual(balances(empresa=self.empresa), {})
+
+        reserva = recargar(reserva)
+        reserva.efectivo_cobrado_en = LUNES
+        reserva.save()
+
+        self.assertEqual(MovimientoDinero.objects.get(reserva=reserva).fecha, LUNES)
+        self.assertEqual(balances(empresa=self.empresa)['MXN'].efectivo, Decimal('300.00'))

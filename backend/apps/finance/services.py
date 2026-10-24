@@ -164,7 +164,7 @@ def _sumar_movimiento(atributo, campo_monto, campo_fecha, empresa, desde=None, h
     if atributo not in CONCEPTOS_CON_FILAS:
         return list(_sumar(_reservas(empresa), campo_monto, campo_fecha, desde, hasta, agrupar_por_dia))
 
-    filas = _filas_de_movimiento(empresa).filter(concepto=atributo)
+    filas = _filas_de_movimiento(empresa).filter(concepto=atributo, fecha__isnull=False)
     if desde:
         filas = filas.filter(fecha__date__gte=desde)
     if hasta:
@@ -267,7 +267,9 @@ def movimientos(desde=None, hasta=None, concepto='todos', moneda=None, empresa=N
         qs = base_qs.filter(**{f'{campo_monto}__isnull': False, f'{campo_fecha}__isnull': False})
         if atributo in CONCEPTOS_CON_FILAS:
             # Con filas: una por cada vez que el monto cambio, con su fecha. Sin filas: la columna.
-            del_libro = _filas_de_movimiento(empresa).filter(concepto=atributo).select_related('reserva__empresa')
+            del_libro = _filas_de_movimiento(empresa).filter(
+                concepto=atributo, fecha__isnull=False,
+            ).select_related('reserva__empresa')
             if moneda:
                 del_libro = del_libro.filter(reserva__moneda=moneda)
             if desde:

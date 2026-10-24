@@ -6,9 +6,11 @@ fechas nuevas se podian vender otra vez.
 """
 from datetime import timedelta
 
+from django.db import transaction
 from django.urls import reverse
 
 from apps.bookings.cupo import SinCupoError
+from apps.bookings.cupo.confirmacion import reservar_cupo_al_confirmar
 from apps.bookings.cupo.hospedaje_sync import sincronizar_ocupaciones
 from decimal import Decimal
 
@@ -158,3 +160,57 @@ class CambioDeFechaDePaqueteTests(AltaManualBase):
         self.assertEqual(ocupacion.recurso, self.habitacion)
         self.assertEqual(ocupacion.fecha_inicio, self.llegada + siete)
         self.assertEqual(ocupacion.fecha_fin, self.llegada + siete + timedelta(days=3))
+
+
+class CancelarMoverYReactivarTests(AltaManualBase):
+    """Cancelar, reprogramar estando cancelada y reactivar no deja la habitacion en las fechas viejas."""
+
+    def datos_en(self, nombre, dias=0):
+        entrada = self.llegada + timedelta(days=dias)
+        return self.datos(
+            servicio=str(self.hotel.pk), nombre_cliente=nombre, fecha=entrada.isoformat(),
+            fecha_salida=(entrada + timedelta(days=3)).isoformat(), precio_total='4500.00',
+        )
+
+    def vender(self, nombre, dias=0):
+        respuesta = self.client.post(self.url, self.datos_en(nombre, dias))
+        self.assertEqual(respuesta.status_code, 302)
+        return Reserva.objects.get(nombre_cliente=nombre)
+
+    def test_reactivada_en_otras_fechas_ocupa_las_nuevas_y_libera_las_viejas(self):
+        reserva = self.vender('Viajera')
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        reserva.estado = Reserva.Estado.CANCELADA
+        reserva.motivo_cancelacion = 'Mal clima'
+        reserva.save()
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        reserva.fecha = self.llegada + timedelta(days=10)
+        reserva.fecha_salida = self.llegada + timedelta(days=13)
+        reserva.save()
+
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        reserva.estado = Reserva.Estado.PAGADA
+        with transaction.atomic():
+            reserva.save()
+            reservar_cupo_al_confirmar(reserva)
+
+        ocupacion = ReservaOcupacion.objects.get(reserva=reserva)
+        self.assertEqual(ocupacion.fecha_inicio, self.llegada + timedelta(days=10))
+        self.assertTrue(ocupacion.ocupa_cupo)
+        # las fechas viejas quedan libres para otra venta y las nuevas ya no
+        self.assertEqual(self.client.post(self.url, self.datos_en('En las viejas')).status_code, 302)
+        self.assertEqual(self.client.post(self.url, self.datos_en('En las nuevas', dias=10)).status_code, 200)
+
+    def test_guardar_fechas_sin_lugar_no_deja_la_reserva_a_medias(self):
+        reserva = self.vender('Mover')
+        self.vender('Estorba', dias=10)
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        reserva.fecha = self.llegada + timedelta(days=10)
+        reserva.fecha_salida = self.llegada + timedelta(days=13)
+
+        with self.assertRaises(SinCupoError):
+            reserva.save()
+
+        reserva = Reserva.objects.get(pk=reserva.pk)
+        self.assertEqual(reserva.fecha, self.llegada)
+        self.assertEqual(ReservaOcupacion.objects.get(reserva=reserva).fecha_inicio, self.llegada)

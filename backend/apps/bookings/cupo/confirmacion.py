@@ -91,18 +91,24 @@ def _asignar_cupo_hospedaje(reserva, servicio, es_componente=False, *, desde=Non
         )
         raise SinCupoError(msg)
 
-    if not reserva.ocupaciones.filter(recurso__servicio=servicio).exists():
-        from apps.bookings.models import ReservaOcupacion
+    existentes = list(reserva.ocupaciones.filter(recurso__servicio=servicio))
+    if existentes and all(o.fecha_inicio == desde and o.fecha_fin == hasta for o in existentes):
+        return  # ya las tiene, en estas fechas (por ejemplo una cancelada que se reactiva)
+    from apps.bookings.models import ReservaOcupacion
 
-        for rec_id in elegidos:
-            ReservaOcupacion.objects.create(
-                reserva=reserva,
-                recurso_id=rec_id,
-                empresa=reserva.empresa,
-                fecha_inicio=desde,
-                fecha_fin=hasta,
-                ocupa_cupo=True,
-            )
+    # Filas en otras fechas: una reserva cancelada, reprogramada y reactivada traia su habitacion en
+    # las fechas viejas. Se reemplazan por las que acaban de elegirse para las fechas actuales.
+    for ocupacion in existentes:
+        ocupacion.delete()
+    for rec_id in elegidos:
+        ReservaOcupacion.objects.create(
+            reserva=reserva,
+            recurso_id=rec_id,
+            empresa=reserva.empresa,
+            fecha_inicio=desde,
+            fecha_fin=hasta,
+            ocupa_cupo=True,
+        )
 
 
 def reservar_cupo_al_confirmar(reserva) -> None:
