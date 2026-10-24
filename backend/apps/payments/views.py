@@ -34,7 +34,9 @@ from apps.fleet.enums import EstrategiaPrecio
 from apps.fleet.models import CodigoPromocional
 from apps.tenancy import scope
 
-from .estrategias_precio import DemandaPrecio, demanda_traslado, obtener_estrategia_precio
+from .estrategias_precio import (
+    DemandaPrecio, demanda_traslado, habitaciones_para_precio, obtener_estrategia_precio,
+)
 from .extras import congelar_personalizaciones, cotizar_personalizaciones
 from .ordenes import ORDEN_TIMEOUT_AUTORIZACION, OrdenCerradaError
 from .pricing import (
@@ -128,6 +130,10 @@ class CrearPagoView(APIView):
             estrategia = obtener_estrategia_precio(reserva.servicio.estrategia_precio)
             demanda = DemandaPrecio(
                 personas=reserva.numero_personas, moneda=reserva.moneda, noches=reserva.noches,
+                habitaciones=(
+                    habitaciones_para_precio(reserva.servicio, reserva.numero_personas)
+                    if reserva.servicio.estrategia_precio == EstrategiaPrecio.POR_NOCHE else 1
+                ),
                 tipo_cambio=reserva.tipo_cambio,
             )
             servicio_config = reserva.servicio

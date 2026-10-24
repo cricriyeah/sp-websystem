@@ -30,6 +30,7 @@ class DemandaPrecio:
     personas: int
     moneda: str = 'MXN'
     noches: int = 1
+    habitaciones: int = 1  # solo hospedaje: el precio base es por habitacion y por noche
     tipo_traslado: str | None = None
     zona: str | None = None
     tipo_cambio: Decimal | None = None  # pesos por dolar; solo se usa si la moneda es USD
@@ -134,15 +135,30 @@ class TarifaFija(EstrategiaPrecio):
 
 
 class PorNoche(EstrategiaPrecio):
-    """Precio por noche multiplicado por la cantidad de noches solicitadas."""
+    """Precio por noche y por habitacion, multiplicado por las noches y las habitaciones que pide el grupo."""
     clave = TipoEstrategiaPrecio.POR_NOCHE
 
     def calcular_base(self, servicio_config: Any, demanda: DemandaPrecio) -> Decimal:
         moneda = demanda.moneda_normalizada
         base = resolver_precio_base(servicio_config, moneda, demanda.tipo_cambio)
         noches = max(1, demanda.noches)
-        total = (base * Decimal(noches)).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
+        habitaciones = max(1, demanda.habitaciones)
+        total = (base * Decimal(noches) * Decimal(habitaciones)).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
         return total
+
+
+def habitaciones_para_precio(servicio, personas: int) -> int:
+    """Cuantas habitaciones hacen falta para `personas`, con las habitaciones activas del servicio.
+
+    Es la misma regla de reparto del cupo (`habitaciones_necesarias`: las mas grandes primero), pero
+    sobre TODAS las habitaciones activas y no solo las libres ese dia: el precio no debe cambiar
+    segun lo que haya vendido otra persona. Sin habitaciones capturadas, o si no alcanzan, cobra una:
+    el cupo es quien rechaza el grupo que no cabe.
+    """
+    from apps.bookings.cupo.nucleo import habitaciones_necesarias
+
+    capacidades = list(servicio.recursos.filter(activo=True).values_list('capacidad_maxima', flat=True))
+    return habitaciones_necesarias(capacidades, personas) or 1
 
 
 class PorRuta(EstrategiaPrecio):

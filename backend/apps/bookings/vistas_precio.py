@@ -77,6 +77,7 @@ def respuesta_precio_sugerido(modelo_admin, request) -> JsonResponse:
             }
 
         fecha = request.GET.get('fecha', '').strip() or None
+        fecha_salida = request.GET.get('fecha_salida', '').strip() or None
 
     except (TypeError, ValueError):
         # Parametros no enteros o malformados devuelven respuesta sin sugerencia
@@ -116,6 +117,7 @@ def respuesta_precio_sugerido(modelo_admin, request) -> JsonResponse:
         numero_personas=personas_int,
         moneda=moneda,
         fecha=fecha,
+        fecha_salida=fecha_salida,
         detalle_transporte=detalle_transporte,
     )
 

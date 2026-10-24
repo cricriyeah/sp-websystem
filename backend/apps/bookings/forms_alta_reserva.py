@@ -165,6 +165,7 @@ class AltaReservaForm(forms.ModelForm):
                     numero_personas=personas,
                     moneda=moneda,
                     fecha=fecha,
+                    fecha_salida=cleaned_data.get('fecha_salida'),
                 )
                 if sugerido is not None:
                     precio_total = sugerido
