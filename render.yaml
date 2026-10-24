@@ -45,9 +45,12 @@ services:
       # El frontend lleva su espejo en NEXT_PUBLIC_IVA_TASA (Vercel) y deben coincidir.
       - key: IVA_TASA
         value: "0.16"
-      # Apartado temporal de cupo mientras el cliente paga. 0 = apagado; subir a 15 tras probarlo con dos navegadores.
+      # Apartado temporal de cupo mientras el cliente paga («tu lugar esta guardado hasta...»).
+      # 0 = apagado: con 0 en produccion el cliente nunca ve el aviso (prueba del 2026-10-23).
+      # Si este servicio no se sincroniza desde este archivo, la variable tambien hay que ponerla
+      # a mano en el dashboard de Render (Environment) y reiniciar.
       - key: APARTADO_MINUTOS
-        value: "0"
+        value: "15"
       # Un salto de proxy: el balanceador de Render. Ver
       # backend/apps/bookings/serializers.py (constancia del deslinde).
       - key: TRUSTED_PROXY_COUNT

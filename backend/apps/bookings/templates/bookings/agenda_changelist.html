@@ -39,6 +39,35 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
             {% endfor %}
         </nav>
     {% endif %}
+    {% comment %}
+    Las fechas: flechas por rango (semana a semana, o del largo del rango elegido), un atajo
+    para volver a la semana de siempre y un "Desde / Hasta" para llegar a cualquier dia. Todo
+    es `?periodo=`, el mismo enlace que arma el Calendario. Va aqui, dentro de la tarjeta del
+    buscador y FUERA del formulario de la tabla (que es POST y no admite otro formulario).
+    {% endcomment %}
+    {% if agenda_periodo and agenda_estado != 'elegir' and agenda_estado != 'sin_pangas' %}
+        <nav data-periodo aria-label="Fechas de la agenda" class="agenda-pestanas">
+            <a href="{{ agenda_periodo.anterior }}" data-periodo-anterior class="agenda-pestana text-base-700 dark:text-base-300">&lsaquo; Anterior</a>
+            <span data-periodo-actual aria-current="page" class="agenda-pestana">{{ agenda_periodo.etiqueta }}</span>
+            <a href="{{ agenda_periodo.siguiente }}" data-periodo-siguiente class="agenda-pestana text-base-700 dark:text-base-300">Siguiente &rsaquo;</a>
+            {% if agenda_periodo.modo != 'semana' %}
+                <a href="{{ agenda_periodo.esta_semana }}" data-esta-semana class="agenda-dia-quitar text-base-700 dark:text-base-300">Esta semana</a>
+            {% endif %}
+            <form method="get" data-periodo-formulario class="agenda-dia">
+                {% for nombre, valor in agenda_periodo.otros_parametros %}
+                    <input type="hidden" name="{{ nombre }}" value="{{ valor }}">
+                {% endfor %}
+                <label class="agenda-dia-etiqueta">Desde <input type="date" name="desde" value="{{ agenda_periodo.desde }}"></label>
+                <label class="agenda-dia-etiqueta">Hasta <input type="date" name="hasta" value="{{ agenda_periodo.hasta }}"></label>
+                <button type="submit" class="agenda-dia-boton">Ver</button>
+            </form>
+        </nav>
+        {% if agenda_periodo.modo == 'busqueda' %}
+            <p data-buscando-en-todas class="text-base-500 dark:text-base-400" style="width: 100%; margin: 0; font-size: 0.85rem">
+                Buscando «{{ agenda_periodo.busqueda }}» en todas las fechas. Elige un rango arriba para buscar solo dentro de él.
+            </p>
+        {% endif %}
+    {% endif %}
 {% endblock %}
 
 {% block result_list %}
@@ -83,6 +112,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
             <summary class="font-medium px-4 py-3 text-base-700 text-sm dark:text-base-300"
                      style="cursor: pointer; user-select: none">
                 Panorama de la semana
+                {% if panorama_rango %}<span data-panorama-rango style="font-weight: 600">· {{ panorama_rango }}</span>{% endif %}
                 <span class="text-base-400" style="font-weight: 400; font-size: 0.8rem">
                     · toca un viaje sin panga y luego una panga libre{% if puede_sacar_panga %}; para sacar una panga, toca su celda vacía{% endif %}
                 </span>

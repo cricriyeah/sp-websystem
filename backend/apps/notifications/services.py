@@ -20,7 +20,35 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT_SEGUNDOS = 10
 
-PUNTO_DE_ENCUENTRO = 'Marina La Costa, Rangel y Navarro, La Paz, BCS'
+# Lo que dice el correo cuando el servicio no tiene capturado de donde sale el cliente. Antes
+# habia un lugar fijo en el codigo que salia en los correos de TODAS las empresas; no se
+# inventa uno: el aviso a la vendedora es la columna «Sales de» de la lista de Servicios.
+SIN_PUNTO_DE_ENCUENTRO = 'Te lo confirmamos por WhatsApp'
+
+
+def punto_de_encuentro(reserva):
+    """De donde sale el cliente, como lo escribio el jefe en el servicio; '' si no lo capturo.
+
+    Es `Servicio.punto_salida` (el «Sales de» de la ficha): el mismo dato que ve el cliente en
+    el sitio, para que correo y sitio no puedan decir cosas distintas.
+    """
+    if not reserva.servicio_id:
+        return ''
+    return (reserva.servicio.punto_salida or '').strip()
+
+
+def _renglon_punto_de_encuentro(reserva):
+    """El renglon «Punto de encuentro» del correo, o '' si no aplica.
+
+    Un hospedaje sin dato no lleva renglon (llegar a un hotel no es encontrarse en un
+    muelle); el resto dice que se confirma por WhatsApp en vez de afirmar un lugar.
+    """
+    punto = punto_de_encuentro(reserva)
+    if not punto:
+        if reserva.servicio_id and reserva.servicio.tipo_servicio == TipoServicio.HOSPEDAJE:
+            return ''
+        punto = SIN_PUNTO_DE_ENCUENTRO
+    return f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>'
 
 
 def _motivo_http(error):
@@ -119,8 +147,6 @@ def _cuerpo_html(reserva):
             f'— {fila.subtotal:.2f} {_html(reserva.moneda)} (incluido en tu pago)</li>')
     extras = ''.join(lineas_personalizaciones)
 
-    punto_de_encuentro = PUNTO_DE_ENCUENTRO
-
     # Aviso explicito: si el cliente cree que algo ya esta pagado sin estarlo,
     # el problema aparece el dia del viaje.
     por_cotizar = ''
@@ -143,7 +169,7 @@ def _cuerpo_html(reserva):
         f'<li><strong>Hora de salida:</strong> {hora_texto(reserva)}</li>'
         f'<li><strong>Personas:</strong> {reserva.numero_personas}</li>'
         f'{extras}'
-        f'<li><strong>Punto de encuentro:</strong> {punto_de_encuentro}</li>'
+        f'{_renglon_punto_de_encuentro(reserva)}'
         f'</ul>'
         f'{pendiente}'
         f'{por_cotizar}'
@@ -216,7 +242,7 @@ def _cuerpo_asignacion_html(reserva):
         f'<li><strong>Panga:</strong> {_html(reserva.embarcacion.nombre)}</li>'
         f'<li><strong>Fecha:</strong> {reserva.fecha}</li>'
         f'<li><strong>Hora de salida:</strong> {hora_texto(reserva)}</li>'
-        f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'
+        f'{_renglon_punto_de_encuentro(reserva)}'
         f'</ul>'
         f'{pendiente}'
         f'<p>Llega 15 minutos antes de la hora de salida. Si algo cambia de tu lado, '
@@ -397,7 +423,7 @@ def _cuerpo_orden_html(orden, reservas):
             tipo = detalle.get_tipo_traslado_display() if detalle else 'Traslado'
             punto = (
                 detalle.punto_encuentro.nombre if (detalle and detalle.punto_encuentro_id)
-                else (detalle.direccion_personalizada if detalle else PUNTO_DE_ENCUENTRO)
+                else (detalle.direccion_personalizada if detalle else SIN_PUNTO_DE_ENCUENTRO)
             )
             regreso = (
                 f'<li><strong>Fecha de regreso al aeropuerto:</strong> {detalle.fecha_regreso}</li>'
@@ -425,7 +451,7 @@ def _cuerpo_orden_html(orden, reservas):
                 f'<li><strong>Fecha:</strong> {r.fecha}</li>'
                 f'<li><strong>Hora:</strong> {hora_texto(r)}</li>'
                 f'<li><strong>Personas:</strong> {r.numero_personas}</li>'
-                f'<li><strong>Punto de encuentro:</strong> {PUNTO_DE_ENCUENTRO}</li>'
+                f'{_renglon_punto_de_encuentro(r)}'
                 f'</ul></li>'
             )
         componentes_html.append(comp)

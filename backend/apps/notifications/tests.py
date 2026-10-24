@@ -17,7 +17,6 @@ from apps.fleet.models import Capitan, Embarcacion, PuntoEncuentro
 from apps.testing import crear_personalizacion_pesca, EmpresaTestCase, crear_flota, crear_servicio_pesca
 
 from .services import (
-    PUNTO_DE_ENCUENTRO,
     _cuerpo_html,
     _asunto,
     enviar_correo_asignacion,
@@ -190,6 +189,7 @@ class CorreoDeAsignacionTests(EmpresaTestCase):
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_el_correo_lleva_panga_capitan_hora_y_punto_de_encuentro(self, post):
+        crear_servicio_pesca(self.empresa, punto_salida='Muelle de prueba, La Paz')
         reserva = self._reserva_asignada()
 
         self.assertTrue(enviar_correo_asignacion(reserva))
@@ -198,7 +198,7 @@ class CorreoDeAsignacionTests(EmpresaTestCase):
         self.assertIn('Dona Chuy', html)
         self.assertIn('Ramon Geraldo', html)
         self.assertIn('06:00', html)
-        self.assertIn(PUNTO_DE_ENCUENTRO, html)
+        self.assertIn('Muelle de prueba, La Paz', html)
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_no_publica_el_telefono_del_capitan(self, post):
@@ -313,13 +313,14 @@ class ExtrasEnElCorreoTests(EmpresaTestCase):
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_reserva_sin_extras_no_muestra_nada_de_mas(self, post):
+        crear_servicio_pesca(self.empresa, punto_salida='Muelle de prueba, La Paz')
         reserva = crear_reserva_guardada(self.empresa)
 
         self.assertTrue(enviar_correo_confirmacion(reserva))
 
         html = _cuerpo_enviado(post)['html']
         self.assertNotIn('incluido en tu pago', html)
-        self.assertIn(PUNTO_DE_ENCUENTRO, html)
+        self.assertIn('Muelle de prueba, La Paz', html)
 
     @mock.patch('apps.notifications.services.requests.post')
     def test_bebidas_pendientes_avisa_sin_prometer_extras(self, post):
@@ -371,6 +372,7 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
                 empresa=self.empresa_1,
                 nombre='Pesca en Panga',
                 slug='pesca-notif',
+                punto_salida='Muelle del paquete, La Paz',
                 tipo_servicio='pesca',
                 estrategia_cupo='por_recurso_dia',
             )
@@ -477,7 +479,8 @@ class NotificarOrdenPagadaTest(TransactionTestCase):
         self.assertIn('Pesca en Panga', html)
         self.assertIn('2026-12-01', html)
         self.assertIn('06:30', html)
-        self.assertIn(PUNTO_DE_ENCUENTRO, html)
+        self.assertIn('Muelle del paquete, La Paz', html)
+        self.assertNotIn('Rangel y Navarro', html)
         # Componente traslado
         self.assertIn('Hotel Gran Baja', html)
         self.assertIn('2026-11-30', html)

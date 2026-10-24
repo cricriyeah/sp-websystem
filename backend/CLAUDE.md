@@ -61,6 +61,11 @@ estar exento.
   despues de guardar la reserva como `pagada`. Cada canal se activa solo si sus env
   vars estan puestas y **nunca lanza**: el cobro ya ocurrio, una notificacion caida no
   debe hacer que Stripe reintente el webhook.
+  **El punto de encuentro de los correos** (confirmacion, asignacion de panga/capitan y paquetes)
+  sale de `Servicio.punto_salida` (el «Sales de» de la ficha del servicio, el mismo dato que ve el
+  cliente en el sitio), nunca de texto fijo en el codigo. Vacio = el correo dice
+  `SIN_PUNTO_DE_ENCUENTRO` («Te lo confirmamos por WhatsApp») y un hospedaje no lleva renglon; la
+  lista de Servicios del admin marca «FALTA» en rojo los servicios de mar sin dato.
 - `fleet.Servicio`: pesca usa el servicio `pesca-deportiva` de cada Empresa y la
   estrategia `por_grupo`. `precio_base` y `precio_persona_extra` se guardan en MXN;
   el USD se deriva del tipo de cambio de la sede y cada importe se redondea hacia
@@ -149,6 +154,14 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   cupo lleva `code='sin_cupo'`**; con mensaje en forma de diccionario el codigo va en el error
   interior (`ValidationError({'fecha': ValidationError(msg, code='sin_cupo')})`) porque Django
   ignora `code=` cuando el mensaje es un diccionario.
+- **Codigos promocionales**: pertenecen a UNA empresa (`(codigo, empresa)` es unico; el mismo texto
+  puede existir en otra) y solo aplican en el checkout de esa empresa. No aplican a un paquete
+  cruza-empresa (`Orden`): ni el backend ni el checkout los leen ahi. La respuesta publica es
+  generica a proposito; el motivo (`motivo_codigo_no_aplica`: desactivado, aun no empieza, vencido,
+  bajo el minimo, agotado, agotado por cliente) es la unica regla de validez y la ve el admin en la
+  columna «Hoy» de la lista de codigos (con la empresa, para el operador). Los limites se dejan
+  **vacios** para no tener limite: un `0` en usos maximos se leia como «cero usos» (codigo agotado
+  desde el inicio) y `CodigoPromocional.clean()` ya lo rechaza.
 - El webhook es la unica fuente de verdad: nada se marca pagado desde el navegador.
   Corre en `transaction.atomic` con `select_for_update` para que dos entregas
   simultaneas del mismo evento no dupliquen nada.
@@ -446,6 +459,17 @@ No aplica a traslados (los vehículos de transporte terrestre se asignan en la p
   en lugar de la ventana de la semana; roto o al reves se ignora) y `?cuando=atrasadas` (las
   `pagada` sin panga de fecha pasada; con `periodo`, solo las de ese rango). `PeriodoAgendaFilter`
   solo registra el parametro; el filtrado esta en `CuandoFilter`.
+- **Llegar a cualquier fecha.** `modo_de_la_agenda(request)` es la unica respuesta a "que mira la
+  tabla" (`semana` por defecto, `periodo`, `manana`, `atrasadas`, `recientes`, `busqueda`); la usan
+  el filtro y la barra de fechas. La barra (en el bloque `filters` de la plantilla, fuera del
+  formulario POST de la tabla) tiene flechas Anterior/Siguiente que saltan el largo del rango
+  mirado (7 dias desde la vista de siempre), "Esta semana" y un formulario "Desde / Hasta"
+  (`?desde=&hasta=`) que `changelist_view` convierte por redireccion en `?periodo=`.
+  **El buscador sin rango mira todas las fechas** (antes se intersectaba con la semana en curso y
+  no encontraba al cliente del mes siguiente); con un rango, o con `cuando=manana`, se queda dentro.
+  El panorama arranca en el primer dia del rango si es futuro (`inicio_del_panorama`; un rango
+  pasado o que cruza hoy lo deja en hoy) y `armar_panorama(..., hoy=)` cuenta como atrasado solo
+  lo anterior a hoy, no lo anterior al inicio de la cuadricula.
 - **Pantalla de asignar** (rama `feat/agenda-asignar`). Reservas es el registro de todo; la
   Agenda es solo para asignar panga:
   - Una linea de resumen arriba ("N atrasados · N sin panga · N sin capitan", o "Todo
