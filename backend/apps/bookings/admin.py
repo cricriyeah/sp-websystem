@@ -845,17 +845,17 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             obj.efectivo_cobrado_en = None
             obj.efectivo_cobrado_por = None
 
-        if not change:
-            if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
+        # Transferencia: igual que el efectivo, el sello es el del primer registro. Antes cada
+        # correccion del monto lo volvia a sellar con la fecha de hoy y Finanzas movia TODO el
+        # monto (tambien el de dias anteriores) al dia de la correccion: el cierre del banco ya
+        # no cuadraba con el deposito real.
+        if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
+            if obj.transferencia_registrada_en is None:
                 obj.transferencia_registrada_en = timezone.now()
                 obj.transferencia_registrada_por = request.user
-        elif 'monto_transferencia' in form.changed_data:
-            if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
-                obj.transferencia_registrada_en = timezone.now()
-                obj.transferencia_registrada_por = request.user
-            else:
-                obj.transferencia_registrada_en = None
-                obj.transferencia_registrada_por = None
+        elif obj.transferencia_registrada_en is not None and 'monto_transferencia' in form.changed_data:
+            obj.transferencia_registrada_en = None
+            obj.transferencia_registrada_por = None
 
         if not self._entra_a_ocupar_cupo(obj, change):
             super().save_model(request, obj, form, change)

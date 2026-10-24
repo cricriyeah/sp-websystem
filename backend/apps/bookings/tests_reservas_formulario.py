@@ -220,7 +220,7 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
         self.assertIsNone(self.reserva.vendedora_id)
         self.assertEqual(self.reserva.personas_por_servicio, {})
 
-    def test_sello_de_transferencia_solo_cambia_con_el_importe(self):
+    def test_sello_de_transferencia_es_el_del_primer_registro(self):
         vendedora = self.crear_vendedora()
         self.client.force_login(vendedora)
         self.assertEqual(self.client.post(self.url, self._datos_edicion(
@@ -238,8 +238,20 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
         self.assertEqual(self.client.post(self.url, self._datos_edicion(
             precio_total='4500.00', monto_transferencia='200.00')).status_code, 302)
         self.reserva.refresh_from_db()
-        self.assertGreater(self.reserva.transferencia_registrada_en, primero)
+        # Corregir o completar el importe NO mueve el dinero ya registrado a la fecha de hoy:
+        # Finanzas lo ve en el dia del primer registro (igual que el efectivo).
+        self.assertEqual(self.reserva.transferencia_registrada_en, primero)
         self.assertEqual(self.reserva.transferencia_registrada_por, vendedora)
+
+        # Quitar el importe borra el sello; uno nuevo lleva su propia fecha.
+        self.assertEqual(self.client.post(self.url, self._datos_edicion(
+            precio_total='4500.00', monto_transferencia='0.00')).status_code, 302)
+        self.reserva.refresh_from_db()
+        self.assertIsNone(self.reserva.transferencia_registrada_en)
+        self.assertEqual(self.client.post(self.url, self._datos_edicion(
+            precio_total='4500.00', monto_transferencia='300.00')).status_code, 302)
+        self.reserva.refresh_from_db()
+        self.assertGreater(self.reserva.transferencia_registrada_en, primero)
 
     def test_alta_por_rol_y_borrado_fuera_de_guardado(self):
         vendedora = self.crear_vendedora()
