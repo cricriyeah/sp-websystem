@@ -66,6 +66,7 @@ from .models import (
     ViajeTransporte,
 )
 from .panorama import armar_panorama, sin_lo_que_no_se_reparte
+from .cobros import liquidar_saldo_en_efectivo, saldo_liquidable
 from .orden_lectura import reservas_de_orden
 from .traslados_reglas import bloqueo_cubre_viaje, bloqueo_toca_viaje
 
@@ -782,7 +783,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             'checkout_id', 'stripe_payment_intent_id', 'pagada_en',
             'vendedora_asignada_en', 'aviso_asignacion_enviado_en',
             'efectivo_cobrado_en', 'efectivo_cobrado_por',
-            'transferencia_registrada_en', 'transferencia_registrada_por', 'en_disputa',
+            'transferencia_registrada_en', 'transferencia_registrada_por',
             'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en',
             'deslinde_ip', 'deslinde_version',
             'apartado_hasta', 'apartado_demanda', 'alerta_reembolso_fallido_en',
@@ -799,7 +800,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             ('Viaje', {'fields': tuple(viaje)}),
             ('Cobro', {'fields': (
                 'forma_pago', 'moneda', 'precio_total', 'iva_monto', 'iva_tasa', 'monto_pagado',
-                'monto_efectivo', 'monto_transferencia',
+                'monto_efectivo', 'monto_transferencia', 'en_disputa',
                 'pide_bebidas', 'pide_extras_whatsapp', 'codigo_promocional', 'descuento_aplicado',
             )}),
             # El canal es obligatorio en el alta; queda visible junto a la atribución.
@@ -819,6 +820,19 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return tuple(dict.fromkeys(campos))
 
     def save_model(self, request, obj, form, change):
+        # Efectivo: Finanzas descarta todo movimiento sin fecha, asi que un monto
+        # escrito aqui sin sello no existia para el panel. Se sella UNA vez (la
+        # fecha del primer registro, que tambien pudo dejar «Registrar liquidacion en
+        # efectivo»); corregir el monto despues no la mueve. Si se quita el efectivo
+        # se borra el sello, para que un monto nuevo lleve su propia fecha.
+        if obj.monto_efectivo is not None and obj.monto_efectivo > 0:
+            if obj.efectivo_cobrado_en is None:
+                obj.efectivo_cobrado_en = timezone.now()
+                obj.efectivo_cobrado_por = request.user
+        elif obj.efectivo_cobrado_en is not None and 'monto_efectivo' in form.changed_data:
+            obj.efectivo_cobrado_en = None
+            obj.efectivo_cobrado_por = None
+
         if not change:
             if obj.monto_transferencia is not None and obj.monto_transferencia > 0:
                 obj.transferencia_registrada_en = timezone.now()
@@ -933,8 +947,24 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                     'cobro': self.cobro(obj),
                     'asignacion': asignacion,
                     'asignacion_urgente': 'Sin panga' in str(asignacion),
+                    'cobrar_saldo': self._boton_cobrar_saldo(request, obj),
                 }
         return super().changeform_view(request, object_id, form_url, contexto)
+    def _boton_cobrar_saldo(self, request, obj):
+        """Datos del boton «Cobrar saldo en efectivo» del resumen de la reserva, o
+        None si no aplica (sin saldo, cancelada, reembolsada, sin pagar o sin permiso
+        de cambio). Manda a la misma accion de la lista, con su confirmacion."""
+        saldo = saldo_liquidable(obj)
+        if saldo is None or not self.has_change_permission(request, obj):
+            return None
+        monto = f'{saldo:,.0f}' if saldo == saldo.to_integral_value() else f'{saldo:,.2f}'
+        return {
+            'texto': f'{monto} {obj.moneda}',
+            'url': reverse('admin:bookings_reserva_changelist'),
+            'accion': 'registrar_liquidacion_en_efectivo',
+            'pk': obj.pk,
+        }
+
     actions = [
         'registrar_liquidacion_en_efectivo', 'marcar_como_venta_mia',
         'confirmar_devolucion', 'cancelar_por_mal_clima',
@@ -1064,7 +1094,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             **(extra_context or {}), 'reservas_pestanas': pestanas, 'reservas_dia': selector_dia,
         })
         if getattr(respuesta, 'context_data', None) and 'cl' in respuesta.context_data:
-            frecuentes = {'estado', 'canal_origen', 'vendedora', 'forma_pago'}
+            frecuentes = {'estado', 'canal_origen', 'vendedora', 'forma_pago', 'en_disputa'}
             visibles, avanzados = [], []
             for spec in respuesta.context_data['cl'].filter_specs:
                 campo = getattr(spec, 'field_path', getattr(spec, 'parameter_name', None))
@@ -1314,6 +1344,17 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
 
     @admin.display(description='Cobro')
     def cobro(self, obj):
+        """El hecho del cobro (`_cobro_base`) y, si el cliente disputó el cargo, la
+        marca en rojo encima: es lo primero que hay que ver antes de que salga al mar.
+        Una disputa no cambia el estado de la reserva (lo decide una persona), así que
+        sin esta marca solo se veía entrando a un bloque colapsado de la reserva."""
+        base = self._cobro_base(obj)
+        if not obj.en_disputa:
+            return base
+        return format_html(
+            '<span class="reservas-cobro-urgente">⚠ En disputa</span><br>{}', base)
+
+    def _cobro_base(self, obj):
         """Un hecho breve; rojo sólo para deuda vencida, devolución o descuadre."""
         def monto(valor):
             return (f'{valor:,.0f}' if valor == valor.to_integral_value()
@@ -1335,18 +1376,27 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             )
         if obj.estado == Reserva.Estado.PENDIENTE_PAGO:
             return 'Sin pagar'
+        devuelto = obj.monto_reembolsado if (obj.monto_reembolsado or 0) > 0 else None
+        if obj.estado == Reserva.Estado.CANCELADA:
+            # Una cancelada ya no va a cobrarse: decir lo que "debe" (el 70% del anticipo,
+            # o un "descuadre" contra un precio que ya no aplica) mandaria a cobrar un viaje
+            # que no existe. Lo unico que cuenta es lo que se devolvio.
+            return f'Devuelto {monto(devuelto)} {obj.moneda}' if devuelto else 'Cancelada'
+        # Un reembolso parcial no cambia el saldo (por que se devolvio una parte no se sabe:
+        # un descuento, un lugar menos), pero tiene que verse en la fila.
+        nota = f' · devuelto {monto(devuelto)} {obj.moneda}' if devuelto else ''
         saldo = obj.saldo_pendiente
         if saldo is None:
             return '—'
         if saldo <= 0:
-            return 'Pagado'
+            return f'Pagado{nota}'
         if obj.forma_pago == Reserva.FormaPago.ANTICIPO:
-            texto = f'Debe {monto(saldo)} {obj.moneda} en efectivo'
+            texto = f'Debe {monto(saldo)} {obj.moneda} en efectivo{nota}'
             if obj.fecha <= timezone.localdate():
                 return format_html('<span class="reservas-cobro-urgente">{}</span>', texto)
             return texto
         return format_html('<span class="reservas-cobro-urgente">{}</span>',
-                           f'Descuadre de {monto(saldo)} {obj.moneda}')
+                           f'Descuadre de {monto(saldo)} {obj.moneda}{nota}')
 
     @staticmethod
     def _mi_perfil_de_vendedora(request):
@@ -1481,31 +1531,60 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             return HttpResponseRedirect(reverse('admin:bookings_reserva_changelist'))
         return respuesta
 
-    @admin.action(description='Registrar liquidacion en efectivo (el 70%% restante)')
+    @admin.action(
+        description='Registrar liquidacion en efectivo (el 70%% restante)',
+        permissions=['change'],
+    )
     def registrar_liquidacion_en_efectivo(self, request, queryset):
         """Deja constancia del efectivo que se recibio el dia del viaje.
 
         Rellena el saldo exacto que faltaba del tour, que es el caso normal. Si
         ademas se cobro algo cotizado aparte (bebidas, transporte), la vendedora
         corrige el monto a mano en la reserva.
-        """
-        liquidadas = omitidas = 0
-        for reserva in queryset:
-            saldo = reserva.saldo_pendiente
-            if saldo is None or saldo <= 0:
-                omitidas += 1
-                continue
 
-            reserva.monto_efectivo = (reserva.monto_efectivo or 0) + saldo
-            reserva.efectivo_cobrado_en = timezone.now()
-            reserva.efectivo_cobrado_por = request.user
-            reserva.full_clean()
-            reserva.save()
+        Pide confirmacion (solo anota dinero que ya se recibio, y marcarlo por
+        error descuadra la caja) y solo toca reservas pagadas o asignadas que de
+        verdad deben algo; ver `apps.bookings.cobros`. El boton «Cobrar saldo en
+        efectivo» de la reserva entra por aqui mismo.
+        """
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+
+        seleccionadas = list(queryset)
+        liquidables = [reserva for reserva in seleccionadas if saldo_liquidable(reserva) is not None]
+        if request.POST.get('confirmar_liquidacion') != 'si':
+            por_moneda = {}
+            for reserva in liquidables:
+                por_moneda[reserva.moneda] = por_moneda.get(
+                    reserva.moneda, Decimal('0.00')) + saldo_liquidable(reserva)
+            return TemplateResponse(request, 'bookings/confirmar_liquidacion.html', {
+                **self.admin_site.each_context(request),
+                'opts': self.model._meta,
+                'titulo': 'Registrar el efectivo recibido',
+                'seleccionadas': seleccionadas,
+                'liquidables': [(reserva, f'{saldo_liquidable(reserva):.2f}') for reserva in liquidables[:20]],
+                'restantes': max(0, len(liquidables) - 20),
+                'cantidad': len(liquidables),
+                'omitidas': len(seleccionadas) - len(liquidables),
+                'totales': [(moneda, f'{monto:.2f}') for moneda, monto in sorted(por_moneda.items())],
+                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+                'volver': request.get_full_path(),
+            })
+
+        liquidadas = 0
+        for reserva in seleccionadas:
+            # Recalcula con la fila bloqueada: el saldo de la pantalla pudo cambiar.
+            monto = liquidar_saldo_en_efectivo(reserva.pk, request.user)
+            if monto is None:
+                continue
+            self.log_change(request, reserva, f'Saldo cobrado en efectivo: {monto} {reserva.moneda}.')
             liquidadas += 1
 
         aviso = f'{liquidadas} reserva(s) liquidada(s).'
+        omitidas = len(seleccionadas) - liquidadas
         if omitidas:
-            aviso += f' {omitidas} se omitieron: no debian nada.'
+            aviso += (f' {omitidas} se omitieron: no debian nada, ya estaban canceladas, '
+                      'reembolsadas o sin pagar.')
         self.message_user(request, aviso)
 
 

@@ -70,7 +70,7 @@ más tiempo hacen perder:
 |---|---|
 | `STRIPE_SECRET_KEY` | `crear-pago` responde 503 y el checkout muestra "pago no disponible". El resto del sitio funciona |
 | `STRIPE_PUBLISHABLE_KEY` | El formulario de tarjeta no monta |
-| `STRIPE_WEBHOOK_SECRET` | Los webhooks se rechazan con 400. **El dinero entra y ninguna reserva se marca pagada** — el caso más caro de esta tabla |
+| `STRIPE_WEBHOOK_SECRET` | Solo siembra la primera empresa al migrar. El secreto real de cada empresa vive en su ficha del admin (*Stripe webhook secret*); si falta ahí, el webhook de esa empresa se rechaza con 400 y **el dinero entra sin que ninguna reserva se marque pagada** — el caso más caro de esta tabla |
 | `RESEND_API_KEY` `RESEND_FROM` | No se manda correo de confirmación. El cobro sigue funcionando |
 | `RESEND_BCC` | El negocio no recibe copia. Ver `docs/vendors/supabase.md`: es el rastro fuera de la base |
 | `WHATSAPP_TOKEN` `WHATSAPP_PHONE_NUMBER_ID` | No se manda WhatsApp. El cobro sigue funcionando |
@@ -172,17 +172,30 @@ contra la base de producción real sin mover un peso.
 
 1. [ ] Capturar en Render las llaves de **prueba** (`sk_test_...`, `pk_test_...`)
        desde https://dashboard.stripe.com/test/apikeys
-2. [ ] Registrar el endpoint del webhook en el dashboard de Stripe (modo prueba):
+2. [ ] **Por cada empresa**, registrar su propio endpoint de webhook en SU cuenta
+       de Stripe (modo prueba). La dirección lleva el *slug* de la empresa
+       (`sal-y-sol`, `piratas`, …); no existe una ruta común `/api/stripe/webhook/`:
        ```
-       https://TU-API.onrender.com/api/stripe/webhook/
+       https://TU-API.onrender.com/api/<slug-de-la-empresa>/stripe/webhook/
        ```
-       Eventos que hay que suscribir — los cuatro, no solo el primero:
-       - `payment_intent.succeeded`
-       - `charge.refunded`
-       - `charge.dispute.created`
-       - `charge.dispute.closed` y `charge.dispute.funds_reinstated`
+       La dirección exacta de cada empresa aparece en el admin, en
+       *Empresas > (la empresa) > qué falta*, lista para copiar.
+
+       Eventos que hay que suscribir — los seis, no solo el primero. Es todo lo que
+       el sistema escucha; un evento que falte deja una parte del dinero sin reflejar:
+       | Evento | Para qué |
+       |---|---|
+       | `payment_intent.succeeded` | Marca la reserva pagada. Sin este, el dinero entra y no hay reserva |
+       | `payment_intent.amount_capturable_updated` | Paquetes de dos empresas: avisa que el pago quedó retenido |
+       | `charge.refunded` | Reembolso hecho en Stripe: total cancela la reserva y suelta su cupo; parcial solo anota lo devuelto |
+       | `charge.dispute.created` | El cliente disputó el cargo: marca «En disputa» en el admin |
+       | `charge.dispute.closed` | La disputa se resolvió: quita la marca |
+       | `charge.dispute.funds_reinstated` | Stripe devolvió los fondos: quita la marca |
 3. [ ] Copiar el *signing secret* que Stripe genera al crear el endpoint
-       (`whsec_...`) a `STRIPE_WEBHOOK_SECRET` en Render, y redesplegar.
+       (`whsec_...`) al campo *Stripe webhook secret* de **esa** empresa en el admin
+       (*Empresas*). El secreto es distinto por empresa y por modo (prueba o real);
+       la variable `STRIPE_WEBHOOK_SECRET` de Render solo siembra la primera empresa
+       al migrar y ya no gobierna a las demás.
 
 ### Pruebas a correr, en este orden
 
@@ -197,8 +210,17 @@ Con [tarjetas de prueba de Stripe](https://docs.stripe.com/testing):
       `pendiente_pago`, no cancelarse.
 - [ ] **Doble clic en pagar** — no debe generar dos cobros. La `idempotency_key`
       lo cubre, pero conviene verlo.
-- [ ] **Reembolso desde el panel de Stripe** — la reserva debe quedar marcada
-      `reembolsada` sola, vía el webhook `charge.refunded`.
+- [ ] **Reembolso total desde el panel de Stripe** — la reserva debe quedar
+      `cancelada` y `reembolsada` sola, vía el webhook `charge.refunded`, con su
+      cupo, panga y capitán liberados y el motivo «Reembolso completo hecho desde
+      el panel de Stripe». Ya no dice «Debe … en efectivo».
+- [ ] **Reembolso parcial desde Stripe** — la reserva sigue en pie (ni cancelada
+      ni `reembolsada`) y la columna Cobro muestra «· devuelto X». Finanzas lo
+      cuenta como salida del día en que se hizo.
+- [ ] **Disputa** (tarjeta `4000 0000 0000 0259`) — la reserva muestra «⚠ En
+      disputa» en la lista y en su resumen, se puede filtrar por «en disputa», y su
+      estado **no** cambia: qué hacer con ese viaje lo decide una persona. Se baja
+      sola al cerrarse la disputa.
 - [ ] **Día lleno** — cerrar un día con un `CupoDiario` de 0 e intentar pagarlo.
       Debe reembolsarse solo y quedar cancelada con el motivo real.
 - [ ] **Conciliación** — `python manage.py conciliar_pagos --dry-run` no debe
@@ -238,9 +260,10 @@ llegar hasta el formulario de tarjeta. Cero errores de CORS y cero de CSP.
 Solo cuando toda la Fase 5 pasó.
 
 - [ ] Cambiar en Render a las llaves `sk_live_...` / `pk_live_...`
-- [ ] **Registrar otra vez el endpoint del webhook, ahora en modo real.** Es un
-      endpoint distinto con un *signing secret* distinto. Actualizar
-      `STRIPE_WEBHOOK_SECRET` con el nuevo valor — el de prueba no sirve aquí, y
+- [ ] **Registrar otra vez el endpoint del webhook de cada empresa, ahora en modo
+      real** (`/api/<slug>/stripe/webhook/`, con los seis eventos de arriba). Es un
+      endpoint distinto con un *signing secret* distinto. Actualizar el *Stripe
+      webhook secret* de cada empresa en el admin — el de prueba no sirve aquí, y
       el síntoma es que el dinero entra y ninguna reserva se marca pagada.
 - [ ] Redesplegar.
 - [ ] Hacer **una** reserva real de monto bajo, con tarjeta propia, y reembolsarla
@@ -260,7 +283,7 @@ Todas se pueden correr y reportar sin revelar un valor:
 | Proceso y base | `curl .../healthz` → 200 | Credenciales de base correctas |
 | Datos de negocio | `curl .../api/tarifa/` → 200 | Tarifa creada |
 | Stripe configurado | Crear reserva y pedir pago; 503 = falta la llave | `STRIPE_SECRET_KEY` presente |
-| Webhook alcanzable | "Send test webhook" desde el dashboard de Stripe | Ruta y `STRIPE_WEBHOOK_SECRET` correctos |
+| Webhook alcanzable | "Send test webhook" desde el dashboard de Stripe de cada empresa | La ruta `/api/<slug>/stripe/webhook/` y el secreto de esa empresa son correctos |
 | CORS | Abrir el checkout con la consola del navegador | `CORS_ALLOWED_ORIGINS` correcto |
 | Cobros sin aplicar | `conciliar_pagos --dry-run` | Ningún pago quedó sin reserva |
 
@@ -273,8 +296,9 @@ Todas se pueden correr y reportar sin revelar un valor:
   (503 en `/healthz`).
 - **El sitio carga pero el checkout no** → CORS o CSP. Los dos se ven en la
   consola del navegador, no en los logs del backend.
-- **Entró dinero y no hay reserva** → `STRIPE_WEBHOOK_SECRET` equivocado, o el
-  endpoint registrado en el modo que no es. `conciliar_pagos` recupera esos
+- **Entró dinero y no hay reserva** → el *Stripe webhook secret* de esa empresa
+  está equivocado o vacío, el endpoint no lleva el slug de la empresa, o está
+  registrado en el modo que no es. `conciliar_pagos` recupera esos
   pagos: para eso existe, y corre cada hora por cron.
 - **Volver atrás** → Render permite redesplegar un commit anterior desde el
   dashboard. Ojo: eso **no** revierte las migraciones. Ninguna migración de este

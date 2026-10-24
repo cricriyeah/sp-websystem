@@ -428,6 +428,8 @@ class LiquidacionEnEfectivoTests(EmpresaTestCase):
         return self.client.post(self.url, {
             'action': 'registrar_liquidacion_en_efectivo',
             '_selected_action': [str(reserva.pk)],
+            # Ya hay pantalla de confirmacion; estas pruebas son del paso final.
+            'confirmar_liquidacion': 'si',
         }, follow=True)
 
     def test_el_saldo_arranca_en_el_70_por_ciento(self):

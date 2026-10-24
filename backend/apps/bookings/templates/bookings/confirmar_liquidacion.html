@@ -1,0 +1,40 @@
+{% extends "admin/base_site.html" %}
+{% load l10n %}
+
+{% block content %}
+{{ block.super }}
+<div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
+    <div class="p-4">
+        <h1 class="font-semibold text-important">{{ titulo }}</h1>
+        <p><strong>Esto no cobra nada.</strong> Solo anota que ya recibiste en efectivo lo que el cliente deb&iacute;a. Si todav&iacute;a no tienes el dinero en la mano, no lo marques: aparecer&iacute;a como dinero en caja en Finanzas.</p>
+        <p>{{ cantidad }} reserva{{ cantidad|pluralize }} se saldar&aacute;{{ cantidad|pluralize:",n" }}. {{ omitidas }} se omite{{ omitidas|pluralize:",n" }}: no deb&iacute;an nada, estaban canceladas, reembolsadas o sin pagar.</p>
+    </div>
+
+    {% if liquidables %}
+    <div class="border-t border-base-200 p-4 dark:border-base-800">
+        <h2 class="font-semibold text-important">Reservas que se saldar&aacute;n</h2>
+        <ul>
+            {% for reserva, monto in liquidables %}
+            <li>{{ reserva.fecha|date:"j M Y" }} &middot; {{ reserva.nombre_cliente }} &middot; {{ monto }} {{ reserva.moneda }}</li>
+            {% endfor %}
+        </ul>
+        {% if restantes %}<p>Y {{ restantes }} reservas m&aacute;s.</p>{% endif %}
+        <h2 class="font-semibold text-important">Total que se anotar&aacute; como efectivo recibido</h2>
+        <ul>{% for moneda, monto in totales %}<li>{{ monto }} {{ moneda }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ volver }}" class="border-t border-base-200 p-4 dark:border-base-800">
+        {% csrf_token %}
+        {% for reserva in seleccionadas %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ reserva.pk|unlocalize }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="registrar_liquidacion_en_efectivo">
+        <input type="hidden" name="confirmar_liquidacion" value="si">
+        <div class="flex items-center gap-4">
+            <a href="{{ volver }}">No, volver</a>
+            {% if cantidad %}<button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default">S&iacute;, ya lo cobr&eacute; en efectivo</button>{% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

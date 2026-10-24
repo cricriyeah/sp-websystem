@@ -166,15 +166,34 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
 - La logica de aplicar un pago vive en `apps/payments/services.py`
   (`aplicar_pago_exitoso`), no en la vista: tiene dos entradas y las dos deben
   decidir igual.
-- El webhook tambien escucha `charge.refunded` (un reembolso hecho a mano desde el
-  panel de Stripe marca `reembolsada`) y `charge.dispute.created` / `.closed` /
+- El webhook tambien escucha `charge.refunded` (`services.aplicar_reembolso`). Un reembolso
+  **total** hecho desde el panel de Stripe deja la reserva como «Cancelar por mal clima» +
+  reembolso (estado `cancelada`, `reembolsada`, cupo/panga/capitan/habitacion liberados, sin
+  correo de asignacion; `cancelada_por` queda vacio y el motivo dice que vino de Stripe). Uno
+  **parcial** solo anota `monto_reembolsado`: no cancela ni marca `reembolsada`, y la columna
+  Cobro lo muestra («· devuelto X»). `amount_refunded` es acumulado: un evento que no sube lo ya
+  anotado (repetido o atrasado) no cambia nada; uno que lo sube actualiza `reembolsada_en`. Una
+  `completada` reembolsada por completo conserva su estado; un reembolso que llega antes que
+  el pago (reserva aun `pendiente_pago`) se ignora y queda en el log. Tambien escucha `charge.dispute.created` / `.closed` /
   `.funds_reinstated` (levantan y bajan `en_disputa`). Una disputa **no** cambia el
-  estado de la reserva: que hacer con un viaje en contracargo lo decide una persona.
+  estado de la reserva: que hacer con un viaje en contracargo lo decide una persona. En el
+  admin se ve como «⚠ En disputa» en la columna Cobro (lista y resumen de la reserva), el campo
+  esta junto al cobro y el filtro «en disputa» esta entre los filtros a la vista.
+  Los seis eventos que el webhook escucha (los que hay que suscribir en Stripe, por empresa, en
+  `/api/<slug>/stripe/webhook/`): `payment_intent.succeeded`,
+  `payment_intent.amount_capturable_updated`, `charge.refunded`, `charge.dispute.created`,
+  `charge.dispute.closed`, `charge.dispute.funds_reinstated` (`docs/deploy/GO-LIVE.md`).
 - **Efectivo**: `monto_efectivo` guarda lo que se recibio el dia del viaje — el 70%
   restante del anticipo y lo que el agente haya cotizado aparte (bebidas, transporte),
   por eso puede superar el saldo del tour y no se valida contra el. `saldo_pendiente`
   ya lo descuenta. La accion de admin "Registrar liquidacion en efectivo" rellena el
-  saldo exacto y sella quien y cuando; para un monto distinto se edita a mano.
+  saldo exacto y sella quien y cuando; para un monto distinto se edita a mano. Pide
+  confirmacion, solo toca reservas `pagada`/`asignada` no reembolsadas con saldo > 0 y
+  recalcula el saldo con la fila bloqueada (`apps/bookings/cobros.py`), asi que repetir el
+  clic o dos clics a la vez no cobran de mas. Tambien sale como boton «Cobrar saldo en
+  efectivo» en el resumen de la reserva (entra por la misma accion). Cualquier efectivo
+  escrito en el formulario se sella una sola vez (`save_model`): corregir el monto no mueve
+  la fecha del primer registro; quitarlo la borra.
 - **Transferencia**: `monto_transferencia` guarda una entrada independiente de Stripe
   y de caja. Descuenta `saldo_pendiente`; `monto_pagado` sigue siendo solo lo cobrado
   por Stripe para verificar montos y reembolsos de tarjeta. El admin sella fecha y
