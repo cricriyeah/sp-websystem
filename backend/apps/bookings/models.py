@@ -785,6 +785,23 @@ class Reserva(models.Model):
             tuple(sorted((self.personas_por_servicio or {}).items())),
         )
 
+    def _sincronizar_habitaciones_si_cambio(self):
+        """Una reserva que ya ocupaba cupo y cambia de fechas o de grupo arrastra sus habitaciones.
+
+        Sin esto la habitacion se quedaba bloqueada en las fechas viejas y las nuevas se podian
+        vender otra vez. Solo mira reservas cargadas de la base (`_cupo_original`) que siguen
+        ocupando; reservar por primera vez le toca a `reservar_cupo_al_confirmar`.
+        """
+        original = getattr(self, '_cupo_original', None)
+        if (
+            original is None or not original[0] or self.estado not in ESTADOS_QUE_OCUPAN_CUPO
+            or original == self._firma_de_cupo()
+        ):
+            return
+        from apps.bookings.cupo.hospedaje_sync import sincronizar_ocupaciones
+
+        sincronizar_ocupaciones(self)
+
     def _cupo_ya_validado(self):
         """Ya ocupaba cupo al cargarse y nada de lo que lo decide cambio.
 
@@ -837,6 +854,7 @@ class Reserva(models.Model):
 
             sincronizar_salidas(self)
             sincronizar_viajes_seguro(self)
+            self._sincronizar_habitaciones_si_cambio()
         self._vendedora_original = self.vendedora_id
         if self.pk and estado_previo is not None:
             era_ocupante = estado_previo in ESTADOS_QUE_OCUPAN_CUPO

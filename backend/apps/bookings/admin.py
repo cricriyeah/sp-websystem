@@ -858,7 +858,14 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             obj.transferencia_registrada_por = None
 
         if not self._entra_a_ocupar_cupo(obj, change):
-            super().save_model(request, obj, form, change)
+            # Cambiar fechas o grupo de un hospedaje ya pagado mueve sus habitaciones (Reserva.save):
+            # si ya no hay lugar en el rango nuevo se avisa en español, no se rompe con un 500.
+            try:
+                with transaction.atomic():
+                    super().save_model(request, obj, form, change)
+            except (SinCupoError, IntegrityError) as exc:
+                motivo = str(exc) if isinstance(exc, SinCupoError) else 'Ya no hay habitación esas fechas.'
+                raise CupoAgotadoAlGuardar(motivo) from exc
             return
 
         # Una reserva que entra ya pagada (o vuelve a pagada) aparta habitacion y componentes
