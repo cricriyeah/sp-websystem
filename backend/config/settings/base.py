@@ -502,6 +502,13 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', '')
 # Minutos que dura el apartado temporal de cupo en el checkout web. 0 = apagado.
 APARTADO_MINUTOS = 0 if 'test' in sys.argv else int(os.environ.get('APARTADO_MINUTOS', '0'))
 
+# Tope del apartado: no se renueva mas alla de este numero de minutos desde que se creo la reserva, y
+# una misma persona (correo o telefono) no sostiene mas de este numero de apartados a la vez. Sin
+# tope, repetir «Pagar» mantenia lugares apartados para siempre. Al llegar al tope el pago sigue
+# funcionando, pero ya no guarda el lugar: el cupo se vuelve a revisar al cobrar.
+APARTADO_TOPE_MINUTOS = int(os.environ.get('APARTADO_TOPE_MINUTOS', '45'))
+APARTADO_MAX_POR_CONTACTO = int(os.environ.get('APARTADO_MAX_POR_CONTACTO', '3'))
+
 # Anticipación mínima de la reserva web, en horas antes de la salida (0 = sin regla). Ver bookings/anticipacion.py.
 # Apagada al correr las pruebas: muchas usan fechas fijas; la regla se prueba con `override_settings`.
 HORAS_MINIMAS_RESERVA = 0 if 'test' in sys.argv else int(os.environ.get('HORAS_MINIMAS_RESERVA', '0'))

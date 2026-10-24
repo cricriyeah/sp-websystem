@@ -382,6 +382,73 @@ class ApartadoCrearPagoTests(ApiTestCase):
         self.assertEqual(data2['apartado_hasta'], segundo_vencimiento.isoformat())
 
     @mock.patch.object(StripeClient, 'payment_intents')
+    def test_pasado_el_tope_no_se_renueva_el_apartado_pero_el_pago_sigue(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        self.assertEqual(self.post_pago().status_code, 200)
+        vencimiento = timezone.now() + timedelta(minutes=2)
+        Reserva.objects.filter(pk=self.reserva.pk).update(
+            apartado_hasta=vencimiento, creado_en=timezone.now() - timedelta(minutes=50),
+        )
+
+        payment_intents.retrieve.return_value = intent_falso()
+        resp = self.post_pago()
+
+        self.assertEqual(resp.status_code, 200)
+        self.reserva.refresh_from_db()
+        self.assertEqual(self.reserva.apartado_hasta, vencimiento)  # no se movio
+        self.assertEqual(resp.json()['apartado_hasta'], vencimiento.isoformat())
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_pasado_el_tope_no_se_crea_un_apartado_nuevo(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        Reserva.objects.filter(pk=self.reserva.pk).update(creado_en=timezone.now() - timedelta(minutes=50))
+
+        resp = self.post_pago()
+
+        self.assertEqual(resp.status_code, 200)
+        self.reserva.refresh_from_db()
+        self.assertIsNone(self.reserva.apartado_hasta)
+        self.assertIsNone(resp.json()['apartado_hasta'])
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_una_misma_persona_no_sostiene_mas_de_tres_apartados(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        for n in range(3):
+            Reserva.objects.create(
+                empresa=self.empresa, servicio=self.servicio, fecha=self.fecha_viaje + timedelta(days=n + 1),
+                hora=time(6, 0), numero_personas=1, nombre_cliente='Ana Ruiz', telefono_cliente='+5210000000000',
+                correo_cliente='ANA@example.com', moneda='MXN', estado=Reserva.Estado.PENDIENTE_PAGO,
+                checkout_id=uuid.uuid4(), deslinde_aceptado=True, deslinde_nombre='Ana Ruiz',
+                apartado_hasta=timezone.now() + timedelta(minutes=10),
+                apartado_demanda={'v': 1, 'salidas': [], 'habitaciones': []},
+            )
+
+        resp = self.post_pago()
+
+        self.assertEqual(resp.status_code, 200)
+        self.reserva.refresh_from_db()
+        self.assertIsNone(self.reserva.apartado_hasta)
+
+    @mock.patch.object(StripeClient, 'payment_intents')
+    def test_otra_persona_no_cuenta_para_el_limite(self, payment_intents):
+        payment_intents.create.return_value = intent_falso()
+        for n in range(3):
+            Reserva.objects.create(
+                empresa=self.empresa, servicio=self.servicio, fecha=self.fecha_viaje + timedelta(days=n + 1),
+                hora=time(6, 0), numero_personas=1, nombre_cliente='Otra', telefono_cliente='+5210000000001',
+                correo_cliente='otra@example.com', moneda='MXN', estado=Reserva.Estado.PENDIENTE_PAGO,
+                checkout_id=uuid.uuid4(), deslinde_aceptado=True, deslinde_nombre='Otra',
+                apartado_hasta=timezone.now() + timedelta(minutes=10),
+                apartado_demanda={'v': 1, 'salidas': [], 'habitaciones': []},
+            )
+
+        resp = self.post_pago()
+
+        self.assertEqual(resp.status_code, 200)
+        self.reserva.refresh_from_db()
+        self.assertIsNotNone(self.reserva.apartado_hasta)
+
+    @mock.patch.object(StripeClient, 'payment_intents')
     def test_un_apartado_activo_bloquea_a_otra_reserva(self, payment_intents):
         # Configurar la flota para que solo quepa 1 viaje
         self.empresa.embarcaciones.all().delete()

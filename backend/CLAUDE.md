@@ -378,8 +378,10 @@ con la hora, sin tarea que limpie). `APARTADO_MINUTOS` (variable de entorno, 0 =
 15 en produccion) lo gobierna: con 0 el motor ignora los apartados aunque existan. Los endpoints
 publicos `/api/cupo/` y `/api/cupo/rango/` aceptan la cabecera `X-Checkout-Id` para no contar el
 apartado del propio cliente. `crear-pago` lo toma (ver "Garantias del cobro"); el webhook lo limpia
-al pagar o cancelar. Sin tope de edad en v1: renovar al pulsar Pagar puede prolongar un apartado
-(riesgo aceptado). Fuera de alcance: paquetes cruza-empresa (Orden).
+al pagar o cancelar. Tope: el apartado no se renueva pasados `APARTADO_TOPE_MINUTOS` (45) desde que se creo la
+reserva, y una misma persona (correo o telefono) no sostiene mas de `APARTADO_MAX_POR_CONTACTO` (3)
+apartados vigentes; en ambos casos el pago sigue, solo que sin guardar el lugar (el cupo se revisa de
+nuevo al cobrar). Fuera de alcance: paquetes cruza-empresa (Orden).
 
 Una actividad repetida dentro de un paquete ocupa cupo en cada fecha de `ReservaSalida`.
 El motor cuenta esas salidas junto con las reservas sueltas y excluye `Reserva.fecha`

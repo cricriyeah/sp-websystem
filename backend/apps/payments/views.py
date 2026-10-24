@@ -6,6 +6,7 @@ import uuid
 import stripe
 from django.conf import settings
 from django.db import DatabaseError, connection, transaction
+from django.db.models import Q
 from django.db.utils import OperationalError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -219,6 +220,34 @@ class CrearPagoView(APIView):
             'descuento': descuento,
         }
 
+    @staticmethod
+    def _apartado_topado(reserva, empresa, ahora):
+        """True si no toca crear ni renovar el apartado de esta reserva.
+
+        Dos topes contra quien quiera sostener lugares sin pagar: el apartado no se extiende mas alla
+        de `APARTADO_TOPE_MINUTOS` desde que se creo la reserva, y una misma persona (mismo correo o
+        telefono) no tiene mas de `APARTADO_MAX_POR_CONTACTO` apartados vigentes a la vez.
+        """
+        tope = getattr(settings, 'APARTADO_TOPE_MINUTOS', 45)
+        if tope and ahora >= reserva.creado_en + timedelta(minutes=tope):
+            return True
+        maximo = getattr(settings, 'APARTADO_MAX_POR_CONTACTO', 3)
+        if not maximo:
+            return False
+        mismo_contacto = Q()
+        if reserva.correo_cliente:
+            mismo_contacto |= Q(correo_cliente__iexact=reserva.correo_cliente)
+        if reserva.telefono_cliente:
+            mismo_contacto |= Q(telefono_cliente=reserva.telefono_cliente)
+        if not mismo_contacto:
+            return False
+        vigentes = (
+            Reserva.objects.filter(
+                empresa=empresa, estado=Reserva.Estado.PENDIENTE_PAGO, apartado_hasta__gt=ahora,
+            ).filter(mismo_contacto).exclude(pk=reserva.pk).count()
+        )
+        return vigentes >= maximo
+
     def _bloque_b(self, request, empresa, pk, contexto):
         reserva = contexto['reserva']
         # `tiene_cupo_fisico` se calculo en el Bloque A, dentro del alcance de la empresa: aqui,
@@ -260,6 +289,12 @@ class CrearPagoView(APIView):
                     if isinstance(resp_o_retrato, Response):
                         return resp_o_retrato
                     retrato = resp_o_retrato
+
+                    if self._apartado_topado(reserva_lock, empresa, ahora):
+                        # Ya se paso del tope: el pago sigue (el cupo se revisa de nuevo al cobrar),
+                        # pero no se renueva ni se crea un apartado nuevo.
+                        vigente = reserva_lock.apartado_hasta if tenia_apartado_vigente else None
+                        return {'apartado_hasta': vigente, 'creo_apartado': False}
 
                     minutos = getattr(settings, 'APARTADO_MINUTOS', 0)
                     apartado_hasta = ahora + timedelta(minutes=minutos)
