@@ -20,7 +20,8 @@
   <p style="margin-bottom: 0.5rem">
     En el Dashboard de Stripe de {{ empresa.nombre }}, crea un webhook a esta dirección con los eventos
     <code>payment_intent.succeeded</code>, <code>charge.refunded</code> y <code>charge.dispute.created</code>
-    (más <code>charge.dispute.closed</code> y <code>charge.dispute.funds_reinstated</code>).
+    (más <code>charge.dispute.closed</code>, <code>charge.dispute.funds_reinstated</code> y, para paquetes
+    de dos empresas, <code>payment_intent.amount_capturable_updated</code>).
     Luego pega su secreto (<code>whsec_…</code>) en la empresa.
   </p>
   <input type="text" readonly value="{{ webhook }}" data-webhook onclick="this.select()" style="width: 100%; max-width: 40rem">

@@ -176,7 +176,13 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   `completada` reembolsada por completo conserva su estado; un reembolso que llega antes que
   el pago (reserva aun `pendiente_pago`) se ignora y queda en el log. Tambien escucha `charge.dispute.created` / `.closed` /
   `.funds_reinstated` (levantan y bajan `en_disputa`). Una disputa **no** cambia el
-  estado de la reserva: que hacer con un viaje en contracargo lo decide una persona.
+  estado de la reserva: que hacer con un viaje en contracargo lo decide una persona. En el
+  admin se ve como «⚠ En disputa» en la columna Cobro (lista y resumen de la reserva), el campo
+  esta junto al cobro y el filtro «en disputa» esta entre los filtros a la vista.
+  Los seis eventos que el webhook escucha (los que hay que suscribir en Stripe, por empresa, en
+  `/api/<slug>/stripe/webhook/`): `payment_intent.succeeded`,
+  `payment_intent.amount_capturable_updated`, `charge.refunded`, `charge.dispute.created`,
+  `charge.dispute.closed`, `charge.dispute.funds_reinstated` (`docs/deploy/GO-LIVE.md`).
 - **Efectivo**: `monto_efectivo` guarda lo que se recibio el dia del viaje — el 70%
   restante del anticipo y lo que el agente haya cotizado aparte (bebidas, transporte),
   por eso puede superar el saldo del tour y no se valida contra el. `saldo_pendiente`

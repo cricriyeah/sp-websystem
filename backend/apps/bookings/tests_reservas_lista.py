@@ -143,19 +143,20 @@ class ReservasListaTests(EmpresaTestCase):
         lateral = unescape(html[html.index('id="changelist-filter"'):])
         titulos = [re.sub(r'\s+', ' ', titulo).strip().lower()
                    for titulo in re.findall(r'<h3[^>]*>(.*?)</h3>', lateral, re.S)]
-        self.assertEqual(titulos[:4], ['por estado', 'por canal origen', 'por vendedora',
-                                      'por forma pago'])
-        self.assertEqual(titulos[4:7], ['por llegada',
-                                       'por requiere atenci\u00f3n (devoluci\u00f3n)',
-                                       'por en disputa'])
+        # La disputa es de los filtros a la vista: es lo que hay que ver antes de que
+        # el viaje salga, no algo que se busque dentro de \u00abMas filtros\u00bb.
+        self.assertEqual(titulos[:5], ['por estado', 'por canal origen', 'por vendedora',
+                                      'por forma pago', 'por en disputa'])
+        self.assertEqual(titulos[5:7], ['por llegada',
+                                       'por requiere atenci\u00f3n (devoluci\u00f3n)'])
         antes, despues = lateral.split('id="reservas-mas-filtros"', 1)
-        self.assertEqual(len(re.findall(r'<h3[^>]*>', antes)), 4)
+        self.assertEqual(len(re.findall(r'<h3[^>]*>', antes)), 5)
         self.assertIn('llegada', despues)
 
     def test_filtro_avanzado_activo_abre_seccion_y_muestra_cantidad(self):
         self.reserva('Reserva reciente', 1)
         respuesta = self.client.get(self.url, {'vista': 'todas', 'llegada': 'recientes',
-                                                'en_disputa__exact': '0'})
+                                                'requiere_atencion': 'si'})
         self.assertContains(respuesta, 'id="reservas-mas-filtros" open')
         self.assertRegex(respuesta.content.decode(), r'M&aacute;s filtros\s*\(2\)')
 

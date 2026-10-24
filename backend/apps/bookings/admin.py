@@ -783,7 +783,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             'checkout_id', 'stripe_payment_intent_id', 'pagada_en',
             'vendedora_asignada_en', 'aviso_asignacion_enviado_en',
             'efectivo_cobrado_en', 'efectivo_cobrado_por',
-            'transferencia_registrada_en', 'transferencia_registrada_por', 'en_disputa',
+            'transferencia_registrada_en', 'transferencia_registrada_por',
             'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en',
             'deslinde_ip', 'deslinde_version',
             'apartado_hasta', 'apartado_demanda', 'alerta_reembolso_fallido_en',
@@ -800,7 +800,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             ('Viaje', {'fields': tuple(viaje)}),
             ('Cobro', {'fields': (
                 'forma_pago', 'moneda', 'precio_total', 'iva_monto', 'iva_tasa', 'monto_pagado',
-                'monto_efectivo', 'monto_transferencia',
+                'monto_efectivo', 'monto_transferencia', 'en_disputa',
                 'pide_bebidas', 'pide_extras_whatsapp', 'codigo_promocional', 'descuento_aplicado',
             )}),
             # El canal es obligatorio en el alta; queda visible junto a la atribución.
@@ -1094,7 +1094,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             **(extra_context or {}), 'reservas_pestanas': pestanas, 'reservas_dia': selector_dia,
         })
         if getattr(respuesta, 'context_data', None) and 'cl' in respuesta.context_data:
-            frecuentes = {'estado', 'canal_origen', 'vendedora', 'forma_pago'}
+            frecuentes = {'estado', 'canal_origen', 'vendedora', 'forma_pago', 'en_disputa'}
             visibles, avanzados = [], []
             for spec in respuesta.context_data['cl'].filter_specs:
                 campo = getattr(spec, 'field_path', getattr(spec, 'parameter_name', None))
@@ -1344,6 +1344,17 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
 
     @admin.display(description='Cobro')
     def cobro(self, obj):
+        """El hecho del cobro (`_cobro_base`) y, si el cliente disputó el cargo, la
+        marca en rojo encima: es lo primero que hay que ver antes de que salga al mar.
+        Una disputa no cambia el estado de la reserva (lo decide una persona), así que
+        sin esta marca solo se veía entrando a un bloque colapsado de la reserva."""
+        base = self._cobro_base(obj)
+        if not obj.en_disputa:
+            return base
+        return format_html(
+            '<span class="reservas-cobro-urgente">⚠ En disputa</span><br>{}', base)
+
+    def _cobro_base(self, obj):
         """Un hecho breve; rojo sólo para deuda vencida, devolución o descuadre."""
         def monto(valor):
             return (f'{valor:,.0f}' if valor == valor.to_integral_value()
