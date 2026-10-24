@@ -512,12 +512,17 @@ def _es_reembolso_total(charge, reserva, devuelto):
 
 
 @transaction.atomic
-def aplicar_disputa(charge, abierta, empresa):
+def aplicar_disputa(charge, abierta, empresa, resultado=None):
     """Levanta o baja la bandera de disputa (contracargo).
 
     No cambia el estado de la reserva: quien decide que hacer con un viaje en
     disputa es una persona, no el sistema. Lo unico que hace falta es que se vea
     en el panel antes de que salgan al mar.
+
+    `resultado` es el `status` con que Stripe cierra la disputa. `lost` significa que
+    Stripe se quedo con el dinero: se anota como salida aparte (`contracargo_perdido`) para
+    que Finanzas no siga contando ese monto «en la cuenta». `won` borra una anotacion
+    anterior. Es idempotente: repetir el evento deja lo mismo.
     """
     reserva = _reserva_del_cargo(charge, empresa)
     if reserva is None:
@@ -525,10 +530,22 @@ def aplicar_disputa(charge, abierta, empresa):
         return None
 
     reserva.en_disputa = abierta
-    reserva.save(update_fields=['en_disputa'])
+    campos = ['en_disputa']
+    if not abierta and resultado == 'lost':
+        monto = _campo_del_cargo(charge, 'amount')
+        if monto and reserva.contracargo_perdido is None:
+            reserva.contracargo_perdido = de_centavos(monto)
+            reserva.contracargo_perdido_en = timezone.now()
+            campos += ['contracargo_perdido', 'contracargo_perdido_en']
+    elif not abierta and resultado == 'won' and reserva.contracargo_perdido is not None:
+        reserva.contracargo_perdido = None
+        reserva.contracargo_perdido_en = None
+        campos += ['contracargo_perdido', 'contracargo_perdido_en']
+    reserva.save(update_fields=campos)
     logger.error(
-        'Reserva %s %s disputa (cargo %s)',
+        'Reserva %s %s disputa (cargo %s)%s',
         reserva.pk, 'entro en' if abierta else 'salio de', charge['id'],
+        f', resultado {resultado}' if resultado else '',
     )
     return reserva
 

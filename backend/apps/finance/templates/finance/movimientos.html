@@ -90,8 +90,8 @@
                         <td class="px-3 py-2 text-base-600 dark:text-base-400">
                             {{ fila.concepto|capfirst }}
                         </td>
-                        <td class="px-3 py-2 text-right font-medium {% if fila.concepto == 'reembolsos' %}text-red-600 dark:text-red-400{% else %}text-base-800 dark:text-base-200{% endif %}">
-                            {% if fila.concepto == 'reembolsos' %}−{% endif %}{{ fila.monto|floatformat:2|intcomma }}
+                        <td class="px-3 py-2 text-right font-medium {% if fila.concepto == 'reembolsos' or fila.concepto == 'contracargos' %}text-red-600 dark:text-red-400{% else %}text-base-800 dark:text-base-200{% endif %}">
+                            {% if fila.concepto == 'reembolsos' or fila.concepto == 'contracargos' %}−{% endif %}{{ fila.monto|floatformat:2|intcomma }}
                         </td>
                         <td class="px-3 py-2 text-base-500 dark:text-base-400">
                             {{ fila.moneda }}

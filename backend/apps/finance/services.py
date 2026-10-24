@@ -39,6 +39,8 @@ MOVIMIENTOS = (
     ('efectivo', 'monto_efectivo', 'efectivo_cobrado_en'),
     ('transferencia', 'monto_transferencia', 'transferencia_registrada_en'),
     ('reembolsos', 'monto_reembolsado', 'reembolsada_en'),
+    # Disputa perdida: Stripe se quedo con el dinero. Sale de la cuenta como un reembolso, pero no lo es.
+    ('contracargos', 'contracargo_perdido', 'contracargo_perdido_en'),
 )
 
 
@@ -51,6 +53,7 @@ class Balance:
     efectivo: Decimal = CERO
     transferencia: Decimal = CERO
     reembolsos: Decimal = CERO
+    contracargos: Decimal = CERO
 
     @property
     def entradas(self):
@@ -59,7 +62,7 @@ class Balance:
     @property
     def neto(self):
         """Entradas menos salidas: el balance del periodo."""
-        return self.entradas - self.reembolsos
+        return self.entradas - self.reembolsos - self.contracargos
 
     @property
     def en_cuenta(self):
@@ -68,7 +71,7 @@ class Balance:
         Es bruto: Stripe descuenta su comision antes de depositar y el sistema no
         la registra, asi que el deposito real siempre es un poco menor.
         """
-        return self.tarjeta - self.reembolsos
+        return self.tarjeta - self.reembolsos - self.contracargos
 
     @property
     def en_efectivo(self):
@@ -83,7 +86,7 @@ class Balance:
 
     @property
     def hay_movimiento(self):
-        return bool(self.tarjeta or self.efectivo or self.transferencia or self.reembolsos)
+        return bool(self.tarjeta or self.efectivo or self.transferencia or self.reembolsos or self.contracargos)
 
 
 @dataclass
@@ -101,7 +104,7 @@ class Movimiento:
 
     @property
     def enlace_stripe(self):
-        if self.concepto in ('tarjeta', 'reembolsos'):
+        if self.concepto in ('tarjeta', 'reembolsos', 'contracargos'):
             from apps.bookings.admin import enlace_pago_stripe
 
             return enlace_pago_stripe(self.reserva)
@@ -193,11 +196,11 @@ def movimientos(desde=None, hasta=None, concepto='todos', moneda=None, empresa=N
     Orden: más reciente primero.
     """
     if concepto == 'stripe':
-        conceptos_pedidos = {'tarjeta', 'reembolsos'}
-    elif concepto in {'tarjeta', 'efectivo', 'transferencia', 'reembolsos'}:
+        conceptos_pedidos = {'tarjeta', 'reembolsos', 'contracargos'}
+    elif concepto in {'tarjeta', 'efectivo', 'transferencia', 'reembolsos', 'contracargos'}:
         conceptos_pedidos = {concepto}
     else:
-        conceptos_pedidos = {'tarjeta', 'efectivo', 'transferencia', 'reembolsos'}
+        conceptos_pedidos = {'tarjeta', 'efectivo', 'transferencia', 'reembolsos', 'contracargos'}
 
     filas = []
     base_qs = _reservas(empresa).select_related('empresa')
@@ -246,7 +249,7 @@ def totales_de_movimientos(filas, concepto='todos', moneda=None):
 
     for fila in filas:
         totales.setdefault(fila.moneda, CERO)
-        if fila.concepto == 'reembolsos' and concepto in ('stripe', 'todos'):
+        if fila.concepto in ('reembolsos', 'contracargos') and concepto in ('stripe', 'todos'):
             totales[fila.moneda] -= fila.monto
         else:
             totales[fila.moneda] += fila.monto

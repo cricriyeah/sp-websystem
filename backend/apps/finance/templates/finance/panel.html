@@ -20,7 +20,7 @@
         <div>
             <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">Lo que deberia haber</h2>
             <p class="mt-1 text-base-500 text-sm dark:text-base-400">
-                Acumulado de toda la operacion. En la cuenta: cobros con tarjeta menos reembolsos.
+                Acumulado de toda la operacion. En la cuenta: cobros con tarjeta menos reembolsos y contracargos perdidos.
                 En efectivo: lo que la vendedora registro haber recibido el dia del viaje.
                 En el banco: transferencias registradas.
             </p>
@@ -164,6 +164,7 @@
                         <th class="font-medium px-3 py-2 text-right">Efectivo</th>
                         <th class="font-medium px-3 py-2 text-right">Transferencia</th>
                         <th class="font-medium px-3 py-2 text-right">Reembolsos</th>
+                        <th class="font-medium px-3 py-2 text-right">Contracargos</th>
                         <th class="font-medium px-3 py-2 text-right">Balance</th>
                     </tr>
                 </thead>
@@ -203,6 +204,13 @@
                                         {{ saldo.reembolsos|floatformat:2|intcomma }}
                                     {% endif %}
                                 </td>
+                            <td class="px-3 py-2 text-right {% if saldo.contracargos %}text-red-600 dark:text-red-400{% else %}text-base-400{% endif %}">
+                                {% if saldo.contracargos %}
+                                    <a href="{% url 'finanzas_movimientos' %}?concepto=contracargos&moneda={{ moneda }}&desde={{ dia|date:'Y-m-d'|default:dia }}&hasta={{ dia|date:'Y-m-d'|default:dia }}" class="hover:underline">−{{ saldo.contracargos|floatformat:2|intcomma }}</a>
+                                {% else %}
+                                    {{ saldo.contracargos|floatformat:2|intcomma }}
+                                {% endif %}
+                            </td>
                                 <td class="font-semibold px-3 py-2 text-right text-base-800 dark:text-base-200">
                                     {% if saldo.neto %}
                                         <a href="{% url 'finanzas_movimientos' %}?concepto=todos&moneda={{ moneda }}&desde={{ dia|date:'Y-m-d'|default:dia }}&hasta={{ dia|date:'Y-m-d'|default:dia }}" class="hover:underline">{{ saldo.neto|floatformat:2|intcomma }}</a>
@@ -214,7 +222,7 @@
                         {% endfor %}
                     {% empty %}
                         <tr>
-                            <td class="px-3 py-4 text-base-400 text-center" colspan="7">
+                            <td class="px-3 py-4 text-base-400 text-center" colspan="8">
                                 Ningun movimiento de dinero en este mes.
                             </td>
                         </tr>

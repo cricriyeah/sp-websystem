@@ -196,6 +196,10 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   `/api/<slug>/stripe/webhook/`): `payment_intent.succeeded`,
   `payment_intent.amount_capturable_updated`, `charge.refunded`, `charge.dispute.created`,
   `charge.dispute.closed`, `charge.dispute.funds_reinstated` (`docs/deploy/GO-LIVE.md`).
+  **Disputa perdida**: `charge.dispute.closed` con `status=lost` anota `contracargo_perdido` y
+  `contracargo_perdido_en` (idempotente; `won` o `funds_reinstated` la borran). Finanzas lo cuenta como
+  salida aparte, «Contracargos», y lo resta de «En la cuenta» y del neto; el admin lo marca en la
+  columna Cobro. Tampoco cambia el estado de la reserva.
 - **Efectivo**: `monto_efectivo` guarda lo que se recibio el dia del viaje — el 70%
   restante del anticipo y lo que el agente haya cotizado aparte (bebidas, transporte),
   por eso puede superar el saldo del tour y no se valida contra el. `saldo_pendiente`
@@ -209,8 +213,10 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   la fecha del primer registro; quitarlo la borra.
 - **Transferencia**: `monto_transferencia` guarda una entrada independiente de Stripe
   y de caja. Descuenta `saldo_pendiente`; `monto_pagado` sigue siendo solo lo cobrado
-  por Stripe para verificar montos y reembolsos de tarjeta. El admin sella fecha y
-  usuario al cambiar un importe positivo de transferencia.
+  por Stripe para verificar montos y reembolsos de tarjeta. El admin sella fecha y usuario
+  **una sola vez** (igual que el efectivo): corregir o completar el importe no mueve el dinero
+  ya registrado a la fecha de hoy; quitarlo borra el sello. Limite conocido: no hay libro de
+  movimientos, asi que un importe completado despues cae entero en la fecha del primer registro.
 - **Una panga hace una sola salida por dia, y un capitan tambien.** Se valida en
   `Reserva._validar_una_salida_por_dia()`, llamada desde `clean()`, asi que aplica igual
   desde la agenda, desde el admin de Reservas y desde el shell. En un paquete con varios
@@ -267,6 +273,7 @@ posibles por reserva, cada uno con monto y fecha propios:
 | Entrada efectivo | `monto_efectivo` | `efectivo_cobrado_en` | la vendedora |
 | Entrada transferencia | `monto_transferencia` | `transferencia_registrada_en` | la vendedora |
 | Salida (reembolso) | `monto_reembolsado` | `reembolsada_en` | webhook de Stripe |
+| Salida (contracargo perdido) | `contracargo_perdido` | `contracargo_perdido_en` | webhook de Stripe |
 
 Reglas que no hay que romper:
 

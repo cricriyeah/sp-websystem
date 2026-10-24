@@ -644,6 +644,13 @@ class Reserva(models.Model):
     # Lo levanta el webhook con charge.dispute.created. La vendedora necesita
     # verlo: una reserva en disputa no se toca hasta que Stripe resuelva.
     en_disputa = models.BooleanField(default=False, verbose_name='en disputa')
+    # Contracargo perdido: Stripe se quedo con el dinero (charge.dispute.closed con status=lost).
+    # Es una salida de la cuenta que no es un reembolso, y Finanzas la resta aparte.
+    contracargo_perdido = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='contracargo perdido',
+        help_text='Lo que Stripe se llevo al perder una disputa. Lo llena el webhook.',
+    )
+    contracargo_perdido_en = models.DateTimeField(null=True, blank=True, verbose_name='contracargo perdido el')
 
     # Brunch, licencia y carnada se venden con precio congelado
     # solo por el checkout web (ver ReservaPersonalizacion mas abajo,

@@ -197,15 +197,17 @@ CONCEPTOS_MOVIMIENTOS = {
     'efectivo': 'Efectivo',
     'transferencia': 'Transferencia',
     'reembolsos': 'Reembolsos',
+    'contracargos': 'Contracargos perdidos',
 }
 
 ETIQUETAS_TOTAL = {
-    'todos': 'Total neto (entradas − reembolsos)',
-    'stripe': 'Total en la cuenta (tarjeta − reembolsos)',
+    'todos': 'Total neto (entradas − reembolsos − contracargos)',
+    'stripe': 'Total en la cuenta (tarjeta − reembolsos − contracargos)',
     'tarjeta': 'Total tarjeta',
     'efectivo': 'Total efectivo',
     'transferencia': 'Total transferencia',
     'reembolsos': 'Total reembolsos',
+    'contracargos': 'Total contracargos perdidos',
 }
 
 

@@ -854,8 +854,10 @@ class StripeWebhookView(APIView):
                     aplicar_reembolso(objeto, empresa)
                 elif evento['type'] == 'charge.dispute.created':
                     aplicar_disputa(objeto, True, empresa)
-                elif evento['type'] in ('charge.dispute.closed', 'charge.dispute.funds_reinstated'):
-                    aplicar_disputa(objeto, False, empresa)
+                elif evento['type'] == 'charge.dispute.closed':
+                    aplicar_disputa(objeto, False, empresa, resultado=objeto.get('status'))
+                elif evento['type'] == 'charge.dispute.funds_reinstated':
+                    aplicar_disputa(objeto, False, empresa, resultado='won')
         except Exception:
             logger.exception('Fallo procesando %s (%s)', evento['id'], evento['type'])
 

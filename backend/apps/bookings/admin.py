@@ -1388,6 +1388,10 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         Una disputa no cambia el estado de la reserva (lo decide una persona), así que
         sin esta marca solo se veía entrando a un bloque colapsado de la reserva."""
         base = self._cobro_base(obj)
+        if obj.contracargo_perdido:
+            return format_html(
+                '<span class="reservas-cobro-urgente">Contracargo perdido: {} {}</span><br>{}',
+                f'{obj.contracargo_perdido:,.2f}', obj.moneda, base)
         if not obj.en_disputa:
             return base
         return format_html(
