@@ -413,6 +413,11 @@ Con la expansión multi-servicio y paquetes turísticos:
   1. `por_recurso_dia` (pesca deportiva / embarcaciones): aplica `validar_cupo_diario` y toma advisory lock `bloquear_cupo(empresa_id, fecha, servicio_id)`.
   2. `por_noche` (hospedaje): multi-día sobre rango `[fecha, fecha_fin_servicio)`. Se crean registros `ReservaOcupacion` por habitación/recurso asignado; `habitaciones_necesarias` calcula cuántas habitaciones libres hacen falta para el grupo. La base de datos protege contra sobreventa mediante constraint PostgreSQL `EXCLUDE USING gist` sobre `(recurso_id WITH =, daterange(fecha_inicio, fecha_fin, '[)') WITH &&) WHERE (ocupa_cupo)`. Lock de serialización: `bloquear_recurso(empresa_id, recurso_id)`.
   3. `bajo_demanda` (tours/experiencias sin límite físico estricto): no bloquea inventario previo.
+- **Cambiar fechas o grupo de un hospedaje ya pagado mueve sus habitaciones** (`cupo/hospedaje_sync.py`,
+  llamado desde `Reserva._guardar_reserva`): si la firma de cupo cambia (fechas, personas) en una reserva
+  que ya ocupaba, `sincronizar_ocupaciones` conserva las mismas habitaciones si siguen libres en el rango
+  nuevo y alcanzan, y si no las vuelve a elegir; sin lugar lanza `SinCupoError` y el admin lo muestra como
+  aviso en espanol (`CupoAgotadoAlGuardar`). Antes la habitacion se quedaba bloqueada en las fechas viejas.
 - **Apartado de hospedaje**: no crea filas `ReservaOcupacion` (no toca el `EXCLUDE`); el retrato
   guarda las habitaciones elegidas por `elegir_habitaciones` (misma funcion pura que usa
   `_asignar_cupo_hospedaje`, orden determinista por `pk`) y `obtener_recursos_con_ocupaciones`
@@ -670,6 +675,7 @@ En `/admin/bookings/viajetransporte/` (`ViajeTransporteAdmin`, Unfold, `EmpresaS
   - Encabezado: "N sin vehículo" o "Todo asignado".
   - Columna Aviso (alertas informativas en rojo, nunca bloquean el guardado):
     - *"Mismo vehículo a la misma hora que #X"*: aviso de empalme cuando dos viajes coinciden en vehículo, fecha y hora.
+    - *"Mismo vehículo con otro traslado a menos de 2 h (#X)"*: aviso cuando el mismo vehículo tiene otro tramo a menos de 2 horas de distancia (un traslado dura).
     - *"Falta la hora"*: tramo de regreso pendiente de hora.
     - *"El vehículo ya no cabe o está bloqueado"*: asignación que quedó inválida por un cambio posterior.
 
