@@ -2612,6 +2612,24 @@ class ContextoAsignacionVehiculo:
         grupo = empalmes.get(clave, [])
         return [reserva_id for pk, reserva_id in grupo if pk != viaje.pk]
 
+    VENTANA_TRASLADOS_CERCANOS = timedelta(hours=2)
+
+    def otros_viajes_cercanos(self, viaje):
+        """reserva_ids de otros viajes del mismo vehiculo y dia con una hora distinta pero a menos de
+        `VENTANA_TRASLADOS_CERCANOS`: un traslado dura, asi que las 9:00 y las 10:00 en el mismo
+        vehiculo tambien se pisan. Los de la misma hora exacta los da `otros_viajes_empalmados`."""
+        if not viaje.vehiculo_id or not viaje.hora or viaje.cancelado:
+            return []
+        minutos = viaje.hora.hour * 60 + viaje.hora.minute
+        ventana = int(self.VENTANA_TRASLADOS_CERCANOS.total_seconds() // 60)
+        cercanos = []
+        for (vehiculo_id, hora), grupo in self._obtener_empalmes(viaje.fecha, viaje.empresa_id).items():
+            if vehiculo_id != viaje.vehiculo_id or hora == viaje.hora:
+                continue
+            if abs(hora.hour * 60 + hora.minute - minutos) < ventana:
+                cercanos.extend(reserva_id for pk, reserva_id in grupo if pk != viaje.pk)
+        return cercanos
+
     def asignacion_es_invalida(self, viaje):
         """True si el vehículo asignado ya no cabe, está inactivo o está bloqueado."""
         if not viaje.vehiculo_id:
@@ -2877,6 +2895,24 @@ class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAd
             if otros_reserva:
                 referencias = ', '.join(f'#{r_id}' for r_id in sorted(set(otros_reserva)))
                 avisos.append(f'Mismo vehículo a la misma hora que {referencias}')
+
+        if obj.vehiculo_id and obj.hora and not obj.cancelado:
+            if contexto is not None:
+                cercanos = contexto.otros_viajes_cercanos(obj)
+            else:
+                # La lista se pinta cuando el contexto de la vista ya se solto: una consulta por fila.
+                minutos = obj.hora.hour * 60 + obj.hora.minute
+                ventana = int(ContextoAsignacionVehiculo.VENTANA_TRASLADOS_CERCANOS.total_seconds() // 60)
+                cercanos = [
+                    reserva_id for reserva_id, hora in ViajeTransporte.objects.filter(
+                        empresa_id=obj.empresa_id, fecha=obj.fecha, vehiculo_id=obj.vehiculo_id,
+                        cancelado=False, hora__isnull=False,
+                    ).exclude(pk=obj.pk).exclude(hora=obj.hora).values_list('reserva_id', 'hora')
+                    if abs(hora.hour * 60 + hora.minute - minutos) < ventana
+                ]
+            if cercanos:
+                referencias = ', '.join(f'#{r_id}' for r_id in sorted(set(cercanos)))
+                avisos.append(f'Mismo vehículo con otro traslado a menos de 2 h ({referencias})')
 
         # 2. Sin hora: en un paquete es la hora del vuelo (cualquier tramo); en un traslado suelto, la del regreso
         if not obj.hora:

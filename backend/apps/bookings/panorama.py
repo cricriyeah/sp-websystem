@@ -20,13 +20,13 @@ aqui. Lo que se guarda sigue siendo el selector de la tabla, con su validacion.
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
-from django.db.models import Q
+from django.db.models import F, Q
 
 from apps.fleet.models import Embarcacion, EmbarcacionNoDisponible
 
 from .cupo.adaptador import obtener_contexto_rango, solo_demanda_de_mar
 from .cupo.apartado import apartado_activo, demanda_apartada_por_rango
-from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva
+from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva, ReservaSalida
 
 DIAS_DEL_PANORAMA = 7
 
@@ -154,6 +154,20 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA, hoy=None):
         else:
             sin_panga[reserva.fecha].append(reserva)
 
+    # Un paquete con varios dias de mar sale cada uno de esos dias con la misma panga: ocupa su celda
+    # en cada fecha de `ReservaSalida`, no solo en `Reserva.fecha` (el primer dia ya esta arriba).
+    reservas_de_salidas = sin_lo_que_no_se_reparte(Reserva.objects.filter(
+        estado__in=ESTADOS_QUE_OCUPAN_CUPO, empresa=empresa,
+    ))
+    for salida in ReservaSalida.objects.filter(
+        fecha__range=(desde, hasta), empresa=empresa, reserva__in=reservas_de_salidas,
+    ).exclude(fecha=F('reserva__fecha')).select_related('reserva__embarcacion').order_by('fecha', 'reserva__hora', 'reserva_id'):
+        reserva = salida.reserva
+        if reserva.embarcacion_id:
+            asignadas.setdefault((salida.fecha, reserva.embarcacion_id), reserva)
+        else:
+            sin_panga[salida.fecha].append(reserva)
+
     # Cobrados que ya pasaron y nadie asigno: la agenda los lista y los marca
     # ATRASADO, asi que el resumen tiene que contarlos tambien.
     atrasados = sin_lo_que_no_se_reparte(Reserva.objects.filter(
@@ -198,7 +212,7 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA, hoy=None):
             sum(1 for e in embarcaciones if (fecha, e.pk) not in fuera) for fecha in fechas
         ],
         resumen=Resumen(
-            sin_panga=sum(len(dia) for dia in sin_panga.values()),
+            sin_panga=len({reserva.pk for dia in sin_panga.values() for reserva in dia}),
             sin_capitan=sin_capitan,
             atrasados=atrasados,
         ),

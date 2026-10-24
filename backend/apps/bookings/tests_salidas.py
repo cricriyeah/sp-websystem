@@ -159,3 +159,35 @@ class SincronizacionSalidasTests(SalidasBase):
         reserva.save()
         self.assertEqual(reserva.salidas.count(), 4)
         self.assertEqual(obtener_contexto_cupo(self.inicio + timedelta(days=2), self.empresa).grupos, [])
+
+
+class PanoramaConSalidasTests(SalidasBase):
+    """La cuadricula de «Asignar pangas» pinta la panga del paquete en cada dia de mar, no solo el primero."""
+
+    def test_el_paquete_ocupa_su_panga_en_cada_dia_de_mar(self):
+        from apps.bookings.panorama import armar_panorama
+
+        reserva = self.reserva_con_salidas(estado=Reserva.Estado.CANCELADA)  # crea sus 4 salidas
+        panga = Embarcacion.objects.create(
+            empresa=self.empresa, nombre='Panga del paquete', clase='chica', capacidad_maxima=3,
+        )
+        Reserva.objects.filter(pk=reserva.pk).update(estado=Reserva.Estado.ASIGNADA, embarcacion=panga)
+
+        panorama = armar_panorama(self.inicio, self.empresa, dias=7)
+
+        renglon = next(r for r in panorama.renglones if r.embarcacion.pk == panga.pk)
+        pintados = [celda.fecha for celda in renglon.celdas if celda.reserva is not None]
+        self.assertEqual(pintados, [self.inicio + timedelta(days=d) for d in (1, 2, 3, 4)])
+        self.assertEqual(sum(panorama.ocupadas), 4)
+
+    def test_sin_panga_cuenta_una_reserva_aunque_salga_varios_dias(self):
+        from apps.bookings.panorama import armar_panorama
+
+        reserva = self.reserva_con_salidas(estado=Reserva.Estado.CANCELADA)
+        Reserva.objects.filter(pk=reserva.pk).update(estado=Reserva.Estado.PAGADA)
+
+        panorama = armar_panorama(self.inicio, self.empresa, dias=7)
+
+        self.assertEqual(panorama.resumen.sin_panga, 1)
+        con_pendiente = [dia for dia in panorama.sin_repartir if dia]
+        self.assertEqual(len(con_pendiente), 4)

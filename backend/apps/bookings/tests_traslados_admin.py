@@ -627,3 +627,53 @@ class TrasladosAdminTests(EmpresaTestCase):
         # Con 5 filas, la cantidad de consultas debe ser exactamente la misma
         with self.assertNumQueries(n_consultas):
             self.client.get(self.url, {'cuando': 'semana'})
+
+
+class AvisoDeTrasladosCercanosTests(EmpresaTestCase):
+    """Un traslado dura: dos viajes del mismo vehiculo a las 9:00 y a las 10:00 tambien se pisan."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse('admin:bookings_viajetransporte_changelist')
+        self.jefe = self.crear_jefe('jefe_cercanos')
+        self.servicio = _crear_servicio_transporte(self.empresa)
+        self.client.force_login(self.jefe)
+
+    def _asignar(self, nombre, hora, vehiculo, fecha):
+        reserva = _crear_reserva_transporte(self.empresa, self.servicio, fecha=fecha, hora=hora, nombre_cliente=nombre)
+        viaje = reserva.viajes_transporte.first()
+        viaje.vehiculo = vehiculo
+        viaje.save()
+        return reserva
+
+    def test_avisa_si_el_mismo_vehiculo_tiene_otro_traslado_a_menos_de_dos_horas(self):
+        fecha = timezone.localdate() + timedelta(days=2)
+        van = Vehiculo.objects.create(empresa=self.empresa, nombre='Van Cercana', lugares=6, activo=True)
+        self._asignar('Primero', time(9, 0), van, fecha)
+        self._asignar('Segundo', time(10, 0), van, fecha)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn('Mismo vehículo con otro traslado a menos de 2 h', html)
+        self.assertNotIn('Mismo vehículo a la misma hora', html)
+
+    def test_no_avisa_con_dos_horas_o_mas_de_distancia(self):
+        fecha = timezone.localdate() + timedelta(days=2)
+        van = Vehiculo.objects.create(empresa=self.empresa, nombre='Van Lejana', lugares=6, activo=True)
+        self._asignar('Primero', time(9, 0), van, fecha)
+        self._asignar('Segundo', time(11, 0), van, fecha)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertNotIn('a menos de 2 h', html)
+
+    def test_no_avisa_si_son_vehiculos_distintos(self):
+        fecha = timezone.localdate() + timedelta(days=2)
+        uno = Vehiculo.objects.create(empresa=self.empresa, nombre='Van Uno', lugares=6, activo=True)
+        dos = Vehiculo.objects.create(empresa=self.empresa, nombre='Van Dos', lugares=6, activo=True)
+        self._asignar('Primero', time(9, 0), uno, fecha)
+        self._asignar('Segundo', time(9, 30), dos, fecha)
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertNotIn('a menos de 2 h', html)
