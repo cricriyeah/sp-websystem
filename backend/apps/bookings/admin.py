@@ -732,6 +732,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         'deslinde_version',
         'efectivo_cobrado_en', 'efectivo_cobrado_por',
         'transferencia_registrada_en', 'transferencia_registrada_por', 'en_disputa',
+        'contracargo_perdido', 'contracargo_perdido_en',
         'vendedora_asignada_en', 'pagada_en', 'monto_reembolsado', 'reembolsada_en',
         'aviso_asignacion_enviado_en',
         # Se congelan en CrearPagoView junto con precio_total: editarlos aqui a
@@ -812,7 +813,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             ('Viaje', {'fields': tuple(viaje)}),
             ('Cobro', {'fields': (
                 'forma_pago', 'moneda', 'precio_total', 'iva_monto', 'iva_tasa', 'monto_pagado',
-                'monto_efectivo', 'monto_transferencia', 'en_disputa',
+                'monto_efectivo', 'monto_transferencia', 'en_disputa', 'contracargo_perdido', 'contracargo_perdido_en',
                 'pide_bebidas', 'pide_extras_whatsapp', 'codigo_promocional', 'descuento_aplicado',
             )}),
             # El canal es obligatorio en el alta; queda visible junto a la atribución.
