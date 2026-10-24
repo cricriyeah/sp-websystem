@@ -4,6 +4,7 @@ Reutiliza la logica de pricing del checkout web (apps.payments.estrategias_preci
 apps.fleet.tarifa_transporte y Paquete.precio_total_en) sin duplicar reglas de cobro.
 """
 
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -13,9 +14,20 @@ from apps.fleet.tarifa_transporte import TarifaTransporteNoConfigurada
 from apps.payments.estrategias_precio import (
     DemandaPrecio,
     REGISTRO_ESTRATEGIAS_PRECIO,
+    habitaciones_para_precio,
     obtener_estrategia_precio,
 )
 from apps.payments.pricing import CENTAVOS
+
+
+def _noches_entre(llegada, salida) -> int:
+    """Noches de una estancia; una sola si falta alguna fecha o no son validas (aun se esta tecleando)."""
+    try:
+        llegada = date.fromisoformat(llegada) if isinstance(llegada, str) else llegada
+        salida = date.fromisoformat(salida) if isinstance(salida, str) else salida
+        return max(1, (salida - llegada).days)
+    except (TypeError, ValueError):
+        return 1
 
 
 def sugerir_precio(
@@ -25,6 +37,7 @@ def sugerir_precio(
     numero_personas,
     moneda,
     fecha=None,
+    fecha_salida=None,
     detalle_transporte=None,
 ) -> Decimal | None:
     """Devuelve Decimal (dos decimales) o None si no hay forma de calcularlo.
@@ -174,9 +187,15 @@ def sugerir_precio(
             return None
 
         estrategia = obtener_estrategia_precio(estrategia_clave)
+        noches, habitaciones = 1, 1
+        if estrategia_clave == EstrategiaPrecio.POR_NOCHE:
+            noches = _noches_entre(fecha, fecha_salida)
+            habitaciones = habitaciones_para_precio(servicio, personas_int)
         demanda = DemandaPrecio(
             personas=personas_int,
             moneda=moneda_str,
+            noches=noches,
+            habitaciones=habitaciones,
             tipo_cambio=tipo_cambio,
         )
         precio = estrategia.calcular_base(servicio, demanda)

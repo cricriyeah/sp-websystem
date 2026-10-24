@@ -81,6 +81,13 @@ DESLINDE_VERSION = '2026-09-11'
 # pero no pagado) no debe bloquear el cupo de otro cliente.
 ESTADOS_QUE_OCUPAN_CUPO = ['pagada', 'asignada', 'completada']
 
+# Columnas (attname, como las entrega `from_db`) que deciden cuanto cupo pide una reserva.
+# Ver `Reserva._cupo_ya_validado`.
+CAMPOS_QUE_DECIDEN_EL_CUPO = {
+    'estado', 'fecha', 'fecha_salida', 'inicio_paquete', 'numero_personas', 'servicio_id', 'paquete_id',
+    'orden_id', 'personas_por_servicio',
+}
+
 
 def validar_ventana_salida(value):
     """Valida la ventana horaria legacy de pesca (5:00 a 7:00 am). Conservado como helper."""
@@ -742,13 +749,35 @@ class Reserva(models.Model):
             instance._vendedora_original = instance.vendedora_id
         if 'estado' in field_names:
             instance._estado_original = instance.estado
+        if CAMPOS_QUE_DECIDEN_EL_CUPO <= set(field_names):
+            instance._cupo_original = instance._firma_de_cupo()
         return instance
+
+    def _firma_de_cupo(self):
+        """Lo que la reserva le pide al cupo. Si no cambia entre cargarla y guardarla, el cupo que
+        ya tenia sigue siendo suyo y no hay por que volver a pedirselo al motor."""
+        return (
+            self.estado in ESTADOS_QUE_OCUPAN_CUPO, self.fecha, self.fecha_salida, self.inicio_paquete,
+            self.numero_personas, self.servicio_id, self.paquete_id, self.orden_id,
+            tuple(sorted((self.personas_por_servicio or {}).items())),
+        )
+
+    def _cupo_ya_validado(self):
+        """Ya ocupaba cupo al cargarse y nada de lo que lo decide cambio.
+
+        Sin esto, guardar cualquier dato de un viaje ya vendido (ponerle panga, corregir un
+        telefono) le volvia a pedir cupo contra el tope de su dia: si el negocio bajo o cerro
+        `CupoDiario` por debajo de lo vendido, el viaje se rechazaba a si mismo. El tope frena
+        ventas nuevas, reprogramaciones y grupos mas grandes — no a lo que ya se vendio.
+        """
+        original = getattr(self, '_cupo_original', None)
+        return original is not None and original[0] and original == self._firma_de_cupo()
 
     def save(self, *args, **kwargs):
         _congelar_tipo_cambio(self, lambda: self.empresa.sede, kwargs)
         if (
             kwargs.get('update_fields') is None and self.paquete_id and not self.orden_id
-            and self.estado in ESTADOS_QUE_OCUPAN_CUPO
+            and self.estado in ESTADOS_QUE_OCUPAN_CUPO and not self._cupo_ya_validado()
         ):
             from apps.bookings.cupo.salidas import salidas_deseadas, validar_cupo_salidas_bajo_candado
 
@@ -798,6 +827,8 @@ class Reserva(models.Model):
                 )
                 self.componentes.exclude(estado_cupo=nuevo_estado_cupo).update(estado_cupo=nuevo_estado_cupo)
         self._estado_original = self.estado
+        if update_fields is None:
+            self._cupo_original = self._firma_de_cupo()
 
     def _derivar_estado_de_asignacion(self):
         """Poner la panga da el viaje por asignado; quitarla lo regresa a pagada.
@@ -838,7 +869,9 @@ class Reserva(models.Model):
             if self.fecha_salida and self.fecha_salida <= self.inicio_paquete:
                 raise ValidationError({'fecha_salida': 'La salida debe ser posterior al inicio del paquete.'})
         if self.estado in ESTADOS_QUE_OCUPAN_CUPO:
-            if self.orden_id:
+            if self._cupo_ya_validado():
+                pass
+            elif self.orden_id:
                 # Cada reserva de una orden valida unicamente el inventario de
                 # su servicio bajo el alcance de su empresa.
                 if self.servicio_id and self.servicio.estrategia_cupo == 'por_noche':
@@ -873,12 +906,36 @@ class Reserva(models.Model):
             raise ValidationError(
                 {'deslinde_aceptado': 'La reserva web requiere aceptar el deslinde de responsabilidad.'}
             )
+        self._validar_ocupaciones_al_reactivar()
         self._validar_ventana_horaria()
         self._validar_tope_personas()
         self._validar_capacidad_embarcacion()
         self._validar_una_salida_por_dia()
         self._validar_cambio_de_fecha()
         self._validar_consistencia_de_empresa()
+
+    def _validar_ocupaciones_al_reactivar(self):
+        """Una cancelada que vuelve a pagada recupera las habitaciones que tenia. Si otra venta ya
+        se quedo con alguna, `save()` no puede reactivarla (la base lo rechaza con un 500): se avisa aqui."""
+        if not self.pk or self.estado not in ESTADOS_QUE_OCUPAN_CUPO:
+            return
+        estado_previo = getattr(self, '_estado_original', None)
+        if estado_previo is None or estado_previo in ESTADOS_QUE_OCUPAN_CUPO:
+            return
+        for ocupacion in self.ocupaciones.select_related('recurso'):
+            otra = ReservaOcupacion.objects.filter(
+                recurso_id=ocupacion.recurso_id, ocupa_cupo=True, empresa_id=self.empresa_id,
+                fecha_inicio__lt=ocupacion.fecha_fin, fecha_fin__gt=ocupacion.fecha_inicio,
+            ).exclude(reserva_id=self.pk).first()
+            if otra is not None:
+                raise ValidationError({
+                    'estado': ValidationError(
+                        f'Ya no hay habitación esas fechas: {ocupacion.recurso.nombre} está ocupada por la '
+                        f'reserva #{otra.reserva_id}. Con la reserva todavía cancelada, cambia la habitación '
+                        f'en «Ocupaciones del viaje», guarda, y vuelve a reactivarla.',
+                        code='sin_cupo',
+                    ),
+                })
 
     def _validar_ventana_horaria(self):
         if self.servicio_id:

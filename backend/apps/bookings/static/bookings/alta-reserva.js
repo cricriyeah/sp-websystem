@@ -170,6 +170,8 @@
       if (personasVal) url.searchParams.set('personas', personasVal);
       if (monedaVal) url.searchParams.set('moneda', monedaVal);
       if (fechaVal) url.searchParams.set('fecha', fechaVal);
+      var elSalida = document.getElementById('id_fecha_salida');
+      if (elSalida && elSalida.value) url.searchParams.set('fecha_salida', elSalida.value);
 
       if (esServicioTransporte(servicioVal)) {
         var elTipoActual = elTipoTraslado || document.getElementById('id_detalle_transporte-0-tipo_traslado');
@@ -223,7 +225,7 @@
     });
 
     // Escuchar cambios en los campos que determinan la cotizacion
-    var camposObservados = [elServicio, elPaquete, elPersonas, elMoneda, elFecha, elTipoTraslado, elZona];
+    var camposObservados = [elServicio, elPaquete, elPersonas, elMoneda, elFecha, document.getElementById('id_fecha_salida'), elTipoTraslado, elZona];
     camposObservados.forEach(function (campo) {
       if (campo) {
         campo.addEventListener('change', pedirSugerenciaDebounced);
@@ -328,7 +330,7 @@
 
     // Si django.jQuery esta presente (widgets autocomplete de select2), enlazar tambien el evento change
     if (window.django && window.django.jQuery) {
-      window.django.jQuery('#id_servicio, #id_paquete, #id_numero_personas, #id_moneda, #id_fecha, #id_detalle_transporte-0-tipo_traslado, #id_detalle_transporte-0-zona')
+      window.django.jQuery('#id_servicio, #id_paquete, #id_numero_personas, #id_moneda, #id_fecha, #id_fecha_salida, #id_detalle_transporte-0-tipo_traslado, #id_detalle_transporte-0-zona')
         .on('change', pedirSugerenciaDebounced);
       window.django.jQuery('#id_servicio').on('change', actualizarVisibilidadDetalleTransporte);
       window.django.jQuery('#id_servicio').on('change', actualizarLimitesServicio);

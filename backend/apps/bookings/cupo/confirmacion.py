@@ -163,6 +163,14 @@ def reservar_cupo_al_confirmar(reserva) -> None:
         for dia, servicio_id in sorted(locks):
             bloquear_cupo(reserva.empresa_id, dia, servicio_id=servicio_id)
 
+        def registrar_componente(servicio):
+            # update_or_create: una cancelada que se reactiva desde el admin ya trae sus filas
+            # (en `liberado`) y no debe chocar con la restriccion de unicidad.
+            ReservaPaqueteComponente.objects.update_or_create(
+                reserva=reserva, servicio=servicio,
+                defaults={'empresa': reserva.empresa, 'estado_cupo': ReservaPaqueteComponente.EstadoCupo.OK},
+            )
+
         for ps in componentes:
             servicio = ps.servicio
             estrategia = servicio.estrategia_cupo
@@ -184,31 +192,16 @@ def reservar_cupo_al_confirmar(reserva) -> None:
                                 f'No hay cupo disponible para el componente {servicio.nombre} el {dia} ({motivo}).'
                             )
                         raise SinCupoError(f'No hay cupo disponible para el componente {servicio.nombre} ({motivo}).')
-                ReservaPaqueteComponente.objects.create(
-                    reserva=reserva,
-                    servicio=servicio,
-                    empresa=reserva.empresa,
-                    estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
-                )
+                registrar_componente(servicio)
             elif estrategia == 'por_noche':
                 _asignar_cupo_hospedaje(
                     reserva, servicio, es_componente=True,
                     desde=reserva.fecha_inicio_paquete, hasta=reserva.fecha_fin_servicio,
                     personas=reserva.personas_de(servicio.pk),
                 )
-                ReservaPaqueteComponente.objects.create(
-                    reserva=reserva,
-                    servicio=servicio,
-                    empresa=reserva.empresa,
-                    estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
-                )
+                registrar_componente(servicio)
             elif estrategia == 'bajo_demanda':
-                ReservaPaqueteComponente.objects.create(
-                    reserva=reserva,
-                    servicio=servicio,
-                    empresa=reserva.empresa,
-                    estado_cupo=ReservaPaqueteComponente.EstadoCupo.OK,
-                )
+                registrar_componente(servicio)
         from .salidas import sincronizar_salidas
 
         sincronizar_salidas(reserva)
