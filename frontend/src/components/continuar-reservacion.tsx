@@ -52,6 +52,9 @@ function montoRetenido(resumen: Resumen, locale: string): string | null {
   }
 }
 
+// La banda espera a que la barra termine de abrirse antes de entrar: asi se ve como una sola secuencia, no dos cosas a la vez.
+const RETRASO_ENTRADA_MS = 450;
+
 export function ContinuarReservacion({ lang, dict }: Props) {
   const router = useRouter();
   const sinMovimiento = useReducedMotion();
@@ -336,10 +339,21 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     onDestructiva={() => { if (!cancelando) void cancelar(); }}
   />;
 
-  if (!aviso && !deshacerAviso) return null;
+  const hayBanda = Boolean(aviso || deshacerAviso);
+  const [entrada, setEntrada] = useState(false);
+  useEffect(() => {
+    if (!hayBanda) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reinicia la espera para la próxima vez que aparezca
+      setEntrada(false);
+      return;
+    }
+    const espera = setTimeout(() => setEntrada(true), sinMovimiento ? 0 : RETRASO_ENTRADA_MS);
+    return () => clearTimeout(espera);
+  }, [hayBanda, sinMovimiento]);
+  if (!hayBanda) return null;
   return <>
     <AnimatePresence>
-      {(aviso || deshacerAviso) && <m.div
+      {entrada && <m.div
         key="continuar-banda"
         initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
         animate={{ height: sinMovimiento ? 'auto' : alto, opacity: 1 }}
