@@ -17,6 +17,10 @@ type Props = {
   ayudaMensaje: string;
   /** Cómo se resuelve cada acción en esta vista; sin él, «reintentar» recarga y «volver» regresa. */
   alAccionar?: (clave: ClaveAccion) => void;
+  /** Conserva el cuerpo del tipo («No se hizo ningún cobro.») aunque `mensaje` reemplace el título. */
+  conservarCuerpo?: boolean;
+  /** El enlace de WhatsApp. Por defecto siempre; la tarjeta rechazada lo ofrece desde el tercer fallo. */
+  ofrecerAyuda?: boolean;
   className?: string;
 };
 
@@ -24,12 +28,17 @@ type Props = {
  * El único aviso de problema del checkout: `AvisoAccion` con los textos del diccionario y
  * la salida humana (WhatsApp) siempre a un toque. Reemplaza al antiguo `ErrorBlock`.
  */
-export function AvisoProblema({ checkout, feedback, tipo, mensaje, lineasDinero, ayudaMensaje, alAccionar, className }: Props) {
+export function AvisoProblema({
+  checkout, feedback, tipo, mensaje, lineasDinero, ayudaMensaje, alAccionar, conservarCuerpo = false, ofrecerAyuda = true, className,
+}: Props) {
   const textos = mensaje
-    ? { ...checkout.problema, [tipo]: { ...checkout.problema[tipo], titulo: mensaje, cuerpo: '' } }
+    ? {
+      ...checkout.problema,
+      [tipo]: { ...checkout.problema[tipo], titulo: mensaje, cuerpo: conservarCuerpo ? checkout.problema[tipo].cuerpo : '' },
+    }
     : checkout.problema;
   const problema = problemaDe(tipo, { lineasDinero, tieneWhatsapp }, textos);
-  const ayuda = tieneWhatsapp && tipo !== 'catalogo_caido';
+  const ayuda = tieneWhatsapp && tipo !== 'catalogo_caido' && ofrecerAyuda;
 
   return (
     <div className={className}>

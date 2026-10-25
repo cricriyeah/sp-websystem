@@ -232,6 +232,14 @@
         "hoy": "Today"
       }
     },
+    "motivosTarjeta": {
+      "insufficient_funds": "Your card does not have enough funds.",
+      "card_declined": "Your bank declined the payment.",
+      "expired_card": "The card has expired.",
+      "incorrect_cvc": "The security code doesn't match.",
+      "authentication_required": "Your bank asked to verify the card and it was not completed.",
+      "generic": "Your bank didn't accept the payment."
+    },
     "verificacion": {
       "marca": "Tick the box to confirm you are a person."
     },

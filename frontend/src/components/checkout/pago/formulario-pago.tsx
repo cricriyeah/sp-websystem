@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Clock, Lock } from '@phosphor-icons/react';
+import { useReducedMotion } from 'framer-motion';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CheckoutSectionCard } from '@/components/checkout-section-card';
 import { EsqueletoPago } from '@/components/checkout/pago/esqueleto-pago';
@@ -14,6 +15,7 @@ import { useMovil } from '@/components/reserva/use-movil';
 import { Button } from '@/components/ui/button';
 import { WaitNotice } from '@/components/wait-notice';
 import type { Pago } from '@/lib/api';
+import { claveMotivoRechazo, ofreceAyuda, type ClaveMotivoRechazo } from '@/lib/fallo-pago';
 import { fechaHoraDeVencimiento, horaDeVencimiento } from '@/lib/pendientes-texto';
 import { RADIO_PAGO, REGLAS_PAGO, TOKENS_PAGO } from '@/lib/tokens-pago';
 
@@ -59,6 +61,20 @@ function PaymentForm({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [errorEsDeTarjeta, setErrorEsDeTarjeta] = useState(false);
+  // Por qué rechazó el banco, en nuestras palabras (el texto de Stripe llega en su idioma y su tono) y
+  // cuántas veces seguidas: WhatsApp se ofrece desde el tercer rechazo, no desde el primero.
+  const [motivo, setMotivo] = useState<ClaveMotivoRechazo | null>(null);
+  const [rechazos, setRechazos] = useState(0);
+  // El aviso va ARRIBA del formulario, donde está la tarjeta que hay que cambiar; si queda fuera de
+  // pantalla (el cliente pulsó «Pagar» desde abajo) se trae a la vista.
+  const avisoRef = useRef<HTMLDivElement>(null);
+  const sinMovimiento = useReducedMotion();
+  useEffect(() => {
+    if (!formError) return;
+    const caja = avisoRef.current?.getBoundingClientRect();
+    if (!caja || (caja.top >= 0 && caja.bottom <= window.innerHeight)) return;
+    avisoRef.current?.scrollIntoView({ block: 'center', behavior: sinMovimiento ? 'auto' : 'smooth' });
+  }, [formError, sinMovimiento]);
   // El esqueleto cubre el hueco del iframe hasta que Stripe termina de pintarlo.
   const [listo, setListo] = useState(false);
 
@@ -67,6 +83,7 @@ function PaymentForm({
     setSubmitting(true);
     setFormError('');
     setErrorEsDeTarjeta(false);
+    setMotivo(null);
 
     // Renovacion silenciosa del apartado antes de hablar con Stripe: la hace el
     // componente que conoce la reserva. Si decide que no se cobra (sin cupo, monto
@@ -86,8 +103,13 @@ function PaymentForm({
     });
 
     if (confirmError) {
-      setFormError(confirmError.message ?? checkout.errorGeneric);
-      setErrorEsDeTarjeta(confirmError.type === 'card_error');
+      const esDeTarjeta = confirmError.type === 'card_error';
+      const clave = esDeTarjeta ? claveMotivoRechazo(confirmError.decline_code ?? confirmError.code) : null;
+      // Un rechazo de tarjeta se explica con nuestro texto del motivo; lo demás conserva el mensaje que llegó.
+      setFormError(clave ? checkout.motivosTarjeta[clave] : confirmError.message ?? checkout.errorGeneric);
+      setErrorEsDeTarjeta(esDeTarjeta);
+      setMotivo(clave);
+      setRechazos((n) => (esDeTarjeta ? n + 1 : n));
       setSubmitting(false);
       if (confirmError.type === 'card_error') {
         onPagoRechazado?.(confirmError.message ?? checkout.errorGeneric, confirmError.decline_code ?? confirmError.code);
@@ -122,6 +144,34 @@ function PaymentForm({
           PaymentIntent para montarse, pero eso es un detalle tecnico que al
           cliente no le toca notar. */}
       <p className="texto-cuerpo">{puente}</p>
+      {formError && (
+        <div ref={avisoRef}>
+          <AvisoProblema
+            checkout={checkout}
+            feedback={feedback}
+            tipo={errorEsDeTarjeta ? 'tarjeta_rechazada' : 'red'}
+            mensaje={formError}
+            // «No se hizo ningún cobro.» va con el motivo del banco.
+            conservarCuerpo={errorEsDeTarjeta}
+            ofrecerAyuda={!errorEsDeTarjeta || ofreceAyuda(rechazos)}
+            ayudaMensaje={ayudaMensaje}
+            // «Probar otra tarjeta» limpia el aviso y, si el banco rechazó la tarjeta, vacía el campo y lo
+            // enfoca. Si fue la verificación 3D Secure que no se completó, la tarjeta es buena: no se borra.
+            alAccionar={(clave) => {
+              if (clave === 'reintentar') {
+                void handleConfirm();
+                return;
+              }
+              setFormError('');
+              if (clave === 'otra_tarjeta' && motivo && motivo !== 'authentication_required') {
+                const pago = elements?.getElement('payment');
+                pago?.clear();
+                pago?.focus();
+              }
+            }}
+          />
+        </div>
+      )}
       {/* El contenedor reserva la altura del esqueleto hasta `onReady`; el esqueleto va
           superpuesto (hermano del iframe, nunca su ancestro) y se desvanece en 150 ms.
           Mientras Stripe carga, su iframe va a opacidad 0: sus campos a medio pintar asomaban
@@ -144,18 +194,6 @@ function PaymentForm({
           sale malinterpretar: si el cliente cree que se rompio y recarga, lo hace
           a media autorizacion. */}
       {submitting && <WaitNotice mensaje={feedback.payingWait} mensajeLento={feedback.paySlow} />}
-
-      {formError && (
-        <AvisoProblema
-          checkout={checkout}
-          feedback={feedback}
-          tipo={errorEsDeTarjeta ? 'tarjeta_rechazada' : 'red'}
-          mensaje={formError}
-          ayudaMensaje={ayudaMensaje}
-          // «Probar otra tarjeta» limpia el aviso y deja el formulario para editar; «reintentar» vuelve a cobrar.
-          alAccionar={(clave) => (clave === 'reintentar' ? void handleConfirm() : setFormError(''))}
-        />
-      )}
 
       {!movil && (
       <Button

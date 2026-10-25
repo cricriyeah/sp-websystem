@@ -232,6 +232,14 @@
         "hoy": "Hoy"
       }
     },
+    "motivosTarjeta": {
+      "insufficient_funds": "Tu tarjeta no tiene fondos suficientes.",
+      "card_declined": "Tu banco rechazó el pago.",
+      "expired_card": "La tarjeta está vencida.",
+      "incorrect_cvc": "El código de seguridad no coincide.",
+      "authentication_required": "Tu banco pidió verificar la tarjeta y no se completó.",
+      "generic": "Tu banco no aceptó el pago."
+    },
     "verificacion": {
       "marca": "Marca la casilla para confirmar que eres una persona."
     },
