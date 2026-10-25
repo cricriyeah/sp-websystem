@@ -300,7 +300,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
   };
 
   const aviso = activo && linea && (resumen || problema) ? (
-    <div role="status" aria-live="polite" className={`${estilo} rounded-sheet px-5 py-2 text-hero-ink transition-colors duration-300`}>
+    <div role="status" aria-live="polite" className={`${estilo} rounded-sheet px-5 py-4 text-hero-ink transition-colors duration-300 sm:py-2`}>
       <div className="flex flex-col gap-x-8 gap-y-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 lg:flex-1">
           <TextoPlegable abrir={textos.verMas} cerrar={textos.verMenos}>
@@ -341,14 +341,15 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     <AnimatePresence initial={false}>
       {(aviso || deshacerAviso) && <m.div
         key="continuar-banda"
-        initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
+        initial={sinMovimiento ? false : { height: 0 }}
         animate={{ height: sinMovimiento || !alto ? 'auto' : alto, opacity: 1 }}
         exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
         transition={sinMovimiento ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="overflow-hidden"
       >
         <div ref={medirContenido}>
-          <m.div key={activo?.checkoutId ?? 'deshacer'} initial={sinMovimiento ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+          {/* Barrido: la banda se descubre de arriba hacia abajo mientras la altura crece. */}
+          <m.div key={activo?.checkoutId ?? 'deshacer'} initial={sinMovimiento ? false : { clipPath: 'inset(0 0 100% 0)' }} animate={{ clipPath: 'inset(0 0 0% 0)' }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
             {aviso}{deshacerAviso}
           </m.div>
         </div>

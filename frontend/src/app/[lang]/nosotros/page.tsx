@@ -20,6 +20,13 @@ import { SiteFooter } from '@/components/site-footer';
 import { botonClases } from '@/components/ui/variantes';
 
 const FOTO = '/sunbajaexperience/fotos/pangas-en-la-playa.webp';
+const CARPETA = '/sunbajaexperience/fotos/';
+// Tres pares de fotos verticales que se reparten por la columna; el texto de cada una está en `nosotros.fotosAlt`.
+const PARES_DE_FOTOS = [
+  ['pescador-con-cana', 'cardon-junto-al-mar'],
+  ['pesca-al-atardecer', 'salto-al-mar'],
+  ['cardones-al-atardecer', 'brazos-abiertos-al-mar'],
+] as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
@@ -58,6 +65,15 @@ export default async function NosotrosPage({ params }: { params: Promise<{ lang:
   )];
 
   const [lead, ...resto] = nosotros.historia;
+  const par = (i: number) => (
+    <div className="mt-12 grid grid-cols-2 gap-2 sm:gap-4">
+      {PARES_DE_FOTOS[i].map((nombre, j) => (
+        <div key={nombre} className="relative aspect-[4/5]">
+          <Image src={`${CARPETA}${nombre}.webp`} alt={nosotros.fotosAlt[i * 2 + j] ?? ''} fill sizes="(min-width: 1024px) 22vw, 46vw" className="object-cover" />
+        </div>
+      ))}
+    </div>
+  );
 
   return <>
     <JsonLd datos={jsonLdMigas([
@@ -102,6 +118,8 @@ export default async function NosotrosPage({ params }: { params: Promise<{ lang:
             </div>
           </section>
 
+          {par(0)}
+
           <section aria-labelledby="nosotros-historia" className="mt-16">
             <h2 id="nosotros-historia" className="texto-paso text-foreground">{nosotros.historiaTitulo}</h2>
             <p className="mt-5 texto-subtitulo text-foreground">{lead}</p>
@@ -109,6 +127,8 @@ export default async function NosotrosPage({ params }: { params: Promise<{ lang:
               <p key={parrafo} className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{parrafo}</p>
             ))}
           </section>
+
+          {par(1)}
 
           {nombres.length > 0 && (
             <section aria-labelledby="nosotros-empresas" className="mt-16">
@@ -121,6 +141,8 @@ export default async function NosotrosPage({ params }: { params: Promise<{ lang:
               </ul>
             </section>
           )}
+
+          {par(2)}
         </div>
       </div>
     </main>

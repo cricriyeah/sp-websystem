@@ -435,11 +435,10 @@ export function usePagoPedido(config: Config) {
       setFallos((n) => n + 1);
       // pedir confirmar-captura revierte la orden incompleta (void del primer pago)
       setFase('capturando');
-    } else {
-      setError(mensaje);
-      setErrorTipo('tarjeta_rechazada');
-      setFase('formulario');
     }
+    // Reserva de una sola empresa: el cliente se queda en el formulario de tarjeta. Antes la fase volvia a
+    // «formulario», o sea al paso «Cómo pagas», que pedia otra vez la verificación y mostraba un error aparte;
+    // el aviso con el motivo y «Probar otra tarjeta» ya lo pinta el propio formulario de pago.
   }, [indice, pagos]);
 
   // La orden/reserva anterior quedó cancelada en el servidor y su checkout_id ya está

@@ -1,4 +1,5 @@
 import { CifraViva } from '@/components/ui/cifra-viva';
+import { Despliegue } from '@/components/ui/despliegue';
 import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { ListaCargos } from '@/components/checkout/pago/renglon-cargo';
 import type { ResumenVivo } from '@/components/reserva/contexto-barra';
@@ -47,7 +48,7 @@ export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], 
         ))}
       </dl>
 
-      <div className="flex flex-col gap-3 bg-tinta px-5 py-4 text-hero-ink">
+      <div className="flex flex-col bg-tinta px-5 py-4 text-hero-ink">
         <div className="flex items-center justify-between gap-4">
           <p className="texto-etiqueta">
             {checkout.total}
@@ -55,13 +56,14 @@ export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], 
           </p>
           <p className="texto-paso tabular-nums"><CifraViva valor={total} /></p>
         </div>
-        {/* Solo cuando difiere del total (anticipo): si no, repetiría la cifra. */}
-        {amountDueNow !== total && (
-          <div className="flex items-center justify-between gap-4 texto-cuerpo">
+        {/* Solo cuando difiere del total (anticipo): si no, repetiría la cifra. Se despliega hacia abajo; el
+            espacio de arriba va dentro de la fila para que crezca con ella. */}
+        <Despliegue abierto={amountDueNow !== total}>
+          <div className="flex items-center justify-between gap-4 pt-3 texto-cuerpo">
             <span>{checkout.amountDueNow}</span>
             <span className="font-semibold tabular-nums"><CifraViva valor={amountDueNow} /></span>
           </div>
-        )}
+        </Despliegue>
       </div>
     </div>
   );
