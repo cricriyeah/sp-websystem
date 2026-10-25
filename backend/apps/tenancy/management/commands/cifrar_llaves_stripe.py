@@ -18,6 +18,9 @@ CAMPOS = ('stripe_secret_key', 'stripe_webhook_secret')
 
 class Command(BaseCommand):
     help = 'Cifra las llaves de Stripe de cada Empresa con STRIPE_KEYS_ENCRYPTION_KEY.'
+    # Es el comando que ARREGLA lo que el chequeo payments.E003 marca (una sk_live_ en texto plano):
+    # si los chequeos corrieran antes, el propio comando se negaria a correr.
+    requires_system_checks = []
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Solo cuenta, sin escribir.')

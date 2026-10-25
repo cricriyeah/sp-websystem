@@ -121,6 +121,10 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
 - El servidor calcula el precio base y el reparto en `apps/payments/pricing.py`, y
   cotiza las personalizaciones en `apps/payments/extras.py`. El cliente manda su
   selección y, cuando aplica, si paga completo o anticipo; nunca un total.
+- **Ordenes cruza-empresa: el `checkout_id` es la prueba de posesion.** `crear-pago`, `confirmar-captura`, `cancelar` y
+  la lectura por id (`GET .../ordenes/<id>/?checkout_id=`) lo exigen (403 si falta o no coincide); sin eso, recorrer
+  ids enteros devolvia el `checkout_id` y los `client_secret` de otras ordenes. `GET .../ordenes/?checkout_id=` sigue
+  siendo la lectura sin id. El comando `cifrar_llaves_stripe` corre sin chequeos de sistema a proposito.
 - `crear-pago` es idempotente: reusa el intent de la reserva si sigue sin cobrar, lo
   ajusta con `PaymentIntent.modify` si cambiaron las amenidades, y manda
   `idempotency_key` para el doble clic. Si el intent ya esta en `succeeded`/`processing`

@@ -59,6 +59,9 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
         'LOCATION': os.environ.get('DJANGO_CACHE_DIR', '/tmp/django-cache'),
+        # Con el tope por defecto (300) Django borra un tercio de los contadores al llenarse y el
+        # limite se afloja justo con trafico. Cada contador es un archivo pequeño.
+        'OPTIONS': {'MAX_ENTRIES': 10000},
     },
 }
 

@@ -1252,7 +1252,8 @@ def _dueno_de_la_orden(orden, request):
     ids recibia los `client_secret` de otras ordenes y podia disparar su reversion. `cancelar` ya lo
     exigia; ahora las tres piden la misma prueba de posesion.
     """
-    if not orden.checkout_id or str(orden.checkout_id) != str(request.data.get('checkout_id')):
+    crudo = request.data.get('checkout_id') or request.query_params.get('checkout_id')
+    if not orden.checkout_id or str(orden.checkout_id) != str(crudo):
         return Response({'detail': 'checkout_id inválido para esta orden.'}, status=403)
     return None
 
@@ -1482,6 +1483,10 @@ class GetOrdenView(APIView):
 
         if pk is not None:
             orden = _buscar_orden(sede, pk=pk)
+            # Por id entero se podia recorrer 1, 2, 3... y leer el checkout_id (la llave de todo lo demas) y
+            # los client_secret de cada orden: el id solo sirve si va acompañado de su checkout_id.
+            if orden and (rechazo := _dueno_de_la_orden(orden, request)) is not None:
+                return rechazo
         else:
             checkout_id = request.query_params.get('checkout_id')
             if not checkout_id:

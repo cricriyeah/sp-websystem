@@ -126,7 +126,7 @@ def revisar_cifrado_de_llaves(app_configs, **kwargs):
       (decision ADR-002): o se pone `STRIPE_KEYS_ENCRYPTION_KEY` y se corre `cifrar_llaves_stripe`, o no
       se despliega.
     - E004: la variable existe pero no es una clave Fernet valida; sin esto el primer cobro fallaria.
-    - E005: un valor cifrado que no se puede descifrar (clave perdida o equivocada).
+    - W004: un valor cifrado que no se puede descifrar (clave perdida o equivocada); aviso, no error.
     - W003: hay clave pero quedan valores en texto plano (falta correr `cifrar_llaves_stripe`).
     Lee la base en crudo porque el campo ya devuelve el texto real. Nunca incluye el valor.
     """
@@ -156,13 +156,15 @@ def revisar_cifrado_de_llaves(app_configs, **kwargs):
 
     for slug, secreta, webhook in filas:
         if any(isinstance(descifrar(valor), Ilegible) for valor in (secreta, webhook)):
-            problemas.append(Error(
+            # Aviso y no error: bloquear `migrate` y los cron con una clave perdida impediria desplegar
+            # justo el arreglo. La empresa ya figura sin Stripe (fail-closed), eso ya es el freno.
+            problemas.append(Warning(
                 f'Empresa "{slug}": hay una llave de Stripe cifrada que no se puede descifrar con '
                 'STRIPE_KEYS_ENCRYPTION_KEY.',
                 hint='La clave de cifrado no es la que la cifro (o se perdio). Mientras tanto la empresa '
                      'figura sin Stripe: el webhook se rechaza y no se puede cobrar. Pon la clave correcta '
                      'o vuelve a capturar las llaves en el admin.',
-                id='payments.E005',
+                id='payments.W004',
             ))
         if secreta and not secreta.startswith(PREFIJO) and secreta.startswith('sk_live_'):
             problemas.append(Error(

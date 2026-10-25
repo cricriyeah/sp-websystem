@@ -164,7 +164,7 @@ export function usePagoPedido(config: Config) {
   useEffect(() => {
     if (ordenId === null) return;
     let cancelado = false;
-    getOrden(config.sedeSlug, ordenId)
+    getOrden(config.sedeSlug, checkoutId)
       .then((detalle: OrdenDetalle) => {
         if (cancelado) return;
         if (detalle.estado === 'capturada') return setFase('exito');
@@ -235,7 +235,7 @@ export function usePagoPedido(config: Config) {
     };
     const consultar = async () => {
       try {
-        if (aplicar(await getOrden(config.sedeSlug, ordenId))) return;
+        if (aplicar(await getOrden(config.sedeSlug, checkoutId))) return;
       } catch {
         // una respuesta perdida no prueba que el cobro falló: conservar la orden y seguir consultando
       }
@@ -351,7 +351,7 @@ export function usePagoPedido(config: Config) {
         // La lectura confirma en el servidor la primera retención y permite
         // enviar el enlace de retomar si el siguiente pago sigue pendiente.
         if (indice < pagos.length - 1) {
-          void getOrden(cfg.current.sedeSlug, ordenId).catch(() => undefined);
+          void getOrden(cfg.current.sedeSlug, checkoutId).catch(() => undefined);
         }
       }
       if (indice >= pagos.length - 1) {

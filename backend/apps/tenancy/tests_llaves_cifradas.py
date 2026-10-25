@@ -235,8 +235,28 @@ class ChequeoDeCifradoTests(TestCase):
     def test_una_clave_que_no_es_fernet_es_un_error(self):
         self.assertEqual(self.ids(), ['payments.E004'])
 
-    def test_un_valor_cifrado_que_no_se_puede_descifrar_es_un_error(self):
+    def test_un_valor_cifrado_que_no_se_puede_descifrar_es_un_aviso_que_no_bloquea(self):
         with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
             self.empresa()
         with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_B):
-            self.assertEqual(self.ids(), ['payments.E005'])
+            self.assertEqual(self.ids(), ['payments.W004'])
+
+
+class ComandoSinChequeosTests(TestCase):
+    """El comando que arregla el error E003 tiene que poder correr aunque E003 este activo."""
+
+    def test_corre_con_una_llave_de_produccion_en_texto_plano(self):
+        sede = Sede.objects.create(nombre='Sede', slug='sede-live')
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=''):
+            empresa = Empresa.objects.create(
+                sede=sede, nombre='Live', slug='live', stripe_secret_key='sk_live_llave_falsa_de_prueba',
+                stripe_webhook_secret='whsec_live', stripe_publishable_key='pk_live_x',
+            )
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
+            from apps.tenancy.management.commands.cifrar_llaves_stripe import Command
+
+            # Desde la consola Django corre los chequeos antes del comando salvo que el comando los
+            # pida apagados; con E003 activo (la sk_live_ en texto plano) el comando no podria arreglarlo.
+            self.assertEqual(Command.requires_system_checks, [])
+            call_command('cifrar_llaves_stripe', stdout=StringIO())
+            self.assertTrue(crudo(empresa).startswith(PREFIJO))

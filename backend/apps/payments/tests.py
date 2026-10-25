@@ -3708,7 +3708,7 @@ class OrdenesApiTest(TestCase):
             self.orden.refresh_from_db()
 
         # Vía ID
-        url_id = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/'
+        url_id = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/?checkout_id={self.orden.checkout_id}'
         res = self.client.get(url_id)
         self.assertEqual(res.status_code, 200)
         data = res.json()

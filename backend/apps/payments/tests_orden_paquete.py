@@ -377,3 +377,18 @@ class DuenoDeLaOrdenTests(OrdenPaqueteBase):
     def test_cancelar_sigue_exigiendolo(self):
         orden_id = self._orden()
         self.assertEqual(self._post('cancelar', orden_id, {}).status_code, 403)
+
+    def test_leer_la_orden_por_id_sin_checkout_id_es_403_y_no_filtra_nada(self):
+        orden_id = self._orden()
+        respuesta = self.client.get(f'/api/{self.sede.slug}/ordenes/{orden_id}/')
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn('checkout_id', respuesta.json())
+        self.assertNotIn('client_secret', respuesta.content.decode())
+
+    def test_leer_la_orden_por_id_con_su_checkout_id_funciona(self):
+        orden_id = self._orden()
+        respuesta = self.client.get(
+            f'/api/{self.sede.slug}/ordenes/{orden_id}/?checkout_id={self.ultimo_checkout_id}',
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json()['id'], orden_id)
