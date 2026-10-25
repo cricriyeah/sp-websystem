@@ -59,8 +59,9 @@ class IpDelClienteTests(SimpleTestCase):
     def test_si_todo_el_header_son_proxies_se_usa_la_ip_de_la_conexion(self):
         self.assertEqual(self.ip('172.64.1.5, 10.0.0.1'), '198.51.100.7')
 
-    def test_un_valor_ilegible_cuenta_como_cliente_y_no_rompe(self):
-        self.assertEqual(self.ip('no-es-ip, 172.64.1.5'), 'no-es-ip')
+    def test_algo_que_no_es_una_ip_no_se_adivina_se_usa_la_conexion(self):
+        self.assertEqual(self.ip('no-es-ip, 172.64.1.5'), '198.51.100.7')
+        self.assertEqual(self.ip('basura'), '198.51.100.7')
 
     @override_settings(TRUSTED_PROXY_COUNT=0)
     def test_sin_proxy_de_confianza_no_se_le_cree_al_header(self):

@@ -11,6 +11,11 @@ La regla ahora no depende del numero de saltos: se recorre la lista de derecha a
 direcciones que son de NUESTROS proxies (Cloudflare y redes privadas) y la primera que no lo es es la IP
 que se conecto a ellos. Un cliente no puede falsificarla: lo que escriba va a la izquierda de esa.
 
+Limite conocido: quien salga a internet desde las propias redes de Cloudflare (un Worker, WARP) aparece con
+una IP de proxy, se salta, y se toma lo que haya escrito a la izquierda. Eso solo le permite elegir con que
+IP lo cuenta el limite de peticiones y el registro del deslinde, no autenticarse como nadie. Cerrarlo del todo
+exige que el origen solo acepte trafico de nuestra zona de Cloudflare (Authenticated Origin Pulls).
+
 Sin proxy de confianza (`TRUSTED_PROXY_COUNT=0`, local y pruebas) no se le cree al header y se usa la IP
 de la conexion. Si algun dia Cloudflare publica un rango nuevo y no esta aqui, esa IP se tomaria por la del
 cliente (el limite volveria a agrupar usuarios, no es una brecha): se agrega en
@@ -64,6 +69,10 @@ def ip_del_cliente(request):
         return remota
     partes = [p.strip() for p in request.META.get('HTTP_X_FORWARDED_FOR', '').split(',') if p.strip()]
     for ip in reversed(partes):
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            return remota  # algo que no es una IP en la cadena: no se adivina, se usa la conexion real
         if not es_de_proxy(ip):
             return ip
     return remota
