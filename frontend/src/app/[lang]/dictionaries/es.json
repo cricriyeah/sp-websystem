@@ -232,6 +232,9 @@
         "hoy": "Hoy"
       }
     },
+    "verificacion": {
+      "marca": "Marca la casilla para confirmar que eres una persona."
+    },
     "barra": {
       "verResumen": "Ver resumen",
       "estimado": "Estimado",

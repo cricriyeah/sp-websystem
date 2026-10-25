@@ -108,6 +108,8 @@ export function mensajeDeError(
     if (err.status === 409) return checkout.errorPaymentInProgress;
     if (err.status === 503) return checkout.paymentUnavailable;
     if (err.status === 400) {
+      // Cloudflare rechazo el token (vencio o ya se uso): se dice igual que el resto de la verificacion.
+      if (err.detail && typeof err.detail === 'object' && 'captcha' in err.detail) return checkout.verificacion.marca;
       const campo = campoDeValidacion(err.detail);
       if (campo) return feedback.validation[campo];
     }

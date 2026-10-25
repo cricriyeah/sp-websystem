@@ -13,7 +13,7 @@ import { AvisoProblema } from '@/components/checkout/aviso-problema';
 import { ErrorDeCampo, FieldError, propsDeError } from '@/components/ui/error-de-campo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Turnstile, turnstileEncendido } from '@/components/turnstile';
+import { Turnstile, turnstileEncendido, type EstadoVerificacion } from '@/components/turnstile';
 import { usePublicarAccion } from '@/components/reserva/contexto-barra';
 import { useMovil } from '@/components/reserva/use-movil';
 import { WaitNotice } from '@/components/wait-notice';
@@ -71,21 +71,37 @@ export function TarjetaComoPagas({
     setVerificado(true);
     onCaptchaToken(token);
   };
+  // La verificacion se trata como un campo mas: si Cloudflare pidio marcar la casilla y no se ha marcado,
+  // «Pagar» no llama al servidor (que respondia con la tarjeta roja y WhatsApp); dice que falta, en la linea.
+  const [captcha, setCaptcha] = useState<EstadoVerificacion>('esperando');
+  const [intentoPagar, setIntentoPagar] = useState(false);
+  const faltaMarcar = turnstileEncendido && captcha === 'visible';
+  const verificando = turnstileEncendido && captcha !== 'visible' && !verificado;
+  const mensajeVerificacion = faltaMarcar
+    ? checkout.verificacion.marca
+    : verificando ? checkout.barra.verificando : '';
+  const alPagar = () => {
+    if (mensajeVerificacion) {
+      setIntentoPagar(true);
+      return;
+    }
+    onSubmit();
+  };
 
   // En móvil el botón vive en la barra inferior; en escritorio, en el pie de la tarjeta.
   const movil = useMovil();
   usePublicarAccion(movil && abierta ? {
     etiqueta: etiquetaBotonEnvio ?? checkout.barra.continuarTarjeta,
-    alPulsar: onSubmit,
-    deshabilitado: submitDisabled || !verificado,
-    razon: verificado ? undefined : checkout.barra.verificando,
+    alPulsar: alPagar,
+    deshabilitado: submitDisabled || Boolean(mensajeVerificacion),
+    razon: mensajeVerificacion || undefined,
     cargando: phase === 'submitting',
     etiquetaCargando: checkout.submitting,
   } : null, 'contenido');
 
   const cta = abierta && !movil ? (
     <Button
-      onClick={onSubmit}
+      onClick={alPagar}
       disabled={submitDisabled}
       cargando={phase === 'submitting'}
       etiquetaCargando={checkout.submitting}
@@ -269,7 +285,12 @@ export function TarjetaComoPagas({
                 <ErrorDeCampo id="error-waiver" mensaje={errorWaiver ? checkout.waiver.missing : ''} />
               </div>
 
-              <Turnstile onToken={alToken} />
+              {/* El widget solo aparece si Cloudflare decide preguntar algo; su mensaje va en la linea, como el de
+                  cualquier otro campo. `tabIndex` deja que el error lleve el foco aqui al aparecer. */}
+              <div id="verificacion" aria-describedby="error-verificacion" tabIndex={-1} className="outline-none">
+                <Turnstile onToken={alToken} onEstado={setCaptcha} />
+              </div>
+              <ErrorDeCampo id="error-verificacion" mensaje={intentoPagar ? mensajeVerificacion : ''} />
 
               {phase === 'submitting' && <WaitNotice mensaje={feedback.savingWait} />}
 

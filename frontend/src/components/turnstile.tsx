@@ -30,6 +30,8 @@ type TurnstileApi = {
       callback: (token: string) => void;
       'expired-callback'?: () => void;
       'error-callback'?: () => void;
+      'before-interactive-callback'?: () => void;
+      'unsupported-callback'?: () => void;
       'refresh-expired'?: 'auto' | 'manual' | 'never';
       appearance?: 'always' | 'execute' | 'interaction-only';
     },
@@ -68,11 +70,22 @@ function cargarScript(): Promise<void> {
   return cargando;
 }
 
+/**
+ * Lo que el widget le dice al checkout:
+ * - `esperando`: aun no responde (o el token vencio y pide uno nuevo). Se resuelve solo.
+ * - `visible`: Cloudflare decidio preguntar algo; el cliente tiene que marcar la casilla.
+ * - `resuelto`: ya hay token.
+ * - `error`: el script no cargo o fallo. El backend falla abierto a proposito, asi que no bloquea.
+ */
+export type EstadoVerificacion = 'esperando' | 'visible' | 'resuelto' | 'error';
+
 export function Turnstile({
   onToken,
+  onEstado,
 }: {
   /** Recibe el token, o '' cuando expira y todavia no hay uno nuevo. */
   onToken: (token: string) => void;
+  onEstado?: (estado: EstadoVerificacion) => void;
 }) {
   const contenedor = useRef<HTMLDivElement>(null);
   // El callback cambia en cada render del padre; guardarlo en un ref evita
@@ -80,10 +93,12 @@ export function Turnstile({
   // actualiza en su propio efecto, no durante el render: React prohibe mutar un
   // ref mientras pinta.
   const alToken = useRef(onToken);
+  const alEstado = useRef(onEstado);
 
   useEffect(() => {
     alToken.current = onToken;
-  }, [onToken]);
+    alEstado.current = onEstado;
+  }, [onToken, onEstado]);
 
   useEffect(() => {
     if (!SITE_KEY || !contenedor.current) return;
@@ -96,12 +111,24 @@ export function Turnstile({
         if (cancelado || !contenedor.current || !window.turnstile) return;
         widgetId = window.turnstile.render(contenedor.current, {
           sitekey: SITE_KEY,
-          callback: (token) => alToken.current(token),
+          callback: (token) => {
+            alEstado.current?.('resuelto');
+            alToken.current(token);
+          },
+          // Cloudflare decidio preguntar algo: el widget aparece y el cliente tiene que marcarlo.
+          'before-interactive-callback': () => alEstado.current?.('visible'),
+          'unsupported-callback': () => alEstado.current?.('error'),
           // El token vive 5 minutos y alguien puede tardar mas en el checkout.
           // 'auto' lo renueva solo en vez de dejarlo vencido.
           'refresh-expired': 'auto',
-          'expired-callback': () => alToken.current(''),
-          'error-callback': () => alToken.current(''),
+          'expired-callback': () => {
+            alEstado.current?.('esperando');
+            alToken.current('');
+          },
+          'error-callback': () => {
+            alEstado.current?.('error');
+            alToken.current('');
+          },
           // Solo se hace visible si Cloudflare decide preguntar algo.
           appearance: 'interaction-only',
         });
@@ -109,7 +136,10 @@ export function Turnstile({
       .catch(() => {
         // El backend falla abierto si no puede verificar, asi que un script que
         // no carga no debe dejar al cliente sin poder reservar.
-        if (!cancelado) alToken.current('');
+        if (!cancelado) {
+          alEstado.current?.('error');
+          alToken.current('');
+        }
       });
 
     return () => {

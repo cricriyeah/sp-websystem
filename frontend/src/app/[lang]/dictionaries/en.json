@@ -232,6 +232,9 @@
         "hoy": "Today"
       }
     },
+    "verificacion": {
+      "marca": "Tick the box to confirm you are a person."
+    },
     "barra": {
       "verResumen": "View summary",
       "estimado": "Estimate",
