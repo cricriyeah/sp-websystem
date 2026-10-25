@@ -69,6 +69,7 @@ class OrdenPaqueteBase(TestCase):
             ],
         }
         datos.update(extra)
+        self.ultimo_checkout_id = datos['checkout_id']
         return datos
 
     def crear(self, **extra):
@@ -194,7 +195,8 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
 
     def _pago(self, orden_id):
         return self.client.post(
-            f'/api/{self.sede.slug}/ordenes/{orden_id}/crear-pago/', {}, content_type='application/json',
+            f'/api/{self.sede.slug}/ordenes/{orden_id}/crear-pago/',
+            {'checkout_id': self.ultimo_checkout_id}, content_type='application/json',
         )
 
     def _stripe_falso(self):
@@ -333,3 +335,45 @@ class CrearPagoOrdenTests(OrdenPaqueteBase):
         montos = {p['empresa_slug']: p['monto'] for p in respuesta.json()}
         self.assertEqual(montos, {'pesca-op': '3400.00', 'transp-op': '4650.00'})
 
+
+
+class DuenoDeLaOrdenTests(OrdenPaqueteBase):
+    """Crear el pago y confirmar la captura exigen el `checkout_id` que nace en el navegador del cliente."""
+
+    def setUp(self):
+        super().setUp()
+        from django.core.cache import cache
+
+        cache.clear()  # el limite de peticiones vive en el cache y viene de las pruebas anteriores
+
+    def _orden(self):
+        respuesta = self.crear()
+        self.assertEqual(respuesta.status_code, 201, respuesta.content)
+        return respuesta.json()['orden_id']
+
+    def _post(self, sufijo, orden_id, cuerpo):
+        return self.client.post(
+            f'/api/{self.sede.slug}/ordenes/{orden_id}/{sufijo}/', cuerpo, content_type='application/json',
+        )
+
+    def test_crear_pago_sin_checkout_id_es_403(self):
+        orden_id = self._orden()
+        self.assertEqual(self._post('crear-pago', orden_id, {}).status_code, 403)
+
+    def test_crear_pago_con_checkout_id_ajeno_es_403(self):
+        orden_id = self._orden()
+        respuesta = self._post('crear-pago', orden_id, {'checkout_id': str(uuid.uuid4())})
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_confirmar_captura_sin_checkout_id_es_403(self):
+        orden_id = self._orden()
+        self.assertEqual(self._post('confirmar-captura', orden_id, {}).status_code, 403)
+
+    def test_confirmar_captura_con_checkout_id_ajeno_es_403(self):
+        orden_id = self._orden()
+        respuesta = self._post('confirmar-captura', orden_id, {'checkout_id': str(uuid.uuid4())})
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_cancelar_sigue_exigiendolo(self):
+        orden_id = self._orden()
+        self.assertEqual(self._post('cancelar', orden_id, {}).status_code, 403)

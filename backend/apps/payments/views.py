@@ -1245,6 +1245,18 @@ def _vence_de_orden(orden):
     return (orden.actualizado_en + ORDEN_TIMEOUT_AUTORIZACION).isoformat()
 
 
+def _dueno_de_la_orden(orden, request):
+    """None si quien llama tiene el `checkout_id` de la orden (nace en su navegador); si no, la 403.
+
+    Crear el pago y confirmar la captura identificaban la orden solo por su id entero: quien recorriera
+    ids recibia los `client_secret` de otras ordenes y podia disparar su reversion. `cancelar` ya lo
+    exigia; ahora las tres piden la misma prueba de posesion.
+    """
+    if not orden.checkout_id or str(orden.checkout_id) != str(request.data.get('checkout_id')):
+        return Response({'detail': 'checkout_id inválido para esta orden.'}, status=403)
+    return None
+
+
 class CrearPagoOrdenView(APIView):
     """Resuelve el reparto del paquete de la orden y crea (o reutiliza) los N
     PaymentIntents con captura manual en Stripe, uno por empresa.
@@ -1271,6 +1283,8 @@ class CrearPagoOrdenView(APIView):
         orden = _buscar_orden(sede, pk=pk)
         if not orden:
             raise Http404('No se encontró la orden solicitada.')
+        if (rechazo := _dueno_de_la_orden(orden, request)) is not None:
+            return rechazo
 
         if orden.estado in (Orden.Estado.CAPTURADA, Orden.Estado.CANCELADA):
             return Response({'detail': f'La orden ya está {orden.estado}.'}, status=409)
@@ -1374,6 +1388,8 @@ class ConfirmarCapturaOrdenView(APIView):
         orden = _buscar_orden(sede, pk=pk)
         if not orden:
             raise Http404('No se encontró la orden solicitada.')
+        if (rechazo := _dueno_de_la_orden(orden, request)) is not None:
+            return rechazo
 
         if orden.estado == Orden.Estado.CAPTURADA:
             return Response({'estado': orden.estado}, status=200)
@@ -1621,9 +1637,8 @@ class CancelarOrdenPublicaView(APIView):
         orden = _buscar_orden(sede, pk=pk)
         if not orden:
             raise Http404('No se encontró la orden solicitada.')
-        crudo = request.data.get('checkout_id')
-        if not orden.checkout_id or str(orden.checkout_id) != str(crudo):
-            return Response({'detail': 'checkout_id inválido para esta orden.'}, status=403)
+        if (rechazo := _dueno_de_la_orden(orden, request)) is not None:
+            return rechazo
 
         try:
             revertir_orden(orden, 'cancelada por el cliente desde "Continuar reservación"')

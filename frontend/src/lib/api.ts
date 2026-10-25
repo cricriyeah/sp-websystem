@@ -545,9 +545,11 @@ export type PagoOrdenItem = {
   vence_en?: string | null;
 };
 
-export const crearPagoOrden = (sedeSlug: string, ordenId: number): Promise<PagoOrdenItem[]> =>
+/** `checkoutId` es la prueba de que la orden es de quien llama: el servidor la exige igual que al cancelar. */
+export const crearPagoOrden = (sedeSlug: string, ordenId: number, checkoutId: string): Promise<PagoOrdenItem[]> =>
   request<PagoOrdenItem[]>(`/api/ordenes/${ordenId}/crear-pago/`, {
     method: 'POST',
+    body: JSON.stringify({ checkout_id: checkoutId }),
   }, sedeSlug);
 
 export type ConfirmarCapturaRespuesta = {
@@ -555,9 +557,12 @@ export type ConfirmarCapturaRespuesta = {
   motivo?: string;
 };
 
-export const confirmarCapturaOrden = (sedeSlug: string, ordenId: number): Promise<ConfirmarCapturaRespuesta> =>
+export const confirmarCapturaOrden = (
+  sedeSlug: string, ordenId: number, checkoutId: string,
+): Promise<ConfirmarCapturaRespuesta> =>
   request<ConfirmarCapturaRespuesta>(`/api/ordenes/${ordenId}/confirmar-captura/`, {
     method: 'POST',
+    body: JSON.stringify({ checkout_id: checkoutId }),
   }, sedeSlug);
 
 export type OrdenDetalle = {

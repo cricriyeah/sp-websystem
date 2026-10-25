@@ -3593,7 +3593,9 @@ class OrdenesApiTest(TestCase):
         cliente_2.payment_intents.create.return_value = intent_2
 
         url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/crear-pago/'
-        res = self.client.post(url, content_type='application/json')
+        res = self.client.post(
+            url, {'checkout_id': str(self.orden.checkout_id)}, content_type='application/json',
+        )
         self.assertEqual(res.status_code, 200)
         pagos = res.json()
         self.assertEqual(len(pagos), 2)
@@ -3637,7 +3639,9 @@ class OrdenesApiTest(TestCase):
             self.orden.save(update_fields=['estado'])
 
         url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/confirmar-captura/'
-        res = self.client.post(url, content_type='application/json')
+        res = self.client.post(
+            url, {'checkout_id': str(self.orden.checkout_id)}, content_type='application/json',
+        )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()['estado'], 'autorizada')
 
@@ -3668,7 +3672,9 @@ class OrdenesApiTest(TestCase):
         cliente_2.payment_intents.retrieve.return_value = intent_2
 
         url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/confirmar-captura/'
-        res = self.client.post(url, content_type='application/json')
+        res = self.client.post(
+            url, {'checkout_id': str(self.orden.checkout_id)}, content_type='application/json',
+        )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()['estado'], 'cancelada')
         self.assertIn('motivo', res.json())
@@ -3728,7 +3734,9 @@ class OrdenesApiTest(TestCase):
             self.orden.save(update_fields=['estado'])
 
         url = f'/api/{self.sede.slug}/ordenes/{self.orden.id}/crear-pago/'
-        res = self.client.post(url, content_type='application/json')
+        res = self.client.post(
+            url, {'checkout_id': str(self.orden.checkout_id)}, content_type='application/json',
+        )
         self.assertEqual(res.status_code, 409)
 
 

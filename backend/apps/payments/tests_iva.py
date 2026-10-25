@@ -158,10 +158,12 @@ class OrdenConIvaTests(OrdenPaqueteBase):
     def test_cada_empresa_cobra_su_neto_mas_su_iva(self, configurar):
         para, clientes = self._stripe_falso()
         configurar.side_effect = para
-        orden_id = self.crear().json()['orden_id']
+        creada = self.crear().json()
+        orden_id = creada['orden_id']
 
         respuesta = self.client.post(
-            f'/api/{self.sede.slug}/ordenes/{orden_id}/crear-pago/', {}, content_type='application/json',
+            f'/api/{self.sede.slug}/ordenes/{orden_id}/crear-pago/',
+            {'checkout_id': creada['checkout_id']}, content_type='application/json',
         )
 
         self.assertEqual(respuesta.status_code, 200, respuesta.content)

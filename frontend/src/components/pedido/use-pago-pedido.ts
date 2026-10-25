@@ -241,7 +241,7 @@ export function usePagoPedido(config: Config) {
       }
       if (!cancelado) timer = setTimeout(consultar, REINTENTO_MS);
     };
-    confirmarCapturaOrden(config.sedeSlug, ordenId)
+    confirmarCapturaOrden(config.sedeSlug, ordenId, checkoutId)
       .then((r) => {
         if (!aplicar(r)) timer = setTimeout(consultar, REINTENTO_MS);
       })
@@ -252,7 +252,7 @@ export function usePagoPedido(config: Config) {
       cancelado = true;
       clearTimeout(timer);
     };
-  }, [fase, ordenId, config.sedeSlug]);
+  }, [fase, ordenId, checkoutId, config.sedeSlug]);
 
   // Motor 'reserva': esperar al webhook. Solo `pagada` es éxito; `cancelada` (cupo lleno, reembolso) es fallo.
   useEffect(() => {
@@ -294,7 +294,7 @@ export function usePagoPedido(config: Config) {
         setOrdenId(creada.orden_id);
         guardar({ checkoutId: id, ordenId: creada.orden_id });
         registrarPendiente(id, creada.orden_id);
-        const respuesta = await crearPagoOrden(c.sedeSlug, creada.orden_id);
+        const respuesta = await crearPagoOrden(c.sedeSlug, creada.orden_id, id);
         setPagos(respuesta.map((p) => ({
           empresaSlug: p.empresa_slug, monto: p.monto, clientSecret: p.client_secret, publishableKey: p.publishable_key,
           venceEn: p.vence_en,
