@@ -109,6 +109,8 @@ export function SiteHeader({
         { href: hrefInicio(lang, ANCLA_HUB.sedes), label: nav.sedes },
         { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.comoFunciona },
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
+        // «Sobre nosotros» va en la barra solo de la portada; en el resto del sitio, en el pie.
+        ...(variante === 'hub' ? [{ href: `/${lang}/nosotros`, label: nav.sobreNosotros }] : []),
       ];
 
   const idioma = <SelectorIdioma lang={lang} label={nav.switchLang} variante="campana" />;

@@ -33,7 +33,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         subtitulo:
           'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
         facts: [
-          { value: '6 a 8 horas', label: 'Duración de la aventura' },
+          { value: '6 a 7 horas', label: 'Duración de la aventura' },
           { value: '5:00 a 7:00 am', label: 'Horario flexible a tu gusto' },
           { value: 'Hasta 5 personas', label: 'Ambiente privado y familiar' },
           { value: '365 días al año', label: 'Salidas disponibles todo el año' },
@@ -52,7 +52,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         momentos: [
           { titulo: '5:00 am', texto: 'Te espera tu capitán en Marina La Costa. Eliges la hora de salida entre 5:00 y 7:00 am.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
           { titulo: 'A bordo', texto: 'Solo tu grupo y tu capitán en la panga. Hasta 5 personas.', foto: '/photos/capitan-cabrilla-bahia.webp' },
-          { titulo: 'Pesca', texto: 'De 6 a 8 horas en la bahía, buscando lo que pica en la temporada.', foto: '/photos/cana-doblada-dorado.webp' },
+          { titulo: 'Pesca', texto: 'De 6 a 7 horas en la bahía, buscando lo que pica en la temporada.', foto: '/photos/cana-doblada-dorado.webp' },
           { titulo: 'Regresa', texto: 'Con tus fotos y tu captura.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
@@ -153,7 +153,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿A qué hora salimos y cuánto dura?',
-          a: 'Puedes elegir tu hora de salida preferida entre las 5:00 y las 7:00 am al momento de reservar. El viaje dura de 6 a 8 horas para aprovechar al máximo las mejores horas de pesca.',
+          a: 'Puedes elegir tu hora de salida preferida entre las 5:00 y las 7:00 am al momento de reservar. El viaje dura de 6 a 7 horas para aprovechar al máximo las mejores horas de pesca.',
         },
         {
           q: '¿Dónde nos vemos?',
@@ -199,7 +199,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         subtitulo:
           'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',
         facts: [
-          { value: '6 to 8 hours', label: 'Adventure duration' },
+          { value: '6 to 7 hours', label: 'Adventure duration' },
           { value: '5:00 to 7:00 am', label: 'Flexible departure of your choice' },
           { value: 'Up to 5 guests', label: 'Private & family-friendly' },
           { value: '365 days a year', label: 'Departures available all year' },
@@ -319,7 +319,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'What time do we leave and how long is the trip?',
-          a: 'You can pick your preferred departure time between 5:00 and 7:00 am when booking. The tour lasts 6 to 8 hours to take full advantage of the best morning fishing conditions.',
+          a: 'You can pick your preferred departure time between 5:00 and 7:00 am when booking. The tour lasts 6 to 7 hours to take full advantage of the best morning fishing conditions.',
         },
         {
           q: 'Where do we meet?',

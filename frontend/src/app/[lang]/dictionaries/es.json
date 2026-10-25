@@ -100,6 +100,7 @@
     "temporadas": "Qué se pesca",
     "galeria": "Galería",
     "preguntas": "Preguntas",
+    "sobreNosotros": "Sobre nosotros",
     "contacto": "Contacto",
     "catalogo": "Experiencias",
     "sedeLabel": "Destino",
@@ -146,7 +147,7 @@
       },
       {
         "icon": "horas",
-        "title": "De 6 a 8 horas de tour",
+        "title": "De 6 a 7 horas de tour",
         "body": "Salidas matutinas entre las 5:00 y 7:00 am, ajustándonos al horario que más te convenga."
       }
     ],
@@ -779,8 +780,52 @@
       "whatsappMensaje": "Hola, tengo una pregunta sobre {sede}."
     }
   },
+  "nosotros": {
+    "meta": {
+      "title": "Sobre nosotros",
+      "description": "Somos una agencia que reúne a empresas locales de Baja California Sur: tú reservas en un solo lugar y pagas directo a quien te lleva."
+    },
+    "titular": "Gente de aquí. Mar de aquí.",
+    "subtitulo": "Sun Baja Experience reúne a empresas locales de Baja California Sur para que reserves pesca, ballenas, hospedaje y traslados en un solo lugar, y salgas al mar con quien lo conoce.",
+    "fotoAlt": "Pangas en la arena frente al mar",
+    "fichaTitulo": "Quién hace qué",
+    "ficha": [
+      {
+        "etiqueta": "Quién te atiende",
+        "valor": "Nosotros: tu fecha, el calendario, el pago y tus dudas por WhatsApp, en español y en inglés."
+      },
+      {
+        "etiqueta": "Quién te lleva",
+        "valor": "Cada empresa local opera su servicio: pone la embarcación, al capitán, al guía o el hospedaje."
+      },
+      {
+        "etiqueta": "A quién le pagas",
+        "valor": "Directo a la empresa que te lleva, con su propia cuenta. En pesos o en dólares."
+      },
+      {
+        "etiqueta": "Si hay mal clima",
+        "valor": "Si no se puede salir, hay reembolso completo."
+      },
+      {
+        "etiqueta": "Si cambias de plan",
+        "valor": "Puedes cambiar la fecha con al menos 48 horas de anticipación."
+      }
+    ],
+    "cta": "Elegir mi destino",
+    "whatsapp": "Escribirnos por WhatsApp",
+    "whatsappMensaje": "Hola, quiero saber más sobre Sun Baja Experience.",
+    "historiaTitulo": "Cómo empezó",
+    "historia": [
+      "Todo empezó con una panga y una idea.",
+      "Una empresa de pesca deportiva en La Paz y un equipo de marketing se sentaron a hablar de lo mismo: gran parte de la gestión de los paseos y las aventuras de la Baja se estaba quedando en manos de empresas extranjeras. Los capitanes ponían el mar y el oficio; otros se encargaban de la reserva, el cobro y el trato con el viajero.",
+      "Decidimos que podía ser distinto. Cada quien puso lo que sabe hacer: unos, salir al mar; otros, lograr que reservar un tour en la Baja fuera fácil. De esa unión nació Sun Baja Experience."
+    ],
+    "empresasTitulo": "Las empresas con las que trabajamos",
+    "empresasTexto": "Son locales, y cada una opera sus propios servicios. Nosotros no operamos los tours: coordinamos que reservarlos sea claro y sencillo."
+  },
   "hubContenido": {
-    "titularLineas": ["Mar adentro", "en Baja Sur"],
+    "titularLineas": ["Mar adentro:"],
+    "titularSecundario": "pesca y ballenas en Baja Sur",
     "subtexto": "Pesca, ballenas, hospedaje y traslados con empresas locales de Baja California Sur.",
     "og": { "lugar": "Baja California Sur", "titular": "Pesca, ballenas y mar en Baja Sur con empresas locales" },
     "ctaSedes": "Ver destinos",

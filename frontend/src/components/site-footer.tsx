@@ -40,7 +40,7 @@ const ENLACE = 'inline-flex min-h-11 items-center texto-cuerpo transition-colors
  */
 export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, anclas, empresasDeslinde }: SiteFooterProps) {
   const baseSede = sedeSlug ? hrefSede(lang, sedeSlug) : null;
-  const secciones = baseSede
+  const seccionesDeLaPagina = baseSede
     ? (anclas?.length ? anclas.map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta })) : [{ href: baseSede, label: nav.reservar }])
     : [
         { href: hrefInicio(lang, ANCLA_HUB.mapa), label: nav.mapa },
@@ -48,6 +48,9 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
         { href: hrefInicio(lang, ANCLA_HUB.comoFunciona), label: nav.comoFunciona },
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
       ];
+
+  // «Sobre nosotros» al final del primer grupo, en todas las páginas.
+  const secciones = [...seccionesDeLaPagina, { href: `/${lang}/nosotros`, label: nav.sobreNosotros }];
 
   const legales = [
     { href: hrefDeslinde(lang, empresasDeslinde), label: footer.waiver },

@@ -15,7 +15,7 @@ const POSTER_HUB = '/photos/cola-amarilla-acantilado.webp';
 
 type Props = {
   lang: Locale;
-  textos: Pick<Dictionary['hubContenido'], 'titularLineas' | 'subtexto' | 'ctaSedes'>;
+  textos: Pick<Dictionary['hubContenido'], 'titularLineas' | 'titularSecundario' | 'subtexto' | 'ctaSedes'>;
 };
 
 /**
@@ -33,6 +33,9 @@ export function HubPortada({ lang, textos }: Props) {
             {textos.titularLineas.map((linea) => (
               <span key={linea} className="block">{linea}</span>
             ))}
+            {/* Lo que se ofrece y dónde, en el mismo titular: «Mar adentro» sigue gigante y esta línea, más chica,
+                lo dice con palabras (la letra gigante no cabría en el teléfono). */}
+            <span className="mt-3 block texto-seccion">{textos.titularSecundario}</span>
           </h1>
           <div className="mt-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
             <p className="max-w-[44ch] text-xl leading-snug text-hero-ink">{textos.subtexto}</p>

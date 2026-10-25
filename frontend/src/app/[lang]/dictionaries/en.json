@@ -100,6 +100,7 @@
     "temporadas": "What's biting",
     "galeria": "Gallery",
     "preguntas": "FAQ",
+    "sobreNosotros": "About us",
     "contacto": "Contact",
     "catalogo": "Experiences",
     "sedeLabel": "Destination",
@@ -146,7 +147,7 @@
       },
       {
         "icon": "horas",
-        "title": "6 to 8 hour tour",
+        "title": "6 to 7 hour tour",
         "body": "Morning departures between 5:00 and 7:00 am, tailored to the time that suits you best."
       }
     ],
@@ -779,8 +780,52 @@
       "whatsappMensaje": "Hi, I have a question about {sede}."
     }
   },
+  "nosotros": {
+    "meta": {
+      "title": "About us",
+      "description": "We are an agency that brings together local companies in Baja California Sur: you book in one place and pay the company that takes you out."
+    },
+    "titular": "Local people. Local sea.",
+    "subtitulo": "Sun Baja Experience brings together local companies in Baja California Sur so you can book fishing, whale watching, lodging and transfers in one place, and head out with people who know these waters.",
+    "fotoAlt": "Pangas on the sand by the sea",
+    "fichaTitulo": "Who does what",
+    "ficha": [
+      {
+        "etiqueta": "Who looks after you",
+        "valor": "Us: your date, the calendar, the payment and your questions on WhatsApp, in English and Spanish."
+      },
+      {
+        "etiqueta": "Who takes you out",
+        "valor": "Each local company runs its own service: it provides the boat, the captain, the guide or the lodging."
+      },
+      {
+        "etiqueta": "Who you pay",
+        "valor": "The company that takes you out, directly, through its own account. In pesos or dollars."
+      },
+      {
+        "etiqueta": "If the weather turns",
+        "valor": "If the boat cannot go out, you get a full refund."
+      },
+      {
+        "etiqueta": "If your plans change",
+        "valor": "You can change your date with at least 48 hours notice."
+      }
+    ],
+    "cta": "Choose my destination",
+    "whatsapp": "Message us on WhatsApp",
+    "whatsappMensaje": "Hi, I would like to know more about Sun Baja Experience.",
+    "historiaTitulo": "How it started",
+    "historia": [
+      "It all started with a panga and an idea.",
+      "A sportfishing company in La Paz and a marketing team sat down to talk about the same thing: much of the management of tours and adventures in Baja was ending up in the hands of foreign companies. The captains brought the sea and the craft; others handled the booking, the payment and the relationship with the traveler.",
+      "We decided it could be different. Everyone put in what they do best: some go out on the water, others make booking a tour in Baja easy. Sun Baja Experience came out of that union."
+    ],
+    "empresasTitulo": "The companies we work with",
+    "empresasTexto": "They are local, and each one runs its own services. We do not run the tours: we make booking them clear and simple."
+  },
   "hubContenido": {
-    "titularLineas": ["Out at sea", "in Baja Sur"],
+    "titularLineas": ["Out at sea:"],
+    "titularSecundario": "fishing and whales in Baja Sur",
     "subtexto": "Fishing, whale watching, lodging and transfers with local outfitters in Baja California Sur.",
     "og": { "lugar": "Baja California Sur", "titular": "Fishing, whales and open sea in Baja Sur with local outfitters" },
     "ctaSedes": "See destinations",

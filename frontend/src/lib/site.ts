@@ -20,7 +20,7 @@ export const LOCALE_TAG: Record<Locale, string> = {
 };
 
 /** Rutas publicas estaticas del sitio (no dependen de que sedes esten activas). */
-export const rutasEstaticas = ['', '/reservar', '/deslinde', '/privacidad'] as const;
+export const rutasEstaticas = ['', '/reservar', '/deslinde', '/privacidad', '/nosotros'] as const;
 
 /**
  * Keep the sitemap, hub and navigation on the same active destination list.
