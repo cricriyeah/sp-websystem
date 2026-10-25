@@ -54,16 +54,18 @@ estar exento.
 
 - `fleet`, `bookings`: modelos + admin implementados. Backoffice basico (item 1 de
   contexto-negocio.md) ya cubre catalogo + reservas + roles, ver abajo.
-- `notifications/plantilla.py`: el boleto, la cara de los correos al cliente (confirmacion de servicio, traslado y paquete,
-  asignacion de capitan y panga, y el correo combinado de una orden). Direccion «El boleto» elegida por el dueño con la
-  skill de taste: papel arena sobre el campo de color de la actividad (azul mar, coral traslado, verde estancia), el dia
-  y la hora ENORME (84 px), los datos con el valor por delante de la etiqueta, una fila de puntos como perforacion y el
-  talon oscuro con el folio y el dinero. En la asignacion la hora grande es la LLEGADA (15 min antes de la salida) y el
-  titulo es «Sales con <primer nombre del capitan>». Sin lineas finas, degradados, sombras, mayusculas diminutas ni
-  monoespaciada; sin imagenes (el boleto se ve completo con las imagenes bloqueadas y en Outlook de escritorio); texto
-  de vista previa que lleva la fecha ISO y la hora 24 h, y version de texto plano (`text`). El asunto lleva el folio.
-  Todo dato de una persona entra ya escapado (`services._html`). No lleva boton de WhatsApp (el backend no conoce el
-  numero publico) ni promete "responde a este correo" sin un `Reply-To`.
+- `notifications/plantilla.py`: la cara de los correos al cliente (confirmacion de servicio, traslado y paquete, asignacion de
+  capitan y panga, y el correo combinado de una orden). **Sigue el estilo de la pagina de confirmacion del sitio**
+  (`frontend/src/components/confirmacion-reserva.tsx`), a peticion del dueño: campo de color de la actividad (azul mar,
+  coral traslado, verde estancia) con el titular grande en la letra de titulares del sitio (mayusculas, negrita,
+  monoespaciada: Consolas / Courier New en correo; es regla de marca del dueño y por eso no aplica la de taste contra la
+  monoespaciada), el folio a la derecha, el saludo y el producto; debajo, sobre arena, «Lo que reservaste» (etiqueta a la
+  izquierda, valor a la derecha), «El dinero» (bloque tinta de «Pagaste hoy» y bloque arena-clara del saldo en efectivo),
+  «Que sigue» y «Si algo cambia» (100 % y 48 h, con los textos del sitio; solo en servicios de mar). Si cambia la
+  pagina del sitio, cambiar esto igual. Sin imagenes, sin lineas finas, degradados ni sombras; texto de vista previa que
+  lleva la fecha ISO y la hora 24 h; version de texto plano (`text`); el asunto lleva el folio. Todo dato de una persona
+  entra ya escapado (`services._html`). No lleva boton de WhatsApp (el backend no conoce el numero publico) ni promete
+  "responde a este correo" sin un `Reply-To`. En la asignacion el titular es «Sales con <primer nombre del capitan>».
 - `payments`: API implementada (crear PaymentIntent + webhook), ver seccion "API
   publica (frontend)" abajo.
 - `notifications`: `services.py` con `notificar_reserva_pagada(reserva)` — correo via

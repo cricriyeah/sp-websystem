@@ -1,4 +1,4 @@
-"""Los correos al cliente son el boleto (dirección A): campo de color, hora enorme, datos, perforación y talón."""
+"""Los correos al cliente siguen la página de confirmación del sitio: campo de color, titular, datos, dinero, qué sigue."""
 from datetime import date, time, timedelta
 from decimal import Decimal
 from unittest import mock
@@ -32,53 +32,73 @@ class FormatosTests(SimpleTestCase):
         self.assertEqual(plantilla.quince_antes(time(0, 10)), time(23, 55))
 
 
-class BoletoTests(SimpleTestCase):
-    def boleto(self, **extra):
+class CorreoTests(SimpleTestCase):
+    def correo(self, **extra):
         datos = dict(
-            actividad='mar', empresa='Sal y Sol', linea1='Lunes 7 de diciembre', linea2='6:00 a. m.', folio=12,
-            previa='2026-12-07 · 06:00', pares=[('Sales de', 'Marina Costa Baja')], talon_html='<b>dinero</b>',
+            actividad='mar', empresa='Sal y Sol', titulo='Reserva confirmada', folio=12, producto='Pesca deportiva',
+            intro_html='Hola Ana', previa='2026-12-07 · 06:00',
+            pares=[('Día', 'Lunes 7 de diciembre'), ('Sales de', 'Marina Costa Baja')],
+            dinero_html=plantilla.bloque_pagado('3240.00 MXN'), siguiente_html='<p>sigue</p>', con_garantias=True,
         )
         datos.update(extra)
-        return plantilla.boleto(**datos)
+        return plantilla.correo(**datos)
 
     def test_el_campo_es_el_color_de_la_actividad(self):
         for actividad, color in (('mar', '#1b607f'), ('traslado', '#a83226'), ('estancia', '#343f04')):
-            self.assertIn(color, self.boleto(actividad=actividad))
+            self.assertIn(color, self.correo(actividad=actividad))
 
-    def test_lleva_empresa_dia_hora_folio_y_texto_de_vista_previa(self):
-        html = self.boleto()
-        for texto in ('Sal y Sol', 'Lunes 7 de diciembre', '6:00 a. m.', '#12', '2026-12-07 · 06:00', 'color-scheme'):
+    def test_sigue_el_orden_de_la_confirmacion_del_sitio(self):
+        texto = plantilla.a_texto(self.correo())
+        orden = ['RESERVA CONFIRMADA', 'Pesca deportiva', 'LO QUE RESERVASTE', 'EL DINERO', 'QUÉ SIGUE', 'SI ALGO CAMBIA']
+        posiciones = [texto.index(parte) for parte in orden]
+        self.assertEqual(posiciones, sorted(posiciones))
+
+    def test_los_titulares_van_en_mayusculas_y_negrita_como_el_sitio(self):
+        html = self.correo()
+        self.assertIn('RESERVA CONFIRMADA', html)
+        self.assertIn('LO QUE RESERVASTE', html)
+        self.assertIn('Consolas', html)  # la fuente de titulares del sitio no se carga en correo: se usa su equivalente
+
+    def test_lleva_folio_empresa_y_texto_de_vista_previa(self):
+        html = self.correo()
+        for texto in ('Sal y Sol', '#12', '2026-12-07 · 06:00', 'color-scheme'):
             self.assertIn(texto, html)
 
-    def test_la_perforacion_separa_el_boleto_del_talon(self):
-        self.assertIn('border-radius:5px', self.boleto())
-        self.assertNotIn('border-radius:5px', self.boleto(folio='', talon_html=''))  # sin talon no hay perforacion
+    def test_las_garantias_son_las_del_sitio_con_sus_cifras(self):
+        html = self.correo()
+        for texto in ('100 %', '48 h', 'Si el mal clima impide salir, hay reembolso completo.',
+                      'Puedes cambiar la fecha con al menos 48 horas de anticipación.'):
+            self.assertIn(texto, html)
+        self.assertNotIn('SI ALGO CAMBIA', self.correo(con_garantias=False))
 
-    def test_sin_hora_no_hay_linea_enorme(self):
-        self.assertNotIn('font:800 84px', self.boleto(linea2=''))
+    def test_sin_dinero_ni_siguiente_no_hay_esas_secciones(self):
+        html = self.correo(dinero_html='', siguiente_html='', con_garantias=False)
+        self.assertNotIn('EL DINERO', html)
+        self.assertNotIn('QUÉ SIGUE', html)
 
-    def test_las_reglas_de_la_casa_no_se_rompen(self):
-        html = self.boleto()
-        for prohibido in ('gradient', 'box-shadow', 'text-shadow', 'monospace', 'text-transform:uppercase', 'border-top:1px'):
+    def test_sin_adornos_prohibidos(self):
+        html = self.correo()
+        for prohibido in ('gradient', 'box-shadow', 'text-shadow', 'border-radius', 'border-top:1px', '<img'):
             self.assertNotIn(prohibido, html)
 
-    def test_el_nombre_de_la_empresa_se_escapa(self):
-        html = self.boleto(empresa='A&B <script>')
-        self.assertNotIn('<script>', html)
-        self.assertIn('A&amp;B &lt;script&gt;', html)
+    def test_el_titular_se_escapa_y_no_rompe_entidades(self):
+        html = self.correo(titulo='A&B <x>')
+        self.assertNotIn('<x>', html)
+        self.assertIn('A&amp;B &lt;X&gt;', html)
 
-    def test_texto_plano_conserva_el_orden_y_no_trae_etiquetas(self):
-        texto = plantilla.a_texto(self.boleto(pares=[('Sales de', 'Marina'), ('Personas', '2')]))
-        self.assertNotIn('<', texto)
-        self.assertLess(texto.index('Lunes 7 de diciembre'), texto.index('Sales de'))
-        self.assertLess(texto.index('Sales de'), texto.index('Personas'))
+    def test_el_nombre_de_la_empresa_se_escapa(self):
+        html = self.correo(empresa='A&B <script>')
+        self.assertNotIn('<script>', html)
+
+    def test_texto_plano_sin_etiquetas(self):
+        self.assertNotIn('<', plantilla.a_texto(self.correo()))
 
     def test_los_datos_vacios_se_omiten(self):
-        self.assertNotIn('Regreso', self.boleto(pares=[('Sales de', 'Marina'), ('Regreso', '')]))
+        self.assertNotIn('Regreso', self.correo(pares=[('Día', 'Lunes'), ('Regreso', '')]))
 
 
 @override_settings(RESEND_API_KEY='re_x', RESEND_FROM='reservas@example.com', RESEND_BCC='')
-class CorreosConBoletoTests(EmpresaTestCase):
+class CorreosComoElSitioTests(EmpresaTestCase):
     def setUp(self):
         super().setUp()
         crear_flota(self.empresa)
@@ -101,7 +121,7 @@ class CorreosConBoletoTests(EmpresaTestCase):
         self.assertIn(f'#{reserva.pk}', _asunto(reserva))
         self.assertIn(f'#{reserva.pk}', _asunto_asignacion(reserva))
 
-    def test_la_confirmacion_es_un_boleto_con_dia_hora_llegada_y_folio(self):
+    def test_la_confirmacion_trae_dia_hora_llegada_y_folio(self):
         reserva = self.reserva()
         html = _cuerpo_html(reserva)
         self.assertIn(plantilla.dia_largo(reserva.fecha), html)
@@ -110,8 +130,9 @@ class CorreosConBoletoTests(EmpresaTestCase):
         self.assertIn('Marina Costa Baja, La Paz', html)
         self.assertIn(f'#{reserva.pk}', html)
         self.assertIn(self.empresa.nombre, html)
+        self.assertIn('SI ALGO CAMBIA', html)  # la pesca lleva las garantias del sitio
 
-    def test_el_anticipo_muestra_lo_pagado_y_el_saldo_en_el_talon(self):
+    def test_el_anticipo_muestra_lo_pagado_y_el_saldo(self):
         reserva = self.reserva(
             forma_pago=Reserva.FormaPago.ANTICIPO, precio_total=Decimal('10800.00'), monto_pagado=Decimal('3240.00'),
         )
@@ -134,16 +155,17 @@ class CorreosConBoletoTests(EmpresaTestCase):
         self.assertNotIn('<', cuerpo['text'])
         self.assertIn('Ana Ruiz', cuerpo['text'])
 
-    def test_la_asignacion_pone_la_llegada_en_grande_y_con_quien_sale(self):
+    def test_la_asignacion_dice_con_quien_sale_y_a_que_hora_llegar(self):
         from apps.fleet.models import Capitan, Embarcacion
 
         panga = Embarcacion.objects.filter(empresa=self.empresa).first()
         capitan = Capitan.objects.create(empresa=self.empresa, nombre='Chuy Amador')
         reserva = self.reserva(embarcacion=panga, capitan=capitan, estado=Reserva.Estado.ASIGNADA)
         html = _cuerpo_asignacion_html(reserva)
-        self.assertIn('Sales con Chuy', html)
+        self.assertIn('SALES CON CHUY', html)
         self.assertIn('Chuy Amador', html)
         self.assertIn(panga.nombre, html)
         self.assertIn('5:45 a. m.', html)
-        self.assertIn('La panga sale a las 6:00 a. m.', html)
+        self.assertIn('Hora de salida', html)
+        self.assertIn('6:00 a. m.', html)
         self.assertNotIn('9876543', html)

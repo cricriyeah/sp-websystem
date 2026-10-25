@@ -1,17 +1,17 @@
-"""El boleto: la cara de los correos al cliente (dirección «El boleto», elegida por el dueño el 2026-10-24).
+"""La cara de los correos al cliente: la misma de la página de confirmación del sitio.
 
-La idea sale del negocio: una salida de pesca es de madrugada, con una hora que manda (6:00) y un folio que se
-muestra en el muelle. El correo es ese boleto: un papel arena sobre el campo de color de la actividad, la hora
-enorme, los datos del viaje con el valor por delante de la etiqueta, una fila de puntos como perforación y,
-debajo, el talón oscuro con el folio y el dinero.
+El dueño pidió (2026-10-24) que los correos sigan el estilo visual de la confirmación de reserva del sitio, no uno
+inventado aparte. Es el mismo orden y la misma voz: un campo de color de la actividad con el titular grande en la
+letra de los titulares del sitio (mayúsculas, negrita, monoespaciada: es la regla de marca del dueño, no de la
+skill de taste, y por eso se conserva), el folio a la derecha, el saludo y el producto; debajo, sobre arena, «Lo que
+reservaste» (etiqueta a la izquierda, valor a la derecha), «El dinero» (el bloque tinta de «Pagaste hoy» y el bloque
+arena-clara del resto), «Qué sigue» y «Si algo cambia» (la cifra grande y su texto).
 
-Reglas de la casa (taste): sin líneas finas, sin degradados, sin sombras, sin mayúsculas diminutas ni
-monoespaciada; esquinas rectas o círculos; una sola familia (la del sistema) porque los clientes de correo no
-cargan fuentes. Tablas con estilos en línea (Outlook no entiende más) y `color-scheme: light only`. Sin imágenes:
-el boleto se ve completo con las imágenes bloqueadas y en Outlook de escritorio.
+Los clientes de correo no cargan la fuente del sitio (Consola Mono): se usa Consolas / Courier New. No hay imágenes (se
+ve completo con las imágenes bloqueadas). Tablas con estilos en línea, 600 px, `color-scheme: light only`.
 
-Todo lo que entra como `valor` o `*_html` ya viene escapado por quien lo arma (`services._html`): esta capa no
-vuelve a escapar para no mostrar `&amp;`, y tampoco escribe datos de personas por su cuenta.
+Todo lo que entra como `valor` o `*_html` ya viene escapado por quien lo arma (`services._html`): esta capa no vuelve a
+escapar para no mostrar `&amp;`, y tampoco escribe datos de personas por su cuenta.
 """
 import re
 from datetime import datetime, timedelta
@@ -25,11 +25,20 @@ ARENA = '#fcf6ed'
 ARENA_CLARA = '#fee0ac'
 TINTA = '#1f1a14'
 SUAVE = '#4a3f33'
-FUENTE = "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+BLANCO = '#ffffff'
+BLANCO_SUAVE = '#e9eff2'
+CUERPO = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+TITULAR = "Consolas, 'Lucida Console', 'Courier New', monospace"
 
 DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
 MESES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
          'noviembre', 'diciembre')
+
+# Las garantías de la confirmación del sitio (sedeContenido.tranquilidad): mismos textos, mismas cifras.
+GARANTIAS = (
+    ('100 %', 'Si hay mal clima', 'Si el mal clima impide salir, hay reembolso completo.'),
+    ('48 h', 'Cambio de fecha', 'Puedes cambiar la fecha con al menos 48 horas de anticipación.'),
+)
 
 
 def actividad_de(reserva):
@@ -58,81 +67,117 @@ def quince_antes(hora):
     return (datetime.combine(datetime(2000, 1, 1), hora) - timedelta(minutes=15)).time()
 
 
-def t(texto, tam, peso=400, color=TINTA, interlin=1.2, extra=''):
-    return f'<div style="font:{peso} {tam}px/{interlin} {FUENTE};color:{color};{extra}">{texto}</div>'
+def t(texto, tam, peso=400, color=TINTA, interlin=1.3, extra='', familia=CUERPO):
+    return f'<div style="font:{peso} {tam}px/{interlin} {familia};color:{color};{extra}">{texto}</div>'
 
 
-def parrafo(contenido_html, color=TINTA, tam=17):
-    return t(contenido_html, tam, 400, color, 1.5, 'padding-top:14px;')
+def titular(texto, tam, color=TINTA, extra=''):
+    """La letra de los titulares del sitio: mayúsculas, negrita, monoespaciada, apretada."""
+    return t(escape(texto.upper()), tam, 700, color, 0.95, f'letter-spacing:-0.03em;{extra}', TITULAR)
 
 
-def dato(etiqueta, valor):
-    """Una pareja etiqueta/valor sin líneas ni mayúsculas: el valor manda."""
-    return f'<tr><td style="padding:14px 0 0;">{t(etiqueta, 16, 600, SUAVE)}{t(valor, 22, 700, TINTA, 1.25)}</td></tr>'
+def parrafo(contenido_html, color=TINTA, tam=16):
+    return t(contenido_html, tam, 400, color, 1.5, 'padding-top:12px;')
 
 
-def datos(pares):
-    """Los datos del viaje. `pares` = [(etiqueta, valor_html)]; los vacíos se omiten."""
-    filas = ''.join(dato(e, v) for e, v in pares if v not in ('', None))
-    return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{filas}</table>' if filas else ''
-
-
-def recuadro(contenido_html, fondo=ARENA_CLARA, color=TINTA):
-    """Lo que el cliente no debe pasar por alto, en un campo de color."""
+def seccion(titulo, contenido_html):
+    """Un bloque del cuerpo: su título (letra de titulares) y lo suyo."""
     return (
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;"><tr>'
-        f'<td style="background:{fondo};padding:18px 22px;font:400 17px/1.45 {FUENTE};color:{color};">{contenido_html}</td></tr></table>'
+        f'<tr><td class="pad" style="background:{ARENA};padding:28px 32px 0;">{titular(titulo, 24)}'
+        f'<div style="padding-top:16px;">{contenido_html}</div></td></tr>'
     )
 
 
-def perforacion(campo):
-    """Fila de puntos redondos del color del campo: la perforación entre el boleto y el talón."""
-    punto = (f'<td style="width:10px;"><div style="width:10px;height:10px;border-radius:5px;background:{campo};'
-             f'line-height:10px;font-size:1px;">&nbsp;</div></td><td style="width:14px;"></td>')
+def filas(pares):
+    """«Lo que reservaste»: etiqueta en negrita a la izquierda y valor a la derecha, como en el sitio."""
+    cuerpo = ''.join(
+        f'<tr><td valign="top" style="padding:6px 16px 6px 0;font:600 16px/1.5 {CUERPO};color:{TINTA};">{e}</td>'
+        f'<td valign="top" align="right" style="padding:6px 0;font:400 16px/1.5 {CUERPO};color:{TINTA};">{v}</td></tr>'
+        for e, v in pares if v not in ('', None) and e
+    )
+    return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{cuerpo}</table>' if cuerpo else ''
+
+
+def bloque(contenido_html, fondo, color):
+    """Un renglón de color del dinero («Pagaste hoy», «Resto en efectivo»)."""
     return (
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{ARENA};">'
-        f'<tr><td align="center" style="padding:6px 0;"><table role="presentation" cellpadding="0" cellspacing="0">'
-        f'<tr>{punto * 24}</tr></table></td></tr></table>'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr>'
+        f'<td style="background:{fondo};padding:16px 20px;font:400 16px/1.45 {CUERPO};color:{color};">{contenido_html}</td></tr></table>'
     )
 
 
-def boleto(*, actividad, empresa, linea1, linea2='', intro_html='', pares=(), folio='', talon_html='',
-           cierre_html='', previa='', titulo_documento='Reserva confirmada'):
-    """El correo completo.
+def bloque_pagado(monto_html):
+    """El bloque tinta de «Pagaste hoy»."""
+    return bloque(
+        t('Pagaste hoy', 16, 600, BLANCO, 1.2) + titular(monto_html, 24, BLANCO, 'padding-top:6px;'), TINTA, BLANCO,
+    )
 
-    `linea1` es el día (o el título), `linea2` la hora enorme (puede ir vacía); `pares` los datos; el talón lleva el
-    folio a la izquierda y `talon_html` (el dinero) a la derecha; `cierre_html` es lo que sigue.
+
+def bloque_resto(frase_html):
+    """El bloque arena-clara de lo que queda en efectivo."""
+    return bloque(t(frase_html, 17, 600, TINTA, 1.45), ARENA_CLARA, TINTA)
+
+
+def recuadro(contenido_html):
+    """Un aviso que el cliente no debe pasar por alto, en el campo arena-clara."""
+    return bloque(contenido_html, ARENA_CLARA, TINTA)
+
+
+def garantias():
+    filas_ = ''.join(
+        f'<tr><td width="88" valign="top" style="padding:8px 0;">{titular(cifra, 24)}</td>'
+        f'<td valign="top" style="padding:8px 0;">{t(escape(titulo), 16, 600, TINTA, 1.2)}'
+        f'{t(escape(texto), 16, 400, TINTA, 1.5, "padding-top:4px;")}</td></tr>'
+        for cifra, titulo, texto in GARANTIAS
+    )
+    return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{filas_}</table>'
+
+
+def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', pares=(), dinero_html='',
+           siguiente_html='', con_garantias=False, previa='', etiqueta_pares='Lo que reservaste'):
+    """El correo completo, con el orden de la página de confirmación del sitio.
+
+    `titulo` es el titular grande; `producto` la línea en negrita bajo el saludo (servicio y empresa).
     """
     campo = CAMPO.get(actividad, CAMPO['mar'])
-    grande = t(escape(linea2), 84, 800, campo, 1.0, 'letter-spacing:-2px;') if linea2 else ''
-    talon_folio = (
-        f'<td class="col" valign="top">{t("Folio", 17, 600, ARENA_CLARA)}{t("#" + escape(str(folio)), 52, 800, ARENA, 1.0)}</td>'
+    folio_html = (
+        f'<td class="col" valign="top" align="right" style="padding-left:16px;">'
+        f'{t("Folio", 16, 600, BLANCO_SUAVE, 1.2)}{titular("#" + str(folio), 40, BLANCO)}</td>'
     ) if folio else ''
-    talon_der = (
-        f'<td class="col" valign="top" align="right" style="padding-top:2px;">{talon_html}</td>'
-    ) if talon_html else ''
-    talon = (
-        f'<tr><td>{perforacion(campo)}</td></tr>'
-        f'<tr><td class="pad" style="background:{TINTA};padding:24px 32px;"><table role="presentation" width="100%" '
-        f'cellpadding="0" cellspacing="0"><tr>{talon_folio}{talon_der}</tr></table></td></tr>'
-    ) if (talon_folio or talon_der) else ''
+    linea_producto = t(
+        f'{escape(producto)}<span style="font-weight:400;"> · {escape(empresa)}</span>' if producto else escape(empresa),
+        20, 700, BLANCO, 1.3, 'padding-top:22px;',
+    )
+    secciones = ''
+    if pares:
+        secciones += seccion(etiqueta_pares, filas(pares))
+    if dinero_html:
+        secciones += seccion('El dinero', dinero_html)
+    if siguiente_html:
+        secciones += seccion('Qué sigue', siguiente_html)
+    if con_garantias:
+        secciones += seccion('Si algo cambia', garantias())
     return (
         '<!doctype html><html lang="es"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only">'
-        '<style>@media (max-width:480px){.col{display:block!important;width:100%!important;text-align:left!important}'
-        '.pad{padding-left:20px!important;padding-right:20px!important}}</style>'
-        f'<title>{escape(titulo_documento)}</title></head>'
-        f'<body style="margin:0;padding:0;background:{campo};">'
-        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{campo};">{escape(previa)}</div>'
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{campo};">'
-        '<tr><td align="center" style="padding:28px 12px;">'
+        '<style>@media (max-width:480px){.col{display:block!important;width:100%!important;text-align:left!important;'
+        'padding-left:0!important;padding-top:14px!important}.pad{padding-left:20px!important;padding-right:20px!important}}</style>'
+        f'<title>{escape(titulo)}</title></head>'
+        f'<body style="margin:0;padding:0;background:{ARENA};">'
+        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{ARENA};">{escape(previa)}</div>'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{ARENA};">'
+        '<tr><td align="center">'
         '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;">'
-        f'<tr><td class="pad" style="background:{ARENA};padding:30px 32px 6px;">{t(escape(empresa), 20, 800, campo)}'
-        f'{t(escape(linea1), 30, 800, TINTA, 1.1, "padding-top:26px;")}{grande}{intro_html}</td></tr>'
-        f'<tr><td class="pad" style="background:{ARENA};padding:8px 32px 26px;">{datos(pares)}</td></tr>'
-        f'{talon}'
-        f'<tr><td class="pad" style="background:{ARENA};padding:8px 32px 30px;">{cierre_html}</td></tr>'
+        f'<tr><td class="pad" style="background:{campo};padding:36px 32px 32px;">'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        f'<td class="col" valign="top">{titular(titulo, 40, BLANCO)}</td>{folio_html}</tr></table>'
+        f'{t(intro_html, 20, 400, BLANCO_SUAVE, 1.35, "padding-top:22px;") if intro_html else ""}'
+        f'{linea_producto}</td></tr>'
+        f'{secciones}'
+        f'<tr><td class="pad" style="background:{ARENA};padding:32px 32px 36px;">'
+        f'{t("Guarda este correo: es tu comprobante. Si necesitas un cambio, escríbenos por WhatsApp con tu folio.", 14, 400, SUAVE, 1.5)}'
+        f'{t(escape(empresa) + " · Sun Baja Experience", 14, 400, SUAVE, 1.5, "padding-top:6px;")}</td></tr>'
         '</table></td></tr></table></body></html>'
     )
 

@@ -115,48 +115,30 @@ def _par_punto_de_encuentro(reserva, etiqueta='Punto de encuentro'):
     return (etiqueta, _html(punto))
 
 
-_CIERRE_COMPROBANTE = 'Guarda este correo: es tu comprobante. Si necesitas un cambio, escríbenos por WhatsApp con tu folio.'
-
-
 def _dia_y_hora(fecha, hora):
-    """(linea1, linea2) del boleto: el día en grande y la hora enorme; sin hora la segunda va vacía."""
-    return plantilla.dia_largo(fecha), (plantilla.hora_12(hora) if hora else '')
+    """Los dos primeros renglones de «Lo que reservaste»: el día y, si se sabe, la hora."""
+    pares = [('Día', plantilla.dia_largo(fecha))]
+    if hora:
+        pares.append(('Hora', plantilla.hora_12(hora)))
+    return pares
 
 
 def _cuerpo_traslado_html(reserva):
     detalle = reserva.detalle_transporte
     punto = detalle.punto_encuentro.nombre if detalle.punto_encuentro_id else detalle.direccion_personalizada
     personas = detalle.numero_personas if detalle.numero_personas is not None else reserva.numero_personas
-    linea1, linea2 = _dia_y_hora(reserva.fecha, reserva.hora)
-    return plantilla.boleto(
-        actividad='traslado', empresa=_empresa_de(reserva), titulo_documento='Traslado confirmado',
-        linea1=linea1, linea2=linea2, folio=reserva.pk,
+    return plantilla.correo(
+        actividad='traslado', empresa=_empresa_de(reserva), titulo='Traslado confirmado', folio=reserva.pk,
+        producto=_html(reserva.servicio.nombre),
         previa=f'{reserva.fecha} · {hora_texto(reserva)}',
-        intro_html=plantilla.parrafo(f'Hola {_html(reserva.nombre_cliente)}, tu traslado quedó confirmado.'),
-        pares=[
+        intro_html=f'Hola {_html(reserva.nombre_cliente)}, tu traslado quedó confirmado.',
+        pares=_dia_y_hora(reserva.fecha, reserva.hora) + [
             ('Tipo de traslado', _html(detalle.get_tipo_traslado_display())),
             ('Fecha de regreso al aeropuerto', str(detalle.fecha_regreso) if detalle.fecha_regreso else ''),
             ('Personas', str(personas)),
             ('Punto de encuentro', _html(punto)),
         ],
-        cierre_html=plantilla.parrafo(_CIERRE_COMPROBANTE, plantilla.SUAVE, 16),
     )
-
-
-def _talon_dinero(reserva, pendiente):
-    """El dinero del talon: lo pagado hoy en grande y, si hay saldo, cuanto queda en efectivo."""
-    if not reserva.monto_pagado:
-        return ''
-    html = (
-        plantilla.t('Pagaste hoy', 17, 600, plantilla.ARENA_CLARA)
-        + plantilla.t(f'{reserva.monto_pagado} {_html(reserva.moneda)}', 28, 800, plantilla.ARENA, 1.2)
-    )
-    if pendiente:
-        html += plantilla.t(
-            f'Quedan {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.',
-            16, 400, plantilla.ARENA_CLARA, 1.4, 'padding-top:10px;',
-        )
-    return html
 
 
 def _saldo_en_efectivo(reserva):
@@ -167,13 +149,23 @@ def _saldo_en_efectivo(reserva):
     return None
 
 
+def _bloques_de_dinero(reserva, pendiente):
+    """«El dinero» como en el sitio: el bloque tinta de lo pagado hoy y, si hay saldo, el de lo que queda en efectivo."""
+    if not reserva.monto_pagado:
+        return ''
+    html = plantilla.bloque_pagado(f'{reserva.monto_pagado} {reserva.moneda}')
+    if pendiente:
+        html += plantilla.bloque_resto(
+            f'Quedan {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.')
+    return html
+
+
 def _cuerpo_html(reserva):
     if _es_traslado(reserva):
         return _cuerpo_traslado_html(reserva)
 
     actividad = plantilla.actividad_de(reserva)
     fecha = reserva.fecha_inicio_paquete
-    linea1, linea2 = _dia_y_hora(fecha, reserva.hora)
 
     # Lo que compro en el checkout (brunch, licencia, carnada): ya tiene precio
     # congelado porque este correo solo se manda despues de pagar. `reserva.pk`
@@ -182,12 +174,12 @@ def _cuerpo_html(reserva):
     # renderizado del correo usan una `Reserva` en memoria sin guardar, y
     # consultar una relacion inversa sin pk revienta con ValueError, no con
     # AttributeError — `getattr(..., None)` no lo atrapa.
-    pares = []
+    pares = _dia_y_hora(fecha, reserva.hora)
+    if reserva.hora and actividad == 'mar':
+        pares.append(('Llega a las', plantilla.hora_12(plantilla.quince_antes(reserva.hora)) + ' (15 minutos antes)'))
     punto = _par_punto_de_encuentro(reserva, 'Sales de' if actividad == 'mar' else 'Punto de encuentro')
     if punto:
         pares.append(punto)
-    if reserva.hora and actividad == 'mar':
-        pares.append(('Llega a las', plantilla.hora_12(plantilla.quince_antes(reserva.hora)) + ' (15 minutos antes)'))
     pares.append(('Personas', str(reserva.numero_personas)))
     filas_extras = (reserva.personalizaciones_seleccionadas.select_related(
         'servicio_personalizacion__personalizacion') if reserva.pk else [])
@@ -202,32 +194,29 @@ def _cuerpo_html(reserva):
 
     # Aviso explicito: si el cliente cree que algo ya esta pagado sin estarlo,
     # el problema aparece el dia del viaje.
-    cierre = ''
+    siguiente = ''
     if reserva.tiene_cotizaciones_pendientes:
         pedidos = [
             etiqueta for pedido, etiqueta in
             ((reserva.pide_bebidas, 'bebidas'), (reserva.pide_extras_whatsapp, 'extras'))
             if pedido
         ]
-        cierre += plantilla.recuadro(
+        siguiente += plantilla.recuadro(
             f'<strong>Pediste {" y ".join(pedidos)}.</strong> Eso <strong>no</strong> está '
             f'incluido en el monto que acabas de pagar: nuestro agente te lo cotiza y lo '
             f'acuerdas directamente con él.'
         )
     if actividad == 'mar':
-        cierre += plantilla.parrafo('Te llega otro correo con tu capitán y tu panga en cuanto los asignemos.')
-        cierre += plantilla.parrafo(
-            'Si el mal clima impide salir, hay reembolso completo. '
-            'Puedes cambiar la fecha con al menos 48 horas de anticipación.', plantilla.SUAVE, 16,
-        )
-    cierre += plantilla.parrafo(_CIERRE_COMPROBANTE, plantilla.SUAVE, 16)
+        siguiente += plantilla.parrafo('Te llega otro correo con el nombre de tu capitán y la panga que les toca, '
+                                       'en cuanto queden asignados.', plantilla.TINTA, 16)
 
-    return plantilla.boleto(
-        actividad=actividad, empresa=_empresa_de(reserva), linea1=linea1, linea2=linea2, folio=reserva.pk,
+    return plantilla.correo(
+        actividad=actividad, empresa=_empresa_de(reserva), titulo='Reserva confirmada', folio=reserva.pk,
+        producto=_html(reserva.servicio.nombre) if reserva.servicio_id else '',
         previa=f'{fecha} · {hora_texto(reserva)}',
-        intro_html=plantilla.parrafo(
-            f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó confirmada.'),
-        pares=pares, talon_html=_talon_dinero(reserva, _saldo_en_efectivo(reserva)), cierre_html=cierre,
+        intro_html=f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó confirmada.',
+        pares=pares, dinero_html=_bloques_de_dinero(reserva, _saldo_en_efectivo(reserva)),
+        siguiente_html=siguiente, con_garantias=(actividad == 'mar'),
     )
 
 
@@ -282,38 +271,29 @@ def _cuerpo_asignacion_html(reserva):
     por el numero del negocio, que es el que si tiene quien lo atienda.
     """
     pendiente = _saldo_en_efectivo(reserva)
-    talon = ''
+    dinero = ''
     if pendiente:
-        talon = (
-            plantilla.t('Recuerda', 17, 600, plantilla.ARENA_CLARA)
-            + plantilla.t(f'{pendiente} {_html(reserva.moneda)}', 28, 800, plantilla.ARENA, 1.2)
-            + plantilla.t(
-                f'Recuerda que llevas {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.',
-                16, 400, plantilla.ARENA_CLARA, 1.4, 'padding-top:10px;')
-        )
+        dinero = plantilla.bloque_resto(
+            f'Recuerda que llevas {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.')
     primer_nombre = (reserva.capitan.nombre.split() or [''])[0]
+    pares = [('Día', plantilla.dia_largo(reserva.fecha))]
     if reserva.hora:
-        llegada = plantilla.hora_12(plantilla.quince_antes(reserva.hora))
-        intro = plantilla.parrafo(
-            f'Hola {_html(reserva.nombre_cliente)}, llega a esta hora. '
-            f'La panga sale a las {plantilla.hora_12(reserva.hora)}.')
-    else:
-        llegada = ''
-        intro = plantilla.parrafo(f'Hola {_html(reserva.nombre_cliente)}, ya sabemos con quién sales.')
-    return plantilla.boleto(
+        pares.append(('Llega a las', plantilla.hora_12(plantilla.quince_antes(reserva.hora)) + ' (15 minutos antes)'))
+        pares.append(('Hora de salida', plantilla.hora_12(reserva.hora)))
+    pares += [('Capitán', _html(reserva.capitan.nombre)), ('Panga', _html(reserva.embarcacion.nombre))]
+    punto = _par_punto_de_encuentro(reserva, 'Sales de')
+    if punto:
+        pares.append(punto)
+    return plantilla.correo(
         actividad=plantilla.actividad_de(reserva), empresa=_empresa_de(reserva),
-        titulo_documento='Tu capitán y tu panga', linea1=f'Sales con {primer_nombre}', linea2=llegada,
-        folio=reserva.pk, previa=f'{reserva.fecha} · {hora_texto(reserva)} · sale con {reserva.capitan.nombre}',
-        intro_html=intro,
-        pares=[
-            ('Capitán', _html(reserva.capitan.nombre)),
-            ('Panga', _html(reserva.embarcacion.nombre)),
-            _par_punto_de_encuentro(reserva, 'Sales de') or ('', ''),
-            ('Fecha', plantilla.dia_largo(reserva.fecha)),
-        ],
-        talon_html=talon,
-        cierre_html=plantilla.parrafo(
-            'Si algo cambia de tu lado, escríbenos por WhatsApp y lo movemos.', plantilla.SUAVE, 16),
+        titulo=f'Sales con {primer_nombre}', folio=reserva.pk,
+        producto=_html(reserva.servicio.nombre) if reserva.servicio_id else '',
+        previa=f'{reserva.fecha} · {hora_texto(reserva)} · sale con {reserva.capitan.nombre}',
+        intro_html=f'Hola {_html(reserva.nombre_cliente)}, ya sabemos con quién sales.',
+        pares=pares, etiqueta_pares='Tu salida', dinero_html=dinero,
+        siguiente_html=plantilla.parrafo(
+            'Llega 15 minutos antes de la hora de salida. Si algo cambia de tu lado, '
+            'escríbenos por WhatsApp y lo movemos.', plantilla.TINTA, 16),
     )
 
 
@@ -527,18 +507,15 @@ def _cuerpo_orden_html(orden, reservas):
 
     paquete_nombre = orden.paquete.nombre if orden.paquete_id else 'Paquete'
     empresa = orden.empresa_lider.nombre if orden.empresa_lider_id else 'Sun Baja Experience'
-    cierre = (
-        plantilla.parrafo('Detalle de tus servicios:')
-        + f'<ul style="margin:8px 0 0;padding-left:20px;font:400 17px/1.6 {plantilla.FUENTE};color:{plantilla.TINTA};">'
+    detalle = (
+        f'<ul style="margin:0;padding-left:20px;font:400 16px/1.6 {plantilla.CUERPO};color:{plantilla.TINTA};">'
         + "".join(componentes_html) + '</ul>'
-        + plantilla.parrafo('Te esperamos para vivir una gran experiencia.')
-        + plantilla.parrafo(_CIERRE_COMPROBANTE, plantilla.SUAVE, 16)
     )
-    return plantilla.boleto(
-        actividad='mar', empresa=empresa, linea1=paquete_nombre, folio=orden.pk, previa=paquete_nombre,
-        intro_html=plantilla.parrafo(
-            f'Hola {_html(orden.nombre_cliente)}, tu paquete {_html(paquete_nombre)} quedó confirmado.'),
-        cierre_html=cierre,
+    return plantilla.correo(
+        actividad='mar', empresa=empresa, titulo='Reserva confirmada', folio=orden.pk, producto=_html(paquete_nombre),
+        previa=paquete_nombre,
+        intro_html=f'Hola {_html(orden.nombre_cliente)}, tu paquete {_html(paquete_nombre)} quedó confirmado.',
+        siguiente_html=detalle + plantilla.parrafo('Te esperamos para vivir una gran experiencia.'),
     )
 
 
