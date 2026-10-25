@@ -54,13 +54,16 @@ estar exento.
 
 - `fleet`, `bookings`: modelos + admin implementados. Backoffice basico (item 1 de
   contexto-negocio.md) ya cubre catalogo + reservas + roles, ver abajo.
-- `notifications/plantilla.py`: el membrete de los correos al cliente (confirmacion de servicio, traslado y paquete,
-  asignacion de capitan y panga, y el correo combinado de una orden): banda del color de la actividad con la empresa
-  y "Sun Baja Experience", titulo y folio grandes, datos como renglones etiqueta/valor, el dinero en bloques, pie
-  con la instruccion de escribir por WhatsApp con el folio, texto de vista previa y version de texto plano (`text`).
-  Tablas con estilos en linea y `color-scheme: light only`. El asunto lleva el folio. Todo dato de una persona entra
-  ya escapado (`services._html`); la plantilla no vuelve a escapar. No lleva boton de WhatsApp: el backend no
-  conoce el numero publico del negocio. No promete "responde a este correo" mientras no haya un `Reply-To`.
+- `notifications/plantilla.py`: el boleto, la cara de los correos al cliente (confirmacion de servicio, traslado y paquete,
+  asignacion de capitan y panga, y el correo combinado de una orden). Direccion «El boleto» elegida por el dueño con la
+  skill de taste: papel arena sobre el campo de color de la actividad (azul mar, coral traslado, verde estancia), el dia
+  y la hora ENORME (84 px), los datos con el valor por delante de la etiqueta, una fila de puntos como perforacion y el
+  talon oscuro con el folio y el dinero. En la asignacion la hora grande es la LLEGADA (15 min antes de la salida) y el
+  titulo es «Sales con <primer nombre del capitan>». Sin lineas finas, degradados, sombras, mayusculas diminutas ni
+  monoespaciada; sin imagenes (el boleto se ve completo con las imagenes bloqueadas y en Outlook de escritorio); texto
+  de vista previa que lleva la fecha ISO y la hora 24 h, y version de texto plano (`text`). El asunto lleva el folio.
+  Todo dato de una persona entra ya escapado (`services._html`). No lleva boton de WhatsApp (el backend no conoce el
+  numero publico) ni promete "responde a este correo" sin un `Reply-To`.
 - `payments`: API implementada (crear PaymentIntent + webhook), ver seccion "API
   publica (frontend)" abajo.
 - `notifications`: `services.py` con `notificar_reserva_pagada(reserva)` — correo via

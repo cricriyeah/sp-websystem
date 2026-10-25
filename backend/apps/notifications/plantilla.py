@@ -1,31 +1,39 @@
-"""Membrete de los correos al cliente: la misma cara que la página de confirmación del sitio.
+"""El boleto: la cara de los correos al cliente (dirección «El boleto», elegida por el dueño el 2026-10-24).
 
-Los clientes de correo no entienden CSS moderno: todo va en tablas con estilos en línea, ancho de 600 px,
-fuente del sistema y colores fijos (el fondo arena se declara explícito para que el modo oscuro de Gmail no
-lo invierta a medias). Es la misma jerarquía que la confirmación del sitio: una banda del color de la
-actividad con la empresa, el folio grande, los datos del viaje como renglones etiqueta/valor, el dinero en
-bloques y lo que sigue en un párrafo.
+La idea sale del negocio: una salida de pesca es de madrugada, con una hora que manda (6:00) y un folio que se
+muestra en el muelle. El correo es ese boleto: un papel arena sobre el campo de color de la actividad, la hora
+enorme, los datos del viaje con el valor por delante de la etiqueta, una fila de puntos como perforación y,
+debajo, el talón oscuro con el folio y el dinero.
 
-Todo lo que entra aquí como `valor` o `cuerpo` ya viene escapado por quien lo arma (`services._html`):
-esta capa no vuelve a escapar para no mostrar `&amp;`, y tampoco escribe datos de personas por su cuenta.
+Reglas de la casa (taste): sin líneas finas, sin degradados, sin sombras, sin mayúsculas diminutas ni
+monoespaciada; esquinas rectas o círculos; una sola familia (la del sistema) porque los clientes de correo no
+cargan fuentes. Tablas con estilos en línea (Outlook no entiende más) y `color-scheme: light only`. Sin imágenes:
+el boleto se ve completo con las imágenes bloqueadas y en Outlook de escritorio.
+
+Todo lo que entra como `valor` o `*_html` ya viene escapado por quien lo arma (`services._html`): esta capa no
+vuelve a escapar para no mostrar `&amp;`, y tampoco escribe datos de personas por su cuenta.
 """
 import re
+from datetime import datetime, timedelta
 from html import escape, unescape
 
 from apps.fleet.enums import TipoServicio
 
-# Los mismos colores del sitio (globals.css): azul, coral hondo y verde para el campo de color.
-BANDA = {'mar': '#1b607f', 'traslado': '#a83226', 'estancia': '#343f04'}
+# Los campos de color del sitio: azul (mar), coral hondo (traslado) y verde (estancia).
+CAMPO = {'mar': '#1b607f', 'traslado': '#a83226', 'estancia': '#343f04'}
 ARENA = '#fcf6ed'
 ARENA_CLARA = '#fee0ac'
 TINTA = '#1f1a14'
-TINTA_SUAVE = '#4a3f33'
-BLANCO = '#ffffff'
+SUAVE = '#4a3f33'
 FUENTE = "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+
+DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+MESES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
+         'noviembre', 'diciembre')
 
 
 def actividad_de(reserva):
-    """`mar`, `traslado` o `estancia`: decide el color de la banda."""
+    """`mar`, `traslado` o `estancia`: decide el campo de color."""
     tipo = reserva.servicio.tipo_servicio if reserva.servicio_id else None
     if tipo == TipoServicio.TRANSPORTE:
         return 'traslado'
@@ -34,60 +42,97 @@ def actividad_de(reserva):
     return 'mar'
 
 
-def filas(pares):
-    """Renglones etiqueta (izquierda) y valor (derecha). `pares` = [(etiqueta, valor_html)]; los vacíos se omiten."""
-    renglones = ''.join(
-        f'<tr><td style="padding:10px 0;border-top:1px solid #e8dcc8;font:600 15px {FUENTE};color:{TINTA_SUAVE};">{etiqueta}</td>'
-        f'<td align="right" style="padding:10px 0;border-top:1px solid #e8dcc8;font:400 15px {FUENTE};color:{TINTA};">{valor}</td></tr>'
-        for etiqueta, valor in pares if valor not in ('', None)
-    )
-    return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">{renglones}</table>'
+def dia_largo(fecha):
+    """«Lunes 7 de diciembre»."""
+    return f'{DIAS[fecha.weekday()].capitalize()} {fecha.day} de {MESES[fecha.month - 1]}'
 
 
-def bloque(contenido_html, *, fondo=ARENA_CLARA, color=TINTA):
-    """Un recuadro de color para lo que el cliente no debe pasar por alto (el dinero)."""
+def hora_12(hora):
+    """«6:00 a. m.» a partir de un `time`."""
+    sufijo = 'a. m.' if hora.hour < 12 else 'p. m.'
+    return f'{hora.hour % 12 or 12}:{hora.minute:02d} {sufijo}'
+
+
+def quince_antes(hora):
+    """La hora de llegada: 15 minutos antes de la salida (la regla que ya decía el correo de asignación)."""
+    return (datetime.combine(datetime(2000, 1, 1), hora) - timedelta(minutes=15)).time()
+
+
+def t(texto, tam, peso=400, color=TINTA, interlin=1.2, extra=''):
+    return f'<div style="font:{peso} {tam}px/{interlin} {FUENTE};color:{color};{extra}">{texto}</div>'
+
+
+def parrafo(contenido_html, color=TINTA, tam=17):
+    return t(contenido_html, tam, 400, color, 1.5, 'padding-top:14px;')
+
+
+def dato(etiqueta, valor):
+    """Una pareja etiqueta/valor sin líneas ni mayúsculas: el valor manda."""
+    return f'<tr><td style="padding:14px 0 0;">{t(etiqueta, 16, 600, SUAVE)}{t(valor, 22, 700, TINTA, 1.25)}</td></tr>'
+
+
+def datos(pares):
+    """Los datos del viaje. `pares` = [(etiqueta, valor_html)]; los vacíos se omiten."""
+    filas = ''.join(dato(e, v) for e, v in pares if v not in ('', None))
+    return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{filas}</table>' if filas else ''
+
+
+def recuadro(contenido_html, fondo=ARENA_CLARA, color=TINTA):
+    """Lo que el cliente no debe pasar por alto, en un campo de color."""
     return (
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">'
-        f'<tr><td style="background:{fondo};padding:16px 20px;font:400 15px/1.5 {FUENTE};color:{color};">{contenido_html}</td></tr></table>'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;"><tr>'
+        f'<td style="background:{fondo};padding:18px 22px;font:400 17px/1.45 {FUENTE};color:{color};">{contenido_html}</td></tr></table>'
     )
 
 
-def parrafo(contenido_html):
-    return f'<p style="margin:16px 0 0;font:400 15px/1.55 {FUENTE};color:{TINTA};">{contenido_html}</p>'
+def perforacion(campo):
+    """Fila de puntos redondos del color del campo: la perforación entre el boleto y el talón."""
+    punto = (f'<td style="width:10px;"><div style="width:10px;height:10px;border-radius:5px;background:{campo};'
+             f'line-height:10px;font-size:1px;">&nbsp;</div></td><td style="width:14px;"></td>')
+    return (
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{ARENA};">'
+        f'<tr><td align="center" style="padding:6px 0;"><table role="presentation" cellpadding="0" cellspacing="0">'
+        f'<tr>{punto * 24}</tr></table></td></tr></table>'
+    )
 
 
-def envolver(*, actividad, empresa, titulo, folio, previa, cuerpo_html, saludo_html=''):
-    """El correo completo: banda con la empresa, título y folio grandes, el cuerpo y el pie.
+def boleto(*, actividad, empresa, linea1, linea2='', intro_html='', pares=(), folio='', talon_html='',
+           cierre_html='', previa='', titulo_documento='Reserva confirmada'):
+    """El correo completo.
 
-    `previa` es el texto que el cliente ve en la bandeja junto al asunto (se esconde en el cuerpo).
+    `linea1` es el día (o el título), `linea2` la hora enorme (puede ir vacía); `pares` los datos; el talón lleva el
+    folio a la izquierda y `talon_html` (el dinero) a la derecha; `cierre_html` es lo que sigue.
     """
-    banda = BANDA.get(actividad, BANDA['mar'])
-    folio_html = (
-        f'<div style="font:600 13px {FUENTE};letter-spacing:.08em;text-transform:uppercase;color:{TINTA_SUAVE};">Folio</div>'
-        f'<div style="font:700 28px {FUENTE};color:{TINTA};">#{escape(str(folio))}</div>'
+    campo = CAMPO.get(actividad, CAMPO['mar'])
+    grande = t(escape(linea2), 84, 800, campo, 1.0, 'letter-spacing:-2px;') if linea2 else ''
+    talon_folio = (
+        f'<td class="col" valign="top">{t("Folio", 17, 600, ARENA_CLARA)}{t("#" + escape(str(folio)), 52, 800, ARENA, 1.0)}</td>'
     ) if folio else ''
+    talon_der = (
+        f'<td class="col" valign="top" align="right" style="padding-top:2px;">{talon_html}</td>'
+    ) if talon_html else ''
+    talon = (
+        f'<tr><td>{perforacion(campo)}</td></tr>'
+        f'<tr><td class="pad" style="background:{TINTA};padding:24px 32px;"><table role="presentation" width="100%" '
+        f'cellpadding="0" cellspacing="0"><tr>{talon_folio}{talon_der}</tr></table></td></tr>'
+    ) if (talon_folio or talon_der) else ''
     return (
         '<!doctype html><html lang="es"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only">'
-        f'<title>{escape(titulo)}</title></head>'
-        f'<body style="margin:0;padding:0;background:{ARENA};">'
-        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{ARENA};">{escape(previa)}</div>'
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{ARENA};">'
-        '<tr><td align="center" style="padding:24px 12px;">'
+        '<style>@media (max-width:480px){.col{display:block!important;width:100%!important;text-align:left!important}'
+        '.pad{padding-left:20px!important;padding-right:20px!important}}</style>'
+        f'<title>{escape(titulo_documento)}</title></head>'
+        f'<body style="margin:0;padding:0;background:{campo};">'
+        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{campo};">{escape(previa)}</div>'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{campo};">'
+        '<tr><td align="center" style="padding:28px 12px;">'
         '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;">'
-        f'<tr><td style="background:{banda};padding:20px 24px;font:600 13px {FUENTE};letter-spacing:.08em;'
-        f'text-transform:uppercase;color:{BLANCO};">Sun Baja Experience'
-        f'<div style="font:700 22px {FUENTE};letter-spacing:0;text-transform:none;color:{BLANCO};padding-top:4px;">{escape(empresa)}</div></td></tr>'
-        f'<tr><td style="background:{BLANCO};padding:28px 24px 8px;">'
-        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        f'<td style="font:700 26px/1.15 {FUENTE};color:{TINTA};">{escape(titulo)}</td>'
-        f'<td align="right" valign="bottom" style="padding-left:12px;">{folio_html}</td></tr></table>'
-        f'{saludo_html}</td></tr>'
-        f'<tr><td style="background:{BLANCO};padding:8px 24px 28px;">{cuerpo_html}</td></tr>'
-        f'<tr><td style="padding:16px 24px;font:400 13px/1.5 {FUENTE};color:{TINTA_SUAVE};">'
-        f'{escape(empresa)} · Sun Baja Experience<br>Guarda este correo: es tu comprobante. '
-        f'Si necesitas un cambio, escríbenos por WhatsApp con tu folio.</td></tr>'
+        f'<tr><td class="pad" style="background:{ARENA};padding:30px 32px 6px;">{t(escape(empresa), 20, 800, campo)}'
+        f'{t(escape(linea1), 30, 800, TINTA, 1.1, "padding-top:26px;")}{grande}{intro_html}</td></tr>'
+        f'<tr><td class="pad" style="background:{ARENA};padding:8px 32px 26px;">{datos(pares)}</td></tr>'
+        f'{talon}'
+        f'<tr><td class="pad" style="background:{ARENA};padding:8px 32px 30px;">{cierre_html}</td></tr>'
         '</table></td></tr></table></body></html>'
     )
 
