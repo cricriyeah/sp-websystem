@@ -111,7 +111,8 @@ class EstadoReservaPaqueteTests(FixturePaqueteEstancia, TestCase):
         reserva = self._guardar(Reserva.Estado.PAGADA)
         with scope.con_empresa(self.empresa):
             cuerpo = _cuerpo_html(reserva)
-        self.assertIn('<strong>Fecha:</strong> 2026-10-10', cuerpo)
+        # El correo muestra el dia de INICIO del paquete (sabado 10), no el de la actividad.
+        self.assertIn('Sábado 10 de octubre', cuerpo)
 
     def test_contacto_de_checkout_abandonado_muestra_el_inicio_del_paquete(self):
         reserva = self._guardar(Reserva.Estado.PENDIENTE_PAGO)
