@@ -236,6 +236,12 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   entonces hay un cliente que pago y no tiene reserva. Correrlo por cron cada hora.
   Es idempotente: en la segunda vuelta esas reservas ya no estan pendientes.
 
+**Limite de peticiones (produccion).** `config/settings/production.py` fija `REST_FRAMEWORK['NUM_PROXIES']`
+igual a `TRUSTED_PROXY_COUNT` (1 en Render): el limite cuenta por la IP que agrego nuestro proxy, no por el
+`X-Forwarded-For` completo que escribe el cliente (antes cambiar la cabecera en cada peticion lo evadia). Los
+contadores van en un cache en archivos (`DJANGO_CACHE_DIR`, `/tmp/django-cache`) que comparten los 3 procesos de
+gunicorn; con el cache por defecto cada proceso tenia el suyo y el limite real era el triple.
+
 Llaves de Stripe (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`)
 se leen de variables de entorno, vacias por defecto en local — `crear-pago` responde
 503 si no estan configuradas (el frontend lo maneja mostrando `checkout.paymentUnavailable`).

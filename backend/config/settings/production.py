@@ -46,6 +46,22 @@ CSRF_COOKIE_SECURE = True
 # Subirlo solo si de verdad se mete otro proxy/CDN delante.
 TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '1'))
 
+# El limite de peticiones de DRF cuenta por IP. Sin `NUM_PROXIES` toma TODO `X-Forwarded-For`, que el
+# cliente escribe a su gusto: cambiando la cabecera en cada peticion nunca llega al limite (reproducido:
+# 30 peticiones con cabecera distinta, 0 bloqueos). Con N saltos de confianza usa la entrada que
+# agrego nuestro proxy, la misma que ya usa `ip_del_cliente` para el deslinde.
+REST_FRAMEWORK = {**REST_FRAMEWORK, 'NUM_PROXIES': TRUSTED_PROXY_COUNT}  # noqa: F405
+
+# El limite guarda sus contadores en el cache. El cache por defecto vive en la memoria de CADA proceso,
+# y gunicorn corre 3: el limite real era el triple. Un cache en archivos lo comparten los 3 procesos de
+# la instancia sin montar Redis. (Con varias instancias cada una lleva su cuenta: sigue acotado.)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': os.environ.get('DJANGO_CACHE_DIR', '/tmp/django-cache'),
+    },
+}
+
 # HSTS: le dice al navegador "de aqui en adelante entra solo por https", lo que
 # cierra la ventana de downgrade que deja el redirect de arriba en la segunda
 # visita. Arranca en 1 hora a proposito — el navegador **recuerda** este valor y
