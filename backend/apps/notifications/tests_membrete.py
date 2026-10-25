@@ -78,8 +78,21 @@ class CorreoTests(SimpleTestCase):
 
     def test_sin_adornos_prohibidos(self):
         html = self.correo()
-        for prohibido in ('gradient', 'box-shadow', 'text-shadow', 'border-radius', 'border-top:1px', '<img'):
+        for prohibido in ('gradient', 'box-shadow', 'text-shadow', 'border-radius', 'border-top:1px'):
             self.assertNotIn(prohibido, html)
+
+    @override_settings(FRONTEND_URL='https://sitio.example/')
+    def test_lleva_el_logo_de_la_marca_con_su_texto_alternativo(self):
+        html = self.correo()
+        self.assertIn('<img src="https://sitio.example/correo/sunbajaexperience-blanco.png"', html)
+        self.assertIn('alt="Sun Baja Experience"', html)
+        self.assertEqual(html.count('<img'), 1)
+        # El logo va dentro del campo de color, antes del titular.
+        self.assertLess(html.index('<img'), html.index('RESERVA CONFIRMADA'))
+
+    @override_settings(FRONTEND_URL='')
+    def test_sin_url_del_sitio_no_pone_una_imagen_rota(self):
+        self.assertNotIn('<img', self.correo())
 
     def test_el_titular_se_escapa_y_no_rompe_entidades(self):
         html = self.correo(titulo='A&B <x>')

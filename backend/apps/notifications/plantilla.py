@@ -7,8 +7,9 @@ skill de taste, y por eso se conserva), el folio a la derecha, el saludo y el pr
 reservaste» (etiqueta a la izquierda, valor a la derecha), «El dinero» (el bloque tinta de «Pagaste hoy» y el bloque
 arena-clara del resto), «Qué sigue» y «Si algo cambia» (la cifra grande y su texto).
 
-Los clientes de correo no cargan la fuente del sitio (Consola Mono): se usa Consolas / Courier New. No hay imágenes (se
-ve completo con las imágenes bloqueadas). Tablas con estilos en línea, 600 px, `color-scheme: light only`.
+Los clientes de correo no cargan la fuente del sitio (Consola Mono): se usa Consolas / Courier New. La única imagen es el
+logo de la marca (PNG blanco con fondo transparente, en la carpeta pública del sitio): sin imágenes el correo se ve
+completo, y su texto alternativo, en blanco sobre el campo de color, dice «Sun Baja Experience». Tablas con estilos en línea, 600 px, `color-scheme: light only`.
 
 Todo lo que entra como `valor` o `*_html` ya viene escapado por quien lo arma (`services._html`): esta capa no vuelve a
 escapar para no mostrar `&amp;`, y tampoco escribe datos de personas por su cuenta.
@@ -16,6 +17,8 @@ escapar para no mostrar `&amp;`, y tampoco escribe datos de personas por su cuen
 import re
 from datetime import datetime, timedelta
 from html import escape, unescape
+
+from django.conf import settings
 
 from apps.fleet.enums import TipoServicio
 
@@ -29,6 +32,11 @@ BLANCO = '#ffffff'
 BLANCO_SUAVE = '#e9eff2'
 CUERPO = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
 TITULAR = "Consolas, 'Lucida Console', 'Courier New', monospace"
+
+# El logo blanco de la marca: lo sirve el sitio (`frontend/public/correo/`). Sin `FRONTEND_URL` no hay a dónde
+# apuntar y el correo sale sin logo en lugar de con una imagen rota.
+RUTA_LOGO = '/correo/sunbajaexperience-blanco.png'
+LOGO_ANCHO, LOGO_ALTO = 150, 48
 
 DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
 MESES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
@@ -133,6 +141,17 @@ def garantias():
     return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{filas_}</table>'
 
 
+def logo_html():
+    base = (getattr(settings, 'FRONTEND_URL', '') or '').rstrip('/')
+    if not base.startswith('http'):
+        return ''
+    return (
+        f'<img src="{escape(base + RUTA_LOGO, quote=True)}" width="{LOGO_ANCHO}" height="{LOGO_ALTO}" alt="Sun Baja Experience" '
+        f'style="display:block;border:0;outline:none;text-decoration:none;margin:0 0 24px;'
+        f'font:700 16px/1.2 {TITULAR};color:{BLANCO};">'
+    )
+
+
 def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', pares=(), dinero_html='',
            siguiente_html='', con_garantias=False, previa='', etiqueta_pares='Lo que reservaste'):
     """El correo completo, con el orden de la página de confirmación del sitio.
@@ -170,6 +189,7 @@ def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', 
         '<tr><td align="center">'
         '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;">'
         f'<tr><td class="pad" style="background:{campo};padding:36px 32px 32px;">'
+        f'{logo_html()}'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
         f'<td class="col" valign="top">{titular(titulo, 40, BLANCO)}</td>{folio_html}</tr></table>'
         f'{t(intro_html, 20, 400, BLANCO_SUAVE, 1.35, "padding-top:22px;") if intro_html else ""}'

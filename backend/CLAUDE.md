@@ -62,7 +62,8 @@ estar exento.
   monoespaciada), el folio a la derecha, el saludo y el producto; debajo, sobre arena, «Lo que reservaste» (etiqueta a la
   izquierda, valor a la derecha), «El dinero» (bloque tinta de «Pagaste hoy» y bloque arena-clara del saldo en efectivo),
   «Que sigue» y «Si algo cambia» (100 % y 48 h, con los textos del sitio; solo en servicios de mar). Si cambia la
-  pagina del sitio, cambiar esto igual. Sin imagenes, sin lineas finas, degradados ni sombras; texto de vista previa que
+  pagina del sitio, cambiar esto igual. La unica imagen es el logo blanco de Sun Baja Experience (PNG en `frontend/public/correo/`, servido
+  por el sitio desde `FRONTEND_URL`; sin esa variable el correo sale sin logo, y su texto alternativo lo nombra); sin lineas finas, degradados ni sombras; texto de vista previa que
   lleva la fecha ISO y la hora 24 h; version de texto plano (`text`); el asunto lleva el folio. Todo dato de una persona
   entra ya escapado (`services._html`). No lleva boton de WhatsApp (el backend no conoce el numero publico) ni promete
   "responde a este correo" sin un `Reply-To`. En la asignacion el titular es «Sales con <primer nombre del capitan>».
