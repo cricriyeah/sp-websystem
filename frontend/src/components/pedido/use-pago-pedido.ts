@@ -87,8 +87,9 @@ export function usePagoPedido(config: Config) {
     });
   }, []);
 
+  // En éxito el puntero se queda: la banda global ofrece «Ver confirmación» y «Cerrar». Solo el fallo lo borra.
   useEffect(() => {
-    if (checkoutId && (fase === 'exito' || fase === 'fallo')) borrarPendiente(checkoutId);
+    if (checkoutId && fase === 'fallo') borrarPendiente(checkoutId);
   }, [checkoutId, fase]);
   // La confirmación queda en la URL: recargarla la repone, y una entrada nueva al paquete no.
   useEffect(() => {

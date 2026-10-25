@@ -373,9 +373,7 @@ export function CheckoutView({
   // pantalla de espera neutral — muestra el spinner de "buscando tu reserva"
   // sin comprometer nada hasta saber si hay sessionStorage que recuperar.
   const [phase, setPhase] = useState<Phase>('recuperando');
-  useEffect(() => {
-    if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
-  }, [phase, checkoutId]);
+  // Al confirmarse el pago el puntero se queda: la banda global ofrece «Ver confirmación» y «Cerrar».
   // La confirmacion queda en la URL: recargarla o volver con Atras la repone, y una entrada nueva a /reservar no.
   useEffect(() => {
     if (phase === 'confirmed') marcarPaginaComoConfirmacion();

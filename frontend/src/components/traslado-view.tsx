@@ -63,7 +63,7 @@ import {
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
 import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
-import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
+import { guardarPendiente } from '@/lib/pendientes';
 
 const CLAVE_CHECKOUT_ID = 'salysol:traslados:checkout_id';
 const DIGITOS_TELEFONO_MIN = 8;
@@ -325,9 +325,7 @@ export function TrasladoView({
     return () => { activo = false; };
   }, [checkoutId, empresaSlug, recuperable]);
 
-  useEffect(() => {
-    if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
-  }, [phase, checkoutId]);
+  // Al confirmarse el pago el puntero se queda: la banda global ofrece «Ver confirmación» y «Cerrar».
   useEffect(() => {
     if (phase === 'confirmed') marcarPaginaComoConfirmacion();
   }, [phase]);
