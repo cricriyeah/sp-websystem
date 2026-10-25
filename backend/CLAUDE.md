@@ -240,23 +240,15 @@ Lo mas delicado del sistema. Reglas que **no** hay que romper:
   entonces hay un cliente que pago y no tiene reserva. Correrlo por cron cada hora.
   Es idempotente: en la segunda vuelta esas reservas ya no estan pendientes.
 
-**Limite de peticiones (produccion).** `config/settings/production.py` fija `REST_FRAMEWORK['NUM_PROXIES']`
-igual a `TRUSTED_PROXY_COUNT` (1 en Render): el limite cuenta por la IP que agrego nuestro proxy, no por el
-`X-Forwarded-For` completo que escribe el cliente (antes cambiar la cabecera en cada peticion lo evadia). Los
-contadores van en un cache en archivos (`DJANGO_CACHE_DIR`, `/tmp/django-cache`) que comparten los 3 procesos de
+**IP del cliente y limite de peticiones (produccion).** `apps/bookings/ip_cliente.py` saca la IP real del cliente de
+`X-Forwarded-For` recorriendolo de derecha a izquierda y saltando las direcciones de NUESTROS proxies (rangos de
+Cloudflare y redes internas); la primera que no es de proxy es la que se conecto. No cuenta saltos: en produccion la IP
+del deslinde de una reserva de prueba salio de un nodo de Cloudflare (172.x) contando "1 salto". La usan el limite de
+peticiones (`LimitePorIpDelCliente`, el throttle por defecto), el deslinde, Turnstile y el bloqueo por intentos del
+admin (`AXES_CLIENT_IP_CALLABLE`). `TRUSTED_PROXY_COUNT` solo enciende o apaga (0 = no se le cree al header); si
+Cloudflare publica un rango nuevo, se agrega en `TRUSTED_PROXY_EXTRA_RANGES` (CSV). Los contadores del limite van en un
+cache en archivos (`DJANGO_CACHE_DIR`, `/tmp/django-cache`, hasta 10,000 entradas) que comparten los 3 procesos de
 gunicorn; con el cache por defecto cada proceso tenia el suyo y el limite real era el triple.
-
-**Llaves de Stripe por Empresa, cifradas en la base.** `Empresa.stripe_secret_key` y `stripe_webhook_secret` son
-`tenancy.campos.CampoSecreto`: en Python son el texto real, en la columna `enc:v1:...` (Fernet) cuando existe
-`STRIPE_KEYS_ENCRYPTION_KEY` (varias claves separadas por coma: la primera cifra, todas descifran, asi se rota).
-Sin la variable se guardan en texto plano, como antes. Poner la variable, desplegar y correr
-`manage.py cifrar_llaves_stripe` (con `--dry-run` para solo contar); el grupo `pescadeportiva-secrets` la lleva
-porque los cron tambien leen esas llaves. Si un valor no se puede descifrar (clave perdida o equivocada) el campo vale `''` para el codigo (`Ilegible`):
-la empresa figura sin Stripe, el webhook rechaza el evento y `crear-pago` responde 503, y nadie puede usar el
-texto cifrado como secreto; el dato no se pierde y un guardado del admin lo reescribe igual.  Un filtro por el valor
-de la llave no funciona (cada cifrado es distinto). Chequeos de arranque: `payments.E003` (una `sk_live_` en texto
-plano: no se despliega), `E004` (clave que no es Fernet), `W003` (hay clave pero quedan valores en texto plano).
-Si se pierde la clave, las llaves se vuelven a capturar en el admin.
 
 Llaves de Stripe (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`)
 se leen de variables de entorno, vacias por defecto en local — `crear-pago` responde

@@ -46,11 +46,9 @@ CSRF_COOKIE_SECURE = True
 # Subirlo solo si de verdad se mete otro proxy/CDN delante.
 TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '1'))
 
-# El limite de peticiones de DRF cuenta por IP. Sin `NUM_PROXIES` toma TODO `X-Forwarded-For`, que el
-# cliente escribe a su gusto: cambiando la cabecera en cada peticion nunca llega al limite (reproducido:
-# 30 peticiones con cabecera distinta, 0 bloqueos). Con N saltos de confianza usa la entrada que
-# agrego nuestro proxy, la misma que ya usa `ip_del_cliente` para el deslinde.
-REST_FRAMEWORK = {**REST_FRAMEWORK, 'NUM_PROXIES': TRUSTED_PROXY_COUNT}  # noqa: F405
+# El limite de peticiones y el bloqueo del admin cuentan por la IP real del cliente (apps/bookings/ip_cliente.py):
+# se saltan los proxies nuestros (Cloudflare y redes internas) en vez de contar saltos. En produccion la IP del
+# deslinde de una reserva de prueba salio de un nodo de Cloudflare (172.x) con "1 salto desde la derecha".
 
 # El limite guarda sus contadores en el cache. El cache por defecto vive en la memoria de CADA proceso,
 # y gunicorn corre 3: el limite real era el triple. Un cache en archivos lo comparten los 3 procesos de

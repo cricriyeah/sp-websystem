@@ -53,6 +53,8 @@ services:
         value: "15"
       # Un salto de proxy: el balanceador de Render. Ver
       # backend/apps/bookings/serializers.py (constancia del deslinde).
+      # Mayor que 0 = hay proxies delante y se le cree a X-Forwarded-For; la IP del cliente se saca
+      # saltando los proxies conocidos (Cloudflare, redes internas), no contando saltos.
       - key: TRUSTED_PROXY_COUNT
         value: "1"
       # Arranca en 1 hora. Subir a 31536000 tras un par de dias con https estable

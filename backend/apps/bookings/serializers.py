@@ -41,27 +41,8 @@ class CupoSerializer(serializers.Serializer):
     motivo_no_disponible = serializers.CharField(allow_null=True)
 
 
-def ip_del_cliente(request):
-    """IP para el registro del deslinde.
-
-    `X-Forwarded-For` es una lista `cliente, proxy1, proxy2...` donde cada salto
-    **agrega al final** la IP de quien le hablo. La parte izquierda la puede
-    escribir el propio cliente antes de que su peticion toque nuestro proxy, asi
-    que tomar la primera entrada dejaria la constancia legal del deslinde a
-    merced justo de quien la firma: bastaria mandar `X-Forwarded-For: 1.2.3.4`
-    para quedar registrado con una IP inventada.
-
-    La unica posicion que el cliente no puede falsificar es la que escribio
-    nuestro propio proxy, contando desde la derecha tantos saltos como proxies de
-    confianza haya delante (`TRUSTED_PROXY_COUNT`: 1 en Render, 0 en local).
-    Si el header viene mas corto de lo que deberia, no se adivina — se cae a
-    `REMOTE_ADDR`, que es la IP de la conexion real y nadie puede inventar.
-    """
-    saltos = getattr(settings, 'TRUSTED_PROXY_COUNT', 0)
-    partes = [p.strip() for p in request.META.get('HTTP_X_FORWARDED_FOR', '').split(',') if p.strip()]
-    if saltos > 0 and len(partes) >= saltos:
-        return partes[-saltos]
-    return request.META.get('REMOTE_ADDR')
+# La regla de la IP del cliente vive en ip_cliente.py; se re-exporta para no cambiar los imports.
+from .ip_cliente import ip_del_cliente  # noqa: E402,F401
 
 
 class PersonalizacionSeleccionSerializer(serializers.Serializer):

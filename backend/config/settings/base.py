@@ -68,6 +68,9 @@ AXES_RESET_ON_SUCCESS = True
 # confianza que la constancia del deslinde (ver production.py / serializers.py):
 # tomar la IP equivocada aqui permitiria evadir el bloqueo cambiando un header.
 AXES_IPWARE_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '0')) or None
+# El bloqueo por intentos del admin usa la misma IP de cliente que el limite de peticiones (ver
+# apps/bookings/ip_cliente.py): con la IP de un nodo de Cloudflare, bloquear a un atacante bloquearia a todos.
+AXES_CLIENT_IP_CALLABLE = 'apps.bookings.ip_cliente.ip_del_cliente'
 AXES_IPWARE_META_PRECEDENCE_ORDER = ['HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
 
 REST_FRAMEWORK = {
@@ -81,7 +84,7 @@ REST_FRAMEWORK = {
     # vistas que declaran `throttle_scope` — el webhook de Stripe queda fuera a
     # proposito (ver apps/payments/views.py), sus rafagas de reintentos son
     # legitimas y frenarlas perderia cobros.
-    'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.ScopedRateThrottle'],
+    'DEFAULT_THROTTLE_CLASSES': ['apps.bookings.ip_cliente.LimitePorIpDelCliente'],
     'DEFAULT_THROTTLE_RATES': {
         # Crear/actualizar reserva y crear cobro: el checkout real reenvia unas
         # pocas veces por sesion, 20/min por IP no le estorba a nadie.
@@ -114,6 +117,8 @@ REST_FRAMEWORK = {
 # Render. Nunca poner un numero mayor al de saltos reales: cada salto de mas es
 # una posicion que el cliente puede escribir a mano.
 TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', '0'))
+# Redes de proxies adicionales a Cloudflare y las internas (CSV), por si Cloudflare publica un rango nuevo.
+TRUSTED_PROXY_EXTRA_RANGES = os.environ.get('TRUSTED_PROXY_EXTRA_RANGES', '')
 
 # Cuenta estandar (no Stripe Connect), ver docs/contexto-negocio.md.
 # Vacias en local hasta pegar llaves de prueba reales en el entorno.
