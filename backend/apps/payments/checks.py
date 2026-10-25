@@ -116,3 +116,55 @@ def revisar_llaves_de_relleno(app_configs, **kwargs):
         ))
 
     return avisos
+
+
+@register()
+def revisar_cifrado_de_llaves(app_configs, **kwargs):
+    """Vigila que las llaves de Stripe no queden en texto plano en la base.
+
+    - E003: una `sk_live_` en texto plano. Nunca debe haber una llave de produccion legible en la base
+      (decision ADR-002): o se pone `STRIPE_KEYS_ENCRYPTION_KEY` y se corre `cifrar_llaves_stripe`, o no
+      se despliega.
+    - E004: la variable existe pero no es una clave Fernet valida; sin esto el primer cobro fallaria.
+    - W003: hay clave pero quedan valores en texto plano (falta correr `cifrar_llaves_stripe`).
+    Lee la base en crudo porque el campo ya devuelve el texto real. Nunca incluye el valor.
+    """
+    from django.db import connection
+
+    from apps.tenancy.campos import PREFIJO, claves_de_cifrado, clave_valida
+    from apps.tenancy.models import Empresa
+
+    problemas = []
+    claves = claves_de_cifrado()
+    if claves and not all(clave_valida(clave) for clave in claves):
+        problemas.append(Error(
+            'STRIPE_KEYS_ENCRYPTION_KEY no es una clave Fernet valida.',
+            hint='Genera una: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"',
+            id='payments.E004',
+        ))
+        return problemas
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'SELECT slug, stripe_secret_key, stripe_webhook_secret FROM {Empresa._meta.db_table}'
+            )
+            filas = cursor.fetchall()
+    except DatabaseError:
+        return problemas
+
+    for slug, secreta, webhook in filas:
+        if secreta and not secreta.startswith(PREFIJO) and secreta.startswith('sk_live_'):
+            problemas.append(Error(
+                f'Empresa "{slug}": la llave secreta de produccion esta en texto plano en la base.',
+                hint='Define STRIPE_KEYS_ENCRYPTION_KEY y corre: python manage.py cifrar_llaves_stripe. '
+                     'Ver docs/deploy/GO-LIVE.md.',
+                id='payments.E003',
+            ))
+        elif claves and any(valor and not valor.startswith(PREFIJO) for valor in (secreta, webhook)):
+            problemas.append(Warning(
+                f'Empresa "{slug}": hay llaves de Stripe en texto plano aunque el cifrado esta encendido.',
+                hint='Corre: python manage.py cifrar_llaves_stripe',
+                id='payments.W003',
+            ))
+    return problemas

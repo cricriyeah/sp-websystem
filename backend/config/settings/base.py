@@ -506,6 +506,11 @@ APARTADO_MINUTOS = 0 if 'test' in sys.argv else int(os.environ.get('APARTADO_MIN
 # una misma persona (correo o telefono) no sostiene mas de este numero de apartados a la vez. Sin
 # tope, repetir «Pagar» mantenia lugares apartados para siempre. Al llegar al tope el pago sigue
 # funcionando, pero ya no guarda el lugar: el cupo se vuelve a revisar al cobrar.
+# Clave(s) Fernet con que se cifran las llaves de Stripe de cada Empresa en la base (apps/tenancy/campos.py).
+# Varias separadas por coma: la primera cifra, todas descifran (asi se rota). Vacia = texto plano, como antes.
+# Generar una: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+STRIPE_KEYS_ENCRYPTION_KEY = os.environ.get('STRIPE_KEYS_ENCRYPTION_KEY', '')
+
 APARTADO_TOPE_MINUTOS = int(os.environ.get('APARTADO_TOPE_MINUTOS', '45'))
 APARTADO_MAX_POR_CONTACTO = int(os.environ.get('APARTADO_MAX_POR_CONTACTO', '3'))
 

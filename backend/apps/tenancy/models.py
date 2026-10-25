@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, validate_email
 from django.db import models
 
+from .campos import CampoSecreto
+
 
 class Sede(models.Model):
     nombre = models.CharField(max_length=150)
@@ -73,8 +75,10 @@ class Empresa(models.Model):
     # tabla, sin gestor de secretos externo. Llaves de prueba pre-lanzamiento.
     # Nunca logueadas (ver checks.py). Disparador de reversion: antes de la
     # primera llave sk_live_ -- ver ADR-002.
-    stripe_secret_key = models.CharField(max_length=200, blank=True)
-    stripe_webhook_secret = models.CharField(max_length=200, blank=True)
+    # Cifradas en la base con STRIPE_KEYS_ENCRYPTION_KEY (ver apps/tenancy/campos.py); en Python son el
+    # texto real. Sin esa variable se guardan en texto plano, como antes.
+    stripe_secret_key = CampoSecreto(blank=True)
+    stripe_webhook_secret = CampoSecreto(blank=True)
     stripe_publishable_key = models.CharField(max_length=200, blank=True)
     correos_aviso = models.CharField(
         max_length=300, blank=True,

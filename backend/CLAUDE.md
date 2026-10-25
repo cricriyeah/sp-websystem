@@ -242,6 +242,17 @@ igual a `TRUSTED_PROXY_COUNT` (1 en Render): el limite cuenta por la IP que agre
 contadores van en un cache en archivos (`DJANGO_CACHE_DIR`, `/tmp/django-cache`) que comparten los 3 procesos de
 gunicorn; con el cache por defecto cada proceso tenia el suyo y el limite real era el triple.
 
+**Llaves de Stripe por Empresa, cifradas en la base.** `Empresa.stripe_secret_key` y `stripe_webhook_secret` son
+`tenancy.campos.CampoSecreto`: en Python son el texto real, en la columna `enc:v1:...` (Fernet) cuando existe
+`STRIPE_KEYS_ENCRYPTION_KEY` (varias claves separadas por coma: la primera cifra, todas descifran, asi se rota).
+Sin la variable se guardan en texto plano, como antes. Poner la variable, desplegar y correr
+`manage.py cifrar_llaves_stripe` (con `--dry-run` para solo contar); el grupo `pescadeportiva-secrets` la lleva
+porque los cron tambien leen esas llaves. Si un valor no se puede descifrar (clave perdida) se devuelve lo cifrado
+tal cual y Stripe rechaza la llave: nunca un valor vacio, y un guardado del admin no lo borra. Un filtro por el valor
+de la llave no funciona (cada cifrado es distinto). Chequeos de arranque: `payments.E003` (una `sk_live_` en texto
+plano: no se despliega), `E004` (clave que no es Fernet), `W003` (hay clave pero quedan valores en texto plano).
+Si se pierde la clave, las llaves se vuelven a capturar en el admin.
+
 Llaves de Stripe (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`)
 se leen de variables de entorno, vacias por defecto en local — `crear-pago` responde
 503 si no estan configuradas (el frontend lo maneja mostrando `checkout.paymentUnavailable`).

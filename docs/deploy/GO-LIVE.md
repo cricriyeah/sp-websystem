@@ -259,6 +259,12 @@ llegar hasta el formulario de tarjeta. Cero errores de CORS y cero de CSP.
 
 Solo cuando toda la Fase 5 pasó.
 
+- [ ] **ANTES de capturar la primera llave `sk_live_`: cifrar las llaves en la base.** Generar una
+      clave (`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`),
+      guardarla fuera de Render tambien (gestor de contraseñas: si se pierde, las llaves se vuelven a
+      capturar), ponerla como `STRIPE_KEYS_ENCRYPTION_KEY` en el grupo `pescadeportiva-secrets`, desplegar y
+      correr en el Shell de Render `python manage.py cifrar_llaves_stripe`. Si hay una `sk_live_` en texto plano
+      el arranque marca el error `payments.E003` y el deploy no pasa.
 - [ ] Cambiar en Render a las llaves `sk_live_...` / `pk_live_...`
 - [ ] **Registrar otra vez el endpoint del webhook de cada empresa, ahora en modo
       real** (`/api/<slug>/stripe/webhook/`, con los seis eventos de arriba). Es un

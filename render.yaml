@@ -168,3 +168,11 @@ envVarGroups:
       # widget del dashboard de Cloudflare.
       - key: TURNSTILE_SECRET_KEY
         sync: false
+      # Clave con que se cifran en la base las llaves de Stripe de cada Empresa (backend/apps/tenancy/campos.py).
+      # Va en el grupo porque los cron (conciliar_pagos) tambien leen esas llaves: sin la clave veran el texto
+      # cifrado y no podran hablar con Stripe. Generar una y guardarla TAMBIEN fuera de Render (si se pierde,
+      # las llaves se vuelven a capturar en el admin):
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # Despues de ponerla: python manage.py cifrar_llaves_stripe. Obligatoria antes de la primera sk_live_.
+      - key: STRIPE_KEYS_ENCRYPTION_KEY
+        sync: false
