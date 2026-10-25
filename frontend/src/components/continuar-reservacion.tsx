@@ -338,18 +338,18 @@ export function ContinuarReservacion({ lang, dict }: Props) {
 
   if (!aviso && !deshacerAviso) return null;
   return <>
-    <AnimatePresence initial={false}>
+    <AnimatePresence>
       {(aviso || deshacerAviso) && <m.div
         key="continuar-banda"
-        initial={sinMovimiento ? false : { height: 0 }}
-        animate={{ height: sinMovimiento || !alto ? 'auto' : alto, opacity: 1 }}
+        initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
+        animate={{ height: sinMovimiento ? 'auto' : alto, opacity: 1 }}
         exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
         transition={sinMovimiento ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="overflow-hidden"
       >
         <div ref={medirContenido}>
           {/* Barrido: la banda se descubre de arriba hacia abajo mientras la altura crece. */}
-          <m.div key={activo?.checkoutId ?? 'deshacer'} initial={sinMovimiento ? false : { clipPath: 'inset(0 0 100% 0)' }} animate={{ clipPath: 'inset(0 0 0% 0)' }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
+          <m.div key={activo?.checkoutId ?? 'deshacer'} initial={sinMovimiento ? false : { clipPath: 'inset(0 0 100% 0)', opacity: 0, y: -12 }} animate={{ clipPath: 'inset(0 0 0% 0)', opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}>
             {aviso}{deshacerAviso}
           </m.div>
         </div>
