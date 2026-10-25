@@ -50,31 +50,42 @@ def _redes_de_confianza():
 _REDES = None
 
 
+def _normalizada(ip):
+    """La direccion como objeto, con las IPv4 que llegan como IPv6 mapeado (`::ffff:1.2.3.4`) vueltas IPv4."""
+    direccion = ipaddress.ip_address(ip.strip())
+    if direccion.version == 6 and direccion.ipv4_mapped is not None:
+        return direccion.ipv4_mapped
+    return direccion
+
+
 def es_de_proxy(ip):
-    """True si `ip` es de un proxy nuestro (Cloudflare o red interna). Lo ilegible cuenta como no confiable."""
+    """True si `ip` es de un proxy nuestro (Cloudflare o red interna). Lo que no es una IP cuenta como no confiable."""
     global _REDES
     if _REDES is None:
         _REDES = _redes_de_confianza()
     try:
-        direccion = ipaddress.ip_address(ip.strip())
+        direccion = _normalizada(ip)
     except ValueError:
         return False
     return any(direccion in red for red in _REDES)
 
 
 def ip_del_cliente(request):
-    """La IP del cliente tal como la vio el primer proxy nuestro; o la de la conexion si no se le cree al header."""
+    """La IP del cliente tal como la vio el primer proxy nuestro; o la de la conexion si no se le cree al header.
+
+    Solo devuelve texto que es una IP valida (normalizada); ante algo que no lo es no se adivina.
+    """
     remota = request.META.get('REMOTE_ADDR')
     if getattr(settings, 'TRUSTED_PROXY_COUNT', 0) <= 0:
         return remota
     partes = [p.strip() for p in request.META.get('HTTP_X_FORWARDED_FOR', '').split(',') if p.strip()]
     for ip in reversed(partes):
         try:
-            ipaddress.ip_address(ip)
+            direccion = _normalizada(ip)
         except ValueError:
             return remota  # algo que no es una IP en la cadena: no se adivina, se usa la conexion real
         if not es_de_proxy(ip):
-            return ip
+            return str(direccion)
     return remota
 
 

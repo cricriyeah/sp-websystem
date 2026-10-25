@@ -63,6 +63,12 @@ class IpDelClienteTests(SimpleTestCase):
         self.assertEqual(self.ip('no-es-ip, 172.64.1.5'), '198.51.100.7')
         self.assertEqual(self.ip('basura'), '198.51.100.7')
 
+    def test_una_ip_de_cloudflare_escrita_como_ipv6_mapeada_tambien_se_salta(self):
+        self.assertEqual(self.ip('177.10.20.30, ::ffff:172.64.1.5'), '177.10.20.30')
+
+    def test_una_ip_del_cliente_ipv4_mapeada_se_devuelve_como_ipv4(self):
+        self.assertEqual(self.ip('::ffff:177.10.20.30, 172.64.1.5'), '177.10.20.30')
+
     @override_settings(TRUSTED_PROXY_COUNT=0)
     def test_sin_proxy_de_confianza_no_se_le_cree_al_header(self):
         self.assertEqual(self.ip('1.2.3.4'), '198.51.100.7')
