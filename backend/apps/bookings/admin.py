@@ -436,8 +436,30 @@ class DetalleTransporteInline(admin.StackedInline):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+# Las pantallas desde las que se borra una Reserva: su confirmacion de borrado y la accion «borrar» de la lista.
+URLS_DE_BORRAR_RESERVA = ('bookings_reserva_delete', 'bookings_reserva_changelist')
+
+
+class SoloAlBorrarSuReservaMixin:
+    """Lo que cuelga de una Reserva (habitaciones ocupadas, componentes del paquete, tramos de traslado) solo se
+    puede borrar CON ella.
+
+    Django, antes de borrar una reserva, revisa que quien borra tenga permiso de borrar cada tipo de lo que
+    cuelga de ella; sin el, el aviso dice «no tienes permiso para eliminar ocupaciones de reserva» y la reserva
+    de un paquete con hospedaje (o de un traslado) no se podia borrar ni con permiso sobre la reserva. Esos
+    registros no se borran sueltos (quitarle la habitacion a una reserva que sigue pagada la dejaria sobrevendida):
+    el permiso vale solo mientras se borra su reserva, y solo para quien puede borrarla.
+    """
+
+    def has_delete_permission(self, request, obj=None):
+        coincidencia = getattr(request, 'resolver_match', None)
+        if coincidencia is None or coincidencia.url_name not in URLS_DE_BORRAR_RESERVA:
+            return False
+        return request.user.has_perm('bookings.delete_reserva')
+
+
 @admin.register(ReservaOcupacion)
-class ReservaOcupacionAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
+class ReservaOcupacionAdmin(SoloAlBorrarSuReservaMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['recurso', 'reserva', 'fecha_inicio', 'fecha_fin', 'creado_en']
     list_filter = ['recurso', 'fecha_inicio', 'fecha_fin']
     search_fields = ['recurso__nombre', 'reserva__nombre_cliente']
@@ -445,7 +467,7 @@ class ReservaOcupacionAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelA
 
 
 @admin.register(ReservaPaqueteComponente)
-class ReservaPaqueteComponenteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
+class ReservaPaqueteComponenteAdmin(SoloAlBorrarSuReservaMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     list_display = ['reserva', 'servicio', 'estado_cupo', 'creado_en']
     list_filter = ['estado_cupo', 'servicio']
     search_fields = ['reserva__nombre_cliente', 'servicio__nombre']
@@ -2767,7 +2789,7 @@ class ViajeTransporteForm(forms.ModelForm):
 
 
 @admin.register(ViajeTransporte)
-class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
+class ViajeTransporteAdmin(SoloAlBorrarSuReservaMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Pantalla Traslados: asignación de vehículos a viajes de transporte por tramo."""
 
     campos_escopeados_por_empresa = ('vehiculo',)
@@ -2810,8 +2832,8 @@ class ViajeTransporteAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAd
     def has_add_permission(self, request):
         return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+    # Sin `has_delete_permission` propio: los viajes los administra el sistema y solo se borran con su reserva
+    # (`SoloAlBorrarSuReservaMixin`).
 
     def changelist_view(self, request, extra_context=None):
         token = _contexto_traslados.set(ContextoAsignacionVehiculo())
