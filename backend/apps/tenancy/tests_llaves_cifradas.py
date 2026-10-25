@@ -91,18 +91,46 @@ class LlavesCifradasTests(TestCase):
         with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_B):  # ya sin la vieja
             self.assertEqual(Empresa.objects.get(pk=empresa.pk).stripe_secret_key, SECRETA)
 
-    def test_con_la_clave_equivocada_devuelve_lo_cifrado_y_guardar_no_borra_el_dato(self):
+    def test_con_la_clave_equivocada_el_campo_es_vacio_y_guardar_no_borra_el_dato(self):
         with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
             empresa = self.empresa()
             cifrado = crudo(empresa)
         with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_B):
             ilegible = Empresa.objects.get(pk=empresa.pk)
-            self.assertEqual(ilegible.stripe_secret_key, cifrado)  # no se inventa un valor vacio
+            # Para el codigo es "no configurada": nada del cifrado se puede usar como secreto.
+            self.assertEqual(ilegible.stripe_secret_key, '')
+            self.assertFalse(ilegible.stripe_secret_key)
+            self.assertFalse(ilegible.stripe_webhook_secret)
+            self.assertNotIn(PREFIJO, str(ilegible.stripe_secret_key))
             ilegible.nombre = 'Otro nombre'
             ilegible.save()
-            self.assertEqual(crudo(empresa), cifrado)  # lo cifrado no se vuelve a cifrar
+            self.assertEqual(crudo(empresa), cifrado)  # el dato sigue intacto en la base
         with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
             self.assertEqual(Empresa.objects.get(pk=empresa.pk).stripe_secret_key, SECRETA)
+
+    def test_sin_clave_un_valor_cifrado_tambien_es_vacio(self):
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
+            empresa = self.empresa()
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=''):
+            self.assertFalse(Empresa.objects.get(pk=empresa.pk).stripe_webhook_secret)
+
+    def test_el_webhook_rechaza_el_evento_si_el_secreto_no_se_puede_descifrar(self):
+        from unittest import mock
+
+        from django.urls import reverse
+
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
+            empresa = self.empresa(slug='webhook-ilegible')
+            cifrado = crudo(empresa, 'stripe_webhook_secret')
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_B):
+            with mock.patch('stripe.Webhook.construct_event') as construir:
+                respuesta = self.client.post(
+                    reverse('stripe-webhook', kwargs={'empresa_slug': empresa.slug}),
+                    '{}', content_type='application/json', HTTP_STRIPE_SIGNATURE='firma',
+                )
+            self.assertGreaterEqual(respuesta.status_code, 400)
+            construir.assert_not_called()  # nunca se intento validar con el texto cifrado como secreto
+        self.assertTrue(cifrado.startswith(PREFIJO))
 
     def test_llave_vacia_se_queda_vacia(self):
         with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
@@ -206,3 +234,9 @@ class ChequeoDeCifradoTests(TestCase):
     @override_settings(STRIPE_KEYS_ENCRYPTION_KEY='basura')
     def test_una_clave_que_no_es_fernet_es_un_error(self):
         self.assertEqual(self.ids(), ['payments.E004'])
+
+    def test_un_valor_cifrado_que_no_se_puede_descifrar_es_un_error(self):
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A):
+            self.empresa()
+        with override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_B):
+            self.assertEqual(self.ids(), ['payments.E005'])

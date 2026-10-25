@@ -10,7 +10,7 @@ clave vigente solo se vuelve a escribir con un nuevo vector de inicializacion.
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 
-from apps.tenancy.campos import PREFIJO, claves_de_cifrado, clave_valida
+from apps.tenancy.campos import PREFIJO, Ilegible, claves_de_cifrado, clave_valida
 from apps.tenancy.models import Empresa
 
 CAMPOS = ('stripe_secret_key', 'stripe_webhook_secret')
@@ -43,13 +43,13 @@ class Command(BaseCommand):
             if options['dry_run']:
                 continue
             empresa = Empresa.objects.get(pk=pk)
-            if not (empresa.stripe_secret_key or empresa.stripe_webhook_secret):
-                continue
-            if any((getattr(empresa, campo) or '').startswith(PREFIJO) for campo in CAMPOS):
+            if any(isinstance(getattr(empresa, campo), Ilegible) for campo in CAMPOS):
                 raise CommandError(
                     f'Empresa {slug}: un valor guardado no se pudo descifrar con las claves actuales. '
                     'No se escribio nada para no perderlo; revisa STRIPE_KEYS_ENCRYPTION_KEY.'
                 )
+            if not (empresa.stripe_secret_key or empresa.stripe_webhook_secret):
+                continue
             empresa.save(update_fields=list(CAMPOS))
 
         if options['dry_run']:

@@ -14,9 +14,11 @@ Reglas que no hay que romper:
   se leen igual y se cifran la proxima vez que se guarden (o con `manage.py cifrar_llaves_stripe`).
 - La variable admite varias claves separadas por coma: la PRIMERA cifra, todas descifran. Rotar la
   clave es anteponer la nueva, correr `cifrar_llaves_stripe` y retirar la vieja.
-- Si un valor cifrado no se puede descifrar (clave perdida o equivocada) NO se inventa un valor vacio:
-  se devuelve el texto cifrado tal cual y se registra el error. Asi Stripe rechaza la llave (el cobro
-  falla limpio) y un guardado del admin no borra el dato, porque lo cifrado no se vuelve a cifrar.
+- Si un valor cifrado no se puede descifrar (clave perdida o equivocada) el campo es VACIO para todo
+  el codigo (`Ilegible`, un `str` vacio): "no configurada" en cada lugar donde se usa la llave, es
+  decir el webhook rechaza el evento, `crear-pago` responde 503 y nadie ve ni usa el texto cifrado
+  (usarlo como secreto del webhook dejaria falsificar eventos a quien haya leido la base). El dato NO
+  se pierde: el objeto guarda el cifrado y un guardado del admin lo reescribe igual.
 - Un filtro `filter(stripe_secret_key=...)` no sirve (cada cifrado es distinto). Nadie lo usa.
 """
 import logging
@@ -60,19 +62,34 @@ def cifrar(texto):
     return PREFIJO + fernet.encrypt(texto.encode()).decode()
 
 
+class Ilegible(str):
+    """Un valor cifrado que no se pudo descifrar: vale `''` para el codigo y guarda el cifrado.
+
+    Al ser un `str` vacio, `if not empresa.stripe_webhook_secret` y compañia lo tratan como "no
+    configurada" sin que cada lugar tenga que saber de cifrado. `cifrado` permite reescribirlo intacto.
+    """
+
+    cifrado = ''
+
+    def __new__(cls, cifrado):
+        objeto = super().__new__(cls, '')
+        objeto.cifrado = cifrado
+        return objeto
+
+
 def descifrar(valor):
-    """El texto real, o `valor` sin cambios si es texto plano o no se puede descifrar."""
+    """El texto real; `valor` si es texto plano; un `Ilegible` (vacio) si no se puede descifrar."""
     if not valor or not valor.startswith(PREFIJO):
         return valor
     fernet = _fernet()
     if fernet is None:
         logger.error('Hay un valor cifrado en la base y STRIPE_KEYS_ENCRYPTION_KEY no esta definida.')
-        return valor
+        return Ilegible(valor)
     try:
         return fernet.decrypt(valor[len(PREFIJO):].encode()).decode()
     except InvalidToken:
         logger.error('No se pudo descifrar un valor guardado: la clave de cifrado no es la que lo cifro.')
-        return valor
+        return Ilegible(valor)
 
 
 class CampoSecreto(models.CharField):
@@ -87,4 +104,6 @@ class CampoSecreto(models.CharField):
         return descifrar(value)
 
     def get_prep_value(self, value):
+        if isinstance(value, Ilegible):
+            return value.cifrado  # se reescribe tal cual estaba, sin tocarlo
         return cifrar(super().get_prep_value(value))

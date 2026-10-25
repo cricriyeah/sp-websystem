@@ -247,8 +247,9 @@ gunicorn; con el cache por defecto cada proceso tenia el suyo y el limite real e
 `STRIPE_KEYS_ENCRYPTION_KEY` (varias claves separadas por coma: la primera cifra, todas descifran, asi se rota).
 Sin la variable se guardan en texto plano, como antes. Poner la variable, desplegar y correr
 `manage.py cifrar_llaves_stripe` (con `--dry-run` para solo contar); el grupo `pescadeportiva-secrets` la lleva
-porque los cron tambien leen esas llaves. Si un valor no se puede descifrar (clave perdida) se devuelve lo cifrado
-tal cual y Stripe rechaza la llave: nunca un valor vacio, y un guardado del admin no lo borra. Un filtro por el valor
+porque los cron tambien leen esas llaves. Si un valor no se puede descifrar (clave perdida o equivocada) el campo vale `''` para el codigo (`Ilegible`):
+la empresa figura sin Stripe, el webhook rechaza el evento y `crear-pago` responde 503, y nadie puede usar el
+texto cifrado como secreto; el dato no se pierde y un guardado del admin lo reescribe igual.  Un filtro por el valor
 de la llave no funciona (cada cifrado es distinto). Chequeos de arranque: `payments.E003` (una `sk_live_` en texto
 plano: no se despliega), `E004` (clave que no es Fernet), `W003` (hay clave pero quedan valores en texto plano).
 Si se pierde la clave, las llaves se vuelven a capturar en el admin.

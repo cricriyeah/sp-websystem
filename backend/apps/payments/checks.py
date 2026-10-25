@@ -126,12 +126,13 @@ def revisar_cifrado_de_llaves(app_configs, **kwargs):
       (decision ADR-002): o se pone `STRIPE_KEYS_ENCRYPTION_KEY` y se corre `cifrar_llaves_stripe`, o no
       se despliega.
     - E004: la variable existe pero no es una clave Fernet valida; sin esto el primer cobro fallaria.
+    - E005: un valor cifrado que no se puede descifrar (clave perdida o equivocada).
     - W003: hay clave pero quedan valores en texto plano (falta correr `cifrar_llaves_stripe`).
     Lee la base en crudo porque el campo ya devuelve el texto real. Nunca incluye el valor.
     """
     from django.db import connection
 
-    from apps.tenancy.campos import PREFIJO, claves_de_cifrado, clave_valida
+    from apps.tenancy.campos import PREFIJO, Ilegible, claves_de_cifrado, clave_valida, descifrar
     from apps.tenancy.models import Empresa
 
     problemas = []
@@ -154,6 +155,15 @@ def revisar_cifrado_de_llaves(app_configs, **kwargs):
         return problemas
 
     for slug, secreta, webhook in filas:
+        if any(isinstance(descifrar(valor), Ilegible) for valor in (secreta, webhook)):
+            problemas.append(Error(
+                f'Empresa "{slug}": hay una llave de Stripe cifrada que no se puede descifrar con '
+                'STRIPE_KEYS_ENCRYPTION_KEY.',
+                hint='La clave de cifrado no es la que la cifro (o se perdio). Mientras tanto la empresa '
+                     'figura sin Stripe: el webhook se rechaza y no se puede cobrar. Pon la clave correcta '
+                     'o vuelve a capturar las llaves en el admin.',
+                id='payments.E005',
+            ))
         if secreta and not secreta.startswith(PREFIJO) and secreta.startswith('sk_live_'):
             problemas.append(Error(
                 f'Empresa "{slug}": la llave secreta de produccion esta en texto plano en la base.',
