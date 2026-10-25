@@ -229,6 +229,43 @@
   }
 }
 
+/* --- Marca de confirmacion (ConfirmacionReserva) ------------------------
+   Pendiente = invisible un cuadro (se decide en el navegador si ya se vio); quieta = ya dibujada;
+   animar = la primera vez: el circulo entra (confirmacion-pop), una onda sale una pasada y la palomita
+   se dibuja. Con "reducir movimiento" el circulo se funde y la palomita queda dibujada. */
+.confirmacion-marca {
+  opacity: 0;
+}
+.confirmacion-marca[data-fase='quieta'] {
+  opacity: 1;
+}
+.confirmacion-marca[data-fase='animar'] {
+  opacity: 1;
+  animation: confirmacion-pop 500ms ease-out both;
+}
+.confirmacion-marca[data-fase='animar']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: confirmacion-onda 900ms ease-out 1 both;
+  pointer-events: none;
+}
+.confirmacion-marca__palomita {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.confirmacion-marca[data-fase='animar'] .confirmacion-marca__palomita {
+  stroke-dashoffset: 1;
+  animation: palomita-dibuja 450ms ease-out 250ms forwards;
+}
+@keyframes palomita-dibuja {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* --- Reveals de la portada ---------------------------------------------
    CSS puro, sin libreria. Son de una sola pasada y `animation-timeline:
    view()` los ata al scroll sin una linea de JavaScript. Meter Motion aqui
@@ -776,5 +813,18 @@
     to {
       opacity: 0;
     }
+  }
+
+  /* La palomita no se dibuja: aparece completa junto con el circulo. */
+  .confirmacion-marca[data-fase='animar'] .confirmacion-marca__palomita {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+}
+
+/* El comprobante: hoja con margenes propios; lo que no cabe pasa entero a la siguiente. */
+@media print {
+  @page {
+    margin: 15mm;
   }
 }

@@ -420,8 +420,8 @@
       "nextTraslado": "An advisor will message you on WhatsApp within 24 hours to confirm your vehicle and pickup time.",
       "nextPaquete": "An advisor will message you on WhatsApp within 24 hours to confirm the details of each service in your package.",
       "meetingHeadline": "Meeting point",
-      "guaranteesHeadline": "Your booking is protected",
-      "saveReceipt": "Save receipt",
+      "guaranteesHeadline": "If something changes",
+      "saveReceipt": "Print or save as PDF",
       "whatsappCta": "Message us with your reference",
       "whatsappMessage": "Hi, I am {nombre}. I booked for {fecha} (reference #{folio}) and would like to get in touch.",
       "backHome": "Back to home"

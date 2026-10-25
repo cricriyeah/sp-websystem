@@ -420,8 +420,8 @@
       "nextTraslado": "Un asesor te escribe por WhatsApp en las próximas 24 horas para confirmar tu vehículo y la hora de recogida.",
       "nextPaquete": "Un asesor te escribe por WhatsApp en las próximas 24 horas para confirmar los detalles de cada servicio de tu paquete.",
       "meetingHeadline": "Punto de encuentro",
-      "guaranteesHeadline": "Tu reserva está protegida",
-      "saveReceipt": "Guardar comprobante",
+      "guaranteesHeadline": "Si algo cambia",
+      "saveReceipt": "Imprimir o guardar PDF",
       "whatsappCta": "Escribirnos con tu folio",
       "whatsappMessage": "Hola, soy {nombre}. Reservé para el {fecha} (folio #{folio}) y me gustaría ponerme en contacto.",
       "backHome": "Volver al inicio"

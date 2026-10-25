@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle, Clock, DownloadSimple, WhatsappLogo } from '@phosphor-icons/react';
+import { CheckCircle, Clock, Printer, WhatsappLogo } from '@phosphor-icons/react';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,51 @@ const CAMPO: Record<ColorActividad | 'procesando', string> = {
   procesando: 'bg-tinta',
 };
 
+// El círculo de la marca de confirmación: el claro de la actividad sobre su campo de color.
+const MARCA: Record<ColorActividad, string> = {
+  mar: 'bg-azul-claro',
+  traslado: 'bg-coral-claro',
+  estancia: 'bg-verde-claro',
+};
+
+/**
+ * La palomita que dice «quedó». Se anima UNA vez, en el momento en que la reserva se confirma: la
+ * clave por folio en `sessionStorage` evita que se repita al reabrir la confirmación desde «Continuar
+ * reservación» o al recargar (una confirmación que se vuelve a animar parece que está pasando otra
+ * vez). Sin movimiento (preferencia del sistema) el círculo y la palomita aparecen ya dibujados.
+ * Es decoración: el título ya dice «Reserva confirmada», por eso `aria-hidden`.
+ */
+function MarcaConfirmada({ color, folio }: { color: ColorActividad; folio: number }) {
+  const [fase, setFase] = useState<'pendiente' | 'animar' | 'quieta'>('pendiente');
+  useEffect(() => {
+    const clave = `salysol:confirmacion-animada:${folio}`;
+    let primera = true;
+    try {
+      primera = window.sessionStorage.getItem(clave) === null;
+      if (primera) window.sessionStorage.setItem(clave, '1');
+    } catch {
+      // sin almacenamiento (modo privado): se anima, no hay forma de saber si ya se vio
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage solo existe en el navegador
+    setFase(primera ? 'animar' : 'quieta');
+  }, [folio]);
+
+  return (
+    <span
+      aria-hidden="true"
+      data-fase={fase}
+      className={cn(
+        'confirmacion-marca relative mb-6 inline-flex size-14 items-center justify-center rounded-full text-tinta lg:size-16 print:hidden',
+        MARCA[color],
+      )}
+    >
+      <svg viewBox="0 0 24 24" className="size-7 lg:size-8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path className="confirmacion-marca__palomita" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" />
+      </svg>
+    </span>
+  );
+}
+
 const SIGUE: Record<ColorActividad | 'paquete', keyof Dictionary['checkout']['confirmation']> = {
   mar: 'nextMar',
   traslado: 'nextTraslado',
@@ -106,7 +151,7 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
   const avisoCorreo = (datos.procesando ? confirmation.processingBody : confirmation.emailNotice).replace('{email}', datos.email);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background print:bg-white">
+    <div className="flex min-h-dvh flex-col bg-background print:block print:min-h-0 print:bg-white">
       <div className="print:hidden">
         <CabeceraMinima lang={lang} nav={dict.nav} volverHref={`/${lang}`} volverLabel={checkout.back} />
       </div>
@@ -114,8 +159,9 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
       <main className="flex-1">
         <section className={cn('text-hero-ink print:bg-white print:text-foreground', CAMPO[datos.procesando ? 'procesando' : datos.color])}>
           <div className="mx-auto max-w-[1440px] px-4 pb-12 pt-[calc(var(--nav-alto)+3rem)] sm:px-6 lg:px-12 lg:pb-16 lg:pt-[calc(var(--nav-alto)+4rem)] print:pt-8">
+            {!datos.procesando && <MarcaConfirmada color={datos.color} folio={datos.folio} />}
             <div className="flex flex-wrap items-end justify-between gap-x-12 gap-y-6">
-              <h1 className="max-w-[14ch] texto-grande">
+              <h1 className="max-w-[14ch] texto-grande print:text-3xl">
                 {datos.procesando ? confirmation.processingHeadline : confirmation.headline}
               </h1>
               <p className="flex flex-col">
@@ -133,7 +179,7 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
 
         <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1.15fr_1fr] lg:gap-20 lg:px-12 lg:py-20 print:block print:py-6">
           <div className="flex flex-col gap-12">
-            <section>
+            <section className="print:break-inside-avoid">
               <h2 className="texto-paso">{confirmation.tripHeadline}</h2>
               <dl className="mt-6 flex flex-col gap-3">
                 {datos.lineas.map((linea) => (
@@ -152,7 +198,7 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
               {datos.componentes && datos.componentes.length > 0 && (
                 <ul className="mt-6 flex flex-col gap-2">
                   {datos.componentes.map((c) => (
-                    <li key={c.titulo} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 bg-cafe-bruma px-5 py-4 texto-cuerpo">
+                    <li key={c.titulo} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 bg-cafe-bruma px-5 py-4 texto-cuerpo print:break-inside-avoid">
                       <span className="font-semibold">{c.titulo}</span>
                       <span>{c.detalle}</span>
                     </li>
@@ -161,7 +207,7 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
               )}
             </section>
 
-            <section>
+            <section className="print:break-inside-avoid">
               <h2 className="texto-paso">{confirmation.moneyHeadline}</h2>
               {datos.cobros && datos.cobros.length > 1 && (
                 <ul className="mt-6 flex flex-col gap-2">
@@ -197,7 +243,7 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
           </div>
 
           <div className="flex flex-col gap-12">
-            <section>
+            <section className="print:break-inside-avoid">
               <h2 className="texto-paso">{confirmation.nextHeadline}</h2>
               <div className="mt-6 flex flex-col gap-6 texto-cuerpo">
                 <p>{sigue}</p>
@@ -219,23 +265,29 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
               </div>
             </section>
 
-            <section>
+            <section className="print:break-inside-avoid">
               <h2 className="texto-paso">{confirmation.guaranteesHeadline}</h2>
               <ul className="mt-6 flex flex-col gap-2">
-                <li className="bg-cafe-bruma px-5 py-4">
-                  <h3 className="texto-etiqueta">{garantias.climaTitulo}</h3>
-                  <p className="mt-1 texto-cuerpo">{garantias.climaTexto}</p>
+                <li className="grid grid-cols-[5.5rem_1fr] items-baseline gap-x-5 bg-cafe-bruma px-5 py-4">
+                  <span className="texto-paso tabular-nums">{garantias.cifraTotal}</span>
+                  <div>
+                    <h3 className="texto-etiqueta">{garantias.climaTitulo}</h3>
+                    <p className="mt-1 texto-cuerpo">{garantias.climaTexto}</p>
+                  </div>
                 </li>
-                <li className="bg-cafe-bruma px-5 py-4">
-                  <h3 className="texto-etiqueta">{garantias.fechaTitulo}</h3>
-                  <p className="mt-1 texto-cuerpo">{garantias.fechaTexto}</p>
+                <li className="grid grid-cols-[5.5rem_1fr] items-baseline gap-x-5 bg-cafe-bruma px-5 py-4">
+                  <span className="texto-paso tabular-nums">{garantias.cifraFecha}</span>
+                  <div>
+                    <h3 className="texto-etiqueta">{garantias.fechaTitulo}</h3>
+                    <p className="mt-1 texto-cuerpo">{garantias.fechaTexto}</p>
+                  </div>
                 </li>
               </ul>
             </section>
 
             <div className="flex flex-col items-start gap-3 print:hidden">
               <Button onClick={() => window.print()}>
-                <DownloadSimple size={20} weight="bold" aria-hidden="true" />
+                <Printer size={20} weight="bold" aria-hidden="true" />
                 {confirmation.saveReceipt}
               </Button>
               {tieneWhatsapp && (
