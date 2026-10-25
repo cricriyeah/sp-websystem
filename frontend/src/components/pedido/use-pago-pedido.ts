@@ -9,6 +9,7 @@ import { ApiError } from '@/lib/api';
 import { clasificar } from '@/lib/errores';
 import { tipoDeFallo, type TipoProblema } from '@/lib/problema-reserva';
 import { empresaDeFalloCaptura } from '@/lib/fallo-pago';
+import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
 export type PasoPago = {
@@ -89,6 +90,10 @@ export function usePagoPedido(config: Config) {
   useEffect(() => {
     if (checkoutId && (fase === 'exito' || fase === 'fallo')) borrarPendiente(checkoutId);
   }, [checkoutId, fase]);
+  // La confirmación queda en la URL: recargarla la repone, y una entrada nueva al paquete no.
+  useEffect(() => {
+    if (fase === 'exito') marcarPaginaComoConfirmacion();
+  }, [fase]);
 
   const guardar = useCallback(
     (datos: Guardado) => {
@@ -139,6 +144,16 @@ export function usePagoPedido(config: Config) {
     getEstadoReserva(checkoutId, config.empresaSlug)
       .then((estado) => {
         if (cancelado) return;
+        // Ya pagada: solo se muestra la confirmación si la URL la pide (`?confirmacion=1`, que pone
+        // ella misma y el botón «Ver confirmación» de la banda). Sin la marca, esta entrada es para
+        // reservar de nuevo: formulario nuevo con otro checkout_id.
+        if (estado.estado === 'pagada' && !paginaPideConfirmacion()) {
+          const nuevo = crypto.randomUUID();
+          guardar({ checkoutId: nuevo });
+          setCheckoutId(nuevo);
+          setFase('formulario');
+          return;
+        }
         // 'pendiente_pago' o 'cancelada': se sigue con el formulario; reenviar el mismo
         // checkout_id actualiza la misma reserva (el servidor hace upsert).
         setFase(estado.estado === 'pagada' ? 'exito' : 'formulario');
@@ -149,7 +164,7 @@ export function usePagoPedido(config: Config) {
     return () => {
       cancelado = true;
     };
-  }, [config.motor, config.empresaSlug, fase, checkoutId]);
+  }, [config.motor, config.empresaSlug, fase, checkoutId, guardar]);
 
   useEffect(() => {
     if (config.motor !== 'orden' || fase !== 'resumiendo' || !checkoutId || ordenId !== null) return;
@@ -167,7 +182,15 @@ export function usePagoPedido(config: Config) {
     getOrden(config.sedeSlug, checkoutId)
       .then((detalle: OrdenDetalle) => {
         if (cancelado) return;
-        if (detalle.estado === 'capturada') return setFase('exito');
+        if (detalle.estado === 'capturada') {
+          if (paginaPideConfirmacion()) return setFase('exito');
+          // Orden ya cobrada y nadie pidió verla: se reserva de nuevo con un checkout_id nuevo.
+          const nuevo = crypto.randomUUID();
+          guardar({ checkoutId: nuevo });
+          setCheckoutId(nuevo);
+          setOrdenId(null);
+          return setFase('formulario');
+        }
         if (detalle.estado === 'cancelada') return setFase('fallo');
         // Reanudar una orden abierta asegura su puntero de "Continuar reservacion": cubre
         // ordenes creadas antes de que existiera o borradas del localStorage, y deja al dia

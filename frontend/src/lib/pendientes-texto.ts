@@ -70,8 +70,12 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
   });
 
   switch (resumen.situacion) {
-    case 'sin_pago':
-      return resultado('en_curso', dict.sinPago, dict.botonContinuar, dict.botonDescartar);
+    case 'sin_pago': {
+      // Con el lugar apartado, la banda dice hasta cuándo (solo la hora: el apartado dura minutos).
+      const hora = horaDeVencimiento(resumen.vence_en, dict.locale);
+      if (hora) datos.hora = hora;
+      return resultado('en_curso', hora ? dict.sinPagoApartado : dict.sinPago, dict.botonContinuar, dict.botonDescartar);
+    }
     case 'retenido_parcial': {
       Object.assign(datos, {
         n: comprometidos.length, total: montos.length,
@@ -103,7 +107,7 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
       if (resumen.forma_pago === 'anticipo') {
         datos.monto = montoReserva ?? dinero(montos[0]?.monto ?? null, resumen.moneda, dict.locale) ?? undefined;
         return resultado('informativo', datos.monto ? dict.confirmadaAnticipo : dict.confirmadaSinMonto,
-          null, dict.botonCerrar);
+          dict.botonVerConfirmacion, dict.botonCerrar);
       }
       datos.cargos = esOrden(resumen)
         ? montos.map((m) => {
@@ -112,7 +116,7 @@ export function textoDeSituacion(dict: Textos, resumen: ResumenReserva | Resumen
         }).filter((m): m is string => m !== null).join(' y ')
         : montoReserva ?? undefined;
       return resultado('informativo', datos.cargos ? dict.confirmada : dict.confirmadaSinMonto,
-        null, dict.botonCerrar);
+        dict.botonVerConfirmacion, dict.botonCerrar);
     }
     case 'cancelada_liberada':
       return resultado('informativo', dict.canceladaLiberada, dict.botonReservarNuevo,

@@ -62,6 +62,7 @@ import {
   rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
+import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
 const CLAVE_CHECKOUT_ID = 'salysol:traslados:checkout_id';
@@ -283,7 +284,9 @@ export function TrasladoView({
     let activo = true;
     getEstadoReserva(checkoutId, empresaSlug).then((estado) => {
       if (!activo) return;
-      if (estado.estado === 'cancelada') {
+      // Una compra ya pagada solo se muestra si la URL lo pide (`?confirmacion=1`): sin la marca, esta
+      // entrada es para reservar de nuevo y arranca con un formulario nuevo.
+      if (estado.estado === 'cancelada' || (estado.estado === 'pagada' && !paginaPideConfirmacion())) {
         const nuevo = crypto.randomUUID();
         window.sessionStorage.setItem(CLAVE_CHECKOUT_ID, nuevo);
         setCheckoutId(nuevo);
@@ -325,6 +328,9 @@ export function TrasladoView({
   useEffect(() => {
     if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
   }, [phase, checkoutId]);
+  useEffect(() => {
+    if (phase === 'confirmed') marcarPaginaComoConfirmacion();
+  }, [phase]);
 
   // La zona cuenta en la vuelta completa (redondo con aeropuerto y de actividad); la recepción es de precio único.
   const zonaEfectiva = useMemo<Zona | ''>(() => {

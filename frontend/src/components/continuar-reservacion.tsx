@@ -6,6 +6,7 @@ import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { cancelarOrdenPublica, getResumenOrden, getResumenReserva, type ResumenOrden, type ResumenReserva } from '@/lib/api';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
+import { PARAM_CONFIRMACION } from '@/lib/marca-confirmacion';
 import { borrarPendiente, guardarPendiente, listarPendientes, type Pendiente } from '@/lib/pendientes';
 import { textoDeSituacion } from '@/lib/pendientes-texto';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -202,10 +203,12 @@ export function ContinuarReservacion({ lang, dict }: Props) {
     if (lista[0]) void consultar(lista[0]);
   };
 
-  const navegar = (p: Pendiente, nueva: boolean) => {
+  const navegar = (p: Pendiente, nueva: boolean, verConfirmacion = false) => {
     const ruta = rutaSegura(p.ruta, lang);
     if (!ruta) return;
     const destino = new URL(ruta, window.location.origin);
+    // La confirmación de una compra ya pagada solo se abre si se pide: esta marca es el pedido.
+    if (verConfirmacion) destino.searchParams.set(PARAM_CONFIRMACION, '1');
     if (nueva) {
       destino.searchParams.delete('retomar');
       borrarPendiente(p.checkoutId);
@@ -284,7 +287,7 @@ export function ContinuarReservacion({ lang, dict }: Props) {
       if (situacion === 'no_existe') cerrar();
       return;
     }
-    navegar(activo, false);
+    navegar(activo, false, situacion === 'confirmada');
   };
 
   const secundariaClick = () => {

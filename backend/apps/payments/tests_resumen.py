@@ -28,6 +28,30 @@ class ResumenReservaTest(TrasladoPagoFixture, ApiTestCase):
         self.assertIsNone(r.json()['vence_en'])
         self.assertNotIn('nombre_cliente', r.json())
 
+    def test_con_intent_pero_sin_pagar_sigue_siendo_sin_pago(self):
+        """El PaymentIntent existe desde que se llega al paso de pago: no significa que el banco procese nada."""
+        reserva = self.reserva()
+        reserva.stripe_payment_intent_id = 'pi_sin_tarjeta'
+        reserva.save(update_fields=['stripe_payment_intent_id'])
+        r = self.client.get(f'/api/{self.empresa.slug}/reservas/resumen/?checkout_id={reserva.checkout_id}')
+        self.assertEqual(r.json()['situacion'], Situacion.SIN_PAGO)
+
+    def test_sin_pago_con_apartado_vigente_dice_hasta_cuando(self):
+        reserva = self.reserva()
+        hasta = timezone.now() + timedelta(minutes=12)
+        reserva.apartado_hasta = hasta
+        reserva.save(update_fields=['apartado_hasta'])
+        r = self.client.get(f'/api/{self.empresa.slug}/reservas/resumen/?checkout_id={reserva.checkout_id}')
+        self.assertEqual(r.json()['situacion'], Situacion.SIN_PAGO)
+        self.assertEqual(r.json()['vence_en'], hasta.isoformat())
+
+    def test_apartado_vencido_no_se_anuncia(self):
+        reserva = self.reserva()
+        reserva.apartado_hasta = timezone.now() - timedelta(minutes=1)
+        reserva.save(update_fields=['apartado_hasta'])
+        r = self.client.get(f'/api/{self.empresa.slug}/reservas/resumen/?checkout_id={reserva.checkout_id}')
+        self.assertIsNone(r.json()['vence_en'])
+
     def test_no_existe(self):
         r = self.client.get(f'/api/{self.empresa.slug}/reservas/resumen/?checkout_id={uuid.uuid4()}')
         self.assertEqual(r.status_code, 404)

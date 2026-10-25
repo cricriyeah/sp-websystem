@@ -621,7 +621,8 @@
   },
   "continuar": {
     "locale": "en-US",
-    "sinPago": "{producto} · Your details are saved · You have not paid yet",
+    "sinPago": "{producto} · Complete your booking · You have not paid yet",
+    "sinPagoApartado": "{producto} · Complete your booking · Your spot is held until {hora}",
     "retenidoParcial": "{producto} · Payment {n} of {total} held: {montoHecho} at {empresaHecha} · {montoFalta} remains at {empresaFalta}. The booking will be canceled if you do not finish by {vence}.",
     "retenidoParcialSinMonto": "{producto} · A payment is held at {empresaHecha}. The payment to {empresaFalta} remains.",
     "retenidoTotal": "{producto} · Your payments are held ({montos}). We are confirming the charges.",
@@ -650,6 +651,7 @@
     "botonDescartar": "Dismiss",
     "botonCancelarRetenido": "Cancel and release the hold",
     "botonEntendido": "Got it",
+    "botonVerConfirmacion": "View confirmation",
     "botonCerrar": "Close",
     "verMas": "Show the full message",
     "verMenos": "Show less",

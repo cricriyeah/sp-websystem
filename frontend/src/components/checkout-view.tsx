@@ -71,6 +71,7 @@ import {
   rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
+import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 
 // Mismas reglas que el backend (apps/bookings/validators.py). Aqui existen para
@@ -375,6 +376,10 @@ export function CheckoutView({
   useEffect(() => {
     if (phase === 'confirmed' && checkoutId) borrarPendiente(checkoutId);
   }, [phase, checkoutId]);
+  // La confirmacion queda en la URL: recargarla o volver con Atras la repone, y una entrada nueva a /reservar no.
+  useEffect(() => {
+    if (phase === 'confirmed') marcarPaginaComoConfirmacion();
+  }, [phase]);
 
   // Una sola vez: el enlace traia una fecha que no sirvio y se uso otra. Se espera a que el
   // formulario este listo y solo se avisa si sigue vigente (una reserva recuperada puede traer su fecha).
@@ -791,6 +796,15 @@ export function CheckoutView({
         return;
       }
       if (cancelado) return;
+
+      // Una compra ya pagada solo se muestra si la URL lo pide (`?confirmacion=1`: la pone la propia
+      // confirmacion, asi que recargarla sigue funcionando, y el boton «Ver confirmacion» de la banda).
+      // Entrar a /reservar sin esa marca, aunque sea para comprar otra vez, abre un formulario nuevo.
+      if (estado.estado === 'pagada' && !paginaPideConfirmacion()) {
+        renovarCheckoutId();
+        setPhase(tieneProducto ? 'form' : 'unavailable');
+        return;
+      }
 
       if (estado.estado === 'pagada') {
         setReservaId(estado.reserva_id);

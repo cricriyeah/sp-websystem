@@ -21,10 +21,23 @@ const orden = (situacion, extra = {}) => ({
 
 test('sin_pago usa el texto exacto y permite descartar', () => {
   const t = textoDeSituacion(es, reserva('sin_pago', { monto: null }));
-  assert.equal(t.linea1, 'Pesca · Tus datos están guardados · Aún no has pagado');
+  assert.equal(t.linea1, 'Pesca · Completa tu reserva · Aún no has pagado');
   assert.equal(t.registro, 'en_curso');
   assert.equal(t.principal, es.botonContinuar);
   assert.equal(t.secundaria, es.botonDescartar);
+});
+
+test('sin_pago con el lugar apartado dice hasta qué hora, no que el banco procesa', () => {
+  const t = textoDeSituacion(es, reserva('sin_pago', { monto: null, vence_en: '2026-10-24T16:32:00-07:00' }));
+  assert.match(t.linea1, /Completa tu reserva/);
+  assert.match(t.linea1, /apartado hasta las 4:32/);
+  assert.doesNotMatch(t.linea1, /banco/);
+  assert.equal(t.principal, es.botonContinuar);
+});
+
+test('sin_pago sin apartado no inventa una hora', () => {
+  const t = textoDeSituacion(en, reserva('sin_pago', { monto: null, vence_en: null }));
+  assert.doesNotMatch(t.linea1, /held until/);
 });
 
 test('retenido_parcial identifica empresa, importe faltante y vencimiento reales', () => {
@@ -50,10 +63,10 @@ for (const situacion of ['retenido_total', 'confirmando_cobro', 'pago_en_proceso
   });
 }
 
-test('confirmada informa y solo permite cerrar el aviso', () => {
+test('confirmada informa, deja ver la confirmación o cerrar el aviso', () => {
   const t = textoDeSituacion(es, orden('confirmada'));
   assert.match(t.linea1, /confirmada/);
-  assert.equal(t.principal, null);
+  assert.equal(t.principal, es.botonVerConfirmacion);
   assert.equal(t.secundaria, es.botonCerrar);
 });
 
@@ -68,7 +81,7 @@ test('anticipo confirmado se distingue de pago completo', () => {
   const t = textoDeSituacion(es, reserva('confirmada', { forma_pago: 'anticipo' }));
   assert.match(t.linea1, /anticipo/);
   assert.doesNotMatch(t.linea1, /Se cobró \$/);
-  assert.equal(t.principal, null);
+  assert.equal(t.principal, es.botonVerConfirmacion);
 });
 
 test('no inventa un monto de pago cuando el servidor no lo entrega', () => {

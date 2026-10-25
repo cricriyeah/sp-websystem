@@ -1543,10 +1543,18 @@ class ResumenReservaView(APIView):
             )
             if reserva is None:
                 return Response({'detail': 'No se encontró.'}, status=404)
+            # Tener un PaymentIntent no es estar pagando: el intent se crea al llegar al paso de pago y
+            # sigue ahi aunque el cliente cierre la pestana sin poner su tarjeta. «Tu banco esta procesando
+            # tu pago» le decia a esa persona que ya habia pagado. Una reserva pendiente es «sin pagar»; si
+            # paga, el webhook la marca pagada y la banda pasa sola a «confirmada».
             situacion = situacion_de_reserva(
                 estado=reserva.estado, monto_pagado=reserva.monto_pagado,
                 monto_reembolsado=reserva.monto_reembolsado,
-                tiene_intent_activo=bool(reserva.stripe_payment_intent_id),
+            )
+            # Hasta cuando le guardamos su lugar: solo una reserva sin pagar con apartado vigente.
+            apartado_vigente = (
+                reserva.estado == Reserva.Estado.PENDIENTE_PAGO
+                and reserva.apartado_hasta is not None and reserva.apartado_hasta > timezone.now()
             )
             return Response({
                 'situacion': situacion,
@@ -1555,7 +1563,7 @@ class ResumenReservaView(APIView):
                 'moneda': reserva.moneda,
                 'forma_pago': reserva.forma_pago,
                 'folio': reserva.id,
-                'vence_en': None,
+                'vence_en': reserva.apartado_hasta.isoformat() if apartado_vigente else None,
             })
 
 

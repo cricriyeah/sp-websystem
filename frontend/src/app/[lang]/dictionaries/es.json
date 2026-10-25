@@ -621,7 +621,8 @@
   },
   "continuar": {
     "locale": "es-MX",
-    "sinPago": "{producto} · Tus datos están guardados · Aún no has pagado",
+    "sinPago": "{producto} · Completa tu reserva · Aún no has pagado",
+    "sinPagoApartado": "{producto} · Completa tu reserva · Tu lugar está apartado hasta las {hora}",
     "retenidoParcial": "{producto} · Pago {n} de {total} retenido: {montoHecho} en {empresaHecha} · Falta {montoFalta} a {empresaFalta}. Se cancela si no terminas antes del {vence}.",
     "retenidoParcialSinMonto": "{producto} · Hay un pago retenido en {empresaHecha}. Falta el pago a {empresaFalta}.",
     "retenidoTotal": "{producto} · Tus pagos están retenidos ({montos}). Estamos confirmando el cobro.",
@@ -650,6 +651,7 @@
     "botonDescartar": "Descartar",
     "botonCancelarRetenido": "Cancelar y liberar lo retenido",
     "botonEntendido": "Entendido",
+    "botonVerConfirmacion": "Ver confirmación",
     "botonCerrar": "Cerrar",
     "verMas": "Ver el mensaje completo",
     "verMenos": "Ver menos",
