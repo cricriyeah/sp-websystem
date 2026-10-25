@@ -1,0 +1,29 @@
+# GAP-WAVE-PLAN — plan de olas (auditoria 2026-10-24, backend/)
+# Generado con: node scripts/lib/gap-waves.mjs plan docs/governance/GAP-REGISTER.json --per-wave 6 --current-wave 1
+# Resultado del planificador: salida 1 porque 5 brechas de la ola 2 no tienen excepcion firmada.
+# NO se creo ninguna excepcion (regla del CTO). Las brechas diferidas estan en la seccion deferred_without_exception.
+
+feature: backend-seguridad-y-operacion
+generated: 2026-10-24
+strategy: severity-first
+per_wave: 6
+current_wave: 1
+
+waves:
+  - wave: 1
+    target_date: 2026-10-31
+    theme: "antes de vender en serio: CVE de DRF, limite de peticiones, ordenes ajenas, llaves de Stripe, respaldo y rol de base"
+    gaps: [GAP-1, GAP-2, GAP-3, GAP-4, GAP-10, GAP-6]
+    exit_criteria: "todas con status closed en GAP-REGISTER.yaml; pip-audit sin hallazgos; prueba de restauracion hecha"
+  - wave: 2
+    target_date: 2026-11-21
+    theme: "endurecimiento de operacion y orden del codigo"
+    gaps: [GAP-7, GAP-8, GAP-9, GAP-11, GAP-12]
+    exit_criteria: "todas con status closed"
+
+deferred_without_exception:
+  - {gap: GAP-7, gate: "gate:ship", comando_sugerido: '/exception create --gate gate:ship --scope "GAP-7" --reason "gap-wave 2: tracked, scheduled" --risk medium'}
+  - {gap: GAP-8, gate: "gate:ship", comando_sugerido: '/exception create --gate gate:ship --scope "GAP-8" --reason "gap-wave 2: tracked, scheduled" --risk medium'}
+  - {gap: GAP-9, gate: "gate:ship", comando_sugerido: '/exception create --gate gate:ship --scope "GAP-9" --reason "gap-wave 2: tracked, scheduled" --risk medium'}
+  - {gap: GAP-11, gate: "gate:arch", comando_sugerido: '/exception create --gate gate:arch --scope "GAP-11" --reason "gap-wave 2: tracked, scheduled" --risk medium'}
+  - {gap: GAP-12, gate: "gate:arch", comando_sugerido: '/exception create --gate gate:arch --scope "GAP-12" --reason "gap-wave 2: tracked, scheduled" --risk medium'}

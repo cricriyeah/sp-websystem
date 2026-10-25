@@ -90,3 +90,23 @@ de codigo aparte.
 - No se encontro `vercel.json` ni configuracion de despliegue del frontend en el
   repo — se desconoce con certeza donde vive el build de produccion del
   frontend. Pregunta abierta para el mantenedor, no un hallazgo de codigo.
+
+# Tasks from Audit 2026-10-24 (backend/) — bd unavailable (`bd: command not found`)
+
+Fuente: `docs/audit/AUDIT-2026-10-24.md`. Brechas: `docs/governance/GAP-REGISTER.yaml`. Sin P0: nada bloquea el arranque; los P1 son previos a vender en serio. No duplica lo ya conocido (ver sección final del informe).
+
+| Estado | Priority | Title | Source | Effort |
+|--------|----------|-------|--------|--------|
+| PENDIENTE | P1 | SEC: Subir djangorestframework 3.18.0 -> 3.18.2 (CVE-2026-114138, CVE-2026-114136) y quitar continue-on-error del job pip-audit (ci.yml:121) | B-01 / GAP-1 | 30m |
+| PENDIENTE | P1 | SEC: Limite de peticiones evadible con X-Forwarded-For: NUM_PROXIES=1 y cache compartida (base.py:73-110) | B-02 / GAP-2 | 1-2h |
+| PENDIENTE | P1 | SEC: Exigir checkout_id en crear-pago y confirmar-captura de ordenes (payments/views.py:1248-1402) | B-03 / GAP-3 | 2h |
+| PENDIENTE | P1 | SEC: Cifrar en reposo las llaves secretas de Stripe por empresa antes de capturar sk_live_ (tenancy/models.py:75-78, ADR-002) | B-04 / GAP-4 | 1d |
+| PENDIENTE | P1 | OPS: Respaldo previo a migrate en cada deploy, prueba de restauracion y confirmar plan Pro/PITR de Supabase | B-05 / GAP-6 | 3-6h |
+| PENDIENTE | P2 | SEC: Verificar rol de Postgres de produccion (pg_roles) y repetir la guardia fuera del build | B-06 / GAP-10 | 2h |
+| PENDIENTE | P2 | SEC: Turnstile tambien en CrearOrdenView y aviso de arranque si falta TURNSTILE_SECRET_KEY | B-07 / GAP-7 | 2h |
+| PENDIENTE | P2 | OPS: conciliar_pagos debe fallar con codigo distinto de 0 / logger.error ante error de Stripe; latido y monitor externo de /healthz | B-08 / GAP-8 | 2h |
+| PENDIENTE | P2 | SEC: Segundo factor para el admin (jefes y operador); ver F-14 de agosto sobre la ruta /admin/ | B-09 / GAP-9 | 1d |
+| PENDIENTE | P2 | REFACTOR: Dividir payments/views.py (1638 lineas) y luego bookings/admin.py (2952) sin cambiar logica | B-11 / GAP-11 | 2-4d |
+| PENDIENTE | P3 | CHORE: Actualizar ENDURECIMIENTO.md (RLS), agregar *.log a .gitignore, retirar STRIPE_* globales sin uso | B-10,B-12,B-13 / GAP-12 | 1h |
+
+Total: 11 tareas (P0:0 P1:5 P2:5 P3:1).

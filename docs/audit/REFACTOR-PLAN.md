@@ -194,3 +194,72 @@ Steps:
 3. Add a note to the go-live checklist (WP-16) to bump this deliberately, not silently, whenever the Stripe SDK is upgraded.
 Tests: run the existing payment test suite after pinning, confirm no behavior change (expected — pinning to the version already in effect should be a no-op).
 Done when: `stripe.api_version` is explicit in code and documented.
+
+---
+
+# Auditoría 2026-10-24 (backend/) — paquetes de trabajo
+
+Fuente: `docs/audit/AUDIT-2026-10-24.md`. Sin Tier 0. Orden sugerido: WP-20 a WP-23 en una tanda (un día), WP-24 y WP-25 antes de capturar llaves `sk_live_`.
+
+## WP-20: Subir DRF y volver bloqueante el pip-audit
+Tier: 1 | Effort: 30m | Risk: Low (parche menor)
+Files: `backend/requirements.txt:3`, `.github/workflows/ci.yml:121`
+Steps: 1. `djangorestframework==3.18.2`. 2. Quitar `continue-on-error: true` del job `auditoria-dependencias`. 3. Correr pruebas de `apps/payments` y `apps/bookings` en SQLite.
+Tests: `pip-audit -r backend/requirements.txt --no-deps` sin hallazgos.
+Done when: CI verde con el job bloqueante.
+
+## WP-21: Límite de peticiones que no se evade
+Tier: 1 | Effort: 1-2h | Risk: Medium (cambia la IP que ve el límite)
+Files: `backend/config/settings/base.py:73-110`
+Steps: 1. `REST_FRAMEWORK['NUM_PROXIES'] = int(os.environ.get('TRUSTED_PROXY_COUNT', '0'))`. 2. `CACHES` con respaldo compartido (caché en base de datos o Redis). 3. Confirmar si el frontend llama desde el servidor de Vercel (IP compartida) y, si es así, reenviar la IP del cliente.
+Tests: prueba que 30 GET con `X-Forwarded-For` distinto reciben 429 tras el límite (reproducción de la auditoría: antes 0 de 30, sin XFF 10 de 30).
+Done when: la prueba pasa y el límite cuenta por cliente real.
+
+## WP-22: Dueño de la orden en crear-pago y confirmar-captura
+Tier: 1 | Effort: 2h | Risk: Low
+Files: `backend/apps/payments/views.py:1248-1402`, frontend (envío de `checkout_id`)
+Steps: 1. Tras `_buscar_orden`, comparar `checkout_id` como en `CancelarOrdenPublicaView`; 403 si no coincide. 2. Confirmar que el frontend ya lo manda; si no, agregarlo.
+Tests: orden ajena con `checkout_id` incorrecto o ausente → 403 y sin llamadas a Stripe.
+Done when: ambas vistas rechazan el acceso sin dueño y el checkout de paquete sigue funcionando.
+
+## WP-23: Turnstile en órdenes y aviso de arranque
+Tier: 2 | Effort: 2h | Risk: Low
+Files: `backend/apps/payments/views.py:964`, `backend/apps/bookings/captcha.py`, un check de sistema en `apps/payments/checks.py`
+Steps: 1. Llamar `verificar_turnstile` al crear la orden nueva. 2. Check de sistema (Warning) si `DEBUG=False` y falta `TURNSTILE_SECRET_KEY`.
+Tests: sin token → rechazo; con llave vacía en producción → aviso.
+Done when: ambos endpoints de creación con gate y aviso visible.
+
+## WP-24: Cifrar las llaves secretas de Stripe por empresa
+Tier: 1 | Effort: 1 día | Risk: Medium (migración de datos con RLS)
+Files: `backend/apps/tenancy/models.py:75-78`, `backend/apps/tenancy/admin.py:68-88`, `backend/apps/payments/stripe_client.py:17`, nueva migración
+Steps: 1. Campo cifrado con llave de entorno (`STRIPE_KEYS_ENCRYPTION_KEY` en el grupo de secretos). 2. Migración de datos dentro de `alcance_operador_migracion`. 3. Mantener el admin de solo escritura. 4. Rotar las llaves de prueba al terminar.
+Tests: lectura y escritura por el cliente de Stripe; el valor en la base no contiene el prefijo `sk_`.
+Done when: ninguna llave secreta legible en la base ni en un volcado; ADR-002 enmendado.
+
+## WP-25: Respaldo previo a migrar y prueba de restauración
+Tier: 1 | Effort: 3-6h | Risk: Low
+Files: `render.yaml:22-25`, `docs/vendors/supabase.md`, `docs/deploy/GO-LIVE.md`
+Steps: 1. Confirmar plan Pro y PITR en Supabase. 2. Paso previo al deploy (volcado o respaldo del día verificado). 3. Restaurar una vez en una base vacía y anotar el tiempo. 4. Correr `SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;` y anotar el resultado (B-06).
+Tests: restauración documentada con hora y conteo de filas.
+Done when: runbook con tiempo real de restauración y resultado de `pg_roles` (esperado `f,f`).
+
+## WP-26: Alerta cuando falla la red del cobro
+Tier: 2 | Effort: 2h | Risk: Low
+Files: `backend/apps/payments/management/commands/conciliar_pagos.py:93-95,146-150`, `render.yaml:85`
+Steps: 1. `logger.error` y código de salida ≠ 0 cuando Stripe falla. 2. Ping de latido al terminar bien. 3. Monitor externo de `/healthz`.
+Tests: simular `StripeError` → salida ≠ 0.
+Done when: un fallo del cron llega a Sentry o al monitor en menos de 2 h.
+
+## WP-27: Segundo factor en el admin
+Tier: 2 | Effort: 1 día | Risk: Medium (afecta el acceso de las vendedoras)
+Files: `backend/config/settings/base.py`, `backend/config/urls.py:40-47`, requirements
+Steps: 1. django-otp (o equivalente) obligatorio para jefes y operador. 2. Decidir ruta del admin o lista de IP (F-14). 3. Plan de recuperación de cuenta.
+Tests: login sin segundo factor → rechazado para jefes.
+Done when: jefes y operador entran con segundo factor.
+
+## WP-28: Dividir `payments/views.py`
+Tier: 2 | Effort: 1-2 días | Risk: Low (extracción sin cambio de lógica)
+Files: `backend/apps/payments/views.py` (1638 líneas) → `views_ordenes.py`, `views_webhook.py`
+Steps: 1. Mover las vistas de órdenes y el webhook. 2. Unificar `_buscar_orden` y la comprobación de dueño. 3. Actualizar `urls.py`.
+Tests: suite de `apps/payments` en SQLite y Postgres sin cambios.
+Done when: ningún archivo de vistas pasa de 700 líneas.

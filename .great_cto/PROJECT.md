@@ -8,7 +8,7 @@
 primary: commerce
 archetype: commerce
 project_size: large
-stack: django-6, django-rest-framework, django-unfold, stripe, sqlite (local), postgres/supabase (prod), next.js-16, react-19, tailwind-4, whitenoise
+stack: django-6, django-rest-framework, django-unfold, stripe (cuenta directa por empresa, sin Connect), sqlite (local), postgres/supabase con RLS por empresa (prod), gunicorn en Render, next.js-16 en Vercel, react-19, tailwind-4, whitenoise, sentry, django-axes
 languages: python, typescript
 package-manager: pip (backend, requirements.txt) + npm (frontend)
 archetype_confidence: user-specified
@@ -80,8 +80,8 @@ jurisdiction: [unknown]
 
 ## Context
 
-- Tests present: yes (backend `python manage.py test`, 125 tests; frontend sin suite)
-- CI configured: no (sin `.github/workflows/`)
+- Tests present: yes (backend: 143 archivos de pruebas y 2161 métodos `test_`, corren en SQLite y en Postgres con rol sin BYPASSRLS; frontend: tsc + eslint + build, sin suite unitaria verificada)
+- CI configured: yes (`.github/workflows/ci.yml`: pruebas backend SQLite + Postgres, `check --deploy`, pip-audit con `continue-on-error`, npm audit, build del frontend)
 - Repo layout: monorepo — `backend/` (Django), `frontend/` (Next.js), `docs/`
 - Business rules of record: `docs/contexto-negocio.md` (leer antes de tocar
   reservas o pagos), más `backend/CLAUDE.md` y `frontend/CLAUDE.md`
@@ -104,3 +104,17 @@ when you actually start work:
   instead) before committing to architecture.
 - To override the guess directly: edit `primary:` and `compliance:` in
   this file, then continue.
+
+## Domain
+
+- Operación en México (La Paz y otras sedes), 4 empresas con su propia cuenta de Stripe (llaves de prueba hoy), una vendedora por empresa en laptop. Sin ventas reales al 2026-10-24.
+- audience: turistas (MXN y USD) y vendedoras/jefes en el backoffice; detalle por confirmar.
+- Privacidad de datos personales (aviso de privacidad / LFPDPPP): por confirmar.
+- Hospedaje: Render (backend, 2 cron) + Supabase (Postgres) + Vercel (frontend).
+
+## Last Audit
+date: 2026-10-24
+findings: P0:0 P1:5 P2:5 P3:1
+next-audit: 2027-01-22
+report: docs/audit/AUDIT-2026-10-24.md
+gap-register: docs/governance/GAP-REGISTER.yaml

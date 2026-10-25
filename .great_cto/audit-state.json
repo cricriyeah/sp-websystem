@@ -1,7 +1,7 @@
 {
-  "audit_sha": "084714079d9d3f481192945224167546ab5af512",
-  "date": "2026-08-14",
-  "findings": { "P0": 4, "P1": 2, "P2": 0, "P3": 0 },
+  "audit_sha": "0eb78fbfde98588d587d32a73cc6078a1cb57d8e",
+  "date": "2026-10-24",
+  "findings": { "P0": 0, "P1": 5, "P2": 5, "P3": 1 },
   "beads_ids": [],
-  "note": "bd unavailable; tasks tracked in .great_cto/tasks.md under '2026-08-14' section"
+  "note": "bd unavailable; tasks tracked in .great_cto/tasks.md under the '2026-10-24' section. Scope: backend/ only."
 }
