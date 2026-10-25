@@ -54,6 +54,13 @@ estar exento.
 
 - `fleet`, `bookings`: modelos + admin implementados. Backoffice basico (item 1 de
   contexto-negocio.md) ya cubre catalogo + reservas + roles, ver abajo.
+- `notifications/plantilla.py`: el membrete de los correos al cliente (confirmacion de servicio, traslado y paquete,
+  asignacion de capitan y panga, y el correo combinado de una orden): banda del color de la actividad con la empresa
+  y "Sun Baja Experience", titulo y folio grandes, datos como renglones etiqueta/valor, el dinero en bloques, pie
+  con la instruccion de escribir por WhatsApp con el folio, texto de vista previa y version de texto plano (`text`).
+  Tablas con estilos en linea y `color-scheme: light only`. El asunto lleva el folio. Todo dato de una persona entra
+  ya escapado (`services._html`); la plantilla no vuelve a escapar. No lleva boton de WhatsApp: el backend no
+  conoce el numero publico del negocio. No promete "responde a este correo" mientras no haya un `Reply-To`.
 - `payments`: API implementada (crear PaymentIntent + webhook), ver seccion "API
   publica (frontend)" abajo.
 - `notifications`: `services.py` con `notificar_reserva_pagada(reserva)` — correo via
