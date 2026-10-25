@@ -34,6 +34,7 @@ const suites = {
   'borrador-reserva': ['src/lib/borrador-reserva.ts', 'BORRADOR_TEST_OUT'],
   origen: ['src/lib/origen.ts', 'ORIGEN_TEST_OUT'],
   'marca-confirmacion': ['src/lib/marca-confirmacion.ts', 'MARCA_CONFIRMACION_TEST_OUT'],
+  seo: ['src/lib/seo.ts', 'SEO_TEST_OUT'],
   'campo-paso': ['src/lib/campo-paso.ts', 'CAMPO_PASO_TEST_OUT'],
   'validar-reserva': ['src/lib/validar-reserva.ts', 'VALIDAR_RESERVA_TEST_OUT'],
   'paso-url': ['src/lib/paso-url.ts', 'PASO_URL_TEST_OUT'],

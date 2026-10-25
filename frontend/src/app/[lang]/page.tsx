@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDictionary, hasLocale, type Locale } from './dictionaries';
-import { alternativasDe } from '@/lib/site';
+import { LOCALE_TAG, absolutaEn } from '@/lib/site';
+import { metadataDePagina } from '@/lib/metadata-pagina';
+import { jsonLdMarca } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import { getSedes, type Sede } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { baseDeCobro, chipsDeSede, tarjetasConFoto } from '@/lib/etiquetas-catalogo';
@@ -25,7 +28,10 @@ export async function generateMetadata({ params }: PageProps<'/[lang]'>): Promis
   const { lang } = await params;
   if (!hasLocale(lang)) return {};
   const dict = await getDictionary(lang);
-  return { title: { absolute: dict.hub.meta.title }, description: dict.hub.meta.description, alternates: alternativasDe(lang) };
+  return metadataDePagina({
+    lang, titulo: dict.hub.meta.title, tituloCompleto: true, descripcion: dict.hub.meta.description,
+    descripcionGeneral: dict.hub.meta.description, nombreDelSitio: dict.home.title,
+  });
 }
 
 type Textos = Awaited<ReturnType<typeof getDictionary>>['hubContenido'];
@@ -108,6 +114,9 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
   const { mapAria, pacificOcean, seaOfCortez, zoomIn, zoomOut, resetMap, dragMap } = dict.hub;
 
   return <>
+    <JsonLd datos={jsonLdMarca({
+      nombre: dict.home.title, url: absolutaEn(lang), descripcion: dict.hub.meta.description, idioma: LOCALE_TAG[lang],
+    })} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
     <main>
       <HubPortada lang={lang} textos={textos} />

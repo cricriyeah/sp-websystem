@@ -5,7 +5,11 @@ import { cache } from 'react';
 import { getDictionary, hasLocale, type Locale } from '../../../../dictionaries';
 import { API_URL, ApiError, getPaqueteDetalle, getPaquetesSede, getServiciosSede } from '@/lib/api';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
-import { alternativasDe } from '@/lib/site';
+import { absolutaEn } from '@/lib/site';
+import { metadataDePagina } from '@/lib/metadata-pagina';
+import { jsonLdMigas, jsonLdViaje } from '@/lib/seo';
+import { getEmpresa } from '@/content/empresas';
+import { JsonLd } from '@/components/json-ld';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { DetalleProducto } from '@/components/detalle-producto';
@@ -31,11 +35,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const datos = await cargar(slug, paquete, lang).catch(() => null);
   if (!datos) return {};
   const sede = getSedeContenido(slug, lang);
-  return {
-    title: sede ? `${datos.nombre} · ${sede.nombre}` : datos.nombre,
-    description: datos.descripcion || undefined,
-    alternates: alternativasDe(lang, `/sede/${slug}/paquete/${paquete}`),
-  };
+  const dict = await getDictionary(lang);
+  return metadataDePagina({
+    lang, ruta: `/sede/${slug}/paquete/${paquete}`, titulo: sede ? `${datos.nombre} · ${sede.nombre}` : datos.nombre,
+    descripcion: datos.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
+  });
 }
 
 export default async function PaquetePage({ params, searchParams }: Props) {
@@ -55,7 +59,20 @@ export default async function PaquetePage({ params, searchParams }: Props) {
   if (!paquete) notFound();
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   const vista = vistaDeDetallePaquete({ lang, moneda, dict, sede, otros: { servicios, paquetes }, paquete });
+  const urlPaquete = absolutaEn(lang, `/sede/${slug}/paquete/${paqueteSlug}`);
   return <>
+    <JsonLd datos={[
+      jsonLdViaje({
+        nombre: paquete.nombre, descripcion: paquete.descripcion || undefined, url: urlPaquete,
+        proveedor: { nombre: getEmpresa(paquete.empresa_lider_slug)?.nombre ?? paquete.empresa_lider },
+        precio: paquete.precio_ancla, lugar: sede.nombre,
+      }),
+      jsonLdMigas([
+        { nombre: dict.home.title, url: absolutaEn(lang) },
+        { nombre: sede.nombre, url: absolutaEn(lang, `/sede/${slug}`) },
+        { nombre: paquete.nombre, url: urlPaquete },
+      ]),
+    ]} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede.slug} />
     <main>
       <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />

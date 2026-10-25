@@ -5,7 +5,11 @@ import { cache } from 'react';
 import { getDictionary, hasLocale, type Locale } from '../../../dictionaries';
 import { API_URL, ApiError, getPaquetesSede, getServicioDetalle, getServiciosSede } from '@/lib/api';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
-import { alternativasDe } from '@/lib/site';
+import { absolutaEn } from '@/lib/site';
+import { metadataDePagina } from '@/lib/metadata-pagina';
+import { jsonLdMigas, jsonLdViaje } from '@/lib/seo';
+import { getEmpresa } from '@/content/empresas';
+import { JsonLd } from '@/components/json-ld';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { DetalleProducto } from '@/components/detalle-producto';
@@ -24,8 +28,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!hasLocale(lang)) return {};
   const dict = await getDictionary(lang);
   const result = await cargar(servicio, empresa, lang);
-  const title = result.data?.nombre ?? (servicio === 'pesca-deportiva' ? dict.serviceDetail.fishingTitle : dict.serviceDetail.metaFallback);
-  return { title, alternates: alternativasDe(lang, `/servicio/${empresa}/${servicio}`) };
+  const nombre = result.data?.nombre ?? (servicio === 'pesca-deportiva' ? dict.serviceDetail.fishingTitle : dict.serviceDetail.metaFallback);
+  // La sede del servicio sale de su empresa, no de `?sede=`: el buscador pide la página sin parámetros.
+  const sedeDelServicio = getSedeContenido(getEmpresa(empresa)?.sede ?? '', lang);
+  return metadataDePagina({
+    lang, ruta: `/servicio/${empresa}/${servicio}`, titulo: sedeDelServicio ? `${nombre} · ${sedeDelServicio.nombre}` : nombre,
+    descripcion: result.data?.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
+  });
 }
 export default async function ServicioPage({ params, searchParams }: Props) {
   // La conexion es de fetch CORS: sin crossOrigin el navegador abriria otra.
@@ -44,7 +53,20 @@ export default async function ServicioPage({ params, searchParams }: Props) {
     ? await Promise.all([getServiciosSede(sede.slug, lang).catch(() => null), getPaquetesSede(sede.slug, lang).catch(() => null)])
     : [null, null];
   const vista = vistaDeDetalleServicio({ lang, moneda, dict, sede, otros: { servicios, paquetes }, empresaSlug: empresa, slug, servicio, pesca, traslado });
+  const sedeDelServicio = getSedeContenido(getEmpresa(empresa)?.sede ?? '', lang);
+  const urlServicio = absolutaEn(lang, `/servicio/${empresa}/${slug}`);
   return <>
+    {servicio && <JsonLd datos={[
+      jsonLdViaje({
+        nombre: servicio.nombre, descripcion: servicio.descripcion || undefined, url: urlServicio,
+        proveedor: { nombre: getEmpresa(empresa)?.nombre ?? empresa }, precio: servicio.precio_base, lugar: sedeDelServicio?.nombre,
+      }),
+      jsonLdMigas([
+        { nombre: dict.home.title, url: absolutaEn(lang) },
+        ...(sedeDelServicio ? [{ nombre: sedeDelServicio.nombre, url: absolutaEn(lang, `/sede/${sedeDelServicio.slug}`) }] : []),
+        { nombre: servicio.nombre, url: urlServicio },
+      ]),
+    ]} />}
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede?.slug} />
     <main>
       <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />

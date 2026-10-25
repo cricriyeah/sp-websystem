@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import { Fragment, type ReactNode } from 'react';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getDictionary, hasLocale } from '../../dictionaries';
-import { alternativasDe } from '@/lib/site';
+import { absolutaEn } from '@/lib/site';
+import { metadataDePagina } from '@/lib/metadata-pagina';
+import { jsonLdMigas } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getSedes, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
@@ -30,7 +33,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!hasLocale(lang)) return {};
   const contenido = getSedeContenido(slug, lang);
   if (!contenido) return {};
-  return { title: { absolute: contenido.metaTitle }, description: contenido.metaDescription, alternates: alternativasDe(lang, `/sede/${slug}`) };
+  const dict = await getDictionary(lang);
+  return metadataDePagina({
+    lang, ruta: `/sede/${slug}`, titulo: contenido.metaTitle, tituloCompleto: true, descripcion: contenido.metaDescription,
+    descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
+  });
 }
 
 export default async function SedePage({ params, searchParams }: Props) {
@@ -94,6 +101,10 @@ export default async function SedePage({ params, searchParams }: Props) {
 
   return <>
     <StructuredData lang={lang} slug={slug} negocio={contenido.negocio} description={contenido.metaDescription} faqItems={faq ?? null} />
+    <JsonLd datos={jsonLdMigas([
+      { nombre: dict.home.title, url: absolutaEn(lang) },
+      { nombre: contenido.nombre, url: absolutaEn(lang, `/sede/${slug}`) },
+    ])} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="sede" sedeSlugActual={slug} marcaSede={marcaSede} anclas={anclas} />
     <main>
       {ids.map((id) => <Fragment key={id}>{pintar[id]?.(fondos[id] ?? 'blanco')}</Fragment>)}

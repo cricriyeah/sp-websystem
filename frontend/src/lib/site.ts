@@ -1,6 +1,6 @@
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE } from '@/content/sedes-indice';
-import { getPaquetesSede, getSedes } from './api';
+import { getPaquetesSede, getServiciosSede, getSedes } from './api';
 import { sedesActivas } from './reconciliar-sedes';
 
 // URL publica del sitio. Hace falta para canonicals, hreflang, sitemap y para
@@ -41,6 +41,22 @@ export async function rutasPaquetes(): Promise<string[]> {
     }),
   );
   return porSede.flat();
+}
+
+/**
+ * Las páginas de servicio de las sedes activas (pesca, ballenas, traslados…): son lo que la gente busca y lo
+ * que se reserva, y no estaban en el sitemap. Si el catálogo de una sede no responde, esa sede no aporta rutas.
+ */
+export async function rutasServicios(): Promise<string[]> {
+  const sedesApi = await getSedes().catch(() => null);
+  const sedes = sedesActivas(SEDES_INDICE, sedesApi);
+  const porSede = await Promise.all(
+    sedes.map(async (sede) => {
+      const servicios = await getServiciosSede(sede.slug).catch(() => []);
+      return servicios.map((servicio) => `/servicio/${servicio.empresa_slug}/${servicio.slug}`);
+    }),
+  );
+  return [...new Set(porSede.flat())];
 }
 
 export const absolutaEn = (lang: Locale, ruta: string = '') => `${SITE_URL}/${lang}${ruta}`;

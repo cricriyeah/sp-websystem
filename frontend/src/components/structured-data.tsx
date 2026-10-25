@@ -2,6 +2,7 @@ import type { Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
 import { whatsappNumero, tieneWhatsapp } from '@/lib/contacto';
 import { absolutaEn } from '@/lib/site';
+import { JsonLd } from './json-ld';
 
 type StructuredDataProps = {
   lang: Locale;
@@ -11,9 +12,6 @@ type StructuredDataProps = {
   description: string;
   faqItems: { q: string; a: string }[] | null;
 };
-
-/** JSON dentro de <script>: `<` se escapa para que un texto no pueda cerrar la etiqueta (guía json-ld de Next). */
-const aJsonLd = (dato: unknown) => JSON.stringify(dato).replace(/</g, '\\u003c');
 
 /**
  * JSON-LD para Google: ficha del negocio de la sede y sus preguntas
@@ -36,12 +34,8 @@ export function StructuredData({ lang, slug, negocio, description, faqItems }: S
       addressCountry: negocio.pais,
     },
     ...(tieneWhatsapp ? { telephone: `+${whatsappNumero}` } : {}),
-    openingHoursSpecification: {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-      opens: negocio.horarioApertura,
-      closes: negocio.horarioCierre,
-    },
+    // Sin `openingHoursSpecification`: `horarioApertura` y `horarioCierre` son la ventana de SALIDA de los viajes
+    // (5 a 7 a. m.), no el horario en que el negocio atiende; publicarlo como horario decia que cierra a las 7.
     availableLanguage: ['es', 'en'],
   };
 
@@ -55,20 +49,5 @@ export function StructuredData({ lang, slug, negocio, description, faqItems }: S
     })),
   };
 
-  return (
-    <>
-      {negocioJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: aJsonLd(negocioJsonLd) }}
-        />
-      )}
-      {preguntasJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: aJsonLd(preguntasJsonLd) }}
-        />
-      )}
-    </>
-  );
+  return <JsonLd datos={[negocioJsonLd, preguntasJsonLd].filter(Boolean)} />;
 }
