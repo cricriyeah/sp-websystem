@@ -181,7 +181,7 @@ class ResumenOrdenTest(TestCase):
         self._poner_intent(self.reserva_2, self.empresa_2, 'pi_detalle_2')
         self._intent(self.cliente_1, 'pi_detalle_1', 'requires_capture', 700000)
         self._intent(self.cliente_2, 'pi_detalle_2', 'requires_payment_method', 300000)
-        r = self.client.get(f'/api/{self.sede.slug}/ordenes/{self.orden.pk}/')
+        r = self.client.get(f'/api/{self.sede.slug}/ordenes/{self.orden.pk}/?checkout_id={self.checkout_id}')
         self.assertEqual(r.status_code, 200)
         with scope.con_empresa(self.empresa_1):
             self.orden.refresh_from_db()
