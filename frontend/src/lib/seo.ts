@@ -58,6 +58,19 @@ export function etiquetasSociales({ url, titulo, descripcion, locale, nombreDelS
   };
 }
 
+/** `FAQPage` con las mismas preguntas que se pintan en la página. */
+export function jsonLdPreguntas(preguntas: { q: string; a: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: preguntas.map((p) => ({
+      '@type': 'Question',
+      name: p.q,
+      acceptedAnswer: { '@type': 'Answer', text: p.a },
+    })),
+  };
+}
+
 export type Miga = { nombre: string; url: string };
 
 /** `BreadcrumbList`: inicio › sede › servicio o paquete. */

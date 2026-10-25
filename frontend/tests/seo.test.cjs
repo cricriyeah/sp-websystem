@@ -79,3 +79,10 @@ test('un viaje sin precio valido no lleva oferta', () => {
     assert.equal(v.offers, undefined, String(precio));
   }
 });
+
+test('las preguntas frecuentes van al JSON-LD tal como se pintan', () => {
+  const f = s.jsonLdPreguntas([{ q: '¿Uno?', a: 'Sí.' }, { q: '¿Dos?', a: 'No.' }]);
+  assert.equal(f['@type'], 'FAQPage');
+  assert.deepEqual(f.mainEntity.map((p) => p.name), ['¿Uno?', '¿Dos?']);
+  assert.equal(f.mainEntity[1].acceptedAnswer.text, 'No.');
+});

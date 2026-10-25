@@ -7,7 +7,10 @@ import { API_URL, ApiError, getPaquetesSede, getServicioDetalle, getServiciosSed
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
-import { jsonLdMigas, jsonLdViaje } from '@/lib/seo';
+import { jsonLdMigas, jsonLdPreguntas, jsonLdViaje } from '@/lib/seo';
+import { getFaqServicio } from '@/content/faq-servicios';
+import { FaqSection } from '@/components/faq-section';
+import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { getEmpresa } from '@/content/empresas';
 import { JsonLd } from '@/components/json-ld';
 import { SiteHeader } from '@/components/site-header';
@@ -55,6 +58,13 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   const vista = vistaDeDetalleServicio({ lang, moneda, dict, sede, otros: { servicios, paquetes }, empresaSlug: empresa, slug, servicio, pesca, traslado });
   const sedeDelServicio = getSedeContenido(getEmpresa(empresa)?.sede ?? '', lang);
   const urlServicio = absolutaEn(lang, `/servicio/${empresa}/${slug}`);
+  // Las preguntas del servicio (si ya las tiene) se pintan y van al JSON-LD: son las mismas.
+  const preguntas = getFaqServicio(empresa, slug, lang);
+  const textosFaq = dict.sedeContenido.faq;
+  const nombreServicio = servicio?.nombre ?? dict.serviceDetail.metaFallback;
+  const whatsappFaq = tieneWhatsapp
+    ? { texto: textosFaq.whatsapp, boton: textosFaq.whatsappBoton, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', nombreServicio)) }
+    : null;
   return <>
     {servicio && <JsonLd datos={[
       jsonLdViaje({
@@ -66,10 +76,12 @@ export default async function ServicioPage({ params, searchParams }: Props) {
         ...(sedeDelServicio ? [{ nombre: sedeDelServicio.nombre, url: absolutaEn(lang, `/sede/${sedeDelServicio.slug}`) }] : []),
         { nombre: servicio.nombre, url: urlServicio },
       ]),
+      ...(preguntas ? [jsonLdPreguntas(preguntas)] : []),
     ]} />}
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede?.slug} />
     <main>
       <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />
+      {preguntas && <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={preguntas} whatsapp={whatsappFaq} fondo="cafe-bruma" />}
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={sede?.negocio ?? null} sedeSlug={sede?.slug} empresasDeslinde={[empresa]} />
   </>;
