@@ -40,10 +40,24 @@ export function AvisoProblema({
   const problema = problemaDe(tipo, { lineasDinero, tieneWhatsapp }, textos);
   const ayuda = tieneWhatsapp && tipo !== 'catalogo_caido' && ofrecerAyuda;
 
+  // Un error es el bloque de coral: la ayuda va dentro, en blanco. Un aviso es la caja suave: la ayuda debajo.
+  const enCampo = problema.tono === 'error';
+  const enlaceAyuda = ayuda ? (
+    <a href={whatsappHref(ayudaMensaje)} target="_blank" rel="noopener noreferrer"
+      className={enCampo
+        ? 'flex min-h-11 items-center gap-2 texto-pequeno font-semibold text-hero-ink underline underline-offset-4'
+        : 'mt-2 flex min-h-11 items-center justify-center gap-2 texto-pequeno font-semibold text-tinta-suave hover:text-foreground'}>
+      <WhatsappLogo size={18} weight="fill" aria-hidden />
+      {feedback.helpCta}
+    </a>
+  ) : null;
+
   return (
     <div className={className}>
       <AvisoAccion
         problema={problema}
+        etiquetaDinero={tipo === 'tarjeta_rechazada' ? checkout.etiquetaDinero : undefined}
+        pie={enCampo ? enlaceAyuda : undefined}
         alAccionar={(clave) => {
           if (clave === 'whatsapp') window.open(whatsappHref(ayudaMensaje), '_blank', 'noopener');
           else if (alAccionar) alAccionar(clave);
@@ -51,13 +65,7 @@ export function AvisoProblema({
           else window.location.reload();
         }}
       />
-      {ayuda && (
-        <a href={whatsappHref(ayudaMensaje)} target="_blank" rel="noopener noreferrer"
-          className="mt-2 flex min-h-11 items-center justify-center gap-2 texto-pequeno font-semibold text-tinta-suave hover:text-foreground">
-          <WhatsappLogo size={18} weight="fill" aria-hidden />
-          {feedback.helpCta}
-        </a>
-      )}
+      {!enCampo && enlaceAyuda}
     </div>
   );
 }

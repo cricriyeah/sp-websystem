@@ -232,6 +232,7 @@
         "hoy": "Hoy"
       }
     },
+    "etiquetaDinero": "Tu dinero",
     "motivosTarjeta": {
       "insufficient_funds": "Tu tarjeta no tiene fondos suficientes.",
       "card_declined": "Tu banco rechazó el pago.",

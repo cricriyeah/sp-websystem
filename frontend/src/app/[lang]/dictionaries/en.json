@@ -232,6 +232,7 @@
         "hoy": "Today"
       }
     },
+    "etiquetaDinero": "Your money",
     "motivosTarjeta": {
       "insufficient_funds": "Your card does not have enough funds.",
       "card_declined": "Your bank declined the payment.",

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
-import { m, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import {
   alTocar, bandaPrevia, celdasDelMes, estadoDeCelda, inicioDeMes, moverFoco, moverMes,
 } from '@/lib/calendario-mes';
@@ -41,6 +41,16 @@ type Props = {
   enTarjeta?: boolean;
   textos: TextosCalendario;
 };
+
+// El mes que se va sale hacia el lado contrario al que llega el nuevo: se ve que el calendario pasó de un
+// mes a otro en vez de cambiar de golpe. Con «reducir movimiento» solo se desvanece.
+const VARIANTES_MES = {
+  entra: ({ dir, quieto }: { dir: 1 | -1; quieto: boolean }) => (quieto ? { opacity: 0 } : { opacity: 0, x: dir * 24 }),
+  centro: { opacity: 1, x: 0 },
+  sale: ({ dir, quieto }: { dir: 1 | -1; quieto: boolean }) => (quieto ? { opacity: 0 } : { opacity: 0, x: dir * -24 }),
+};
+// Pausa antes de pasar solo al mes de la salida: deja ver el día elegido y su banda antes de que el mes se mueva.
+const PAUSA_SALTO_MS = 450;
 
 const NOCHES_ENTRE = (desde: string, hasta: string) =>
   Math.round((fromLocalISODate(hasta).getTime() - fromLocalISODate(desde).getTime()) / 86_400_000);
@@ -84,7 +94,15 @@ export function Calendario({
     cuadricula.current?.querySelector<HTMLElement>(`[data-dia="${dia}"]`)?.focus();
   });
 
+  const saltoPendiente = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelarSalto = () => {
+    if (saltoPendiente.current) clearTimeout(saltoPendiente.current);
+    saltoPendiente.current = null;
+  };
+  useEffect(() => cancelarSalto, []);
+
   const cambiarMes = (delta: number) => {
+    cancelarSalto();
     setDireccion(delta > 0 ? 1 : -1);
     setMes((actual) => moverMes(actual, delta));
   };
@@ -122,8 +140,15 @@ export function Calendario({
       // mes: si no, la salida queda fuera de la vista y parece que no se eligió.
       const fin = resultado.seleccion.hasta;
       if (control === 'rango_fijo_paquete' && fin && inicioDeMes(fin) > mes) {
-        setDireccion(1);
-        setMes(inicioDeMes(fin));
+        const destino = inicioDeMes(fin);
+        const saltar = () => {
+          saltoPendiente.current = null;
+          setDireccion(1);
+          setMes(destino);
+        };
+        cancelarSalto();
+        if (sinMovimiento) saltar();
+        else saltoPendiente.current = setTimeout(saltar, PAUSA_SALTO_MS);
       }
     }
   };
@@ -139,6 +164,7 @@ export function Calendario({
     if (!nuevo) return;
     evento.preventDefault();
     puntero.current = 'teclado';
+    cancelarSalto();
     setFoco(nuevo);
     setSobre(nuevo);
     if (inicioDeMes(nuevo) !== mes) {
@@ -242,7 +268,7 @@ export function Calendario({
         onPointerDown={alBajar}
         onPointerUp={alSubir}
         onPointerLeave={() => setSobre(null)}
-        className="touch-pan-y select-none"
+        className="relative touch-pan-y select-none"
       >
         <div role="row" className="grid grid-cols-[repeat(7,minmax(0,1fr))] pb-1">
           {iniciales(locale).map((inicial, i) => (
@@ -251,10 +277,14 @@ export function Calendario({
             </span>
           ))}
         </div>
+        <AnimatePresence mode="popLayout" custom={{ dir: direccion, quieto: !!sinMovimiento }}>
         <m.div
           key={mes}
-          initial={sinMovimiento ? { opacity: 0 } : { opacity: 0, x: direccion * 24 }}
-          animate={sinMovimiento ? { opacity: 1 } : { opacity: 1, x: 0 }}
+          custom={{ dir: direccion, quieto: !!sinMovimiento }}
+          variants={VARIANTES_MES}
+          initial="entra"
+          animate="centro"
+          exit="sale"
           transition={transicion(sinMovimiento, DURACION.larga)}
         >
           {Array.from({ length: 6 }, (_, fila) => (
@@ -291,6 +321,7 @@ export function Calendario({
             </div>
           ))}
         </m.div>
+        </AnimatePresence>
       </div>
 
       <p role="status" className={cn('texto-pequeno text-foreground', !avisoSinLugar && 'sr-only')}>
