@@ -165,40 +165,71 @@
       return boton.getAttribute('data-texto');
     }
 
+    /* Un paquete de varios dias de mar sale cada dia con LA MISMA panga y se reparte una sola vez: su
+     * boton aparece en cada dia, pero todos son la misma reserva. `data-fechas` trae todos sus dias. */
+    function fechasDe(boton) {
+      return (boton.getAttribute('data-fechas') || boton.getAttribute('data-fecha') || '').split(',');
+    }
+
+    function botonesDe(reserva) {
+      var lista = [];
+      for (var p = 0; p < pendientes.length; p++) {
+        if (pendientes[p].getAttribute('data-reserva') === reserva) lista.push(pendientes[p]);
+      }
+      return lista;
+    }
+
     function elegir(boton) {
       soltar();
       elegido = boton;
       panel.setAttribute('data-asignando', '1');
-      pintarElegido(boton);
 
       var reserva = boton.getAttribute('data-reserva');
-      var fecha = boton.getAttribute('data-fecha');
+      var fechas = fechasDe(boton);
       var personas = parseInt(boton.getAttribute('data-personas'), 10);
       var select = selectorDe(reserva);
-      var cabe = 0;
+      var hermanos = botonesDe(reserva);
+      var h;
+      for (h = 0; h < hermanos.length; h++) pintarElegido(hermanos[h]);
 
-      for (var c = 0; c < celdas.length; c++) {
+      /* Una panga sirve solo si esta libre TODOS los dias del viaje que la cuadricula muestra; los dias
+       * fuera de la semana en pantalla los revisa el servidor al guardar. */
+      var aptas = {};
+      var c;
+      for (c = 0; c < celdas.length; c++) {
+        var cand = celdas[c];
+        if (fechas.indexOf(cand.getAttribute('data-fecha')) === -1) continue;
+        var id = cand.getAttribute('data-embarcacion');
+        var sirve = !(cand.hasAttribute('data-ocupada') || cand.hasAttribute('data-fuera') ||
+          cand.querySelector('[data-tentativa]') ||
+          parseInt(cand.getAttribute('data-capacidad'), 10) < personas ||
+          (select && !tieneOpcion(select, id)));
+        if (!sirve) aptas[id] = false;
+        else if (aptas[id] === undefined) aptas[id] = true;
+      }
+
+      var cabe = 0;
+      var contadas = {};
+      for (c = 0; c < celdas.length; c++) {
         var celda = celdas[c];
         /* Lo que no sirve se atenua: con 70 celdas, las pocas que si sirven
          * tienen que destacar contra todo lo demas. La transicion va en CSS. */
         celda.style.opacity = '0.3';
-        if (celda.getAttribute('data-fecha') !== fecha) continue;
-        if (celda.hasAttribute('data-ocupada') || celda.hasAttribute('data-fuera')) continue;
-        if (celda.querySelector('[data-tentativa]')) continue;
-        if (parseInt(celda.getAttribute('data-capacidad'), 10) < personas) continue;
-        if (select && !tieneOpcion(select, celda.getAttribute('data-embarcacion'))) continue;
+        if (fechas.indexOf(celda.getAttribute('data-fecha')) === -1) continue;
+        var idCelda = celda.getAttribute('data-embarcacion');
+        if (aptas[idCelda] !== true) continue;
         celda.style.opacity = '';
         celda.setAttribute('data-elegible', '1');
         celda.style.boxShadow = 'inset 0 0 0 2px ' + VERDE;
         celda.style.background = 'rgba(21, 128, 61, 0.10)';
         celda.style.cursor = 'pointer';
-        cabe++;
+        if (!contadas[idCelda]) { contadas[idCelda] = true; cabe++; }
       }
 
       if (!select) {
         decir('Esa reserva no esta en la tabla de abajo (otro filtro o pagina). Cambia el filtro y vuelve a tocarla.', ROJO);
       } else if (!cabe) {
-        decir(nombreDe(boton) + ': no hay pangas libres donde quepa ese dia.', ROJO);
+        decir(nombreDe(boton) + ': no hay una panga libre todos los dias del viaje donde quepa el grupo.', ROJO);
       } else {
         decir(nombreDe(boton) + ' — toca una panga marcada en verde.', VERDE);
       }
@@ -251,12 +282,16 @@
       vuela.oncancel = terminar;
     }
 
+    /* La panga elegida ocupa su celda en CADA dia del viaje: `tentativas[reserva].celdas` las guarda todas. */
     function revertirCelda(reserva) {
       var previa = tentativas[reserva];
       if (!previa) return;
-      while (previa.celda.firstChild) previa.celda.removeChild(previa.celda.firstChild);
-      for (var h = 0; h < previa.hijos.length; h++) previa.celda.appendChild(previa.hijos[h]);
-      previa.celda.removeAttribute('title');
+      for (var k = 0; k < previa.celdas.length; k++) {
+        var guardada = previa.celdas[k];
+        while (guardada.celda.firstChild) guardada.celda.removeChild(guardada.celda.firstChild);
+        for (var h = 0; h < guardada.hijos.length; h++) guardada.celda.appendChild(guardada.hijos[h]);
+        guardada.celda.removeAttribute('title');
+      }
       delete tentativas[reserva];
     }
 
@@ -269,9 +304,11 @@
         select.value = '';
         select.dispatchEvent(new Event('change', { bubbles: true }));
       }
-      pintarPendiente(previa.boton);
-      previa.boton.title = '';
-      animar(previa.boton, [{ opacity: 0.3 }, { opacity: 1 }], { duration: 200 });
+      for (var b = 0; b < previa.botones.length; b++) {
+        pintarPendiente(previa.botones[b]);
+        previa.botones[b].title = '';
+        animar(previa.botones[b], [{ opacity: 0.3 }, { opacity: 1 }], { duration: 200 });
+      }
       decir('');
     }
 
@@ -286,19 +323,31 @@
       var hasta = celda.getBoundingClientRect();
 
       /* 1. El estado primero. */
-      select.value = celda.getAttribute('data-embarcacion');
+      var embarcacion = celda.getAttribute('data-embarcacion');
+      select.value = embarcacion;
       select.dispatchEvent(new Event('change', { bubbles: true }));
 
-      var hijos = [];
-      while (celda.firstChild) hijos.push(celda.removeChild(celda.firstChild));
-      tentativas[reserva] = { celda: celda, hijos: hijos, boton: boton };
-      var marca = document.createElement('span');
-      marca.setAttribute('data-tentativa', '1');
-      marca.style.color = VERDE;
-      marca.style.fontStyle = 'italic';
-      marca.textContent = nombreDe(boton).replace(/\s*·.*$/, '') + ' · sin guardar';
-      celda.appendChild(marca);
-      celda.title = 'Toca para deshacer';
+      var fechas = fechasDe(boton);
+      var guardadas = [];
+      var marca = null;
+      for (var c = 0; c < celdas.length; c++) {
+        var destino = celdas[c];
+        if (destino.getAttribute('data-embarcacion') !== embarcacion) continue;
+        if (fechas.indexOf(destino.getAttribute('data-fecha')) === -1) continue;
+        var hijos = [];
+        while (destino.firstChild) hijos.push(destino.removeChild(destino.firstChild));
+        guardadas.push({ celda: destino, hijos: hijos });
+        var senal = document.createElement('span');
+        senal.setAttribute('data-tentativa', '1');
+        senal.style.color = VERDE;
+        senal.style.fontStyle = 'italic';
+        senal.textContent = nombreDe(boton).replace(/\s*·.*$/, '') + ' · sin guardar';
+        destino.appendChild(senal);
+        destino.title = 'Toca para deshacer';
+        if (destino === celda) marca = senal;
+      }
+      var botones = botonesDe(reserva);
+      tentativas[reserva] = { celdas: guardadas, botones: botones };
 
       var panga = select.options[select.selectedIndex].textContent.replace(/\s*\(.*$/, '');
       decir(nombreDe(boton) + ' → ' + panga + '. Falta Guardar.', VERDE);
@@ -311,6 +360,11 @@
       limpiarCeldas();
       elegido = null;
       boton.style.visibility = 'hidden';
+
+      /* Los botones de los otros dias de la misma reserva quedan asignados de una vez: es la misma panga. */
+      for (var o = 0; o < botones.length; o++) {
+        if (botones[o] !== boton) pintarAsignado(botones[o], panga);
+      }
 
       /* 2. Despues, la animacion: el boton reaparece ya como "asignado". */
       vuelo(boton, desde, hasta, marca, function () {
@@ -333,7 +387,10 @@
         var marca = this.querySelector('[data-tentativa]');
         if (marca && !elegido) {
           for (var reserva in tentativas) {
-            if (tentativas[reserva].celda === this) { deshacer(reserva); return; }
+            var propias = tentativas[reserva].celdas;
+            for (var n = 0; n < propias.length; n++) {
+              if (propias[n].celda === this) { deshacer(reserva); return; }
+            }
           }
         }
         colocar(this);
@@ -409,9 +466,14 @@
       habiaCambios = cambios > 0;
 
       if (etiqueta) {
+        /* Una reserva de varios dias tiene un boton por dia pero se reparte una vez: se cuenta por reserva. */
         var asignados = 0;
+        var contadas = {};
         for (var j = 0; j < chips.length; j++) {
-          var select = selectorDe(chips[j].getAttribute('data-reserva'));
+          var reservaDelChip = chips[j].getAttribute('data-reserva');
+          if (contadas[reservaDelChip]) continue;
+          contadas[reservaDelChip] = true;
+          var select = selectorDe(reservaDelChip);
           if (select && select.value) asignados++;
         }
         var faltan = Math.max(inicial - asignados, 0);

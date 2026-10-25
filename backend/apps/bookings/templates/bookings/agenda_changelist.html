@@ -206,6 +206,7 @@ el selector de su fila. Guardar sigue siendo el boton de la tabla.
                                         <button type="button" data-pendiente
                                                 data-reserva="{{ reserva.pk }}"
                                                 data-fecha="{{ reserva.fecha|date:'Y-m-d' }}"
+                                                data-fechas="{{ reserva.fechas_de_mar }}"
                                                 data-personas="{{ reserva.numero_personas }}"
                                                 title="{{ reserva.nombre_cliente }} · {{ reserva.numero_personas }} pers — toca para ver donde cabe"
                                                 style="display: block; width: 100%; margin-bottom: 0.25rem; padding: 0.1rem 0.4rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #dc2626; font-weight: 600; font-size: 0.8rem; border: 1px solid #dc2626; border-radius: 4px; background: transparent; cursor: pointer">

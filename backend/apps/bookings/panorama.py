@@ -168,6 +168,20 @@ def armar_panorama(desde, empresa, dias=DIAS_DEL_PANORAMA, hoy=None):
         else:
             sin_panga[salida.fecha].append(reserva)
 
+    # Un paquete de varios dias aparece en cada dia de mar sin panga, pero se reparte UNA vez: la panga
+    # vale para todos sus dias. Cada boton lleva todos los dias de su reserva (`fechas_de_mar`, ISO
+    # separado por comas) para que `panorama.js` busque la panga libre en todos y no solo en el primero.
+    por_repartir = {r.pk: r for dia in sin_panga.values() for r in dia}
+    if por_repartir:
+        dias_de_mar = {pk: {r.fecha} for pk, r in por_repartir.items()}
+        for reserva_id, fecha in ReservaSalida.objects.filter(
+            reserva_id__in=list(por_repartir), empresa=empresa,
+        ).values_list('reserva_id', 'fecha'):
+            dias_de_mar[reserva_id].add(fecha)
+        for dia in sin_panga.values():
+            for reserva in dia:
+                reserva.fechas_de_mar = ','.join(f.isoformat() for f in sorted(dias_de_mar[reserva.pk]))
+
     # Cobrados que ya pasaron y nadie asigno: la agenda los lista y los marca
     # ATRASADO, asi que el resumen tiene que contarlos tambien.
     atrasados = sin_lo_que_no_se_reparte(Reserva.objects.filter(

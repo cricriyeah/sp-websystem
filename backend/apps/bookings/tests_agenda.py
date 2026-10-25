@@ -500,6 +500,33 @@ class PanoramaTests(EmpresaTestCase):
         self.assertEqual([r.pk for r in panorama.sin_repartir[1]], [pendiente.pk])
         self.assertEqual(panorama.sin_repartir[0], [])
 
+    def test_un_viaje_de_varios_dias_lleva_todos_sus_dias_en_cada_boton(self):
+        """Un paquete con salidas aparece sin panga en cada dia, pero es UNA reserva con UNA panga: el
+        boton de cualquier dia tiene que saber todos los dias para buscar la panga libre en todos."""
+        from .models import ReservaSalida
+
+        inicio = self.hoy + timedelta(days=1)
+        pendiente = viaje(self.empresa, fecha=inicio)
+        servicio = pendiente.servicio or crear_servicio_pesca(self.empresa)
+        for i in range(3):
+            ReservaSalida.objects.create(
+                empresa=self.empresa, reserva=pendiente, servicio=servicio, fecha=inicio + timedelta(days=i),
+            )
+
+        panorama = armar_panorama(self.hoy, self.empresa)
+
+        todos = ','.join((inicio + timedelta(days=i)).isoformat() for i in range(3))
+        for columna in (1, 2, 3):
+            self.assertEqual([r.pk for r in panorama.sin_repartir[columna]], [pendiente.pk])
+            self.assertEqual(panorama.sin_repartir[columna][0].fechas_de_mar, todos)
+
+    def test_un_viaje_de_un_dia_lleva_solo_su_fecha(self):
+        pendiente = viaje(self.empresa, fecha=self.hoy + timedelta(days=1))
+
+        panorama = armar_panorama(self.hoy, self.empresa)
+
+        self.assertEqual(panorama.sin_repartir[1][0].fechas_de_mar, pendiente.fecha.isoformat())
+
     def test_el_conteo_del_pie_cuadra(self):
         viaje(self.empresa, fecha=self.hoy, estado=Reserva.Estado.ASIGNADA, embarcacion=self.grande)
         EmbarcacionNoDisponible.objects.create(

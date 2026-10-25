@@ -543,7 +543,13 @@ No aplica a traslados (los vehículos de transporte terrestre se asignan en la p
     filtra por `Reserva.fecha`, no por cada dia de un paquete de varias salidas.
   - `static/bookings/panorama.js`: tocar un viaje sin panga marca en verde las pangas
     libres de ese dia cuyo valor exista en el selector de su fila, y tocar una llena el
-    selector. No guarda; Guardar sigue siendo el boton de la tabla.
+    selector. No guarda; Guardar sigue siendo el boton de la tabla. **Un paquete de varios dias de
+    mar tiene un boton por dia pero es UNA reserva con UNA panga para todos sus dias**: cada boton
+    lleva `data-fechas` (`Reserva.fechas_de_mar`, que arma `armar_panorama`), la panga solo se marca
+    si esta libre en todos los dias que la cuadricula muestra, la eleccion ocupa su celda en cada
+    uno y todos los botones de la reserva quedan asignados juntos (antes cada boton buscaba solo en
+    `Reserva.fecha` y cinco toques llenaban cinco pangas del dia 1). Los dias fuera de la semana en
+    pantalla los revisa el modelo al guardar.
 
 ## Calendario (apps/bookings/calendario.py, vistas_calendario.py)
 
