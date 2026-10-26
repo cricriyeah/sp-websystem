@@ -10,7 +10,7 @@ import { botonClases } from '@/components/ui/variantes';
  * hay hasta subir lo real): son los de La Paz. El definitivo es neutro (varias sedes o Baja en
  * general), sin audio, ≤ 8 MB y ≥ 1280 px (Task 9.7).
  */
-const VIDEO_HUB = '/videos/nuevo-hero.webm';
+const VIDEO_HUB = '/videos/videohero.webm';
 const POSTER_HUB = '/photos/cola-amarilla-acantilado.webp';
 
 type Props = {
