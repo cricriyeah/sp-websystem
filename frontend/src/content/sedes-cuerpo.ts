@@ -400,8 +400,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         {
           src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp',
           alt: 'Vista aérea del Hotel Casa Arrecife con el mar de La Ventana al fondo',
-          ancho: 2000,
-          alto: 1118,
+          ancho: 2750,
+          alto: 1536,
           empresaSlug: 'la-ventana-travel',
         },
         {
@@ -421,8 +421,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         {
           src: '/catalogo/la-ventana-travel-hospedaje-cocina.webp',
           alt: 'La cocina compartida del Hotel Casa Arrecife',
-          ancho: 2000,
-          alto: 1494,
+          ancho: 2400,
+          alto: 1792,
           empresaSlug: 'la-ventana-travel',
         },
         {
@@ -515,8 +515,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         {
           src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp',
           alt: 'Aerial view of Hotel Casa Arrecife with the La Ventana sea behind it',
-          ancho: 2000,
-          alto: 1118,
+          ancho: 2750,
+          alto: 1536,
           empresaSlug: 'la-ventana-travel',
         },
         {
@@ -536,8 +536,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         {
           src: '/catalogo/la-ventana-travel-hospedaje-cocina.webp',
           alt: 'The shared kitchen at Hotel Casa Arrecife',
-          ancho: 2000,
-          alto: 1494,
+          ancho: 2400,
+          alto: 1792,
           empresaSlug: 'la-ventana-travel',
         },
         {

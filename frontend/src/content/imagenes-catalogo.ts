@@ -23,7 +23,7 @@ type Foto = FotoBase & { relleno?: true; mas?: FotoBase[]; galeria?: FotoGaleria
 
 // Fotos del hospedaje de La Ventana (de ejemplo, sin pie de foto). Se comparten entre la tarjeta y la galería.
 const HOSPEDAJE_VISTA_AEREA: FotoGaleria = {
-  src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp', ancho: 2000, alto: 1118,
+  src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp', ancho: 2750, alto: 1536,
   alt: { es: 'Vista aérea del hospedaje, con su terraza y el mar al fondo', en: 'Aerial view of the lodging, with its terrace and the sea behind it' },
 };
 const HOSPEDAJE_HABITACION_NICHOS: FotoGaleria = {
@@ -39,7 +39,7 @@ const HOSPEDAJE_ESTUDIO_VISTA_MAR: FotoGaleria = {
   alt: { es: 'Estudio con puerta corrediza y vista al mar', en: 'Studio with a sliding door and a view of the sea' },
 };
 const HOSPEDAJE_COCINA: FotoGaleria = {
-  src: '/catalogo/la-ventana-travel-hospedaje-cocina.webp', ancho: 2000, alto: 1494,
+  src: '/catalogo/la-ventana-travel-hospedaje-cocina.webp', ancho: 2400, alto: 1792,
   alt: { es: 'Cocina compartida con barra de mármol', en: 'Shared kitchen with a marble counter' },
 };
 const HOSPEDAJE_FOGATA: FotoGaleria = {
