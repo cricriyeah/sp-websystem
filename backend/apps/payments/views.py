@@ -504,24 +504,46 @@ class CrearPagoView(APIView):
                 self._liberar_apartado_si_procede(empresa, reserva.pk, apartado_info['apartado_hasta'])
             return Response({'detail': 'No se pudo iniciar el pago. Intenta de nuevo.'}, status=502)
 
+        ya_no_pendiente = False
         with transaction.atomic():
-            if detalle_a_congelar is not None:
-                detalle_a_congelar.numero_personas = reserva.numero_personas
-                detalle_a_congelar.precio_calculado = precio_base_servicio
-                detalle_a_congelar.save(update_fields=['numero_personas', 'precio_calculado'])
-            congelar_personalizaciones(extras_a_borrar, extras_a_congelar)
+            # Entre el bloque A y aqui se hablo con Stripe sin candado: alguien pudo saldar la reserva (la vendedora por
+            # transferencia, el webhook de otro intent) o cancelarla. Se vuelve a leer el estado CON candado antes de
+            # escribir encima del precio y del intent de una reserva que ya no esta esperando el pago.
+            estado_actual = (
+                Reserva.objects.select_for_update().filter(pk=reserva.pk).values_list('estado', flat=True).first()
+            )
+            if estado_actual != Reserva.Estado.PENDIENTE_PAGO:
+                ya_no_pendiente = True
+            else:
+                if detalle_a_congelar is not None:
+                    detalle_a_congelar.numero_personas = reserva.numero_personas
+                    detalle_a_congelar.precio_calculado = precio_base_servicio
+                    detalle_a_congelar.save(update_fields=['numero_personas', 'precio_calculado'])
+                congelar_personalizaciones(extras_a_borrar, extras_a_congelar)
 
-            reserva.precio_total = precio_total
-            reserva.iva_monto = iva
-            reserva.iva_tasa = iva_tasa
-            reserva.forma_pago = forma_pago
-            reserva.stripe_payment_intent_id = intent.id
-            reserva.codigo_promocional = codigo_promocional
-            reserva.descuento_aplicado = descuento if codigo_promocional else None
-            reserva.save(update_fields=[
-                'precio_total', 'iva_monto', 'iva_tasa', 'forma_pago', 'stripe_payment_intent_id',
-                'codigo_promocional', 'descuento_aplicado',
-            ])
+                reserva.precio_total = precio_total
+                reserva.iva_monto = iva
+                reserva.iva_tasa = iva_tasa
+                reserva.forma_pago = forma_pago
+                reserva.stripe_payment_intent_id = intent.id
+                reserva.codigo_promocional = codigo_promocional
+                reserva.descuento_aplicado = descuento if codigo_promocional else None
+                reserva.save(update_fields=[
+                    'precio_total', 'iva_monto', 'iva_tasa', 'forma_pago', 'stripe_payment_intent_id',
+                    'codigo_promocional', 'descuento_aplicado',
+                ])
+
+        if ya_no_pendiente:
+            # El intent que se acaba de crear no debe quedar cobrable: un cliente que lo pague seria un doble cobro.
+            try:
+                cliente.payment_intents.cancel(
+                    intent.id, options={'idempotency_key': f'crear-pago-{reserva.pk}-{intent.id}-cancel'})
+            except stripe.StripeError:
+                logger.exception('No se pudo anular el intent %s de una reserva que ya no esta pendiente', intent.id)
+            return Response(
+                {'detail': 'Esta reserva ya no esta pendiente de pago.', 'codigo': 'ya_no_pendiente'},
+                status=409,
+            )
 
         apartado_hasta = apartado_info.get('apartado_hasta')
         return Response({

@@ -27,7 +27,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Vive la mejor experiencia de pesca deportiva en La Paz, BCS con capitanes locales. Salidas privadas desde Marina La Costa. Reserva en línea o escríbenos por WhatsApp.',
       hero: {
-        video: '/videos/videohero.webm',
+        video: '/videos/nuevo-hero.webm',
         imagen: '/photos/cola-amarilla-acantilado.webp',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
@@ -54,6 +54,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'A bordo', texto: 'Solo tu grupo y tu capitán en la panga. Hasta 5 personas.', foto: '/photos/capitan-cabrilla-bahia.webp' },
           { titulo: 'Pesca', texto: 'De 6 a 7 horas en la bahía, buscando lo que pica en la temporada.', foto: '/photos/cana-doblada-dorado.webp' },
           { titulo: 'Regresa', texto: 'Con tus fotos y tu captura.', foto: '/photos/grupo-cabrilla-costa.webp' },
+        ],
+      },
+      // Foto de relleno hasta tener la del equipo de Sal y Sol. Con más fotos, las demás van en tira debajo.
+      conocenos: {
+        titulo: 'Tres generaciones de pescadores en La Paz',
+        etiquetaDesde: 'Desde',
+        desde: '1950',
+        fotos: [
+          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Capitán de Sal y Sol con una cabrilla en la bahía de La Paz' },
         ],
       },
       galeria: [
@@ -193,7 +202,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Experience the best sportfishing in La Paz, BCS with passionate local captains. Private charters from Marina La Costa. Book online or message us on WhatsApp.',
       hero: {
-        video: '/videos/videohero.webm',
+        video: '/videos/nuevo-hero.webm',
         imagen: '/photos/cola-amarilla-acantilado.webp',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
@@ -220,6 +229,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'On board', texto: 'Just your group and your captain on the boat. Up to 5 guests.', foto: '/photos/capitan-cabrilla-bahia.webp' },
           { titulo: 'Fishing', texto: 'Six to eight hours on the bay, going after whatever is biting this season.', foto: '/photos/cana-doblada-dorado.webp' },
           { titulo: 'Return', texto: 'Back with your photos and your catch.', foto: '/photos/grupo-cabrilla-costa.webp' },
+        ],
+      },
+      // Placeholder photo until we have the Sal y Sol crew's own. Extra photos go in a strip below.
+      conocenos: {
+        titulo: 'Three generations of fishermen in La Paz',
+        etiquetaDesde: 'Since',
+        desde: '1950',
+        fotos: [
+          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Sal y Sol captain holding a grouper on the bay of La Paz' },
         ],
       },
       galeria: [

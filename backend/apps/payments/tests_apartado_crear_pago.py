@@ -520,6 +520,30 @@ class ApartadoCrearPagoTests(ApiTestCase):
         payment_intents.create.assert_not_called()
 
     @mock.patch.object(StripeClient, 'payment_intents')
+    def test_si_la_reserva_se_salda_mientras_se_habla_con_stripe_no_se_escribe_encima_y_se_anula_el_intent(
+        self, payment_intents
+    ):
+        # La vendedora marca pagada por transferencia justo cuando `crear-pago` ya estaba creando el intent.
+        pk = self.reserva.pk
+
+        def _crea_y_otro_la_salda(*args, **kwargs):
+            Reserva.objects.filter(pk=pk).update(estado=Reserva.Estado.PAGADA, precio_total=Decimal('999.00'))
+            return intent_falso(id='pi_carrera')
+
+        payment_intents.create.side_effect = _crea_y_otro_la_salda
+
+        resp = self.post_pago()
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.json()['codigo'], 'ya_no_pendiente')
+        payment_intents.cancel.assert_called_once()
+        self.assertEqual(payment_intents.cancel.call_args.args[0], 'pi_carrera')
+        reserva = Reserva.objects.get(pk=pk)
+        self.assertEqual(reserva.estado, Reserva.Estado.PAGADA)
+        self.assertEqual(reserva.precio_total, Decimal('999.00'))  # no se reescribio
+        self.assertNotEqual(reserva.stripe_payment_intent_id, 'pi_carrera')
+
+    @mock.patch.object(StripeClient, 'payment_intents')
     def test_error_409_pago_en_curso_salida_temprana_bloque_a(self, payment_intents):
         self.reserva.stripe_payment_intent_id = 'pi_en_curso'
         self.reserva.save(update_fields=['stripe_payment_intent_id'])

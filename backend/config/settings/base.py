@@ -180,7 +180,9 @@ UNFOLD = {
     # El logo reemplaza al nombre en el menu lateral: el de la empresa del jefe o la vendedora, o el de la
     # plataforma para el operador.
     'SITE_LOGO': 'apps.tenancy.admin_branding.logo_backoffice',
-    'STYLES': [lambda request: static('tenancy/backoffice.css')],
+    'STYLES': [lambda request: static('tenancy/backoffice.css'), lambda request: static('tenancy/avisos.css')],
+    # Aviso de reservas nuevas en cualquier pantalla del admin (apps/bookings/avisos.py).
+    'SCRIPTS': [lambda request: static('tenancy/avisos.js')],
     'SHOW_HISTORY': True,
     'SHOW_VIEW_ON_SITE': False,
     'DASHBOARD_CALLBACK': 'apps.tenancy.inicio.contexto_inicio',
@@ -201,6 +203,12 @@ UNFOLD = {
                         'icon': 'calendar_month',
                         'link': reverse_lazy('calendario'),
                         'permission': lambda request: request.user.has_perm('bookings.view_reserva'),
+                    },
+                    {
+                        'title': 'Notificaciones',
+                        'icon': 'notifications',
+                        'link': reverse_lazy('admin:tenancy_notificacion_changelist'),
+                        'permission': lambda request: request.user.has_perm('tenancy.view_notificacion'),
                     },
                     {
                         'title': 'Reservas',
@@ -425,7 +433,7 @@ MIDDLEWARE = [
     # un nginx delante. Va justo despues de SecurityMiddleware, como pide su doc.
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'apps.tenancy.middleware_sesion.SesionSinRenovarEnSondeo',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -505,6 +513,14 @@ TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
 # (apps/cuentas). Es un par con el secreto de arriba: la misma que NEXT_PUBLIC_TURNSTILE_SITE_KEY en Vercel.
 # Sin ella, sin el secreto o sin Resend, la recuperacion responde 503 (cierra, no deja pasar).
 TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '')
+# El inicio de sesion del backoffice (/admin/login/) tambien lleva Turnstile (apps/cuentas/login.py) cuando las dos
+# llaves estan puestas. Salida de emergencia si Cloudflare se cae o el dominio del backend no esta en el widget y
+# nadie puede entrar: LOGIN_TURNSTILE_OBLIGATORIO=0 en Render (y volver a 1 en cuanto se arregle).
+LOGIN_TURNSTILE_OBLIGATORIO = os.environ.get('LOGIN_TURNSTILE_OBLIGATORIO', '1').strip() != '0'
+# Un captcha rechazado no cuenta en Axes: tope por IP y por hora (en la base) y espera corta a Cloudflare, para que un
+# token falso repetido no ocupe los procesos de gunicorn que tambien sirven la API.
+LOGIN_MAX_CAPTCHA_FALLIDOS_IP_HORA = int(os.environ.get('LOGIN_MAX_CAPTCHA_FALLIDOS_IP_HORA', '20'))
+LOGIN_TURNSTILE_TIMEOUT_SEGUNDOS = int(os.environ.get('LOGIN_TURNSTILE_TIMEOUT_SEGUNDOS', '3'))
 
 # Recuperacion de contrasena por codigo al correo (apps/cuentas). Los valores son los del diseno
 # aprobado; las variables existen solo para afinar un limite sin tocar codigo, no hace falta definirlas.
@@ -524,6 +540,10 @@ RECUPERACION_AVISO_ADMIN = [
 
 # URL pública del frontend para enlaces de retomar enviados desde el backend.
 FRONTEND_URL = os.environ.get('FRONTEND_URL', '')
+
+# URL pública del backend (el admin) para los enlaces a una reserva en los correos al negocio. Render pone
+# RENDER_EXTERNAL_URL solo; BACKEND_URL la pisa si se quiere un dominio propio. Vacía = el correo va sin enlace.
+BACKEND_URL = (os.environ.get('BACKEND_URL') or os.environ.get('RENDER_EXTERNAL_URL', '')).rstrip('/')
 
 # Minutos que dura el apartado temporal de cupo en el checkout web. 0 = apagado.
 APARTADO_MINUTOS = 0 if 'test' in sys.argv else int(os.environ.get('APARTADO_MINUTOS', '0'))

@@ -2,6 +2,7 @@
 from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
+from django.db import models
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
@@ -10,10 +11,11 @@ from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import action
 
-from . import scope
+from . import notificaciones, scope
 from .acciones_fila import AccionesDeFilaMixin
+from .admin_mixins import EmpresaScopedAdminMixin
 from .alta_empresa import AltaEmpresaForm, dar_de_alta_empresa, estado_de_empresa, url_del_webhook
-from .models import Aeropuerto, Empresa, MembresiaEmpresa, Sede
+from .models import Aeropuerto, Empresa, LecturaNotificacion, MembresiaEmpresa, Notificacion, Sede
 
 
 class SoloOperadorPlataformaAdminMixin:
@@ -144,6 +146,106 @@ class EmpresaAdmin(SoloOperadorPlataformaAdminMixin, AccionesDeFilaMixin, ModelA
             'title': f'{empresa.nombre}: qué falta', 'empresa': empresa, 'pasos': pasos,
             'pendientes': sum(1 for paso in pasos if not paso['hecho']),
             'webhook': url_del_webhook(empresa, request),
+        })
+
+
+@admin.register(Notificacion)
+class NotificacionAdmin(EmpresaScopedAdminMixin, ModelAdmin):
+    """El feed de notificaciones del backoffice (ver `notificaciones.py` y el ARCH).
+
+    De SOLO LECTURA para todos, operador incluido: las filas las crea `avisar()` y las borra el cron de retencion.
+    «Marcar como leidas» no toca la notificacion: escribe la lectura de quien lo pide (por eso se gatea con ver, no con
+    cambiar). `texto` y `motivo` traen datos del cliente: se muestran SIEMPRE con `format_html` y argumentos o como
+    texto plano (autoescape), nunca con `mark_safe`.
+    """
+
+    list_display = ['nivel_pintado', 'que_paso', 'quien', 'tipo', 'creado_en', 'abrir', 'leida']
+    list_display_links = None
+    list_filter = ['tipo', 'nivel']
+    list_per_page = 50
+    ordering = ['-creado_en', '-pk']
+    actions = ['marcar_como_leidas']
+    actions_list = ['accion_marcar_todas']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        ya_leida = LecturaNotificacion.objects.filter(notificacion=models.OuterRef('pk'), usuario=request.user)
+        return (super().get_queryset(request).select_related('actor')
+                .annotate(_leida=models.Exists(ya_leida)))
+
+    def get_urls(self):
+        # Antes de super(): el admin termina en un catch-all <path:object_id>/.
+        return [
+            path('marcar-todas/', self.admin_site.admin_view(self.marcar_todas_view),
+                 name='tenancy_notificacion_marcar_todas'),
+        ] + super().get_urls()
+
+    @admin.display(description='Nivel', ordering='nivel')
+    def nivel_pintado(self, obj):
+        return format_html('<span class="notif-nivel notif-nivel--{}">{}</span>', obj.nivel, obj.get_nivel_display())
+
+    @admin.display(description='Qué pasó')
+    def que_paso(self, obj):
+        # Lo no leido va en negritas.
+        base = (format_html('<span>{}</span>', obj.texto) if obj._leida
+                else format_html('<strong>{}</strong>', obj.texto))
+        if obj.motivo:
+            return format_html('{}<br><span class="notif-motivo">{}</span>', base, obj.motivo)
+        return base
+
+    @admin.display(description='Quién')
+    def quien(self, obj):
+        if not obj.actor_id:
+            return 'Sistema'
+        return obj.actor.get_full_name() or obj.actor.get_username()
+
+    @admin.display(description='Enlace')
+    def abrir(self, obj):
+        url = notificaciones.enlace_seguro(obj.enlace_url)
+        if not url:
+            return '—'
+        return format_html('<a href="{}">{}</a>', url, obj.enlace_texto or 'Abrir')
+
+    @admin.display(description='Leída', boolean=True)
+    def leida(self, obj):
+        return obj._leida
+
+    @admin.action(description='Marcar como leídas', permissions=['view'])
+    def marcar_como_leidas(self, request, queryset):
+        # `queryset` ya respeta el filtro activo y la empresa de quien pide: marca exactamente lo seleccionado.
+        sin_leer = list(queryset.filter(_leida=False))
+        notificaciones.marcar_leidas(request.user, sin_leer)
+        self.message_user(request, f'{len(sin_leer)} notificación(es) marcada(s) como leída(s).', messages.SUCCESS)
+
+    @action(description='Marcar todas como leídas', url_path='marcar-todas-accion', permissions=['view'])
+    def accion_marcar_todas(self, request):
+        return HttpResponseRedirect(reverse('admin:tenancy_notificacion_marcar_todas'))
+
+    def marcar_todas_view(self, request):
+        """Pide confirmacion (GET) y marca como leidas TODAS las pendientes de quien lo pide (POST). Es un POST
+        con token CSRF y no un enlace: cambiar estado con un GET se puede disparar desde cualquier otra pagina."""
+        if not self.has_view_permission(request):
+            raise PermissionDenied
+        pendientes = self.get_queryset(request).filter(_leida=False)
+        volver = reverse('admin:tenancy_notificacion_changelist')
+        if request.method == 'POST':
+            sin_leer = list(pendientes)
+            notificaciones.marcar_leidas(request.user, sin_leer)
+            self.message_user(
+                request, f'{len(sin_leer)} notificación(es) marcada(s) como leída(s).', messages.SUCCESS)
+            return HttpResponseRedirect(volver)
+        return TemplateResponse(request, 'tenancy/marcar_todas_notificaciones.html', {
+            **self.admin_site.each_context(request),
+            'opts': self.model._meta, 'titulo': 'Marcar todas como leídas',
+            'cuantas': pendientes.count(), 'volver': volver,
         })
 
 

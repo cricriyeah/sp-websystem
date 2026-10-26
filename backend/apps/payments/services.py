@@ -15,6 +15,7 @@ import stripe
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.utils import OperationalError
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.bookings.cupo import SinCupoError
@@ -34,7 +35,8 @@ except ImportError:
     def notificar_orden_pagada(orden):
         pass
 from apps.tenancy import scope
-from apps.tenancy.models import Empresa
+from apps.tenancy.models import Empresa, Notificacion
+from apps.tenancy.notificaciones import registrar_notificacion, sin_romper
 
 from .estrategias_precio import precio_traslado_congelado
 from .pricing import a_centavos, con_iva, de_centavos, monto_inicial
@@ -148,6 +150,10 @@ def _aplicar_pago_exitoso_transaccional(intent, empresa):
             return _cancelar_orden_sin_cupo(reserva, intent, empresa, motivo=f'sin cupo en {nombre_servicio}')
         return _cancelar_sin_cupo(reserva, intent, empresa, motivo=str(exc), causa='cupo')
 
+    # En linea y en el alcance de esta empresa (el webhook y la conciliacion ya lo abrieron): comparte el COMMIT del
+    # cobro, y si el cobro se revierte la notificacion tambien. Nunca lanza.
+    _notificar_reserva_nueva(reserva, empresa)
+
     if reserva.orden_id:
         orden = Orden.objects.select_for_update().get(pk=reserva.orden_id)
         # NO orden.reservas.all() — bajo el RLS de esta empresa solo vería su
@@ -179,11 +185,34 @@ def _aplicar_pago_exitoso_transaccional(intent, empresa):
     return APLICADO
 
 
+def _producto_de(reserva):
+    if reserva.paquete_id:
+        return reserva.paquete.nombre
+    if reserva.servicio_id:
+        return reserva.servicio.nombre
+    return 'Pesca deportiva'
+
+
+def _enlace_a(reserva):
+    return reverse('admin:bookings_reserva_change', args=[reserva.pk])
+
+
+@sin_romper
+def _notificar_reserva_nueva(reserva, empresa):
+    registrar_notificacion(
+        empresa, Notificacion.Nivel.EXITO,
+        f'Nueva reserva pagada: {reserva.nombre_cliente} · {_producto_de(reserva)} · {reserva.fecha:%d/%m/%Y}.',
+        tipo=Notificacion.Tipo.RESERVA_NUEVA, enlace_url=_enlace_a(reserva), enlace_texto='Ver reserva',
+    )
+
+
 def _resolver_cobro_repetido(reserva, intent, empresa):
     """La reserva ya no esta pendiente. Si es el mismo intent, es Stripe
     reintentando el evento y no hay nada que hacer. Si es OTRO intent, al
     cliente le cobraron dos veces: se devuelve el segundo de inmediato."""
-    if reserva.stripe_payment_intent_id == intent['id']:
+    # Solo es "evento repetido" si ese intent ya se aplico (dejo `monto_pagado`). Una reserva saldada por transferencia
+    # conserva el intent del checkout abandonado sin haberlo cobrado: si ese cobro llega, es un doble cobro.
+    if reserva.stripe_payment_intent_id == intent['id'] and (reserva.monto_pagado or reserva.monto_reembolsado):
         logger.info('Evento repetido del pago %s, ya aplicado', intent['id'])
         return YA_APLICADO
 
@@ -191,11 +220,11 @@ def _resolver_cobro_repetido(reserva, intent, empresa):
         'Cobro duplicado en la reserva %s: ya pagada con %s y llego %s. Se reembolsa el segundo.',
         reserva.pk, reserva.stripe_payment_intent_id, intent['id'],
     )
-    return (
-        DUPLICADO_REEMBOLSADO
-        if reembolsar(intent, 'cobro duplicado', empresa)
-        else FALLO_REEMBOLSO
-    )
+    if reembolsar(intent, 'cobro duplicado', empresa):
+        return DUPLICADO_REEMBOLSADO
+    # Un cliente cobrado dos veces cuyo reembolso no salio: sin alerta nadie se entera hasta que se queje.
+    _gestionar_fallo_reembolso(reserva, intent, empresa, motivo='Cobro duplicado: no se pudo devolver el segundo cargo')
+    return FALLO_REEMBOLSO
 
 
 def _verificar_monto(reserva, intent):
@@ -305,6 +334,12 @@ def _gestionar_fallo_reembolso(reserva, intent, empresa, motivo):
         empresa_id = empresa.pk
         reserva_id = reserva.pk
         motivo_alerta = motivo or 'Fallo al procesar el reembolso en Stripe'
+        # Sellado una sola vez por reserva (el UPDATE de arriba): una sola notificacion, no una por reintento.
+        registrar_notificacion(
+            empresa, Notificacion.Nivel.ERROR, f'El reembolso de {reserva.nombre_cliente} falló.',
+            motivo=motivo_alerta, tipo=Notificacion.Tipo.REEMBOLSO,
+            enlace_url=_enlace_a(reserva), enlace_texto='Ver reserva',
+        )
 
         def _notificar_fallo():
             try:
@@ -318,6 +353,18 @@ def _gestionar_fallo_reembolso(reserva, intent, empresa, motivo):
                 )
 
         transaction.on_commit(_notificar_fallo)
+
+
+@sin_romper
+def _registrar_cancelacion_sin_cupo(reserva, empresa):
+    """Queda en el feed del backoffice: nadie la ve en pantalla (la causa el webhook, no una persona) y es un cliente
+    que pago, se le devolvio todo y se quedo sin viaje. Nunca rompe el reembolso (registrar_notificacion no lanza)."""
+    registrar_notificacion(
+        empresa, Notificacion.Nivel.AVISO,
+        f'Sin cupo: se reembolsó y canceló la reserva de {reserva.nombre_cliente} · {_producto_de(reserva)} · '
+        f'{reserva.fecha:%d/%m/%Y}.',
+        tipo=Notificacion.Tipo.REEMBOLSO, enlace_url=_enlace_a(reserva), enlace_texto='Ver reserva',
+    )
 
 
 def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None, causa='cupo'):
@@ -338,6 +385,7 @@ def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None, causa='cupo'):
     reserva.apartado_demanda = None
     reserva.full_clean()
     reserva.save()
+    _registrar_cancelacion_sin_cupo(reserva, empresa)
 
     empresa_id = empresa.pk
     reserva_id = reserva.pk
@@ -445,6 +493,16 @@ def aplicar_reembolso(charge, empresa):
         )
         return None
 
+    if not reserva.monto_pagado:
+        # La reserva se pago por otra via (transferencia, efectivo) y este cargo de tarjeta NO fue su cobro: es el cobro
+        # repetido que `_resolver_cobro_repetido` acaba de devolver. Tomarlo por reembolso total cancelaria una
+        # reserva pagada, soltaria su cupo, su panga y su capitan, y anotaria una salida sin su entrada.
+        logger.error(
+            'Reembolso del cargo %s en la reserva %s, que no registro cobro con tarjeta (se pago por otra via); '
+            'no se cancela ni se anota.', charge['id'], reserva.pk,
+        )
+        return None
+
     devuelto = _monto_devuelto(charge, reserva)
     if devuelto <= (reserva.monto_reembolsado or Decimal('0.00')):
         logger.info('Reembolso del cargo %s ya registrado en la reserva %s', charge['id'], reserva.pk)
@@ -457,6 +515,11 @@ def aplicar_reembolso(charge, empresa):
         reserva.save(update_fields=['monto_reembolsado', 'reembolsada_en'])
         logger.info(
             'Reserva %s: reembolso parcial de %s por el cargo %s', reserva.pk, devuelto, charge['id'],
+        )
+        registrar_notificacion(
+            empresa, Notificacion.Nivel.AVISO,
+            f'Reembolso parcial registrado: {devuelto:.2f} {reserva.moneda} · {reserva.nombre_cliente}.',
+            tipo=Notificacion.Tipo.REEMBOLSO, enlace_url=_enlace_a(reserva), enlace_texto='Ver reserva',
         )
         return reserva
 
@@ -476,6 +539,12 @@ def aplicar_reembolso(charge, empresa):
     else:
         reserva.save(update_fields=['monto_reembolsado', 'reembolsada_en', 'reembolsada'])
     logger.info('Reserva %s: reembolso total por el cargo %s (%s)', reserva.pk, charge['id'], reserva.estado)
+    cancelada = ' La reserva quedó cancelada.' if reserva.estado == Reserva.Estado.CANCELADA else ''
+    registrar_notificacion(
+        empresa, Notificacion.Nivel.AVISO,
+        f'Reembolso total registrado: {devuelto:.2f} {reserva.moneda} · {reserva.nombre_cliente}.{cancelada}',
+        tipo=Notificacion.Tipo.REEMBOLSO, enlace_url=_enlace_a(reserva), enlace_texto='Ver reserva',
+    )
     return reserva
 
 

@@ -50,7 +50,7 @@ class ReservasListaTests(EmpresaTestCase):
         })
         self.assertTrue(pestanas['proximas']['activa'])
         self.assertContains(respuesta, 'agenda-pestanas')
-        self.assertContains(respuesta, 'bookings/reservas-nuevas.js')
+        self.assertContains(respuesta, 'tenancy/avisos.js')
         self.assertIn('cliente', respuesta.context['cl'].list_display_links)
         for vista, ids in [('hoy', [hoy.pk]), ('manana', [temprano.pk, tarde.pk]),
                            ('todas', [tarde.pk, cancelada.pk, pendiente.pk, temprano.pk, hoy.pk, ayer.pk])]:

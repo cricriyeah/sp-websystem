@@ -130,6 +130,25 @@ services:
         value: "3.14"
       - fromGroup: pescadeportiva-secrets
 
+  # Purga las notificaciones del backoffice (apps/tenancy) de hace mas de 90 dias, de todas las empresas (el command
+  # corre como operador de plataforma por la RLS). Las lecturas caen en cascada. Diario para que la tabla y el conteo
+  # del sondeo se mantengan baratos; no se empalma con checkouts (30 9) ni con recuperacion (45 9 el dia 1).
+  - type: cron
+    name: pescadeportiva-limpiar-notificaciones
+    runtime: python
+    plan: starter
+    region: oregon
+    rootDir: backend
+    schedule: "15 9 * * *"  # 09:15 UTC = 02:15 en America/Mazatlan, fuera de horario
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py limpiar_notificaciones --dias 90
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      - fromGroup: pescadeportiva-secrets
+
 # Credenciales compartidas por los tres servicios. Se capturan una sola vez en
 # este grupo (dashboard > Environment Groups) en vez de repetirlas —y arriesgarse
 # a que se desincronicen— en cada uno. `DJANGO_SECRET_KEY` va aqui y no como

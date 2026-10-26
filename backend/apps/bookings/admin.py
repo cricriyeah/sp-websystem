@@ -19,7 +19,6 @@ from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.timesince import timesince
@@ -39,7 +38,8 @@ from apps.notifications.services import enlace_retomar_orden
 from apps.tenancy import scope
 from apps.tenancy.acciones_fila import AccionesDeFilaMixin
 from apps.tenancy.admin_mixins import EmpresaScopedAdminMixin, EmpresaScopedUserAdminMixin
-from apps.tenancy.models import Empresa, MembresiaEmpresa
+from apps.tenancy.models import Empresa, MembresiaEmpresa, Notificacion
+from apps.tenancy.notificaciones import avisar, registrar_notificacion
 
 from apps.tenancy.usuarios import crear_usuario_con_rol
 
@@ -47,6 +47,11 @@ from .forms import AltaUsuarioForm, AltaVendedoraForm
 from .forms_alta_reserva import AltaReservaForm
 from .limites_servicio import mapa_limites
 from .precio_sugerido import sugerir_precio
+from .signals import tomar_resultados_de_aviso
+from .transferencia import (
+    ErrorDeTransferencia, cerrar_cobro_con_tarjeta, marcar_pagada_por_transferencia, monto_sugerido,
+    puede_marcarse_pagada,
+)
 from .vistas_precio import respuesta_precio_sugerido
 from .vistas_enlace_pago import respuesta_enlace_pago
 
@@ -97,6 +102,32 @@ def telefono_marcable(telefono):
     if len(digitos) == 10:
         return LADA_PAIS + digitos
     return digitos if len(digitos) >= 11 else ''
+
+
+def _nombres_para_aviso(reservas, maximo=3):
+    """«Ana Ruiz, Beto Soto y 2 más»: los clientes de una accion sobre varias reservas, sin alargar el aviso."""
+    nombres = [r.nombre_cliente for r in reservas]
+    if len(nombres) <= maximo:
+        return ', '.join(nombres)
+    return f"{', '.join(nombres[:maximo])} y {len(nombres) - maximo} más"
+
+
+def _avisar_por_empresa(request, reservas, nivel, tipo, texto_de, *, mensaje=None):
+    """Una notificacion por EMPRESA para una accion sobre varias reservas (el operador de plataforma puede actuar
+    sobre varias a la vez, y cada empresa solo ve la suya). La primera lleva ademas el aviso de pantalla."""
+    grupos = {}
+    for reserva in reservas:
+        grupos.setdefault(reserva.empresa_id, []).append(reserva)
+    for indice, grupo in enumerate(grupos.values()):
+        if len(grupo) == 1:
+            enlace, enlace_texto = reverse('admin:bookings_reserva_change', args=[grupo[0].pk]), 'Ver reserva'
+        else:
+            enlace, enlace_texto = reverse('admin:bookings_reserva_changelist'), 'Ver reservas'
+        datos = dict(empresa=grupo[0].empresa, tipo=tipo, enlace_url=enlace, enlace_texto=enlace_texto)
+        if indice == 0:
+            avisar(request, nivel, texto_de(grupo), mensaje=mensaje, **datos)
+        else:
+            registrar_notificacion(datos.pop('empresa'), nivel, texto_de(grupo), actor=request.user, **datos)
 
 
 @admin.register(CupoDiario)
@@ -247,56 +278,74 @@ class AccionesEnEspanolMixin:
         return [('', 'Elegir acción'), *opciones[1:]]
 
 
-class AvisoDeReservasNuevasMixin:
-    """Contador de reservas nuevas para un listado del admin.
+class AvisoDeAsignacionMixin:
+    """Dice, al guardar, que paso con el aviso al cliente cuando se reparte panga y capitan.
 
-    El admin es HTML renderizado en el servidor: no hay push ni reactividad. Esto
-    le da a cada listado un endpoint `nuevas/` que dice cuantas reservas entraron
-    desde que se cargo la pagina, y `bookings/reservas-nuevas.js` lo consulta cada
-    30 segundos para pintar un boton flotante.
+    El correo sale despues de confirmar la transaccion y la senal (`signals.avisar_asignacion`) deja anotado
+    si salio o por que no. Aqui se lee eso y se le dice a quien guardo, en el mismo aviso verde o rojo que usa
+    el resto del admin. Antes todo era mudo: un correo que fallaba solo quedaba en el log del servidor.
 
-    Lo comparten el listado de Reservas y la Agenda: en las dos se esta mirando la
-    pantalla cuando entra una reserva nueva. Cada admin registra su propia URL con
-    su nombre, y el JS arma el endpoint relativo a la pagina en la que esta.
+    Se envuelve la vista completa (`changelist_view` para la edicion en linea de la Agenda, `changeform_view`
+    para una reserva) y no `save_model`: ahi el correo todavia no ha salido.
     """
 
-    def get_urls(self):
-        # Va antes de super(): las URLs del admin terminan en un catch-all
-        # `<path:object_id>/` que si no se tragaria 'nuevas/'.
-        return [
-            path(
-                'nuevas/',
-                self.admin_site.admin_view(self.reservas_nuevas_view),
-                name=f'bookings_{self.model._meta.model_name}_nuevas',
-            ),
-        ] + super().get_urls()
+    def save_model(self, request, obj, form, change):
+        ya_avisado = obj.aviso_asignacion_enviado_en is not None
+        cambio = {'embarcacion', 'capitan'} & set(form.changed_data)
+        # La senal lo lee para atribuir la notificacion del correo a quien asigno (ver `signals.avisar_asignacion`).
+        obj._asignado_por_id = request.user.pk
+        super().save_model(request, obj, form, change)
+        if not cambio:
+            return
+        # `avisar` dice lo que paso en pantalla Y lo deja en las notificaciones. Se escribe en esta transaccion: si el
+        # guardado se revierte, esta constancia tambien.
+        enlace = dict(
+            empresa=obj.empresa, tipo=Notificacion.Tipo.ASIGNACION,
+            enlace_url=reverse('admin:bookings_reserva_change', args=[obj.pk]), enlace_texto='Ver reserva',
+        )
+        if ya_avisado:
+            avisar(
+                request, Notificacion.Nivel.AVISO,
+                f'Cambiaste la panga o el capitán de {obj.nombre_cliente}. Al cliente no le llega aviso de cambios: '
+                'avísale tú.', **enlace,
+            )
+        elif obj.embarcacion_id and not obj.capitan_id:
+            avisar(
+                request, Notificacion.Nivel.AVISO,
+                f'Panga asignada a {obj.nombre_cliente}. El correo al cliente sale cuando también tenga capitán.',
+                **enlace,
+            )
 
-    def reservas_nuevas_view(self, request):
-        """Cuantas reservas entraron desde que la vendedora cargo el listado.
+    def _decir_lo_que_paso(self, request):
+        for r in tomar_resultados_de_aviso():
+            if r['enviado']:
+                self.message_user(
+                    request, f"Panga y capitán asignados. Correo enviado a {r['correo']} ({r['cliente']}).",
+                    messages.SUCCESS,
+                )
+            else:
+                self.message_user(
+                    request,
+                    f"No se pudo avisar a {r['cliente']}: {r['motivo']}. La asignación sí quedó guardada; "
+                    'avísale por WhatsApp.',
+                    messages.ERROR,
+                )
 
-        Sin `desde` devuelve la hora del servidor y cero: asi el navegador nunca
-        usa su propio reloj como referencia. Con `desde` cuenta solo las que ya
-        ocupan cupo (pagadas en adelante) — los checkouts abandonados dejan filas
-        en pendiente_pago y avisar de esas volveria el contador puro ruido.
-        """
-        if not self.has_view_permission(request):
-            raise PermissionDenied
+    def changelist_view(self, request, extra_context=None):
+        if request.method == 'POST':
+            tomar_resultados_de_aviso()  # lo que haya de antes (otro lugar del sistema) no es de este guardado
+        respuesta = super().changelist_view(request, extra_context)
+        if request.method == 'POST':
+            self._decir_lo_que_paso(request)
+        return respuesta
 
-        desde_param = request.GET.get('desde')
-        if not desde_param:
-            return JsonResponse({'desde': timezone.now().isoformat(), 'nuevas': 0})
-
-        desde = parse_datetime(desde_param)
-        if desde is None:
-            return JsonResponse({'detail': 'desde invalido.'}, status=400)
-        if timezone.is_naive(desde):
-            desde = timezone.make_aware(desde)
-
-        nuevas = Reserva.objects.filter(
-            creado_en__gt=desde, estado__in=ESTADOS_QUE_OCUPAN_CUPO,
-            empresa=scope.empresa_actual(request),
-        ).count()
-        return JsonResponse({'desde': desde.isoformat(), 'nuevas': nuevas})
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        if request.method == 'POST':
+            tomar_resultados_de_aviso()
+        respuesta = super().changeform_view(request, object_id, form_url, extra_context)
+        if request.method == 'POST':
+            self._decir_lo_que_paso(request)
+        return respuesta
 
 
 class ReservaPersonalizacionInline(admin.TabularInline):
@@ -719,7 +768,7 @@ class OrdenAdmin(AccionesEnEspanolMixin, AccionesDeFilaMixin, ModelAdmin):
 
 
 @admin.register(Reserva)
-class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
+class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     campos_escopeados_por_empresa = ('servicio', 'vendedora', 'embarcacion', 'capitan')
     change_form_template = 'bookings/reserva_change_form.html'
     warn_unsaved_form = True
@@ -891,18 +940,42 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             except (SinCupoError, IntegrityError) as exc:
                 motivo = str(exc) if isinstance(exc, SinCupoError) else 'Ya no hay habitación esas fechas.'
                 raise CupoAgotadoAlGuardar(motivo) from exc
+            self._avisar_cambio_de_fecha(request, obj, form, change)
             return
 
         # Una reserva que entra ya pagada (o vuelve a pagada) aparta habitacion y componentes
         # con la misma funcion que el webhook de Stripe: antes esto solo corria al pagar en la
         # web, y la misma habitacion se podia vender otra vez.
+        # `Reserva.save()` actualiza `_estado_original` al guardar: hay que leerlo ANTES.
+        estaba_pendiente = getattr(obj, '_estado_original', None) == Reserva.Estado.PENDIENTE_PAGO
         try:
             with transaction.atomic():
                 super().save_model(request, obj, form, change)
                 reservar_cupo_al_confirmar(obj)
+                # Si el cliente dejo un cobro con tarjeta abierto (checkout abandonado) y la vendedora la pasa a pagada
+                # a mano, ese cobro se anula igual que con el boton «Pagó por transferencia»: si no, cobraria otra vez.
+                if estaba_pendiente and obj.stripe_payment_intent_id and not obj.monto_pagado:
+                    cerrar_cobro_con_tarjeta(obj)
         except (SinCupoError, IntegrityError) as exc:
             motivo = str(exc) if isinstance(exc, SinCupoError) else 'Ya no hay habitación esas fechas.'
             raise CupoAgotadoAlGuardar(motivo) from exc
+        except ErrorDeTransferencia as exc:
+            raise CupoAgotadoAlGuardar(str(exc)) from exc
+        self._avisar_cambio_de_fecha(request, obj, form, change)
+
+    @staticmethod
+    def _avisar_cambio_de_fecha(request, obj, form, change):
+        """Reprogramar un viaje ya vendido no le manda nada al cliente: lo dice la pantalla y queda en las
+        notificaciones, para que quien lo hizo (o su compañera) recuerde avisarle. Una reserva que aun no se paga no
+        tiene nada agendado que avisar."""
+        if not change or 'fecha' not in form.changed_data or obj.estado not in ESTADOS_QUE_OCUPAN_CUPO:
+            return
+        avisar(
+            request, Notificacion.Nivel.AVISO,
+            f'Cambiaste la fecha de {obj.nombre_cliente} a {obj.fecha:%d/%m/%Y}. Al cliente no le llega aviso: avísale tú.',
+            empresa=obj.empresa, tipo=Notificacion.Tipo.CAMBIO_FECHA,
+            enlace_url=reverse('admin:bookings_reserva_change', args=[obj.pk]), enlace_texto='Ver reserva',
+        )
 
     @staticmethod
     def _entra_a_ocupar_cupo(obj, change):
@@ -1013,6 +1086,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                     'asignacion': asignacion,
                     'asignacion_urgente': 'Sin panga' in str(asignacion),
                     'cobrar_saldo': self._boton_cobrar_saldo(request, obj),
+                    'pagar_transferencia': self._boton_pagar_transferencia(request, obj),
                 }
         try:
             return super().changeform_view(request, object_id, form_url, contexto)
@@ -1362,6 +1436,11 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 self.admin_site.admin_view(self.enlace_pago_view),
                 name='bookings_reserva_enlace_pago',
             ),
+            path(
+                '<path:object_id>/pagar-transferencia/',
+                self.admin_site.admin_view(self.pagar_transferencia_view),
+                name='bookings_reserva_pagar_transferencia',
+            ),
         ] + super().get_urls()
 
     def precio_sugerido_view(self, request):
@@ -1370,6 +1449,84 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
     def enlace_pago_view(self, request):
         return respuesta_enlace_pago(self, request)
 
+    def pagar_transferencia_view(self, request, object_id):
+        """Confirma que llego una transferencia y deja la reserva pagada (ver `apps.bookings.transferencia`).
+
+        Pide confirmacion y el monto: anotar por error una transferencia que no llego aparece como dinero en el
+        banco en Finanzas y aparta cupo de un viaje que no se pago."""
+        reserva = self.get_object(request, object_id)
+        if reserva is None:
+            raise Http404('Reserva no encontrada')
+        if not self.has_change_permission(request, reserva):
+            raise PermissionDenied
+        volver = reverse('admin:bookings_reserva_change', args=[reserva.pk])
+        if not puede_marcarse_pagada(reserva):
+            avisar(
+                request, Notificacion.Nivel.ERROR,
+                'Esta reserva ya no está esperando el pago: se pagó, se canceló o es parte de un paquete '
+                'de varias empresas.',
+                empresa=reserva.empresa, tipo=Notificacion.Tipo.TRANSFERENCIA, enlace_url=volver,
+                enlace_texto='Ver reserva',
+            )
+            return HttpResponseRedirect(volver)
+
+        error = None
+        sugerido = monto_sugerido(reserva)
+        # En POST se usa lo que la persona escribio, tal cual: un campo vacio es un error ("no es un numero"), no
+        # "el total". El total solo se propone al abrir la pantalla.
+        if request.method == 'POST':
+            monto = request.POST.get('monto', '')
+        else:
+            monto = '' if sugerido is None else f'{sugerido:.2f}'
+        if request.method == 'POST':
+            try:
+                reserva = marcar_pagada_por_transferencia(reserva.pk, monto, request.user)
+            except ErrorDeTransferencia as exc:
+                error = str(exc)
+            else:
+                self.log_change(
+                    request, reserva, f'Marcada pagada por transferencia: {reserva.monto_transferencia} {reserva.moneda}.')
+                resultado = reserva.resultado_notificacion
+                correo_salio = resultado.get('email')
+                if 'email' in resultado:
+                    cierre = (f'Se le mandó el correo de confirmación a {reserva.correo_cliente}.' if correo_salio
+                              else 'No se pudo mandar el correo de confirmación: avísale tú por WhatsApp.')
+                elif not reserva.correo_cliente:
+                    cierre = 'La reserva no tiene correo del cliente: avísale tú por WhatsApp.'
+                    correo_salio = False
+                else:
+                    # El correo sale al confirmar la transaccion de la peticion entera, que es DESPUES de esta
+                    # respuesta: todavia no hay resultado y decir «no se pudo» seria mentir. Si falla, queda una
+                    # notificacion (`transferencia._avisar_al_cliente`).
+                    cierre = (f'El correo de confirmación a {reserva.correo_cliente} sale en unos segundos; '
+                              'si no sale, te avisa Notificaciones.')
+                    correo_salio = True
+                self.message_user(
+                    request,
+                    f'Listo: la reserva de {reserva.nombre_cliente} quedó pagada por transferencia '
+                    f'({reserva.monto_transferencia} {reserva.moneda}). ' + cierre,
+                    messages.SUCCESS if correo_salio else messages.WARNING,
+                )
+                return HttpResponseRedirect(volver)
+
+        return TemplateResponse(request, 'bookings/pagar_transferencia.html', {
+            **self.admin_site.each_context(request),
+            'opts': self.model._meta,
+            'titulo': 'Marcar como pagada por transferencia',
+            'reserva': reserva,
+            'servicio': self.servicio_resumen(reserva),
+            'cuando': self.cuando(reserva),
+            'monto': monto,
+            'error': error,
+            'volver': volver,
+        })
+
+    def _boton_pagar_transferencia(self, request, obj):
+        """Datos del boton «Marcar pagada por transferencia» del resumen, o None si no aplica."""
+        if not puede_marcarse_pagada(obj) or not self.has_change_permission(request, obj):
+            return None
+        return {'url': reverse('admin:bookings_reserva_pagar_transferencia', args=[obj.pk])}
+
     @action(description='Enlace de pago', url_path='enlace-pago-accion', permissions=['add'])
     def accion_enlace_pago(self, request):
         if not self.has_add_permission(request):
@@ -1377,8 +1534,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
         return HttpResponseRedirect(reverse('admin:bookings_reserva_enlace_pago'))
 
     class Media:
-        # Aviso de reservas nuevas en el listado, ver reservas_nuevas_view.
-        js = ['bookings/reservas-nuevas.js', 'bookings/alta-reserva.js']
+        js = ['bookings/alta-reserva.js']
         # Ancho de las columnas de asignacion, ver el propio archivo.
         css = {'all': ['bookings/admin-columnas.css']}
 
@@ -1566,6 +1722,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             })
 
         actualizadas = 0
+        canceladas = []
         with transaction.atomic():
             # `of=('self',)`: el listado trae `select_related` de FK opcionales (vendedora,
             # paquete, panga...) y Postgres rechaza FOR UPDATE sobre el lado nulo de un
@@ -1581,12 +1738,22 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 reserva.save()
                 self.log_change(request, reserva, 'Cancelada por mal clima; reembolso pendiente en Stripe.')
                 actualizadas += 1
-        self.message_user(
-            request,
+                canceladas.append(reserva)
+        pantalla = (
             f'{actualizadas} reserva(s) cancelada(s). El dinero todavía NO se devolvió: haz el reembolso '
             'en Stripe (cada reserva en la columna "Atención" tiene su enlace) o, si fue en efectivo o '
             'transferencia, devuélvelo y usa "Marcar devolución ya hecha". '
-            'Filtro rápido: requiere atención (devolución) = Sí.',
+            'Filtro rápido: requiere atención (devolución) = Sí.'
+        )
+        if not canceladas:
+            self.message_user(request, pantalla)
+            return
+        # En el feed va corto: el «como seguir» es de la pantalla, no de la bitacora.
+        _avisar_por_empresa(
+            request, canceladas, Notificacion.Nivel.AVISO, Notificacion.Tipo.CANCELACION,
+            lambda grupo: (f'{len(grupo)} reserva(s) cancelada(s) por mal clima: {_nombres_para_aviso(grupo)}. '
+                           'El dinero todavía NO se devolvió.'),
+            mensaje=pantalla,
         )
 
     @action(
@@ -1647,6 +1814,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
             })
 
         liquidadas = 0
+        cobradas = {}
         for reserva in seleccionadas:
             # Recalcula con la fila bloqueada: el saldo de la pantalla pudo cambiar.
             monto = liquidar_saldo_en_efectivo(reserva.pk, request.user)
@@ -1654,13 +1822,30 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeReservasNuevasMixin, EmpresaSc
                 continue
             self.log_change(request, reserva, f'Saldo cobrado en efectivo: {monto} {reserva.moneda}.')
             liquidadas += 1
+            cobradas[reserva] = monto
 
         aviso = f'{liquidadas} reserva(s) liquidada(s).'
         omitidas = len(seleccionadas) - liquidadas
         if omitidas:
             aviso += (f' {omitidas} se omitieron: no debian nada, ya estaban canceladas, '
                       'reembolsadas o sin pagar.')
-        self.message_user(request, aviso)
+        if not liquidadas:
+            self.message_user(request, aviso)
+            return
+
+        def texto_de(grupo):
+            if len(grupo) == 1:
+                return f'Cobro en efectivo: {cobradas[grupo[0]]:.2f} {grupo[0].moneda} · {grupo[0].nombre_cliente}.'
+            por_moneda = {}
+            for reserva in grupo:
+                por_moneda[reserva.moneda] = por_moneda.get(reserva.moneda, Decimal('0.00')) + cobradas[reserva]
+            totales = ' + '.join(f'{monto:.2f} {moneda}' for moneda, monto in sorted(por_moneda.items()))
+            return f'Cobro en efectivo en {len(grupo)} reservas: {totales} ({_nombres_para_aviso(grupo)}).'
+
+        _avisar_por_empresa(
+            request, list(cobradas), Notificacion.Nivel.EXITO, Notificacion.Tipo.COBRO_EFECTIVO, texto_de,
+            mensaje=aviso,
+        )
 
 
 @admin.register(CheckoutAbandonado)
@@ -1676,6 +1861,24 @@ class CheckoutAbandonadoAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, Mode
     list_filter = ['fecha', 'moneda']
     search_fields = ['nombre_cliente', 'telefono_cliente', 'correo_cliente']
     date_hierarchy = 'creado_en'
+    actions_row = ['accion_fila_ver', 'accion_fila_transferencia']
+
+    def has_transferir_permission(self, request):
+        """La lista es de solo lectura, pero quien puede cambiar reservas puede marcar una pagada por transferencia
+        (la pantalla que lo hace es la de la reserva y comprueba el permiso otra vez)."""
+        return request.user.has_perm('bookings.change_reserva')
+
+    @action(
+        description='Pagó por transferencia',
+        url_path='pago-por-transferencia',
+        permissions=['transferir'],
+        extra_options={'display_in_dropdown': False},
+    )
+    def accion_fila_transferencia(self, request, object_id=None, *args, **kwargs):
+        object_id = object_id or kwargs.get('object_id')
+        if not self.get_queryset(request).filter(pk=object_id).exists():
+            raise Http404('Reserva no encontrada')
+        return HttpResponseRedirect(reverse('admin:bookings_reserva_pagar_transferencia', args=[object_id]))
 
     def get_queryset(self, request):
         # `super()` aplica el filtro por empresa del mixin; aqui se replica lo que
@@ -2217,7 +2420,7 @@ class AgendaForm(forms.ModelForm):
 
 
 @admin.register(Agenda)
-class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
+class AgendaAdmin(AvisoDeAsignacionMixin, EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Repartir los viajes ya vendidos: que panga y que capitan le toca a cada uno.
 
     Se edita en el propio listado, que es el punto entero de la pantalla: con ocho
@@ -2250,9 +2453,7 @@ class AgendaAdmin(AvisoDeReservasNuevasMixin, EmpresaScopedAdminMixin, AccionesD
         return super().get_changelist_form(request, form=formulario, **kwargs)
 
     class Media:
-        # Mismo aviso de reservas nuevas que el listado de Reservas: repartir
-        # tambien se hace mirando esta pantalla.
-        js = ['bookings/reservas-nuevas.js', 'bookings/panorama.js']
+        js = ['bookings/panorama.js']
         css = {'all': ['bookings/admin-columnas.css']}
 
     SESION_EMPRESA = 'agenda_empresa'

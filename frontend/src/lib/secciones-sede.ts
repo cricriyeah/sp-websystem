@@ -4,7 +4,7 @@
 // que es `server-only`: la página le pasa los datos.
 import { hayGaleria } from './etiquetas-catalogo';
 
-export type SeccionId = 'hero' | 'reservar' | 'paquetes' | 'dia' | 'tranquilidad' | 'galeria' | 'temporadas' | 'opiniones' | 'preguntas';
+export type SeccionId = 'hero' | 'reservar' | 'paquetes' | 'dia' | 'tranquilidad' | 'conocenos' | 'galeria' | 'temporadas' | 'opiniones' | 'preguntas';
 
 export type Seccion = { id: SeccionId; estado?: 'normal' | 'vacio' | 'catalogo_caido' };
 
@@ -18,6 +18,8 @@ type Entrada = {
   temporadas: readonly unknown[] | null | undefined;
   /** Los momentos de «Tu día»; sin ellos no hay sección. */
   dia: readonly unknown[] | undefined;
+  /** Las fotos de «Conócenos»; sin ellas no hay sección. */
+  conocenos: readonly unknown[] | undefined;
 };
 
 function estadoDeReservar(servicios: Entrada['servicios'], paquetes: Entrada['paquetes']): Seccion['estado'] {
@@ -25,7 +27,7 @@ function estadoDeReservar(servicios: Entrada['servicios'], paquetes: Entrada['pa
   return servicios === null || paquetes === null ? 'catalogo_caido' : 'vacio';
 }
 
-export function seccionesDeSede({ servicios, paquetes, resenas, fotos, faq, temporadas, dia }: Entrada): Seccion[] {
+export function seccionesDeSede({ servicios, paquetes, resenas, fotos, faq, temporadas, dia, conocenos }: Entrada): Seccion[] {
   const secciones: Seccion[] = [
     { id: 'hero' },
     { id: 'reservar', estado: estadoDeReservar(servicios, paquetes) },
@@ -36,6 +38,7 @@ export function seccionesDeSede({ servicios, paquetes, resenas, fotos, faq, temp
     // El pago, la cancelación y el clima van junto al producto: la política es real en las 4 empresas.
     { id: 'tranquilidad' },
   );
+  if (conocenos && conocenos.length > 0) secciones.push({ id: 'conocenos' });
   if (hayGaleria([...fotos])) secciones.push({ id: 'galeria' });
   if (temporadas && temporadas.length > 0) secciones.push({ id: 'temporadas' });
   if (resenas.some((r) => r.confirmada)) secciones.push({ id: 'opiniones' });
@@ -49,6 +52,7 @@ export const ANCLA_DE: Record<SeccionId, string> = {
   paquetes: 'paquetes',
   dia: 'dia',
   tranquilidad: 'tranquilidad',
+  conocenos: 'conocenos',
   galeria: 'galeria',
   temporadas: 'temporadas',
   opiniones: 'opiniones',
@@ -70,6 +74,7 @@ const PREFERENCIA: Record<Exclude<SeccionId, 'hero'>, readonly Fondo[]> = {
   paquetes: ['cafe-bruma', 'blanco'],
   dia: ['blanco', 'cafe-bruma'],
   tranquilidad: ['tinta'],
+  conocenos: ['blanco', 'cafe-bruma'],
   galeria: ['blanco', 'cafe-bruma'],
   temporadas: ['blanco', 'cafe-bruma'],
   opiniones: ['cafe-bruma', 'blanco'],
@@ -93,9 +98,9 @@ export function fondosDeSecciones(ids: readonly SeccionId[]): Partial<Record<Sec
   return resultado;
 }
 
-/** Fuera del menú: el héroe (es el inicio), tranquilidad (va pegada a reservar) y los paquetes y el día (van junto a reservar). */
-type SinEnlace = 'hero' | 'tranquilidad' | 'paquetes' | 'dia';
-const SIN_ENLACE: readonly SeccionId[] = ['hero', 'tranquilidad', 'paquetes', 'dia'] satisfies SinEnlace[];
+/** Fuera del menú: el héroe (es el inicio), tranquilidad (va pegada a reservar), los paquetes y el día (van junto a reservar) y conócenos (se lee de paso hacia la galería). */
+type SinEnlace = 'hero' | 'tranquilidad' | 'paquetes' | 'dia' | 'conocenos';
+const SIN_ENLACE: readonly SeccionId[] = ['hero', 'tranquilidad', 'paquetes', 'dia', 'conocenos'] satisfies SinEnlace[];
 export type SeccionNavegable = Exclude<SeccionId, SinEnlace>;
 
 /** Los enlaces del menú de la sede; la etiqueta sale de `dict.nav[claveNav]`. */

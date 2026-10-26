@@ -74,7 +74,7 @@ def verificar_turnstile(token, ip):
     return bool(response.json().get('success'))
 
 
-def verificar_turnstile_obligatorio(token, ip, *, accion, hostname):
+def verificar_turnstile_obligatorio(token, ip, *, accion, hostname, timeout=TIMEOUT_OBLIGATORIO_SEGUNDOS):
     """True solo si Cloudflare confirma el token Y fue emitido para esta accion y este sitio.
 
     **Falla cerrada.** Es el opuesto de `verificar_turnstile`: la recuperacion de contrasena es la
@@ -93,7 +93,7 @@ def verificar_turnstile_obligatorio(token, ip, *, accion, hostname):
         return False
 
     try:
-        response = _consultar_siteverify(token, ip, TIMEOUT_OBLIGATORIO_SEGUNDOS)
+        response = _consultar_siteverify(token, ip, timeout)
     except requests.RequestException as exc:
         logger.error('No se pudo verificar el captcha obligatorio contra Cloudflare (%s)', type(exc).__name__)
         return False

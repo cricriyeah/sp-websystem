@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+{{ block.super }}
+<div class="border border-base-200 rounded-default dark:border-base-800">
+    <div class="p-4">
+        <h1 class="font-semibold text-important">{{ titulo }}</h1>
+        {% if cuantas %}
+        <p>Vas a marcar como le&iacute;das <strong>{{ cuantas }}</strong> notificaci&oacute;n(es). Solo cambia lo que t&uacute; ves como pendiente: a las dem&aacute;s personas no se les marca nada.</p>
+        {% else %}
+        <p>No tienes notificaciones sin leer.</p>
+        {% endif %}
+    </div>
+
+    <form method="post" class="border-t border-base-200 p-4 dark:border-base-800">
+        {% csrf_token %}
+        <div class="flex items-center gap-4">
+            <a href="{{ volver }}">Volver</a>
+            {% if cuantas %}
+            <button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default">S&iacute;, marcar todas como le&iacute;das</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

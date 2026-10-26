@@ -29,6 +29,9 @@ PERMISOS_VENDEDORA = [
     ('fleet', 'vehiculonodisponible', ['add', 'change', 'delete', 'view']),
     # Vista y edición de su propio usuario (con queryset acotado a sí misma en el admin)
     ('auth', 'user', ['view', 'change']),
+    # Notificaciones del backoffice: solo ver. Las crea `avisar()`, las borra el cron de retención y «marcar como
+    # leídas» escribe la lectura de la propia persona (se gatea con este permiso).
+    ('tenancy', 'notificacion', ['view']),
 ]
 
 # Todo lo que Vendedora no tiene: borrar, y el catalogo financiero completo

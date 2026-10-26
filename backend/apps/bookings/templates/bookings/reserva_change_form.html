@@ -34,6 +34,11 @@
                     <button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default font-semibold">Cobrar saldo en efectivo ({{ resumen_reserva.cobrar_saldo.texto }})</button>
                 </form>
             {% endif %}
+            {% if resumen_reserva.pagar_transferencia %}
+                <div style="margin-top: 0.75rem">
+                    <a href="{{ resumen_reserva.pagar_transferencia.url }}" class="bg-primary-600 text-white px-3 py-2 rounded-default font-semibold" style="display: inline-block">Marcar pagada por transferencia</a>
+                </div>
+            {% endif %}
         </section>
     {% endif %}
 {% endblock %}

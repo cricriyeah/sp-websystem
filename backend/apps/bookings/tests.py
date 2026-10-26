@@ -552,15 +552,15 @@ class AdminDeCuentasTests(TestCase):
 
 
 class ReservasNuevasAdminTests(EmpresaTestCase):
-    """Contador de reservas nuevas del listado del admin (ver ReservaAdmin)."""
+    """Aviso de reservas nuevas para cualquier pantalla del admin (ver bookings/avisos.py)."""
 
     def setUp(self):
-        self.url = reverse('admin:bookings_reserva_nuevas')
+        self.url = reverse('avisos_reservas_nuevas')
 
     def semilla(self):
         """Primera llamada, sin `desde`: devuelve la hora del servidor y cero."""
         body = self.client.get(self.url).json()
-        self.assertEqual(body['nuevas'], 0)
+        self.assertEqual(body['total'], 0)
         return body['desde']
 
     def test_anonimo_no_pasa(self):
@@ -579,38 +579,71 @@ class ReservasNuevasAdminTests(EmpresaTestCase):
         self.client.force_login(vendedora)
         self.assertEqual(self.client.get(self.url).status_code, 200)
 
-    def test_cuenta_las_pagadas_que_entraron_despues(self):
+    def test_cuenta_las_pagadas_que_entraron_despues_y_las_describe(self):
         self.client.force_login(self.crear_jefe())
         desde = self.semilla()
 
-        crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
+        crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA, nombre_cliente='Ana Ruiz')
         crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         body = self.client.get(self.url, {'desde': desde}).json()
 
-        self.assertEqual(body['nuevas'], 2)
-        # El ancla no se mueve: el contador sigue subiendo hasta que se recargue.
-        self.assertEqual(body['desde'], desde)
+        self.assertEqual(body['total'], 2)
+        self.assertEqual(len(body['reservas']), 2)
+        self.assertIn('Ana Ruiz', [r['cliente'] for r in body['reservas']])
+        self.assertTrue(all(r['url'].startswith('/admin/bookings/reserva/') for r in body['reservas']))
 
+    def test_el_ancla_avanza_y_no_repite_lo_ya_avisado(self):
+        self.client.force_login(self.crear_jefe())
+        desde = self.semilla()
         crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
-        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 3)
+
+        primera = self.client.get(self.url, {'desde': desde}).json()
+        segunda = self.client.get(self.url, {'desde': primera['desde']}).json()
+
+        self.assertEqual(primera['total'], 1)
+        self.assertEqual(segunda['total'], 0)
 
     def test_ignora_los_checkouts_abandonados(self):
         self.client.force_login(self.crear_jefe())
         desde = self.semilla()
 
         crear_reserva(self.empresa)  # pendiente_pago
-        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 0)
+        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['total'], 0)
+
+    def test_avisa_cuando_una_reserva_creada_antes_se_paga_despues(self):
+        """Una reserva de la web nace pendiente y se paga minutos u horas despues: tambien es una venta nueva."""
+        self.client.force_login(self.crear_jefe())
+        pendiente = crear_reserva(self.empresa)
+        desde = self.semilla()
+
+        Reserva.objects.filter(pk=pendiente.pk).update(estado=Reserva.Estado.PAGADA, pagada_en=timezone.now())
+
+        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['total'], 1)
+
+    def test_avisa_cuando_se_marca_pagada_por_transferencia(self):
+        self.client.force_login(self.crear_jefe())
+        pendiente = crear_reserva(self.empresa)
+        desde = self.semilla()
+
+        Reserva.objects.filter(pk=pendiente.pk).update(
+            estado=Reserva.Estado.PAGADA, transferencia_registrada_en=timezone.now())
+
+        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['total'], 1)
 
     def test_ignora_lo_anterior_a_la_carga_de_la_pagina(self):
         self.client.force_login(self.crear_jefe())
         crear_reserva(self.empresa, estado=Reserva.Estado.PAGADA)
         desde = self.semilla()
 
-        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['nuevas'], 0)
+        self.assertEqual(self.client.get(self.url, {'desde': desde}).json()['total'], 0)
 
     def test_desde_invalido_responde_400(self):
         self.client.force_login(self.crear_jefe())
         self.assertEqual(self.client.get(self.url, {'desde': 'ayer'}).status_code, 400)
+
+    def test_el_script_del_aviso_se_carga_en_todo_el_admin(self):
+        self.client.force_login(self.crear_jefe())
+        self.assertContains(self.client.get(reverse('admin:index')), 'tenancy/avisos.js')
 
 
 class ReservaApiTests(ApiTestCase):
