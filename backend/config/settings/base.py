@@ -541,6 +541,10 @@ RECUPERACION_AVISO_ADMIN = [
 # URL pública del frontend para enlaces de retomar enviados desde el backend.
 FRONTEND_URL = os.environ.get('FRONTEND_URL', '')
 
+# URL pública del backend (el admin) para los enlaces a una reserva en los correos al negocio. Render pone
+# RENDER_EXTERNAL_URL solo; BACKEND_URL la pisa si se quiere un dominio propio. Vacía = el correo va sin enlace.
+BACKEND_URL = (os.environ.get('BACKEND_URL') or os.environ.get('RENDER_EXTERNAL_URL', '')).rstrip('/')
+
 # Minutos que dura el apartado temporal de cupo en el checkout web. 0 = apagado.
 APARTADO_MINUTOS = 0 if 'test' in sys.argv else int(os.environ.get('APARTADO_MINUTOS', '0'))
 

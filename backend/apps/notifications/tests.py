@@ -612,6 +612,33 @@ class AvisoALaEmpresaTests(EmpresaTestCase):
         self.assertIn(f'#{reserva.pk}', cuerpo['html'])
 
     @mock.patch('apps.notifications.services.requests.post')
+    @override_settings(BACKEND_URL='https://api.ejemplo.com')
+    def test_el_aviso_lleva_enlace_directo_a_la_reserva_en_el_admin(self, post):
+        post.return_value.raise_for_status.return_value = None
+        self._con_correos('dueno@ejemplo.com')
+        reserva = crear_reserva_guardada(self.empresa)
+
+        from .services import enviar_aviso_empresa
+        enviar_aviso_empresa(reserva)
+
+        self.assertIn(
+            f'href="https://api.ejemplo.com/admin/bookings/reserva/{reserva.pk}/change/"',
+            _cuerpo_enviado(post)['html'],
+        )
+
+    @mock.patch('apps.notifications.services.requests.post')
+    @override_settings(BACKEND_URL='')
+    def test_sin_url_publica_del_backend_el_aviso_va_sin_enlace(self, post):
+        post.return_value.raise_for_status.return_value = None
+        self._con_correos('dueno@ejemplo.com')
+        reserva = crear_reserva_guardada(self.empresa)
+
+        from .services import enviar_aviso_empresa
+        enviar_aviso_empresa(reserva)
+
+        self.assertNotIn('href=', _cuerpo_enviado(post)['html'])
+
+    @mock.patch('apps.notifications.services.requests.post')
     def test_sin_direcciones_no_llama_a_la_red(self, post):
         reserva = crear_reserva_guardada(self.empresa)
 

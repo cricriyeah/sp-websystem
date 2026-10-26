@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.fleet.enums import TipoServicio
@@ -401,6 +402,14 @@ def enviar_whatsapp_confirmacion(reserva):
     return True
 
 
+def _enlace_admin_reserva_html(reserva):
+    """Enlace directo a la reserva en el admin, o '' si no se conoce la URL pública del backend."""
+    if not settings.BACKEND_URL:
+        return ''
+    url = settings.BACKEND_URL + reverse('admin:bookings_reserva_change', args=[reserva.pk])
+    return f'<p><a href="{_html(url)}">Ver la reserva #{reserva.pk} en el panel</a></p>'
+
+
 def _cuerpo_aviso_empresa_html(reserva):
     """Lo que necesita la empresa para saber que le entro una reserva y a quien
     hablarle. Solo lo de su propio componente: en un paquete de dos empresas cada
@@ -436,6 +445,7 @@ def _cuerpo_aviso_empresa_html(reserva):
         f'{pago}'
         f'<li><strong>Folio:</strong> #{reserva.pk}</li>'
         f'</ul>'
+        f'{_enlace_admin_reserva_html(reserva)}'
     )
 
 
