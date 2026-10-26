@@ -9,7 +9,19 @@
     {{ block.super }}
 {% endblock %}
 
+{% block login_before %}
+    {{ block.super }}
+    {# Turnstile (apps/cuentas/login.py): vacio si no hay llaves o si esta la salida de emergencia. login-turnstile.js lo mete en el formulario. #}
+    {% if form.turnstile_site_key %}
+        <div id="login-turnstile" class="mt-6" data-sitekey="{{ form.turnstile_site_key }}" hidden></div>
+    {% endif %}
+{% endblock %}
+
 {% block login_after %}
     {{ block.super }}
     <script src="{% static 'tenancy/login-password.js' %}" defer></script>
+    {% if form.turnstile_site_key %}
+        <script src="{% static 'tenancy/login-turnstile.js' %}"></script>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=cargaTurnstileLogin" async defer onerror="turnstileLoginNoCargo()"></script>
+    {% endif %}
 {% endblock %}

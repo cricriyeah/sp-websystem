@@ -626,10 +626,18 @@ El admin es HTML renderizado en el servidor: no hay conexion abierta con el nave
   le llega aviso de cambios». El correo sale al confirmar la transaccion; `signals._mandar` anota el resultado por hilo
   (`tomar_resultados_de_aviso`) y `enviar_correo_asignacion` deja el motivo en `reserva.motivo_fallo_aviso` (sin correo
   del cliente, Resend sin configurar o lo que respondio Resend). Antes de este aviso todo fallo era mudo (solo log).
-  **Limite conocido:** en produccion ese «correo enviado / no se pudo avisar» de pantalla casi nunca aparece, porque el
-  COMMIT que dispara el correo es el de la peticion entera (la abre `EmpresaScopeMiddleware`) y llega despues de que la
-  vista respondio; las pruebas lo ven porque confirman al instante con un mock. Lo confiable es la notificacion
-  persistente que escribe el propio `_mandar` (ver la seccion siguiente).
+  **Limite y como se resuelve:** en produccion ese «correo enviado / no se pudo avisar» de la respuesta casi nunca aparece,
+  porque el COMMIT que dispara el correo es el de la peticion entera (la abre `EmpresaScopeMiddleware`) y llega despues de
+  que la vista respondio; las pruebas lo ven porque confirman al instante con un mock. Lo que SI llega es la notificacion
+  persistente que escribe el propio `_mandar`, y el sondeo la trae con su TEXTO (`tenancy.notificaciones.nuevas_desde`,
+  campos `notif_ultima` / `notificaciones_nuevas` de `/admin/avisos/reservas-nuevas/`): `avisos.js` guarda el ultimo id visto
+  en `sessionStorage` y el primer sondeo tras recargar ya la muestra como tarjeta (verde, ojo o roja con el motivo). Las de
+  tipo reserva nueva se saltan: ya salen como tarjeta de «Nueva reserva». Abrir una pagina sin referencia nunca vuelca el
+  historial. El `pk` se asigna al INSERTAR y no al confirmar: una notificacion de una transaccion larga puede confirmarse
+  despues de otra con `pk` mayor, asi que `nuevas_desde` tambien devuelve lo creado en los ultimos 2 minutos, salvo los ids
+  que el navegador dice haber visto (`?vistas=`, hasta 100, guardados en `sessionStorage`); en la primera consulta de una
+  pestana el servidor devuelve `notif_recientes` y el navegador los marca como vistos sin mostrarlos. Si el sondeo se rinde
+  (3 fallos seguidos) sale una tarjeta que lo dice y ofrece recargar.
 - **La senal escucha a `Reserva` Y a sus proxies** (`Agenda`, `CheckoutAbandonado`): Django manda `post_save` con el
   proxy como emisor, y «Asignar pangas» guarda por `Agenda`; con `sender=Reserva` el correo de asignacion nunca salia
   desde esa pantalla.
@@ -703,7 +711,21 @@ empresa**, no una bitacora legal (el History del admin sigue siendo la auditoria
   cascada.
 - Pruebas: `venv/Scripts/python.exe manage.py test apps.tenancy` (el RLS y la retencion solo valen en Postgres, ver arriba)
   y `apps.bookings.tests_notificaciones_procesos` para los procesos.
-- Despliegue, en orden: `migrate` (0010, 0011) -> `manage.py setup_roles` -> `collectstatic` -> alta del cron en Render.
+- Despliegue: tras `migrate` hay que correr UNA vez `python manage.py setup_roles` en el Shell de Render: sin eso los
+  grupos no tienen `view_notificacion` y la campana y la lista no aparecen para nadie. **No esta en el `buildCommand`
+  a proposito**: `setup_roles` REEMPLAZA los permisos de cada grupo (`group.permissions.set`), asi que correrlo en
+  cada deploy borraria cualquier ajuste hecho a mano en el admin. Hay que repetirlo cuando un cambio agregue
+  permisos a los roles. Falta ademas el alta del cron en Render.
+- **Los avisos que solo avisan no pueden romper al que los llama**: `tenancy.notificaciones.sin_romper` envuelve a
+  `_notificar_reserva_nueva`, `_registrar_cancelacion_sin_cupo` (webhook: arman su texto dentro de la transaccion que
+  marca el pago), `signals._dejar_constancia` y `transferencia._dejar_constancia`; registra solo el nombre de la funcion y
+  el tipo de error (el texto trae datos del cliente).
+- **Avisos de Django como tarjetas, con sonido.** `templates/unfold/helpers/messages.html` (override del de Unfold) deja
+  los mensajes en un bloque `[data-avisos-django]` que `avisos.css` oculta y `avisos.js` convierte en tarjetas flotantes
+  arriba a la derecha (misma pila que «Nueva reserva»): exito se va solo a los 8 s, error/ojo se quedan hasta cerrarlos y
+  nunca los recorta el tope de tarjetas visibles. Si la conversion falla, el script vuelve a mostrar el bloque. La
+  reserva nueva suena (dos tonos con Web Audio, sin archivo); los navegadores solo dejan sonar despues de que la persona
+  toco la pagina una vez, y la bocina junto a la campana lo apaga (queda en `localStorage`).
 - **El sondeo no renueva la sesion.** `SESSION_SAVE_EVERY_REQUEST = True` renueva la cookie en cada respuesta; el sondeo
   de 10 s correria solo y una pestana olvidada abierta mantendria la sesion para siempre. `SessionMiddleware` es
   `apps.tenancy.middleware_sesion.SesionSinRenovarEnSondeo`, que no guarda ni renueva en `/admin/avisos/reservas-nuevas/`.
@@ -740,7 +762,7 @@ con otro filtro. Si despues paga, la fila cambia de estado sola y desaparece de 
   transaccion sale `notificar_reserva_pagada` (correo y WhatsApp de confirmacion, aviso a la empresa). La pantalla dice
   si el correo salio. No aplica a reservas de una orden cruza-empresa. Un monto menor al total se acepta (queda saldo
   pendiente). El correo de confirmacion muestra «Pagaste hoy» con la transferencia cuando no hay monto de tarjeta.
-  **Antes de saldar, cierra el cobro con tarjeta** (`transferencia._cerrar_cobro_con_tarjeta`): el checkout abandonado
+  **Antes de saldar, cierra el cobro con tarjeta** (`transferencia.cerrar_cobro_con_tarjeta`, que tambien llama el formulario general de la reserva al pasarla de pendiente a pagada): el checkout abandonado
   ya tiene un `PaymentIntent` abierto en Stripe; si queda vivo y el cliente lo completa despues, cobra otra vez y el
   webhook lo tomaba por «evento repetido» (mismo id). Se anula el intent (`requires_payment_method`/`requires_action`/
   `requires_confirmation`, con llave de idempotencia); si ya esta `succeeded`/`processing`/`requires_capture` se
@@ -748,6 +770,17 @@ con otro filtro. Si despues paga, la fila cambia de estado sola y desaparece de 
   Rechaza ademas una reserva sin `precio_total` (nunca llego a `crear-pago`: no hay tope contra el cual validar el monto).
   Defensa en profundidad: `payments.services._resolver_cobro_repetido` solo da por «repetido» un intent que ya dejo
   `monto_pagado`; si no, es un doble cobro y se reembolsa.
+  **Orden y carreras** (revision PCI de 2026-10-26): `cerrar_cobro_con_tarjeta` es lo ULTIMO que se hace dentro del
+  atomic (si el cupo o el guardado fallan antes, el intent sigue vivo y el cliente puede pagar; si anular falla, se
+  deshace todo). `CrearPagoView._bloque_c` vuelve a leer el estado CON candado antes de escribir: si la reserva ya no
+  esta pendiente (la saldaron mientras hablaba con Stripe), anula el intent recien creado y responde 409
+  `ya_no_pendiente` sin tocar el precio. `aplicar_reembolso` ignora un `charge.refunded` de una reserva sin
+  `monto_pagado`: ese cargo es el cobro duplicado que acaba de devolverse y tomarlo por reembolso total cancelaria una
+  reserva pagada por transferencia. `_resolver_cobro_repetido` da por repetido un `succeeded` si hay `monto_pagado`
+  O `monto_reembolsado` (el reembolso automatico por falta de cupo). El formulario general de la reserva
+  (`ReservaAdmin.save_model`) tambien anula el intent abierto al pasar una pendiente sin `monto_pagado` a pagada
+  (si el cliente ya pago con tarjeta, no deja guardar y manda a revisar Stripe). Si el reembolso del cobro duplicado
+  falla, `_resolver_cobro_repetido` levanta la alerta urgente deduplicada (`_gestionar_fallo_reembolso`).
 
 ## Estaticos
 
@@ -882,9 +915,21 @@ contrasena nueva en un solo envio), montadas en `config/urls.py` **antes** de `a
 - **Modelos por usuario, sin empresa y fuera de RLS**: `CodigoRecuperacion` (uno por usuario; pedir otro lo
   sobrescribe) guarda solo un HMAC-SHA256 atado al hash de la contrasena vigente (`seguridad.hash_codigo`), vence a
   10 min, un solo uso, 5 intentos. `EventoRecuperacion` es la bitacora y la base de los limites; **jamas lleva el codigo**.
+- **Turnstile tambien en el login** (`apps/cuentas/login.py`, `admin.site.login_form` en `config/urls.py`): misma llave
+  y widget, `action` `login`. Se verifica ANTES de mirar usuario y contrasena (un captcha malo no cuenta como intento de
+  Axes ni dice si la clave era buena). Solo se exige con `TURNSTILE_SECRET_KEY` y `TURNSTILE_SITE_KEY` puestas. Falla
+  cerrada: si Cloudflare se cae o el dominio del backend no esta en el widget, nadie entra; salida de emergencia
+  `LOGIN_TURNSTILE_OBLIGATORIO=0` en Render (y volver a 1 al arreglarlo). `static/tenancy/login-turnstile.js` mete el widget
+  dentro del formulario de Unfold y, si Cloudflare no carga (bloqueador, sin red), dice que no cargo en vez de dejar un
+  formulario mudo. Un captcha rechazado NO cuenta en Axes, asi que tiene su propio tope: `LOGIN_MAX_CAPTCHA_FALLIDOS_IP_HORA`
+  (20 por IP y hora, contados en `EventoRecuperacion` con `tipo='login_captcha'`; pasado el tope se rechaza sin llamar a
+  Cloudflare) y espera de `LOGIN_TURNSTILE_TIMEOUT_SEGUNDOS` (3) a Cloudflare, para que un token falso repetido no ocupe los
+  procesos de gunicorn que tambien sirven la API. `apps/cuentas/checks.py` deja un `Info` en el registro del despliegue si
+  el login quedo sin captcha (faltan llaves) o con la salida de emergencia (Info y no Warning: `check --deploy --fail-level
+  WARNING` corre en CI sin llaves).
 - **Turnstile obligatorio y cerrado en los dos pasos** (`captcha.verificar_turnstile_obligatorio`, con `action`
   `recuperar_solicitar`/`recuperar_confirmar` y `hostname` verificados). La `verificar_turnstile` del checkout sigue
-  abierta a proposito y no cambio. **No** esta en `/admin/login/` (decision del dueno).
+  abierta a proposito y no cambio. El login lleva el suyo (ver abajo).
 - **Respuesta neutra**: el paso 1 responde lo mismo para cualquier correo; el motivo real (`sin_cuenta`, `inactiva`,
   `ambigua`, `limite_correo`...) solo va a la bitacora. Las vistas envuelven el servicio en `try/except` y registran la
   clase del error: sin eso `ErrorInesperadoAdminMiddleware` redirige distinto solo si la cuenta existe (oraculo).

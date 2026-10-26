@@ -1,0 +1,25 @@
+{% comment %}
+    Los avisos de Django («Guardado», «No se pudo avisar…») no salen como barras de colores arriba del contenido:
+    static/tenancy/avisos.js los lee de aqui y los pinta como tarjetas flotantes arriba a la derecha, igual que el aviso
+    de reserva nueva. El texto entra escapado como siempre. avisos.css oculta este bloque para que no parpadee; si el
+    script falla al convertirlo, el mismo script lo vuelve a mostrar (nunca se pierde un mensaje).
+{% endcomment %}
+{% if messages %}
+    <ul class="flex flex-col gap-3 mb-4" data-avisos-django>
+        {% for message in messages %}
+            <li class="*:mb-0!" data-nivel="{{ message.level_tag }}">
+                {% if message.level == DEFAULT_MESSAGE_LEVELS.INFO %}
+                    {% include "unfold/helpers/messages/info.html" with message=message %}
+                {% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}
+                    {% include "unfold/helpers/messages/success.html" with message=message %}
+                {% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}
+                    {% include "unfold/helpers/messages/warning.html" with message=message %}
+                {% elif message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+                    {% include "unfold/helpers/messages/error.html" with message=message %}
+                {% else %}
+                    {% include "unfold/helpers/messages/debug.html" with message=message %}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}

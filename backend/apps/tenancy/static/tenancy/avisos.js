@@ -14,13 +14,18 @@
 (function () {
   'use strict';
 
+  // Mientras esta clase no exista, avisos.css NO esconde las barras de Django: si este script no corre, un error de
+  // guardado se sigue viendo.
+  document.documentElement.classList.add('avisos-js');
+
   var INTERVALO_MS = 10000;
   var MAXIMO_VISIBLES = 3;
   var FALLOS_PARA_PARAR = 3;
   var ENDPOINT = '/admin/avisos/reservas-nuevas/';
 
-  // Sin sesion no hay a quien avisar: login, recuperacion de contrasena y cierre de sesion.
-  if (/\/admin\/(login|logout|recuperar|password_reset)/.test(window.location.pathname)) return;
+  // Sin sesion no hay a quien avisar: login, recuperacion de contrasena y cierre de sesion. Los avisos de Django
+  // (tarjetas) si se convierten ahi tambien; el sondeo, la campana y el sonido no.
+  var sinSesion = /\/admin\/(login|logout|recuperar|password_reset)/.test(window.location.pathname);
 
   var enListado = /\/(bookings\/(reserva|agenda)|tenancy\/notificacion)\/$/.test(window.location.pathname);
   var desde = null;
@@ -29,7 +34,15 @@
   var contenedor = null;
   var campana = null;
   var insignia = null;
-  var conteoAnterior = null;
+  var ultimaNotif = null;
+  var CLAVE_ULTIMA = 'avisos-ultima-notificacion';
+  var vistas = null;
+  var CLAVE_VISTAS = 'avisos-notificaciones-vistas';
+  var MAXIMO_VISTAS = 50;
+  var audio = null;
+  var botonSonido = null;
+  var CLAVE_SILENCIO = 'avisos-sonido-apagado';
+  var SEGUNDOS_DE_EXITO = 8;
 
   function el(etiqueta, clase, texto) {
     var nodo = document.createElement(etiqueta);
@@ -54,9 +67,61 @@
     return contenedor;
   }
 
-  function crearAviso(titulo, detalle, enlace, enlaceTexto) {
+  // Quita tarjetas viejas cuando hay muchas, pero nunca un error: quien lo causo tiene que poder leerlo.
+  function recortar(lugar) {
+    while (lugar.children.length > MAXIMO_VISIBLES) {
+      var candidata = null;
+      for (var i = lugar.children.length - 1; i >= 0; i -= 1) {
+        if (lugar.children[i].getAttribute('data-nivel') !== 'error') { candidata = lugar.children[i]; break; }
+      }
+      if (!candidata) return;
+      lugar.removeChild(candidata);
+    }
+  }
+
+  var TITULOS_DE_AVISO = { success: 'Listo', info: 'Aviso', warning: 'Ojo', error: 'No salió' };
+
+  // Los avisos de Django («Panga y capitán asignados…») ya vienen en la pagina (templates/unfold/helpers/messages.html):
+  // se leen con textContent y se pintan como tarjetas, en vez de las barras verdes y naranjas de Unfold.
+  function convertirAvisosDeDjango() {
+    var listas = document.querySelectorAll('[data-avisos-django]');
+    for (var i = 0; i < listas.length; i += 1) {
+      var lista = listas[i];
+      try {
+        var items = lista.querySelectorAll('li[data-nivel]');
+        var lugar = asegurarContenedor();
+        for (var j = 0; j < items.length; j += 1) {
+          var nivel = items[j].getAttribute('data-nivel') || 'info';
+          if (!TITULOS_DE_AVISO[nivel]) nivel = 'info';
+          var texto = (items[j].textContent || '').replace(/\s+/g, ' ').trim();
+          if (!texto) continue;
+          var tarjeta = crearAviso(TITULOS_DE_AVISO[nivel], texto, null, '', nivel);
+          lugar.appendChild(tarjeta);
+          if (nivel === 'success') programarCierre(tarjeta, SEGUNDOS_DE_EXITO);
+        }
+        recortar(lugar);
+        lista.parentNode.removeChild(lista);
+      } catch (e) {
+        lista.style.display = 'block'; // si algo falla, salen las barras de siempre: nunca se pierde un mensaje
+      }
+    }
+  }
+
+  function programarCierre(tarjeta, segundos) {
+    window.setTimeout(function () { if (tarjeta.parentNode) tarjeta.parentNode.removeChild(tarjeta); }, segundos * 1000);
+  }
+
+  function crearAviso(titulo, detalle, enlace, enlaceTexto, nivel, accion) {
     var tarjeta = el('div', 'aviso-reservas__tarjeta');
-    tarjeta.appendChild(el('p', 'aviso-reservas__titulo', titulo));
+    var cabecera = el('p', 'aviso-reservas__titulo');
+    if (nivel) {
+      tarjeta.setAttribute('data-nivel', nivel);
+      var marca = el('span', 'aviso-reservas__marca aviso-reservas__marca--' + nivel);
+      marca.setAttribute('aria-hidden', 'true');
+      cabecera.appendChild(marca);
+    }
+    cabecera.appendChild(document.createTextNode(titulo));
+    tarjeta.appendChild(cabecera);
     if (detalle) tarjeta.appendChild(el('p', 'aviso-reservas__detalle', detalle));
     var acciones = el('div', 'aviso-reservas__acciones');
     if (enlace) {
@@ -64,7 +129,13 @@
       a.href = enlace;
       acciones.appendChild(a);
     }
-    if (enListado) {
+    if (accion) {
+      var extra = el('button', 'aviso-reservas__boton', accion.texto);
+      extra.type = 'button';
+      extra.addEventListener('click', accion.hacer);
+      acciones.appendChild(extra);
+    }
+    if (enListado && !nivel) {
       var actualizar = el('button', 'aviso-reservas__boton', 'Actualizar lista');
       actualizar.type = 'button';
       actualizar.addEventListener('click', function () { window.location.reload(); });
@@ -94,7 +165,77 @@
         lugar.firstChild
       );
     }
-    while (lugar.children.length > MAXIMO_VISIBLES) lugar.removeChild(lugar.lastChild);
+    recortar(lugar);
+    if (datos.reservas.length > 0) sonar();
+  }
+
+  // Sonido de reserva nueva: dos tonos cortos generados en el navegador (sin archivo de audio). Los navegadores no
+  // dejan sonar nada hasta que la persona toco la pagina una vez (clic o tecla); antes de eso, la tarjeta sale igual
+  // pero en silencio. Se apaga con el boton de la bocina y la eleccion se recuerda en este navegador.
+  function sonidoApagado() {
+    try { return window.localStorage.getItem(CLAVE_SILENCIO) === '1'; } catch (e) { return false; }
+  }
+
+  function desbloquearAudio() {
+    var Contexto = window.AudioContext || window.webkitAudioContext;
+    if (!audio && Contexto) {
+      try { audio = new Contexto(); } catch (e) { audio = null; }
+    }
+    if (audio && audio.state === 'suspended') audio.resume();
+  }
+
+  function tono(frecuencia, inicio, duracion) {
+    var oscilador = audio.createOscillator();
+    var volumen = audio.createGain();
+    oscilador.type = 'sine';
+    oscilador.frequency.value = frecuencia;
+    volumen.gain.setValueAtTime(0.0001, inicio);
+    volumen.gain.exponentialRampToValueAtTime(0.2, inicio + 0.02);
+    volumen.gain.exponentialRampToValueAtTime(0.0001, inicio + duracion);
+    oscilador.connect(volumen);
+    volumen.connect(audio.destination);
+    oscilador.start(inicio);
+    oscilador.stop(inicio + duracion + 0.05);
+  }
+
+  function sonar() {
+    if (sonidoApagado() || !audio || audio.state !== 'running') return;
+    try {
+      var ahora = audio.currentTime;
+      tono(880, ahora, 0.18);
+      tono(1175, ahora + 0.2, 0.28);
+    } catch (e) { /* sin sonido: la tarjeta ya salio */ }
+  }
+
+  function pintarBotonSonido() {
+    var apagado = sonidoApagado();
+    botonSonido.firstChild.textContent = apagado ? 'volume_off' : 'volume_up';
+    botonSonido.setAttribute('aria-pressed', apagado ? 'true' : 'false');
+    botonSonido.setAttribute('aria-label', apagado ? 'Activar el sonido de reservas nuevas' : 'Silenciar el sonido de reservas nuevas');
+    botonSonido.title = apagado ? 'Sonido de reservas nuevas: apagado' : 'Sonido de reservas nuevas: encendido';
+  }
+
+  function asegurarBotonSonido() {
+    if (botonSonido) return;
+    botonSonido = el('button', 'aviso-sonido');
+    botonSonido.type = 'button';
+    var icono = el('span', 'material-symbols-outlined', 'volume_up');
+    icono.setAttribute('aria-hidden', 'true');
+    botonSonido.appendChild(icono);
+    botonSonido.addEventListener('click', function () {
+      desbloquearAudio();
+      try { window.localStorage.setItem(CLAVE_SILENCIO, sonidoApagado() ? '0' : '1'); } catch (e) { /* sin memoria */ }
+      pintarBotonSonido();
+      if (!sonidoApagado()) sonar(); // al encenderlo suena una vez: asi se sabe que funciona
+    });
+    pintarBotonSonido();
+    var cabecera = document.querySelector('#header-inner .ml-auto');
+    if (cabecera) {
+      cabecera.insertBefore(botonSonido, cabecera.firstChild);
+    } else {
+      botonSonido.className += ' aviso-sonido--flotante';
+      document.body.appendChild(botonSonido);
+    }
   }
 
   // Solo rutas del propio sitio: la URL viene del servidor, pero un enlace nunca debe poder ser `javascript:`.
@@ -129,21 +270,85 @@
     insignia.textContent = n > 99 ? '99+' : String(n);
     insignia.hidden = n === 0;
     campana.setAttribute('aria-label', n === 0 ? 'Notificaciones' : 'Notificaciones, ' + n + ' sin leer');
-    if (conteoAnterior !== null) {
-      // Lo que ya explica una tarjeta de «Nueva reserva» de esta misma consulta no se avisa dos veces.
-      var nuevas = n - conteoAnterior - (Number(datos.total) || 0);
-      if (nuevas > 0) {
-        var titulo = nuevas === 1 ? 'Notificación nueva' : nuevas + ' notificaciones nuevas';
-        var lugar = asegurarContenedor();
-        lugar.insertBefore(crearAviso(titulo, '', datos.notificaciones_url, 'Ver notificaciones'), lugar.firstChild);
-        while (lugar.children.length > MAXIMO_VISIBLES) lugar.removeChild(lugar.lastChild);
+  }
+
+  // Lo que paso despues de que la pantalla que lo pidio ya respondio (el correo de asignacion, un reembolso...): el
+  // servidor manda el TEXTO de las notificaciones nuevas y aqui salen como tarjetas. La referencia (ultimo id visto)
+  // sobrevive a recargar la pagina en sessionStorage: asi, tras guardar y volver a cargar, el primer sondeo ya trae
+  // el resultado de lo que se acaba de hacer. Sin ella, abrir una pagina nunca vuelca el historial.
+  var NIVELES_DE_NOTIFICACION = { exito: 'success', aviso: 'warning', error: 'error' };
+
+  function leerUltima() {
+    if (ultimaNotif !== null) return ultimaNotif;
+    try {
+      var guardada = window.sessionStorage.getItem(CLAVE_ULTIMA);
+      if (guardada !== null && /^[0-9]+$/.test(guardada)) ultimaNotif = Number(guardada);
+    } catch (e) { /* sin memoria de sesion: se parte de la referencia del servidor */ }
+    return ultimaNotif;
+  }
+
+  function guardarUltima(id) {
+    ultimaNotif = id;
+    try { window.sessionStorage.setItem(CLAVE_ULTIMA, String(id)); } catch (e) { /* sin memoria de sesion */ }
+  }
+
+  function leerVistas() {
+    if (vistas !== null) return vistas;
+    vistas = [];
+    try {
+      var guardadas = window.sessionStorage.getItem(CLAVE_VISTAS);
+      if (guardadas && /^[0-9,]+$/.test(guardadas)) {
+        vistas = guardadas.split(',').filter(Boolean).map(Number);
       }
+    } catch (e) { /* sin memoria de sesion */ }
+    return vistas;
+  }
+
+  function agregarVistas(ids) {
+    var lista = leerVistas();
+    ids.forEach(function (id) { if (lista.indexOf(id) === -1) lista.push(id); });
+    while (lista.length > MAXIMO_VISTAS) lista.shift();
+    try { window.sessionStorage.setItem(CLAVE_VISTAS, lista.join(',')); } catch (e) { /* sin memoria de sesion */ }
+  }
+
+  function mostrarNotificaciones(datos) {
+    if (typeof datos.notif_ultima !== 'number') return;
+    // Primera consulta de esta pestana: lo creado hace un momento no es "nuevo", solo se marca como visto.
+    if (Array.isArray(datos.notif_recientes) && datos.notif_recientes.length) agregarVistas(datos.notif_recientes);
+    var nuevas = Array.isArray(datos.notificaciones_nuevas) ? datos.notificaciones_nuevas : [];
+    var lugar = asegurarContenedor();
+    var total = Number(datos.notificaciones_nuevas_total) || nuevas.length;
+    nuevas.slice().reverse().forEach(function (n) {
+      var nivel = NIVELES_DE_NOTIFICACION[n.nivel] || 'info';
+      var texto = n.motivo ? n.texto + ' ' + n.motivo : n.texto;
+      var enlace = rutaPropia(n.url) ? n.url : null;
+      var tarjeta = crearAviso(TITULOS_DE_AVISO[nivel], texto, enlace, n.enlace_texto || 'Ver', nivel);
+      lugar.insertBefore(tarjeta, lugar.firstChild);
+      if (nivel === 'success') programarCierre(tarjeta, SEGUNDOS_DE_EXITO);
+    });
+    if (total > nuevas.length) {
+      var resto = total - nuevas.length;
+      lugar.insertBefore(
+        crearAviso('+' + resto + (resto === 1 ? ' notificación más' : ' notificaciones más'), '',
+          datos.notificaciones_url, 'Ver notificaciones', 'info'),
+        lugar.firstChild
+      );
     }
-    conteoAnterior = n;
+    recortar(lugar);
+    agregarVistas(nuevas.map(function (n) { return n.id; }).filter(function (id) { return typeof id === 'number'; }));
+    guardarUltima(datos.notif_ultima);
   }
 
   function consultar() {
-    var url = desde ? ENDPOINT + '?desde=' + encodeURIComponent(desde) : ENDPOINT;
+    var partes = [];
+    if (desde) partes.push('desde=' + encodeURIComponent(desde));
+    var referencia = leerUltima();
+    if (referencia !== null) {
+      partes.push('notif=' + referencia);
+      var ya = leerVistas();
+      if (ya.length) partes.push('vistas=' + ya.join(','));
+    }
+    var url = partes.length ? ENDPOINT + '?' + partes.join('&') : ENDPOINT;
     fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(function (res) {
         var tipo = res.headers.get('content-type') || '';
@@ -154,14 +359,33 @@
         fallos = 0;
         desde = datos.desde;
         pintarCampana(datos);
+        mostrarNotificaciones(datos);
         if (datos.total > 0) mostrar(datos);
       })
       .catch(function () {
         // Sesion vencida (el admin responde con la pantalla de login) o backend caido: se reintenta unas veces y
         // se calla. No hay nada util que decirle a quien esta trabajando.
         fallos += 1;
-        if (fallos >= FALLOS_PARA_PARAR) parar();
+        if (fallos >= FALLOS_PARA_PARAR) {
+          parar();
+          avisarQueSePerdioLaConexion();
+        }
       });
+  }
+
+  // Tras varios fallos seguidos el sondeo se detiene (sesion vencida, backend caido, sin red): sin este aviso la persona
+  // creeria que sigue enterandose de las reservas nuevas.
+  function avisarQueSePerdioLaConexion() {
+    var lugar = asegurarContenedor();
+    lugar.insertBefore(
+      crearAviso(
+        TITULOS_DE_AVISO.warning,
+        'Dejaron de llegar los avisos nuevos (la sesión venció o no hay conexión). Recarga la página para volver a recibirlos.',
+        null, '', 'warning', { texto: 'Recargar', hacer: function () { window.location.reload(); } }
+      ),
+      lugar.firstChild
+    );
+    recortar(lugar);
   }
 
   function arrancar() {
@@ -175,6 +399,7 @@
   }
 
   document.addEventListener('visibilitychange', function () {
+    if (sinSesion) return;
     if (document.hidden) {
       parar();
     } else if (fallos < FALLOS_PARA_PARAR) {
@@ -183,6 +408,20 @@
     }
   });
 
-  consultar();
-  arrancar();
+  function iniciar() {
+    convertirAvisosDeDjango();
+    if (sinSesion) return;
+    ['click', 'keydown', 'touchstart'].forEach(function (evento) {
+      document.addEventListener(evento, desbloquearAudio, { passive: true });
+    });
+    asegurarBotonSonido();
+    consultar();
+    arrancar();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciar);
+  } else {
+    iniciar();
+  }
 })();

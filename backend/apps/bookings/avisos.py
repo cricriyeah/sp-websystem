@@ -21,7 +21,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.tenancy import scope
-from apps.tenancy.notificaciones import contar_no_leidas
+from apps.tenancy.notificaciones import contar_no_leidas, nuevas_desde
 
 from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva
 
@@ -87,13 +87,40 @@ def _de_la_campana(request):
         return {'no_leidas': 0, 'notificaciones_url': ''}
     try:
         with transaction.atomic():
+            datos = nuevas_desde(request, _entero(request.GET.get('notif')), _enteros(request.GET.get('vistas')))
             return {
                 'no_leidas': contar_no_leidas(request),
                 'notificaciones_url': reverse('admin:tenancy_notificacion_changelist'),
+                'notif_ultima': datos['ultima'],
+                'notif_recientes': datos['recientes'],
+                'notificaciones_nuevas': datos['nuevas'],
+                'notificaciones_nuevas_total': datos['total'],
             }
     except Exception:
         logger.exception('No se pudo contar las notificaciones sin leer.')
         return {'no_leidas': 0, 'notificaciones_url': ''}
+
+
+def _entero(valor):
+    """El id que el navegador guardo de la ultima notificacion vista; cualquier otra cosa es "sin referencia"."""
+    try:
+        numero = int(valor)
+    except (TypeError, ValueError):
+        return None
+    return numero if numero >= 0 else None
+
+
+def _enteros(valor):
+    """Lista de ids separados por coma que el navegador dice haber visto (como mucho 100); lo que no sea un entero se
+    ignora."""
+    if not valor:
+        return []
+    ids = []
+    for trozo in str(valor)[:700].split(','):
+        numero = _entero(trozo.strip())
+        if numero is not None:
+            ids.append(numero)
+    return ids[:100]
 
 
 def _como_aviso(reserva):

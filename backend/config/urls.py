@@ -20,6 +20,7 @@ from django.urls import include, path
 from apps.bookings.avisos import reservas_nuevas
 from apps.bookings.vistas_calendario import calendario
 from apps.cuentas import views as cuentas_views
+from apps.cuentas.login import LoginConTurnstile
 from apps.finance.views import movimientos_financieros, panel_financiero
 from apps.fleet.views import TrasladosView
 from apps.tenancy.inicio import vista_avanzada, vista_saldos
@@ -29,6 +30,7 @@ from .health import healthz
 admin.site.site_header = 'Sun Baja Experiences'
 admin.site.site_title = 'Sun Baja Experiences'
 admin.site.index_title = 'Panel de administracion'
+admin.site.login_form = LoginConTurnstile
 
 urlpatterns = [
     # Sonda del balanceador de Render (ver config/health.py). Deliberadamente

@@ -143,3 +143,55 @@
   font-size: 0.875rem;
   opacity: 0.75;
 }
+
+/* Avisos de Django (guardado, errores): tarjetas en la misma pila que las de reserva nueva. templates/unfold/helpers/
+   messages.html los deja en la pagina y avisos.js los convierte; solo se esconden cuando el script corre (agrega la clase avisos-js a <html>). */
+.avisos-js [data-avisos-django] {
+  display: none;
+}
+
+.aviso-reservas__marca {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: 0.5rem;
+  border-radius: 9999px;
+  background: rgb(168 162 158);
+}
+
+.aviso-reservas__marca--success { background: rgb(22 163 74); }
+.aviso-reservas__marca--warning { background: rgb(245 158 11); }
+.aviso-reservas__marca--error { background: rgb(220 38 38); }
+.aviso-reservas__marca--info { background: rgb(56 189 248); }
+
+/* Bocina del sonido de reserva nueva, junto a la campana. */
+.aviso-sonido {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.aviso-sonido:hover,
+.aviso-sonido:focus-visible {
+  background: rgb(120 113 108 / 0.18);
+}
+
+.aviso-sonido .material-symbols-outlined {
+  font-size: 1.5rem;
+}
+
+.aviso-sonido--flotante {
+  position: fixed;
+  top: 0.75rem;
+  right: 9rem;
+  z-index: 60;
+  background: rgb(28 25 23);
+  color: #fff;
+}

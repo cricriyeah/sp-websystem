@@ -23,7 +23,7 @@ from apps.notifications.services import notificar_reserva_pagada
 from apps.payments.stripe_client import configurar_stripe
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Notificacion
-from apps.tenancy.notificaciones import registrar_notificacion
+from apps.tenancy.notificaciones import registrar_notificacion, sin_romper
 
 from .models import Reserva
 
@@ -50,14 +50,17 @@ def _como_decimal(monto):
         raise ErrorDeTransferencia('El monto no es un número válido.') from None
     if not valor.is_finite() or valor <= 0:
         raise ErrorDeTransferencia('El monto de la transferencia debe ser mayor que cero.')
-    return valor.quantize(Decimal('0.01'))
+    try:
+        return valor.quantize(Decimal('0.01'))
+    except InvalidOperation:  # 1e30: no cabe en dos decimales
+        raise ErrorDeTransferencia('El monto es demasiado grande.') from None
 
 
 INTENT_COBRADO_O_EN_CURSO = {'succeeded', 'processing', 'requires_capture'}
 INTENT_ANULABLE = {'requires_payment_method', 'requires_confirmation', 'requires_action'}
 
 
-def _cerrar_cobro_con_tarjeta(reserva):
+def cerrar_cobro_con_tarjeta(reserva):
     """El checkout abandonado tiene un PaymentIntent vivo: si queda abierto y el cliente lo completa despues, cobra una
     segunda vez y el webhook lo toma por evento repetido. Falla cerrado: si no se puede anular, no se salda."""
     pi_id = reserva.stripe_payment_intent_id
@@ -73,7 +76,7 @@ def _cerrar_cobro_con_tarjeta(reserva):
                 'revisa el cobro en Stripe.')
         if intent.status in INTENT_ANULABLE:
             cliente.payment_intents.cancel(
-                intent.id, options={'idempotency_key': f'transferencia-{reserva.pk}-cancel'})
+                intent.id, options={'idempotency_key': f'transferencia-{reserva.pk}-{intent.id}-cancel'})
     except stripe.InvalidRequestError as exc:
         if getattr(exc, 'code', None) != 'resource_missing':
             raise ErrorDeTransferencia('No se pudo cerrar el cobro con tarjeta pendiente. Intenta de nuevo.') from exc
@@ -103,8 +106,6 @@ def marcar_pagada_por_transferencia(reserva_pk, monto, usuario):
         if monto > reserva.precio_total:
             raise ErrorDeTransferencia(
                 f'El monto ({monto}) es mayor que el total de la reserva ({reserva.precio_total} {reserva.moneda}).')
-        _cerrar_cobro_con_tarjeta(reserva)
-
         reserva._usuario_dinero = usuario
         reserva.monto_transferencia = monto
         reserva.transferencia_registrada_en = timezone.now()
@@ -124,6 +125,11 @@ def marcar_pagada_por_transferencia(reserva_pk, monto, usuario):
         except IntegrityError as exc:
             raise ErrorDeTransferencia('Ya no hay habitación disponible esas fechas.') from exc
 
+        # Lo ultimo y lo unico que no se deshace: anular el cobro con tarjeta pendiente en Stripe. Si el cupo, la
+        # validacion o el guardado fallan arriba, el intent sigue vivo y el cliente puede pagar; si esto falla, la
+        # excepcion deshace TODO lo de arriba y la reserva sigue esperando el pago.
+        cerrar_cobro_con_tarjeta(reserva)
+
         # El correo sale al confirmar la transaccion, ya con la reserva guardada, y dentro de su propio alcance
         # de empresa: SET LOCAL de la transaccion muere al COMMIT (mismo cuidado que en el webhook).
         empresa_id = reserva.empresa_id
@@ -142,19 +148,24 @@ def _avisar_al_cliente(reserva_pk, empresa_id, resultado, usuario=None, monto=No
         if reserva is None:
             return
         resultado.update(notificar_reserva_pagada(reserva))  # nunca lanza
-
         # Constancia en el feed, ya dentro del alcance reabierto (el de la transaccion que encolo esto murio al COMMIT).
-        enlace = reverse('admin:bookings_reserva_change', args=[reserva.pk])
+        _dejar_constancia(empresa, reserva, resultado, usuario, monto)
+
+
+@sin_romper
+def _dejar_constancia(empresa, reserva, resultado, usuario, monto):
+    """Solo avisa: si armar el texto fallara, el correo ya salio y la reserva ya esta pagada."""
+    enlace = reverse('admin:bookings_reserva_change', args=[reserva.pk])
+    registrar_notificacion(
+        empresa, Notificacion.Nivel.EXITO,
+        f'Reserva pagada por transferencia: {reserva.nombre_cliente} · {monto} {reserva.moneda}.',
+        tipo=Notificacion.Tipo.RESERVA_NUEVA, actor=usuario, enlace_url=enlace, enlace_texto='Ver reserva',
+    )
+    if not resultado.get('email'):
         registrar_notificacion(
-            empresa, Notificacion.Nivel.EXITO,
-            f'Reserva pagada por transferencia: {reserva.nombre_cliente} · {monto} {reserva.moneda}.',
-            tipo=Notificacion.Tipo.RESERVA_NUEVA, actor=usuario, enlace_url=enlace, enlace_texto='Ver reserva',
+            empresa, Notificacion.Nivel.AVISO,
+            f'No se pudo mandar el correo de confirmación a {reserva.nombre_cliente}. Avísale por WhatsApp.',
+            tipo=Notificacion.Tipo.TRANSFERENCIA, actor=usuario,
+            motivo='' if reserva.correo_cliente else 'la reserva no tiene correo del cliente',
+            enlace_url=enlace, enlace_texto='Ver reserva',
         )
-        if not resultado.get('email'):
-            registrar_notificacion(
-                empresa, Notificacion.Nivel.AVISO,
-                f'No se pudo mandar el correo de confirmación a {reserva.nombre_cliente}. Avísale por WhatsApp.',
-                tipo=Notificacion.Tipo.TRANSFERENCIA, actor=usuario,
-                motivo='' if reserva.correo_cliente else 'la reserva no tiene correo del cliente',
-                enlace_url=enlace, enlace_texto='Ver reserva',
-            )

@@ -21,7 +21,7 @@ from django.utils import timezone
 from apps.notifications.services import enviar_correo_asignacion
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Notificacion
-from apps.tenancy.notificaciones import registrar_notificacion
+from apps.tenancy.notificaciones import registrar_notificacion, sin_romper
 
 from .models import DetalleTransporte, Reserva
 
@@ -86,6 +86,7 @@ def avisar_asignacion(sender, instance, **kwargs):
     transaction.on_commit(lambda: _mandar(instance.pk, empresa_id, actor_id))
 
 
+@sin_romper
 def _dejar_constancia(empresa, reserva, enviado, motivo, actor):
     """Escribe en el feed de notificaciones como termino el correo de asignacion. Corre dentro del `con_empresa` que
     `_mandar` reabrio (el alcance de la transaccion que encolo el callback ya murio con su COMMIT) y nunca lanza.

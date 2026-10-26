@@ -513,6 +513,14 @@ TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
 # (apps/cuentas). Es un par con el secreto de arriba: la misma que NEXT_PUBLIC_TURNSTILE_SITE_KEY en Vercel.
 # Sin ella, sin el secreto o sin Resend, la recuperacion responde 503 (cierra, no deja pasar).
 TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '')
+# El inicio de sesion del backoffice (/admin/login/) tambien lleva Turnstile (apps/cuentas/login.py) cuando las dos
+# llaves estan puestas. Salida de emergencia si Cloudflare se cae o el dominio del backend no esta en el widget y
+# nadie puede entrar: LOGIN_TURNSTILE_OBLIGATORIO=0 en Render (y volver a 1 en cuanto se arregle).
+LOGIN_TURNSTILE_OBLIGATORIO = os.environ.get('LOGIN_TURNSTILE_OBLIGATORIO', '1').strip() != '0'
+# Un captcha rechazado no cuenta en Axes: tope por IP y por hora (en la base) y espera corta a Cloudflare, para que un
+# token falso repetido no ocupe los procesos de gunicorn que tambien sirven la API.
+LOGIN_MAX_CAPTCHA_FALLIDOS_IP_HORA = int(os.environ.get('LOGIN_MAX_CAPTCHA_FALLIDOS_IP_HORA', '20'))
+LOGIN_TURNSTILE_TIMEOUT_SEGUNDOS = int(os.environ.get('LOGIN_TURNSTILE_TIMEOUT_SEGUNDOS', '3'))
 
 # Recuperacion de contrasena por codigo al correo (apps/cuentas). Los valores son los del diseno
 # aprobado; las variables existen solo para afinar un limite sin tocar codigo, no hace falta definirlas.

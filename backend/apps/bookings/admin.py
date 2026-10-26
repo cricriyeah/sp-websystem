@@ -49,7 +49,8 @@ from .limites_servicio import mapa_limites
 from .precio_sugerido import sugerir_precio
 from .signals import tomar_resultados_de_aviso
 from .transferencia import (
-    ErrorDeTransferencia, marcar_pagada_por_transferencia, monto_sugerido, puede_marcarse_pagada,
+    ErrorDeTransferencia, cerrar_cobro_con_tarjeta, marcar_pagada_por_transferencia, monto_sugerido,
+    puede_marcarse_pagada,
 )
 from .vistas_precio import respuesta_precio_sugerido
 from .vistas_enlace_pago import respuesta_enlace_pago
@@ -945,13 +946,21 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         # Una reserva que entra ya pagada (o vuelve a pagada) aparta habitacion y componentes
         # con la misma funcion que el webhook de Stripe: antes esto solo corria al pagar en la
         # web, y la misma habitacion se podia vender otra vez.
+        # `Reserva.save()` actualiza `_estado_original` al guardar: hay que leerlo ANTES.
+        estaba_pendiente = getattr(obj, '_estado_original', None) == Reserva.Estado.PENDIENTE_PAGO
         try:
             with transaction.atomic():
                 super().save_model(request, obj, form, change)
                 reservar_cupo_al_confirmar(obj)
+                # Si el cliente dejo un cobro con tarjeta abierto (checkout abandonado) y la vendedora la pasa a pagada
+                # a mano, ese cobro se anula igual que con el boton «Pagó por transferencia»: si no, cobraria otra vez.
+                if estaba_pendiente and obj.stripe_payment_intent_id and not obj.monto_pagado:
+                    cerrar_cobro_con_tarjeta(obj)
         except (SinCupoError, IntegrityError) as exc:
             motivo = str(exc) if isinstance(exc, SinCupoError) else 'Ya no hay habitación esas fechas.'
             raise CupoAgotadoAlGuardar(motivo) from exc
+        except ErrorDeTransferencia as exc:
+            raise CupoAgotadoAlGuardar(str(exc)) from exc
         self._avisar_cambio_de_fecha(request, obj, form, change)
 
     @staticmethod
@@ -1463,7 +1472,12 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
 
         error = None
         sugerido = monto_sugerido(reserva)
-        monto = request.POST.get('monto') or ('' if sugerido is None else f'{sugerido:.2f}')
+        # En POST se usa lo que la persona escribio, tal cual: un campo vacio es un error ("no es un numero"), no
+        # "el total". El total solo se propone al abrir la pantalla.
+        if request.method == 'POST':
+            monto = request.POST.get('monto', '')
+        else:
+            monto = '' if sugerido is None else f'{sugerido:.2f}'
         if request.method == 'POST':
             try:
                 reserva = marcar_pagada_por_transferencia(reserva.pk, monto, request.user)

@@ -36,7 +36,7 @@ except ImportError:
         pass
 from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Notificacion
-from apps.tenancy.notificaciones import registrar_notificacion
+from apps.tenancy.notificaciones import registrar_notificacion, sin_romper
 
 from .estrategias_precio import precio_traslado_congelado
 from .pricing import a_centavos, con_iva, de_centavos, monto_inicial
@@ -197,6 +197,7 @@ def _enlace_a(reserva):
     return reverse('admin:bookings_reserva_change', args=[reserva.pk])
 
 
+@sin_romper
 def _notificar_reserva_nueva(reserva, empresa):
     registrar_notificacion(
         empresa, Notificacion.Nivel.EXITO,
@@ -211,7 +212,7 @@ def _resolver_cobro_repetido(reserva, intent, empresa):
     cliente le cobraron dos veces: se devuelve el segundo de inmediato."""
     # Solo es "evento repetido" si ese intent ya se aplico (dejo `monto_pagado`). Una reserva saldada por transferencia
     # conserva el intent del checkout abandonado sin haberlo cobrado: si ese cobro llega, es un doble cobro.
-    if reserva.stripe_payment_intent_id == intent['id'] and reserva.monto_pagado:
+    if reserva.stripe_payment_intent_id == intent['id'] and (reserva.monto_pagado or reserva.monto_reembolsado):
         logger.info('Evento repetido del pago %s, ya aplicado', intent['id'])
         return YA_APLICADO
 
@@ -219,11 +220,11 @@ def _resolver_cobro_repetido(reserva, intent, empresa):
         'Cobro duplicado en la reserva %s: ya pagada con %s y llego %s. Se reembolsa el segundo.',
         reserva.pk, reserva.stripe_payment_intent_id, intent['id'],
     )
-    return (
-        DUPLICADO_REEMBOLSADO
-        if reembolsar(intent, 'cobro duplicado', empresa)
-        else FALLO_REEMBOLSO
-    )
+    if reembolsar(intent, 'cobro duplicado', empresa):
+        return DUPLICADO_REEMBOLSADO
+    # Un cliente cobrado dos veces cuyo reembolso no salio: sin alerta nadie se entera hasta que se queje.
+    _gestionar_fallo_reembolso(reserva, intent, empresa, motivo='Cobro duplicado: no se pudo devolver el segundo cargo')
+    return FALLO_REEMBOLSO
 
 
 def _verificar_monto(reserva, intent):
@@ -354,6 +355,18 @@ def _gestionar_fallo_reembolso(reserva, intent, empresa, motivo):
         transaction.on_commit(_notificar_fallo)
 
 
+@sin_romper
+def _registrar_cancelacion_sin_cupo(reserva, empresa):
+    """Queda en el feed del backoffice: nadie la ve en pantalla (la causa el webhook, no una persona) y es un cliente
+    que pago, se le devolvio todo y se quedo sin viaje. Nunca rompe el reembolso (registrar_notificacion no lanza)."""
+    registrar_notificacion(
+        empresa, Notificacion.Nivel.AVISO,
+        f'Sin cupo: se reembolsó y canceló la reserva de {reserva.nombre_cliente} · {_producto_de(reserva)} · '
+        f'{reserva.fecha:%d/%m/%Y}.',
+        tipo=Notificacion.Tipo.REEMBOLSO, enlace_url=_enlace_a(reserva), enlace_texto='Ver reserva',
+    )
+
+
 def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None, causa='cupo'):
     """El dia se lleno mientras el cliente pagaba. Se devuelve el 100% y la
     reserva queda cancelada con el motivo real, para que la vendedora la vea en
@@ -372,6 +385,7 @@ def _cancelar_sin_cupo(reserva, intent, empresa, motivo=None, causa='cupo'):
     reserva.apartado_demanda = None
     reserva.full_clean()
     reserva.save()
+    _registrar_cancelacion_sin_cupo(reserva, empresa)
 
     empresa_id = empresa.pk
     reserva_id = reserva.pk
@@ -476,6 +490,16 @@ def aplicar_reembolso(charge, empresa):
         logger.error(
             'Reembolso del cargo %s llego antes que el pago de la reserva %s (sigue pendiente_pago); '
             'no se registra.', charge['id'], reserva.pk,
+        )
+        return None
+
+    if not reserva.monto_pagado:
+        # La reserva se pago por otra via (transferencia, efectivo) y este cargo de tarjeta NO fue su cobro: es el cobro
+        # repetido que `_resolver_cobro_repetido` acaba de devolver. Tomarlo por reembolso total cancelaria una
+        # reserva pagada, soltaria su cupo, su panga y su capitan, y anotaria una salida sin su entrada.
+        logger.error(
+            'Reembolso del cargo %s en la reserva %s, que no registro cobro con tarjeta (se pago por otra via); '
+            'no se cancela ni se anota.', charge['id'], reserva.pk,
         )
         return None
 

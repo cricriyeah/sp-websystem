@@ -12,11 +12,14 @@ Diseno completo y decisiones en docs/architecture/ARCH-notificaciones-backoffice
   con ella: no se afirma un exito que no ocurrio.
 - NUNCA rompen la accion del usuario: atrapan cualquier excepcion, la registran y devuelven `None`.
 """
+import functools
 import logging
+from datetime import timedelta
 
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
+from django.utils import timezone
 
 from . import scope
 from .models import LecturaNotificacion, Notificacion
@@ -36,6 +39,21 @@ def _recortar(texto, largo):
     """Cabe en la columna: un motivo largo de Stripe o un nombre enorme no debe hacer que se pierda el aviso."""
     texto = str(texto or '')
     return texto if len(texto) <= largo else texto[: largo - 1] + '…'
+
+
+def sin_romper(funcion):
+    """Un aviso nunca debe tumbar lo que avisa. `registrar_notificacion` ya atrapa el INSERT, pero armar su texto (leer
+    el producto de la reserva, formatear la fecha) pasa ANTES, en quien llama: en el webhook eso es la transaccion que
+    marca el pago, y una excepcion ahi la revierte. Este decorador envuelve a las funciones que solo existen para
+    avisar. Registra solo el nombre de la funcion y el tipo de error: el texto trae datos del cliente."""
+    @functools.wraps(funcion)
+    def envuelta(*args, **kwargs):
+        try:
+            return funcion(*args, **kwargs)
+        except Exception as exc:
+            logger.warning('No se pudo armar el aviso %s (%s)', funcion.__name__, type(exc).__name__)
+            return None
+    return envuelta
 
 
 def enlace_seguro(url):
@@ -128,6 +146,52 @@ def contar_no_leidas(request, tope=TOPE_NO_LEIDAS):
     ya_leida = LecturaNotificacion.objects.filter(notificacion=OuterRef('pk'), usuario=user)
     sin_leer = _del_alcance(request).annotate(_leida=Exists(ya_leida)).filter(_leida=False)
     return sin_leer.order_by().values('pk')[: tope + 1].count()
+
+
+VENTANA_DE_RECIENTES = timedelta(minutes=2)
+
+
+def nuevas_desde(request, ultima_id, vistas=(), tope=3):
+    """Lo que se anoto en el feed y esta persona aun no ha visto en pantalla, para decirlo con su texto.
+
+    El correo de asignacion y otros procesos terminan al confirmar la transaccion de la peticion, que en produccion
+    es DESPUES de que la vista respondio (`EmpresaScopeMiddleware` la abre entera): la pantalla que guardo no puede
+    saber el resultado. La pagina siguiente (o el siguiente sondeo) si: este es el aviso.
+
+    El `pk` se asigna al INSERTAR, no al confirmar: una notificacion de una transaccion larga puede confirmarse DESPUES
+    de otra con `pk` mayor, y solo mirar `pk > ultima` la perderia para siempre. Por eso tambien se devuelve lo creado
+    en los ultimos 2 minutos, salvo lo que el navegador dice haber visto (`vistas`, ids).
+
+    Devuelve un diccionario: `ultima` (mayor id visible, la referencia de la proxima pregunta), `nuevas` (hasta
+    `tope`, las mas recientes primero), `total` (cuantas hay sin ver) y, solo sin `ultima_id`, `recientes` (ids de la
+    ventana, para que el navegador que acaba de abrir la pagina no las trate como nuevas). Sin `ultima_id` abrir la
+    pagina nunca vuelca el historial. Las de tipo reserva nueva se saltan: ya salen como tarjeta de «Nueva reserva».
+    """
+    vacio = {'ultima': 0, 'nuevas': [], 'total': 0, 'recientes': []}
+    user = getattr(request, 'user', None)
+    if user is None or user.is_anonymous or not user.has_perm('tenancy.view_notificacion'):
+        return vacio
+    base = _del_alcance(request)
+    corte = timezone.now() - VENTANA_DE_RECIENTES
+    ultima = base.order_by('-pk').values_list('pk', flat=True).first() or 0
+    if ultima_id is None:
+        recientes = list(base.filter(creado_en__gte=corte).order_by('-pk').values_list('pk', flat=True)[:50])
+        return {**vacio, 'ultima': ultima, 'recientes': recientes}
+    nuevas = (
+        base.filter(Q(pk__gt=ultima_id) | Q(creado_en__gte=corte))
+        .exclude(tipo=Notificacion.Tipo.RESERVA_NUEVA)
+        .exclude(pk__in=list(vistas)[:100])
+        .order_by('-pk')
+    )
+    total = nuevas.count()
+    items = [
+        {
+            'id': n.pk, 'nivel': n.nivel, 'texto': n.texto, 'motivo': n.motivo,
+            'url': enlace_seguro(n.enlace_url), 'enlace_texto': n.enlace_texto,
+        }
+        for n in nuevas[:tope]
+    ]
+    return {**vacio, 'ultima': ultima, 'nuevas': items, 'total': total}
 
 
 def marcar_leidas(usuario, notificaciones):
