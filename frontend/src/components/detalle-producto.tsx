@@ -3,6 +3,8 @@ import { Check, Dot, Minus, Plus } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import type { ColorActividad } from '@/lib/color-actividad';
 import { TarjetaEmpresa, type TextosEmpresa, type VistaEmpresa } from '@/components/tarjeta-empresa';
+import { GaleriaMosaico } from '@/components/galeria-mosaico';
+import type { FotoVisor } from '@/components/ui/visor-galeria';
 import { TarjetaProducto, type TextosProducto, type VistaProducto } from '@/components/tarjeta-producto';
 import { FilaArrastrable } from '@/components/ui/fila-arrastrable';
 import { HeroMedia } from '@/components/ui/hero-media';
@@ -26,6 +28,8 @@ export type VistaDetalle = {
   /** La palabra del tipo: rotula el arranque cuando no hay foto honesta. */
   palabra: string;
   foto: { src: string; alt: string } | null;
+  /** Todas las fotos del lugar, para la galería con visor; vacía = no hay galería. */
+  galeria: FotoVisor[];
   /** Una línea bajo el título: quién lo opera. */
   linea: string;
   volver: { href: string; etiqueta: string };
@@ -55,6 +59,7 @@ export type VistaDetalle = {
 
 export type TextosDetalle = {
     detalle: Dictionary['sedeContenido']['detalle'];
+    visor: Dictionary['sedeContenido']['galeriaVisor'];
     reservar: TextosProducto;
     carril: { anterior: string; siguiente: string };
     empresa: TextosEmpresa;
@@ -142,6 +147,12 @@ export function DetalleProducto({ vista, textos }: Props) {
                     ))}
                   </dl>
                 )}
+              </div>
+            )}
+            {vista.galeria.length > 0 && (
+              <div>
+                <h2 className="rev texto-seccion">{textos.detalle.galeria}</h2>
+                <GaleriaMosaico fotos={vista.galeria} textosVisor={textos.visor} />
               </div>
             )}
             {vista.incluye.items.length > 0 && (
