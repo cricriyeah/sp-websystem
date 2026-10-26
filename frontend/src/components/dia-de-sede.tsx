@@ -36,7 +36,10 @@ export function DiaDeSede({ id, dia, textos, fondo }: Props) {
               src={momento.foto}
               alt=""
               fill
-              sizes="(min-width: 640px) 30vw, 78vw"
+              // La tarjeta es vertical (3:4) y las fotos horizontales: `object-cover` las escala a la ALTURA de la tarjeta,
+              // así que la foto ocupa unas 2,4 veces el ancho de la tarjeta. Con `sizes` igual al ancho de la tarjeta,
+              // Next sirve una versión chica que el navegador estira (borrosa).
+              sizes="(min-width: 640px) 72vw, 185vw"
               loading={i === 0 ? 'eager' : 'lazy'}
               className="object-cover transition-transform duration-[900ms] ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.04]"
             />
