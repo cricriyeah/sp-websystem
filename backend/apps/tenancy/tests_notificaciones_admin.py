@@ -349,8 +349,11 @@ class CampanaEstaticosTests(SimpleTestCase):
         self.assertGreaterEqual(len(reglas), 6)
         for selector, cuerpo in reglas:
             with self.subTest(selector=selector):
-                for prohibido in ('shadow', 'gradient', 'border:', 'border-width', 'outline'):
+                for prohibido in ('shadow', 'gradient', 'outline'):
                     self.assertNotIn(prohibido, cuerpo)
+                # `border: 0` solo quita el borde por defecto del boton; cualquier borde visible esta prohibido.
+                for borde in re.findall(r'border(?:-width)?:\s*([^;]+);', cuerpo):
+                    self.assertEqual(borde.strip(), '0', selector)
                 for radio in re.findall(r'border-radius:\s*([^;]+);', cuerpo):
                     self.assertIn(radio.strip(), ('9999px', '50%', '0'), selector)
 

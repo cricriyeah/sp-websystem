@@ -194,6 +194,46 @@ def nuevas_desde(request, ultima_id, vistas=(), tope=3):
     return {**vacio, 'ultima': ultima, 'nuevas': items, 'total': total}
 
 
+LIMITE_PANEL = 8
+TOPE_MARCAR_TODAS = 5000
+
+
+def _puede_ver(request):
+    user = getattr(request, 'user', None)
+    return user is not None and not user.is_anonymous and user.has_perm('tenancy.view_notificacion')
+
+
+def _con_lectura(request):
+    """Las del alcance de la persona, cada una con `_leida` (si ESTA persona ya la vio)."""
+    ya_leida = LecturaNotificacion.objects.filter(notificacion=OuterRef('pk'), usuario=request.user)
+    return _del_alcance(request).annotate(_leida=Exists(ya_leida))
+
+
+def recientes_para_el_panel(request, limite=LIMITE_PANEL):
+    """Las ultimas notificaciones de la persona para el panel de la campana, las mas nuevas primero. Incluye las ya
+    leidas (`leida`): el panel es un vistazo al historial reciente, no solo a lo pendiente. Vacio sin permiso."""
+    if not _puede_ver(request):
+        return []
+    filas = _con_lectura(request).order_by('-creado_en', '-pk')[:limite]
+    return [
+        {
+            'id': n.pk, 'nivel': n.nivel, 'texto': n.texto, 'motivo': n.motivo,
+            'url': enlace_seguro(n.enlace_url), 'enlace_texto': n.enlace_texto,
+            'creado_en': n.creado_en.isoformat(), 'leida': n._leida,
+        }
+        for n in filas
+    ]
+
+
+def marcar_todas_las_del_alcance(request):
+    """Marca como leidas, para quien lo pide, todas sus pendientes. Devuelve cuantas marco. 0 sin permiso."""
+    if not _puede_ver(request):
+        return 0
+    pendientes = list(_con_lectura(request).filter(_leida=False).order_by('-pk')[:TOPE_MARCAR_TODAS])
+    marcar_leidas(request.user, pendientes)
+    return len(pendientes)
+
+
 def marcar_leidas(usuario, notificaciones):
     """Crea la lectura de `usuario` para cada notificacion del iterable. Idempotente (`ignore_conflicts` sobre la
     restriccion unica): dos clics no duplican. Solo escribe lecturas del propio `usuario`."""

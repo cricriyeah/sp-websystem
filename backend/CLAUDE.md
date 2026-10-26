@@ -691,12 +691,19 @@ empresa**, no una bitacora legal (el History del admin sigue siendo la auditoria
   da por fallido un resultado vacio.
 - **Campana** (`static/tenancy/avisos.js` y `avisos.css`, sin tocar plantillas de Unfold). El sondeo de reservas nuevas
   (`/admin/avisos/reservas-nuevas/`) agrego `no_leidas` (tope 99+1) y `notificaciones_url` (vacio = sin permiso, sin
-  campana); sigue siendo la misma peticion cada 10 s. El JS inserta un `<a class="aviso-campana">` al inicio de
+  campana); sigue siendo la misma peticion cada 10 s. El JS inserta un `<button class="aviso-campana">` al inicio de
   `#header-inner .ml-auto` (cae a esquina fija si no lo encuentra) y, si el contador sube entre dos consultas, muestra una
   tarjeta «Notificacion nueva» (descontando las que ya explica una tarjeta de «Nueva reserva» de la misma consulta). Todo
   dato del servidor entra con `textContent`; la URL solo se acepta si es una ruta propia. Clases propias `.aviso-campana*`
   y `.notif-*` (esquinas rectas o circulo, sin sombras, degradados ni lineas finas; vigilado por prueba): nada de Tailwind
   inventado.
+- **Panel de la campana**: el clic en la campana abre un rectangulo debajo de ella (`.aviso-panel`) con las ultimas 8
+  notificaciones (leidas y no leidas, las no leidas en negritas), el boton «Marcar todas como leidas» y un enlace a la
+  pantalla completa. Se consulta SOLO al abrirlo, no en el sondeo: `GET /admin/avisos/notificaciones/` (JSON, incluye el
+  token CSRF) y `POST /admin/avisos/notificaciones/marcar-todas/` (`apps/tenancy/vistas_notificaciones.py`; el POST va con
+  CSRF por `admin_view`). Marcar es una accion explicita: abrir el panel NO marca nada como leido. Mismo alcance por empresa
+  que la lista (operador: todas), cada endpoint en su savepoint y 503 si el feed falla. Se cierra con `Esc` o clic fuera.
+  Pruebas: `apps/tenancy/tests_panel_notificaciones.py`.
 - **Lista** (`tenancy.admin.NotificacionAdmin`, `/admin/tenancy/notificacion/`): **solo lectura para todos**, operador
   incluido (las crea `avisar()`, las borra el cron). Filtros por tipo y nivel, lo no leido en negritas, columna «Leida».
   Accion «Marcar como leidas» (respeta el filtro, incluso con «seleccionar todas») y boton «Marcar todas como leidas»

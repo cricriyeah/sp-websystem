@@ -24,6 +24,7 @@ from apps.cuentas.login import LoginConTurnstile
 from apps.finance.views import movimientos_financieros, panel_financiero
 from apps.fleet.views import TrasladosView
 from apps.tenancy.inicio import vista_avanzada, vista_saldos
+from apps.tenancy.vistas_notificaciones import marcar_todas_panel, panel_notificaciones
 
 from .health import healthz
 
@@ -47,6 +48,10 @@ urlpatterns = [
     path('admin/calendario/', admin.site.admin_view(calendario), name='calendario'),
     # Aviso de reservas nuevas para cualquier pantalla del admin: JSON que consulta tenancy/avisos.js.
     path('admin/avisos/reservas-nuevas/', admin.site.admin_view(reservas_nuevas), name='avisos_reservas_nuevas'),
+    # Panel de la campana de notificaciones (tenancy/avisos.js): las ultimas en JSON y «Marcar todas como leidas».
+    path('admin/avisos/notificaciones/marcar-todas/', admin.site.admin_view(marcar_todas_panel),
+         name='avisos_notificaciones_marcar_todas'),
+    path('admin/avisos/notificaciones/', admin.site.admin_view(panel_notificaciones), name='avisos_notificaciones'),
     path('admin/avanzado/',admin.site.admin_view(vista_avanzada), name='admin_avanzado'),
     path('admin/saldos-por-cobrar/', admin.site.admin_view(vista_saldos), name='saldos_por_cobrar'),
     # Recuperacion de contrasena por codigo al correo (apps/cuentas). Anonima a proposito, asi que NO va con

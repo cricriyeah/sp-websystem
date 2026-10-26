@@ -73,9 +73,11 @@
   justify-content: center;
   width: 2.5rem;
   height: 2.5rem;
+  border: 0;
   border-radius: 9999px;
+  background: transparent;
   color: inherit;
-  text-decoration: none;
+  cursor: pointer;
 }
 
 .aviso-campana:hover,
@@ -114,6 +116,157 @@
 
 .aviso-campana__badge[hidden] {
   display: none;
+}
+
+/* Panel de la campana (tenancy/avisos.js): un rectangulo pegado debajo de la campana, encima de la pantalla actual.
+ * Esquinas rectas, sin lineas ni sombras: lo separan del fondo su tono oscuro y, dentro, un paso de tono para lo no
+ * leido. En celular ocupa el ancho de la pantalla menos el margen. */
+.aviso-panel {
+  position: fixed;
+  right: 1rem;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, calc(100vw - 2rem));
+  overflow: hidden;
+  border-radius: 0;
+  background: rgb(28 25 23);
+  color: #fff;
+}
+
+.aviso-panel[hidden] {
+  display: none;
+}
+
+.aviso-panel:focus {
+  outline: none;
+}
+
+.dark .aviso-panel {
+  background: rgb(41 37 36);
+}
+
+.aviso-panel__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+}
+
+.aviso-panel__titulo {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.aviso-panel__marcar {
+  min-height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  color: rgb(28 25 23);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aviso-panel__marcar[hidden] {
+  display: none;
+}
+
+.aviso-panel__marcar:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.aviso-panel__estado {
+  margin: 0;
+  padding: 0.5rem 1rem 1rem;
+  font-size: 0.9375rem;
+  color: rgb(231 229 228);
+}
+
+.aviso-panel__estado[hidden] {
+  display: none;
+}
+
+.aviso-panel__lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.aviso-panel__fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+}
+
+.aviso-panel__fila--nueva {
+  background: rgb(68 64 60);
+}
+
+.aviso-panel__fila--nueva .aviso-panel__texto {
+  font-weight: 700;
+}
+
+.aviso-panel__fila .aviso-reservas__marca {
+  flex: none;
+  margin-top: 0.4375rem;
+}
+
+.aviso-panel__cuerpo {
+  min-width: 0;
+}
+
+.aviso-panel__texto,
+.aviso-panel__motivo,
+.aviso-panel__meta {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.aviso-panel__texto {
+  font-size: 0.9375rem;
+}
+
+.aviso-panel__motivo {
+  margin-top: 0.125rem;
+  font-size: 0.875rem;
+  color: rgb(214 211 209);
+}
+
+.aviso-panel__meta {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: rgb(214 211 209);
+}
+
+.aviso-panel__enlace,
+.aviso-panel__todas {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.aviso-panel__todas {
+  display: block;
+  padding: 0.875rem 1rem;
+  font-size: 0.9375rem;
+}
+
+.aviso-panel__enlace:hover,
+.aviso-panel__todas:hover,
+.aviso-panel__enlace:focus-visible,
+.aviso-panel__todas:focus-visible {
+  text-decoration: none;
 }
 
 /* Lista de notificaciones (admin de Notificacion): nivel como pildora de color solido. */

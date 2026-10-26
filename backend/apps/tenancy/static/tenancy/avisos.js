@@ -7,7 +7,8 @@
  * Ver apps/bookings/avisos.py.
  *
  * La misma respuesta trae `no_leidas` y `notificaciones_url`: con ellos se pinta la campana de notificaciones en el
- * encabezado (apps/tenancy/notificaciones.py) sin otra peticion. Si el contador sube entre una consulta y la
+ * encabezado (apps/tenancy/notificaciones.py) sin otra peticion. Al hacer clic en la campana se abre un panel con las
+ * ultimas (apps/tenancy/vistas_notificaciones.py); la lista completa queda a un enlace. Si el contador sube entre una consulta y la
  * siguiente sale una tarjeta «Notificación nueva»: el correo de asignacion y otros procesos terminan cuando la
  * pantalla que los pidio ya respondio, asi que ese es el aviso inmediato de lo que paso despues.
  */
@@ -22,6 +23,7 @@
   var MAXIMO_VISIBLES = 3;
   var FALLOS_PARA_PARAR = 3;
   var ENDPOINT = '/admin/avisos/reservas-nuevas/';
+  var ENDPOINT_PANEL = '/admin/avisos/notificaciones/';
 
   // Sin sesion no hay a quien avisar: login, recuperacion de contrasena y cierre de sesion. Los avisos de Django
   // (tarjetas) si se convierten ahi tambien; el sondeo, la campana y el sonido no.
@@ -34,6 +36,16 @@
   var contenedor = null;
   var campana = null;
   var insignia = null;
+  var todasUrl = '';
+  var panel = null;
+  var panelLista = null;
+  var panelEstado = null;
+  var panelMarcar = null;
+  var panelPie = null;
+  var panelAbierto = false;
+  var cargaDelPanel = 0;
+  var csrfPanel = '';
+  var urlMarcarTodas = '';
   var ultimaNotif = null;
   var CLAVE_ULTIMA = 'avisos-ultima-notificacion';
   var vistas = null;
@@ -245,8 +257,14 @@
 
   function asegurarCampana(url) {
     if (campana) return;
-    campana = el('a', 'aviso-campana');
-    campana.href = url;
+    todasUrl = url;
+    // Boton, no enlace: abre el panel encima de la pantalla actual. La lista completa queda al pie del panel.
+    campana = el('button', 'aviso-campana');
+    campana.type = 'button';
+    campana.setAttribute('aria-haspopup', 'dialog');
+    campana.setAttribute('aria-expanded', 'false');
+    campana.setAttribute('aria-controls', 'aviso-panel');
+    campana.addEventListener('click', alternarPanel);
     var icono = el('span', 'material-symbols-outlined', 'notifications');
     icono.setAttribute('aria-hidden', 'true');
     insignia = el('span', 'aviso-campana__badge');
@@ -266,11 +284,155 @@
   function pintarCampana(datos) {
     if (!rutaPropia(datos.notificaciones_url)) return;
     asegurarCampana(datos.notificaciones_url);
-    var n = Number(datos.no_leidas) || 0;
+    ponerConteo(datos.no_leidas);
+  }
+
+  function ponerConteo(sinLeer) {
+    var n = Number(sinLeer) || 0;
     insignia.textContent = n > 99 ? '99+' : String(n);
     insignia.hidden = n === 0;
     campana.setAttribute('aria-label', n === 0 ? 'Notificaciones' : 'Notificaciones, ' + n + ' sin leer');
   }
+
+  // Panel de la campana: un rectangulo debajo de ella con las ultimas notificaciones. Se consulta al abrirlo
+  // (/admin/avisos/notificaciones/), no en el sondeo. Todo lo del servidor entra con textContent.
+  function hora(iso) {
+    var fecha = new Date(iso);
+    if (isNaN(fecha.getTime())) return '';
+    return new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+      .format(fecha);
+  }
+
+  function asegurarPanel() {
+    if (panel) return;
+    panel = el('div', 'aviso-panel');
+    panel.id = 'aviso-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Notificaciones');
+    panel.tabIndex = -1;
+    panel.hidden = true;
+    var cabecera = el('div', 'aviso-panel__cabecera');
+    cabecera.appendChild(el('p', 'aviso-panel__titulo', 'Notificaciones'));
+    panelMarcar = el('button', 'aviso-panel__marcar', 'Marcar todas como leídas');
+    panelMarcar.type = 'button';
+    panelMarcar.hidden = true;
+    panelMarcar.addEventListener('click', marcarTodasDesdeElPanel);
+    cabecera.appendChild(panelMarcar);
+    panelEstado = el('p', 'aviso-panel__estado', 'Cargando…');
+    panelEstado.setAttribute('role', 'status');
+    panelLista = el('ul', 'aviso-panel__lista');
+    panelPie = el('a', 'aviso-panel__todas', 'Ver todas las notificaciones');
+    if (rutaPropia(todasUrl)) panelPie.href = todasUrl;
+    panel.appendChild(cabecera);
+    panel.appendChild(panelEstado);
+    panel.appendChild(panelLista);
+    panel.appendChild(panelPie);
+    document.body.appendChild(panel);
+  }
+
+  function colocarPanel() {
+    var caja = campana.getBoundingClientRect();
+    panel.style.top = Math.round(caja.bottom + 8) + 'px';
+    panel.style.maxHeight = Math.max(240, window.innerHeight - caja.bottom - 24) + 'px';
+  }
+
+  function alternarPanel() {
+    if (panelAbierto) { cerrarPanel(false); } else { abrirPanel(); }
+  }
+
+  function abrirPanel() {
+    asegurarPanel();
+    panelAbierto = true;
+    panel.hidden = false;
+    colocarPanel();
+    campana.setAttribute('aria-expanded', 'true');
+    cargarPanel();
+    panel.focus();
+  }
+
+  function cerrarPanel(devolverFoco) {
+    if (!panelAbierto) return;
+    panelAbierto = false;
+    panel.hidden = true;
+    campana.setAttribute('aria-expanded', 'false');
+    if (devolverFoco) campana.focus();
+  }
+
+  function cargarPanel() {
+    var turno = cargaDelPanel += 1;
+    fetch(ENDPOINT_PANEL, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (res) {
+        var tipo = res.headers.get('content-type') || '';
+        if (!res.ok || tipo.indexOf('application/json') === -1) throw new Error('sin respuesta util');
+        return res.json();
+      })
+      .then(function (datos) { if (turno === cargaDelPanel) pintarPanel(datos); })
+      .catch(function () {
+        if (turno !== cargaDelPanel) return;
+        panelLista.textContent = '';
+        panelMarcar.hidden = true;
+        panelEstado.textContent = 'No se pudieron cargar. Abre la lista completa.';
+        panelEstado.hidden = false;
+      });
+  }
+
+  function pintarPanel(datos) {
+    csrfPanel = typeof datos.csrf === 'string' ? datos.csrf : '';
+    urlMarcarTodas = rutaPropia(datos.marcar_todas_url) ? datos.marcar_todas_url : '';
+    if (rutaPropia(datos.todas_url)) panelPie.href = datos.todas_url;
+    ponerConteo(datos.no_leidas);
+    panelLista.textContent = '';
+    var filas = Array.isArray(datos.notificaciones) ? datos.notificaciones : [];
+    filas.forEach(function (n) {
+      var nivel = NIVELES_DE_NOTIFICACION[n.nivel] || 'info';
+      var fila = el('li', 'aviso-panel__fila' + (n.leida ? '' : ' aviso-panel__fila--nueva'));
+      var marca = el('span', 'aviso-reservas__marca aviso-reservas__marca--' + nivel);
+      marca.setAttribute('aria-hidden', 'true');
+      var cuerpo = el('div', 'aviso-panel__cuerpo');
+      cuerpo.appendChild(el('p', 'aviso-panel__texto', n.texto));
+      if (n.motivo) cuerpo.appendChild(el('p', 'aviso-panel__motivo', n.motivo));
+      var pie = el('p', 'aviso-panel__meta', hora(n.creado_en));
+      if (rutaPropia(n.url)) {
+        var enlace = el('a', 'aviso-panel__enlace', n.enlace_texto || 'Ver');
+        enlace.href = n.url;
+        pie.appendChild(document.createTextNode(' · '));
+        pie.appendChild(enlace);
+      }
+      cuerpo.appendChild(pie);
+      fila.appendChild(marca);
+      fila.appendChild(cuerpo);
+      panelLista.appendChild(fila);
+    });
+    panelEstado.textContent = 'No hay notificaciones.';
+    panelEstado.hidden = filas.length > 0;
+    panelMarcar.hidden = !(Number(datos.no_leidas) > 0) || !urlMarcarTodas;
+  }
+
+  function marcarTodasDesdeElPanel() {
+    if (!urlMarcarTodas) return;
+    panelMarcar.disabled = true;
+    fetch(urlMarcarTodas, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'X-CSRFToken': csrfPanel },
+    })
+      .then(function (res) { if (!res.ok) throw new Error('no se pudo marcar'); return res.json(); })
+      .then(function () { cargarPanel(); })
+      .catch(function () {
+        panelEstado.textContent = 'No se pudieron marcar como leídas. Intenta de nuevo.';
+        panelEstado.hidden = false;
+      })
+      .then(function () { panelMarcar.disabled = false; });
+  }
+
+  document.addEventListener('click', function (evento) {
+    if (!panelAbierto) return;
+    if (panel.contains(evento.target) || campana.contains(evento.target)) return;
+    cerrarPanel(false);
+  });
+  document.addEventListener('keydown', function (evento) {
+    if (panelAbierto && evento.key === 'Escape') cerrarPanel(true);
+  });
+  window.addEventListener('resize', function () { if (panelAbierto) colocarPanel(); });
 
   // Lo que paso despues de que la pantalla que lo pidio ya respondio (el correo de asignacion, un reembolso...): el
   // servidor manda el TEXTO de las notificaciones nuevas y aqui salen como tarjetas. La referencia (ultimo id visto)
