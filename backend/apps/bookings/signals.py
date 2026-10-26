@@ -38,8 +38,13 @@ def _le_toca_aviso(reserva):
     return reserva.fecha >= timezone.localdate()
 
 
-@receiver(post_save, sender=Reserva, dispatch_uid='bookings.aviso_asignacion')
+@receiver(post_save, dispatch_uid='bookings.aviso_asignacion')
 def avisar_asignacion(sender, instance, **kwargs):
+    # Sin `sender=Reserva` a proposito: Django manda la senal con la clase proxy como emisor, y la pantalla
+    # «Asignar pangas» guarda a traves del proxy `Agenda`. Con `sender=Reserva` el aviso nunca salia al asignar
+    # panga y capitan desde ahi. El isinstance cubre a Reserva y a cualquier proxy suyo.
+    if not isinstance(instance, Reserva):
+        return
     if not _le_toca_aviso(instance):
         return
     # SET LOCAL muere al COMMIT: el callback no puede depender del alcance de la
