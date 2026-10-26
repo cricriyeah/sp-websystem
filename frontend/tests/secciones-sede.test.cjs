@@ -6,7 +6,7 @@ const path = require('node:path');
 const s = require(path.join(process.env.SECCIONES_TEST_OUT, 'lib/secciones-sede.js'));
 
 const foto = { ancho: 1448, alto: 1086 };
-const base = { servicios: [{}], paquetes: [], resenas: [], fotos: [], faq: [], temporadas: null, dia: undefined };
+const base = { servicios: [{}], paquetes: [], resenas: [], fotos: [], faq: [], temporadas: null, dia: undefined, conocenos: undefined };
 const ids = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).map((x) => x.id);
 const reservar = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).find((x) => x.id === 'reservar');
 
@@ -38,8 +38,8 @@ test('galería solo con 3 fotos aptas', () => {
 
 test('orden fijo de la sede, con todo', () => {
   assert.deepEqual(
-    ids({ paquetes: [{}], dia: [{}], fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}] }),
-    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'galeria', 'temporadas', 'opiniones', 'preguntas'],
+    ids({ paquetes: [{}], dia: [{}], conocenos: [{}], fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}] }),
+    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'conocenos', 'galeria', 'temporadas', 'opiniones', 'preguntas'],
   );
 });
 
@@ -50,6 +50,16 @@ test('paquetes y día solo si hay contenido real: sin paquetes o sin momentos no
   assert.ok(!ids({ dia: [] }).includes('dia'));
   assert.ok(!ids({ dia: undefined }).includes('dia'));
   assert.ok(ids({ dia: [{}] }).includes('dia'));
+});
+
+test('conócenos solo con fotos, entre tranquilidad y la galería, y fuera del menú', () => {
+  assert.ok(!ids({ conocenos: [] }).includes('conocenos'));
+  assert.ok(!ids({ conocenos: undefined }).includes('conocenos'));
+  assert.deepEqual(ids({ conocenos: [{}], fotos: [foto, foto, foto] }), ['hero', 'reservar', 'tranquilidad', 'conocenos', 'galeria']);
+  assert.deepEqual(s.enlacesDeSede(['hero', 'reservar', 'tranquilidad', 'conocenos', 'galeria']).map((e) => e.claveNav), ['reservar', 'galeria']);
+  const fondos = s.fondosDeSecciones(['hero', 'reservar', 'tranquilidad', 'conocenos', 'galeria']);
+  assert.equal(fondos.conocenos, 'blanco');
+  assert.equal(fondos.galeria, 'cafe-bruma');
 });
 
 test('enlaces del menú: un ancla por sección navegable, sin héroe, paquetes, día ni tranquilidad', () => {

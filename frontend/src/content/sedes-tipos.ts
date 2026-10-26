@@ -73,6 +73,17 @@ export type SedeDia = {
   momentos: { titulo: string; texto: string; foto: string }[];
 };
 
+/**
+ * «Conócenos»: la gente detrás de los servicios de la sede. Abre con `etiquetaDesde` y el año `desde` en
+ * grande («Desde» / «1950»). La primera foto es la protagonista (vertical, ocupa dos filas).
+ */
+export type SedeConocenos = {
+  titulo: string;
+  etiquetaDesde: string;
+  desde: string;
+  fotos: { src: string; alt: string }[];
+};
+
 export type SedeDestacada = {
   tipo: 'servicio' | 'paquete';
   slug: string;
@@ -101,6 +112,8 @@ export type SedeCuerpoContenido = {
   galeria?: { src: string; alt: string; ancho: number; alto: number; empresaSlug: string }[];
   /** El día del viaje, momento por momento. Sin él, no hay sección. */
   dia?: SedeDia;
+  /** Quiénes hacen los servicios de la sede. Sin él, no hay sección. */
+  conocenos?: SedeConocenos;
   temporadas?: SedeTemporadas;
   faq?: { q: string; a: string }[];
 };
