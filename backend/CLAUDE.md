@@ -733,6 +733,13 @@ empresa**, no una bitacora legal (el History del admin sigue siendo la auditoria
   nunca los recorta el tope de tarjetas visibles. Si la conversion falla, el script vuelve a mostrar el bloque. La
   reserva nueva suena (dos tonos con Web Audio, sin archivo); los navegadores solo dejan sonar despues de que la persona
   toco la pagina una vez, y la bocina junto a la campana lo apaga (queda en `localStorage`).
+- **Con la pestana en segundo plano el sondeo sigue** (ya no se pausa al ocultarla): el ritmo de 10 s lo marca un worker
+  creado desde un Blob (el `setInterval` de una pestana oculta lo frenan los navegadores a una vez por minuto o menos;
+  sin Worker se usa el normal). Con la ventana fuera de vista una reserva nueva suena, pone `(N) Nueva reserva · …` en el
+  titulo de la pestana y, si la persona lo permitio, manda una notificacion del sistema (tambien al detenerse los avisos
+  por sesion vencida). El permiso solo se pide con un clic en el boton «Activar» de una tarjeta que sale UNA vez por
+  navegador (`localStorage`). Limites: la pestana debe seguir abierta y sin «dormir» (Edge/Chrome/Opera GX pueden
+  congelar pestanas inactivas: excluir este sitio) y hubo que tocar la pagina una vez para que suene.
 - **El sondeo no renueva la sesion.** `SESSION_SAVE_EVERY_REQUEST = True` renueva la cookie en cada respuesta; el sondeo
   de 10 s correria solo y una pestana olvidada abierta mantendria la sesion para siempre. `SessionMiddleware` es
   `apps.tenancy.middleware_sesion.SesionSinRenovarEnSondeo`, que no guarda ni renueva en `/admin/avisos/reservas-nuevas/`.

@@ -206,3 +206,27 @@ class PanelEstaticosTests(SimpleTestCase):
 
     def test_marcar_todas_manda_el_token_csrf(self):
         self.assertIn("'X-CSRFToken'", self.js)
+
+
+class AvisosEnSegundoPlanoEstaticosTests(SimpleTestCase):
+    """El sondeo sigue con la pestana oculta y avisa fuera de la pantalla: reglas del JS, sin navegador."""
+
+    def setUp(self):
+        self.js = (ESTATICOS / 'avisos.js').read_text(encoding='utf-8')
+
+    def test_el_ritmo_lo_marca_un_worker_con_respaldo_de_setinterval(self):
+        self.assertIn('new window.Worker(', self.js)
+        self.assertIn('window.setInterval(consultar, INTERVALO_MS)', self.js)
+
+    def test_ocultar_la_pestana_ya_no_detiene_el_sondeo(self):
+        manejador = self.js.split("document.addEventListener('visibilitychange'")[1].split('});')[0]
+        self.assertNotIn('parar()', manejador)
+
+    def test_la_notificacion_del_sistema_solo_sale_con_permiso_y_fuera_de_vista(self):
+        funcion = self.js.split('function avisarAlSistema(')[1].split('\n  }\n')[0]
+        self.assertIn('fueraDeVista()', funcion)
+        self.assertIn("permission !== 'granted'", funcion)
+
+    def test_el_permiso_se_pide_solo_desde_un_clic_en_el_boton_de_la_tarjeta(self):
+        self.assertEqual(self.js.count('requestPermission'), 1)
+        self.assertIn("texto: 'Activar'", self.js)

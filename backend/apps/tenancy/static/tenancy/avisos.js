@@ -1,8 +1,10 @@
 /* Aviso de reservas nuevas y campana de notificaciones en cualquier pantalla del admin.
  *
- * Pregunta cada 10 segundos (solo con la pestana a la vista) que reservas entraron desde la ultima vez y las
- * muestra arriba a la derecha. No es instantaneo: el admin no tiene una conexion abierta con el navegador y
- * montar una (WebSockets) no vale la pena para este volumen. Nunca recarga sola: la vendedora puede estar a media
+ * Pregunta cada 10 segundos que reservas entraron desde la ultima vez y las muestra arriba a la derecha. Sigue
+ * preguntando con la pestana en segundo plano (el ritmo lo marca un worker: los navegadores frenan los temporizadores
+ * normales de una pestana oculta a una vez por minuto o menos) y ahi avisa tambien con el sonido, el titulo de la
+ * pestana y, si la persona lo activo, una notificacion del sistema. No es instantaneo: el admin no tiene una conexion
+ * abierta con el navegador y montar una (WebSockets) no vale la pena para este volumen. Nunca recarga sola: la vendedora puede estar a media
  * asignacion; en el listado de Reservas y en Asignar pangas el aviso ofrece "Actualizar lista".
  * Ver apps/bookings/avisos.py.
  *
@@ -32,6 +34,11 @@
   var enListado = /\/(bookings\/(reserva|agenda)|tenancy\/notificacion)\/$/.test(window.location.pathname);
   var desde = null;
   var timer = null;
+  var worker = null;
+  var tituloOriginal = document.title;
+  var tituloPendientes = 0;
+  var CLAVE_OFRECIDO = 'avisos-sistema-ofrecido';
+  var ofrecido = false;
   var fallos = 0;
   var contenedor = null;
   var campana = null;
@@ -178,7 +185,60 @@
       );
     }
     recortar(lugar);
-    if (datos.reservas.length > 0) sonar();
+    if (datos.reservas.length > 0) {
+      sonar();
+      marcarTitulo(datos.total);
+      var primera = datos.reservas[0];
+      var cuerpo = primera.cliente + (primera.producto ? ' · ' + primera.producto : '');
+      if (datos.total > 1) cuerpo += ' (+' + (datos.total - 1) + ' más)';
+      avisarAlSistema('Nueva reserva', cuerpo, 'reserva-nueva');
+    }
+  }
+
+  // Con la ventana en segundo plano la tarjeta no se ve: el titulo de la pestana lleva la cuenta y, si la persona dio
+  // permiso, el sistema operativo muestra una notificacion. El permiso se pide solo con un clic (ver ofrecerAvisosDelSistema).
+  function fueraDeVista() {
+    return document.hidden || !document.hasFocus();
+  }
+
+  function marcarTitulo(cuantas) {
+    if (!fueraDeVista()) return;
+    tituloPendientes += Number(cuantas) || 1;
+    document.title = '(' + tituloPendientes + ') Nueva reserva · ' + tituloOriginal;
+  }
+
+  function restaurarTitulo() {
+    if (tituloPendientes === 0) return;
+    tituloPendientes = 0;
+    document.title = tituloOriginal;
+  }
+
+  function avisarAlSistema(titulo, cuerpo, etiqueta) {
+    if (!fueraDeVista() || typeof window.Notification === 'undefined' || window.Notification.permission !== 'granted') return;
+    try {
+      var aviso = new window.Notification(titulo, { body: cuerpo, tag: etiqueta });
+      aviso.onclick = function () { window.focus(); aviso.close(); };
+    } catch (e) { /* sin notificaciones del sistema: quedan el sonido y el titulo */ }
+  }
+
+  // Una sola vez por navegador ofrece activar las notificaciones del sistema, con un boton (el navegador exige un clic).
+  function ofrecerAvisosDelSistema() {
+    if (ofrecido || typeof window.Notification === 'undefined' || window.Notification.permission !== 'default') return;
+    ofrecido = true;
+    try {
+      if (window.localStorage.getItem(CLAVE_OFRECIDO) === '1') return;
+      window.localStorage.setItem(CLAVE_OFRECIDO, '1');
+    } catch (e) { return; }
+    var lugar = asegurarContenedor();
+    lugar.insertBefore(
+      crearAviso(
+        'Avisos con la ventana en segundo plano',
+        'Activa los avisos del sistema para enterarte de una reserva nueva aunque estés en otra pestaña o programa.',
+        null, '', 'info', { texto: 'Activar', hacer: function () { window.Notification.requestPermission(); } }
+      ),
+      lugar.firstChild
+    );
+    recortar(lugar);
   }
 
   // Sonido de reserva nueva: dos tonos cortos generados en el navegador (sin archivo de audio). Los navegadores no
@@ -523,6 +583,7 @@
         pintarCampana(datos);
         mostrarNotificaciones(datos);
         if (datos.total > 0) mostrar(datos);
+        ofrecerAvisosDelSistema();
       })
       .catch(function () {
         // Sesion vencida (el admin responde con la pantalla de login) o backend caido: se reintenta unas veces y
@@ -548,27 +609,50 @@
       lugar.firstChild
     );
     recortar(lugar);
+    avisarAlSistema('Se detuvieron los avisos', 'La sesión venció o no hay conexión. Recarga la página del panel.', 'avisos-detenidos');
+  }
+
+  // El ritmo lo marca un worker: el temporizador de una pestana oculta lo frenan los navegadores (una vez por minuto o
+  // menos), el de un worker no. Sin Worker (o con una politica que lo impida) se usa el temporizador normal.
+  function crearTemporizador() {
+    try {
+      var fuente = 'var t=setInterval(function(){postMessage(1)},' + INTERVALO_MS + ');onmessage=function(){clearInterval(t)}';
+      var direccion = window.URL.createObjectURL(new window.Blob([fuente], { type: 'text/javascript' }));
+      var hilo = new window.Worker(direccion);
+      window.URL.revokeObjectURL(direccion);
+      hilo.onmessage = function () { consultar(); };
+      return hilo;
+    } catch (e) {
+      return null;
+    }
   }
 
   function arrancar() {
-    if (timer) return;
-    timer = window.setInterval(consultar, INTERVALO_MS);
+    if (timer || worker) return;
+    worker = crearTemporizador();
+    if (!worker) timer = window.setInterval(consultar, INTERVALO_MS);
   }
 
   function parar() {
+    if (worker) {
+      worker.postMessage('parar');
+      worker.terminate();
+      worker = null;
+    }
     window.clearInterval(timer);
     timer = null;
   }
 
+  // Ya no se pausa al ocultar la pestana: es justo cuando mas sirve el aviso. Al volver se pregunta de inmediato.
   document.addEventListener('visibilitychange', function () {
-    if (sinSesion) return;
-    if (document.hidden) {
-      parar();
-    } else if (fallos < FALLOS_PARA_PARAR) {
+    if (sinSesion || document.hidden) return;
+    restaurarTitulo();
+    if (fallos < FALLOS_PARA_PARAR) {
       consultar();
       arrancar();
     }
   });
+  window.addEventListener('focus', restaurarTitulo);
 
   function iniciar() {
     convertirAvisosDeDjango();
