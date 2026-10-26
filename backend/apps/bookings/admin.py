@@ -1744,11 +1744,30 @@ admin.site.unregister(User)
 admin.site.unregister(Group)
 
 
+class UserChangeFormCorreoUnico(UserChangeForm):
+    """Edicion de Usuarios que no deja repetir el correo de otra cuenta.
+
+    La recuperacion de contrasena (apps/cuentas) encuentra la cuenta por su correo: con dos cuentas en el mismo
+    correo no envia nada. Solo se revisa cuando el correo CAMBIA, para no impedir editar una cuenta antigua
+    que ya lo tenia repetido; vacio se permite (cuentas sin correo todavia: `auditar_correos_cuentas`).
+    """
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if (
+            email
+            and 'email' in self.changed_data
+            and User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists()
+        ):
+            raise ValidationError('Ya existe otra cuenta con ese correo.')
+        return email
+
+
 @admin.register(User)
 class UserAdmin(EmpresaScopedUserAdminMixin, AccionesDeFilaMixin, BaseUserAdmin, ModelAdmin):
     # Los formularios de Unfold son los de Django con sus widgets. Sin ellos el
     # campo de contraseña se pinta sin estilo y el enlace para cambiarla no sale.
-    form = UserChangeForm
+    form = UserChangeFormCorreoUnico
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
 
@@ -1800,6 +1819,7 @@ class UserAdmin(EmpresaScopedUserAdminMixin, AccionesDeFilaMixin, BaseUserAdmin,
                         rol=form.cleaned_data['rol'],
                         empresa=empresa,
                         codigo_vendedora=form.cleaned_data.get('codigo'),
+                        email=form.cleaned_data.get('email', ''),
                     )
                     rol_str = 'Jefe' if form.cleaned_data['rol'] == MembresiaEmpresa.Rol.JEFE else 'Vendedora'
                     self.message_user(request, f'{rol_str} {nuevo.get_username()} dado(a) de alta.')

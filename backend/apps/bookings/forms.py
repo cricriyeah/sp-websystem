@@ -8,6 +8,7 @@ from apps.bookings.models import Vendedora
 from apps.tenancy import scope
 from apps.tenancy.forms_unfold import EstiloUnfoldMixin
 from apps.tenancy.models import Empresa, MembresiaEmpresa
+from unfold.widgets import UnfoldAdminEmailInputWidget
 
 User = get_user_model()
 
@@ -22,6 +23,12 @@ class AltaUsuarioForm(EstiloUnfoldMixin, forms.Form):
         max_length=150,
         label='Nombre completo',
         help_text='Nombre y apellido de la persona.',
+    )
+    email = forms.EmailField(
+        max_length=254,
+        label='Correo',
+        help_text='Con este correo la persona recupera su contraseña. Debe ser suyo y no repetirse en otra cuenta.',
+        widget=UnfoldAdminEmailInputWidget,
     )
     password = forms.CharField(
         widget=forms.PasswordInput,
@@ -80,6 +87,12 @@ class AltaUsuarioForm(EstiloUnfoldMixin, forms.Form):
         if username and User.objects.filter(username=username).exists():
             raise forms.ValidationError('Ya existe una cuenta con ese nombre de usuario.')
         return username
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Ya existe una cuenta con ese correo.')
+        return email
 
     def clean_password(self):
         password = self.cleaned_data.get('password')

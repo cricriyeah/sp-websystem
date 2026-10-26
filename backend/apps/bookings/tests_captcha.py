@@ -13,6 +13,7 @@ from django.test import override_settings
 from apps.testing import ApiTestCase, crear_flota, crear_servicio_pesca
 
 from .captcha import verificar_turnstile
+from .captcha import verificar_turnstile_obligatorio
 
 SECRET = 'secret-de-prueba'
 
@@ -75,6 +76,133 @@ class VerificarTurnstileTests(ApiTestCase):
         ):
             with self.assertLogs('apps.bookings.captcha', level='ERROR'):
                 self.assertTrue(verificar_turnstile('token', '1.2.3.4'))
+
+
+def _respuesta_completa(**campos):
+    """Respuesta de siteverify con `action` y `hostname`, como la de un widget real."""
+    respuesta = mock.Mock(status_code=200)
+    respuesta.json.return_value = {'success': True, 'action': 'recuperar_solicitar', 'hostname': 'api.example.com', **campos}
+    respuesta.raise_for_status.return_value = None
+    return respuesta
+
+
+class VerificarTurnstileObligatorioTests(ApiTestCase):
+    """La variante FAIL-CLOSED que usa la recuperacion de contrasena.
+
+    A diferencia de `verificar_turnstile` (abierta a proposito para el checkout), aqui todo lo que no
+    sea un `True` explicito y completo de Cloudflare es un rechazo.
+    """
+
+    def verificar(self, token='token-bueno', **kwargs):
+        kwargs.setdefault('accion', 'recuperar_solicitar')
+        kwargs.setdefault('hostname', 'api.example.com')
+        return verificar_turnstile_obligatorio(token, '1.2.3.4', **kwargs)
+
+    @override_settings(TURNSTILE_SECRET_KEY='')
+    def test_sin_secret_rechaza_y_no_llama(self):
+        with mock.patch('apps.bookings.captcha.requests.post') as post:
+            self.assertFalse(self.verificar())
+        post.assert_not_called()
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_token_vacio_rechaza_sin_llamar(self):
+        with mock.patch('apps.bookings.captcha.requests.post') as post:
+            self.assertFalse(self.verificar(token=''))
+            self.assertFalse(self.verificar(token=None))
+        post.assert_not_called()
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_token_de_mas_de_2048_caracteres_rechaza_sin_llamar(self):
+        with mock.patch('apps.bookings.captcha.requests.post') as post:
+            self.assertFalse(self.verificar(token='x' * 2049))
+        post.assert_not_called()
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_token_de_2048_caracteres_si_se_consulta(self):
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=_respuesta_completa()) as post:
+            self.assertTrue(self.verificar(token='x' * 2048))
+        post.assert_called_once()
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_exito_con_action_y_hostname_correctos(self):
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=_respuesta_completa()) as post:
+            self.assertTrue(self.verificar())
+
+        _, kwargs = post.call_args
+        self.assertEqual(kwargs['data']['secret'], SECRET)
+        self.assertEqual(kwargs['data']['response'], 'token-bueno')
+        self.assertEqual(kwargs['data']['remoteip'], '1.2.3.4')
+        self.assertEqual(kwargs['timeout'], 5)
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_action_distinta_rechaza(self):
+        """Un token generado en el checkout publico (otra accion) no sirve aqui."""
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=_respuesta_completa(action='checkout')):
+            self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_sin_action_en_la_respuesta_rechaza(self):
+        respuesta = _respuesta_completa()
+        del respuesta.json.return_value['action']
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=respuesta):
+            self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_hostname_distinto_rechaza(self):
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=_respuesta_completa(hostname='otro.example.org')):
+            self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_success_falso_rechaza(self):
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=_respuesta_completa(success=False)):
+            self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_success_que_no_es_true_estricto_rechaza(self):
+        for valor in ('true', 1, 'yes', None):
+            with self.subTest(valor=valor):
+                with mock.patch('apps.bookings.captcha.requests.post', return_value=_respuesta_completa(success=valor)):
+                    self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_cloudflare_caido_cierra_en_vez_de_dejar_pasar(self):
+        """El inverso del checkout: sin respuesta de Cloudflare, no se deja pasar a nadie."""
+        for falla in (requests.RequestException('caido'), requests.Timeout('lento')):
+            with self.subTest(falla=type(falla).__name__):
+                with mock.patch('apps.bookings.captcha.requests.post', side_effect=falla):
+                    with self.assertLogs('apps.bookings.captcha', level='ERROR'):
+                        self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_http_distinto_de_200_rechaza(self):
+        respuesta = _respuesta_completa()
+        respuesta.status_code = 500
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=respuesta):
+            with self.assertLogs('apps.bookings.captcha', level='ERROR'):
+                self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_json_invalido_rechaza(self):
+        respuesta = _respuesta_completa()
+        respuesta.json.side_effect = ValueError('no es json')
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=respuesta):
+            with self.assertLogs('apps.bookings.captcha', level='ERROR'):
+                self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_json_que_no_es_un_objeto_rechaza(self):
+        respuesta = _respuesta_completa()
+        respuesta.json.return_value = ['success', True]
+        with mock.patch('apps.bookings.captcha.requests.post', return_value=respuesta):
+            self.assertFalse(self.verificar())
+
+    @override_settings(TURNSTILE_SECRET_KEY=SECRET)
+    def test_el_log_de_error_no_lleva_el_token(self):
+        token = 'token-secreto-que-no-debe-salir-en-logs'
+        with mock.patch('apps.bookings.captcha.requests.post', side_effect=requests.RequestException('caido')):
+            with self.assertLogs('apps.bookings.captcha', level='ERROR') as logs:
+                self.verificar(token=token)
+        self.assertNotIn(token, '\n'.join(logs.output))
 
 
 class CheckoutConCaptchaTests(ApiTestCase):

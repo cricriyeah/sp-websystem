@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from apps.bookings.vistas_calendario import calendario
+from apps.cuentas import views as cuentas_views
 from apps.finance.views import movimientos_financieros, panel_financiero
 from apps.fleet.views import TrasladosView
 from apps.tenancy.inicio import vista_avanzada, vista_saldos
@@ -43,6 +44,11 @@ urlpatterns = [
     path('admin/calendario/', admin.site.admin_view(calendario), name='calendario'),
     path('admin/avanzado/',admin.site.admin_view(vista_avanzada), name='admin_avanzado'),
     path('admin/saldos-por-cobrar/', admin.site.admin_view(vista_saldos), name='saldos_por_cobrar'),
+    # Recuperacion de contrasena por codigo al correo (apps/cuentas). Anonima a proposito, asi que NO va con
+    # `admin_view`. El nombre `admin_password_reset` es el que Unfold busca para pintar «¿Olvidaste tu contraseña?»
+    # en el login. Antes de `admin/`, que se traga todo lo que cuelgue de ahi.
+    path('admin/recuperar/codigo/', cuentas_views.confirmar, name='admin_password_reset_codigo'),
+    path('admin/recuperar/', cuentas_views.solicitar, name='admin_password_reset'),
     path('admin/', admin.site.urls),
     path('api/<slug:empresa_slug>/traslados/', TrasladosView.as_view(), name='traslados'),
     path('api/', include('apps.fleet.urls')),

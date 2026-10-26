@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'apps.payments',
     'apps.notifications',
     'apps.finance',
+    'apps.cuentas',
 ]
 
 # Cabeceras permitidas por CORS extendiendo las predeterminadas.
@@ -500,6 +501,26 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # mismo patron que Stripe y Resend. La publica va aparte en el frontend
 # (NEXT_PUBLIC_TURNSTILE_SITE_KEY) porque la pinta el navegador.
 TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
+# La llave publica del MISMO widget, para el formulario de recuperacion de contrasena del backoffice
+# (apps/cuentas). Es un par con el secreto de arriba: la misma que NEXT_PUBLIC_TURNSTILE_SITE_KEY en Vercel.
+# Sin ella, sin el secreto o sin Resend, la recuperacion responde 503 (cierra, no deja pasar).
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '')
+
+# Recuperacion de contrasena por codigo al correo (apps/cuentas). Los valores son los del diseno
+# aprobado; las variables existen solo para afinar un limite sin tocar codigo, no hace falta definirlas.
+RECUPERACION_CODIGO_MINUTOS = int(os.environ.get('RECUPERACION_CODIGO_MINUTOS', '10'))
+RECUPERACION_MAX_INTENTOS = int(os.environ.get('RECUPERACION_MAX_INTENTOS', '5'))
+RECUPERACION_MAX_POR_CORREO_HORA = int(os.environ.get('RECUPERACION_MAX_POR_CORREO_HORA', '3'))
+RECUPERACION_MAX_POR_CORREO_DIA = int(os.environ.get('RECUPERACION_MAX_POR_CORREO_DIA', '10'))
+RECUPERACION_COOLDOWN_SEGUNDOS = int(os.environ.get('RECUPERACION_COOLDOWN_SEGUNDOS', '60'))
+RECUPERACION_MAX_POR_IP_HORA = int(os.environ.get('RECUPERACION_MAX_POR_IP_HORA', '10'))
+RECUPERACION_MAX_FALLOS_IP_HORA = int(os.environ.get('RECUPERACION_MAX_FALLOS_IP_HORA', '20'))
+# Tope global de correos de codigo por dia: protege la cuota de Resend que usan las confirmaciones de clientes.
+RECUPERACION_MAX_ENVIOS_DIA = int(os.environ.get('RECUPERACION_MAX_ENVIOS_DIA', '50'))
+# Correos (CSV) que reciben un aviso, sin codigo, de cada cambio de contrasena. Vacia = sin copia.
+RECUPERACION_AVISO_ADMIN = [
+    c.strip() for c in os.environ.get('RECUPERACION_AVISO_ADMIN', '').split(',') if c.strip()
+]
 
 # URL pública del frontend para enlaces de retomar enviados desde el backend.
 FRONTEND_URL = os.environ.get('FRONTEND_URL', '')

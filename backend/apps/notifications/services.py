@@ -1018,3 +1018,119 @@ def notificar_fallo_reembolso(reserva, monto, motivo=None):
 
 
 enviar_alerta_fallo_reembolso = notificar_fallo_reembolso
+
+
+# ---------------------------------------------------------------------------
+# Correos de cuenta (recuperacion de contrasena). Reglas propias, mas estrictas que las de reserva:
+# nunca llevan `bcc` (RESEND_BCC copiaria el codigo al buzon del negocio), el asunto no lleva el codigo y
+# ningun fallo se registra con traza (`logger.exception` / `exc_info` dejaria las variables locales,
+# con el codigo, a la vista de Sentry).
+# ---------------------------------------------------------------------------
+
+def _post_resend_seguro(cuerpo, etiqueta):
+    """POST a Resend para un correo que lleva o anuncia una credencial. True si se envio.
+
+    Registra solo la etiqueta y el codigo HTTP o la clase del error: ni el cuerpo del correo, ni el
+    mensaje de la excepcion, ni una traza.
+    """
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}'},
+            json=cuerpo,
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        estado = getattr(getattr(error, 'response', None), 'status_code', None)
+        logger.warning('Fallo el correo de cuenta "%s" (%s)', etiqueta, estado or type(error).__name__)
+        return False
+    return True
+
+
+def _resend_configurado():
+    return bool(settings.RESEND_API_KEY and settings.RESEND_FROM)
+
+
+def _pie_de_cuenta(texto):
+    return plantilla.t(escape(texto), 14, 400, plantilla.SUAVE, 1.5)
+
+
+def _cuerpo_codigo_html(usuario, codigo):
+    minutos = settings.RECUPERACION_CODIGO_MINUTOS
+    digitos = codigo.revelar() if hasattr(codigo, 'revelar') else str(codigo)
+    recuadro = plantilla.titular(
+        escape(digitos), 40, plantilla.BLANCO, 'letter-spacing:0.25em;padding-top:12px;'
+    )
+    return plantilla.correo(
+        actividad='cuenta', empresa='Sun Baja Experience', titulo='Tu código', producto='Recuperar contraseña',
+        intro_html=f'Usa este código para crear una contraseña nueva. Vence en {minutos} minutos.{recuadro}',
+        etiqueta_pares='Tu cuenta', pares=[('Usuario', _html(usuario))],
+        siguiente_html=plantilla.parrafo(
+            'Escribe el código y tu contraseña nueva en la pantalla de recuperación. '
+            'Si no lo pediste, ignóralo: tu contraseña no cambia.'
+        ),
+        previa=f'Tu código vence en {minutos} minutos.',
+        pie_html=_pie_de_cuenta('Nunca compartas este código: nadie del negocio te lo va a pedir.'),
+    )
+
+
+def enviar_correo_codigo_recuperacion(destino, usuario, codigo):
+    """Manda el codigo de 6 digitos a la direccion GUARDADA de la cuenta. True si se mando.
+
+    `codigo` llega como `apps.cuentas.seguridad.Secreto` (o texto). Nunca lleva `bcc`.
+    """
+    if not _resend_configurado():
+        logger.info('Resend sin configurar, no se mando el codigo de recuperacion')
+        return False
+
+    html_correo = _cuerpo_codigo_html(usuario, codigo)
+    cuerpo = {
+        'from': settings.RESEND_FROM,
+        'to': [destino],
+        'subject': 'Tu código para recuperar la contraseña',
+        'html': html_correo,
+        'text': plantilla.a_texto(html_correo),
+    }
+    return _post_resend_seguro(cuerpo, 'codigo de recuperacion')
+
+
+def _cuerpo_cambio_html(usuario, para_el_usuario):
+    if para_el_usuario:
+        intro = 'Se cambió la contraseña de tu cuenta.'
+        siguiente = plantilla.parrafo(
+            'Si no fuiste tú, avisa de inmediato a tu jefe: alguien más pudo entrar a tu correo.'
+        )
+    else:
+        intro = 'Se cambió la contraseña de una cuenta del backoffice.'
+        siguiente = plantilla.parrafo('Es un aviso: no necesitas hacer nada si fue la persona de la cuenta.')
+    return plantilla.correo(
+        actividad='cuenta', empresa='Sun Baja Experience', titulo='Contraseña cambiada',
+        intro_html=intro, etiqueta_pares='Tu cuenta' if para_el_usuario else 'La cuenta',
+        pares=[('Usuario', _html(usuario))], siguiente_html=siguiente, previa=intro,
+        pie_html=_pie_de_cuenta('Este aviso no lleva ningún código ni contraseña.'),
+    )
+
+
+def enviar_correo_contrasena_cambiada(destino, usuario, copia_a=()):
+    """Avisa a la cuenta que su contrasena cambio; `copia_a` recibe un aviso aparte (sin bcc ni codigo).
+
+    True si el aviso a la cuenta salio; que falle la copia al administrador no cambia ese resultado.
+    """
+    if not _resend_configurado():
+        logger.info('Resend sin configurar, no se mando el aviso de cambio de contrasena')
+        return False
+
+    html_usuario = _cuerpo_cambio_html(usuario, para_el_usuario=True)
+    enviado = _post_resend_seguro({
+        'from': settings.RESEND_FROM, 'to': [destino], 'subject': 'Tu contraseña cambió',
+        'html': html_usuario, 'text': plantilla.a_texto(html_usuario),
+    }, 'aviso de cambio de contrasena')
+
+    if copia_a:
+        html_admin = _cuerpo_cambio_html(usuario, para_el_usuario=False)
+        _post_resend_seguro({
+            'from': settings.RESEND_FROM, 'to': list(copia_a), 'subject': 'Cambio de contraseña en el backoffice',
+            'html': html_admin, 'text': plantilla.a_texto(html_admin),
+        }, 'copia del aviso de cambio de contrasena')
+    return enviado

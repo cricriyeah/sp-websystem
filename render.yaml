@@ -112,6 +112,24 @@ services:
         value: "3.14"
       - fromGroup: pescadeportiva-secrets
 
+  # Purga la bitacora de la recuperacion de contrasena (apps/cuentas): guarda hash de correo e IP de cada
+  # solicitud, asi que no debe crecer sin fin. Los limites solo miran el ultimo dia.
+  - type: cron
+    name: pescadeportiva-limpiar-recuperacion
+    runtime: python
+    plan: starter
+    region: oregon
+    rootDir: backend
+    schedule: "45 9 1 * *"  # dia 1 de cada mes, 09:45 UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py limpiar_eventos_recuperacion --dias 90
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      - fromGroup: pescadeportiva-secrets
+
 # Credenciales compartidas por los tres servicios. Se capturan una sola vez en
 # este grupo (dashboard > Environment Groups) en vez de repetirlas —y arriesgarse
 # a que se desincronicen— en cada uno. `DJANGO_SECRET_KEY` va aqui y no como
@@ -169,6 +187,14 @@ envVarGroups:
       # NEXT_PUBLIC_TURNSTILE_SITE_KEY — son un par, tienen que salir del mismo
       # widget del dashboard de Cloudflare.
       - key: TURNSTILE_SECRET_KEY
+        sync: false
+      # Site key del mismo widget, ahora tambien en el backend: la pantalla de recuperacion de contrasena del
+      # admin (/admin/recuperar/) pinta el widget y exige Turnstile cerrado. Mismo valor que
+      # NEXT_PUBLIC_TURNSTILE_SITE_KEY en Vercel; el widget debe listar el hostname del backend. Sin ella, 503.
+      - key: TURNSTILE_SITE_KEY
+        sync: false
+      # Opcional: correos (CSV) que reciben un aviso, sin codigo, de cada cambio de contrasena por recuperacion.
+      - key: RECUPERACION_AVISO_ADMIN
         sync: false
       # Clave con que se cifran en la base las llaves de Stripe de cada Empresa (backend/apps/tenancy/campos.py).
       # Va en el grupo porque los cron (conciliar_pagos) tambien leen esas llaves: sin la clave veran el texto

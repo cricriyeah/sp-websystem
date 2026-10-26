@@ -1,0 +1,42 @@
+{% extends 'unfold/layouts/unauthenticated.html' %}
+
+{% load i18n unfold %}
+
+{% block title %}{{ titulo }} | {{ site_title }}{% endblock %}
+
+{% block content %}
+    {% include "unfold/helpers/unauthenticated_title.html" with title=titulo subtitle="Sun Baja Experiences" %}
+
+    {% include "unfold/helpers/messages.html" %}
+
+    {% if aviso and not form %}
+        {% include "unfold/helpers/messages/error.html" with error=aviso %}
+    {% else %}
+        {% if error %}
+            <div class="mb-6">{% include "unfold/helpers/messages/error.html" with error=error %}</div>
+        {% endif %}
+
+        <p class="mb-6 text-sm text-font-subtle-light dark:text-font-subtle-dark">
+            Escribe el correo de tu cuenta y te mandamos un código de 6 dígitos.
+        </p>
+
+        <form method="post" action="{% url 'admin_password_reset' %}" id="recuperar-form">
+            {% csrf_token %}
+
+            {% include "unfold/helpers/field.html" with field=form.correo %}
+
+            <div class="cf-turnstile mt-6" data-sitekey="{{ turnstile_site_key }}" data-action="recuperar_solicitar"></div>
+
+            <div class="flex flex-col gap-3 mt-6">
+                {% component "unfold/components/button.html" with submit=1 variant="primary" class="w-full" %}
+                    Enviarme el código
+                {% endcomponent %}
+
+                {% component "unfold/components/button.html" with href=login_url variant="secondary" class="w-full" %}
+                    Volver al inicio de sesión
+                {% endcomponent %}
+            </div>
+        </form>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% endif %}
+{% endblock %}

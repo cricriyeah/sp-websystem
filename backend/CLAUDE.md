@@ -764,6 +764,75 @@ En `/admin/bookings/viajetransporte/` (`ViajeTransporteAdmin`, Unfold, `EmpresaS
 - **Alta de usuario**: acción y formulario unificados "Alta de usuario" en `/admin/auth/user/alta/` (servicio `apps/tenancy/usuarios.py::crear_usuario_con_rol`). El jefe ve el botón "Agregar" y crea vendedoras para su propia empresa (empresa y rol fijos); el operador de plataforma elige empresa y puede crear Jefes o Vendedoras; las vendedoras reciben 403. "Sistema > Usuarios > Agregar" redirige a esta vista. Crea `User` (is_staff=True), `MembresiaEmpresa` (cuya señal asigna automáticamente el grupo Django) y, si es vendedora, `bookings.Vendedora` en una sola transacción respetando RLS.
 - En el admin de usuarios (`UserAdmin`), el campo `groups` es de solo lectura para todos los perfiles (operador incluido), impidiendo reemplazos accidentales al guardar.
 
+## Recuperacion de contrasena por codigo al correo (apps/cuentas)
+
+Diseno completo y modelo de amenazas: `docs/architecture/ARCH-recuperacion-contrasena-backoffice.md`. Pantallas
+anonimas en `/admin/recuperar/` (pide el correo) y `/admin/recuperar/codigo/` (correo, codigo de 6 digitos y
+contrasena nueva en un solo envio), montadas en `config/urls.py` **antes** de `admin/`. La URL se llama
+`admin_password_reset`: Unfold pinta «¿Olvidaste tu contraseña?» en el login solo si existe, asi que
+`templates/admin/login.html` no se toca. Para todas las cuentas con correo, incluidos jefes, operador y superusuarios.
+
+- **Modelos por usuario, sin empresa y fuera de RLS**: `CodigoRecuperacion` (uno por usuario; pedir otro lo
+  sobrescribe) guarda solo un HMAC-SHA256 atado al hash de la contrasena vigente (`seguridad.hash_codigo`), vence a
+  10 min, un solo uso, 5 intentos. `EventoRecuperacion` es la bitacora y la base de los limites; **jamas lleva el codigo**.
+- **Turnstile obligatorio y cerrado en los dos pasos** (`captcha.verificar_turnstile_obligatorio`, con `action`
+  `recuperar_solicitar`/`recuperar_confirmar` y `hostname` verificados). La `verificar_turnstile` del checkout sigue
+  abierta a proposito y no cambio. **No** esta en `/admin/login/` (decision del dueno).
+- **Respuesta neutra**: el paso 1 responde lo mismo para cualquier correo; el motivo real (`sin_cuenta`, `inactiva`,
+  `ambigua`, `limite_correo`...) solo va a la bitacora. Las vistas envuelven el servicio en `try/except` y registran la
+  clase del error: sin eso `ErrorInesperadoAdminMiddleware` redirige distinto solo si la cuenta existe (oraculo).
+  Limite practico del tiempo de respuesta: el correo sale en un hilo aparte (`envio.despachar`; sincrono bajo
+  `manage.py test`) y ambos caminos hacen el mismo trabajo de base y un HMAC, pero no es una garantia perfecta.
+- **Consumo atomico** (`servicio.confirmar_codigo`): la contrasena nueva se valida ANTES de tocar el codigo (no gasta
+  intento y no distingue cuentas); el intento se suma con un `UPDATE` condicional (`intentos < 5`, no vencido, no
+  consumido); la comparacion es `hmac.compare_digest`; consumir es otro `UPDATE` y solo gana quien actualiza 1 fila.
+  Al ganar: contrasena nueva, filas de `Session` de esa cuenta fuera, bloqueo de Axes limpio, aviso por correo
+  (con copia sin codigo a `RECUPERACION_AVISO_ADMIN`). **No inicia sesion**: redirige al login.
+- **Limites en la base, no en el cache** (el cache de produccion es de archivos y `incr` no es atomico entre los 3
+  procesos): por correo tecleado, exista o no (60 s entre envios, 3/hora, 10/dia), por IP (10 solicitudes/hora y 20
+  confirmaciones fallidas/hora, estos dos responden 429) y global (50 correos/dia, protege la cuota de Resend de las
+  confirmaciones de clientes; al llegar loguea `logger.error`). Lo rechazado por limite no cuenta contra el limite,
+  asi quien insiste no alarga su bloqueo ni el de la victima. Ninguna cuenta se bloquea por pedir recuperacion.
+- **El codigo nunca va a logs ni a Sentry**: viaja como `seguridad.Secreto` (`repr`/`str` = `<Secreto>`), los correos
+  de cuenta usan `services._post_resend_seguro` (sin `logger.exception`, sin `exc_info`, sin `bcc` aunque exista
+  `RESEND_BCC`) y las vistas llevan `sensitive_post_parameters`. `grep -rn --exclude='tests_*.py' "logger.exception\|exc_info" apps/cuentas` debe quedar vacio.
+- Solo es recuperable una cuenta activa, con contrasena utilizable y **unica** en su correo (dos cuentas con el mismo
+  correo = `ambigua`, no se envia nada). Por eso `crear_usuario_con_rol(..., email='')` y `AltaUsuarioForm` piden el
+  correo (obligatorio y unico en el formulario del admin, opcional en el servicio) y la edicion de Usuarios rechaza
+  repetir el de otra cuenta.
+- **Cuenta sin correo**: no puede recuperarse sola. Vendedora o jefe: su jefe u operador usa «Cambiar contraseña» en
+  Usuarios y de paso carga su correo. Operador o superusuario: `python manage.py changepassword <usuario>` en el Shell
+  de Render y cargar el correo despues.
+
+Variables de entorno (Render):
+
+| Variable | Estado |
+|---|---|
+| `TURNSTILE_SECRET_KEY` | **Obligatoria** (ya existe para el checkout). Sin ella la recuperacion responde 503. |
+| `TURNSTILE_SITE_KEY` | **Nueva**, `sync: false`: el MISMO valor que `NEXT_PUBLIC_TURNSTILE_SITE_KEY` en Vercel (par con el secreto). Sin ella, 503. |
+| `RESEND_API_KEY`, `RESEND_FROM` | Obligatorias (ya existen). Sin ellas, 503. |
+| `RECUPERACION_AVISO_ADMIN` | Opcional, CSV de correos que reciben un aviso, sin codigo, de cada cambio de contrasena. Recomendado: el del dueno. |
+| `RECUPERACION_CODIGO_MINUTOS=10`, `_MAX_INTENTOS=5`, `_MAX_POR_CORREO_HORA=3`, `_MAX_POR_CORREO_DIA=10`, `_COOLDOWN_SEGUNDOS=60`, `_MAX_POR_IP_HORA=10`, `_MAX_FALLOS_IP_HORA=20`, `_MAX_ENVIOS_DIA=50` | No definirlas: defaults en `base.py`, solo para afinar un limite sin tocar codigo. |
+
+Pasos del dueno: agregar el **hostname del backend** (el de `/admin/`) a los dominios del widget de Turnstile en
+Cloudflare; copiar su site key a `TURNSTILE_SITE_KEY`; confirmar que `TURNSTILE_SECRET_KEY` esta puesta de verdad (hoy
+el checkout falla abierto sin ella y no se nota); cargar el correo de **cada** cuenta (admin > Usuarios) y correr
+`manage.py auditar_correos_cuentas` en el Shell de Render; probar con una cuenta real.
+
+Operacion: `manage.py auditar_correos_cuentas` (solo lee: usuario, superusuario si/no, correo enmascarado `a***@dominio`,
+`OK`/`SIN CORREO`/`DUPLICADO`); `manage.py limpiar_eventos_recuperacion --dias 90` (cron mensual; rechaza `--dias < 1`).
+La bitacora se ve en el admin (`EventoRecuperacion`, solo lectura, solo operador de plataforma; aun no esta en
+`UNFOLD['SIDEBAR']`, se llega por «All applications»).
+
+Prueba local a mano: las llaves de prueba de Cloudflare (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`)
+**no sirven** aqui, porque responden `action: test` y el chequeo cerrado de `action` las rechaza a proposito. Para
+probar en el navegador hace falta un widget real de Cloudflare con `localhost` en sus dominios. Con `DEBUG` y sin Resend
+no se imprime el codigo (el diseno lo permitia con `print`; se dejo fuera para que el codigo no pueda salir por una
+configuracion olvidada); las pruebas automaticas cubren el flujo.
+
+Pruebas: `venv/Scripts/python.exe manage.py test apps.cuentas apps.bookings.tests_captcha apps.notifications apps.tenancy.tests_alta_usuario`.
+Las carreras (`tests_carreras.py`) solo corren en Postgres.
+
 ## Gotchas
 
 - `bookings.Reserva.hora` ya no tiene `validar_ventana_salida` como validador de campo fijo. La ventana horaria se valida en `Reserva.clean()` vía `_validar_ventana_horaria()` gateado por `self.servicio.ventana_horaria()`; servicios como transporte no restringen a 5:00–7:00am. El helper `validar_ventana_salida` se conserva como helper utilitario.

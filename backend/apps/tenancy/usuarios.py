@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
+from django.core.validators import validate_email
 from django.db import connection, transaction
 
 from apps.bookings.models import Vendedora
@@ -13,7 +14,7 @@ from .models import MembresiaEmpresa
 User = get_user_model()
 
 
-def crear_usuario_con_rol(username, password, nombre, rol, empresa, codigo_vendedora=None):
+def crear_usuario_con_rol(username, password, nombre, rol, empresa, codigo_vendedora=None, email=''):
     """Crea en una sola transacción:
     1. User (is_staff=True, is_active=True, first_name=nombre).
     2. Agrega al grupo Django que corresponde al rol ('Jefe' o 'Vendedora') vía señal de MembresiaEmpresa.
@@ -46,6 +47,19 @@ def crear_usuario_con_rol(username, password, nombre, rol, empresa, codigo_vende
         errores['username'] = 'El nombre de usuario es obligatorio.'
     elif User.objects.filter(username=username_limpio).exists():
         errores['username'] = 'Ya existe una cuenta con ese nombre de usuario.'
+
+    # 2b. Correo: opcional aqui (las pruebas y comandos que ya llaman al servicio no lo pasan), pero si viene
+    # tiene que ser valido y no repetirse: la recuperacion de contrasena encuentra la cuenta por su correo y
+    # con dos cuentas en el mismo correo no envia nada. El formulario del admin lo hace obligatorio.
+    email_limpio = (email or '').strip().lower()
+    if email_limpio:
+        try:
+            validate_email(email_limpio)
+        except DjangoValidationError:
+            errores['email'] = 'Escribe un correo válido.'
+        else:
+            if User.objects.filter(email__iexact=email_limpio).exists():
+                errores['email'] = 'Ya existe una cuenta con ese correo.'
 
     # 3. Validación de contraseña
     if not password:
@@ -89,6 +103,7 @@ def crear_usuario_con_rol(username, password, nombre, rol, empresa, codigo_vende
         nuevo_user = User.objects.create_user(
             username=username_limpio,
             password=password,
+            email=email_limpio,
             first_name=nombre or '',
             is_staff=True,
             is_active=True,

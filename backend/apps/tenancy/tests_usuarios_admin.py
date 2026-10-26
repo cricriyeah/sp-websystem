@@ -3,6 +3,7 @@ from io import StringIO
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
@@ -360,4 +361,39 @@ class UsuariosAdminIntegrationTests(TestCase):
         self.assertEqual(resp.status_code, 403)
         super_u.refresh_from_db()
         self.assertTrue(super_u.check_password('password123'))
+
+
+class CorreoUnicoEnElAdminDeUsuariosTests(TestCase):
+    """El formulario de edicion de Usuarios no deja repetir el correo de otra cuenta (apps/cuentas necesita
+    que un correo identifique a una sola cuenta)."""
+
+    def setUp(self):
+        from apps.bookings.admin import UserAdmin
+        self.formulario = UserAdmin.form
+        self.ana = User.objects.create_user(username='ana_correo', email='ana@ejemplo.com', password='PasswordValida123!')
+        self.beto = User.objects.create_user(username='beto_correo', email='beto@ejemplo.com', password='PasswordValida123!')
+
+    def limpiar(self, instancia, nuevo_correo):
+        form = self.formulario(instance=instancia, data={'email': nuevo_correo})
+        form.cleaned_data = {'email': nuevo_correo}
+        return form
+
+    def test_rechaza_el_correo_de_otra_cuenta_sin_distinguir_mayusculas(self):
+        form = self.limpiar(self.beto, 'ANA@ejemplo.com')
+        with self.assertRaises(DjangoValidationError):
+            form.clean_email()
+
+    def test_deja_conservar_el_propio_correo(self):
+        self.assertEqual(self.limpiar(self.ana, 'ana@ejemplo.com').clean_email(), 'ana@ejemplo.com')
+
+    def test_deja_cambiarlo_a_uno_libre_y_dejarlo_vacio(self):
+        self.assertEqual(self.limpiar(self.ana, 'nueva@ejemplo.com').clean_email(), 'nueva@ejemplo.com')
+        self.assertEqual(self.limpiar(self.ana, '').clean_email(), '')
+
+    def test_una_cuenta_antigua_con_correo_repetido_se_puede_seguir_editando_sin_tocar_el_correo(self):
+        User.objects.filter(pk=self.beto.pk).update(email='ana@ejemplo.com')
+        self.beto.refresh_from_db()
+        form = self.formulario(instance=self.beto, data={'email': 'ana@ejemplo.com'})
+        form.cleaned_data = {'email': 'ana@ejemplo.com'}
+        self.assertEqual(form.clean_email(), 'ana@ejemplo.com')
 

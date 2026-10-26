@@ -27,6 +27,8 @@ CAMPO = {'mar': '#1b607f', 'traslado': '#a83226', 'estancia': '#343f04'}
 ARENA = '#fcf6ed'
 ARENA_CLARA = '#fee0ac'
 TINTA = '#1f1a14'
+# Correos de cuenta (codigo de recuperacion, aviso de cambio): no son de una actividad, van en tinta.
+CAMPO['cuenta'] = TINTA
 SUAVE = '#4a3f33'
 BLANCO = '#ffffff'
 BLANCO_SUAVE = '#e9eff2'
@@ -153,10 +155,12 @@ def logo_html():
 
 
 def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', pares=(), dinero_html='',
-           siguiente_html='', con_garantias=False, previa='', etiqueta_pares='Lo que reservaste'):
+           siguiente_html='', con_garantias=False, previa='', etiqueta_pares='Lo que reservaste', pie_html=None):
     """El correo completo, con el orden de la página de confirmación del sitio.
 
     `titulo` es el titular grande; `producto` la línea en negrita bajo el saludo (servicio y empresa).
+    `pie_html` reemplaza el pie de «comprobante de reserva» (que no aplica a un correo de cuenta); sin él la
+    salida es la de siempre.
     """
     campo = CAMPO.get(actividad, CAMPO['mar'])
     folio_html = (
@@ -176,6 +180,11 @@ def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', 
         secciones += seccion('Qué sigue', siguiente_html)
     if con_garantias:
         secciones += seccion('Si algo cambia', garantias())
+    if pie_html is None:
+        pie_html = (
+            f'{t("Guarda este correo: es tu comprobante. Si necesitas un cambio, escríbenos por WhatsApp con tu folio.", 14, 400, SUAVE, 1.5)}'
+            f'{t(escape(empresa) + " · Sun Baja Experience", 14, 400, SUAVE, 1.5, "padding-top:6px;")}'
+        )
     return (
         '<!doctype html><html lang="es"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -196,8 +205,7 @@ def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', 
         f'{linea_producto}</td></tr>'
         f'{secciones}'
         f'<tr><td class="pad" style="background:{ARENA};padding:32px 32px 36px;">'
-        f'{t("Guarda este correo: es tu comprobante. Si necesitas un cambio, escríbenos por WhatsApp con tu folio.", 14, 400, SUAVE, 1.5)}'
-        f'{t(escape(empresa) + " · Sun Baja Experience", 14, 400, SUAVE, 1.5, "padding-top:6px;")}</td></tr>'
+        f'{pie_html}</td></tr>'
         '</table></td></tr></table></body></html>'
     )
 

@@ -79,7 +79,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'nuevo_jefe',
             'nombre': 'Nuevo Jefe A',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'JEFE',
             'empresa': self.empresa_a.pk,
         })
@@ -113,7 +113,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'nueva_vendedora_b',
             'nombre': 'Nueva Vendedora B',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'VENDEDORA',
             'empresa': self.empresa_b.pk,
             'codigo': 'vendb01',
@@ -141,7 +141,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'vendedora_por_jefe',
             'nombre': 'Vendedora Creada Por Jefe',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'VENDEDORA',
             'empresa': self.empresa_b.pk,  # intento forzar empresa B
             'codigo': 'vjefe01',
@@ -162,7 +162,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'intento_jefe_a',
             'nombre': 'Intento Otro Jefe',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'JEFE',
             'codigo': 'intjefe',
         })
@@ -203,7 +203,7 @@ class AltaUsuarioTests(TestCase):
             'username': self.jefe_a.username,
             'nombre': 'Duplicado',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'JEFE',
             'empresa': self.empresa_a.pk,
         })
@@ -215,7 +215,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'nuevo_usuario_invalido',
             'nombre': 'Invalido',
             'password': '123',
-            'password_confirm': '123',
+            'email': 'alta@ejemplo.com', 'password_confirm': '123',
             'rol': 'JEFE',
             'empresa': self.empresa_a.pk,
         })
@@ -232,7 +232,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'vendedora_chocada',
             'nombre': 'Chocada',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'VENDEDORA',
             'codigo': 'venda',
         })
@@ -246,7 +246,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'vendedora_empresa_b',
             'nombre': 'Vendedora B',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'VENDEDORA',
             'empresa': self.empresa_b.pk,
             'codigo': 'venda',
@@ -275,7 +275,7 @@ class AltaUsuarioTests(TestCase):
             'username': 'jefe_sin_grupos_previos',
             'nombre': 'Jefe Nuevo',
             'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!',
             'rol': 'JEFE',
             'empresa': self.empresa_a.pk,
         })
@@ -377,8 +377,75 @@ class AltaUsuarioTests(TestCase):
         self.assertEqual(self.client.get(self.url).status_code, 403)
         resp = self.client.post(self.url, {
             'username': 'colada', 'nombre': 'Colada', 'password': 'PasswordValida123!',
-            'password_confirm': 'PasswordValida123!', 'rol': 'VENDEDORA', 'codigo': 'colada1',
+            'email': 'alta@ejemplo.com', 'password_confirm': 'PasswordValida123!', 'rol': 'VENDEDORA', 'codigo': 'colada1',
         })
         self.assertEqual(resp.status_code, 403)
         self.assertFalse(User.objects.filter(username='colada').exists())
+
+
+class AltaUsuarioCorreoTests(TestCase):
+    """El correo es lo unico que permite recuperar la contrasena (apps/cuentas): sin el, una cuenta nueva
+    nacia sin salida. Obligatorio en el formulario del admin, opcional en el servicio, unico en ambos."""
+
+    def setUp(self):
+        call_command('setup_roles', stdout=StringIO())
+        sede = Sede.objects.create(nombre='Sede Correo', slug='sede-alta-correo')
+        self.empresa = Empresa.objects.create(sede=sede, nombre='Empresa Correo', slug='empresa-alta-correo')
+        self.operador = User.objects.create_user(username='operador_correo', password='PasswordValida123!', is_staff=True)
+        self.operador.groups.add(Group.objects.get(name='OperadorPlataforma'))
+        self.url = reverse('admin:bookings_user_alta_usuario')
+
+    def datos(self, **extra):
+        datos = {
+            'username': 'con_correo', 'nombre': 'Con Correo', 'password': 'PasswordValida123!',
+            'password_confirm': 'PasswordValida123!', 'rol': 'JEFE', 'empresa': self.empresa.pk,
+            'email': 'persona@ejemplo.com',
+        }
+        datos.update(extra)
+        return datos
+
+    def test_servicio_guarda_el_correo_sin_espacios_y_en_minusculas(self):
+        nuevo = crear_usuario_con_rol(
+            'servicio_correo', 'PasswordValida123!', 'Servicio', 'JEFE', self.empresa, email='  Ana@Ejemplo.COM ',
+        )
+        self.assertEqual(nuevo.email, 'ana@ejemplo.com')
+
+    def test_servicio_sin_correo_sigue_siendo_valido_para_no_romper_a_quien_ya_lo_llama(self):
+        nuevo = crear_usuario_con_rol('servicio_sin_correo', 'PasswordValida123!', 'Servicio', 'JEFE', self.empresa)
+        self.assertEqual(nuevo.email, '')
+
+    def test_servicio_rechaza_un_correo_mal_formado(self):
+        with self.assertRaises(DjangoValidationError) as contexto:
+            crear_usuario_con_rol('mal_correo', 'PasswordValida123!', 'X', 'JEFE', self.empresa, email='no-es-correo')
+        self.assertIn('email', contexto.exception.message_dict)
+        self.assertFalse(User.objects.filter(username='mal_correo').exists())
+
+    def test_servicio_rechaza_un_correo_repetido_sin_distinguir_mayusculas(self):
+        crear_usuario_con_rol('primero', 'PasswordValida123!', 'X', 'JEFE', self.empresa, email='Repetido@Ejemplo.com')
+        with self.assertRaises(DjangoValidationError) as contexto:
+            crear_usuario_con_rol('segundo', 'PasswordValida123!', 'X', 'JEFE', self.empresa, email='repetido@ejemplo.com')
+        self.assertIn('email', contexto.exception.message_dict)
+        self.assertFalse(User.objects.filter(username='segundo').exists())
+
+    def test_la_vista_de_alta_guarda_el_correo(self):
+        self.client.force_login(self.operador)
+        self.assertEqual(self.client.post(self.url, self.datos()).status_code, 302)
+        self.assertEqual(User.objects.get(username='con_correo').email, 'persona@ejemplo.com')
+
+    def test_la_vista_de_alta_exige_el_correo(self):
+        self.client.force_login(self.operador)
+        for correo in ('', 'no-es-correo'):
+            with self.subTest(correo=correo):
+                resp = self.client.post(self.url, self.datos(email=correo))
+                self.assertEqual(resp.status_code, 200)
+                self.assertTrue(resp.context['form'].errors.get('email'))
+        self.assertFalse(User.objects.filter(username='con_correo').exists())
+
+    def test_la_vista_de_alta_rechaza_un_correo_ya_usado_por_otra_cuenta(self):
+        User.objects.create_user(username='otra', email='Persona@Ejemplo.com', password='PasswordValida123!')
+        self.client.force_login(self.operador)
+        resp = self.client.post(self.url, self.datos())
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('Ya existe una cuenta con ese correo.', resp.context['form'].errors['email'])
+        self.assertFalse(User.objects.filter(username='con_correo').exists())
 
