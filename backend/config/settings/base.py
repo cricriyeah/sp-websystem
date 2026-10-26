@@ -180,7 +180,9 @@ UNFOLD = {
     # El logo reemplaza al nombre en el menu lateral: el de la empresa del jefe o la vendedora, o el de la
     # plataforma para el operador.
     'SITE_LOGO': 'apps.tenancy.admin_branding.logo_backoffice',
-    'STYLES': [lambda request: static('tenancy/backoffice.css')],
+    'STYLES': [lambda request: static('tenancy/backoffice.css'), lambda request: static('tenancy/avisos.css')],
+    # Aviso de reservas nuevas en cualquier pantalla del admin (apps/bookings/avisos.py).
+    'SCRIPTS': [lambda request: static('tenancy/avisos.js')],
     'SHOW_HISTORY': True,
     'SHOW_VIEW_ON_SITE': False,
     'DASHBOARD_CALLBACK': 'apps.tenancy.inicio.contexto_inicio',
@@ -201,6 +203,12 @@ UNFOLD = {
                         'icon': 'calendar_month',
                         'link': reverse_lazy('calendario'),
                         'permission': lambda request: request.user.has_perm('bookings.view_reserva'),
+                    },
+                    {
+                        'title': 'Notificaciones',
+                        'icon': 'notifications',
+                        'link': reverse_lazy('admin:tenancy_notificacion_changelist'),
+                        'permission': lambda request: request.user.has_perm('tenancy.view_notificacion'),
                     },
                     {
                         'title': 'Reservas',
@@ -425,7 +433,7 @@ MIDDLEWARE = [
     # un nginx delante. Va justo despues de SecurityMiddleware, como pide su doc.
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'apps.tenancy.middleware_sesion.SesionSinRenovarEnSondeo',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

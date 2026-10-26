@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.bookings.avisos import reservas_nuevas
 from apps.bookings.vistas_calendario import calendario
 from apps.cuentas import views as cuentas_views
 from apps.finance.views import movimientos_financieros, panel_financiero
@@ -42,6 +43,8 @@ urlpatterns = [
     path('admin/finanzas/', admin.site.admin_view(panel_financiero), name='finanzas'),
     # Calendario de solo lectura: `admin_view` pone el login; el permiso (ver reservas) lo decide la vista.
     path('admin/calendario/', admin.site.admin_view(calendario), name='calendario'),
+    # Aviso de reservas nuevas para cualquier pantalla del admin: JSON que consulta tenancy/avisos.js.
+    path('admin/avisos/reservas-nuevas/', admin.site.admin_view(reservas_nuevas), name='avisos_reservas_nuevas'),
     path('admin/avanzado/',admin.site.admin_view(vista_avanzada), name='admin_avanzado'),
     path('admin/saldos-por-cobrar/', admin.site.admin_view(vista_saldos), name='saldos_por_cobrar'),
     # Recuperacion de contrasena por codigo al correo (apps/cuentas). Anonima a proposito, asi que NO va con

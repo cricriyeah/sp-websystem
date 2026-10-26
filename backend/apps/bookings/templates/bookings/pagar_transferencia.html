@@ -1,0 +1,37 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+{{ block.super }}
+<div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
+    <div class="p-4">
+        <h1 class="font-semibold text-important">{{ titulo }}</h1>
+        <p><strong>Esto no cobra nada.</strong> Solo anota que ya te llegó la transferencia del cliente. Si todavía no la has recibido, no la marques: aparecería como dinero en el banco en Finanzas y se apartaría el lugar de un viaje que no está pagado.</p>
+        <p>Al confirmar, la reserva queda <strong>pagada</strong>, se aparta el cupo y al cliente le llega el correo de confirmación.</p>
+    </div>
+
+    <dl class="border-t border-base-200 p-4 dark:border-base-800">
+        <div><dt class="font-semibold">Cliente</dt><dd>{{ reserva.nombre_cliente }} &middot; {{ reserva.correo_cliente|default:"sin correo" }}</dd></div>
+        <div><dt class="font-semibold">Servicio</dt><dd>{{ servicio }}</dd></div>
+        <div><dt class="font-semibold">Cu&aacute;ndo</dt><dd>{{ cuando }}</dd></div>
+        <div><dt class="font-semibold">Total de la reserva</dt><dd>{{ reserva.precio_total|default:"sin precio" }} {{ reserva.moneda }}</dd></div>
+    </dl>
+
+    {% if not reserva.correo_cliente %}
+    <p class="border-t border-base-200 p-4 dark:border-base-800" role="alert"><strong>Esta reserva no tiene correo del cliente.</strong> Se marcar&aacute; pagada, pero no le llegar&aacute; la confirmaci&oacute;n: av&iacute;sale por WhatsApp.</p>
+    {% endif %}
+
+    <form method="post" class="border-t border-base-200 p-4 dark:border-base-800">
+        {% csrf_token %}
+        <label for="monto" class="font-semibold">Monto que lleg&oacute; por transferencia ({{ reserva.moneda }})</label>
+        <div style="margin-top: 0.5rem">
+            <input id="monto" name="monto" type="text" inputmode="decimal" value="{{ monto }}" required style="max-width: 14rem" aria-describedby="monto-ayuda{% if error %} monto-error{% endif %}">
+        </div>
+        <p id="monto-ayuda">Por defecto, el total de la reserva. Si el cliente transfiri&oacute; menos (un anticipo), escribe lo que lleg&oacute;.</p>
+        {% if error %}<p id="monto-error" role="alert" style="color: rgb(185 28 28)"><strong>{{ error }}</strong></p>{% endif %}
+        <div class="flex items-center gap-4" style="margin-top: 1rem">
+            <a href="{{ volver }}">No, volver</a>
+            <button type="submit" class="bg-primary-600 text-white px-3 py-2 rounded-default">S&iacute;, ya me lleg&oacute; la transferencia</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

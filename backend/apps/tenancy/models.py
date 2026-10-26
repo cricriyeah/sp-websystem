@@ -153,3 +153,74 @@ class MembresiaEmpresa(models.Model):
 
     def __str__(self):
         return f'{self.user} - {self.empresa} ({self.get_rol_display()})'
+
+
+class Notificacion(models.Model):
+    """Lo que paso en el backoffice, para quien no lo vio o no recuerda que hizo.
+
+    Es un feed operativo por empresa (RLS `tenancy_alcance`), NO una bitacora legal: el History del admin sigue
+    siendo la auditoria de cambios de reserva. Lo escribe `apps.tenancy.notificaciones` (`avisar` y
+    `registrar_notificacion`); nadie la crea ni la edita a mano. `texto` y `motivo` son TEXTO PLANO que puede traer
+    datos del cliente: nunca se muestran como HTML. Sin FK al objeto enlazado a proposito: `enlace_url` es una
+    ruta del admin que, si el objeto desaparece, queda como enlace muerto y no como un 500.
+    """
+
+    class Nivel(models.TextChoices):
+        EXITO = 'exito', 'Éxito'
+        AVISO = 'aviso', 'Aviso'
+        ERROR = 'error', 'Error'
+
+    class Tipo(models.TextChoices):
+        ASIGNACION = 'asignacion', 'Asignación de panga/capitán'
+        RESERVA_NUEVA = 'reserva_nueva', 'Reserva nueva pagada'
+        TRANSFERENCIA = 'transferencia', 'Pago por transferencia'
+        COBRO_EFECTIVO = 'cobro_efectivo', 'Cobro en efectivo'
+        REEMBOLSO = 'reembolso', 'Reembolso'
+        CANCELACION = 'cancelacion', 'Cancelación'
+        CAMBIO_FECHA = 'cambio_fecha', 'Cambio de fecha'
+        OTRO = 'otro', 'Otro'
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='notificaciones')
+    nivel = models.CharField(max_length=10, choices=Nivel.choices)
+    tipo = models.CharField(max_length=20, choices=Tipo.choices, default=Tipo.OTRO)
+    texto = models.CharField(max_length=300, help_text='Qué pasó. Texto plano.')
+    motivo = models.CharField(max_length=300, blank=True, default='', help_text='Por qué falló, si falló.')
+    enlace_url = models.CharField(max_length=300, blank=True, default='', help_text='Ruta del admin al objeto.')
+    enlace_texto = models.CharField(max_length=40, blank=True, default='')
+    # None = lo hizo el sistema (webhook de Stripe, cron).
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creado_en', '-pk']
+        verbose_name = 'notificación'
+        verbose_name_plural = 'notificaciones'
+        indexes = [
+            models.Index(fields=['empresa', 'creado_en'], name='notif_empresa_creado'),
+            models.Index(fields=['empresa', 'tipo'], name='notif_empresa_tipo'),
+        ]
+
+    def __str__(self):
+        return self.texto
+
+
+class LecturaNotificacion(models.Model):
+    """Que una persona ya vio una notificacion. Una fila por persona y notificacion (el estado de leida es
+    personal, no compartido), y no una marca de agua: con el filtro por tipo, «marcar como leidas» tiene que poder
+    marcar exactamente las filas mostradas. Se borra en cascada con su notificacion (el purgado de 90 dias)."""
+
+    # Denormalizada para que la politica RLS estandar (`empresa_id`) aplique igual que en el resto de las tablas.
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='+')
+    notificacion = models.ForeignKey(Notificacion, on_delete=models.CASCADE, related_name='lecturas')
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    leida_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['notificacion', 'usuario'], name='lectura_unica_por_usuario'),
+        ]
+        indexes = [
+            models.Index(fields=['usuario', 'notificacion'], name='lectura_usuario_notif'),
+        ]

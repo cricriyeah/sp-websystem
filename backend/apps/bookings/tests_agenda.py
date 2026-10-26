@@ -304,55 +304,6 @@ class AnchoDeColumnasTests(EmpresaTestCase):
         self.assertContains(respuesta, self.HOJA)
 
 
-class AvisoDeReservasNuevasTests(EmpresaTestCase):
-    """El aviso de reservas nuevas vive en las dos pantallas.
-
-    Es un boton flotante que consulta cada 30 segundos y **nunca recarga solo**:
-    quien lo ve puede estar a media asignacion de capitan. Estaba solo en el
-    listado de Reservas, pero repartir tambien se hace mirando la agenda.
-    """
-
-    SCRIPT = 'bookings/reservas-nuevas.js'
-
-    def setUp(self):
-        crear_flota(self.empresa)
-        self.client.force_login(self.crear_jefe())
-
-    def test_la_agenda_carga_el_script(self):
-        self.assertContains(
-            self.client.get(reverse('admin:bookings_agenda_changelist')), self.SCRIPT)
-
-    def test_el_listado_de_reservas_sigue_cargando_el_script(self):
-        self.assertContains(
-            self.client.get(reverse('admin:bookings_reserva_changelist')), self.SCRIPT)
-
-    def test_la_agenda_tiene_su_propio_endpoint_de_conteo(self):
-        cuerpo = self.client.get(reverse('admin:bookings_agenda_nuevas')).json()
-
-        self.assertEqual(cuerpo['nuevas'], 0)
-        self.assertIn('desde', cuerpo)
-
-    def test_el_endpoint_de_la_agenda_cuenta_las_que_entraron_despues(self):
-        antes = timezone.now().isoformat()
-        viaje(self.empresa)
-
-        cuerpo = self.client.get(
-            reverse('admin:bookings_agenda_nuevas'), {'desde': antes}).json()
-
-        self.assertEqual(cuerpo['nuevas'], 1)
-
-    def test_el_endpoint_de_la_agenda_ignora_los_checkouts_sin_pagar(self):
-        """Cada checkout abandonado deja una fila en pendiente_pago; avisar de
-        esas volveria el contador puro ruido."""
-        antes = timezone.now().isoformat()
-        viaje(self.empresa, estado=Reserva.Estado.PENDIENTE_PAGO)
-
-        cuerpo = self.client.get(
-            reverse('admin:bookings_agenda_nuevas'), {'desde': antes}).json()
-
-        self.assertEqual(cuerpo['nuevas'], 0)
-
-
 class RecienLlegadasTests(EmpresaTestCase):
     """Lo ultimo que entro al sistema, sin importar para cuando sea el viaje.
 

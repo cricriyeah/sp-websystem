@@ -67,6 +67,19 @@ def _motivo_http(error):
     return (respuesta.text or '')[:300]
 
 
+def motivo_para_persona(error):
+    """El motivo del proveedor en una frase corta para el admin: el `message` del JSON de Resend si lo trae."""
+    respuesta = getattr(error, 'response', None)
+    if respuesta is not None:
+        try:
+            mensaje = respuesta.json().get('message')
+        except (ValueError, AttributeError):
+            mensaje = None
+        if mensaje:
+            return str(mensaje)[:200]
+    return _motivo_http(error)[:200]
+
+
 def _html(valor):
     """Escapa un dato escrito por una persona antes de meterlo al correo.
 
@@ -151,9 +164,11 @@ def _saldo_en_efectivo(reserva):
 
 def _bloques_de_dinero(reserva, pendiente):
     """«El dinero» como en el sitio: el bloque tinta de lo pagado hoy y, si hay saldo, el de lo que queda en efectivo."""
-    if not reserva.monto_pagado:
+    # Una reserva pagada por transferencia no trae monto de tarjeta: el bloque dice lo que se recibio por ahi.
+    pagado = reserva.monto_pagado or reserva.monto_transferencia
+    if not pagado:
         return ''
-    html = plantilla.bloque_pagado(f'{reserva.monto_pagado} {reserva.moneda}')
+    html = plantilla.bloque_pagado(f'{pagado} {reserva.moneda}')
     if pendiente:
         html += plantilla.bloque_resto(
             f'Quedan {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.')
@@ -304,8 +319,15 @@ def enviar_correo_asignacion(reserva):
     entra el pago — la panga y el capitan se reparten despues, desde la agenda
     del admin. Devuelve True si se mando.
     """
+    # El motivo de un fallo queda en la reserva (atributo de la instancia) para que la pantalla del admin lo diga
+    # en vez de callar: quien asigna panga y capitan tiene que saber si el cliente fue avisado.
+    reserva.motivo_fallo_aviso = ''
+    if not reserva.correo_cliente:
+        reserva.motivo_fallo_aviso = 'la reserva no tiene correo del cliente'
+        return False
     if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
         logger.info('Resend sin configurar, no se mando el aviso de asignacion %s', reserva.pk)
+        reserva.motivo_fallo_aviso = 'el envio de correos no esta configurado en el servidor'
         return False
 
     _html_correo = _cuerpo_asignacion_html(reserva)
@@ -329,6 +351,7 @@ def enviar_correo_asignacion(reserva):
         response.raise_for_status()
     except requests.RequestException as error:
         logger.exception('Fallo el aviso de asignacion de la reserva %s: %s', reserva.pk, _motivo_http(error))
+        reserva.motivo_fallo_aviso = f'el proveedor de correo respondio: {motivo_para_persona(error)}'
         return False
     return True
 
