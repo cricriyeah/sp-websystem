@@ -31,20 +31,22 @@ type EmpresaSelloProps = {
   tamano: Tamano;
   /** Pinta el nombre junto al sello. */
   mostrarNombre?: boolean;
+  /** El logo suelto, sin círculo, borde ni fondo (sobre una foto o un video). Sin logo sigue el monograma en círculo. */
+  sinCirculo?: boolean;
   className?: string;
 };
 
-export function EmpresaSello({ nombre, logo, tamano, mostrarNombre = false, className }: EmpresaSelloProps) {
+export function EmpresaSello({ nombre, logo, tamano, mostrarNombre = false, sinCirculo = false, className }: EmpresaSelloProps) {
   const letras = tamano === 24 ? iniciales(nombre).slice(0, 1) : iniciales(nombre);
 
   const sello = logo ? (
-    <span className={cn('relative shrink-0 overflow-hidden rounded-full border border-borde bg-blanco', CIRCULO[tamano])}>
+    <span className={cn('relative shrink-0', CIRCULO[tamano], !sinCirculo && 'overflow-hidden rounded-full border border-borde bg-blanco')}>
       <Image
         src={logo}
         alt={mostrarNombre ? '' : nombre}
         fill
         sizes={`${tamano}px`}
-        className="object-contain p-[12%]"
+        className={cn('object-contain', !sinCirculo && 'p-[12%]')}
       />
     </span>
   ) : (

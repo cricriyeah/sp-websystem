@@ -22,7 +22,7 @@ type SedeHeroProps = {
  * de la empresa que opera, el nombre de la sede como `h1`, una frase y un solo botón que baja a lo que
  * se puede reservar. Lo comparten las tres sedes.
  *
- * La empresa va justo debajo del nombre, en una sola línea: su sello en círculo (el símbolo, sin letras) y
+ * La empresa va justo debajo del nombre, en una sola línea: su símbolo suelto, sin círculo y sin letras, y
  * «Con <nombre>» a tamaño de frase. Sin etiqueta ni píldora: se lee de corrido con el titular. Server Component (la palabra que rota es una isla cliente).
  */
 export function SedeHero({ nombre, contenido, palabras, empresa, textos }: SedeHeroProps) {
@@ -35,7 +35,7 @@ export function SedeHero({ nombre, contenido, palabras, empresa, textos }: SedeH
             <h1 className="texto-grande">{nombre}</h1>
             {empresa && (
               <div className="mt-6 flex items-center gap-4">
-                <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} />
+                <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} sinCirculo />
                 <p className="text-2xl font-semibold leading-tight">
                   <span className="font-normal">{textos.operadaPor}</span> {empresa.nombre}
                 </p>
