@@ -55,7 +55,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
   const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug, lang).catch(() => null), getServiciosSede(slug, lang).catch(() => null)]);
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
-  const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo } : undefined;
+  const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo, simboloBarra: protagonista.simboloBarra } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
   const { temporadas } = contenido;
   // Máximo 8 preguntas: las que se pintan son las mismas que van al JSON-LD.

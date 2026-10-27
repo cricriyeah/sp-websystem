@@ -181,7 +181,7 @@ type CheckoutViewProps = {
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
   /** `{ nombre, logo }` de la empresa del servicio (de `content/empresas`, server-only). */
-  empresa?: { nombre: string; logo?: string; simbolo?: string };
+  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
   servicio?: ServicioCatalogo | null;
 };
 

@@ -12,7 +12,7 @@ type SedeHeroProps = {
   /** Lo que vende la sede, sacado de su catálogo (`palabrasDeSede`); vacío si el catálogo no respondió. */
   palabras: string[];
   /** La empresa local que opera la sede; sin ella no hay sello. */
-  empresa?: { nombre: string; logo?: string; simbolo?: string };
+  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
   textos: { cta: string; operadaPor: string };
 };
 

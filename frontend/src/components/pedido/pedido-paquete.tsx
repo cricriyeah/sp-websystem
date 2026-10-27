@@ -69,7 +69,7 @@ type Props = {
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
   /** `{ nombre, logo }` por slug, de `content/empresas` (server-only: llega por prop). */
-  empresas: Record<string, { nombre: string; logo?: string; simbolo?: string }>;
+  empresas: Record<string, { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string }>;
   retomarCheckoutId?: string;
 };
 

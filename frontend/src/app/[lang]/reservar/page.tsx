@@ -31,7 +31,7 @@ export async function generateMetadata({
 /** `{ nombre, logo }` de la empresa para el sello de la cabecera; `undefined` si no está en el contenido. */
 function empresaDe(slug: string) {
   const empresa = EMPRESAS.find((e) => e.slug === slug);
-  return empresa ? { nombre: empresa.nombre, logo: empresa.logo, simbolo: empresa.simbolo } : undefined;
+  return empresa ? { nombre: empresa.nombre, logo: empresa.logo, simbolo: empresa.simbolo, simboloBarra: empresa.simboloBarra } : undefined;
 }
 
 export default async function ReservarPage({
@@ -99,7 +99,7 @@ export default async function ReservarPage({
         puntosPorEmpresa={puntosPorEmpresa}
         minDate={minDate}
         volverHref={hrefDeOrigen({ lang, origen: origenQuery, sedeSlug: paquete.sede_slug || sedeSlug })}
-        empresas={Object.fromEntries(EMPRESAS.map((e) => [e.slug, { nombre: e.nombre, logo: e.logo, simbolo: e.simbolo }]))}
+        empresas={Object.fromEntries(EMPRESAS.map((e) => [e.slug, { nombre: e.nombre, logo: e.logo, simbolo: e.simbolo, simboloBarra: e.simboloBarra }]))}
         retomarCheckoutId={retomarCheckoutId}
       />
     );

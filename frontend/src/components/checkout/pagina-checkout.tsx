@@ -21,7 +21,7 @@ type Props = {
    */
   alPasoAnterior?: () => void;
   /** Checkout de una sola empresa: su sello va junto a la marca (`CabeceraMinima`). */
-  empresa?: { nombre: string; logo?: string; simbolo?: string };
+  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
   /** Hay dinero retenido: la marca de la cabecera no enlaza. */
   marcaFija?: boolean;
   /** Slugs de las empresas que operan lo que se compra: el deslinde que se enlaza es el de ellas. */
