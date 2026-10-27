@@ -27,9 +27,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Vive la mejor experiencia de pesca deportiva en La Paz, BCS con capitanes locales. Salidas privadas desde Marina La Costa. Reserva en línea o escríbenos por WhatsApp.',
       hero: {
-        video: '/videos/videonuevolapaz.mp4',
+        video: '/videos/videonuevonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
         posicionImagenMovil: '75% 50%',
+        // La embarcación cruza el video de 45 % a 29 % del ancho: con 32 % la ventana del móvil la cubre todo el tiempo.
+        posicionVideoMovil: '32% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
           'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
@@ -214,9 +216,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Experience the best sportfishing in La Paz, BCS with passionate local captains. Private charters from Marina La Costa. Book online or message us on WhatsApp.',
       hero: {
-        video: '/videos/videonuevolapaz.mp4',
+        video: '/videos/videonuevonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
         posicionImagenMovil: '75% 50%',
+        // La embarcación cruza el video de 45 % a 29 % del ancho: con 32 % la ventana del móvil la cubre todo el tiempo.
+        posicionVideoMovil: '32% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
           'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',

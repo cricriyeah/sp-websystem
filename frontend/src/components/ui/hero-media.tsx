@@ -15,6 +15,8 @@ type HeroMediaProps = {
   objectPosition?: string;
   /** `object-position` solo bajo 640 px; sin él, el de `objectPosition`. */
   objectPositionMovil?: string;
+  /** `object-position` del video solo bajo 640 px; sin él, el mismo encuadre de la imagen. */
+  objectPositionVideoMovil?: string;
   /**
    * `pantalla` (por defecto): alto mínimo de 70-80 % de la pantalla. `contenido`: el alto lo da el
    * contenido, con tope para que lo de abajo asome al menos 120 px. `completo` (campaña, F10): toda la pantalla, desde el borde de arriba: la barra flota encima, así que el contenido se aparta con `--nav-alto`. `media` (detalles de servicio y paquete): 70 % de la pantalla.
@@ -33,11 +35,16 @@ type HeroMediaProps = {
  *
  * Server Component: no necesita JavaScript propio.
  */
-export function HeroMedia({ imagen, video, alt, preload = false, objectPosition, objectPositionMovil, alto = 'pantalla', children }: HeroMediaProps) {
+export function HeroMedia({ imagen, video, alt, preload = false, objectPosition, objectPositionMovil, objectPositionVideoMovil, alto = 'pantalla', children }: HeroMediaProps) {
   const posicion = objectPosition || objectPositionMovil
     ? ({ '--pos': objectPosition ?? '50% 50%', '--pos-m': objectPositionMovil ?? objectPosition ?? '50% 50%' } as CSSProperties)
     : undefined;
-  const claseEncuadre = posicion ? '[object-position:var(--pos)] max-sm:[object-position:var(--pos-m)]' : '';
+  const ENCUADRE = '[object-position:var(--pos)] max-sm:[object-position:var(--pos-m)]';
+  const claseEncuadre = posicion ? ENCUADRE : '';
+  // El video puede necesitar su propio encuadre móvil: lo que sigue la cámara no está donde está lo bonito de la foto.
+  const posicionVideo = objectPositionVideoMovil
+    ? ({ '--pos': objectPosition ?? '50% 50%', '--pos-m': objectPositionVideoMovil } as CSSProperties)
+    : posicion;
   return (
     <div className="relative w-full overflow-hidden">
       {imagen ? (
@@ -52,7 +59,7 @@ export function HeroMedia({ imagen, video, alt, preload = false, objectPosition,
         />
       ) : null}
       {video ? (
-        <VideoDiferido src={video} className={`absolute inset-0 h-full w-full object-cover ${claseEncuadre}`} style={posicion} />
+        <VideoDiferido src={video} className={`absolute inset-0 h-full w-full object-cover ${posicionVideo ? ENCUADRE : ''}`} style={posicionVideo} />
       ) : null}
       <div className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
 

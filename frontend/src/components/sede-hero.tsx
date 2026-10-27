@@ -30,7 +30,7 @@ type SedeHeroProps = {
 export function SedeHero({ nombre, contenido, palabras, empresa, empresaSinCirculo = false, textos }: SedeHeroProps) {
   return (
     <section>
-      <HeroMedia imagen={contenido.imagen} video={contenido.video} alt="" preload alto="completo" objectPosition={contenido.posicionImagen} objectPositionMovil={contenido.posicionImagenMovil}>
+      <HeroMedia imagen={contenido.imagen} video={contenido.video} alt="" preload alto="completo" objectPosition={contenido.posicionImagen} objectPositionMovil={contenido.posicionImagenMovil} objectPositionVideoMovil={contenido.posicionVideoMovil}>
         <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-between gap-8 px-pagina pb-10 pt-[calc(var(--nav-alto)+1.5rem)] text-hero-ink sm:pb-14">
           {palabras.length > 0 ? <PalabraRota palabras={palabras} className="texto-gigante" /> : <span />}
           <div>
