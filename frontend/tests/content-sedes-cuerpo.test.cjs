@@ -113,5 +113,5 @@ test('«Conócenos» de La Paz: título de las generaciones, una foto, dos socio
 });
 
 test('el héroe de La Paz se encuadra a la izquierda en celular, en los dos idiomas', () => {
-  for (const lang of ['es', 'en']) assert.equal(c.getSedeContenido('la-paz', lang).hero.posicionImagenMovil, '0% 50%');
+  for (const lang of ['es', 'en']) assert.equal(c.getSedeContenido('la-paz', lang).hero.posicionImagenMovil, '75% 50%');
 });

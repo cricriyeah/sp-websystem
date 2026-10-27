@@ -29,7 +29,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
-        posicionImagenMovil: '0% 50%',
+        posicionImagenMovil: '75% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
           'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
@@ -216,7 +216,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
-        posicionImagenMovil: '0% 50%',
+        posicionImagenMovil: '75% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
           'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',
