@@ -59,7 +59,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // Los datos de Omar están por confirmar con el dueño.
       conocenos: {
-        titulo: { inicio: 'Tres', destacada: 'generaciones', fin: 'de pescadores en La Paz' },
+        titulo: { inicio: 'Tres', destacada: 'generaciones', fin: 'de pescadores' },
         apertura: 'El mar de La Paz no se aprende en un curso. Se hereda.',
         foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Capitán en su panga Dream, en la bahía de La Paz' },
         socios: [
@@ -246,7 +246,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // Omar's details are pending the owner's confirmation.
       conocenos: {
-        titulo: { inicio: 'Three', destacada: 'generations', fin: 'of fishermen in La Paz' },
+        titulo: { inicio: 'Three', destacada: 'generations', fin: 'of fishermen' },
         apertura: 'The sea of La Paz is not learned in a class. It is inherited.',
         foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Captain aboard his panga Dream on the bay of La Paz' },
         socios: [
