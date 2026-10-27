@@ -49,7 +49,7 @@ export function SectionShell({ id, fondo, titulo, anchoTitulo = '24ch', lado, ch
       aria-labelledby={idTitulo}
       className={`scroll-mt-[calc(var(--nav-alto)+16px)] ${CLASE_FONDO[fondo]} py-16 sm:py-20 lg:py-28`}
     >
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-12">
+      <div className="mx-auto max-w-[1440px] px-pagina">
         {lado ? (
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
             {bloqueTitulo}

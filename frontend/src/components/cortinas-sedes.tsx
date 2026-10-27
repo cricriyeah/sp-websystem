@@ -49,7 +49,7 @@ export function CortinasSedes({ sedes, textos }: Props) {
             <FotosRotativas fotos={sede.fotos} sizes="100vw" />
           )}
           <div aria-hidden="true" className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
-          <div className="relative mx-auto flex h-full w-full max-w-[1440px] flex-col justify-between px-4 pb-[clamp(7.5rem,26svh,17.5rem)] pt-6 sm:px-6 lg:px-12">
+          <div className="relative mx-auto flex h-full w-full max-w-[1440px] flex-col justify-between px-pagina pb-[clamp(7.5rem,26svh,17.5rem)] pt-6">
             <div className="flex flex-wrap justify-between gap-x-6 gap-y-1 texto-etiqueta">
               <p>{textos.region}</p>
               {sede.empresas && <p>{sede.empresas}</p>}

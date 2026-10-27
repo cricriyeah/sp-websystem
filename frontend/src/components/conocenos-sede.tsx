@@ -27,7 +27,7 @@ export function ConocenosSede({ id, conocenos, fondo }: Props) {
   const { titulo, apertura, foto, socios, cita } = conocenos;
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className={cn('scroll-mt-[calc(var(--nav-alto)+16px)] py-16 sm:py-20 lg:py-28', CLASE_FONDO[fondo])}>
-      <div className="mx-auto grid max-w-[1440px] gap-x-6 gap-y-10 px-4 sm:px-6 lg:px-12 xl:grid-cols-12 xl:gap-y-14">
+      <div className="mx-auto grid max-w-[1440px] gap-x-6 gap-y-10 px-pagina xl:grid-cols-12 xl:gap-y-14">
         <h2 id={`${id}-titulo`} className="rev texto-grande xl:col-span-12">
           <span className="block">{titulo.inicio}</span>{' '}
           <span className="block texto-destacado text-cafe">{titulo.destacada}</span>{' '}

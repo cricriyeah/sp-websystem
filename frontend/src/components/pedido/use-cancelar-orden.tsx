@@ -88,7 +88,7 @@ export function useCancelarOrden({ dict, activo, sedeSlug, ordenId, checkoutId, 
     ? whatsappHref(dict.continuar.whatsappFolio.replace('{folio}', String(resultado.folio)).replace('{producto}', resultado.producto))
     : null;
   const aviso = linea ? (
-    <div role="status" aria-live="polite" className="mx-auto mb-2 max-w-6xl px-6 sm:px-8 lg:px-12">
+    <div role="status" aria-live="polite" className="mx-auto mb-2 max-w-6xl px-pagina">
       <div className="flex flex-col gap-2 rounded-card border border-borde bg-blanco p-4">
         <p className="texto-cuerpo text-foreground">{linea}</p>
         {whatsapp && (

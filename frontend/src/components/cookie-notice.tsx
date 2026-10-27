@@ -95,7 +95,7 @@ export function CookieNotice({
           transition={{ duration: 0.25 }}
           // z-40: por encima de la pagina, por debajo de los avisos y del modal
           // de amenidades (z-50), que si exigen respuesta.
-          className="fixed inset-x-0 bottom-0 z-40 bg-cafe-bruma px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-12"
+          className="fixed inset-x-0 bottom-0 z-40 bg-cafe-bruma px-pagina pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
           role="region"
           aria-label={cookies.title}
         >

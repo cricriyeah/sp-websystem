@@ -158,7 +158,7 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
 
       <main className="flex-1">
         <section className={cn('text-hero-ink print:bg-white print:text-foreground', CAMPO[datos.procesando ? 'procesando' : datos.color])}>
-          <div className="mx-auto max-w-[1440px] px-4 pb-12 pt-[calc(var(--nav-alto)+3rem)] sm:px-6 lg:px-12 lg:pb-16 lg:pt-[calc(var(--nav-alto)+4rem)] print:pt-8">
+          <div className="mx-auto max-w-[1440px] px-pagina pb-12 pt-[calc(var(--nav-alto)+3rem)] lg:pb-16 lg:pt-[calc(var(--nav-alto)+4rem)] print:pt-8">
             {!datos.procesando && <MarcaConfirmada color={datos.color} folio={datos.folio} />}
             <div className="flex flex-wrap items-end justify-between gap-x-12 gap-y-6">
               <h1 className="max-w-[14ch] texto-grande print:text-3xl">
@@ -177,7 +177,7 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
           </div>
         </section>
 
-        <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1.15fr_1fr] lg:gap-20 lg:px-12 lg:py-20 print:block print:py-6">
+        <div className="mx-auto grid max-w-[1440px] gap-12 px-pagina py-12 lg:grid-cols-[1.15fr_1fr] lg:gap-20 lg:py-20 print:block print:py-6">
           <div className="flex flex-col gap-12">
             <section className="print:break-inside-avoid">
               <h2 className="texto-paso">{confirmation.tripHeadline}</h2>

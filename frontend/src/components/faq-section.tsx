@@ -35,7 +35,7 @@ export function FaqSection({ id, titulo, preguntas, fondo, whatsapp }: FaqSectio
 
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className={cn('scroll-mt-[calc(var(--nav-alto)+16px)] py-16 sm:py-20 lg:py-28', CLASE_FONDO[fondo])}>
-      <div className="mx-auto grid max-w-[1440px] gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-12 lg:px-12">
+      <div className="mx-auto grid max-w-[1440px] gap-8 px-pagina lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-12">
         <h2 id={`${id}-titulo`} className="rev texto-seccion">{titulo}</h2>
 
         <div className="flex flex-col gap-2">

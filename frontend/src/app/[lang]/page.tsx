@@ -121,7 +121,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
     <main>
       <HubPortada lang={lang} textos={textos} />
       <section id={ANCLA_HUB.mapa} aria-labelledby={`${ANCLA_HUB.mapa}-titulo`} className="hidden scroll-mt-[calc(var(--nav-alto)+16px)] bg-superficie py-28 lg:block">
-        <div className="mx-auto max-w-[1440px] px-12">
+        <div className="mx-auto max-w-[1440px] px-pagina">
           <h2 id={`${ANCLA_HUB.mapa}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.mapaTitulo}</h2>
           <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.mapaTexto}</p>
           <div className="mt-10">

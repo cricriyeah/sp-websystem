@@ -19,19 +19,19 @@ export function CheckoutLoadingShell({
     <div className="min-h-dvh bg-background">
       <VeloCargando />
       {/* Mismo esqueleto que `CabeceraMinima`: la píldora de la barra, con la flecha a la izquierda y el idioma a la derecha. */}
-      <div className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8 lg:pt-4" aria-hidden="true">
+      <div className="fixed inset-x-0 top-0 z-40 px-[1.05rem] pt-3 sm:px-[2.1rem] lg:px-[2.8rem] lg:pt-4" aria-hidden="true">
         <div className="mx-auto flex h-[var(--barra-h)] w-full max-w-[1440px] items-center justify-between gap-2 rounded-full bg-superficie px-4 shadow-n2 sm:px-5 lg:px-7">
           <Skeleton className="size-11 rounded-full" />
           <Skeleton className="h-11 w-[88px] rounded-full" />
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1440px] px-4 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-6 lg:px-12">
+      <div className="mx-auto max-w-[1440px] px-pagina pt-[calc(1.5rem_+_var(--nav-alto))]">
         <Skeleton className="h-4 w-24" />
       </div>
 
       {withTitle && (
-        <div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-12">
+        <div className="mx-auto max-w-[1440px] px-pagina pt-6">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="mt-2 h-4 w-72 max-w-full" />
         </div>
@@ -46,7 +46,7 @@ export function CheckoutLoadingShell({
         </div>
       </div>
 
-      <div className="mx-auto hidden max-w-6xl gap-4 px-6 pt-6 sm:px-8 lg:flex lg:px-12" aria-hidden="true">
+      <div className="mx-auto hidden max-w-6xl gap-4 px-pagina pt-6 lg:flex" aria-hidden="true">
         {steps.map((step) => (
           <div key={step} className="flex min-w-0 flex-1 items-center gap-2">
             <Skeleton className="h-6 w-6 shrink-0 rounded-full" />
@@ -56,7 +56,7 @@ export function CheckoutLoadingShell({
         ))}
       </div>
 
-      <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 pt-6 pb-24 sm:px-8 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
+      <main className="mx-auto grid min-w-0 max-w-6xl gap-10 px-pagina pt-6 pb-24 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12">
         <div className="flex min-w-0 flex-col gap-6">{children}</div>
         <section className={`min-w-0 bg-superficie p-6 shadow-tarjeta sm:p-8 ${showSummaryMobile ? '' : 'hidden lg:block'}`} aria-hidden="true">
           <Skeleton className="h-5 w-28" />

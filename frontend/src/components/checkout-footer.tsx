@@ -23,7 +23,7 @@ type CheckoutFooterProps = {
 export function CheckoutFooter({ lang, footer, nav }: CheckoutFooterProps) {
   const empresas = useDeslindeEmpresas();
   return (
-    <footer className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-12">
+    <footer className="mx-auto max-w-[1440px] px-pagina py-10">
       <nav aria-label={footer.legalLabel} className="flex flex-wrap gap-x-6 gap-y-2">
         <Link
           href={hrefDeslinde(lang, empresas)}

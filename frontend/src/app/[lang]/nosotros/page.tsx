@@ -86,7 +86,7 @@ export default async function NosotrosPage({ params }: { params: Promise<{ lang:
         <Image src={FOTO} alt={nosotros.fotoAlt} fill preload sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
       </div>
 
-      <div className="flex-1 px-4 pb-20 pt-10 sm:px-6 lg:px-12 lg:pb-28 lg:pt-16">
+      <div className="flex-1 px-pagina pb-20 pt-10 lg:pb-28 lg:pt-16">
         <div className="max-w-[44rem]">
           <h1 className="texto-display text-foreground">{nosotros.titular}</h1>
           <p className="mt-5 text-xl leading-snug text-foreground">{nosotros.subtitulo}</p>

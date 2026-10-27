@@ -28,7 +28,7 @@ export function HubPortada({ lang, textos }: Props) {
   return (
     <section>
       <HeroMedia imagen={POSTER_HUB} video={VIDEO_HUB} alt="" preload alto="completo">
-        <div className="mx-auto w-full max-w-[1440px] px-4 pb-10 pt-[calc(var(--nav-alto)+1.5rem)] sm:px-6 sm:pb-14 lg:px-12">
+        <div className="mx-auto w-full max-w-[1440px] px-pagina pb-10 pt-[calc(var(--nav-alto)+1.5rem)] sm:pb-14">
           <h1 className="texto-gigante text-hero-ink">
             {textos.titularLineas.map((linea) => (
               <span key={linea} className="block">{linea}</span>

@@ -30,7 +30,7 @@ const FOTOS = [
 export function HubComoFunciona({ id, titulo, texto, pasos, cta }: Props) {
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-[calc(var(--nav-alto)+16px)] bg-superficie py-16 sm:py-20 lg:py-28">
-      <div className="mx-auto grid max-w-[1440px] items-start gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-12">
+      <div className="mx-auto grid max-w-[1440px] items-start gap-10 px-pagina lg:grid-cols-12 lg:gap-12">
         <div className="relative aspect-[4/3] overflow-hidden bg-tinta lg:sticky lg:top-[calc(var(--nav-alto)+1.5rem)] lg:col-span-6 lg:aspect-[4/5]">
           <FotoAleatoria fotos={FOTOS} sizes="(min-width: 1024px) 50vw, 100vw" />
         </div>

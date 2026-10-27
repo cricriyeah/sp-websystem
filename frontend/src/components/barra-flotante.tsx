@@ -30,7 +30,7 @@ type BarraFlotanteProps = {
  */
 export function BarraFlotante({ inicio, resto, menu, debajo, className }: BarraFlotanteProps) {
   return (
-    <div className={cn('fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8 lg:pt-4', className)}>
+    <div className={cn('fixed inset-x-0 top-0 z-40 px-[1.05rem] pt-3 sm:px-[2.1rem] lg:px-[2.8rem] lg:pt-4', className)}>
       <div className="relative mx-auto flex w-full flex-col lg:max-w-[1440px]">
         {/* `z-10`: lo que se despliega de la barra (selector de sede) queda dentro del contexto de apilamiento de
             `.barra-resto` (tiene animación), así que sin esto la banda de abajo, que viene después, lo tapa. */}

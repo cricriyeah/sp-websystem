@@ -50,7 +50,7 @@ export function VisorGaleria({ fotos, indice, onCambiar, textos }: Props) {
     >
       {foto && indice !== null && (
         <>
-          <div className="flex items-center justify-between gap-4 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 lg:px-12">
+          <div className="flex items-center justify-between gap-4 px-pagina pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
             <p className="texto-cuerpo font-semibold">
               {textos.contador.replace('{n}', String(indice + 1)).replace('{total}', String(fotos.length))}
               {foto.leyenda && <span className="font-normal"> · {foto.leyenda}</span>}

@@ -101,7 +101,7 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
 export function DetalleProducto({ vista, textos }: Props) {
   const { compra } = vista;
   const arranque = (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-4 pb-10 pt-[calc(var(--nav-alto)+0.5rem)] text-hero-ink sm:px-6 sm:pb-14 lg:px-12">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-pagina pb-10 pt-[calc(var(--nav-alto)+0.5rem)] text-hero-ink sm:pb-14">
       <div className="mb-auto flex flex-col items-start gap-6">
         <LegalBackLink
           label={textos.detalle.atras}
@@ -129,7 +129,7 @@ export function DetalleProducto({ vista, textos }: Props) {
       </section>
 
       <section className="bg-superficie py-16 sm:py-20 lg:py-28">
-        <div className="mx-auto grid max-w-[1440px] items-start gap-12 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)] lg:gap-24 lg:px-12">
+        <div className="mx-auto grid max-w-[1440px] items-start gap-12 px-pagina lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)] lg:gap-24">
           <div className="flex flex-col gap-12 lg:gap-16">
             {(vista.lead || vista.ficha.length > 0) && (
               <div>
@@ -256,7 +256,7 @@ export function DetalleProducto({ vista, textos }: Props) {
 
       {vista.empresas.length > 0 && (
         <section aria-labelledby="detalle-opera" className="bg-superficie py-16 sm:py-20 lg:py-28">
-          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-12">
+          <div className="mx-auto max-w-[1440px] px-pagina">
             <h2 id="detalle-opera" className="rev texto-seccion">{textos.detalle.quienOpera}</h2>
             <ul className="mt-10 flex flex-col gap-12">
               {vista.empresas.map((empresa) => (
@@ -282,7 +282,7 @@ export function DetalleProducto({ vista, textos }: Props) {
       )}
 
       {compra.href && (
-        <div className="fixed inset-x-0 bottom-[var(--aviso-alto,0px)] z-[var(--z-barra)] flex items-center justify-between gap-4 bg-tinta px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 text-hero-ink transition-[bottom] duration-200 sm:px-6 md:hidden">
+        <div className="fixed inset-x-0 bottom-[var(--aviso-alto,0px)] z-[var(--z-barra)] flex items-center justify-between gap-4 bg-tinta px-pagina pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 text-hero-ink transition-[bottom] duration-200 md:hidden">
           <p className="font-semibold tabular-nums">{compra.precio && <Precio precio={compra.precio} textos={textos} />}</p>
           <Link href={compra.href} className={botonClases({ variante: 'campana-claro' })}>{textos.reservarCorto}</Link>
         </div>

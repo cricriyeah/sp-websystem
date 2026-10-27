@@ -63,7 +63,7 @@ export function PaginaCheckout({
 
       {/* La cabecera es `fixed` y no reserva espacio: `--nav-alto` (globals.css) la
           compensa. El 1.5rem es la separación de siempre. */}
-      <div className="mx-auto max-w-[1440px] px-4 pt-[calc(1.5rem_+_var(--nav-alto))] sm:px-6 lg:px-12">
+      <div className="mx-auto max-w-[1440px] px-pagina pt-[calc(1.5rem_+_var(--nav-alto))]">
         {encabezado}
       </div>
 
@@ -72,14 +72,14 @@ export function PaginaCheckout({
       {/* Escritorio y tablet: la línea de progreso va arriba, sin cifra (el total vive en el resumen).
           En móvil la lleva la barra inferior. */}
       <LineaProgreso
-        className="mx-auto mt-6 max-w-[1440px] px-4 max-sm:hidden sm:px-6 lg:px-12"
+        className="mx-auto mt-6 max-w-[1440px] px-pagina max-sm:hidden"
         actual={stepper.actual}
         nombres={nombres}
         plantilla={dict.checkout.stepper.stepOf}
       />
 
       {/* 3fr/2fr: los pasos necesitan el ancho, el pedido es una columna de cifras. */}
-      <main className="mx-auto grid min-w-0 max-w-[1440px] gap-10 px-4 pt-8 pb-24 max-sm:pb-[calc(var(--barra-alto)+16px)] sm:px-6 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12 lg:px-12">
+      <main className="mx-auto grid min-w-0 max-w-[1440px] gap-10 px-pagina pt-8 pb-24 max-sm:pb-[calc(var(--barra-alto)+16px)] lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-12">
         <div className="flex min-w-0 flex-col gap-6">{pasos}</div>
         <div className="min-w-0">{pedido}</div>
       </main>

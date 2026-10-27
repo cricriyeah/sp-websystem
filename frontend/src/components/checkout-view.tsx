@@ -1592,7 +1592,7 @@ export function CheckoutView({
           />
         }
         aviso={sinLugar && day ? (
-          <div className="mx-auto mb-2 max-w-6xl px-6 sm:px-8 lg:px-12">
+          <div className="mx-auto mb-2 max-w-6xl px-pagina">
             <AvisoAccion
               problema={problemaDe('sin_cupo', { tieneWhatsapp }, {
                 ...checkout.problema,

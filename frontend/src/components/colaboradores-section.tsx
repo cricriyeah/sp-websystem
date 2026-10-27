@@ -47,7 +47,7 @@ export function ColaboradoresSection({ sedes, lang, textos, id }: {
 
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-[calc(var(--nav-alto)+16px)] bg-superficie py-16 sm:py-20 lg:py-28">
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-12">
+      <div className="mx-auto max-w-[1440px] px-pagina">
         <h2 id={`${id}-titulo`} className="max-w-[24ch] texto-seccion text-foreground">{textos.empresasTitulo}</h2>
         <p className="mt-4 max-w-[60ch] texto-cuerpo text-foreground">{textos.empresasTexto}</p>
         {/* 16 px entre los grupos de una tarjeta (cada una ocupa tres filas en subrejilla) y 48 px entre tarjetas. */}

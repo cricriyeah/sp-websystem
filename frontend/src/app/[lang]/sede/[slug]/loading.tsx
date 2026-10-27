@@ -8,7 +8,7 @@ export default function CargandoSede() {
       <VeloCargando />
     <div className="min-h-dvh bg-background" aria-hidden="true">
       <div className="fixed inset-x-0 top-0 z-40 bg-superficie shadow-tarjeta">
-        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-12">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-pagina">
           <Skeleton className="size-11 rounded-full" />
           <Skeleton className="h-11 w-40 rounded-full" />
         </div>
@@ -16,7 +16,7 @@ export default function CargandoSede() {
 
       <Skeleton className="mt-[var(--nav-alto)] h-[max(28.75rem,calc(100svh-var(--nav-alto)))] w-full bg-tinta" />
 
-      <section className="mx-auto max-w-[1440px] px-4 py-16 sm:px-6 lg:px-12">
+      <section className="mx-auto max-w-[1440px] px-pagina py-16">
         <Skeleton className="mb-8 h-10 w-64" />
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <Skeleton className="aspect-[4/5] w-full" />

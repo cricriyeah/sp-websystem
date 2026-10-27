@@ -94,7 +94,7 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
 
   return (
     <div>
-      <div className="mx-auto flex max-w-[1440px] flex-wrap items-end justify-between gap-6 px-4 pb-8 sm:px-6 lg:px-12">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-end justify-between gap-6 px-pagina pb-8">
         {cabeza}
         {/* Junto al título, donde ya va la vista al llegar a la sección; en el teléfono con el contador «1 / 3»
             (las tarjetas ocupan la fila y nada más dice que hay otras). */}
@@ -113,12 +113,12 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, children }: Props) {
         aria-label={etiqueta}
         tabIndex={0}
         onScroll={medir}
-        className="mx-auto flex max-w-[1440px] snap-x snap-mandatory gap-4 overflow-x-auto sm:gap-3 scroll-px-4 px-4 pb-1 [scrollbar-width:none] sm:scroll-px-6 sm:px-6 lg:scroll-px-12 lg:px-12 [&::-webkit-scrollbar]:hidden"
+        className="mx-auto flex max-w-[1440px] snap-x snap-mandatory gap-4 overflow-x-auto sm:gap-3 scroll-px-pagina px-pagina pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {children}
       </div>
       {estado.desborda && (
-        <div className="mx-auto mt-7 flex max-w-[1440px] items-center gap-4 px-4 sm:px-6 lg:px-12">
+        <div className="mx-auto mt-7 flex max-w-[1440px] items-center gap-4 px-pagina">
           <div aria-hidden="true" className="h-1 flex-1 overflow-hidden bg-cafe-bruma">
             <span
               className="block h-full origin-left bg-tinta transition-transform duration-[120ms] ease-linear motion-reduce:transition-none"
