@@ -98,13 +98,13 @@ export function LogoEmpresaAlLado({ empresa, ocultoEnMovil = false }: LogosProps
     <div className={cn('flex min-w-0 items-center gap-3', ocultoEnMovil && 'max-sm:hidden')}>
       <X aria-hidden="true" size={14} weight="bold" className="shrink-0 text-foreground" />
       {empresa.simbolo ? (
-        // Solo el símbolo, sin letras: así cabe más grande (44 px) en la barra de 64.
+        // Solo el símbolo, sin letras: así cabe más grande (56 px) en la barra de 64.
         <Image
           src={empresa.simbolo}
           alt={empresa.nombre}
           width={120}
           height={75}
-          className="h-11 w-auto max-w-[5rem] shrink-0 object-contain sm:h-12 sm:max-w-[5.5rem]"
+          className="h-12 w-auto max-w-[5.5rem] shrink-0 object-contain sm:h-14 sm:max-w-[6.5rem]"
         />
       ) : empresa.logo ? (
         <Image
