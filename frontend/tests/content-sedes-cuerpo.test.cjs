@@ -30,7 +30,7 @@ test('la-paz existe en los dos idiomas con hero y negocio no nulos', () => {
   assert.equal(es.slug, 'la-paz');
   assert.equal(es.nombre, 'La Paz');
   assert.equal(es.negocio.ciudad, 'La Paz');
-  assert.equal(es.hero.video, '/videos/videolapaz.webm');
+  assert.equal(es.hero.video, '/videos/videonuevolapaz.mp4');
   assert.notEqual(es.hero.subtitulo, en.hero.subtitulo);
 });
 

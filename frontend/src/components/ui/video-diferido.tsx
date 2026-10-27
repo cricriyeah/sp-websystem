@@ -62,7 +62,7 @@ export function VideoDiferido({
       style={style}
       className={`transition-opacity duration-400 motion-reduce:transition-none ${listo ? 'opacity-100' : 'opacity-0'} ${className}`}
     >
-      <source src={src} type="video/webm" />
+      <source src={src} type={src.endsWith(".mp4") ? "video/mp4" : "video/webm"} />
     </video>
   );
 }
