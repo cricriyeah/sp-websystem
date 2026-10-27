@@ -125,7 +125,10 @@ export function SiteHeader({
           animate={{ opacity: 1, y: 0 }}
           exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: -8 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-x-0 top-[calc(var(--barra-h)+0.5rem)] z-10 flex flex-col rounded-sheet bg-superficie px-6 py-3 shadow-n2 xl:hidden"
+          data-panel-desplazable
+          // Acotado a la pantalla: en una ventana baja el panel se desplaza por dentro en vez de salirse
+          // por abajo, y `overscroll-contain` evita que ese desplazamiento llegue a la página y lo cierre.
+          className="absolute inset-x-0 top-[calc(var(--barra-h)+0.5rem)] z-10 flex max-h-[calc(100dvh-var(--barra-h)-2.5rem)] flex-col overflow-y-auto overscroll-contain rounded-sheet bg-superficie px-6 py-3 shadow-n2 xl:hidden"
         >
           {/* El mapa solo existe desde 1024 px: el menú móvil no lo ofrece. */}
           {links.filter((link) => !link.href.endsWith(`#${ANCLA_HUB.mapa}`)).map((link) => (
@@ -138,7 +141,8 @@ export function SiteHeader({
               {link.label}
             </Link>
           ))}
-          <div className="flex flex-col gap-2 py-3.5">
+          {/* Desde 640 px el selector ya está en la barra: repetirlo aquí era la misma función dos veces. */}
+          <div className="flex flex-col gap-2 py-3.5 sm:hidden">
             <span className="texto-cuerpo">{nav.sedeLabel}</span>
             <SedeSelector
               lang={lang}

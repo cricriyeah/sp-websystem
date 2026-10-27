@@ -11,6 +11,8 @@ import { guardarSedePreferida, leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
+import { Despliegue } from '@/components/ui/despliegue';
+import { DURACION } from '@/lib/movimiento';
 
 // Compacto: el círculo se estira a píldora hacia la izquierda y, ya abierta, la lista cae desde ella.
 // Al cerrar, el orden se invierte: primero se recoge la lista y después la píldora vuelve a círculo.
@@ -19,6 +21,24 @@ const LISTA_ABIERTA = 'inset(-20px -20px -40px -20px)';
 const CURVA = [0.16, 1, 0.3, 1] as const;
 
 export type SedeOpcion = Pick<SedeIndiceEntry, 'slug' | 'nombre'>;
+
+// Lo que crece el círculo (48 px) al estirarse a píldora (240 px), más un respiro con lo que queda a su izquierda.
+const CRECE_AL_ESTIRAR = 192;
+const RESPIRO = 12;
+
+/**
+ * La píldora compacta crece dentro de la barra y empuja a sus vecinos hacia la izquierda, así que solo se
+ * estira si entre el grupo de controles y lo que tiene antes hay sitio de sobra. Si no, se queda círculo y
+ * la lista cae debajo: nunca se sale de la barra ni tapa nada.
+ */
+function hayEspacioParaEstirar(caja: HTMLElement | null): boolean {
+  const grupo = caja?.parentElement;
+  if (!grupo) return false;
+  let previo = grupo.previousElementSibling as HTMLElement | null;
+  while (previo && previo.offsetWidth === 0) previo = previo.previousElementSibling as HTMLElement | null;
+  if (!previo) return false;
+  return grupo.getBoundingClientRect().left - previo.getBoundingClientRect().right >= CRECE_AL_ESTIRAR + RESPIRO;
+}
 
 type SedeSelectorProps = {
   lang: Locale;
@@ -49,6 +69,8 @@ export function SedeSelector({
   className = '',
 }: SedeSelectorProps) {
   const [open, setOpen] = useState(false);
+  // Compacto: si al abrir hay sitio, la píldora se estira; si no, queda círculo (ver `hayEspacioParaEstirar`).
+  const [estira, setEstira] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
@@ -129,10 +151,66 @@ export function SedeSelector({
     }
   }
 
+  // Ya desplegada la lista del menú móvil, la lleva a la vista dentro del panel que se desplaza: si
+  // cabe entera, lo justo para verla; si no, con el disparador arriba y las opciones debajo.
+  useEffect(() => {
+    if (!open || !anchoCompleto) return;
+    const espera = window.setTimeout(() => {
+      const caja = ref.current;
+      const panel = caja?.closest<HTMLElement>('[data-panel-desplazable]');
+      if (!caja || !panel) return;
+      caja.scrollIntoView({
+        block: caja.offsetHeight <= panel.clientHeight ? 'nearest' : 'start',
+        behavior: sinMovimiento ? 'auto' : 'smooth',
+      });
+    }, DURACION.media * 1000);
+    return () => window.clearTimeout(espera);
+  }, [open, anchoCompleto, sinMovimiento]);
+
   const puedeAbrir = sedes.length > 0;
   const nombreMostrado = sedeActiva?.nombre ?? placeholder ?? label;
 
+  const opciones = (
+    <>
+      {sedes.map((s) => {
+        const selected = sedeActiva?.slug === s.slug;
+        return (
+          <Button
+            key={s.slug}
+            variante="libre"
+            role="option"
+            aria-selected={selected}
+            onClick={() => handleSelect(s)}
+            className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-full px-4 py-2 text-left texto-cuerpo transition-colors ${
+              selected
+                ? 'bg-tinta font-semibold text-white'
+                : 'text-foreground hover:bg-cafe-bruma'
+            }`}
+          >
+            <span>{s.nombre}</span>
+            {selected && <Check size={16} weight="bold" aria-hidden="true" />}
+          </Button>
+        );
+      })}
+      {inicioLabel && <div aria-hidden="true" className="mx-4 my-1 h-px bg-borde" />}
+      {inicioLabel && (
+        <Button
+          variante="libre"
+          role="option"
+          aria-selected={false}
+          onClick={() => { setOpen(false); router.push(hrefInicio(lang)); }}
+          className="flex min-h-12 w-full items-center gap-3 rounded-full px-4 py-2 text-left texto-cuerpo text-foreground transition-colors hover:bg-cafe-bruma"
+        >
+          <House size={16} weight="bold" aria-hidden="true" />
+          <span>{inicioLabel}</span>
+        </Button>
+      )}
+    </>
+  );
+
   return (
+    // `cn` y no plantilla: con `hidden sm:inline-block` desde la cabecera, el `inline-block` propio
+    // ganaba y el selector se veía en móvil, empujando el botón de menú fuera de la pantalla.
     // `cn` y no plantilla: con `hidden sm:inline-block` desde la cabecera, el `inline-block` propio
     // ganaba y el selector se veía en móvil, empujando el botón de menú fuera de la pantalla.
     <div ref={ref} className={cn('relative inline-block text-left', anchoCompleto && 'block w-full', className)}>
@@ -140,13 +218,17 @@ export function SedeSelector({
         <div
           className={cn(
             'relative h-12 max-w-[calc(100vw-2rem)] overflow-hidden rounded-full bg-tinta text-white transition-[width] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
-            open ? 'w-60' : 'w-12 delay-[160ms]',
+            open && estira ? 'w-60' : open ? 'w-12' : 'w-12 delay-[160ms]',
           )}
         >
             <Button
               variante="libre"
               disabled={!puedeAbrir}
-              onClick={() => puedeAbrir && setOpen((v) => !v)}
+              onClick={() => {
+                if (!puedeAbrir) return;
+                if (!open) setEstira(hayEspacioParaEstirar(ref.current));
+                setOpen((v) => !v);
+              }}
               aria-expanded={open}
               aria-haspopup="listbox"
               aria-label={`${label}: ${nombreMostrado}`}
@@ -154,7 +236,7 @@ export function SedeSelector({
             >
               <span
                 aria-hidden="true"
-                className={cn('min-w-0 flex-1 truncate pl-5 text-left texto-cuerpo font-semibold transition-opacity duration-200', open ? 'opacity-100 delay-150' : 'opacity-0')}
+                className={cn('min-w-0 flex-1 truncate pl-5 text-left texto-cuerpo font-semibold transition-opacity duration-200', open && estira ? 'opacity-100 delay-150' : 'opacity-0')}
               >
                 {nombreMostrado}
               </span>
@@ -183,56 +265,34 @@ export function SedeSelector({
         </Button>
       )}
 
-      <AnimatePresence>
-        {open && puedeAbrir && (
-          <m.div
-            role="listbox"
-            aria-label={label}
-            initial={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
-            animate={sinMovimiento ? { opacity: 1 } : compacto ? { opacity: 1, clipPath: LISTA_ABIERTA } : { opacity: 1, y: 0, scale: 1 }}
-            exit={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
-            transition={compacto && !sinMovimiento ? { duration: 0.34, ease: CURVA, delay: 0.3 } : { duration: 0.15, ease: 'easeOut' }}
-            className={cn(
-              'absolute right-0 top-full z-50 mt-3 rounded-sheet bg-superficie p-2 shadow-n2',
-              compacto ? 'w-60 max-w-[calc(100vw-2rem)]' : anchoCompleto ? 'left-0 w-full' : 'w-max min-w-[15rem] max-w-[calc(100vw-2rem)]',
-            )}
-          >
-            {sedes.map((s) => {
-              const selected = sedeActiva?.slug === s.slug;
-              return (
-                <Button
-                  key={s.slug}
-                  variante="libre"
-                  role="option"
-                  aria-selected={selected}
-                  onClick={() => handleSelect(s)}
-                  className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-full px-4 py-2 text-left texto-cuerpo transition-colors ${
-                    selected
-                      ? 'bg-tinta font-semibold text-white'
-                      : 'text-foreground hover:bg-cafe-bruma'
-                  }`}
-                >
-                  <span>{s.nombre}</span>
-                  {selected && <Check size={16} weight="bold" aria-hidden="true" />}
-                </Button>
-              );
-            })}
-            {inicioLabel && <div aria-hidden="true" className="mx-4 my-1 h-px bg-borde" />}
-            {inicioLabel && (
-              <Button
-                variante="libre"
-                role="option"
-                aria-selected={false}
-                onClick={() => { setOpen(false); router.push(hrefInicio(lang)); }}
-                className="flex min-h-12 w-full items-center gap-3 rounded-full px-4 py-2 text-left texto-cuerpo text-foreground transition-colors hover:bg-cafe-bruma"
-              >
-                <House size={16} weight="bold" aria-hidden="true" />
-                <span>{inicioLabel}</span>
-              </Button>
-            )}
-          </m.div>
-        )}
-      </AnimatePresence>
+      {anchoCompleto ? (
+        // En el menú móvil la lista no flota: se despliega dentro del panel, empujando lo de abajo.
+        // Una hoja flotante colgaba del borde del panel y la pantalla la recortaba.
+        <Despliegue abierto={open && puedeAbrir}>
+          <div role="listbox" aria-label={label} className="pt-2">
+            {opciones}
+          </div>
+        </Despliegue>
+      ) : (
+        <AnimatePresence>
+          {open && puedeAbrir && (
+            <m.div
+              role="listbox"
+              aria-label={label}
+              initial={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
+              animate={sinMovimiento ? { opacity: 1 } : compacto ? { opacity: 1, clipPath: LISTA_ABIERTA } : { opacity: 1, y: 0, scale: 1 }}
+              exit={sinMovimiento ? { opacity: 0 } : compacto ? { opacity: 0, clipPath: LISTA_CERRADA } : { opacity: 0, y: -4, scale: 0.98 }}
+              transition={compacto && !sinMovimiento ? { duration: 0.34, ease: CURVA, delay: estira ? 0.3 : 0 } : { duration: 0.15, ease: 'easeOut' }}
+              className={cn(
+                'absolute right-0 top-full z-50 mt-3 rounded-sheet bg-superficie p-2 shadow-n2',
+                compacto ? 'w-60 max-w-[calc(100vw-2rem)]' : 'w-max min-w-[15rem] max-w-[calc(100vw-2rem)]',
+              )}
+            >
+              {opciones}
+            </m.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
