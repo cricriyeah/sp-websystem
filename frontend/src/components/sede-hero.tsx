@@ -13,6 +13,8 @@ type SedeHeroProps = {
   palabras: string[];
   /** La empresa local que opera la sede; sin ella no hay sello. */
   empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
+  /** El logo de la empresa suelto, sin el círculo del sello (cuando el logo ya trae su disco). */
+  empresaSinCirculo?: boolean;
   textos: { cta: string; operadaPor: string };
 };
 
@@ -25,7 +27,7 @@ type SedeHeroProps = {
  * La empresa va justo debajo del nombre, en una sola línea: su símbolo suelto, sin círculo y sin letras, y
  * «Con <nombre>» a tamaño de frase. Sin etiqueta ni píldora: se lee de corrido con el titular. Server Component (la palabra que rota es una isla cliente).
  */
-export function SedeHero({ nombre, contenido, palabras, empresa, textos }: SedeHeroProps) {
+export function SedeHero({ nombre, contenido, palabras, empresa, empresaSinCirculo = false, textos }: SedeHeroProps) {
   return (
     <section>
       <HeroMedia imagen={contenido.imagen} video={contenido.video} alt="" preload alto="completo" objectPosition={contenido.posicionImagen} objectPositionMovil={contenido.posicionImagenMovil}>
@@ -35,7 +37,7 @@ export function SedeHero({ nombre, contenido, palabras, empresa, textos }: SedeH
             <h1 className="texto-grande">{nombre}</h1>
             {empresa && (
               <div className="mt-6 flex items-center gap-4">
-                <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} sinCirculo />
+                <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} sinCirculo={empresaSinCirculo} />
                 <p className="text-2xl font-semibold leading-tight">
                   <span className="font-normal">{textos.operadaPor}</span> {empresa.nombre}
                 </p>

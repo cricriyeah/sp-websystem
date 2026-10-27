@@ -12,10 +12,12 @@ export type MarcaEmpresa = {
   simbolo?: string;
   /** El símbolo sin fondo y recortado a su contorno, para la barra de arriba (blanca): así llena la altura. */
   simboloBarra?: string;
+  /** En el arranque de la sede el logo va suelto, sin el círculo del sello: solo si el logo ya trae su propio disco. */
+  heroSinCirculo?: boolean;
 };
 
 export const MARCAS: readonly MarcaEmpresa[] = [
-  { slug: 'sal-y-sol', nombre: 'Sal y Sol Sportfishing', logo: '/logos/salysol.webp', simbolo: '/logos/salysol.webp', simboloBarra: '/logos/salysol-barra.webp' },
+  { slug: 'sal-y-sol', nombre: 'Sal y Sol Sportfishing', logo: '/logos/salysol.webp', simbolo: '/logos/salysol.webp', simboloBarra: '/logos/salysol-barra.webp', heroSinCirculo: true },
   { slug: 'transporte-la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp' },
   { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-oscuro.webp', simbolo: '/logos/laventanatravel-simbolo.webp' },
   { slug: 'piratas-adventures', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp' },
