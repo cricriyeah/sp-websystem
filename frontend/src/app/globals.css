@@ -410,6 +410,7 @@
      encogido a una columna; `hyphens: manual` y `min-width: 0` para que un hijo flex o grid pueda
      encogerse y envolver. `font-synthesis: none`: Bold es real, ningun navegador inventa otra. */
   .texto-gigante,
+  .texto-destacado,
   .texto-grande,
   .texto-display,
   .texto-pagina,
@@ -437,6 +438,9 @@
   .texto-gigante { font-size: clamp(4.5rem, 13vw, 13.75rem); line-height: 0.84; letter-spacing: -0.05em; }
   .texto-grande { font-size: clamp(2.5rem, 5.4vw, 5.25rem); line-height: 0.9; letter-spacing: -0.04em; }
   @media (max-width: 39.99rem) { .texto-gigante { font-size: 12.5vw; } }
+  /* Una palabra que destaca sin dominar: la del medio de un titular en `texto-grande` (Conócenos). Mismo tamaño que `texto-gigante` en celular; en pantalla ancha se queda en 7 rem. */
+  .texto-destacado { font-size: clamp(4.5rem, 8vw, 7rem); line-height: 0.84; letter-spacing: -0.05em; }
+  @media (max-width: 39.99rem) { .texto-destacado { font-size: 12.5vw; } }
 
   .texto-display { font-size: 2.5rem; line-height: 1.05; letter-spacing: -0.02em; }
   .texto-pagina { font-size: 2.25rem; line-height: 1.1; letter-spacing: -0.02em; }
