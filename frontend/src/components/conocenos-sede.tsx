@@ -10,45 +10,42 @@ type Props = {
 };
 
 /**
- * «Conócenos»: quién lleva el negocio. El título ocupa todo el ancho en tres líneas y la del medio
- * («generaciones») va un tamaño por encima y en el color de acento: destaca sin dominar.
+ * «Conócenos»: quién lleva el negocio. Sigue el mosaico «foto ancha + campo de color» de la dirección de taste
+ * («Photographs at uneven sizes», sección `about`), con la proporción nativa de la foto (2:1, no se recorta: se ven el
+ * capitán y el nombre de la panga).
  *
- * La foto es horizontal (2:1) y no se recorta, así que la sección se compone alrededor de ella. Desde 1280 px, la
- * foto ocupa siete de doce columnas y a su lado, alineadas con su borde de arriba y de abajo, van la apertura y la
- * cita: la foto y lo que la explica se leen de un golpe. Debajo, los dos socios en dos columnas anchas, cada una con
- * un renglón corto de leer. Por debajo de 1280 px (donde al lado no cabe) todo se apila: foto, apertura y cita, socios.
- * Sin botones: la decisión de reservar la sigue llevando la sección de los viajes. El contenido es de `sedes-cuerpo`:
- * solo La Paz lo tiene hoy y sin él la sección no se pinta (`seccionesDeSede`).
+ * De arriba abajo: el título en tres líneas, con la del medio («generaciones») un tamaño por encima y en el acento;
+ * la apertura como frase guía bajo el título (columnas 1-6); el mosaico, con la foto en las columnas 1-8 y, de su
+ * misma altura, un campo de color tinta en las 9-12 que lleva la cita de prensa (la prueba externa pegada a la foto);
+ * y los dos socios en dos columnas de seis. Por debajo de 1280 px (donde la foto y el campo no caben lado a lado) todo
+ * se apila en ese mismo orden. Sin botones: la decisión de reservar la sigue llevando la sección de los viajes.
+ * El contenido es de `sedes-cuerpo`: solo La Paz lo tiene hoy y sin él la sección no se pinta (`seccionesDeSede`).
  *
  * Server Component.
  */
 export function ConocenosSede({ id, conocenos, fondo }: Props) {
   const { titulo, apertura, foto, socios, cita } = conocenos;
-  // El paso de tono: el panel de la cita es gris sobre blanco y blanco sobre gris.
-  const panel = fondo === 'cafe-bruma' ? 'bg-superficie' : 'bg-cafe-bruma';
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className={cn('scroll-mt-[calc(var(--nav-alto)+16px)] py-16 sm:py-20 lg:py-28', CLASE_FONDO[fondo])}>
-      <div className="mx-auto grid max-w-[1440px] gap-x-12 gap-y-10 px-4 sm:px-6 lg:px-12 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:gap-y-14">
-        <h2 id={`${id}-titulo`} className="rev texto-grande xl:col-span-2">
+      <div className="mx-auto grid max-w-[1440px] gap-x-6 gap-y-10 px-4 sm:px-6 lg:px-12 xl:grid-cols-12 xl:gap-y-14">
+        <h2 id={`${id}-titulo`} className="rev texto-grande xl:col-span-12">
           <span className="block">{titulo.inicio}</span>{' '}
           <span className="block texto-destacado text-cafe">{titulo.destacada}</span>{' '}
           <span className="block">{titulo.fin}</span>
         </h2>
 
-        <div className="rev-foto relative aspect-[2912/1464] self-start overflow-hidden bg-tinta">
-          <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1280px) 58vw, 100vw" className="object-cover" />
+        <p className="rev max-w-[26ch] text-2xl font-semibold leading-snug text-balance sm:text-3xl xl:col-span-6 xl:max-w-[30ch] xl:text-4xl">{apertura}</p>
+
+        <div className="rev-foto relative aspect-[2912/1464] overflow-hidden bg-tinta xl:col-span-8">
+          <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1280px) 66vw, 100vw" className="object-cover" />
         </div>
 
-        <div className="flex flex-col gap-8 xl:justify-between">
-          <p className="rev max-w-[24ch] text-2xl font-semibold leading-snug text-balance sm:text-3xl xl:text-4xl">{apertura}</p>
+        <figure className="rev m-0 flex flex-col justify-center gap-6 bg-tinta p-6 text-hero-ink sm:p-8 xl:col-span-4">
+          <blockquote className="m-0 text-2xl font-semibold leading-snug text-balance xl:text-3xl">{`“${cita.texto}”`}</blockquote>
+          <figcaption className="texto-cuerpo font-semibold">{cita.atribucion}</figcaption>
+        </figure>
 
-          <figure className={cn('rev m-0 p-6 sm:p-8', panel)}>
-            <blockquote className="m-0 text-xl font-semibold leading-snug text-balance">{`“${cita.texto}”`}</blockquote>
-            <figcaption className="mt-4 texto-pequeno">{cita.atribucion}</figcaption>
-          </figure>
-        </div>
-
-        <ul className="grid gap-8 sm:grid-cols-2 sm:gap-12 xl:col-span-2">
+        <ul className="grid gap-8 sm:grid-cols-2 sm:gap-6 xl:col-span-12">
           {socios.map((socio) => (
             <li key={socio.nombre} className="rev">
               <strong className="block text-xl font-semibold leading-snug">{socio.nombre}</strong>
