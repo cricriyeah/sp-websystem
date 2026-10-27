@@ -1,11 +1,11 @@
 import Image from 'next/image';
 import type { CSSProperties, ReactNode } from 'react';
-import { VideoDiferido } from '@/components/ui/video-diferido';
+import { VideoHeroe } from '@/components/ui/video-heroe';
 
 type HeroMediaProps = {
-  /** Foto del héroe: es el LCP, va en el HTML inicial. `null` si la sede aún no tiene. */
+  /** Foto del héroe. Sin video es el LCP y va en el HTML inicial; con video es solo el respaldo. `null` si la sede aún no tiene. */
   imagen: string | null;
-  /** Video de fondo: se monta después de `load`, encima de la imagen. `null` = solo imagen. */
+  /** Video de fondo: va en el HTML inicial y es lo primero que se pinta. `null` = solo imagen. */
   video: string | null;
   /** Descripción de la imagen; vacío (`''`) si es decorativa. */
   alt: string;
@@ -27,11 +27,11 @@ type HeroMediaProps = {
 };
 
 /**
- * Fondo de un héroe: imagen inmediata (`<Image preload>`), video diferido encima,
- * degradado `--scrim-hero` para que el texto nunca vaya directo sobre la foto, y
- * el alto mínimo con el que se pinta el contenido. La isla cliente
- * `VideoDiferido` no monta nada con «reducir movimiento» ni con ahorro de datos,
- * así que en esos casos queda solo la imagen.
+ * Fondo de un héroe: con video, el video desde el primer instante (su primer cuadro se ve como
+ * un video pausado y arranca solo) y la foto solo de respaldo; sin video, la foto inmediata
+ * (`<Image preload>`). Encima, el degradado `--scrim-hero` para que el texto nunca vaya directo
+ * sobre el fondo, y el alto mínimo con el que se pinta el contenido. La isla cliente `VideoHeroe`
+ * cambia el video por la foto con «reducir movimiento», con ahorro de datos o si el video falla.
  *
  * Server Component: no necesita JavaScript propio.
  */
@@ -45,22 +45,24 @@ export function HeroMedia({ imagen, video, alt, preload = false, objectPosition,
   const posicionVideo = objectPositionVideoMovil
     ? ({ '--pos': objectPosition ?? '50% 50%', '--pos-m': objectPositionVideoMovil } as CSSProperties)
     : posicion;
+  // Con video, la foto es solo el respaldo (no se precarga): lo primero que se pinta es el video.
+  const foto = imagen ? (
+    <Image
+      src={imagen}
+      alt={alt}
+      fill
+      sizes="100vw"
+      preload={preload && !video}
+      className={`object-cover ${claseEncuadre}`}
+      style={posicion}
+    />
+  ) : null;
   return (
-    <div className="relative w-full overflow-hidden">
-      {imagen ? (
-        <Image
-          src={imagen}
-          alt={alt}
-          fill
-          sizes="100vw"
-          preload={preload}
-          className={`object-cover ${claseEncuadre}`}
-          style={posicion}
-        />
-      ) : null}
+    // `bg-tinta` solo con video: es el fondo que se ve hasta que llega su primer cuadro.
+    <div className={`relative w-full overflow-hidden ${video ? 'bg-tinta' : ''}`}>
       {video ? (
-        <VideoDiferido src={video} className={`absolute inset-0 h-full w-full object-cover ${posicionVideo ? ENCUADRE : ''}`} style={posicionVideo} />
-      ) : null}
+        <VideoHeroe src={video} className={`absolute inset-0 h-full w-full object-cover ${posicionVideo ? ENCUADRE : ''}`} style={posicionVideo} respaldo={foto} />
+      ) : foto}
       <div className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
 
       <div
