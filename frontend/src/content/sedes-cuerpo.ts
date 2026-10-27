@@ -29,7 +29,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
-        posicionImagenMovil: '100% 50%',
+        posicionImagenMovil: '0% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
           'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
@@ -57,11 +57,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Regresa', texto: 'Con tus fotos y tu captura.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Foto de relleno hasta tener la del equipo de Sal y Sol. Los datos de Omar están por confirmar con el dueño.
+      // Los datos de Omar están por confirmar con el dueño.
       conocenos: {
         titulo: { inicio: 'Tres', destacada: 'generaciones', fin: 'de pescadores en La Paz' },
         apertura: 'El mar de La Paz no se aprende en un curso. Se hereda.',
-        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Capitán de Sal y Sol con una cabrilla en la bahía de La Paz' },
+        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Capitán en su panga Dream, en la bahía de La Paz' },
         socios: [
           {
             nombre: 'Rogelio Camacho',
@@ -216,7 +216,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
-        posicionImagenMovil: '100% 50%',
+        posicionImagenMovil: '0% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
           'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',
@@ -244,11 +244,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Return', texto: 'Back with your photos and your catch.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Placeholder photo until we have the Sal y Sol crew's own. Omar's details are pending the owner's confirmation.
+      // Omar's details are pending the owner's confirmation.
       conocenos: {
         titulo: { inicio: 'Three', destacada: 'generations', fin: 'of fishermen in La Paz' },
         apertura: 'The sea of La Paz is not learned in a class. It is inherited.',
-        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Sal y Sol captain holding a grouper on the bay of La Paz' },
+        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Captain aboard his panga Dream on the bay of La Paz' },
         socios: [
           {
             nombre: 'Rogelio Camacho',

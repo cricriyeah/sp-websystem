@@ -32,7 +32,7 @@ export function ConocenosSede({ id, conocenos, fondo }: Props) {
         </h2>
 
         <div className="rev-foto relative aspect-[4/5] overflow-hidden bg-tinta lg:col-start-1 lg:row-start-2 lg:aspect-auto lg:min-h-[34rem]">
-          <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1024px) 42vw, 100vw" className="object-cover object-top" />
+          <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1024px) 42vw, 100vw" className="object-cover object-[52%_50%]" />
         </div>
 
         <div className="flex flex-col gap-10 lg:col-start-2 lg:row-start-2 lg:justify-center">
