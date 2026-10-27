@@ -57,6 +57,7 @@ const suites = {
   'regla-personas': ['src/lib/regla-personas.ts', 'REGLA_PERSONAS_TEST_OUT'],
   'secciones-sede': ['src/lib/secciones-sede.ts', 'SECCIONES_TEST_OUT'],
   empresas: ['src/content/empresas.ts', 'EMPRESAS_TEST_OUT'],
+  media: ['src/lib/media.ts', 'MEDIA_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

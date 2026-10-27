@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties } from 'react';
+import { urlVideo } from '@/lib/media';
 
 type Navegador = Navigator & { connection?: { saveData?: boolean } };
 
@@ -51,6 +52,7 @@ export function VideoDiferido({
   }, []);
 
   if (!montar) return null;
+  const direccion = urlVideo(src, process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
   return (
     <video
       autoPlay
@@ -62,7 +64,7 @@ export function VideoDiferido({
       style={style}
       className={`transition-opacity duration-400 motion-reduce:transition-none ${listo ? 'opacity-100' : 'opacity-0'} ${className}`}
     >
-      <source src={src} type={src.endsWith(".mp4") ? "video/mp4" : "video/webm"} />
+      <source src={direccion} type={direccion.endsWith(".mp4") ? "video/mp4" : "video/webm"} />
     </video>
   );
 }

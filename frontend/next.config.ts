@@ -5,6 +5,18 @@ import type { NextConfig } from "next";
 // checkout entero. Por eso se lee de la misma env var que usa src/lib/api.ts.
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+// Los videos pueden servirse desde un bucket de Cloudflare R2 (src/lib/media.ts). Sin su
+// origen en `media-src`, el CSP bloquea el video y el heroe se queda en la foto. Una URL mal
+// escrita no debe tumbar el build: simplemente no se agrega nada.
+function origenDeMedios(): string {
+  try {
+    return process.env.NEXT_PUBLIC_MEDIA_BASE_URL ? new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL).origin : "";
+  } catch {
+    return "";
+  }
+}
+const mediaOrigen = origenDeMedios();
+
 // Politica de contenido: define de donde puede cargar cosas la pagina, para que
 // un script inyectado no pueda mandar los datos de la tarjeta a otro lado.
 //
@@ -22,6 +34,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
+  `media-src 'self'${mediaOrigen ? ` ${mediaOrigen}` : ""}`,
   `connect-src 'self' ${apiUrl} https://api.stripe.com https://challenges.cloudflare.com`,
   // Turnstile monta su reto en un iframe propio, igual que Stripe.
   "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
