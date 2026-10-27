@@ -78,7 +78,8 @@ export type SedeDia = {
  * socios (nombre y una línea cada uno) y una cita con su fuente.
  */
 export type SedeConocenos = {
-  titulo: string;
+  /** El título en tres líneas; la del medio es la que se destaca («generaciones»). */
+  titulo: { inicio: string; destacada: string; fin: string };
   apertura: string;
   foto: { src: string; alt: string };
   socios: { nombre: string; texto: string }[];

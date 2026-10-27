@@ -29,6 +29,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
+        posicionImagenMovil: '100% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
           'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
@@ -58,22 +59,22 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // Foto de relleno hasta tener la del equipo de Sal y Sol. Los datos de Omar están por confirmar con el dueño.
       conocenos: {
-        titulo: 'Tres generaciones de pescadores en La Paz',
-        apertura: 'En Sal y Sol sales con gente de aquí. Rogelio Camacho es paceño, del barrio El Manglito, y vive entre lanchas desde niño.',
+        titulo: { inicio: 'Tres', destacada: 'generaciones', fin: 'de pescadores en La Paz' },
+        apertura: 'El mar de La Paz no se aprende en un curso. Se hereda.',
         foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Capitán de Sal y Sol con una cabrilla en la bahía de La Paz' },
         socios: [
           {
             nombre: 'Rogelio Camacho',
-            texto: 'La pesca viene de familia: sus hermanos trabajaban en los barcos de Los Ruffo y de Jack Vélez y pescaban por deporte, una tradición de La Paz. Hoy suma más de 30 años en la bahía.',
+            texto: 'Creció en el barrio El Manglito, mirando los barcos de Los Ruffo y de Jack Vélez, donde trabajaban sus hermanos. Ellos pescaban por deporte, una competencia tan de La Paz como el malecón. Hoy Rogelio lleva más de treinta años en la bahía y sigue saliendo con el mismo entusiasmo.',
           },
           {
             nombre: 'Omar',
-            texto: 'Su socio y capitán de panga. Sale al amanecer con cada grupo desde la Marina La Costa y conoce los puntos donde pica el pescado.',
+            texto: 'Es el que llega antes que el sol. Capitán de panga y socio de Rogelio, conoce la bahía como su casa y sabe dónde buscar el pescado.',
           },
         ],
         cita: {
-          texto: 'Prácticamente preservar el medio ambiente',
-          atribucion: 'Rogelio Camacho, sobre la misión de la Asociación Civil Prestadores de Servicios Turísticos, de la que es parte. Peninsular Digital, 2010.',
+          texto: 'El entusiasmo de lancheros como Rogelio Camacho es el motor de la ciudad de La Paz.',
+          atribucion: 'Perla Taddie García, Peninsular Digital, 2010.',
         },
       },
       galeria: [
@@ -215,6 +216,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
+        posicionImagenMovil: '100% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
           'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',
@@ -244,22 +246,22 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // Placeholder photo until we have the Sal y Sol crew's own. Omar's details are pending the owner's confirmation.
       conocenos: {
-        titulo: 'Three generations of fishermen in La Paz',
-        apertura: "At Sal y Sol you head out with locals. Rogelio Camacho is from La Paz's El Manglito neighborhood and has lived among boats since childhood.",
+        titulo: { inicio: 'Three', destacada: 'generations', fin: 'of fishermen in La Paz' },
+        apertura: 'The sea of La Paz is not learned in a class. It is inherited.',
         foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Sal y Sol captain holding a grouper on the bay of La Paz' },
         socios: [
           {
             nombre: 'Rogelio Camacho',
-            texto: 'Fishing runs in the family: his brothers worked on the boats of Los Ruffo and Jack Vélez and fished for sport, a La Paz tradition. Today he has more than 30 years on the bay.',
+            texto: 'He grew up in the El Manglito neighborhood, watching the boats of Los Ruffo and Jack Vélez, where his brothers worked. They fished for sport, a contest as much a part of La Paz as the malecón. Today Rogelio has more than thirty years on the bay and still heads out with the same enthusiasm.',
           },
           {
             nombre: 'Omar',
-            texto: 'His partner and panga captain. He heads out at dawn with every group from Marina La Costa and knows where the fish bite.',
+            texto: 'He is the one who gets there before the sun. Panga captain and Rogelio’s partner, he knows the bay like his own home and knows where to find the fish.',
           },
         ],
         cita: {
-          texto: 'Basically, preserving the environment',
-          atribucion: 'Rogelio Camacho, on the mission of the Asociación Civil Prestadores de Servicios Turísticos, which he belongs to. Peninsular Digital, 2010.',
+          texto: 'The enthusiasm of boatmen like Rogelio Camacho is the engine of the city of La Paz.',
+          atribucion: 'Perla Taddie García, Peninsular Digital, 2010.',
         },
       },
       galeria: [

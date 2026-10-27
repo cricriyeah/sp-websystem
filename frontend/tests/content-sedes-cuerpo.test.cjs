@@ -99,14 +99,19 @@ test('«Conócenos» de La Paz: título de las generaciones, una foto, dos socio
   for (const lang of ['es', 'en']) {
     const k = c.getSedeContenido('la-paz', lang).conocenos;
     assert.ok(k, lang);
-    assert.match(k.titulo, /(Tres generaciones|Three generations)/);
+    assert.match(`${k.titulo.inicio} ${k.titulo.destacada} ${k.titulo.fin}`, /^(Tres generaciones de|Three generations of)/);
     assert.ok(k.foto.src && k.foto.alt);
     assert.equal(k.socios.length, 2);
     assert.deepEqual(k.socios.map((s) => s.nombre), ['Rogelio Camacho', 'Omar']);
     assert.ok(k.cita.texto && /Peninsular Digital, 2010/.test(k.cita.atribucion));
+    assert.match(k.cita.texto, /(motor|engine)/);
     const todo = JSON.stringify(k);
     assert.ok(!todo.includes('1950'), 'ya no hay año de fundación');
     assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
-    assert.ok(k.apertura.split(/\s+/).length <= 26, 'apertura corta');
+    assert.ok(k.apertura.split(/\s+/).length <= 14, 'apertura corta');
   }
+});
+
+test('el héroe de La Paz se encuadra a la derecha en celular, en los dos idiomas', () => {
+  for (const lang of ['es', 'en']) assert.equal(c.getSedeContenido('la-paz', lang).hero.posicionImagenMovil, '100% 50%');
 });
