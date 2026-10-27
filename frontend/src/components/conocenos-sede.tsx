@@ -40,7 +40,7 @@ export function ConocenosSede({ id, conocenos, fondo }: Props) {
         </div>
 
         <div className="flex flex-col gap-8 xl:justify-between">
-          <p className="rev max-w-[28ch] text-2xl font-semibold leading-snug text-balance sm:text-3xl">{apertura}</p>
+          <p className="rev max-w-[24ch] text-2xl font-semibold leading-snug text-balance sm:text-3xl xl:text-4xl">{apertura}</p>
 
           <figure className={cn('rev m-0 p-6 sm:p-8', panel)}>
             <blockquote className="m-0 text-xl font-semibold leading-snug text-balance">{`“${cita.texto}”`}</blockquote>
