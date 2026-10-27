@@ -96,7 +96,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     faq: faq ?? [],
     temporadas: temporadas?.filas,
     dia: contenido.dia?.momentos,
-    conocenos: contenido.conocenos?.fotos,
+    conocenos: contenido.conocenos ? [contenido.conocenos.foto] : undefined,
   });
   const ids = secciones.map((s) => s.id).filter((id) => pintar[id]);
   const fondos = fondosDeSecciones(ids);

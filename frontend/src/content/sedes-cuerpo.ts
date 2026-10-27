@@ -56,14 +56,25 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Regresa', texto: 'Con tus fotos y tu captura.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Foto de relleno hasta tener la del equipo de Sal y Sol. Con más fotos, las demás van en tira debajo.
+      // Foto de relleno hasta tener la del equipo de Sal y Sol. Los datos de Omar están por confirmar con el dueño.
       conocenos: {
         titulo: 'Tres generaciones de pescadores en La Paz',
-        etiquetaDesde: 'Desde',
-        desde: '1950',
-        fotos: [
-          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Capitán de Sal y Sol con una cabrilla en la bahía de La Paz' },
+        apertura: 'En Sal y Sol sales con gente de aquí. Rogelio Camacho es paceño, del barrio El Manglito, y vive entre lanchas desde niño.',
+        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Capitán de Sal y Sol con una cabrilla en la bahía de La Paz' },
+        socios: [
+          {
+            nombre: 'Rogelio Camacho',
+            texto: 'La pesca viene de familia: sus hermanos trabajaban en los barcos de Los Ruffo y de Jack Vélez y pescaban por deporte, una tradición de La Paz. Hoy suma más de 30 años en la bahía.',
+          },
+          {
+            nombre: 'Omar',
+            texto: 'Su socio y capitán de panga. Sale al amanecer con cada grupo desde la Marina La Costa y conoce los puntos donde pica el pescado.',
+          },
         ],
+        cita: {
+          texto: 'Prácticamente preservar el medio ambiente',
+          atribucion: 'Rogelio Camacho, sobre la misión de la Asociación Civil Prestadores de Servicios Turísticos, de la que es parte. Peninsular Digital, 2010.',
+        },
       },
       galeria: [
         {
@@ -231,14 +242,25 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Return', texto: 'Back with your photos and your catch.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Placeholder photo until we have the Sal y Sol crew's own. Extra photos go in a strip below.
+      // Placeholder photo until we have the Sal y Sol crew's own. Omar's details are pending the owner's confirmation.
       conocenos: {
         titulo: 'Three generations of fishermen in La Paz',
-        etiquetaDesde: 'Since',
-        desde: '1950',
-        fotos: [
-          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Sal y Sol captain holding a grouper on the bay of La Paz' },
+        apertura: "At Sal y Sol you head out with locals. Rogelio Camacho is from La Paz's El Manglito neighborhood and has lived among boats since childhood.",
+        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Sal y Sol captain holding a grouper on the bay of La Paz' },
+        socios: [
+          {
+            nombre: 'Rogelio Camacho',
+            texto: 'Fishing runs in the family: his brothers worked on the boats of Los Ruffo and Jack Vélez and fished for sport, a La Paz tradition. Today he has more than 30 years on the bay.',
+          },
+          {
+            nombre: 'Omar',
+            texto: 'His partner and panga captain. He heads out at dawn with every group from Marina La Costa and knows where the fish bite.',
+          },
         ],
+        cita: {
+          texto: 'Basically, preserving the environment',
+          atribucion: 'Rogelio Camacho, on the mission of the Asociación Civil Prestadores de Servicios Turísticos, which he belongs to. Peninsular Digital, 2010.',
+        },
       },
       galeria: [
         {

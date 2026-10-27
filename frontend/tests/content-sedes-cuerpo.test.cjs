@@ -94,3 +94,19 @@ test('«Tu día» en La Paz y La Ventana con los mismos momentos en es y en; Pue
   }
   assert.equal(c.getSedeContenido('puerto-chale', 'es').dia, undefined);
 });
+
+test('«Conócenos» de La Paz: título de las generaciones, una foto, dos socios y una cita con fuente, sin el 1950', () => {
+  for (const lang of ['es', 'en']) {
+    const k = c.getSedeContenido('la-paz', lang).conocenos;
+    assert.ok(k, lang);
+    assert.match(k.titulo, /(Tres generaciones|Three generations)/);
+    assert.ok(k.foto.src && k.foto.alt);
+    assert.equal(k.socios.length, 2);
+    assert.deepEqual(k.socios.map((s) => s.nombre), ['Rogelio Camacho', 'Omar']);
+    assert.ok(k.cita.texto && /Peninsular Digital, 2010/.test(k.cita.atribucion));
+    const todo = JSON.stringify(k);
+    assert.ok(!todo.includes('1950'), 'ya no hay año de fundación');
+    assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
+    assert.ok(k.apertura.split(/\s+/).length <= 26, 'apertura corta');
+  }
+});

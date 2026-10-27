@@ -74,14 +74,15 @@ export type SedeDia = {
 };
 
 /**
- * «Conócenos»: la gente detrás de los servicios de la sede. Abre con `etiquetaDesde` y el año `desde` en
- * grande («Desde» / «1950»). La primera foto es la protagonista (vertical, ocupa dos filas).
+ * «Conócenos»: la gente detrás de los servicios de la sede. El título, una apertura corta, una sola foto, los
+ * socios (nombre y una línea cada uno) y una cita con su fuente.
  */
 export type SedeConocenos = {
   titulo: string;
-  etiquetaDesde: string;
-  desde: string;
-  fotos: { src: string; alt: string }[];
+  apertura: string;
+  foto: { src: string; alt: string };
+  socios: { nombre: string; texto: string }[];
+  cita: { texto: string; atribucion: string };
 };
 
 export type SedeDestacada = {
