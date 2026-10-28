@@ -1,4 +1,3 @@
-import re
 from contextvars import ContextVar
 from datetime import date, timedelta
 from decimal import Decimal
@@ -78,8 +77,8 @@ from .cobros import liquidar_saldo_en_efectivo, saldo_liquidable
 from .orden_lectura import reservas_de_orden
 from .traslados_reglas import bloqueo_cubre_viaje, bloqueo_toca_viaje
 
-# Lada de Mexico, para completar los telefonos que el cliente escribio a 10 digitos.
-LADA_PAIS = '52'
+# Reexportados: `vistas_enlace_pago.py` y varias pruebas los importan de aqui.
+from .telefono import LADA_PAIS, telefono_marcable  # noqa: F401
 
 
 class CupoAgotadoAlGuardar(Exception):
@@ -88,20 +87,6 @@ class CupoAgotadoAlGuardar(Exception):
     `ReservaAdmin.save_model` la lanza para deshacer la transaccion del admin; `changeform_view`
     la convierte en un aviso en espanol en vez de un 500.
     """
-
-
-def telefono_marcable(telefono):
-    """Telefono en digitos con lada de pais, como lo quieren `wa.me` y `tel:`.
-
-    Los clientes escriben el numero como se les da la gana ('612 123 4567',
-    '+52 1 612...'), asi que se limpia todo lo que no sea digito. 10 digitos =
-    numero nacional sin lada internacional. Menos de 10 es un numero incompleto:
-    devuelve '' y la interfaz muestra el texto crudo en vez de un enlace roto.
-    """
-    digitos = re.sub(r'\D', '', telefono or '')
-    if len(digitos) == 10:
-        return LADA_PAIS + digitos
-    return digitos if len(digitos) >= 11 else ''
 
 
 def _nombres_para_aviso(reservas, maximo=3):

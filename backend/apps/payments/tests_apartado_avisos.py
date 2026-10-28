@@ -380,7 +380,8 @@ class ApartadoAvisosTests(ApiTestCase):
         self.assertTrue(any('graph.facebook.com' in url for url in urls_llamadas_2))
         llamada_wa = [c for c in mock_post.call_args_list if c.args and 'graph.facebook.com' in c.args[0]][0]
         self.assertEqual(llamada_wa.kwargs['json']['template']['name'], 'plantilla_reembolso_cupo')
-        self.assertEqual(llamada_wa.kwargs['json']['to'], reserva_2.telefono_cliente)
+        # Meta recibe digitos con codigo de pais y sin `+` (telefono_marcable).
+        self.assertEqual(llamada_wa.kwargs['json']['to'], '5216121234567')
 
     @mock.patch('apps.notifications.services.requests.post')
     @mock.patch('apps.payments.services.reembolsar', return_value=False)

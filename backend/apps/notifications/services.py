@@ -15,6 +15,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.bookings.telefono import telefono_marcable
 from apps.fleet.enums import TipoServicio
 
 from . import plantilla
@@ -382,7 +383,7 @@ def enviar_whatsapp_confirmacion(reserva):
             headers={'Authorization': f'Bearer {settings.WHATSAPP_TOKEN}'},
             json={
                 'messaging_product': 'whatsapp',
-                'to': reserva.telefono_cliente,
+                'to': telefono_marcable(reserva.telefono_cliente) or reserva.telefono_cliente,
                 'type': 'template',
                 'template': {
                     'name': settings.WHATSAPP_TEMPLATE,
@@ -943,7 +944,7 @@ def enviar_whatsapp_reembolso_sin_cupo(reserva):
             headers={'Authorization': f'Bearer {settings.WHATSAPP_TOKEN}'},
             json={
                 'messaging_product': 'whatsapp',
-                'to': reserva.telefono_cliente,
+                'to': telefono_marcable(reserva.telefono_cliente) or reserva.telefono_cliente,
                 'type': 'template',
                 'template': {
                     'name': template,
