@@ -1005,7 +1005,9 @@ class Reserva(models.Model):
                     self.fecha, self.numero_personas, self.empresa,
                     excluir_pk=self.pk, estrategia_cupo=estrategia_cupo, servicio_id=self.servicio_id,
                 )
-            if self.codigo_promocional_id:
+            # `_reagendando` solo lo pone `reagendar.py`: el precio ya esta congelado y el cliente ya lo pago,
+            # asi que un codigo que venció despues de la compra no debe impedir mover la fecha.
+            if self.codigo_promocional_id and not getattr(self, '_reagendando', False):
                 validar_codigo_promocional_en_pago(
                     self.codigo_promocional, self.moneda,
                     (self.precio_total or 0) - (self.iva_monto or 0) + (self.descuento_aplicado or 0),
@@ -1182,6 +1184,10 @@ class Reserva(models.Model):
         if original is None or self.estado not in ESTADOS_QUE_OCUPAN_CUPO:
             return
         if (self.fecha, self.hora) == original:
+            return
+        # Solo en memoria: `reagendar.py` lo pone despues de comprobar que quien reagenda es jefe (o
+        # operador) y dejo un motivo escrito. Ninguna otra entrada (formulario, API) lo tiene.
+        if getattr(self, '_excepcion_48h', False):
             return
 
         limite = salida_aware(*original) - timedelta(hours=HORAS_MINIMAS_CAMBIO_FECHA)
