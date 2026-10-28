@@ -51,6 +51,10 @@ leen los lectores de pantalla dos veces. Solo lectura: nada se edita aqui, para 
             {% if p.marca %}
                 <a href="{% url 'admin:bookings_agenda_changelist' %}?periodo={{ r.fecha|date:'Y-m-d' }}_{{ r.fecha|date:'Y-m-d' }}{% if es_operador %}&amp;empresa={{ r.empresa.slug }}{% endif %}" data-asignar-panga class="cal-boton">Asignar panga</a>
             {% endif %}
+            {% if p.se_puede_reagendar and perms.bookings.change_reserva %}
+                {# `volver` es esta misma pantalla con sus parametros; la vista de Reagendar lo valida antes de redirigir. #}
+                <a href="{% url 'admin:bookings_reserva_reagendar' r.pk %}?volver={{ request.get_full_path|urlencode:'' }}" class="cal-boton">Reagendar</a>
+            {% endif %}
         </p>
     </div>
 </template>

@@ -46,6 +46,9 @@ from .forms import AltaUsuarioForm, AltaVendedoraForm
 from .forms_alta_reserva import AltaReservaForm
 from .limites_servicio import mapa_limites
 from .precio_sugerido import sugerir_precio
+from .reagendar import puede_reagendarse
+from .reagendar_vista import responder as responder_reagendar
+from .reagendar_vista import url_de_reagendar, volver_desde_referer
 from .signals import tomar_resultados_de_aviso
 from .transferencia import (
     ErrorDeTransferencia, cerrar_cobro_con_tarjeta, marcar_pagada_por_transferencia, monto_sugerido,
@@ -1072,6 +1075,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
                     'asignacion_urgente': 'Sin panga' in str(asignacion),
                     'cobrar_saldo': self._boton_cobrar_saldo(request, obj),
                     'pagar_transferencia': self._boton_pagar_transferencia(request, obj),
+                    'reagendar': self._boton_reagendar(request, obj),
                 }
         try:
             return super().changeform_view(request, object_id, form_url, contexto)
@@ -1100,7 +1104,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         'confirmar_devolucion', 'cancelar_por_mal_clima',
     ]
     actions_list = ['accion_enlace_pago']
-    actions_row = ['accion_fila_editar', 'accion_fila_ver', 'accion_fila_cancelar']
+    actions_row = ['accion_fila_editar', 'accion_fila_ver', 'accion_fila_reagendar', 'accion_fila_cancelar']
     change_list_template = 'bookings/reservas_changelist.html'
     VISTAS = (
         ('proximas', 'Próximas'), ('hoy', 'Hoy'), ('manana', 'Mañana'),
@@ -1426,6 +1430,11 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
                 self.admin_site.admin_view(self.pagar_transferencia_view),
                 name='bookings_reserva_pagar_transferencia',
             ),
+            path(
+                '<path:object_id>/reagendar/',
+                self.admin_site.admin_view(self.reagendar_view),
+                name='bookings_reserva_reagendar',
+            ),
         ] + super().get_urls()
 
     def precio_sugerido_view(self, request):
@@ -1511,6 +1520,19 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         if not puede_marcarse_pagada(obj) or not self.has_change_permission(request, obj):
             return None
         return {'url': reverse('admin:bookings_reserva_pagar_transferencia', args=[obj.pk])}
+
+    def reagendar_view(self, request, object_id):
+        """Pantalla «Reagendar» de dos pasos. Toda la logica vive en `reagendar_vista` para no engordar este archivo."""
+        return responder_reagendar(self, request, object_id)
+
+    def _boton_reagendar(self, request, obj):
+        """Datos del boton «Reagendar» del resumen, o None si no aplica (sin permiso de cambiar o no reagendable).
+
+        Regresa a la ficha: es de donde salio la persona. Es la misma regla que usa el calendario
+        (`puede_reagendarse`), asi que lista, ficha y calendario no pueden contradecirse."""
+        if not puede_reagendarse(obj) or not self.has_change_permission(request, obj):
+            return None
+        return {'url': url_de_reagendar(obj.pk, reverse('admin:bookings_reserva_change', args=[obj.pk]))}
 
     @action(description='Enlace de pago', url_path='enlace-pago-accion', permissions=['add'])
     def accion_enlace_pago(self, request):
@@ -1757,6 +1779,24 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         if respuesta is None:
             return HttpResponseRedirect(reverse('admin:bookings_reserva_changelist'))
         return respuesta
+
+    @action(
+        description='Reagendar',
+        # No es 'reagendar': ese segmento ya es la URL de la pantalla (`<id>/reagendar/`) y la accion
+        # quedaria tapada por ella. Esta solo redirige, para que `volver` sea la lista con sus filtros.
+        url_path='reagendar-desde-lista',
+        permissions=['change'],
+        extra_options={'display_in_dropdown': False},
+    )
+    def accion_fila_reagendar(self, request, object_id=None, *args, **kwargs):
+        """Unfold no deja ocultar una accion de fila por fila (`get_actions_row` solo recibe `request`): el
+        boton sale en todas y, en una reserva que no se puede reagendar, la propia pantalla avisa en espanol y
+        regresa a la lista."""
+        object_id = object_id or kwargs.get('object_id')
+        if not self.get_queryset(request).filter(pk=object_id).exists():
+            raise Http404('Reserva no encontrada')
+        lista = reverse('admin:bookings_reserva_changelist')
+        return HttpResponseRedirect(url_de_reagendar(object_id, volver_desde_referer(request, lista)))
 
     @admin.action(
         description='Registrar liquidacion en efectivo (el 70%% restante)',

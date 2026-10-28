@@ -39,6 +39,11 @@
                     <a href="{{ resumen_reserva.pagar_transferencia.url }}" class="bg-primary-600 text-white px-3 py-2 rounded-default font-semibold" style="display: inline-block">Marcar pagada por transferencia</a>
                 </div>
             {% endif %}
+            {% if resumen_reserva.reagendar %}
+                <div style="margin-top: 0.75rem">
+                    <a href="{{ resumen_reserva.reagendar.url }}" class="bg-primary-600 text-white px-3 py-2 rounded-default font-semibold" style="display: inline-block">Reagendar</a>
+                </div>
+            {% endif %}
         </section>
     {% endif %}
 {% endblock %}

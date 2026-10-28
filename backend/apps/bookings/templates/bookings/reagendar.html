@@ -1,0 +1,225 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% comment %}
+Pantalla «Reagendar» (docs/design/DESIGN-reagendar-reserva.md). Dos pasos sobre la misma URL:
+paso 1 elegir fecha (y hora), paso 2 revisar y confirmar. Lo que pinta lo arma `reagendar_vista`.
+
+Unfold sirve su Tailwind ya compilado: una clase nueva no existe. Todo el estilo esta en
+`static/bookings/reagendar.css` (clases `rg-*`). Los textos van con sus acentos escritos tal cual (no como
+entidades): las pruebas comparan contra el texto exacto del DESIGN.
+{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'bookings/reagendar.css' %}">{% endblock %}
+
+{% block content %}
+<div class="rg">
+    {# Encabezado fijo de la reserva: el titulo «Reagendar reserva #N» ya lo pone la cabecera del admin. #}
+    <p class="rg-linea">{{ linea_de_la_reserva }}</p>
+
+    <div class="rg-zona">
+        {% if errores.general %}
+            <p class="rg-banda" role="alert">{{ errores.general }}</p>
+        {% endif %}
+
+        {% if paso == 2 %}
+            {# ---------------------------------------------------------------- Paso 2 · Revisar y confirmar #}
+            <h2 class="rg-titulo">Revisa antes de confirmar</h2>
+
+            <div class="rg-heroe">
+                {% for grupo in grupos %}
+                    <div class="rg-grupo">
+                        {% if grupo.titulo %}<p class="rg-grupo-titulo">{{ grupo.titulo }}</p>{% endif %}
+                        <dl class="rg-filas">
+                            <div class="rg-fila rg-fila--antes">
+                                <dt>Antes</dt>
+                                <dd>{{ grupo.antes.fecha|default:"—" }}{% if grupo.antes.hora %} · {{ grupo.antes.hora }}{% endif %}</dd>
+                            </div>
+                            <div class="rg-fila rg-fila--ahora">
+                                <dt>Ahora</dt>
+                                <dd>{% if grupo.cambio_fecha %}<span class="rg-cambio">{{ grupo.ahora.fecha }}</span>{% else %}{{ grupo.ahora.fecha|default:"—" }}{% endif %}{% if grupo.ahora.hora %} · {% if grupo.cambio_hora %}<span class="rg-cambio">{{ grupo.ahora.hora }}</span>{% else %}{{ grupo.ahora.hora }}{% endif %}{% endif %}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% if bloqueada_por_48h %}
+                {# La vendedora no confirma: no hay formulario ni boton, solo el motivo y el camino de vuelta. #}
+                <div class="rg-aviso">
+                    <p>Faltan menos de 48 horas para la salida original, así que no se puede reagendar desde aquí. Pídele a un jefe que lo autorice.</p>
+                </div>
+                <div class="rg-acciones rg-acciones--solo">
+                    <a class="rg-secundario" href="{{ ficha_url }}">Volver a la reserva</a>
+                </div>
+            {% else %}
+                <form method="post" id="rg-confirmar-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="paso" value="confirmar">
+                    <input type="hidden" name="nueva_fecha" value="{{ valores.nueva_fecha }}">
+                    <input type="hidden" name="nueva_hora" value="{{ valores.nueva_hora }}">
+                    <input type="hidden" name="nueva_fecha_regreso" value="{{ valores.nueva_fecha_regreso }}">
+                    <input type="hidden" name="token_fecha" value="{{ token.fecha }}">
+                    <input type="hidden" name="token_hora" value="{{ token.hora }}">
+                    <input type="hidden" name="token_inicio_paquete" value="{{ token.inicio_paquete }}">
+                    <input type="hidden" name="token_estado" value="{{ token.estado }}">
+                    {% if volver %}<input type="hidden" name="volver" value="{{ volver }}">{% endif %}
+
+                    {% if pide_motivo %}
+                        <div class="rg-aviso">
+                            <p>Faltan menos de 48 horas para la salida original. Como jefe puedes autorizar el cambio.</p>
+                            <div class="rg-campo-grupo">
+                                <label class="rg-etiqueta" for="rg-motivo">Motivo de la excepción</label>
+                                <input class="rg-campo{% if errores.motivo_excepcion %} rg-campo--error{% endif %}" type="text" id="rg-motivo" name="motivo_excepcion" value="{{ motivo }}" required minlength="{{ motivo_min }}" maxlength="{{ motivo_max }}" autocomplete="off" aria-describedby="rg-ayuda-motivo{% if errores.motivo_excepcion %} rg-error-motivo{% endif %}"{% if errores.motivo_excepcion %} aria-invalid="true"{% endif %}>
+                                <p class="rg-ayuda" id="rg-ayuda-motivo">Queda registrado en el historial y avisa a toda la empresa.</p>
+                                {% if errores.motivo_excepcion %}<p class="rg-error" id="rg-error-motivo" role="alert">{{ errores.motivo_excepcion }}</p>{% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <ul class="rg-consecuencias">
+                        {% for consecuencia in consecuencias %}
+                            <li class="rg-consecuencia"{% if consecuencia.con_aviso %} data-texto-con-aviso="{{ consecuencia.con_aviso }}" data-texto-sin-aviso="{{ consecuencia.sin_aviso }}"{% endif %}>
+                                <span class="rg-consecuencia-texto">{{ consecuencia.texto }}</span>
+                                {% if consecuencia.detalle %}<span class="rg-consecuencia-detalle">{{ consecuencia.detalle }}</span>{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    <div class="rg-casilla">
+                        <input type="checkbox" id="rg-avisar" name="avisar_cliente" value="1"{% if avisar_marcado %} checked{% endif %}{% if not tiene_correo %} disabled{% endif %} aria-describedby="rg-ayuda-correo">
+                        <div>
+                            <label for="rg-avisar">Avisar al cliente por correo</label>
+                            <p class="rg-ayuda" id="rg-ayuda-correo">{% if tiene_correo %}{{ correo_ayuda }}{% else %}Esta reserva no tiene correo.{% endif %}</p>
+                        </div>
+                    </div>
+
+                    {# El primario va primero en el HTML: Enter dentro del formulario manda el primer boton, y no debe ser «Cambiar la fecha». El CSS lo pasa a la derecha. #}
+                    <div class="rg-acciones rg-acciones--invertida">
+                        <button type="submit" class="rg-boton" id="rg-confirmar"{% if tiene_correo %} data-texto-con-aviso="Reagendar y avisar al cliente" data-texto-sin-aviso="Reagendar"{% endif %} data-texto-enviando="Reagendando…">{% if avisar_marcado %}Reagendar y avisar al cliente{% else %}Reagendar{% endif %}</button>
+                        <button type="submit" class="rg-secundario" name="volver_a_elegir" value="1" formnovalidate>Cambiar la fecha</button>
+                    </div>
+                </form>
+            {% endif %}
+        {% else %}
+            {# ---------------------------------------------------------------- Paso 1 · Elegir #}
+            <h2 class="rg-titulo">¿Para cuándo?</h2>
+            <p class="rg-ahora">Ahora: {{ ahora_texto }}</p>
+
+            <form method="post" id="rg-elegir-form">
+                {% csrf_token %}
+                <input type="hidden" name="paso" value="revisar">
+                {% if volver %}<input type="hidden" name="volver" value="{{ volver }}">{% endif %}
+
+                <div class="rg-campos">
+                    <div class="rg-campo-grupo">
+                        <label class="rg-etiqueta" for="rg-nueva-fecha">Nueva fecha</label>
+                        <input class="rg-campo{% if errores.nueva_fecha %} rg-campo--error{% endif %}" type="date" id="rg-nueva-fecha" name="nueva_fecha" value="{{ valores.nueva_fecha }}" required aria-describedby="rg-ayuda-fecha{% if errores.nueva_fecha %} rg-error-fecha{% endif %}"{% if errores.nueva_fecha %} aria-invalid="true"{% endif %}>
+                        <p class="rg-ayuda" id="rg-ayuda-fecha">Se revisa el lugar y la panga antes de confirmar.</p>
+                        {% if errores.nueva_fecha %}<p class="rg-error" id="rg-error-fecha" role="alert">{{ errores.nueva_fecha }}</p>{% endif %}
+                    </div>
+
+                    {% if muestra_hora %}
+                        <div class="rg-campo-grupo">
+                            <label class="rg-etiqueta" for="rg-nueva-hora">Nueva hora</label>
+                            <input class="rg-campo{% if errores.nueva_hora %} rg-campo--error{% endif %}" type="time" id="rg-nueva-hora" name="nueva_hora" value="{{ valores.nueva_hora }}"{% if errores.nueva_hora %} aria-invalid="true" aria-describedby="rg-error-hora"{% endif %}>
+                            {% if errores.nueva_hora %}<p class="rg-error" id="rg-error-hora" role="alert">{{ errores.nueva_hora }}</p>{% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if pide_regreso %}
+                    <div class="rg-campos">
+                        <div class="rg-campo-grupo">
+                            <label class="rg-etiqueta" for="rg-nueva-fecha-regreso">Nueva fecha de regreso</label>
+                            <input class="rg-campo{% if errores.nueva_fecha_regreso %} rg-campo--error{% endif %}" type="date" id="rg-nueva-fecha-regreso" name="nueva_fecha_regreso" value="{{ valores.nueva_fecha_regreso }}" required{% if errores.nueva_fecha_regreso %} aria-invalid="true" aria-describedby="rg-error-regreso"{% endif %}>
+                            {% if errores.nueva_fecha_regreso %}<p class="rg-error" id="rg-error-regreso" role="alert">{{ errores.nueva_fecha_regreso }}</p>{% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if es_de_mar %}
+                    <div class="rg-lugar">
+                        <p class="rg-lugar-titulo" id="rg-lugar-titulo">Próximas fechas con lugar</p>
+                        {% if chips %}
+                            <div class="rg-chips" role="group" aria-labelledby="rg-lugar-titulo">
+                                {% for chip in chips %}<button type="button" class="rg-chip" data-fecha="{{ chip.iso }}" aria-pressed="false">{{ chip.texto }}</button>{% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="rg-ayuda">No hay lugar en los próximos {{ dias_con_lugar }} días.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="rg-acciones">
+                    <a class="rg-secundario" href="{{ ficha_url }}">Volver a la reserva</a>
+                    <button type="submit" class="rg-boton">Revisar cambio</button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+{# Solo comodidad: sin JavaScript los dos pasos funcionan igual (el boton conserva el texto con el que salio). #}
+<script>
+(function () {
+    var raiz = document.querySelector('.rg');
+    if (!raiz) { return; }
+
+    // Paso 1: tocar una fecha con lugar llena el campo «Nueva fecha».
+    var fecha = raiz.querySelector('input[type="date"][name="nueva_fecha"]');
+    var chips = raiz.querySelectorAll('.rg-chip');
+    function marcarChips() {
+        for (var i = 0; i < chips.length; i++) {
+            var activo = fecha.value === chips[i].getAttribute('data-fecha');
+            chips[i].setAttribute('aria-pressed', activo ? 'true' : 'false');
+        }
+    }
+    if (fecha && chips.length) {
+        for (var i = 0; i < chips.length; i++) {
+            chips[i].addEventListener('click', function (evento) {
+                fecha.value = evento.currentTarget.getAttribute('data-fecha');
+                marcarChips();
+                fecha.focus();
+            });
+        }
+        fecha.addEventListener('input', marcarChips);
+        fecha.addEventListener('change', marcarChips);
+        marcarChips();
+    }
+
+    // Paso 2: la casilla cambia la etiqueta del boton y la primera frase de las consecuencias; al enviar, el
+    // boton se deshabilita («Reagendando…») para que un doble clic no mande dos veces.
+    var boton = raiz.querySelector('#rg-confirmar');
+    var casilla = raiz.querySelector('input[name="avisar_cliente"]');
+    if (!boton) { return; }
+
+    function textoSegunCasilla() {
+        var atributo = casilla && casilla.checked ? 'data-texto-con-aviso' : 'data-texto-sin-aviso';
+        if (boton.hasAttribute(atributo)) { boton.textContent = boton.getAttribute(atributo); }
+        var frases = raiz.querySelectorAll('.rg-consecuencia[data-texto-con-aviso]');
+        for (var j = 0; j < frases.length; j++) {
+            frases[j].querySelector('.rg-consecuencia-texto').textContent = frases[j].getAttribute(atributo);
+        }
+    }
+    if (casilla && boton.hasAttribute('data-texto-con-aviso')) {
+        casilla.addEventListener('change', textoSegunCasilla);
+    }
+
+    var formulario = boton.form;
+    if (formulario) {
+        formulario.addEventListener('submit', function (evento) {
+            // El boton secundario tambien envia este formulario, pero no confirma nada.
+            if (evento.submitter && evento.submitter !== boton) { return; }
+            if (boton.disabled) { evento.preventDefault(); return; }
+            boton.textContent = boton.getAttribute('data-texto-enviando');
+            // En el turno siguiente: deshabilitar dentro del propio evento puede perder el envio en algunos navegadores.
+            setTimeout(function () { boton.disabled = true; }, 0);
+        });
+        // Volver con el boton del navegador restaura la pagina tal cual estaba al enviar: se rehabilita.
+        window.addEventListener('pageshow', function (evento) {
+            if (evento.persisted) { boton.disabled = false; textoSegunCasilla(); }
+        });
+    }
+}());
+</script>
+{% endblock %}

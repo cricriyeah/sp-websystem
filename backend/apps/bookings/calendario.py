@@ -35,6 +35,7 @@ from .cupo.adaptador import obtener_contexto_rango
 from .cupo.nucleo import motivo_sin_lugar
 from .models import ESTADOS_QUE_OCUPAN_CUPO, Reserva, ReservaSalida, ViajeTransporte
 from .panorama import sin_lo_que_no_se_reparte
+from .reagendar import puede_reagendarse
 
 SIN_PANGA = 'sin_panga'
 ATRASADA = 'atrasada'
@@ -73,6 +74,14 @@ class Pieza:
     @property
     def pagado(self):
         return _pagado(self.reserva)
+
+    @property
+    def se_puede_reagendar(self):
+        """Si el popover ofrece «Reagendar». La regla es de `reagendar`, una sola para lista, ficha y calendario.
+
+        Solo mira campos de la propia reserva (estado, orden, disputa): no hace consultas por pieza.
+        """
+        return puede_reagendarse(self.reserva)
 
     @property
     def empresa_corta(self):
