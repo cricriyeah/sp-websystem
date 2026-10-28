@@ -170,7 +170,7 @@ def armar_consecuencias(reserva, propuesta, *, avisar_marcado, tiene_correo, fec
     panga = reserva.embarcacion.nombre if reserva.embarcacion_id else ''
     capitan = reserva.capitan.nombre if reserva.capitan_id else ''
     frase = _frase_de_mar(propuesta, panga, capitan)
-    if capitan and propuesta.capitan in ('conserva', 'quita'):
+    if capitan and propuesta.capitan == 'conserva':
         frase = f'{frase} Avísale al capitán {capitan} del nuevo día.'.strip()
     if frase:
         consecuencias.append({'texto': frase, 'detalle': propuesta.motivo_panga or ''})
@@ -444,15 +444,6 @@ def _dia_vigente(objeto):
     return getattr(objeto, 'inicio_paquete', None) or getattr(objeto, 'fecha', None)
 
 
-def _quien_avisa(resultado, avisar_marcado):
-    """'sí' | 'no' | 'sin correo' para el History."""
-    if resultado.correo_encolado:
-        return 'sí'
-    if avisar_marcado and not resultado.reserva.correo_cliente:
-        return 'sin correo'
-    return 'no' if not resultado.reserva.correo_cliente is False else 'no'
-
-
 def _dejar_constancia(modelo_admin, request, resultado, avisar_marcado, motivo):
     reserva = resultado.reserva
     antes = resultado.antes
@@ -474,7 +465,9 @@ def _dejar_constancia(modelo_admin, request, resultado, avisar_marcado, motivo):
     modelo_admin.log_change(request, reserva, mensaje)
 
     capitan = getattr(antes, 'capitan', '') or ''
-    aviso_capitan = f' Avísale al capitán {capitan} del nuevo día.' if capitan else ''
+    aviso_capitan = (
+        f' Avísale al capitán {capitan} del nuevo día.' if capitan and resultado.capitan_conservado else ''
+    )
     antes_corto = _dia_vigente(antes).strftime('%d/%m/%Y') if _dia_vigente(antes) else ''
     ahora_corto = _dia_vigente(reserva).strftime('%d/%m/%Y')
     # El feed dura 90 dias y no se anonimiza: nombre y fechas, nunca el correo ni el telefono.

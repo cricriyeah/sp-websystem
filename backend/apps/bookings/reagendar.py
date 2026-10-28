@@ -213,10 +213,14 @@ def _normalizar_token(token):
         valor = token.get(clave, '')
         if isinstance(valor, str):
             valor = valor.strip()
-            if clave in ('fecha', 'inicio_paquete'):
-                valor = parse_date(valor) if valor else None
-            elif clave == 'hora':
-                valor = parse_time(valor) if valor else None
+            # Un campo oculto manipulado ('2026-02-31', '25:00:00') no es un 500: queda como texto y no coincide.
+            try:
+                if clave in ('fecha', 'inicio_paquete'):
+                    valor = parse_date(valor) if valor else None
+                elif clave == 'hora':
+                    valor = parse_time(valor) if valor else None
+            except ValueError:
+                pass
         if isinstance(valor, time):
             valor = valor.isoformat('seconds')
         elif isinstance(valor, date):

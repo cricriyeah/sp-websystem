@@ -93,9 +93,14 @@ class BotonReagendarBase(RutaDeReagendarSiFalta, CalendarioVistaBase):
 
 
 class PiezaSePuedeReagendarTests(BotonReagendarBase):
+    def _armar(self, empresa):
+        # Con RLS (Postgres) las piezas se leen dentro de un alcance, como lo hace la vista.
+        with scope.como_operador_plataforma():
+            return armar_calendario(self.lunes, self.lunes + timedelta(days=6), empresa)
+
     def test_la_pieza_pregunta_a_puede_reagendarse(self):
         reserva = self.reserva(self.alfa, self.pesca_alfa, 'Pieza Uno', self.martes)
-        evento = armar_calendario(self.lunes, self.lunes + timedelta(days=6), self.alfa).eventos[0]
+        evento = self._armar(self.alfa).eventos[0]
         self.assertIsInstance(evento, Evento)
 
         with mock.patch('apps.bookings.calendario.puede_reagendarse', return_value=False) as pregunta:
@@ -109,7 +114,7 @@ class PiezaSePuedeReagendarTests(BotonReagendarBase):
             self.beta, self.hotel_beta, 'Pieza Hotel', self.martes, hora=None,
             fecha_salida=self.martes + timedelta(days=2),
         )
-        estancia = armar_calendario(self.lunes, self.lunes + timedelta(days=6), self.beta).estancias[0]
+        estancia = self._armar(self.beta).estancias[0]
         self.assertIsInstance(estancia, Estancia)
         self.assertIsInstance(estancia, Pieza)
 
@@ -123,7 +128,7 @@ class PiezaSePuedeReagendarTests(BotonReagendarBase):
         )
         piezas = {
             e.reserva.pk: e
-            for e in armar_calendario(self.lunes, self.lunes + timedelta(days=6), self.alfa).eventos
+            for e in self._armar(self.alfa).eventos
         }
 
         self.assertTrue(piezas[pagada.pk].se_puede_reagendar)

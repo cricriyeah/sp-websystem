@@ -160,6 +160,15 @@ class _Base(TestCase):
         datos_post.update(campos)
         return self.client.post(self.url, datos_post)
 
+    def _reserva(self):
+        """Relee la reserva: con RLS (Postgres) una consulta fuera de un alcance no ve nada."""
+        with scope.como_operador_plataforma():
+            return Reserva.objects.get(pk=self.reserva.pk)
+
+    def _actualizar(self, **cambios):
+        with scope.como_operador_plataforma():
+            Reserva.objects.filter(pk=self.reserva.pk).update(**cambios)
+
     def _html(self, respuesta):
         return respuesta.content.decode()
 
@@ -168,7 +177,7 @@ class _Base(TestCase):
 
     def _resultado(self, **cambios):
         """Lo que devolveria el servicio: la reserva ya con la fecha nueva (solo en memoria)."""
-        reserva = Reserva.objects.get(pk=self.reserva.pk)
+        reserva = self._reserva()
         reserva.fecha = self.fecha_nueva
         base = dict(
             reserva=reserva, antes=antes_del_cambio(fecha=self.fecha_actual, hora=time(6, 0)),
@@ -237,7 +246,7 @@ class PasoUnoTests(_Base):
         self.assertIn('value="revisar"', etiqueta(html, 'paso'))
 
     def test_el_nombre_del_cliente_se_escapa(self):
-        Reserva.objects.filter(pk=self.reserva.pk).update(nombre_cliente='<script>alert(1)</script>')
+        self._actualizar(nombre_cliente='<script>alert(1)</script>')
 
         respuesta = self.client.get(self.url)
 
@@ -387,7 +396,7 @@ class PasoDosTests(_Base):
         self.assertContains(respuesta, 'data-texto-enviando="Reagendando…"')
 
     def test_sin_correo_la_casilla_va_deshabilitada_y_desmarcada(self):
-        Reserva.objects.filter(pk=self.reserva.pk).update(correo_cliente='')
+        self._actualizar(correo_cliente='')
 
         respuesta, _ = self._revisar()
         casilla = etiqueta(self._html(respuesta), 'avisar_cliente')
@@ -409,7 +418,7 @@ class PasoDosTests(_Base):
             from apps.fleet.models import Capitan, Embarcacion
             panga = Embarcacion.objects.filter(empresa=self.empresa).first()
             capitan = Capitan.objects.create(empresa=self.empresa, nombre='Beto Lugo', telefono='1')
-            Reserva.objects.filter(pk=self.reserva.pk).update(embarcacion=panga, capitan=capitan)
+            self._actualizar(embarcacion=panga, capitan=capitan)
 
         casos = [
             (dict(panga='conserva', capitan='conserva'),
@@ -427,7 +436,7 @@ class PasoDosTests(_Base):
         with scope.como_operador_plataforma():
             from apps.fleet.models import Embarcacion
             panga = Embarcacion.objects.filter(empresa=self.empresa).first()
-            Reserva.objects.filter(pk=self.reserva.pk).update(embarcacion=panga)
+            self._actualizar(embarcacion=panga)
 
         respuesta, _ = self._revisar(panga='quita', motivo_panga='Ya sale con otro cliente ese día.')
 
@@ -739,7 +748,7 @@ class ConfirmarTests(_Base):
         self.assertTrue(any('Reagendada sin avisar al cliente. Avísale tú.' in m for m in self._mensajes(respuesta)))
 
     def test_una_reserva_sin_correo_avisa_por_whatsapp(self):
-        Reserva.objects.filter(pk=self.reserva.pk).update(correo_cliente='')
+        self._actualizar(correo_cliente='')
         campos = self._datos_de_confirmar()
         del campos['avisar_cliente']
         with parche_proponer(return_value=propuesta()), \

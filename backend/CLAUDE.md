@@ -999,6 +999,34 @@ configuracion olvidada); las pruebas automaticas cubren el flujo.
 Pruebas: `venv/Scripts/python.exe manage.py test apps.cuentas apps.bookings.tests_captcha apps.notifications apps.tenancy.tests_alta_usuario`.
 Las carreras (`tests_carreras.py`) solo corren en Postgres.
 
+## Reagendar reserva (apps/bookings/reagendar*.py)
+
+Diseno: `docs/architecture/ARCH-reagendar-reserva.md` y `docs/design/DESIGN-reagendar-reserva.md`. Boton «Reagendar» en la
+lista de reservas (accion de fila, `url_path` `reagendar-desde-lista`: NO puede llamarse `reagendar`, chocaria con la
+pantalla), en la ficha y en el popover de Semana y Dia del Calendario. Las tres entradas llevan a
+`/admin/bookings/reserva/<id>/reagendar/` (`bookings_reserva_reagendar`), una pantalla de dos pasos (elegir, revisar y
+confirmar). Cero migraciones, sin permiso nuevo (basta `change_reserva`).
+
+- **El servicio decide, la vista pinta.** `reagendar.proponer(...)` es solo lectura (sin candados) y devuelve una
+  `Propuesta`; `reagendar.reagendar(...)` hace el cambio en un `atomic`: bloquea la fila, compara el token optimista
+  (`fecha`, `hora`, `inicio_paquete`, `estado`; NO `actualizado_en`, que asignar una panga mueve), valida, toma los candados
+  de cupo en orden y guarda con `full_clean()`. Precio, cobro y `MovimientoDinero` no se tocan. Solo `pagada` y `asignada`;
+  no una componente de `Orden` ni una reserva en disputa.
+- **Regla de 48 h**: sobre la salida original (en un paquete, la fecha mas temprana). Con menos de 48 h solo Jefe u
+  operador de plataforma, con motivo de 10 a 200 caracteres (queda en History y en la notificacion como AVISO); la
+  vendedora ve un bloqueo («Pidele a un jefe que lo autorice»). `Reserva._excepcion_48h` y `_reagendando` viven solo en
+  memoria; el formulario normal del admin no cambia.
+- **Panga y capitan**: se conservan si siguen sirviendo ese dia y se quitan si chocan; al quitar algo,
+  `aviso_asignacion_enviado_en = None` (la reasignacion si manda su correo) y `asignada` baja a `pagada` si se quita la panga.
+  Vehiculos de traslado: se sueltan al cambiar de dia, se conservan si solo cambia la hora.
+- **Correo al cliente** (`notifications/correo_reagendado.py`): sale en `transaction.on_commit`, nunca lanza; un fallo deja
+  una notificacion de ERROR con el motivo y la fecha nueva queda guardada.
+- **Doble envio**: el segundo POST ya ve la reserva movida y la propuesta lo rechaza («Elige una fecha u hora distinta de la
+  actual»); con la reserva movida por otra persona entre medias, el token da «cambio mientras la revisabas».
+- Pruebas: `tests_reagendar` (servicio), `tests_reagendar_vista`, `tests_calendario_reagendar`, `tests_reagendar_integracion`
+  (vista y servicio sin parches) y `tests_reagendar_carreras` (solo Postgres, 6 carreras deterministas).
+  Con `psycopg` en esta maquina usar `DB_HOST=127.0.0.1`, no `localhost` (se cuelga).
+
 ## Gotchas
 
 - `bookings.Reserva.hora` ya no tiene `validar_ventana_salida` como validador de campo fijo. La ventana horaria se valida en `Reserva.clean()` vía `_validar_ventana_horaria()` gateado por `self.servicio.ventana_horaria()`; servicios como transporte no restringen a 5:00–7:00am. El helper `validar_ventana_salida` se conserva como helper utilitario.
