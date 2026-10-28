@@ -7,7 +7,7 @@
  * sigue sirviendo desde `public`.
  */
 const VIDEOS_EN_BUCKET: Record<string, string> = {
-  '/videos/videohub.webm': 'hub/videohub.webm',
+  '/videos/videohub.webm': 'hub/videohub.mp4',
   '/videos/videonuevonuevolapaz.mp4': 'lapaz/videonuevonuevolapaz-20s.mp4',
   '/videos/ventana-hero.webm': 'laventana/videolaventana-0025-0045.mp4',
 };
