@@ -73,18 +73,8 @@ import {
 import { leerRef } from '@/lib/ref';
 import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
-
-// Mismas reglas que el backend (apps/bookings/validators.py). Aqui existen para
-// que el cliente vea el error antes de llegar a la pantalla de pago, no para
-// sustituir la validacion del servidor — esta se salta con un curl.
-const DIGITOS_TELEFONO_MIN = 10;
-const DIGITOS_TELEFONO_MAX = 15;
-
-function telefonoValido(valor: string) {
-  if (!/^[\d\s+()\-.]+$/.test(valor.trim())) return false;
-  const digitos = valor.replace(/\D/g, '').length;
-  return digitos >= DIGITOS_TELEFONO_MIN && digitos <= DIGITOS_TELEFONO_MAX;
-}
+import { evaluar, restaurarTelefono, telefonoParaEnviar } from '@/lib/telefono';
+import { lineaDeTelefono, nombradorDePaises } from '@/lib/telefono-campo';
 
 // Deliberadamente permisivo: acentos, apostrofos y guiones son parte de nombres
 // reales. Solo se rechaza lo que claramente no es un nombre.
@@ -226,6 +216,7 @@ export function CheckoutView({
   const recuperable = checkoutIdValue?.recuperable ?? false;
   const catalogoUnificado = servicio?.personalizaciones ?? [];
   const pideHora = servicio ? servicio.pide_hora : true;
+  const nombrePais = useMemo(() => nombradorDePaises(lang), [lang]);
   const horasDelServicio = useMemo(() => (servicio ? horasDeServicio(servicio) : []), [servicio]);
 
   // `null` = el cliente borró la fecha: Continuar la pide (no se repone sola).
@@ -710,7 +701,7 @@ export function CheckoutView({
       setFechaSalidaManual(guardado.fechaSalidaManual);
       setMoneda(guardado.moneda);
       setFormaPago(guardado.formaPago);
-      setContact(guardado.contact);
+      setContact({ ...guardado.contact, phone: restaurarTelefono(guardado.contact.phone) });
       setActual(pasoDeQuery(guardado.paso) ?? 'viaje');
     },
   });
@@ -846,7 +837,7 @@ export function CheckoutView({
         }
         setContact({
           fullName: estado.nombre_cliente,
-          phone: estado.telefono_cliente,
+          phone: restaurarTelefono(estado.telefono_cliente),
           email: estado.correo_cliente,
         });
         setMoneda(estado.moneda);
@@ -916,8 +907,11 @@ export function CheckoutView({
     if (!contact.fullName.trim()) errores.fullName = checkout.missingFields;
     else if (!nombreValido(contact.fullName)) errores.fullName = checkout.invalidName;
 
-    if (!contact.phone.trim()) errores.phone = checkout.missingFields;
-    else if (!telefonoValido(contact.phone)) errores.phone = checkout.invalidPhone;
+    // `{pais}` y `{codigo}` del mensaje los llena `TelefonoCampo`, que sabe qué país está elegido.
+    const telefono = evaluar(contact.phone);
+    if (telefono === 'vacio') errores.phone = checkout.missingFields;
+    else if (telefono === 'codigo-desconocido') errores.phone = checkout.phoneUnknownCode;
+    else if (telefono === 'incompleto') errores.phone = checkout.invalidPhone;
 
     if (!contact.email.trim()) errores.email = checkout.missingFields;
     else if (!correoValido(contact.email)) errores.email = checkout.invalidEmail;
@@ -1070,7 +1064,7 @@ export function CheckoutView({
         ...(pideHora ? { hora: time } : {}),
         numero_personas: people,
         nombre_cliente: contact.fullName,
-        telefono_cliente: contact.phone,
+        telefono_cliente: telefonoParaEnviar(contact.phone),
         correo_cliente: contact.email,
         moneda,
         deslinde_aceptado: waiverAccepted,
@@ -1303,7 +1297,7 @@ export function CheckoutView({
   const detallePaso2 = [
     { etiqueta: checkout.fullName, valor: contact.fullName },
     { etiqueta: checkout.email, valor: contact.email },
-    { etiqueta: checkout.phone, valor: contact.phone },
+    { etiqueta: checkout.phone, valor: lineaDeTelefono(contact.phone, nombrePais) },
   ].filter((linea) => linea.valor.trim() !== '');
 
   // Lo que se le manda a la vendedora si el cliente usa la salida de emergencia
@@ -1498,6 +1492,7 @@ export function CheckoutView({
   const bloqueContacto = (
     <BloqueContacto
       idPrefijo="checkout"
+      lang={lang}
       checkout={checkout}
       valores={contact}
       errores={erroresCampo}

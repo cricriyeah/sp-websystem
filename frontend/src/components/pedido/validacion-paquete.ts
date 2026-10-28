@@ -3,6 +3,7 @@ import type { PaqueteCatalogo } from '@/lib/api';
 import { fechaDeComponente } from '@/lib/calendario-paquete';
 import type { EstadoPedido } from '@/lib/pedido-estado';
 import { erroresPersonalizaciones } from '@/lib/personalizaciones';
+import { evaluar } from '@/lib/telefono';
 
 export type ErroresContacto = Partial<Record<'fullName' | 'phone' | 'email', string>>;
 
@@ -13,14 +14,14 @@ export function erroresDeContacto(
 ): ErroresContacto {
   const errores: ErroresContacto = {};
   const nombre = contacto.fullName.trim();
-  const telefono = contacto.phone.trim();
   const correo = contacto.email.trim();
   if (!nombre) errores.fullName = checkout.missingFields;
   else if (/\d/.test(nombre) || !/\p{L}/u.test(nombre)) errores.fullName = checkout.invalidName;
-  if (!telefono) errores.phone = checkout.missingFields;
-  else if (!/^[\d\s+()\-.]+$/.test(telefono) || !/^\d{10,15}$/.test(telefono.replace(/\D/g, ''))) {
-    errores.phone = checkout.invalidPhone;
-  }
+  // `{pais}` y `{codigo}` del mensaje los llena `TelefonoCampo`, que sabe qué país está elegido.
+  const telefono = evaluar(contacto.phone);
+  if (telefono === 'vacio') errores.phone = checkout.missingFields;
+  else if (telefono === 'codigo-desconocido') errores.phone = checkout.phoneUnknownCode;
+  else if (telefono === 'incompleto') errores.phone = checkout.invalidPhone;
   if (!correo) errores.email = checkout.missingFields;
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) errores.email = checkout.invalidEmail;
   return errores;

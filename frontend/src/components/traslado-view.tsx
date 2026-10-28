@@ -64,16 +64,10 @@ import {
 import { leerRef } from '@/lib/ref';
 import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { guardarPendiente } from '@/lib/pendientes';
+import { evaluar, restaurarTelefono, telefonoParaEnviar } from '@/lib/telefono';
+import { lineaDeTelefono, nombradorDePaises } from '@/lib/telefono-campo';
 
 const CLAVE_CHECKOUT_ID = 'salysol:traslados:checkout_id';
-const DIGITOS_TELEFONO_MIN = 8;
-const DIGITOS_TELEFONO_MAX = 15;
-
-function telefonoValido(valor: string) {
-  if (!/^[\d\s+()\-.]+$/.test(valor.trim())) return false;
-  const digitos = valor.replace(/\D/g, '').length;
-  return digitos >= DIGITOS_TELEFONO_MIN && digitos <= DIGITOS_TELEFONO_MAX;
-}
 
 function nombreValido(valor: string) {
   return !/\d/.test(valor) && /\p{L}/u.test(valor);
@@ -150,6 +144,7 @@ export function TrasladoView({
   // Error de la tarjeta de recogida (hotel o dirección).
   const [errorPaso2, setErrorPaso2] = useState('');
 
+  const nombrePais = useMemo(() => nombradorDePaises(lang), [lang]);
   const horasDelServicio = useMemo(() => {
     return generarHorasVentana(
       catalogo.servicio.hora_apertura,
@@ -238,7 +233,7 @@ export function TrasladoView({
       setFechaRegreso(guardado.fechaRegreso);
       setHora(guardado.hora);
       setPersonas(guardado.personas);
-      setContact(guardado.contact);
+      setContact({ ...guardado.contact, phone: restaurarTelefono(guardado.contact.phone) });
       setMoneda(guardado.moneda);
       setFormaPagoSeleccionada(guardado.formaPagoSeleccionada);
       setActual(pasoDeQuery(guardado.paso) ?? 'viaje');
@@ -298,7 +293,7 @@ export function TrasladoView({
       setFecha(estado.fecha);
       setHora(estado.hora);
       setPersonas(estado.numero_personas);
-      setContact({ phone: 'telefono_cliente' in estado ? estado.telefono_cliente : '',
+      setContact({ phone: 'telefono_cliente' in estado ? restaurarTelefono(estado.telefono_cliente) : '',
         fullName: estado.nombre_cliente, email: estado.correo_cliente });
       setMoneda(estado.moneda);
       if (estado.forma_pago === 'anticipo' || estado.forma_pago === 'completo') {
@@ -425,8 +420,11 @@ export function TrasladoView({
     if (!contact.fullName.trim()) errs.fullName = checkout.missingFields;
     else if (!nombreValido(contact.fullName)) errs.fullName = checkout.invalidName;
 
-    if (!contact.phone.trim()) errs.phone = checkout.missingFields;
-    else if (!telefonoValido(contact.phone)) errs.phone = checkout.invalidPhone;
+    // `{pais}` y `{codigo}` del mensaje los llena `TelefonoCampo`, que sabe qué país está elegido.
+    const telefono = evaluar(contact.phone);
+    if (telefono === 'vacio') errs.phone = checkout.missingFields;
+    else if (telefono === 'codigo-desconocido') errs.phone = checkout.phoneUnknownCode;
+    else if (telefono === 'incompleto') errs.phone = checkout.invalidPhone;
 
     if (!contact.email.trim()) errs.email = checkout.missingFields;
     else if (!correoValido(contact.email)) errs.email = checkout.invalidEmail;
@@ -570,7 +568,7 @@ export function TrasladoView({
         fecha_regreso: tipoTraslado === 'redondo_aeropuerto' ? fechaRegreso : null,
         numero_personas: personas,
         nombre_cliente: contact.fullName.trim(),
-        telefono_cliente: contact.phone.trim(),
+        telefono_cliente: telefonoParaEnviar(contact.phone),
         correo_cliente: contact.email.trim(),
         moneda,
         deslinde_aceptado: waiverAccepted,
@@ -744,7 +742,7 @@ export function TrasladoView({
   const detalleContacto = [
     { etiqueta: checkout.fullName, valor: contact.fullName },
     { etiqueta: checkout.email, valor: contact.email },
-    { etiqueta: checkout.phone, valor: contact.phone },
+    { etiqueta: checkout.phone, valor: lineaDeTelefono(contact.phone, nombrePais) },
   ].filter((linea) => linea.valor.trim() !== '');
   const detalleRecogida = resumenRecogida
     ? [{ etiqueta: traslados.fields.puntoEncuentro, valor: resumenRecogida }]
@@ -788,6 +786,7 @@ export function TrasladoView({
   const bloqueContacto = (
     <BloqueContacto
       idPrefijo="traslado"
+      lang={lang}
       checkout={checkout}
       valores={contact}
       errores={erroresContacto}

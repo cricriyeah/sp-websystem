@@ -3,6 +3,7 @@ import type { ComponentePedido, DatosContacto, DetalleTraslado } from './pedido-
 import { seleccionInicial, type SeleccionPersonalizacion } from './personalizaciones';
 import { horasDePaquete } from './horario-servicio';
 import { maxPersonasPaquete, trasladoFijoAeropuerto } from './pedido-paquete';
+import { restaurarTelefono } from './telefono';
 
 export type EstadoPedido = {
   contacto: DatosContacto;
@@ -105,6 +106,7 @@ export function reducirPedido(estado: EstadoPedido, accion: AccionPedido): Estad
       return {
         ...estado,
         ...accion.estado,
+        contacto: { ...accion.estado.contacto, phone: restaurarTelefono(accion.estado.contacto.phone) },
         componentes: Object.fromEntries(
           Object.entries(estado.componentes).map(([slug, c]) => [slug, accion.estado.componentes?.[slug] ?? c]),
         ),

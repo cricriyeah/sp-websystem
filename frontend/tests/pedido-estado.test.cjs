@@ -120,3 +120,11 @@ test('restaurar repone el borrador y conserva los servicios que el borrador no t
   assert.equal(s.componentes.pesca.personas, 5);
   assert.equal(s.componentes.traslado.personas, 2);
 });
+
+test('restaurar pasa el teléfono del borrador al formato compacto sin borrarlo', () => {
+  const con = (phone) => ({ ...inicial(), contacto: { fullName: 'Ana', phone, email: 'a@b.co' } });
+  assert.equal(e.reducirPedido(inicial(), { tipo: 'restaurar', estado: con('612 123 4567') }).contacto.phone, '+526121234567');
+  assert.equal(e.reducirPedido(inicial(), { tipo: 'restaurar', estado: con('') }).contacto.phone, '');
+  // Lo que no se entiende queda tal cual: el campo lo muestra y el cliente lo corrige.
+  assert.equal(e.reducirPedido(inicial(), { tipo: 'restaurar', estado: con(' abc ') }).contacto.phone, 'abc');
+});

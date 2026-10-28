@@ -53,6 +53,7 @@ import { ConfirmacionReserva } from '@/components/confirmacion-reserva';
 import { PantallaFallo } from './pantalla-fallo';
 import { PanelPedidoPaquete } from './panel-pedido-paquete';
 import { PantallaPago } from './pantalla-pago';
+import { nombradorDePaises } from '@/lib/telefono-campo';
 import { armarResumenPaquete } from './resumen-paquete';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
@@ -193,9 +194,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     hora: estado.hora,
     personas: personasPaquete,
   });
+  const nombrePais = useMemo(() => nombradorDePaises(lang), [lang]);
   const { detalleCompra, lineasViaje, lineasContacto, lineaPunto } = armarResumenPaquete({
     paquete, inicio: estado.inicio, hora: estado.hora, contacto: estado.contacto, personasPaquete, salida, noches,
-    checkout, traslados, pedido: textos, puntosPorEmpresa, nombreEmpresa, formatearFecha,
+    checkout, traslados, pedido: textos, puntosPorEmpresa, nombreEmpresa, formatearFecha, nombrePais,
   });
 
   const pago = usePagoPedido({
@@ -668,6 +670,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   const bloqueContacto = (
     <BloqueContacto
       idPrefijo="pedido"
+      lang={lang}
       checkout={checkout}
       valores={estado.contacto}
       errores={erroresContacto}

@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import { CaretDown } from '@phosphor-icons/react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/components/ui/cn';
 
 type FieldPopoverProps = {
   label: string;
@@ -26,6 +27,14 @@ type FieldPopoverProps = {
   placeholder?: string;
   /** Dentro de una tarjeta del checkout: el relleno interno alinea con el resto de controles (16 px). */
   compacto?: boolean;
+  /**
+   * Nombre accesible del botón cuando el texto visible no basta (el selector de país dice
+   * "+52" y el lector necesita también el país). Debe contener el texto visible. Sin esto el
+   * botón se nombra por su contenido, como siempre.
+   */
+  etiquetaDisparador?: string;
+  /** Clases extra del botón, fusionadas al final: sustituyen relleno o separación del modo base. */
+  claseDisparador?: string;
 };
 
 /** Margen contra el borde del viewport, y separacion entre el campo y el panel. */
@@ -79,6 +88,8 @@ export function FieldPopover({
   vacio = false,
   placeholder,
   compacto = false,
+  etiquetaDisparador,
+  claseDisparador,
 }: FieldPopoverProps) {
   const [open, setOpen] = useState(false);
   const [posicion, setPosicion] = useState<Posicion | null>(null);
@@ -173,7 +184,12 @@ export function FieldPopover({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        className={`flex flex-1 items-center gap-3 text-left transition-colors ${compacto ? 'rounded-campo px-4 py-3 hover:bg-cafe-bruma' : 'px-6 py-3.5 hover:bg-cafe-bruma'}`}
+        aria-label={etiquetaDisparador}
+        className={cn(
+          'flex flex-1 items-center gap-3 text-left transition-colors',
+          compacto ? 'rounded-campo px-4 py-3 hover:bg-cafe-bruma' : 'px-6 py-3.5 hover:bg-cafe-bruma',
+          claseDisparador,
+        )}
       >
         {compacto ? <span className="shrink-0 [&>svg]:size-6">{icon}</span> : icon}
         {/* Sin contestar, la pregunta ocupa el lugar grande y no hay etiqueta

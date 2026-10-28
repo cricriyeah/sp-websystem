@@ -2,6 +2,7 @@ import type {
   ComponenteOrdenInput, CrearOrdenInput, Moneda, PaqueteCatalogo, ReservaInput, TipoTraslado, Zona,
 } from './api';
 import type { SeleccionPersonalizacion } from './personalizaciones';
+import { telefonoParaEnviar } from './telefono';
 
 export type DatosContacto = { fullName: string; phone: string; email: string };
 
@@ -87,7 +88,7 @@ export function armarPayloadOrden(args: ArgsComunes): CrearOrdenInput {
     deslinde_aceptado: true,
     deslinde_nombre: nombre,
     nombre_cliente: nombre,
-    telefono_cliente: contacto.phone.trim(),
+    telefono_cliente: telefonoParaEnviar(contacto.phone),
     correo_cliente: contacto.email.trim(),
     moneda: args.moneda,
     ref: args.ref,
@@ -116,7 +117,7 @@ export function armarPayloadReserva(args: ArgsComunes): ReservaInput {
     numero_personas: personasPrincipales(paquete, componentes),
     personas_por_servicio: personasPorServicio,
     nombre_cliente: nombre,
-    telefono_cliente: contacto.phone.trim(),
+    telefono_cliente: telefonoParaEnviar(contacto.phone),
     correo_cliente: contacto.email.trim(),
     moneda: args.moneda,
     deslinde_aceptado: true,

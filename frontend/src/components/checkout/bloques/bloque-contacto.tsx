@@ -7,6 +7,8 @@ import { CamposContacto, type CampoContacto } from '@/components/checkout/campos
 type Props = {
   /** Prefijo de los ids de los campos y sus errores (`checkout`, `traslado`). */
   idPrefijo: string;
+  /** Idioma del selector de país del teléfono (nombres de países y orden). */
+  lang: string;
   checkout: Dictionary['checkout'];
   valores: Record<CampoContacto, string>;
   errores: Partial<Record<CampoContacto, string>>;
@@ -23,7 +25,7 @@ type Props = {
  * código promocional, la reserva y la recuperación los leen), así que plegar
  * la tarjeta no pierde lo escrito.
  */
-export function BloqueContacto({ idPrefijo, checkout, valores, errores, refs, disabled, onCambio }: Props) {
+export function BloqueContacto({ idPrefijo, lang, checkout, valores, errores, refs, disabled, onCambio }: Props) {
   return (
     <CamposContacto
       idPrefijo={idPrefijo}
@@ -31,6 +33,22 @@ export function BloqueContacto({ idPrefijo, checkout, valores, errores, refs, di
       errores={errores}
       etiquetas={{ phone: checkout.phone, fullName: checkout.fullName, email: checkout.email }}
       ejemplos={checkout.contactExamples}
+      telefono={{
+        lang,
+        textos: {
+          phoneCountry: checkout.phoneCountry,
+          phoneCountrySearch: checkout.phoneCountrySearch,
+          phoneCountryNone: checkout.phoneCountryNone,
+          phoneCountryNoneHint: checkout.phoneCountryNoneHint,
+          phoneCountryFrequent: checkout.phoneCountryFrequent,
+          phoneCountryAll: checkout.phoneCountryAll,
+          phoneCountryCount: checkout.phoneCountryCount,
+          phoneCountryCountOne: checkout.phoneCountryCountOne,
+          phoneCountryChanged: checkout.phoneCountryChanged,
+          phonePlaceholderOther: checkout.phonePlaceholderOther,
+          cerrar: checkout.barra.cerrar,
+        },
+      }}
       refs={refs}
       disabled={disabled}
       onCambio={onCambio}

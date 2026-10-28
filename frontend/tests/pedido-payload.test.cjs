@@ -145,3 +145,11 @@ test('paquete que pide hora (o sin dato) la sigue mandando', () => {
   const payload = p.armarPayloadReserva({ ...BASE, paquete, componentes: { pesca: { personas: 2, extras: [] } } });
   assert.equal(payload.hora, '07:00');
 });
+
+test('el teléfono sale en E.164 en la orden y en la reserva; lo que no se entiende sale recortado, nunca vacío', () => {
+  const con = (phone) => ({ ...BASE, contacto: { ...BASE.contacto, phone } });
+  const comps = { hotel: { personas: 1, extras: [] }, pesca: { personas: 2, extras: [] } };
+  assert.equal(p.armarPayloadOrden({ ...con('+52 (612) 123-4567'), paquete: CRUZA, componentes: COMPONENTES }).telefono_cliente, '+526121234567');
+  assert.equal(p.armarPayloadReserva({ ...con('+52 (612) 123-4567'), paquete: MONO, componentes: comps }).telefono_cliente, '+526121234567');
+  assert.equal(p.armarPayloadOrden({ ...con(' 12345 '), paquete: CRUZA, componentes: COMPONENTES }).telefono_cliente, '12345');
+});

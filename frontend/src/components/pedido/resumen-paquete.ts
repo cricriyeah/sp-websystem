@@ -3,6 +3,7 @@ import type { PaqueteCatalogo, PuntoEncuentro } from '@/lib/api';
 import { formatHour } from '@/lib/dates';
 import type { EstadoPedido } from '@/lib/pedido-estado';
 import type { DetalleTraslado } from '@/lib/pedido-payload';
+import { lineaDeTelefono } from '@/lib/telefono-campo';
 
 type Entrada = {
   paquete: PaqueteCatalogo;
@@ -18,6 +19,7 @@ type Entrada = {
   puntosPorEmpresa: Record<string, PuntoEncuentro[]>;
   nombreEmpresa: (slug: string) => string;
   formatearFecha: (iso: string) => string;
+  nombrePais: (iso: string) => string | undefined;
 };
 
 /**
@@ -27,7 +29,7 @@ type Entrada = {
  */
 export function armarResumenPaquete({
   paquete, inicio, hora, contacto, personasPaquete, salida, noches, checkout, traslados, pedido, puntosPorEmpresa,
-  nombreEmpresa, formatearFecha,
+  nombreEmpresa, formatearFecha, nombrePais,
 }: Entrada) {
   const empresas = [...new Set(paquete.servicios_asociados.map((c) => nombreEmpresa(c.servicio.empresa_slug)))];
   const detalleCompra = [
@@ -55,7 +57,7 @@ export function armarResumenPaquete({
   const lineasContacto = [
     { etiqueta: checkout.fullName, valor: contacto.fullName },
     { etiqueta: checkout.email, valor: contacto.email },
-    { etiqueta: checkout.phone, valor: contacto.phone },
+    { etiqueta: checkout.phone, valor: lineaDeTelefono(contacto.phone, nombrePais) },
   ].filter((linea) => linea.valor.trim() !== '');
   // Dónde lo recogen: el nombre del punto elegido, o la dirección escrita a mano.
   const lineaPunto = (traslado: DetalleTraslado | undefined) => {

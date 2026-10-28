@@ -4,6 +4,7 @@ import type { Ref } from 'react';
 import { EnvelopeSimple, Phone, User } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { ErrorDeCampo, propsDeError } from '@/components/ui/error-de-campo';
+import { TelefonoCampo, type TextosTelefono } from '@/components/checkout/telefono-campo';
 
 export type CampoContacto = 'fullName' | 'phone' | 'email';
 
@@ -18,6 +19,12 @@ type Props = {
   disabled?: boolean;
   /** Prefijo de los ids de error (`aria-describedby`), único por pantalla. */
   idPrefijo: string;
+  /**
+   * Idioma y textos del selector de país del teléfono. Con esto el teléfono es `TelefonoCampo`
+   * (selector + número; `valores.phone` es el valor compacto `+<código><número>` y `errores.phone`
+   * puede traer `{pais}` y `{codigo}`).
+   */
+  telefono: { lang: string; textos: TextosTelefono };
 };
 
 const CAMPOS: { campo: CampoContacto; tipo: string; icono: typeof Phone; ancho: string }[] = [
@@ -27,12 +34,30 @@ const CAMPOS: { campo: CampoContacto; tipo: string; icono: typeof Phone; ancho: 
 ];
 
 /** Los tres datos de contacto, iguales en servicio suelto y en paquete. */
-export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio, refs, disabled, idPrefijo }: Props) {
+export function CamposContacto({ valores, errores, etiquetas, ejemplos, onCambio, refs, disabled, idPrefijo, telefono }: Props) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {CAMPOS.map(({ campo, tipo, icono: Icono, ancho }) => {
         const idError = `${idPrefijo}-error-${campo}`;
         const error = errores[campo];
+        if (campo === 'phone') {
+          return (
+            <TelefonoCampo
+              key={campo}
+              idPrefijo={idPrefijo}
+              valor={valores.phone}
+              onCambio={(valor) => onCambio('phone', valor)}
+              etiqueta={etiquetas.phone}
+              ejemplo={ejemplos?.phone}
+              error={error}
+              lang={telefono.lang}
+              textos={telefono.textos}
+              refInput={refs?.phone}
+              disabled={disabled}
+              className={ancho}
+            />
+          );
+        }
         return (
           <label key={campo} className={`flex flex-col gap-1.5 text-base sm:text-sm ${ancho}`}>
             <span className="text-muted">{etiquetas[campo]}</span>

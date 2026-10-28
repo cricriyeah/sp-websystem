@@ -58,6 +58,9 @@ const suites = {
   'secciones-sede': ['src/lib/secciones-sede.ts', 'SECCIONES_TEST_OUT'],
   empresas: ['src/content/empresas.ts', 'EMPRESAS_TEST_OUT'],
   media: ['src/lib/media.ts', 'MEDIA_TEST_OUT'],
+  telefono: ['src/lib/telefono.ts', 'TELEFONO_TEST_OUT'],
+  'paises-telefono': ['src/lib/paises-telefono.ts', 'PAISES_TELEFONO_TEST_OUT'],
+  'telefono-campo': ['src/lib/telefono-campo.ts', 'TELEFONO_CAMPO_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {
@@ -96,7 +99,12 @@ if (result.emitSkipped) {
   process.stderr.write(ts.formatDiagnostics(result.diagnostics, formatHost));
   process.exit(1);
 }
-const env = { ...process.env };
+// El JS compilado vive en un directorio temporal sin node_modules: sin esto
+// `require('libphonenumber-js/min')` (telefono, paises-telefono) no se resolveria.
+const env = {
+  ...process.env,
+  NODE_PATH: [path.join(root, 'node_modules'), process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
+};
 for (const name of chosen) {
   env[suites[name][1]] = name === 'personalizaciones' ? path.join(outDir, 'lib') : outDir;
 }
