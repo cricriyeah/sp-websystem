@@ -96,8 +96,10 @@ class Empresa(models.Model):
 
     def clean(self):
         errores = {}
-        if self.stripe_secret_key and not self.stripe_secret_key.startswith('sk_'):
-            errores['stripe_secret_key'] = "Debe empezar con 'sk_'."
+        # `sk_` es la llave secreta completa; `rk_` es una llave restringida (la que Stripe recomienda
+        # para produccion): se usa igual, solo que con los permisos que se le hayan dado.
+        if self.stripe_secret_key and not self.stripe_secret_key.startswith(('sk_', 'rk_')):
+            errores['stripe_secret_key'] = "Debe empezar con 'sk_' o 'rk_'."
         if self.stripe_webhook_secret and not self.stripe_webhook_secret.startswith('whsec_'):
             errores['stripe_webhook_secret'] = "Debe empezar con 'whsec_'."
         if self.stripe_publishable_key and not self.stripe_publishable_key.startswith('pk_'):

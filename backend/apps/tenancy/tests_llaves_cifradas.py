@@ -215,6 +215,11 @@ class ChequeoDeCifradoTests(TestCase):
         self.empresa(secreta='sk_live_llave_falsa_de_prueba')
         self.assertEqual(self.ids(), ['payments.E003'])
 
+    @override_settings(STRIPE_KEYS_ENCRYPTION_KEY='')
+    def test_una_llave_restringida_de_produccion_en_texto_plano_tambien_es_un_error(self):
+        self.empresa(secreta='rk_live_llave_falsa_de_prueba')
+        self.assertEqual(self.ids(), ['payments.E003'])
+
     @override_settings(STRIPE_KEYS_ENCRYPTION_KEY=CLAVE_A)
     def test_una_llave_de_produccion_cifrada_no_avisa(self):
         self.empresa(secreta='sk_live_llave_falsa_de_prueba')

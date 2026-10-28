@@ -98,6 +98,23 @@ class RevisarLlavesDeStripeTests(TestCase):
         self._crear_empresa('sal-y-sol-2')
         self.assertEqual(revisar_llaves_de_stripe(None), [])
 
+    def test_una_llave_restringida_rk_es_una_llave_secreta_valida(self):
+        # Stripe recomienda las llaves restringidas (`rk_live_...`) para produccion: el prefijo no
+        # es `sk_`, pero es la llave secreta de la empresa y debe aceptarse en el admin y en el check.
+        empresa = self._crear_empresa('restringida', secreta='rk_live_ok')
+        empresa.clean()
+        self.assertEqual(revisar_llaves_de_stripe(None), [])
+
+    def test_el_admin_sigue_rechazando_lo_que_no_es_una_llave_secreta(self):
+        from django.core.exceptions import ValidationError
+
+        for valor in ('whsec_falsa', 'pk_test_falsa', 'abc'):
+            with self.subTest(valor=valor):
+                empresa = self._crear_empresa(f'mala-{len(valor)}', secreta=valor)
+                with self.assertRaises(ValidationError) as ctx:
+                    empresa.clean()
+                self.assertIn("'sk_' o 'rk_'", ctx.exception.message_dict['stripe_secret_key'][0])
+
     def test_llaves_vacias_no_reportan_nada(self):
         # Vacio significa "Stripe apagado para esta Empresa", comportamiento
         # documentado (crear-pago responde 503), no una llave cruzada.

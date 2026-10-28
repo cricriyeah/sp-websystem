@@ -20,7 +20,8 @@ from django.db.utils import DatabaseError
 LLAVES_DE_STRIPE = (
     (
         'stripe_secret_key',
-        'sk_',
+        # `rk_` = llave restringida de Stripe: vale igual que una `sk_`.
+        ('sk_', 'rk_'),
         'payments.E001',
         'la llave secreta (Developers -> API keys)',
     ),
@@ -51,8 +52,9 @@ def revisar_llaves_de_stripe(app_configs, **kwargs):
         for atributo, prefijo, codigo, de_donde_sale in LLAVES_DE_STRIPE:
             valor = getattr(empresa, atributo, '')
             if valor and not valor.startswith(prefijo):
+                esperado = ' o '.join(f'"{p}"' for p in ((prefijo,) if isinstance(prefijo, str) else prefijo))
                 errores.append(Error(
-                    f'Empresa "{empresa.slug}": {atributo} no empieza con "{prefijo}", '
+                    f'Empresa "{empresa.slug}": {atributo} no empieza con {esperado}, '
                     f'asi que no es la llave que este campo espera.',
                     hint=(
                         f'Parece una llave de Stripe capturada en el campo equivocado. '
@@ -102,7 +104,7 @@ def revisar_llaves_de_relleno(app_configs, **kwargs):
                     id='payments.W001',
                 ))
         secreta = empresa.stripe_secret_key or ''
-        if secreta.startswith('sk_') and MARCA_DE_RELLENO not in secreta.upper():
+        if secreta.startswith(('sk_', 'rk_')) and MARCA_DE_RELLENO not in secreta.upper():
             modos[empresa.slug] = 'prueba' if secreta.startswith(('sk_test_', 'rk_test_')) else 'produccion'
 
     if len(set(modos.values())) > 1:
@@ -166,7 +168,7 @@ def revisar_cifrado_de_llaves(app_configs, **kwargs):
                      'o vuelve a capturar las llaves en el admin.',
                 id='payments.W004',
             ))
-        if secreta and not secreta.startswith(PREFIJO) and secreta.startswith('sk_live_'):
+        if secreta and not secreta.startswith(PREFIJO) and secreta.startswith(('sk_live_', 'rk_live_')):
             problemas.append(Error(
                 f'Empresa "{slug}": la llave secreta de produccion esta en texto plano en la base.',
                 hint='Define STRIPE_KEYS_ENCRYPTION_KEY y corre: python manage.py cifrar_llaves_stripe. '

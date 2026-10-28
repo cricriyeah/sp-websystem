@@ -216,7 +216,7 @@ def enlace_pago_stripe(reserva):
     intent = reserva.stripe_payment_intent_id
     if not intent:
         return None
-    modo = 'test/' if (reserva.empresa.stripe_secret_key or '').startswith('sk_test') else ''
+    modo = 'test/' if (reserva.empresa.stripe_secret_key or '').startswith(('sk_test', 'rk_test')) else ''
     return f'https://dashboard.stripe.com/{modo}payments/{intent}'
 
 

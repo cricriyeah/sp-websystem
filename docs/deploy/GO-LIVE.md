@@ -172,6 +172,11 @@ contra la base de producción real sin mover un peso.
 
 1. [ ] Capturar en Render las llaves de **prueba** (`sk_test_...`, `pk_test_...`)
        desde https://dashboard.stripe.com/test/apikeys
+   **Llave restringida (`rk_...`) en vez de `sk_...`.** El campo *Stripe secret key* de la empresa acepta las
+   dos. Stripe recomienda la restringida para produccion; si se usa, al crearla en el dashboard
+   (Developers > API keys > Create restricted key) hay que darle **Write** a **PaymentIntents** y a **Charges and
+   Refunds** (el backend crea, actualiza, captura, cancela y consulta intents, y crea reembolsos), y nada mas.
+   Si le falta un permiso, Stripe responde 403 al cobrar o al reembolsar y el cliente no puede pagar.
 2. [ ] **Por cada empresa**, registrar su propio endpoint de webhook en SU cuenta
        de Stripe (modo prueba). La dirección lleva el *slug* de la empresa
        (`sal-y-sol`, `piratas`, …); no existe una ruta común `/api/stripe/webhook/`:
