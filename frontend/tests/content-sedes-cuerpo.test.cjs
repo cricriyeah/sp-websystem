@@ -95,21 +95,43 @@ test('«Tu día» en La Paz y La Ventana con los mismos momentos en es y en; Pue
   assert.equal(c.getSedeContenido('puerto-chale', 'es').dia, undefined);
 });
 
-test('«Conócenos» de La Paz: título de las generaciones, una foto, dos socios y una cita con fuente, sin el 1950', () => {
-  for (const lang of ['es', 'en']) {
-    const k = c.getSedeContenido('la-paz', lang).conocenos;
-    assert.ok(k, lang);
-    assert.match(`${k.titulo.inicio} ${k.titulo.destacada} ${k.titulo.fin}`, /^(Tres generaciones de|Three generations of)/);
-    assert.ok(k.foto.src && k.foto.alt);
-    assert.equal(k.socios.length, 2);
-    assert.deepEqual(k.socios.map((s) => s.nombre), ['Rogelio Camacho', 'Omar']);
-    assert.ok(k.cita.texto && /Peninsular Digital, 2010/.test(k.cita.atribucion));
-    assert.match(k.cita.texto, /(motor|engine)/);
+test('«Conócenos» de La Paz: reseña con hechos reales, prensa, tripulación, fotos y cierre en los dos idiomas', () => {
+  const es = c.getSedeContenido('la-paz', 'es').conocenos;
+  const en = c.getSedeContenido('la-paz', 'en').conocenos;
+  for (const k of [es, en]) {
+    assert.match(k.titulo, /^(Familia de pescadores|A fishing family)$/);
+    assert.deepEqual(k.hechos.map((h) => h.valor), ['30+', '3+', '365'], 'solo hechos confirmados o ya publicados');
+    assert.match(k.resena, /Rogelio Camacho/);
+    assert.ok(/Peninsular Digital, 2010/.test(k.prensa.fuente) && /(motor|engine)/.test(k.prensa.texto));
+    assert.ok(k.tripulacion.titulo && k.tripulacion.texto);
+    assert.equal(k.tripulacion.capitanes[0].nombre, 'Rogelio');
+    assert.ok(k.fotos.length >= 4 && k.fotos.every((f) => f.src.startsWith('/photos/') && f.alt && f.pie));
+    assert.ok(k.cierre.titulo && k.cierre.frase && k.cierre.boton);
     const todo = JSON.stringify(k);
-    assert.ok(!todo.includes('1950'), 'ya no hay año de fundación');
+    assert.ok(!todo.includes('1950'), 'sin año de fundación');
     assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
-    assert.ok(k.apertura.split(/\s+/).length <= 14, 'apertura corta');
+    assert.ok(!/n[uú]mero uno|number one|#1/i.test(todo), 'ningún superlativo sin prueba');
   }
+  assert.deepEqual(es.fotos.map((f) => f.src), en.fotos.map((f) => f.src));
+  assert.deepEqual(es.tripulacion.capitanes.map((x) => x.nombre), en.tripulacion.capitanes.map((x) => x.nombre));
+});
+
+test('«Conócenos» de La Paz: los nombres de la tripulación siguen marcados `pendiente` hasta que el dueño los confirme', () => {
+  for (const lang of ['es', 'en']) {
+    for (const capitan of c.getSedeContenido('la-paz', lang).conocenos.tripulacion.capitanes) {
+      assert.equal(capitan.pendiente, true, capitan.nombre);
+    }
+  }
+});
+
+test('la primera vista de La Paz es la de marca: nombre partido, foto de una panga propia y título con qué es', () => {
+  for (const lang of ['es', 'en']) {
+    const m = c.getSedeContenido('la-paz', lang).hero.marca;
+    assert.deepEqual(m.nombre, { inicio: 'Sal y', fin: 'Sol' });
+    assert.match(m.titulo, /La Paz/);
+    assert.ok(m.foto.src.startsWith('/photos/') && m.foto.alt);
+  }
+  assert.equal(c.getSedeContenido('la-ventana', 'es').hero.marca, undefined, 'las otras sedes siguen con su arranque');
 });
 
 test('el héroe de La Paz se encuadra a la izquierda en celular, en los dos idiomas', () => {

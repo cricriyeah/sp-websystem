@@ -243,6 +243,23 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
 - **`npm run verificar`** corre toda la puerta: `tsc`, `eslint`, `npm test`, `test:guardia`, `guardia`
   y `next build`. Córrelo antes de cerrar cualquier tarea de frontend.
 
+## La Paz: primera vista de marca y «Conócenos» (pedido del dueño, 2026-10-28)
+
+Derivado con perception-first-design y construido con la dirección de taste «El nombre como monumento».
+
+- **Primera vista** (`sede-hero-marca.tsx`, solo si `hero.marca` existe; las otras sedes siguen con `SedeHero`): campo
+  tinta, el nombre arriba a todo el ancho («Sal y», el isotipo del tamaño de una letra, «Sol»; arriba porque abajo lo
+  tapa el aviso de cookies), la foto de la panga *Dream* a sangre como LCP (`loading="eager"` + `fetchPriority="high"`,
+  se acerca despacio con `foto-deriva`) y el `h1` con qué es y dónde, una frase y Reservar. El isotipo NO gira.
+- **«Conócenos»** (`conocenos-sede.tsx`): reseña con tres cifras monumentales (solo hechos confirmados o ya publicados:
+  30+ años de Rogelio, 3+ generaciones, 365 días) y la prensa; la tripulación como cartel (un nombre de pila por renglón
+  en `.texto-tripulacion`, su dato a la derecha con el isotipo como única marca; título fijo en escritorio); fotos de dos
+  en dos a tamaños distintos con su pie; y cierre invertido «Sal con el sol» con Reservar. No hay foto ni panga por
+  capitán: el dueño no las tiene.
+- Los nombres de la tripulación vienen de una nota de voz: van `pendiente: true` y NO se publican
+  (`lib/capitanes-visibles.ts`; se ven en desarrollo o con `NEXT_PUBLIC_VER_PENDIENTES=1`). Al confirmarlos, quitar
+  `pendiente` y ajustar la prueba `content-sedes-cuerpo` que hoy exige la marca. Las fotos son de relleno.
+
 ## Continuar reservación (banda global)
 
 `ContinuarReservacion` (`src/components/continuar-reservacion.tsx`) es una

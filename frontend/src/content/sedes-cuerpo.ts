@@ -41,6 +41,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { value: 'Hasta 5 personas', label: 'Ambiente privado y familiar' },
           { value: '365 días al año', label: 'Salidas disponibles todo el año' },
         ],
+        marca: {
+          nombre: { inicio: 'Sal y', fin: 'Sol' },
+          titulo: 'Pesca deportiva en La Paz',
+          frase: 'Salimos todos los días de Marina La Costa, de 5:00 a 7:00 am, con capitanes de aquí y solo tu grupo a bordo.',
+          foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'La panga Dream con su capitán en la bahía de La Paz', posicion: '14% 60%' },
+        },
       },
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
@@ -59,24 +65,46 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Regresa', texto: 'Con tus fotos y tu captura.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Los datos de Omar están por confirmar con el dueño.
+      // Los nombres de la tripulación salen de una nota de voz y están por confirmar (`pendiente`: no se publican).
+      // Las fotos son las que ya existen, de relleno, hasta que lleguen las que edita el dueño.
       conocenos: {
-        titulo: { inicio: 'Tres', destacada: 'generaciones', fin: 'de pescadores' },
-        apertura: 'El mar de La Paz no se aprende en un curso. Se hereda.',
-        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Capitán en su panga Dream, en la bahía de La Paz' },
-        socios: [
-          {
-            nombre: 'Rogelio Camacho',
-            texto: 'Creció en el barrio El Manglito, mirando los barcos de Los Ruffo y de Jack Vélez, donde trabajaban sus hermanos. Ellos pescaban por deporte, una competencia tan de La Paz como el malecón. Hoy Rogelio lleva más de treinta años en la bahía y sigue saliendo con el mismo entusiasmo.',
-          },
-          {
-            nombre: 'Omar',
-            texto: 'Es el que llega antes que el sol. Capitán de panga y socio de Rogelio, conoce la bahía como su casa y sabe dónde buscar el pescado.',
-          },
+        titulo: 'Familia de pescadores',
+        hechos: [
+          { valor: '30+', etiqueta: 'años de Rogelio Camacho en el mar' },
+          { valor: '3+', etiqueta: 'generaciones de su familia en la pesca' },
+          { valor: '365', etiqueta: 'días al año con salidas desde Marina La Costa' },
         ],
-        cita: {
+        resena:
+          'Rogelio Camacho creció en El Manglito viendo salir los barcos de pesca deportiva de La Paz. Hoy suma más de treinta años en la bahía y su familia lleva más de tres generaciones en el mar. Con él sale un gremio de capitanes de aquí, que conocen cada bajo y cada temporada. A La Paz no se viene a ver el mar: se viene a pescarlo.',
+        prensa: {
+          etiqueta: 'Prensa',
           texto: 'El entusiasmo de lancheros como Rogelio Camacho es el motor de la ciudad de La Paz.',
-          atribucion: 'Perla Taddie García, Peninsular Digital, 2010.',
+          fuente: 'Perla Taddie García, Peninsular Digital, 2010.',
+        },
+        tripulacion: {
+          titulo: 'El gremio de capitanes',
+          texto: 'Capitanes locales de La Paz, en la bahía todos los días. Ellos saben dónde está el pescado.',
+          capitanes: [
+            { nombre: 'Rogelio', detalle: 'Camacho · más de 30 años en el mar', pendiente: true },
+            { nombre: 'Omar', detalle: '«Boli» · socio de Rogelio', pendiente: true },
+            { nombre: 'Alfredo', detalle: 'Camacho', pendiente: true },
+            { nombre: 'Joel', detalle: 'Martínez', pendiente: true },
+            { nombre: 'Icho', detalle: 'Camacho', pendiente: true },
+            { nombre: 'Julio', detalle: '«Chito»', pendiente: true },
+            { nombre: 'Raúl', detalle: 'Martínez', pendiente: true },
+            { nombre: 'Dagoberto', pendiente: true },
+          ],
+        },
+        fotos: [
+          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Un capitán con un mero recién sacado, en la bahía', pie: 'Un mero recién sacado, en la bahía.' },
+          { src: '/photos/dorado-bajo-toldo.webp', alt: 'Un dorado bajo el toldo de la panga', pie: 'Bajo el toldo de la panga.' },
+          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'La pesca del día sobre la cubierta de la panga', pie: 'La pesca del día, en cubierta.' },
+          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'Un jurel con pelícanos junto a la panga', pie: 'Jurel, con los pelícanos al lado.' },
+        ],
+        cierre: {
+          titulo: 'Sal con el sol',
+          frase: 'Salidas de 5:00 a 7:00 am desde Marina La Costa, con un capitán del gremio y solo tu grupo a bordo.',
+          boton: 'Reservar tu salida',
         },
       },
       galeria: [
@@ -230,6 +258,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { value: 'Up to 5 guests', label: 'Private & family-friendly' },
           { value: '365 days a year', label: 'Departures available all year' },
         ],
+        marca: {
+          nombre: { inicio: 'Sal y', fin: 'Sol' },
+          titulo: 'Sportfishing in La Paz',
+          frase: 'We head out every day from Marina La Costa, between 5:00 and 7:00 am, with local captains and only your group on board.',
+          foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'The panga Dream and its captain on the bay of La Paz', posicion: '14% 60%' },
+        },
       },
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
@@ -248,24 +282,46 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Return', texto: 'Back with your photos and your catch.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Omar's details are pending the owner's confirmation.
+      // The crew names come from a voice note and are pending confirmation (`pendiente`: not published).
+      // The photos are the existing ones, as placeholders, until the owner sends the edited ones.
       conocenos: {
-        titulo: { inicio: 'Three', destacada: 'generations', fin: 'of fishermen' },
-        apertura: 'The sea of La Paz is not learned in a class. It is inherited.',
-        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Captain aboard his panga Dream on the bay of La Paz' },
-        socios: [
-          {
-            nombre: 'Rogelio Camacho',
-            texto: 'He grew up in the El Manglito neighborhood, watching the boats of Los Ruffo and Jack Vélez, where his brothers worked. They fished for sport, a contest as much a part of La Paz as the malecón. Today Rogelio has more than thirty years on the bay and still heads out with the same enthusiasm.',
-          },
-          {
-            nombre: 'Omar',
-            texto: 'He is the one who gets there before the sun. Panga captain and Rogelio’s partner, he knows the bay like his own home and knows where to find the fish.',
-          },
+        titulo: 'A fishing family',
+        hechos: [
+          { valor: '30+', etiqueta: 'years at sea for Rogelio Camacho' },
+          { valor: '3+', etiqueta: 'generations of his family in fishing' },
+          { valor: '365', etiqueta: 'days a year with trips from Marina La Costa' },
         ],
-        cita: {
+        resena:
+          'Rogelio Camacho grew up in El Manglito watching the sportfishing boats leave La Paz. Today he has more than thirty years on the bay, and his family has been at sea for more than three generations. With him goes a guild of local captains who know every reef and every season. You don’t come to La Paz to look at the sea: you come to fish it.',
+        prensa: {
+          etiqueta: 'Press',
           texto: 'The enthusiasm of boatmen like Rogelio Camacho is the engine of the city of La Paz.',
-          atribucion: 'Perla Taddie García, Peninsular Digital, 2010.',
+          fuente: 'Perla Taddie García, Peninsular Digital, 2010.',
+        },
+        tripulacion: {
+          titulo: 'The captains guild',
+          texto: 'Local La Paz captains, out on the bay every day. They know where the fish are.',
+          capitanes: [
+            { nombre: 'Rogelio', detalle: 'Camacho · more than 30 years at sea', pendiente: true },
+            { nombre: 'Omar', detalle: '«Boli» · Rogelio’s partner', pendiente: true },
+            { nombre: 'Alfredo', detalle: 'Camacho', pendiente: true },
+            { nombre: 'Joel', detalle: 'Martínez', pendiente: true },
+            { nombre: 'Icho', detalle: 'Camacho', pendiente: true },
+            { nombre: 'Julio', detalle: '«Chito»', pendiente: true },
+            { nombre: 'Raúl', detalle: 'Martínez', pendiente: true },
+            { nombre: 'Dagoberto', pendiente: true },
+          ],
+        },
+        fotos: [
+          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'A captain with a freshly caught grouper on the bay', pie: 'A fresh grouper, on the bay.' },
+          { src: '/photos/dorado-bajo-toldo.webp', alt: 'A mahi under the panga canopy', pie: 'Under the panga canopy.' },
+          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'The day’s catch on the deck of the panga', pie: 'The day’s catch, on deck.' },
+          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'A yellowtail with pelicans next to the panga', pie: 'Yellowtail, with the pelicans alongside.' },
+        ],
+        cierre: {
+          titulo: 'Head out with the sun',
+          frase: 'Departures from 5:00 to 7:00 am at Marina La Costa, with a guild captain and only your group on board.',
+          boton: 'Book your trip',
         },
       },
       galeria: [

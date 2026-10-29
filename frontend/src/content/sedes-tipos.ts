@@ -34,6 +34,19 @@ export type SedeHeroContenido = {
   palabras?: string[];
   subtitulo: string;
   facts: { value: string; label: string }[];
+  /**
+   * Primera vista «de marca»: el nombre de la empresa como monumento (`inicio` arriba, `fin` abajo con el isotipo del
+   * tamaño de una letra) y entre los dos una foto a sangre de una panga propia. Sustituye a la palabra que rota y al
+   * video. El `h1` es `titulo` (qué es y dónde); `frase` va debajo. Solo la sede que lo pide lo tiene.
+   */
+  marca?: SedeHeroMarca;
+};
+
+export type SedeHeroMarca = {
+  nombre: { inicio: string; fin: string };
+  titulo: string;
+  frase: string;
+  foto: { src: string; alt: string; posicion?: string };
 };
 
 export type SedeNegocio = {
@@ -76,16 +89,26 @@ export type SedeDia = {
 };
 
 /**
- * «Conócenos»: la gente detrás de los servicios de la sede. El título, una apertura corta, una sola foto, los
- * socios (nombre y una línea cada uno) y una cita con su fuente.
+ * «Conócenos»: la gente detrás de los servicios de la sede, en cuatro tiempos.
+ * 1. La reseña: un título, tres hechos a la izquierda (lo que se sabe de verdad: los años de Rogelio en el mar, las
+ *    generaciones de su familia, de dónde salen) y la reseña a la derecha; debajo, la prensa.
+ * 2. La tripulación: el gremio de capitanes como cartel, un nombre de pila por renglón y su dato a la derecha. No hay
+ *    foto ni panga por capitán. Un capitán `pendiente` (nombre por confirmar) no se publica (`capitanesVisibles`).
+ * 3. Las fotos de su gente y sus pangas, sueltas a distintos tamaños, cada una con lo que muestra.
+ * 4. El cierre: la idea de la marca otra vez («Sal con el sol») y el botón de reservar.
  */
 export type SedeConocenos = {
-  /** El título en tres líneas; la del medio es la que se destaca («generaciones»). */
-  titulo: { inicio: string; destacada: string; fin: string };
-  apertura: string;
-  foto: { src: string; alt: string };
-  socios: { nombre: string; texto: string }[];
-  cita: { texto: string; atribucion: string };
+  titulo: string;
+  hechos: { etiqueta: string; valor: string }[];
+  resena: string;
+  prensa: { etiqueta: string; texto: string; fuente: string };
+  tripulacion: {
+    titulo: string;
+    texto: string;
+    capitanes: { nombre: string; detalle?: string; pendiente?: boolean }[];
+  };
+  fotos: { src: string; alt: string; pie: string }[];
+  cierre: { titulo: string; frase: string; boton: string };
 };
 
 export type SedeDestacada = {
