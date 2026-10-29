@@ -9,6 +9,8 @@ type SeasonSectionProps = {
   temporadas: SedeTemporadas;
   textos: { ahora: string };
   fondo: Fondo;
+  /** El isotipo de la empresa, junto a la temporada de ahora. */
+  isotipo?: string;
 };
 
 /**
@@ -17,11 +19,11 @@ type SeasonSectionProps = {
  *
  * Server Component (el selector es una isla cliente).
  */
-export function SeasonSection({ id, titulo, temporadas, textos, fondo }: SeasonSectionProps) {
+export function SeasonSection({ id, titulo, temporadas, textos, fondo, isotipo }: SeasonSectionProps) {
   return (
     <SectionShell id={id} fondo={fondo} titulo={titulo}>
       <p className="mt-4 max-w-[60ch] text-lg leading-relaxed">{temporadas.intro}</p>
-      <TemporadasSelector temporadas={temporadas} textos={textos} />
+      <TemporadasSelector temporadas={temporadas} textos={textos} isotipo={isotipo} />
     </SectionShell>
   );
 }

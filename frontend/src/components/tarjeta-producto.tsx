@@ -11,6 +11,8 @@ export type VistaProducto = {
   clave: string;
   nombre: string;
   empresa: string;
+  /** El isotipo de la empresa que te lleva; con él, el renglón «Te lleva» lo usa en vez del ícono genérico. */
+  logoEmpresa?: string;
   color: ColorActividad;
   /** La palabra del tipo («Pesca», «5 noches»): rotula el bloque de color cuando no hay foto honesta. */
   palabra: string;
@@ -133,9 +135,15 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
         <p className={cn(unica ? 'texto-paso lg:text-4xl lg:leading-tight' : 'text-lg font-semibold leading-snug')}>{nombre}</p>
 
         <ul className="flex flex-wrap gap-x-5 gap-y-2 texto-cuerpo">
-          {datos.map(({ icono: Icono, texto }) => (
+          {datos.map(({ icono: Icono, texto }, i) => (
             <li key={texto} className="flex items-center gap-2">
-              <Icono size={20} weight="regular" aria-hidden="true" className="shrink-0" />
+              {i === 0 && vista.logoEmpresa ? (
+                <span aria-hidden className="relative inline-block size-7 shrink-0 overflow-hidden rounded-full bg-blanco">
+                  <Image src={vista.logoEmpresa} alt="" fill sizes="28px" className="object-contain p-[6%]" />
+                </span>
+              ) : (
+                <Icono size={20} weight="regular" aria-hidden="true" className="shrink-0" />
+              )}
               {texto}
             </li>
           ))}

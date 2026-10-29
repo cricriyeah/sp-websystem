@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { WhatsappLogo } from '@phosphor-icons/react/ssr';
 import { CifraContada } from '@/components/ui/cifra-contada';
@@ -15,6 +16,8 @@ type Props = {
   /** Atención al cliente por WhatsApp: el número ya formateado y el enlace con el mensaje escrito. Sin número configurado, no hay bloque. */
   atencion: { numero: string; href: string } | null;
   fondo: Fondo;
+  /** La empresa que opera la sede: su isotipo va como sello junto al título (estas reglas las respalda ella). */
+  sello?: { isotipo: string; empresa: string };
 };
 
 function Cifra({ cifra, titulo, children }: { cifra: string; titulo: string; children: ReactNode }) {
@@ -29,13 +32,20 @@ function Cifra({ cifra, titulo, children }: { cifra: string; titulo: string; chi
 
 /**
  * Pago, clima y cambio de fecha como tres cifras grandes en la banda negra (F10), que cuentan desde cero
- * al entrar. Una sola política para las cuatro empresas. Al final, el número de atención al cliente.
+ * al entrar. Una sola política para las cuatro empresas. Al final, el número de atención al cliente. Con `sello`, el
+ * isotipo de la empresa que opera la sede va junto al título, como sello de que respalda esas reglas (un solo logo
+ * en toda la banda: también cubre el bloque de atención).
  *
  * Server Component (las cifras que cuentan son una isla cliente).
  */
-export function ReservaTranquila({ id, textos, porcentaje, atencion, fondo }: Props) {
+export function ReservaTranquila({ id, textos, porcentaje, atencion, fondo, sello }: Props) {
+  const lado = sello ? (
+    <span className="rev relative block size-20 shrink-0 overflow-hidden rounded-full bg-blanco sm:size-24">
+      <Image src={sello.isotipo} alt={sello.empresa} fill sizes="96px" className="object-contain p-[6%]" />
+    </span>
+  ) : undefined;
   return (
-    <SectionShell id={id} fondo={fondo} titulo={textos.titulo}>
+    <SectionShell id={id} fondo={fondo} titulo={textos.titulo} lado={lado}>
       <ul className="mt-12 grid gap-12 md:grid-cols-3 md:gap-8 lg:mt-16">
         <Cifra cifra={porcentaje === null ? textos.cifraTotal : `${porcentaje} %`} titulo={textos.pagoTitulo}>
           <p>{porcentaje === null ? textos.pagoTextoTotal : textos.pagoTexto.replace('{porcentaje}', String(porcentaje))}</p>

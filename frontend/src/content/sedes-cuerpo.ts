@@ -78,7 +78,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { valor: '365', etiqueta: 'días al año con salidas desde Marina La Costa' },
         ],
         resena:
-          'Rogelio Camacho creció en El Manglito viendo salir los barcos de pesca deportiva de La Paz. Hoy suma más de treinta años en la bahía y su familia lleva más de tres generaciones en el mar. Con él sale un gremio de capitanes de aquí, que conocen cada bajo y cada temporada. A La Paz no se viene a ver el mar: se viene a pescarlo.',
+          'Aquí nadie aprendió a pescar en un curso. Rogelio Camacho creció en El Manglito viendo zarpar los barcos de pesca deportiva, y desde hace más de treinta años es él quien zarpa. Su familia lleva más de tres generaciones en el mar, y con él sale un gremio de capitanes de La Paz que conoce la bahía como su propia casa. Tú traes las ganas. El mar ya lo conocemos.',
         prensa: {
           etiqueta: 'Prensa',
           texto: 'El entusiasmo de lancheros como Rogelio Camacho es el motor de la ciudad de La Paz.',
@@ -293,7 +293,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { valor: '365', etiqueta: 'days a year with trips from Marina La Costa' },
         ],
         resena:
-          'Rogelio Camacho grew up in El Manglito watching the sportfishing boats leave La Paz. Today he has more than thirty years on the bay, and his family has been at sea for more than three generations. With him goes a guild of local captains who know every reef and every season. You don’t come to La Paz to look at the sea: you come to fish it.',
+          'Nobody here learned to fish in a class. Rogelio Camacho grew up in El Manglito watching the sportfishing boats head out, and for more than thirty years he has been the one at the helm. His family has worked this sea for more than three generations, and with him goes a guild of La Paz captains who know the bay like their own backyard. You bring the drive. We already know the water.',
         prensa: {
           etiqueta: 'Press',
           texto: 'The enthusiasm of boatmen like Rogelio Camacho is the engine of the city of La Paz.',
