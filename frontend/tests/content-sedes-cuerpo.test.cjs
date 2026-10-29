@@ -95,17 +95,20 @@ test('«Tu día» en La Paz y La Ventana con los mismos momentos en es y en; Pue
   assert.equal(c.getSedeContenido('puerto-chale', 'es').dia, undefined);
 });
 
-test('«Conócenos» de La Paz: reseña con hechos reales, prensa, tripulación, fotos y cierre en los dos idiomas', () => {
+test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), prensa, tripulación y cierre en los dos idiomas', () => {
   const es = c.getSedeContenido('la-paz', 'es').conocenos;
   const en = c.getSedeContenido('la-paz', 'en').conocenos;
   for (const k of [es, en]) {
-    assert.match(k.titulo, /^(Familia de pescadores|A fishing family)$/);
-    assert.deepEqual(k.hechos.map((h) => h.valor), ['30+', '3+', '365'], 'solo hechos confirmados o ya publicados');
-    assert.match(k.resena, /Rogelio Camacho/);
+    assert.ok(k.titulo && k.apertura);
+    assert.equal(k.historia.length, 3, 'un relato en tres párrafos');
+    assert.ok(k.historia.join(' ').split(/\s+/).length >= 150, 'texto largo, de trayectoria e historia');
+    assert.ok(!('hechos' in k), 'sin cifras sueltas: se leían como estadísticas');
+    assert.match(k.historia.join(' '), /(gremio|guild)/, 'el protagonista es el grupo, no una persona');
     assert.ok(/Peninsular Digital, 2010/.test(k.prensa.fuente) && /(motor|engine)/.test(k.prensa.texto));
     assert.ok(k.tripulacion.titulo && k.tripulacion.texto);
     assert.equal(k.tripulacion.capitanes[0].nombre, 'Rogelio');
-    assert.ok(k.foto.src.startsWith('/photos/') && k.foto.alt, 'la panga del jefe llena la columna de la reseña');
+    assert.ok(k.foto.src.startsWith('/photos/') && k.foto.alt);
+    assert.ok(!k.foto.src.includes('sobre-nosotros'), 'no el retrato del jefe solo');
     assert.ok(k.cierre.titulo && k.cierre.frase && k.cierre.boton);
     const todo = JSON.stringify(k);
     assert.ok(!todo.includes('1950'), 'sin año de fundación');

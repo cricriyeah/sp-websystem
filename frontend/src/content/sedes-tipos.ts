@@ -76,25 +76,23 @@ export type SedeDia = {
 };
 
 /**
- * «Conócenos»: la gente detrás de los servicios de la sede, en cuatro tiempos.
- * 1. La reseña: un título, tres hechos a la izquierda (lo que se sabe de verdad: los años de Rogelio en el mar, las
- *    generaciones de su familia, de dónde salen) y la reseña a la derecha; debajo, la prensa.
- * 2. La tripulación: el gremio de capitanes como cartel, un nombre de pila por renglón y su dato a la derecha. No hay
- *    foto ni panga por capitán. Un capitán `pendiente` (nombre por confirmar) no se publica (`capitanesVisibles`).
- *    A la derecha de las cifras, bajo la reseña, la foto de la panga del jefe (la Dream) cierra la columna.
- * 3. El cierre: la idea de la marca otra vez («Sal con el sol») y el botón de reservar.
+ * «Conócenos»: la historia de la gente detrás de los servicios de la sede, contada como relato (nada de cifras sueltas:
+ * el dueño las leyó como estadísticas de ventas). El protagonista es el grupo (la familia y el gremio de capitanes), no
+ * una persona. Un título, una frase de apertura grande, los párrafos del relato y una foto del equipo; la prensa; la
+ * tripulación como cartel (un capitán `pendiente` no se publica, `capitanesVisibles`); y el cierre con el botón.
  */
 export type SedeConocenos = {
   titulo: string;
-  hechos: { etiqueta: string; valor: string }[];
-  resena: string;
+  apertura: string;
+  historia: string[];
+  /** Una foto del equipo o del gremio, nunca el retrato de una sola persona. */
+  foto: { src: string; alt: string };
   prensa: { etiqueta: string; texto: string; fuente: string };
   tripulacion: {
     titulo: string;
     texto: string;
     capitanes: { nombre: string; detalle?: string; pendiente?: boolean }[];
   };
-  foto: { src: string; alt: string };
   cierre: { titulo: string; frase: string; boton: string };
 };
 

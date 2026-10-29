@@ -16,13 +16,14 @@ type Props = {
 };
 
 /**
- * «Conócenos» de la sede, rehecho con la dirección de taste «El nombre como monumento» y la derivación PFD (R1-R5).
+ * «Conócenos» de la sede: la historia de su gente (taste, dirección editorial) y la derivación PFD (R1-R5).
  * Tres tiempos, cada uno con su propia composición:
  *
- * 1. Reseña («Side facts, wide paragraph»): el título; a la izquierda (34 %) los tres hechos, cada cifra monumental
- *    con lo que cuenta debajo; desde la misma línea, la reseña a lo ancho y, bajo ella, la foto de la panga del jefe (la
- *    Dream), que cierra la columna a la altura de la última cifra (sin ella, la mitad derecha quedaba vacía). Abajo,
- *    «Prensa» y la cita, en la misma retícula.
+ * 1. Historia (relato editorial, sin cifras sueltas: se leían como estadísticas de ventas): en escritorio, la foto del
+ *    gremio en las columnas 1-5, fija mientras se lee, y en las 6-12 el título, la frase de apertura grande (tamaño de
+ *    frase, no de titular), los párrafos del relato con medida de lectura y la cita de prensa. El protagonista es el
+ *    grupo; la foto nunca es el retrato de una sola persona. En el teléfono todo va apilado: título, apertura, foto,
+ *    relato y prensa.
  * 2. Tripulación («One item per poster line»): el gremio como cartel, un nombre de pila por renglón en la letra de los
  *    titulares y, a la derecha y en la misma línea base, su dato con el isotipo delante (la única marca, la misma en
  *    todos). En escritorio el título se queda fijo a la izquierda mientras pasan los nombres (el movimiento firma de la
@@ -33,34 +34,39 @@ type Props = {
  * Todo entra con `rev` al llegar a cuadro (con «reducir movimiento» no se mueve). Server Component.
  */
 export function ConocenosSede({ id, conocenos, fondo, isotipo }: Props) {
-  const { titulo, hechos, resena, foto, prensa, tripulacion, cierre } = conocenos;
+  const { titulo, apertura, historia, foto, prensa, tripulacion, cierre } = conocenos;
   const capitanes = capitanesVisibles(tripulacion.capitanes, mostrarPendientesEnEsteEntorno(process.env));
 
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className={cn('scroll-mt-[calc(var(--nav-alto)+16px)] pt-16 sm:pt-20 lg:pt-28', CLASE_FONDO[fondo])}>
       <div className="mx-auto flex max-w-[1440px] flex-col gap-24 px-pagina sm:gap-32 xl:gap-40">
-        {/* 1. Reseña */}
-        <div className="grid gap-x-6 gap-y-10 xl:grid-cols-12 xl:gap-y-16">
-          <h2 id={`${id}-titulo`} className="rev texto-display m-0 xl:col-span-12">
-            {titulo}
-          </h2>
-          <dl className="m-0 grid grid-cols-3 gap-x-4 gap-y-6 sm:gap-x-6 xl:col-span-4 xl:row-span-2 xl:grid-cols-1 xl:content-between xl:gap-y-10">
-            {hechos.map((h) => (
-              <div key={h.etiqueta} className="rev flex flex-col-reverse gap-1">
-                <dt className="texto-pequeno max-w-[24ch] sm:text-base">{h.etiqueta}</dt>
-                <dd className="texto-destacado m-0 text-cafe">{h.valor}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="rev m-0 text-xl leading-[1.4] sm:text-2xl xl:col-span-8">{resena}</p>
-          <div className="rev-foto relative aspect-[2/1] overflow-hidden bg-tinta xl:col-span-8 xl:col-start-5">
-            <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1280px) 60vw, 100vw" className="object-cover object-[20%_55%]" />
+        {/* 1. Historia */}
+        <div className="grid gap-x-6 gap-y-10 xl:grid-cols-12">
+          <div className="order-3 xl:order-none xl:col-span-5">
+            <div className="rev-foto relative aspect-[4/3] overflow-hidden bg-tinta xl:sticky xl:top-[calc(var(--nav-alto)+2rem)] xl:aspect-[4/5]">
+              <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1280px) 40vw, 100vw" className="object-cover object-[50%_35%]" />
+            </div>
           </div>
-          <p className="rev texto-etiqueta m-0 xl:col-span-4">{prensa.etiqueta}</p>
-          <figure className="rev m-0 flex flex-col gap-3 xl:col-span-8">
-            <blockquote className="m-0 max-w-[36ch] text-2xl font-semibold leading-snug text-balance xl:text-3xl">{`“${prensa.texto}”`}</blockquote>
-            <figcaption className="texto-cuerpo">{prensa.fuente}</figcaption>
-          </figure>
+          <div className="contents xl:col-span-7 xl:flex xl:flex-col xl:gap-10">
+            <div className="order-1 flex flex-col gap-6 xl:order-none">
+              <h2 id={`${id}-titulo`} className="rev texto-display m-0">
+                {titulo}
+              </h2>
+              <p className="rev m-0 max-w-[32ch] text-2xl font-semibold leading-snug text-balance sm:text-3xl xl:text-4xl">{apertura}</p>
+            </div>
+            <div className="order-4 flex max-w-[62ch] flex-col gap-5 xl:order-none">
+              {historia.map((parrafo) => (
+                <p key={parrafo.slice(0, 32)} className="rev m-0 text-lg leading-relaxed sm:text-xl">
+                  {parrafo}
+                </p>
+              ))}
+            </div>
+            <figure className="rev order-5 m-0 flex flex-col gap-3 bg-tinta p-6 text-hero-ink sm:p-8 xl:order-none">
+              <figcaption className="texto-etiqueta">{prensa.etiqueta}</figcaption>
+              <blockquote className="m-0 text-2xl font-semibold leading-snug text-balance xl:text-3xl">{`“${prensa.texto}”`}</blockquote>
+              <p className="texto-cuerpo m-0">{prensa.fuente}</p>
+            </figure>
+          </div>
         </div>
 
         {/* 2. Tripulación */}

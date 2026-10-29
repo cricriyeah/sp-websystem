@@ -71,14 +71,16 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // Los nombres de la tripulación salen de una nota de voz y están por confirmar (`pendiente`: no se publican).
       conocenos: {
-        titulo: 'Familia de pescadores',
-        hechos: [
-          { valor: '30+', etiqueta: 'años de Rogelio Camacho en el mar' },
-          { valor: '3+', etiqueta: 'generaciones de su familia en la pesca' },
-          { valor: '365', etiqueta: 'días al año con salidas desde Marina La Costa' },
+        titulo: 'Gente de mar',
+        apertura:
+          'En La Paz, la pesca deportiva no se estudia: se mira desde niño en el muelle y se lleva toda la vida.',
+        historia: [
+          'Así fue para Rogelio Camacho, que creció en El Manglito viendo zarpar los barcos de Los Ruffo y de Jack Vélez, donde trabajaban sus hermanos. En ese entonces la pesca deportiva era una competencia tan de La Paz como el malecón. Hoy suma más de treinta años en el mar, y su familia lleva más de tres generaciones en él.',
+          'Pero esta historia no es de un solo hombre. Con nosotros salen capitanes de La Paz, un gremio de gente de aquí que conoce la bahía como la palma de su mano: dónde se junta el pescado en cada temporada, a qué hora se calma el viento, cómo volver con la hielera llena y todos sonriendo.',
+          'Cada madrugada, entre las cinco y las siete, salimos de Marina La Costa con la misma emoción de la primera vez. En la panga vas solo con tu grupo y con un capitán que vive para este mar. Tú traes las ganas. Nosotros te llevamos a donde está la pesca.',
         ],
-        resena:
-          'Aquí nadie aprendió a pescar en un curso. Rogelio Camacho creció en El Manglito viendo zarpar los barcos de pesca deportiva, y desde hace más de treinta años es él quien zarpa. Su familia lleva más de tres generaciones en el mar, y con él sale un gremio de capitanes de La Paz que conoce la bahía como su propia casa. Tú traes las ganas. El mar ya lo conocemos.',
+        // Foto de relleno hasta que llegue la del gremio que edita el dueño (nunca el retrato del jefe solo).
+        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Un capitán con un mero recién sacado, en la bahía de La Paz' },
         prensa: {
           etiqueta: 'Prensa',
           texto: 'El entusiasmo de lancheros como Rogelio Camacho es el motor de la ciudad de La Paz.',
@@ -98,7 +100,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             { nombre: 'Dagoberto', pendiente: true },
           ],
         },
-        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'La panga Dream con su capitán, en la bahía de La Paz' },
         cierre: {
           titulo: 'Sal con el sol',
           frase: 'Salidas de 5:00 a 7:00 am desde Marina La Costa, con un capitán del gremio y solo tu grupo a bordo.',
@@ -286,14 +287,16 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // The crew names come from a voice note and are pending confirmation (`pendiente`: not published).
       conocenos: {
-        titulo: 'A fishing family',
-        hechos: [
-          { valor: '30+', etiqueta: 'years at sea for Rogelio Camacho' },
-          { valor: '3+', etiqueta: 'generations of his family in fishing' },
-          { valor: '365', etiqueta: 'days a year with trips from Marina La Costa' },
+        titulo: 'Born to this bay',
+        apertura:
+          'In La Paz, sportfishing isn’t something you study. You grow up watching it from the dock, and it stays with you for life.',
+        historia: [
+          'That’s how it was for Rogelio Camacho. He grew up in El Manglito watching the boats of Los Ruffo and Jack Vélez head out, the same boats his brothers worked on. Back then, sportfishing was as much a part of La Paz as the malecón. Today he has more than thirty years on the water, and his family has fished this sea for more than three generations.',
+          'But this isn’t one man’s story. The captains who take you out are a guild of La Paz locals who know this bay by heart: where the fish gather each season, when the wind lays down, and how to bring everyone home with a full cooler and a grin.',
+          'Every morning between five and seven, we leave Marina La Costa with the same thrill as the first time. It’s just your group on the panga, with a captain who lives for this water. You bring the drive. We’ll take you where the fish are.',
         ],
-        resena:
-          'Nobody here learned to fish in a class. Rogelio Camacho grew up in El Manglito watching the sportfishing boats head out, and for more than thirty years he has been the one at the helm. His family has worked this sea for more than three generations, and with him goes a guild of La Paz captains who know the bay like their own backyard. You bring the drive. We already know the water.',
+        // Placeholder until the owner sends the guild photo (never a portrait of the boss alone).
+        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'A captain with a freshly caught grouper on the bay of La Paz' },
         prensa: {
           etiqueta: 'Press',
           texto: 'The enthusiasm of boatmen like Rogelio Camacho is the engine of the city of La Paz.',
@@ -313,7 +316,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             { nombre: 'Dagoberto', pendiente: true },
           ],
         },
-        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'The panga Dream and its captain, on the bay of La Paz' },
         cierre: {
           titulo: 'Head out with the sun',
           frase: 'Departures from 5:00 to 7:00 am at Marina La Costa, with a guild captain and only your group on board.',
