@@ -25,8 +25,8 @@ type SeasonSectionProps = {
 export function SeasonSection({ id, titulo, temporadas, textos, fondo, isotipo, empresa }: SeasonSectionProps) {
   // El sello va arriba a la derecha: en el teléfono antes del título (order-first), en escritorio a su altura.
   const lado = isotipo ? (
-    <span className="rev relative order-first block size-20 shrink-0 self-end overflow-hidden rounded-full bg-blanco sm:size-24 lg:order-none lg:self-start">
-      <Image src={isotipo} alt={empresa ?? ''} fill sizes="96px" className="object-contain p-[6%]" />
+    <span className="rev relative order-first block size-28 shrink-0 self-end overflow-hidden rounded-full bg-blanco sm:size-36 lg:order-none lg:self-start xl:size-44">
+      <Image src={isotipo} alt={empresa ?? ''} fill sizes="(min-width: 1280px) 176px, 144px" className="object-contain p-[6%]" />
     </span>
   ) : undefined;
   return (
