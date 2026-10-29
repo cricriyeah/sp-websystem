@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { SedeTemporadas } from '@/content/sedes-tipos';
 import { TemporadasSelector } from '@/components/temporadas-selector';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
@@ -9,8 +10,10 @@ type SeasonSectionProps = {
   temporadas: SedeTemporadas;
   textos: { ahora: string };
   fondo: Fondo;
-  /** El isotipo de la empresa, junto a la temporada de ahora. */
+  /** El isotipo de la empresa: va en la esquina de arriba a la derecha de la sección, como sello. */
   isotipo?: string;
+  /** Nombre de la empresa: el texto alternativo del isotipo. */
+  empresa?: string;
 };
 
 /**
@@ -19,11 +22,17 @@ type SeasonSectionProps = {
  *
  * Server Component (el selector es una isla cliente).
  */
-export function SeasonSection({ id, titulo, temporadas, textos, fondo, isotipo }: SeasonSectionProps) {
+export function SeasonSection({ id, titulo, temporadas, textos, fondo, isotipo, empresa }: SeasonSectionProps) {
+  // El sello va arriba a la derecha: en el teléfono antes del título (order-first), en escritorio a su altura.
+  const lado = isotipo ? (
+    <span className="rev relative order-first block size-20 shrink-0 self-end overflow-hidden rounded-full bg-blanco sm:size-24 lg:order-none lg:self-start">
+      <Image src={isotipo} alt={empresa ?? ''} fill sizes="96px" className="object-contain p-[6%]" />
+    </span>
+  ) : undefined;
   return (
-    <SectionShell id={id} fondo={fondo} titulo={titulo}>
+    <SectionShell id={id} fondo={fondo} titulo={titulo} lado={lado}>
       <p className="mt-4 max-w-[60ch] text-lg leading-relaxed">{temporadas.intro}</p>
-      <TemporadasSelector temporadas={temporadas} textos={textos} isotipo={isotipo} />
+      <TemporadasSelector temporadas={temporadas} textos={textos} />
     </SectionShell>
   );
 }

@@ -12,8 +12,6 @@ const suscribirseAlMes = () => () => {};
 type Props = {
   temporadas: SedeTemporadas;
   textos: { ahora: string };
-  /** El isotipo de la empresa: marca la temporada en la que se está pescando ahora. */
-  isotipo?: string;
 };
 
 /**
@@ -25,7 +23,7 @@ type Props = {
  * opacidad (sin escala), y los textos de todas las temporadas comparten una celda de la cuadrícula, así
  * que el bloque mide siempre lo de la más larga y nada de abajo se mueve. En móvil el texto va antes que la foto: es la respuesta a lo que se acaba de tocar.
  */
-export function TemporadasSelector({ temporadas, textos, isotipo }: Props) {
+export function TemporadasSelector({ temporadas, textos }: Props) {
   const { filas } = temporadas;
   const fuerte = Math.max(0, filas.findIndex((fila) => fila.fuerte));
   // El mes de hoy es del navegador: el servidor no lo sabe (-1) y el cliente lo lee al hidratar.
@@ -52,12 +50,7 @@ export function TemporadasSelector({ temporadas, textos, isotipo }: Props) {
               )}
             >
               <span className="texto-paso">{f.periodo}</span>
-              <span className="texto-etiqueta inline-flex items-center gap-2">
-                {i === hoy && isotipo ? (
-                  <span aria-hidden className="relative inline-block size-6 shrink-0 overflow-hidden rounded-full bg-blanco">
-                    <Image src={isotipo} alt="" fill sizes="24px" className="object-contain p-[6%]" />
-                  </span>
-                ) : null}
+              <span className="texto-etiqueta">
                 {i === hoy ? textos.ahora : ''}
                 {i === hoy && f.fuerte ? <span className="hidden md:inline">{` · ${temporadas.etiquetaFuerte}`}</span> : null}
                 {i !== hoy && f.fuerte ? <span className="hidden md:inline">{temporadas.etiquetaFuerte}</span> : null}

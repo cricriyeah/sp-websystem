@@ -40,7 +40,7 @@ function Cifra({ cifra, titulo, children }: { cifra: string; titulo: string; chi
  */
 export function ReservaTranquila({ id, textos, porcentaje, atencion, fondo, sello }: Props) {
   const lado = sello ? (
-    <span className="rev relative block size-20 shrink-0 overflow-hidden rounded-full bg-blanco sm:size-24">
+    <span className="rev relative order-first block size-20 shrink-0 self-end overflow-hidden rounded-full bg-blanco sm:size-24 lg:order-none lg:self-start">
       <Image src={sello.isotipo} alt={sello.empresa} fill sizes="96px" className="object-contain p-[6%]" />
     </span>
   ) : undefined;
