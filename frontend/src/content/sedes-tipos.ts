@@ -76,33 +76,16 @@ export type SedeDia = {
 };
 
 /**
- * «Conócenos»: la gente detrás de los servicios de la sede. El título, una apertura corta, una sola foto con dos cifras
- * al lado (lo que sí se sabe: los años de Rogelio en el mar y las generaciones de su familia), los socios (nombre y una
- * línea cada uno), el gremio de capitanes (nombre y foto, sin más datos), la flota (tres fotos de las pangas) y el cierre
- * (una cita con su fuente y el botón de reservar).
+ * «Conócenos»: la gente detrás de los servicios de la sede. El título, una apertura corta, una sola foto, los
+ * socios (nombre y una línea cada uno) y una cita con su fuente.
  */
 export type SedeConocenos = {
   /** El título en tres líneas; la del medio es la que se destaca («generaciones»). */
   titulo: { inicio: string; destacada: string; fin: string };
   apertura: string;
   foto: { src: string; alt: string };
-  /** Dos cifras que el dueño confirmó, junto a la foto: `valor` en grande y `texto` que dice de quién son. */
-  cifras: { valor: string; texto: string }[];
   socios: { nombre: string; texto: string }[];
-  /**
-   * El gremio de capitanes locales: un círculo con aro de sol por capitán (nombre y, si hay, foto). Un capitán
-   * `pendiente` es relleno y no se publica (`capitanesVisibles`); sin ninguno visible el bloque no se pinta.
-   */
-  gremio: {
-    titulo: string;
-    texto: string;
-    capitanes: { nombre: string; foto?: string; alt?: string; pendiente?: boolean }[];
-  };
-  /** Las pangas: tres fotos en vertical con un solo pie común. */
-  flota: { pie: string; fotos: { src: string; alt: string }[] };
   cita: { texto: string; atribucion: string };
-  /** El texto del botón con que cierra la sección (lleva a lo que se puede reservar). */
-  reservar: string;
 };
 
 export type SedeDestacada = {

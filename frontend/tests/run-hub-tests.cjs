@@ -31,7 +31,6 @@ const suites = {
   variantes: ['src/components/ui/variantes.ts', 'VARIANTES_TEST_OUT'],
   'caja-campo': ['src/components/ui/caja-campo.ts', 'CAJA_CAMPO_TEST_OUT'],
   iniciales: ['src/lib/iniciales.ts', 'INICIALES_TEST_OUT'],
-  'capitanes-visibles': ['src/lib/capitanes-visibles.ts', 'CAPITANES_TEST_OUT'],
   'borrador-reserva': ['src/lib/borrador-reserva.ts', 'BORRADOR_TEST_OUT'],
   origen: ['src/lib/origen.ts', 'ORIGEN_TEST_OUT'],
   'marca-confirmacion': ['src/lib/marca-confirmacion.ts', 'MARCA_CONFIRMACION_TEST_OUT'],

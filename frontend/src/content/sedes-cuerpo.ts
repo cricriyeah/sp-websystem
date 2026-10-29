@@ -61,13 +61,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // Los datos de Omar están por confirmar con el dueño.
       conocenos: {
-        titulo: { inicio: 'Más de tres', destacada: 'generaciones', fin: 'de pescadores' },
+        titulo: { inicio: 'Tres', destacada: 'generaciones', fin: 'de pescadores' },
         apertura: 'El mar de La Paz no se aprende en un curso. Se hereda.',
         foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Capitán en su panga Dream, en la bahía de La Paz' },
-        cifras: [
-          { valor: '30+', texto: 'años de Rogelio en el mar de La Paz' },
-          { valor: '3+', texto: 'generaciones de una familia de pescadores' },
-        ],
         socios: [
           {
             nombre: 'Rogelio Camacho',
@@ -78,36 +74,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             texto: 'Es el que llega antes que el sol. Capitán de panga y socio de Rogelio, conoce la bahía como su casa y sabe dónde buscar el pescado.',
           },
         ],
-        // Capitanes de relleno: el dueño pasará los nombres y las fotos. `pendiente` los oculta en el sitio publicado.
-        gremio: {
-          titulo: 'Nuestro gremio',
-          texto: 'Un gremio de capitanes de La Paz, que conocen cada rincón de la bahía. Tú eliges la hora; ellos saben dónde está el pescado.',
-          capitanes: [
-            { nombre: 'Capitán 1', pendiente: true },
-            { nombre: 'Capitán 2', pendiente: true },
-            { nombre: 'Capitán 3', pendiente: true },
-            { nombre: 'Capitán 4', pendiente: true },
-            { nombre: 'Capitán 5', pendiente: true },
-            { nombre: 'Capitán 6', pendiente: true },
-            { nombre: 'Capitán 7', pendiente: true },
-            { nombre: 'Capitán 8', pendiente: true },
-            { nombre: 'Capitán 9', pendiente: true },
-          ],
-        },
-        // Fotos de relleno de las pangas: se cambian por las que edita el dueño.
-        flota: {
-          pie: 'Nuestras pangas, en la bahía de La Paz.',
-          fotos: [
-            { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'Dos pescadores con su captura sobre la cubierta de una panga' },
-            { src: '/photos/dorado-bajo-toldo.webp', alt: 'Un pescador con un dorado bajo el toldo de la panga' },
-            { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'Una panga con su capitán en la bahía, con pelícanos al lado' },
-          ],
-        },
         cita: {
           texto: 'El entusiasmo de lancheros como Rogelio Camacho es el motor de la ciudad de La Paz.',
           atribucion: 'Perla Taddie García, Peninsular Digital, 2010.',
         },
-        reservar: 'Reserva tu salida',
       },
       galeria: [
         {
@@ -280,13 +250,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       // Omar's details are pending the owner's confirmation.
       conocenos: {
-        titulo: { inicio: 'More than three', destacada: 'generations', fin: 'of fishermen' },
+        titulo: { inicio: 'Three', destacada: 'generations', fin: 'of fishermen' },
         apertura: 'The sea of La Paz is not learned in a class. It is inherited.',
         foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'Captain aboard his panga Dream on the bay of La Paz' },
-        cifras: [
-          { valor: '30+', texto: 'years on the water for Rogelio, in La Paz' },
-          { valor: '3+', texto: 'generations of a fishing family' },
-        ],
         socios: [
           {
             nombre: 'Rogelio Camacho',
@@ -297,36 +263,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             texto: 'He is the one who gets there before the sun. Panga captain and Rogelio’s partner, he knows the bay like his own home and knows where to find the fish.',
           },
         ],
-        // Placeholder captains: the owner will send the names and photos. `pendiente` hides them on the published site.
-        gremio: {
-          titulo: 'Our guild',
-          texto: 'A guild of La Paz captains who know every corner of the bay. You pick the time; they know where the fish are.',
-          capitanes: [
-            { nombre: 'Captain 1', pendiente: true },
-            { nombre: 'Captain 2', pendiente: true },
-            { nombre: 'Captain 3', pendiente: true },
-            { nombre: 'Captain 4', pendiente: true },
-            { nombre: 'Captain 5', pendiente: true },
-            { nombre: 'Captain 6', pendiente: true },
-            { nombre: 'Captain 7', pendiente: true },
-            { nombre: 'Captain 8', pendiente: true },
-            { nombre: 'Captain 9', pendiente: true },
-          ],
-        },
-        // Placeholder photos of the pangas: swapped for the ones the owner is editing.
-        flota: {
-          pie: 'Our pangas, on the bay of La Paz.',
-          fotos: [
-            { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'Two anglers with their catch on the deck of a panga' },
-            { src: '/photos/dorado-bajo-toldo.webp', alt: 'An angler holding a mahi under the panga canopy' },
-            { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'A panga and its captain on the bay, with pelicans alongside' },
-          ],
-        },
         cita: {
           texto: 'The enthusiasm of boatmen like Rogelio Camacho is the engine of the city of La Paz.',
           atribucion: 'Perla Taddie García, Peninsular Digital, 2010.',
         },
-        reservar: 'Book your trip',
       },
       galeria: [
         {
