@@ -4,7 +4,6 @@ import { ANCLA_DE } from '@/lib/secciones-sede';
 import { PalabraRota } from '@/components/palabra-rota';
 import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { HeroMedia } from '@/components/ui/hero-media';
-import { SedeHeroMarca } from '@/components/sede-hero-marca';
 import { botonClases } from '@/components/ui/variantes';
 
 type SedeHeroProps = {
@@ -29,10 +28,6 @@ type SedeHeroProps = {
  * «Con <nombre>» a tamaño de frase. Sin etiqueta ni píldora: se lee de corrido con el titular. Server Component (la palabra que rota es una isla cliente).
  */
 export function SedeHero({ nombre, contenido, palabras, empresa, empresaSinCirculo = false, textos }: SedeHeroProps) {
-  // Una sede con `marca` (hoy La Paz) abre con su nombre como monumento y una panga propia: ver `SedeHeroMarca`.
-  if (contenido.marca) {
-    return <SedeHeroMarca marca={contenido.marca} isotipo={empresa?.simbolo ?? empresa?.logo} empresa={empresa?.nombre ?? nombre} cta={textos.cta} />;
-  }
   return (
     <section>
       <HeroMedia imagen={contenido.imagen} video={contenido.video} alt="" preload alto="completo" objectPosition={contenido.posicionImagen} objectPositionMovil={contenido.posicionImagenMovil} objectPositionVideoMovil={contenido.posicionVideoMovil}>

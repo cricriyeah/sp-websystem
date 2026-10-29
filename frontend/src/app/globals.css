@@ -274,11 +274,6 @@
    Cada una tiene un motivo, no estan por verse bien:
      .rev        jerarquia, el contenido entra en el orden en que se lee
      .rev-foto   la foto es la protagonista, se descubre en vez de aparecer */
-@keyframes foto-deriva {
-  from { transform: scale(1.08); }
-  to { transform: scale(1); }
-}
-
 @keyframes revelar {
   from {
     opacity: 0;
@@ -415,7 +410,6 @@
      encogido a una columna; `hyphens: manual` y `min-width: 0` para que un hijo flex o grid pueda
      encogerse y envolver. `font-synthesis: none`: Bold es real, ningun navegador inventa otra. */
   .texto-gigante,
-  .texto-marca,
   .texto-tripulacion,
   .texto-destacado,
   .texto-grande,
@@ -448,10 +442,6 @@
   /* Una palabra que destaca sin dominar: la del medio de un titular en `texto-grande` (Conócenos). Mismo tamaño que `texto-gigante` en celular; en pantalla ancha se queda en 7 rem. */
   .texto-destacado { font-size: clamp(4.5rem, 8vw, 7rem); line-height: 0.84; letter-spacing: -0.05em; }
   @media (max-width: 39.99rem) { .texto-destacado { font-size: 12.5vw; } }
-
-  /* El nombre de la marca como monumento (primera vista de La Paz): «Sal y» arriba y «Sol» abajo, con el isotipo
-     del tamaño de una letra. Va partido en dos renglones cortos, así que puede ser más grande que la letra gigante. */
-  .texto-marca { font-size: clamp(5rem, 13vw, 13.5rem); line-height: 0.84; letter-spacing: -0.05em; }
 
   /* La tripulación como cartel: un nombre por renglón. En el teléfono, 15 vw (el nombre más largo, «Dagoberto»,
      cabe en una línea); en escritorio comparte la fila con su dato y baja a 7 vw. */
@@ -489,11 +479,6 @@
 
   .rev-foto {
     animation: revelar-foto 1s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  /* La foto de la panga en la primera vista de La Paz se acerca muy despacio: la imagen que se mueve de la página. */
-  .foto-deriva {
-    animation: foto-deriva 14s cubic-bezier(0.25, 0.1, 0.25, 1) both;
   }
 
   .icono-cargando {
@@ -811,10 +796,9 @@
     }
   }
 
-  /* El logo del pie no se anima con el scroll: queda completo y quieto. La foto de la primera vista no se acerca. */
+  /* El logo del pie no se anima con el scroll: queda completo y quieto. */
   .logo-isotipo,
-  .logo-letras,
-  .foto-deriva {
+  .logo-letras {
     animation: none;
   }
 

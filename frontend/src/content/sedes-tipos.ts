@@ -34,19 +34,6 @@ export type SedeHeroContenido = {
   palabras?: string[];
   subtitulo: string;
   facts: { value: string; label: string }[];
-  /**
-   * Primera vista «de marca»: el nombre de la empresa como monumento (`inicio` arriba, `fin` abajo con el isotipo del
-   * tamaño de una letra) y entre los dos una foto a sangre de una panga propia. Sustituye a la palabra que rota y al
-   * video. El `h1` es `titulo` (qué es y dónde); `frase` va debajo. Solo la sede que lo pide lo tiene.
-   */
-  marca?: SedeHeroMarca;
-};
-
-export type SedeHeroMarca = {
-  nombre: { inicio: string; fin: string };
-  titulo: string;
-  frase: string;
-  foto: { src: string; alt: string; posicion?: string };
 };
 
 export type SedeNegocio = {
@@ -94,8 +81,8 @@ export type SedeDia = {
  *    generaciones de su familia, de dónde salen) y la reseña a la derecha; debajo, la prensa.
  * 2. La tripulación: el gremio de capitanes como cartel, un nombre de pila por renglón y su dato a la derecha. No hay
  *    foto ni panga por capitán. Un capitán `pendiente` (nombre por confirmar) no se publica (`capitanesVisibles`).
- * 3. Las fotos de su gente y sus pangas, sueltas a distintos tamaños, cada una con lo que muestra.
- * 4. El cierre: la idea de la marca otra vez («Sal con el sol») y el botón de reservar.
+ *    A la derecha de las cifras, bajo la reseña, la foto de la panga del jefe (la Dream) cierra la columna.
+ * 3. El cierre: la idea de la marca otra vez («Sal con el sol») y el botón de reservar.
  */
 export type SedeConocenos = {
   titulo: string;
@@ -107,7 +94,7 @@ export type SedeConocenos = {
     texto: string;
     capitanes: { nombre: string; detalle?: string; pendiente?: boolean }[];
   };
-  fotos: { src: string; alt: string; pie: string }[];
+  foto: { src: string; alt: string };
   cierre: { titulo: string; frase: string; boton: string };
 };
 
@@ -121,6 +108,16 @@ export type SedeDestacada = {
 export type SedeServicioTransporte = {
   empresaSlug: string;
 } | null;
+
+/**
+ * «Nuestras pangas»: justo bajo el héroe, la firma de la empresa (su isotipo con el nombre), un título, una frase y tres
+ * fotos (una protagonista y dos de apoyo), cada una con lo que muestra. Sin botón: lo siguiente es lo que se reserva.
+ */
+export type SedePangas = {
+  titulo: string;
+  texto: string;
+  fotos: { src: string; alt: string; pie: string }[];
+};
 
 /** Contenido largo/pesado por sede — vive en `sedes-cuerpo.ts` (server-only). */
 export type SedeCuerpoContenido = {
@@ -141,6 +138,8 @@ export type SedeCuerpoContenido = {
   dia?: SedeDia;
   /** Quiénes hacen los servicios de la sede. Sin él, no hay sección. */
   conocenos?: SedeConocenos;
+  /** Las pangas de la sede, bajo el héroe. Sin ellas, no hay sección. */
+  pangas?: SedePangas;
   temporadas?: SedeTemporadas;
   faq?: { q: string; a: string }[];
 };

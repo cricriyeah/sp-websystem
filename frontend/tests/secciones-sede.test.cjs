@@ -10,6 +10,15 @@ const base = { servicios: [{}], paquetes: [], resenas: [], fotos: [], faq: [], t
 const ids = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).map((x) => x.id);
 const reservar = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).find((x) => x.id === 'reservar');
 
+test('las pangas van justo después del héroe, antes de lo que se reserva, y no salen en el menú', () => {
+  assert.deepEqual(ids({ pangas: [{}] }).slice(0, 3), ['hero', 'pangas', 'reservar']);
+  assert.ok(!ids({ pangas: [] }).includes('pangas'));
+  assert.ok(!ids({}).includes('pangas'));
+  assert.deepEqual(s.enlacesDeSede(['hero', 'pangas', 'reservar']).map((e) => e.claveNav), ['reservar']);
+  const fondos = s.fondosDeSecciones(['hero', 'pangas', 'reservar']);
+  assert.notEqual(fondos.pangas, fondos.reservar, 'dos bandas seguidas nunca con el mismo tono');
+});
+
 test('catálogo caído: ambas listas null', () => {
   assert.deepEqual(reservar({ servicios: null, paquetes: null }), { id: 'reservar', estado: 'catalogo_caido' });
 });

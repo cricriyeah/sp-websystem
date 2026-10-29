@@ -105,14 +105,14 @@ test('«Conócenos» de La Paz: reseña con hechos reales, prensa, tripulación,
     assert.ok(/Peninsular Digital, 2010/.test(k.prensa.fuente) && /(motor|engine)/.test(k.prensa.texto));
     assert.ok(k.tripulacion.titulo && k.tripulacion.texto);
     assert.equal(k.tripulacion.capitanes[0].nombre, 'Rogelio');
-    assert.ok(k.fotos.length >= 4 && k.fotos.every((f) => f.src.startsWith('/photos/') && f.alt && f.pie));
+    assert.ok(k.foto.src.startsWith('/photos/') && k.foto.alt, 'la panga del jefe llena la columna de la reseña');
     assert.ok(k.cierre.titulo && k.cierre.frase && k.cierre.boton);
     const todo = JSON.stringify(k);
     assert.ok(!todo.includes('1950'), 'sin año de fundación');
     assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
     assert.ok(!/n[uú]mero uno|number one|#1/i.test(todo), 'ningún superlativo sin prueba');
   }
-  assert.deepEqual(es.fotos.map((f) => f.src), en.fotos.map((f) => f.src));
+  assert.equal(es.foto.src, en.foto.src);
   assert.deepEqual(es.tripulacion.capitanes.map((x) => x.nombre), en.tripulacion.capitanes.map((x) => x.nombre));
 });
 
@@ -124,14 +124,17 @@ test('«Conócenos» de La Paz: los nombres de la tripulación siguen marcados `
   }
 });
 
-test('la primera vista de La Paz es la de marca: nombre partido, foto de una panga propia y título con qué es', () => {
-  for (const lang of ['es', 'en']) {
-    const m = c.getSedeContenido('la-paz', lang).hero.marca;
-    assert.deepEqual(m.nombre, { inicio: 'Sal y', fin: 'Sol' });
-    assert.match(m.titulo, /La Paz/);
-    assert.ok(m.foto.src.startsWith('/photos/') && m.foto.alt);
+test('las pangas de La Paz: firma, título, frase y tres fotos con su pie, iguales en los dos idiomas', () => {
+  const es = c.getSedeContenido('la-paz', 'es').pangas;
+  const en = c.getSedeContenido('la-paz', 'en').pangas;
+  for (const p of [es, en]) {
+    assert.ok(p.titulo && p.texto);
+    assert.equal(p.fotos.length, 3, 'una protagonista y dos de apoyo: cabe en una pantalla');
+    assert.ok(p.fotos.every((f) => f.src.startsWith('/photos/') && f.alt && f.pie));
+    assert.ok(!/[—–]/.test(JSON.stringify(p)));
   }
-  assert.equal(c.getSedeContenido('la-ventana', 'es').hero.marca, undefined, 'las otras sedes siguen con su arranque');
+  assert.deepEqual(es.fotos.map((f) => f.src), en.fotos.map((f) => f.src));
+  assert.equal(c.getSedeContenido('la-paz', 'es').hero.marca, undefined, 'el héroe vuelve a ser el de video');
 });
 
 test('el héroe de La Paz se encuadra a la izquierda en celular, en los dos idiomas', () => {

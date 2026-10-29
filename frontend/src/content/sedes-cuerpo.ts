@@ -41,12 +41,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { value: 'Hasta 5 personas', label: 'Ambiente privado y familiar' },
           { value: '365 días al año', label: 'Salidas disponibles todo el año' },
         ],
-        marca: {
-          nombre: { inicio: 'Sal y', fin: 'Sol' },
-          titulo: 'Pesca deportiva en La Paz',
-          frase: 'Salimos todos los días de Marina La Costa, de 5:00 a 7:00 am, con capitanes de aquí y solo tu grupo a bordo.',
-          foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'La panga Dream con su capitán en la bahía de La Paz', posicion: '14% 60%' },
-        },
       },
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
@@ -65,8 +59,17 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Regresa', texto: 'Con tus fotos y tu captura.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
+      // Fotos de relleno de las pangas (las que ya existen) hasta que lleguen las que edita el dueño.
+      pangas: {
+        titulo: 'Las pangas de Sal y Sol',
+        texto: 'Salen todos los días de Marina La Costa, con su capitán y solo tu grupo a bordo.',
+        fotos: [
+          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'Dos pescadores con su captura sobre la cubierta de una panga', pie: 'La pesca del día, en cubierta.' },
+          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'Una panga con su capitán en la bahía, con pelícanos al lado', pie: 'Con el capitán, en la bahía.' },
+          { src: '/photos/dorado-bajo-toldo.webp', alt: 'Un pescador con un dorado bajo el toldo de la panga', pie: 'Bajo el toldo de la panga.' },
+        ],
+      },
       // Los nombres de la tripulación salen de una nota de voz y están por confirmar (`pendiente`: no se publican).
-      // Las fotos son las que ya existen, de relleno, hasta que lleguen las que edita el dueño.
       conocenos: {
         titulo: 'Familia de pescadores',
         hechos: [
@@ -95,12 +98,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             { nombre: 'Dagoberto', pendiente: true },
           ],
         },
-        fotos: [
-          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Un capitán con un mero recién sacado, en la bahía', pie: 'Un mero recién sacado, en la bahía.' },
-          { src: '/photos/dorado-bajo-toldo.webp', alt: 'Un dorado bajo el toldo de la panga', pie: 'Bajo el toldo de la panga.' },
-          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'La pesca del día sobre la cubierta de la panga', pie: 'La pesca del día, en cubierta.' },
-          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'Un jurel con pelícanos junto a la panga', pie: 'Jurel, con los pelícanos al lado.' },
-        ],
+        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'La panga Dream con su capitán, en la bahía de La Paz' },
         cierre: {
           titulo: 'Sal con el sol',
           frase: 'Salidas de 5:00 a 7:00 am desde Marina La Costa, con un capitán del gremio y solo tu grupo a bordo.',
@@ -258,12 +256,6 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { value: 'Up to 5 guests', label: 'Private & family-friendly' },
           { value: '365 days a year', label: 'Departures available all year' },
         ],
-        marca: {
-          nombre: { inicio: 'Sal y', fin: 'Sol' },
-          titulo: 'Sportfishing in La Paz',
-          frase: 'We head out every day from Marina La Costa, between 5:00 and 7:00 am, with local captains and only your group on board.',
-          foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'The panga Dream and its captain on the bay of La Paz', posicion: '14% 60%' },
-        },
       },
       destacadas: [
         { tipo: 'servicio', slug: 'pesca-deportiva', empresaSlug: 'sal-y-sol', inlineable: true },
@@ -282,8 +274,17 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { titulo: 'Return', texto: 'Back with your photos and your catch.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
+      // Placeholder photos of the pangas (the existing ones) until the owner sends the edited ones.
+      pangas: {
+        titulo: 'The Sal y Sol pangas',
+        texto: 'They leave Marina La Costa every day, with their captain and only your group on board.',
+        fotos: [
+          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'Two anglers with their catch on the deck of a panga', pie: 'The day’s catch, on deck.' },
+          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'A panga and its captain on the bay, with pelicans alongside', pie: 'With the captain, on the bay.' },
+          { src: '/photos/dorado-bajo-toldo.webp', alt: 'An angler holding a mahi under the panga canopy', pie: 'Under the panga canopy.' },
+        ],
+      },
       // The crew names come from a voice note and are pending confirmation (`pendiente`: not published).
-      // The photos are the existing ones, as placeholders, until the owner sends the edited ones.
       conocenos: {
         titulo: 'A fishing family',
         hechos: [
@@ -312,12 +313,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             { nombre: 'Dagoberto', pendiente: true },
           ],
         },
-        fotos: [
-          { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'A captain with a freshly caught grouper on the bay', pie: 'A fresh grouper, on the bay.' },
-          { src: '/photos/dorado-bajo-toldo.webp', alt: 'A mahi under the panga canopy', pie: 'Under the panga canopy.' },
-          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'The day’s catch on the deck of the panga', pie: 'The day’s catch, on deck.' },
-          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'A yellowtail with pelicans next to the panga', pie: 'Yellowtail, with the pelicans alongside.' },
-        ],
+        foto: { src: '/photos/sobre-nosotros-la-paz.webp', alt: 'The panga Dream and its captain, on the bay of La Paz' },
         cierre: {
           titulo: 'Head out with the sun',
           frase: 'Departures from 5:00 to 7:00 am at Marina La Costa, with a guild captain and only your group on board.',
