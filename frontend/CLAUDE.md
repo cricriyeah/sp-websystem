@@ -243,6 +243,22 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
 - **`npm run verificar`** corre toda la puerta: `tsc`, `eslint`, `npm test`, `test:guardia`, `guardia`
   y `next build`. Córrelo antes de cerrar cualquier tarea de frontend.
 
+## «Conócenos» de La Paz: el gremio de capitanes (relleno que no se publica)
+
+`conocenos-sede.tsx` pinta, de `sedes-cuerpo.ts`: título, apertura, foto con las dos cifras que el dueño confirmó (`30+` años
+de Rogelio en el mar, `3+` generaciones de su familia), socios, el gremio de capitanes, la flota (tres fotos de pangas) y el
+cierre con la cita y el botón de reservar. El gremio es un círculo por capitán, todos iguales, con UN solo sello: el aro del sol
+del logo (`border-sol`, token `--color-sol`). No hay estrellas ni insignias. No se inventan datos por capitán (ni años ni
+panga): solo nombre y foto.
+
+- Los capitanes de `gremio.capitanes` marcados `pendiente: true` son RELLENO («Capitán 1»…): se ven en desarrollo y en una
+  vista previa con `NEXT_PUBLIC_VER_PENDIENTES=1`, pero NUNCA en el sitio publicado (`lib/capitanes-visibles.ts`). Si no
+  queda ninguno visible el bloque entero se omite. Cuando el dueño pase los nombres y las fotos: sustituir las entradas,
+  quitar `pendiente`, poner las fotos en `public/photos/capitanes/` y la prueba `content-sedes-cuerpo` sigue exigiendo que un
+  nombre de relleno siempre lleve `pendiente`.
+- Las fotos de la flota son de relleno (las que ya existen) hasta que lleguen las que edita el dueño.
+- El logo del héroe de las sedes (`EmpresaSello` en `sede-hero.tsx`) subió a `tamano={96}` y aparece con `rev`.
+
 ## Continuar reservación (banda global)
 
 `ContinuarReservacion` (`src/components/continuar-reservacion.tsx`) es una

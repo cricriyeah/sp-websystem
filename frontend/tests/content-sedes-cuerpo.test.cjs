@@ -99,7 +99,7 @@ test('«Conócenos» de La Paz: título de las generaciones, una foto, dos socio
   for (const lang of ['es', 'en']) {
     const k = c.getSedeContenido('la-paz', lang).conocenos;
     assert.ok(k, lang);
-    assert.match(`${k.titulo.inicio} ${k.titulo.destacada} ${k.titulo.fin}`, /^(Tres generaciones de|Three generations of)/);
+    assert.match(`${k.titulo.inicio} ${k.titulo.destacada} ${k.titulo.fin}`, /^(Más de tres generaciones de|More than three generations of)/);
     assert.ok(k.foto.src && k.foto.alt);
     assert.equal(k.socios.length, 2);
     assert.deepEqual(k.socios.map((s) => s.nombre), ['Rogelio Camacho', 'Omar']);
@@ -109,6 +109,33 @@ test('«Conócenos» de La Paz: título de las generaciones, una foto, dos socio
     assert.ok(!todo.includes('1950'), 'ya no hay año de fundación');
     assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
     assert.ok(k.apertura.split(/\s+/).length <= 14, 'apertura corta');
+  }
+});
+
+test('«Conócenos» de La Paz: cifras, gremio, flota y cierre en los dos idiomas con la misma forma', () => {
+  const es = c.getSedeContenido('la-paz', 'es').conocenos;
+  const en = c.getSedeContenido('la-paz', 'en').conocenos;
+  for (const k of [es, en]) {
+    assert.deepEqual(k.cifras.map((x) => x.valor), ['30+', '3+'], 'solo las dos cifras que confirmó el dueño');
+    assert.ok(k.cifras.every((x) => x.texto.length > 0));
+    assert.equal(k.flota.fotos.length, 3);
+    assert.ok(k.flota.pie && k.flota.fotos.every((f) => f.src.startsWith('/photos/') && f.alt));
+    assert.ok(k.reservar);
+    assert.ok(k.gremio.titulo && k.gremio.texto && k.gremio.capitanes.length > 0);
+    const todo = JSON.stringify(k);
+    assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
+    assert.ok(!/n[uú]mero uno|number one|#1/i.test(todo), 'ningún superlativo sin prueba');
+  }
+  assert.equal(es.gremio.capitanes.length, en.gremio.capitanes.length);
+  assert.deepEqual(es.flota.fotos.map((f) => f.src), en.flota.fotos.map((f) => f.src));
+  assert.deepEqual(es.gremio.capitanes.map((x) => Boolean(x.pendiente)), en.gremio.capitanes.map((x) => Boolean(x.pendiente)));
+});
+
+test('«Conócenos» de La Paz: un capitán con nombre de relleno siempre va marcado `pendiente` (nunca se publica)', () => {
+  for (const lang of ['es', 'en']) {
+    for (const capitan of c.getSedeContenido('la-paz', lang).conocenos.gremio.capitanes) {
+      if (/^(Capitán|Captain) \d+$/.test(capitan.nombre)) assert.equal(capitan.pendiente, true, capitan.nombre);
+    }
   }
 });
 

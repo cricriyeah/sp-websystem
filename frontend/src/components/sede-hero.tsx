@@ -36,9 +36,9 @@ export function SedeHero({ nombre, contenido, palabras, empresa, empresaSinCircu
           <div>
             <h1 className="texto-grande">{nombre}</h1>
             {empresa && (
-              <div className="mt-6 flex items-center gap-4">
-                <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} sinCirculo={empresaSinCirculo} />
-                <p className="text-2xl font-semibold leading-tight">
+              <div className="rev mt-6 flex items-center gap-4 sm:gap-5">
+                <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={96} sinCirculo={empresaSinCirculo} />
+                <p className="text-2xl font-semibold leading-tight sm:text-3xl">
                   <span className="font-normal">{textos.operadaPor}</span> {empresa.nombre}
                 </p>
               </div>
