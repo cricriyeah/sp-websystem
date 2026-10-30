@@ -6,6 +6,7 @@ import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
 import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
+import { conVentana, ventanaDeSalida } from '@/lib/horario-servicio';
 import { hrefDeslinde, hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 
@@ -39,6 +40,8 @@ const ENLACE = 'inline-flex min-h-11 items-center texto-cuerpo transition-colors
  * tarjetas y el efectivo) y qué dice lo legal.
  */
 export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, anclas, empresasDeslinde }: SiteFooterProps) {
+  // El horario es la ventana de salida de la sede, que ya viene del backoffice (ver `sedeConVentana`).
+  const ventana = negocio && ventanaDeSalida(negocio.horarioApertura, negocio.horarioCierre);
   const baseSede = sedeSlug ? hrefSede(lang, sedeSlug) : null;
   const seccionesDeLaPagina = baseSede
     ? (anclas?.length ? anclas.map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta })) : [{ href: baseSede, label: nav.reservar }])
@@ -104,8 +107,12 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
                   <br />
                   {negocio.ciudad}, {negocio.estado}
                 </p>
-                <p className="mt-4 texto-etiqueta text-cafe-bruma">{footer.hoursLabel}</p>
-                <p className="texto-cuerpo">{footer.hours}</p>
+                {ventana && (
+                  <>
+                    <p className="mt-4 texto-etiqueta text-cafe-bruma">{footer.hoursLabel}</p>
+                    <p className="texto-cuerpo">{conVentana(footer.hours, ventana)}</p>
+                  </>
+                )}
               </>
             )}
           </div>

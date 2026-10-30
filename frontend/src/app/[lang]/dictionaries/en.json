@@ -122,7 +122,7 @@
     "todosLosDestinos": "All destinations"
   },
   "booking": {
-    "timeHelp": "Departure between 5:00 and 7:00 am",
+    "timeHelp": "Departure between {desde} and {hasta}",
     "submit": "Book now",
     "verQueReservar": "See what to book"
   },
@@ -148,7 +148,7 @@
       {
         "icon": "horas",
         "title": "6 to 7 hour tour",
-        "body": "Morning departures between 5:00 and 7:00 am, tailored to the time that suits you best."
+        "body": "Morning departures between {desde} and {hasta}, tailored to the time that suits you best."
       }
     ],
     "bringTitle": "Recommendations to bring",
@@ -164,7 +164,7 @@
     "address": "Marina La Costa, Rangel y Navarro",
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Morning departures",
-    "hours": "Every day, 5:00 to 7:00 am",
+    "hours": "Every day, {desde} to {hasta}",
     "officeLabel": "Customer support",
     "office": "C. Toronja 561, Indeco, Donceles 28, 23070",
     "exploreLabel": "Your adventure",

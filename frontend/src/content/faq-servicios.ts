@@ -21,7 +21,7 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
       },
       {
         q: '¿A qué hora salimos, de dónde y cuánto dura?',
-        a: 'Salimos de Marina La Costa, en La Paz. Tú eliges la hora de salida entre las 5:00 y las 7:00 am al reservar, y la jornada dura de 6 a 7 horas.',
+        a: 'Salimos de Marina La Costa, en La Paz. Tú eliges la hora de salida entre las {desde} y las {hasta} al reservar, y la jornada dura de 6 a 7 horas.',
       },
       {
         q: '¿Cuántas personas pueden ir?',
@@ -47,7 +47,7 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
       },
       {
         q: 'What time do we leave, from where, and how long is it?',
-        a: 'We leave from Marina La Costa in La Paz. You choose your departure time between 5:00 and 7:00 am when you book, and the trip lasts 6 to 7 hours.',
+        a: 'We leave from Marina La Costa in La Paz. You choose your departure time between {desde} and {hasta} when you book, and the trip lasts 6 to 7 hours.',
       },
       {
         q: 'How many people can come?',

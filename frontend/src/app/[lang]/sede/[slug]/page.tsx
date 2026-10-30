@@ -9,6 +9,7 @@ import { JsonLd } from '@/components/json-ld';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getSedes, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
+import { sedeConVentana } from '@/lib/horario-servicio';
 import { fotosAptas, palabrasDeSede } from '@/lib/etiquetas-catalogo';
 import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
 import { hrefSede } from '@/lib/routes';
@@ -45,8 +46,8 @@ export default async function SedePage({ params, searchParams }: Props) {
   const { lang, slug } = await params;
   if (!hasLocale(lang)) notFound();
   if (slug === 'los-cabos') permanentRedirect(hrefSede(lang, 'la-ventana'));
-  const contenido = getSedeContenido(slug, lang);
-  if (!contenido) notFound();
+  const escrito = getSedeContenido(slug, lang);
+  if (!escrito) notFound();
   // Sede desactivada en el backoffice: su página deja de existir. Si la API no responde se falla abierto
   // (una caída de red no apaga el sitio), igual que el hub.
   const sedesApi = await getSedes().catch(() => null);
@@ -54,6 +55,8 @@ export default async function SedePage({ params, searchParams }: Props) {
   const query = await searchParams;
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
   const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug, lang).catch(() => null), getServiciosSede(slug, lang).catch(() => null)]);
+  // La hora de salida de los textos es la del servicio destacado en el backoffice.
+  const contenido = sedeConVentana(escrito, servicios);
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo, simboloBarra: protagonista.simboloBarra } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);

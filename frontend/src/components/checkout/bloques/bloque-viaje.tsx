@@ -10,6 +10,7 @@ import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import type { SeleccionFechas } from '@/components/ui/calendario/calendario';
 import type { ControlFecha } from '@/lib/control-fecha';
 import { fromLocalISODate } from '@/lib/dates';
+import { ayudaDeHora } from '@/lib/horario-servicio';
 
 type Props = {
   lang: Locale;
@@ -109,7 +110,7 @@ export function BloqueViaje({
       ) : (
         <TimeField
           label={checkout.hourLabel}
-          help={booking.timeHelp}
+          help={ayudaDeHora(booking.timeHelp, horasDisponibles)}
           value={time}
           onChange={onHora}
           availableHours={horasDisponibles}

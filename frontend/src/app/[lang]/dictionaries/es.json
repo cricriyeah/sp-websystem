@@ -122,7 +122,7 @@
     "todosLosDestinos": "Todos los destinos"
   },
   "booking": {
-    "timeHelp": "Salida entre 5:00 y 7:00 am",
+    "timeHelp": "Salida entre {desde} y {hasta}",
     "submit": "Agendar",
     "verQueReservar": "Ver qué reservar"
   },
@@ -148,7 +148,7 @@
       {
         "icon": "horas",
         "title": "De 6 a 7 horas de tour",
-        "body": "Salidas matutinas entre las 5:00 y 7:00 am, ajustándonos al horario que más te convenga."
+        "body": "Salidas matutinas entre las {desde} y {hasta}, ajustándonos al horario que más te convenga."
       }
     ],
     "bringTitle": "Recomendaciones para traer",
@@ -164,7 +164,7 @@
     "address": "Marina La Costa, Rangel y Navarro",
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Salidas matutinas",
-    "hours": "Todos los días, de 5:00 a 7:00 am",
+    "hours": "Todos los días, de {desde} a {hasta}",
     "officeLabel": "Atención al cliente",
     "office": "La Paz, BCS: C. Toronja 561, Indeco, Donceles 28, 23070",
     "exploreLabel": "Tu aventura",

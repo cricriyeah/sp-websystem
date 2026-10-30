@@ -35,7 +35,7 @@ export function StructuredData({ lang, slug, negocio, description, faqItems }: S
     },
     ...(tieneWhatsapp ? { telephone: `+${whatsappNumero}` } : {}),
     // Sin `openingHoursSpecification`: `horarioApertura` y `horarioCierre` son la ventana de SALIDA de los viajes
-    // (5 a 7 a. m.), no el horario en que el negocio atiende; publicarlo como horario decia que cierra a las 7.
+    // (6 a 7 a. m.), no el horario en que el negocio atiende; publicarlo como horario decia que cierra a las 7.
     availableLanguage: ['es', 'en'],
   };
 

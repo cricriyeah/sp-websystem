@@ -437,7 +437,7 @@ class Command(BaseCommand):
                     nombre='Pesca deportiva', tipo_servicio=TipoServicio.PESCA,
                     estrategia_cupo='por_recurso_dia', estrategia_precio='por_grupo', modo_ocupacion='exclusivo',
                     precio_base=Decimal('10800'), personas_incluidas=2, porcentaje_anticipo=30, activo=True,
-                    pide_hora=True, hora_apertura=time(5, 0), hora_cierre=time(7, 0), paso_hora_minutos=15,
+                    pide_hora=True, hora_apertura=time(6, 0), hora_cierre=time(7, 0), paso_hora_minutos=15,
                 ),
             )
             licencia, _ = Personalizacion.objects.get_or_create(
@@ -657,7 +657,7 @@ class Command(BaseCommand):
 
         # (empresa, slug) -> (apertura, cierre, paso en minutos) | None = no pide hora
         horarios = {
-            ('sal-y-sol', 'pesca-deportiva'): (time(5, 0), time(7, 0), 15),
+            ('sal-y-sol', 'pesca-deportiva'): (time(6, 0), time(7, 0), 15),
             ('transporte-la-paz', 'traslados-la-paz'): (time(6, 0), time(22, 0), 30),
             ('la-ventana-travel', 'pesca-con-mosca'): (time(7, 0), time(8, 0), 30),
             ('la-ventana-travel', 'avistamiento-ballenas-orcas'): (time(7, 0), time(8, 0), 30),
