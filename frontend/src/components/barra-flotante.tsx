@@ -1,5 +1,6 @@
 import Image from 'next/image';
-import type { CSSProperties, ReactNode } from 'react';
+import type { LogoLargo } from '@/content/empresas-marca';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 import { X } from '@phosphor-icons/react/ssr';
 import { cn } from '@/components/ui/cn';
 
@@ -16,6 +17,13 @@ type BarraFlotanteProps = {
   debajo?: ReactNode;
   /** Clases extra del contenedor fijo. Existe para el `print:hidden` del recibo. */
   className?: string;
+  /**
+   * Solo el checkout móvil (`CabeceraMinima`): la barra sube y se desvanece (`.barra-escondible`). `undefined` deja
+   * la barra de siempre, sin transición.
+   */
+  oculta?: boolean;
+  /** El contenedor fijo: `useCabeceraEscondida` mide su alto y sabe si el foco está dentro. */
+  ref?: Ref<HTMLDivElement>;
 };
 
 /**
@@ -28,9 +36,13 @@ type BarraFlotanteProps = {
  *
  * Alto: `--barra-h` (64 px en móvil, 72 en escritorio) más el margen de arriba; `--nav-alto` (globals.css) lo suma. Server Component: lo que necesita estado llega ya armado en `inicio`, `resto` y `menu`.
  */
-export function BarraFlotante({ inicio, resto, menu, debajo, className }: BarraFlotanteProps) {
+export function BarraFlotante({ inicio, resto, menu, debajo, className, oculta, ref }: BarraFlotanteProps) {
   return (
-    <div className={cn('fixed inset-x-0 top-0 z-40 px-[1.05rem] pt-3 sm:px-[2.1rem] lg:px-[2.8rem] lg:pt-4', className)}>
+    <div
+      ref={ref}
+      data-oculta={oculta === undefined ? undefined : oculta}
+      className={cn('fixed inset-x-0 top-0 z-40 px-[1.05rem] pt-3 sm:px-[2.1rem] lg:px-[2.8rem] lg:pt-4', oculta !== undefined && 'barra-escondible', className)}
+    >
       <div className="relative mx-auto flex w-full flex-col lg:max-w-[1440px]">
         {/* `z-10`: lo que se despliega de la barra (selector de sede) queda dentro del contexto de apilamiento de
             `.barra-resto` (tiene animación), así que sin esto la banda de abajo, que viene después, lo tapa. */}
@@ -83,7 +95,7 @@ export function LogoMarca({ girado = false, retraso = 0 }: LogoMarcaProps) {
 
 type LogosProps = {
   /** La empresa protagonista de la sede: va junto a nuestra marca, separada por una equis. */
-  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
+  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string; logoLargo?: LogoLargo };
   /** Bajo 640 px no se pinta: la barra del checkout lleva además el botón de atención al cliente y no cabe todo. */
   ocultoEnMovil?: boolean;
 };
@@ -97,7 +109,10 @@ export function LogoEmpresaAlLado({ empresa, ocultoEnMovil = false }: LogosProps
   return (
     <div className={cn('flex min-w-0 items-center gap-3', ocultoEnMovil && 'max-sm:hidden')}>
       <X aria-hidden="true" size={14} weight="bold" className="shrink-0 text-foreground" />
-      {empresa.simboloBarra ?? empresa.simbolo ? (
+      {empresa.logoLargo ? (
+        // El logo largo a color (isotipo y nombre), de la altura del símbolo para que quepa en la barra de 72.
+        <Image src={empresa.logoLargo.src} alt={empresa.nombre} width={empresa.logoLargo.ancho} height={empresa.logoLargo.alto} className="h-12 w-auto shrink-0 sm:h-14" />
+      ) : empresa.simboloBarra ?? empresa.simbolo ? (
         // Solo el símbolo, sin letras: así cabe más grande (64 px) en la barra de 72.
         <Image
           src={(empresa.simboloBarra ?? empresa.simbolo)!}

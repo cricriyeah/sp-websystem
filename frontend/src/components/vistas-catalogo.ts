@@ -12,7 +12,7 @@ import { hrefDetalleServicio } from '@/lib/booking-href';
 import { hrefDetallePaquete } from '@/lib/routes';
 import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
 import { aMoneda } from '@/lib/moneda';
-import { formatHour } from '@/lib/dates';
+import { ventanaDeSalida } from '@/lib/horario-servicio';
 import type { VistaProducto } from '@/components/tarjeta-producto';
 
 // Un renglón de «incluye» que en realidad dice lo que NO incluye: no lleva palomita; el detalle lo dice aparte.
@@ -32,10 +32,8 @@ function precioDe(mxn: (moneda: Moneda) => number | null, lang: Locale, moneda: 
 
 /** «5:00 - 7:00 am» (o «9:00 am - 1:00 pm»): la ventana de salida, solo si el servicio pide hora. */
 function horarioDe(servicio: ServicioCatalogo): string | null {
-  if (!servicio.pide_hora || !servicio.hora_apertura || !servicio.hora_cierre) return null;
-  const desde = formatHour(servicio.hora_apertura);
-  const hasta = formatHour(servicio.hora_cierre);
-  return desde.slice(-2) === hasta.slice(-2) ? `${desde.slice(0, -3)} - ${hasta}` : `${desde} - ${hasta}`;
+  const ventana = servicio.pide_hora ? ventanaDeSalida(servicio.hora_apertura, servicio.hora_cierre) : null;
+  return ventana && `${ventana.desde} - ${ventana.hasta}`;
 }
 
 export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda: Moneda, sedeSlug: string): VistaProducto {
@@ -47,7 +45,8 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
     clave,
     nombre: servicio.nombre,
     empresa: empresa?.nombre ?? servicio.empresa_slug,
-    logoEmpresa: empresa?.simbolo ?? empresa?.logo,
+    logoEmpresa: empresa?.simboloBarra ?? empresa?.simbolo ?? empresa?.logo,
+    logoSinFondo: Boolean(empresa?.simboloBarra),
     color: colorDeServicio(servicio),
     palabra: palabraDeServicio(servicio.tipo_servicio, lang),
     // Igual que el paquete: un texto propio del sitio manda; si no, la descripción del backoffice (ya en el idioma).
@@ -80,7 +79,8 @@ export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: M
     clave,
     nombre: paquete.nombre,
     empresa: empresa?.nombre ?? paquete.empresa_lider,
-    logoEmpresa: empresa?.simbolo ?? empresa?.logo,
+    logoEmpresa: empresa?.simboloBarra ?? empresa?.simbolo ?? empresa?.logo,
+    logoSinFondo: Boolean(empresa?.simboloBarra),
     color: colorDePaquete(paquete),
     palabra: palabraDePaquete(paquete.noches, lang),
     // La del backoffice (ya en el idioma de la página); un texto propio del sitio, si lo hay, manda.

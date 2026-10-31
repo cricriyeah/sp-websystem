@@ -4,6 +4,7 @@ import { preconnect } from 'react-dom';
 import { cache } from 'react';
 import { getDictionary, hasLocale, type Locale } from '../../../../dictionaries';
 import { API_URL, ApiError, getPaqueteDetalle, getPaquetesSede, getServiciosSede } from '@/lib/api';
+import { sedeConVentana } from '@/lib/horario-servicio';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
@@ -47,8 +48,8 @@ export default async function PaquetePage({ params, searchParams }: Props) {
   preconnect(API_URL, { crossOrigin: 'anonymous' });
   const { lang, slug, paquete: paqueteSlug } = await params;
   if (!hasLocale(lang)) notFound();
-  const sede = getSedeContenido(slug, lang);
-  if (!sede) notFound();
+  const escrita = getSedeContenido(slug, lang);
+  if (!escrita) notFound();
   const [paquete, query, dict, servicios, paquetes] = await Promise.all([
     cargar(slug, paqueteSlug, lang),
     searchParams,
@@ -57,6 +58,7 @@ export default async function PaquetePage({ params, searchParams }: Props) {
     getPaquetesSede(slug, lang).catch(() => null),
   ]);
   if (!paquete) notFound();
+  const sede = sedeConVentana(escrita, servicios);
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   const vista = vistaDeDetallePaquete({ lang, moneda, dict, sede, otros: { servicios, paquetes }, paquete });
   const urlPaquete = absolutaEn(lang, `/sede/${slug}/paquete/${paqueteSlug}`);

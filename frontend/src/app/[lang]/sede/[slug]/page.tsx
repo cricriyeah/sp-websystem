@@ -9,6 +9,7 @@ import { JsonLd } from '@/components/json-ld';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getSedes, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
+import { sedeConVentana } from '@/lib/horario-servicio';
 import { fotosAptas, palabrasDeSede } from '@/lib/etiquetas-catalogo';
 import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
 import { hrefSede } from '@/lib/routes';
@@ -46,8 +47,8 @@ export default async function SedePage({ params, searchParams }: Props) {
   const { lang, slug } = await params;
   if (!hasLocale(lang)) notFound();
   if (slug === 'los-cabos') permanentRedirect(hrefSede(lang, 'la-ventana'));
-  const contenido = getSedeContenido(slug, lang);
-  if (!contenido) notFound();
+  const escrito = getSedeContenido(slug, lang);
+  if (!escrito) notFound();
   // Sede desactivada en el backoffice: su página deja de existir. Si la API no responde se falla abierto
   // (una caída de red no apaga el sitio), igual que el hub.
   const sedesApi = await getSedes().catch(() => null);
@@ -55,9 +56,11 @@ export default async function SedePage({ params, searchParams }: Props) {
   const query = await searchParams;
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
   const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug, lang).catch(() => null), getServiciosSede(slug, lang).catch(() => null)]);
+  // La hora de salida de los textos es la del servicio destacado en el backoffice.
+  const contenido = sedeConVentana(escrito, servicios);
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const isotipoSede = protagonista ? (protagonista.simbolo ?? protagonista.logo) : undefined;
-  const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo, simboloBarra: protagonista.simboloBarra } : undefined;
+  const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo, simboloBarra: protagonista.simboloBarra, logoLargo: protagonista.logoLargo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
   const { temporadas } = contenido;
   // Máximo 8 preguntas: las que se pintan son las mismas que van al JSON-LD.
@@ -80,14 +83,14 @@ export default async function SedePage({ params, searchParams }: Props) {
   // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
   const pintar: Partial<Record<SeccionId, (fondo: Fondo) => ReactNode>> = {
     hero: () => <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={contenido.hero.palabras ?? palabrasDeSede(servicios, paquetes, lang)} empresa={marcaSede} empresaSinCirculo={protagonista?.heroSinCirculo} textos={dict.sedeContenido.arranque} />,
-    ...(contenido.pangas && { pangas: (fondo: Fondo) => <PangasSede id={ANCLA_DE.pangas} pangas={contenido.pangas!} fondo={fondo} empresa={marcaSede?.nombre ?? contenido.nombre} isotipo={marcaSede?.simbolo ?? marcaSede?.logo} /> }),
+    ...(contenido.pangas && { pangas: (fondo: Fondo) => <PangasSede id={ANCLA_DE.pangas} pangas={contenido.pangas!} fondo={fondo} empresa={marcaSede?.nombre ?? contenido.nombre} isotipo={marcaSede?.simbolo ?? marcaSede?.logo} isotipoSinFondo={marcaSede?.simboloBarra} logoLargo={marcaSede?.logoLargo} /> }),
     reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} />,
     paquetes: (fondo) => <PaquetesSede id={ANCLA_DE.paquetes} lang={lang} moneda={moneda} paquetes={paquetes ?? []} textos={dict.sedeContenido.paquetes} textosReservar={dict.sedeContenido.queReservar} fondo={fondo} />,
     ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),
-    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} sello={isotipoSede && protagonista ? { isotipo: isotipoSede, empresa: protagonista.nombre } : undefined} />,
-    ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} isotipo={marcaSede?.simbolo ?? marcaSede?.logo} /> }),
+    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} sello={isotipoSede && protagonista ? { isotipo: isotipoSede, sinFondo: protagonista.simboloBarra, empresa: protagonista.nombre } : undefined} ilustracion={protagonista?.ilustracionFondo} />,
+    ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
-    ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} empresa={protagonista?.nombre} /> }),
+    ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} isotipoSinFondo={protagonista?.simboloBarra} empresa={protagonista?.nombre} logoLargo={protagonista?.logoLargo} /> }),
     opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} fondo={fondo} />,
     ...(faq && { preguntas: (fondo: Fondo) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} fondo={fondo} /> }),
   };

@@ -159,6 +159,7 @@ export function PantallaPago({
       empresa={empresa}
       empresasDeslinde={[...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]}
       marcaFija={motor === 'orden'}
+      pagoEnCurso
       volverLabel={textos.back}
       encabezado={
         <EncabezadoCompra

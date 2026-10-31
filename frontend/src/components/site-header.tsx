@@ -14,6 +14,7 @@ import { leerSedePreferidaCliente } from '@/lib/sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_HUB } from '@/lib/secciones-sede';
 import { BarraFlotante, LogoEmpresaAlLado, LogoMarca } from '@/components/barra-flotante';
+import type { LogoLargo } from '@/content/empresas-marca';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { SelectorIdioma } from '@/components/selector-idioma';
 import { SedeSelector } from '@/components/sede-selector';
@@ -34,7 +35,7 @@ type SiteHeaderProps = {
    * La empresa protagonista de la sede: su sello va junto a nuestra marca. Solo la pasa la
    * página de sede; fuera de una sede (hub, servicio, legales) va solo la nuestra.
    */
-  marcaSede?: { nombre: string; logo?: string };
+  marcaSede?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string; logoLargo?: LogoLargo };
   /**
    * El menú de la sede, armado por su página con `enlacesDeSede(seccionesDeSede(...))`: solo
    * las secciones que de verdad se pintan. «Reserva ahora» va primero y baja a la sección de reservar.

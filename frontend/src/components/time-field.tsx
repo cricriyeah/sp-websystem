@@ -7,7 +7,8 @@ import { formatHour } from '@/lib/dates';
 
 type TimeFieldProps = {
   label: string;
-  help: string;
+  /** Sin horas que ofrecer no hay ventana que contar: se omite. */
+  help?: string;
   /** `null` = todavia no contesta. */
   value: string | null;
   onChange: (time: string) => void;
@@ -39,7 +40,7 @@ export function TimeField({
     >
       {(cerrar) => (
         <div className="w-full sm:w-56">
-          <p className="px-1 pb-2 text-sm text-muted">{help}</p>
+          {help && <p className="px-1 pb-2 text-sm text-muted">{help}</p>}
           <ul className="flex flex-col gap-0.5">
             {horas.map((hora) => {
               const seleccionada = hora === value;

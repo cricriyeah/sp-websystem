@@ -18,7 +18,7 @@
     },
     "privacidad": {
       "title": "Aviso de privacidad",
-      "description": "Conoce cómo protegemos tus datos personales al reservar tu tour de pesca con nosotros."
+      "description": "Cómo cuidamos tus datos cuando reservas en Sun Baja Experience."
     },
     "notFound": {
       "title": "Página no encontrada",
@@ -26,7 +26,7 @@
     },
     "catalogo": {
       "title": "Experiencias y Paquetes | Sun Baja Experience",
-      "description": "Descubre nuestros paquetes de aventura y servicios de pesca por destino en BCS."
+      "description": "Pesca, ballenas, hospedaje y traslados con la gente de La Paz, La Ventana y Puerto Chale."
     },
     "traslados": {
       "title": "Traslados y Transporte Privado | Sun Baja Experience",
@@ -34,8 +34,8 @@
     }
   },
   "notFound": {
-    "headline": "Parece que esta página zarpó a otro rumbo",
-    "body": "No te preocupes, te ayudamos a retomar el curso. Desde el inicio puedes conocer nuestras embarcaciones, las especies de temporada y planear tu próxima aventura con nosotros.",
+    "headline": "Esta página se quedó en el muelle",
+    "body": "El enlace está mal escrito o la página cambió de lugar. Desde el inicio puedes elegir tu destino y ver qué salidas hay.",
     "cta": "Ir al inicio",
     "ctaBook": "Reservar un viaje"
   },
@@ -107,7 +107,7 @@
     "reservar": "Reserva ahora",
     "humanContact": "Atención al cliente",
     "whatsappCta": "Escríbenos por WhatsApp",
-    "whatsappMessage": "¡Hola! Me gustaría información para reservar un tour de pesca deportiva con ustedes. ¿Me pueden ayudar?",
+    "whatsappMessage": "Hola, quiero ayuda para reservar una salida.",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
     "switchLang": "Switch to English",
@@ -122,7 +122,7 @@
     "todosLosDestinos": "Todos los destinos"
   },
   "booking": {
-    "timeHelp": "Salida entre 5:00 y 7:00 am",
+    "timeHelp": "Salida entre {desde} y {hasta}",
     "submit": "Agendar",
     "verQueReservar": "Ver qué reservar"
   },
@@ -148,7 +148,7 @@
       {
         "icon": "horas",
         "title": "De 6 a 7 horas de tour",
-        "body": "Salidas matutinas entre las 5:00 y 7:00 am, ajustándonos al horario que más te convenga."
+        "body": "Salidas matutinas entre las {desde} y {hasta}, ajustándonos al horario que más te convenga."
       }
     ],
     "bringTitle": "Recomendaciones para traer",
@@ -159,15 +159,15 @@
     ]
   },
   "footer": {
-    "headline": "Reserva tu experiencia en la Baja Sur",
+    "headline": "Sal al mar con la gente de Baja Sur",
     "addressLabel": "Punto de encuentro",
     "address": "Marina La Costa, Rangel y Navarro",
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Salidas matutinas",
-    "hours": "Todos los días, de 5:00 a 7:00 am",
+    "hours": "Todos los días, de {desde} a {hasta}",
     "officeLabel": "Atención al cliente",
     "office": "La Paz, BCS: C. Toronja 561, Indeco, Donceles 28, 23070",
-    "exploreLabel": "Tu aventura",
+    "exploreLabel": "Explora",
     "legalLabel": "Información legal",
     "waiver": "Deslinde de responsabilidad",
     "privacy": "Aviso de privacidad",
@@ -493,14 +493,14 @@
     "reintentar": "Intenta de nuevo en unos segundos."
   },
   "cookies": {
-    "title": "Aviso de cookies y privacidad",
-    "body": "Utilizamos cookies esenciales para que puedas reservar con total seguridad y comodidad. Si lo deseas, también nos ayudan a optimizar la experiencia de navegación en nuestro sitio web.",
+    "title": "Cookies",
+    "body": "Usamos las necesarias para que reservar y pagar funcione. Si aceptas, también usaremos otras para saber qué páginas se visitan y medir nuestros anuncios.",
     "accept": "Aceptar",
     "reject": "Rechazar",
     "more": "Ver aviso de privacidad"
   },
   "traslados": {
-    "title": "Servicio de Traslados y Transporte",
+    "title": "Traslados privados en La Paz",
     "subtitle": "Traslados privados en La Paz, BCS. Aeropuerto, hoteles y puntos de encuentro.",
     "cta": "Reservar traslado",
     "unavailableTitle": "Servicio no disponible",
@@ -689,7 +689,7 @@
       "operadaPor": "Con"
     },
     "queReservar": {
-      "titulo": "Reserva ahora mismo",
+      "titulo": "Elige tu salida",
       "opera": "Te lleva {empresa}",
       "incluye": "Incluye",
       "preguntaIncluye": "Pregunta qué incluye",
@@ -762,7 +762,7 @@
       "pagoTextoTotal": "Pagas directo a la empresa a cargo de tu servicio, el total en línea al reservar.",
       "resto": "El resto, el día del viaje, en efectivo",
       "climaTitulo": "Si hay mal clima",
-      "climaTexto": "Si el mal clima impide salir, hay reembolso completo.",
+      "climaTexto": "Si el clima no deja salir, te devolvemos todo lo que pagaste. Lo decide la capitanía de puerto o tu capitán, el mismo día.",
       "fechaTitulo": "Cambio de fecha",
       "fechaTexto": "Puedes cambiar la fecha con al menos 48 horas de anticipación.",
       "atencionTitulo": "¿Prefieres reservar con una persona?",
@@ -776,7 +776,7 @@
       "originalEs": "Original en español",
       "originalEn": "Original en inglés"
     },
-    "galeria": "Fotos de la experiencia",
+    "galeria": "Así se ven nuestras salidas",
     "temporadasAhora": "ahora",
     "galeriaVisor": {
       "cerrar": "Cerrar",
@@ -797,8 +797,8 @@
       "title": "Sobre nosotros",
       "description": "Somos una agencia que reúne a empresas locales de Baja California Sur: tú reservas en un solo lugar y pagas directo a quien te lleva."
     },
-    "titular": "Gente de aquí. Mar de aquí.",
-    "subtitulo": "Sun Baja Experience reúne a empresas locales de Baja California Sur para que reserves pesca, ballenas, hospedaje y traslados en un solo lugar, y salgas al mar con quien lo conoce.",
+    "titular": "Hecho en La Paz, por gente que sale al mar",
+    "subtitulo": "Sun Baja Experience nació en La Paz para que reserves directo con la gente de Baja Sur, los capitanes, guías y familias que viven del mar.",
     "fotoAlt": "Pangas en la arena frente al mar",
     "fotosAlt": [
       "Un pescador con su caña, frente al mar",
@@ -836,17 +836,17 @@
     "whatsappMensaje": "Hola, quiero saber más sobre Sun Baja Experience.",
     "historiaTitulo": "Cómo empezó",
     "historia": [
-      "Todo empezó con una panga y una idea.",
-      "Una empresa de pesca deportiva en La Paz y un equipo de marketing se sentaron a hablar de lo mismo: gran parte de la gestión de los paseos y las aventuras de la Baja se estaba quedando en manos de empresas extranjeras. Los capitanes ponían el mar y el oficio; otros se encargaban de la reserva, el cobro y el trato con el viajero.",
-      "Decidimos que podía ser distinto. Cada quien puso lo que sabe hacer: unos, salir al mar; otros, lograr que reservar un tour en la Baja fuera fácil. De esa unión nació Sun Baja Experience."
+      "Sun Baja Experience empezó en La Paz, en una plática entre los capitanes de una empresa de pesca deportiva y un equipo de marketing de la ciudad.",
+      "Los dos veían que buena parte de las reservas de tours en la Baja las manejaban empresas de fuera. Los capitanes ponían el mar, la panga y el oficio de toda una vida; otros ponían su nombre y cobraban, y el viajero casi nunca sabía con quién había salido al mar.",
+      "Juntamos lo que cada uno sabe hacer. Los capitanes salen al mar, y nosotros hacemos que reservar con ellos sea fácil, en español y en inglés, y que sepas desde antes quién te va a llevar."
     ],
     "empresasTitulo": "Las empresas con las que trabajamos",
-    "empresasTexto": "Son locales, y cada una opera sus propios servicios. Nosotros no operamos los tours: coordinamos que reservarlos sea claro y sencillo."
+    "empresasTexto": "Cada empresa es de su destino y opera sus propios servicios. Nosotros te atendemos antes de la salida, con la fecha, el pago y tus dudas."
   },
   "hubContenido": {
     "titularLineas": ["Mar adentro:"],
     "titularSecundario": "pesca y ballenas en Baja Sur",
-    "subtexto": "Pesca, ballenas, hospedaje y traslados con empresas locales de Baja California Sur.",
+    "subtexto": "Aquí reservas directo con la gente que sale al mar en Baja Sur: los capitanes de La Paz, los guías de La Ventana y una familia de pescadores de Puerto Chale.",
     "og": { "lugar": "Baja California Sur", "titular": "Pesca, ballenas y mar en Baja Sur con empresas locales" },
     "ctaSedes": "Ver destinos",
     "sedesTitulo": "¿A dónde vas?",
@@ -856,27 +856,27 @@
     "conN": "Con {a} y {n} más",
     "desde": "Desde",
     "verSede": "Ver {sede}",
-    "mapaTitulo": "Encuéntralos en el mapa",
-    "mapaTexto": "Toca un destino para ver dónde queda y baja a conocerlo.",
+    "mapaTitulo": "Dónde queda cada destino",
+    "mapaTexto": "La Paz y La Ventana miran al Mar de Cortés y Puerto Chale al Pacífico. Toca uno para ver qué puedes hacer ahí.",
     "comoTitulo": "Reservas aquí, sales con gente de allá",
     "comoCta": "Elige tu destino",
-    "comoTexto": "Sun Baja Experience junta en un solo sitio lo que ofrecen las empresas locales de cada destino. Tú comparas y reservas aquí; la empresa te lleva y te cobra directo.",
+    "comoTexto": "Detrás de cada salida hay un capitán, un guía o una familia que creció en ese pedazo de costa. Los juntamos en este sitio para que reservar con ellos sea fácil y para que lo que pagas les llegue a ellos.",
     "comoPasos": [
       {
         "verbo": "Decide",
-        "texto": "Cada servicio dice qué empresa te lleva, cuánto cuesta y qué incluye, antes de pagar."
+        "texto": "Elige destino y salida. En cada una ves con quién vas, cuánto cuesta y qué incluye antes de pagar."
       },
       {
         "verbo": "Reserva",
-        "texto": "Eliges fecha y personas, y pagas en línea a la empresa. Si tu viaje junta dos empresas, verás un cobro de cada una."
+        "texto": "Escoge fecha y personas y paga en línea, directo a la empresa local. Si tu viaje junta dos empresas, verás un cobro de cada una."
       },
       {
         "verbo": "Vívelo",
-        "texto": "El día de tu salida te recibe la empresa. Si el clima no deja salir, te devuelven todo; para cambiar de fecha, avisa con 48 horas."
+        "texto": "Sal al mar con gente que lo conoce de toda la vida. Mira saltar un dorado o salir a respirar a una ballena, y regresa a casa con historias de la Baja Sur que vas a contar por años."
       }
     ],
     "empresasTitulo": "Quién te lleva",
-    "empresasTexto": "Empresas independientes de cada destino. Cada una opera su servicio, te cobra directo y tiene su propio sitio y redes.",
+    "empresasTexto": "Son empresas pequeñas, de gente de cada destino, con sus propios capitanes, guías y embarcaciones. Cuando reservas aquí, sales con ellos y el pago les llega directo.",
     "verServiciosEn": "Ver servicios en {sede}",
     "sitioOficial": "Sitio oficial",
     "pestanaNueva": "{accion}, {empresa}, se abre en una pestaña nueva",
@@ -900,7 +900,7 @@
   },
   "destination": {
     "book": "Reservar",
-    "seasonsTitle": "Temporadas y estacionalidad"
+    "seasonsTitle": "Qué se pesca cada temporada"
   },
   "serviceDetail": {
     "metaFallback": "Detalles del servicio",

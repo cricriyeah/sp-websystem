@@ -6,7 +6,7 @@ import { ErrorDeCampo } from '@/components/ui/error-de-campo';
 import { PeopleStepper } from '@/components/people-stepper';
 import { TimeField } from '@/components/time-field';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
-import { horasDePaquete } from '@/lib/horario-servicio';
+import { ayudaDeHora, horasDePaquete } from '@/lib/horario-servicio';
 import { aMoneda } from '@/lib/moneda';
 import type { AccionPedido } from '@/lib/pedido-estado';
 import { calcularBasePaquete } from '@/lib/precio-paquete';
@@ -78,7 +78,7 @@ export function BloqueViajePaquete({
         hora={paquete.pide_hora ? (
           <TimeField
             label={checkout.hourLabel}
-            help={booking.timeHelp}
+            help={ayudaDeHora(booking.timeHelp, horasDePaquete(paquete))}
             value={hora}
             availableHours={horasDePaquete(paquete)}
             onChange={(valor) => despachar({ tipo: 'hora', valor })}

@@ -1,5 +1,5 @@
-import Image from 'next/image';
 import type { SedeTemporadas } from '@/content/sedes-tipos';
+import type { LogoLargo } from '@/content/empresas-marca';
 import { TemporadasSelector } from '@/components/temporadas-selector';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
 
@@ -10,10 +10,14 @@ type SeasonSectionProps = {
   temporadas: SedeTemporadas;
   textos: { ahora: string };
   fondo: Fondo;
-  /** El isotipo de la empresa: va en la esquina de arriba a la derecha de la sección, como sello. */
+  /** El isotipo de la empresa: va como sello pegado al título y de su alto. */
   isotipo?: string;
+  /** El isotipo transparente: con él, el sello va sin círculo blanco. */
+  isotipoSinFondo?: string;
   /** Nombre de la empresa: el texto alternativo del isotipo. */
   empresa?: string;
+  /** El logo largo a color: si la empresa lo tiene, va en la esquina en lugar del isotipo. */
+  logoLargo?: LogoLargo;
 };
 
 /**
@@ -22,15 +26,9 @@ type SeasonSectionProps = {
  *
  * Server Component (el selector es una isla cliente).
  */
-export function SeasonSection({ id, titulo, temporadas, textos, fondo, isotipo, empresa }: SeasonSectionProps) {
-  // El sello va arriba a la derecha: en el teléfono antes del título (order-first), en escritorio a su altura.
-  const lado = isotipo ? (
-    <span className="rev relative order-first block size-28 shrink-0 self-end overflow-hidden rounded-full bg-blanco sm:size-36 lg:order-none lg:self-start xl:size-44">
-      <Image src={isotipo} alt={empresa ?? ''} fill sizes="(min-width: 1280px) 176px, 144px" className="object-contain p-[6%]" />
-    </span>
-  ) : undefined;
+export function SeasonSection({ id, titulo, temporadas, textos, fondo, isotipo, isotipoSinFondo, empresa, logoLargo }: SeasonSectionProps) {
   return (
-    <SectionShell id={id} fondo={fondo} titulo={titulo} lado={lado}>
+    <SectionShell id={id} fondo={fondo} titulo={titulo} sello={isotipo ? { isotipo, sinFondo: isotipoSinFondo, alt: empresa ?? '', largo: logoLargo } : undefined}>
       <p className="mt-4 max-w-[60ch] text-lg leading-relaxed">{temporadas.intro}</p>
       <TemporadasSelector temporadas={temporadas} textos={textos} />
     </SectionShell>

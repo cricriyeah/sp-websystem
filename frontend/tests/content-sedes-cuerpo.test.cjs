@@ -105,11 +105,11 @@ test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), prensa, 
     assert.ok(!('hechos' in k), 'sin cifras sueltas: se leían como estadísticas');
     assert.match(k.historia.join(' '), /(gremio|guild)/, 'el protagonista es el grupo, no una persona');
     assert.ok(/Peninsular Digital, 2010/.test(k.prensa.fuente) && /(motor|engine)/.test(k.prensa.texto));
-    assert.ok(k.tripulacion.titulo && k.tripulacion.texto);
+    assert.equal(k.tripulacion.fotos.length, 3);
     assert.equal(k.tripulacion.capitanes[0].nombre, 'Rogelio');
     assert.ok(k.foto.src.startsWith('/photos/') && k.foto.alt);
     assert.ok(!k.foto.src.includes('sobre-nosotros'), 'no el retrato del jefe solo');
-    assert.ok(k.cierre.titulo && k.cierre.frase && k.cierre.boton);
+    assert.deepEqual(Object.keys(k.cierre), ['boton'], 'el cierre es el logo largo y el botón, sin título ni frase');
     const todo = JSON.stringify(k);
     assert.ok(!todo.includes('1950'), 'sin año de fundación');
     assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
@@ -119,23 +119,28 @@ test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), prensa, 
   assert.deepEqual(es.tripulacion.capitanes.map((x) => x.nombre), en.tripulacion.capitanes.map((x) => x.nombre));
 });
 
-test('«Conócenos» de La Paz: los nombres de la tripulación siguen marcados `pendiente` hasta que el dueño los confirme', () => {
+test('«Conócenos» de La Paz: los ocho capitanes confirmados por el dueño (2026-10-30) se publican, en los dos idiomas', () => {
   for (const lang of ['es', 'en']) {
-    for (const capitan of c.getSedeContenido('la-paz', lang).conocenos.tripulacion.capitanes) {
-      assert.equal(capitan.pendiente, true, capitan.nombre);
-    }
+    const capitanes = c.getSedeContenido('la-paz', lang).conocenos.tripulacion.capitanes;
+    assert.deepEqual(capitanes.map((x) => x.nombre), ['Rogelio', 'Omar', 'Alfredo', 'Joel', 'Icho', 'Julio', 'Raúl', 'Dagoberto']);
+    assert.ok(capitanes.every((x) => !x.pendiente));
   }
 });
 
-test('las pangas de La Paz: firma, título, frase y tres fotos con su pie, iguales en los dos idiomas', () => {
+test('las pangas de La Paz: la flota completa, sus siete nombres en el texto y dos fotos navegando, iguales en los dos idiomas', () => {
   const es = c.getSedeContenido('la-paz', 'es').pangas;
   const en = c.getSedeContenido('la-paz', 'en').pangas;
   for (const p of [es, en]) {
-    assert.ok(p.titulo && p.texto);
-    assert.equal(p.fotos.length, 3, 'una protagonista y dos de apoyo: cabe en una pantalla');
+    assert.ok(p.titulo && p.frase && p.y);
+    assert.ok(p.flota.src.startsWith('/photos/') && p.flota.alt && p.flota.ancho > p.flota.alto, 'la flota es horizontal');
+    assert.ok(p.texto.includes('{nombres}'), 'el párrafo nombra las pangas');
+    assert.equal(p.fotos.length, 2);
     assert.ok(p.fotos.every((f) => f.src.startsWith('/photos/') && f.alt && f.pie));
     assert.ok(!/[—–]/.test(JSON.stringify(p)));
   }
+  assert.deepEqual(es.nombres, ['Don Piry', 'Volador', 'Dream', 'Escoria del Mar', 'Esperanzas', 'Storm', 'Volador III']);
+  assert.deepEqual(es.nombres, en.nombres, 'los nombres no se traducen');
+  assert.equal(es.flota.src, en.flota.src);
   assert.deepEqual(es.fotos.map((f) => f.src), en.fotos.map((f) => f.src));
   assert.equal(c.getSedeContenido('la-paz', 'es').hero.marca, undefined, 'el héroe vuelve a ser el de video');
 });

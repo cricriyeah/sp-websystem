@@ -1577,6 +1577,7 @@ export function CheckoutView({
         // solo por haber vuelto a revisar algo.
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
+        pagoEnCurso={pagoEnCurso}
         empresa={empresa}
         empresasDeslinde={[empresaSlug ?? process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? 'sal-y-sol']}
         volverLabel={checkout.back}

@@ -901,6 +901,7 @@ export function TrasladoView({
         dict={dict}
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
+        pagoEnCurso={pagoEnCurso}
         empresa={empresa}
         empresasDeslinde={[empresaSlug]}
         volverLabel={traslados.back}

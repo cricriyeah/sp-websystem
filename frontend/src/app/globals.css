@@ -357,6 +357,21 @@
 }
 
 /* Logo del pie: una vuelta del isotipo y las letras que entran desde la izquierda. */
+/* Conócenos: deriva de las fotos, nombres que se entintan y el sol que sale (ver `.foto-deriva` en components). */
+@keyframes foto-deriva {
+  from { translate: 0 -6%; }
+  to { translate: 0 6%; }
+}
+
+@keyframes foto-deriva-rapida {
+  from { translate: 0 -10%; }
+  to { translate: 0 10%; }
+}
+
+@keyframes tinta-al-leer {
+  to { color: var(--color-tinta); }
+}
+
 @keyframes isotipo-gira {
   from {
     opacity: 0;
@@ -443,10 +458,9 @@
   .texto-destacado { font-size: clamp(4.5rem, 8vw, 7rem); line-height: 0.84; letter-spacing: -0.05em; }
   @media (max-width: 39.99rem) { .texto-destacado { font-size: 12.5vw; } }
 
-  /* La tripulación como cartel: un nombre por renglón. En el teléfono, 15 vw (el nombre más largo, «Dagoberto»,
-     cabe en una línea); en escritorio comparte la fila con su dato y baja a 7 vw. */
-  .texto-tripulacion { font-size: 15vw; line-height: 0.92; letter-spacing: -0.04em; }
-  @media (min-width: 40rem) { .texto-tripulacion { font-size: clamp(4rem, 7vw, 7.5rem); } }
+  /* Los nombres de los capitanes, una frase del relato de Conócenos en la letra de los titulares: más que el texto,
+     menos que el título de la sección (26 px en el teléfono, hasta 42 px en escritorio). */
+  .texto-tripulacion { font-size: clamp(1.6rem, 2.9vw, 2.6rem); line-height: 1.18; letter-spacing: -0.01em; }
 
   /* Margen entre la ventana y las secciones de toda la pagina (era 16 / 24 / 48 px; +40 %). Un solo valor por ancho: `px-pagina` y `scroll-px-pagina` lo leen. */
   :root { --margen-x: 1.4rem; }
@@ -492,6 +506,25 @@
   .isotipo-rellena {
     clip-path: inset(100% 0 0 0);
     animation: isotipo-rellena 7s cubic-bezier(0.2, 0.6, 0.3, 1) 0.4s forwards;
+  }
+
+  /* Cabecera del checkout móvil que cede su sitio al bajar (use-cabecera-escondida.ts). Vuelve por el mismo camino
+     con la curva de las hojas de iOS (un resorte sin rebote: entra rápido y se asienta); se va más corta y
+     acelerando, porque lo que sale no pide atención. La sombra va dentro y viaja con la píldora. Es una
+     transición, no una animación: si el cliente cambia de dirección a medio camino, retoma desde donde va. */
+  .barra-escondible {
+    transform-origin: 50% 0;
+    transition:
+      transform 340ms cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 340ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .barra-escondible[data-oculta='true'] {
+    transform: translateY(calc(-100% - 1rem)) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: 260ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
   }
 
   .barra-fondo {
@@ -594,6 +627,37 @@
       animation-timeline: view();
       animation-range: entry 5% cover 28%;
       animation-delay: 0s;
+    }
+  }
+
+  /* Conócenos (conocenos-sede.tsx), atado al scroll y solo con movimiento permitido; sin `animation-timeline` o con
+     «reducir movimiento» todo queda en su estado final (fotos quietas, nombres en tinta):
+     - `.foto-deriva`: la foto, al 114 % dentro de su marco (`overflow: clip`, no `hidden`, para que `view()` vea el
+       scroll), baja un 6 % mientras cruza la pantalla; `.foto-deriva-rapida` un 10 %, así las fotos que se enciman
+       se separan en profundidad.
+     - `.tinta-al-leer`: los nombres de los capitanes pasan de tinta tenue a tinta llena, palabra por palabra, mientras
+       suben por la pantalla. Se leen desde el principio (22 % de tinta en letra de titular). */
+  .foto-deriva {
+    scale: 1.14;
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .foto-deriva {
+        animation: foto-deriva linear both;
+        animation-timeline: view();
+      }
+
+      .foto-deriva-rapida {
+        animation-name: foto-deriva-rapida;
+      }
+
+      .tinta-al-leer > span {
+        color: color-mix(in oklab, var(--color-tinta) 22%, transparent);
+        animation: tinta-al-leer linear both;
+        animation-timeline: view();
+        animation-range: cover 18% cover 42%;
+      }
     }
   }
 
@@ -762,6 +826,7 @@
       animation-duration: 1.2s !important;
       animation-iteration-count: infinite !important;
     }
+
   }
 }
 
@@ -794,6 +859,11 @@
     to {
       opacity: 1;
     }
+  }
+
+  /* La cabecera escondible del checkout solo se desvanece: no se desplaza ni se encoge. */
+  .barra-escondible[data-oculta='true'] {
+    transform: none;
   }
 
   /* El logo del pie no se anima con el scroll: queda completo y quieto. */

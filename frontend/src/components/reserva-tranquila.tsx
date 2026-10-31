@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import Image from 'next/image';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { WhatsappLogo } from '@phosphor-icons/react/ssr';
 import { CifraContada } from '@/components/ui/cifra-contada';
@@ -16,8 +15,13 @@ type Props = {
   /** Atención al cliente por WhatsApp: el número ya formateado y el enlace con el mensaje escrito. Sin número configurado, no hay bloque. */
   atencion: { numero: string; href: string } | null;
   fondo: Fondo;
-  /** La empresa que opera la sede: su isotipo va como sello junto al título (estas reglas las respalda ella). */
-  sello?: { isotipo: string; empresa: string };
+  /**
+   * La empresa que opera la sede: su isotipo va como sello pegado al título y de su alto (estas reglas las respalda
+   * ella); en la banda tinta, con el círculo blanco por fuera si hay isotipo transparente (`sinFondo`).
+   */
+  sello?: { isotipo: string; sinFondo?: string; empresa: string };
+  /** La ilustración de la empresa detrás de las cifras (`MarcaEmpresa.ilustracionFondo`); con ella no va el sello. */
+  ilustracion?: string;
 };
 
 function Cifra({ cifra, titulo, children }: { cifra: string; titulo: string; children: ReactNode }) {
@@ -33,19 +37,21 @@ function Cifra({ cifra, titulo, children }: { cifra: string; titulo: string; chi
 /**
  * Pago, clima y cambio de fecha como tres cifras grandes en la banda negra (F10), que cuentan desde cero
  * al entrar. Una sola política para las cuatro empresas. Al final, el número de atención al cliente. Con `sello`, el
- * isotipo de la empresa que opera la sede va junto al título, como sello de que respalda esas reglas (un solo logo
- * en toda la banda: también cubre el bloque de atención).
+ * isotipo de la empresa que opera la sede va pegado al título, como sello de que respalda esas reglas (un solo logo
+ * en toda la banda: también cubre el bloque de atención). Si la empresa tiene `ilustracion`, su logo va de fondo,
+ * grande y tenue detrás de las cifras, y no hay sello junto al título (pedido del dueño, 2026-10-30).
  *
  * Server Component (las cifras que cuentan son una isla cliente).
  */
-export function ReservaTranquila({ id, textos, porcentaje, atencion, fondo, sello }: Props) {
-  const lado = sello ? (
-    <span className="rev relative order-first block size-20 shrink-0 self-end overflow-hidden rounded-full bg-blanco sm:size-24 lg:order-none lg:self-start">
-      <Image src={sello.isotipo} alt={sello.empresa} fill sizes="96px" className="object-contain p-[6%]" />
-    </span>
-  ) : undefined;
+export function ReservaTranquila({ id, textos, porcentaje, atencion, fondo, sello, ilustracion }: Props) {
   return (
-    <SectionShell id={id} fondo={fondo} titulo={textos.titulo} lado={lado}>
+    <SectionShell
+      id={id}
+      fondo={fondo}
+      titulo={textos.titulo}
+      sello={!ilustracion && sello ? { isotipo: sello.isotipo, sinFondo: sello.sinFondo, alt: sello.empresa } : undefined}
+      ilustracion={ilustracion}
+    >
       <ul className="mt-12 grid gap-12 md:grid-cols-3 md:gap-8 lg:mt-16">
         <Cifra cifra={porcentaje === null ? textos.cifraTotal : `${porcentaje} %`} titulo={textos.pagoTitulo}>
           <p>{porcentaje === null ? textos.pagoTextoTotal : textos.pagoTexto.replace('{porcentaje}', String(porcentaje))}</p>

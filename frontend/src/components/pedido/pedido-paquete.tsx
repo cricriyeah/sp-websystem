@@ -778,6 +778,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
         dict={dict}
         volverHref={volverHref}
         alPasoAnterior={alPasoAnterior}
+        pagoEnCurso={pagoEnCurso}
         empresa={paquete.es_cruza_empresa ? undefined : empresas[paquete.empresa_lider_slug]}
         empresasDeslinde={[...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]}
         volverLabel={textos.back}

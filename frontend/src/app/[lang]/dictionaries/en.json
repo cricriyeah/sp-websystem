@@ -18,7 +18,7 @@
     },
     "privacidad": {
       "title": "Privacy notice",
-      "description": "Learn how we protect your personal data when you book your fishing charter with us."
+      "description": "How we look after your data when you book on Sun Baja Experience."
     },
     "notFound": {
       "title": "Page not found",
@@ -26,7 +26,7 @@
     },
     "catalogo": {
       "title": "Experiences and Packages | Sun Baja Experience",
-      "description": "Explore curated sportfishing packages and tours across destinations in BCS."
+      "description": "Fishing, whales, lodging and transfers with the people of La Paz, La Ventana and Puerto Chale."
     },
     "traslados": {
       "title": "Private Transportation & Transfers | Sun Baja Experience",
@@ -34,8 +34,8 @@
     }
   },
   "notFound": {
-    "headline": "Looks like this page set sail!",
-    "body": "Don't worry, we'll help you get back on course. From our home page you can explore our boats, see what's biting, and plan your next fishing adventure with us.",
+    "headline": "This page stayed on the dock",
+    "body": "The link is mistyped or the page has moved. From the home page you can pick a destination and see the trips on offer.",
     "cta": "Go to home",
     "ctaBook": "Book a trip"
   },
@@ -107,7 +107,7 @@
     "reservar": "Book now",
     "humanContact": "Customer support",
     "whatsappCta": "Message us on WhatsApp",
-    "whatsappMessage": "Hi! I'd like info about booking a sportfishing tour with you. Could you help me?",
+    "whatsappMessage": "Hi, I'd like help booking a trip.",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "switchLang": "Cambiar a Español",
@@ -122,7 +122,7 @@
     "todosLosDestinos": "All destinations"
   },
   "booking": {
-    "timeHelp": "Departure between 5:00 and 7:00 am",
+    "timeHelp": "Departure between {desde} and {hasta}",
     "submit": "Book now",
     "verQueReservar": "See what to book"
   },
@@ -148,7 +148,7 @@
       {
         "icon": "horas",
         "title": "6 to 7 hour tour",
-        "body": "Morning departures between 5:00 and 7:00 am, tailored to the time that suits you best."
+        "body": "Morning departures between {desde} and {hasta}, tailored to the time that suits you best."
       }
     ],
     "bringTitle": "Recommendations to bring",
@@ -159,15 +159,15 @@
     ]
   },
   "footer": {
-    "headline": "Book your Baja Sur experience",
+    "headline": "Head out to sea with the people of Baja Sur",
     "addressLabel": "Meeting point",
     "address": "Marina La Costa, Rangel y Navarro",
     "city": "La Paz, Baja California Sur",
     "hoursLabel": "Morning departures",
-    "hours": "Every day, 5:00 to 7:00 am",
+    "hours": "Every day, {desde} to {hasta}",
     "officeLabel": "Customer support",
     "office": "C. Toronja 561, Indeco, Donceles 28, 23070",
-    "exploreLabel": "Your adventure",
+    "exploreLabel": "Explore",
     "legalLabel": "Legal information",
     "waiver": "Liability waiver",
     "privacy": "Privacy notice",
@@ -493,14 +493,14 @@
     "reintentar": "Try again in a few seconds."
   },
   "cookies": {
-    "title": "Cookie and privacy notice",
-    "body": "We use essential cookies to ensure your booking is smooth and secure. If you wish, they also help us optimize your browsing experience on our site.",
+    "title": "Cookies",
+    "body": "We use the ones needed for booking and payment to work. If you accept, we'll also use others to see which pages people visit and to measure our ads.",
     "accept": "Accept",
     "reject": "Decline",
     "more": "View privacy notice"
   },
   "traslados": {
-    "title": "Private Transfers & Transportation",
+    "title": "Private transfers in La Paz",
     "subtitle": "Private transfers in La Paz, BCS. Airport, hotels, and meeting points.",
     "cta": "Book transfer",
     "unavailableTitle": "Service currently unavailable",
@@ -689,7 +689,7 @@
       "operadaPor": "With"
     },
     "queReservar": {
-      "titulo": "Book right now",
+      "titulo": "Choose your trip",
       "opera": "With {empresa}",
       "incluye": "Includes",
       "preguntaIncluye": "Ask what is included",
@@ -762,7 +762,7 @@
       "pagoTextoTotal": "You pay the company that runs your service directly, the full amount online when you book.",
       "resto": "The rest, on the day of the trip, in cash",
       "climaTitulo": "If the weather is bad",
-      "climaTexto": "If bad weather keeps the trip from leaving, you get a full refund.",
+      "climaTexto": "If the weather keeps the boats in, we refund everything you paid. The port authority or your captain makes that call on the day.",
       "fechaTitulo": "Changing your date",
       "fechaTexto": "You can change the date with at least 48 hours' notice.",
       "atencionTitulo": "Prefer to book with a person?",
@@ -776,7 +776,7 @@
       "originalEs": "Original in Spanish",
       "originalEn": "Original in English"
     },
-    "galeria": "Photos from the experience",
+    "galeria": "What our trips look like",
     "temporadasAhora": "now",
     "galeriaVisor": {
       "cerrar": "Close",
@@ -797,8 +797,8 @@
       "title": "About us",
       "description": "We are an agency that brings together local companies in Baja California Sur: you book in one place and pay the company that takes you out."
     },
-    "titular": "Local people. Local sea.",
-    "subtitulo": "Sun Baja Experience brings together local companies in Baja California Sur so you can book fishing, whale watching, lodging and transfers in one place, and head out with people who know these waters.",
+    "titular": "Made in La Paz, by people who go to sea",
+    "subtitulo": "Sun Baja Experience started in La Paz so you can book directly with the people of Baja Sur: the captains, guides and families who make their living from the sea.",
     "fotoAlt": "Pangas on the sand by the sea",
     "fotosAlt": [
       "An angler with his rod, by the sea",
@@ -836,17 +836,17 @@
     "whatsappMensaje": "Hi, I would like to know more about Sun Baja Experience.",
     "historiaTitulo": "How it started",
     "historia": [
-      "It all started with a panga and an idea.",
-      "A sportfishing company in La Paz and a marketing team sat down to talk about the same thing: much of the management of tours and adventures in Baja was ending up in the hands of foreign companies. The captains brought the sea and the craft; others handled the booking, the payment and the relationship with the traveler.",
-      "We decided it could be different. Everyone put in what they do best: some go out on the water, others make booking a tour in Baja easy. Sun Baja Experience came out of that union."
+      "Sun Baja Experience started in La Paz, in a conversation between the captains of a sportfishing company and a local marketing team.",
+      "Both could see that much of the tour booking in Baja was handled by companies from elsewhere. The captains brought the sea, the panga and a lifetime of skill; others put their name on it and took the payment, and travelers rarely knew who had taken them out.",
+      "We combined what each of us does best. The captains go out to sea, and we make booking with them easy, in English and Spanish, so you know who will take you out before you arrive."
     ],
     "empresasTitulo": "The companies we work with",
-    "empresasTexto": "They are local, and each one runs its own services. We do not run the tours: we make booking them clear and simple."
+    "empresasTexto": "Each company is from its own destination and runs its own services. We help you before the trip, with the date, the payment and your questions."
   },
   "hubContenido": {
     "titularLineas": ["Out at sea:"],
     "titularSecundario": "fishing and whales in Baja Sur",
-    "subtexto": "Fishing, whale watching, lodging and transfers with local outfitters in Baja California Sur.",
+    "subtexto": "Book directly with the people who go out to sea in Baja Sur: captains in La Paz, guides in La Ventana and a fishing family in Puerto Chale.",
     "og": { "lugar": "Baja California Sur", "titular": "Fishing, whales and open sea in Baja Sur with local outfitters" },
     "ctaSedes": "See destinations",
     "sedesTitulo": "Where are you headed?",
@@ -856,27 +856,27 @@
     "conN": "With {a} and {n} more",
     "desde": "From",
     "verSede": "See {sede}",
-    "mapaTitulo": "Find them on the map",
-    "mapaTexto": "Tap a destination to see where it is, then scroll down to explore it.",
+    "mapaTitulo": "Where each destination is",
+    "mapaTexto": "La Paz and La Ventana face the Sea of Cortez, and Puerto Chale faces the Pacific. Tap one to see what you can do there.",
     "comoTitulo": "Book here, head out with locals",
     "comoCta": "Choose your destination",
-    "comoTexto": "Sun Baja Experience brings together what each destination's local companies offer. You compare and book here; the company takes you out and charges you directly.",
+    "comoTexto": "Behind every trip there's a captain, a guide or a family who grew up on that stretch of coast. We bring them together on this site so booking with them is easy, and so what you pay goes to them.",
     "comoPasos": [
       {
         "verbo": "Decide",
-        "texto": "Every service shows who takes you, what it costs and what's included, before you pay."
+        "texto": "Choose a destination and a trip. Each one shows who you'll go with, what it costs and what's included before you pay."
       },
       {
         "verbo": "Book",
-        "texto": "Pick a date and group size, and pay the company online. If your trip combines two companies, you'll see one charge from each."
+        "texto": "Pick a date and group size and pay online, directly to the local company. If your trip combines two companies, you'll see one charge from each."
       },
       {
-        "verbo": "Enjoy it",
-        "texto": "On the day, the company meets you. If the weather keeps you ashore, you get it all back; to change your date, give 48 hours' notice."
+        "verbo": "Live it",
+        "texto": "Head out to sea with people who have known it all their lives. Watch a dorado jump or a whale come up to breathe, and go home with Baja Sur stories you'll be telling for years."
       }
     ],
     "empresasTitulo": "Who takes you out",
-    "empresasTexto": "Independent companies from each destination. Each runs its own service, charges you directly and has its own site and socials.",
+    "empresasTexto": "They're small companies run by people from each destination, with their own captains, guides and boats. When you book here, you go out with them and the payment goes straight to them.",
     "verServiciosEn": "See services in {sede}",
     "sitioOficial": "Official site",
     "pestanaNueva": "{accion}, {empresa}, opens in a new tab",
@@ -900,7 +900,7 @@
   },
   "destination": {
     "book": "Book",
-    "seasonsTitle": "Seasons and seasonality"
+    "seasonsTitle": "What's biting each season"
   },
   "serviceDetail": {
     "metaFallback": "Service details",

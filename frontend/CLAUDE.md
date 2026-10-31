@@ -249,18 +249,36 @@ Acomodo derivado con perception-first-design; construido con taste. El héroe es
 
 - **«Nuestras pangas»** (`pangas-sede.tsx`, id `pangas`): justo bajo el héroe y antes de «Reservar ahora»
   (`seccionesDeSede` la pone ahí si `contenido.pangas` tiene fotos; fuera del menú). Cabe en una pantalla y no lleva botón
-  para no alejar la compra: isotipo junto al título, una frase y tres fotos (protagonista en 7 columnas y dos de apoyo
-  apiladas en 5; en el teléfono la protagonista a todo el ancho y dos lado a lado), cada una con su pie. Si llegan más de
-  tres fotos de pangas, las demás van a la galería, no aquí.
-- **«Conócenos»** (`conocenos-sede.tsx`): tres cifras monumentales (solo hechos confirmados o ya publicados: 30+ años de
-  Rogelio, 3+ generaciones, 365 días) y, a su derecha, la reseña con la foto de la panga Dream debajo (cierra la columna);
-  la prensa; la tripulación como cartel (un nombre de pila por renglón en `.texto-tripulacion`, su dato con el isotipo;
-  título fijo en escritorio); y el cierre «Sal con el sol» con el isotipo grande. No hay foto ni panga por capitán.
-- **El logo** va siempre igual (isotipo en círculo blanco) y solo donde significa algo: barra, sello del héroe, título de
-  las pangas, tripulación, cierre del sol y pie. No en «Tu día», las garantías, temporadas ni preguntas (sería adorno).
+  para no alejar la compra. Rehecha el 2026-10-30 (PFD + Apple): bajo el título, la foto de la flota COMPLETA, en su
+  proporción y sin nada encima (el dueño rechazó los nombres sobre la foto); pegado a ella, una frase grande y el párrafo
+  que nombra las siete pangas en el orden de la foto (`pangas.nombres`, `{nombres}` en `texto`); al lado, las dos fotos
+  navegando, que en el teléfono son una tira que se desliza de lado. En el teléfono la flota va de orilla a orilla.
+- **«Conócenos»** (`conocenos-sede.tsx`): un solo relato a dos columnas en un solo fondo (2026-10-30; reemplazó la banda
+  tinta con el collage del staff y el cartel gigante «Sal con el sol»). En escritorio, las fotos del gremio bajan a la
+  izquierda (la del relato, la primera de `tripulacion.fotos` y las otras dos lado a lado), sin alinearse con ningún nombre;
+  a la derecha, título, apertura, párrafos 1-2, los nombres de los capitanes como frase del relato (`.texto-tripulacion`),
+  párrafo 3, la prensa (único bloque tinta) y el cierre: el logo largo a color de la empresa (`MarcaEmpresa.logoLargo`) y
+  debajo el único botón (2026-10-30, el dueño quitó «Sal con el sol», el isotipo chico y la frase). En el
+  teléfono todo va intercalado con `order` (las columnas son `contents`). Sin cifras sueltas, sin estrellas ni íconos.
+  Dinamismo: la foto del relato sangra hasta el borde de la pantalla (en el teléfono, las dos grandes de borde a borde), la escena se encima más angosta con un marco del
+  color del fondo y la pareja va escalonada; al hacer scroll las fotos derivan dentro de su marco (`.foto-deriva`), los
+  nombres se entintan palabra por palabra (`.tinta-al-leer`). Todo
+  con `animation-timeline: view()` y quieto con «reducir movimiento».
+- **El logo** solo donde significa algo. En «Las pangas», «Reserva con tranquilidad» y Temporadas va arriba a la
+  derecha, en la esquina, alineado al borde de arriba del título, de tamaño medio y fijo (64/80/96/112 px;
+  `ui/sello-titulo.tsx`, vía `SectionShell sello`). En «Las pangas», si la empresa tiene `logoLargo` (Sal y Sol), va el logo largo a color en lugar del
+  isotipo, del tamaño del sello (48/80/96/112 px), y el título baja a la base del logo para quedar pegado a la foto.
+  Lo mismo en «Qué se pesca» (`SectionShell sello.largo`). En la barra de arriba (`LogoEmpresaAlLado`) y en el héroe
+  (`SedeHero`, sin el «Con …») también va el logo largo cuando la empresa lo tiene. En «Gente de mar» el dorado
+  (`conocenos.ilustracion`, /ilustraciones/dorado.svg) va de fondo, tenue, como el logo de «Reserva con tranquilidad». Sin círculo en fondo claro (isotipo transparente
+  `simboloBarra`), dentro de un círculo blanco en la banda tinta, y con su propio círculo si la empresa no tiene isotipo
+  transparente. En «Te lleva», sin círculo.
+  En «Reserva con tranquilidad» de La Paz no hay sello: el logo de Sal y Sol dibujado en blanco
+  (`/logos/logosbgsalysol.svg`, `MarcaEmpresa.ilustracionFondo`) va de fondo detrás de las cifras al 7 % de opacidad,
+  cortado por la derecha (`SectionShell ilustracion`). Las empresas sin ilustración conservan el sello.
 - Los nombres de la tripulación vienen de una nota de voz: van `pendiente: true` y NO se publican
   (`lib/capitanes-visibles.ts`; se ven en desarrollo o con `NEXT_PUBLIC_VER_PENDIENTES=1`). Al confirmarlos, quitar
-  `pendiente` y ajustar la prueba `content-sedes-cuerpo`. Las fotos de pangas son de relleno.
+  `pendiente` y ajustar la prueba `content-sedes-cuerpo`. Las fotos de pangas y de Conócenos ya son las reales del dueño.
 
 ## Continuar reservación (banda global)
 

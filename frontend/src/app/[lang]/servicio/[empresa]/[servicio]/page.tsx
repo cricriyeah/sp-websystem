@@ -4,6 +4,7 @@ import { preconnect } from 'react-dom';
 import { cache } from 'react';
 import { getDictionary, hasLocale, type Locale } from '../../../dictionaries';
 import { API_URL, ApiError, getPaquetesSede, getServicioDetalle, getServiciosSede } from '@/lib/api';
+import { conVentana, sedeConVentana, ventanaDeSalida } from '@/lib/horario-servicio';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
@@ -49,17 +50,23 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   const [{ data: servicio, missing }, query, dict] = await Promise.all([cargar(slug, empresa, lang), searchParams, getDictionary(lang)]);
   const traslado = servicio?.tipo_servicio === 'transporte' || (empresa === 'transporte-la-paz' && slug === 'traslados-la-paz');
   if (missing && !pesca && !traslado) notFound();
-  const sede = getSedeContenido(typeof query.sede === 'string' ? query.sede : 'la-paz', lang);
+  const escrita = getSedeContenido(typeof query.sede === 'string' ? query.sede : 'la-paz', lang);
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   // El resto de la sede, para «También en»: si no responde, esa fila no se pinta.
-  const [servicios, paquetes] = sede
-    ? await Promise.all([getServiciosSede(sede.slug, lang).catch(() => null), getPaquetesSede(sede.slug, lang).catch(() => null)])
+  const [servicios, paquetes] = escrita
+    ? await Promise.all([getServiciosSede(escrita.slug, lang).catch(() => null), getPaquetesSede(escrita.slug, lang).catch(() => null)])
     : [null, null];
-  const vista = vistaDeDetalleServicio({ lang, moneda, dict, sede, otros: { servicios, paquetes }, empresaSlug: empresa, slug, servicio, pesca, traslado });
+  const sede = escrita && sedeConVentana(escrita, servicios);
+  // Los textos del servicio dicen su propia ventana; si la API no lo trajo, la de su sede.
+  const ventana = (servicio?.pide_hora ? ventanaDeSalida(servicio.hora_apertura, servicio.hora_cierre) : null)
+    ?? ventanaDeSalida(sede?.negocio?.horarioApertura, sede?.negocio?.horarioCierre);
+  const textosConHora = ventana ? { ...dict, included: conVentana(dict.included, ventana) } : dict;
+  const vista = vistaDeDetalleServicio({ lang, moneda, dict: textosConHora, sede, otros: { servicios, paquetes }, empresaSlug: empresa, slug, servicio, pesca, traslado });
   const sedeDelServicio = getSedeContenido(getEmpresa(empresa)?.sede ?? '', lang);
   const urlServicio = absolutaEn(lang, `/servicio/${empresa}/${slug}`);
   // Las preguntas del servicio (si ya las tiene) se pintan y van al JSON-LD: son las mismas.
-  const preguntas = getFaqServicio(empresa, slug, lang);
+  const escritas = getFaqServicio(empresa, slug, lang);
+  const preguntas = escritas && ventana ? conVentana(escritas, ventana) : escritas;
   const textosFaq = dict.sedeContenido.faq;
   const nombreServicio = servicio?.nombre ?? dict.serviceDetail.metaFallback;
   const whatsappFaq = tieneWhatsapp

@@ -24,6 +24,8 @@ type Props = {
   empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
   /** Hay dinero retenido: la marca de la cabecera no enlaza. */
   marcaFija?: boolean;
+  /** Pago en curso: la cabecera no se esconde al bajar en el teléfono. */
+  pagoEnCurso?: boolean;
   /** Slugs de las empresas que operan lo que se compra: el deslinde que se enlaza es el de ellas. */
   empresasDeslinde?: readonly string[];
   /** `EncabezadoCompra`. */
@@ -43,7 +45,7 @@ type Props = {
  * no persigue el scroll).
  */
 export function PaginaCheckout({
-  lang, dict, volverHref, volverLabel, alPasoAnterior, empresa, marcaFija, empresasDeslinde = [], encabezado, aviso, stepper, pasos, pedido,
+  lang, dict, volverHref, volverLabel, alPasoAnterior, empresa, marcaFija, pagoEnCurso, empresasDeslinde = [], encabezado, aviso, stepper, pasos, pedido,
 }: Props) {
   const movil = useMovil();
   const nombres: [string, string, string] = [dict.checkout.stepper.viaje, dict.checkout.stepper.datos, dict.checkout.stepper.pago];
@@ -59,6 +61,7 @@ export function PaginaCheckout({
         alPasoAnterior={alPasoAnterior}
         empresa={empresa}
         marcaFija={marcaFija}
+        quieta={pagoEnCurso}
       />
 
       {/* La cabecera es `fixed` y no reserva espacio: `--nav-alto` (globals.css) la

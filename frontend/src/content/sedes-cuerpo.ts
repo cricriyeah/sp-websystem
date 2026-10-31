@@ -20,12 +20,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         ciudad: 'La Paz',
         estado: 'Baja California Sur',
         pais: 'MX',
-        horarioApertura: '05:00',
+        horarioApertura: '06:00',
         horarioCierre: '07:00',
       },
       metaTitle: 'Tours de pesca deportiva en La Paz, BCS | Sal y Sol Sportfishing',
       metaDescription:
-        'Vive la mejor experiencia de pesca deportiva en La Paz, BCS con capitanes locales. Salidas privadas desde Marina La Costa. Reserva en línea o escríbenos por WhatsApp.',
+        'Pesca deportiva en La Paz con capitanes que crecieron en la bahía. Panga solo para tu grupo, hasta 5 personas, saliendo cada mañana de Marina La Costa.',
       hero: {
         video: '/videos/videonuevonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
@@ -34,12 +34,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionVideoMovil: '32% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
-          'Somos una agencia local de La Paz con capitanes que conocen estas aguas como nadie. Salimos todos los días de Marina La Costa para darte la mejor experiencia de pesca en BCS.',
+          'Somos capitanes de La Paz y crecimos en esta bahía. Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar lo que esté picando en el Mar de Cortés.',
         facts: [
-          { value: '6 a 7 horas', label: 'Duración de la aventura' },
-          { value: '5:00 a 7:00 am', label: 'Horario flexible a tu gusto' },
-          { value: 'Hasta 5 personas', label: 'Ambiente privado y familiar' },
-          { value: '365 días al año', label: 'Salidas disponibles todo el año' },
+          { value: '6 a 7 horas', label: 'En el mar' },
+          { value: '{desde} a {hasta}', label: 'Tú eliges la hora de salida' },
+          { value: 'Hasta 5 personas', label: 'Solo tu grupo a bordo' },
+          { value: '365 días al año', label: 'Salimos todos los días' },
         ],
       },
       destacadas: [
@@ -53,58 +53,60 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Tu día de pesca',
         etiqueta: 'Tu día de pesca, momento por momento',
         momentos: [
-          { titulo: '5:00 am', texto: 'Te espera tu capitán en Marina La Costa. Eliges la hora de salida entre 5:00 y 7:00 am.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
-          { titulo: 'A bordo', texto: 'Solo tu grupo y tu capitán en la panga. Hasta 5 personas.', foto: '/photos/capitan-cabrilla-bahia.webp' },
-          { titulo: 'Pesca', texto: 'De 6 a 7 horas en la bahía, buscando lo que pica en la temporada.', foto: '/photos/cana-doblada-dorado.webp' },
-          { titulo: 'Regresa', texto: 'Con tus fotos y tu captura.', foto: '/photos/grupo-cabrilla-costa.webp' },
+          { titulo: '{hora}', texto: 'Tu capitán te espera en el muelle de Marina La Costa con la panga lista. La hora la eliges tú, entre {desde} y {hasta}.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
+          { titulo: 'A bordo', texto: 'En la panga van solo tu grupo y tu capitán. Él decide hacia dónde ir según cómo amaneció el mar.', foto: '/photos/capitan-cabrilla-bahia.webp' },
+          { titulo: 'Pesca', texto: 'De 6 a 7 horas en el Mar de Cortés, buscando lo que da la temporada: dorado, marlín, jurel o sierra.', foto: '/photos/cana-doblada-dorado.webp' },
+          { titulo: 'Regresa', texto: 'Vuelves al muelle con la captura y las fotos, y con los pelícanos rondando la panga a ver si les toca algo.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Fotos de relleno de las pangas (las que ya existen) hasta que lleguen las que edita el dueño.
       pangas: {
-        titulo: 'Las pangas de Sal y Sol',
-        texto: 'Salen todos los días de Marina La Costa, con su capitán y solo tu grupo a bordo.',
+        titulo: 'La flota de Sal y Sol',
+        flota: { src: '/photos/flota-pangas-bahia.webp', alt: 'Las siete pangas de Sal y Sol formadas en el agua turquesa de la bahía', ancho: 1600, alto: 894 },
+        frase: 'Pangas de La Paz, capitanes de La Paz.',
+        nombres: ['Don Piry', 'Volador', 'Dream', 'Escoria del Mar', 'Esperanzas', 'Storm', 'Volador III'],
+        y: 'y',
+        texto: '{nombres}. En el muelle las conocen por su nombre, igual que a sus capitanes, todos de La Paz. Cada mañana salen de Marina La Costa, y la que te lleva va solo con tu grupo, hasta 5 personas.',
         fotos: [
-          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'Dos pescadores con su captura sobre la cubierta de una panga', pie: 'La pesca del día, en cubierta.' },
-          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'Una panga con su capitán en la bahía, con pelícanos al lado', pie: 'Con el capitán, en la bahía.' },
-          { src: '/photos/dorado-bajo-toldo.webp', alt: 'Un pescador con un dorado bajo el toldo de la panga', pie: 'Bajo el toldo de la panga.' },
+          { src: '/photos/panga-rumbo-a-la-pesca.webp', alt: 'La panga Storm, con toldo verde, navega a toda velocidad con tres pescadores a bordo', pie: 'Storm' },
+          { src: '/photos/panga-acantilados-rojos.webp', alt: 'La panga Volador III cruza el agua clara frente a acantilados rojos', pie: 'Volador III' },
         ],
       },
-      // Los nombres de la tripulación salen de una nota de voz y están por confirmar (`pendiente`: no se publican).
+      // Los nombres de la tripulación los confirmó el dueño el 2026-10-30.
       conocenos: {
         titulo: 'Gente de mar',
-        apertura:
-          'En La Paz, la pesca deportiva no se estudia: se mira desde niño en el muelle y se lleva toda la vida.',
+        apertura: 'En La Paz, el oficio del mar se aprende de niño, en el muelle, viendo a los mayores salir antes de que amanezca.',
         historia: [
-          'Así fue para Rogelio Camacho, que creció en El Manglito viendo zarpar los barcos de Los Ruffo y de Jack Vélez, donde trabajaban sus hermanos. En ese entonces la pesca deportiva era una competencia tan de La Paz como el malecón. Hoy suma más de treinta años en el mar, y su familia lleva más de tres generaciones en él.',
-          'Pero esta historia no es de un solo hombre. Con nosotros salen capitanes de La Paz, un gremio de gente de aquí que conoce la bahía como la palma de su mano: dónde se junta el pescado en cada temporada, a qué hora se calma el viento, cómo volver con la hielera llena y todos sonriendo.',
-          'Cada madrugada, entre las cinco y las siete, salimos de Marina La Costa con la misma emoción de la primera vez. En la panga vas solo con tu grupo y con un capitán que vive para este mar. Tú traes las ganas. Nosotros te llevamos a donde está la pesca.',
+          'Así lo aprendieron los capitanes que salen con nosotros. Son un gremio de gente de La Paz, y en él se repiten los apellidos, porque aquí el oficio pasa de padres a hijos. Rogelio Camacho, uno de ellos, creció en El Manglito, el barrio de pescadores de la ciudad, viendo salir los barcos donde trabajaban sus hermanos. Cualquiera de sus compañeros podría contar una historia parecida.',
+          'Llevan la vida entera en esta agua. Saben dónde se junta el pescado en cada temporada, a qué hora se calma el viento y por dónde volver con la hielera llena. Cada salida es su trabajo y el sustento de su casa, y también la oportunidad de enseñarle su bahía a alguien que viene de lejos.',
+          'Cada mañana, entre las {desde} y las {hasta}, salimos de Marina La Costa. En la panga vas solo con tu grupo y con uno de ellos al timón. Te lleva a sus lugares y, cuando el pez pica, lo pelea contigo hasta subirlo a bordo.',
         ],
-        // Foto de relleno hasta que llegue la del gremio que edita el dueño (nunca el retrato del jefe solo).
-        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'Un capitán con un mero recién sacado, en la bahía de La Paz' },
+        // Nunca el retrato del jefe solo: la foto del relato es de la gente del gremio.
+        foto: { src: '/photos/capitanes-con-marlines.webp', alt: 'Dos hombres de mar sostienen un marlín cada uno en la popa de la panga' },
+        ilustracion: { src: '/ilustraciones/dorado.svg', ancho: 710, alto: 723 },
         prensa: {
           etiqueta: 'Prensa',
           texto: 'El entusiasmo de lancheros como Rogelio Camacho es el motor de la ciudad de La Paz.',
           fuente: 'Perla Taddie García, Peninsular Digital, 2010.',
         },
         tripulacion: {
-          titulo: 'El gremio de capitanes',
-          texto: 'Capitanes locales de La Paz, en la bahía todos los días. Ellos saben dónde está el pescado.',
           capitanes: [
-            { nombre: 'Rogelio', detalle: 'Camacho · más de 30 años en el mar', pendiente: true },
-            { nombre: 'Omar', detalle: '«Boli» · socio de Rogelio', pendiente: true },
-            { nombre: 'Alfredo', detalle: 'Camacho', pendiente: true },
-            { nombre: 'Joel', detalle: 'Martínez', pendiente: true },
-            { nombre: 'Icho', detalle: 'Camacho', pendiente: true },
-            { nombre: 'Julio', detalle: '«Chito»', pendiente: true },
-            { nombre: 'Raúl', detalle: 'Martínez', pendiente: true },
-            { nombre: 'Dagoberto', pendiente: true },
+            { nombre: 'Rogelio', apodo: 'Jolly Roger', detalle: 'Camacho' },
+            { nombre: 'Omar', detalle: 'Oboli' },
+            { nombre: 'Alfredo', apodo: 'Fetuccini', detalle: 'Camacho' },
+            { nombre: 'Joel', detalle: 'Martínez' },
+            { nombre: 'Icho', detalle: 'Camacho' },
+            { nombre: 'Julio', apodo: 'Chito' },
+            { nombre: 'Raúl', detalle: 'Martínez' },
+            { nombre: 'Dagoberto', detalle: 'Usón' },
+          ],
+          y: 'y',
+          fotos: [
+            { src: '/photos/pez-gallo-a-bordo.webp', alt: 'Dos pescadores cargan un pez gallo enorme bajo el toldo azul de la panga' },
+            { src: '/photos/capitanes-con-jurel.webp', alt: 'Un pescador con un jurel y su capitán con el pulgar arriba, mar adentro' },
+            { src: '/photos/jureles-en-la-bahia.webp', alt: 'Un pescador sostiene dos jureles con la ciudad de La Paz al fondo' },
           ],
         },
-        cierre: {
-          titulo: 'Sal con el sol',
-          frase: 'Salidas de 5:00 a 7:00 am desde Marina La Costa, con un capitán del gremio y solo tu grupo a bordo.',
-          boton: 'Reservar tu salida',
-        },
+        cierre: { boton: 'Reservar tu salida' },
       },
       galeria: [
         {
@@ -158,7 +160,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
       ],
       temporadas: {
-        intro: 'La bahía ofrece una maravillosa variedad de especies a lo largo de las estaciones. Te compartimos nuestro calendario de pesca para ayudarte a elegir el momento ideal para tu aventura.',
+        intro: 'En la bahía, el pez cambia con el agua. Los capitanes lo leen en el color del mar y en los pájaros. Aquí lo tienes mes por mes, para que elijas tu fecha según lo que quieres pescar.',
         etiquetaCalendario: 'Calendario de pesca mes por mes',
         etiquetaFuerte: 'Temporada fuerte',
         etiquetaOtras: 'También activas',
@@ -167,7 +169,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'Enero a abril',
             meses: ['Ene', 'Feb', 'Mar', 'Abr'],
             estrella: 'Jurel',
-            descripcion: 'Aguas frescas y mar tranquilo: temporada de peleas largas con el jurel, ideal para quien quiere pescar con calma.',
+            descripcion: 'Agua fresca y mar en calma. El jurel pelea largo y hay que sujetar bien la caña.',
             otras: 'Pargo, cabrilla',
             foto: '/photos/yellowtail-pelicanos-bahia.webp',
             fuerte: false,
@@ -176,7 +178,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'Junio a octubre',
             meses: ['Jun', 'Jul', 'Ago', 'Sep', 'Oct'],
             estrella: 'Marlin y dorado',
-            descripcion: 'El mar caliente trae a los grandes: la temporada con más acción para quien busca una pelea de las que se cuentan.',
+            descripcion: 'Se calienta el agua y llegan el marlín y el dorado, los que saltan. Es la temporada fuerte del año.',
             otras: '',
             foto: '/photos/cana-doblada-dorado.webp',
             fuerte: true,
@@ -185,7 +187,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'Noviembre a diciembre',
             meses: ['Nov', 'Dic'],
             estrella: 'Sierra',
-            descripcion: 'El final del año deja pesca constante y buen clima para salir temprano, con la sierra como protagonista.',
+            descripcion: 'La sierra cierra el año, con pesca pareja y mañanas frescas para salir temprano.',
             otras: 'Cochito',
             foto: '/photos/pesca-del-dia-cubierta.webp',
             fuerte: false,
@@ -199,11 +201,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cuántas personas caben en la embarcación?',
-          a: 'Contamos con dos modalidades de embarcación privada: estándar para hasta 3 personas y amplia para hasta 5 pasajeros. Toda la embarcación es 100% privada para tu grupo, garantizando comodidad y atención personalizada. Familias con niños de todas las edades son siempre bienvenidas.',
+          a: 'Hay dos tamaños de panga: una para hasta 3 personas y otra para hasta 5. En las dos va solo tu grupo, y los niños de cualquier edad pueden ir.',
         },
         {
           q: '¿A qué hora salimos y cuánto dura?',
-          a: 'Puedes elegir tu hora de salida preferida entre las 5:00 y las 7:00 am al momento de reservar. El viaje dura de 6 a 7 horas para aprovechar al máximo las mejores horas de pesca.',
+          a: 'Tú eliges la hora al reservar, entre las {desde} y las {hasta}. El viaje dura de 6 a 7 horas.',
         },
         {
           q: '¿Dónde nos vemos?',
@@ -211,19 +213,19 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cómo puedo pagar?',
-          a: 'Ofrecemos modalidades cómodas y seguras: puedes liquidar el 100% en línea con tarjeta, o asegurar tu fecha con un anticipo del 30% en línea y pagar el 70% restante en efectivo el día de tu salida. Aceptamos pesos mexicanos (MXN) y dólares (USD).',
+          a: 'Puedes pagar el 100 % en línea con tarjeta, o apartar tu fecha con un anticipo del 30 % en línea y pagar el 70 % restante en efectivo el día de tu salida. Aceptamos pesos mexicanos (MXN) y dólares (USD).',
         },
         {
           q: '¿Qué pasa si hay mal clima?',
-          a: 'Tu seguridad y tranquilidad son siempre nuestra máxima prioridad. Si la capitanía de puerto o nuestro capitán determinan que las condiciones del mar no son seguras, te ofrecemos reprogramar tu viaje con gusto o te reembolsamos el 100% de lo pagado.',
+          a: 'Si la capitanía de puerto o tu capitán deciden que el mar no está para salir, eliges entre cambiar la fecha o recibir el reembolso completo.',
         },
         {
           q: '¿Puedo cambiar la fecha de mi reserva?',
-          a: '¡Claro que sí! Con al menos 48 horas de anticipación podemos reprogramar tu fecha sin costo adicional según la disponibilidad. Si surge algún imprevisto con menos tiempo, avísanos cuanto antes y buscaremos con gusto la mejor solución para apoyarte.',
+          a: 'Sí, sin costo, si avisas con al menos 48 horas y hay lugar en la nueva fecha. Si te surge algo con menos tiempo, escríbenos y vemos qué se puede hacer.',
         },
         {
           q: '¿Necesito licencia de pesca?',
-          a: 'Sí, la autoridad marítima mexicana (CONAPESCA) solicita que cada pescador a bordo cuente con su licencia individual. Puedes agregar el trámite de la licencia a tu viaje y nosotros la tramitamos por ti con gusto.',
+          a: 'Sí. La CONAPESCA, que regula la pesca en México, pide una licencia por cada persona que pesca a bordo. Puedes agregarla al reservar y nosotros la tramitamos.',
         },
       ],
     },
@@ -236,12 +238,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         ciudad: 'La Paz',
         estado: 'Baja California Sur',
         pais: 'MX',
-        horarioApertura: '05:00',
+        horarioApertura: '06:00',
         horarioCierre: '07:00',
       },
       metaTitle: 'Sportfishing Charters in La Paz, BCS | Sal y Sol Sportfishing',
       metaDescription:
-        'Experience the best sportfishing in La Paz, BCS with passionate local captains. Private charters from Marina La Costa. Book online or message us on WhatsApp.',
+        'Sportfishing in La Paz with captains who grew up on the bay. A private panga for your group of up to 5, leaving Marina La Costa every morning.',
       hero: {
         video: '/videos/videonuevonuevolapaz.mp4',
         imagen: '/photos/cola-amarilla-acantilado.webp',
@@ -250,12 +252,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionVideoMovil: '32% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
-          'We are a local La Paz agency with captains who know these waters like no one else. We sail every day from Marina La Costa to bring you the best fishing experience in BCS.',
+          'We are La Paz captains, and we grew up on this bay. Every morning we leave Marina La Costa with only your group on board, to go after whatever is biting in the Sea of Cortez.',
         facts: [
-          { value: '6 to 7 hours', label: 'Adventure duration' },
-          { value: '5:00 to 7:00 am', label: 'Flexible departure of your choice' },
-          { value: 'Up to 5 guests', label: 'Private & family-friendly' },
-          { value: '365 days a year', label: 'Departures available all year' },
+          { value: '6 to 7 hours', label: 'On the water' },
+          { value: '{desde} to {hasta}', label: 'You pick the departure time' },
+          { value: 'Up to 5 guests', label: 'Only your group on board' },
+          { value: '365 days a year', label: 'We go out every day' },
         ],
       },
       destacadas: [
@@ -269,58 +271,60 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Your fishing day',
         etiqueta: 'Your fishing day, moment by moment',
         momentos: [
-          { titulo: '5:00 am', texto: 'Your captain is waiting at Marina La Costa. You choose your departure time between 5:00 and 7:00 am.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
-          { titulo: 'On board', texto: 'Just your group and your captain on the boat. Up to 5 guests.', foto: '/photos/capitan-cabrilla-bahia.webp' },
-          { titulo: 'Fishing', texto: 'Six to eight hours on the bay, going after whatever is biting this season.', foto: '/photos/cana-doblada-dorado.webp' },
-          { titulo: 'Return', texto: 'Back with your photos and your catch.', foto: '/photos/grupo-cabrilla-costa.webp' },
+          { titulo: '{hora}', texto: 'Your captain meets you on the dock at Marina La Costa with the panga ready. You pick the time, between {desde} and {hasta}.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
+          { titulo: 'On board', texto: 'Only your group and your captain on the panga. He decides where to head based on how the sea looks that morning.', foto: '/photos/capitan-cabrilla-bahia.webp' },
+          { titulo: 'Fishing', texto: 'Six to seven hours on the Sea of Cortez, after whatever the season brings: dorado, marlin, yellowtail or sierra.', foto: '/photos/cana-doblada-dorado.webp' },
+          { titulo: 'Return', texto: 'Back at the dock with your catch and your photos, and pelicans circling the panga hoping for a share.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
-      // Placeholder photos of the pangas (the existing ones) until the owner sends the edited ones.
       pangas: {
-        titulo: 'The Sal y Sol pangas',
-        texto: 'They leave Marina La Costa every day, with their captain and only your group on board.',
+        titulo: 'The Sal y Sol fleet',
+        flota: { src: '/photos/flota-pangas-bahia.webp', alt: 'The seven Sal y Sol pangas lined up on the turquoise water of the bay', ancho: 1600, alto: 894 },
+        frase: 'La Paz pangas, La Paz captains.',
+        nombres: ['Don Piry', 'Volador', 'Dream', 'Escoria del Mar', 'Esperanzas', 'Storm', 'Volador III'],
+        y: 'and',
+        texto: '{nombres}. Everyone on the dock knows them by name, the same way they know their captains, all from La Paz. Every morning they leave Marina La Costa, and the one that takes you carries only your group, up to 5 people.',
         fotos: [
-          { src: '/photos/pesca-del-dia-cubierta.webp', alt: 'Two anglers with their catch on the deck of a panga', pie: 'The day’s catch, on deck.' },
-          { src: '/photos/yellowtail-pelicanos-bahia.webp', alt: 'A panga and its captain on the bay, with pelicans alongside', pie: 'With the captain, on the bay.' },
-          { src: '/photos/dorado-bajo-toldo.webp', alt: 'An angler holding a mahi under the panga canopy', pie: 'Under the panga canopy.' },
+          { src: '/photos/panga-rumbo-a-la-pesca.webp', alt: 'The panga Storm, with its green canopy, speeds across the water with three anglers on board', pie: 'Storm' },
+          { src: '/photos/panga-acantilados-rojos.webp', alt: 'The panga Volador III crosses clear water in front of red cliffs', pie: 'Volador III' },
         ],
       },
-      // The crew names come from a voice note and are pending confirmation (`pendiente`: not published).
+      // Los nombres de la tripulación los confirmó el dueño el 2026-10-30.
       conocenos: {
         titulo: 'Born to this bay',
-        apertura:
-          'In La Paz, sportfishing isn’t something you study. You grow up watching it from the dock, and it stays with you for life.',
+        apertura: 'In La Paz, you learn the sea as a kid, on the dock, watching the older fishermen head out before sunrise.',
         historia: [
-          'That’s how it was for Rogelio Camacho. He grew up in El Manglito watching the boats of Los Ruffo and Jack Vélez head out, the same boats his brothers worked on. Back then, sportfishing was as much a part of La Paz as the malecón. Today he has more than thirty years on the water, and his family has fished this sea for more than three generations.',
-          'But this isn’t one man’s story. The captains who take you out are a guild of La Paz locals who know this bay by heart: where the fish gather each season, when the wind lays down, and how to bring everyone home with a full cooler and a grin.',
-          'Every morning between five and seven, we leave Marina La Costa with the same thrill as the first time. It’s just your group on the panga, with a captain who lives for this water. You bring the drive. We’ll take you where the fish are.',
+          'That’s how the captains who take you out learned it. They are a guild of La Paz locals, and the same last names come up again and again, because here the trade passes from parents to children. Rogelio Camacho, one of them, grew up in El Manglito, the city’s fishing neighborhood, watching the boats his brothers worked on head out. Any of the others could tell you a similar story.',
+          'They have spent their whole lives on this water. They know where the fish gather each season, when the wind lays down, and which way to come home with a full cooler. Every trip is their work and how they support their families, and it is also a chance to show their bay to someone who came a long way to see it.',
+          'Every morning between {desde} and {hasta}, we leave Marina La Costa. On the panga it’s just your group and one of them at the helm. He takes you to his spots, and when a fish bites, he fights it with you until it’s on board.',
         ],
         // Placeholder until the owner sends the guild photo (never a portrait of the boss alone).
-        foto: { src: '/photos/capitan-cabrilla-bahia.webp', alt: 'A captain with a freshly caught grouper on the bay of La Paz' },
+        foto: { src: '/photos/capitanes-con-marlines.webp', alt: 'Two seamen each hold a marlin at the stern of the panga' },
+        ilustracion: { src: '/ilustraciones/dorado.svg', ancho: 710, alto: 723 },
         prensa: {
           etiqueta: 'Press',
           texto: 'The enthusiasm of boatmen like Rogelio Camacho is the engine of the city of La Paz.',
           fuente: 'Perla Taddie García, Peninsular Digital, 2010.',
         },
         tripulacion: {
-          titulo: 'The captains guild',
-          texto: 'Local La Paz captains, out on the bay every day. They know where the fish are.',
           capitanes: [
-            { nombre: 'Rogelio', detalle: 'Camacho · more than 30 years at sea', pendiente: true },
-            { nombre: 'Omar', detalle: '«Boli» · Rogelio’s partner', pendiente: true },
-            { nombre: 'Alfredo', detalle: 'Camacho', pendiente: true },
-            { nombre: 'Joel', detalle: 'Martínez', pendiente: true },
-            { nombre: 'Icho', detalle: 'Camacho', pendiente: true },
-            { nombre: 'Julio', detalle: '«Chito»', pendiente: true },
-            { nombre: 'Raúl', detalle: 'Martínez', pendiente: true },
-            { nombre: 'Dagoberto', pendiente: true },
+            { nombre: 'Rogelio', apodo: 'Jolly Roger', detalle: 'Camacho' },
+            { nombre: 'Omar', detalle: 'Oboli' },
+            { nombre: 'Alfredo', apodo: 'Fetuccini', detalle: 'Camacho' },
+            { nombre: 'Joel', detalle: 'Martínez' },
+            { nombre: 'Icho', detalle: 'Camacho' },
+            { nombre: 'Julio', apodo: 'Chito' },
+            { nombre: 'Raúl', detalle: 'Martínez' },
+            { nombre: 'Dagoberto', detalle: 'Usón' },
+          ],
+          y: 'and',
+          fotos: [
+            { src: '/photos/pez-gallo-a-bordo.webp', alt: 'Two anglers hold a huge roosterfish under the panga’s blue canopy' },
+            { src: '/photos/capitanes-con-jurel.webp', alt: 'An angler with a yellowtail and his captain giving a thumbs-up, out at sea' },
+            { src: '/photos/jureles-en-la-bahia.webp', alt: 'An angler holds two yellowtail with the city of La Paz behind him' },
           ],
         },
-        cierre: {
-          titulo: 'Head out with the sun',
-          frase: 'Departures from 5:00 to 7:00 am at Marina La Costa, with a guild captain and only your group on board.',
-          boton: 'Book your trip',
-        },
+        cierre: { boton: 'Book your trip' },
       },
       galeria: [
         {
@@ -374,7 +378,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
       ],
       temporadas: {
-        intro: 'Our bay offers an incredible variety of game fish across every season. Here is our fishing calendar to help you choose the best time for your dream adventure.',
+        intro: 'On the bay, the fish change with the water. The captains read it in the color of the sea and in the birds. Here it is month by month, so you can pick your dates around the fish you want.',
         etiquetaCalendario: 'Month-by-month fishing calendar',
         etiquetaFuerte: 'Peak season',
         etiquetaOtras: 'Also active',
@@ -382,8 +386,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           {
             periodo: 'January to April',
             meses: ['Jan', 'Feb', 'Mar', 'Apr'],
-            estrella: 'Amberjack',
-            descripcion: 'Cool water and calm seas: a season of long fights with amberjack, ideal if you want to fish at an easy pace.',
+            estrella: 'Yellowtail',
+            descripcion: 'Cool water and calm seas. Yellowtail fight long, so hold the rod tight.',
             otras: 'Snapper, cabrilla',
             foto: '/photos/yellowtail-pelicanos-bahia.webp',
             fuerte: false,
@@ -392,7 +396,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'June to October',
             meses: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
             estrella: 'Marlin and dorado',
-            descripcion: 'Warm water brings the big ones: the busiest season for anyone chasing a fight worth telling stories about.',
+            descripcion: 'The water warms up and marlin and dorado arrive, the fish that jump. This is the peak season of the year.',
             otras: '',
             foto: '/photos/cana-doblada-dorado.webp',
             fuerte: true,
@@ -401,7 +405,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'November to December',
             meses: ['Nov', 'Dec'],
             estrella: 'Sierra',
-            descripcion: 'The end of the year brings steady fishing and good weather for early starts, with sierra as the star.',
+            descripcion: 'Sierra close out the year, with steady fishing and cool mornings for early starts.',
             otras: 'Triggerfish (cochito)',
             foto: '/photos/pesca-del-dia-cubierta.webp',
             fuerte: false,
@@ -415,11 +419,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How many people fit on the boat?',
-          a: 'We offer two private charter options: standard for up to 3 guests and large for up to 5 guests. The boat is 100% private for your group, ensuring complete comfort and personalized attention. Families with children of all ages are warmly welcome.',
+          a: 'There are two panga sizes: one for up to 3 people and one for up to 5. Either way it carries only your group, and kids of any age can come.',
         },
         {
           q: 'What time do we leave and how long is the trip?',
-          a: 'You can pick your preferred departure time between 5:00 and 7:00 am when booking. The tour lasts 6 to 7 hours to take full advantage of the best morning fishing conditions.',
+          a: 'You pick the time when you book, between {desde} and {hasta}. The trip lasts 6 to 7 hours.',
         },
         {
           q: 'Where do we meet?',
@@ -427,19 +431,19 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How can I pay?',
-          a: 'We offer convenient and secure payment options: you can pay 100% online by card, or secure your date with a 30% online deposit and settle the remaining 70% in cash on the morning of your trip. We accept MXN and USD.',
+          a: 'You can pay 100% online by card, or hold your date with a 30% online deposit and pay the remaining 70% in cash on the day of your trip. We accept Mexican pesos (MXN) and US dollars (USD).',
         },
         {
           q: 'What happens if the weather is bad?',
-          a: 'Your safety and peace of mind are always our highest priority. If the port authority or captain determines that sea conditions are unsafe to sail, we will gladly reschedule your trip or issue a 100% full refund.',
+          a: 'If the port authority or your captain decides the sea isn’t safe to go out, you choose: move your date or get a full refund.',
         },
         {
           q: 'Can I change my booking date?',
-          a: 'Yes, absolutely! With at least 48 hours notice, we can reschedule your trip at no extra charge according to availability. If an unexpected change happens closer to your date, let us know right away and we\'ll do our best to find a great solution.',
+          a: 'Yes, at no cost, if you give at least 48 hours notice and there is room on the new date. If something comes up with less notice, message us and we’ll see what we can do.',
         },
         {
           q: 'Do I need a fishing licence?',
-          a: 'Yes, Mexican regulations (CONAPESCA) require each angler on board to hold an individual sportfishing permit. You can add the licence process to your trip and we will gladly handle it for you.',
+          a: 'Yes. CONAPESCA, the agency that regulates fishing in Mexico, requires a licence for each person fishing on board. You can add it when you book and we take care of the paperwork.',
         },
       ],
     },
@@ -451,7 +455,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiencias en La Ventana, BCS | Sun Baja Experience',
       metaDescription:
-        'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes de La Ventana Travel.',
+        'Ballenas, orcas y pesca con mosca en La Ventana, BCS, con La Ventana Travel. Hospedaje en el Hotel Casa Arrecife y paquetes con traslado de aeropuerto.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -459,7 +463,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Pesca', 'Orcas', 'Ballenas', 'Snorkel', 'Mar', 'Aventura'],
         subtitulo:
-          'Explora la pesca con mosca, el avistamiento de ballenas y orcas y los paquetes con hospedaje de La Ventana Travel.',
+          'La Ventana es un pueblo de playa y mucho viento, frente a la isla Cerralvo. Con La Ventana Travel sales a buscar ballenas y orcas o a pescar con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -468,7 +472,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         momentos: [
           { titulo: '7:00 am', texto: 'Salimos todos los días entre 7:00 y 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
           { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'En el mar', texto: 'Buscamos ballenas y orcas e intentamos nadar con ellos, según lo que haya en la temporada. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'En el mar', texto: 'Buscamos ballenas y orcas e intentamos nadar con ellas, según lo que haya en la temporada. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
       },
       galeria: [
@@ -566,7 +570,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiences in La Ventana, BCS | Sun Baja Experience',
       metaDescription:
-        'Explore fly fishing, whale and orca watching, and multi-day packages with La Ventana Travel.',
+        'Whales, orcas and fly fishing in La Ventana, BCS, with La Ventana Travel. Stays at Hotel Casa Arrecife and packages with airport transfers.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -574,7 +578,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Fishing', 'Orcas', 'Whales', 'Snorkel', 'Sea', 'Adventure'],
         subtitulo:
-          'Explore fly fishing, whale and orca watching, and packages with lodging from La Ventana Travel.',
+          'La Ventana is a windy beach town facing Cerralvo Island. With La Ventana Travel you head out to look for whales and orcas or to fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -683,12 +687,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiencias en Puerto Chale, BCS | Sun Baja Experience',
       metaDescription:
-        'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
+        'Safari marino, ballena gris y pesca deportiva en el Pacífico con Piratas Adventures, una familia de Puerto Chale, en Bahía Magdalena.',
       hero: {
         video: '/videos/videohero.webm', // relleno hasta el video propio
         imagen: '/photos/mar-poster.webp',
         subtitulo:
-          'Explora el safari marino, el avistamiento de ballenas y la pesca deportiva de Piratas Adventures en Puerto Chale.',
+          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, a donde la ballena gris llega cada invierno a tener a sus crías. Piratas Adventures es una familia de aquí y te lleva al safari marino, a ver a las ballenas y a pescar en el Pacífico.',
         facts: [],
       },
       destacadas: [],
@@ -701,12 +705,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiences in Puerto Chale, BCS | Sun Baja Experience',
       metaDescription:
-        'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
+        'Marine safaris, gray whales and sportfishing on the Pacific with Piratas Adventures, a Puerto Chale family on Magdalena Bay.',
       hero: {
         video: '/videos/videohero.webm', // relleno hasta el video propio
         imagen: '/photos/mar-poster.webp',
         subtitulo:
-          'Explore marine safaris, whale watching, and sportfishing with Piratas Adventures in Puerto Chale.',
+          'Puerto Chale is a fishing village on Magdalena Bay, where gray whales arrive every winter to give birth. Piratas Adventures is a local family that takes you on marine safaris, out to see the whales and fishing on the Pacific.',
         facts: [],
       },
       destacadas: [],

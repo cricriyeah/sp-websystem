@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { SedeHeroContenido } from '@/content/sedes-tipos';
+import type { LogoLargo } from '@/content/empresas-marca';
 import { ANCLA_DE } from '@/lib/secciones-sede';
 import { PalabraRota } from '@/components/palabra-rota';
 import { EmpresaSello } from '@/components/ui/empresa-sello';
@@ -12,7 +14,7 @@ type SedeHeroProps = {
   /** Lo que vende la sede, sacado de su catálogo (`palabrasDeSede`); vacío si el catálogo no respondió. */
   palabras: string[];
   /** La empresa local que opera la sede; sin ella no hay sello. */
-  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
+  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string; logoLargo?: LogoLargo };
   /** El logo de la empresa suelto, sin el círculo del sello (cuando el logo ya trae su disco). */
   empresaSinCirculo?: boolean;
   textos: { cta: string; operadaPor: string };
@@ -35,7 +37,11 @@ export function SedeHero({ nombre, contenido, palabras, empresa, empresaSinCircu
           {palabras.length > 0 ? <PalabraRota palabras={palabras} className="texto-gigante" /> : <span />}
           <div>
             <h1 className="texto-grande">{nombre}</h1>
-            {empresa && (
+            {empresa?.logoLargo ? (
+              // El logo largo ya dice el nombre de la empresa: va solo, sin el sello ni el «Con …», y en blanco como el texto
+              // del héroe (a color no se lee sobre el video; el dueño eligió el blanco, 2026-10-30).
+              <Image src={empresa.logoLargo.blanco ?? empresa.logoLargo.src} alt={empresa.nombre} width={empresa.logoLargo.ancho} height={empresa.logoLargo.alto} className="mt-6 block h-20 w-auto sm:h-24" />
+            ) : empresa && (
               <div className="mt-6 flex items-center gap-4">
                 <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} sinCirculo={empresaSinCirculo} />
                 <p className="text-2xl font-semibold leading-tight">

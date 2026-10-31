@@ -1,7 +1,10 @@
 import Image from 'next/image';
 import type { SedePangas } from '@/content/sedes-tipos';
+import type { LogoLargo } from '@/content/empresas-marca';
 import { CLASE_FONDO, type Fondo } from '@/components/ui/section-shell';
 import { cn } from '@/components/ui/cn';
+import { SelloTitulo } from '@/components/ui/sello-titulo';
+import { fraseDeNombres } from '@/lib/frase-de-nombres';
 
 type Props = {
   id: string;
@@ -9,50 +12,52 @@ type Props = {
   fondo: Fondo;
   /** Nombre de la empresa: el texto alternativo de su isotipo. */
   empresa: string;
-  /** El isotipo (pez gallo y sol), en círculo blanco como en el resto de la página. */
+  /** El isotipo (pez gallo y sol). */
   isotipo?: string;
+  /** El isotipo transparente: con él, el sello va sin círculo blanco; sin él, el isotipo en su círculo. */
+  isotipoSinFondo?: string;
+  /** El logo largo a color: si la empresa lo tiene, va en la esquina en lugar del isotipo. */
+  logoLargo?: LogoLargo;
 };
 
 /**
- * «Nuestras pangas», justo bajo el héroe (derivación PFD: el dueño quiere que sus pangas se vean al abrir, sin alejar lo
- * que se reserva). Cabe en una pantalla y no lleva botón: lo siguiente es «Reservar ahora».
+ * «Las pangas», justo bajo el héroe y antes de «Reservar ahora» (derivación PFD + Apple, 2026-10-30). Sin botón: lo
+ * siguiente es lo que se reserva.
  *
- * Arriba, el isotipo en círculo blanco junto al título («Las pangas de Sal y Sol»): la marca firma lo que es suyo, sin
- * etiqueta encima del título; debajo, una frase. Luego tres fotos: en escritorio la protagonista ocupa 7 columnas y las otras dos se apilan en las 5
- * restantes, a la misma altura; en el teléfono la protagonista va a todo el ancho y las dos de apoyo lado a lado. Cada
- * foto lleva debajo lo que muestra. Server Component; entran con `rev`/`rev-foto` al llegar a cuadro.
+ * Bajo el título (con el logo largo de la empresa en la esquina, del tamaño del sello y con el título bajado a su base para que quede pegado a la foto; sin él, el isotipo con `SelloTitulo`), la flota formada COMPLETA, en su proporción y sin nada
+ * encima: el dueño la quiere entera y rechazó los nombres sobre la foto. Pegado a ella, el texto que la nombra en su orden
+ * («De izquierda a derecha: …»), una sola frase y no siete rótulos. Al lado (escritorio) o debajo (teléfono), las pangas
+ * navegando: en el teléfono es una tira que se desliza de lado con la siguiente asomándose, para que la sección no crezca
+ * hacia abajo. En el teléfono la flota va de orilla a orilla. Server Component; entran con `rev`/`rev-foto`.
  */
-export function PangasSede({ id, pangas, fondo, empresa, isotipo }: Props) {
-  const [protagonista, ...apoyo] = pangas.fotos;
+export function PangasSede({ id, pangas, fondo, empresa, isotipo, isotipoSinFondo, logoLargo }: Props) {
+  const { flota, fotos } = pangas;
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className={cn('scroll-mt-[calc(var(--nav-alto)+16px)] py-16 sm:py-20 lg:py-24', CLASE_FONDO[fondo])}>
       <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-pagina sm:gap-10">
-        <div className="rev flex flex-col gap-4">
-          <div className="flex items-center gap-4 sm:gap-5">
-            {isotipo && (
-              <span className="relative block size-14 shrink-0 overflow-hidden rounded-full bg-blanco sm:size-20">
-                <Image src={isotipo} alt={empresa} fill sizes="80px" className="object-contain p-[6%]" />
-              </span>
-            )}
-            <h2 id={`${id}-titulo`} className="texto-display m-0">{pangas.titulo}</h2>
-          </div>
-          <p className="texto-subtitulo m-0 max-w-[48ch]">{pangas.texto}</p>
+        <div className={cn('rev flex justify-between gap-6', logoLargo ? 'items-end' : 'items-start')}>
+          <h2 id={`${id}-titulo`} className="texto-display m-0">{pangas.titulo}</h2>
+          {logoLargo ? (
+            <Image src={logoLargo.src} alt={empresa} width={logoLargo.ancho} height={logoLargo.alto} className="rev block h-12 w-auto shrink-0 sm:h-20 lg:h-24 xl:h-28" />
+          ) : (
+            isotipo && <SelloTitulo src={isotipoSinFondo ?? isotipo} alt={empresa} modo={isotipoSinFondo ? 'sin-aro' : 'aro-propio'} />
+          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-4 xl:grid-cols-12 xl:gap-x-6">
-          {protagonista && (
-            <figure className="rev-foto col-span-2 m-0 flex flex-col gap-2.5 xl:col-span-7">
-              <div className="relative aspect-[4/3] overflow-hidden bg-tinta xl:aspect-auto xl:h-full xl:min-h-[34rem]">
-                <Image src={protagonista.src} alt={protagonista.alt} fill sizes="(min-width: 1280px) 56vw, 100vw" className="object-cover object-[50%_60%]" />
-              </div>
-              <figcaption className="texto-pequeno">{protagonista.pie}</figcaption>
-            </figure>
-          )}
-          <div className="col-span-2 grid grid-cols-2 gap-x-3 sm:gap-x-4 xl:col-span-5 xl:grid-cols-1 xl:gap-y-6">
-            {apoyo.map((foto) => (
-              <figure key={foto.src} className="rev-foto m-0 flex flex-col gap-2.5">
-                <div className="relative aspect-square overflow-hidden bg-tinta xl:aspect-[16/9]">
-                  <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1280px) 40vw, 50vw" className="object-cover object-[50%_45%]" />
+        <div className="rev-foto -mx-[var(--margen-x)] sm:mx-0">
+          <Image src={flota.src} alt={flota.alt} width={flota.ancho} height={flota.alto} sizes="(min-width: 1440px) 1376px, 100vw" className="block h-auto w-full" />
+        </div>
+
+        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-12 lg:gap-x-6">
+          <div className="rev flex flex-col gap-5 lg:col-span-5 lg:pr-6">
+            <p className="texto-seccion m-0 font-semibold text-balance">{pangas.frase}</p>
+            <p className="m-0 max-w-[48ch] text-lg leading-relaxed sm:text-xl">{pangas.texto.replace('{nombres}', fraseDeNombres(pangas.nombres, pangas.y))}</p>
+          </div>
+          <div className="-mx-[var(--margen-x)] flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-pagina px-pagina [scrollbar-width:none] sm:gap-4 lg:col-span-7 lg:mx-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden">
+            {fotos.map((foto) => (
+              <figure key={foto.src} className="rev-foto m-0 flex w-[82%] shrink-0 snap-start flex-col gap-2.5 sm:w-[60%] lg:w-auto">
+                <div className="relative aspect-[4/3] overflow-hidden bg-tinta">
+                  <Image src={foto.src} alt={foto.alt} fill sizes="(min-width: 1024px) 28vw, 82vw" className="object-cover" />
                 </div>
                 <figcaption className="texto-pequeno">{foto.pie}</figcaption>
               </figure>

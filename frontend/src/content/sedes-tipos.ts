@@ -79,7 +79,7 @@ export type SedeDia = {
  * «Conócenos»: la historia de la gente detrás de los servicios de la sede, contada como relato (nada de cifras sueltas:
  * el dueño las leyó como estadísticas de ventas). El protagonista es el grupo (la familia y el gremio de capitanes), no
  * una persona. Un título, una frase de apertura grande, los párrafos del relato y una foto del equipo; la prensa; la
- * tripulación como cartel (un capitán `pendiente` no se publica, `capitanesVisibles`); y el cierre con el botón.
+ * tripulación como cartel (un capitán `pendiente` no se publica, `capitanesVisibles`); y el cierre: el logo largo y el botón.
  */
 export type SedeConocenos = {
   titulo: string;
@@ -87,13 +87,23 @@ export type SedeConocenos = {
   historia: string[];
   /** Una foto del equipo o del gremio, nunca el retrato de una sola persona. */
   foto: { src: string; alt: string };
+  /** Dibujo de un solo color (ruta bajo /public y su proporción) que va de fondo, grande y muy tenue, detrás del relato. */
+  ilustracion?: { src: string; ancho: number; alto: number };
   prensa: { etiqueta: string; texto: string; fuente: string };
+  /** Los capitanes del gremio: sus nombres van como una frase dentro del relato, tras el párrafo que los presenta. */
   tripulacion: {
-    titulo: string;
-    texto: string;
-    capitanes: { nombre: string; detalle?: string; pendiente?: boolean }[];
+    /** `apodo` va junto al nombre en la frase, sin comillas; `detalle` (el apellido) no se pinta. */
+    capitanes: { nombre: string; apodo?: string; detalle?: string; pendiente?: boolean }[];
+    /** «y» o «and»: une al último nombre en la frase de los capitanes. */
+    y: string;
+    /**
+     * Tres escenas del gremio que siguen a la foto del relato en su columna (la primera grande, las otras dos lado a
+     * lado), nunca una por capitán: no se alinean con ningún nombre.
+     */
+    fotos: { src: string; alt: string }[];
   };
-  cierre: { titulo: string; frase: string; boton: string };
+  /** Solo el botón: encima va el logo largo de la empresa (`MarcaEmpresa.logoLargo`), que dice el resto. */
+  cierre: { boton: string };
 };
 
 export type SedeDestacada = {
@@ -108,12 +118,22 @@ export type SedeServicioTransporte = {
 } | null;
 
 /**
- * «Nuestras pangas»: justo bajo el héroe, la firma de la empresa (su isotipo con el nombre), un título, una frase y tres
- * fotos (una protagonista y dos de apoyo), cada una con lo que muestra. Sin botón: lo siguiente es lo que se reserva.
+ * «Las pangas»: justo bajo el héroe, el título, la foto de la flota completa y, pegado a ella, el texto que nombra cada
+ * panga en el orden de la foto; al lado, las pangas navegando. Sin botón: lo siguiente es lo que se reserva.
  */
 export type SedePangas = {
   titulo: string;
+  /** La flota formada: va completa, en su proporción y sin nada encima. */
+  flota: { src: string; alt: string; ancho: number; alto: number };
+  /** La frase grande bajo la flota. */
+  frase: string;
+  /** Las pangas en el orden en que salen en la foto de la flota, de izquierda a derecha. */
+  nombres: string[];
+  /** «y» o «and» antes del último nombre. */
+  y: string;
+  /** El párrafo: `{nombres}` se cambia por la lista de las pangas. */
   texto: string;
+  /** Las pangas navegando, cada una con lo que muestra. */
   fotos: { src: string; alt: string; pie: string }[];
 };
 
