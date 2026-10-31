@@ -65,7 +65,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         frase: 'Pangas de La Paz, capitanes de La Paz.',
         nombres: ['Don Piry', 'Volador', 'Dream', 'Escoria del Mar', 'Esperanzas', 'Storm', 'Volador III'],
         y: 'y',
-        texto: '{nombres}. En el muelle las conocen por su nombre, igual que a sus capitanes, todos de La Paz. Cada mañana salen de Marina La Costa, y la que te lleva va solo con tu grupo, hasta 5 personas.',
+        texto: '{nombres}. En el muelle las conocen por su nombre, igual que a sus capitanes, todos de La Paz.',
         fotos: [
           { src: '/photos/panga-rumbo-a-la-pesca.webp', alt: 'La panga Storm, con toldo verde, navega a toda velocidad con tres pescadores a bordo', pie: 'Storm' },
           { src: '/photos/panga-acantilados-rojos.webp', alt: 'La panga Volador III cruza el agua clara frente a acantilados rojos', pie: 'Volador III' },
@@ -283,7 +283,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         frase: 'La Paz pangas, La Paz captains.',
         nombres: ['Don Piry', 'Volador', 'Dream', 'Escoria del Mar', 'Esperanzas', 'Storm', 'Volador III'],
         y: 'and',
-        texto: '{nombres}. Everyone on the dock knows them by name, the same way they know their captains, all from La Paz. Every morning they leave Marina La Costa, and the one that takes you carries only your group, up to 5 people.',
+        texto: '{nombres}. Everyone on the dock knows them by name, the same way they know their captains, all from La Paz.',
         fotos: [
           { src: '/photos/panga-rumbo-a-la-pesca.webp', alt: 'The panga Storm, with its green canopy, speeds across the water with three anglers on board', pie: 'Storm' },
           { src: '/photos/panga-acantilados-rojos.webp', alt: 'The panga Volador III crosses clear water in front of red cliffs', pie: 'Volador III' },
