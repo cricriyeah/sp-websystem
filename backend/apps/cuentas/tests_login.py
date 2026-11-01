@@ -247,3 +247,10 @@ class AvisosEstaticosTests(SimpleTestCase):
     def test_el_widget_del_login_se_renderiza_con_la_accion_login(self):
         self.assertIn("action: 'login'", self.login_js)
         self.assertIn('cargaTurnstileLogin', self.login_js)
+
+    def test_el_aviso_de_no_cargo_no_depende_de_buscar_el_iframe(self):
+        # Cloudflare pinta el widget en un shadow root: buscar el <iframe> fallaba y a los 10 s el aviso borraba un
+        # widget ya resuelto. El aviso se decide con la bandera que pone cargaTurnstileLogin.
+        self.assertNotIn("querySelector('iframe')", self.login_js)
+        self.assertIn('if (!caja || cargado) return;', self.login_js)
+        self.assertIn('clearTimeout(reloj)', self.login_js)
