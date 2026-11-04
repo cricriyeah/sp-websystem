@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { COOKIE_SOLO_SEDE, SEGUNDOS_SOLO_SEDE, decidirSoloSede } from '@/lib/solo-sede';
 
 const locales = ['es', 'en'] as const;
 const defaultLocale = 'es';
@@ -12,6 +13,29 @@ function getLocale(request: NextRequest): string {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Modo «solo sede» (links cortos `/lapaz`, ver lib/solo-sede.ts). Va antes que el idioma:
+  // `/lapaz` no trae idioma y se resuelve en una sola redirección, directo a la sede.
+  const decision = decidirSoloSede({
+    pathname,
+    search: request.nextUrl.search,
+    cookie: request.cookies.get(COOKIE_SOLO_SEDE)?.value,
+    idiomaPreferido: getLocale(request) as 'es' | 'en',
+  });
+  if (decision.tipo === 'redirigir') {
+    // 307: temporal y sin caché; la misma URL lleva a lugares distintos según la cookie.
+    const respuesta = NextResponse.redirect(new URL(decision.destino, request.url), 307);
+    if (decision.cookie === 'borrar') {
+      respuesta.cookies.delete(COOKIE_SOLO_SEDE);
+    } else if (decision.cookie) {
+      respuesta.cookies.set(COOKIE_SOLO_SEDE, decision.cookie.guardar, {
+        path: '/',
+        maxAge: SEGUNDOS_SOLO_SEDE,
+        sameSite: 'lax',
+      });
+    }
+    return respuesta;
+  }
 
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
@@ -31,6 +55,9 @@ export const config = {
     // /logos/logo.png se redirigia a /es/logos/logo.png —que no existe— y la
     // imagen salia rota; el optimizador de next/image devolvia 400 al recibir
     // una redireccion en vez del archivo.
-    '/((?!_next|api|.*\..*).*)',
+    // `\\.` y no `\.`: en un string de JS `\.` se vuelve `.` (cualquier carácter) y el patrón
+    // dejaba fuera toda ruta de dos letras o más; el proxy solo corría en `/`.
+    // `_vercel` y `__next`: rutas internas de Vercel y del servidor de desarrollo, sin idioma.
+    '/((?!_next|__next|_vercel|api|.*\\..*).*)',
   ],
 };

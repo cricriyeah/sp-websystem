@@ -915,3 +915,10 @@
     margin: 15mm;
   }
 }
+
+/* Modo «solo sede» (lib/solo-sede.ts): con el link corto de una sede, lo que solo sirve para
+   salir al hub (selector de destino, «Sobre nosotros», enlaces del hub en el pie) no se pinta.
+   Fuera de capa y con !important: tiene que ganarle a `sm:inline-block` y a cualquier utilidad. */
+body[data-solo-sede] .sale-al-hub {
+  display: none !important;
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { List, X } from '@phosphor-icons/react';
@@ -11,6 +11,7 @@ import type { SedeIndiceEntry } from '@/content/sedes-tipos';
 import { getSedes } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { leerSedePreferidaCliente } from '@/lib/sede';
+import { guardarSoloSedeCliente, leerSoloSedeCliente } from '@/lib/solo-sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_HUB } from '@/lib/secciones-sede';
 import { BarraFlotante, LogoEmpresaAlLado, LogoMarca } from '@/components/barra-flotante';
@@ -22,6 +23,10 @@ import { ContinuarReservacion } from '@/components/continuar-reservacion';
 import { Button } from '@/components/ui/button';
 
 const MARCA = 'Sun Baja Experience';
+
+// La cookie del modo «solo sede» no cambia mientras la página está abierta (salvo por
+// `guardarSoloSedeCliente`, que también marca <body>): no hace falta suscribirse a nada.
+const sinSuscripcion = () => () => {};
 
 type SiteHeaderProps = {
   lang: Locale;
@@ -62,6 +67,13 @@ export function SiteHeader({
   const [open, setOpen] = useState(false);
   const bandaRef = useRef<HTMLDivElement>(null);
   const sinMovimiento = useReducedMotion();
+  // Modo «solo sede» (lib/solo-sede.ts). En el servidor no hay cookie: el primer render es el
+  // normal y el cliente corrige el destino del logo al hidratar. Lo visible ya lo escondió el CSS.
+  const soloSede = useSyncExternalStore(sinSuscripcion, leerSoloSedeCliente, () => null);
+  // Si el cliente abrió otra sede, el modo la sigue: nunca la página de una con el logo de otra.
+  useEffect(() => {
+    if (soloSede && sedeSlugActual && sedeSlugActual !== soloSede) guardarSoloSedeCliente(sedeSlugActual);
+  }, [soloSede, sedeSlugActual]);
   const [slugResuelto, setSlugResuelto] = useState<string | undefined>(sedeSlugActual);
   const [sedesDisponibles, setSedesDisponibles] = useState<SedeIndiceEntry[]>(Object.values(SEDES_INDICE));
   // El header es `fixed` y las paginas se apartan con `--nav-alto`: la banda le suma su
@@ -100,7 +112,10 @@ export function SiteHeader({
     return () => window.removeEventListener('scroll', alDesplazar);
   }, [open]);
 
-  const slugActual = sedeSlugActual ?? slugResuelto ?? sedesDisponibles[0]?.slug;
+  // Sin sede propia (privacidad, deslinde), la del modo «solo sede» manda sobre la preferida.
+  const slugActual = sedeSlugActual ?? soloSede ?? slugResuelto ?? sedesDisponibles[0]?.slug;
+  // El logo lleva al inicio: el del sitio, o el de la sede en modo «solo sede».
+  const hrefLogo = soloSede ? hrefSede(lang, sedeSlugActual ?? soloSede) : hrefInicio(lang);
   const baseSede = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
 
   const links = baseSede
@@ -143,7 +158,7 @@ export function SiteHeader({
             </Link>
           ))}
           {/* Desde 640 px el selector ya está en la barra: repetirlo aquí era la misma función dos veces. */}
-          <div className="flex flex-col gap-2 py-3.5 sm:hidden">
+          <div className="sale-al-hub flex flex-col gap-2 py-3.5 sm:hidden">
             <span className="texto-cuerpo">{nav.sedeLabel}</span>
             <SedeSelector
               lang={lang}
@@ -167,7 +182,7 @@ export function SiteHeader({
     <BarraFlotante
       className={className}
       inicio={
-        <Link href={hrefInicio(lang)} className="inline-flex" onClick={alPulsarEnlace} aria-label={MARCA}>
+        <Link href={hrefLogo} className="inline-flex" onClick={alPulsarEnlace} aria-label={MARCA}>
           <LogoMarca girado={open} />
         </Link>
       }
@@ -210,7 +225,7 @@ export function SiteHeader({
               label={nav.sedeLabel}
               inicioLabel={variante === 'hub' ? undefined : nav.todosLosDestinos}
               compacto={variante !== 'hub'}
-              className="hidden sm:inline-block"
+              className="sale-al-hub hidden sm:inline-block"
             />
 
             <Button

@@ -317,6 +317,27 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
 - El codigo vive 30 dias en localStorage (`src/lib/ref.ts`) y viaja como `ref` en
   `guardarReserva`. El backend ignora en silencio el que no resuelva.
 
+## Links cortos por sede (modo «solo sede»)
+
+Cada empresa comparte el link corto de su sede (`/lapaz`, `/laventana`, `/puertochale`; también
+`/en/lapaz`) y el cliente no ve el hub. Toda la lógica de rutas está en `src/lib/solo-sede.ts`
+(`decidirSoloSede`, pura, probada en `tests/solo-sede.test.cjs`); `proxy.ts` solo la aplica.
+
+- El link corto redirige (307) a `/[lang]/sede/<slug>` conservando la query (`?ref=` sigue
+  funcionando) y guarda la cookie `sbe_solo_sede` 30 días.
+- Con la cookie, `/`, `/es`, `/en` y `/[lang]/nosotros` redirigen a la sede: cualquier enlace que
+  quede apuntando al hub (checkout, 404, «Ver qué reservar» de privacidad) cae en la sede.
+- `/hub` borra la cookie y lleva a la portada (para el dueño y las vendedoras).
+- Si el cliente abre otra sede (o un servicio o paquete de otra), `SiteHeader` pasa la cookie a esa
+  sede: nunca la página de una sede con el logo de otra.
+- Lo visible: un script en línea al inicio de `<body>` (layout) pone `data-solo-sede` antes de pintar
+  y `globals.css` esconde `.sale-al-hub` (selector de destino de la barra y del menú, «Sobre
+  nosotros» y los enlaces del hub en el pie). El logo de `SiteHeader` lleva a la sede. Las páginas
+  siguen estáticas: nada lee cookies en el servidor.
+- Una sede nueva se agrega en `ENLACES_CORTOS`.
+- El matcher de `proxy.ts` escribe `\\.` dentro del string, no `\.`: en JS `'\.'` vale `.`
+  (cualquier carácter) y el proxy solo corría en `/` (bug viejo, corregido junto con esto).
+
 ## Ruta /traslados (checkout de transporte)
 
 `[lang]/traslados/page.tsx` es el punto de entrada server-side para cotizar y reservar traslados terrestres privados:

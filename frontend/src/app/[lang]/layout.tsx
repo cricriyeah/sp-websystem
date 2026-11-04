@@ -8,6 +8,7 @@ import { RefCapture } from '@/components/ref-capture';
 import { ProveedorToast } from '@/components/toast';
 import { MotionProvider } from '@/components/ui/motion-provider';
 import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from '@/lib/site';
+import { SCRIPT_SOLO_SEDE } from '@/lib/solo-sede';
 
 // Titulares (display, titulo de pagina, de seccion y de paso): Consola Mono, solo el peso 700
 // (Book no se incorpora). Se sirve desde el sitio, recortada a latin con acentos, puntuacion,
@@ -81,6 +82,9 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
       className={consolaMono.variable}
     >
       <body suppressHydrationWarning>
+        {/* Modo «solo sede» (lib/solo-sede.ts): marca <body> antes de pintar para que lo que lleva
+            al hub no aparezca ni un instante. Va primero y en línea a propósito. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_SOLO_SEDE }} />
         {/* Un solo juego de funciones de motion para todo el sitio; ver motion-provider.tsx. */}
         <MotionProvider>
           {/* No pinta nada: solo guarda el ?ref= de la vendedora si viene en la URL. */}

@@ -62,6 +62,7 @@ const suites = {
   telefono: ['src/lib/telefono.ts', 'TELEFONO_TEST_OUT'],
   'paises-telefono': ['src/lib/paises-telefono.ts', 'PAISES_TELEFONO_TEST_OUT'],
   'telefono-campo': ['src/lib/telefono-campo.ts', 'TELEFONO_CAMPO_TEST_OUT'],
+  'solo-sede': ['src/lib/solo-sede.ts', 'SOLO_SEDE_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

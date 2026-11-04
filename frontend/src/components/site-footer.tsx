@@ -52,8 +52,12 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
       ];
 
-  // «Sobre nosotros» al final del primer grupo, en todas las páginas.
-  const secciones = [...seccionesDeLaPagina, { href: `/${lang}/nosotros`, label: nav.sobreNosotros }];
+  // «Sobre nosotros» al final del primer grupo, en todas las páginas. Es del hub, igual que las
+  // secciones del pie fuera de una sede: en modo «solo sede» se esconden (clase `sale-al-hub`).
+  const secciones = [
+    ...seccionesDeLaPagina.map((link) => ({ ...link, alHub: !baseSede })),
+    { href: `/${lang}/nosotros`, label: nav.sobreNosotros, alHub: true },
+  ];
 
   const legales = [
     { href: hrefDeslinde(lang, empresasDeslinde), label: footer.waiver },
@@ -76,7 +80,10 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
               <ul className="flex flex-wrap gap-x-6">
                 {secciones.map((link) => (
                   // El mapa solo existe desde 1024 px.
-                  <li key={link.href} className={link.href.endsWith(`#${ANCLA_HUB.mapa}`) ? 'hidden lg:block' : undefined}>
+                  <li
+                    key={link.href}
+                    className={[link.href.endsWith(`#${ANCLA_HUB.mapa}`) && 'hidden lg:block', link.alHub && 'sale-al-hub'].filter(Boolean).join(' ') || undefined}
+                  >
                     <Link href={link.href} className={ENLACE}>{link.label}</Link>
                   </li>
                 ))}

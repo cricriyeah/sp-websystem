@@ -50,7 +50,9 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   const [{ data: servicio, missing }, query, dict] = await Promise.all([cargar(slug, empresa, lang), searchParams, getDictionary(lang)]);
   const traslado = servicio?.tipo_servicio === 'transporte' || (empresa === 'transporte-la-paz' && slug === 'traslados-la-paz');
   if (missing && !pesca && !traslado) notFound();
-  const escrita = getSedeContenido(typeof query.sede === 'string' ? query.sede : 'la-paz', lang);
+  // Sin `?sede=`, la sede de la empresa del servicio (no La Paz a ciegas): de ella salen el menú,
+  // el pie y el modo «solo sede», que si apuntara a otra sede cambiaría de sede al cliente.
+  const escrita = getSedeContenido(typeof query.sede === 'string' ? query.sede : (getEmpresa(empresa)?.sede ?? 'la-paz'), lang);
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   // El resto de la sede, para «También en»: si no responde, esa fila no se pinta.
   const [servicios, paquetes] = escrita
