@@ -95,7 +95,7 @@ test('«Tu día» en La Paz y La Ventana con los mismos momentos en es y en; Pue
   assert.equal(c.getSedeContenido('puerto-chale', 'es').dia, undefined);
 });
 
-test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), prensa, tripulación y cierre en los dos idiomas', () => {
+test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), tripulación y cierre en los dos idiomas', () => {
   const es = c.getSedeContenido('la-paz', 'es').conocenos;
   const en = c.getSedeContenido('la-paz', 'en').conocenos;
   for (const k of [es, en]) {
@@ -104,14 +104,15 @@ test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), prensa, 
     assert.ok(k.historia.join(' ').split(/\s+/).length >= 150, 'texto largo, de trayectoria e historia');
     assert.ok(!('hechos' in k), 'sin cifras sueltas: se leían como estadísticas');
     assert.match(k.historia.join(' '), /(gremio|guild)/, 'el protagonista es el grupo, no una persona');
-    assert.ok(/Peninsular Digital, 2010/.test(k.prensa.fuente) && /(motor|engine)/.test(k.prensa.texto));
-    assert.equal(k.tripulacion.fotos.length, 3);
+    assert.ok(!('prensa' in k), 'sin la nota de prensa (el dueño la quitó, 2026-11-04)');
+    assert.equal(k.tripulacion.fotos.length, 4, 'la escena y tres fotos de capitanes (dueño, 2026-11-04)');
     assert.equal(k.tripulacion.capitanes[0].nombre, 'Rogelio');
     assert.ok(k.foto.src.startsWith('/photos/') && k.foto.alt);
     assert.ok(!k.foto.src.includes('sobre-nosotros'), 'no el retrato del jefe solo');
     assert.deepEqual(Object.keys(k.cierre), ['boton'], 'el cierre es el logo largo y el botón, sin título ni frase');
     const todo = JSON.stringify(k);
-    assert.ok(!todo.includes('1950'), 'sin año de fundación');
+    assert.equal(k.desde.anio, '1950', 'el año del gremio va arriba de la sección (dueño, 2026-11-04)');
+    assert.ok(!k.historia.join(' ').includes('Rogelio'), 'el relato habla de nuestros capitanes, no de uno solo');
     assert.ok(!/[—–]/.test(todo), 'sin guiones largos');
     assert.ok(!/n[uú]mero uno|number one|#1/i.test(todo), 'ningún superlativo sin prueba');
   }
@@ -122,7 +123,7 @@ test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), prensa, 
 test('«Conócenos» de La Paz: los ocho capitanes confirmados por el dueño (2026-10-30) se publican, en los dos idiomas', () => {
   for (const lang of ['es', 'en']) {
     const capitanes = c.getSedeContenido('la-paz', lang).conocenos.tripulacion.capitanes;
-    assert.deepEqual(capitanes.map((x) => x.nombre), ['Rogelio', 'Omar', 'Alfredo', 'Joel', 'Icho', 'Julio', 'Raúl', 'Dagoberto']);
+    assert.deepEqual(capitanes.map((x) => x.nombre), ['Rogelio', 'Omar', 'Alfredo', 'Joel', 'Licho', 'Julio', 'Raúl', 'Dagoberto']);
     assert.ok(capitanes.every((x) => !x.pendiente));
   }
 });

@@ -78,7 +78,7 @@ export type SedeDia = {
 /**
  * «Conócenos»: la historia de la gente detrás de los servicios de la sede, contada como relato (nada de cifras sueltas:
  * el dueño las leyó como estadísticas de ventas). El protagonista es el grupo (la familia y el gremio de capitanes), no
- * una persona. Un título, una frase de apertura grande, los párrafos del relato y una foto del equipo; la prensa; la
+ * una persona. Un título, una frase de apertura grande, los párrafos del relato y una foto del equipo; la
  * tripulación como cartel (un capitán `pendiente` no se publica, `capitanesVisibles`); y el cierre: el logo largo y el botón.
  */
 export type SedeConocenos = {
@@ -89,18 +89,21 @@ export type SedeConocenos = {
   foto: { src: string; alt: string };
   /** Dibujo de un solo color (ruta bajo /public y su proporción) que va de fondo, grande y muy tenue, detrás del relato. */
   ilustracion?: { src: string; ancho: number; alto: number };
-  prensa: { etiqueta: string; texto: string; fuente: string };
+  /** Lo primero de la sección, grande: el año del gremio y su texto (pedido del dueño, 2026-11-04). */
+  desde?: { texto: string; anio: string };
   /** Los capitanes del gremio: sus nombres van como una frase dentro del relato, tras el párrafo que los presenta. */
   tripulacion: {
+    /** Título que encabeza la frase de nombres («STAFF DE CAPITANES»; pedido del dueño, 2026-11-04). */
+    titulo: string;
     /** `apodo` va junto al nombre en la frase, sin comillas; `detalle` (el apellido) no se pinta. */
     capitanes: { nombre: string; apodo?: string; detalle?: string; pendiente?: boolean }[];
     /** «y» o «and»: une al último nombre en la frase de los capitanes. */
     y: string;
     /**
-     * Tres escenas del gremio que siguen a la foto del relato en su columna (la primera grande, las otras dos lado a
-     * lado), nunca una por capitán: no se alinean con ningún nombre.
+     * Fotos de capitanes que siguen a la foto del relato en su columna: la primera encimada sobre ella y las demás en
+     * dos columnas escalonadas (dueño, 2026-11-04). `posicion` es el `object-position` del recorte (por omisión 50% 40%).
      */
-    fotos: { src: string; alt: string }[];
+    fotos: { src: string; alt: string; posicion?: string }[];
   };
   /** Solo el botón: encima va el logo largo de la empresa (`MarcaEmpresa.logoLargo`), que dice el resto. */
   cierre: { boton: string };
