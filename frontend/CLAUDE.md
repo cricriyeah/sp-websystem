@@ -325,11 +325,19 @@ Cada empresa comparte el link corto de su sede (`/lapaz`, `/laventana`, `/puerto
 
 - El link corto redirige (307) a `/[lang]/sede/<slug>` conservando la query (`?ref=` sigue
   funcionando) y guarda la cookie `sbe_solo_sede` 30 días.
-- Con la cookie, `/`, `/es`, `/en` y `/[lang]/nosotros` redirigen a la sede: cualquier enlace que
-  quede apuntando al hub (checkout, 404, «Ver qué reservar» de privacidad) cae en la sede.
+- Con la cookie, `/`, `/es`, `/en` y `/nosotros` (con o sin idioma) redirigen a la sede: cualquier
+  enlace que quede apuntando al hub (checkout, 404, «Ver qué reservar» de privacidad) cae en la sede.
 - `/hub` borra la cookie y lleva a la portada (para el dueño y las vendedoras).
-- Si el cliente abre otra sede (o un servicio o paquete de otra), `SiteHeader` pasa la cookie a esa
-  sede: nunca la página de una sede con el logo de otra.
+- Si el cliente abre otra sede (o un servicio, paquete o checkout de otra), la cookie pasa a esa
+  sede: nunca la página de una sede con el logo de otra. Lo hacen dos piezas: el proxy al cargar la
+  página (cubre el checkout, que no lleva `SiteHeader`; manda `?sede=` y si no, la sede de
+  `?empresa=`/`?paquete_empresa=` o de la empresa del servicio, de `MARCAS.sede`), y `SiteHeader` en
+  la navegación sin recarga, que Next puede servir de su caché sin pasar por el proxy. El proxy solo
+  cambia el modo en una carga de página entera (`Sec-Fetch-Dest: document`), para que el prefetch de
+  un enlace visible no lo cambie; la cabecera `next-router-prefetch` no sirve: Next la quita antes
+  de llamar al proxy.
+- La sede de cada empresa vive en `content/empresas-marca.ts` (`MARCAS`), no en `empresas.ts`: este es
+  `server-only` y el proxy no puede leerlo.
 - Lo visible: un script en línea al inicio de `<body>` (layout) pone `data-solo-sede` antes de pintar
   y `globals.css` esconde `.sale-al-hub` (selector de destino de la barra y del menú, «Sobre
   nosotros» y los enlaces del hub en el pie). El logo de `SiteHeader` lleva a la sede. Las páginas

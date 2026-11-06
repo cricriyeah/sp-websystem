@@ -24,7 +24,6 @@ export type Resena = {
 };
 
 export type Empresa = MarcaEmpresa & {
-  sede: string;
   descripcion: Texto;
   /** Su sitio oficial. Sal y Sol no lleva: su sitio es este. */
   web?: string;
@@ -52,7 +51,6 @@ const marca = (slug: string): MarcaEmpresa => {
 export const EMPRESAS: readonly Empresa[] = [
   {
     ...marca('sal-y-sol'),
-    sede: 'la-paz',
     descripcion: {
       es: 'Pesca deportiva en La Paz con capitanes locales. La panga es solo para tu grupo y sale de Marina La Costa al amanecer.',
       en: 'Sportfishing in La Paz with local captains. The panga is just for your group and leaves Marina La Costa at dawn.',
@@ -64,7 +62,6 @@ export const EMPRESAS: readonly Empresa[] = [
   },
   {
     ...marca('transporte-la-paz'),
-    sede: 'la-paz',
     descripcion: {
       es: 'Traslados privados en La Paz: del aeropuerto a tu hospedaje, a tu actividad y de regreso. También transporte para eventos.',
       en: 'Private transfers in La Paz: from the airport to your lodging, to your activity and back. Event transport too.',
@@ -82,7 +79,6 @@ export const EMPRESAS: readonly Empresa[] = [
   },
   {
     ...marca('la-ventana-travel'),
-    sede: 'la-ventana',
     descripcion: {
       es: 'Pesca con mosca, salidas a buscar ballenas y orcas, hospedaje en el Hotel Casa Arrecife y paquetes de varios días con traslado de aeropuerto.',
       en: 'Fly fishing, trips out to find whales and orcas, lodging at Hotel Casa Arrecife and multi-day packages with airport transfers.',
@@ -97,7 +93,6 @@ export const EMPRESAS: readonly Empresa[] = [
   },
   {
     ...marca('piratas-adventures'),
-    sede: 'puerto-chale',
     descripcion: {
       es: 'Una familia local de Puerto Chale: safari marino, avistamiento de ballena gris y pesca deportiva en el Pacífico.',
       en: 'A local family in Puerto Chale: marine safaris, gray whale watching and sportfishing on the Pacific.',

@@ -20,31 +20,33 @@ export function proxy(request: NextRequest) {
     pathname,
     search: request.nextUrl.search,
     cookie: request.cookies.get(COOKIE_SOLO_SEDE)?.value,
-    idiomaPreferido: getLocale(request) as 'es' | 'en',
+    idiomaPreferido: () => getLocale(request) as 'es' | 'en',
+    // Sin la cabecera (navegadores viejos, curl) cuenta como carga de página.
+    esCargaDePagina: (request.headers.get('sec-fetch-dest') ?? 'document') === 'document',
   });
   if (decision.tipo === 'redirigir') {
     // 307: temporal y sin caché; la misma URL lleva a lugares distintos según la cookie.
-    const respuesta = NextResponse.redirect(new URL(decision.destino, request.url), 307);
-    if (decision.cookie === 'borrar') {
-      respuesta.cookies.delete(COOKIE_SOLO_SEDE);
-    } else if (decision.cookie) {
-      respuesta.cookies.set(COOKIE_SOLO_SEDE, decision.cookie.guardar, {
-        path: '/',
-        maxAge: SEGUNDOS_SOLO_SEDE,
-        sameSite: 'lax',
-      });
-    }
-    return respuesta;
+    return conCookie(NextResponse.redirect(new URL(decision.destino, request.url), 307), decision.cookie);
   }
 
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
   );
-  if (pathnameHasLocale) return;
+  // Sin idioma, la petición que sigue ya con idioma vuelve a decidir la cookie.
+  if (pathnameHasLocale) return decision.cookie ? conCookie(NextResponse.next(), decision.cookie) : undefined;
 
   const locale = getLocale(request);
   request.nextUrl.pathname = `/${locale}${pathname}`;
   return NextResponse.redirect(request.nextUrl);
+}
+
+function conCookie(respuesta: NextResponse, cookie: { guardar: string } | 'borrar' | undefined): NextResponse {
+  if (cookie === 'borrar') {
+    respuesta.cookies.delete(COOKIE_SOLO_SEDE);
+  } else if (cookie) {
+    respuesta.cookies.set(COOKIE_SOLO_SEDE, cookie.guardar, { path: '/', maxAge: SEGUNDOS_SOLO_SEDE, sameSite: 'lax' });
+  }
+  return respuesta;
 }
 
 export const config = {

@@ -50,9 +50,12 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   const [{ data: servicio, missing }, query, dict] = await Promise.all([cargar(slug, empresa, lang), searchParams, getDictionary(lang)]);
   const traslado = servicio?.tipo_servicio === 'transporte' || (empresa === 'transporte-la-paz' && slug === 'traslados-la-paz');
   if (missing && !pesca && !traslado) notFound();
-  // Sin `?sede=`, la sede de la empresa del servicio (no La Paz a ciegas): de ella salen el menú,
-  // el pie y el modo «solo sede», que si apuntara a otra sede cambiaría de sede al cliente.
-  const escrita = getSedeContenido(typeof query.sede === 'string' ? query.sede : (getEmpresa(empresa)?.sede ?? 'la-paz'), lang);
+  const datosEmpresa = getEmpresa(empresa);
+  // La sede donde opera la empresa: para el buscador (JSON-LD), sin importar `?sede=`.
+  const sedeDelServicio = getSedeContenido(datosEmpresa?.sede ?? '', lang);
+  // Sin `?sede=`, esa misma sede (no La Paz a ciegas): de ella salen el menú, el pie y el modo
+  // «solo sede», que si apuntara a otra sede cambiaría de sede al cliente.
+  const escrita = typeof query.sede === 'string' ? getSedeContenido(query.sede, lang) : (sedeDelServicio ?? getSedeContenido('la-paz', lang));
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   // El resto de la sede, para «También en»: si no responde, esa fila no se pinta.
   const [servicios, paquetes] = escrita
@@ -64,7 +67,6 @@ export default async function ServicioPage({ params, searchParams }: Props) {
     ?? ventanaDeSalida(sede?.negocio?.horarioApertura, sede?.negocio?.horarioCierre);
   const textosConHora = ventana ? { ...dict, included: conVentana(dict.included, ventana) } : dict;
   const vista = vistaDeDetalleServicio({ lang, moneda, dict: textosConHora, sede, otros: { servicios, paquetes }, empresaSlug: empresa, slug, servicio, pesca, traslado });
-  const sedeDelServicio = getSedeContenido(getEmpresa(empresa)?.sede ?? '', lang);
   const urlServicio = absolutaEn(lang, `/servicio/${empresa}/${slug}`);
   // Las preguntas del servicio (si ya las tiene) se pintan y van al JSON-LD: son las mismas.
   const escritas = getFaqServicio(empresa, slug, lang);
@@ -78,7 +80,7 @@ export default async function ServicioPage({ params, searchParams }: Props) {
     {servicio && <JsonLd datos={[
       jsonLdViaje({
         nombre: servicio.nombre, descripcion: servicio.descripcion || undefined, url: urlServicio,
-        proveedor: { nombre: getEmpresa(empresa)?.nombre ?? empresa }, precio: servicio.precio_base, lugar: sedeDelServicio?.nombre,
+        proveedor: { nombre: datosEmpresa?.nombre ?? empresa }, precio: servicio.precio_base, lugar: sedeDelServicio?.nombre,
       }),
       jsonLdMigas([
         { nombre: dict.home.title, url: absolutaEn(lang) },

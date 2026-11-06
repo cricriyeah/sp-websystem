@@ -9,6 +9,11 @@ export type LogoLargo = { src: string; ancho: number; alto: number; blanco?: str
 export type MarcaEmpresa = {
   slug: string;
   nombre: string;
+  /**
+   * La sede donde opera. Vive aquí y no en `empresas.ts` (server-only) porque también la lee
+   * `proxy.ts`: un link directo al checkout de una empresa pasa el modo «solo sede» a su sede.
+   */
+  sede: string;
   /** Ruta bajo /public. Sin logo, el sello pinta el monograma de las iniciales. */
   logo?: string;
   /** Solo el símbolo, sin letras: para la barra de arriba, donde el nombre ya va en el texto alternativo. */
@@ -27,8 +32,8 @@ export type MarcaEmpresa = {
 };
 
 export const MARCAS: readonly MarcaEmpresa[] = [
-  { slug: 'sal-y-sol', nombre: 'Sal y Sol Sportfishing', logo: '/logos/salysol.webp', simbolo: '/logos/salysol.webp', simboloBarra: '/logos/salysol-barra.webp', heroSinCirculo: true, ilustracionFondo: '/logos/logosbgsalysol.svg', logoLargo: { src: '/logos/salysol-largo.svg', blanco: '/logos/salysol-largo-blanco.svg', ancho: 3763, alto: 1481 } },
-  { slug: 'transporte-la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp' },
-  { slug: 'la-ventana-travel', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-oscuro.webp', simbolo: '/logos/laventanatravel-simbolo.webp' },
-  { slug: 'piratas-adventures', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp' },
+  { slug: 'sal-y-sol', sede: 'la-paz', nombre: 'Sal y Sol Sportfishing', logo: '/logos/salysol.webp', simbolo: '/logos/salysol.webp', simboloBarra: '/logos/salysol-barra.webp', heroSinCirculo: true, ilustracionFondo: '/logos/logosbgsalysol.svg', logoLargo: { src: '/logos/salysol-largo.svg', blanco: '/logos/salysol-largo-blanco.svg', ancho: 3763, alto: 1481 } },
+  { slug: 'transporte-la-paz', sede: 'la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp' },
+  { slug: 'la-ventana-travel', sede: 'la-ventana', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-oscuro.webp', simbolo: '/logos/laventanatravel-simbolo.webp' },
+  { slug: 'piratas-adventures', sede: 'puerto-chale', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp' },
 ];
