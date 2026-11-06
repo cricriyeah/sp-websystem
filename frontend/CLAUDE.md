@@ -245,7 +245,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
 
 ## La Paz: «Nuestras pangas», «Conócenos» y el logo (pedido del dueño, 2026-10-28)
 
-Acomodo derivado con perception-first-design; construido con taste. El héroe es el de siempre (video).
+Acomodo derivado con perception-first-design; construido con taste. El héroe es la foto de la panga rumbo a la pesca (2026-11-05; el video volvió al hub).
 
 - **«Nuestras pangas»** (`pangas-sede.tsx`, id `pangas`): justo bajo el héroe y antes de «Reservar ahora»
   (`seccionesDeSede` la pone ahí si `contenido.pangas` tiene fotos; fuera del menú). Cabe en una pantalla y no lleva botón

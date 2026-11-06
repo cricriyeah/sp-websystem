@@ -30,7 +30,10 @@ test('la-paz existe en los dos idiomas con hero y negocio no nulos', () => {
   assert.equal(es.slug, 'la-paz');
   assert.equal(es.nombre, 'La Paz');
   assert.equal(es.negocio.ciudad, 'La Paz');
-  assert.equal(es.hero.video, '/videos/videonuevonuevolapaz.mp4');
+  assert.equal(es.hero.video, null);
+  assert.equal(es.hero.imagen, '/photos/panga-rumbo-a-la-pesca.webp');
+  assert.equal(en.hero.imagen, es.hero.imagen);
+  assert.equal(es.hero.imagenCortina, '/photos/cola-amarilla-acantilado.webp');
   assert.notEqual(es.hero.subtitulo, en.hero.subtitulo);
 });
 
@@ -143,9 +146,9 @@ test('las pangas de La Paz: la flota completa, sus siete nombres en el texto y d
   assert.deepEqual(es.nombres, en.nombres, 'los nombres no se traducen');
   assert.equal(es.flota.src, en.flota.src);
   assert.deepEqual(es.fotos.map((f) => f.src), en.fotos.map((f) => f.src));
-  assert.equal(c.getSedeContenido('la-paz', 'es').hero.marca, undefined, 'el héroe vuelve a ser el de video');
+  assert.equal(c.getSedeContenido('la-paz', 'es').hero.marca, undefined, 'el héroe no lleva marca propia');
 });
 
-test('el héroe de La Paz se encuadra a la izquierda en celular, en los dos idiomas', () => {
-  for (const lang of ['es', 'en']) assert.equal(c.getSedeContenido('la-paz', lang).hero.posicionImagenMovil, '75% 50%');
+test('el héroe de La Paz se encuadra en los pescadores en celular, en los dos idiomas', () => {
+  for (const lang of ['es', 'en']) assert.equal(c.getSedeContenido('la-paz', lang).hero.posicionImagenMovil, '36% 50%');
 });

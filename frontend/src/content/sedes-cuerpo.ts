@@ -27,11 +27,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Pesca deportiva en La Paz con capitanes que crecieron en la bahía. Panga solo para tu grupo, hasta 5 personas, saliendo cada mañana de Marina La Costa.',
       hero: {
-        video: '/videos/videonuevonuevolapaz.mp4',
-        imagen: '/photos/cola-amarilla-acantilado.webp',
-        posicionImagenMovil: '75% 50%',
-        // La embarcación cruza el video de 45 % a 29 % del ancho: con 32 % la ventana del móvil la cubre todo el tiempo.
-        posicionVideoMovil: '32% 50%',
+        video: null,
+        imagen: '/photos/panga-rumbo-a-la-pesca.webp',
+        // La cortina del hub conserva su foto.
+        imagenCortina: '/photos/cola-amarilla-acantilado.webp',
+        // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
+        posicionImagenMovil: '36% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         subtitulo:
           'Somos capitanes de La Paz y crecimos en esta bahía. Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar lo que esté picando en el Mar de Cortés.',
@@ -244,11 +245,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Sportfishing in La Paz with captains who grew up on the bay. A private panga for your group of up to 5, leaving Marina La Costa every morning.',
       hero: {
-        video: '/videos/videonuevonuevolapaz.mp4',
-        imagen: '/photos/cola-amarilla-acantilado.webp',
-        posicionImagenMovil: '75% 50%',
-        // La embarcación cruza el video de 45 % a 29 % del ancho: con 32 % la ventana del móvil la cubre todo el tiempo.
-        posicionVideoMovil: '32% 50%',
+        video: null,
+        imagen: '/photos/panga-rumbo-a-la-pesca.webp',
+        // La cortina del hub conserva su foto.
+        imagenCortina: '/photos/cola-amarilla-acantilado.webp',
+        // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
+        posicionImagenMovil: '36% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         subtitulo:
           'We are La Paz captains, and we grew up on this bay. Every morning we leave Marina La Costa with only your group on board, to go after whatever is biting in the Sea of Cortez.',
