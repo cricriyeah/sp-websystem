@@ -340,8 +340,10 @@ Cada empresa comparte el link corto de su sede (`/lapaz`, `/laventana`, `/puerto
   `server-only` y el proxy no puede leerlo.
 - Lo visible: un script en línea al inicio de `<body>` (layout) pone `data-solo-sede` antes de pintar
   y `globals.css` esconde `.sale-al-hub` (selector de destino de la barra y del menú, «Sobre
-  nosotros» y los enlaces del hub en el pie). El logo de `SiteHeader` lleva a la sede. Las páginas
-  siguen estáticas: nada lee cookies en el servidor.
+  nosotros» y, fuera de una sede, el grupo entero de enlaces del pie). El logo de `SiteHeader` lleva
+  a la sede, y «Ver qué reservar» del pie fuera de una sede (`BotonReservarPie`) a su sección de
+  reservar. Los dos leen la cookie al hidratar: las páginas siguen estáticas, nada lee cookies en el
+  servidor.
 - Una sede nueva se agrega en `ENLACES_CORTOS`.
 - El matcher de `proxy.ts` escribe `\\.` dentro del string, no `\.`: en JS `'\.'` vale `.`
   (cualquier carácter) y el proxy solo corría en `/` (bug viejo, corregido junto con esto).

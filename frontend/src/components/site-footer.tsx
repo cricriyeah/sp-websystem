@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Money, WhatsappLogo } from '@phosphor-icons/react/ssr';
+import { BotonReservarPie } from '@/components/boton-reservar-pie';
 import { LogoPie } from '@/components/logo-pie';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
@@ -52,10 +53,10 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
       ];
 
-  // «Sobre nosotros» al final del primer grupo, en todas las páginas. Es del hub, igual que las
-  // secciones del pie fuera de una sede: en modo «solo sede» se esconden (clase `sale-al-hub`).
+  // «Sobre nosotros» al final del primer grupo, en todas las páginas. Es del hub: en modo «solo
+  // sede» se esconde (clase `sale-al-hub`; fuera de una sede se esconde el grupo entero, abajo).
   const secciones = [
-    ...seccionesDeLaPagina.map((link) => ({ ...link, alHub: !baseSede })),
+    ...seccionesDeLaPagina.map((link) => ({ ...link, alHub: false })),
     { href: `/${lang}/nosotros`, label: nav.sobreNosotros, alHub: true },
   ];
 
@@ -70,13 +71,16 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
         <div className="grid gap-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_1.1fr_1fr_0.8fr] lg:gap-12">
           <div className="flex flex-col items-start gap-6">
             <h2 className="max-w-[24ch] texto-paso">{footer.headline}</h2>
-            <Link
-              href={sedeSlug ? hrefSede(lang, sedeSlug, ANCLA_DE.reservar) : hrefInicio(lang, ANCLA_HUB.sedes)}
-              className={botonClases({ variante: 'campana-claro' })}
-            >
-              {bookLabel}
-            </Link>
-            <nav aria-label={footer.exploreLabel}>
+            {sedeSlug ? (
+              <Link href={hrefSede(lang, sedeSlug, ANCLA_DE.reservar)} className={botonClases({ variante: 'campana-claro' })}>
+                {bookLabel}
+              </Link>
+            ) : (
+              <BotonReservarPie lang={lang} label={bookLabel} />
+            )}
+            {/* Fuera de una sede todos los enlaces son del hub: en modo «solo sede» se va el grupo
+                entero, no queda una lista vacía que el lector de pantalla anuncie. */}
+            <nav aria-label={footer.exploreLabel} className={baseSede ? undefined : 'sale-al-hub'}>
               <ul className="flex flex-wrap gap-x-6">
                 {secciones.map((link) => (
                   // El mapa solo existe desde 1024 px.
