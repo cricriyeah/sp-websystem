@@ -4,6 +4,7 @@ import '../globals.css';
 import { getDictionary, hasLocale } from './dictionaries';
 import { notFound } from 'next/navigation';
 import { CookieNotice } from '@/components/cookie-notice';
+import { PixelMeta } from '@/components/pixel-meta';
 import { RefCapture } from '@/components/ref-capture';
 import { ProveedorToast } from '@/components/toast';
 import { MotionProvider } from '@/components/ui/motion-provider';
@@ -95,6 +96,8 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
           {/* Va fuera del proveedor de avisos: no es feedback de una accion del
               cliente, es un tramite que se contesta una vez y no vuelve. */}
           <CookieNotice lang={lang} cookies={dict.cookies} />
+          {/* No pinta nada: carga el pixel de Meta solo si el cliente aceptó las cookies. */}
+          <PixelMeta />
         </MotionProvider>
       </body>
     </html>

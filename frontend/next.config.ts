@@ -30,12 +30,14 @@ const csp = [
   // sistema se queda en alcance PCI-DSS SAQ-A.
   // challenges.cloudflare.com sirve el widget de Turnstile, el gate anti-bot
   // del checkout. Sin esto el CSP lo bloquea y el widget nunca da un token.
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com",
+  // connect.facebook.net sirve el pixel de Meta (components/pixel-meta.tsx), que solo carga
+  // con las cookies aceptadas; manda sus eventos a www.facebook.com (imagen, beacon o fetch).
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com https://connect.facebook.net",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://www.facebook.com",
   "font-src 'self' data:",
   `media-src 'self'${mediaOrigen ? ` ${mediaOrigen}` : ""}`,
-  `connect-src 'self' ${apiUrl} https://api.stripe.com https://challenges.cloudflare.com`,
+  `connect-src 'self' ${apiUrl} https://api.stripe.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net`,
   // Turnstile monta su reto en un iframe propio, igual que Stripe.
   "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
   // Nadie debe poder meter el checkout dentro de un iframe: es como se monta un

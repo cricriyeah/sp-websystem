@@ -38,7 +38,8 @@ const enElServidor = () => true;
 
 /**
  * `/reservar` y `/traslados`: el aviso es fijo abajo y la barra del checkout lo taparía sin dejar
- * contestarlo. Ahí no carga nada no esencial (no hay analítica ni pixel), así que no se pregunta.
+ * contestarlo, así que ahí no se pregunta. Sin respuesta el pixel no carga; si el cliente ya aceptó
+ * en otra página, el pixel también cuenta las del checkout.
  */
 const RUTA_RESERVA = /^\/[a-z]{2}\/(reservar|traslados)(\/|$)/;
 export function CookieNotice({

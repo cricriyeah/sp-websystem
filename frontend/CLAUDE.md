@@ -317,6 +317,17 @@ queda a su nombre en el backoffice (ver `backend/CLAUDE.md`, "Registro de ventas
 - El codigo vive 30 dias en localStorage (`src/lib/ref.ts`) y viaja como `ref` en
   `guardarReserva`. El backend ignora en silencio el que no resuelva.
 
+## Pixel de Meta
+
+`components/pixel-meta.tsx` (montado en `[lang]/layout.tsx`) mete el código base de Meta en `<head>`
+solo si el cliente aceptó las cookies (`lib/cookies.ts`; el aviso ya dice «medir nuestros anuncios»;
+`guardarConsentimiento` dispara `EVENTO_CONSENTIMIENTO` para que cargue al momento). Manda el primer
+`PageView` y las páginas siguientes las cuenta el propio pixel al cambiar la URL (`pushState`); un
+`fbq('track', 'PageView')` a mano después del primero no sirve, fbevents.js acepta uno por carga.
+Los pasos del checkout (`?paso=`) también cuentan. `autoConfig` va apagado: sin eventos automáticos
+ni lectura de formularios. El CSP de `next.config.ts` permite `connect.facebook.net` y
+`www.facebook.com`. Eventos de compra (`Purchase`) no hay: se deciden aparte.
+
 ## Links cortos por sede (modo «solo sede»)
 
 Cada empresa comparte el link corto de su sede (`/lapaz`, `/laventana`, `/puertochale`; también

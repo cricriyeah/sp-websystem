@@ -25,6 +25,12 @@ const VERSION_AVISO = 1;
 
 export type Consentimiento = 'aceptado' | 'rechazado';
 
+/**
+ * Se dispara en `window` al guardar la decision: localStorage no avisa en la misma pestaña, y el
+ * pixel tiene que cargar en cuanto el cliente acepta, sin esperar a otra pagina.
+ */
+export const EVENTO_CONSENTIMIENTO = 'salysol:consentimiento';
+
 type ConsentimientoGuardado = {
   decision: Consentimiento;
   version: number;
@@ -59,4 +65,5 @@ export function guardarConsentimiento(decision: Consentimiento) {
     // Modo privado o almacenamiento lleno. Se le vuelve a preguntar en la
     // siguiente visita; no se asume un "si" que no dio.
   }
+  window.dispatchEvent(new Event(EVENTO_CONSENTIMIENTO));
 }
