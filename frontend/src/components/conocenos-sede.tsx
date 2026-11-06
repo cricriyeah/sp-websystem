@@ -28,7 +28,7 @@ type Props = {
  *   del párrafo que presenta al gremio, el párrafo 3 y el cierre: el logo largo a
  *   color de la empresa y debajo el único botón (el dueño quitó «Sal con el sol», el isotipo chico y la frase).
  * - Teléfono y tableta: una columna intercalada como revista con `order` (las dos columnas son `contents`): título,
- *   foto, párrafos 1-2, nombres, foto, párrafo 3, dos fotos y cierre. Arriba de todo, a todo el ancho, `desde`: el año del gremio.
+ *   foto, párrafos 1-2, nombres, foto, párrafo 3, las fotos de capitanes (una grande y dos debajo) y cierre. Arriba de todo, a todo el ancho, `desde`: el año del gremio.
  *
  * Dinamismo (taste, 2026-10-30, el dueño lo veía plano): la columna de fotos no es una pila pareja. La del relato
  * sale de la retícula hasta el borde de la pantalla, la escena se encima sobre ella más angosta y separada por un
@@ -52,6 +52,9 @@ export function ConocenosSede({ id, conocenos, fondo, logo, empresa }: Props) {
   const [escena, ...resto] = tripulacion.fotos;
   // Dos columnas escalonadas: la de la derecha baja, así las fotos no forman una cuadrícula pareja.
   const columnas = [resto.filter((_, i) => i % 2 === 0), resto.filter((_, i) => i % 2 === 1)];
+  // Bajo lg no hay columnas: con un número impar de fotos, la última va grande y primero, y las demás
+  // en parejas debajo, para que no quede un hueco (pedido del dueño, 2026-11-05).
+  const grande = resto.length % 2 === 1 ? resto[resto.length - 1] : undefined;
 
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className={cn('relative isolate scroll-mt-[calc(var(--nav-alto)+16px)] overflow-x-clip pt-16 pb-20 sm:pt-20 lg:pt-28 lg:pb-40', CLASE_FONDO[fondo])}>
@@ -95,9 +98,17 @@ export function ConocenosSede({ id, conocenos, fondo, logo, empresa }: Props) {
           {resto.length > 0 && (
             <div className="order-7 grid grid-cols-2 items-start gap-3 sm:gap-5 lg:order-none lg:gap-6">
               {columnas.map((col, c) => (
-                <div key={c} className={cn('flex flex-col gap-3 sm:gap-5 lg:gap-6', c === 1 && 'mt-[28%]')}>
+                <div key={c} className={cn('contents lg:flex lg:flex-col lg:gap-6', c === 1 && 'lg:mt-[28%]')}>
                   {col.map((f, i) => (
-                    <Foto key={f.src} src={f.src} alt={f.alt} posicion={f.posicion} rapida={(c + i) % 2 === 1} className="aspect-[3/4]" sizes="(min-width: 1024px) 19vw, 50vw" />
+                    <Foto
+                      key={f.src}
+                      src={f.src}
+                      alt={f.alt}
+                      posicion={f.posicion}
+                      rapida={(c + i) % 2 === 1}
+                      className={f === grande ? 'order-first col-span-2 aspect-[4/5] lg:order-none lg:col-span-1 lg:aspect-[3/4]' : 'aspect-[3/4]'}
+                      sizes={f === grande ? '(min-width: 1024px) 19vw, 100vw' : '(min-width: 1024px) 19vw, 50vw'}
+                    />
                   ))}
                 </div>
               ))}
