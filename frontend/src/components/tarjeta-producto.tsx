@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Check, Clock, UserCircle, UsersThree } from '@phosphor-icons/react/ssr';
 import type { ColorActividad } from '@/lib/color-actividad';
-import { CarruselFotos } from '@/components/carrusel-fotos';
+import { CarruselFotos } from '@/components/ui/carrusel-fotos';
 import { botonClases } from '@/components/ui/variantes';
 import { cn } from '@/components/ui/cn';
 

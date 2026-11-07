@@ -103,8 +103,9 @@ test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), tripulac
   const en = c.getSedeContenido('la-paz', 'en').conocenos;
   for (const k of [es, en]) {
     assert.ok(k.titulo && k.apertura);
-    assert.equal(k.historia.length, 3, 'un relato en tres párrafos');
-    assert.ok(k.historia.join(' ').split(/\s+/).length >= 150, 'texto largo, de trayectoria e historia');
+    // El dueño quitó el párrafo de la salida diaria (2026-11-07): quedan dos.
+    assert.equal(k.historia.length, 2, 'un relato en dos párrafos');
+    assert.ok(k.historia.join(' ').split(/\s+/).length >= 100, 'texto largo, de trayectoria e historia');
     assert.ok(!('hechos' in k), 'sin cifras sueltas: se leían como estadísticas');
     assert.match(k.historia.join(' '), /(gremio|guild)/, 'el protagonista es el grupo, no una persona');
     assert.ok(!('prensa' in k), 'sin la nota de prensa (el dueño la quitó, 2026-11-04)');
@@ -123,10 +124,11 @@ test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), tripulac
   assert.deepEqual(es.tripulacion.capitanes.map((x) => x.nombre), en.tripulacion.capitanes.map((x) => x.nombre));
 });
 
-test('«Conócenos» de La Paz: los ocho capitanes confirmados por el dueño (2026-10-30) se publican, en los dos idiomas', () => {
+test('«Conócenos» de La Paz: los nueve capitanes confirmados por el dueño se publican, en los dos idiomas', () => {
   for (const lang of ['es', 'en']) {
     const capitanes = c.getSedeContenido('la-paz', lang).conocenos.tripulacion.capitanes;
-    assert.deepEqual(capitanes.map((x) => x.nombre), ['Rogelio', 'Omar', 'Alfredo', 'Joel', 'Licho', 'Julio', 'Raúl', 'Dagoberto']);
+    // Julio y Chito son dos capitanes, no nombre y apodo (dueño, 2026-11-06).
+    assert.deepEqual(capitanes.map((x) => x.nombre), ['Rogelio', 'Omar', 'Alfredo', 'Joel', 'Licho', 'Julio', 'Chito', 'Raúl', 'Dagoberto']);
     assert.ok(capitanes.every((x) => !x.pendiente));
   }
 });

@@ -56,6 +56,7 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
     incluye: (servicio.incluye?.[lang] ?? []).filter((r) => !esExclusion(r)).slice(0, 4),
     incluyeSiempre: true,
     foto: imagenDeCatalogo(clave, lang),
+    fotos: imagenesDeCatalogo(clave, lang),
     precio: porRuta
       ? null
       : { ...precioDe((m) => aMoneda(servicio.precio_base, m, servicio.tipo_cambio_usd), lang, moneda), base: base.texto, conDesde: true },

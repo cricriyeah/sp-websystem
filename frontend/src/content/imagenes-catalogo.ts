@@ -50,19 +50,52 @@ const ORCAS: FotoBase = {
   src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
   alt: { es: 'Dos orcas nadando bajo la superficie del mar', en: 'Two orcas swimming just below the sea surface' },
 };
+const SNORKEL: FotoBase = {
+  src: '/catalogo/la-ventana-travel-paquete-7-noches.webp',
+  alt: { es: 'Una persona haciendo snorkel entre peces rayados', en: 'A person snorkeling among striped fish' },
+};
+const RAYAS: FotoBase = {
+  src: '/catalogo/la-ventana-travel-paquete-5-noches.webp',
+  alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
+};
 // El orden de la galería: primero el lugar, luego dónde se duerme, al final las áreas comunes.
 const GALERIA_HOSPEDAJE: FotoGaleria[] = [
   HOSPEDAJE_VISTA_AEREA, HOSPEDAJE_HABITACION_NICHOS, HOSPEDAJE_HABITACION_NAUTICA,
   HOSPEDAJE_ESTUDIO_VISTA_MAR, HOSPEDAJE_COCINA, HOSPEDAJE_FOGATA,
 ];
 
+// Fotos reales de La Paz que también rotan en las tarjetas y el héroe del detalle (dueño, 2026-11-07: carrusel
+// automático de 4 fotos, y solo fotos que ya están en la galería de la sede).
+const LA_PAZ_JUREL_PELICANOS: FotoBase = {
+  src: '/photos/yellowtail-pelicanos-bahia.webp',
+  alt: { es: 'De regreso a la bahía, con pelícanos alrededor', en: 'Back in the bay, with pelicans all around' },
+};
+const LA_PAZ_DORADO_BAJO_TOLDO: FotoBase = {
+  src: '/photos/dorado-bajo-toldo.webp',
+  alt: { es: 'Dorado recién subido, a la sombra del toldo', en: 'Mahi just brought aboard, in the shade of the canopy' },
+};
+const LA_PAZ_CLIENTES_TUNA: FotoBase = {
+  src: '/photos/clientes-tuna.webp',
+  alt: { es: 'Dos pescadores sonríen con un pez grande recién subido a la panga', en: 'Two anglers smile with a big fish just brought aboard the panga' },
+};
+const PESCA_SAL_Y_SOL: FotoBase = {
+  src: '/catalogo/sal-y-sol-pesca-deportiva.webp',
+  alt: { es: 'Jurel (cola amarilla) recién pescado frente a un acantilado', en: 'Freshly caught yellowtail by a sea cliff' },
+};
+const VAN_DLS: FotoBase = {
+  src: '/catalogo/transporte-la-paz-traslados-la-paz.webp',
+  alt: { es: 'Una van blanca de DLS Tours y Transporte Turístico estacionada en una calle de La Paz', en: 'A white DLS Tours and Tourist Transport van parked on a street in La Paz' },
+};
+const BALANDRA: FotoBase = {
+  src: '/catalogo/transporte-la-paz-balandra.webp',
+  alt: { es: 'Una van blanca de DLS estacionada junto al letrero de colores de Balandra, con los cerros detrás', en: 'A white DLS van parked next to the colorful Balandra sign, with the hills behind it' },
+};
+
 const FOTOS: Record<string, Foto> = {
   'servicio:sal-y-sol/pesca-deportiva': {
-    src: '/catalogo/sal-y-sol-pesca-deportiva.webp',
-    alt: {
-      es: 'Jurel (cola amarilla) recién pescado frente a un acantilado',
-      en: 'Freshly caught yellowtail by a sea cliff',
-    },
+    ...PESCA_SAL_Y_SOL,
+    // La principal y tres de la galería de La Paz; ni joel-dorado ni cliente-dorado (el dueño no las quiere aquí, 2026-11-07).
+    mas: [LA_PAZ_CLIENTES_TUNA, LA_PAZ_JUREL_PELICANOS, LA_PAZ_DORADO_BAJO_TOLDO],
   },
   'servicio:la-ventana-travel/avistamiento-ballenas-orcas': {
     src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
@@ -71,14 +104,15 @@ const FOTOS: Record<string, Foto> = {
   'servicio:la-ventana-travel/hospedaje-la-ventana': {
     src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp',
     alt: { es: 'Vista aérea del Hotel Casa Arrecife, con su terraza y el mar de La Ventana al fondo', en: 'Aerial view of Hotel Casa Arrecife, with its rooftop terrace and the La Ventana sea behind it' },
+    mas: [HOSPEDAJE_HABITACION_NICHOS, HOSPEDAJE_ESTUDIO_VISTA_MAR, HOSPEDAJE_FOGATA],
   },
   'servicio:la-ventana-travel/pesca-con-mosca': {
     src: '/catalogo/la-ventana-travel-pesca-con-mosca.webp',
     alt: { es: 'Un joven peleando un pez con la caña doblada, en alta mar', en: 'A young angler fighting a fish with a bent rod, out at sea' },
   },
   'servicio:transporte-la-paz/traslados-la-paz': {
-    src: '/catalogo/transporte-la-paz-traslados-la-paz.webp',
-    alt: { es: 'Una van blanca de DLS Tours y Transporte Turístico estacionada en una calle de La Paz', en: 'A white DLS Tours and Tourist Transport van parked on a street in La Paz' },
+    ...VAN_DLS,
+    mas: [BALANDRA],
   },
   'servicio:piratas-adventures/pesca-deportiva': {
     src: '/photos/dorado-bajo-toldo.webp',
@@ -89,17 +123,19 @@ const FOTOS: Record<string, Foto> = {
     src: '/photos/marlin-en-equipo.webp',
     alt: { es: 'Marlin capturado en equipo, listo para la foto y la liberación', en: 'A marlin caught as a team, ready for the photo and release' },
     relleno: true,
+    // Sin cliente-dorado (dueño, 2026-11-07).
+    mas: [LA_PAZ_DORADO_BAJO_TOLDO, VAN_DLS],
   },
   'paquete:paquete-5-noches': {
-    src: '/catalogo/la-ventana-travel-paquete-5-noches.webp',
-    alt: { es: 'Una persona nadando entre un enorme cardumen de rayas', en: 'A person swimming among a huge school of rays' },
-    mas: [HOSPEDAJE_HABITACION_NICHOS, HOSPEDAJE_VISTA_AEREA, ORCAS],
+    ...RAYAS,
+    // El snorkel en lugar de la vista aérea de la casa (dueño, 2026-11-07).
+    mas: [HOSPEDAJE_HABITACION_NICHOS, SNORKEL, ORCAS],
     galeria: GALERIA_HOSPEDAJE,
   },
   'paquete:paquete-7-noches': {
-    src: '/catalogo/la-ventana-travel-paquete-7-noches.webp',
-    alt: { es: 'Una persona haciendo snorkel entre peces rayados', en: 'A person snorkeling among striped fish' },
-    mas: [HOSPEDAJE_HABITACION_NAUTICA, HOSPEDAJE_FOGATA, HOSPEDAJE_VISTA_AEREA],
+    ...SNORKEL,
+    // Las rayas en lugar de la vista aérea de la casa (dueño, 2026-11-07).
+    mas: [HOSPEDAJE_HABITACION_NAUTICA, HOSPEDAJE_FOGATA, RAYAS],
     galeria: GALERIA_HOSPEDAJE,
   },
 };

@@ -8,7 +8,7 @@ export function vistaDeEmpresa(empresa: Empresa, lang: Locale, sedes: VistaEmpre
   return {
     slug: empresa.slug,
     nombre: empresa.nombre,
-    logo: empresa.logo,
+    logo: empresa.logoTarjeta ?? empresa.logo,
     sedes,
     tambienConocidaComo: empresa.tambienConocidaComo,
     descripcion: empresa.descripcion[lang],

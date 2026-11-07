@@ -4,7 +4,7 @@ import { Check, UserCircle } from '@phosphor-icons/react/ssr';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo } from '@/lib/api';
 import { incluyeDePaquete, vistaDePaquete } from '@/components/vistas-catalogo';
-import { CarruselFotos } from '@/components/carrusel-fotos';
+import { CarruselFotos } from '@/components/ui/carrusel-fotos';
 import { desfaseDe } from '@/components/tarjeta-producto';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
 import { botonClases } from '@/components/ui/variantes';

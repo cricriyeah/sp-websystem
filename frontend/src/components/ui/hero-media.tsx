@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import type { CSSProperties, ReactNode } from 'react';
 import { VideoHeroe } from '@/components/ui/video-heroe';
+import { CarruselFotos } from '@/components/ui/carrusel-fotos';
 
 type HeroMediaProps = {
   /** Foto del héroe. Sin video es el LCP y va en el HTML inicial; con video es solo el respaldo. `null` si la sede aún no tiene. */
@@ -9,6 +10,11 @@ type HeroMediaProps = {
   video: string | null;
   /** Descripción de la imagen; vacío (`''`) si es decorativa. */
   alt: string;
+  /**
+   * Varias fotos (la primera es `imagen`): sin video, el fondo las cambia solo con un fundido, como carrusel
+   * (`CarruselFotos`). La primera sigue en el HTML inicial con `preload`: es el LCP.
+   */
+  imagenes?: { src: string; alt: string }[];
   /** `preload` de `next/image`: verdadero en el héroe de la página, que es el LCP. */
   preload?: boolean;
   /** `object-position` de la imagen y del video, para encuadrar distinto por sede. */
@@ -35,7 +41,7 @@ type HeroMediaProps = {
  *
  * Server Component: no necesita JavaScript propio.
  */
-export function HeroMedia({ imagen, video, alt, preload = false, objectPosition, objectPositionMovil, objectPositionVideoMovil, alto = 'pantalla', children }: HeroMediaProps) {
+export function HeroMedia({ imagen, imagenes, video, alt, preload = false, objectPosition, objectPositionMovil, objectPositionVideoMovil, alto = 'pantalla', children }: HeroMediaProps) {
   const posicion = objectPosition || objectPositionMovil
     ? ({ '--pos': objectPosition ?? '50% 50%', '--pos-m': objectPositionMovil ?? objectPosition ?? '50% 50%' } as CSSProperties)
     : undefined;
@@ -62,6 +68,8 @@ export function HeroMedia({ imagen, video, alt, preload = false, objectPosition,
     <div className={`relative w-full overflow-hidden ${video ? 'bg-tinta' : ''}`}>
       {video ? (
         <VideoHeroe src={video} className={`absolute inset-0 h-full w-full object-cover ${posicionVideo ? ENCUADRE : ''}`} style={posicionVideo} respaldo={foto} />
+      ) : imagenes && imagenes.length > 1 ? (
+        <CarruselFotos fotos={imagenes} sizes="100vw" preload={preload} sinPuntos className={claseEncuadre} />
       ) : foto}
       <div className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
 

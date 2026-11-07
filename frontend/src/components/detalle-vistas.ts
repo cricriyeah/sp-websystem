@@ -5,7 +5,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo, ServicioPersonalizacionCatalogo } from '@/lib/api';
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
-import { claveDePaquete, claveDeServicio, galeriaDeCatalogo, imagenDeCatalogo } from '@/content/imagenes-catalogo';
+import { claveDePaquete, claveDeServicio, galeriaDeCatalogo, imagenDeCatalogo, imagenesDeCatalogo } from '@/content/imagenes-catalogo';
 import { palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
 import { colorDePaquete, colorDeServicio } from '@/lib/color-actividad';
 import { hrefPaquete, hrefServicio } from '@/lib/booking-href';
@@ -163,6 +163,7 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
     color: servicio ? colorDeServicio(servicio) : colorDeServicio({ tipo_servicio: tipo }),
     palabra: palabraDeServicio(tipo, lang),
     foto: imagenDeCatalogo(clave, lang),
+    fotos: imagenesDeCatalogo(clave, lang),
     galeria: galeriaDeCatalogo(clave, lang),
     linea: textos.opera.replace('{empresa}', nombreEmpresa),
     volver: volverASede(entrada),
@@ -230,6 +231,7 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
     color: colorDePaquete(paquete),
     palabra: palabraDePaquete(paquete.noches, lang),
     foto: imagenDeCatalogo(clave, lang),
+    fotos: imagenesDeCatalogo(clave, lang),
     galeria: galeriaDeCatalogo(clave, lang),
     linea: textos.opera.replace('{empresa}', nombresEmpresa.join(' · ')),
     volver: volverASede(entrada),

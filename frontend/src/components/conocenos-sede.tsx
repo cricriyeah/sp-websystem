@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { SedeConocenos } from '@/content/sedes-tipos';
@@ -68,12 +69,29 @@ export function ConocenosSede({ id, conocenos, fondo, logo, empresa }: Props) {
         />
       )}
       {desde && (
-        // Lo primero de la sección y lo más visible (pedido del dueño, 2026-11-04): el año gigante en coral y, a su lado,
-        // el texto; una raya coral gruesa lo separa del relato.
+        // Lo primero de la sección y lo más visible (pedido del dueño, 2026-11-04): la frase y, a su derecha, el año
+        // gigante, para que se lea de corrido («Más de 3 generaciones desde 1950», 2026-11-07). Todo en azules (dueño,
+        // 2026-11-07): el año en azul; la frase y la raya gruesa punteada que lo separa del relato, del color del título
+        // «Gente de mar» (foreground). La raya es un degradado y no `border-dashed`: el borde punteado deja huecos tan largos como el
+        // trazo y el dueño los quiere cortos.
         <div className="rev mx-auto mb-12 max-w-[1440px] px-pagina sm:mb-16 lg:mb-24">
-          <p className="m-0 flex flex-col gap-3 border-b-[6px] border-coral pb-6 font-[family-name:var(--font-titulo)] font-bold sm:flex-row sm:items-end sm:gap-10 lg:pb-8">
-            <span className="texto-gigante text-coral-texto">{desde.anio}</span>
-            <span className="max-w-[14ch] text-3xl leading-[1.05] tracking-[0.04em] text-tinta sm:pb-[0.6em] sm:text-4xl lg:text-6xl">{desde.texto}</span>
+          <p
+            // En el teléfono no hay raya (dueño, 2026-11-07): la imagen solo se aplica desde `sm`.
+            style={{
+              '--raya': 'repeating-linear-gradient(to right, var(--color-foreground) 0 28px, transparent 28px 36px)',
+              backgroundSize: '100% 6px',
+              backgroundPosition: 'left bottom',
+              backgroundRepeat: 'no-repeat',
+            } as CSSProperties}
+            className="m-0 flex flex-col gap-3 pb-0 sm:pb-6 sm:[background-image:var(--raya)] font-[family-name:var(--font-titulo)] font-bold sm:flex-row sm:items-baseline-last sm:gap-10 lg:grid lg:grid-cols-12 lg:gap-x-6 lg:pb-8">
+            {/* El año va sobre la base del último renglón de la frase. En desktop sigue la retícula del relato de abajo:
+                la frase sobre las fotos y el año del ancho exacto de la columna de texto (cols. 7-12). `46.6cqi`: el
+                «1950» mide 2.144 em en Consola Mono con su tracking, así que llena el contenedor. */}
+            <span className="max-w-[14ch] text-3xl leading-[1.05] tracking-[0.04em] text-foreground sm:text-4xl lg:col-span-5 lg:text-6xl">{desde.texto}</span>
+            {/* En el teléfono el año va a todo el ancho de la pantalla (dueño, 2026-11-07), con el mismo cálculo. */}
+            <span className="max-sm:@container lg:@container lg:col-span-6 lg:col-start-7">
+              <span className="texto-gigante block text-azul max-sm:text-[46.6cqi] lg:text-[46.6cqi]">{desde.anio}</span>
+            </span>
           </p>
         </div>
       )}
@@ -126,27 +144,36 @@ export function ConocenosSede({ id, conocenos, fondo, logo, empresa }: Props) {
           </div>
           <Parrafos textos={historia.slice(0, 2)} className="order-3 lg:order-none" />
           {capitanes.length > 0 && (
-            <div className="rev order-4 my-6 flex flex-col gap-8 bg-cafe-profundo px-7 py-9 text-cafe-claro sm:my-8 sm:px-10 sm:py-12 lg:order-none lg:my-10 lg:px-12 lg:py-14">
-              {/* Pedido del dueño (2026-11-04): el staff resalta como bloque, en un recuadro café con aire alrededor. El título
-                  lleva una raya que corre hasta el borde; los capitanes van en lista, cada uno con su apodo debajo en coral. */}
-              <h3 className="m-0 flex items-center gap-5 font-[family-name:var(--font-titulo)] text-xl font-bold tracking-[0.18em] text-coral-medio sm:text-2xl">
+            <div
+              className={cn(
+                'rev order-4 my-6 flex flex-col gap-8 px-7 py-9 text-tinta sm:my-8 sm:px-10 sm:py-12 lg:order-none lg:my-10 lg:px-12 lg:py-14',
+                // Si la sección ya va en arena, el recuadro se perdería: ahí va en blanco.
+                fondo === 'cafe-bruma' ? 'bg-superficie' : 'bg-arena',
+              )}
+            >
+              {/* Pedido del dueño (2026-11-04): el staff resalta como bloque, en un recuadro con aire alrededor; desde
+                  2026-11-07 en arena con letras y rayas oscuras (antes café). El título lleva una raya que corre hasta el
+                  borde; el título va en azul y los capitanes en lista, cada uno con su apodo debajo, también en azul. */}
+              <h3 className="m-0 flex items-center gap-5 font-[family-name:var(--font-titulo)] text-xl font-bold tracking-[0.18em] text-azul sm:text-2xl">
                 <span className="shrink-0">{tripulacion.titulo}</span>
-                <span aria-hidden className="h-px flex-1 bg-coral-medio/50" />
+                <span aria-hidden className="h-px flex-1 bg-tinta/50" />
               </h3>
               <ul className="m-0 grid list-none grid-cols-1 gap-x-10 p-0 sm:grid-cols-2">
                 {capitanes.map((c) => (
-                  <li key={c.nombre} className="flex flex-col gap-2 border-t border-cafe-claro/15 py-5">
+                  <li key={c.nombre} className="flex flex-col gap-2 border-t border-tinta/25 py-5">
                     <span className="texto-tripulacion leading-none">{c.nombre}</span>
-                    {c.apodo && <span className="texto-tripulacion text-base tracking-[0.12em] text-coral-medio sm:text-lg">{c.apodo}</span>}
+                    {c.apodo && <span className="texto-tripulacion text-base tracking-[0.12em] text-azul sm:text-lg">{c.apodo}</span>}
                   </li>
                 ))}
               </ul>
             </div>
           )}
           <Parrafos textos={historia.slice(2)} className="order-6 lg:order-none" />
-          <div className="rev order-9 flex flex-col gap-8 pt-6 lg:order-none lg:pt-10">
+          {/* Firma + acción (PFD, opción A, 2026-11-07): logo y botón a todo el ancho de la columna (el dueño no quiere
+              nada a medio ancho), el botón con más presencia, así se leen como un solo bloque y no queda como nota al pie. */}
+          <div className="rev order-9 flex flex-col gap-8 pt-6 lg:order-none lg:gap-6 lg:pt-10">
             {logo && <Image src={logo.src} alt={empresa} width={logo.ancho} height={logo.alto} className="block h-auto w-full" />}
-            <Link href={`#${ANCLA_DE.reservar}`} className={cn(botonClases({ variante: 'campana' }), 'w-full sm:w-auto sm:self-start')}>
+            <Link href={`#${ANCLA_DE.reservar}`} className={cn(botonClases({ variante: 'campana' }), 'w-full sm:w-auto sm:self-start lg:w-full lg:py-5 lg:text-lg')}>
               {cierre.boton}
             </Link>
           </div>

@@ -844,7 +844,7 @@
     "empresasTexto": "Each company is from its own destination and runs its own services. We help you before the trip, with the date, the payment and your questions."
   },
   "hubContenido": {
-    "titularLineas": ["Out at sea:"],
+    "titularLineas": ["Out at sea"],
     "titularSecundario": "fishing and whales in Baja Sur",
     "subtexto": "Book directly with the people who go out to sea in Baja Sur: captains in La Paz, guides in La Ventana and a fishing family in Puerto Chale.",
     "og": { "lugar": "Baja California Sur", "titular": "Fishing, whales and open sea in Baja Sur with local outfitters" },
@@ -875,7 +875,7 @@
         "texto": "Head out to sea with people who have known it all their lives. Watch a dorado jump or a whale come up to breathe, and go home with Baja Sur stories you'll be telling for years."
       }
     ],
-    "empresasTitulo": "Who takes you out",
+    "empresasTitulo": "Local companies that welcome you",
     "empresasTexto": "They're small companies run by people from each destination, with their own captains, guides and boats. When you book here, you go out with them and the payment goes straight to them.",
     "verServiciosEn": "See services in {sede}",
     "sitioOficial": "Official site",

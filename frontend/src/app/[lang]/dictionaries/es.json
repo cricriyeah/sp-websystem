@@ -844,7 +844,7 @@
     "empresasTexto": "Cada empresa es de su destino y opera sus propios servicios. Nosotros te atendemos antes de la salida, con la fecha, el pago y tus dudas."
   },
   "hubContenido": {
-    "titularLineas": ["Mar adentro:"],
+    "titularLineas": ["Mar adentro"],
     "titularSecundario": "pesca y ballenas en Baja Sur",
     "subtexto": "Aquí reservas directo con la gente que sale al mar en Baja Sur: los capitanes de La Paz, los guías de La Ventana y una familia de pescadores de Puerto Chale.",
     "og": { "lugar": "Baja California Sur", "titular": "Pesca, ballenas y mar en Baja Sur con empresas locales" },
@@ -875,7 +875,7 @@
         "texto": "Sal al mar con gente que lo conoce de toda la vida. Mira saltar un dorado o salir a respirar a una ballena, y regresa a casa con historias de la Baja Sur que vas a contar por años."
       }
     ],
-    "empresasTitulo": "Quién te lleva",
+    "empresasTitulo": "Empresas locales que nos acompañan",
     "empresasTexto": "Son empresas pequeñas, de gente de cada destino, con sus propios capitanes, guías y embarcaciones. Cuando reservas aquí, sales con ellos y el pago les llega directo.",
     "verServiciosEn": "Ver servicios en {sede}",
     "sitioOficial": "Sitio oficial",

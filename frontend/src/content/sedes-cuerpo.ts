@@ -75,12 +75,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       // Los nombres de la tripulación los confirmó el dueño el 2026-10-30.
       conocenos: {
         titulo: 'Gente de mar',
-        desde: { texto: 'DESDE HACE 3 GENERACIONES', anio: '1950' },
+        desde: { texto: 'MÁS DE 3 GENERACIONES DESDE', anio: '1950' },
         apertura: 'En La Paz, el oficio del mar se aprende de niño, en el muelle, viendo a los mayores salir antes de que amanezca.',
         historia: [
           'Así lo aprendieron nuestros capitanes. Son un gremio de gente de La Paz, y en él se repiten los apellidos, porque aquí el oficio pasa de padres a hijos. Crecieron en barrios de pescadores como El Manglito, viendo salir los barcos donde trabajaban sus padres y sus hermanos, y cualquiera de ellos te puede contar esa historia.',
           'Llevan la vida entera en esta agua. Saben dónde se junta el pescado en cada temporada, a qué hora se calma el viento y por dónde volver con la hielera llena. Cada salida es su trabajo y el sustento de su casa, y también la oportunidad de enseñarle su bahía a alguien que viene de lejos.',
-          'Cada mañana, entre las {desde} y las {hasta}, salimos de Marina La Costa. En la panga vas solo con tu grupo y con uno de nuestros capitanes al timón. Te lleva a sus lugares y, cuando el pez pica, lo pelea contigo hasta subirlo a bordo.',
         ],
         // Nunca el retrato del jefe solo: la foto del relato es de la gente del gremio.
         foto: { src: '/photos/capitanes-con-marlines.webp', alt: 'Dos hombres de mar sostienen un marlín cada uno en la popa de la panga' },
@@ -146,10 +145,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           empresaSlug: 'sal-y-sol',
         },
         {
-          src: '/photos/cana-doblada-dorado.webp',
-          alt: 'La caña doblada, peleando un dorado',
-          ancho: 1086,
-          alto: 1448,
+          // Era cana-doblada-dorado (vertical: el cuadro ancho le cortaba la cabeza al cliente). Dueño, 2026-11-07.
+          src: '/photos/cliente-dorado.webp',
+          alt: 'Un pescador sentado en la popa levanta un dorado enorme, con una isla de la bahía al fondo',
+          ancho: 1600,
+          alto: 1200,
           empresaSlug: 'sal-y-sol',
         },
         {
@@ -294,12 +294,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       // Los nombres de la tripulación los confirmó el dueño el 2026-10-30.
       conocenos: {
         titulo: 'Born to this bay',
-        desde: { texto: 'THREE GENERATIONS, SINCE', anio: '1950' },
+        desde: { texto: 'OVER 3 GENERATIONS SINCE', anio: '1950' },
         apertura: 'In La Paz, you learn the sea as a kid, on the dock, watching the older fishermen head out before sunrise.',
         historia: [
           'That’s how our captains learned it. They are a guild of La Paz locals, and the same last names come up again and again, because here the trade passes from parents to children. They grew up in fishing neighborhoods like El Manglito, watching the boats their fathers and brothers worked on head out, and any of them can tell you that story.',
           'They have spent their whole lives on this water. They know where the fish gather each season, when the wind lays down, and which way to come home with a full cooler. Every trip is their work and how they support their families, and it is also a chance to show their bay to someone who came a long way to see it.',
-          'Every morning between {desde} and {hasta}, we leave Marina La Costa. On the panga it’s just your group and one of our captains at the helm. He takes you to his spots, and when a fish bites, he fights it with you until it’s on board.',
         ],
         // Placeholder until the owner sends the guild photo (never a portrait of the boss alone).
         foto: { src: '/photos/capitanes-con-marlines.webp', alt: 'Two seamen each hold a marlin at the stern of the panga' },
@@ -364,10 +363,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           empresaSlug: 'sal-y-sol',
         },
         {
-          src: '/photos/cana-doblada-dorado.webp',
-          alt: 'Rod bent, fighting a mahi',
-          ancho: 1086,
-          alto: 1448,
+          src: '/photos/cliente-dorado.webp',
+          alt: 'An angler sitting at the stern holds up a huge dorado, with an island in the bay behind him',
+          ancho: 1600,
+          alto: 1200,
           empresaSlug: 'sal-y-sol',
         },
         {

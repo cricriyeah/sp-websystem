@@ -12,6 +12,10 @@ type Props = {
   sizes: string;
   /** La primera foto carga de inmediato; el resto, al acercarse. */
   prioridad?: boolean;
+  /** `preload` de la primera foto: en el héroe del detalle, que es el LCP. */
+  preload?: boolean;
+  /** Sin los puntos de abajo: en el héroe el título va ahí. */
+  sinPuntos?: boolean;
   /** Milisegundos que espera el primer cambio: que las tarjetas de una fila no cambien todas a la vez. */
   desfase?: number;
   /** Clases del zoom de la foto al pasar el mouse (cada tarjeta trae el suyo). */
@@ -25,7 +29,7 @@ type Props = {
  * solo un indicador: la tarjeta entera es un enlace y no puede llevar botones dentro. Sin deslizar con
  * el dedo a propósito: la fila de tarjetas ya se arrastra en horizontal y las dos cosas pelearían.
  */
-export function CarruselFotos({ fotos, sizes, prioridad = false, desfase = 0, className }: Props) {
+export function CarruselFotos({ fotos, sizes, prioridad = false, preload = false, sinPuntos = false, desfase = 0, className }: Props) {
   const reducido = useReducedMotion();
   const [indice, setIndice] = useState(0);
   const [quieto, setQuieto] = useState(false);
@@ -61,7 +65,7 @@ export function CarruselFotos({ fotos, sizes, prioridad = false, desfase = 0, cl
           alt={i === indice ? foto.alt : ''}
           fill
           sizes={sizes}
-          loading={prioridad && i === 0 ? 'eager' : 'lazy'}
+          {...(preload && i === 0 ? { preload: true } : { loading: (prioridad && i === 0) || preload ? 'eager' : 'lazy' })}
           className={cn(
             'object-cover transition-[opacity,scale,transform] duration-[900ms] ease-[var(--curva-estandar)] motion-reduce:transition-none',
             i === indice ? 'opacity-100' : 'opacity-0',
@@ -69,7 +73,7 @@ export function CarruselFotos({ fotos, sizes, prioridad = false, desfase = 0, cl
           )}
         />
       ))}
-      {fotos.length > 1 && (
+      {fotos.length > 1 && !sinPuntos && (
         <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
           {fotos.map((foto, i) => (
             <span key={foto.src} className={cn('size-2 rounded-full transition-colors duration-300', i === indice ? 'bg-white' : 'bg-white/50')} />

@@ -28,6 +28,8 @@ export type VistaDetalle = {
   /** La palabra del tipo: rotula el arranque cuando no hay foto honesta. */
   palabra: string;
   foto: { src: string; alt: string } | null;
+  /** Todas sus fotos (la principal primero): con más de una, el fondo del héroe las cambia solo, como carrusel. */
+  fotos: { src: string; alt: string }[];
   /** Todas las fotos del lugar, para la galería con visor; vacía = no hay galería. */
   galeria: FotoVisor[];
   /** Una línea bajo el título: quién lo opera. */
@@ -122,7 +124,7 @@ export function DetalleProducto({ vista, textos }: Props) {
     <div className="pb-[calc(4.75rem+var(--aviso-alto,0px))] md:pb-0">
       <section>
         {vista.foto ? (
-          <HeroMedia imagen={vista.foto.src} video={null} alt={vista.foto.alt} preload alto="media">{arranque}</HeroMedia>
+          <HeroMedia imagen={vista.foto.src} imagenes={vista.fotos} video={null} alt={vista.foto.alt} preload alto="media">{arranque}</HeroMedia>
         ) : (
           <div className={cn('flex min-h-[max(28.75rem,min(70svh,45rem))] flex-col', CAMPO[vista.color])}>{arranque}</div>
         )}
