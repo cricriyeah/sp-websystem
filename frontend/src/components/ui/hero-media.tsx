@@ -51,13 +51,20 @@ export function HeroMedia({ imagen, imagenes, video, alt, preload = false, objec
   const posicionVideo = objectPositionVideoMovil
     ? ({ '--pos': objectPosition ?? '50% 50%', '--pos-m': objectPositionVideoMovil } as CSSProperties)
     : posicion;
+  // Con `object-cover` en una pantalla vertical, la foto (16:9) se pinta al alto de la pantalla y su ancho es ~178 % del
+  // alto, no el ancho de la pantalla: con «100vw» el teléfono pedía la de 1200 px y la estiraba casi 4 veces (dueño,
+  // 2026-11-07: «se ve demasiado pixeleada en móvil»). El héroe `completo` mide toda la pantalla; `media`, el 70 %.
+  const sizes =
+    alto === 'completo' ? '(max-aspect-ratio: 16/9) 178vh, 100vw'
+      : alto === 'media' ? '(max-aspect-ratio: 16/9) 125vh, 100vw'
+        : '100vw';
   // Con video, la foto es solo el respaldo (no se precarga): lo primero que se pinta es el video.
   const foto = imagen ? (
     <Image
       src={imagen}
       alt={alt}
       fill
-      sizes="100vw"
+      sizes={sizes}
       preload={preload && !video}
       className={`object-cover ${claseEncuadre}`}
       style={posicion}
@@ -69,7 +76,7 @@ export function HeroMedia({ imagen, imagenes, video, alt, preload = false, objec
       {video ? (
         <VideoHeroe src={video} className={`absolute inset-0 h-full w-full object-cover ${posicionVideo ? ENCUADRE : ''}`} style={posicionVideo} respaldo={foto} />
       ) : imagenes && imagenes.length > 1 ? (
-        <CarruselFotos fotos={imagenes} sizes="100vw" preload={preload} sinPuntos className={claseEncuadre} />
+        <CarruselFotos fotos={imagenes} sizes={sizes} preload={preload} sinPuntos className={claseEncuadre} />
       ) : foto}
       <div className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
 
