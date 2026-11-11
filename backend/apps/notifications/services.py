@@ -233,7 +233,7 @@ def _cuerpo_html(reserva):
         previa=f'{fecha} · {hora_texto(reserva)}',
         intro_html=f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó confirmada.',
         pares=pares, dinero_html=_bloques_de_dinero(reserva, _saldo_en_efectivo(reserva)),
-        siguiente_html=siguiente, con_garantias=(actividad == 'mar'),
+        siguiente_html=siguiente, con_garantias=(actividad == 'mar'), plazo=plantilla.plazo_de(reserva),
     )
 
 

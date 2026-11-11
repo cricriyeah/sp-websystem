@@ -61,7 +61,7 @@ estar exento.
   monoespaciada: Consolas / Courier New en correo; es regla de marca del dueño y por eso no aplica la de taste contra la
   monoespaciada), el folio a la derecha, el saludo y el producto; debajo, sobre arena, «Lo que reservaste» (etiqueta a la
   izquierda, valor a la derecha), «El dinero» (bloque tinta de «Pagaste hoy» y bloque arena-clara del saldo en efectivo),
-  «Que sigue» y «Si algo cambia» (100 % y 48 h, con los textos del sitio; solo en servicios de mar). Si cambia la
+  «Que sigue» y «Si algo cambia» (100 % y el plazo de cambio de lo que se compró: 48 h un día de mar, 30 días un paquete con hotel, 24 h un traslado, `plantilla.plazo_de`; con los textos del sitio y de la página «Cambios y cancelaciones»; solo en servicios de mar). Si cambia la
   pagina del sitio, cambiar esto igual. La unica imagen es el logo blanco de Sun Baja Experience (PNG en `frontend/public/correo/`, servido
   por el sitio desde `FRONTEND_URL`; sin esa variable el correo sale sin logo, y su texto alternativo lo nombra); sin lineas finas, degradados ni sombras; texto de vista previa que
   lleva la fecha ISO y la hora 24 h; version de texto plano (`text`); el asunto lleva el folio. Todo dato de una persona

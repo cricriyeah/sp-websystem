@@ -16,6 +16,10 @@
       "title": "Deslinde de responsabilidad",
       "description": "Términos y condiciones para las actividades, traslados y servicios de la empresa operadora de tu reservación."
     },
+    "cancelaciones": {
+      "title": "Cambios y cancelaciones",
+      "description": "Cuándo puedes cambiar la fecha, qué pasa si cancelas y qué pasa si el mal clima no deja salir."
+    },
     "privacidad": {
       "title": "Aviso de privacidad",
       "description": "Cómo cuidamos tus datos cuando reservas en Sun Baja Experience."
@@ -38,6 +42,46 @@
     "body": "El enlace está mal escrito o la página cambió de lugar. Desde el inicio puedes elegir tu destino y ver qué salidas hay.",
     "cta": "Ir al inicio",
     "ctaBook": "Reservar un viaje"
+  },
+  "cancelaciones": {
+    "back": "Volver",
+    "title": "Cambios y cancelaciones",
+    "updated": "Última actualización: noviembre de 2026",
+    "intro": "Tu reserva se confirma cuando pagas el total o el anticipo con tarjeta. Antes de pagar ves esta política y la aceptas. Vale la del servicio que reservaste.\n\nHay tres casos:\n\n- **Tú cambias la fecha.** Si avisas a tiempo, tu pago no se pierde: lo usas en otra fecha dentro de los 12 meses siguientes a la fecha original.\n- **Tú cancelas o no llegas.** Después del plazo de tu servicio, el pago no se devuelve.\n- **Cancelamos nosotros o el mal clima no deja salir.** Tú eliges: nueva fecha sin costo o devolución del 100 % de lo que no se prestó.",
+    "sections": [
+      {
+        "title": "Pesca deportiva (La Paz) y pesca con mosca (La Ventana)",
+        "body": "- **Cambio de fecha sin costo** hasta 48 horas antes de la salida, si hay lugar en la nueva fecha.\n- **Con menos de 48 horas, o si no llegas,** el pago no se devuelve.\n- **Mal clima:** nueva fecha o devolución del 100 %, a tu elección."
+      },
+      {
+        "title": "Paquetes de 5 y 7 noches con hotel (La Ventana)",
+        "body": "- **30 días o más antes de tu llegada:** un cambio de fecha sin costo, o pasas tu reserva a otra persona sin costo, o la guardas como crédito por 12 meses.\n- **De 29 a 15 días antes:** un cambio de fecha, si el hotel tiene lugar. Si las nuevas fechas cuestan más, pagas la diferencia. También puedes pasar tu reserva a otra persona.\n- **Menos de 15 días antes, o si no llegas:** no hay cambio ni devolución.\n- **Mal clima en una salida al mar:** la reponemos otro día de tu estancia. Si no hay día libre, eliges: crédito por el valor de esa salida (12 meses) o devolución de ese valor. Las noches de hotel no cambian.\n- **Tormenta o alerta oficial que impide operar toda la estancia:** mueves el paquete completo (12 meses) o te devolvemos lo que no se prestó. Las noches ya usadas no se devuelven.\n\nTe recomendamos un seguro de viaje para tu vuelo y para imprevistos de salud."
+      },
+      {
+        "title": "Traslados privados",
+        "body": "- **Cambio de fecha u hora sin costo** hasta 24 horas antes.\n- **Si cancelas con 24 horas o más,** te devolvemos lo que pagaste.\n- **Con menos de 24 horas, o si no te encontramos en el punto acordado,** no hay devolución.\n- **Si una alerta oficial o un cierre de carretera impide el traslado:** nueva hora o devolución del 100 %."
+      },
+      {
+        "title": "Mal clima",
+        "body": "Lo decide la capitanía de puerto o el capitán, por seguridad. Si el puerto está abierto y tú decides no ir, cuenta como cancelación tuya. Un día nublado, con viento o con el mar movido no es motivo de devolución si el capitán decide salir."
+      },
+      {
+        "title": "Lo que no podemos garantizar",
+        "body": "Los animales y los peces son libres. No hay devolución por no ver orcas, ballenas u otros animales, por pescar poco ni por mareo. En los paquetes salimos varios días para darte más oportunidades."
+      },
+      {
+        "title": "Si pagaste un anticipo",
+        "body": "El resto se paga en efectivo el día del servicio. Si cambias a tiempo, el anticipo pasa a la nueva fecha. Si no llegas o cancelas tarde, el anticipo no se devuelve y no te cobramos el resto."
+      },
+      {
+        "title": "Cómo pedir un cambio",
+        "body": "Escríbenos por WhatsApp, al número que aparece en este sitio, con tu nombre y tu número de reserva. El cambio depende de que haya lugar en la nueva fecha."
+      },
+      {
+        "title": "Devoluciones",
+        "body": "Cuando te corresponde una devolución, la hacemos a la misma tarjeta con la que pagaste. Tu banco puede tardar unos días hábiles en mostrarla."
+      }
+    ]
   },
   "privacy": {
     "title": "Aviso de privacidad",
@@ -171,6 +215,7 @@
     "legalLabel": "Información legal",
     "waiver": "Deslinde de responsabilidad",
     "privacy": "Aviso de privacidad",
+    "cancellations": "Cambios y cancelaciones",
     "rights": "Todos los derechos reservados.",
     "pagosLabel": "Formas de pago",
     "pagosTarjetas": "Tarjetas de crédito y débito",
@@ -313,9 +358,11 @@
     "waiver": {
       "accept": "He leído y acepto el",
       "linkLabel": "deslinde de responsabilidad",
-      "and": "y el",
+      "and": ", el",
       "privacyLinkLabel": "aviso de privacidad",
-      "missing": "Por favor acepta el deslinde de responsabilidad y el aviso de privacidad para continuar.",
+      "andCancel": "y la",
+      "cancelLinkLabel": "política de cambios y cancelaciones",
+      "missing": "Por favor acepta el deslinde de responsabilidad, el aviso de privacidad y la política de cambios y cancelaciones para continuar.",
       "page": {
         "empresaGenerica": "La empresa operadora de tu reservación",
         "title": "Exención de responsabilidad y liberación para actividades y servicios turísticos",
@@ -762,9 +809,13 @@
       "pagoTextoTotal": "Pagas directo a la empresa a cargo de tu servicio, el total en línea al reservar.",
       "resto": "El resto, el día del viaje, en efectivo",
       "climaTitulo": "Si hay mal clima",
-      "climaTexto": "Si el clima no deja salir, te devolvemos todo lo que pagaste. Lo decide la capitanía de puerto o tu capitán, el mismo día.",
+      "climaTexto": "Si el clima no deja salir, eliges: otra fecha sin costo o te devolvemos todo lo que pagaste. Lo decide la capitanía de puerto o tu capitán, el mismo día.",
       "fechaTitulo": "Cambio de fecha",
-      "fechaTexto": "Puedes cambiar la fecha con al menos 48 horas de anticipación.",
+      "fechaTexto": "En pesca, cambias la fecha sin costo hasta 48 horas antes. En los paquetes con hotel, hasta 30 días antes. Lo demás está en «Cambios y cancelaciones», al pie de la página.",
+      "cifraFechaPaquete": "30 días",
+      "fechaTextoPaquete": "Cambias la fecha sin costo hasta 30 días antes de tu llegada. Lo demás está en «Cambios y cancelaciones», al pie de la página.",
+      "cifraFechaTraslado": "24 h",
+      "fechaTextoTraslado": "Cambias la fecha o la hora sin costo hasta 24 horas antes. Lo demás está en «Cambios y cancelaciones», al pie de la página.",
       "atencionTitulo": "¿Prefieres reservar con una persona?",
       "atencionTexto": "Nuestro equipo te ayuda a elegir y a reservar por WhatsApp, todos los días."
     },
@@ -824,11 +875,11 @@
       },
       {
         "etiqueta": "Si hay mal clima",
-        "valor": "Si no se puede salir, hay reembolso completo."
+        "valor": "Si no se puede salir, eliges otra fecha o te devolvemos todo."
       },
       {
         "etiqueta": "Si cambias de plan",
-        "valor": "Puedes cambiar la fecha con al menos 48 horas de anticipación."
+        "valor": "Cambias la fecha sin costo: hasta 48 horas antes en pesca, 30 días antes en paquetes con hotel y 24 horas antes en traslados."
       }
     ],
     "cta": "Elegir mi destino",

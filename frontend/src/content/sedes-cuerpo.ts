@@ -222,7 +222,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Puedo cambiar la fecha de mi reserva?',
-          a: 'Sí, sin costo, si avisas con al menos 48 horas y hay lugar en la nueva fecha. Si te surge algo con menos tiempo, escríbenos y vemos qué se puede hacer.',
+          a: 'Sí, sin costo, si avisas con al menos 48 horas y hay lugar en la nueva fecha, dentro de los 12 meses siguientes. Con menos tiempo, o si no llegas, el pago no se devuelve. Los detalles están en «Cambios y cancelaciones», al pie de la página.',
         },
         {
           q: '¿Necesito licencia de pesca?',
@@ -439,7 +439,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'Can I change my booking date?',
-          a: 'Yes, at no cost, if you give at least 48 hours notice and there is room on the new date. If something comes up with less notice, message us and we’ll see what we can do.',
+          a: 'Yes, at no cost, if you give at least 48 hours notice and there is room on the new date, within the next 12 months. With less notice, or if you don’t show up, the payment is not refunded. The details are under «Changes and cancellations», at the bottom of the page.',
         },
         {
           q: 'Do I need a fishing licence?',
@@ -557,7 +557,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Puedo cambiar la fecha o cancelar si hay mal clima?',
-          a: 'Puedes cambiar la fecha con al menos 48 horas de anticipación. Si el mal clima impide salir, hay reembolso completo.',
+          a: 'La pesca con mosca la cambias sin costo hasta 48 horas antes; los paquetes con hotel, hasta 30 días antes de tu llegada. Si el mal clima impide salir, eliges otra fecha o te devolvemos todo; en un paquete, la salida perdida se repone otro día de tu estancia. Los detalles están en «Cambios y cancelaciones», al pie de la página.',
         },
       ],
       destacadas: [],
@@ -672,7 +672,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'Can I change the date or cancel if the weather is bad?',
-          a: 'You can change the date with at least 48 hours notice. If bad weather keeps us from going out, you get a full refund.',
+          a: 'You can change a fly fishing day at no cost up to 48 hours before, and a package with hotel up to 30 days before arrival. If bad weather keeps us from going out, you choose another date or a full refund; on a package, the lost outing is replaced on another day of your stay. The details are under «Changes and cancellations», at the bottom of the page.',
         },
       ],
       destacadas: [],

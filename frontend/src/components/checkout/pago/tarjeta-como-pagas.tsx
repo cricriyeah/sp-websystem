@@ -245,8 +245,9 @@ export function TarjetaComoPagas({
 
               {avisoCargos}
 
-              {/* Deslinde y aviso de privacidad: una sola casilla para los dos
-                  documentos porque es un solo consentimiento; el texto completo de
+              {/* Deslinde, aviso de privacidad y política de cambios y cancelaciones: una sola
+                  casilla para los tres documentos porque es un solo consentimiento (la política
+                  aceptada antes de pagar es la prueba que pide Stripe ante un contracargo); el texto completo de
                   cada uno vive en su pagina y abre en otra pestaña para no tirar lo
                   que el cliente ya lleno. */}
               <div>
@@ -278,6 +279,15 @@ export function TarjetaComoPagas({
                       className="font-semibold underline underline-offset-2"
                     >
                       {checkout.waiver.privacyLinkLabel}
+                    </Link>{' '}
+                    {checkout.waiver.andCancel}{' '}
+                    <Link
+                      href={`/${lang}/cancelaciones`}
+                      target="_blank"
+                      rel="noopener"
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      {checkout.waiver.cancelLinkLabel}
                     </Link>
                     .
                   </span>

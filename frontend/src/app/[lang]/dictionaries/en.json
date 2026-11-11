@@ -16,6 +16,10 @@
       "title": "Liability waiver",
       "description": "Terms and conditions for activities, transportation, and services of the company operating your booking."
     },
+    "cancelaciones": {
+      "title": "Changes and cancellations",
+      "description": "When you can change your date, what happens if you cancel, and what happens if bad weather stops the trip."
+    },
     "privacidad": {
       "title": "Privacy notice",
       "description": "How we look after your data when you book on Sun Baja Experience."
@@ -38,6 +42,46 @@
     "body": "The link is mistyped or the page has moved. From the home page you can pick a destination and see the trips on offer.",
     "cta": "Go to home",
     "ctaBook": "Book a trip"
+  },
+  "cancelaciones": {
+    "back": "Back",
+    "title": "Changes and cancellations",
+    "updated": "Last updated: November 2026",
+    "intro": "Your booking is confirmed when you pay in full or pay the deposit by card. You see this policy before you pay and you accept it. The policy for the service you booked is the one that applies.\n\nThere are three cases:\n\n- **You change the date.** If you let us know in time, you don't lose your payment: you use it on another date within 12 months of the original one.\n- **You cancel or don't show up.** After your service's deadline, the payment is not refunded.\n- **We cancel, or bad weather stops the trip.** You choose: a new date at no cost, or a 100 % refund of whatever wasn't delivered.\n\nThis is a translation. If it differs from the Spanish version, the Spanish version applies.",
+    "sections": [
+      {
+        "title": "Sport fishing (La Paz) and fly fishing (La Ventana)",
+        "body": "- **Free date change** up to 48 hours before departure, if there is room on the new date.\n- **With less than 48 hours' notice, or if you don't show up,** the payment is not refunded.\n- **Bad weather:** a new date or a 100 % refund, your choice."
+      },
+      {
+        "title": "5- and 7-night packages with hotel (La Ventana)",
+        "body": "- **30 days or more before arrival:** one date change at no cost, or pass your booking to another person at no cost, or keep it as credit for 12 months.\n- **29 to 15 days before:** one date change, if the hotel has room. If the new dates cost more, you pay the difference. You can also pass your booking to another person.\n- **Less than 15 days before, or if you don't show up:** no change and no refund.\n- **Bad weather on a sea outing:** we replace it on another day of your stay. If there is no free day, you choose: credit for the value of that outing (12 months) or a refund of that value. Hotel nights stay the same.\n- **A storm or official alert that stops operations for the whole stay:** you move the whole package (12 months) or we refund what wasn't delivered. Nights already used are not refunded.\n\nWe recommend travel insurance for your flights and for health surprises."
+      },
+      {
+        "title": "Private transfers",
+        "body": "- **Free change of date or time** up to 24 hours before.\n- **If you cancel 24 hours or more before,** we refund what you paid.\n- **With less than 24 hours' notice, or if we can't find you at the agreed spot,** no refund.\n- **If an official alert or a road closure stops the transfer:** a new time or a 100 % refund."
+      },
+      {
+        "title": "Bad weather",
+        "body": "The port captaincy or the captain decides, for safety. If the port is open and you choose not to go, it counts as your cancellation. Clouds, wind or a bumpy sea are not a reason for a refund if the captain decides to go out."
+      },
+      {
+        "title": "What we can't guarantee",
+        "body": "Animals and fish are wild. There is no refund for not seeing orcas, whales or other animals, for a slow day of fishing, or for seasickness. On our packages we go out several days to give you more chances."
+      },
+      {
+        "title": "If you paid a deposit",
+        "body": "You pay the rest in cash on the day of the service. If you change in time, the deposit moves to your new date. If you don't show up or cancel late, the deposit is not refunded and we don't charge the rest."
+      },
+      {
+        "title": "How to ask for a change",
+        "body": "Message us on WhatsApp, at the number shown on this site, with your name and booking number. A change depends on availability on the new date."
+      },
+      {
+        "title": "Refunds",
+        "body": "When you are owed a refund, we send it to the card you paid with. Your bank may take a few business days to show it."
+      }
+    ]
   },
   "privacy": {
     "title": "Privacy notice",
@@ -171,6 +215,7 @@
     "legalLabel": "Legal information",
     "waiver": "Liability waiver",
     "privacy": "Privacy notice",
+    "cancellations": "Changes and cancellations",
     "rights": "All rights reserved.",
     "pagosLabel": "Payment methods",
     "pagosTarjetas": "Credit and debit cards",
@@ -313,9 +358,11 @@
     "waiver": {
       "accept": "I have read and agree to the",
       "linkLabel": "liability waiver",
-      "and": "and the",
+      "and": ", the",
       "privacyLinkLabel": "privacy notice",
-      "missing": "Please accept the liability waiver and privacy notice to continue.",
+      "andCancel": "and the",
+      "cancelLinkLabel": "changes and cancellations policy",
+      "missing": "Please accept the liability waiver, the privacy notice and the changes and cancellations policy to continue.",
       "page": {
         "empresaGenerica": "The company operating your booking",
         "title": "Liability waiver and release for activities and tourism services",
@@ -762,9 +809,13 @@
       "pagoTextoTotal": "You pay the company that runs your service directly, the full amount online when you book.",
       "resto": "The rest, on the day of the trip, in cash",
       "climaTitulo": "If the weather is bad",
-      "climaTexto": "If the weather keeps the boats in, we refund everything you paid. The port authority or your captain makes that call on the day.",
+      "climaTexto": "If the weather keeps the boats in, you choose: another date at no cost, or a refund of everything you paid. The port authority or your captain makes that call on the day.",
       "fechaTitulo": "Changing your date",
-      "fechaTexto": "You can change the date with at least 48 hours' notice.",
+      "fechaTexto": "On fishing trips, you can change your date at no cost up to 48 hours before. On packages with hotel, up to 30 days before. The rest is under «Changes and cancellations», at the bottom of the page.",
+      "cifraFechaPaquete": "30 days",
+      "fechaTextoPaquete": "You can change your dates at no cost up to 30 days before arrival. The rest is under «Changes and cancellations», at the bottom of the page.",
+      "cifraFechaTraslado": "24 h",
+      "fechaTextoTraslado": "You can change the date or time at no cost up to 24 hours before. The rest is under «Changes and cancellations», at the bottom of the page.",
       "atencionTitulo": "Prefer to book with a person?",
       "atencionTexto": "Our team helps you choose and book on WhatsApp, every day."
     },
@@ -824,11 +875,11 @@
       },
       {
         "etiqueta": "If the weather turns",
-        "valor": "If the boat cannot go out, you get a full refund."
+        "valor": "If the boat cannot go out, you choose another date or a full refund."
       },
       {
         "etiqueta": "If your plans change",
-        "valor": "You can change your date with at least 48 hours notice."
+        "valor": "You can change your date at no cost: up to 48 hours before on fishing trips, 30 days before on packages with hotel, and 24 hours before on transfers."
       }
     ],
     "cta": "Choose my destination",

@@ -37,6 +37,12 @@ export function CheckoutFooter({ lang, footer, nav }: CheckoutFooterProps) {
         >
           {footer.privacy}
         </Link>
+        <Link
+          href={`/${lang}/cancelaciones`}
+          className="inline-flex min-h-11 items-center texto-cuerpo text-foreground underline underline-offset-4 transition-colors hover:text-cafe"
+        >
+          {footer.cancellations}
+        </Link>
       </nav>
       <p className="mt-2 texto-cuerpo text-foreground">
         {new Date().getFullYear()} {nav.brandMain} {nav.brandAccent}. {footer.rights}

@@ -135,6 +135,13 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
   const { confirmation } = checkout;
   const garantias = sedeContenido.tranquilidad;
   const esPaquete = Boolean(datos.componentes?.length);
+  // El plazo de cambio depende de lo que compró (política de cambios y cancelaciones): con hotel, 30 días;
+  // traslado, 24 h; lo demás (pesca, paseos), 48 h.
+  const plazo = datos.color === 'estancia'
+    ? { cifra: garantias.cifraFechaPaquete, texto: garantias.fechaTextoPaquete }
+    : datos.color === 'traslado'
+      ? { cifra: garantias.cifraFechaTraslado, texto: garantias.fechaTextoTraslado }
+      : { cifra: garantias.cifraFecha, texto: garantias.fechaTexto };
 
   // La confirmación no es una página nueva: reemplaza al checkout en el mismo montaje, así que el
   // navegador conserva el scroll del formulario. Salto directo y sin animar.
@@ -276,10 +283,10 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
                   </div>
                 </li>
                 <li className="grid grid-cols-[5.5rem_1fr] items-baseline gap-x-5 bg-cafe-bruma px-5 py-4">
-                  <span className="texto-paso tabular-nums">{garantias.cifraFecha}</span>
+                  <span className="texto-paso tabular-nums">{plazo.cifra}</span>
                   <div>
                     <h3 className="texto-etiqueta">{garantias.fechaTitulo}</h3>
-                    <p className="mt-1 texto-cuerpo">{garantias.fechaTexto}</p>
+                    <p className="mt-1 texto-cuerpo">{plazo.texto}</p>
                   </div>
                 </li>
               </ul>

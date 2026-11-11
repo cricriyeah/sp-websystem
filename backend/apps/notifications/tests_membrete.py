@@ -66,10 +66,17 @@ class CorreoTests(SimpleTestCase):
 
     def test_las_garantias_son_las_del_sitio_con_sus_cifras(self):
         html = self.correo()
-        for texto in ('100 %', '48 h', 'Si el mal clima impide salir, hay reembolso completo.',
-                      'Puedes cambiar la fecha con al menos 48 horas de anticipación.'):
+        for texto in ('100 %', '48 h', 'eliges otra fecha sin costo o te devolvemos todo',
+                      'Cambias la fecha sin costo hasta 48 horas antes de la salida.'):
             self.assertIn(texto, html)
         self.assertNotIn('SI ALGO CAMBIA', self.correo(con_garantias=False))
+
+    def test_el_plazo_de_cambio_es_el_de_lo_que_se_compro(self):
+        paquete = self.correo(plazo='paquete')
+        self.assertIn('30 días', paquete)
+        self.assertIn('hasta 30 días antes de tu llegada', paquete)
+        self.assertNotIn('48 horas', paquete)
+        self.assertIn('hasta 24 horas antes', self.correo(plazo='traslado'))
 
     def test_sin_dinero_ni_siguiente_no_hay_esas_secciones(self):
         html = self.correo(dinero_html='', siguiente_html='', con_garantias=False)

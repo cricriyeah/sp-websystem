@@ -44,11 +44,27 @@ DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'doming
 MESES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
          'noviembre', 'diciembre')
 
-# Las garantías de la confirmación del sitio (sedeContenido.tranquilidad): mismos textos, mismas cifras.
-GARANTIAS = (
-    ('100 %', 'Si hay mal clima', 'Si el mal clima impide salir, hay reembolso completo.'),
-    ('48 h', 'Cambio de fecha', 'Puedes cambiar la fecha con al menos 48 horas de anticipación.'),
-)
+# Las garantías de la confirmación del sitio (sedeContenido.tranquilidad): mismos textos, mismas cifras. El plazo de
+# cambio depende de lo que se compró (política «Cambios y cancelaciones» del sitio, 2026-11-11): un día de mar, 48 h;
+# un paquete con hotel, 30 días; un traslado, 24 h.
+GARANTIA_CLIMA = ('100 %', 'Si hay mal clima',
+                  'Si el mal clima impide salir, eliges otra fecha sin costo o te devolvemos todo lo que pagaste.')
+PLAZOS_DE_CAMBIO = {
+    'dia': ('48 h', 'Cambio de fecha', 'Cambias la fecha sin costo hasta 48 horas antes de la salida.'),
+    'paquete': ('30 días', 'Cambio de fecha', 'Cambias la fecha sin costo hasta 30 días antes de tu llegada.'),
+    'traslado': ('24 h', 'Cambio de fecha', 'Cambias la fecha o la hora sin costo hasta 24 horas antes.'),
+}
+GARANTIAS = (GARANTIA_CLIMA, PLAZOS_DE_CAMBIO['dia'])
+
+
+def plazo_de(reserva):
+    """`dia`, `paquete` o `traslado`: qué plazo de cambio le toca a esta reserva."""
+    if reserva.servicio_id and reserva.servicio.tipo_servicio == TipoServicio.TRANSPORTE:
+        return 'traslado'
+    if reserva.paquete_id and reserva.paquete.servicios_asociados.filter(
+            servicio__tipo_servicio=TipoServicio.HOSPEDAJE).exists():
+        return 'paquete'
+    return 'dia'
 
 
 def actividad_de(reserva):
@@ -133,12 +149,12 @@ def recuadro(contenido_html):
     return bloque(contenido_html, ARENA_CLARA, TINTA)
 
 
-def garantias():
+def garantias(plazo='dia'):
     filas_ = ''.join(
         f'<tr><td width="88" valign="top" style="padding:8px 0;">{titular(cifra, 24)}</td>'
         f'<td valign="top" style="padding:8px 0;">{t(escape(titulo), 16, 600, TINTA, 1.2)}'
         f'{t(escape(texto), 16, 400, TINTA, 1.5, "padding-top:4px;")}</td></tr>'
-        for cifra, titulo, texto in GARANTIAS
+        for cifra, titulo, texto in (GARANTIA_CLIMA, PLAZOS_DE_CAMBIO[plazo])
     )
     return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{filas_}</table>'
 
@@ -155,7 +171,8 @@ def logo_html():
 
 
 def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', pares=(), dinero_html='',
-           siguiente_html='', con_garantias=False, previa='', etiqueta_pares='Lo que reservaste', pie_html=None):
+           siguiente_html='', con_garantias=False, previa='', etiqueta_pares='Lo que reservaste', pie_html=None,
+           plazo='dia'):
     """El correo completo, con el orden de la página de confirmación del sitio.
 
     `titulo` es el titular grande; `producto` la línea en negrita bajo el saludo (servicio y empresa).
@@ -179,7 +196,7 @@ def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', 
     if siguiente_html:
         secciones += seccion('Qué sigue', siguiente_html)
     if con_garantias:
-        secciones += seccion('Si algo cambia', garantias())
+        secciones += seccion('Si algo cambia', garantias(plazo))
     if pie_html is None:
         pie_html = (
             f'{t("Guarda este correo: es tu comprobante. Si necesitas un cambio, escríbenos por WhatsApp con tu folio.", 14, 400, SUAVE, 1.5)}'

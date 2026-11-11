@@ -63,6 +63,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
   const legales = [
     { href: hrefDeslinde(lang, empresasDeslinde), label: footer.waiver },
     { href: `/${lang}/privacidad`, label: footer.privacy },
+    { href: `/${lang}/cancelaciones`, label: footer.cancellations },
   ];
 
   return (

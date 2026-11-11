@@ -139,7 +139,7 @@ def _cuerpo_html(reserva, antes):
         intro_html=f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó reagendada.',
         pares=_pares(reserva, antes, actividad), etiqueta_pares='Tu nueva fecha',
         dinero_html=dinero, siguiente_html=_siguiente(reserva, antes, actividad),
-        con_garantias=(actividad == 'mar'),
+        con_garantias=(actividad == 'mar'), plazo=plantilla.plazo_de(reserva),
     )
 
 
