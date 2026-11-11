@@ -43,6 +43,7 @@ class AltaReservaForm(forms.ModelForm):
             'nombre_cliente',
             'telefono_cliente',
             'correo_cliente',
+            'origen_cliente',
             'servicio',
             'paquete',
             'fecha',

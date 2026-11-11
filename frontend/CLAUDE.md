@@ -23,7 +23,7 @@ archivo actual. Los `.tsx` sueltos si los recoge el HMR.
 
 - Todo vive bajo `src/app/[lang]/` (layout, page, dictionaries). No hay `layout.tsx`/`page.tsx`
   sueltos en `src/app/` — el root layout es el de `[lang]`.
-- `src/proxy.ts` redirige segun `Accept-Language`; locale por defecto `es`.
+- `src/proxy.ts` redirige segun `Accept-Language` (`lib/idioma-navegador.ts`): el primero de `es`/`en` en la lista del navegador (respeta `q`); sin cabecera, `es`; si no lee ninguno de los dos, `en` (plan de marketing 2026-11-11).
 - Diccionarios: `src/app/[lang]/dictionaries.ts` + `dictionaries/{es,en}.json`. Patron:
   agregar clave nueva a ambos JSON, usar `getDictionary(lang)` en Server Components.
 - `params` es async (`Promise`) en pages/layouts — usar `await params`, tipos `PageProps<'/[lang]'>`
@@ -326,7 +326,17 @@ solo si el cliente aceptó las cookies (`lib/cookies.ts`; el aviso ya dice «med
 `fbq('track', 'PageView')` a mano después del primero no sirve, fbevents.js acepta uno por carga.
 Los pasos del checkout (`?paso=`) también cuentan. `autoConfig` va apagado: sin eventos automáticos
 ni lectura de formularios. El CSP de `next.config.ts` permite `connect.facebook.net` y
-`www.facebook.com`. Eventos de compra (`Purchase`) no hay: se deciden aparte.
+`www.facebook.com`.
+
+**Eventos de venta y origen de la visita** (plan de marketing, 2026-11-11). `lib/medicion.ts` (`medir`) es el único
+punto que avisa al pixel y a Google Analytics; sin cookies aceptadas no hay `fbq`/`gtag` y no hace nada. `ViewContent`
+en el detalle de servicio y paquete (`MedirEvento`, hoja cliente en la página de servidor), `InitiateCheckout` justo
+antes de `crearPago` en los tres checkouts, `Purchase` desde `ConfirmacionReserva` (`datos.compra`, una vez por folio
+con `sessionStorage`; `eventID` = `reserva-<folio>`/`orden-<folio>`, el mismo que usará la API de Conversiones) y
+`Contact` en cualquier toque a un enlace de WhatsApp (`MedirWhatsapp`, un oyente en el layout). `lib/atribucion.ts`
+guarda 30 días el último enlace con `utm_*`/`fbclid`/`gclid` (o el sitio de origen si no hay nada guardado) desde
+`RefCapture`, y los tres checkouts lo mandan como `atribucion` con la reserva u orden (más `_fbp`/`_fbc` si el pixel
+cargó); el backend lo limpia (`apps/bookings/atribucion.py`) y lo enseña en la reserva («Llegó por»).
 
 ## Links cortos por sede (modo «solo sede»)
 

@@ -62,6 +62,8 @@ import {
   rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
+import { leerAtribucion } from '@/lib/atribucion';
+import { medir } from '@/lib/medicion';
 import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { guardarPendiente } from '@/lib/pendientes';
 import { evaluar, restaurarTelefono, telefonoParaEnviar } from '@/lib/telefono';
@@ -575,6 +577,7 @@ export function TrasladoView({
         deslinde_nombre: contact.fullName.trim(),
         forma_pago: formaPago,
         ref: leerRef(),
+        atribucion: leerAtribucion(),
         captcha_token: captchaToken.current || undefined,
       };
 
@@ -586,6 +589,11 @@ export function TrasladoView({
         productoNombre: catalogo.servicio.nombre,
         ruta: window.location.pathname + window.location.search,
         actualizadoEn: new Date().toISOString(),
+      });
+
+      // Llegó a pagar: para la publicidad (lib/medicion.ts).
+      medir('InitiateCheckout', {
+        id: catalogo.servicio.slug, nombre: catalogo.servicio.nombre, moneda, ...(total !== null ? { valor: total } : {}),
       });
 
       const pagoResponse = await crearPago(
@@ -667,6 +675,9 @@ export function TrasladoView({
           pagado: total !== null ? currency.format(total) : null,
           saldoEnEfectivo: null,
           encuentro: null,
+          compra: total !== null ? {
+            id: catalogo.servicio.slug, valor: total, moneda, eventoId: `reserva-${reservaId}`,
+          } : undefined,
         }}
       />
     );

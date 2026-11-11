@@ -42,6 +42,7 @@ from apps.tenancy.notificaciones import avisar, registrar_notificacion
 
 from apps.tenancy.usuarios import crear_usuario_con_rol
 
+from apps.bookings.atribucion import resumen as resumen_atribucion
 from .forms import AltaUsuarioForm, AltaVendedoraForm
 from .forms_alta_reserva import AltaReservaForm
 from .limites_servicio import mapa_limites
@@ -769,6 +770,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         VistaReservasFilter, DiaReservasFilter,
         'estado', 'canal_origen', 'vendedora', 'forma_pago',
         LlegadaFilter, RequiereAtencionFilter, 'en_disputa',
+        # «¿Cómo nos conoció?» va dentro de «Más filtros»: se consulta para medir, no para operar el día.
+        'origen_cliente',
         'pide_bebidas', 'pide_extras_whatsapp',
         'embarcacion', 'capitan', 'reembolsada', 'codigo_promocional', 'paquete',
     ]
@@ -799,7 +802,13 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         'codigo_promocional', 'descuento_aplicado', 'iva_monto', 'iva_tasa',
         'personas_por_servicio_legible', 'tipo_cambio',
         'apartado_hasta', 'apartado_demanda', 'alerta_reembolso_fallido_en',
+        'llego_por',
     ]
+
+    @admin.display(description='Llegó por (enlace)')
+    def llego_por(self, obj):
+        """El resumen del enlace por el que entró a la web (utm, id de clic, sitio de origen); vacío si no hubo."""
+        return resumen_atribucion(obj.atribucion) or '—'
 
     def get_form(self, request, obj=None, **kwargs):
         if obj is None:
@@ -838,7 +847,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
                 asignacion_alta.insert(0, 'vendedora')
 
             return [
-                ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente')}),
+                ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente', 'origen_cliente')}),
                 ('Viaje', {'fields': tuple(viaje_alta)}),
                 ('Cobro', {'fields': ('moneda', 'precio_total', 'ya_pago', 'monto_recibido')}),
                 ('Asignación', {'fields': tuple(asignacion_alta), 'classes': ('collapse',)}),
@@ -876,7 +885,8 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
                 'pide_bebidas', 'pide_extras_whatsapp', 'codigo_promocional', 'descuento_aplicado',
             )}),
             # El canal es obligatorio en el alta; queda visible junto a la atribución.
-            ('Asignación', {'fields': ('estado', 'canal_origen', 'vendedora', 'embarcacion', 'capitan')}),
+            ('Asignación', {'fields': ('estado', 'canal_origen', 'origen_cliente', 'llego_por', 'vendedora',
+                                       'embarcacion', 'capitan')}),
             ('Cancelación', cancelacion),
             ('Registro del sistema', {'fields': tuple(sistema), 'classes': ('collapse',)}),
         ]

@@ -32,12 +32,14 @@ const csp = [
   // del checkout. Sin esto el CSP lo bloquea y el widget nunca da un token.
   // connect.facebook.net sirve el pixel de Meta (components/pixel-meta.tsx), que solo carga
   // con las cookies aceptadas; manda sus eventos a www.facebook.com (imagen, beacon o fetch).
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com https://connect.facebook.net",
+  // www.googletagmanager.com sirve Google Analytics 4 (components/google-analytics.tsx), con la misma
+  // condición; manda sus eventos a *.google-analytics.com y *.analytics.google.com.
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com https://connect.facebook.net https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://www.facebook.com",
+  "img-src 'self' data: blob: https://www.facebook.com https://www.googletagmanager.com https://*.google-analytics.com",
   "font-src 'self' data:",
   `media-src 'self'${mediaOrigen ? ` ${mediaOrigen}` : ""}`,
-  `connect-src 'self' ${apiUrl} https://api.stripe.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net`,
+  `connect-src 'self' ${apiUrl} https://api.stripe.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com`,
   // Turnstile monta su reto en un iframe propio, igual que Stripe.
   "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
   // Nadie debe poder meter el checkout dentro de un iframe: es como se monta un

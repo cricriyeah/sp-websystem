@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { capturarRef } from '@/lib/ref';
+import { capturarAtribucion } from '@/lib/atribucion';
 
 /**
  * Guarda el codigo de la vendedora que venga en la URL (`?ref=`), en cualquier
@@ -19,6 +20,8 @@ export function RefCapture() {
 
   useEffect(() => {
     capturarRef(window.location.search);
+    // Y por qué enlace llegó (utm, id de clic, sitio de origen): lib/atribucion.ts.
+    capturarAtribucion();
   }, [pathname]);
 
   return null;

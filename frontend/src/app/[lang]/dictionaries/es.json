@@ -94,7 +94,7 @@
       },
       {
         "title": "Qué datos recabamos",
-        "body": "- **Al reservar:** tu nombre, teléfono y correo electrónico, además de la fecha, hora y número de personas de tu viaje.\n- **Al aceptar el deslinde de responsabilidad:** tu nombre, la fecha y hora de aceptación y tu dirección IP, como constancia de ese acuerdo.\n- **Al pagar:** el monto, la moneda y un identificador de la transacción (ver «Datos de pago»: nunca vemos los datos de tu tarjeta bancaria).\n- **De forma automática, mediante cookies:** ver «Cookies y almacenamiento en tu navegador».\n\nSolo recabamos la información indispensable para brindarte un servicio de excelencia y cuidar tu seguridad durante la navegación."
+        "body": "- **Al reservar:** tu nombre, teléfono y correo electrónico, además de la fecha, hora y número de personas de tu viaje.\n- **Al aceptar el deslinde de responsabilidad:** tu nombre, la fecha y hora de aceptación y tu dirección IP, como constancia de ese acuerdo.\n- **Al pagar:** el monto, la moneda y un identificador de la transacción (ver «Datos de pago»: nunca vemos los datos de tu tarjeta bancaria).\n- **De forma automática, mediante cookies:** ver «Cookies y almacenamiento en tu navegador».\n- **El enlace por el que llegaste:** si entraste por un anuncio o desde otro sitio, guardamos con tu reserva de cuál (por ejemplo, el nombre de la campaña o el sitio de origen), para saber qué publicidad funciona.\n\nSolo recabamos la información indispensable para brindarte un servicio de excelencia y cuidar tu seguridad durante la navegación."
       },
       {
         "title": "Para qué los usamos",
@@ -126,7 +126,7 @@
       },
       {
         "title": "Cookies y almacenamiento en tu navegador",
-        "body": "Utilizamos elementos técnicos esenciales para que puedas completar tu reservación de forma ágil y segura. También podemos emplear herramientas de medición para mejorar la calidad y navegación de nuestro sitio web, siempre respetando tus preferencias."
+        "body": "Utilizamos elementos técnicos esenciales para que puedas completar tu reservación de forma ágil y segura.\n\nSolo si aceptas las cookies, usamos además dos herramientas de medición: el pixel de Meta (Facebook e Instagram), para saber qué anuncios traen reservas, y Google Analytics, para saber qué páginas se visitan. Las dos registran las páginas que ves, si empiezas a pagar o completas una reserva y su monto, y si tocas el botón de WhatsApp. Si rechazas las cookies, no se carga ninguna de las dos."
       },
       {
         "title": "Cambios a este aviso",

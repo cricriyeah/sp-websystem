@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { COOKIE_SOLO_SEDE, SEGUNDOS_SOLO_SEDE, decidirSoloSede } from '@/lib/solo-sede';
+import { idiomaDeCabecera } from '@/lib/idioma-navegador';
 
 const locales = ['es', 'en'] as const;
-const defaultLocale = 'es';
 
-function getLocale(request: NextRequest): string {
-  const acceptLanguage = request.headers.get('accept-language') ?? '';
-  const preferred = acceptLanguage.split(',')[0]?.split('-')[0];
-  return locales.includes(preferred as (typeof locales)[number]) ? preferred! : defaultLocale;
+// Sin idioma en la URL: el del navegador; quien no lee español ni inglés va al inglés (lib/idioma-navegador.ts).
+function getLocale(request: NextRequest): 'es' | 'en' {
+  return idiomaDeCabecera(request.headers.get('accept-language'));
 }
 
 export function proxy(request: NextRequest) {
@@ -20,7 +19,7 @@ export function proxy(request: NextRequest) {
     pathname,
     search: request.nextUrl.search,
     cookie: request.cookies.get(COOKIE_SOLO_SEDE)?.value,
-    idiomaPreferido: () => getLocale(request) as 'es' | 'en',
+    idiomaPreferido: () => getLocale(request),
     // Sin la cabecera (navegadores viejos, curl) cuenta como carga de página.
     esCargaDePagina: (request.headers.get('sec-fetch-dest') ?? 'document') === 'document',
   });

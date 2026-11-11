@@ -14,6 +14,7 @@ from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.bookings.atribucion import limpiar as limpiar_atribucion
 from apps.bookings.cupo import (
     SinCupoError,
     apartado_activo,
@@ -1088,6 +1089,7 @@ class CrearOrdenView(APIView):
         correo_cliente = request.data.get('correo_cliente', '').strip()
         moneda = (request.data.get('moneda') or Reserva.Moneda.MXN).upper()
         ref = request.data.get('ref', '').strip()
+        atribucion = limpiar_atribucion(request.data.get('atribucion'))
 
         componentes_data = request.data.get('componentes', [])
 
@@ -1189,6 +1191,8 @@ class CrearOrdenView(APIView):
                         reserva.deslinde_aceptado_en = deslinde_aceptado_en
                         reserva.deslinde_ip = deslinde_ip
                         reserva.deslinde_version = DESLINDE_VERSION
+                        if atribucion:
+                            reserva.atribucion = atribucion
                         if es_lider and ref:
                             vendedora = Vendedora.por_codigo(ref, empresa)
                             if vendedora:

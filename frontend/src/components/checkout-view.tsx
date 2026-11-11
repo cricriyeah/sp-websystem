@@ -71,6 +71,8 @@ import {
   rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
+import { leerAtribucion } from '@/lib/atribucion';
+import { medir } from '@/lib/medicion';
 import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 import { evaluar, restaurarTelefono, telefonoParaEnviar } from '@/lib/telefono';
@@ -1073,6 +1075,7 @@ export function CheckoutView({
         deslinde_nombre: contact.fullName.trim(),
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
+        atribucion: leerAtribucion(),
         captcha_token: captchaToken.current,
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
         // La seleccion viaja con la reserva, sin precio: crear-pago la congela
@@ -1099,6 +1102,12 @@ export function CheckoutView({
         productoNombre: servicio?.nombre ?? servicioNombre ?? '',
         ruta: window.location.pathname + window.location.search,
         actualizadoEn: new Date().toISOString(),
+      });
+
+      // Llegó a pagar: para la publicidad (lib/medicion.ts).
+      medir('InitiateCheckout', {
+        id: servicio?.slug ?? (typeof servicioId === 'string' ? servicioId : 'pesca-deportiva'),
+        nombre: servicio?.nombre ?? servicioNombre ?? undefined, moneda, ...(total !== null ? { valor: total } : {}),
       });
 
       const pagoResponse = await crearPago(reserva.id, {
@@ -1341,6 +1350,8 @@ export function CheckoutView({
   }
 
   if (phase === 'confirmed') {
+    // Valor de la venta para la publicidad: lo que se cobró más lo que queda en efectivo.
+    const valorDeLaVenta = recuperadoPagado !== null ? recuperadoPagado + (recuperadoSaldo ?? 0) : total;
     const pescaDeSalYSol = !servicio || (servicio.tipo_servicio === 'pesca' && servicio.empresa_slug === 'sal-y-sol');
     return (
       <ConfirmacionReserva
@@ -1385,6 +1396,10 @@ export function CheckoutView({
           // El punto de encuentro y la lista de qué llevar solo existen para la pesca de Sal y Sol.
           encuentro: pescaDeSalYSol ? { lugar: `${dict.footer.address}, ${dict.footer.city}`, hora: horaTexto || undefined } : null,
           llevar: pescaDeSalYSol ? dict.included.bring : undefined,
+          compra: valorDeLaVenta !== null ? {
+            id: servicio?.slug ?? (typeof servicioId === 'string' ? servicioId : 'pesca-deportiva'),
+            valor: valorDeLaVenta, moneda, eventoId: `reserva-${reservaId}`,
+          } : undefined,
         }}
       />
     );

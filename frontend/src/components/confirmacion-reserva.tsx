@@ -10,6 +10,7 @@ import { cn } from '@/components/ui/cn';
 import { botonClases } from '@/components/ui/variantes';
 import type { ColorActividad } from '@/lib/color-actividad';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
+import { medirCompraUnaVez } from '@/lib/medicion';
 
 /** Un cobro de una reserva con varias empresas: quién cobra, cuánto y cómo va. */
 export type CobroConfirmado = { empresa: string; monto: string };
@@ -46,6 +47,11 @@ export type DatosConfirmacion = {
   encuentro: { lugar: string; hora?: string } | null;
   /** Qué llevar, solo si hay lista para este producto. */
   llevar?: string[];
+  /**
+   * La compra para la publicidad (lib/medicion.ts): valor total de la venta con IVA, su moneda y el id que
+   * también manda el servidor (`reserva-<folio>` u `orden-<folio>`). Sin esto no se mide nada.
+   */
+  compra?: { id: string; valor: number; moneda: string; eventoId: string };
 };
 
 type Props = {
@@ -142,6 +148,12 @@ export function ConfirmacionReserva({ lang, dict, datos }: Props) {
     : datos.color === 'traslado'
       ? { cifra: garantias.cifraFechaTraslado, texto: garantias.fechaTextoTraslado }
       : { cifra: garantias.cifraFecha, texto: garantias.fechaTexto };
+
+  // Se mide al quedar confirmada, una sola vez por folio (no mientras el pago se procesa).
+  const { compra, procesando } = datos;
+  useEffect(() => {
+    if (compra && !procesando) medirCompraUnaVez({ ...compra });
+  }, [compra, procesando]);
 
   // La confirmación no es una página nueva: reemplaza al checkout en el mismo montaje, así que el
   // navegador conserva el scroll del formulario. Salto directo y sin animar.

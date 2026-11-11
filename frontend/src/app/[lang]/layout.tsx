@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation';
 import { CookieNotice } from '@/components/cookie-notice';
 import { PixelMeta } from '@/components/pixel-meta';
 import { RefCapture } from '@/components/ref-capture';
+import { MedirWhatsapp } from '@/components/medir-whatsapp';
+import { GoogleAnalytics } from '@/components/google-analytics';
 import { ProveedorToast } from '@/components/toast';
 import { MotionProvider } from '@/components/ui/motion-provider';
 import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from '@/lib/site';
@@ -98,6 +100,10 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[la
           <CookieNotice lang={lang} cookies={dict.cookies} />
           {/* No pinta nada: carga el pixel de Meta solo si el cliente aceptó las cookies. */}
           <PixelMeta />
+          {/* No pinta nada: cuenta los toques a WhatsApp para la publicidad (lib/medicion.ts). */}
+          <MedirWhatsapp />
+          {/* No pinta nada: Google Analytics, solo con NEXT_PUBLIC_GA_ID y las cookies aceptadas. */}
+          <GoogleAnalytics />
         </MotionProvider>
       </body>
     </html>

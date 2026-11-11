@@ -481,6 +481,20 @@ class Reserva(models.Model):
         WEB = 'web', 'Web'
         WHATSAPP = 'whatsapp', 'WhatsApp'
 
+    class OrigenCliente(models.TextChoices):
+        """«¿Cómo nos conoció?»: lo pregunta la vendedora en las ventas que captura a mano."""
+        GOOGLE = 'google', 'Google (buscador o Maps)'
+        INSTAGRAM = 'instagram', 'Instagram'
+        FACEBOOK = 'facebook', 'Facebook'
+        TIKTOK = 'tiktok', 'TikTok'
+        TRIPADVISOR = 'tripadvisor', 'TripAdvisor'
+        FISHINGBOOKER = 'fishingbooker', 'FishingBooker'
+        HOTEL = 'hotel', 'Su hotel o renta'
+        RECOMENDACION = 'recomendacion', 'Se lo recomendó alguien'
+        YA_CLIENTE = 'ya_cliente', 'Ya había salido con nosotros'
+        MUELLE = 'muelle', 'Pasó por el muelle o la oficina'
+        OTRO = 'otro', 'Otro'
+
     class Moneda(models.TextChoices):
         MXN = 'MXN', 'Pesos mexicanos'
         USD = 'USD', 'Dolares'
@@ -562,6 +576,15 @@ class Reserva(models.Model):
                   'link (?ref=), o a mano desde aqui.',
     )
     vendedora_asignada_en = models.DateTimeField(null=True, blank=True)
+
+    # De dónde llegó el cliente (plan de marketing, 2026-11-11). `origen_cliente` lo contesta el cliente a la
+    # vendedora en una venta a mano; `atribucion` la manda el navegador en una venta web: los parámetros del enlace
+    # por el que entró (`utm_*`, id de clic de Meta/Google, sitio del que venía). Ver `apps/bookings/atribucion.py`.
+    origen_cliente = models.CharField(
+        '¿Cómo nos conoció?', max_length=20, choices=OrigenCliente.choices, blank=True,
+        help_text='Pregúntaselo al cliente en cada venta por WhatsApp o en persona.',
+    )
+    atribucion = models.JSONField('Llegó por (enlace)', default=dict, blank=True)
 
     # Identificador que genera el navegador al abrir el checkout. Sirve para que
     # una sesion de checkout ocupe siempre la misma fila: si el cliente corrige

@@ -129,8 +129,9 @@ class EdicionReservaFormularioTests(EmpresaTestCase):
             'Cliente', 'Viaje', 'Cobro', 'Asignación', 'Cancelación', 'Registro del sistema',
         ])
         campos = [campo for _, opciones in fieldsets for campo in opciones['fields']]
-        esperados = {campo.name for campo in Reserva._meta.fields} - {'id', 'empresa'}
-        self.assertEqual(set(campos) - {'personas_por_servicio_legible'}, esperados)
+        # `atribucion` (JSON del navegador) se enseña leída por `llego_por`, no cruda.
+        esperados = {campo.name for campo in Reserva._meta.fields} - {'id', 'empresa', 'atribucion'}
+        self.assertEqual(set(campos) - {'personas_por_servicio_legible', 'llego_por'}, esperados)
         self.assertEqual(len(campos), len(set(campos)))
         self.assertIn('collapse', fieldsets[-1][1]['classes'])
         self.assertIn('collapse', fieldsets[-2][1]['classes'])

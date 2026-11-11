@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from apps.bookings import personalizaciones
+from apps.bookings.atribucion import limpiar as limpiar_atribucion
 from apps.bookings.anticipacion import anticipacion_insuficiente
 from apps.fleet.calendario_paquete import ComponenteCalendario, fecha_ancla, fecha_salida as calcular_salida
 from apps.fleet.enums import TipoServicio, TipoTraslado
@@ -84,6 +85,10 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     # viejo mal copiado no puede impedir que alguien reserve.
     ref = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
+    # Por qué enlace llegó el cliente (utm_*, id de clic). Write_only y sin validar a propósito: lo que no sirva se
+    # descarta en `save` (`atribucion.limpiar`) y nunca rompe el checkout.
+    atribucion = serializers.JSONField(required=False, write_only=True)
+
     # Opcional en el esquema; `validate` la exige salvo en un paquete que no la pide.
     hora = serializers.TimeField(required=False, allow_null=True)
 
@@ -112,7 +117,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'servicio', 'paquete', 'fecha_salida',
             'personas_por_servicio', 'fecha_inicio_paquete', 'aeropuerto',
             'personalizaciones',
-            'ref', 'estado',
+            'ref', 'atribucion', 'estado',
         ]
         read_only_fields = ['id', 'estado']
 
@@ -383,6 +388,8 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         # no sirve) se respeta lo que ya tuviera la reserva, para no borrar una
         # atribucion hecha a mano cuando el cliente reenvia el checkout.
         vendedora = Vendedora.por_codigo(self.validated_data.pop('ref', ''), self.context['empresa'])
+        # Igual que el ref: un reenvío sin atribución no borra la que ya tenía la reserva.
+        atribucion = limpiar_atribucion(self.validated_data.pop('atribucion', None))
 
         return super().save(
             canal_origen=Reserva.CanalOrigen.WEB,
@@ -392,6 +399,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             # el propio firmante puede elegir no acredita nada.
             deslinde_version=DESLINDE_VERSION,
             **({'vendedora': vendedora} if vendedora else {}),
+            **({'atribucion': atribucion} if atribucion else {}),
             **kwargs,
         )
 
@@ -477,7 +485,7 @@ class TrasladoCheckoutSerializer(ReservaCheckoutSerializer):
             'id', 'checkout_id', 'servicio', 'tipo_traslado', 'punto_encuentro',
             'direccion_personalizada', 'zona', 'fecha', 'hora', 'fecha_regreso',
             'numero_personas', 'nombre_cliente', 'telefono_cliente', 'correo_cliente',
-            'deslinde_aceptado', 'deslinde_nombre', 'moneda', 'forma_pago', 'ref', 'estado',
+            'deslinde_aceptado', 'deslinde_nombre', 'moneda', 'forma_pago', 'ref', 'atribucion', 'estado',
         ]
 
     def get_fields(self):

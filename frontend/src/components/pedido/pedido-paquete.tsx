@@ -38,6 +38,8 @@ import {
 import { conIva } from '@/lib/iva';
 import { armarPayloadOrden, armarPayloadReserva, zonaEfectivaDeTraslado } from '@/lib/pedido-payload';
 import { leerRef } from '@/lib/ref';
+import { leerAtribucion } from '@/lib/atribucion';
+import { medir } from '@/lib/medicion';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { BloqueViajePaquete } from './bloque-viaje-paquete';
 import { useBorrador } from '@/components/checkout/use-borrador';
@@ -220,7 +222,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     armarPayload: (checkoutId) => {
       const args = {
         checkoutId, paquete, componentes: estado.componentes, inicio: estado.inicio ?? minDate,
-        hora: estado.hora, moneda: estado.moneda, contacto: estado.contacto, ref: leerRef(),
+        hora: estado.hora, moneda: estado.moneda, contacto: estado.contacto, ref: leerRef(), atribucion: leerAtribucion(),
         zonaDePunto,
       };
       return motor === 'orden' ? armarPayloadOrden(args) : armarPayloadReserva(args);
@@ -423,6 +425,11 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
     }
     if (!pedido) return setErrorDetalles(feedback.error.no_disponible);
     setErrorDetalles('');
+    // Llegó a pagar: para la publicidad (lib/medicion.ts).
+    medir('InitiateCheckout', {
+      id: paquete.slug, nombre: paquete.nombre, moneda: estado.moneda,
+      ...(totalConDescuento !== null ? { valor: totalConDescuento } : {}),
+    });
     void pago.enviar();
   };
 
@@ -468,6 +475,10 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
             ? `${formatearPrecio(totalConDescuento - porPagarHoy, estado.moneda)} ${estado.moneda}`
             : null,
           encuentro: null,
+          compra: totalConDescuento !== null ? {
+            id: paquete.slug, valor: totalConDescuento, moneda: estado.moneda,
+            eventoId: pago.ordenId ? `orden-${pago.ordenId}` : `reserva-${pago.reservaId ?? 0}`,
+          } : undefined,
         }}
       />
     );

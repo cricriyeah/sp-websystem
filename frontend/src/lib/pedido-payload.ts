@@ -3,6 +3,7 @@ import type {
 } from './api';
 import type { SeleccionPersonalizacion } from './personalizaciones';
 import { telefonoParaEnviar } from './telefono';
+import type { Atribucion } from './atribucion';
 
 export type DatosContacto = { fullName: string; phone: string; email: string };
 
@@ -45,6 +46,8 @@ type ArgsComunes = {
   moneda: Moneda;
   contacto: DatosContacto;
   ref?: string;
+  /** Por qué enlace llegó el cliente (lib/atribucion.ts). */
+  atribucion?: Atribucion;
   /** Zona de un punto de encuentro del catálogo de traslados, o '' si no aplica. */
   zonaDePunto: ZonaDePunto;
 };
@@ -92,6 +95,7 @@ export function armarPayloadOrden(args: ArgsComunes): CrearOrdenInput {
     correo_cliente: contacto.email.trim(),
     moneda: args.moneda,
     ref: args.ref,
+    atribucion: args.atribucion,
     fecha: args.inicio,
     ...(paquete.pide_hora === false ? {} : { hora: args.hora }),
     componentes: filas,
@@ -123,6 +127,7 @@ export function armarPayloadReserva(args: ArgsComunes): ReservaInput {
     deslinde_aceptado: true,
     deslinde_nombre: nombre,
     ref: args.ref,
+    atribucion: args.atribucion,
     paquete: paquete.slug,
     ...(aeropuerto ? { aeropuerto } : {}),
     personalizaciones,
