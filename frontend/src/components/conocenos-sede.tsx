@@ -183,8 +183,8 @@ export function ConocenosSede({ id, conocenos, fondo, logo, empresa }: Props) {
   );
 }
 
-/** `overflow-clip` y no `hidden`: con `hidden` el marco sería un contenedor de scroll y la deriva no correría. */
-function Foto({ src, alt, className, sizes, rapida, posicion }: { src: string; alt: string; className: string; sizes: string; rapida?: boolean; posicion?: string }) {
+/** `overflow-clip` y no `hidden`: con `hidden` el marco sería un contenedor de scroll y la deriva no correría. También la usa `FamiliaSede`. */
+export function Foto({ src, alt, className, sizes, rapida, posicion }: { src: string; alt: string; className: string; sizes: string; rapida?: boolean; posicion?: string }) {
   return (
     <div className={cn('rev-foto relative overflow-clip bg-tinta', className)}>
       <Image src={src} alt={alt} fill sizes={sizes} style={posicion ? { objectPosition: posicion } : undefined} className={cn('foto-deriva object-cover object-[50%_40%]', rapida && 'foto-deriva-rapida')} />

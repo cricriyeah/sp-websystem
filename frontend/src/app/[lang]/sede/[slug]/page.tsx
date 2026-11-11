@@ -22,6 +22,7 @@ import { PaquetesSede } from '@/components/paquetes-sede';
 import { DiaDeSede } from '@/components/dia-de-sede';
 import { ReservaTranquila } from '@/components/reserva-tranquila';
 import { ConocenosSede } from '@/components/conocenos-sede';
+import { FamiliaSede } from '@/components/familia-sede';
 import { PangasSede } from '@/components/pangas-sede';
 import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
@@ -89,8 +90,10 @@ export default async function SedePage({ params, searchParams }: Props) {
     ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),
     tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} sello={isotipoSede && protagonista ? { isotipo: isotipoSede, sinFondo: protagonista.simboloBarra, empresa: protagonista.nombre } : undefined} ilustracion={protagonista?.ilustracionFondo} />,
     ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
+    // Una sede lleva el «Conócenos» del gremio (La Paz) o el de una familia (Puerto Chale), nunca los dos.
+    ...(!contenido.conocenos && contenido.familia && { conocenos: (fondo: Fondo) => <FamiliaSede id={ANCLA_DE.conocenos} familia={contenido.familia!} fondo={fondo} /> }),
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
-    ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} isotipoSinFondo={protagonista?.simboloBarra} empresa={protagonista?.nombre} logoLargo={protagonista?.logoLargo} /> }),
+    ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={temporadas.titulo ?? dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} isotipoSinFondo={protagonista?.simboloBarra} empresa={protagonista?.nombre} logoLargo={protagonista?.logoLargo} /> }),
     opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} fondo={fondo} />,
     ...(faq && { preguntas: (fondo: Fondo) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} fondo={fondo} /> }),
   };
@@ -102,12 +105,15 @@ export default async function SedePage({ params, searchParams }: Props) {
     faq: faq ?? [],
     temporadas: temporadas?.filas,
     dia: contenido.dia?.momentos,
-    conocenos: contenido.conocenos ? [contenido.conocenos.foto] : undefined,
+    conocenos: contenido.conocenos ? [contenido.conocenos.foto] : contenido.familia ? [contenido.familia.retrato] : undefined,
     pangas: contenido.pangas?.fotos,
   });
   const ids = secciones.map((s) => s.id).filter((id) => pintar[id]);
   const fondos = fondosDeSecciones(ids);
-  const anclas = enlacesDeSede(ids).map(({ ancla, claveNav }) => ({ ancla, etiqueta: dict.nav[claveNav] }));
+  const anclas = enlacesDeSede(ids).map(({ ancla, claveNav }) => ({
+    ancla,
+    etiqueta: (claveNav === 'temporadas' && temporadas?.nav) || dict.nav[claveNav],
+  }));
 
   return <>
     <StructuredData lang={lang} slug={slug} negocio={contenido.negocio} description={contenido.metaDescription} faqItems={faq ?? null} />
