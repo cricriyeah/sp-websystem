@@ -49,3 +49,16 @@ test('galeriaDeCatalogo: un producto sin galería la devuelve vacía', () => {
   assert.deepEqual(m.galeriaDeCatalogo('servicio:sal-y-sol/pesca-deportiva', 'es'), []);
   assert.deepEqual(m.galeriaDeCatalogo('servicio:nadie/nada', 'es'), []);
 });
+
+test('la imagen para compartir es un JPG que existe en public/ (npm run fotos-compartir)', () => {
+  const fs = require('node:fs');
+  const fuente = fs.readFileSync(path.join(__dirname, '..', 'src/content/imagenes-catalogo.ts'), 'utf8');
+  const claves = [...fuente.matchAll(/^ {2}'((?:servicio|paquete):[^']+)':/gm)].map((x) => x[1]);
+  assert.ok(claves.length > 0);
+  for (const clave of claves) {
+    const foto = m.fotoParaCompartir(clave);
+    assert.match(foto.src, /^\/compartir\/[a-z0-9-]+\.jpg$/);
+    assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', foto.src)), `falta ${foto.src}: corre npm run fotos-compartir`);
+  }
+  assert.equal(m.fotoParaCompartir('servicio:nadie/nada'), null);
+});

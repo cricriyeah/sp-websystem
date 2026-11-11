@@ -3,11 +3,14 @@ import { notFound } from 'next/navigation';
 import { preconnect } from 'react-dom';
 import { cache } from 'react';
 import { getDictionary, hasLocale, type Locale } from '../../../../dictionaries';
+import { MedirEvento } from '@/components/medir-evento';
+import { conIva } from '@/lib/iva';
 import { API_URL, ApiError, getPaqueteDetalle, getPaquetesSede, getServiciosSede } from '@/lib/api';
 import { sedeConVentana } from '@/lib/horario-servicio';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
+import { claveDePaquete, fotoParaCompartir } from '@/content/imagenes-catalogo';
 import { jsonLdMigas, jsonLdViaje } from '@/lib/seo';
 import { getEmpresa } from '@/content/empresas';
 import { JsonLd } from '@/components/json-ld';
@@ -40,6 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return metadataDePagina({
     lang, ruta: `/sede/${slug}/paquete/${paquete}`, titulo: sede ? `${datos.nombre} · ${sede.nombre}` : datos.nombre,
     descripcion: datos.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
+    imagen: fotoParaCompartir(claveDePaquete(paquete))?.src,
   });
 }
 
@@ -75,6 +79,10 @@ export default async function PaquetePage({ params, searchParams }: Props) {
         { nombre: paquete.nombre, url: urlPaquete },
       ]),
     ]} />
+    <MedirEvento evento="ViewContent" datos={{
+      id: paquete.slug, nombre: paquete.nombre, moneda: 'MXN',
+      ...(Number(paquete.precio_ancla) > 0 ? { valor: conIva(Number(paquete.precio_ancla)).total } : {}),
+    }} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede.slug} />
     <main>
       <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />

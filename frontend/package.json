@@ -15,7 +15,8 @@
     "test:fotos": "node --test tests/imagenes-catalogo-completo.test.cjs",
     "test:contenido": "node --test tests/contenido-paridad.test.cjs tests/claves-huerfanas.test.cjs",
     "banderas": "node scripts/copiar-banderas.cjs",
-    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:contraste && npm run test:contenido && npm run test:guardia && npm run guardia && knip && next build"
+    "verificar": "tsc --noEmit && eslint src tests && npm test && npm run test:contraste && npm run test:contenido && npm run test:guardia && npm run guardia && knip && next build",
+    "fotos-compartir": "node scripts/fotos-compartir.cjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -40,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "knip": "^6.42.1",
+    "sharp": "^0.35.5",
     "typescript": "^5"
   }
 }

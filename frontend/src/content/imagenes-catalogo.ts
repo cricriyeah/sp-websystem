@@ -163,3 +163,15 @@ export function imagenesDeCatalogo(clave: string, lang: Lang): { src: string; al
 export function galeriaDeCatalogo(clave: string, lang: Lang): { src: string; alt: string; ancho: number; alto: number }[] {
   return (FOTOS[clave]?.galeria ?? []).map((f) => ({ src: f.src, alt: f.alt[lang], ancho: f.ancho, alto: f.alto }));
 }
+
+/**
+ * La imagen que se ve al compartir el enlace del producto en WhatsApp o Facebook (plan de marketing, 2026-11-11):
+ * su foto principal recortada a 1200×630 y en JPG, porque WhatsApp no siempre enseña un WebP. Los JPG los genera
+ * `npm run fotos-compartir` (scripts/fotos-compartir.cjs) en `public/compartir/` y se commitean; al cambiar una foto
+ * principal hay que volver a correrlo. Sin foto, `null` y la página usa la imagen general del sitio.
+ */
+export function fotoParaCompartir(clave: string): { src: string; origen: string } | null {
+  const foto = FOTOS[clave];
+  if (!foto) return null;
+  return { src: `/compartir/${clave.replace(/[:/]/g, '-')}.jpg`, origen: foto.src };
+}

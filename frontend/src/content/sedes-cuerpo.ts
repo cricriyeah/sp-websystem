@@ -29,6 +29,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: null,
         imagen: '/photos/panga-rumbo-a-la-pesca.webp',
+        alt: 'Panga de Sal y Sol a toda velocidad en el Mar de Cortés, con los pescadores a bordo',
         // La cortina del hub conserva su foto.
         imagenCortina: '/photos/cola-amarilla-acantilado.webp',
         // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
@@ -248,6 +249,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: null,
         imagen: '/photos/panga-rumbo-a-la-pesca.webp',
+        alt: 'A Sal y Sol panga at full speed on the Sea of Cortez, with the anglers on board',
         // La cortina del hub conserva su foto.
         imagenCortina: '/photos/cola-amarilla-acantilado.webp',
         // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
@@ -459,6 +461,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
+        alt: 'Ballena jorobada vista desde el aire, junto a la espuma de su salida a la superficie',
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Pesca', 'Snorkel', 'Mar', 'Aventura'],
@@ -574,6 +577,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
+        alt: 'Humpback whale seen from above, next to the foam where it surfaced',
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Fishing', 'Snorkel', 'Sea', 'Adventure'],
@@ -691,6 +695,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videohero.webm', // relleno hasta el video propio
         imagen: '/photos/mar-poster.webp',
+        alt: 'Lancha cruzando agua turquesa frente a la costa, vista desde el aire',
         subtitulo:
           'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, a donde la ballena gris llega cada invierno a tener a sus crías. Piratas Adventures es una familia de aquí y te lleva al safari marino, a ver a las ballenas y a pescar en el Pacífico.',
         facts: [],
@@ -709,6 +714,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       hero: {
         video: '/videos/videohero.webm', // relleno hasta el video propio
         imagen: '/photos/mar-poster.webp',
+        alt: 'Boat crossing turquoise water along the coast, seen from above',
         subtitulo:
           'Puerto Chale is a fishing village on Magdalena Bay, where gray whales arrive every winter to give birth. Piratas Adventures is a local family that takes you on marine safaris, out to see the whales and fishing on the Pacific.',
         facts: [],

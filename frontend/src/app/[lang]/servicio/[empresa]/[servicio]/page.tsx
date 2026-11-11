@@ -3,11 +3,14 @@ import { notFound } from 'next/navigation';
 import { preconnect } from 'react-dom';
 import { cache } from 'react';
 import { getDictionary, hasLocale, type Locale } from '../../../dictionaries';
+import { MedirEvento } from '@/components/medir-evento';
+import { conIva } from '@/lib/iva';
 import { API_URL, ApiError, getPaquetesSede, getServicioDetalle, getServiciosSede } from '@/lib/api';
 import { conVentana, sedeConVentana, ventanaDeSalida } from '@/lib/horario-servicio';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
+import { claveDeServicio, fotoParaCompartir } from '@/content/imagenes-catalogo';
 import { jsonLdMigas, jsonLdPreguntas, jsonLdViaje } from '@/lib/seo';
 import { getFaqServicio } from '@/content/faq-servicios';
 import { FaqSection } from '@/components/faq-section';
@@ -38,6 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return metadataDePagina({
     lang, ruta: `/servicio/${empresa}/${servicio}`, titulo: sedeDelServicio ? `${nombre} · ${sedeDelServicio.nombre}` : nombre,
     descripcion: result.data?.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
+    imagen: fotoParaCompartir(claveDeServicio(empresa, servicio))?.src,
   });
 }
 export default async function ServicioPage({ params, searchParams }: Props) {
@@ -89,6 +93,10 @@ export default async function ServicioPage({ params, searchParams }: Props) {
       ]),
       ...(preguntas ? [jsonLdPreguntas(preguntas)] : []),
     ]} />}
+    {servicio && <MedirEvento evento="ViewContent" datos={{
+      id: servicio.slug, nombre: servicio.nombre, moneda: 'MXN',
+      ...(Number(servicio.precio_base) > 0 ? { valor: conIva(Number(servicio.precio_base)).total } : {}),
+    }} />}
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede?.slug} />
     <main>
       <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />

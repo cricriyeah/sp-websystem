@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@/app/[lang]/dictionaries';
-import { LOCALE_TAG, absolutaEn, alternativasDe } from './site';
+import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from './site';
 import { etiquetasSociales, recortarDescripcion } from './seo';
 
 type Entrada = {
@@ -15,6 +15,8 @@ type Entrada = {
   descripcionGeneral: string;
   /** «Sun Baja Experience». */
   nombreDelSitio: string;
+  /** Ruta en `public/` de la imagen para compartir de esta página (1200×630); sin ella, la general del sitio. */
+  imagen?: string | null;
 };
 
 /**
@@ -23,7 +25,7 @@ type Entrada = {
  * del layout cuando la página define los suyos, por eso aquí se arman enteros, con la imagen del sitio.
  */
 export function metadataDePagina({
-  lang, ruta = '', titulo, tituloCompleto = false, descripcion, descripcionGeneral, nombreDelSitio,
+  lang, ruta = '', titulo, tituloCompleto = false, descripcion, descripcionGeneral, nombreDelSitio, imagen,
 }: Entrada): Metadata {
   const descripcionFinal = recortarDescripcion(descripcion) ?? descripcionGeneral;
   const tituloSocial = tituloCompleto ? titulo : `${titulo} | ${nombreDelSitio}`;
@@ -37,7 +39,7 @@ export function metadataDePagina({
       descripcion: descripcionFinal,
       locale: LOCALE_TAG[lang].replace('-', '_'),
       nombreDelSitio,
-      imagen: absolutaEn(lang, '/opengraph-image'),
+      imagen: imagen ? `${SITE_URL}${imagen}` : absolutaEn(lang, '/opengraph-image'),
     }),
   };
 }

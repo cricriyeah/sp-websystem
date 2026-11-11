@@ -21,6 +21,8 @@ export type SedeIndiceEntry = {
 export type SedeHeroContenido = {
   video: string | null;
   imagen: string | null;
+  /** Qué se ve en la foto (o el póster del video), para lectores de pantalla y buscadores de imágenes. */
+  alt?: string;
   /** `object-position` para encuadrar la foto/video de esta sede; sin él, centrado. */
   posicionImagen?: string;
   /** Foto de la cortina del hub, si debe ser otra que `imagen` (p. ej. cuando el texto blanco no se lee sobre el póster). */
