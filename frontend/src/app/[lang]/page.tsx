@@ -4,6 +4,7 @@ import { getDictionary, hasLocale, type Locale } from './dictionaries';
 import { LOCALE_TAG, absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
 import { jsonLdMarca } from '@/lib/seo';
+import { SAME_AS_MARCA } from '@/content/redes-marca';
 import { JsonLd } from '@/components/json-ld';
 import { getSedes, type Sede } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
@@ -115,7 +116,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
 
   return <>
     <JsonLd datos={jsonLdMarca({
-      nombre: dict.home.title, url: absolutaEn(lang), descripcion: dict.hub.meta.description, idioma: LOCALE_TAG[lang],
+      nombre: dict.home.title, url: absolutaEn(lang), descripcion: dict.hub.meta.description, idioma: LOCALE_TAG[lang], sameAs: SAME_AS_MARCA,
     })} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
     <main>

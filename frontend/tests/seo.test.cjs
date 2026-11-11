@@ -60,6 +60,14 @@ test('la marca son dos bloques: organizacion y sitio, sin datos inventados', () 
   for (const clave of ['sameAs', 'logo', 'telephone']) assert.equal(org[clave], undefined, clave);
 });
 
+test('con perfiles confirmados, la marca los une con sameAs (y nada más)', () => {
+  const perfiles = ['https://www.instagram.com/x', 'https://www.tiktok.com/@x'];
+  const [org] = s.jsonLdMarca({ nombre: 'Marca', url: 'https://x.test/es', descripcion: 'D', idioma: 'es-MX', sameAs: perfiles });
+  assert.deepEqual(org.sameAs, perfiles);
+  assert.notEqual(org.sameAs, perfiles, 'copia, no la misma lista');
+  for (const clave of ['logo', 'telephone']) assert.equal(org[clave], undefined, clave);
+});
+
 test('un viaje con precio lleva su oferta, dicha sin IVA', () => {
   const v = s.jsonLdViaje({
     nombre: 'Pesca con mosca', descripcion: 'D', url: 'https://x.test/es/servicio/a/b', proveedor: { nombre: 'Empresa' },

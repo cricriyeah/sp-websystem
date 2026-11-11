@@ -7,7 +7,7 @@ Estructura de negocio:
                   DLS Transporte (traslados; el slug se queda `transporte-la-paz`
                   porque el webhook de Stripe y el frontend dependen de él)
                   Paquete cruza-empresa Pesca + Traslado (lo siembra seed_local_demo)
-  La Ventana   -> La Ventana Travel (pesca con mosca, avistamiento de ballenas y orcas)
+  La Ventana   -> La Ventana Travel (pesca con mosca, seafari de orcas y fauna marina)
   Puerto Chale -> Piratas Adventures (safari marino, avistamiento de ballenas, pesca)
 
 De La Ventana Travel y Piratas Adventures ya hay datos confirmados por ellos (ver `DATOS_REALES`):
@@ -57,9 +57,9 @@ SERVICIOS = [
     ('la-ventana-travel', 'pesca-con-mosca', 'Pesca con mosca', 'pesca', 'por_grupo',
      '6000', 2, 3, 'Pesca con mosca (fly fishing) en La Ventana.',
      [('DEMO Panga La Ventana 1', 3), ('DEMO Panga La Ventana 2', 3)]),
-    ('la-ventana-travel', 'avistamiento-ballenas-orcas', 'Avistamiento de ballenas y orcas', 'paseo',
+    ('la-ventana-travel', 'avistamiento-ballenas-orcas', 'Seafari: orcas y fauna marina', 'paseo',
      'por_persona', '1200', 1, 12,
-     'Salida al mar para ver ballenas y orcas según la temporada; la logística es la misma.',
+     'Seafari: salida al mar para ver orcas y fauna marina; la logística es la misma.',
      [('DEMO Lancha La Ventana 1', 12), ('DEMO Lancha La Ventana 2', 12)]),
     ('piratas-adventures', 'safari-marino', 'Safari marino', 'paseo', 'por_persona', '900', 1, 10,
      'Safari marino en Puerto Chale.',
@@ -79,9 +79,9 @@ SERVICIOS = [
 # Solo lo que recibe el cliente: horario, duración, punto de salida y cupo van en sus campos (la ficha del detalle).
 INCLUYE_AVISTAMIENTO = {
     'es': ['Algo de comer, aguas y refrescos', 'Equipo para snorkelear', 'Snorkel en un arrecife',
-           'Intento de nado con ballenas u orcas, si el mar lo permite'],
+           'Nado con orcas, si aparecen y el mar lo permite'],
     'en': ['Some food, water and soft drinks', 'Snorkeling gear', 'Snorkeling at a reef',
-           'A try at swimming with whales or orcas, sea permitting'],
+           'Swimming with orcas, if they show up and the sea allows'],
 }
 
 # Lo que confirmó el dueño el 2026-10-21 (precios SIN IVA). Sal y Sol: 8 pangas de 8, salida de 5 a 7, 10,800 por viaje
@@ -121,13 +121,16 @@ DATOS_REALES = {
         duracion='Día completo', duracion_en='Full day',
     ),
     ('la-ventana-travel', 'avistamiento-ballenas-orcas'): dict(
-        nombre='Avistamiento de ballenas y orcas',
+        # Seafari de orcas y fauna marina (dueño, 2026-11-11); el nado es solo con orcas (NOM-131). Igual que fleet 0056.
+        nombre='Seafari: orcas y fauna marina',
         estrategia_precio='por_persona', modo_ocupacion='compartido',
         precio_base=Decimal('5000'), precio_persona_extra=Decimal('0'),
         personas_incluidas=1, capacidad_maxima=8,
-        descripcion='Salida diaria al mar para buscar ballenas y orcas e intentar nadar con ellas, con snorkel en un '
-                    'arrecife. Precio por persona en lancha compartida; '
-                    'para un grupo privado (hasta 10 personas) el costo es de $20,000 MXN: consúltalo por WhatsApp.',
+        descripcion='Sales al mar en lancha compartida a buscar orcas, que visitan esta zona todo el año, y lo que el mar '
+                    'traiga ese día: delfines y lobos marinos casi siempre y, desde abril, ballenas jorobadas y mobulas. '
+                    'Si aparecen orcas y el mar lo permite, puedes meterte al agua con ellas; después hay snorkel en un '
+                    'arrecife. Lo que se ve depende del mar. ¿Van en grupo? La lancha privada para hasta 10 personas '
+                    'cuesta $20,000 MXN: pídela por WhatsApp.',
         incluye=INCLUYE_AVISTAMIENTO,
         duracion='5–6 h', duracion_en='5–6 h', punto_salida='La Ventana o Bahía de los Sueños',
         punto_salida_en='La Ventana or Bahía de los Sueños',
@@ -585,8 +588,8 @@ class Command(BaseCommand):
         empresa = Empresa.objects.get(slug='la-ventana-travel')
         sede = empresa.sede
         definiciones = (
-            ('paquete-5-noches', 'Paquete 5 noches', 5, Decimal('45000')),
-            ('paquete-7-noches', 'Paquete 7 noches', 7, Decimal('52500')),
+            ('paquete-5-noches', 'Seafari 5 noches', 5, Decimal('45000')),
+            ('paquete-7-noches', 'Seafari 7 noches', 7, Decimal('52500')),
         )
         with scope.con_empresa(empresa):
             hotel = Servicio.objects.get(empresa=empresa, slug='hospedaje-la-ventana')
@@ -599,16 +602,16 @@ class Command(BaseCommand):
                         empresa_lider=empresa, nombre=nombre, precio_ancla=precio,
                         estrategia_precio='por_persona', pide_hora=False, activo=True,
                         descripcion=f'{noches} noches de hospedaje, traslado redondo de aeropuerto y '
-                                    f'avistamiento de ballenas y orcas del día 2 al {noches}.',
+                                    f'seafari de orcas y fauna marina del día 2 al {noches}.',
                     ),
                 )
                 # Lo que incluye el paquete: las mismas amenidades que la pesca con mosca; el hospedaje no lleva comida.
                 paquete.incluye = {
                     'es': [f'{noches} noches de hospedaje en el Hotel Casa Arrecife', 'Traslado redondo del aeropuerto al hotel',
-                           f'Salidas al mar para ver ballenas y orcas, del día 2 al {noches}',
+                           f'Seafari diario de orcas y fauna marina, del día 2 al {noches}',
                            *INCLUYE_AMENIDADES_VENTANA['es'], 'El hospedaje no incluye comida'],
                     'en': [f'{noches} nights at Hotel Casa Arrecife', 'Round-trip airport transfer',
-                           f'Sea trips to see whales and orcas, from day 2 to day {noches}',
+                           f'Daily orca and marine life seafari, from day 2 to day {noches}',
                            *INCLUYE_AMENIDADES_VENTANA['en'], 'Lodging does not include meals'],
                 }
                 for orden, servicio, extra in (

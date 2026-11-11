@@ -455,15 +455,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiencias en La Ventana, BCS | Sun Baja Experience',
       metaDescription:
-        'Ballenas, orcas y pesca con mosca en La Ventana, BCS, con La Ventana Travel. Hospedaje en el Hotel Casa Arrecife y paquetes con traslado de aeropuerto.',
+        'Seafari de orcas y fauna marina y pesca con mosca en La Ventana, BCS, con La Ventana Travel. Paquetes de 5 y 7 noches con hospedaje en el Hotel Casa Arrecife y traslado de aeropuerto.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
-        palabras: ['Pesca', 'Orcas', 'Ballenas', 'Snorkel', 'Mar', 'Aventura'],
+        palabras: ['Orcas', 'Seafari', 'Pesca', 'Snorkel', 'Mar', 'Aventura'],
         subtitulo:
-          'La Ventana es un pueblo de playa y mucho viento, frente a la isla Cerralvo. Con La Ventana Travel sales a buscar ballenas y orcas o a pescar con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
+          'La Ventana es un pueblo de playa y mucho viento, frente a la isla Cerralvo. Con La Ventana Travel sales a buscar orcas y fauna marina o a pescar con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -472,7 +472,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         momentos: [
           { titulo: '7:00 am', texto: 'Salimos todos los días entre 7:00 y 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
           { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'En el mar', texto: 'Buscamos ballenas y orcas e intentamos nadar con ellas, según lo que haya en la temporada. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
       },
       galeria: [
@@ -529,7 +529,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       faq: [
         {
           q: '¿Qué incluye el paquete de 5 o de 7 noches?',
-          a: 'Hospedaje en el Hotel Casa Arrecife durante 5 o 7 noches, traslado redondo del aeropuerto y el avistamiento de ballenas y orcas todos los días de mar: del día 2 al 5 en el paquete de 5 noches y del día 2 al 7 en el de 7. El día 1 es de llegada.',
+          a: 'Hospedaje en el Hotel Casa Arrecife durante 5 o 7 noches, traslado redondo del aeropuerto y el seafari de orcas y fauna marina todos los días de mar: del día 2 al 5 en el paquete de 5 noches y del día 2 al 7 en el de 7. El día 1 es de llegada.',
         },
         {
           q: '¿Cómo es el hospedaje?',
@@ -540,7 +540,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'Niños de cualquier edad son bienvenidos. Cada estudio es para 2 personas con una cama king size, y no se pueden agregar camas extra ni cunas: tenlo en cuenta al elegir cuántas habitaciones reservar.',
         },
         {
-          q: '¿A qué hora sale el avistamiento de ballenas y orcas y cuánto dura?',
+          q: '¿A qué hora sale el seafari y cuánto dura?',
           a: 'Salimos todos los días entre las 7:00 y las 8:00 am, de La Ventana o de Bahía de los Sueños. La salida dura de 5 a 6 horas, e incluye algo de comer, aguas y refrescos, y el equipo para snorkelear.',
         },
         {
@@ -570,15 +570,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Experiences in La Ventana, BCS | Sun Baja Experience',
       metaDescription:
-        'Whales, orcas and fly fishing in La Ventana, BCS, with La Ventana Travel. Stays at Hotel Casa Arrecife and packages with airport transfers.',
+        'Orca and marine life seafaris and fly fishing in La Ventana, BCS, with La Ventana Travel. 5- and 7-night packages with lodging at Hotel Casa Arrecife and airport transfers.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
-        palabras: ['Fishing', 'Orcas', 'Whales', 'Snorkel', 'Sea', 'Adventure'],
+        palabras: ['Orcas', 'Seafari', 'Fishing', 'Snorkel', 'Sea', 'Adventure'],
         subtitulo:
-          'La Ventana is a windy beach town facing Cerralvo Island. With La Ventana Travel you head out to look for whales and orcas or to fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
+          'La Ventana is a windy beach town facing Cerralvo Island. With La Ventana Travel you head out to look for orcas and marine life or to fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -587,7 +587,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         momentos: [
           { titulo: '7:00 am', texto: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
           { titulo: 'Snorkel', texto: 'We give you the snorkeling gear and head to a reef to swim among the fish.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'At sea', texto: 'We look for whales and orcas and try to swim with them, depending on the season. We bring some food, water and soft drinks. In all, 5 to 6 hours.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks. In all, 5 to 6 hours.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
       },
       galeria: [
@@ -644,7 +644,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       faq: [
         {
           q: 'What does the 5-night or 7-night package include?',
-          a: 'Lodging at Hotel Casa Arrecife for 5 or 7 nights, a round-trip airport transfer, and whale and orca watching on every sea day: days 2 to 5 on the 5-night package and days 2 to 7 on the 7-night one. Day 1 is your arrival day.',
+          a: 'Lodging at Hotel Casa Arrecife for 5 or 7 nights, a round-trip airport transfer, and an orca and marine life seafari on every sea day: days 2 to 5 on the 5-night package and days 2 to 7 on the 7-night one. Day 1 is your arrival day.',
         },
         {
           q: 'What is the lodging like?',
@@ -655,7 +655,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'Children of all ages are welcome. Each studio is for 2 people with one king size bed, and extra beds and cribs cannot be added: keep this in mind when you choose how many rooms to book.',
         },
         {
-          q: 'What time does whale and orca watching leave, and how long does it last?',
+          q: 'What time does the seafari leave, and how long does it last?',
           a: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños. The trip lasts 5 to 6 hours and includes some food, water and soft drinks, and snorkeling gear.',
         },
         {

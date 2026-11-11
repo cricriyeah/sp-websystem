@@ -43,3 +43,7 @@ test('Sal y Sol no lleva sitio externo; las otras tres sí, confirmado', () => {
 test('el WhatsApp de relleno de Piratas no entra', () => {
   assert.equal(getEmpresa('piratas-adventures').contacto, undefined);
 });
+
+test('La Ventana Travel no muestra su propio WhatsApp: la venta va al número de la marca', () => {
+  assert.equal(getEmpresa('la-ventana-travel').contacto, undefined);
+});

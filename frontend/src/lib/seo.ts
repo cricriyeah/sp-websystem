@@ -88,10 +88,10 @@ export function jsonLdMigas(migas: Miga[]) {
 }
 
 /**
- * La marca y el sitio, para la portada. No lleva `sameAs`, logo ni teléfono: ninguno está confirmado para la
- * marca (cada empresa tiene los suyos), y no se inventan.
+ * La marca y el sitio, para la portada. `sameAs` son los perfiles de la marca que confirmó el dueño
+ * (`content/redes-marca.ts`); logo y teléfono no van: no están confirmados para la marca y no se inventan.
  */
-export function jsonLdMarca({ nombre, url, descripcion, idioma }: { nombre: string; url: string; descripcion: string; idioma: string }) {
+export function jsonLdMarca({ nombre, url, descripcion, idioma, sameAs = [] }: { nombre: string; url: string; descripcion: string; idioma: string; sameAs?: readonly string[] }) {
   return [
     {
       '@context': 'https://schema.org',
@@ -99,6 +99,7 @@ export function jsonLdMarca({ nombre, url, descripcion, idioma }: { nombre: stri
       name: nombre,
       url,
       description: descripcion,
+      ...(sameAs.length ? { sameAs: [...sameAs] } : {}),
       areaServed: { '@type': 'AdministrativeArea', name: 'Baja California Sur', addressCountry: 'MX' },
     },
     {

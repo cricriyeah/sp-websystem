@@ -70,12 +70,12 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
   'la-ventana-travel/avistamiento-ballenas-orcas': {
     es: [
       {
-        q: '¿Qué incluye el avistamiento de ballenas y orcas?',
-        a: 'Algo de comer, aguas y refrescos, equipo para snorkelear y un rato de snorkel en un arrecife. Si aparecen ballenas u orcas y el mar lo permite, se intenta nadar con ellas.',
+        q: '¿Qué incluye el seafari?',
+        a: 'Algo de comer, aguas y refrescos, equipo para snorkelear y un rato de snorkel en un arrecife. Si aparecen orcas y el mar lo permite, puedes meterte al agua con ellas. A las ballenas se les mira desde la lancha.',
       },
       {
-        q: '¿Aseguran que veré ballenas u orcas?',
-        a: 'No: son animales libres y lo que se ve depende de la temporada y del mar. Lo que sí ocurre en cada salida es que vamos a buscarlas, con quien conoce estas aguas.',
+        q: '¿Qué animales voy a ver? ¿Aseguran que veré orcas?',
+        a: 'Las orcas visitan la zona todo el año. Desde abril también llegan ballenas jorobadas y mobulas, y a veces aparecen calderones, cachalotes o mantarrayas gigantes. Los delfines y lobos marinos son comunes. No podemos asegurar qué verás: son animales libres y depende del mar. Lo que sí ocurre en cada salida es que vamos a buscarlos, con quien conoce estas aguas.',
       },
       {
         q: '¿A qué hora sale, de dónde y cuánto dura?',
@@ -87,7 +87,7 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
       },
       {
         q: '¿Puedo combinarlo con hospedaje y traslado?',
-        a: 'Sí. Los paquetes de 5 y de 7 noches incluyen hospedaje en el Hotel Casa Arrecife, traslado redondo del aeropuerto y este avistamiento todos los días de mar.',
+        a: 'Sí. Los paquetes de 5 y de 7 noches incluyen hospedaje en el Hotel Casa Arrecife, traslado redondo del aeropuerto y este seafari todos los días de mar.',
       },
       {
         q: '¿Cómo pago, y qué pasa si hay mal clima?',
@@ -96,12 +96,12 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
     ],
     en: [
       {
-        q: 'What does whale and orca watching include?',
-        a: 'Some food, water and soft drinks, snorkeling gear and a snorkel stop at a reef. If whales or orcas show up and the sea allows it, we try to swim with them.',
+        q: 'What does the seafari include?',
+        a: 'Some food, water and soft drinks, snorkeling gear and a snorkel stop at a reef. If orcas show up and the sea allows it, you can get in the water with them. Whales are watched from the boat.',
       },
       {
-        q: 'Do you guarantee I will see whales or orcas?',
-        a: 'No: they are wild animals, and what you see depends on the season and the sea. What does happen on every trip is that we go looking for them, with people who know these waters.',
+        q: 'What will I see? Do you guarantee orcas?',
+        a: 'Orcas visit the area all year round. From April, humpback whales and mobula rays arrive too, and now and then we see pilot whales, sperm whales or giant manta rays. Dolphins and sea lions are common. We cannot promise what you will see: they are wild animals and it depends on the sea. What does happen on every trip is that we go looking for them, with people who know these waters.',
       },
       {
         q: 'What time does it leave, from where, and how long is it?',
@@ -113,7 +113,7 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
       },
       {
         q: 'Can I combine it with lodging and transfers?',
-        a: 'Yes. The 5-night and 7-night packages include lodging at Hotel Casa Arrecife, a round-trip airport transfer and this whale watching on every sea day.',
+        a: 'Yes. The 5-night and 7-night packages include lodging at Hotel Casa Arrecife, a round-trip airport transfer and this seafari on every sea day.',
       },
       {
         q: 'How do I pay, and what happens in bad weather?',

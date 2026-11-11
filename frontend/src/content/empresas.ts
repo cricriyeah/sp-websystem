@@ -80,14 +80,14 @@ export const EMPRESAS: readonly Empresa[] = [
   {
     ...marca('la-ventana-travel'),
     descripcion: {
-      es: 'Pesca con mosca, salidas a buscar ballenas y orcas, hospedaje en el Hotel Casa Arrecife y paquetes de varios días con traslado de aeropuerto.',
-      en: 'Fly fishing, trips out to find whales and orcas, lodging at Hotel Casa Arrecife and multi-day packages with airport transfers.',
+      es: 'Pesca con mosca, seafari de orcas y fauna marina, hospedaje en el Hotel Casa Arrecife y paquetes de varios días con traslado de aeropuerto.',
+      en: 'Fly fishing, orca and marine life seafaris, lodging at Hotel Casa Arrecife and multi-day packages with airport transfers.',
     },
     web: 'https://laventanatravel.com/',
     webConfirmada: true,
     tambienConocidaComo: 'La Ventana Adventures',
     redes: [{ nombre: 'Instagram', url: 'https://www.instagram.com/laventana.travel' }],
-    contacto: { tipo: 'whatsapp', numero: '+52 612 179 4239' },
+    // Sin contacto propio (dueño, 2026-11-11): el cliente escribe al WhatsApp único de la marca, que lleva la venta.
     resenas: [],
     fotos: [],
   },
