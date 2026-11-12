@@ -68,16 +68,16 @@ test('con perfiles confirmados, la marca los une con sameAs (y nada más)', () =
   for (const clave of ['logo', 'telephone']) assert.equal(org[clave], undefined, clave);
 });
 
-test('un viaje con precio lleva su oferta, dicha sin IVA', () => {
+test('un viaje con precio lleva su oferta, con el IVA sumado', () => {
   const v = s.jsonLdViaje({
     nombre: 'Pesca con mosca', descripcion: 'D', url: 'https://x.test/es/servicio/a/b', proveedor: { nombre: 'Empresa' },
     precio: '2500.00', lugar: 'La Ventana',
   });
   assert.equal(v['@type'], 'TouristTrip');
   assert.equal(v.provider.name, 'Empresa');
-  assert.equal(v.offers.price, '2500.00');
+  assert.equal(v.offers.price, '2900.00');
   assert.equal(v.offers.priceCurrency, 'MXN');
-  assert.equal(v.offers.priceSpecification.valueAddedTaxIncluded, false);
+  assert.equal(v.offers.priceSpecification.valueAddedTaxIncluded, true);
   assert.equal(v.itinerary.name, 'La Ventana');
 });
 

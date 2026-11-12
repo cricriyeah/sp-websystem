@@ -34,6 +34,11 @@ export type SedeHeroContenido = {
   /** Las palabras gigantes que rotan en el arranque. Sin ellas salen del catálogo (una por tipo de servicio),
    * y una sede con un solo tipo se queda quieta. */
   palabras?: string[];
+  /**
+   * Lo que se hace en la sede, en una línea pequeña dentro del `h1`, sobre el nombre («Pesca deportiva en panga
+   * privada» + «La Paz»): el encabezado dice producto y lugar, no solo el lugar (plan de marketing, punto 19).
+   */
+  encabezado?: string;
   subtitulo: string;
   facts: { value: string; label: string }[];
 };

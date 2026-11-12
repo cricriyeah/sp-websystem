@@ -11,7 +11,9 @@ import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
 import { claveDePaquete, fotoParaCompartir } from '@/content/imagenes-catalogo';
-import { jsonLdMigas, jsonLdViaje } from '@/lib/seo';
+import { jsonLdMigas, jsonLdPreguntas, jsonLdViaje } from '@/lib/seo';
+import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
+import { FaqSection } from '@/components/faq-section';
 import { getEmpresa } from '@/content/empresas';
 import { JsonLd } from '@/components/json-ld';
 import { SiteHeader } from '@/components/site-header';
@@ -66,6 +68,12 @@ export default async function PaquetePage({ params, searchParams }: Props) {
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   const vista = vistaDeDetallePaquete({ lang, moneda, dict, sede, otros: { servicios, paquetes }, paquete });
   const urlPaquete = absolutaEn(lang, `/sede/${slug}/paquete/${paqueteSlug}`);
+  // Las preguntas de su sede (hospedaje, horarios, cambios): las mismas que se pintan van al JSON-LD.
+  const preguntas = sede.faq?.slice(0, 8);
+  const textosFaq = dict.sedeContenido.faq;
+  const whatsappFaq = tieneWhatsapp
+    ? { texto: textosFaq.whatsapp, boton: textosFaq.whatsappBoton, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', paquete.nombre)) }
+    : null;
   return <>
     <JsonLd datos={[
       jsonLdViaje({
@@ -78,6 +86,7 @@ export default async function PaquetePage({ params, searchParams }: Props) {
         { nombre: sede.nombre, url: absolutaEn(lang, `/sede/${slug}`) },
         { nombre: paquete.nombre, url: urlPaquete },
       ]),
+      ...(preguntas?.length ? [jsonLdPreguntas(preguntas)] : []),
     ]} />
     <MedirEvento evento="ViewContent" datos={{
       id: paquete.slug, nombre: paquete.nombre, moneda: 'MXN',
@@ -86,6 +95,7 @@ export default async function PaquetePage({ params, searchParams }: Props) {
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede.slug} />
     <main>
       <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />
+      {preguntas?.length ? <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={preguntas} whatsapp={whatsappFaq} fondo="cafe-bruma" /> : null}
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={sede.negocio} sedeSlug={sede.slug} empresasDeslinde={[...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]} />
   </>;

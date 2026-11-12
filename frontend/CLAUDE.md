@@ -337,6 +337,13 @@ con `sessionStorage`; `eventID` = `reserva-<folio>`/`orden-<folio>`, el mismo qu
 guarda 30 días el último enlace con `utm_*`/`fbclid`/`gclid` (o el sitio de origen si no hay nada guardado) desde
 `RefCapture`, y los tres checkouts lo mandan como `atribucion` con la reserva u orden (más `_fbp`/`_fbc` si el pixel
 cargó); el backend lo limpia (`apps/bookings/atribucion.py`) y lo enseña en la reserva («Llegó por»).
+El servidor manda la misma compra a la API de Conversiones (`backend/apps/payments/meta_capi.py`, al confirmar el
+cobro; `META_PIXEL_ID` + `META_CAPI_TOKEN` en Render): solo si la reserva trae `_fbp` (cookies aceptadas), salvo
+`META_CAPI_SIN_CONSENTIMIENTO=1`.
+
+**Precio público con IVA** (plan de marketing, punto 1). El catálogo va sin IVA; tarjetas, detalle, extras, la nota de
+persona extra, el «desde» del hub y la oferta del JSON-LD lo suman con `precioPublico` (`lib/iva.ts`) y lo dicen
+(«· IVA incluido» en `baseDeCobro`; un precio por grupo dice «para N personas»). El checkout sigue desglosando el IVA.
 
 ## Links cortos por sede (modo «solo sede»)
 

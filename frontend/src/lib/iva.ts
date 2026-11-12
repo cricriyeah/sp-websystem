@@ -13,6 +13,11 @@ export function ivaDe(neto: number, tasa: number = TASA_IVA): number {
   return Math.round(Math.round(neto * 100) * tasa) / 100;
 }
 
+/** Un precio de catálogo (sin IVA) como se anuncia en la página: con el IVA sumado. `null` sigue siendo `null`. */
+export function precioPublico(neto: number | null, tasa: number = TASA_IVA): number | null {
+  return neto === null ? null : conIva(neto, tasa).total;
+}
+
 /** El IVA y el total que se cobra (el anticipo se calcula sobre este total). */
 export function conIva(neto: number, tasa: number = TASA_IVA): { iva: number; total: number } {
   const iva = ivaDe(neto, tasa);

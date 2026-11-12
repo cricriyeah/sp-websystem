@@ -90,7 +90,7 @@
     "sections": [
       {
         "title": "Quién es responsable de tus datos",
-        "body": "Sun Baja Experience, agencia de turismo local con domicilio en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, Baja California Sur, México, es responsable de los datos personales descritos en este aviso, que recabamos a través de este sitio web.\n\nPara cualquier asunto relacionado con tus datos, incluidas las solicitudes que se describen en «Tus derechos ARCO», escríbenos con gusto por WhatsApp al número que aparece en este sitio. Respondemos en un plazo máximo de 20 días hábiles, conforme a la legislación aplicable."
+        "body": "Sun Baja Experience, agencia de turismo local con domicilio en C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, Baja California Sur, México, es responsable de los datos personales descritos en este aviso, que recabamos a través de este sitio web.\n\nPara cualquier asunto relacionado con tus datos, incluidas las solicitudes que se describen en «Tus derechos ARCO», escríbenos con gusto a support@salysoltours.com o por WhatsApp al número que aparece en este sitio. Respondemos en un plazo máximo de 20 días hábiles, conforme a la legislación aplicable."
       },
       {
         "title": "Qué datos recabamos",
@@ -114,7 +114,7 @@
       },
       {
         "title": "Tus derechos ARCO",
-        "body": "Tienes pleno derecho a ejercer en cualquier momento tus derechos de Acceso, Rectificación, Cancelación y Oposición (ARCO):\n\n- **Acceder** a los datos personales que conservamos de ti.\n- **Rectificarlos** si presentan algún error o están desactualizados.\n- **Cancelarlos** cuando consideres que ya no son necesarios para la prestación del servicio.\n- **Oponerte** al tratamiento de tus datos para fines específicos.\n\nPara ejercerlos, escríbenos por WhatsApp o correo electrónico y con gusto daremos seguimiento inmediato a tu solicitud."
+        "body": "Tienes pleno derecho a ejercer en cualquier momento tus derechos de Acceso, Rectificación, Cancelación y Oposición (ARCO):\n\n- **Acceder** a los datos personales que conservamos de ti.\n- **Rectificarlos** si presentan algún error o están desactualizados.\n- **Cancelarlos** cuando consideres que ya no son necesarios para la prestación del servicio.\n- **Oponerte** al tratamiento de tus datos para fines específicos.\n\nPara ejercerlos, escríbenos a support@salysoltours.com o por WhatsApp y con gusto daremos seguimiento inmediato a tu solicitud."
       },
       {
         "title": "Seguridad",
@@ -217,6 +217,8 @@
     "privacy": "Aviso de privacidad",
     "cancellations": "Cambios y cancelaciones",
     "rights": "Todos los derechos reservados.",
+    "redesLabel": "Síguenos",
+    "redAria": "Sun Baja Experience en {red} (abre en otra pestaña)",
     "pagosLabel": "Formas de pago",
     "pagosTarjetas": "Tarjetas de crédito y débito",
     "pagosEfectivo": "Efectivo, para el resto el día del viaje",
@@ -759,8 +761,7 @@
     "paquetes": {
       "titulo": "Paquetes",
       "noches": "{n} noches",
-      "dias": "{n} días en {sede}",
-      "incluyePersonas": "Incluye {n} personas"
+      "dias": "{n} días en {sede}"
     },
     "detalle": {
       "atras": "Atrás",
@@ -821,8 +822,8 @@
     },
     "empresas": "Quién está detrás de cada servicio",
     "opiniones": {
-      "titulo": "Opiniones de las empresas",
-      "publicadaPor": "Opinión publicada por {empresa}",
+      "titulo": "Lo que dicen nuestros clientes",
+      "publicadaPor": "Reseña en el perfil de {empresa}",
       "verEn": "Ver en {fuente}",
       "originalEs": "Original en español",
       "originalEn": "Original en inglés"

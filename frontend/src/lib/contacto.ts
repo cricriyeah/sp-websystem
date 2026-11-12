@@ -9,6 +9,9 @@ const NUMERO = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '').replace(/\D/g, ''
 
 export const tieneWhatsapp = NUMERO.length >= 11;
 
+/** Correo de atención de la marca (dueño, 2026-11-11). Va en el pie, en el aviso de privacidad y en el JSON-LD. */
+export const CORREO_MARCA = 'support@salysoltours.com';
+
 export const whatsappNumero = NUMERO;
 
 /** Formato legible: +52 1 612 123 4567 / +52 612 123 4567. */

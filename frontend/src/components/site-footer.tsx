@@ -1,12 +1,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Money, WhatsappLogo } from '@phosphor-icons/react/ssr';
+import { EnvelopeSimple, FacebookLogo, GoogleLogo, InstagramLogo, Money, TiktokLogo, WhatsappLogo } from '@phosphor-icons/react/ssr';
+import type { Icon } from '@phosphor-icons/react';
 import { BotonReservarPie } from '@/components/boton-reservar-pie';
 import { LogoPie } from '@/components/logo-pie';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
-import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
+import { CORREO_MARCA, tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
+import { REDES_MARCA, type RedMarca } from '@/content/redes-marca';
 import { conVentana, ventanaDeSalida } from '@/lib/horario-servicio';
 import { hrefDeslinde, hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
@@ -31,7 +33,16 @@ const FORMAS_DE_PAGO = [
   { nombre: 'American Express', src: '/pagos/amex.svg' },
 ] as const;
 
+const ICONO_DE_RED: Record<RedMarca['nombre'], Icon> = {
+  Instagram: InstagramLogo,
+  TikTok: TiktokLogo,
+  Facebook: FacebookLogo,
+  Google: GoogleLogo,
+};
+
 const TITULO_GRUPO = 'texto-etiqueta text-cafe-bruma';
+// Círculo claro sobre el pie oscuro, del tamaño de dedo (44 px), como los de las tarjetas de empresa.
+const CIRCULO_RED = 'inline-flex size-11 items-center justify-center rounded-full bg-hero-ink/10 text-hero-ink transition-colors hover:bg-hero-ink hover:text-tinta';
 const ENLACE = 'inline-flex min-h-11 items-center texto-cuerpo transition-colors hover:text-cafe-claro';
 
 /**
@@ -110,6 +121,10 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
                 {whatsappVisible()}
               </a>
             )}
+            <a href={`mailto:${CORREO_MARCA}`} className={`${ENLACE} gap-2 break-all`}>
+              <EnvelopeSimple size={20} aria-hidden="true" />
+              {CORREO_MARCA}
+            </a>
             <p className="mt-2 texto-cuerpo">{footer.office}</p>
             {negocio && (
               <>
@@ -130,7 +145,26 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
           </div>
 
           <div className="flex flex-col items-start gap-3">
-            <h3 className={TITULO_GRUPO}>{footer.pagosLabel}</h3>
+            <h3 className={TITULO_GRUPO}>{footer.redesLabel}</h3>
+            <ul className="flex flex-wrap gap-2">
+              {REDES_MARCA.map((red) => {
+                const Icono = ICONO_DE_RED[red.nombre];
+                return (
+                  <li key={red.nombre}>
+                    <a
+                      href={red.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={footer.redAria.replace('{red}', red.nombre)}
+                      className={CIRCULO_RED}
+                    >
+                      <Icono size={20} weight="fill" aria-hidden="true" />
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+            <h3 className={`${TITULO_GRUPO} mt-6`}>{footer.pagosLabel}</h3>
             <ul className="flex flex-wrap items-center gap-3">
               {FORMAS_DE_PAGO.map((forma) => (
                 <li key={forma.nombre}>

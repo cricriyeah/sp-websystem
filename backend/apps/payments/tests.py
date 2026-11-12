@@ -1678,6 +1678,39 @@ class NotificarReservaPagadaOnCommitTests(TransactionTestCase):
             reserva.save()
         return reserva
 
+    @override_settings(META_PIXEL_ID='123', META_CAPI_TOKEN='tok')
+    @mock.patch('apps.payments.meta_capi.enviar_compra')
+    @mock.patch('apps.payments.services.notificar_reserva_pagada')
+    def test_la_compra_se_avisa_a_meta_al_confirmar_con_el_id_del_pixel(self, _notificar, enviar):
+        reserva = self._crear_reserva()
+        with scope.con_empresa(self.empresa):
+            Reserva.objects.filter(pk=reserva.pk).update(atribucion={'fbp': 'fb.1.1.2'}, precio_total='1575.00')
+        intent = {
+            'id': 'pi_meta', 'amount_received': 157500, 'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+        with scope.con_empresa(self.empresa):
+            aplicar_pago_exitoso(intent, self.empresa)
+        enviar.assert_called_once()
+        datos = enviar.call_args.kwargs
+        self.assertEqual(datos['evento_id'], f'reserva-{reserva.pk}')
+        self.assertEqual(datos['atribucion'], {'fbp': 'fb.1.1.2'})
+        self.assertEqual(datos['correo'], 'ana@example.com')
+
+    @mock.patch('apps.payments.meta_capi.enviar_compra')
+    @mock.patch('apps.payments.services.notificar_reserva_pagada')
+    def test_sin_llaves_de_meta_no_se_encola_nada(self, _notificar, enviar):
+        reserva = self._crear_reserva()
+        intent = {
+            'id': 'pi_meta2', 'amount_received': 157500, 'currency': 'mxn',
+            'metadata': {'reserva_id': str(reserva.pk)},
+            'created': int(timezone.now().timestamp()),
+        }
+        with self.settings(META_PIXEL_ID='', META_CAPI_TOKEN=''), scope.con_empresa(self.empresa):
+            aplicar_pago_exitoso(intent, self.empresa)
+        enviar.assert_not_called()
+
     @mock.patch('apps.payments.services.notificar_reserva_pagada')
     def test_el_callback_ve_el_alcance_correcto_tras_el_commit(self, mock_notificar):
         reserva = self._crear_reserva()

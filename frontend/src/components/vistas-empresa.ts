@@ -16,5 +16,6 @@ export function vistaDeEmpresa(empresa: Empresa, lang: Locale, sedes: VistaEmpre
     // El sitio externo solo si el dueño confirmó que está al día.
     web: empresa.webConfirmada ? empresa.web : undefined,
     contacto: empresa.contacto,
+    permiso: empresa.permiso?.[lang],
   };
 }

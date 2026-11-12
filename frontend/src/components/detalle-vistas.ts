@@ -5,12 +5,14 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo, ServicioPersonalizacionCatalogo } from '@/lib/api';
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
+import { bloquesDeDetalle } from '@/content/detalle-extra';
 import { claveDePaquete, claveDeServicio, galeriaDeCatalogo, imagenDeCatalogo, imagenesDeCatalogo } from '@/content/imagenes-catalogo';
 import { palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
 import { colorDePaquete, colorDeServicio } from '@/lib/color-actividad';
 import { hrefPaquete, hrefServicio } from '@/lib/booking-href';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { aMoneda } from '@/lib/moneda';
+import { precioPublico } from '@/lib/iva';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
@@ -33,7 +35,7 @@ function precioDeExtra(extra: ServicioPersonalizacionCatalogo, tipoCambio: strin
   const detalle = dict.sedeContenido.detalle;
   if (!(Number(extra.precio) > 0)) return { monto: dict.serviceDetail.optionalPrice };
   return {
-    monto: detalle.extraPrecio.replace('{monto}', `${formatearPrecio(aMoneda(extra.precio, moneda, tipoCambio), moneda)} ${moneda}`),
+    monto: detalle.extraPrecio.replace('{monto}', `${formatearPrecio(precioPublico(aMoneda(extra.precio, moneda, tipoCambio)), moneda)} ${moneda}`),
     base: extra.cobrar_por_persona ? detalle.porPersona : undefined,
   };
 }
@@ -64,7 +66,7 @@ function partirIncluye(renglones: string[]) {
 function notaDeExtra(incluidas: number, extra: string, tipoCambio: string, maximo: number | null | undefined, { moneda, dict }: Comun): string | undefined {
   if (!(Number(extra) > 0)) return undefined;
   const detalle = dict.sedeContenido.detalle;
-  const monto = `${formatearPrecio(aMoneda(extra, moneda, tipoCambio), moneda)} ${moneda}`;
+  const monto = `${formatearPrecio(precioPublico(aMoneda(extra, moneda, tipoCambio)), moneda)} ${moneda}`;
   const base = maximo ? detalle.notaExtraMax.replace('{max}', String(maximo)) : detalle.notaExtra;
   return base.replace('{n}', String(incluidas)).replace('{monto}', monto);
 }
@@ -137,6 +139,7 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
         : [];
   const otros: BloqueLista[] = [];
   if (pesca && propia.incluye.length === 0) otros.push({ titulo: dict.included.bringTitle, items: dict.included.bring.map((titulo) => ({ titulo })) });
+  otros.push(...bloquesDeDetalle(clave, lang));
 
   const vista = servicio ? vistaDeServicio(servicio, lang, moneda, sede?.slug ?? '') : null;
   const porGrupo = servicio?.estrategia_precio === 'por_grupo';
@@ -239,7 +242,7 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
     ficha,
     incluye: { titulo: detalle.queIncluyePaquete, items: incluye, noIncluye: propia.noIncluye },
     extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicios, entrada) },
-    otros: [],
+    otros: bloquesDeDetalle(clave, lang),
     preguntaIncluye: null,
     compra: {
       precio: vista.precio,

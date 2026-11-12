@@ -25,6 +25,8 @@ export type VistaEmpresa = {
   /** Solo si el dueño confirmó que el sitio está al día. */
   web?: string;
   contacto?: { tipo: 'whatsapp' | 'telefono'; numero: string };
+  /** El permiso oficial con su número, en una línea bajo el nombre. */
+  permiso?: string;
 };
 
 export type TextosEmpresa = {
@@ -82,6 +84,7 @@ export function TarjetaEmpresa({ empresa, textos, horizontal = false }: { empres
       {empresa.tambienConocidaComo && (
         <p className="texto-pequeno text-foreground">{textos.tambienConocida.replace('{nombre}', empresa.tambienConocidaComo)}</p>
       )}
+      {empresa.permiso && <p className="texto-pequeno text-foreground">{empresa.permiso}</p>}
     </div>
   );
   const descripcion = <p className="max-w-[60ch] texto-cuerpo text-foreground">{empresa.descripcion}</p>;

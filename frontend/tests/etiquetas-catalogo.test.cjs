@@ -25,13 +25,17 @@ test('baseDeCobro: cada estrategia en es y en; según ruta va sin «desde»', ()
     por_ruta: ['según ruta', 'by route'],
   };
   for (const [estrategia, [es, en]] of Object.entries(casos)) {
-    // Los precios del catálogo van sin IVA (16 %): se anuncia junto a la base, salvo en «según ruta».
-    const iva = estrategia === 'por_ruta' ? '' : ' + IVA';
-    assert.deepEqual(e.baseDeCobro(estrategia, 'es'), { texto: es + iva, conDesde: estrategia !== 'por_ruta' });
-    assert.deepEqual(e.baseDeCobro(estrategia, 'en'), { texto: en + iva, conDesde: estrategia !== 'por_ruta' });
+    // El precio público lleva el IVA (16 %) y lo dice junto a la base, salvo en «según ruta».
+    const sinRuta = estrategia !== 'por_ruta';
+    assert.deepEqual(e.baseDeCobro(estrategia, 'es'), { texto: es + (sinRuta ? ' · IVA incluido' : ''), conDesde: sinRuta });
+    assert.deepEqual(e.baseDeCobro(estrategia, 'en'), { texto: en + (sinRuta ? ' · VAT included' : ''), conDesde: sinRuta });
     assert.equal(e.baseDeCobro(estrategia, 'es', 0).texto, es);
   }
   assert.equal(e.baseDeCobro('desconocida', 'es'), null);
+  // Por grupo con cuántas personas cubre: dice para cuántas en vez de «por grupo».
+  assert.equal(e.baseDeCobro('por_grupo', 'es', undefined, 2).texto, 'para 2 personas · IVA incluido');
+  assert.equal(e.baseDeCobro('por_grupo', 'en', undefined, 2).texto, 'for 2 guests · VAT included');
+  assert.equal(e.baseDeCobro('por_persona', 'es', undefined, 2).texto, 'por persona · IVA incluido');
 });
 
 test('chipDeServicio: una palabra por tipo y el tono de su familia', () => {

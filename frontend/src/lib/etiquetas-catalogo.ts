@@ -30,15 +30,25 @@ const BASES: Record<string, Record<Lang, string>> = {
   por_ruta: { es: 'según ruta', en: 'by route' },
 };
 
-/** Junto al precio: «desde $X por persona + IVA». No existe «por barco» en el backend. */
+const IVA_INCLUIDO: Record<Lang, string> = { es: ' · IVA incluido', en: ' · VAT included' };
+
+/**
+ * Junto al precio: «desde $X por persona · IVA incluido». No existe «por barco» en el backend.
+ * Plan de marketing (2026-11-11): el precio público ya lleva el IVA (el catálogo va sin él y la vista lo suma con
+ * `conIva`); así el cliente no ve un 16 % de más al pagar. Con `personas`, un precio por grupo dice para cuántos es
+ * («para 2 personas») en vez de «por grupo».
+ */
 export function baseDeCobro(
-  estrategia: string, lang: Lang, tasaIva: number = TASA_IVA,
+  estrategia: string, lang: Lang, tasaIva: number = TASA_IVA, personas?: number | null,
 ): { texto: string; conDesde: boolean } | null {
   const base = BASES[estrategia];
-  // El catálogo va sin IVA: se suma al final del checkout. Según ruta no muestra precio, así que no lo anuncia.
-  const masIva = tasaIva > 0 && estrategia !== 'por_ruta' ? ' + IVA' : '';
+  // Según ruta no muestra precio, así que no anuncia el IVA.
+  const iva = tasaIva > 0 && estrategia !== 'por_ruta' ? IVA_INCLUIDO[lang] : '';
+  const texto = estrategia === 'por_grupo' && personas && personas > 0
+    ? (lang === 'es' ? `para ${personas} persona${personas === 1 ? '' : 's'}` : `for ${personas} guest${personas === 1 ? '' : 's'}`)
+    : base?.[lang];
   // Según ruta no lleva «desde»: el precio depende de la ruta, no hay un mínimo que anunciar.
-  return base ? { texto: base[lang] + masIva, conDesde: estrategia !== 'por_ruta' } : null;
+  return base ? { texto: texto + iva, conDesde: estrategia !== 'por_ruta' } : null;
 }
 
 export type Chip = { tipo: Actividad | 'neutro'; icono?: 'hospedaje' | 'traslado' | 'paquete'; texto: string };

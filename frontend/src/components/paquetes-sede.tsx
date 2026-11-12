@@ -42,8 +42,6 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
         {paquetes.map((paquete, i) => {
           const vista = vistaDePaquete(paquete, lang, moneda);
           const incluye = incluyeDePaquete(paquete, lang);
-          const porGrupo =
-            paquete.estrategia_precio === 'por_grupo' ? textos.incluyePersonas.replace('{n}', String(paquete.personas_precio_base)) : null;
           return (
             <Link
               key={paquete.slug}
@@ -111,7 +109,6 @@ export function PaquetesSede({ id, lang, moneda, paquetes, textos, textosReserva
                           <span className="block texto-pequeno">
                             {vista.precio.aprox && `${vista.precio.aprox} · `}
                             {vista.precio.base}
-                            {porGrupo && ` · ${porGrupo}`}
                           </span>
                         </>
                       )}

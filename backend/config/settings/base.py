@@ -138,6 +138,16 @@ STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
+# API de Conversiones de Meta (apps/payments/meta_capi.py): la compra avisada desde el servidor. Vacias = apagada.
+# META_PIXEL_ID es el mismo id que NEXT_PUBLIC_META_PIXEL_ID en Vercel; el token sale del Administrador de eventos.
+META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '')
+META_CAPI_TOKEN = os.environ.get('META_CAPI_TOKEN', '')
+# Código de «Probar eventos» del Administrador de eventos; solo mientras se prueba.
+META_CAPI_TEST_CODE = os.environ.get('META_CAPI_TEST_CODE', '')
+# 1 = manda también las compras de quien no aceptó cookies. Decisión del dueño; antes hay que decirlo en el aviso
+# de privacidad (correo y teléfono viajan a Meta cifrados).
+META_CAPI_SIN_CONSENTIMIENTO = os.environ.get('META_CAPI_SIN_CONSENTIMIENTO', '0') == '1'
+
 # Confirmacion automatica al cliente (ver apps/notifications/services.py). Vacias
 # en local: sin llaves no se manda nada y el cobro sigue funcionando igual.
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')

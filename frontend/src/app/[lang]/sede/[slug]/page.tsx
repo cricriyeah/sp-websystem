@@ -27,6 +27,7 @@ import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
 import { FaqSection } from '@/components/faq-section';
 import { OpinionesEmpresas } from '@/components/opiniones-empresas';
+import { FUENTE_GOOGLE, resenasMarcaDeSede } from '@/content/resenas-marca';
 import { StructuredData } from '@/components/structured-data';
 import type { Fondo } from '@/lib/secciones-sede';
 
@@ -68,9 +69,14 @@ export default async function SedePage({ params, searchParams }: Props) {
   const textosFaq = dict.sedeContenido.faq;
   const whatsappFaq = tieneWhatsapp ? { texto: textosFaq.whatsapp, boton: textosFaq.whatsappBoton, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null;
   // Solo las confirmadas salen del servidor: el texto de una no confirmada nunca viaja al navegador.
-  const opiniones = empresas.flatMap((e) => e.resenas.filter((r) => r.confirmada).map((r) => ({
-    autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: e.nombre, logo: e.logo },
-  })));
+  // Primero las del perfil de Google de la marca (3 como máximo, sin cifra grande); luego las de cada empresa.
+  const resenasMarca = resenasMarcaDeSede(slug);
+  const opiniones = [
+    ...resenasMarca.map((r) => ({ autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: FUENTE_GOOGLE, empresa: { nombre: 'Sun Baja Experience' } })),
+    ...empresas.flatMap((e) => e.resenas.filter((r) => r.confirmada).map((r) => ({
+      autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: e.nombre, logo: e.logo },
+    }))),
+  ];
   // La galería no repite la foto del héroe, pero sí puede repetir las de las tarjetas (decisión del dueño,
   // 2026-10-21): una sede con pocas fotos reales no llegaría a las 3 que pide la galería. Temporadas
   // también puede repetir mientras las fotos sean de relleno (2026-10-19).
@@ -97,7 +103,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   const secciones = seccionesDeSede({
     servicios,
     paquetes,
-    resenas: empresas.flatMap((e) => e.resenas),
+    resenas: [...resenasMarca.map(() => ({ confirmada: true })), ...empresas.flatMap((e) => e.resenas)],
     fotos: galeria ?? [],
     faq: faq ?? [],
     temporadas: temporadas?.filas,

@@ -5,10 +5,12 @@ import { LOCALE_TAG, absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
 import { jsonLdMarca } from '@/lib/seo';
 import { SAME_AS_MARCA } from '@/content/redes-marca';
+import { CORREO_MARCA } from '@/lib/contacto';
 import { JsonLd } from '@/components/json-ld';
 import { getSedes, type Sede } from '@/lib/api';
 import { sedesActivas } from '@/lib/reconciliar-sedes';
 import { baseDeCobro, chipsDeSede, tarjetasConFoto } from '@/lib/etiquetas-catalogo';
+import { precioPublico } from '@/lib/iva';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { hrefSede } from '@/lib/routes';
 import { ANCLA_HUB } from '@/lib/secciones-sede';
@@ -80,8 +82,9 @@ function vistaDeSede(sede: SedeContenido, api: Sede | undefined, conFoto: boolea
   );
   const desde = resumen?.desde;
   const base = desde ? baseDeCobro(desde.base, lang) : null;
-  const mxn = desde ? `${formatearPrecio(Number(desde.monto_mxn), 'MXN')} MXN` : '';
-  const usd = desde ? `${formatearPrecio(Number(desde.monto_usd), 'USD')} USD` : '';
+  // El resumen va sin IVA, como el catálogo; la página lo anuncia con él (lib/etiquetas-catalogo.ts).
+  const mxn = desde ? `${formatearPrecio(precioPublico(Number(desde.monto_mxn)), 'MXN')} MXN` : '';
+  const usd = desde ? `${formatearPrecio(precioPublico(Number(desde.monto_usd)), 'USD')} USD` : '';
   return {
     slug: sede.slug,
     nombre: sede.nombre,
@@ -116,7 +119,7 @@ export default async function Home({ params }: PageProps<'/[lang]'>) {
 
   return <>
     <JsonLd datos={jsonLdMarca({
-      nombre: dict.home.title, url: absolutaEn(lang), descripcion: dict.hub.meta.description, idioma: LOCALE_TAG[lang], sameAs: SAME_AS_MARCA,
+      nombre: dict.home.title, url: absolutaEn(lang), descripcion: dict.hub.meta.description, idioma: LOCALE_TAG[lang], sameAs: SAME_AS_MARCA, email: CORREO_MARCA,
     })} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="hub" />
     <main>

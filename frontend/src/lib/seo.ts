@@ -2,6 +2,8 @@
 // para compartir propias de la página y los datos estructurados (JSON-LD). Funciones puras, sin red ni
 // React: el sitio las usa en `generateMetadata` y en los componentes de cada página.
 
+import { conIva } from './iva';
+
 /** Lo que Google suele mostrar de una descripción: unos 155 caracteres. */
 export const LARGO_DESCRIPCION = 155;
 
@@ -89,9 +91,10 @@ export function jsonLdMigas(migas: Miga[]) {
 
 /**
  * La marca y el sitio, para la portada. `sameAs` son los perfiles de la marca que confirmó el dueño
- * (`content/redes-marca.ts`); logo y teléfono no van: no están confirmados para la marca y no se inventan.
+ * (`content/redes-marca.ts`) y `email` el correo de atención; logo y teléfono no van: no están confirmados para
+ * la marca y no se inventan.
  */
-export function jsonLdMarca({ nombre, url, descripcion, idioma, sameAs = [] }: { nombre: string; url: string; descripcion: string; idioma: string; sameAs?: readonly string[] }) {
+export function jsonLdMarca({ nombre, url, descripcion, idioma, sameAs = [], email }: { nombre: string; url: string; descripcion: string; idioma: string; sameAs?: readonly string[]; email?: string }) {
   return [
     {
       '@context': 'https://schema.org',
@@ -100,6 +103,7 @@ export function jsonLdMarca({ nombre, url, descripcion, idioma, sameAs = [] }: {
       url,
       description: descripcion,
       ...(sameAs.length ? { sameAs: [...sameAs] } : {}),
+      ...(email ? { email } : {}),
       areaServed: { '@type': 'AdministrativeArea', name: 'Baja California Sur', addressCountry: 'MX' },
     },
     {
@@ -118,18 +122,19 @@ export type EntradaViaje = {
   url: string;
   /** Quién presta el servicio (la empresa), no el sitio: el sitio es la vitrina. */
   proveedor: { nombre: string };
-  /** Precio base en pesos, tal como lo entrega el catálogo (sin IVA). */
+  /** Precio base en pesos, tal como lo entrega el catálogo (sin IVA); la oferta lo publica con IVA. */
   precio?: string | null;
   /** Dónde ocurre: la sede. */
   lugar?: string;
 };
 
 /**
- * `TouristTrip` con su oferta. El precio del catálogo va SIN IVA y así se dice
- * (`valueAddedTaxIncluded: false`), igual que la página. Sin precio no hay oferta.
+ * `TouristTrip` con su oferta. El catálogo va SIN IVA; la oferta lo lleva sumado
+ * (`valueAddedTaxIncluded: true`), igual que la página. Sin precio no hay oferta.
  */
 export function jsonLdViaje({ nombre, descripcion, url, proveedor, precio, lugar }: EntradaViaje) {
-  const importe = Number(precio);
+  const neto = Number(precio);
+  const importe = Number.isFinite(neto) && neto > 0 ? conIva(neto).total : NaN;
   return {
     '@context': 'https://schema.org',
     '@type': 'TouristTrip',
@@ -151,7 +156,7 @@ export function jsonLdViaje({ nombre, descripcion, url, proveedor, precio, lugar
             '@type': 'UnitPriceSpecification',
             price: importe.toFixed(2),
             priceCurrency: 'MXN',
-            valueAddedTaxIncluded: false,
+            valueAddedTaxIncluded: true,
           },
         },
       }

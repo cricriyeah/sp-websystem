@@ -12,6 +12,7 @@ import { hrefDetalleServicio } from '@/lib/booking-href';
 import { hrefDetallePaquete } from '@/lib/routes';
 import { calcularPrecioPaquete, formatearPrecio } from '@/lib/pricing-paquete';
 import { aMoneda } from '@/lib/moneda';
+import { precioPublico } from '@/lib/iva';
 import { ventanaDeSalida } from '@/lib/horario-servicio';
 import type { VistaProducto } from '@/components/tarjeta-producto';
 
@@ -19,8 +20,9 @@ import type { VistaProducto } from '@/components/tarjeta-producto';
 const EXCLUSION = /no incluye|not include/i;
 export const esExclusion = (renglon: string) => EXCLUSION.test(renglon);
 
-/** En `/en` el precio va primero en dólares y debajo, aproximado, en pesos. */
-function precioDe(mxn: (moneda: Moneda) => number | null, lang: Locale, moneda: Moneda) {
+/** En `/en` el precio va primero en dólares y debajo, aproximado, en pesos. `neto` va sin IVA; se anuncia con él. */
+function precioDe(neto: (moneda: Moneda) => number | null, lang: Locale, moneda: Moneda) {
+  const mxn = (m: Moneda) => precioPublico(neto(m));
   const principal: Moneda = lang === 'en' ? 'USD' : moneda;
   const monto = `${formatearPrecio(mxn(principal), principal)} ${principal}`;
   // La otra moneda, aproximada, para quien piensa en la suya: pesos bajo los dólares y dólares bajo los pesos.
@@ -39,7 +41,7 @@ function horarioDe(servicio: ServicioCatalogo): string | null {
 export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda: Moneda, sedeSlug: string): VistaProducto {
   const clave = claveDeServicio(servicio.empresa_slug, servicio.slug);
   const empresa = getEmpresa(servicio.empresa_slug);
-  const base = servicio.tipo_servicio === 'transporte' ? baseDeCobro('por_ruta', lang) : baseDeCobro(servicio.estrategia_precio, lang);
+  const base = servicio.tipo_servicio === 'transporte' ? baseDeCobro('por_ruta', lang) : baseDeCobro(servicio.estrategia_precio, lang, undefined, servicio.personas_incluidas);
   const porRuta = !base || !base.conDesde;
   return {
     clave,
@@ -75,7 +77,7 @@ export function incluyeDePaquete(paquete: PaqueteCatalogo, lang: Locale): string
 export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: Moneda): VistaProducto {
   const clave = claveDePaquete(paquete.slug);
   const empresa = getEmpresa(paquete.empresa_lider_slug);
-  const base = baseDeCobro(paquete.estrategia_precio, lang);
+  const base = baseDeCobro(paquete.estrategia_precio, lang, undefined, paquete.personas_precio_base);
   return {
     clave,
     nombre: paquete.nombre,

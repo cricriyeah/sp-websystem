@@ -90,7 +90,7 @@
     "sections": [
       {
         "title": "Who is responsible for your data",
-        "body": "Sun Baja Experience, a local travel agency based at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, Baja California Sur, Mexico, is responsible for the personal data described in this notice, which we collect through this website.\n\nFor anything related to your data, including the requests described under «Your rights» below, contact us gladly on WhatsApp at the number shown on this site. We respond within 20 business days in accordance with applicable regulations."
+        "body": "Sun Baja Experience, a local travel agency based at C. Toronja 561, Indeco, Donceles 28, 23070 La Paz, Baja California Sur, Mexico, is responsible for the personal data described in this notice, which we collect through this website.\n\nFor anything related to your data, including the requests described under «Your rights» below, email us at support@salysoltours.com or message us on WhatsApp at the number shown on this site. We respond within 20 business days in accordance with applicable regulations."
       },
       {
         "title": "What we collect",
@@ -114,7 +114,7 @@
       },
       {
         "title": "Your rights (ARCO rights)",
-        "body": "You have the right to exercise your Access, Rectification, Cancellation, and Opposition (ARCO) rights at any time:\n\n- **Access** the personal data we hold about you.\n- **Rectify** any inaccurate or outdated information.\n- **Cancel** your records when no longer needed for service delivery.\n- **Oppose** specific uses of your personal details.\n\nTo exercise any of these rights, simply message us on WhatsApp or email us and we will promptly attend to your request."
+        "body": "You have the right to exercise your Access, Rectification, Cancellation, and Opposition (ARCO) rights at any time:\n\n- **Access** the personal data we hold about you.\n- **Rectify** any inaccurate or outdated information.\n- **Cancel** your records when no longer needed for service delivery.\n- **Oppose** specific uses of your personal details.\n\nTo exercise any of these rights, email us at support@salysoltours.com or message us on WhatsApp and we will promptly attend to your request."
       },
       {
         "title": "Security",
@@ -217,6 +217,8 @@
     "privacy": "Privacy notice",
     "cancellations": "Changes and cancellations",
     "rights": "All rights reserved.",
+    "redesLabel": "Follow us",
+    "redAria": "Sun Baja Experience on {red} (opens in a new tab)",
     "pagosLabel": "Payment methods",
     "pagosTarjetas": "Credit and debit cards",
     "pagosEfectivo": "Cash, for the balance on the day of the trip",
@@ -759,8 +761,7 @@
     "paquetes": {
       "titulo": "Packages",
       "noches": "{n} nights",
-      "dias": "{n} days in {sede}",
-      "incluyePersonas": "Includes {n} guests"
+      "dias": "{n} days in {sede}"
     },
     "detalle": {
       "atras": "Back",
@@ -821,8 +822,8 @@
     },
     "empresas": "Who runs each service",
     "opiniones": {
-      "titulo": "Reviews from the companies",
-      "publicadaPor": "Review published by {empresa}",
+      "titulo": "What our guests say",
+      "publicadaPor": "Review on the {empresa} profile",
       "verEn": "See on {fuente}",
       "originalEs": "Original in Spanish",
       "originalEn": "Original in English"

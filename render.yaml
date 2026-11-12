@@ -177,6 +177,11 @@ envVarGroups:
         sync: false
       - key: RESEND_FROM
         sync: false
+      # API de Conversiones de Meta (apps/payments/meta_capi.py). Vacias = apagada.
+      - key: META_PIXEL_ID
+        sync: false
+      - key: META_CAPI_TOKEN
+        sync: false
       # Direccion del negocio que recibe copia oculta de cada confirmacion. Es el
       # rastro fuera de la base para reconstruir reservas despues de restaurar un
       # respaldo (ver docs/vendors/supabase.md). Verificar bien el valor: una

@@ -36,7 +36,10 @@ export function SedeHero({ nombre, contenido, palabras, empresa, empresaSinCircu
         <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-between gap-8 px-pagina pb-10 pt-[calc(var(--nav-alto)+1.5rem)] text-hero-ink sm:pb-14">
           {palabras.length > 0 ? <PalabraRota palabras={palabras} className="texto-gigante" /> : <span />}
           <div>
-            <h1 className="texto-grande">{nombre}</h1>
+            <h1 className="texto-grande">
+              {contenido.encabezado && <span className="mb-2 block texto-etiqueta">{contenido.encabezado}</span>}
+              {nombre}
+            </h1>
             {empresa?.logoLargo ? (
               // El logo largo ya dice el nombre de la empresa: va solo, sin el sello ni el «Con …», y en blanco como el texto
               // del héroe (a color no se lee sobre el video; el dueño eligió el blanco, 2026-10-30).

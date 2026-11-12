@@ -35,6 +35,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
         posicionImagenMovil: '36% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
+        encabezado: 'Pesca deportiva en panga privada',
         subtitulo:
           'Somos capitanes de La Paz y crecimos en esta bahía. Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar lo que esté picando en el Mar de Cortés.',
         facts: [
@@ -255,6 +256,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
         posicionImagenMovil: '36% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
+        encabezado: 'Private panga sportfishing charters',
         subtitulo:
           'We are La Paz captains, and we grew up on this bay. Every morning we leave Marina La Costa with only your group on board, to go after whatever is biting in the Sea of Cortez.',
         facts: [
@@ -455,7 +457,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'Experiencias en La Ventana, BCS | Sun Baja Experience',
+      metaTitle: 'Seafari de orcas y pesca con mosca en La Ventana, BCS | Sun Baja Experience',
       metaDescription:
         'Seafari de orcas y fauna marina y pesca con mosca en La Ventana, BCS, con La Ventana Travel. Paquetes de 5 y 7 noches con hospedaje en el Hotel Casa Arrecife y traslado de aeropuerto.',
       hero: {
@@ -465,6 +467,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Pesca', 'Snorkel', 'Mar', 'Aventura'],
+        encabezado: 'Seafari de orcas y pesca con mosca',
         subtitulo:
           'La Ventana es un pueblo de playa y mucho viento, frente a la isla Cerralvo. Con La Ventana Travel sales a buscar orcas y fauna marina o a pescar con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
         facts: [],
@@ -571,7 +574,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'Experiences in La Ventana, BCS | Sun Baja Experience',
+      metaTitle: 'Orca Seafari and Fly Fishing Charters in La Ventana, BCS | Sun Baja Experience',
       metaDescription:
         'Orca and marine life seafaris and fly fishing in La Ventana, BCS, with La Ventana Travel. 5- and 7-night packages with lodging at Hotel Casa Arrecife and airport transfers.',
       hero: {
@@ -581,6 +584,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Fishing', 'Snorkel', 'Sea', 'Adventure'],
+        encabezado: 'Orca seafari and fly fishing charters',
         subtitulo:
           'La Ventana is a windy beach town facing Cerralvo Island. With La Ventana Travel you head out to look for orcas and marine life or to fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
         facts: [],

@@ -38,6 +38,7 @@ from apps.tenancy import scope
 from apps.tenancy.models import Empresa, Notificacion
 from apps.tenancy.notificaciones import registrar_notificacion, sin_romper
 
+from . import meta_capi
 from .estrategias_precio import precio_traslado_congelado
 from .pricing import a_centavos, con_iva, de_centavos, monto_inicial
 from .stripe_client import configurar_stripe
@@ -168,6 +169,11 @@ def _aplicar_pago_exitoso_transaccional(intent, empresa):
                 notificar_orden_pagada(orden)   # nunca lanza
                 orden.notificada_en = timezone.now()
                 orden.save(update_fields=['notificada_en'])
+                # Una sola vez por orden, como la notificación. El valor es lo cobrado por todas las empresas
+                # (una orden siempre se paga completa).
+                _avisar_compra_a_meta(
+                    f'orden-{orden.pk}', sum((f['monto_pagado'] or 0) for f in filas), orden.moneda, reserva,
+                )
     else:
         # Revision 4 (N1): SET LOCAL muere al COMMIT — un callback de on_commit
         # corre FUERA del `with scope.con_empresa(...)` que encolo esta
@@ -182,7 +188,25 @@ def _aplicar_pago_exitoso_transaccional(intent, empresa):
                 notificar_reserva_pagada(reserva)
 
         transaction.on_commit(_notificar)
+        _avisar_compra_a_meta(f'reserva-{reserva.pk}', reserva.precio_total, reserva.moneda, reserva)
     return APLICADO
+
+
+def _avisar_compra_a_meta(evento_id, valor, moneda, reserva):
+    """La compra a la API de Conversiones de Meta, al confirmar el cobro. Los datos se copian ANTES de encolar
+    (fuera del alcance de la empresa el callback no podria leer la reserva bajo RLS). Nunca lanza."""
+    if not meta_capi.configurada():
+        return
+    datos = {
+        'evento_id': evento_id,
+        'valor': valor,
+        'moneda': moneda,
+        'correo': reserva.correo_cliente,
+        'telefono': reserva.telefono_cliente,
+        'atribucion': dict(reserva.atribucion or {}),
+        'momento': reserva.pagada_en,
+    }
+    transaction.on_commit(lambda: meta_capi.enviar_compra(**datos))
 
 
 def _producto_de(reserva):
