@@ -823,7 +823,10 @@
     "empresas": "Who runs each service",
     "opiniones": {
       "titulo": "What our guests say",
-      "publicadaPor": "Review on the {empresa} profile",
+      "publicadaPor": "Review published by {empresa}",
+      "estrellas": "{n} out of 5 stars",
+      "verTodas": "See them all on {fuente}",
+      "resenaEn": "Review on {fuente}",
       "verEn": "See on {fuente}",
       "originalEs": "Original in Spanish",
       "originalEn": "Original in English"

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Check, Dot, Minus, Plus } from '@phosphor-icons/react/ssr';
+import { Check, Dot, Minus, Plus, Question } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import type { ColorActividad } from '@/lib/color-actividad';
 import { TarjetaEmpresa, type TextosEmpresa, type VistaEmpresa } from '@/components/tarjeta-empresa';
@@ -17,6 +17,16 @@ export type ItemLista = { titulo: string; detalle?: string };
 export type BloqueLista = { titulo: string; items: ItemLista[] };
 /** Un dato de la ficha: la cifra o el lugar en grande y debajo qué es («5–6 h» · «Duración»). */
 export type DatoFicha = { etiqueta: string; valor: string };
+/**
+ * Un bloque propio de un servicio o paquete (`content/detalle-extra.ts`), con su forma: `dias` = una fila por día con
+ * su ficha de calendario; `filas` = un dato grande con su explicación al lado; `cifras` = el recuadro arena de la ficha.
+ */
+export type BloqueDetalle =
+  | { tipo: 'dias'; titulo: string; items: { dia: string; numero: string; titulo: string; texto: string }[] }
+  | { tipo: 'filas'; titulo: string; items: { valor: string; texto: string }[]; nota?: string }
+  | { tipo: 'cifras'; titulo: string; items: { valor: string; etiqueta: string }[] }
+  /** Lo que se incluye o no, con el mismo signo que «Qué incluye»: palomita, guion o signo de pregunta (sin confirmar). */
+  | { tipo: 'incluye'; titulo: string; items: { titulo: string; estado: 'si' | 'no' | 'pendiente'; detalle?: string }[] };
 /** Un extra con su precio aparte, para leerlo como costo opcional y no como algo incluido. */
 export type ExtraDetalle = { nombre: string; detalle?: string; precio: { monto: string; base?: string } };
 
@@ -44,6 +54,8 @@ export type VistaDetalle = {
   extras: { titulo: string; items: ExtraDetalle[] };
   /** Listas sin lugar fijo (el «qué llevar» de la pesca cuando el catálogo no responde). */
   otros: BloqueLista[];
+  /** Itinerario, temporada, qué se pesca, equipo: los bloques propios de este servicio o paquete. */
+  bloques: BloqueDetalle[];
   /** Cuando una lista de «Qué incluye» no existe todavía: el enlace para preguntarlo por WhatsApp. */
   preguntaIncluye: { etiqueta: string; href: string } | null;
   compra: {
@@ -89,6 +101,79 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
         {precio.base}
       </span>
     </>
+  );
+}
+
+/** La ficha de datos: el dato en la letra de los titulares sobre un campo arena y su etiqueta, chica, debajo. */
+function Cifras({ items, className }: { items: { valor: string; etiqueta: string }[]; className?: string }) {
+  return (
+    <dl className={cn('rev grid grid-cols-2 gap-x-6 gap-y-7 bg-cafe-bruma p-6 sm:p-8', className)}>
+      {items.map((dato) => (
+        <div key={`${dato.valor}-${dato.etiqueta}`} className="flex flex-col-reverse justify-end gap-1.5">
+          <dt className="texto-pequeno">{dato.etiqueta}</dt>
+          <dd className="texto-mono-mayus text-xl font-bold leading-tight text-balance">{dato.valor}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * Los bloques propios. El itinerario es un `<ol>`: cada día lleva su ficha de calendario en el color del producto
+ * («Días» chico arriba, «2–5» grande), y a su lado qué pasa ese día. «Qué se pesca» pone el dato grande a la
+ * izquierda y la explicación a la derecha; sin líneas: los renglones se separan con espacio.
+ */
+function Bloque({ bloque, color }: { bloque: BloqueDetalle; color: ColorActividad }) {
+  return (
+    <div>
+      <h2 className="rev texto-seccion">{bloque.titulo}</h2>
+      {bloque.tipo === 'dias' && (
+        <ol className="mt-8 flex flex-col gap-8">
+          {bloque.items.map((dia) => (
+            <li key={dia.numero} className="rev grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-5 sm:grid-cols-[6.5rem_minmax(0,1fr)] sm:gap-8">
+              <span className={cn('flex aspect-square flex-col items-center justify-center text-white', CAMPO[color])}>
+                <span className="texto-pequeno">{dia.dia}</span>
+                <span className="texto-mono-mayus text-3xl font-bold leading-none sm:text-4xl">{dia.numero}</span>
+              </span>
+              <span className="pt-1">
+                <span className="block texto-mono-mayus text-xl font-bold leading-tight">{dia.titulo}</span>
+                <span className="mt-2 block max-w-[52ch] text-lg leading-snug">{dia.texto}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {bloque.tipo === 'filas' && (
+        <>
+          <dl className="mt-8 flex flex-col gap-6">
+            {bloque.items.map((fila) => (
+              <div key={fila.valor} className="rev grid gap-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-baseline sm:gap-8">
+                <dt className="texto-mono-mayus text-2xl font-bold leading-tight sm:text-3xl">{fila.valor}</dt>
+                <dd className="text-lg leading-snug">{fila.texto}</dd>
+              </div>
+            ))}
+          </dl>
+          {bloque.nota && <p className="rev mt-6 texto-cuerpo">{bloque.nota}</p>}
+        </>
+      )}
+      {bloque.tipo === 'cifras' && <Cifras items={bloque.items} className="mt-8" />}
+      {bloque.tipo === 'incluye' && (
+        <ul className="mt-6 grid gap-x-10 gap-y-4 sm:grid-cols-2">
+          {bloque.items.map((item) => {
+            const Signo = item.estado === 'si' ? Check : item.estado === 'no' ? Minus : Question;
+            return (
+              <li key={item.titulo} className="rev flex items-start gap-3">
+                <Signo size={22} weight="bold" aria-hidden="true" className="mt-0.5 shrink-0 text-cafe" />
+                <span>
+                  <span className="block text-lg font-semibold leading-snug">{item.titulo}</span>
+                  {item.detalle && <span className="mt-1 block texto-cuerpo">{item.detalle}</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -139,16 +224,7 @@ export function DetalleProducto({ vista, textos }: Props) {
                 {vista.lead && <p className="mt-5 max-w-[52ch] whitespace-pre-line text-xl leading-snug">{vista.lead}</p>}
                 {/* La ficha: lo que el turista busca primero (a qué hora, cuánto dura, cuántos caben, de dónde sale),
                     en la letra de los titulares sobre un campo arena; la etiqueta, chica, debajo de cada dato. */}
-                {vista.ficha.length > 0 && (
-                  <dl className="rev mt-8 grid grid-cols-2 gap-x-6 gap-y-7 bg-cafe-bruma p-6 sm:p-8">
-                    {vista.ficha.map((dato) => (
-                      <div key={dato.etiqueta} className="flex flex-col-reverse gap-1.5">
-                        <dt className="texto-pequeno">{dato.etiqueta}</dt>
-                        <dd className="texto-mono-mayus text-xl font-bold leading-tight text-balance">{dato.valor}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
+                {vista.ficha.length > 0 && <Cifras items={vista.ficha} className="mt-8" />}
               </div>
             )}
             {vista.galeria.length > 0 && (
@@ -220,6 +296,9 @@ export function DetalleProducto({ vista, textos }: Props) {
                   ))}
                 </ul>
               </div>
+            ))}
+            {vista.bloques.map((bloque) => (
+              <Bloque key={bloque.titulo} bloque={bloque} color={vista.color} />
             ))}
             {vista.preguntaIncluye && (
               <a href={vista.preguntaIncluye.href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center self-start font-semibold text-cafe">

@@ -139,7 +139,6 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
         : [];
   const otros: BloqueLista[] = [];
   if (pesca && propia.incluye.length === 0) otros.push({ titulo: dict.included.bringTitle, items: dict.included.bring.map((titulo) => ({ titulo })) });
-  otros.push(...bloquesDeDetalle(clave, lang));
 
   const vista = servicio ? vistaDeServicio(servicio, lang, moneda, sede?.slug ?? '') : null;
   const porGrupo = servicio?.estrategia_precio === 'por_grupo';
@@ -175,6 +174,7 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
     incluye: { titulo: detalle.queIncluye, items: incluye, noIncluye: propia.noIncluye },
     extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicio ? [servicio] : [], entrada) },
     otros,
+    bloques: bloquesDeDetalle(clave, lang),
     preguntaIncluye: servicio && !traslado && !pesca && propia.incluye.length === 0 && tieneWhatsapp
       ? { etiqueta: textos.preguntaIncluye, href: whatsappHref(textos.whatsappMensaje.replace('{sede}', sede?.nombre ?? '')) }
       : null,
@@ -242,7 +242,8 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
     ficha,
     incluye: { titulo: detalle.queIncluyePaquete, items: incluye, noIncluye: propia.noIncluye },
     extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicios, entrada) },
-    otros: bloquesDeDetalle(clave, lang),
+    otros: [],
+    bloques: bloquesDeDetalle(clave, lang),
     preguntaIncluye: null,
     compra: {
       precio: vista.precio,

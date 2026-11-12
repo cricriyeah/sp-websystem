@@ -72,7 +72,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   // Primero las del perfil de Google de la marca (3 como máximo, sin cifra grande); luego las de cada empresa.
   const resenasMarca = resenasMarcaDeSede(slug);
   const opiniones = [
-    ...resenasMarca.map((r) => ({ autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: FUENTE_GOOGLE, empresa: { nombre: 'Sun Baja Experience' } })),
+    ...resenasMarca.map((r) => ({ autor: r.autor, texto: r.texto, idioma: r.idioma, estrellas: r.estrellas, fuente: FUENTE_GOOGLE, empresa: { nombre: 'Sun Baja Experience' } })),
     ...empresas.flatMap((e) => e.resenas.filter((r) => r.confirmada).map((r) => ({
       autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: e.nombre, logo: e.logo },
     }))),
@@ -97,7 +97,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
     ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} isotipoSinFondo={protagonista?.simboloBarra} empresa={protagonista?.nombre} logoLargo={protagonista?.logoLargo} /> }),
-    opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} fondo={fondo} />,
+    opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} textosFila={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} todas={resenasMarca.length > 0 ? FUENTE_GOOGLE : undefined} />,
     ...(faq && { preguntas: (fondo: Fondo) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} fondo={fondo} /> }),
   };
   const secciones = seccionesDeSede({

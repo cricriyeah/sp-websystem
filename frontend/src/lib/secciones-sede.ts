@@ -41,10 +41,12 @@ export function seccionesDeSede({ servicios, paquetes, resenas, fotos, faq, temp
     // El pago, la cancelación y el clima van junto al producto: la política es real en las 4 empresas.
     { id: 'tranquilidad' },
   );
+  // Las reseñas junto a la política y al producto, no al final (PFD, 2026-11-11): una prueba social lejos de la compra
+  // no se ve y no cuenta.
+  if (resenas.some((r) => r.confirmada)) secciones.push({ id: 'opiniones' });
   if (conocenos && conocenos.length > 0) secciones.push({ id: 'conocenos' });
   if (hayGaleria([...fotos])) secciones.push({ id: 'galeria' });
   if (temporadas && temporadas.length > 0) secciones.push({ id: 'temporadas' });
-  if (resenas.some((r) => r.confirmada)) secciones.push({ id: 'opiniones' });
   if (faq.length > 0) secciones.push({ id: 'preguntas' });
   return secciones;
 }

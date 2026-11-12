@@ -48,7 +48,7 @@ test('galería solo con 3 fotos aptas', () => {
 test('orden fijo de la sede, con todo', () => {
   assert.deepEqual(
     ids({ paquetes: [{}], dia: [{}], conocenos: [{}], fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}] }),
-    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'conocenos', 'galeria', 'temporadas', 'opiniones', 'preguntas'],
+    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'opiniones', 'conocenos', 'galeria', 'temporadas', 'preguntas'],
   );
 });
 

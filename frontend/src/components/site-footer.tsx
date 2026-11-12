@@ -41,8 +41,8 @@ const ICONO_DE_RED: Record<RedMarca['nombre'], Icon> = {
 };
 
 const TITULO_GRUPO = 'texto-etiqueta text-cafe-bruma';
-// Círculo claro sobre el pie oscuro, del tamaño de dedo (44 px), como los de las tarjetas de empresa.
-const CIRCULO_RED = 'inline-flex size-11 items-center justify-center rounded-full bg-hero-ink/10 text-hero-ink transition-colors hover:bg-hero-ink hover:text-tinta';
+// El mismo círculo e iconos (contorno, 20 px) que las redes de las tarjetas de empresa (`tarjeta-empresa.tsx`).
+const CIRCULO_RED = 'inline-flex size-11 items-center justify-center rounded-full bg-cafe-bruma text-foreground transition-colors hover:bg-borde';
 const ENLACE = 'inline-flex min-h-11 items-center texto-cuerpo transition-colors hover:text-cafe-claro';
 
 /**
@@ -158,7 +158,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
                       aria-label={footer.redAria.replace('{red}', red.nombre)}
                       className={CIRCULO_RED}
                     >
-                      <Icono size={20} weight="fill" aria-hidden="true" />
+                      <Icono size={20} aria-hidden="true" />
                     </a>
                   </li>
                 );

@@ -823,7 +823,10 @@
     "empresas": "Quién está detrás de cada servicio",
     "opiniones": {
       "titulo": "Lo que dicen nuestros clientes",
-      "publicadaPor": "Reseña en el perfil de {empresa}",
+      "publicadaPor": "Opinión publicada por {empresa}",
+      "estrellas": "{n} de 5 estrellas",
+      "verTodas": "Ver todas en {fuente}",
+      "resenaEn": "Reseña en {fuente}",
       "verEn": "Ver en {fuente}",
       "originalEs": "Original en español",
       "originalEn": "Original en inglés"
