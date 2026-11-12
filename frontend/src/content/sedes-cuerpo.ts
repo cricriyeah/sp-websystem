@@ -476,7 +476,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Tu día en La Ventana',
         etiqueta: 'Tu día en La Ventana, momento por momento',
         momentos: [
-          { titulo: '7:00 am', texto: 'Salimos todos los días entre 7:00 y 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: '7:00 am', texto: 'Salimos todos los días entre 7:00 y 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
           { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
@@ -593,7 +593,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Your day in La Ventana',
         etiqueta: 'Your day in La Ventana, moment by moment',
         momentos: [
-          { titulo: '7:00 am', texto: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: '7:00 am', texto: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'Snorkel', texto: 'We give you the snorkeling gear and head to a reef to swim among the fish.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
           { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks. In all, 5 to 6 hours.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
