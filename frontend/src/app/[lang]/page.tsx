@@ -64,7 +64,10 @@ function fotosDeCortina(sede: SedeContenido): { src: string; alt: string }[] {
     sede.hero.imagenCortina ?? sede.hero.imagen,
     ...(sede.dia?.momentos.map((momento) => momento.foto) ?? []),
     ...(sede.temporadas?.filas.map((fila) => fila.foto) ?? []),
-  ].filter((src): src is string => Boolean(src));
+  ].filter((src): src is string => Boolean(src))
+    // Sin fotos del hospedaje (dueño, 2026-11-11): la cortina vende la experiencia, no el cuarto. El catálogo las nombra
+    // `<empresa>-hospedaje-*`; el detalle del paquete y la galería de la sede las siguen mostrando.
+    .filter((src) => !src.includes('-hospedaje'));
   return [...new Set(fuentes)].slice(0, 5).map((src) => ({ src, alt: sede.nombre }));
 }
 
