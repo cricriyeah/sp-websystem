@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { COOKIE_SOLO_SEDE, SEGUNDOS_SOLO_SEDE, decidirSoloSede } from '@/lib/solo-sede';
 import { idiomaDeCabecera } from '@/lib/idioma-navegador';
+import { rutaInexistente } from '@/lib/ruta-inexistente';
 
 const locales = ['es', 'en'] as const;
 
@@ -31,6 +32,10 @@ export function proxy(request: NextRequest) {
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
   );
+  // Una sede o empresa que no existe va a la ruta comodín, que responde 404 de verdad (`lib/ruta-inexistente.ts`).
+  if (pathnameHasLocale && rutaInexistente(pathname)) {
+    return NextResponse.rewrite(new URL(`/${pathname.slice(1, 3)}/no-existe`, request.url));
+  }
   // Sin idioma, la petición que sigue ya con idioma vuelve a decidir la cookie.
   if (pathnameHasLocale) return decision.cookie ? conCookie(NextResponse.next(), decision.cookie) : undefined;
 

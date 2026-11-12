@@ -65,10 +65,10 @@ test('transporte conserva empresa y moneda y abre el formulario de traslados', (
   assert.equal(h.hrefServicio(servicio, 'en', 'USD'), '/en/traslados?empresa=transporte-la-paz&moneda=USD');
 });
 
-test('detalle de servicio conserva sede y moneda mediante el helper compartido', () => {
+test('detalle de servicio: una sola URL, sin la sede propia de la empresa ni la moneda de siempre', () => {
   const servicio = paqueteBase().servicios_asociados[0].servicio;
-  assert.equal(
-    h.hrefDetalleServicio(servicio, 'es', 'MXN', 'la-paz'),
-    '/es/servicio/sal-y-sol/pesca-deportiva?sede=la-paz&moneda=MXN',
-  );
+  assert.equal(h.hrefDetalleServicio(servicio, 'es', 'MXN', 'la-paz'), '/es/servicio/sal-y-sol/pesca-deportiva');
+  assert.equal(h.hrefDetalleServicio(servicio, 'es', 'USD', 'la-paz'), '/es/servicio/sal-y-sol/pesca-deportiva?moneda=USD');
+  // Desde otra sede sí la lleva: el menú y el pie son los de la sede de la que vino.
+  assert.equal(h.hrefDetalleServicio(servicio, 'es', 'MXN', 'la-ventana'), '/es/servicio/sal-y-sol/pesca-deportiva?sede=la-ventana');
 });

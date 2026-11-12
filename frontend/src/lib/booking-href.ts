@@ -2,6 +2,7 @@
 import type { Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda, PaqueteCatalogo, ServicioCatalogo } from '@/lib/api';
 import type { Origen } from './origen';
+import { MARCAS } from '../content/empresas-marca';
 
 type ServicioEnlace = Pick<ServicioCatalogo, 'slug' | 'empresa_slug' | 'tipo_servicio'>;
 
@@ -52,8 +53,11 @@ export function hrefDetalleServicio(
   moneda: Moneda,
   sedeSlug?: string,
 ): string {
+  // Una sola URL por página (Search Console, 2026-11-11): sin `?moneda=MXN`, que es la de siempre, ni `?sede=` cuando es
+  // la sede de la propia empresa (la página la toma sola). Cada variante con parámetros era otra URL que Google rastreaba.
+  const sedePropia = MARCAS.find((m) => m.slug === servicio.empresa_slug)?.sede;
   return rutaConQuery(
     `/${lang}/servicio/${encodeURIComponent(servicio.empresa_slug)}/${encodeURIComponent(servicio.slug)}`,
-    { sede: sedeSlug, moneda },
+    { sede: sedeSlug === sedePropia ? undefined : sedeSlug, moneda: moneda === 'USD' ? moneda : undefined },
   );
 }

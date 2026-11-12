@@ -16,7 +16,8 @@ export function hrefSede(lang: Locale, slug: string, ancla?: string): string {
 /** La página de un paquete de la sede (F10). La moneda viaja en `?moneda=` solo si no es la de siempre. */
 export function hrefDetallePaquete(lang: Locale, sedeSlug: string, paqueteSlug: string, moneda?: 'MXN' | 'USD'): string {
   const ruta = `/${lang}/sede/${encodeURIComponent(sedeSlug)}/paquete/${encodeURIComponent(paqueteSlug)}`;
-  return moneda ? `${ruta}?moneda=${moneda}` : ruta;
+  // `?moneda=MXN` es la de siempre: solo el dólar va en la URL (una sola URL por página para los buscadores).
+  return moneda === 'USD' ? `${ruta}?moneda=${moneda}` : ruta;
 }
 
 /**

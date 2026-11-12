@@ -24,6 +24,7 @@ archivo actual. Los `.tsx` sueltos si los recoge el HMR.
 - Todo vive bajo `src/app/[lang]/` (layout, page, dictionaries). No hay `layout.tsx`/`page.tsx`
   sueltos en `src/app/` — el root layout es el de `[lang]`.
 - `src/proxy.ts` redirige segun `Accept-Language` (`lib/idioma-navegador.ts`): el primero de `es`/`en` en la lista del navegador (respeta `q`); sin cabecera, `es`; si no lee ninguno de los dos, `en` (plan de marketing 2026-11-11).
+- `src/proxy.ts` manda a la ruta comodín (404 de verdad) una sede o empresa que no existe (`lib/ruta-inexistente.ts`): con `loading.tsx` la página ya salió como 200 cuando su `notFound()` corre y Google la ve como soft 404. Los enlaces a detalle no llevan `?moneda=MXN` ni `?sede=` de la sede propia de la empresa: una sola URL por página (Search Console, 2026-11-11).
 - Diccionarios: `src/app/[lang]/dictionaries.ts` + `dictionaries/{es,en}.json`. Patron:
   agregar clave nueva a ambos JSON, usar `getDictionary(lang)` en Server Components.
 - `params` es async (`Promise`) en pages/layouts — usar `await params`, tipos `PageProps<'/[lang]'>`
