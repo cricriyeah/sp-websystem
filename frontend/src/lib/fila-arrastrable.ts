@@ -43,3 +43,13 @@ export function indiceDeFila(scrollLeft: number, inicios: number[]): number {
   }
   return mejor;
 }
+
+/**
+ * A dónde avanza la fila que se mueve sola: a la tarjeta que sigue a la que encabeza lo que se ve; desde el final
+ * (o si ya no queda recorrido), de vuelta al principio. `maximo` es el recorrido total (`scrollWidth - clientWidth`).
+ */
+export function siguienteAutomatico(scrollLeft: number, inicios: number[], maximo: number): number {
+  if (scrollLeft >= maximo - MARGEN) return 0;
+  const siguiente = inicios[indiceDeFila(scrollLeft, inicios) + 1];
+  return siguiente === undefined ? 0 : Math.min(siguiente, maximo);
+}

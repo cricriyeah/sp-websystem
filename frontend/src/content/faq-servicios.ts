@@ -37,7 +37,7 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
       },
       {
         q: '¿Cómo pago, y qué pasa si hay mal clima?',
-        a: 'Puedes pagar el 100 % en línea o apartar tu fecha con un anticipo del 30 % y pagar el resto en efectivo el día de la salida. Aceptamos pesos y dólares, y el total con IVA lo ves antes de pagar. Si el mal clima impide salir, eliges otra fecha o te devolvemos todo; y puedes cambiar la fecha sin costo hasta 48 horas antes.',
+        a: 'Puedes pagar el 100 % en línea o apartar tu fecha con un anticipo del 30 % y pagar el resto en efectivo. Aceptamos pesos y dólares, y el total con IVA lo ves antes de pagar. Si el mal clima impide salir, eliges otra fecha o te devolvemos todo; y puedes cambiar la fecha sin costo hasta 48 horas antes.',
       },
     ],
     en: [
@@ -63,7 +63,7 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
       },
       {
         q: 'How do I pay, and what happens in bad weather?',
-        a: 'You can pay 100% online, or hold your date with a 30% deposit and pay the rest in cash on the day. We accept pesos and dollars, and you see the total with tax before you pay. If bad weather keeps the boat in, you choose another date or a full refund; and you can change your date at no cost up to 48 hours before.',
+        a: 'You can pay 100% online, or hold your date with a 30% deposit and pay the rest in cash. We accept pesos and dollars, and you see the total with tax before you pay. If bad weather keeps the boat in, you choose another date or a full refund; and you can change your date at no cost up to 48 hours before.',
       },
     ],
   },

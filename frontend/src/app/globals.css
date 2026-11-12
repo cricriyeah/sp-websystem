@@ -140,6 +140,10 @@
   --curva-estandar: cubic-bezier(0.2, 0, 0, 1);
   --curva-salida: cubic-bezier(0.4, 0, 1, 1);
 
+  /* Estrellas de las reseñas (dueño, 2026-11-12): el amarillo de Google, solo para ese ícono. No es texto ni
+     acento; la cifra la lleva el aria-label. */
+  --color-estrella: #fbbc04;
+
   /* Actividades: azul = mar, coral = ciudad, verde = outside o montana. El coral tambien es el color de los errores (decision del dueño 2026-10-21): --color-error apunta a coral-hondo. */
   --color-azul: #1b607f;
   --color-azul-hondo: #14485f;

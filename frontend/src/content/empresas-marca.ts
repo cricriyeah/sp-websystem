@@ -34,7 +34,7 @@ export type MarcaEmpresa = {
 };
 
 export const MARCAS: readonly MarcaEmpresa[] = [
-  { slug: 'sal-y-sol', sede: 'la-paz', nombre: 'Sal y Sol Sportfishing', logo: '/logos/salysol.webp', simbolo: '/logos/salysol.webp', simboloBarra: '/logos/salysol-barra.webp', heroSinCirculo: true, ilustracionFondo: '/logos/logosbgsalysol.svg', logoLargo: { src: '/logos/salysol-largo.svg', blanco: '/logos/salysol-largo-blanco.svg', ancho: 3763, alto: 1481 }, logoTarjeta: '/logos/salysol-largo.svg' },
+  { slug: 'sal-y-sol', sede: 'la-paz', nombre: 'Sal y Sol Sportfishing', logo: '/logos/salysol.webp', simbolo: '/logos/salysol.webp', simboloBarra: '/logos/salysol-barra.webp', heroSinCirculo: true, ilustracionFondo: '/logos/logosbgsalysol.svg', logoLargo: { src: '/logos/salysol-largo.svg', blanco: '/logos/salysol-largo-blanco.svg', ancho: 3846, alto: 1733 }, logoTarjeta: '/logos/salysol-largo.svg' },
   { slug: 'transporte-la-paz', sede: 'la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp' },
   { slug: 'la-ventana-travel', sede: 'la-ventana', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-oscuro.webp', simbolo: '/logos/laventanatravel-simbolo.webp' },
   { slug: 'piratas-adventures', sede: 'puerto-chale', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp' },

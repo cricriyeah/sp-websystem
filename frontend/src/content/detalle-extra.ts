@@ -12,8 +12,9 @@ import type { BloqueDetalle } from '@/components/detalle-producto';
  * incluye» (palomita, guion o pregunta mientras no se confirme).
  *
  * Los itinerarios salen de lo que ya dice la página de La Ventana (seafari del día 2 al 5 o al 7, entrada al hotel
- * de 14:00 a 15:00, salida de 11:00 a 12:00) y la temporada, del dueño (2026-11-11). Lo de la pesca con mosca es de
- * RELLENO hasta que La Ventana Travel confirme especies, meses, equipo y guía: cada dato dice «por confirmar».
+ * de 14:00 a 15:00, salida de 11:00 a 12:00) y la temporada, del dueño (2026-11-11). En la pesca con mosca, equipo,
+ * guía, nivel y comida los confirmó el dueño (2026-11-12); especies, meses y captura y liberación siguen de RELLENO
+ * («por confirmar») hasta que La Ventana Travel los confirme.
  */
 // Igual que «Qué se pesca y cuándo»: el animal grande y cuándo al lado (PFD: los dos responden «qué veo y cuándo»).
 const TEMPORADA: Record<Locale, BloqueDetalle> = {
@@ -81,10 +82,10 @@ const BLOQUES: Record<string, Record<Locale, BloqueDetalle[]>> = {
         tipo: 'incluye',
         titulo: 'Equipo y guía',
         items: [
-          { titulo: 'Caña y carrete', estado: 'pendiente', detalle: 'Por confirmar si se incluyen' },
-          { titulo: 'Moscas y líneas', estado: 'pendiente', detalle: 'Por confirmar' },
-          { titulo: 'Guía de pesca a bordo', estado: 'pendiente', detalle: 'Por confirmar' },
-          { titulo: 'Para principiantes y expertos', estado: 'pendiente', detalle: 'Por confirmar' },
+          { titulo: 'Equipo de pesca', estado: 'si', detalle: 'Caña, carrete, moscas y líneas' },
+          { titulo: 'Guía de pesca a bordo', estado: 'si' },
+          { titulo: 'Para principiantes y expertos', estado: 'si' },
+          { titulo: 'Comida', estado: 'no', detalle: 'Trae tu lunch' },
         ],
       },
     ],
@@ -103,10 +104,10 @@ const BLOQUES: Record<string, Record<Locale, BloqueDetalle[]>> = {
         tipo: 'incluye',
         titulo: 'Gear and guide',
         items: [
-          { titulo: 'Rod and reel', estado: 'pendiente', detalle: 'To be confirmed whether included' },
-          { titulo: 'Flies and lines', estado: 'pendiente', detalle: 'To be confirmed' },
-          { titulo: 'Fishing guide on board', estado: 'pendiente', detalle: 'To be confirmed' },
-          { titulo: 'Beginners and experts', estado: 'pendiente', detalle: 'To be confirmed' },
+          { titulo: 'Fishing gear', estado: 'si', detalle: 'Rod, reel, flies and lines' },
+          { titulo: 'Fishing guide on board', estado: 'si' },
+          { titulo: 'Beginners and experts', estado: 'si' },
+          { titulo: 'Food', estado: 'no', detalle: 'Bring your own lunch' },
         ],
       },
     ],

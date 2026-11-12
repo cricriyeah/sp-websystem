@@ -41,3 +41,13 @@ test('indiceDeFila: la tarjeta cuyo inicio queda más cerca del recorrido', () =
   assert.equal(f.indiceDeFila(900, inicios), 2);
   assert.equal(f.indiceDeFila(0, []), 0);
 });
+
+test('siguienteAutomatico: avanza una tarjeta y al final vuelve al principio', () => {
+  const inicios = [0, 300, 600, 900];
+  assert.equal(f.siguienteAutomatico(0, inicios, 700), 300);
+  assert.equal(f.siguienteAutomatico(310, inicios, 700), 600);
+  // La que sigue pasa del recorrido: se queda en el tope (la fila ya no puede ir más lejos).
+  assert.equal(f.siguienteAutomatico(600, inicios, 700), 700);
+  assert.equal(f.siguienteAutomatico(699, inicios, 700), 0);
+  assert.equal(f.siguienteAutomatico(0, [0], 0), 0);
+});

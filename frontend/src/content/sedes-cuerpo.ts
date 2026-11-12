@@ -216,7 +216,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cómo puedo pagar?',
-          a: 'Puedes pagar el 100 % en línea con tarjeta, o apartar tu fecha con un anticipo del 30 % en línea y pagar el 70 % restante en efectivo el día de tu salida. Aceptamos pesos mexicanos (MXN) y dólares (USD).',
+          a: 'Puedes pagar el 100 % en línea con tarjeta, o apartar tu fecha con el 30 % en línea y pagar el resto en efectivo. Aceptamos pesos mexicanos (MXN) y dólares (USD).',
         },
         {
           q: '¿Qué pasa si hay mal clima?',
@@ -435,7 +435,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How can I pay?',
-          a: 'You can pay 100% online by card, or hold your date with a 30% online deposit and pay the remaining 70% in cash on the day of your trip. We accept Mexican pesos (MXN) and US dollars (USD).',
+          a: 'You can pay 100% online by card, or hold your date with 30% online and pay the rest in cash. We accept Mexican pesos (MXN) and US dollars (USD).',
         },
         {
           q: 'What happens if the weather is bad?',

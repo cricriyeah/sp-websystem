@@ -2,6 +2,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import { EmpresaSello } from '@/components/ui/empresa-sello';
 import { Star } from '@phosphor-icons/react/ssr';
 import { FilaArrastrable } from '@/components/ui/fila-arrastrable';
+import { OriginalPlegable } from '@/components/original-plegable';
 import { CLASE_FONDO, type Fondo } from '@/components/ui/section-shell';
 import { cn } from '@/components/ui/cn';
 
@@ -10,6 +11,8 @@ export type OpinionVista = {
   autor: string;
   texto: string;
   idioma: 'es' | 'en';
+  /** El texto en el otro idioma del sitio. Si la página está en ese idioma se enseña esta, con el original a un toque. */
+  traduccion?: string;
   /** La calificación que dio ese cliente (1 a 5), si la fuente la tiene. Nunca un promedio. */
   estrellas?: number;
   fuente: { nombre: string; url: string };
@@ -22,7 +25,7 @@ type Props = {
   opiniones: OpinionVista[];
   textos: Dictionary['sedeContenido']['opiniones'];
   /** Las flechas del carril, las mismas de las demás filas que se arrastran. */
-  textosFila: { anterior: string; siguiente: string };
+  textosFila: { anterior: string; siguiente: string; pausar: string; reanudar: string };
   fondo: Fondo;
   /** El perfil donde están todas (Google de la marca): un solo enlace bajo el carril en lugar de uno por tarjeta. */
   todas?: { nombre: string; url: string };
@@ -51,8 +54,12 @@ export function OpinionesEmpresas({ id, lang, opiniones, textos, textosFila, fon
         cabeza={<h2 id={`${id}-titulo`} className="rev max-w-[24ch] texto-seccion">{textos.titulo}</h2>}
         etiqueta={textos.titulo}
         textos={textosFila}
+        automatico
       >
-        {opiniones.map((cita) => (
+        {opiniones.map((cita) => {
+          // En la página del otro idioma va la traducción, dicha como tal, y el original a un toque.
+          const traducida = cita.idioma !== lang && Boolean(cita.traduccion);
+          return (
           <figure
             key={`${cita.autor}-${cita.texto.slice(0, 24)}`}
             className={cn(
@@ -63,15 +70,18 @@ export function OpinionesEmpresas({ id, lang, opiniones, textos, textosFila, fon
             <div className="flex flex-col gap-4">
             {cita.estrellas ? (
               // Las estrellas de ESTE cliente, como las dio en la fuente: llenas las que puso, vacías las que no.
-              <span role="img" aria-label={textos.estrellas.replace('{n}', String(cita.estrellas))} className="flex gap-1 text-cafe">
+              <span role="img" aria-label={textos.estrellas.replace('{n}', String(cita.estrellas))} className="flex gap-1 text-estrella">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <Star key={n} size={22} weight={n <= cita.estrellas! ? 'fill' : 'regular'} aria-hidden="true" />
                 ))}
               </span>
             ) : null}
-            <blockquote lang={cita.idioma} className="text-xl leading-snug">
-              <p className="line-clamp-[8]">“{cita.texto}”</p>
+            <blockquote lang={traducida ? lang : cita.idioma} className="text-xl leading-snug">
+              <p className="line-clamp-[8]">“{traducida ? cita.traduccion : cita.texto}”</p>
             </blockquote>
+            {traducida && (
+              <OriginalPlegable texto={cita.texto} idioma={cita.idioma} textos={{ ver: textos.verOriginal, ocultar: textos.ocultarOriginal }} />
+            )}
             </div>
             <figcaption className="flex flex-col gap-1">
               <span className="texto-mono-mayus text-lg font-bold leading-tight">{cita.autor}</span>
@@ -82,7 +92,11 @@ export function OpinionesEmpresas({ id, lang, opiniones, textos, textosFila, fon
                   </span>
                 )}
                 {cita.empresa.logo ? textos.publicadaPor.replace('{empresa}', cita.empresa.nombre) : textos.resenaEn.replace('{fuente}', cita.fuente.nombre)}
-                {cita.idioma !== lang && <> · {cita.idioma === 'es' ? textos.originalEs : textos.originalEn}</>}
+                {cita.idioma !== lang && (
+                  <> · {traducida
+                    ? (cita.idioma === 'es' ? textos.traducidaDelEs : textos.traducidaDelEn)
+                    : (cita.idioma === 'es' ? textos.originalEs : textos.originalEn)}</>
+                )}
               </span>
               {cita.fuente.url !== todas?.url && (
                 <a href={cita.fuente.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center self-start font-semibold text-cafe">
@@ -91,7 +105,8 @@ export function OpinionesEmpresas({ id, lang, opiniones, textos, textosFila, fon
               )}
             </figcaption>
           </figure>
-        ))}
+          );
+        })}
       </FilaArrastrable>
       {todas && (
         <div className="mx-auto mt-8 max-w-[1440px] px-pagina">

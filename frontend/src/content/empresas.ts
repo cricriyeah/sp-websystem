@@ -90,11 +90,7 @@ export const EMPRESAS: readonly Empresa[] = [
     tambienConocidaComo: 'La Ventana Adventures',
     redes: [{ nombre: 'Instagram', url: 'https://www.instagram.com/laventana.travel' }],
     // Sin contacto propio (dueño, 2026-11-11): el cliente escribe al WhatsApp único de la marca, que lleva la venta.
-    // RELLENO: el número llega del dueño; mientras, la tarjeta dice dónde irá.
-    permiso: {
-      es: 'Permiso SEMARNAT de observación de fauna marina: número por confirmar',
-      en: 'SEMARNAT marine wildlife watching permit: number to be confirmed',
-    },
+    // Sin permiso en la tarjeta hasta tener el número real (dueño, 2026-11-12).
     resenas: [],
     fotos: [],
   },

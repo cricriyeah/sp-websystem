@@ -45,6 +45,7 @@ const EXENTOS = {
   'src/components/checkout/ayuda-flotante.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
   'src/components/error-block.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp en el boton de ayuda' },
   'src/components/pedido/reserva-plegable.tsx': { reglas: ['color-literal'], motivo: 'color de marca de WhatsApp' },
+  'src/components/insignia-tripadvisor.tsx': { reglas: ['img-cruda'], motivo: 'marcado de TripAdvisor en un string: su script lo reescribe, React no lo pinta' },
   'src/components/paquete-card.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en F9 (Task 9.1b)' },
   'src/components/reviews-carousel.tsx': { reglas: ['boton-crudo'], motivo: 'se borra en F9 (Task 9.5)' },
   'src/lib/tokens-pago.ts': { reglas: ['color-literal'], motivo: 'única fuente de lo que Stripe Elements pide en concreto' },

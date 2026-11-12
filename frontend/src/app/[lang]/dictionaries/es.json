@@ -71,7 +71,7 @@
       },
       {
         "title": "Si pagaste un anticipo",
-        "body": "El resto se paga en efectivo el día del servicio. Si cambias a tiempo, el anticipo pasa a la nueva fecha. Si no llegas o cancelas tarde, el anticipo no se devuelve y no te cobramos el resto."
+        "body": "El resto se paga en efectivo. Si cambias a tiempo, el anticipo pasa a la nueva fecha. Si no llegas o cancelas tarde, el anticipo no se devuelve y no te cobramos el resto."
       },
       {
         "title": "Cómo pedir un cambio",
@@ -221,7 +221,7 @@
     "redAria": "Sun Baja Experience en {red} (abre en otra pestaña)",
     "pagosLabel": "Formas de pago",
     "pagosTarjetas": "Tarjetas de crédito y débito",
-    "pagosEfectivo": "Efectivo, para el resto el día del viaje",
+    "pagosEfectivo": "Aparta con el 30 % y paga el resto en efectivo",
     "pagosEfectivoCorto": "Efectivo",
     "credito": "Diseñado y desarrollado por"
   },
@@ -443,7 +443,7 @@
       "headline": "Modalidad de pago",
       "full": "100% en línea",
       "deposit": "30% de anticipo en línea",
-      "depositNote": "El 70% restante se liquida cómodamente en efectivo el día de tu viaje."
+      "depositNote": "Apartas con el 30 % y pagas el resto en efectivo."
     },
     "amountDueNow": "Total a pagar ahora",
     "promoCode": {
@@ -481,7 +481,7 @@
       "tripHeadline": "Lo que reservaste",
       "moneyHeadline": "El dinero",
       "paidLabel": "Pagaste hoy",
-      "pendingLabel": "Resto en efectivo el día del viaje",
+      "pendingLabel": "Resto en efectivo",
       "chargePaid": "Cobrado",
       "chargeProcessing": "En proceso",
       "nextHeadline": "Qué sigue",
@@ -806,9 +806,9 @@
       "cifraFecha": "48 h",
       "cifraTotal": "100 %",
       "pagoTitulo": "Cómo pagas",
-      "pagoTexto": "Pagas directo a la empresa a cargo de tu servicio. Según el servicio, pagas el total en línea o el {porcentaje} % ahora y el resto en efectivo el día del viaje.",
+      "pagoTexto": "Pagas directo a la empresa a cargo de tu servicio. Según el servicio, pagas el total en línea o apartas con el {porcentaje} % y pagas el resto en efectivo.",
       "pagoTextoTotal": "Pagas directo a la empresa a cargo de tu servicio, el total en línea al reservar.",
-      "resto": "El resto, el día del viaje, en efectivo",
+      "resto": "El resto, en efectivo",
       "climaTitulo": "Si hay mal clima",
       "climaTexto": "Si el clima no deja salir, eliges: otra fecha sin costo o te devolvemos todo lo que pagaste. Lo decide la capitanía de puerto o tu capitán, el mismo día.",
       "fechaTitulo": "Cambio de fecha",
@@ -829,7 +829,13 @@
       "resenaEn": "Reseña en {fuente}",
       "verEn": "Ver en {fuente}",
       "originalEs": "Original en español",
-      "originalEn": "Original en inglés"
+      "originalEn": "Original en inglés",
+      "traducidaDelEs": "Traducida del español",
+      "traducidaDelEn": "Traducida del inglés",
+      "verOriginal": "Ver original",
+      "ocultarOriginal": "Ocultar original",
+      "pausar": "Pausar las reseñas",
+      "reanudar": "Reanudar las reseñas"
     },
     "galeria": "Así se ven nuestras salidas",
     "temporadasAhora": "ahora",

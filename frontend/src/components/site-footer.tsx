@@ -1,8 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { EnvelopeSimple, FacebookLogo, GoogleLogo, InstagramLogo, Money, TiktokLogo, WhatsappLogo } from '@phosphor-icons/react/ssr';
+import { EnvelopeSimple, FacebookLogo, InstagramLogo, Money, TiktokLogo, WhatsappLogo } from '@phosphor-icons/react/ssr';
 import type { Icon } from '@phosphor-icons/react';
 import { BotonReservarPie } from '@/components/boton-reservar-pie';
+import { InsigniaTripadvisor } from '@/components/insignia-tripadvisor';
 import { LogoPie } from '@/components/logo-pie';
 import { botonClases } from '@/components/ui/variantes';
 import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
@@ -37,7 +38,6 @@ const ICONO_DE_RED: Record<RedMarca['nombre'], Icon> = {
   Instagram: InstagramLogo,
   TikTok: TiktokLogo,
   Facebook: FacebookLogo,
-  Google: GoogleLogo,
 };
 
 const TITULO_GRUPO = 'texto-etiqueta text-cafe-bruma';
@@ -164,6 +164,7 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
                 );
               })}
             </ul>
+            <InsigniaTripadvisor />
             <h3 className={`${TITULO_GRUPO} mt-6`}>{footer.pagosLabel}</h3>
             <ul className="flex flex-wrap items-center gap-3">
               {FORMAS_DE_PAGO.map((forma) => (

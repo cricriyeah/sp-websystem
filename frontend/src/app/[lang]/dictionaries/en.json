@@ -71,7 +71,7 @@
       },
       {
         "title": "If you paid a deposit",
-        "body": "You pay the rest in cash on the day of the service. If you change in time, the deposit moves to your new date. If you don't show up or cancel late, the deposit is not refunded and we don't charge the rest."
+        "body": "You pay the rest in cash. If you change in time, the deposit moves to your new date. If you don't show up or cancel late, the deposit is not refunded and we don't charge the rest."
       },
       {
         "title": "How to ask for a change",
@@ -221,7 +221,7 @@
     "redAria": "Sun Baja Experience on {red} (opens in a new tab)",
     "pagosLabel": "Payment methods",
     "pagosTarjetas": "Credit and debit cards",
-    "pagosEfectivo": "Cash, for the balance on the day of the trip",
+    "pagosEfectivo": "Hold your date with 30% and pay the rest in cash",
     "pagosEfectivoCorto": "Cash",
     "credito": "Designed and developed by"
   },
@@ -443,7 +443,7 @@
       "headline": "Payment option",
       "full": "100% online",
       "deposit": "30% deposit online",
-      "depositNote": "The remaining 70% is comfortably paid in cash on the morning of your trip."
+      "depositNote": "Hold your date with 30% and pay the rest in cash."
     },
     "amountDueNow": "Total due now",
     "promoCode": {
@@ -481,7 +481,7 @@
       "tripHeadline": "What you booked",
       "moneyHeadline": "The money",
       "paidLabel": "You paid today",
-      "pendingLabel": "Balance in cash on the day of the trip",
+      "pendingLabel": "Balance in cash",
       "chargePaid": "Charged",
       "chargeProcessing": "In progress",
       "nextHeadline": "What happens next",
@@ -806,9 +806,9 @@
       "cifraFecha": "48 h",
       "cifraTotal": "100 %",
       "pagoTitulo": "How you pay",
-      "pagoTexto": "You pay the company that runs your service directly. Depending on the service, you pay the full amount online or {porcentaje}% now and the rest in cash on the day of the trip.",
+      "pagoTexto": "You pay the company that runs your service directly. Depending on the service, you pay the full amount online or hold your date with {porcentaje}% and pay the rest in cash.",
       "pagoTextoTotal": "You pay the company that runs your service directly, the full amount online when you book.",
-      "resto": "The rest, on the day of the trip, in cash",
+      "resto": "The rest, in cash",
       "climaTitulo": "If the weather is bad",
       "climaTexto": "If the weather keeps the boats in, you choose: another date at no cost, or a refund of everything you paid. The port authority or your captain makes that call on the day.",
       "fechaTitulo": "Changing your date",
@@ -829,7 +829,13 @@
       "resenaEn": "Review on {fuente}",
       "verEn": "See on {fuente}",
       "originalEs": "Original in Spanish",
-      "originalEn": "Original in English"
+      "originalEn": "Original in English",
+      "traducidaDelEs": "Translated from Spanish",
+      "traducidaDelEn": "Translated from English",
+      "verOriginal": "See original",
+      "ocultarOriginal": "Hide original",
+      "pausar": "Pause the reviews",
+      "reanudar": "Resume the reviews"
     },
     "galeria": "What our trips look like",
     "temporadasAhora": "now",
