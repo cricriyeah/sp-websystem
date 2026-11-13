@@ -123,7 +123,8 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit, empresaSlug?: string): Promise<T> {
+/** `next.revalidate`: la opción de caché de `fetch` en Next (en el servidor); el navegador la ignora. */
+async function request<T>(path: string, init?: RequestInit & { next?: { revalidate?: number } }, empresaSlug?: string): Promise<T> {
   // Cada ruta exportada de este archivo empieza con '/api/' (ver getCupo,
   // etc. mas abajo) — se reescribe aqui, en un solo lugar, en vez de
   // que cada funcion exportada tenga que acordarse del slug.
@@ -420,8 +421,13 @@ export type PaqueteCatalogo = {
   servicios_asociados: PaqueteServicioCatalogo[];
 };
 
+/**
+ * Las sedes activas. `revalidate` hace que las páginas que la leen (hub, sede, nosotros, traslados) se vuelvan a
+ * generar cada minuto: sin él quedaban fijas desde el build y una sede encendida o apagada en el backoffice no
+ * aparecía ni desaparecía hasta el siguiente despliegue (Puerto Chale, 2026-11-13). En el navegador se ignora.
+ */
 export const getSedes = () =>
-  request<Sede[]>('/api/sedes/', { signal: AbortSignal.timeout(8000) });
+  request<Sede[]>('/api/sedes/', { signal: AbortSignal.timeout(8000), next: { revalidate: 60 } });
 
 // Con `lang`, el nombre y la descripción llegan ya en ese idioma (ver lib/idioma-catalogo.ts).
 export const getPaquetesSede = (sedeSlug: string, lang: Idioma = 'es') =>

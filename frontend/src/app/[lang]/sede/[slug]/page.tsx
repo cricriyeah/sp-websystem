@@ -63,7 +63,7 @@ export default async function SedePage({ params, searchParams }: Props) {
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const isotipoSede = protagonista ? (protagonista.simbolo ?? protagonista.logo) : undefined;
   // Dónde va el logo largo como sello: sin `secciones`, solo en Temporadas (Sal y Sol).
-  const largoEn = (seccion: 'temporadas' | 'galeria') =>
+  const largoEn = (seccion: 'temporadas' | 'galeria' | 'tranquilidad') =>
     (protagonista?.logoLargo?.secciones ?? ['temporadas']).includes(seccion) ? protagonista?.logoLargo : undefined;
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo, simboloBarra: protagonista.simboloBarra, logoLargo: protagonista.logoLargo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
@@ -97,7 +97,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} />,
     paquetes: (fondo) => <PaquetesSede id={ANCLA_DE.paquetes} lang={lang} moneda={moneda} paquetes={paquetes ?? []} textos={dict.sedeContenido.paquetes} textosReservar={dict.sedeContenido.queReservar} fondo={fondo} />,
     ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),
-    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} sello={isotipoSede && protagonista ? { isotipo: isotipoSede, sinFondo: protagonista.simboloBarra, empresa: protagonista.nombre } : undefined} ilustracion={protagonista?.ilustracionFondo} />,
+    tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} sello={isotipoSede && protagonista ? { isotipo: isotipoSede, sinFondo: protagonista.simboloBarra, empresa: protagonista.nombre, largo: largoEn('tranquilidad') } : undefined} ilustracion={protagonista?.ilustracionFondo} />,
     ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
     // Una sede lleva el «Conócenos» del gremio (La Paz) o el de una familia (Puerto Chale), nunca los dos.
     ...(!contenido.conocenos && contenido.familia && { conocenos: (fondo: Fondo) => <FamiliaSede id={ANCLA_DE.conocenos} familia={contenido.familia!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),

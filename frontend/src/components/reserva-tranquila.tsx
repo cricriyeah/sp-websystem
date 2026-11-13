@@ -4,6 +4,7 @@ import { WhatsappLogo } from '@phosphor-icons/react/ssr';
 import { CifraContada } from '@/components/ui/cifra-contada';
 import { botonClases } from '@/components/ui/variantes';
 import { SectionShell, type Fondo } from '@/components/ui/section-shell';
+import type { LogoLargo } from '@/content/empresas-marca';
 
 type Textos = Dictionary['sedeContenido']['tranquilidad'];
 
@@ -19,7 +20,7 @@ type Props = {
    * La empresa que opera la sede: su isotipo va como sello pegado al título y de su alto (estas reglas las respalda
    * ella); en la banda tinta, con el círculo blanco por fuera si hay isotipo transparente (`sinFondo`).
    */
-  sello?: { isotipo: string; sinFondo?: string; empresa: string };
+  sello?: { isotipo: string; sinFondo?: string; empresa: string; largo?: LogoLargo };
   /** La ilustración de la empresa detrás de las cifras (`MarcaEmpresa.ilustracionFondo`); con ella no va el sello. */
   ilustracion?: string;
 };
@@ -49,7 +50,7 @@ export function ReservaTranquila({ id, textos, porcentaje, atencion, fondo, sell
       id={id}
       fondo={fondo}
       titulo={textos.titulo}
-      sello={!ilustracion && sello ? { isotipo: sello.isotipo, sinFondo: sello.sinFondo, alt: sello.empresa } : undefined}
+      sello={!ilustracion && sello ? { isotipo: sello.isotipo, sinFondo: sello.sinFondo, alt: sello.empresa, largo: sello.largo } : undefined}
       ilustracion={ilustracion}
     >
       <ul className="mt-12 grid gap-12 md:grid-cols-3 md:gap-8 lg:mt-16">

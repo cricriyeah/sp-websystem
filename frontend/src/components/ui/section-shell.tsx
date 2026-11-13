@@ -65,10 +65,11 @@ export function SectionShell({ id, fondo, titulo, anchoTitulo = '24ch', lado, se
   const src = sello && (modo === 'aro-propio' ? sello.isotipo : sello.sinFondo!);
   // El sello en la esquina de arriba a la derecha (`SelloTitulo`): firma la sección sin quitarle el protagonismo.
   const bloqueTitulo = sello?.largo ? (
-    // El logo largo a color (Sal y Sol): del tamaño del sello y con el título bajado a su base, como en «Las pangas».
+    // El logo largo (Sal y Sol, Piratas): del tamaño del sello y con el título bajado a su base, como en «Las pangas».
+    // En la banda tinta va su versión en blanco si la tiene (el de color no se lee sobre negro).
     <div className="flex items-end justify-between gap-6">
       {h2}
-      <Image src={sello.largo.src} alt={sello.alt} width={sello.largo.ancho} height={sello.largo.alto} className={cn('rev block w-auto shrink-0', sello.largo.sello ?? 'h-12 sm:h-20 lg:h-24 xl:h-28')} />
+      <Image src={fondo === 'tinta' && sello.largo.blanco ? sello.largo.blanco : sello.largo.src} alt={sello.alt} width={sello.largo.ancho} height={sello.largo.alto} className={cn('rev block w-auto shrink-0', sello.largo.sello ?? 'h-12 sm:h-20 lg:h-24 xl:h-28')} />
     </div>
   ) : sello && modo && src ? (
       <div className="flex items-start justify-between gap-6">
