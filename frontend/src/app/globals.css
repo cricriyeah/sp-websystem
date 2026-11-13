@@ -460,10 +460,15 @@
   @media (max-width: 39.99rem) { .texto-gigante { font-size: 12.5vw; } }
   /* La palabra que rota en el héroe de sede, de orilla a orilla en el teléfono (dueño, 2026-11-13). Consola Mono mide
      0,586 em por letra y `texto-gigante` le quita 0,05 em: cada letra ocupa ~0,536 em (0,545 deja holgura). Tope de
-     22svh para que una palabra corta («Mar») no empuje el resto del héroe en una pantalla baja. */
+     22svh para que una palabra corta («Mar») no empuje el resto del héroe en una pantalla baja. El tracking se vuelve a
+     poner en el span: un `letter-spacing` en em se hereda ya convertido a px (el del párrafo, más chico) y la palabra
+     salía más ancha que la pantalla («FISHING» cortada). */
   @media (max-width: 39.99rem) {
     .palabra-ancho { container-type: inline-size; }
-    .palabra-ancho > span { font-size: min(calc(100cqw / (var(--letras) * 0.545)), 22svh); }
+    .palabra-ancho > span {
+      font-size: min(calc(100cqw / (var(--letras) * 0.55)), 22svh);
+      letter-spacing: -0.05em;
+    }
   }
   /* Una palabra que destaca sin dominar: la del medio de un titular en `texto-grande` (Conócenos). Mismo tamaño que `texto-gigante` en celular; en pantalla ancha se queda en 7 rem. */
   .texto-destacado { font-size: clamp(4.5rem, 8vw, 7rem); line-height: 0.84; letter-spacing: -0.05em; }
