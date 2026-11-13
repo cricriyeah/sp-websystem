@@ -8,7 +8,7 @@
     "paqueteTitulo": "{nombre} in {sede}, BCS: Vacation Package",
     "home": {
       "title": "Sun Baja Experience | Baja California Sur Fishing & Whale Tours",
-      "description": "Baja California Sur tours with local outfitters: La Paz fishing charters, La Ventana orca tours and vacation packages, Magdalena Bay whale watching. Weather refund."
+      "description": "Baja California Sur tours: La Paz fishing charters, swim with orcas and vacation packages in La Ventana, Magdalena Bay gray whale watching. Weather refund."
     },
     "reservar": {
       "title": "Book your fishing charter",
@@ -958,7 +958,7 @@
     "dragMap": "Drag to explore",
     "meta": {
       "title": "Sun Baja Experience | Baja California Sur Fishing & Whale Tours",
-      "description": "Baja California Sur tours with local outfitters: La Paz fishing charters, La Ventana orca tours and vacation packages, Magdalena Bay whale watching. Weather refund."
+      "description": "Baja California Sur tours: La Paz fishing charters, swim with orcas and vacation packages in La Ventana, Magdalena Bay gray whale watching. Weather refund."
     }
   },
   "destination": {

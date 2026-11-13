@@ -118,10 +118,10 @@ const FOTOS: Record<string, Foto> = {
   'servicio:piratas-adventures/avistamiento-ballenas': {
     src: '/catalogo/piratas-adventures-avistamiento-ballenas.webp',
     // La de las ballenas que tocan desde la panga va en «Conócenos»: la tarjeta abre con otra para no repetirla seguida.
-    alt: { es: 'Una ballena jorobada asoma la cabeza frente a la isla', en: 'A humpback whale lifts its head out of the water in front of the island' },
+    alt: { es: 'Una ballena gris asoma la cabeza frente a la isla', en: 'A gray whale lifts its head out of the water in front of the island' },
     mas: [
-      { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: { es: 'Dos ballenas jorobadas nadan pegadas a la panga mientras una pasajera las toca', en: 'Two humpback whales swim right beside the panga while a passenger reaches out to touch them' } },
-      { src: '/photos/puerto-chale/ballena-y-la-sierra.webp', alt: { es: 'Una ballena jorobada nada junto a la panga, con la sierra al fondo', en: 'A humpback whale swims beside the panga, with the mountains behind' } },
+      { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: { es: 'Dos ballenas grises nadan pegadas a la panga mientras una pasajera las toca', en: 'Two gray whales swim right beside the panga while a passenger reaches out to touch them' } },
+      { src: '/photos/puerto-chale/ballena-y-la-sierra.webp', alt: { es: 'Una ballena gris nada junto a la panga, con la sierra al fondo', en: 'A gray whale swims beside the panga, with the mountains behind' } },
       { src: '/photos/puerto-chale/jorobada-saltando.webp', alt: { es: 'Una ballena jorobada salta fuera del agua', en: 'A humpback whale breaches out of the water' } },
       { src: '/photos/puerto-chale/jorobada-bajo-el-agua.webp', alt: { es: 'Una ballena jorobada nada bajo el agua con las aletas abiertas', en: 'A humpback whale swims underwater with its fins spread' } },
     ],

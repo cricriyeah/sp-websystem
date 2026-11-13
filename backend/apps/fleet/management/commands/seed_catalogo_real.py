@@ -151,14 +151,14 @@ DATOS_REALES = {
                         'Extra beds and cribs cannot be added']},
     ),
     # Precios de Piratas confirmados el 2026-11-10 (sin IVA; dólar de la sede a 17.5; anticipo 30 %). Producción los
-    # recibe por la migración fleet 0056.
+    # recibe por las migraciones fleet 0057 y 0058.
     ('piratas-adventures', 'avistamiento-ballenas'): dict(
-        nombre='Avistamiento de ballena jorobada', nombre_en='Humpback whale watching',
+        nombre='Avistamiento de ballenas', nombre_en='Whale watching',
         estrategia_precio='por_grupo', precio_base=Decimal('5000'), precio_persona_extra=Decimal('600'),
         personas_incluidas=6, capacidad_maxima=8, duracion='2 h', duracion_en='2 h',
         permite_anticipo=True, porcentaje_anticipo=30,
-        descripcion='Dos horas en la bahía para ver a la ballena jorobada, que llega cada invierno a tener a sus crías. El '
-                    'precio cubre de 1 a 6 personas y caben hasta 2 más por un cargo por persona. Si quieres más tiempo, '
+        descripcion='Dos horas en Bahía Magdalena para ver ballenas. De enero a marzo, la ballena gris llega a tener a sus '
+                    'crías; a finales de año pasa la ballena jorobada. El precio cubre de 1 a 6 personas y caben hasta 2 más por un cargo por persona. Si quieres más tiempo, '
                     'hay recorridos de 3 y 4 horas: pídelos por WhatsApp.',
         incluye={'es': ['Refrescos, aguas naturales, agua mineral y sueros sin costo',
                         'Puedes traer tus propias bebidas y alimentos'],

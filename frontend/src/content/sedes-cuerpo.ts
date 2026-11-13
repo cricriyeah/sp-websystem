@@ -457,9 +457,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'Tours en La Ventana, BCS: orcas, snorkel y pesca con mosca',
+      metaTitle: 'Tours en La Ventana: nado con orcas, snorkel y pesca con mosca',
       metaDescription:
-        'Tours en La Ventana, BCS: seafari de orcas, delfines y mobulas con snorkel, pesca con mosca y paquetes de 5 y 7 noches con hotel y traslado del aeropuerto.',
+        'Tours en La Ventana, BCS: seafari para nadar con orcas y ver delfines y mobulas, snorkel, pesca con mosca y paquetes de 5 y 7 noches con hotel y traslado.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -467,9 +467,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Pesca', 'Snorkel', 'Mar', 'Aventura'],
-        encabezado: 'Tours de orcas, snorkel y pesca con mosca',
+        encabezado: 'Nado con orcas, snorkel y pesca con mosca',
         subtitulo:
-          'La Ventana es un pueblo de playa y mucho viento frente a la isla Cerralvo, en el Mar de Cortés. Con La Ventana Travel sales en lancha a buscar orcas, delfines y lobos marinos, haces snorkel o pescas con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
+          'La Ventana es un pueblo de playa y mucho viento frente a la isla Cerralvo, en el Mar de Cortés. Con La Ventana Travel sales en lancha a buscar orcas y nadar con ellas, ves delfines y lobos marinos, haces snorkel o pescas con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -478,7 +478,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         momentos: [
           { titulo: '7:00 am', texto: 'Salimos todos los días entre 7:00 y 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y si el mar lo permite nadas con ellas. También lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
       },
       galeria: [
@@ -558,8 +558,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'Es un día de pesca con mosca (fly fishing) para 2 o 3 personas como máximo. El precio es por día y por grupo, no por persona; lo ves en su tarjeta. La licencia de pesca no está incluida: es un extra que se paga aparte.',
         },
         {
-          q: '¿Cuándo se ven orcas en La Ventana?',
-          a: 'Las orcas vienen todo el año. En cada salida también buscamos delfines, lobos marinos y lo que el mar traiga ese día; desde abril llegan las ballenas jorobadas y las mobulas.',
+          q: '¿Cuándo se ven orcas en La Ventana y se puede nadar con ellas?',
+          a: 'Las orcas vienen todo el año. Si aparecen y el mar lo permite, te metes al agua a nadar con ellas; a las ballenas se les mira desde la lancha. En cada salida también buscamos delfines, lobos marinos y lo que el mar traiga ese día; desde abril llegan las ballenas jorobadas y las mobulas.',
         },
         {
           q: '¿Puedo cambiar la fecha o cancelar si hay mal clima?',
@@ -574,9 +574,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'La Ventana Tours: Orca Ocean Safari, Snorkeling & Fly Fishing',
+      metaTitle: 'La Ventana Tours: Swim with Orcas, Snorkeling & Fly Fishing',
       metaDescription:
-        'Things to do in La Ventana, BCS: orca ocean safari boat tours with snorkeling, fly fishing, and 5- or 7-night vacation packages with hotel and airport transfer.',
+        'Things to do in La Ventana, BCS: swim with orcas on an ocean safari, snorkeling, fly fishing, and 5- or 7-night vacation packages with hotel and transfers.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -584,9 +584,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Fishing', 'Snorkel', 'Sea', 'Adventure'],
-        encabezado: 'Orca ocean safari, snorkeling and fly fishing tours',
+        encabezado: 'Swim with orcas, snorkeling and fly fishing tours',
         subtitulo:
-          'La Ventana is a windy beach town facing Cerralvo Island, on the Sea of Cortez. With La Ventana Travel you take a boat out to look for orcas, dolphins and sea lions, snorkel or fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
+          'La Ventana is a windy beach town facing Cerralvo Island, on the Sea of Cortez. With La Ventana Travel you take a boat out to look for orcas and swim with them, see dolphins and sea lions, snorkel or fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -595,7 +595,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         momentos: [
           { titulo: '7:00 am', texto: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'Snorkel', texto: 'We give you the snorkeling gear and head to a reef to swim among the fish.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks. In all, 5 to 6 hours.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and if the sea allows, you swim with them. We also look for whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks. In all, 5 to 6 hours.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
       },
       galeria: [
@@ -675,8 +675,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'It is a day of fly fishing for 2 or 3 people at most. The price is per day and per group, not per person; you can see it on its card. The fishing license is not included: it is an extra, paid separately.',
         },
         {
-          q: 'When can you see orcas in La Ventana?',
-          a: 'Orcas visit all year round. On every trip we also look for dolphins, sea lions and whatever the sea brings that day; from April, humpback whales and mobula rays arrive.',
+          q: 'When can you see orcas in La Ventana, and can you swim with them?',
+          a: 'Orcas visit all year round. If they show up and the sea allows, you get in the water and swim with them; whales are watched from the boat. On every trip we also look for dolphins, sea lions and whatever the sea brings that day; from April, humpback whales and mobula rays arrive.',
         },
         {
           q: 'Can I change the date or cancel if the weather is bad?',
@@ -693,9 +693,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Avistamiento de ballenas en Bahía Magdalena | Puerto Chale, BCS',
+      metaTitle: 'Avistamiento de ballena gris en Bahía Magdalena | Puerto Chale',
       metaDescription:
-        'Tours en Puerto Chale, Bahía Magdalena: ballena jorobada de enero a marzo, safari marino con lobos marinos y pesca deportiva en el Pacífico con una familia local.',
+        'Tours en Puerto Chale, Bahía Magdalena, a 2 horas de La Paz: ballena gris de enero a marzo, ballena jorobada, safari marino y pesca deportiva en el Pacífico.',
       // Fotos reales de Piratas Adventures (dueño, 2026-11-10). Textos pasados por humanizer y por las reglas de taste.
       hero: {
         video: '/videos/puertochale-hero.mp4',
@@ -704,7 +704,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Ballenas', 'Safari', 'Pesca', 'Bahía'],
         encabezado: 'Avistamiento de ballenas, safari marino y pesca',
         subtitulo:
-          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, Baja California Sur, donde la ballena jorobada llega a parir cada invierno. Piratas Adventures, una familia de aquí, te lleva a ver ballenas, al safari marino o a pescar en el Pacífico.',
+          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, Baja California Sur, donde la ballena gris llega a parir cada invierno. Piratas Adventures, una familia de aquí, te lleva a ver ballenas, al safari marino o a pescar en el Pacífico.',
         facts: [],
       },
       // «Tu día» como en La Paz y La Ventana (dueño, 2026-11-12). Sin horas: la familia aún no da los horarios de salida.
@@ -713,7 +713,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         etiqueta: 'Tu día en Puerto Chale, momento por momento',
         momentos: [
           { titulo: 'La bahía', texto: 'Sales en la panga de la familia a Bahía Magdalena, del lado del Pacífico.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
-          { titulo: 'Ballena jorobada', texto: 'De enero a marzo la ballena jorobada está en la bahía con sus crías y se acerca a la panga.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
+          { titulo: 'Ballenas', texto: 'De enero a marzo la ballena gris está en la bahía con sus crías y se acerca a la panga. A finales de año pasa la ballena jorobada.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
           { titulo: 'Safari marino', texto: 'Ocho horas recorriendo el mar entre islas, con lobos marinos y peces. Refrescos, aguas y comida sencilla van a bordo.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
           { titulo: 'Pesca', texto: 'Ocho horas de pesca en el Pacífico. Casi todos traen su propio equipo, y la licencia se agrega a tu reserva.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
           { titulo: 'De regreso', texto: 'Al final del día, la panga vuelve al pueblo.', foto: '/photos/puerto-chale/estela-rumbo-al-pueblo.webp' },
@@ -727,30 +727,30 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         historia: [
           'Puerto Chale es un pueblo de pescadores a la orilla de Bahía Magdalena, del lado del Pacífico. Aquí el oficio pasa de padres a hijos, y Piratas Adventures es una de esas familias: llevan más de cinco generaciones saliendo al mar.',
           'Hoy salen padre e hijo. Conocen la bahía como su casa: por dónde entra el pescado, dónde se arriman las ballenas y a qué hora conviene volver.',
-          'Cada invierno ven llegar a la ballena jorobada a tener a sus crías en la bahía. Y cada temporada se la enseñan, desde su panga, a quien viene de lejos.',
+          'Cada invierno ven llegar a la ballena gris a tener a sus crías en la bahía. Y cada temporada se la enseñan, desde su panga, a quien viene de lejos.',
         ],
-        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Dos ballenas jorobadas nadan pegadas a la panga mientras una pasajera las toca', posicion: '50% 60%' },
+        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Dos ballenas grises nadan pegadas a la panga mientras una pasajera las toca', posicion: '50% 60%' },
         retrato: { src: '/photos/puerto-chale/cristian-panga-atardecer.webp', alt: 'Cristian saluda desde su panga al atardecer, con el sol cayendo detrás de la isla', posicion: '50% 45%' },
         fotos: [
           { src: '/photos/puerto-chale/pesca-submarina-en-la-panga.webp', alt: 'Buzos en neopreno suben su pesca a la panga' },
-          { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'El lomo de una ballena jorobada, cubierto de percebes, junto a la panga' },
+          { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'El lomo de una ballena gris, cubierto de percebes, junto a la panga' },
         ],
         quien: { titulo: 'QUIÉN TE LLEVA', nombre: 'Cristian Bladimir Arce Murillo', detalles: ['Más de 15 años en el mar', 'Sale con su padre'] },
         cierre: { boton: 'Reservar tu salida' },
       },
       galeria: [
-        { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'El lomo de una ballena jorobada, cubierto de percebes, junto a la panga', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'El lomo de una ballena gris, cubierto de percebes, junto a la panga', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/jorobada-saltando.webp', alt: 'Una ballena jorobada salta fuera del agua', ancho: 2000, alto: 1324, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp', alt: 'Dos lobos marinos nadan bajo el agua', ancho: 1126, alto: 2000, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/pesca-submarina-en-la-panga.webp', alt: 'Buzos en neopreno suben su pesca a la panga', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/arrecife-con-peces.webp', alt: 'Peces sobre el arrecife, con el sol entrando por la superficie', ancho: 1500, alto: 2000, empresaSlug: 'piratas-adventures' },
-        { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Dos ballenas jorobadas nadan pegadas a la panga mientras una pasajera las toca', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Dos ballenas grises nadan pegadas a la panga mientras una pasajera las toca', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/cardumen.webp', alt: 'Un cardumen de peces de colores', ancho: 1150, alto: 1369, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/jorobada-bajo-el-agua.webp', alt: 'Una ballena jorobada nada bajo el agua con las aletas abiertas', ancho: 2000, alto: 1324, empresaSlug: 'piratas-adventures' },
-        { src: '/photos/puerto-chale/ballena-bajo-el-agua.webp', alt: 'Una ballena jorobada pasa bajo el agua, a un lado de la panga', ancho: 900, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballena-bajo-el-agua.webp', alt: 'Una ballena gris pasa bajo el agua, a un lado de la panga', ancho: 900, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/buzos-con-marlines.webp', alt: 'Cuatro buzos en la panga con dos marlines', ancho: 1500, alto: 2000, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/lobos-marinos-en-la-superficie.webp', alt: 'Lobos marinos asoman en la superficie del mar', ancho: 1334, alto: 2000, empresaSlug: 'piratas-adventures' },
-        { src: '/photos/puerto-chale/ballena-y-la-sierra.webp', alt: 'Una ballena jorobada nada junto a la panga, con la sierra al fondo', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballena-y-la-sierra.webp', alt: 'Una ballena gris nada junto a la panga, con la sierra al fondo', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
       ],
       temporadas: {
         titulo: 'Qué hay cada temporada',
@@ -763,10 +763,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           {
             periodo: 'Enero a marzo',
             meses: ['Ene', 'Feb', 'Mar'],
-            estrella: 'Ballena jorobada',
-            descripcion: 'La ballena jorobada llega a la bahía a tener a sus crías. Es la temporada del avistamiento, en recorridos de 2 horas.',
+            estrella: 'Ballena gris',
+            descripcion: 'La ballena gris llega a la bahía a tener a sus crías. Es la temporada fuerte del avistamiento, en recorridos de 2 horas.',
             otras: '',
-            foto: '/photos/puerto-chale/jorobada-saltando.webp',
+            foto: '/photos/puerto-chale/ballena-de-cerca.webp',
             fuerte: true,
           },
           {
@@ -774,7 +774,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             meses: ['Oct', 'Nov', 'Dic'],
             estrella: 'Safari marino',
             descripcion: 'Ocho horas recorriendo el mar, con el lonche y las bebidas a bordo.',
-            otras: '',
+            otras: 'Ballena jorobada',
             foto: '/photos/puerto-chale/cardumen.webp',
             fuerte: false,
           },
@@ -792,11 +792,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       faq: [
         {
           q: '¿Cuándo es la temporada de ballenas en Bahía Magdalena?',
-          a: 'De enero a marzo, cuando la ballena jorobada entra a la bahía a tener a sus crías. El safari marino es de octubre a diciembre y la pesca deportiva, todo el año.',
+          a: 'La temporada fuerte es de enero a marzo, cuando la ballena gris entra a la bahía a tener a sus crías. A finales de año pasa la ballena jorobada. El safari marino es de octubre a diciembre y la pesca deportiva, todo el año.',
         },
         {
-          q: '¿Tengo que llevar mi equipo de pesca?',
-          a: 'Casi todos los que vienen a pescar traen su equipo: cañas, curricanes y señuelos. Si no tienes, pregúntanos por WhatsApp antes de reservar.',
+          q: '¿Cómo llego a Puerto Chale?',
+          a: 'Por carretera: desde La Paz son entre 1 hora 40 minutos y 2 horas de camino. Si necesitas el punto exacto de salida, escríbenos por WhatsApp.',
+        },
+        {
+          q: '¿Tengo que llevar mi equipo de pesca? ¿La licencia está incluida?',
+          a: 'Casi todos los que vienen a pescar traen su equipo: cañas, curricanes y señuelos. Si no tienes, pregúntanos por WhatsApp antes de reservar. La licencia de pesca no está incluida: la CONAPESCA pide una por cada persona que pesca a bordo, y puedes agregarla al reservar.',
         },
         {
           q: '¿Incluye comida y bebidas?',
@@ -804,19 +808,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cuántas personas caben?',
-          a: 'En el safari marino el precio es para 6 personas y caben 2 más con un cargo por persona. En el avistamiento de ballena jorobada el precio cubre de 1 a 6 personas, y cada persona extra paga $600 MXN, hasta 8. La pesca es para hasta 4. Si son más, se puede sumar otra embarcación avisando con anticipación.',
+          a: 'En el safari marino el precio es para 6 personas y caben 2 más con un cargo por persona. En el avistamiento de ballenas el precio cubre de 1 a 6 personas, y cada persona extra paga $600 MXN, hasta 8. La pesca es para hasta 4. Si son más, se puede sumar otra embarcación avisando con anticipación.',
         },
         {
-          q: '¿Cuánto dura el avistamiento de ballena jorobada?',
+          q: '¿Cuánto dura el avistamiento de ballenas?',
           a: 'El recorrido que reservas aquí es de 2 horas. Si quieres más tiempo, hay recorridos de 3 y 4 horas: pídelos por WhatsApp.',
         },
         {
           q: '¿Pueden ir niños?',
-          a: 'A ver la ballena jorobada, sí. En la pesca, los niños y jóvenes vienen con sus padres. En el safari marino, los menores de edad necesitan una carta responsiva firmada por su madre, padre o tutor.',
-        },
-        {
-          q: '¿La licencia de pesca está incluida?',
-          a: 'No. La CONAPESCA, que regula la pesca en México, pide una licencia por cada persona que pesca a bordo. Puedes agregarla al reservar.',
+          a: 'A ver ballenas, sí. En la pesca, los niños y jóvenes vienen con sus padres. En el safari marino, los menores de edad necesitan una carta responsiva firmada por su madre, padre o tutor.',
         },
         {
           q: '¿Puedo cambiar la fecha o cancelar si hay mal clima?',
@@ -831,9 +831,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Magdalena Bay Whale Watching Tours from Puerto Chale, BCS',
+      metaTitle: 'Magdalena Bay Gray Whale Watching Tours from Puerto Chale',
       metaDescription:
-        'Mag Bay whale watching from Puerto Chale: humpback whales January to March, a marine safari with sea lions and Pacific sportfishing with a local fishing family.',
+        'Mag Bay whale watching from Puerto Chale, 2 hours from La Paz: gray whales January to March, humpback whales, a marine safari and Pacific sportfishing.',
       hero: {
         video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
@@ -841,7 +841,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Whales', 'Safari', 'Fishing', 'Bay'],
         encabezado: 'Whale watching, marine safari and fishing tours',
         subtitulo:
-          'Puerto Chale is a fishing village on Magdalena Bay (Mag Bay), Baja California Sur, where humpback whales come to calve every winter. Piratas Adventures, a local family, takes you whale watching, on a marine safari or fishing on the Pacific.',
+          'Puerto Chale is a fishing village on Magdalena Bay (Mag Bay), Baja California Sur, where gray whales come to calve every winter. Piratas Adventures, a local family, takes you whale watching, on a marine safari or fishing on the Pacific.',
         facts: [],
       },
       dia: {
@@ -849,7 +849,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         etiqueta: 'Your day in Puerto Chale, moment by moment',
         momentos: [
           { titulo: 'The bay', texto: 'You head out in the family panga onto Magdalena Bay, on the Pacific side.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
-          { titulo: 'Humpback whales', texto: 'From January to March the humpback whales are in the bay with their calves and come close to the panga.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
+          { titulo: 'Whales', texto: 'From January to March the gray whales are in the bay with their calves and come close to the panga. Late in the year, humpback whales pass through.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
           { titulo: 'Marine safari', texto: 'Eight hours at sea among the islands, with sea lions and fish. Sodas, water and simple food are on board.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
           { titulo: 'Fishing', texto: 'Eight hours of fishing on the Pacific. Almost everyone brings their own gear, and the license is added to your booking.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
           { titulo: 'Heading back', texto: 'At the end of the day, the panga heads back to the village.', foto: '/photos/puerto-chale/estela-rumbo-al-pueblo.webp' },
@@ -862,30 +862,30 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         historia: [
           'Puerto Chale is a fishing village on the shore of Magdalena Bay, on the Pacific side. Here the trade passes from parents to children, and Piratas Adventures is one of those families: they have been going out to sea for more than five generations.',
           'Today a father and his son go out. They know the bay like their own home: where the fish come in, where the whales come close and what time it is best to head back.',
-          'Every winter they watch the humpback whales arrive to give birth in the bay. And every season they show them, from their panga, to people who come from far away.',
+          'Every winter they watch the gray whales arrive to give birth in the bay. And every season they show them, from their panga, to people who come from far away.',
         ],
-        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Two humpback whales swim right beside the panga while a passenger reaches out to touch them', posicion: '50% 60%' },
+        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Two gray whales swim right beside the panga while a passenger reaches out to touch them', posicion: '50% 60%' },
         retrato: { src: '/photos/puerto-chale/cristian-panga-atardecer.webp', alt: 'Cristian waves from his panga at sunset, with the sun going down behind the island', posicion: '50% 45%' },
         fotos: [
           { src: '/photos/puerto-chale/pesca-submarina-en-la-panga.webp', alt: 'Divers in wetsuits bring their catch aboard the panga' },
-          { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'The barnacled back of a humpback whale beside the panga' },
+          { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'The barnacled back of a gray whale beside the panga' },
         ],
         quien: { titulo: 'WHO TAKES YOU OUT', nombre: 'Cristian Bladimir Arce Murillo', detalles: ['More than 15 years at sea', 'Goes out with his father'] },
         cierre: { boton: 'Book your trip' },
       },
       galeria: [
-        { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'The barnacle-covered back of a humpback whale beside the panga', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'The barnacle-covered back of a gray whale beside the panga', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/jorobada-saltando.webp', alt: 'A humpback whale breaches out of the water', ancho: 2000, alto: 1324, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp', alt: 'Two sea lions swim underwater', ancho: 1126, alto: 2000, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/pesca-submarina-en-la-panga.webp', alt: 'Divers in wetsuits bring their catch aboard the panga', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/arrecife-con-peces.webp', alt: 'Fish over the reef, with sunlight coming through the surface', ancho: 1500, alto: 2000, empresaSlug: 'piratas-adventures' },
-        { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Two humpback whales swim right beside the panga while a passenger reaches out to touch them', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Two gray whales swim right beside the panga while a passenger reaches out to touch them', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/cardumen.webp', alt: 'A school of colorful fish', ancho: 1150, alto: 1369, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/jorobada-bajo-el-agua.webp', alt: 'A humpback whale swims underwater with its fins spread', ancho: 2000, alto: 1324, empresaSlug: 'piratas-adventures' },
-        { src: '/photos/puerto-chale/ballena-bajo-el-agua.webp', alt: 'A humpback whale passes under the water beside the panga', ancho: 900, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballena-bajo-el-agua.webp', alt: 'A gray whale passes under the water beside the panga', ancho: 900, alto: 1600, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/buzos-con-marlines.webp', alt: 'Four divers in the panga with two marlin', ancho: 1500, alto: 2000, empresaSlug: 'piratas-adventures' },
         { src: '/photos/puerto-chale/lobos-marinos-en-la-superficie.webp', alt: 'Sea lions pop up at the surface', ancho: 1334, alto: 2000, empresaSlug: 'piratas-adventures' },
-        { src: '/photos/puerto-chale/ballena-y-la-sierra.webp', alt: 'A humpback whale swims beside the panga, with the mountains behind', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
+        { src: '/photos/puerto-chale/ballena-y-la-sierra.webp', alt: 'A gray whale swims beside the panga, with the mountains behind', ancho: 1200, alto: 1600, empresaSlug: 'piratas-adventures' },
       ],
       temporadas: {
         titulo: 'What’s on each season',
@@ -898,10 +898,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           {
             periodo: 'January to March',
             meses: ['Jan', 'Feb', 'Mar'],
-            estrella: 'Humpback whales',
-            descripcion: 'The humpback whales come into the bay to give birth. This is whale-watching season, in 2-hour trips.',
+            estrella: 'Gray whales',
+            descripcion: 'The gray whales come into the bay to give birth. This is peak whale-watching season, in 2-hour trips.',
             otras: '',
-            foto: '/photos/puerto-chale/jorobada-saltando.webp',
+            foto: '/photos/puerto-chale/ballena-de-cerca.webp',
             fuerte: true,
           },
           {
@@ -909,7 +909,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             meses: ['Oct', 'Nov', 'Dec'],
             estrella: 'Marine safari',
             descripcion: 'Eight hours out at sea, with lunch and drinks on board.',
-            otras: '',
+            otras: 'Humpback whales',
             foto: '/photos/puerto-chale/cardumen.webp',
             fuerte: false,
           },
@@ -927,11 +927,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       faq: [
         {
           q: 'When is whale watching season in Magdalena Bay?',
-          a: 'January to March, when the humpback whales come into the bay to give birth. The marine safari runs October to December, and sportfishing all year.',
+          a: 'Peak season is January to March, when the gray whales come into the bay to give birth. Late in the year, humpback whales pass through. The marine safari runs October to December, and sportfishing all year.',
         },
         {
-          q: 'Do I need to bring my own fishing gear?',
-          a: 'Most people who come to fish bring their own gear: rods, trolling lures and baits. If you don’t have any, ask us on WhatsApp before you book.',
+          q: 'How do I get to Puerto Chale?',
+          a: 'By road: from La Paz it is a drive of 1 hour 40 minutes to 2 hours. If you need the exact meeting point, message us on WhatsApp.',
+        },
+        {
+          q: 'Do I need to bring my own fishing gear? Is the license included?',
+          a: 'Most people who come to fish bring their own gear: rods, trolling lures and baits. If you don’t have any, ask us on WhatsApp before you book. The fishing license is not included: CONAPESCA requires one for each person fishing on board, and you can add it when you book.',
         },
         {
           q: 'Are food and drinks included?',
@@ -939,19 +943,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How many people fit?',
-          a: 'The marine safari is priced for 6 people, with room for 2 more at a per-person charge. Humpback whale watching covers 1 to 6 people, and each extra person pays $600 MXN, up to 8. Fishing is for up to 4. For a bigger group, another boat can be added with some notice.',
+          a: 'The marine safari is priced for 6 people, with room for 2 more at a per-person charge. Whale watching covers 1 to 6 people, and each extra person pays $600 MXN, up to 8. Fishing is for up to 4. For a bigger group, another boat can be added with some notice.',
         },
         {
-          q: 'How long is the humpback whale trip?',
+          q: 'How long is the whale watching trip?',
           a: 'The trip you book here is 2 hours. If you want more time, there are 3- and 4-hour trips: ask for them on WhatsApp.',
         },
         {
           q: 'Can children come?',
-          a: 'To see the humpback whales, yes. On fishing trips, children and teens come with their parents. On the marine safari, minors need a release letter signed by a parent or guardian.',
-        },
-        {
-          q: 'Is the fishing license included?',
-          a: 'No. CONAPESCA, which regulates fishing in Mexico, requires a license for each person fishing on board. You can add it when you book.',
+          a: 'To see the whales, yes. On fishing trips, children and teens come with their parents. On the marine safari, minors need a release letter signed by a parent or guardian.',
         },
         {
           q: 'Can I change the date or cancel if the weather is bad?',

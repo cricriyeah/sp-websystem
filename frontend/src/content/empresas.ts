@@ -97,8 +97,8 @@ export const EMPRESAS: readonly Empresa[] = [
   {
     ...marca('piratas-adventures'),
     descripcion: {
-      es: 'Una familia local de Puerto Chale: safari marino, avistamiento de ballena jorobada y pesca deportiva en el Pacífico.',
-      en: 'A local family in Puerto Chale: marine safaris, humpback whale watching and sportfishing on the Pacific.',
+      es: 'Una familia local de Puerto Chale: safari marino, avistamiento de ballena gris y jorobada y pesca deportiva en el Pacífico.',
+      en: 'A local family in Puerto Chale: marine safaris, gray and humpback whale watching and sportfishing on the Pacific.',
     },
     web: 'https://piratas-landing.vercel.app/',
     webConfirmada: true,

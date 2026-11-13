@@ -192,8 +192,8 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
         a: 'El precio es por grupo y cubre de 1 a 6 personas. Caben hasta 2 más, hasta 8 en total, por un cargo por persona que ves antes de pagar.',
       },
       {
-        q: '¿Cuándo hay ballena jorobada?',
-        a: 'De enero a marzo. Cada invierno la ballena jorobada llega a Bahía Magdalena a tener a sus crías, y es la temporada del avistamiento.',
+        q: '¿Cuándo hay ballenas?',
+        a: 'La temporada fuerte es de enero a marzo: cada invierno la ballena gris llega a Bahía Magdalena a tener a sus crías. A finales de año pasa la ballena jorobada.',
       },
       {
         q: '¿Cómo pago, y qué pasa si hay mal clima?',
@@ -214,8 +214,8 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
         a: 'The price is per group and covers 1 to 6 people. Up to 2 more can come, 8 in total, for a per-person charge you see before you pay.',
       },
       {
-        q: 'When are the humpback whales here?',
-        a: 'January to March. Every winter the humpback whales come to Magdalena Bay to give birth, and that is whale watching season.',
+        q: 'When are the whales here?',
+        a: 'Peak season is January to March: every winter the gray whales come to Magdalena Bay to give birth. Late in the year, humpback whales pass through.',
       },
       {
         q: 'How do I pay, and what happens in bad weather?',
