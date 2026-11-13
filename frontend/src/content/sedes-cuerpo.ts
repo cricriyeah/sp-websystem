@@ -23,21 +23,21 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         horarioApertura: '06:00',
         horarioCierre: '07:00',
       },
-      metaTitle: 'Tours de pesca deportiva en La Paz, BCS | Sal y Sol Sportfishing',
+      metaTitle: 'Pesca deportiva en La Paz, BCS: tours en panga privada | Sal y Sol',
       metaDescription:
-        'Pesca deportiva en La Paz con capitanes que crecieron en la bahía. Panga solo para tu grupo, hasta 5 personas, saliendo cada mañana de Marina La Costa.',
+        'Tours de pesca deportiva en La Paz con capitanes locales: dorado, marlín, pez vela y jurel en el Mar de Cortés. Panga privada para hasta 5, desde Marina La Costa.',
       hero: {
         video: null,
         imagen: '/photos/panga-rumbo-a-la-pesca.webp',
-        alt: 'Panga de Sal y Sol a toda velocidad en el Mar de Cortés, con los pescadores a bordo',
+        alt: 'Panga de pesca deportiva de Sal y Sol a toda velocidad en el Mar de Cortés, frente a La Paz, con los pescadores a bordo',
         // La cortina del hub conserva su foto.
         imagenCortina: '/photos/cola-amarilla-acantilado.webp',
         // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
         posicionImagenMovil: '36% 50%',
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
-        encabezado: 'Pesca deportiva en panga privada',
+        encabezado: 'Tours de pesca deportiva en panga privada',
         subtitulo:
-          'Somos capitanes de La Paz y crecimos en esta bahía. Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar lo que esté picando en el Mar de Cortés.',
+          'Somos capitanes de La Paz y crecimos en esta bahía. Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar dorado, marlín o lo que esté picando en el Mar de Cortés.',
         facts: [
           { value: '6 a 7 horas', label: 'En el mar' },
           { value: '{desde} a {hasta}', label: 'Tú eliges la hora de salida' },
@@ -199,8 +199,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       faq: [
         {
-          q: '¿Dónde veo qué incluye cada servicio?',
-          a: 'Cada servicio tiene su propia lista de lo que incluye, en su tarjeta y en su página. Revísala antes de reservar; si te queda una duda, escríbenos por WhatsApp.',
+          q: '¿Qué se pesca en La Paz y cuál es la mejor temporada?',
+          a: 'De junio a octubre es la temporada fuerte: llegan el marlín y el dorado. De enero a abril pica el jurel, con pargo y cabrilla, y en noviembre y diciembre, la sierra. También salen pez vela y atún aleta amarilla. Lo que incluye cada salida está en su tarjeta.',
         },
         {
           q: '¿Cuántas personas caben en la embarcación?',
@@ -244,21 +244,21 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         horarioApertura: '06:00',
         horarioCierre: '07:00',
       },
-      metaTitle: 'Sportfishing Charters in La Paz, BCS | Sal y Sol Sportfishing',
+      metaTitle: 'La Paz Fishing Charters: Private Panga Sportfishing | Sal y Sol',
       metaDescription:
-        'Sportfishing in La Paz with captains who grew up on the bay. A private panga for your group of up to 5, leaving Marina La Costa every morning.',
+        'La Paz sportfishing charters with local captains: mahi mahi, marlin, sailfish and yellowtail in the Sea of Cortez. Private panga for up to 5, from Marina La Costa.',
       hero: {
         video: null,
         imagen: '/photos/panga-rumbo-a-la-pesca.webp',
-        alt: 'A Sal y Sol panga at full speed on the Sea of Cortez, with the anglers on board',
+        alt: 'A Sal y Sol sportfishing panga at full speed on the Sea of Cortez off La Paz, with the anglers on board',
         // La cortina del hub conserva su foto.
         imagenCortina: '/photos/cola-amarilla-acantilado.webp',
         // Los tres pescadores están entre 31 % y 48 % del ancho: con 36 % la ventana del móvil los abarca.
         posicionImagenMovil: '36% 50%',
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
-        encabezado: 'Private panga sportfishing charters',
+        encabezado: 'Private panga fishing charters',
         subtitulo:
-          'We are La Paz captains, and we grew up on this bay. Every morning we leave Marina La Costa with only your group on board, to go after whatever is biting in the Sea of Cortez.',
+          'We are La Paz captains, and we grew up on this bay. Every morning we leave Marina La Costa with only your group on board, to go after mahi mahi, marlin or whatever is biting in the Sea of Cortez.',
         facts: [
           { value: '6 to 7 hours', label: 'On the water' },
           { value: '{desde} to {hasta}', label: 'You pick the departure time' },
@@ -418,8 +418,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       faq: [
         {
-          q: 'Where can I see what each service includes?',
-          a: 'Each service has its own list of what it includes, on its card and on its page. Check it before you book; if anything is unclear, message us on WhatsApp.',
+          q: 'What can I catch in La Paz, and when is the best season?',
+          a: 'June to October is peak season, when marlin and dorado (mahi mahi) arrive. From January to April it is yellowtail, with snapper and cabrilla, and in November and December, sierra. Sailfish and yellowfin tuna come up too. What each trip includes is on its card.',
         },
         {
           q: 'How many people fit on the boat?',
@@ -457,9 +457,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'Seafari de orcas y pesca con mosca en La Ventana, BCS | Sun Baja Experience',
+      metaTitle: 'Tours en La Ventana, BCS: orcas, snorkel y pesca con mosca',
       metaDescription:
-        'Seafari de orcas y fauna marina y pesca con mosca en La Ventana, BCS, con La Ventana Travel. Paquetes de 5 y 7 noches con hospedaje en el Hotel Casa Arrecife y traslado de aeropuerto.',
+        'Tours en La Ventana, BCS: seafari de orcas, delfines y mobulas con snorkel, pesca con mosca y paquetes de 5 y 7 noches con hotel y traslado del aeropuerto.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -467,9 +467,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Pesca', 'Snorkel', 'Mar', 'Aventura'],
-        encabezado: 'Seafari de orcas y pesca con mosca',
+        encabezado: 'Tours de orcas, snorkel y pesca con mosca',
         subtitulo:
-          'La Ventana es un pueblo de playa y mucho viento, frente a la isla Cerralvo. Con La Ventana Travel sales a buscar orcas y fauna marina o a pescar con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
+          'La Ventana es un pueblo de playa y mucho viento frente a la isla Cerralvo, en el Mar de Cortés. Con La Ventana Travel sales en lancha a buscar orcas, delfines y lobos marinos, haces snorkel o pescas con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -555,11 +555,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cómo funciona la pesca con mosca?',
-          a: 'Es un día de pesca con mosca (fly fishing) para 2 o 3 personas como máximo. El precio es por día y por grupo, no por persona; lo ves en su tarjeta.',
+          a: 'Es un día de pesca con mosca (fly fishing) para 2 o 3 personas como máximo. El precio es por día y por grupo, no por persona; lo ves en su tarjeta. La licencia de pesca no está incluida: es un extra que se paga aparte.',
         },
         {
-          q: '¿La licencia de pesca está incluida?',
-          a: 'No. La licencia de pesca es un extra y se paga aparte.',
+          q: '¿Cuándo se ven orcas en La Ventana?',
+          a: 'Las orcas vienen todo el año. En cada salida también buscamos delfines, lobos marinos y lo que el mar traiga ese día; desde abril llegan las ballenas jorobadas y las mobulas.',
         },
         {
           q: '¿Puedo cambiar la fecha o cancelar si hay mal clima?',
@@ -574,9 +574,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'la-ventana',
       empresaProtagonistaSlug: 'la-ventana-travel',
       negocio: null,
-      metaTitle: 'Orca Seafari and Fly Fishing Charters in La Ventana, BCS | Sun Baja Experience',
+      metaTitle: 'La Ventana Tours: Orca Ocean Safari, Snorkeling & Fly Fishing',
       metaDescription:
-        'Orca and marine life seafaris and fly fishing in La Ventana, BCS, with La Ventana Travel. 5- and 7-night packages with lodging at Hotel Casa Arrecife and airport transfers.',
+        'Things to do in La Ventana, BCS: orca ocean safari boat tours with snorkeling, fly fishing, and 5- or 7-night vacation packages with hotel and airport transfer.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -584,9 +584,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         posicionImagenMovil: '68% 50%',
         imagenCortina: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
         palabras: ['Orcas', 'Seafari', 'Fishing', 'Snorkel', 'Sea', 'Adventure'],
-        encabezado: 'Orca seafari and fly fishing charters',
+        encabezado: 'Orca ocean safari, snorkeling and fly fishing tours',
         subtitulo:
-          'La Ventana is a windy beach town facing Cerralvo Island. With La Ventana Travel you head out to look for orcas and marine life or to fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
+          'La Ventana is a windy beach town facing Cerralvo Island, on the Sea of Cortez. With La Ventana Travel you take a boat out to look for orcas, dolphins and sea lions, snorkel or fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -663,7 +663,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'Children of all ages are welcome. Each studio is for 2 people with one king size bed, and extra beds and cribs cannot be added: keep this in mind when you choose how many rooms to book.',
         },
         {
-          q: 'What time does the seafari leave, and how long does it last?',
+          q: 'What time does the ocean safari leave, and how long does it last?',
           a: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños. The trip lasts 5 to 6 hours and includes some food, water and soft drinks, and snorkeling gear.',
         },
         {
@@ -672,11 +672,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How does fly fishing work?',
-          a: 'It is a day of fly fishing for 2 or 3 people at most. The price is per day and per group, not per person; you can see it on its card.',
+          a: 'It is a day of fly fishing for 2 or 3 people at most. The price is per day and per group, not per person; you can see it on its card. The fishing license is not included: it is an extra, paid separately.',
         },
         {
-          q: 'Is the fishing license included?',
-          a: 'No. The fishing license is an extra and is paid separately.',
+          q: 'When can you see orcas in La Ventana?',
+          a: 'Orcas visit all year round. On every trip we also look for dolphins, sea lions and whatever the sea brings that day; from April, humpback whales and mobula rays arrive.',
         },
         {
           q: 'Can I change the date or cancel if the weather is bad?',
@@ -693,17 +693,18 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Experiencias en Puerto Chale, BCS | Sun Baja Experience',
+      metaTitle: 'Avistamiento de ballenas en Bahía Magdalena | Puerto Chale, BCS',
       metaDescription:
-        'Safari marino, ballena jorobada y pesca deportiva en el Pacífico con Piratas Adventures, una familia de Puerto Chale, en Bahía Magdalena.',
+        'Tours en Puerto Chale, Bahía Magdalena: ballena jorobada de enero a marzo, safari marino con lobos marinos y pesca deportiva en el Pacífico con una familia local.',
       // Fotos reales de Piratas Adventures (dueño, 2026-11-10). Textos pasados por humanizer y por las reglas de taste.
       hero: {
         video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
         posicionImagenMovil: '58% 50%',
         palabras: ['Ballenas', 'Safari', 'Pesca', 'Bahía'],
+        encabezado: 'Avistamiento de ballenas, safari marino y pesca',
         subtitulo:
-          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, a donde la ballena jorobada llega cada invierno a tener a sus crías. Piratas Adventures es una familia de aquí y te lleva al safari marino, a ver a las ballenas y a pescar en el Pacífico.',
+          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, Baja California Sur, donde la ballena jorobada llega a parir cada invierno. Piratas Adventures, una familia de aquí, te lleva a ver ballenas, al safari marino o a pescar en el Pacífico.',
         facts: [],
       },
       // «Tu día» como en La Paz y La Ventana (dueño, 2026-11-12). Sin horas: la familia aún no da los horarios de salida.
@@ -790,6 +791,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       faq: [
         {
+          q: '¿Cuándo es la temporada de ballenas en Bahía Magdalena?',
+          a: 'De enero a marzo, cuando la ballena jorobada entra a la bahía a tener a sus crías. El safari marino es de octubre a diciembre y la pesca deportiva, todo el año.',
+        },
+        {
           q: '¿Tengo que llevar mi equipo de pesca?',
           a: 'Casi todos los que vienen a pescar traen su equipo: cañas, curricanes y señuelos. Si no tienes, pregúntanos por WhatsApp antes de reservar.',
         },
@@ -826,16 +831,17 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Experiences in Puerto Chale, BCS | Sun Baja Experience',
+      metaTitle: 'Magdalena Bay Whale Watching Tours from Puerto Chale, BCS',
       metaDescription:
-        'Marine safaris, humpback whales and sportfishing on the Pacific with Piratas Adventures, a Puerto Chale family on Magdalena Bay.',
+        'Mag Bay whale watching from Puerto Chale: humpback whales January to March, a marine safari with sea lions and Pacific sportfishing with a local fishing family.',
       hero: {
         video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
         posicionImagenMovil: '58% 50%',
         palabras: ['Whales', 'Safari', 'Fishing', 'Bay'],
+        encabezado: 'Whale watching, marine safari and fishing tours',
         subtitulo:
-          'Puerto Chale is a fishing village on Magdalena Bay, where humpback whales arrive every winter to give birth. Piratas Adventures is a local family that takes you on marine safaris, out to see the whales and fishing on the Pacific.',
+          'Puerto Chale is a fishing village on Magdalena Bay (Mag Bay), Baja California Sur, where humpback whales come to calve every winter. Piratas Adventures, a local family, takes you whale watching, on a marine safari or fishing on the Pacific.',
         facts: [],
       },
       dia: {
@@ -919,6 +925,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         ],
       },
       faq: [
+        {
+          q: 'When is whale watching season in Magdalena Bay?',
+          a: 'January to March, when the humpback whales come into the bay to give birth. The marine safari runs October to December, and sportfishing all year.',
+        },
         {
           q: 'Do I need to bring my own fishing gear?',
           a: 'Most people who come to fish bring their own gear: rods, trolling lures and baits. If you don’t have any, ask us on WhatsApp before you book.',

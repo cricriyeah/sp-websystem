@@ -4,9 +4,11 @@
     "description": "Book your private sportfishing charter in La Paz, BCS with local captains."
   },
   "meta": {
+    "servicioTitulo": "{nombre} in {sede}, BCS",
+    "paqueteTitulo": "{nombre} in {sede}, BCS: Vacation Package",
     "home": {
-      "title": "Sun Baja Experience | Fishing and whales in Baja Sur",
-      "description": "Book sportfishing, whale and orca watching, lodging and transfers in La Paz and La Ventana with local outfitters. Pay them directly; full weather refund."
+      "title": "Sun Baja Experience | Baja California Sur Fishing & Whale Tours",
+      "description": "Baja California Sur tours with local outfitters: La Paz fishing charters, La Ventana orca tours and vacation packages, Magdalena Bay whale watching. Weather refund."
     },
     "reservar": {
       "title": "Book your fishing charter",
@@ -955,8 +957,8 @@
     "resetMap": "Reset map",
     "dragMap": "Drag to explore",
     "meta": {
-      "title": "Sun Baja Experience | Fishing and whales in Baja Sur",
-      "description": "Book sportfishing, whale and orca watching, lodging and transfers in La Paz and La Ventana with local outfitters. Pay them directly; full weather refund."
+      "title": "Sun Baja Experience | Baja California Sur Fishing & Whale Tours",
+      "description": "Baja California Sur tours with local outfitters: La Paz fishing charters, La Ventana orca tours and vacation packages, Magdalena Bay whale watching. Weather refund."
     }
   },
   "destination": {

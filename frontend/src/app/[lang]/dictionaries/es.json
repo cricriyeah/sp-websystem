@@ -4,9 +4,11 @@
     "description": "Reserva tu tour de pesca deportiva privado en La Paz, BCS con capitanes locales."
   },
   "meta": {
+    "servicioTitulo": "{nombre} en {sede}, BCS",
+    "paqueteTitulo": "{nombre} en {sede}, BCS: paquete vacacional",
     "home": {
-      "title": "Sun Baja Experience | Pesca y ballenas en Baja Sur",
-      "description": "Reserva pesca deportiva, ballenas y orcas, hospedaje y traslados en La Paz y La Ventana con empresas locales. Pagas directo; reembolso total por mal clima."
+      "title": "Sun Baja Experience | Tours de pesca y ballenas en BCS",
+      "description": "Tours en Baja California Sur con empresas locales: pesca deportiva en La Paz, orcas y paquetes en La Ventana, ballenas en Bahía Magdalena. Reembolso por mal clima."
     },
     "reservar": {
       "title": "Reserva tu tour de pesca deportiva",
@@ -955,8 +957,8 @@
     "resetMap": "Restablecer mapa",
     "dragMap": "Arrastra para explorar",
     "meta": {
-      "title": "Sun Baja Experience | Pesca y ballenas en Baja Sur",
-      "description": "Reserva pesca deportiva, ballenas y orcas, hospedaje y traslados en La Paz y La Ventana con empresas locales. Pagas directo; reembolso total por mal clima."
+      "title": "Sun Baja Experience | Tours de pesca y ballenas en BCS",
+      "description": "Tours en Baja California Sur con empresas locales: pesca deportiva en La Paz, orcas y paquetes en La Ventana, ballenas en Bahía Magdalena. Reembolso por mal clima."
     }
   },
   "destination": {

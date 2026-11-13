@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const sede = getSedeContenido(slug, lang);
   const dict = await getDictionary(lang);
   return metadataDePagina({
-    lang, ruta: `/sede/${slug}/paquete/${paquete}`, titulo: sede ? `${datos.nombre} · ${sede.nombre}` : datos.nombre,
+    lang, ruta: `/sede/${slug}/paquete/${paquete}`, titulo: sede ? dict.meta.paqueteTitulo.replace('{nombre}', datos.nombre).replace('{sede}', sede.nombre) : datos.nombre,
     descripcion: datos.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
     imagen: fotoParaCompartir(claveDePaquete(paquete))?.src,
   });

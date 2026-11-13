@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // La sede del servicio sale de su empresa, no de `?sede=`: el buscador pide la página sin parámetros.
   const sedeDelServicio = getSedeContenido(getEmpresa(empresa)?.sede ?? '', lang);
   return metadataDePagina({
-    lang, ruta: `/servicio/${empresa}/${servicio}`, titulo: sedeDelServicio ? `${nombre} · ${sedeDelServicio.nombre}` : nombre,
+    lang, ruta: `/servicio/${empresa}/${servicio}`, titulo: sedeDelServicio ? dict.meta.servicioTitulo.replace('{nombre}', nombre).replace('{sede}', sedeDelServicio.nombre) : nombre,
     descripcion: result.data?.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
     imagen: fotoParaCompartir(claveDeServicio(empresa, servicio))?.src,
   });
