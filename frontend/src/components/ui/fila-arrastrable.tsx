@@ -24,7 +24,7 @@ type Props = {
 // Cuánto se queda cada tarjeta en la fila automática; también lo que espera después de que el visitante la toca.
 const AVANCE_MS = 5000;
 const INICIAL: EstadoFila = { desborda: false, avance: 1, puedeAtras: false, puedeAdelante: false };
-// El amago del teléfono: la fila se corre lo justo para que asome la orilla de la siguiente tarjeta, se detiene
+// El amago del teléfono: las tarjetas se corren lo justo para que asome la orilla de la siguiente, se detienen
 // un instante y regresa asentándose. Cada tramo lleva su propia curva (la de la animación es lineal): sale
 // acelerando y frenando, y vuelve con un pequeño rebase de 6 px, como si la soltara un resorte.
 const AMAGO_PX = 64;
@@ -78,7 +78,12 @@ export function FilaArrastrable({ cabeza, etiqueta, textos, automatico = false, 
       if (!entrada?.isIntersecting) return;
       observador.disconnect();
       if (el.scrollLeft > 2 || el.scrollWidth - el.clientWidth <= 2) return;
-      el.animate(AMAGO_CUADROS, { duration: AMAGO_MS, delay: 400, easing: 'linear' });
+      // Se mueven las tarjetas, no el carril: el carril es la ventana que recorta, y al correrlo entero asomaba un
+      // hueco en blanco a la derecha en vez de la orilla de la siguiente tarjeta (dueño, 2026-11-13). Las tarjetas se
+      // corren juntas dentro de él y la siguiente, que ya está pintada fuera de la vista, entra de verdad.
+      for (const tarjeta of Array.from(el.children)) {
+        (tarjeta as HTMLElement).animate(AMAGO_CUADROS, { duration: AMAGO_MS, delay: 400, easing: 'linear' });
+      }
     }, { threshold: 0.6 });
     observador.observe(el);
     return () => observador.disconnect();
