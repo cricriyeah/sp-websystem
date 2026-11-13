@@ -59,7 +59,8 @@ function lineaDeEmpresas(nombres: string[], textos: Textos): string | null {
  * Las fotos propias de la sede para su cortina: la de la cortina (o el arranque), luego las de «Tu día» y las de
  * las temporadas, sin repetir, hasta 5. Nunca las fotos del hub.
  */
-function fotosDeCortina(sede: SedeContenido): { src: string; alt: string }[] {
+function fotosDeCortina(sede: SedeContenido): { src: string; alt: string; posicion?: string }[] {
+  if (sede.hero.fotosCortina?.length) return sede.hero.fotosCortina;
   const fuentes = [
     sede.hero.imagenCortina ?? sede.hero.imagen,
     ...(sede.dia?.momentos.map((momento) => momento.foto) ?? []),

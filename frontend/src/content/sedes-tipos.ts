@@ -27,6 +27,11 @@ export type SedeHeroContenido = {
   posicionImagen?: string;
   /** Foto de la cortina del hub, si debe ser otra que `imagen` (p. ej. cuando el texto blanco no se lee sobre el póster). */
   imagenCortina?: string;
+  /**
+   * Las fotos que rotan en la cortina del hub, en este orden, cuando la sede las elige a mano (Puerto Chale, 2026-11-13:
+   * ballenas y safari). Sin ellas salen de la portada, «Tu día» y las temporadas. `posicion` = `object-position`.
+   */
+  fotosCortina?: { src: string; alt: string; posicion?: string }[];
   /** `object-position` solo bajo 640 px (el encuadre del móvil); sin él vale `posicionImagen`. */
   posicionImagenMovil?: string;
   /** `object-position` del video solo bajo 640 px; sin él vale `posicionImagenMovil`. */

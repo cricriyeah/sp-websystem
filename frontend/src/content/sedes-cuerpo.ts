@@ -701,6 +701,15 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
         posicionImagenMovil: '58% 50%',
+        // Cortina del hub (dueño, 2026-11-13): ballenas y el safari marino (lobos marinos y peces), alternados.
+        fotosCortina: [
+          { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Dos ballenas grises nadan pegadas a la panga mientras una pasajera las toca', posicion: '50% 62%' },
+          { src: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp', alt: 'Lobos marinos nadan bajo el agua', posicion: '50% 45%' },
+          { src: '/photos/puerto-chale/ballena-asomada.webp', alt: 'Una ballena gris asoma la cabeza frente a la isla', posicion: '50% 48%' },
+          { src: '/photos/puerto-chale/cardumen.webp', alt: 'Un cardumen de peces de colores', posicion: '50% 50%' },
+          { src: '/photos/puerto-chale/jorobada-saltando.webp', alt: 'Una ballena jorobada salta fuera del agua', posicion: '50% 50%' },
+          { src: '/photos/puerto-chale/lobos-marinos-en-la-superficie.webp', alt: 'Lobos marinos asoman en la superficie del mar', posicion: '50% 68%' },
+        ],
         palabras: ['Ballenas', 'Safari', 'Pesca', 'Bahía'],
         encabezado: 'Avistamiento de ballenas, safari marino y pesca',
         subtitulo:
@@ -838,6 +847,14 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
         posicionImagenMovil: '58% 50%',
+        fotosCortina: [
+          { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Two gray whales swim right beside the panga while a passenger reaches out to touch them', posicion: '50% 62%' },
+          { src: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp', alt: 'Sea lions swimming underwater', posicion: '50% 45%' },
+          { src: '/photos/puerto-chale/ballena-asomada.webp', alt: 'A gray whale lifts its head out of the water in front of the island', posicion: '50% 48%' },
+          { src: '/photos/puerto-chale/cardumen.webp', alt: 'A school of colorful fish', posicion: '50% 50%' },
+          { src: '/photos/puerto-chale/jorobada-saltando.webp', alt: 'A humpback whale breaches out of the water', posicion: '50% 50%' },
+          { src: '/photos/puerto-chale/lobos-marinos-en-la-superficie.webp', alt: 'Sea lions pop up at the surface', posicion: '50% 68%' },
+        ],
         palabras: ['Whales', 'Safari', 'Fishing', 'Bay'],
         encabezado: 'Whale watching, marine safari and fishing tours',
         subtitulo:

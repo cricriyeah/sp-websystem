@@ -5,7 +5,8 @@ import Image from 'next/image';
 import { cn } from '@/components/ui/cn';
 
 type Props = {
-  fotos: { src: string; alt: string }[];
+  /** `posicion`: el `object-position` de esa foto (encuadre al recortarla); sin él, centrada. */
+  fotos: { src: string; alt: string; posicion?: string }[];
   sizes: string;
   /** Milisegundos que se queda cada foto. */
   intervalo?: number;
@@ -36,6 +37,7 @@ export function FotosRotativas({ fotos, sizes, intervalo = 5000, className }: Pr
       fill
       sizes={sizes}
       loading="lazy"
+      style={foto.posicion ? { objectPosition: foto.posicion } : undefined}
       className={cn(
         'object-cover transition-opacity duration-[1200ms] ease-[var(--curva-estandar)] motion-reduce:transition-none',
         i === actual ? 'opacity-100' : 'opacity-0',

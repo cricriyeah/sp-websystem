@@ -13,7 +13,7 @@ export type VistaSedeHub = {
    * Fotos propias de la sede (nunca las del hub), que rotan solas. Solo si TODAS las sedes tienen foto
    * propia (`tarjetasConFoto`); vacías, la cortina es un campo oscuro.
    */
-  fotos: { src: string; alt: string }[];
+  fotos: { src: string; alt: string; posicion?: string }[];
   /** Sin resumen de la API (fallo parcial) van vacíos: la cortina conserva su botón. */
   chips: Chip[];
   empresas: string | null;
