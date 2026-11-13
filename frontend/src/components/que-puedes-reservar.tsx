@@ -27,6 +27,8 @@ type Props = {
   destacadas: SedeDestacada[];
   textos: Textos;
   fondo: Fondo;
+  /** El resto de la presentación de la sede (`hero.presentacion`), bajo el título; sin ella, solo el título. */
+  presentacion?: string;
 };
 
 type Elemento = { vista: VistaProducto; destacada: boolean };
@@ -39,7 +41,7 @@ type Elemento = { vista: VistaProducto; destacada: boolean };
  *
  * Server Component.
  */
-export function QuePuedesReservar({ lang, moneda, sede, servicios, paquetes, estado, destacadas, textos, fondo }: Props) {
+export function QuePuedesReservar({ lang, moneda, sede, servicios, paquetes, estado, destacadas, textos, fondo, presentacion }: Props) {
   const contacto = tieneWhatsapp ? whatsappHref(textos.whatsappMensaje.replace('{sede}', sede.nombre)) : null;
   const shell = (contenido: ReactNode) => (
     <SectionShell id={ANCLA_DE.reservar} fondo={fondo} titulo={textos.titulo}>
@@ -91,7 +93,12 @@ export function QuePuedesReservar({ lang, moneda, sede, servicios, paquetes, est
       className={`scroll-mt-[calc(var(--nav-alto)+16px)] ${CLASE_FONDO[fondo]} py-16 sm:py-20 lg:py-28`}
     >
       <FilaArrastrable
-        cabeza={<h2 id={`${ANCLA_DE.reservar}-titulo`} className="rev texto-seccion">{textos.titulo}</h2>}
+        cabeza={
+          <div>
+            <h2 id={`${ANCLA_DE.reservar}-titulo`} className="rev texto-seccion">{textos.titulo}</h2>
+            {presentacion && <p className="rev mt-4 max-w-[60ch] text-lg leading-snug text-foreground">{presentacion}</p>}
+          </div>
+        }
         etiqueta={textos.carril.replace('{sede}', sede.nombre)}
         textos={{ anterior: textos.flechaAnterior, siguiente: textos.flechaSiguiente }}
       >

@@ -44,7 +44,13 @@ export type SedeHeroContenido = {
    * privada» + «La Paz»): el encabezado dice producto y lugar, no solo el lugar (plan de marketing, punto 19).
    */
   encabezado?: string;
+  /** Una o dos frases, bajo el nombre en el héroe (máx. ~25 palabras: el héroe cabe en una pantalla, PFD 2026-11-13). */
   subtitulo: string;
+  /**
+   * El resto de la presentación de la sede, que ya no cabe en el héroe: va bajo el título de «Elige tu salida», donde
+   * Google y el cliente la siguen leyendo.
+   */
+  presentacion?: string;
   facts: { value: string; label: string }[];
 };
 

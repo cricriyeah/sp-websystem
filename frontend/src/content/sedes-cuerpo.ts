@@ -37,7 +37,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         encabezado: 'Tours de pesca deportiva en panga privada',
         subtitulo:
-          'Somos capitanes de La Paz y crecimos en esta bahía. Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar dorado, marlín o lo que esté picando en el Mar de Cortés.',
+          'Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar dorado, marlín o lo que esté picando en el Mar de Cortés.',
+        presentacion: 'Somos capitanes de La Paz y crecimos en esta bahía.',
         facts: [
           { value: '6 a 7 horas', label: 'En el mar' },
           { value: '{desde} a {hasta}', label: 'Tú eliges la hora de salida' },
@@ -258,7 +259,8 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         encabezado: 'Private panga fishing charters',
         subtitulo:
-          'We are La Paz captains, and we grew up on this bay. Every morning we leave Marina La Costa with only your group on board, to go after mahi mahi, marlin or whatever is biting in the Sea of Cortez.',
+          'Every morning we leave Marina La Costa with only your group on board, to go after mahi mahi, marlin or whatever is biting in the Sea of Cortez.',
+        presentacion: 'We are La Paz captains, and we grew up on this bay.',
         facts: [
           { value: '6 to 7 hours', label: 'On the water' },
           { value: '{desde} to {hasta}', label: 'You pick the departure time' },
@@ -469,7 +471,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Orcas', 'Seafari', 'Pesca', 'Snorkel', 'Mar', 'Aventura'],
         encabezado: 'Nado con orcas, snorkel y pesca con mosca',
         subtitulo:
-          'La Ventana es un pueblo de playa y mucho viento frente a la isla Cerralvo, en el Mar de Cortés. Con La Ventana Travel sales en lancha a buscar orcas y nadar con ellas, ves delfines y lobos marinos, haces snorkel o pescas con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
+          'La Ventana es un pueblo de playa y mucho viento frente a la isla Cerralvo, en el Mar de Cortés.',
+        presentacion:
+          'Con La Ventana Travel sales en lancha a buscar orcas y nadar con ellas, ves delfines y lobos marinos, haces snorkel o pescas con mosca, y puedes quedarte unas noches en el Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -586,7 +590,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Orcas', 'Seafari', 'Fishing', 'Snorkel', 'Sea', 'Adventure'],
         encabezado: 'Swim with orcas, snorkeling and fly fishing tours',
         subtitulo:
-          'La Ventana is a windy beach town facing Cerralvo Island, on the Sea of Cortez. With La Ventana Travel you take a boat out to look for orcas and swim with them, see dolphins and sea lions, snorkel or fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
+          'La Ventana is a windy beach town facing Cerralvo Island, on the Sea of Cortez.',
+        presentacion:
+          'With La Ventana Travel you take a boat out to look for orcas and swim with them, see dolphins and sea lions, snorkel or fly fish, and you can stay a few nights at Hotel Casa Arrecife.',
         facts: [],
       },
       dia: {
@@ -713,7 +719,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Ballenas', 'Safari', 'Pesca', 'Bahía'],
         encabezado: 'Avistamiento de ballenas, safari marino y pesca',
         subtitulo:
-          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, Baja California Sur, donde la ballena gris llega a parir cada invierno. Piratas Adventures, una familia de aquí, te lleva a ver ballenas, al safari marino o a pescar en el Pacífico.',
+          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, Baja California Sur, donde la ballena gris llega a parir cada invierno.',
+        presentacion:
+          'Piratas Adventures, una familia de aquí, te lleva a ver ballenas, al safari marino o a pescar en el Pacífico.',
         facts: [],
       },
       // «Tu día» como en La Paz y La Ventana (dueño, 2026-11-12). Sin horas: la familia aún no da los horarios de salida.
@@ -858,7 +866,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Whales', 'Safari', 'Fishing', 'Bay'],
         encabezado: 'Whale watching, marine safari and fishing tours',
         subtitulo:
-          'Puerto Chale is a fishing village on Magdalena Bay (Mag Bay), Baja California Sur, where gray whales come to calve every winter. Piratas Adventures, a local family, takes you whale watching, on a marine safari or fishing on the Pacific.',
+          'Puerto Chale is a fishing village on Magdalena Bay (Mag Bay), Baja California Sur, where gray whales come to calve every winter.',
+        presentacion:
+          'Piratas Adventures, a local family, takes you whale watching, on a marine safari or fishing on the Pacific.',
         facts: [],
       },
       dia: {
