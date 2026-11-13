@@ -136,9 +136,10 @@ const FOTOS: Record<string, Foto> = {
       { src: '/photos/puerto-chale/lobos-marinos-en-la-superficie.webp', alt: { es: 'Lobos marinos asoman en la superficie del mar', en: 'Sea lions pop up at the surface' } },
     ],
   },
+  // La misma foto que la pesca de La Ventana (dueño, 2026-11-12), de relleno hasta tener una de Piratas.
   'servicio:piratas-adventures/pesca-deportiva': {
-    src: '/catalogo/piratas-adventures-pesca-deportiva.webp',
-    alt: { es: 'Un pescador pelea un pez con la caña doblada, desde la popa', en: 'An angler fights a fish with a bent rod from the stern' },
+    src: '/catalogo/la-ventana-travel-pesca-con-mosca.webp',
+    alt: { es: 'Un joven peleando un pez con la caña doblada, en alta mar', en: 'A young angler fighting a fish with a bent rod, out at sea' },
     relleno: true,
   },
   'paquete:pesca-traslado': {

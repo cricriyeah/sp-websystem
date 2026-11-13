@@ -87,15 +87,14 @@ test('getSedeCuerpo no trae slug/nombre/logo del indice (solo el cuerpo crudo)',
   assert.deepEqual(cuerpo.otrasEmpresas, []); // DLS Transporte desactivado por ahora
 });
 
-test('«Tu día» en La Paz y La Ventana con los mismos momentos en es y en; Puerto Chale sin él', () => {
-  for (const slug of ['la-paz', 'la-ventana']) {
+test('«Tu día» en las tres sedes con los mismos momentos en es y en', () => {
+  for (const slug of ['la-paz', 'la-ventana', 'puerto-chale']) {
     const es = c.getSedeContenido(slug, 'es').dia;
     const en = c.getSedeContenido(slug, 'en').dia;
     assert.ok(es && en, slug);
     assert.equal(es.momentos.length, en.momentos.length, slug);
     assert.deepEqual(es.momentos.map((m) => m.foto), en.momentos.map((m) => m.foto), slug);
   }
-  assert.equal(c.getSedeContenido('puerto-chale', 'es').dia, undefined);
 });
 
 test('«Conócenos» de La Paz: historia de todos (sin cifras sueltas), tripulación y cierre en los dos idiomas', () => {

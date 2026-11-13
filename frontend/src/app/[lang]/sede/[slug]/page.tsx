@@ -62,6 +62,9 @@ export default async function SedePage({ params, searchParams }: Props) {
   const contenido = sedeConVentana(escrito, servicios);
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const isotipoSede = protagonista ? (protagonista.simbolo ?? protagonista.logo) : undefined;
+  // Dónde va el logo largo como sello: sin `secciones`, solo en Temporadas (Sal y Sol).
+  const largoEn = (seccion: 'temporadas' | 'galeria') =>
+    (protagonista?.logoLargo?.secciones ?? ['temporadas']).includes(seccion) ? protagonista?.logoLargo : undefined;
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo, simboloBarra: protagonista.simboloBarra, logoLargo: protagonista.logoLargo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
   const { temporadas } = contenido;
@@ -97,9 +100,9 @@ export default async function SedePage({ params, searchParams }: Props) {
     tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} sello={isotipoSede && protagonista ? { isotipo: isotipoSede, sinFondo: protagonista.simboloBarra, empresa: protagonista.nombre } : undefined} ilustracion={protagonista?.ilustracionFondo} />,
     ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
     // Una sede lleva el «Conócenos» del gremio (La Paz) o el de una familia (Puerto Chale), nunca los dos.
-    ...(!contenido.conocenos && contenido.familia && { conocenos: (fondo: Fondo) => <FamiliaSede id={ANCLA_DE.conocenos} familia={contenido.familia!} fondo={fondo} /> }),
-    ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} /> }),
-    ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={temporadas.titulo ?? dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} isotipoSinFondo={protagonista?.simboloBarra} empresa={protagonista?.nombre} logoLargo={protagonista?.logoLargo} /> }),
+    ...(!contenido.conocenos && contenido.familia && { conocenos: (fondo: Fondo) => <FamiliaSede id={ANCLA_DE.conocenos} familia={contenido.familia!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
+    ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} sello={largoEn('galeria') && isotipoSede ? { isotipo: isotipoSede, sinFondo: protagonista?.simboloBarra, alt: protagonista?.nombre ?? '', largo: largoEn('galeria') } : undefined} /> }),
+    ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={temporadas.titulo ?? dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} isotipoSinFondo={protagonista?.simboloBarra} empresa={protagonista?.nombre} logoLargo={largoEn('temporadas')} /> }),
     opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} textosFila={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente, pausar: dict.sedeContenido.opiniones.pausar, reanudar: dict.sedeContenido.opiniones.reanudar }} fondo={fondo} todas={resenasMarca.length > 0 ? FUENTE_GOOGLE : undefined} />,
     ...(faq && { preguntas: (fondo: Fondo) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} fondo={fondo} /> }),
   };

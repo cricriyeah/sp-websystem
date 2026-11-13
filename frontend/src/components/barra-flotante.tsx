@@ -111,15 +111,15 @@ export function LogoEmpresaAlLado({ empresa, ocultoEnMovil = false }: LogosProps
       <X aria-hidden="true" size={14} weight="bold" className="shrink-0 text-foreground" />
       {empresa.logoLargo ? (
         // El logo largo a color (isotipo y nombre), de la altura del símbolo para que quepa en la barra de 72.
-        <Image src={empresa.logoLargo.src} alt={empresa.nombre} width={empresa.logoLargo.ancho} height={empresa.logoLargo.alto} className="h-12 w-auto shrink-0 sm:h-14" />
+        <Image src={empresa.logoLargo.src} alt={empresa.nombre} width={empresa.logoLargo.ancho} height={empresa.logoLargo.alto} className={cn('w-auto shrink-0', empresa.logoLargo.barra ?? 'h-12 sm:h-14')} />
       ) : empresa.simboloBarra ?? empresa.simbolo ? (
-        // Solo el símbolo, sin letras: así cabe más grande (64 px) en la barra de 72.
+        // Solo el símbolo, sin letras (La Ventana). Bajó de 56/64 a 40/44 px: se veía demasiado grande (dueño, 2026-11-12).
         <Image
           src={(empresa.simboloBarra ?? empresa.simbolo)!}
           alt={empresa.nombre}
           width={120}
           height={75}
-          className="h-14 w-auto max-w-[6.5rem] shrink-0 object-contain sm:h-16 sm:max-w-[7.5rem]"
+          className="h-10 w-auto max-w-[5rem] shrink-0 object-contain sm:h-11 sm:max-w-[5.5rem]"
         />
       ) : empresa.logo ? (
         <Image

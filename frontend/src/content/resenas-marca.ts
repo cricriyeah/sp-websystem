@@ -35,7 +35,7 @@ export const RESENAS_MARCA: readonly ResenaMarca[] = [
       'I had a thousand unforgettable experiences when I came to La Paz, thanks to the service and the tours you offer. When I come back I will definitely book with you again!!',
     idioma: 'es',
     estrellas: 5,
-    sedes: ['la-paz', 'la-ventana'],
+    sedes: ['la-paz', 'la-ventana', 'puerto-chale'],
   },
   {
     autor: 'Gustavo Santaolalla',
@@ -43,7 +43,7 @@ export const RESENAS_MARCA: readonly ResenaMarca[] = [
     traduccion: '¡La pasamos en grande con ellos, jaja! Excelente atención en inglés y súper profesionales.',
     idioma: 'en',
     estrellas: 5,
-    sedes: ['la-paz', 'la-ventana'],
+    sedes: ['la-paz', 'la-ventana', 'puerto-chale'],
   },
   {
     autor: 'araceli fernandez',
@@ -51,7 +51,7 @@ export const RESENAS_MARCA: readonly ResenaMarca[] = [
     traduccion: 'I loved the friendly, professional treatment from all the staff in charge, and the customer service!',
     idioma: 'es',
     estrellas: 5,
-    sedes: ['la-paz', 'la-ventana'],
+    sedes: ['la-paz', 'la-ventana', 'puerto-chale'],
   },
   {
     autor: 'Lalo Srz',
@@ -59,7 +59,7 @@ export const RESENAS_MARCA: readonly ResenaMarca[] = [
     traduccion: 'Friendly staff, good organization and an unforgettable experience.',
     idioma: 'es',
     estrellas: 4,
-    sedes: ['la-paz', 'la-ventana'],
+    sedes: ['la-paz', 'la-ventana', 'puerto-chale'],
   },
   {
     autor: 'Lara Juárez Carlos Abel #13',
@@ -67,7 +67,7 @@ export const RESENAS_MARCA: readonly ResenaMarca[] = [
     traduccion: 'Super good, 100% recommended',
     idioma: 'es',
     estrellas: 5,
-    sedes: ['la-paz', 'la-ventana'],
+    sedes: ['la-paz', 'la-ventana', 'puerto-chale'],
   },
 ];
 

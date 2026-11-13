@@ -175,6 +175,154 @@ export const FAQ_SERVICIOS: Record<string, Record<Locale, PreguntaServicio[]>> =
       },
     ],
   },
+  // Puerto Chale (dueño, 2026-11-12): con los datos de la ficha de cada servicio (migración fleet 0057) y lo que dio la
+  // familia (temporadas, equipo propio, menores con carta responsiva). Sin horario ni punto de salida: aún no los dan.
+  'piratas-adventures/avistamiento-ballenas': {
+    es: [
+      {
+        q: '¿Qué incluye el avistamiento?',
+        a: 'Una salida en panga para tu grupo con Piratas Adventures, una familia de pescadores de Puerto Chale. A bordo van refrescos, aguas naturales, agua mineral y sueros sin costo, y puedes traer tus propias bebidas y alimentos.',
+      },
+      {
+        q: '¿Cuánto dura?',
+        a: 'Dos horas en la bahía. Si quieres más tiempo, hay recorridos de 3 y 4 horas: pídelos por WhatsApp.',
+      },
+      {
+        q: '¿Cuántas personas pueden ir?',
+        a: 'El precio es por grupo y cubre de 1 a 6 personas. Caben hasta 2 más, hasta 8 en total, por un cargo por persona que ves antes de pagar.',
+      },
+      {
+        q: '¿Cuándo hay ballena jorobada?',
+        a: 'De enero a marzo. Cada invierno la ballena jorobada llega a Bahía Magdalena a tener a sus crías, y es la temporada del avistamiento.',
+      },
+      {
+        q: '¿Cómo pago, y qué pasa si hay mal clima?',
+        a: 'Puedes pagar el 100 % en línea o apartar tu fecha con un anticipo del 30 % y pagar el resto en efectivo. Aceptamos pesos y dólares, y el total con IVA lo ves antes de pagar. Si el mal clima impide salir, eliges otra fecha o te devolvemos todo. Los plazos para cambiar o cancelar los ves antes de pagar.',
+      },
+    ],
+    en: [
+      {
+        q: 'What does the whale watching include?',
+        a: 'A panga trip for your group with Piratas Adventures, a family of fishermen from Puerto Chale. Sodas, fresh water, mineral water and electrolyte drinks are on board at no cost, and you can bring your own drinks and food.',
+      },
+      {
+        q: 'How long is it?',
+        a: 'Two hours on the bay. If you want more time, there are 3- and 4-hour trips: ask for them on WhatsApp.',
+      },
+      {
+        q: 'How many people can come?',
+        a: 'The price is per group and covers 1 to 6 people. Up to 2 more can come, 8 in total, for a per-person charge you see before you pay.',
+      },
+      {
+        q: 'When are the humpback whales here?',
+        a: 'January to March. Every winter the humpback whales come to Magdalena Bay to give birth, and that is whale watching season.',
+      },
+      {
+        q: 'How do I pay, and what happens in bad weather?',
+        a: 'You can pay 100% online, or hold your date with a 30% deposit and pay the rest in cash. We accept pesos and dollars, and you see the total with tax before you pay. If bad weather keeps the boat in, you choose another date or a full refund. You see the deadlines to change or cancel before you pay.',
+      },
+    ],
+  },
+  'piratas-adventures/safari-marino': {
+    es: [
+      {
+        q: '¿Qué incluye el safari marino?',
+        a: 'Ocho horas en el mar con Piratas Adventures. A bordo van refrescos, aguas naturales, agua mineral y sueros sin costo, a veces también cervezas si lo deseas, y comida sencilla sin costo, como sándwiches o burritos. También puedes traer tus propias bebidas y alimentos.',
+      },
+      {
+        q: '¿Cuántas personas pueden ir?',
+        a: 'El precio cubre a un grupo de 6 personas y caben 2 más por un cargo por persona, hasta 8. Si son más, se puede sumar otra embarcación avisando con tiempo.',
+      },
+      {
+        q: '¿Cuándo es la temporada?',
+        a: 'De octubre a diciembre. Puedes ver qué hay cada mes en la sección de temporadas de la página de Puerto Chale.',
+      },
+      {
+        q: '¿Pueden ir menores de edad?',
+        a: 'Sí. Los menores van con una carta responsiva firmada por su madre, padre o tutor.',
+      },
+      {
+        q: '¿Cómo pago, y qué pasa si hay mal clima?',
+        a: 'Puedes pagar el 100 % en línea o apartar tu fecha con un anticipo del 30 % y pagar el resto en efectivo. Aceptamos pesos y dólares, y el total con IVA lo ves antes de pagar. Si el mal clima impide salir, eliges otra fecha o te devolvemos todo. Los plazos para cambiar o cancelar los ves antes de pagar.',
+      },
+    ],
+    en: [
+      {
+        q: 'What does the marine safari include?',
+        a: 'Eight hours at sea with Piratas Adventures. Sodas, fresh water, mineral water and electrolyte drinks are on board at no cost, sometimes beer too if you like, and simple food at no cost, such as sandwiches or burritos. You can also bring your own drinks and food.',
+      },
+      {
+        q: 'How many people can come?',
+        a: 'The price covers a group of 6 people, and 2 more can come for a per-person charge, up to 8. If you are more, another boat can be added with advance notice.',
+      },
+      {
+        q: 'When is the season?',
+        a: 'October to December. You can see what is on each month in the seasons section of the Puerto Chale page.',
+      },
+      {
+        q: 'Can minors come?',
+        a: 'Yes. Minors come with a liability waiver signed by their mother, father or guardian.',
+      },
+      {
+        q: 'How do I pay, and what happens in bad weather?',
+        a: 'You can pay 100% online, or hold your date with a 30% deposit and pay the rest in cash. We accept pesos and dollars, and you see the total with tax before you pay. If bad weather keeps the boat in, you choose another date or a full refund. You see the deadlines to change or cancel before you pay.',
+      },
+    ],
+  },
+  'piratas-adventures/pesca-deportiva': {
+    es: [
+      {
+        q: '¿Qué incluye la pesca deportiva?',
+        a: 'Ocho horas de pesca en el Pacífico con Piratas Adventures. A bordo van refrescos, aguas naturales, agua mineral y sueros sin costo y, si quieres, comida sencilla sin costo, como sándwiches o burritos. También puedes traer tus propias bebidas y alimentos. La licencia de pesca no está incluida.',
+      },
+      {
+        q: '¿Cuántas personas pueden ir?',
+        a: 'Hasta 4 personas, y el precio es por el grupo.',
+      },
+      {
+        q: '¿Tengo que llevar mi equipo?',
+        a: 'Casi todos los que vienen traen su propio equipo de pesca. Si no tienes, pregúntanos por WhatsApp antes de reservar.',
+      },
+      {
+        q: '¿Necesito licencia de pesca?',
+        a: 'Sí: cada persona que pesca a bordo necesita su licencia individual. Puedes agregar el trámite a tu reserva y la gestionamos por ti.',
+      },
+      {
+        q: '¿Cuándo se puede pescar?',
+        a: 'Todo el año.',
+      },
+      {
+        q: '¿Cómo pago, y qué pasa si hay mal clima?',
+        a: 'Puedes pagar el 100 % en línea o apartar tu fecha con un anticipo del 30 % y pagar el resto en efectivo. Aceptamos pesos y dólares, y el total con IVA lo ves antes de pagar. Si el mal clima impide salir, eliges otra fecha o te devolvemos todo. Los plazos para cambiar o cancelar los ves antes de pagar.',
+      },
+    ],
+    en: [
+      {
+        q: 'What does the sportfishing trip include?',
+        a: 'Eight hours of fishing on the Pacific with Piratas Adventures. Sodas, fresh water, mineral water and electrolyte drinks are on board at no cost and, if you like, simple food at no cost, such as sandwiches or burritos. You can also bring your own drinks and food. The fishing license is not included.',
+      },
+      {
+        q: 'How many people can come?',
+        a: 'Up to 4 people, and the price is per group.',
+      },
+      {
+        q: 'Do I need to bring my own gear?',
+        a: 'Almost everyone who comes brings their own fishing gear. If you do not have any, ask us on WhatsApp before you book.',
+      },
+      {
+        q: 'Do I need a fishing license?',
+        a: 'Yes: each person fishing on board needs an individual license. You can add the paperwork to your booking and we take care of it for you.',
+      },
+      {
+        q: 'When can you fish?',
+        a: 'All year round.',
+      },
+      {
+        q: 'How do I pay, and what happens in bad weather?',
+        a: 'You can pay 100% online, or hold your date with a 30% deposit and pay the rest in cash. We accept pesos and dollars, and you see the total with tax before you pay. If bad weather keeps the boat in, you choose another date or a full refund. You see the deadlines to change or cancel before you pay.',
+      },
+    ],
+  },
 };
 
 /** Las preguntas de un servicio en un idioma, o `null` si ese servicio todavía no las tiene. */

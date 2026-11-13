@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Image from 'next/image';
+import { cn } from './cn';
 import { SelloTitulo, type ModoSello } from './sello-titulo';
 
 /**
@@ -20,7 +21,7 @@ const ANCHOS_TITULO = {
   '24ch': 'max-w-[24ch]',
 } as const;
 
-type SectionShellProps = {
+export type SectionShellProps = {
   /** Ancla de la sección (`#id`); el `<h2>` toma `${id}-titulo` para `aria-labelledby`. */
   id: string;
   fondo: Fondo;
@@ -35,7 +36,7 @@ type SectionShellProps = {
    * (isotipo transparente) va sin círculo en fondo claro y dentro de un círculo blanco en la banda tinta; sin él, el
    * logo con su propio círculo.
    */
-  sello?: { isotipo: string; sinFondo?: string; alt: string; largo?: { src: string; ancho: number; alto: number; blanco?: string } };
+  sello?: { isotipo: string; sinFondo?: string; alt: string; largo?: { src: string; ancho: number; alto: number; blanco?: string; sello?: string } };
   /**
    * Ilustración de fondo detrás del contenido (ruta bajo /public, un dibujo de un solo color): grande, en tinta muy
    * baja y cortada por el borde derecho. Decorativa: no la anuncian los lectores de pantalla.
@@ -67,7 +68,7 @@ export function SectionShell({ id, fondo, titulo, anchoTitulo = '24ch', lado, se
     // El logo largo a color (Sal y Sol): del tamaño del sello y con el título bajado a su base, como en «Las pangas».
     <div className="flex items-end justify-between gap-6">
       {h2}
-      <Image src={sello.largo.src} alt={sello.alt} width={sello.largo.ancho} height={sello.largo.alto} className="rev block h-12 w-auto shrink-0 sm:h-20 lg:h-24 xl:h-28" />
+      <Image src={sello.largo.src} alt={sello.alt} width={sello.largo.ancho} height={sello.largo.alto} className={cn('rev block w-auto shrink-0', sello.largo.sello ?? 'h-12 sm:h-20 lg:h-24 xl:h-28')} />
     </div>
   ) : sello && modo && src ? (
       <div className="flex items-start justify-between gap-6">

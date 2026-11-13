@@ -1,6 +1,6 @@
 import type { SedeCuerpoContenido } from '@/content/sedes-tipos';
 import { GaleriaMosaico } from '@/components/galeria-mosaico';
-import { SectionShell, type Fondo } from '@/components/ui/section-shell';
+import { SectionShell, type Fondo, type SectionShellProps } from '@/components/ui/section-shell';
 
 type GallerySectionProps = {
   id: string;
@@ -11,6 +11,8 @@ type GallerySectionProps = {
   empresas: Record<string, { nombre: string }>;
   textosVisor: { cerrar: string; anterior: string; siguiente: string; contador: string; pista: string };
   fondo: Fondo;
+  /** El sello de la empresa en la esquina del título (solo donde la marca lo pide, ver `LogoLargo.secciones`). */
+  sello?: SectionShellProps['sello'];
 };
 
 /**
@@ -19,7 +21,7 @@ type GallerySectionProps = {
  *
  * Server Component (el mosaico y el visor son una isla cliente).
  */
-export function GallerySection({ id, titulo, fotos, empresas, textosVisor, fondo }: GallerySectionProps) {
+export function GallerySection({ id, titulo, fotos, empresas, textosVisor, fondo, sello }: GallerySectionProps) {
   const variasEmpresas = new Set(fotos.map((foto) => foto.empresaSlug)).size > 1;
   const vistas = fotos.map((foto) => ({
     src: foto.src,
@@ -30,7 +32,7 @@ export function GallerySection({ id, titulo, fotos, empresas, textosVisor, fondo
   }));
 
   return (
-    <SectionShell id={id} fondo={fondo} titulo={titulo}>
+    <SectionShell id={id} fondo={fondo} titulo={titulo} sello={sello}>
       <GaleriaMosaico fotos={vistas} textosVisor={textosVisor} />
     </SectionShell>
   );

@@ -10,6 +10,8 @@ const VIDEOS_EN_BUCKET: Record<string, string> = {
   '/videos/videohub.webm': 'hub/videohub.mp4',
   '/videos/videonuevonuevolapaz.mp4': 'lapaz/videonuevonuevolapaz-20s.mp4',
   '/videos/ventana-hero.webm': 'laventana/videolaventana-0025-0045.mp4',
+  // Héroe de Puerto Chale (dueño, 2026-11-12): solo vive en el bucket; en local, sin la base, el héroe enseña su foto.
+  '/videos/puertochale-hero.mp4': 'puertochale/5607991-uhd_3840_2160_30fps.mp4',
 };
 
 /**

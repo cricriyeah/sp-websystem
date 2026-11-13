@@ -120,26 +120,25 @@ export type SedeConocenos = {
 };
 
 /**
- * «Conócenos» de una empresa familiar (Puerto Chale, 2026-11-10): su propia sección, no la del gremio de La Paz. Una
- * persona con cara y nombre (la única foto de gente que hay) y, en zigzag, la prueba de lo que hacen: las ballenas junto a
- * su panga. Sin año ni nombres que la familia no dio.
+ * «Conócenos» de una empresa familiar (Puerto Chale). Rehecha el 2026-11-12 a pedido del dueño: un relato emocional
+ * como «Gente de mar» de La Paz, con su propia historia. Sin año ni nombres que la familia no dio.
  */
 export type SedeFamilia = {
+  /** Lo primero y más visible: la cifra gigante y su frase («+5 · generaciones de pescadores en Bahía Magdalena»). */
+  desde: { cifra: string; texto: string };
   titulo: string;
-  /** La frase bajo el título: quiénes son, dicho llano. */
+  /** La frase grande bajo el título. */
   apertura: string;
-  /** El retrato: la pieza más grande. `posicion` es el `object-position` del recorte. */
+  /** Los párrafos del relato; «Quién te lleva» va entre el segundo y el tercero. */
+  historia: string[];
+  /** La foto grande de la columna (sale hasta el borde de la pantalla). Debe medir 1200 px de ancho o más. */
+  foto: { src: string; alt: string; posicion?: string };
+  /** El retrato de quien te lleva, encimado sobre la foto grande y más angosto: la foto es chica y no se estira. */
   retrato: { src: string; alt: string; posicion?: string };
-  /** Bajo el retrato: el nombre completo y, en el renglón de abajo, los años en el mar. */
-  nombre: string;
-  anios: string;
-  /** La foto que prueba lo que hacen, con su pie. */
-  foto: { src: string; alt: string; pie: string; posicion?: string };
-  /**
-   * Una línea que cambia con la fecha: `en` dentro de los meses (1 = enero), `fuera` el resto del año. Sin script se ve
-   * `base`, que dice los meses y nunca miente.
-   */
-  temporada?: { meses: number[]; en: string; fuera: string; base: string };
+  /** Las fotos que siguen, en dos columnas escalonadas. */
+  fotos: { src: string; alt: string; posicion?: string }[];
+  /** El bloque de quien te lleva: el nombre en grande y debajo sus datos. */
+  quien: { titulo: string; nombre: string; detalles: string[] };
   cierre: { boton: string };
 };
 

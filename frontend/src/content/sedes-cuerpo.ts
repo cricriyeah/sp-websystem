@@ -698,7 +698,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         'Safari marino, ballena jorobada y pesca deportiva en el Pacífico con Piratas Adventures, una familia de Puerto Chale, en Bahía Magdalena.',
       // Fotos reales de Piratas Adventures (dueño, 2026-11-10). Textos pasados por humanizer y por las reglas de taste.
       hero: {
-        video: null,
+        video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
         posicionImagenMovil: '58% 50%',
         palabras: ['Ballenas', 'Safari', 'Pesca', 'Bahía'],
@@ -706,19 +706,35 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, a donde la ballena jorobada llega cada invierno a tener a sus crías. Piratas Adventures es una familia de aquí y te lleva al safari marino, a ver a las ballenas y a pescar en el Pacífico.',
         facts: [],
       },
+      // «Tu día» como en La Paz y La Ventana (dueño, 2026-11-12). Sin horas: la familia aún no da los horarios de salida.
+      dia: {
+        titulo: 'Tu día en Puerto Chale',
+        etiqueta: 'Tu día en Puerto Chale, momento por momento',
+        momentos: [
+          { titulo: 'La bahía', texto: 'Sales en la panga de la familia a Bahía Magdalena, del lado del Pacífico.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
+          { titulo: 'Ballena jorobada', texto: 'De enero a marzo la ballena jorobada está en la bahía con sus crías y se acerca a la panga.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
+          { titulo: 'Safari marino', texto: 'Ocho horas recorriendo el mar entre islas, con lobos marinos y peces. Refrescos, aguas y comida sencilla van a bordo.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
+          { titulo: 'Pesca', texto: 'Ocho horas de pesca en el Pacífico. Casi todos traen su propio equipo, y la licencia se agrega a tu reserva.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
+          { titulo: 'De regreso', texto: 'Al final del día, la panga vuelve al pueblo.', foto: '/photos/puerto-chale/estela-rumbo-al-pueblo.webp' },
+        ],
+      },
       familia: {
-        titulo: 'Cinco generaciones de pescadores',
-        apertura: 'Piratas Adventures es una familia de puros pescadores y gente de mar. Hoy salen al mar padre e hijo.',
+        // Relato a pedido del dueño (2026-11-12): emocional, como «Gente de mar», solo con lo que la familia contó.
+        desde: { cifra: '+5', texto: 'GENERACIONES DE PESCADORES EN BAHÍA MAGDALENA' },
+        titulo: 'Gente de la bahía',
+        apertura: 'En Puerto Chale, el mar es el trabajo de toda la vida, y se hereda.',
+        historia: [
+          'Puerto Chale es un pueblo de pescadores a la orilla de Bahía Magdalena, del lado del Pacífico. Aquí el oficio pasa de padres a hijos, y Piratas Adventures es una de esas familias: llevan más de cinco generaciones saliendo al mar.',
+          'Hoy salen padre e hijo. Conocen la bahía como su casa: por dónde entra el pescado, dónde se arriman las ballenas y a qué hora conviene volver.',
+          'Cada invierno ven llegar a la ballena jorobada a tener a sus crías en la bahía. Y cada temporada se la enseñan, desde su panga, a quien viene de lejos.',
+        ],
+        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Dos ballenas jorobadas nadan pegadas a la panga mientras una pasajera las toca', posicion: '50% 60%' },
         retrato: { src: '/photos/puerto-chale/cristian-panga-atardecer.webp', alt: 'Cristian saluda desde su panga al atardecer, con el sol cayendo detrás de la isla', posicion: '50% 45%' },
-        nombre: 'Cristian Bladimir Arce Murillo',
-        anios: 'Más de 15 años en el mar',
-        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Dos ballenas jorobadas nadan pegadas a la panga mientras una pasajera las toca', pie: 'Ballenas jorobadas junto a la panga.', posicion: '50% 60%' },
-        temporada: {
-          meses: [1, 2, 3],
-          en: 'Es temporada: la ballena jorobada ya está en la bahía.',
-          fuera: 'La ballena jorobada llega en enero.',
-          base: 'La ballena jorobada está en la bahía de enero a marzo.',
-        },
+        fotos: [
+          { src: '/photos/puerto-chale/pesca-submarina-en-la-panga.webp', alt: 'Buzos en neopreno suben su pesca a la panga' },
+          { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'El lomo de una ballena jorobada, cubierto de percebes, junto a la panga' },
+        ],
+        quien: { titulo: 'QUIÉN TE LLEVA', nombre: 'Cristian Bladimir Arce Murillo', detalles: ['Más de 15 años en el mar', 'Sale con su padre'] },
         cierre: { boton: 'Reservar tu salida' },
       },
       galeria: [
@@ -749,7 +765,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             estrella: 'Ballena jorobada',
             descripcion: 'La ballena jorobada llega a la bahía a tener a sus crías. Es la temporada del avistamiento, en recorridos de 2 horas.',
             otras: '',
-            foto: '/photos/puerto-chale/ballena-asomada.webp',
+            foto: '/photos/puerto-chale/jorobada-saltando.webp',
             fuerte: true,
           },
           {
@@ -758,7 +774,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             estrella: 'Safari marino',
             descripcion: 'Ocho horas recorriendo el mar, con el lonche y las bebidas a bordo.',
             otras: '',
-            foto: '/photos/puerto-chale/islote-rocoso.webp',
+            foto: '/photos/puerto-chale/cardumen.webp',
             fuerte: false,
           },
           {
@@ -814,7 +830,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       metaDescription:
         'Marine safaris, humpback whales and sportfishing on the Pacific with Piratas Adventures, a Puerto Chale family on Magdalena Bay.',
       hero: {
-        video: null,
+        video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
         posicionImagenMovil: '58% 50%',
         palabras: ['Whales', 'Safari', 'Fishing', 'Bay'],
@@ -822,19 +838,33 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           'Puerto Chale is a fishing village on Magdalena Bay, where humpback whales arrive every winter to give birth. Piratas Adventures is a local family that takes you on marine safaris, out to see the whales and fishing on the Pacific.',
         facts: [],
       },
+      dia: {
+        titulo: 'Your day in Puerto Chale',
+        etiqueta: 'Your day in Puerto Chale, moment by moment',
+        momentos: [
+          { titulo: 'The bay', texto: 'You head out in the family panga onto Magdalena Bay, on the Pacific side.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
+          { titulo: 'Humpback whales', texto: 'From January to March the humpback whales are in the bay with their calves and come close to the panga.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
+          { titulo: 'Marine safari', texto: 'Eight hours at sea among the islands, with sea lions and fish. Sodas, water and simple food are on board.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
+          { titulo: 'Fishing', texto: 'Eight hours of fishing on the Pacific. Almost everyone brings their own gear, and the license is added to your booking.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
+          { titulo: 'Heading back', texto: 'At the end of the day, the panga heads back to the village.', foto: '/photos/puerto-chale/estela-rumbo-al-pueblo.webp' },
+        ],
+      },
       familia: {
-        titulo: 'Five generations of fishermen',
-        apertura: 'Piratas Adventures is a family of fishermen and people of the sea. Today a father and his son take you out.',
+        desde: { cifra: '5+', texto: 'GENERATIONS OF FISHERMEN ON MAGDALENA BAY' },
+        titulo: 'People of the bay',
+        apertura: 'In Puerto Chale, the sea is a lifetime of work, and it is handed down.',
+        historia: [
+          'Puerto Chale is a fishing village on the shore of Magdalena Bay, on the Pacific side. Here the trade passes from parents to children, and Piratas Adventures is one of those families: they have been going out to sea for more than five generations.',
+          'Today a father and his son go out. They know the bay like their own home: where the fish come in, where the whales come close and what time it is best to head back.',
+          'Every winter they watch the humpback whales arrive to give birth in the bay. And every season they show them, from their panga, to people who come from far away.',
+        ],
+        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Two humpback whales swim right beside the panga while a passenger reaches out to touch them', posicion: '50% 60%' },
         retrato: { src: '/photos/puerto-chale/cristian-panga-atardecer.webp', alt: 'Cristian waves from his panga at sunset, with the sun going down behind the island', posicion: '50% 45%' },
-        nombre: 'Cristian Bladimir Arce Murillo',
-        anios: 'More than 15 years at sea',
-        foto: { src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp', alt: 'Two humpback whales swim right beside the panga while a passenger reaches out to touch them', pie: 'Humpback whales beside the panga.', posicion: '50% 60%' },
-        temporada: {
-          meses: [1, 2, 3],
-          en: 'It’s whale season: the humpback whales are in the bay.',
-          fuera: 'The humpback whales arrive in January.',
-          base: 'The humpback whales are in the bay from January to March.',
-        },
+        fotos: [
+          { src: '/photos/puerto-chale/pesca-submarina-en-la-panga.webp', alt: 'Divers in wetsuits bring their catch aboard the panga' },
+          { src: '/photos/puerto-chale/ballena-de-cerca.webp', alt: 'The barnacled back of a humpback whale beside the panga' },
+        ],
+        quien: { titulo: 'WHO TAKES YOU OUT', nombre: 'Cristian Bladimir Arce Murillo', detalles: ['More than 15 years at sea', 'Goes out with his father'] },
         cierre: { boton: 'Book your trip' },
       },
       galeria: [
@@ -865,7 +895,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             estrella: 'Humpback whales',
             descripcion: 'The humpback whales come into the bay to give birth. This is whale-watching season, in 2-hour trips.',
             otras: '',
-            foto: '/photos/puerto-chale/ballena-asomada.webp',
+            foto: '/photos/puerto-chale/jorobada-saltando.webp',
             fuerte: true,
           },
           {
@@ -874,7 +904,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             estrella: 'Marine safari',
             descripcion: 'Eight hours out at sea, with lunch and drinks on board.',
             otras: '',
-            foto: '/photos/puerto-chale/islote-rocoso.webp',
+            foto: '/photos/puerto-chale/cardumen.webp',
             fuerte: false,
           },
           {
