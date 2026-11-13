@@ -11,8 +11,8 @@ Estructura de negocio:
   Puerto Chale -> Piratas Adventures (safari marino, avistamiento de ballenas, pesca)
 
 De La Ventana Travel y Piratas Adventures ya hay datos confirmados por ellos (ver `DATOS_REALES`):
-estudios, pesca con mosca, safari marino y su flota. Lo que sigue siendo
-PLACEHOLDER (avistamiento de ballenas, precio de la pesca de Piratas, hospedaje por noche, los
+estudios, pesca con mosca y los tres servicios de Piratas con su flota. Lo que sigue siendo
+PLACEHOLDER (avistamiento de ballenas de La Ventana, hospedaje por noche, los
 paquetes y las lanchas "DEMO ...") se reemplaza desde el admin. Los paquetes de La Ventana
 (precio por persona, mar en varios días) sí se siembran.
 
@@ -150,10 +150,26 @@ DATOS_REALES = {
                         'Children of all ages are welcome',
                         'Extra beds and cribs cannot be added']},
     ),
+    # Precios de Piratas confirmados el 2026-11-10 (sin IVA; dólar de la sede a 17.5; anticipo 30 %). Producción los
+    # recibe por la migración fleet 0056.
+    ('piratas-adventures', 'avistamiento-ballenas'): dict(
+        nombre='Avistamiento de ballena jorobada', nombre_en='Humpback whale watching',
+        estrategia_precio='por_grupo', precio_base=Decimal('5000'), precio_persona_extra=Decimal('600'),
+        personas_incluidas=6, capacidad_maxima=8, duracion='2 h', duracion_en='2 h',
+        permite_anticipo=True, porcentaje_anticipo=30,
+        descripcion='Dos horas en la bahía para ver a la ballena jorobada, que llega cada invierno a tener a sus crías. El '
+                    'precio cubre de 1 a 6 personas y caben hasta 2 más por un cargo por persona. Si quieres más tiempo, '
+                    'hay recorridos de 3 y 4 horas: pídelos por WhatsApp.',
+        incluye={'es': ['Refrescos, aguas naturales, agua mineral y sueros sin costo',
+                        'Puedes traer tus propias bebidas y alimentos'],
+                 'en': ['Sodas, fresh water, mineral water and electrolyte drinks at no cost',
+                        'You can bring your own drinks and food']},
+    ),
     ('piratas-adventures', 'safari-marino'): dict(
         nombre='Safari marino',
         estrategia_precio='por_grupo', precio_base=Decimal('14000'), precio_persona_extra=Decimal('2000'),
-        personas_incluidas=6, capacidad_maxima=8,
+        personas_incluidas=6, capacidad_maxima=8, duracion='8 h', duracion_en='8 h',
+        permite_anticipo=True, porcentaje_anticipo=30,
         descripcion='Safari marino en Puerto Chale para un grupo de 6 personas, con hasta 2 personas más '
                     'por un cargo adicional. Si el grupo es más grande se puede sumar otra embarcación '
                     'avisando con un poco de anticipación.',
@@ -167,7 +183,8 @@ DATOS_REALES = {
                         'You can bring your own drinks and food']},
     ),
     ('piratas-adventures', 'pesca-deportiva'): dict(
-        capacidad_maxima=4,
+        precio_base=Decimal('13000'), personas_incluidas=4, capacidad_maxima=4, duracion='8 h', duracion_en='8 h',
+        permite_anticipo=True, porcentaje_anticipo=30,
         descripcion='Pesca deportiva en Puerto Chale, hasta 4 personas. La licencia de pesca no está incluida.',
         incluye={'es': ['Refrescos, aguas naturales, agua mineral y sueros sin costo',
                         'Comida opcional, sin costo: sándwiches, burritos...',
@@ -243,12 +260,12 @@ class Command(BaseCommand):
             self.stdout.write(
                 'Relleno SIN confirmar que quedó en la base (revisar en el admin antes de vender): precio de la noche de '
                 'hospedaje (2,500), tarifas del traslado de La Ventana (3,500 / 6,500), precio por persona de los paquetes, '
-                'precio de la pesca de Piratas Adventures y los horarios de cada servicio salvo Sal y Sol. '
+                'y los horarios de cada servicio salvo Sal y Sol. '
                 'La flota (pangas, vehículos) y las llaves de Stripe de cada empresa se capturan en el admin.'
             )
         else:
             self.stdout.write(
-                'Placeholders: precio de la pesca de Piratas Adventures, '
+                'Placeholders: '
                 'precio del hospedaje, paquetes y llaves de Stripe de Piratas Adventures (sk_test_CAMBIAME).'
             )
 
@@ -564,6 +581,11 @@ class Command(BaseCommand):
                 except ProtectedError:
                     self.stdout.write(f'  {demo.nombre}: tiene reservas, se queda (desactivar a mano)')
 
+        from apps.fleet.models import ServicioPersonalizacion
+        with scope.como_operador_plataforma():
+            precio_licencia = ServicioPersonalizacion.objects.filter(
+                servicio__empresa__slug='sal-y-sol', servicio__slug='pesca-deportiva', personalizacion__tipo='licencia',
+            ).values_list('precio', flat=True).first()
         empresa = Empresa.objects.get(slug='piratas-adventures')
         with scope.con_empresa(empresa):
             # Dos embarcaciones para unas 14 personas; para la actividad, máximo 8 por salida.
@@ -576,6 +598,21 @@ class Command(BaseCommand):
                 Embarcacion.objects.get_or_create(
                     empresa=empresa, nombre=nombre, defaults=dict(clase='grande', capacidad_maxima=8),
                 )
+            # La licencia de pesca, al precio de la de Sal y Sol (dueño, 2026-11-10); igual que la migración fleet 0056.
+            from apps.fleet.models import Personalizacion
+            pesca = Servicio.objects.get(empresa=empresa, slug='pesca-deportiva')
+            if not ServicioPersonalizacion.objects.filter(servicio=pesca, personalizacion__tipo='licencia').exists():
+                licencia, _ = Personalizacion.objects.get_or_create(
+                    empresa=empresa, nombre='Licencia de pesca',
+                    defaults=dict(nombre_en='Fishing license', tipo='licencia', tipo_interaccion='check',
+                                  cobrar_por_persona=True, cantidad_editable=True),
+                )
+                ServicioPersonalizacion.objects.create(
+                    servicio=pesca, personalizacion=licencia, precio=precio_licencia or Decimal('300'),
+                )
+        with scope.como_operador_plataforma():
+            # El dueño cambia sus dólares a la compra, a 17.5 (2026-11-10).
+            Sede.objects.filter(slug='puerto-chale').update(tipo_cambio_usd=Decimal('17.5'))
 
     # ------------------------------------------------------------------ paquetes de La Ventana Travel
     def _paquetes_la_ventana(self):

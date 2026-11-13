@@ -55,6 +55,9 @@ export type SedeNegocio = {
 
 /** El calendario de especies de una sede: una fila por temporada, en orden de temporada. */
 export type SedeTemporadas = {
+  /** Título y nombre en el menú si la sede no es de pesca («Qué hay cada temporada»); sin ellos, los del diccionario. */
+  titulo?: string;
+  nav?: string;
   intro: string;
   etiquetaCalendario: string;
   etiquetaFuerte: string;
@@ -116,6 +119,30 @@ export type SedeConocenos = {
   cierre: { boton: string };
 };
 
+/**
+ * «Conócenos» de una empresa familiar (Puerto Chale, 2026-11-10): su propia sección, no la del gremio de La Paz. Una
+ * persona con cara y nombre (la única foto de gente que hay) y, en zigzag, la prueba de lo que hacen: las ballenas junto a
+ * su panga. Sin año ni nombres que la familia no dio.
+ */
+export type SedeFamilia = {
+  titulo: string;
+  /** La frase bajo el título: quiénes son, dicho llano. */
+  apertura: string;
+  /** El retrato: la pieza más grande. `posicion` es el `object-position` del recorte. */
+  retrato: { src: string; alt: string; posicion?: string };
+  /** Bajo el retrato: el nombre completo y, en el renglón de abajo, los años en el mar. */
+  nombre: string;
+  anios: string;
+  /** La foto que prueba lo que hacen, con su pie. */
+  foto: { src: string; alt: string; pie: string; posicion?: string };
+  /**
+   * Una línea que cambia con la fecha: `en` dentro de los meses (1 = enero), `fuera` el resto del año. Sin script se ve
+   * `base`, que dice los meses y nunca miente.
+   */
+  temporada?: { meses: number[]; en: string; fuera: string; base: string };
+  cierre: { boton: string };
+};
+
 export type SedeDestacada = {
   tipo: 'servicio' | 'paquete';
   slug: string;
@@ -166,6 +193,8 @@ export type SedeCuerpoContenido = {
   dia?: SedeDia;
   /** Quiénes hacen los servicios de la sede. Sin él, no hay sección. */
   conocenos?: SedeConocenos;
+  /** Una empresa familiar contada por su gente (ocupa el lugar de «Conócenos»; una sede lleva una u otra). */
+  familia?: SedeFamilia;
   /** Las pangas de la sede, bajo el héroe. Sin ellas, no hay sección. */
   pangas?: SedePangas;
   temporadas?: SedeTemporadas;
