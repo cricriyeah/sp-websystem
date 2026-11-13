@@ -736,8 +736,7 @@
   },
   "sedeContenido": {
     "arranque": {
-      "cta": "Reservar",
-      "operadaPor": "Con"
+      "cta": "Reservar"
     },
     "queReservar": {
       "titulo": "Elige tu salida",

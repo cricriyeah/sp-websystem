@@ -736,8 +736,7 @@
   },
   "sedeContenido": {
     "arranque": {
-      "cta": "Book",
-      "operadaPor": "With"
+      "cta": "Book"
     },
     "queReservar": {
       "titulo": "Choose your trip",

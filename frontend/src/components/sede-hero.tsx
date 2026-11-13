@@ -17,7 +17,7 @@ type SedeHeroProps = {
   empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string; logoLargo?: LogoLargo };
   /** El logo de la empresa suelto, sin el círculo del sello (cuando el logo ya trae su disco). */
   empresaSinCirculo?: boolean;
-  textos: { cta: string; operadaPor: string };
+  textos: { cta: string };
 };
 
 /**
@@ -61,12 +61,9 @@ export function SedeHero({ nombre, contenido, palabras, empresa, empresaSinCircu
                   className={`block w-auto ${empresa.logoLargo.sello ?? 'h-12 sm:h-14 lg:h-16'}`}
                 />
               ) : empresa && (
-                <div className="flex items-center gap-3">
-                  <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} sinCirculo={empresaSinCirculo} />
-                  <p className="text-lg font-semibold leading-tight">
-                    <span className="font-normal">{textos.operadaPor}</span> {empresa.nombre}
-                  </p>
-                </div>
+                // Sin logo largo, solo el sello, sin el «Con …» al lado: como las demás sedes, un logo junto al botón
+                // (dueño, 2026-11-13). El nombre va en el `alt` del sello.
+                <EmpresaSello nombre={empresa.nombre} logo={empresa.simbolo ?? empresa.logo} tamano={64} sinCirculo={empresaSinCirculo} />
               )}
               <Link href={`#${ANCLA_DE.reservar}`} className={botonClases({ variante: 'campana-claro' })}>
                 {textos.cta}
