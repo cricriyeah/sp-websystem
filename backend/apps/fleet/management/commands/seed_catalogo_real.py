@@ -639,16 +639,16 @@ class Command(BaseCommand):
                         empresa_lider=empresa, nombre=nombre, precio_ancla=precio,
                         estrategia_precio='por_persona', pide_hora=False, activo=True,
                         descripcion=f'{noches} noches de hospedaje, traslado redondo de aeropuerto y '
-                                    f'seafari de orcas y fauna marina del día 2 al {noches}.',
+                                    f'{noches - 1} salidas al mar para ver ballenas.',
                     ),
                 )
                 # Lo que incluye el paquete: las mismas amenidades que la pesca con mosca; el hospedaje no lleva comida.
                 paquete.incluye = {
                     'es': [f'{noches} noches de hospedaje en el Hotel Casa Arrecife', 'Traslado redondo del aeropuerto al hotel',
-                           f'Seafari diario de orcas y fauna marina, del día 2 al {noches}',
+                           f'{noches - 1} salidas al mar para ver ballenas',
                            *INCLUYE_AMENIDADES_VENTANA['es'], 'El hospedaje no incluye comida'],
                     'en': [f'{noches} nights at Hotel Casa Arrecife', 'Round-trip airport transfer',
-                           f'Daily orca and marine life seafari, from day 2 to day {noches}',
+                           f'{noches - 1} sea trips to see whales',
                            *INCLUYE_AMENIDADES_VENTANA['en'], 'Lodging does not include meals'],
                 }
                 for orden, servicio, extra in (

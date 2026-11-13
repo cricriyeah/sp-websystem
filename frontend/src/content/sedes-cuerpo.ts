@@ -539,7 +539,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       faq: [
         {
           q: '¿Qué incluye el paquete de 5 o de 7 noches?',
-          a: 'Hospedaje en el Hotel Casa Arrecife durante 5 o 7 noches, traslado redondo del aeropuerto y el seafari de orcas y fauna marina todos los días de mar: del día 2 al 5 en el paquete de 5 noches y del día 2 al 7 en el de 7. El día 1 es de llegada.',
+          a: 'Hospedaje en el Hotel Casa Arrecife durante 5 o 7 noches, traslado redondo del aeropuerto y las salidas al mar para ver ballenas: 4 en el paquete de 5 noches y 6 en el de 7. El día 1 es de llegada.',
         },
         {
           q: '¿Cómo es el hospedaje?',
@@ -658,7 +658,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       faq: [
         {
           q: 'What does the 5-night or 7-night package include?',
-          a: 'Lodging at Hotel Casa Arrecife for 5 or 7 nights, a round-trip airport transfer, and an orca and marine life seafari on every sea day: days 2 to 5 on the 5-night package and days 2 to 7 on the 7-night one. Day 1 is your arrival day.',
+          a: 'Lodging at Hotel Casa Arrecife for 5 or 7 nights, a round-trip airport transfer, and sea trips to see whales: 4 on the 5-night package and 6 on the 7-night one. Day 1 is your arrival day.',
         },
         {
           q: 'What is the lodging like?',
