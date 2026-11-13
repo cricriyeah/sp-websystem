@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { cn } from '@/components/ui/cn';
 
@@ -12,12 +12,16 @@ const SALE_MS = 220;
  * abajo). Es decoración: el significado lo lleva el `h1`, así que va oculta a los lectores de
  * pantalla. Con «reducir movimiento», con una sola palabra o con la pestaña oculta se queda quieta
  * en la primera, que es también lo que llega en el HTML inicial.
+ *
+ * En el teléfono cada palabra ocupa todo el ancho (dueño, 2026-11-13): `.palabra-ancho` calcula el tamaño con el
+ * número de letras (`--letras`), porque la letra de titulares es monoespaciada (globals.css).
  */
 export function PalabraRota({ palabras, className }: { palabras: string[]; className?: string }) {
   const reducido = useReducedMotion();
   const [indice, setIndice] = useState(0);
   const [fase, setFase] = useState<'quieta' | 'sale' | 'entra'>('quieta');
   const rota = !reducido && palabras.length > 1;
+  const palabra = palabras[indice % palabras.length];
 
   useEffect(() => {
     if (!rota) return;
@@ -37,9 +41,12 @@ export function PalabraRota({ palabras, className }: { palabras: string[]; class
   }, [rota, palabras.length]);
 
   return (
-    <p aria-hidden="true" className={cn('-mb-[0.16em] overflow-hidden whitespace-nowrap pb-[0.16em]', className)}>
-      <span className={cn('inline-block', fase === 'sale' && 'palabra-sale', fase === 'entra' && 'palabra-entra')}>
-        {palabras[indice % palabras.length]}
+    <p aria-hidden="true" className={cn('palabra-ancho -mb-[0.16em] overflow-hidden whitespace-nowrap pb-[0.16em]', className)}>
+      <span
+        className={cn('inline-block', fase === 'sale' && 'palabra-sale', fase === 'entra' && 'palabra-entra')}
+        style={{ '--letras': palabra.length } as CSSProperties}
+      >
+        {palabra}
       </span>
     </p>
   );
