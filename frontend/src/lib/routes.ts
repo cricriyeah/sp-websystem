@@ -29,3 +29,18 @@ export function hrefDeslinde(lang: Locale, empresaSlugs: readonly string[] = [])
   const slugs = [...new Set(empresaSlugs.filter(Boolean))];
   return slugs.length > 0 ? `/${lang}/deslinde?empresa=${slugs.map(encodeURIComponent).join(',')}` : `/${lang}/deslinde`;
 }
+
+/** La página de detalle de un servicio, sin moneda ni sede en la URL (una sola URL por página). */
+export function hrefServicioDetalle(lang: Locale, empresaSlug: string, servicioSlug: string): string {
+  return `/${lang}/servicio/${encodeURIComponent(empresaSlug)}/${encodeURIComponent(servicioSlug)}`;
+}
+
+/** El índice de guías. */
+export function hrefGuias(lang: Locale): string {
+  return `/${lang}/guias`;
+}
+
+/** Una guía. El slug cambia con el idioma (`content/guias.ts`). */
+export function hrefGuia(lang: Locale, slug: string): string {
+  return `/${lang}/guias/${encodeURIComponent(slug)}`;
+}

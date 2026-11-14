@@ -47,9 +47,18 @@ test('galería solo con 3 fotos aptas', () => {
 
 test('orden fijo de la sede, con todo', () => {
   assert.deepEqual(
-    ids({ paquetes: [{}], dia: [{}], conocenos: [{}], fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}] }),
-    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'opiniones', 'conocenos', 'galeria', 'temporadas', 'preguntas'],
+    ids({ paquetes: [{}], dia: [{}], conocenos: [{}], fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}], guias: [{}] }),
+    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'opiniones', 'conocenos', 'galeria', 'temporadas', 'guias', 'preguntas'],
   );
+});
+
+test('las guías van antes de las preguntas, fuera del menú, y solo si la sede tiene', () => {
+  assert.ok(!ids({ faq: [{}] }).includes('guias'));
+  assert.ok(!ids({ guias: [] }).includes('guias'));
+  assert.deepEqual(ids({ guias: [{}], faq: [{}] }).slice(-2), ['guias', 'preguntas']);
+  assert.deepEqual(s.enlacesDeSede(['hero', 'reservar', 'guias']), [{ ancla: '#reservar', claveNav: 'reservar' }]);
+  const fondos = s.fondosDeSecciones(['hero', 'reservar', 'temporadas', 'guias', 'preguntas']);
+  assert.deepEqual(['temporadas', 'guias', 'preguntas'].map((id) => fondos[id]), ['cafe-bruma', 'blanco', 'cafe-bruma']);
 });
 
 test('paquetes y día solo si hay contenido real: sin paquetes o sin momentos no se pintan', () => {

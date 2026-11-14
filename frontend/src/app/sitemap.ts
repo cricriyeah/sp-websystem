@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { LOCALES, rutasEstaticas, rutasPaquetes, rutasSedes, rutasServicios, absolutaEn, idiomasDe } from '@/lib/site';
+import { LOCALES, rutasEstaticas, rutasGuias, rutasPaquetes, rutasSedes, rutasServicios, absolutaEn, idiomasDe, idiomasDeRutas } from '@/lib/site';
 
 // Sin `lastModified`: no hay una fecha real de cambio por página, y poner «ahora» en cada entrada hace que
 // Google deje de creerle a todas las fechas del sitemap.
@@ -27,5 +27,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     [...sedes, ...paquetes, ...servicios].map((ruta) => entradaDe(lang, ruta)),
   );
 
-  return [...estaticas, ...deSede];
+  // Las guías: su slug cambia con el idioma, así que cada entrada apunta a la ruta de la otra versión.
+  const guias = rutasGuias().flatMap((rutas) =>
+    LOCALES.map((lang) => ({
+      url: absolutaEn(lang, rutas[lang]),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+      alternates: { languages: idiomasDeRutas(rutas) },
+    })),
+  );
+
+  return [...estaticas, ...deSede, ...guias];
 }

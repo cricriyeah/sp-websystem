@@ -147,6 +147,7 @@
     "galeria": "Galería",
     "preguntas": "Preguntas",
     "sobreNosotros": "Sobre nosotros",
+    "guias": "Guías",
     "contacto": "Contacto",
     "catalogo": "Experiencias",
     "sedeLabel": "Destino",
@@ -945,6 +946,28 @@
     "tambienConocida": "En su sitio: {nombre}",
     "telefono": "Teléfono",
     "whatsapp": "WhatsApp"
+  },
+  "guias": {
+    "meta": {
+      "title": "Guías de Baja California Sur: temporadas, fauna marina y cómo llegar",
+      "description": "Cuándo ver orcas, ballena gris y mobulas, qué se pesca cada mes en La Paz y cómo llegar a cada destino de Baja California Sur."
+    },
+    "nombre": "Guías",
+    "indiceTitulo": "Guías de Baja California Sur",
+    "indiceIntro": "Cuándo ir, qué se ve y cómo llegar. Lo que conviene saber antes de reservar, contado por quienes salen al mar aquí.",
+    "region": "Baja California Sur",
+    "migas": "Ruta de la página",
+    "actualizado": "Actualizado en {fecha}",
+    "conEmpresa": "Con {empresa}",
+    "enTemporada": "En temporada",
+    "temporadaFuerte": "Más fuerte",
+    "datoDeZona": "Dato de la zona",
+    "resumenFila": "{nombre}: {meses}.",
+    "resumenFuerte": "Más fuerte: {meses}.",
+    "masGuias": "Más guías",
+    "verTodas": "Ver todas las guías",
+    "antesDeVenir": "Antes de venir",
+    "carrilProductos": "Lo que puedes reservar"
   },
   "hub": {
     "headline": "Tu próxima experiencia empieza en Baja",

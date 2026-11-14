@@ -107,8 +107,8 @@ type Entrada = {
  * 1. Link corto (`/lapaz`, `/en/lapaz`, sin importar mayúsculas ni la diagonal final):
  *    redirige a la sede y guarda el modo.
  * 2. `/hub` (o `/es/hub`, `/en/hub`): borra el modo y va a la portada.
- * 3. Con el modo puesto, la portada (`/`, `/es`, `/en`) y «Sobre nosotros» (con o sin idioma)
- *    redirigen a la sede.
+ * 3. Con el modo puesto, la portada (`/`, `/es`, `/en`), «Sobre nosotros» y el índice de guías (con o sin
+ *    idioma) redirigen a la sede.
  *
  * Y con el modo puesto, una página de otra sede (`sedeDeLaPagina`) sigue de largo y pasa el modo
  * a esa sede.
@@ -135,7 +135,9 @@ export function decidirSoloSede({ pathname, search, cookie, idiomaPreferido, esC
   // siguiente petición volvería a redirigir (dos saltos en vez de uno).
   const esPortada = resto.length === 0;
   const esNosotros = resto.length === 1 && resto[0] === 'nosotros';
-  if (esPortada || esNosotros) return { tipo: 'redirigir', destino: `/${idioma()}/sede/${sede}${search}` };
+  // El índice de guías es del hub (lista las de todas las sedes); una guía suelta sí se lee en modo «solo sede».
+  const esIndiceDeGuias = resto.length === 1 && resto[0] === 'guias';
+  if (esPortada || esNosotros || esIndiceDeGuias) return { tipo: 'redirigir', destino: `/${idioma()}/sede/${sede}${search}` };
 
   const otra = !esCargaDePagina ? null : sedeDeLaPagina(resto, new URLSearchParams(search));
   if (otra && otra !== sede) return { tipo: 'seguir', cookie: { guardar: otra } };

@@ -377,6 +377,32 @@ Cada empresa comparte el link corto de su sede (`/lapaz`, `/laventana`, `/puerto
 - El matcher de `proxy.ts` escribe `\\.` dentro del string, no `\.`: en JS `'\.'` vale `.`
   (cualquier carácter) y el proxy solo corría en `/` (bug viejo, corregido junto con esto).
 
+## Guías (`/[lang]/guias`, auditoría SEO 2026-11-13)
+
+Páginas para las búsquedas de «cuándo, dónde, cómo» (nado con orcas, temporada de ballena gris, calendario de pesca,
+cómo llegar a Puerto Chale). Acomodo derivado con perception-first-design, construido con taste.
+
+- **El texto vive en `content/guias.ts`** (`GUIAS`, es/en en el mismo objeto). Lo que ofrecen las empresas repite lo
+  de `sedes-cuerpo.ts` y `faq-servicios.ts`: si cambia allá, se cambia aquí. Lo general de la región va como rango y
+  sus filas de calendario llevan `fuente: 'region'` («Dato de la zona»). Sin precios. Nunca se mencionan permisos ni
+  dependencias de gobierno (decisión del dueño; la prueba `content-guias` lo revisa, con los largos de título y
+  descripción, la paridad es/en y que la foto exista).
+- **El slug cambia con el idioma.** `metadataDePagina({ rutas })` e `idiomasDeRutas` (`lib/site.ts`) arman canonical y
+  hreflang con la ruta de cada versión; el sitemap usa `rutasGuias()`. El selector de idioma solo cambia `/es` por
+  `/en`: si el slug es el de la otra versión, la página redirige al suyo (`slugEnIdioma`).
+- **La plantilla** (`guias/[slug]/page.tsx`): la pregunta como `h1` y su respuesta en la primera pantalla, con la ficha
+  de datos del detalle (`Cifras`) al lado; foto; calendario de doce casillas por especie (`guia-calendario.tsx`, la
+  casilla alta es mes fuerte y cada fila se lee como frase en lector de pantalla); secciones; un solo bloque de lo que
+  se reserva (tarjetas del catálogo con precio al día, o el enlace si el catálogo no responde); preguntas frecuentes;
+  hasta 3 guías más. JSON-LD: `Article` (fecha = `actualizado`, la de la última revisión real), migas y `FAQPage`.
+- **Cómo se llega:** el índice `/guias` (grupos por destino), «Guías» en el pie y la sección «Antes de venir» de cada
+  sede (`guias-sede.tsx`, id `guias`, antes de las preguntas y fuera del menú). El índice es del hub: en modo «solo
+  sede» redirige a la sede y sus enlaces llevan `sale-al-hub`; una guía suelta sí se lee.
+- `/servicio/la-ventana-travel/avistamiento-ballenas-orcas` redirige (307, `next.config.ts`) a la guía de orcas: por
+  ahora el seafari solo se vende dentro de los paquetes. El día que se venda suelto, se quita la redirección.
+- Una guía nueva: un objeto más en `GUIAS` (los dos idiomas) y actualizar `ACTUALIZADO`. Al revisar el texto de una,
+  cambiar su `actualizado`.
+
 ## Ruta /traslados (checkout de transporte)
 
 `[lang]/traslados/page.tsx` es el punto de entrada server-side para cotizar y reservar traslados terrestres privados:

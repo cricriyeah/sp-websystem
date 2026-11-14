@@ -11,7 +11,7 @@ import type { SedeNegocio } from '@/content/sedes-tipos';
 import { CORREO_MARCA, tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
 import { REDES_MARCA, type RedMarca } from '@/content/redes-marca';
 import { conVentana, ventanaDeSalida } from '@/lib/horario-servicio';
-import { hrefDeslinde, hrefInicio, hrefSede } from '@/lib/routes';
+import { hrefDeslinde, hrefGuias, hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
 
 type SiteFooterProps = {
@@ -64,11 +64,12 @@ export function SiteFooter({ lang, footer, nav, bookLabel, negocio, sedeSlug, an
         { href: hrefInicio(lang, ANCLA_HUB.empresas), label: nav.empresas },
       ];
 
-  // «Sobre nosotros» al final del primer grupo, en todas las páginas. Es del hub: en modo «solo
-  // sede» se esconde (clase `sale-al-hub`; fuera de una sede se esconde el grupo entero, abajo).
+  // «Sobre nosotros» y «Guías» al final del primer grupo, en todas las páginas. Son del hub: en modo «solo
+  // sede» se esconden (clase `sale-al-hub`; fuera de una sede se esconde el grupo entero, abajo).
   const secciones = [
     ...seccionesDeLaPagina.map((link) => ({ ...link, alHub: false })),
     { href: `/${lang}/nosotros`, label: nav.sobreNosotros, alHub: true },
+    { href: hrefGuias(lang), label: nav.guias, alHub: true },
   ];
 
   const legales = [

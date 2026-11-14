@@ -209,3 +209,38 @@ export function jsonLdViaje({ nombre, descripcion, url, proveedor, precio, lugar
       : {}),
   };
 }
+
+export type EntradaArticulo = {
+  titulo: string;
+  descripcion: string;
+  url: string;
+  /** URL absoluta de la foto de la guía. */
+  imagen: string;
+  /** Fecha de la última revisión (AAAA-MM-DD). */
+  actualizado: string;
+  /** `es-MX` / `en-US`. */
+  idioma: string;
+  /** Quién publica: la marca del sitio. */
+  editor: { nombre: string; url: string };
+};
+
+/**
+ * Una guía como `Article`: título, foto, fecha de revisión y quién la publica. La fecha es la de la última revisión
+ * real del texto (`content/guias.ts`), nunca «hoy».
+ */
+export function jsonLdArticulo({ titulo, descripcion, url, imagen, actualizado, idioma, editor }: EntradaArticulo) {
+  const organizacion = { '@type': 'Organization', name: editor.nombre, url: editor.url };
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: titulo,
+    description: descripcion,
+    image: [imagen],
+    dateModified: actualizado,
+    datePublished: actualizado,
+    inLanguage: idioma,
+    mainEntityOfPage: url,
+    author: organizacion,
+    publisher: organizacion,
+  };
+}

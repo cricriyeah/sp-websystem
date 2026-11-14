@@ -1,5 +1,6 @@
 import type { Locale } from '@/app/[lang]/dictionaries';
 import { SEDES_INDICE } from '@/content/sedes-indice';
+import { GUIAS } from '@/content/guias';
 import { getPaquetesSede, getServiciosSede, getSedes } from './api';
 import { sedesActivas } from './reconciliar-sedes';
 
@@ -20,7 +21,11 @@ export const LOCALE_TAG: Record<Locale, string> = {
 };
 
 /** Rutas publicas estaticas del sitio (no dependen de que sedes esten activas). */
-export const rutasEstaticas = ['', '/reservar', '/deslinde', '/privacidad', '/cancelaciones', '/nosotros'] as const;
+export const rutasEstaticas = ['', '/reservar', '/deslinde', '/privacidad', '/cancelaciones', '/nosotros', '/guias'] as const;
+
+/** La ruta de cada guía en cada idioma: el slug cambia con el idioma, así que no cabe en una sola ruta. */
+export const rutasGuias = (): Record<Locale, string>[] =>
+  GUIAS.map((guia) => ({ es: `/guias/${guia.textos.es.slug}`, en: `/guias/${guia.textos.en.slug}` }));
 
 /**
  * Keep the sitemap, hub and navigation on the same active destination list.
@@ -68,10 +73,15 @@ export const absolutaEn = (lang: Locale, ruta: string = '') => `${SITE_URL}/${la
  * La usan las etiquetas de cada página y el sitemap: los dos tienen que decir lo mismo.
  */
 export function idiomasDe(ruta: string = ''): Record<Locale | 'x-default', string> {
+  return idiomasDeRutas({ es: ruta, en: ruta });
+}
+
+/** Lo mismo cuando la ruta cambia con el idioma (las guías: `/guias/nado-con-orcas…` y `/guias/swim-with-orcas…`). */
+export function idiomasDeRutas(rutas: Record<Locale, string>): Record<Locale | 'x-default', string> {
   return {
-    es: absolutaEn('es', ruta),
-    en: absolutaEn('en', ruta),
-    'x-default': absolutaEn('en', ruta),
+    es: absolutaEn('es', rutas.es),
+    en: absolutaEn('en', rutas.en),
+    'x-default': absolutaEn('en', rutas.en),
   };
 }
 

@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@/app/[lang]/dictionaries';
-import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe } from './site';
+import { LOCALE_TAG, SITE_URL, absolutaEn, alternativasDe, idiomasDeRutas } from './site';
 import { etiquetasSociales, recortarDescripcion } from './seo';
 
 type Entrada = {
   lang: Locale;
   /** Ruta de la página sin idioma (`/sede/la-paz`); vacía para la portada. */
   ruta?: string;
+  /** La ruta en cada idioma, cuando el slug cambia con él (las guías). Manda sobre `ruta`. */
+  rutas?: Record<Locale, string>;
   titulo: string;
   /** El título ya lleva la marca: no se le agrega «| Sun Baja Experience». */
   tituloCompleto?: boolean;
@@ -25,14 +27,15 @@ type Entrada = {
  * del layout cuando la página define los suyos, por eso aquí se arman enteros, con la imagen del sitio.
  */
 export function metadataDePagina({
-  lang, ruta = '', titulo, tituloCompleto = false, descripcion, descripcionGeneral, nombreDelSitio, imagen,
+  lang, ruta: rutaUnica = '', rutas, titulo, tituloCompleto = false, descripcion, descripcionGeneral, nombreDelSitio, imagen,
 }: Entrada): Metadata {
+  const ruta = rutas ? rutas[lang] : rutaUnica;
   const descripcionFinal = recortarDescripcion(descripcion) ?? descripcionGeneral;
   const tituloSocial = tituloCompleto ? titulo : `${titulo} | ${nombreDelSitio}`;
   return {
     title: tituloCompleto ? { absolute: titulo } : titulo,
     description: descripcionFinal,
-    alternates: alternativasDe(lang, ruta),
+    alternates: rutas ? { canonical: absolutaEn(lang, ruta), languages: idiomasDeRutas(rutas) } : alternativasDe(lang, ruta),
     ...etiquetasSociales({
       url: absolutaEn(lang, ruta),
       titulo: tituloSocial,

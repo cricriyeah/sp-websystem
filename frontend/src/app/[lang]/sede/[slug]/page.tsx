@@ -27,6 +27,8 @@ import { PangasSede } from '@/components/pangas-sede';
 import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
 import { FaqSection } from '@/components/faq-section';
+import { GuiasSede } from '@/components/guias-sede';
+import { guiasDeSede } from '@/content/guias';
 import { OpinionesEmpresas } from '@/components/opiniones-empresas';
 import { FUENTE_GOOGLE, resenasMarcaDeSede } from '@/content/resenas-marca';
 import { StructuredData } from '@/components/structured-data';
@@ -88,6 +90,8 @@ export default async function SedePage({ params, searchParams }: Props) {
   const galeria = contenido.galeria && fotosAptas(contenido.galeria.filter((foto) => !usadas.has(foto.src)));
   const empresasGaleria = Object.fromEntries((galeria ?? []).map((foto) => [foto.empresaSlug, { nombre: getEmpresa(foto.empresaSlug)?.nombre ?? foto.empresaSlug }]));
 
+  const guias = guiasDeSede(slug);
+
   const porcentaje = porcentajeDeSede(servicios ?? [], contenido.destacadas[0]);
 
   // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
@@ -104,6 +108,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} sello={largoEn('galeria') && isotipoSede ? { isotipo: isotipoSede, sinFondo: protagonista?.simboloBarra, alt: protagonista?.nombre ?? '', largo: largoEn('galeria') } : undefined} /> }),
     ...(temporadas && { temporadas: (fondo: Fondo) => <SeasonSection id={ANCLA_DE.temporadas} titulo={temporadas.titulo ?? dict.destination.seasonsTitle} temporadas={temporadas} textos={{ ahora: dict.sedeContenido.temporadasAhora }} fondo={fondo} isotipo={isotipoSede} isotipoSinFondo={protagonista?.simboloBarra} empresa={protagonista?.nombre} logoLargo={largoEn('temporadas')} /> }),
     opiniones: (fondo) => <OpinionesEmpresas id={ANCLA_DE.opiniones} lang={lang} opiniones={opiniones} textos={dict.sedeContenido.opiniones} textosFila={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente, pausar: dict.sedeContenido.opiniones.pausar, reanudar: dict.sedeContenido.opiniones.reanudar }} fondo={fondo} todas={resenasMarca.length > 0 ? FUENTE_GOOGLE : undefined} />,
+    ...(guias.length > 0 && { guias: (fondo: Fondo) => <GuiasSede id={ANCLA_DE.guias} lang={lang} guias={guias} fondo={fondo} textos={{ titulo: dict.guias.antesDeVenir, verTodas: dict.guias.verTodas }} /> }),
     ...(faq && { preguntas: (fondo: Fondo) => <FaqSection id={ANCLA_DE.preguntas} titulo={textosFaq.titulo} preguntas={faq} whatsapp={whatsappFaq} fondo={fondo} /> }),
   };
   const secciones = seccionesDeSede({
@@ -116,6 +121,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     dia: contenido.dia?.momentos,
     conocenos: contenido.conocenos ? [contenido.conocenos.foto] : contenido.familia ? [contenido.familia.retrato] : undefined,
     pangas: contenido.pangas?.fotos,
+    guias,
   });
   const ids = secciones.map((s) => s.id).filter((id) => pintar[id]);
   const fondos = fondosDeSecciones(ids);

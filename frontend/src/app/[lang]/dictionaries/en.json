@@ -147,6 +147,7 @@
     "galeria": "Gallery",
     "preguntas": "FAQ",
     "sobreNosotros": "About us",
+    "guias": "Guides",
     "contacto": "Contact",
     "catalogo": "Experiences",
     "sedeLabel": "Destination",
@@ -945,6 +946,28 @@
     "tambienConocida": "On its site: {nombre}",
     "telefono": "Phone",
     "whatsapp": "WhatsApp"
+  },
+  "guias": {
+    "meta": {
+      "title": "Baja California Sur Guides: Seasons, Marine Life and Getting There",
+      "description": "When to see orcas, gray whales and mobula rays, what bites each month in La Paz, and how to get to each destination in Baja California Sur."
+    },
+    "nombre": "Guides",
+    "indiceTitulo": "Baja California Sur guides",
+    "indiceIntro": "When to go, what you see and how to get there. What is worth knowing before you book, from the people who go out to sea here.",
+    "region": "Baja California Sur",
+    "migas": "Page path",
+    "actualizado": "Updated {fecha}",
+    "conEmpresa": "With {empresa}",
+    "enTemporada": "In season",
+    "temporadaFuerte": "Peak",
+    "datoDeZona": "Regional data",
+    "resumenFila": "{nombre}: {meses}.",
+    "resumenFuerte": "Peak: {meses}.",
+    "masGuias": "More guides",
+    "verTodas": "See all guides",
+    "antesDeVenir": "Before you come",
+    "carrilProductos": "What you can book"
   },
   "hub": {
     "headline": "Your next experience starts in Baja",

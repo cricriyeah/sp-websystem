@@ -50,6 +50,13 @@ test('con el modo puesto, la portada y «Sobre nosotros» llevan a la sede', () 
   assert.deepEqual(decidir('/es', { cookie: 'la-paz', search: '?ref=ana' }), aLaPaz('/es/sede/la-paz?ref=ana'));
 });
 
+test('con el modo puesto, el índice de guías lleva a la sede y una guía suelta se lee', () => {
+  assert.deepEqual(decidir('/es/guias', { cookie: 'la-paz' }), { tipo: 'redirigir', destino: '/es/sede/la-paz' });
+  assert.deepEqual(decidir('/guias', { cookie: 'la-paz', idiomaPreferido: 'en' }), { tipo: 'redirigir', destino: '/en/sede/la-paz' });
+  assert.deepEqual(decidir('/es/guias/nado-con-orcas-la-ventana', { cookie: 'la-paz' }), sigue);
+  assert.deepEqual(decidir('/es/guias'), sigue);
+});
+
 test('sin modo, la portada y «Sobre nosotros» no se tocan', () => {
   assert.deepEqual(decidir('/'), sigue);
   assert.deepEqual(decidir('/es'), sigue);

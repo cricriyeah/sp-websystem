@@ -65,6 +65,16 @@ const nextConfig: NextConfig = {
       "motion/react",
     ],
   },
+  // El nado con orcas de La Ventana se vende, por ahora, solo dentro de los paquetes: su página de servicio no tiene
+  // nada que reservar y la guía contesta lo que ahí se buscaba. Temporal (307) a propósito: el día que se venda
+  // suelto, se quita y la página de servicio vuelve sin que el navegador recuerde el salto.
+  async redirects() {
+    const servicio = "servicio/la-ventana-travel/avistamiento-ballenas-orcas";
+    return [
+      { source: `/es/${servicio}`, destination: "/es/guias/nado-con-orcas-la-ventana", permanent: false },
+      { source: `/en/${servicio}`, destination: "/en/guias/swim-with-orcas-la-ventana", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {
