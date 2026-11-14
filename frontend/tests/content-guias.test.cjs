@@ -91,6 +91,34 @@ test('la foto existe, la fecha es una fecha y la sede es una de las tres', () =>
   }
 });
 
+test('cada seccion tiene su foto, todas existen y llevan descripcion en los dos idiomas', () => {
+  for (const guia of m.GUIAS) {
+    assert.equal(guia.fotos.length, guia.textos.es.secciones.length, `${guia.id}: una foto por seccion`);
+    for (const foto of [guia.foto, guia.fotoFrase, ...guia.fotos]) {
+      assert.ok(fs.existsSync(path.join(raiz, 'public', foto.src)), `falta ${foto.src}`);
+      assert.ok(foto.alt.es.trim() && foto.alt.en.trim(), `${guia.id}: ${foto.src}`);
+    }
+    assert.ok(['mar', 'traslado', 'estancia'].includes(guia.tema), guia.id);
+    for (const idioma of IDIOMAS) {
+      const frase = guia.textos[idioma].frase;
+      assert.ok(frase.trim() && frase.length <= 70, `${guia.id}: frase de ${frase.length}`);
+    }
+  }
+});
+
+test('el titulo se parte para el arranque: lo que nombra el tema y el resto', () => {
+  assert.deepEqual(m.partesDeTitulo('Nado con orcas en La Ventana: cuándo ir y cómo es la salida'), { principal: 'Nado con orcas en La Ventana', resto: 'Cuándo ir y cómo es la salida' });
+  assert.deepEqual(m.partesDeTitulo('Qué hacer en La Ventana, Baja California Sur'), { principal: 'Qué hacer en La Ventana', resto: 'Baja California Sur' });
+  assert.deepEqual(m.partesDeTitulo('Cómo llegar a Puerto Chale desde La Paz y Los Cabos'), { principal: 'Cómo llegar a Puerto Chale', resto: 'Desde La Paz y Los Cabos' });
+  assert.deepEqual(m.partesDeTitulo('How to get to Puerto Chale from La Paz and Los Cabos'), { principal: 'How to get to Puerto Chale', resto: 'From La Paz and Los Cabos' });
+  assert.deepEqual(m.partesDeTitulo('Sin corte'), { principal: 'Sin corte', resto: null });
+  // La parte grande va en mayúsculas sobre la foto: corta, para que quepa en pocas líneas.
+  for (const { guia, textos } of cadaTexto()) {
+    const { principal } = m.partesDeTitulo(textos.titulo);
+    assert.ok(principal.length <= 50, `${guia.id}: ${principal.length} ${principal}`);
+  }
+});
+
 test('nunca se habla de permisos ni de dependencias de gobierno (decision del dueño)', () => {
   const todo = JSON.stringify(m.GUIAS);
   assert.doesNotMatch(todo, /semarnat|profepa|conanp/i);

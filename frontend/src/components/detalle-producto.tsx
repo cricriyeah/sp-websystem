@@ -108,7 +108,7 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
 }
 
 /** La ficha de datos: el dato en la letra de los titulares sobre un campo arena y su etiqueta, chica, debajo. */
-export function Cifras({ items, className }: { items: { valor: string; etiqueta: string }[]; className?: string }) {
+function Cifras({ items, className }: { items: { valor: string; etiqueta: string }[]; className?: string }) {
   return (
     <dl className={cn('rev grid grid-cols-2 gap-x-6 gap-y-7 bg-cafe-bruma p-6 sm:p-8', className)}>
       {items.map((dato) => (

@@ -390,14 +390,27 @@ cómo llegar a Puerto Chale). Acomodo derivado con perception-first-design, cons
 - **El slug cambia con el idioma.** `metadataDePagina({ rutas })` e `idiomasDeRutas` (`lib/site.ts`) arman canonical y
   hreflang con la ruta de cada versión; el sitemap usa `rutasGuias()`. El selector de idioma solo cambia `/es` por
   `/en`: si el slug es el de la otra versión, la página redirige al suyo (`slugEnIdioma`).
-- **La plantilla** (`guias/[slug]/page.tsx`): la pregunta como `h1` y su respuesta en la primera pantalla, con la ficha
-  de datos del detalle (`Cifras`) al lado; foto; calendario de doce casillas por especie (`guia-calendario.tsx`, la
-  casilla alta es mes fuerte y cada fila se lee como frase en lector de pantalla); secciones; un solo bloque de lo que
-  se reserva (tarjetas del catálogo con precio al día, o el enlace si el catálogo no responde); preguntas frecuentes;
-  hasta 3 guías más. JSON-LD: `Article` (fecha = `actualizado`, la de la última revisión real), migas y `FAQPage`.
+- **La plantilla** (`guias/[slug]/page.tsx`), con el lenguaje de campaña del sitio (pedido del dueño, 2026-11-13: «más
+  imágenes, dinamismo, sport»): foto a sangre con la pregunta encima (`HeroMedia`; el título se parte con
+  `partesDeTitulo`: lo que nombra el tema en letra grande y el resto debajo) y su respuesta; banda negra con hasta cuatro
+  datos; calendario de doce casillas por especie (`guia-calendario.tsx`: la casilla alta es mes fuerte, crecen al entrar
+  en pantalla con `.casilla-crece`, la marca «Ahora» es la isla cliente `guia-mes-actual.tsx` y cada fila se lee como
+  frase en lector de pantalla); las secciones, cada una con su foto grande alternando el lado (`Foto` de «Gente de mar»,
+  con deriva); tras la segunda, una foto a sangre con la `frase`; un solo bloque de lo que se reserva (tarjetas del
+  catálogo con precio al día, o el enlace si el catálogo no responde); preguntas frecuentes; hasta 3 guías más.
+  JSON-LD: `Article` (fecha = `actualizado`, la de la última revisión real), migas y `FAQPage`.
+- **El color es solo acento** (decisión del dueño): `tema` de la guía (azul = mar, coral = traslados, verde = estancia)
+  pinta las casillas del calendario, las palomitas de las listas y la marca junto al título de cada tarjeta. Nunca un
+  fondo de sección: las bandas son blanco, arena y negro.
+- **Fotos:** `foto` (arranque), `fotos` (una por sección, mismo orden) y `fotoFrase`. Son las del sitio puestas de
+  relleno, con la descripción que ya llevan en `sedes-cuerpo.ts`; se repiten entre guías hasta que el dueño mande las
+  de cada tema.
+- **Los textos** pasaron por la skill de copywriting y luego por humanizer (2026-11-13). Regla del dueño: nunca una
+  negativa en seco («No. Son animales libres…»): se dice primero lo que sí pasa, sin prometer avistamientos.
 - **Cómo se llega:** el índice `/guias` (grupos por destino), «Guías» en el pie y la sección «Antes de venir» de cada
-  sede (`guias-sede.tsx`, id `guias`, antes de las preguntas y fuera del menú). El índice es del hub: en modo «solo
-  sede» redirige a la sede y sus enlaces llevan `sale-al-hub`; una guía suelta sí se lee.
+  sede (`guias-sede.tsx`, id `guias`, antes de las preguntas y fuera del menú). En los tres sitios las guías son
+  tarjetas de foto (`tarjetas-guias.tsx`; el acomodo sale del número de guías para que ninguna quede sola). El índice es
+  del hub: en modo «solo sede» redirige a la sede y sus enlaces llevan `sale-al-hub`; una guía suelta sí se lee.
 - `/servicio/la-ventana-travel/avistamiento-ballenas-orcas` redirige (307, `next.config.ts`) a la guía de orcas: por
   ahora el seafari solo se vende dentro de los paquetes. El día que se venda suelto, se quita la redirección.
 - Una guía nueva: un objeto más en `GUIAS` (los dos idiomas) y actualizar `ACTUALIZADO`. Al revisar el texto de una,

@@ -367,6 +367,11 @@
   to { translate: 0 6%; }
 }
 
+@keyframes casilla-crece {
+  from { scale: 1 0.2; opacity: 0.4; }
+  to { scale: 1 1; opacity: 1; }
+}
+
 @keyframes foto-deriva-rapida {
   from { translate: 0 -10%; }
   to { translate: 0 10%; }
@@ -673,6 +678,20 @@
         animation: tinta-al-leer linear both;
         animation-timeline: view();
         animation-range: cover 18% cover 42%;
+      }
+    }
+  }
+
+  /* El calendario de una guía (`guia-calendario.tsx`): cada casilla crece desde su base mientras la fila entra en
+     pantalla, una tras otra de enero a diciembre (`--mes`, de 0 a 11). Sin `view()` o con «reducir movimiento» las
+     casillas están en su alto desde el principio. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .casilla-crece {
+        transform-origin: bottom;
+        animation: casilla-crece linear both;
+        animation-timeline: view();
+        animation-range: entry calc(10% + var(--mes, 0) * 5%) entry calc(60% + var(--mes, 0) * 5%);
       }
     }
   }

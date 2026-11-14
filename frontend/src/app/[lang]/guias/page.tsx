@@ -12,7 +12,7 @@ import { hrefSede } from '@/lib/routes';
 import { JsonLd } from '@/components/json-ld';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
-import { ListaGuias } from '@/components/lista-guias';
+import { TarjetasGuias } from '@/components/tarjetas-guias';
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -27,9 +27,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * El índice de guías: el título y de qué tratan arriba, y debajo un grupo por destino (el nombre a la izquierda, sus
- * guías a la derecha, cada una con una frase que dice qué contesta) y al final las de toda la región. Mismo acomodo que
- * las preguntas frecuentes: quien llega aquí viene a escoger una, no a leer.
+ * El índice de guías: el título y de qué tratan arriba, y debajo un grupo por destino con sus guías como tarjetas de
+ * foto (`TarjetasGuias`), y al final las de toda la región. Quien llega aquí viene a escoger una, no a leer.
  *
  * Server Component, estático: todo sale de `content/guias.ts`.
  */
@@ -66,13 +65,13 @@ export default async function GuiasPage({ params }: Props) {
       <div className="bg-cafe-bruma py-16 sm:py-20 lg:py-28">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-14 px-pagina lg:gap-20">
           {grupos.map((grupo) => (
-            <section key={grupo.clave} aria-labelledby={`guias-${grupo.clave}`} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-12">
-              <h2 id={`guias-${grupo.clave}`} className="rev texto-paso">
+            <section key={grupo.clave} aria-labelledby={`guias-${grupo.clave}`}>
+              <h2 id={`guias-${grupo.clave}`} className="rev texto-seccion">
                 {grupo.href
                   ? <Link href={grupo.href} className="underline-offset-4 hover:underline">{grupo.nombre}</Link>
                   : grupo.nombre}
               </h2>
-              <ListaGuias lang={lang} guias={grupo.guias} bloque="bg-superficie" resumen />
+              <TarjetasGuias lang={lang} guias={grupo.guias} className="mt-6 lg:mt-8" />
             </section>
           ))}
         </div>
