@@ -339,6 +339,14 @@ Reglas que no hay que romper:
   cuenta.
 - Los reembolsos de reservas pagadas por transferencia se hacen fuera del sistema;
   no hay movimiento de salida bancaria ni se descuentan del saldo teorico del banco.
+- **Uso de codigos promocionales** (`services.uso_de_codigos`, seccion «Códigos promocionales» del panel y
+  columnas «Usos», «Descuento dado» y «Vendido con el código» de la lista de codigos). No hay tabla de usos:
+  se suma de `Reserva.codigo_promocional`, `descuento_aplicado` (antes de IVA) y `precio_total` (con IVA), solo
+  en reservas de `ESTADOS_QUE_OCUPAN_CUPO` (el mismo criterio que agota `usos_maximos`: pendientes y canceladas
+  no cuentan). Un renglon por codigo y moneda. En el panel sigue al select de periodo y corta por la fecha de
+  venta (`pagada_en`, o `transferencia_registrada_en`, o `creado_en`); la lista de codigos muestra el historico
+  completo. El codigo y el numero de usos enlazan a Reservas filtradas por ese codigo y esos estados
+  (`views.enlace_a_reservas_del_codigo`), sin periodo: Reservas no filtra por fecha de cobro.
 - El menu lateral del admin se arma a mano en `UNFOLD['SIDEBAR']`
   (`config/settings/base.py`) porque esta pantalla no es un modelo y no aparece sola.
   Un modelo nuevo hay que darlo de alta ahi; mientras tanto sigue alcanzable por

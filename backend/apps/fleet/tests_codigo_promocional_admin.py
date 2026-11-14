@@ -195,3 +195,91 @@ class ListaDeCodigosParaElJefeTests(EmpresaTestCase):
 
         self.assertContains(respuesta, 'Aplica')
         self.assertContains(respuesta, 'Venció')
+
+
+class UsoDeCadaCodigoEnLaListaTests(EmpresaTestCase):
+    """La lista dice cuantas veces se uso cada codigo, cuanto se desconto y cuanto vendio.
+
+    Sale de las reservas que lo aplicaron (las mismas que cuentan contra `usos_maximos`); no hay
+    tabla de usos aparte. Cada moneda por separado.
+    """
+
+    def setUp(self):
+        self.url = reverse('admin:fleet_codigopromocional_changelist')
+        self.promo = CodigoPromocional.objects.create(
+            empresa=self.empresa, codigo='VERANO', porcentaje_descuento=Decimal('10'),
+        )
+        self._dia = 10
+
+    def venta(self, descuento, total, **extra):
+        self._dia += 1
+        datos = {
+            'codigo_promocional': self.promo, 'estado': Reserva.Estado.PAGADA,
+            'descuento_aplicado': Decimal(descuento), 'precio_total': Decimal(total),
+            'fecha': timezone.localdate() + timedelta(days=self._dia),
+        }
+        datos.update(extra)
+        return crear_reserva(self.empresa, **datos)
+
+    def fila(self):
+        self.client.force_login(self.crear_jefe())
+        respuesta = self.client.get(self.url)
+        (codigo,) = respuesta.context['cl'].result_list
+        return respuesta, codigo
+
+    def test_un_codigo_sin_usar_dice_cero_y_no_inventa_dinero(self):
+        respuesta, codigo = self.fila()
+
+        self.assertEqual(codigo.n_usos, 0)
+        self.assertContains(respuesta, 'Descuento dado')
+        self.assertContains(respuesta, 'Vendido con el código')
+
+    def test_suma_usos_descuento_y_venta(self):
+        self.venta('512.34', '5220.00')
+        self.venta('700.00', '7308.00')
+
+        respuesta, codigo = self.fila()
+
+        self.assertEqual(codigo.n_usos, 2)
+        self.assertContains(respuesta, '1,212.34 MXN')
+        self.assertContains(respuesta, '12,528.00 MXN')
+
+    def test_cada_moneda_por_separado(self):
+        self.venta('500.00', '5220.00')
+        self.venta('30.00', '313.00', moneda=Reserva.Moneda.USD)
+
+        respuesta, codigo = self.fila()
+
+        self.assertEqual(codigo.n_usos, 2)
+        self.assertContains(respuesta, '500.00 MXN')
+        self.assertContains(respuesta, '30.00 USD')
+        self.assertNotContains(respuesta, '530.00')
+
+    def test_pendientes_y_canceladas_no_cuentan(self):
+        self.venta('500.00', '5220.00')
+        self.venta('900.00', '9000.00', estado=Reserva.Estado.PENDIENTE_PAGO)
+        cancelada = self.venta('800.00', '8000.00')
+        Reserva.objects.filter(pk=cancelada.pk).update(estado=Reserva.Estado.CANCELADA)
+
+        respuesta, codigo = self.fila()
+
+        self.assertEqual(codigo.n_usos, 1)
+        self.assertContains(respuesta, '500.00 MXN')
+        self.assertNotContains(respuesta, '900.00')
+        self.assertNotContains(respuesta, '800.00')
+
+    def test_los_usos_enlazan_a_las_reservas_del_codigo(self):
+        self.venta('500.00', '5220.00')
+
+        respuesta, _ = self.fila()
+        enlace = f'{reverse("admin:bookings_reserva_changelist")}?codigo_promocional__id__exact={self.promo.pk}'
+
+        self.assertContains(respuesta, enlace)
+        self.assertEqual(self.client.get(enlace).status_code, 200)
+
+    def test_la_lista_se_sigue_pudiendo_editar_en_linea(self):
+        """Las sumas van como anotaciones de la consulta; no deben romper `list_editable`."""
+        self.venta('500.00', '5220.00')
+        respuesta, _ = self.fila()
+
+        self.assertContains(respuesta, 'name="form-0-porcentaje_descuento"')

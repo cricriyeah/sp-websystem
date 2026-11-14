@@ -26,10 +26,11 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 
-from django.db.models import Exists, F, OuterRef, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import Count, Exists, F, OuterRef, Sum
+from django.db.models.functions import Coalesce, TruncDate
 
-from apps.bookings.models import CONCEPTOS_DE_DINERO, MovimientoDinero, Reserva
+from apps.bookings.models import CONCEPTOS_DE_DINERO, ESTADOS_QUE_OCUPAN_CUPO, MovimientoDinero, Reserva
+from apps.fleet.models import CodigoPromocional
 
 CERO = Decimal('0.00')
 
@@ -326,3 +327,60 @@ def totales_de_movimientos(filas, concepto='todos', moneda=None):
             totales[fila.moneda] += fila.monto
 
     return dict(sorted(totales.items()))
+
+
+@dataclass
+class UsoDeCodigo:
+    """Lo que un codigo promocional movio en una moneda durante un periodo."""
+
+    codigo: CodigoPromocional
+    moneda: str
+    usos: int
+    # Lo que se dejo de cobrar. Va antes de IVA: el descuento se resta del subtotal y el IVA se
+    # calcula despues (`Reserva.descuento_aplicado`).
+    descontado: Decimal
+    # El total de esas reservas, ya con el descuento y con IVA (`Reserva.precio_total`).
+    vendido: Decimal
+
+
+def uso_de_codigos(desde=None, hasta=None, empresa=None):
+    """Cuantas veces se uso cada codigo promocional, cuanto se desconto y cuanto se vendio con el.
+
+    Igual que el resto del panel, sale de `Reserva` y no de un libro de usos aparte: cada reserva
+    guarda el codigo que aplico y el monto que se le resto. Cuentan las reservas que ocupan cupo,
+    el mismo criterio con el que se agota `usos_maximos`: una pendiente no llego a comprar y una
+    cancelada se devolvio.
+
+    El periodo corta por la fecha en que se vendio: la del cobro con tarjeta, o la de la
+    transferencia cuando un checkout se saldo asi, o la de creacion si no hay ninguna de las dos
+    (venta capturada a mano). Un renglon por codigo y moneda, el mas usado primero.
+    """
+    qs = _reservas(empresa).filter(
+        codigo_promocional__isnull=False, estado__in=ESTADOS_QUE_OCUPAN_CUPO,
+    ).annotate(vendida_en=Coalesce('pagada_en', 'transferencia_registrada_en', 'creado_en'))
+    if desde:
+        qs = qs.filter(vendida_en__date__gte=desde)
+    if hasta:
+        qs = qs.filter(vendida_en__date__lte=hasta)
+
+    sumas = list(
+        qs.order_by().values('codigo_promocional', 'moneda').annotate(
+            usos=Count('pk'), descontado=Sum('descuento_aplicado'), vendido=Sum('precio_total'),
+        )
+    )
+    codigos = CodigoPromocional.objects.select_related('empresa').in_bulk(
+        {fila['codigo_promocional'] for fila in sumas}
+    )
+    filas = [
+        UsoDeCodigo(
+            codigo=codigos[fila['codigo_promocional']],
+            moneda=fila['moneda'],
+            usos=fila['usos'],
+            descontado=fila['descontado'] or CERO,
+            vendido=fila['vendido'] or CERO,
+        )
+        for fila in sumas
+        if fila['codigo_promocional'] in codigos
+    ]
+    filas.sort(key=lambda fila: (-fila.usos, fila.codigo.codigo, fila.codigo.pk, fila.moneda))
+    return filas

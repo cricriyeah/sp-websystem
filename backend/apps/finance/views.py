@@ -12,10 +12,13 @@ from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import formats
 
 from apps.tenancy import scope
 from apps.tenancy.permisos_unfold import puede_ver_finanzas
+
+from apps.bookings.models import ESTADOS_QUE_OCUPAN_CUPO
 
 from .services import (
     balances,
@@ -23,6 +26,7 @@ from .services import (
     movimientos,
     resumen,
     totales_de_movimientos,
+    uso_de_codigos,
 )
 
 
@@ -123,6 +127,25 @@ def _grafica_de_entradas(desde, hasta, empresa=None):
     }
 
 
+def enlace_a_reservas_del_codigo(codigo_id):
+    """La lista de Reservas filtrada a las que aplicaron ese codigo y cuentan como uso.
+
+    Lleva los mismos estados que suman en `uso_de_codigos`, para que el numero de renglones que se
+    abre sea el numero de usos. No lleva el periodo: Reservas no filtra por fecha de cobro.
+    """
+    return (
+        f"{reverse('admin:bookings_reserva_changelist')}?codigo_promocional__id__exact={codigo_id}"
+        f"&estado__in={','.join(ESTADOS_QUE_OCUPAN_CUPO)}"
+    )
+
+
+def _codigos_del_periodo(desde, hasta, empresa=None):
+    filas = uso_de_codigos(desde, hasta, empresa=empresa)
+    for fila in filas:
+        fila.enlace = enlace_a_reservas_del_codigo(fila.codigo.pk)
+    return filas
+
+
 def _mes_pedido(request, hoy):
     """El mes que se esta viendo en el historico, de `?mes=YYYY-MM`.
 
@@ -182,6 +205,9 @@ def panel_financiero(request):
         'periodo_hasta': hasta,
         'saldo_periodo': balances(desde, hasta, empresa=empresa),
         'grafica': _grafica_de_entradas(desde, hasta, empresa=empresa),
+        # Tambien sigue al select: que codigos se usaron en el periodo y cuanto se desconto.
+        'codigos': _codigos_del_periodo(desde, hasta, empresa=empresa),
+        'es_operador': operador,
         'mes_visto': mes,
         'mes_anterior': _mes_vecino(mes, -1),
         # Sin boton para adelantarse a meses que todavia no pasan.

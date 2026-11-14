@@ -608,8 +608,9 @@ class PanelFinancieroPermisoTests(TestCase):
     @mock.patch('apps.finance.views.resumen')
     @mock.patch('apps.finance.views.balances')
     @mock.patch('apps.finance.views.balances_por_dia')
+    @mock.patch('apps.finance.views.uso_de_codigos', return_value=[])
     def test_jefe_ve_solo_su_empresa(
-        self, mock_balances_por_dia, mock_balances, mock_resumen,
+        self, mock_codigos, mock_balances_por_dia, mock_balances, mock_resumen,
         mock_operador, mock_empresa_actual,
     ):
         mock_operador.return_value = False
@@ -629,14 +630,16 @@ class PanelFinancieroPermisoTests(TestCase):
         self.assertEqual(mock_resumen.call_args.kwargs.get('empresa'), empresa)
         self.assertEqual(mock_balances.call_args.kwargs.get('empresa'), empresa)
         self.assertEqual(mock_balances_por_dia.call_args.kwargs.get('empresa'), empresa)
+        self.assertEqual(mock_codigos.call_args.kwargs.get('empresa'), empresa)
 
     @mock.patch('apps.finance.views.scope.empresa_actual')
     @mock.patch('apps.finance.views.scope.es_operador_plataforma')
     @mock.patch('apps.finance.views.resumen')
     @mock.patch('apps.finance.views.balances')
     @mock.patch('apps.finance.views.balances_por_dia')
+    @mock.patch('apps.finance.views.uso_de_codigos', return_value=[])
     def test_operador_de_plataforma_ve_todas(
-        self, mock_balances_por_dia, mock_balances, mock_resumen,
+        self, mock_codigos, mock_balances_por_dia, mock_balances, mock_resumen,
         mock_operador, mock_empresa_actual,
     ):
         mock_operador.return_value = True
@@ -650,3 +653,4 @@ class PanelFinancieroPermisoTests(TestCase):
         panel_financiero(request)
 
         self.assertIsNone(mock_resumen.call_args.kwargs.get('empresa'))
+        self.assertIsNone(mock_codigos.call_args.kwargs.get('empresa'))

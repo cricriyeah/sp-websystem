@@ -136,6 +136,61 @@
     </section>
 
     {% comment %}
+    Que codigos se usaron en el periodo del select y cuanto dinero se fue en cada uno. Sale de las
+    reservas que lo aplicaron (ver uso_de_codigos); un renglon por codigo y moneda, nunca sumadas.
+    {% endcomment %}
+    <section class="flex flex-col gap-3">
+        <div>
+            <h2 class="font-semibold text-base-800 text-lg dark:text-base-200">
+                Códigos promocionales
+                <span class="font-normal text-base-500 text-sm dark:text-base-400">{{ periodo_etiqueta }}</span>
+            </h2>
+            <p class="mt-1 text-base-500 text-sm dark:text-base-400">
+                Reservas vendidas con código en este periodo. El descuento va antes de IVA; lo vendido es el
+                total de esas reservas, ya con el descuento y con IVA. Toca un código para ver todas sus reservas.
+            </p>
+        </div>
+
+        <div class="border border-base-200 rounded-default overflow-hidden dark:border-base-800">
+            <table class="w-full text-sm">
+                <thead class="bg-base-50 text-base-500 dark:bg-base-900 dark:text-base-400">
+                    <tr>
+                        <th class="font-medium px-3 py-2 text-left">Código</th>
+                        {% if es_operador %}<th class="font-medium px-3 py-2 text-left">Empresa</th>{% endif %}
+                        <th class="font-medium px-3 py-2 text-left">Moneda</th>
+                        <th class="font-medium px-3 py-2 text-right">Usos</th>
+                        <th class="font-medium px-3 py-2 text-right">Descuento dado</th>
+                        <th class="font-medium px-3 py-2 text-right">Vendido con el código</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in codigos %}
+                        <tr class="border-t border-base-200 dark:border-base-800">
+                            <td class="px-3 py-2 text-base-700 dark:text-base-300">
+                                <a href="{{ fila.enlace }}" class="font-semibold hover:underline">{{ fila.codigo.codigo }}</a>
+                                <span class="text-base-400">· {{ fila.codigo.porcentaje_descuento|floatformat:"-2" }}%</span>
+                            </td>
+                            {% if es_operador %}
+                                <td class="px-3 py-2 text-base-500 dark:text-base-400">{{ fila.codigo.empresa.nombre }}</td>
+                            {% endif %}
+                            <td class="px-3 py-2 text-base-500 dark:text-base-400">{{ fila.moneda }}</td>
+                            <td class="px-3 py-2 text-right text-base-600 dark:text-base-400">{{ fila.usos }}</td>
+                            <td class="px-3 py-2 text-right text-red-600 dark:text-red-400">−{{ fila.descontado|floatformat:2|intcomma }}</td>
+                            <td class="font-semibold px-3 py-2 text-right text-base-800 dark:text-base-200">{{ fila.vendido|floatformat:2|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td class="px-3 py-4 text-base-400 text-center" colspan="{% if es_operador %}6{% else %}5{% endif %}">
+                                Ningún código usado en este periodo.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% comment %}
     Historico: el cierre de cada dia. Los dias sin un solo movimiento no
     aparecen (ver balances_por_dia).
     {% endcomment %}

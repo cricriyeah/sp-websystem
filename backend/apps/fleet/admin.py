@@ -3,6 +3,7 @@ from decimal import Decimal
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
@@ -57,13 +58,14 @@ class PuntoEncuentroAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdm
 @admin.register(CodigoPromocional)
 class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, ModelAdmin):
     """Sin permisos para Vendedora, mismo trato que Servicio/ServicioPersonalizacion: es
-    informacion financiera. El uso de cada codigo no se audita aqui — se ve
-    en la lista de Reservas (columna/filtro `codigo_promocional`), la misma
-    fuente que ya cuenta contra `usos_maximos`."""
+    informacion financiera. El uso de cada codigo no tiene tabla propia: las columnas «Usos»,
+    «Descuento dado» y «Vendido con el código» se suman de las Reservas que lo aplicaron
+    (`Reserva.codigo_promocional`), la misma fuente que ya cuenta contra `usos_maximos`. El
+    mismo desglose por periodo esta en Finanzas (`finance.services.uso_de_codigos`)."""
 
     list_display = [
-        'codigo', 'porcentaje_descuento', 'activo', 'aplica_hoy', 'usos_maximos',
-        'usos_maximos_por_cliente', 'fecha_inicio', 'fecha_fin',
+        'codigo', 'porcentaje_descuento', 'activo', 'aplica_hoy', 'usos', 'descuento_dado', 'vendido',
+        'usos_maximos', 'usos_maximos_por_cliente', 'fecha_inicio', 'fecha_fin',
     ]
     list_filter = ['activo']
     list_editable = ['porcentaje_descuento', 'activo']
@@ -91,6 +93,57 @@ class CodigoPromocionalAdmin(EmpresaScopedAdminMixin, AccionesDeFilaMixin, Model
         if scope.es_operador_plataforma(request.user):
             filtros.insert(0, 'empresa')
         return filtros
+
+    def get_queryset(self, request):
+        """Suma en la misma consulta lo que cada codigo movio, por moneda (nunca mezcladas).
+
+        Cuentan las reservas que ocupan cupo, igual que `usos_maximos` y que Finanzas.
+        """
+        # Import aqui: bookings importa fleet, no al reves.
+        from apps.bookings.models import ESTADOS_QUE_OCUPAN_CUPO, Reserva
+
+        cuenta = Q(reservas__estado__in=ESTADOS_QUE_OCUPAN_CUPO)
+        sumas = {'n_usos': Count('reservas', filter=cuenta)}
+        for moneda in Reserva.Moneda.values:
+            de_la_moneda = cuenta & Q(reservas__moneda=moneda)
+            sumas[f'descontado_{moneda.lower()}'] = Sum('reservas__descuento_aplicado', filter=de_la_moneda)
+            sumas[f'vendido_{moneda.lower()}'] = Sum('reservas__precio_total', filter=de_la_moneda)
+        return super().get_queryset(request).annotate(**sumas)
+
+    @staticmethod
+    def _por_moneda(obj, prefijo):
+        """«1,200.00 MXN · 80.00 USD», o una raya si el codigo no movio nada."""
+        from apps.bookings.models import Reserva
+
+        partes = [
+            f'{monto:,.2f} {moneda}'
+            for moneda in Reserva.Moneda.values
+            if (monto := getattr(obj, f'{prefijo}_{moneda.lower()}', None))
+        ]
+        return ' · '.join(partes) or '—'
+
+    @admin.display(description='Usos', ordering='n_usos')
+    def usos(self, obj):
+        """Cuantas reservas lo aplicaron; lleva a esas reservas."""
+        from apps.finance.views import enlace_a_reservas_del_codigo
+
+        cuantos = getattr(obj, 'n_usos', 0)
+        if not cuantos:
+            return 0
+        return format_html(
+            '<a href="{}" class="font-semibold hover:underline">{}</a>',
+            enlace_a_reservas_del_codigo(obj.pk), cuantos,
+        )
+
+    @admin.display(description='Descuento dado')
+    def descuento_dado(self, obj):
+        """Lo que se dejo de cobrar con el codigo (antes de IVA)."""
+        return self._por_moneda(obj, 'descontado')
+
+    @admin.display(description='Vendido con el código')
+    def vendido(self, obj):
+        """El total de las reservas que lo aplicaron, ya con el descuento y con IVA."""
+        return self._por_moneda(obj, 'vendido')
 
     @admin.display(description='Hoy')
     def aplica_hoy(self, obj):
