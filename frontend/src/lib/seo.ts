@@ -116,6 +116,52 @@ export function jsonLdMarca({ nombre, url, descripcion, idioma, sameAs = [], ema
   ];
 }
 
+export type EntradaNegocio = {
+  /** El nombre de la empresa que opera en la sede («Sal y Sol Sportfishing»). */
+  nombre: string;
+  descripcion: string;
+  /** La página de la sede en este idioma. */
+  url: string;
+  /** Pueblo o ciudad donde opera. */
+  localidad: string;
+  /** Calle y referencia, solo si la empresa la confirmó: sin ella la dirección lleva pueblo, estado y país. */
+  calle?: string;
+  /** Con signo y lada (`+52612…`). */
+  telefono?: string;
+  /** URL absoluta de una foto de la sede. */
+  imagen?: string;
+  /** El sitio y las redes confirmados de la empresa. */
+  sameAs?: readonly string[];
+};
+
+/**
+ * La empresa de la sede como negocio local (`LocalBusiness`), para que Google la una con su perfil de Maps y con
+ * el lugar donde opera. Antes iba como `TouristAttraction`, que describe un lugar y no una empresa, y solo en La Paz
+ * (auditoría SEO, 2026-11-13). Solo datos confirmados: sin coordenadas, sin horario (la ventana de salida de los
+ * viajes no es el horario de atención) y sin estrellas (Google no las muestra cuando el negocio se reseña a sí mismo).
+ */
+export function jsonLdNegocio({ nombre, descripcion, url, localidad, calle, telefono, imagen, sameAs = [] }: EntradaNegocio) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: nombre,
+    description: descripcion,
+    url,
+    address: {
+      '@type': 'PostalAddress',
+      ...(calle ? { streetAddress: calle } : {}),
+      addressLocality: localidad,
+      addressRegion: 'Baja California Sur',
+      addressCountry: 'MX',
+    },
+    areaServed: { '@type': 'Place', name: `${localidad}, Baja California Sur` },
+    ...(telefono ? { telephone: telefono } : {}),
+    ...(imagen ? { image: imagen } : {}),
+    ...(sameAs.length ? { sameAs: [...sameAs] } : {}),
+    availableLanguage: ['es', 'en'],
+  };
+}
+
 export type EntradaViaje = {
   nombre: string;
   descripcion?: string;

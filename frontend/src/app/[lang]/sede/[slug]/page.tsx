@@ -125,7 +125,12 @@ export default async function SedePage({ params, searchParams }: Props) {
   }));
 
   return <>
-    <StructuredData lang={lang} slug={slug} negocio={contenido.negocio} description={contenido.metaDescription} faqItems={faq ?? null} />
+    <StructuredData
+      lang={lang} slug={slug} localidad={contenido.nombre} negocio={contenido.negocio} description={contenido.metaDescription} faqItems={faq ?? null}
+      // Su sitio (si está al día) y sus redes: con eso Google une la ficha con los perfiles de la empresa.
+      empresa={protagonista ? { nombre: protagonista.nombre, sameAs: [...(protagonista.web && protagonista.webConfirmada ? [protagonista.web] : []), ...protagonista.redes.map((red) => red.url)] } : null}
+      imagen={contenido.hero.imagenCortina ?? contenido.hero.imagen}
+    />
     <JsonLd datos={jsonLdMigas([
       { nombre: dict.home.title, url: absolutaEn(lang) },
       { nombre: contenido.nombre, url: absolutaEn(lang, `/sede/${slug}`) },

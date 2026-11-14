@@ -6,6 +6,7 @@ import type { Moneda, PaqueteCatalogo, ServicioCatalogo, ServicioPersonalizacion
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
 import { bloquesDeDetalle } from '@/content/detalle-extra';
+import { seoDePaquete, seoDeServicio } from '@/content/seo-detalle';
 import { claveDePaquete, claveDeServicio, galeriaDeCatalogo, imagenDeCatalogo, imagenesDeCatalogo } from '@/content/imagenes-catalogo';
 import { palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
 import { colorDePaquete, colorDeServicio } from '@/lib/color-actividad';
@@ -77,6 +78,11 @@ function datosDePago(permiteAnticipo: boolean, porcentaje: number, { dict }: Com
     etiqueta: detalle.etiquetaPago,
     valor: permiteAnticipo && porcentaje > 0 ? detalle.pagoAnticipo.replace('{porcentaje}', String(porcentaje)) : detalle.pagoTotal,
   };
+}
+
+/** El renglón del `h1`: el propio del producto o, sin él, el lugar («La Paz, Baja California Sur»). */
+function encabezadoDe(propio: string | undefined, sede: SedeContenido | undefined): string | undefined {
+  return propio ?? (sede ? `${sede.nombre}, Baja California Sur` : undefined);
 }
 
 function volverASede({ lang, dict, sede }: Comun) {
@@ -161,6 +167,8 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
 
   return {
     titulo,
+    // El traslado no es de una sede: sin renglón.
+    encabezado: traslado ? undefined : encabezadoDe(seoDeServicio(empresaSlug, slug)?.encabezado[lang], sede),
     lead,
     color: servicio ? colorDeServicio(servicio) : colorDeServicio({ tipo_servicio: tipo }),
     palabra: palabraDeServicio(tipo, lang),
@@ -230,6 +238,7 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
 
   return {
     titulo: paquete.nombre,
+    encabezado: encabezadoDe(entrada.sede ? seoDePaquete(entrada.sede.slug, paquete.slug)?.encabezado[lang] : undefined, entrada.sede),
     lead: paquete.descripcion,
     color: colorDePaquete(paquete),
     palabra: palabraDePaquete(paquete.noches, lang),

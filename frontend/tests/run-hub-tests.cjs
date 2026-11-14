@@ -67,6 +67,7 @@ const suites = {
   'telefono-campo': ['src/lib/telefono-campo.ts', 'TELEFONO_CAMPO_TEST_OUT'],
   'solo-sede': ['src/lib/solo-sede.ts', 'SOLO_SEDE_TEST_OUT'],
   'ruta-inexistente': ['src/lib/ruta-inexistente.ts', 'RUTA_INEXISTENTE_TEST_OUT'],
+  'seo-detalle': ['src/content/seo-detalle.ts', 'SEO_DETALLE_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

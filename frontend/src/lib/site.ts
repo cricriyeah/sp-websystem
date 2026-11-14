@@ -13,7 +13,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3
 
 export const LOCALES: Locale[] = ['es', 'en'];
 
-/** Codigo de idioma completo, para hreflang y Open Graph. */
+/** Codigo de idioma completo, para Open Graph y el `inLanguage` de los datos estructurados. */
 export const LOCALE_TAG: Record<Locale, string> = {
   es: 'es-MX',
   en: 'en-US',
@@ -62,17 +62,24 @@ export async function rutasServicios(): Promise<string[]> {
 export const absolutaEn = (lang: Locale, ruta: string = '') => `${SITE_URL}/${lang}${ruta}`;
 
 /**
+ * Las versiones de una misma página por idioma, para hreflang. Van por idioma y no por país (`es`, `en`): quien
+ * busca en inglés desde Canadá o Europa, o en español desde Estados Unidos, es el mismo cliente (auditoría SEO,
+ * 2026-11-13). `x-default` es el inglés: es lo que `proxy.ts` le sirve a quien no lee ninguno de los dos idiomas.
+ * La usan las etiquetas de cada página y el sitemap: los dos tienen que decir lo mismo.
+ */
+export function idiomasDe(ruta: string = ''): Record<Locale | 'x-default', string> {
+  return {
+    es: absolutaEn('es', ruta),
+    en: absolutaEn('en', ruta),
+    'x-default': absolutaEn('en', ruta),
+  };
+}
+
+/**
  * `alternates` para el metadata de Next: canonical de esta pagina y hreflang de
  * la misma pagina en el otro idioma. Sin esto, Google trata /es y /en como
  * contenido duplicado en vez de dos versiones del mismo.
  */
 export function alternativasDe(lang: Locale, ruta: string = '') {
-  return {
-    canonical: absolutaEn(lang, ruta),
-    languages: {
-      'es-MX': absolutaEn('es', ruta),
-      'en-US': absolutaEn('en', ruta),
-      'x-default': absolutaEn('es', ruta),
-    },
-  };
+  return { canonical: absolutaEn(lang, ruta), languages: idiomasDe(ruta) };
 }

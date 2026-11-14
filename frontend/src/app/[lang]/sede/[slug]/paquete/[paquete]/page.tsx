@@ -11,6 +11,7 @@ import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
 import { claveDePaquete, fotoParaCompartir } from '@/content/imagenes-catalogo';
+import { seoDePaquete } from '@/content/seo-detalle';
 import { jsonLdMigas, jsonLdPreguntas, jsonLdViaje } from '@/lib/seo';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { FaqSection } from '@/components/faq-section';
@@ -42,8 +43,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!datos) return {};
   const sede = getSedeContenido(slug, lang);
   const dict = await getDictionary(lang);
+  // El título propio del paquete (dice lo que se busca: «nado con orcas») o, sin él, «nombre en sede».
+  const propio = seoDePaquete(slug, paquete)?.titulo[lang];
   return metadataDePagina({
-    lang, ruta: `/sede/${slug}/paquete/${paquete}`, titulo: sede ? dict.meta.paqueteTitulo.replace('{nombre}', datos.nombre).replace('{sede}', sede.nombre) : datos.nombre,
+    lang, ruta: `/sede/${slug}/paquete/${paquete}`, tituloCompleto: Boolean(propio),
+    titulo: propio ?? (sede ? dict.meta.paqueteTitulo.replace('{nombre}', datos.nombre).replace('{sede}', sede.nombre) : datos.nombre),
     descripcion: datos.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
     imagen: fotoParaCompartir(claveDePaquete(paquete))?.src,
   });
@@ -77,7 +81,8 @@ export default async function PaquetePage({ params, searchParams }: Props) {
   return <>
     <JsonLd datos={[
       jsonLdViaje({
-        nombre: paquete.nombre, descripcion: paquete.descripcion || undefined, url: urlPaquete,
+        nombre: dict.meta.servicioTitulo.replace('{nombre}', paquete.nombre).replace('{sede}', sede.nombre),
+        descripcion: paquete.descripcion || undefined, url: urlPaquete,
         proveedor: { nombre: getEmpresa(paquete.empresa_lider_slug)?.nombre ?? paquete.empresa_lider },
         precio: paquete.precio_ancla, lugar: sede.nombre,
       }),

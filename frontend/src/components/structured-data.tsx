@@ -1,53 +1,41 @@
 import type { Locale } from '@/app/[lang]/dictionaries';
 import type { SedeNegocio } from '@/content/sedes-tipos';
 import { whatsappNumero, tieneWhatsapp } from '@/lib/contacto';
-import { absolutaEn } from '@/lib/site';
+import { SITE_URL, absolutaEn } from '@/lib/site';
+import { jsonLdNegocio, jsonLdPreguntas } from '@/lib/seo';
 import { JsonLd } from './json-ld';
 
 type StructuredDataProps = {
   lang: Locale;
   /** Slug de la sede que describe este JSON-LD — nunca el hub. */
   slug: string;
+  /** Nombre de la sede: el pueblo o la ciudad donde opera la empresa. */
+  localidad: string;
+  /** La dirección confirmada de la empresa; `null` si todavía no la dio (va solo el pueblo). */
   negocio: SedeNegocio;
+  /** La empresa protagonista de la sede: su nombre y sus perfiles confirmados. Sin ella no hay ficha de negocio. */
+  empresa: { nombre: string; sameAs: readonly string[] } | null;
+  /** Ruta en `public/` de la foto de la sede. */
+  imagen?: string | null;
   description: string;
   faqItems: { q: string; a: string }[] | null;
 };
 
 /**
- * JSON-LD para Google: ficha del negocio de la sede y sus preguntas
- * frecuentes. `negocio`/`faqItems` en `null` (spec §9: hoy solo pasa para
- * una sede todavía pendiente) hace que el bloque correspondiente no se renderice — sin datos
- * inventados.
+ * JSON-LD para Google: la empresa de la sede como negocio local y sus preguntas frecuentes. Sin empresa o sin
+ * preguntas, el bloque correspondiente no se pinta: nada inventado.
  */
-export function StructuredData({ lang, slug, negocio, description, faqItems }: StructuredDataProps) {
-  const negocioJsonLd = negocio && {
-    '@context': 'https://schema.org',
-    '@type': 'TouristAttraction',
-    name: negocio.nombre,
-    description,
+export function StructuredData({ lang, slug, localidad, negocio, empresa, imagen, description, faqItems }: StructuredDataProps) {
+  const negocioJsonLd = empresa && jsonLdNegocio({
+    nombre: negocio?.nombre ?? empresa.nombre,
+    descripcion: description,
     url: absolutaEn(lang, `/sede/${slug}`),
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: negocio.calle,
-      addressLocality: negocio.ciudad,
-      addressRegion: negocio.estado,
-      addressCountry: negocio.pais,
-    },
-    ...(tieneWhatsapp ? { telephone: `+${whatsappNumero}` } : {}),
-    // Sin `openingHoursSpecification`: `horarioApertura` y `horarioCierre` son la ventana de SALIDA de los viajes
-    // (6 a 7 a. m.), no el horario en que el negocio atiende; publicarlo como horario decia que cierra a las 7.
-    availableLanguage: ['es', 'en'],
-  };
-
-  const preguntasJsonLd = faqItems && {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqItems.map((item) => ({
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: { '@type': 'Answer', text: item.a },
-    })),
-  };
-
+    localidad: negocio?.ciudad ?? localidad,
+    calle: negocio?.calle,
+    telefono: tieneWhatsapp ? `+${whatsappNumero}` : undefined,
+    imagen: imagen ? `${SITE_URL}${imagen}` : undefined,
+    sameAs: empresa.sameAs,
+  });
+  const preguntasJsonLd = faqItems?.length ? jsonLdPreguntas(faqItems) : null;
   return <JsonLd datos={[negocioJsonLd, preguntasJsonLd].filter(Boolean)} />;
 }

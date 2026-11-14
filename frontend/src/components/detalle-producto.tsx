@@ -32,6 +32,9 @@ export type ExtraDetalle = { nombre: string; detalle?: string; precio: { monto: 
 
 export type VistaDetalle = {
   titulo: string;
+  /** Qué es y dónde, en un renglón pequeño sobre el nombre y dentro del `h1` (como el de la sede): el nombre del
+   * catálogo es corto y no dice el lugar. */
+  encabezado?: string;
   /** Qué es: la descripción, en un párrafo. */
   lead: string;
   color: ColorActividad;
@@ -197,7 +200,10 @@ export function DetalleProducto({ vista, textos }: Props) {
         />
         {!vista.foto && <span aria-hidden="true" className="texto-gigante">{vista.palabra}</span>}
       </div>
-      <h1 className="texto-grande">{vista.titulo}</h1>
+      <h1 className="texto-grande">
+        {vista.encabezado && <span className="mb-2 block texto-etiqueta">{vista.encabezado}</span>}
+        {vista.titulo}
+      </h1>
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
         <p className="max-w-[52ch] text-xl leading-snug">{vista.linea}</p>
         <Link href={vista.volver.href} className={botonClases({ variante: 'campana-claro' })}>{vista.volver.etiqueta}</Link>

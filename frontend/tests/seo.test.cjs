@@ -94,3 +94,23 @@ test('las preguntas frecuentes van al JSON-LD tal como se pintan', () => {
   assert.deepEqual(f.mainEntity.map((p) => p.name), ['¿Uno?', '¿Dos?']);
   assert.equal(f.mainEntity[1].acceptedAnswer.text, 'No.');
 });
+
+test('el negocio de una sede es un LocalBusiness con su direccion confirmada', () => {
+  const n = s.jsonLdNegocio({
+    nombre: 'Sal y Sol Sportfishing', descripcion: 'D', url: 'https://x.test/es/sede/la-paz', localidad: 'La Paz',
+    calle: 'Marina La Costa', telefono: '+526120000000', imagen: 'https://x.test/foto.webp', sameAs: ['https://ig.test/x'],
+  });
+  assert.equal(n['@type'], 'LocalBusiness');
+  assert.equal(n.address.streetAddress, 'Marina La Costa');
+  assert.equal(n.address.addressLocality, 'La Paz');
+  assert.equal(n.address.addressCountry, 'MX');
+  assert.equal(n.telephone, '+526120000000');
+  assert.deepEqual(n.sameAs, ['https://ig.test/x']);
+});
+
+test('sin calle, telefono, foto ni perfiles, el negocio no los inventa', () => {
+  const n = s.jsonLdNegocio({ nombre: 'Piratas Adventures', descripcion: 'D', url: 'https://x.test/es/sede/puerto-chale', localidad: 'Puerto Chale' });
+  assert.equal(n.address.addressLocality, 'Puerto Chale');
+  for (const clave of ['telephone', 'image', 'sameAs', 'geo', 'openingHoursSpecification', 'aggregateRating']) assert.equal(n[clave], undefined, clave);
+  assert.equal(n.address.streetAddress, undefined);
+});

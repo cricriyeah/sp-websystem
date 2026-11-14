@@ -13,6 +13,7 @@ import { metadataDePagina } from '@/lib/metadata-pagina';
 import { claveDeServicio, fotoParaCompartir } from '@/content/imagenes-catalogo';
 import { jsonLdMigas, jsonLdPreguntas, jsonLdViaje } from '@/lib/seo';
 import { getFaqServicio } from '@/content/faq-servicios';
+import { seoDeServicio } from '@/content/seo-detalle';
 import { FaqSection } from '@/components/faq-section';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
 import { getEmpresa } from '@/content/empresas';
@@ -38,8 +39,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const nombre = result.data?.nombre ?? (servicio === 'pesca-deportiva' ? dict.serviceDetail.fishingTitle : dict.serviceDetail.metaFallback);
   // La sede del servicio sale de su empresa, no de `?sede=`: el buscador pide la página sin parámetros.
   const sedeDelServicio = getSedeContenido(getEmpresa(empresa)?.sede ?? '', lang);
+  // El título propio del servicio (lo que busca quien ya compara) o, sin él, «nombre en sede».
+  const propio = seoDeServicio(empresa, servicio)?.titulo[lang];
   return metadataDePagina({
-    lang, ruta: `/servicio/${empresa}/${servicio}`, titulo: sedeDelServicio ? dict.meta.servicioTitulo.replace('{nombre}', nombre).replace('{sede}', sedeDelServicio.nombre) : nombre,
+    lang, ruta: `/servicio/${empresa}/${servicio}`, tituloCompleto: Boolean(propio),
+    titulo: propio ?? (sedeDelServicio ? dict.meta.servicioTitulo.replace('{nombre}', nombre).replace('{sede}', sedeDelServicio.nombre) : nombre),
     descripcion: result.data?.descripcion, descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
     imagen: fotoParaCompartir(claveDeServicio(empresa, servicio))?.src,
   });
@@ -83,7 +87,9 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   return <>
     {servicio && <JsonLd datos={[
       jsonLdViaje({
-        nombre: servicio.nombre, descripcion: servicio.descripcion || undefined, url: urlServicio,
+        // Con el lugar: «Pesca deportiva» sola no le dice a Google de cuál se trata.
+        nombre: sedeDelServicio ? dict.meta.servicioTitulo.replace('{nombre}', servicio.nombre).replace('{sede}', sedeDelServicio.nombre) : servicio.nombre,
+        descripcion: servicio.descripcion || undefined, url: urlServicio,
         proveedor: { nombre: datosEmpresa?.nombre ?? empresa }, precio: servicio.precio_base, lugar: sedeDelServicio?.nombre,
       }),
       jsonLdMigas([
