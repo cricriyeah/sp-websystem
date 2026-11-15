@@ -804,6 +804,30 @@ con otro filtro. Si despues paga, la fila cambia de estado sola y desaparece de 
   (si el cliente ya pago con tarjeta, no deja guardar y manda a revisar Stripe). Si el reembolso del cobro duplicado
   falla, `_resolver_cobro_repetido` levanta la alerta urgente deduplicada (`_gestionar_fallo_reembolso`).
 
+## Recordatorio de saldo (anticipo)
+
+Quien paga anticipo debe el resto. El saldo ya salia en el correo de confirmacion, en el de asignacion y en el de
+reagendado, pero ninguno tiene fecha fija: `manage.py recordar_saldos [--dry-run]` (cron diario `0 16 * * *`, 9:00 en
+America/Mazatlan, en `render.yaml`) manda **un** correo el dia anterior al viaje.
+
+- **A quien**: `pagada` o `asignada`, `forma_pago=anticipo`, sin reembolso, con `saldo_pendiente > 0` (ya descontados
+  efectivo y transferencia) y cuyo primer dia (`inicio_paquete`, o `fecha`) es mañana **en la zona horaria de su sede**.
+  Una orden cruza-empresa nunca entra (siempre paga completo). Una reserva hecha despues de la corrida del dia no lo
+  recibe: su confirmacion de ese mismo dia ya dice el saldo.
+- **Que dice** (`notifications/correo_recordatorio_saldo.py`): cuanto queda y las dos formas de liquidarlo, en efectivo
+  al llegar o por transferencia pidiendo los datos por WhatsApp con el folio. **Sin datos bancarios**, por decision del
+  dueño (2026-11-14): ese movimiento se acuerda por WhatsApp y la vendedora lo registra en «Monto transferencia» de la
+  reserva. Sin enlace de WhatsApp: el backend no conoce el numero publico.
+- **Una sola vez**: `Reserva.recordatorio_saldo_enviado_en` (migracion `0068`, visible de solo lectura en la reserva) se
+  sella con un `UPDATE` condicional antes de mandar y se suelta si el correo no salio. Reagendar a otro dia lo borra
+  (`reagendar.py`); cambiar solo la hora lo conserva.
+- **Si no sale** (sin correo del cliente, Resend caido): notificacion de ERROR en el backoffice de la empresa
+  («Avísale por WhatsApp»), con el motivo y el enlace a la reserva.
+- Corre con el rol de la app: lee las candidatas con alcance de operador y procesa cada reserva en el alcance de su
+  empresa, en su propia transaccion.
+- Pruebas: `apps.bookings.tests_recordar_saldos`. Despliegue: el cron hay que darlo de alta a mano en Render (el
+  servicio no es Blueprint).
+
 ## Estaticos
 
 En local no hay que hacer nada: con `DEBUG=True` el runserver los sirve desde cada app.

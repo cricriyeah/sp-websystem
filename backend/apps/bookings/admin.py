@@ -796,7 +796,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         'transferencia_registrada_en', 'transferencia_registrada_por', 'en_disputa',
         'contracargo_perdido', 'contracargo_perdido_en',
         'vendedora_asignada_en', 'pagada_en', 'monto_reembolsado', 'reembolsada_en',
-        'aviso_asignacion_enviado_en',
+        'aviso_asignacion_enviado_en', 'recordatorio_saldo_enviado_en',
         # Se congelan en CrearPagoView junto con precio_total: editarlos aqui a
         # mano los desincronizaria de ese numero y del conteo de usos del codigo.
         'codigo_promocional', 'descuento_aplicado', 'iva_monto', 'iva_tasa',
@@ -862,7 +862,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         sistema = [
             'orden', 'personas_por_servicio', 'tipo_cambio',
             'checkout_id', 'stripe_payment_intent_id', 'pagada_en',
-            'vendedora_asignada_en', 'aviso_asignacion_enviado_en',
+            'vendedora_asignada_en', 'aviso_asignacion_enviado_en', 'recordatorio_saldo_enviado_en',
             'efectivo_cobrado_en', 'efectivo_cobrado_por',
             'transferencia_registrada_en', 'transferencia_registrada_por',
             'deslinde_aceptado', 'deslinde_nombre', 'deslinde_aceptado_en',

@@ -638,6 +638,12 @@ class Reserva(models.Model):
     # muchas veces por reserva y el cliente recibe este aviso una sola.
     aviso_asignacion_enviado_en = models.DateTimeField(null=True, blank=True)
 
+    # Cuando salio el recordatorio del saldo, un dia antes del viaje (`manage.py recordar_saldos`).
+    # Existe para que salga una sola vez; reagendar a otro dia lo borra.
+    recordatorio_saldo_enviado_en = models.DateTimeField(
+        'Recordatorio de saldo enviado', null=True, blank=True,
+    )
+
     # Efectivo recibido el dia del viaje: el 70% restante cuando el cliente pago
     # anticipo, y lo que se haya cotizado aparte (bebidas, transporte). Puede
     # superar el saldo del tour justo por eso, asi que no se valida contra el.

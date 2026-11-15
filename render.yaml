@@ -94,6 +94,24 @@ services:
         value: "3.14"
       - fromGroup: pescadeportiva-secrets
 
+  # Recordatorio de saldo: a quien pago anticipo y viaja mañana le llega un correo con lo que
+  # le falta y como liquidarlo (efectivo al llegar, o transferencia por WhatsApp).
+  - type: cron
+    name: pescadeportiva-recordar-saldos
+    runtime: python
+    plan: starter
+    region: oregon
+    rootDir: backend
+    schedule: "0 16 * * *"  # 16:00 UTC = 09:00 en America/Mazatlan, el dia anterior al viaje
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py recordar_saldos
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.14"
+      - fromGroup: pescadeportiva-secrets
+
   # Borra las filas `pendiente_pago` viejas (checkouts que nadie termino) para
   # que la lista de recuperacion no crezca sin fin. Nunca toca una reserva pagada.
   - type: cron

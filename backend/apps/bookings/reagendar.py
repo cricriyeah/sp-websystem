@@ -706,6 +706,9 @@ def _reagendar_en_transaccion(
         con_vehiculo = [pk for pk, _, _ in _viajes_con_vehiculo(reserva)]
         fechas = _derivar(reserva, nueva_fecha, entrada)
         _poner(reserva, fechas)
+        if (antes.inicio_paquete or antes.fecha) != (reserva.inicio_paquete or reserva.fecha):
+            # Cambio el dia: el recordatorio de saldo del dia viejo ya no cuenta (`recordar_saldos`).
+            reserva.recordatorio_saldo_enviado_en = None
         if detalle is not None and fechas.fecha_regreso is not None:
             detalle.fecha_regreso = fechas.fecha_regreso
 
