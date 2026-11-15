@@ -550,6 +550,21 @@ class Reserva(models.Model):
     telefono_cliente = models.CharField(max_length=20, validators=[validar_telefono])
     correo_cliente = models.EmailField()
 
+    # En que idioma se le escribe (correos). Lo manda el sitio (`/es` o `/en`) y la vendedora lo
+    # puede corregir. Vacio = decide la lada del telefono (`idioma_cliente`).
+    idioma = models.CharField(
+        'Idioma del cliente', max_length=2, blank=True, default='',
+        choices=[('es', 'Español'), ('en', 'Inglés')],
+        help_text='Idioma de los correos. Vacío = se decide por la lada del teléfono.',
+    )
+
+    @property
+    def idioma_cliente(self):
+        """`es` o `en`: el idioma guardado o, si no hay, el que sugiere la lada del telefono."""
+        from apps.bookings.telefono import idioma_por_telefono
+
+        return self.idioma or idioma_por_telefono(self.telefono_cliente)
+
     # Deslinde de responsabilidad: casilla aceptada + nombre escrito por el cliente,
     # con fecha/hora e IP del momento en que lo acepto (ver docs/contexto-negocio.md,
     # seccion Legal). Se llenan en el servidor, nunca se confian del cliente.
@@ -1729,6 +1744,21 @@ class Orden(models.Model):
     nombre_cliente = models.CharField(max_length=150, validators=[validar_nombre_persona])
     telefono_cliente = models.CharField(max_length=20, validators=[validar_telefono])
     correo_cliente = models.EmailField()
+
+    # En que idioma se le escribe (correos). Lo manda el sitio (`/es` o `/en`) y la vendedora lo
+    # puede corregir. Vacio = decide la lada del telefono (`idioma_cliente`).
+    idioma = models.CharField(
+        'Idioma del cliente', max_length=2, blank=True, default='',
+        choices=[('es', 'Español'), ('en', 'Inglés')],
+        help_text='Idioma de los correos. Vacío = se decide por la lada del teléfono.',
+    )
+
+    @property
+    def idioma_cliente(self):
+        """`es` o `en`: el idioma guardado o, si no hay, el que sugiere la lada del telefono."""
+        from apps.bookings.telefono import idioma_por_telefono
+
+        return self.idioma or idioma_por_telefono(self.telefono_cliente)
 
     moneda = models.CharField(max_length=3, choices=Reserva.Moneda.choices, default=Reserva.Moneda.MXN)
     tipo_cambio = models.DecimalField(

@@ -48,6 +48,8 @@ type ArgsComunes = {
   ref?: string;
   /** Por qué enlace llegó el cliente (lib/atribucion.ts). */
   atribucion?: Atribucion;
+  /** Idioma del sitio (`es` o `en`): el backend escribe los correos del cliente en ese idioma. */
+  idioma?: 'es' | 'en';
   /** Zona de un punto de encuentro del catálogo de traslados, o '' si no aplica. */
   zonaDePunto: ZonaDePunto;
 };
@@ -96,6 +98,7 @@ export function armarPayloadOrden(args: ArgsComunes): CrearOrdenInput {
     moneda: args.moneda,
     ref: args.ref,
     atribucion: args.atribucion,
+    idioma: args.idioma,
     fecha: args.inicio,
     ...(paquete.pide_hora === false ? {} : { hora: args.hora }),
     componentes: filas,
@@ -128,6 +131,7 @@ export function armarPayloadReserva(args: ArgsComunes): ReservaInput {
     deslinde_nombre: nombre,
     ref: args.ref,
     atribucion: args.atribucion,
+    idioma: args.idioma,
     paquete: paquete.slug,
     ...(aeropuerto ? { aeropuerto } : {}),
     personalizaciones,

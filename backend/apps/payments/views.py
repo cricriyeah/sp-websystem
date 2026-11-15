@@ -1090,6 +1090,9 @@ class CrearOrdenView(APIView):
         moneda = (request.data.get('moneda') or Reserva.Moneda.MXN).upper()
         ref = request.data.get('ref', '').strip()
         atribucion = limpiar_atribucion(request.data.get('atribucion'))
+        # El idioma del sitio en el que compra: decide el idioma de sus correos (vacio = por la lada).
+        idioma = str(request.data.get('idioma') or '').strip().lower()[:2]
+        idioma = idioma if idioma in ('es', 'en') else ''
 
         componentes_data = request.data.get('componentes', [])
 
@@ -1120,6 +1123,8 @@ class CrearOrdenView(APIView):
                     orden.correo_cliente = correo_cliente
                     orden.moneda = moneda
                     orden.forma_pago = Reserva.FormaPago.COMPLETO
+                    if idioma:
+                        orden.idioma = idioma
                     with scope.con_empresa(paquete.empresa_lider):
                         orden.full_clean()
                         orden.save()
@@ -1133,6 +1138,7 @@ class CrearOrdenView(APIView):
                         telefono_cliente=telefono_cliente,
                         correo_cliente=correo_cliente,
                         moneda=moneda,
+                        idioma=idioma,
                         forma_pago=Reserva.FormaPago.COMPLETO,
                         estado=Orden.Estado.ARMANDO,
                     )
@@ -1193,6 +1199,8 @@ class CrearOrdenView(APIView):
                         reserva.deslinde_version = DESLINDE_VERSION
                         if atribucion:
                             reserva.atribucion = atribucion
+                        if idioma:
+                            reserva.idioma = idioma
                         if es_lider and ref:
                             vendedora = Vendedora.por_codigo(ref, empresa)
                             if vendedora:

@@ -16,6 +16,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from . import plantilla
+from .idioma import en_catalogo, en_idioma, idioma_de, tr
 from .services import (
     TIMEOUT_SEGUNDOS,
     _empresa_de,
@@ -23,8 +24,11 @@ from .services import (
     _html,
     _par_punto_de_encuentro,
     _saldo_en_efectivo,
+    etiqueta_punto,
     hora_texto,
     motivo_para_persona,
+    par_llegada,
+    saldo_por_liquidar,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,7 +45,8 @@ def _vigente(objeto):
 
 def _asunto(reserva):
     # El folio en el asunto: es lo que el cliente busca en su bandeja cuando necesita escribirnos.
-    return f'Reserva reagendada{_folio(reserva)} — {_vigente(reserva)} {hora_texto(reserva)}'
+    return (f'{tr("Reserva reagendada", "Booking rescheduled")}{_folio(reserva)} — '
+            f'{_vigente(reserva)} {hora_texto(reserva)}')
 
 
 def _dia_con_hora(fecha, hora):
@@ -71,10 +76,10 @@ def _pares(reserva, antes, actividad):
     pares = []
     fecha_vieja = _vigente(antes)
     if fecha_vieja:
-        pares.append(('Antes', _dia_con_hora(fecha_vieja, getattr(antes, 'hora', None))))
-    pares.append(('Ahora', _dia_con_hora(_vigente(reserva), reserva.hora)))
+        pares.append((tr('Antes', 'Before'), _dia_con_hora(fecha_vieja, getattr(antes, 'hora', None))))
+    pares.append((tr('Ahora', 'Now'), _dia_con_hora(_vigente(reserva), reserva.hora)))
     if actividad == 'mar' and reserva.hora:
-        pares.append(('Llega a las', plantilla.hora_12(plantilla.quince_antes(reserva.hora)) + ' (15 minutos antes)'))
+        pares.append(par_llegada(reserva.hora))
 
     detalle = _detalle_transporte(reserva) if actividad == 'traslado' else None
     punto_del_traslado = ''
@@ -83,40 +88,44 @@ def _pares(reserva, antes, actividad):
             detalle.punto_encuentro.nombre if detalle.punto_encuentro_id else detalle.direccion_personalizada)
     if punto_del_traslado:
         # El traslado dice el punto que eligio el cliente; el del servicio es la ficha del catalogo.
-        pares.append(('Punto de encuentro', _html(punto_del_traslado)))
+        pares.append((tr('Punto de encuentro', 'Meeting point'), _html(punto_del_traslado)))
     else:
-        punto = _par_punto_de_encuentro(reserva, 'Sales de' if actividad == 'mar' else 'Punto de encuentro')
+        punto = _par_punto_de_encuentro(reserva, etiqueta_punto(actividad))
         if punto:
             pares.append(punto)
 
-    pares.append(('Personas', str(reserva.numero_personas)))
+    pares.append((tr('Personas', 'Guests'), str(reserva.numero_personas)))
     # Capitan y panga solo si se conservaron; si se quitaron, el correo no los nombra.
     if reserva.capitan_id:
-        pares.append(('Capitán', _html(reserva.capitan.nombre)))
+        pares.append((tr('Capitán', 'Captain'), _html(reserva.capitan.nombre)))
     if reserva.embarcacion_id:
         pares.append(('Panga', _html(reserva.embarcacion.nombre)))
 
     inicio = _vigente(reserva)
     if reserva.fecha_salida and inicio:
         pares += [
-            ('Llegada', plantilla.dia_largo(inicio)),
-            ('Salida', plantilla.dia_largo(reserva.fecha_salida)),
-            ('Noches', str(max((reserva.fecha_salida - inicio).days, 1))),
+            (tr('Llegada', 'Check-in'), plantilla.dia_largo(inicio)),
+            (tr('Salida', 'Check-out'), plantilla.dia_largo(reserva.fecha_salida)),
+            (tr('Noches', 'Nights'), str(max((reserva.fecha_salida - inicio).days, 1))),
         ]
     if detalle and detalle.fecha_regreso:
-        pares.append(('Fecha de regreso', plantilla.dia_largo(detalle.fecha_regreso)))
+        pares.append((tr('Fecha de regreso', 'Return date'), plantilla.dia_largo(detalle.fecha_regreso)))
     return pares
 
 
 def _siguiente(reserva, antes, actividad):
-    frases = ['Tu pago sigue vigente: no tienes que pagar de nuevo.']
+    frases = [tr('Tu pago sigue vigente: no tienes que pagar de nuevo.',
+                 'Your payment carries over. There is nothing new to pay.')]
     if actividad == 'mar':
         habia = bool(getattr(antes, 'panga', '') or getattr(antes, 'capitan', ''))
         if habia and not _quitaron_algo(reserva, antes):
-            frases.append('Tu capitán y tu panga siguen siendo los mismos.')
+            frases.append(tr('Tu capitán y tu panga siguen siendo los mismos.',
+                             'Your captain and panga stay the same.'))
         else:
-            frases.append('Te llega otro correo con tu capitán y tu panga en cuanto queden asignados.')
-    frases.append('Si esta fecha no te funciona, escríbenos por WhatsApp con tu folio.')
+            frases.append(tr('Te llega otro correo con tu capitán y tu panga en cuanto queden asignados.',
+                             "You'll get another email with your captain and panga as soon as they're assigned."))
+    frases.append(tr('Si esta fecha no te funciona, escríbenos por WhatsApp con tu folio.',
+                     "If this date doesn't work for you, message us on WhatsApp with your booking number."))
     return ''.join(plantilla.parrafo(f, plantilla.TINTA, 16) for f in frases)
 
 
@@ -125,19 +134,20 @@ def _cuerpo_html(reserva, antes):
     pendiente = _saldo_en_efectivo(reserva)
     dinero = ''
     if pendiente:
-        dinero = plantilla.bloque_resto(
-            f'Quedan {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.')
+        dinero = plantilla.bloque_resto(saldo_por_liquidar(reserva, pendiente))
     if reserva.servicio_id:
-        producto = _html(reserva.servicio.nombre)
+        producto = _html(en_catalogo(reserva.servicio))
     else:
-        producto = _html(reserva.paquete.nombre) if reserva.paquete_id else ''
-    antes_texto = f' · antes {_vigente(antes)}' if _vigente(antes) else ''
+        producto = _html(en_catalogo(reserva.paquete)) if reserva.paquete_id else ''
+    antes_texto = f' · {tr("antes", "was")} {_vigente(antes)}' if _vigente(antes) else ''
     return plantilla.correo(
-        actividad=actividad, empresa=_empresa_de(reserva), titulo='Reserva reagendada', folio=reserva.pk,
+        actividad=actividad, empresa=_empresa_de(reserva),
+        titulo=tr('Reserva reagendada', 'Booking rescheduled'), folio=reserva.pk,
         producto=producto,
         previa=f'{_vigente(reserva)} · {hora_texto(reserva)}{antes_texto}',
-        intro_html=f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó reagendada.',
-        pares=_pares(reserva, antes, actividad), etiqueta_pares='Tu nueva fecha',
+        intro_html=tr(f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó reagendada.',
+                      f'Hi {_html(reserva.nombre_cliente)}, your booking has a new date.'),
+        pares=_pares(reserva, antes, actividad), etiqueta_pares=tr('Tu nueva fecha', 'Your new date'),
         dinero_html=dinero, siguiente_html=_siguiente(reserva, antes, actividad),
         con_garantias=(actividad == 'mar'), plazo=plantilla.plazo_de(reserva),
     )
@@ -170,11 +180,13 @@ def enviar_correo_reagendado(reserva, antes):
         return False
 
     try:
-        html = _cuerpo_html(reserva, antes)
+        with en_idioma(idioma_de(reserva)):
+            html = _cuerpo_html(reserva, antes)
+            asunto = _asunto(reserva)
         cuerpo = {
             'from': settings.RESEND_FROM,
             'to': [reserva.correo_cliente],
-            'subject': _asunto(reserva),
+            'subject': asunto,
             'html': html,
             'text': plantilla.a_texto(html),
         }

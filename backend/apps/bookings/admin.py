@@ -877,7 +877,7 @@ class ReservaAdmin(AccionesEnEspanolMixin, AvisoDeAsignacionMixin, EmpresaScoped
         if obj is None or (obj.estado != Reserva.Estado.CANCELADA and not obj.motivo_cancelacion):
             cancelacion['classes'] = ('collapse',)
         return [
-            ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente')}),
+            ('Cliente', {'fields': ('nombre_cliente', 'telefono_cliente', 'correo_cliente', 'idioma')}),
             ('Viaje', {'fields': tuple(viaje)}),
             ('Cobro', {'fields': (
                 'forma_pago', 'moneda', 'precio_total', 'iva_monto', 'iva_tasa', 'monto_pagado',

@@ -164,6 +164,9 @@ WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '')
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
 WHATSAPP_TEMPLATE = os.environ.get('WHATSAPP_TEMPLATE', 'reserva_confirmada')
 WHATSAPP_TEMPLATE_LANG = os.environ.get('WHATSAPP_TEMPLATE_LANG', 'es_MX')
+# Codigo de idioma de la MISMA plantilla en ingles (p. ej. `en_US`), para el cliente que compro en ingles.
+# Vacio = todos reciben la de `WHATSAPP_TEMPLATE_LANG`. Solo ponerlo cuando Meta ya aprobo la version en ingles.
+WHATSAPP_TEMPLATE_LANG_EN = os.environ.get('WHATSAPP_TEMPLATE_LANG_EN', '')
 WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO = os.environ.get('WHATSAPP_TEMPLATE_REEMBOLSO_SIN_CUPO', '')
 
 def _perm_puede_ver_finanzas(request):

@@ -61,6 +61,8 @@ export type ReservaInput = {
   ref?: string;
   // Por qué enlace llegó el cliente (src/lib/atribucion.ts). El backend lo limpia y nunca rechaza por esto.
   atribucion?: Atribucion;
+  // Idioma del sitio en el que compra (`/es` o `/en`): el backend escribe sus correos en ese idioma.
+  idioma?: Idioma;
   // Token de Cloudflare Turnstile. El backend solo lo exige al CREAR la reserva
   // — el token es de un solo uso y este endpoint es un upsert, asi que corregir
   // la fecha reenvia sin token (ver backend/apps/bookings/views.py).
@@ -478,7 +480,7 @@ export const getTraslados = (empresaSlug: string, lang: Idioma = 'es'): Promise<
 export type ReservaTrasladoInput = Pick<ReservaInput,
   | 'checkout_id' | 'fecha' | 'hora' | 'numero_personas'
   | 'nombre_cliente' | 'telefono_cliente' | 'correo_cliente'
-  | 'moneda' | 'deslinde_aceptado' | 'deslinde_nombre' | 'ref' | 'atribucion' | 'captcha_token'
+  | 'moneda' | 'deslinde_aceptado' | 'deslinde_nombre' | 'ref' | 'atribucion' | 'idioma' | 'captcha_token'
 > & {
   servicio: string;
   tipo_traslado: TipoTraslado;
@@ -489,7 +491,7 @@ export type ReservaTrasladoInput = Pick<ReservaInput,
   forma_pago: PagoInput['forma_pago'];
 };
 
-export type ReservaTraslado = Omit<ReservaTrasladoInput, 'ref' | 'atribucion' | 'captcha_token'> & {
+export type ReservaTraslado = Omit<ReservaTrasladoInput, 'ref' | 'atribucion' | 'idioma' | 'captcha_token'> & {
   id: number;
   estado: string;
 };
@@ -524,6 +526,8 @@ export type CrearOrdenInput = {
   moneda?: Moneda;
   ref?: string;
   atribucion?: Atribucion;
+  /** Idioma del sitio en el que compra: decide el idioma de sus correos. */
+  idioma?: Idioma;
   componentes?: ComponenteOrdenInput[];
   fecha?: string;
   hora?: string;

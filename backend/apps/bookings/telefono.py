@@ -37,6 +37,21 @@ def es_internacional_corto(telefono):
     return not digitos.startswith(('1', LADA_PAIS))
 
 
+def idioma_por_telefono(telefono):
+    """`es` o `en` segun la lada: el respaldo cuando la reserva no trae el idioma del sitio.
+
+    Sin `+` (numero nacional tecleado a mano) o con +52, español. Cualquier otra lada, ingles:
+    el cliente extranjero de este negocio viene de Estados Unidos y Canada. Es una señal debil
+    (un extranjero con numero mexicano, un mexicano con +1), por eso solo es el respaldo y la
+    vendedora puede corregir `Reserva.idioma`.
+    """
+    texto = (telefono or '').strip()
+    if not texto.startswith('+'):
+        return 'es'
+    digitos = digitos_ascii(texto)
+    return 'es' if digitos.startswith(LADA_PAIS) or not digitos else 'en'
+
+
 def telefono_marcable(telefono):
     """Telefono en digitos con lada de pais, como lo quieren `wa.me` y `tel:`.
 

@@ -223,7 +223,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       const args = {
         checkoutId, paquete, componentes: estado.componentes, inicio: estado.inicio ?? minDate,
         hora: estado.hora, moneda: estado.moneda, contacto: estado.contacto, ref: leerRef(), atribucion: leerAtribucion(),
-        zonaDePunto,
+        idioma: lang, zonaDePunto,
       };
       return motor === 'orden' ? armarPayloadOrden(args) : armarPayloadReserva(args);
     },

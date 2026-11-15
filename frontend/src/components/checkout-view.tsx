@@ -1076,6 +1076,8 @@ export function CheckoutView({
         // A quien le cuenta la venta, si el cliente llego por el link de alguien.
         ref: leerRef(),
         atribucion: leerAtribucion(),
+        // El idioma del sitio: el backend le escribe sus correos en ese idioma.
+        idioma: lang,
         captcha_token: captchaToken.current,
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
         // La seleccion viaja con la reserva, sin precio: crear-pago la congela

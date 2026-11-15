@@ -16,6 +16,7 @@ import requests
 from django.conf import settings
 
 from . import plantilla
+from .idioma import en_catalogo, en_idioma, idioma_de, tr
 from .services import (
     TIMEOUT_SEGUNDOS,
     _empresa_de,
@@ -23,7 +24,9 @@ from .services import (
     _html,
     _par_punto_de_encuentro,
     _saldo_en_efectivo,
+    etiqueta_punto,
     motivo_para_persona,
+    par_llegada,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,6 +35,11 @@ TITULOS = {
     'mar': 'Mañana sales al mar',
     'traslado': 'Mañana es tu traslado',
     'estancia': 'Mañana empieza tu viaje',
+}
+TITULOS_EN = {
+    'mar': 'Out to sea tomorrow',
+    'traslado': 'Your transfer is tomorrow',
+    'estancia': 'Your trip starts tomorrow',
 }
 
 
@@ -51,22 +59,27 @@ def _monto(reserva, saldo):
 
 def _asunto(reserva, saldo):
     # El folio en el asunto: es lo que el cliente busca en su bandeja cuando necesita escribirnos.
-    return f'Mañana es tu viaje{_folio(reserva)}: te quedan {saldo:,.2f} {reserva.moneda} por liquidar'
+    return tr(
+        f'Mañana es tu viaje{_folio(reserva)}: te quedan {saldo:,.2f} {reserva.moneda} por liquidar',
+        f'Your trip is tomorrow{_folio(reserva)}: {saldo:,.2f} {reserva.moneda} left to pay',
+    )
 
 
 def _pares(reserva, actividad):
-    pares = [('Día', plantilla.dia_largo(primer_dia(reserva)))]
+    pares = [(tr('Día', 'Day'), plantilla.dia_largo(primer_dia(reserva)))]
     if reserva.hora:
         if actividad == 'mar':
-            pares.append(
-                ('Llega a las', plantilla.hora_12(plantilla.quince_antes(reserva.hora)) + ' (15 minutos antes)'))
-        pares.append(('Hora de salida' if actividad == 'mar' else 'Hora', plantilla.hora_12(reserva.hora)))
-    punto = _par_punto_de_encuentro(reserva, 'Sales de' if actividad == 'mar' else 'Punto de encuentro')
+            pares.append(par_llegada(reserva.hora))
+        pares.append((
+            tr('Hora de salida', 'Departure') if actividad == 'mar' else tr('Hora', 'Time'),
+            plantilla.hora_12(reserva.hora),
+        ))
+    punto = _par_punto_de_encuentro(reserva, etiqueta_punto(actividad))
     if punto:
         pares.append(punto)
-    pares.append(('Personas', str(reserva.numero_personas)))
+    pares.append((tr('Personas', 'Guests'), str(reserva.numero_personas)))
     if reserva.capitan_id:
-        pares.append(('Capitán', _html(reserva.capitan.nombre)))
+        pares.append((tr('Capitán', 'Captain'), _html(reserva.capitan.nombre)))
     if reserva.embarcacion_id:
         pares.append(('Panga', _html(reserva.embarcacion.nombre)))
     return pares
@@ -74,33 +87,46 @@ def _pares(reserva, actividad):
 
 def _dinero(reserva, saldo):
     return (
-        plantilla.bloque_resto(f'Te quedan {_monto(reserva, saldo)} por liquidar.')
-        + plantilla.parrafo(
+        plantilla.bloque_resto(tr(
+            f'Te quedan {_monto(reserva, saldo)} por liquidar.',
+            f'You have {_monto(reserva, saldo)} left to pay.',
+        ))
+        + plantilla.parrafo(tr(
             'Puedes pagarlos en efectivo mañana, al llegar. Si prefieres transferencia, '
-            f'escríbenos por WhatsApp con tu folio #{reserva.pk} y te pasamos los datos.')
+            f'escríbenos por WhatsApp con tu folio #{reserva.pk} y te pasamos los datos.',
+            'You can pay it in cash tomorrow when you arrive. If you would rather pay by bank transfer, '
+            f'message us on WhatsApp with your booking number #{reserva.pk} and we will send you the details.',
+        ))
     )
 
 
 def _siguiente(actividad):
     frases = []
     if actividad == 'mar':
-        frases.append('Llega 15 minutos antes de la hora de salida.')
-    frases.append('Si algo cambia de tu lado, escríbenos por WhatsApp y lo vemos.')
+        frases.append(tr('Llega 15 minutos antes de la hora de salida.', 'Be there 15 minutes before departure.'))
+    frases.append(tr('Si algo cambia de tu lado, escríbenos por WhatsApp y lo vemos.',
+                     'If anything changes on your end, message us on WhatsApp and we will sort it out.'))
     return ''.join(plantilla.parrafo(frase, plantilla.TINTA, 16) for frase in frases)
 
 
 def _cuerpo_html(reserva, saldo):
     actividad = plantilla.actividad_de(reserva)
     if reserva.servicio_id:
-        producto = _html(reserva.servicio.nombre)
+        producto = _html(en_catalogo(reserva.servicio))
     else:
-        producto = _html(reserva.paquete.nombre) if reserva.paquete_id else ''
+        producto = _html(en_catalogo(reserva.paquete)) if reserva.paquete_id else ''
     return plantilla.correo(
-        actividad=actividad, empresa=_empresa_de(reserva), titulo=TITULOS.get(actividad, TITULOS['mar']),
+        actividad=actividad, empresa=_empresa_de(reserva),
+        titulo=tr(TITULOS.get(actividad, TITULOS['mar']), TITULOS_EN.get(actividad, TITULOS_EN['mar'])),
         folio=reserva.pk, producto=producto,
-        previa=f'Te quedan {saldo:,.2f} {reserva.moneda} por liquidar: en efectivo al llegar o por transferencia.',
-        intro_html=f'Hola {_html(reserva.nombre_cliente)}, ya casi es el día.',
-        pares=_pares(reserva, actividad), etiqueta_pares='Tu salida' if actividad == 'mar' else 'Tu viaje',
+        previa=tr(
+            f'Te quedan {saldo:,.2f} {reserva.moneda} por liquidar: en efectivo al llegar o por transferencia.',
+            f'You have {saldo:,.2f} {reserva.moneda} left to pay: cash on arrival or bank transfer.',
+        ),
+        intro_html=tr(f'Hola {_html(reserva.nombre_cliente)}, ya casi es el día.',
+                      f'Hi {_html(reserva.nombre_cliente)}, the day is almost here.'),
+        pares=_pares(reserva, actividad),
+        etiqueta_pares=tr('Tu salida' if actividad == 'mar' else 'Tu viaje', 'Your trip'),
         dinero_html=_dinero(reserva, saldo), siguiente_html=_siguiente(actividad),
     )
 
@@ -124,11 +150,13 @@ def enviar_correo_recordatorio_saldo(reserva):
         return False
 
     try:
-        html = _cuerpo_html(reserva, saldo)
+        with en_idioma(idioma_de(reserva)):
+            html = _cuerpo_html(reserva, saldo)
+            asunto = _asunto(reserva, saldo)
         cuerpo = {
             'from': settings.RESEND_FROM,
             'to': [reserva.correo_cliente],
-            'subject': _asunto(reserva, saldo),
+            'subject': asunto,
             'html': html,
             'text': plantilla.a_texto(html),
         }

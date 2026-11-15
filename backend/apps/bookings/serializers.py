@@ -88,6 +88,13 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
     # Por qué enlace llegó el cliente (utm_*, id de clic). Write_only y sin validar a propósito: lo que no sirva se
     # descarta en `save` (`atribucion.limpiar`) y nunca rompe el checkout.
     atribucion = serializers.JSONField(required=False, write_only=True)
+    # El idioma del sitio en el que compra (`/es` o `/en`): decide el idioma de sus correos. Cualquier otro
+    # valor se guarda vacio (decide la lada del telefono) y nunca rompe el checkout.
+    idioma = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
+    def validate_idioma(self, valor):
+        valor = (valor or '').strip().lower()[:2]
+        return valor if valor in ('es', 'en') else ''
 
     # Opcional en el esquema; `validate` la exige salvo en un paquete que no la pide.
     hora = serializers.TimeField(required=False, allow_null=True)
@@ -117,7 +124,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'servicio', 'paquete', 'fecha_salida',
             'personas_por_servicio', 'fecha_inicio_paquete', 'aeropuerto',
             'personalizaciones',
-            'ref', 'atribucion', 'estado',
+            'ref', 'atribucion', 'idioma', 'estado',
         ]
         read_only_fields = ['id', 'estado']
 
@@ -485,7 +492,7 @@ class TrasladoCheckoutSerializer(ReservaCheckoutSerializer):
             'id', 'checkout_id', 'servicio', 'tipo_traslado', 'punto_encuentro',
             'direccion_personalizada', 'zona', 'fecha', 'hora', 'fecha_regreso',
             'numero_personas', 'nombre_cliente', 'telefono_cliente', 'correo_cliente',
-            'deslinde_aceptado', 'deslinde_nombre', 'moneda', 'forma_pago', 'ref', 'atribucion', 'estado',
+            'deslinde_aceptado', 'deslinde_nombre', 'moneda', 'forma_pago', 'ref', 'atribucion', 'idioma', 'estado',
         ]
 
     def get_fields(self):

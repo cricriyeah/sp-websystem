@@ -804,6 +804,30 @@ con otro filtro. Si despues paga, la fila cambia de estado sola y desaparece de 
   (si el cliente ya pago con tarjeta, no deja guardar y manda a revisar Stripe). Si el reembolso del cobro duplicado
   falla, `_resolver_cobro_repetido` levanta la alerta urgente deduplicada (`_gestionar_fallo_reembolso`).
 
+## Idioma de los correos al cliente (español o ingles)
+
+Los correos al cliente salen en el idioma del cliente; antes todos iban en español.
+
+- **De donde sale** (`Reserva.idioma_cliente`, `Orden.idioma_cliente`): primero `idioma` (`es`/`en`, migracion
+  `0069`), que manda el sitio al crear la reserva o la orden (el `/es` o `/en` en el que compro) y que la vendedora
+  puede corregir en la reserva. Vacio (venta a mano, reserva anterior al campo) = decide la lada del telefono
+  (`bookings.telefono.idioma_por_telefono`): sin `+` o con +52 español, cualquier otra ingles. La lada es una señal
+  debil (un extranjero con numero mexicano), por eso es solo el respaldo. La API guarda vacio cualquier valor que no
+  sea `es`/`en`: nunca rompe el checkout.
+- **Como se arma** (`notifications/idioma.py`): quien manda envuelve el armado en `with en_idioma(idioma_de(reserva)):`
+  y cada texto se escribe `tr('en español', 'in English')`. El idioma vive en un `ContextVar`, asi no se pasa de mano
+  en mano y no se le pega al siguiente correo. Fuera del bloque todo sale en español (lo que ya salia). `plantilla`
+  traduce etiquetas, garantias, pie, `dia_largo` («Monday, December 7») y `hora_12` («6:00 AM»). Los nombres de
+  catalogo salen de `nombre_en` / `punto_salida_en` si existen (`en_catalogo`), si no del español.
+- **Cuales**: confirmacion (servicio, paquete, traslado), asignacion de capitan, reagendado, recordatorio de saldo,
+  reembolso por falta de cupo, orden cruza-empresa y «falta un pago». Los avisos internos a la empresa siguen en
+  español. Un correo nuevo al cliente tiene que usar `tr` y el bloque `en_idioma`, o saldra solo en español.
+- **WhatsApp**: la plantilla de Meta en ingles solo se usa si `WHATSAPP_TEMPLATE_LANG_EN` esta puesta (p. ej.
+  `en_US`) y el cliente es de ingles; vacia (lo normal hasta que Meta apruebe esa version) todos reciben la de siempre.
+- Los textos en ingles siguen la regla del dueño para todo texto al cliente: decir primero lo que si pasa, sin
+  negativas en seco. Pruebas: `apps.notifications.tests_idioma` (incluye una lista de frases en español que no pueden
+  colarse en un correo en ingles).
+
 ## Recordatorio de saldo (anticipo)
 
 Quien paga anticipo debe el resto. El saldo ya salia en el correo de confirmacion, en el de asignacion y en el de

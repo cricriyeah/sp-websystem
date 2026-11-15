@@ -578,6 +578,7 @@ export function TrasladoView({
         forma_pago: formaPago,
         ref: leerRef(),
         atribucion: leerAtribucion(),
+        idioma: lang,
         captcha_token: captchaToken.current || undefined,
       };
 

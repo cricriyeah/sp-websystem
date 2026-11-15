@@ -22,6 +22,8 @@ from django.conf import settings
 
 from apps.fleet.enums import TipoServicio
 
+from .idioma import idioma_actual, tr
+
 # Los campos de color del sitio: azul (mar), coral hondo (traslado) y verde (estancia).
 CAMPO = {'mar': '#1b607f', 'traslado': '#a83226', 'estancia': '#343f04'}
 ARENA = '#fcf6ed'
@@ -43,6 +45,9 @@ LOGO_ANCHO, LOGO_ALTO = 150, 48
 DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
 MESES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
          'noviembre', 'diciembre')
+DIAS_EN = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+MESES_EN = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+            'November', 'December')
 
 # Las garantías de la confirmación del sitio (sedeContenido.tranquilidad): mismos textos, mismas cifras. El plazo de
 # cambio depende de lo que se compró (política «Cambios y cancelaciones» del sitio, 2026-11-11): un día de mar, 48 h;
@@ -55,6 +60,14 @@ PLAZOS_DE_CAMBIO = {
     'traslado': ('24 h', 'Cambio de fecha', 'Cambias la fecha o la hora sin costo hasta 24 horas antes.'),
 }
 GARANTIAS = (GARANTIA_CLIMA, PLAZOS_DE_CAMBIO['dia'])
+# Las mismas garantias para el cliente que compro en ingles (mismas cifras; ver `garantias`).
+GARANTIA_CLIMA_EN = ('100%', 'If the weather turns',
+                     'If bad weather keeps us in port, you pick another date at no cost or get back everything you paid.')
+PLAZOS_DE_CAMBIO_EN = {
+    'dia': ('48 h', 'Date changes', 'Change your date at no cost up to 48 hours before departure.'),
+    'paquete': ('30 days', 'Date changes', 'Change your dates at no cost up to 30 days before you arrive.'),
+    'traslado': ('24 h', 'Date changes', 'Change the date or time at no cost up to 24 hours before.'),
+}
 
 
 def plazo_de(reserva):
@@ -78,12 +91,16 @@ def actividad_de(reserva):
 
 
 def dia_largo(fecha):
-    """«Lunes 7 de diciembre»."""
+    """«Lunes 7 de diciembre», o «Monday, December 7» en un correo en ingles."""
+    if idioma_actual() == 'en':
+        return f'{DIAS_EN[fecha.weekday()]}, {MESES_EN[fecha.month - 1]} {fecha.day}'
     return f'{DIAS[fecha.weekday()].capitalize()} {fecha.day} de {MESES[fecha.month - 1]}'
 
 
 def hora_12(hora):
-    """«6:00 a. m.» a partir de un `time`."""
+    """«6:00 a. m.» a partir de un `time` («6:00 AM» en ingles)."""
+    if idioma_actual() == 'en':
+        return f"{hora.hour % 12 or 12}:{hora.minute:02d} {'AM' if hora.hour < 12 else 'PM'}"
     sufijo = 'a. m.' if hora.hour < 12 else 'p. m.'
     return f'{hora.hour % 12 or 12}:{hora.minute:02d} {sufijo}'
 
@@ -135,7 +152,8 @@ def bloque(contenido_html, fondo, color):
 def bloque_pagado(monto_html):
     """El bloque tinta de «Pagaste hoy»."""
     return bloque(
-        t('Pagaste hoy', 16, 600, BLANCO, 1.2) + titular(monto_html, 24, BLANCO, 'padding-top:6px;'), TINTA, BLANCO,
+        t(tr('Pagaste hoy', 'Paid today'), 16, 600, BLANCO, 1.2) + titular(monto_html, 24, BLANCO, 'padding-top:6px;'),
+        TINTA, BLANCO,
     )
 
 
@@ -154,7 +172,10 @@ def garantias(plazo='dia'):
         f'<tr><td width="88" valign="top" style="padding:8px 0;">{titular(cifra, 24)}</td>'
         f'<td valign="top" style="padding:8px 0;">{t(escape(titulo), 16, 600, TINTA, 1.2)}'
         f'{t(escape(texto), 16, 400, TINTA, 1.5, "padding-top:4px;")}</td></tr>'
-        for cifra, titulo, texto in (GARANTIA_CLIMA, PLAZOS_DE_CAMBIO[plazo])
+        for cifra, titulo, texto in (
+            (GARANTIA_CLIMA_EN, PLAZOS_DE_CAMBIO_EN[plazo]) if idioma_actual() == 'en'
+            else (GARANTIA_CLIMA, PLAZOS_DE_CAMBIO[plazo])
+        )
     )
     return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{filas_}</table>'
 
@@ -171,7 +192,7 @@ def logo_html():
 
 
 def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', pares=(), dinero_html='',
-           siguiente_html='', con_garantias=False, previa='', etiqueta_pares='Lo que reservaste', pie_html=None,
+           siguiente_html='', con_garantias=False, previa='', etiqueta_pares=None, pie_html=None,
            plazo='dia'):
     """El correo completo, con el orden de la página de confirmación del sitio.
 
@@ -182,7 +203,7 @@ def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', 
     campo = CAMPO.get(actividad, CAMPO['mar'])
     folio_html = (
         f'<td class="col" valign="top" align="right" style="padding-left:16px;">'
-        f'{t("Folio", 16, 600, BLANCO_SUAVE, 1.2)}{titular("#" + str(folio), 40, BLANCO)}</td>'
+        f'{t(tr("Folio", "Booking"), 16, 600, BLANCO_SUAVE, 1.2)}{titular("#" + str(folio), 40, BLANCO)}</td>'
     ) if folio else ''
     linea_producto = t(
         f'{escape(producto)}<span style="font-weight:400;"> · {escape(empresa)}</span>' if producto else escape(empresa),
@@ -190,20 +211,25 @@ def correo(*, actividad, empresa, titulo, folio='', producto='', intro_html='', 
     )
     secciones = ''
     if pares:
-        secciones += seccion(etiqueta_pares, filas(pares))
+        secciones += seccion(etiqueta_pares or tr('Lo que reservaste', 'What you booked'), filas(pares))
     if dinero_html:
-        secciones += seccion('El dinero', dinero_html)
+        secciones += seccion(tr('El dinero', 'Payment'), dinero_html)
     if siguiente_html:
-        secciones += seccion('Qué sigue', siguiente_html)
+        secciones += seccion(tr('Qué sigue', "What's next"), siguiente_html)
     if con_garantias:
-        secciones += seccion('Si algo cambia', garantias(plazo))
+        secciones += seccion(tr('Si algo cambia', 'If plans change'), garantias(plazo))
     if pie_html is None:
+        guarda = tr(
+            'Guarda este correo: es tu comprobante. Si necesitas un cambio, escríbenos por WhatsApp con tu folio.',
+            'Keep this email as your booking record. Need to change something? Message us on WhatsApp with your '
+            'booking number.',
+        )
         pie_html = (
-            f'{t("Guarda este correo: es tu comprobante. Si necesitas un cambio, escríbenos por WhatsApp con tu folio.", 14, 400, SUAVE, 1.5)}'
+            f'{t(guarda, 14, 400, SUAVE, 1.5)}'
             f'{t(escape(empresa) + " · Sun Baja Experience", 14, 400, SUAVE, 1.5, "padding-top:6px;")}'
         )
     return (
-        '<!doctype html><html lang="es"><head><meta charset="utf-8">'
+        f'<!doctype html><html lang="{idioma_actual()}"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only">'
         '<style>@media (max-width:480px){.col{display:block!important;width:100%!important;text-align:left!important;'

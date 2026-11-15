@@ -19,6 +19,7 @@ from apps.bookings.telefono import telefono_marcable
 from apps.fleet.enums import TipoServicio
 
 from . import plantilla
+from .idioma import en_catalogo, en_idioma, idioma_de, tr
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,23 @@ TIMEOUT_SEGUNDOS = 10
 # inventa uno: el aviso a la vendedora es la columna «Sales de» de la lista de Servicios.
 SIN_PUNTO_DE_ENCUENTRO = 'Te lo confirmamos por WhatsApp'
 
+# Los tipos de traslado en ingles (el catalogo los tiene solo en español).
+TIPOS_DE_TRASLADO_EN = {
+    'redondo_aeropuerto': 'Airport round trip',
+    'redondo_actividad': 'Round trip to your activity',
+    'recepcion_aeropuerto': 'Airport pickup',
+}
+
+
+def sin_punto_de_encuentro():
+    return tr(SIN_PUNTO_DE_ENCUENTRO, "We'll confirm it on WhatsApp")
+
+
+def tipo_de_traslado(detalle):
+    """El tipo de traslado en el idioma del correo."""
+    return tr(detalle.get_tipo_traslado_display(),
+              TIPOS_DE_TRASLADO_EN.get(detalle.tipo_traslado, detalle.get_tipo_traslado_display()))
+
 
 def punto_de_encuentro(reserva):
     """De donde sale el cliente, como lo escribio el jefe en el servicio; '' si no lo capturo.
@@ -38,7 +56,7 @@ def punto_de_encuentro(reserva):
     """
     if not reserva.servicio_id:
         return ''
-    return (reserva.servicio.punto_salida or '').strip()
+    return en_catalogo(reserva.servicio, 'punto_salida').strip()
 
 
 def _renglon_punto_de_encuentro(reserva):
@@ -51,8 +69,8 @@ def _renglon_punto_de_encuentro(reserva):
     if not punto:
         if reserva.servicio_id and reserva.servicio.tipo_servicio == TipoServicio.HOSPEDAJE:
             return ''
-        punto = SIN_PUNTO_DE_ENCUENTRO
-    return f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>'
+        punto = sin_punto_de_encuentro()
+    return f'<li><strong>{tr("Punto de encuentro", "Meeting point")}:</strong> {_html(punto)}</li>'
 
 
 def _motivo_http(error):
@@ -100,7 +118,7 @@ def _html(valor):
 
 def hora_texto(reserva):
     """La hora de salida, o 'por definir' si la reserva no la tiene (paquete que no la pide)."""
-    return reserva.hora.strftime('%H:%M') if reserva.hora else 'por definir'
+    return reserva.hora.strftime('%H:%M') if reserva.hora else tr('por definir', 'time to be confirmed')
 
 
 def _folio(reserva):
@@ -109,7 +127,7 @@ def _folio(reserva):
 
 def _asunto(reserva):
     # El folio en el asunto: es lo que el cliente busca en su bandeja cuando necesita escribirnos.
-    return f'Reserva confirmada{_folio(reserva)} — {reserva.fecha} {hora_texto(reserva)}'
+    return f'{tr("Reserva confirmada", "Booking confirmed")}{_folio(reserva)} — {reserva.fecha} {hora_texto(reserva)}'
 
 
 def _es_traslado(reserva):
@@ -120,21 +138,21 @@ def _empresa_de(reserva):
     return reserva.empresa.nombre if reserva.empresa_id else 'Sun Baja Experience'
 
 
-def _par_punto_de_encuentro(reserva, etiqueta='Punto de encuentro'):
+def _par_punto_de_encuentro(reserva, etiqueta=None):
     """(etiqueta, texto) del renglon del punto de encuentro, o None si no aplica (ver `_renglon_punto_de_encuentro`)."""
     punto = punto_de_encuentro(reserva)
     if not punto:
         if reserva.servicio_id and reserva.servicio.tipo_servicio == TipoServicio.HOSPEDAJE:
             return None
-        punto = SIN_PUNTO_DE_ENCUENTRO
-    return (etiqueta, _html(punto))
+        punto = sin_punto_de_encuentro()
+    return (etiqueta or tr('Punto de encuentro', 'Meeting point'), _html(punto))
 
 
 def _dia_y_hora(fecha, hora):
     """Los dos primeros renglones de «Lo que reservaste»: el día y, si se sabe, la hora."""
-    pares = [('Día', plantilla.dia_largo(fecha))]
+    pares = [(tr('Día', 'Day'), plantilla.dia_largo(fecha))]
     if hora:
-        pares.append(('Hora', plantilla.hora_12(hora)))
+        pares.append((tr('Hora', 'Time'), plantilla.hora_12(hora)))
     return pares
 
 
@@ -143,15 +161,18 @@ def _cuerpo_traslado_html(reserva):
     punto = detalle.punto_encuentro.nombre if detalle.punto_encuentro_id else detalle.direccion_personalizada
     personas = detalle.numero_personas if detalle.numero_personas is not None else reserva.numero_personas
     return plantilla.correo(
-        actividad='traslado', empresa=_empresa_de(reserva), titulo='Traslado confirmado', folio=reserva.pk,
-        producto=_html(reserva.servicio.nombre),
+        actividad='traslado', empresa=_empresa_de(reserva),
+        titulo=tr('Traslado confirmado', 'Transfer confirmed'), folio=reserva.pk,
+        producto=_html(en_catalogo(reserva.servicio)),
         previa=f'{reserva.fecha} · {hora_texto(reserva)}',
-        intro_html=f'Hola {_html(reserva.nombre_cliente)}, tu traslado quedó confirmado.',
+        intro_html=tr(f'Hola {_html(reserva.nombre_cliente)}, tu traslado quedó confirmado.',
+                      f'Hi {_html(reserva.nombre_cliente)}, your transfer is confirmed.'),
         pares=_dia_y_hora(reserva.fecha, reserva.hora) + [
-            ('Tipo de traslado', _html(detalle.get_tipo_traslado_display())),
-            ('Fecha de regreso al aeropuerto', str(detalle.fecha_regreso) if detalle.fecha_regreso else ''),
-            ('Personas', str(personas)),
-            ('Punto de encuentro', _html(punto)),
+            (tr('Tipo de traslado', 'Transfer type'), _html(tipo_de_traslado(detalle))),
+            (tr('Fecha de regreso al aeropuerto', 'Return to the airport'),
+             str(detalle.fecha_regreso) if detalle.fecha_regreso else ''),
+            (tr('Personas', 'Guests'), str(personas)),
+            (tr('Punto de encuentro', 'Meeting point'), _html(punto)),
         ],
     )
 
@@ -172,9 +193,29 @@ def _bloques_de_dinero(reserva, pendiente):
         return ''
     html = plantilla.bloque_pagado(f'{pagado} {reserva.moneda}')
     if pendiente:
-        html += plantilla.bloque_resto(
-            f'Quedan {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.')
+        html += plantilla.bloque_resto(saldo_por_liquidar(reserva, pendiente))
     return html
+
+
+def saldo_por_liquidar(reserva, pendiente):
+    """La frase del saldo que queda en efectivo, en el idioma del correo."""
+    return tr(
+        f'Quedan {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.',
+        f'{pendiente} {_html(reserva.moneda)} left to pay in cash on the day of your trip.',
+    )
+
+
+def par_llegada(hora):
+    """El renglon «Llega a las»: 15 minutos antes de la salida."""
+    return (
+        tr('Llega a las', 'Arrive by'),
+        plantilla.hora_12(plantilla.quince_antes(hora)) + tr(' (15 minutos antes)', ' (15 minutes early)'),
+    )
+
+
+def etiqueta_punto(actividad):
+    """«Sales de» en un viaje de mar; «Punto de encuentro» en lo demas."""
+    return tr('Sales de', 'Departs from') if actividad == 'mar' else tr('Punto de encuentro', 'Meeting point')
 
 
 def _cuerpo_html(reserva):
@@ -193,11 +234,11 @@ def _cuerpo_html(reserva):
     # AttributeError — `getattr(..., None)` no lo atrapa.
     pares = _dia_y_hora(fecha, reserva.hora)
     if reserva.hora and actividad == 'mar':
-        pares.append(('Llega a las', plantilla.hora_12(plantilla.quince_antes(reserva.hora)) + ' (15 minutos antes)'))
-    punto = _par_punto_de_encuentro(reserva, 'Sales de' if actividad == 'mar' else 'Punto de encuentro')
+        pares.append(par_llegada(reserva.hora))
+    punto = _par_punto_de_encuentro(reserva, etiqueta_punto(actividad))
     if punto:
         pares.append(punto)
-    pares.append(('Personas', str(reserva.numero_personas)))
+    pares.append((tr('Personas', 'Guests'), str(reserva.numero_personas)))
     filas_extras = (reserva.personalizaciones_seleccionadas.select_related(
         'servicio_personalizacion__personalizacion') if reserva.pk else [])
     for fila in filas_extras:
@@ -205,8 +246,9 @@ def _cuerpo_html(reserva):
         if personalizacion.tipo_interaccion != 'check' or fila.subtotal is None:
             continue
         pares.append((
-            _html(personalizacion.nombre),
-            f'{fila.cantidad} — {fila.subtotal:.2f} {_html(reserva.moneda)} (incluido en tu pago)',
+            _html(en_catalogo(personalizacion)),
+            f'{fila.cantidad} — {fila.subtotal:.2f} {_html(reserva.moneda)} '
+            f'{tr("(incluido en tu pago)", "(included in your payment)")}',
         ))
 
     # Aviso explicito: si el cliente cree que algo ya esta pagado sin estarlo,
@@ -215,23 +257,30 @@ def _cuerpo_html(reserva):
     if reserva.tiene_cotizaciones_pendientes:
         pedidos = [
             etiqueta for pedido, etiqueta in
-            ((reserva.pide_bebidas, 'bebidas'), (reserva.pide_extras_whatsapp, 'extras'))
+            ((reserva.pide_bebidas, tr('bebidas', 'drinks')), (reserva.pide_extras_whatsapp, 'extras'))
             if pedido
         ]
-        siguiente += plantilla.recuadro(
+        siguiente += plantilla.recuadro(tr(
             f'<strong>Pediste {" y ".join(pedidos)}.</strong> Eso <strong>no</strong> está '
             f'incluido en el monto que acabas de pagar: nuestro agente te lo cotiza y lo '
-            f'acuerdas directamente con él.'
-        )
+            f'acuerdas directamente con él.',
+            f'<strong>You asked for {" and ".join(pedidos)}.</strong> That is <strong>not</strong> part of '
+            f'what you just paid: our agent will send you a quote and you settle it directly with them.',
+        ))
     if actividad == 'mar':
-        siguiente += plantilla.parrafo('Te llega otro correo con el nombre de tu capitán y la panga que les toca, '
-                                       'en cuanto queden asignados.', plantilla.TINTA, 16)
+        siguiente += plantilla.parrafo(tr(
+            'Te llega otro correo con el nombre de tu capitán y la panga que les toca, '
+            'en cuanto queden asignados.',
+            "You'll get a second email with your captain's name and your panga as soon as they're assigned.",
+        ), plantilla.TINTA, 16)
 
     return plantilla.correo(
-        actividad=actividad, empresa=_empresa_de(reserva), titulo='Reserva confirmada', folio=reserva.pk,
-        producto=_html(reserva.servicio.nombre) if reserva.servicio_id else '',
+        actividad=actividad, empresa=_empresa_de(reserva),
+        titulo=tr('Reserva confirmada', 'Booking confirmed'), folio=reserva.pk,
+        producto=_html(en_catalogo(reserva.servicio)) if reserva.servicio_id else '',
         previa=f'{fecha} · {hora_texto(reserva)}',
-        intro_html=f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó confirmada.',
+        intro_html=tr(f'Hola {_html(reserva.nombre_cliente)}, tu reserva quedó confirmada.',
+                      f"Hi {_html(reserva.nombre_cliente)}, you're booked."),
         pares=pares, dinero_html=_bloques_de_dinero(reserva, _saldo_en_efectivo(reserva)),
         siguiente_html=siguiente, con_garantias=(actividad == 'mar'), plazo=plantilla.plazo_de(reserva),
     )
@@ -247,11 +296,13 @@ def enviar_correo_confirmacion(reserva):
         logger.info('Resend sin configurar, no se mando correo de la reserva %s', reserva.pk)
         return False
 
-    _html_correo = _cuerpo_html(reserva)
+    with en_idioma(idioma_de(reserva)):
+        _html_correo = _cuerpo_html(reserva)
+        asunto = _asunto(reserva)
     cuerpo = {
         'from': settings.RESEND_FROM,
         'to': [reserva.correo_cliente],
-        'subject': _asunto(reserva),
+        'subject': asunto,
         'html': _html_correo,
         'text': plantilla.a_texto(_html_correo),
     }
@@ -277,7 +328,8 @@ def enviar_correo_confirmacion(reserva):
 
 
 def _asunto_asignacion(reserva):
-    return f'Tu capitán y tu panga{_folio(reserva)} — {reserva.fecha} {hora_texto(reserva)}'
+    return (f'{tr("Tu capitán y tu panga", "Your captain and panga")}{_folio(reserva)} — '
+            f'{reserva.fecha} {hora_texto(reserva)}')
 
 
 def _cuerpo_asignacion_html(reserva):
@@ -290,27 +342,34 @@ def _cuerpo_asignacion_html(reserva):
     pendiente = _saldo_en_efectivo(reserva)
     dinero = ''
     if pendiente:
-        dinero = plantilla.bloque_resto(
-            f'Recuerda que llevas {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.')
+        dinero = plantilla.bloque_resto(tr(
+            f'Recuerda que llevas {pendiente} {_html(reserva.moneda)} por liquidar en efectivo el día del viaje.',
+            f'You still have {pendiente} {_html(reserva.moneda)} to pay in cash on the day of your trip.',
+        ))
     primer_nombre = (reserva.capitan.nombre.split() or [''])[0]
-    pares = [('Día', plantilla.dia_largo(reserva.fecha))]
+    pares = [(tr('Día', 'Day'), plantilla.dia_largo(reserva.fecha))]
     if reserva.hora:
-        pares.append(('Llega a las', plantilla.hora_12(plantilla.quince_antes(reserva.hora)) + ' (15 minutos antes)'))
-        pares.append(('Hora de salida', plantilla.hora_12(reserva.hora)))
-    pares += [('Capitán', _html(reserva.capitan.nombre)), ('Panga', _html(reserva.embarcacion.nombre))]
-    punto = _par_punto_de_encuentro(reserva, 'Sales de')
+        pares.append(par_llegada(reserva.hora))
+        pares.append((tr('Hora de salida', 'Departure'), plantilla.hora_12(reserva.hora)))
+    pares += [(tr('Capitán', 'Captain'), _html(reserva.capitan.nombre)), ('Panga', _html(reserva.embarcacion.nombre))]
+    punto = _par_punto_de_encuentro(reserva, etiqueta_punto('mar'))
     if punto:
         pares.append(punto)
     return plantilla.correo(
         actividad=plantilla.actividad_de(reserva), empresa=_empresa_de(reserva),
-        titulo=f'Sales con {primer_nombre}', folio=reserva.pk,
-        producto=_html(reserva.servicio.nombre) if reserva.servicio_id else '',
-        previa=f'{reserva.fecha} · {hora_texto(reserva)} · sale con {reserva.capitan.nombre}',
-        intro_html=f'Hola {_html(reserva.nombre_cliente)}, ya sabemos con quién sales.',
-        pares=pares, etiqueta_pares='Tu salida', dinero_html=dinero,
-        siguiente_html=plantilla.parrafo(
+        titulo=tr(f'Sales con {primer_nombre}', f'Your captain: {primer_nombre}'), folio=reserva.pk,
+        producto=_html(en_catalogo(reserva.servicio)) if reserva.servicio_id else '',
+        previa=(f'{reserva.fecha} · {hora_texto(reserva)} · '
+                f'{tr("sale con", "with")} {reserva.capitan.nombre}'),
+        intro_html=tr(f'Hola {_html(reserva.nombre_cliente)}, ya sabemos con quién sales.',
+                      f'Hi {_html(reserva.nombre_cliente)}, your captain and panga are set.'),
+        pares=pares, etiqueta_pares=tr('Tu salida', 'Your trip'), dinero_html=dinero,
+        siguiente_html=plantilla.parrafo(tr(
             'Llega 15 minutos antes de la hora de salida. Si algo cambia de tu lado, '
-            'escríbenos por WhatsApp y lo movemos.', plantilla.TINTA, 16),
+            'escríbenos por WhatsApp y lo movemos.',
+            'Be there 15 minutes before departure. If anything changes on your end, message us on WhatsApp '
+            'and we will sort it out.',
+        ), plantilla.TINTA, 16),
     )
 
 
@@ -332,11 +391,13 @@ def enviar_correo_asignacion(reserva):
         reserva.motivo_fallo_aviso = 'el envio de correos no esta configurado en el servidor'
         return False
 
-    _html_correo = _cuerpo_asignacion_html(reserva)
+    with en_idioma(idioma_de(reserva)):
+        _html_correo = _cuerpo_asignacion_html(reserva)
+        asunto = _asunto_asignacion(reserva)
     cuerpo = {
         'from': settings.RESEND_FROM,
         'to': [reserva.correo_cliente],
-        'subject': _asunto_asignacion(reserva),
+        'subject': asunto,
         'html': _html_correo,
         'text': plantilla.a_texto(_html_correo),
     }
@@ -356,6 +417,15 @@ def enviar_correo_asignacion(reserva):
         reserva.motivo_fallo_aviso = f'el proveedor de correo respondio: {motivo_para_persona(error)}'
         return False
     return True
+
+
+def _idioma_de_plantilla_whatsapp(reserva):
+    """El codigo de idioma de la plantilla de Meta. La version en ingles solo se usa si existe:
+    `WHATSAPP_TEMPLATE_LANG_EN` vacio (lo normal hasta darla de alta en Meta) = la de siempre."""
+    en_ingles = getattr(settings, 'WHATSAPP_TEMPLATE_LANG_EN', '')
+    if en_ingles and idioma_de(reserva) == 'en':
+        return en_ingles
+    return settings.WHATSAPP_TEMPLATE_LANG
 
 
 def enviar_whatsapp_confirmacion(reserva):
@@ -387,7 +457,7 @@ def enviar_whatsapp_confirmacion(reserva):
                 'type': 'template',
                 'template': {
                     'name': settings.WHATSAPP_TEMPLATE,
-                    'language': {'code': settings.WHATSAPP_TEMPLATE_LANG},
+                    'language': {'code': _idioma_de_plantilla_whatsapp(reserva)},
                     'components': [{
                         'type': 'body',
                         'parameters': [{'type': 'text', 'text': p} for p in parametros],
@@ -503,13 +573,14 @@ def _cuerpo_orden_html(orden, reservas):
     for r in reservas:
         if _es_traslado(r):
             detalle = getattr(r, 'detalle_transporte', None)
-            tipo = detalle.get_tipo_traslado_display() if detalle else 'Traslado'
+            tipo = tipo_de_traslado(detalle) if detalle else tr('Traslado', 'Transfer')
             punto = (
                 detalle.punto_encuentro.nombre if (detalle and detalle.punto_encuentro_id)
-                else (detalle.direccion_personalizada if detalle else SIN_PUNTO_DE_ENCUENTRO)
+                else (detalle.direccion_personalizada if detalle else sin_punto_de_encuentro())
             )
             regreso = (
-                f'<li><strong>Fecha de regreso al aeropuerto:</strong> {detalle.fecha_regreso}</li>'
+                f'<li><strong>{tr("Fecha de regreso al aeropuerto", "Return to the airport")}:</strong> '
+                f'{detalle.fecha_regreso}</li>'
                 if (detalle and detalle.fecha_regreso) else ''
             )
             personas = (
@@ -517,39 +588,43 @@ def _cuerpo_orden_html(orden, reservas):
                 else r.numero_personas
             )
             comp = (
-                f'<li><strong>Traslado ({_html(tipo)}):</strong>'
+                f'<li><strong>{tr("Traslado", "Transfer")} ({_html(tipo)}):</strong>'
                 f'<ul>'
-                f'<li><strong>Fecha:</strong> {r.fecha}</li>'
-                f'<li><strong>Hora:</strong> {hora_texto(r)}</li>'
+                f'<li><strong>{tr("Fecha", "Date")}:</strong> {r.fecha}</li>'
+                f'<li><strong>{tr("Hora", "Time")}:</strong> {hora_texto(r)}</li>'
                 f'{regreso}'
-                f'<li><strong>Personas:</strong> {personas}</li>'
-                f'<li><strong>Punto de encuentro:</strong> {_html(punto)}</li>'
+                f'<li><strong>{tr("Personas", "Guests")}:</strong> {personas}</li>'
+                f'<li><strong>{tr("Punto de encuentro", "Meeting point")}:</strong> {_html(punto)}</li>'
                 f'</ul></li>'
             )
         else:
-            nombre_servicio = r.servicio.nombre if r.servicio else 'Pesca'
+            nombre_servicio = en_catalogo(r.servicio) if r.servicio else tr('Pesca', 'Fishing')
             comp = (
                 f'<li><strong>{_html(nombre_servicio)}:</strong>'
                 f'<ul>'
-                f'<li><strong>Fecha:</strong> {r.fecha}</li>'
-                f'<li><strong>Hora:</strong> {hora_texto(r)}</li>'
-                f'<li><strong>Personas:</strong> {r.numero_personas}</li>'
+                f'<li><strong>{tr("Fecha", "Date")}:</strong> {r.fecha}</li>'
+                f'<li><strong>{tr("Hora", "Time")}:</strong> {hora_texto(r)}</li>'
+                f'<li><strong>{tr("Personas", "Guests")}:</strong> {r.numero_personas}</li>'
                 f'{_renglon_punto_de_encuentro(r)}'
                 f'</ul></li>'
             )
         componentes_html.append(comp)
 
-    paquete_nombre = orden.paquete.nombre if orden.paquete_id else 'Paquete'
+    paquete_nombre = en_catalogo(orden.paquete) if orden.paquete_id else tr('Paquete', 'Package')
     empresa = orden.empresa_lider.nombre if orden.empresa_lider_id else 'Sun Baja Experience'
     detalle = (
         f'<ul style="margin:0;padding-left:20px;font:400 16px/1.6 {plantilla.CUERPO};color:{plantilla.TINTA};">'
         + "".join(componentes_html) + '</ul>'
     )
     return plantilla.correo(
-        actividad='mar', empresa=empresa, titulo='Reserva confirmada', folio=orden.pk, producto=_html(paquete_nombre),
-        previa=paquete_nombre,
-        intro_html=f'Hola {_html(orden.nombre_cliente)}, tu paquete {_html(paquete_nombre)} quedó confirmado.',
-        siguiente_html=detalle + plantilla.parrafo('Te esperamos para vivir una gran experiencia.'),
+        actividad='mar', empresa=empresa, titulo=tr('Reserva confirmada', 'Booking confirmed'), folio=orden.pk,
+        producto=_html(paquete_nombre), previa=paquete_nombre,
+        intro_html=tr(
+            f'Hola {_html(orden.nombre_cliente)}, tu paquete {_html(paquete_nombre)} quedó confirmado.',
+            f'Hi {_html(orden.nombre_cliente)}, your {_html(paquete_nombre)} package is confirmed.',
+        ),
+        siguiente_html=detalle + plantilla.parrafo(tr(
+            'Te esperamos para vivir una gran experiencia.', 'We look forward to having you out here.')),
     )
 
 
@@ -559,12 +634,14 @@ def enviar_correo_orden(orden, reservas):
         logger.info('Resend sin configurar, no se mando correo de la orden %s', orden.pk)
         return False
 
-    paquete_nombre = orden.paquete.nombre if orden.paquete_id else 'Paquete'
-    _html_correo = _cuerpo_orden_html(orden, reservas)
+    with en_idioma(idioma_de(orden)):
+        paquete_nombre = en_catalogo(orden.paquete) if orden.paquete_id else tr('Paquete', 'Package')
+        _html_correo = _cuerpo_orden_html(orden, reservas)
+        asunto = f'{tr("Reserva confirmada", "Booking confirmed")} #{orden.pk} — {paquete_nombre}'
     cuerpo = {
         'from': settings.RESEND_FROM,
         'to': [orden.correo_cliente],
-        'subject': f'Reserva confirmada #{orden.pk} — {paquete_nombre}',
+        'subject': asunto,
         'html': _html_correo,
         'text': plantilla.a_texto(_html_correo),
     }
@@ -606,18 +683,23 @@ def enviar_correo_retomar_orden(orden):
     """Avisa que falta un pago, sin afirmar que la reserva ya esté confirmada."""
     if not (settings.RESEND_API_KEY and settings.RESEND_FROM):
         return False
-    enlace = enlace_retomar_orden(orden)
+    idioma = idioma_de(orden)
+    enlace = enlace_retomar_orden(orden, lang=idioma)
     if not enlace:
         return False
+    with en_idioma(idioma):
+        asunto = tr('Tu reserva sigue abierta: falta un pago', 'Your booking is still open: one payment to go')
+        html = (
+            f'<p>{tr("Hola", "Hi")} {_html(orden.nombre_cliente)}, '
+            f'{tr("tu reserva sigue abierta y falta terminar el pago.", "your booking is still open and one payment is left to finish it.")}</p>'
+            f'<p>{tr("El primer pago está retenido en tu tarjeta; aún no se ha cobrado.", "The first payment is on hold on your card and has not been charged yet.")}</p>'
+            f'<p><a href="{escape(enlace, quote=True)}">{tr("Continuar reservación", "Finish my booking")}</a></p>'
+        )
     cuerpo = {
         'from': settings.RESEND_FROM,
         'to': [orden.correo_cliente],
-        'subject': 'Tu reserva sigue abierta: falta un pago',
-        'html': (
-            f'<p>Hola {_html(orden.nombre_cliente)}, tu reserva sigue abierta y falta terminar el pago.</p>'
-            f'<p>El primer pago está retenido en tu tarjeta; aún no se ha cobrado.</p>'
-            f'<p><a href="{escape(enlace, quote=True)}">Continuar reservación</a></p>'
-        ),
+        'subject': asunto,
+        'html': html,
     }
     if settings.RESEND_BCC:
         cuerpo['bcc'] = settings.RESEND_BCC
@@ -815,20 +897,23 @@ def enlace_precargado_reserva(reserva, lang='es'):
 
 
 def _asunto_reembolso_sin_cupo(reserva):
-    return f'No pudimos asegurar tu lugar — {reserva.fecha}'
+    return f'{tr("No pudimos asegurar tu lugar", "We could not hold your spot")} — {reserva.fecha}'
 
 
 def _cuerpo_reembolso_sin_cupo_html(reserva):
     monto = f'{reserva.monto_reembolsado or reserva.monto_pagado or 0} {reserva.moneda}'
-    enlace = enlace_precargado_reserva(reserva)
+    enlace = enlace_precargado_reserva(reserva, lang=idioma_de(reserva))
     boton = (
-        f'<p><a href="{escape(enlace, quote=True)}" style="display:inline-block;padding:10px 20px;background-color:#0284c7;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">Elegir otra fecha</a></p>'
+        f'<p><a href="{escape(enlace, quote=True)}" style="display:inline-block;padding:10px 20px;background-color:#0284c7;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">{tr("Elegir otra fecha", "Pick another date")}</a></p>'
         if enlace else ''
     )
     return (
-        f'<p>Hola {_html(reserva.nombre_cliente)},</p>'
-        f'<p>No pudimos asegurar tu lugar para el {reserva.fecha}. Ya solicitamos el reembolso completo de {monto}; tu banco puede tardar en reflejarlo.</p>'
-        f'{boton}'
+        f'<p>{tr("Hola", "Hi")} {_html(reserva.nombre_cliente)},</p>'
+        + tr(
+            f'<p>No pudimos asegurar tu lugar para el {reserva.fecha}. Ya solicitamos el reembolso completo de {monto}; tu banco puede tardar en reflejarlo.</p>',
+            f'<p>We could not hold your spot for {reserva.fecha}. We have already requested a full refund of {monto}; your bank may take a few days to show it.</p>',
+        )
+        + boton
     )
 
 
@@ -838,11 +923,14 @@ def enviar_correo_reembolso_sin_cupo(reserva):
         logger.info('Resend sin configurar, no se mando correo de reembolso sin cupo de la reserva %s', reserva.pk)
         return False
 
+    with en_idioma(idioma_de(reserva)):
+        asunto = _asunto_reembolso_sin_cupo(reserva)
+        html = _cuerpo_reembolso_sin_cupo_html(reserva)
     cuerpo = {
         'from': settings.RESEND_FROM,
         'to': [reserva.correo_cliente],
-        'subject': _asunto_reembolso_sin_cupo(reserva),
-        'html': _cuerpo_reembolso_sin_cupo_html(reserva),
+        'subject': asunto,
+        'html': html,
     }
     if settings.RESEND_BCC:
         cuerpo['bcc'] = settings.RESEND_BCC
