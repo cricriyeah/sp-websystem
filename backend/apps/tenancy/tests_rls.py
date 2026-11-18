@@ -269,10 +269,10 @@ class RLSTests(TransactionTestCase):
                 INSERT INTO bookings_orden (
                     sede_id, empresa_lider_id, paquete_id, nombre_cliente,
                     telefono_cliente, correo_cliente, moneda, forma_pago,
-                    estado, creado_en, actualizado_en
+                    estado, idioma, creado_en, actualizado_en
                 ) VALUES (
                     %s, %s, %s, 'Cliente Crudo', '1234567890', 'crudo@example.com',
-                    'MXN', 'completo', 'armando', NOW(), NOW()
+                    'MXN', 'completo', 'armando', '', NOW(), NOW()
                 );
             """, [self.empresa_a.sede_id, self.empresa_a.id, paq_a.id])
 
