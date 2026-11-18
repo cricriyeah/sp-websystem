@@ -477,12 +477,14 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         facts: [],
       },
       dia: {
-        titulo: 'Tu día en La Ventana',
-        etiqueta: 'Tu día en La Ventana, momento por momento',
+        titulo: 'Tu viaje a La Ventana',
+        etiqueta: 'Tu viaje a La Ventana, momento por momento',
         momentos: [
-          { titulo: '{hora:la-ventana-travel/avistamiento-ballenas-orcas}', texto: 'Salimos todos los días {horario:la-ventana-travel/avistamiento-ballenas-orcas}, de {salida:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+          { titulo: 'Llegas', texto: 'Te recogemos en el aeropuerto y te llevamos al Hotel Casa Arrecife, donde duermes todo el viaje.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: '7:00 am', texto: 'Desde el día 2 sales al mar cada mañana, entre las 7:00 y las 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+          { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y si el mar lo permite nadas con ellas. También lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
           { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y si el mar lo permite nadas con ellas. También lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos. En total, {duracion:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'La tarde', texto: 'Vuelves pasado el mediodía con la tarde libre: playa, fogata en el patio del hotel o restaurantes a menos de 1 km. El último día te llevamos de vuelta al aeropuerto.', foto: '/catalogo/la-ventana-travel-hospedaje-fogata.webp' },
         ],
       },
       galeria: [
@@ -551,7 +553,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿A qué hora sale el seafari y cuánto dura?',
-          a: 'Salimos todos los días {horario:la-ventana-travel/avistamiento-ballenas-orcas}, de {salida:la-ventana-travel/avistamiento-ballenas-orcas}. La salida dura {duracion:la-ventana-travel/avistamiento-ballenas-orcas}, e incluye algo de comer, aguas y refrescos, y el equipo para snorkelear.',
+          a: 'Salimos todos los días entre las 7:00 y las 8:00 am, de La Ventana o Bahía de los Sueños. La salida dura de 5 a 6 horas e incluye algo de comer, aguas y refrescos, y el equipo para snorkelear.',
         },
         {
           q: '¿Cuántas personas caben y puedo ir en un grupo privado?',
@@ -596,12 +598,14 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         facts: [],
       },
       dia: {
-        titulo: 'Your day in La Ventana',
-        etiqueta: 'Your day in La Ventana, moment by moment',
+        titulo: 'Your trip to La Ventana',
+        etiqueta: 'Your trip to La Ventana, moment by moment',
         momentos: [
-          { titulo: '{hora:la-ventana-travel/avistamiento-ballenas-orcas}', texto: 'We leave every day {horario:la-ventana-travel/avistamiento-ballenas-orcas}, from {salida:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+          { titulo: 'Arrival', texto: 'We pick you up at the airport and drive you to Hotel Casa Arrecife, where you stay the whole trip.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: '7:00 am', texto: 'From day 2 you head out to sea every morning, between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+          { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and if the sea allows, you swim with them. We also look for whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
           { titulo: 'Snorkel', texto: 'We give you the snorkeling gear and head to a reef to swim among the fish.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and if the sea allows, you swim with them. We also look for whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks. In all, {duracion:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'Afternoon', texto: 'You are back in the early afternoon with the rest of the day free: the beach, the fire pit in the hotel patio or restaurants less than 1 km away. On the last day we drive you back to the airport.', foto: '/catalogo/la-ventana-travel-hospedaje-fogata.webp' },
         ],
       },
       galeria: [
@@ -670,7 +674,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'What time does the ocean safari leave, and how long does it last?',
-          a: 'We leave every day {horario:la-ventana-travel/avistamiento-ballenas-orcas}, from {salida:la-ventana-travel/avistamiento-ballenas-orcas}. The trip lasts {duracion:la-ventana-travel/avistamiento-ballenas-orcas} and includes some food, water and soft drinks, and snorkeling gear.',
+          a: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños. The trip lasts 5 to 6 hours and includes some food, water and soft drinks, and snorkeling gear.',
         },
         {
           q: 'How many people fit, and can I go in a private group?',

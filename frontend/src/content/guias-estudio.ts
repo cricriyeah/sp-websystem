@@ -541,7 +541,7 @@ export const GUIAS_ESTUDIO: readonly Guia[] = [
         datos: [
           { etiqueta: 'Temporada', valor: 'Finales de abril a julio' },
           { etiqueta: 'Meses fuertes', valor: 'Mayo y junio' },
-          { etiqueta: 'Salida', valor: '{horario:la-ventana-travel/avistamiento-ballenas-orcas}' },
+          { etiqueta: 'Salida', valor: 'entre las 7:00 y las 8:00 am' },
           { etiqueta: 'Cómo se reserva', valor: 'En paquetes de 5 y 7 noches' },
         ],
         calendario: {
@@ -570,7 +570,7 @@ export const GUIAS_ESTUDIO: readonly Guia[] = [
           {
             titulo: 'El safari marino: ¿cómo es la salida?',
             parrafos: [
-              'Sales en lancha {horario:la-ventana-travel/avistamiento-ballenas-orcas}, de {salida:la-ventana-travel/avistamiento-ballenas-orcas}. Son {duracion:la-ventana-travel/avistamiento-ballenas-orcas} en el mar, con algo de comer, aguas, refrescos y el equipo de snorkel a bordo.',
+              'Sales en lancha entre las 7:00 y las 8:00 am, de La Ventana o Bahía de los Sueños. Son 5 a 6 horas en el mar, con algo de comer, aguas, refrescos y el equipo de snorkel a bordo.',
               'A las mobulas las ves saltar desde la lancha. El día incluye una parada para snorkelear en un arrecife, y tu guía te avisa cuándo se puede entrar al agua.',
             ],
           },
@@ -599,7 +599,7 @@ export const GUIAS_ESTUDIO: readonly Guia[] = [
         datos: [
           { etiqueta: 'Season', valor: 'Late April through July' },
           { etiqueta: 'Peak months', valor: 'May and June' },
-          { etiqueta: 'Departure', valor: '{horario:la-ventana-travel/avistamiento-ballenas-orcas}' },
+          { etiqueta: 'Departure', valor: 'between 7:00 and 8:00 am' },
           { etiqueta: 'How to book', valor: 'In 5- and 7-night packages' },
         ],
         calendario: {
@@ -628,7 +628,7 @@ export const GUIAS_ESTUDIO: readonly Guia[] = [
           {
             titulo: 'The ocean safari: what is the trip like?',
             parrafos: [
-              'You leave by boat {horario:la-ventana-travel/avistamiento-ballenas-orcas}, from {salida:la-ventana-travel/avistamiento-ballenas-orcas}. You spend {duracion:la-ventana-travel/avistamiento-ballenas-orcas} at sea, with some food, water, soft drinks and snorkeling gear on board.',
+              'You leave by boat between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños. You spend 5 to 6 hours at sea, with some food, water, soft drinks and snorkeling gear on board.',
               'You watch the mobulas leap from the boat. The day includes a snorkel stop at a reef, and your guide tells you when you can get in the water.',
             ],
           },

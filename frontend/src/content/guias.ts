@@ -123,8 +123,8 @@ export const GUIAS: readonly Guia[] = [
         frase: 'Cada salida es una oportunidad más de encontrarlas.',
         datos: [
           { etiqueta: 'Cuándo', valor: 'Todo el año, más de abril a julio' },
-          { etiqueta: 'Salida', valor: '{horario:la-ventana-travel/avistamiento-ballenas-orcas}' },
-          { etiqueta: 'Duración', valor: '{duracion:la-ventana-travel/avistamiento-ballenas-orcas} en el mar' },
+          { etiqueta: 'Salida', valor: 'entre las 7:00 y las 8:00 am' },
+          { etiqueta: 'Duración', valor: '5 a 6 horas en el mar' },
           { etiqueta: 'Cómo se reserva', valor: 'En paquetes de 5 y 7 noches' },
         ],
         calendario: {
@@ -147,7 +147,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'El safari marino: ¿cómo es la salida?',
             parrafos: [
-              'Sales en lancha {horario:la-ventana-travel/avistamiento-ballenas-orcas}, de {salida:la-ventana-travel/avistamiento-ballenas-orcas}, con gente que conoce estas aguas. Son {duracion:la-ventana-travel/avistamiento-ballenas-orcas} en el mar, con algo de comer, aguas, refrescos y el equipo de snorkel a bordo.',
+              'Sales en lancha entre las 7:00 y las 8:00 am, de La Ventana o Bahía de los Sueños, con gente que conoce estas aguas. Son 5 a 6 horas en el mar, con algo de comer, aguas, refrescos y el equipo de snorkel a bordo.',
               'El día incluye una parada para snorkelear en un arrecife. El resto del tiempo es de búsqueda: orcas, delfines, lobos marinos y lo que el mar traiga ese día.',
             ],
           },
@@ -198,8 +198,8 @@ export const GUIAS: readonly Guia[] = [
         frase: 'Every trip is one more chance to find them.',
         datos: [
           { etiqueta: 'When', valor: 'All year, most from April to July' },
-          { etiqueta: 'Departure', valor: '{horario:la-ventana-travel/avistamiento-ballenas-orcas}' },
-          { etiqueta: 'Length', valor: '{duracion:la-ventana-travel/avistamiento-ballenas-orcas} at sea' },
+          { etiqueta: 'Departure', valor: 'between 7:00 and 8:00 am' },
+          { etiqueta: 'Length', valor: '5 to 6 hours at sea' },
           { etiqueta: 'How to book', valor: 'In 5- and 7-night packages' },
         ],
         calendario: {
@@ -222,7 +222,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'The ocean safari: what is the trip like?',
             parrafos: [
-              'You leave by boat {horario:la-ventana-travel/avistamiento-ballenas-orcas}, from {salida:la-ventana-travel/avistamiento-ballenas-orcas}, with people who know these waters. You spend {duracion:la-ventana-travel/avistamiento-ballenas-orcas} at sea, with some food, water, soft drinks and snorkeling gear on board.',
+              'You leave by boat between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños, with people who know these waters. You spend 5 to 6 hours at sea, with some food, water, soft drinks and snorkeling gear on board.',
               'The day includes a snorkel stop at a reef. The rest of the time you are searching: orcas, dolphins, sea lions and whatever the sea brings that day.',
             ],
           },
@@ -789,7 +789,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'Salir al mar: el seafari',
             parrafos: [
-              'Es la salida por la que más gente viene. Son {duracion:la-ventana-travel/avistamiento-ballenas-orcas} en lancha buscando orcas, delfines y lobos marinos, con una parada de snorkel en un arrecife. Cuando aparecen orcas y el mar lo permite, nadas con ellas.',
+              'Es la salida por la que más gente viene. Son 5 a 6 horas en lancha buscando orcas, delfines y lobos marinos, con una parada de snorkel en un arrecife. Cuando aparecen orcas y el mar lo permite, nadas con ellas.',
               'Va dentro de los paquetes de 5 y 7 noches, que traen de 4 a 6 salidas.',
             ],
           },
@@ -856,7 +856,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'Out at sea: the seafari',
             parrafos: [
-              'This is the trip most people come for. It is {duracion:la-ventana-travel/avistamiento-ballenas-orcas} by boat looking for orcas, dolphins and sea lions, with a snorkel stop at a reef. When orcas show up and the sea allows it, you swim with them.',
+              'This is the trip most people come for. It is 5 to 6 hours by boat looking for orcas, dolphins and sea lions, with a snorkel stop at a reef. When orcas show up and the sea allows it, you swim with them.',
               'It comes with the 5- and 7-night packages, which include 4 to 6 trips.',
             ],
           },
@@ -1088,14 +1088,14 @@ export const GUIAS: readonly Guia[] = [
             lista: [
               'Hospedaje en el Hotel Casa Arrecife, en estudio para 2 personas con cama king size',
               'Traslado del aeropuerto al llegar y de regreso al terminar',
-              'Seafari de {duracion:la-ventana-travel/avistamiento-ballenas-orcas} cada día de mar: orcas, delfines, lobos marinos y snorkel',
+              'Seafari de 5 a 6 horas cada día de mar: orcas, delfines, lobos marinos y snorkel',
               'Comida ligera, botanas, bebidas y equipo de snorkel a bordo',
             ],
           },
           {
             titulo: '¿Cómo son los días?',
             parrafos: [
-              'El día 1 es de llegada: te recogen en el aeropuerto y te llevan al hotel. Desde el día 2 sales cada mañana al mar, {horario:la-ventana-travel/avistamiento-ballenas-orcas}, y vuelves pasado el mediodía con la tarde libre. El último día te llevan de vuelta al aeropuerto.',
+              'El día 1 es de llegada: te recogen en el aeropuerto y te llevan al hotel. Desde el día 2 sales cada mañana al mar, entre las 7:00 y las 8:00 am, y vuelves pasado el mediodía con la tarde libre. El último día te llevan de vuelta al aeropuerto.',
             ],
           },
           {
@@ -1156,7 +1156,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'What are the days like?',
             parrafos: [
-              'Day 1 is arrival day: you are picked up at the airport and driven to the hotel. From day 2 you head out to sea each morning, {horario:la-ventana-travel/avistamiento-ballenas-orcas}, and are back in the early afternoon with the rest of the day free. On the last day you are driven back to the airport.',
+              'Day 1 is arrival day: you are picked up at the airport and driven to the hotel. From day 2 you head out to sea each morning, between 7:00 and 8:00 am, and are back in the early afternoon with the rest of the day free. On the last day you are driven back to the airport.',
             ],
           },
           {
