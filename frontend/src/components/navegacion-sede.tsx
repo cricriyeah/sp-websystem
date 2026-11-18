@@ -44,6 +44,21 @@ export function NavegacionSede({ anclas, etiqueta, reservar, compra }: Props) {
   const [compraVisible, setCompraVisible] = useState(false);
   const [bordes, setBordes] = useState({ izquierda: false, derecha: false });
   const sinMovimiento = useReducedMotion();
+  // ¿Está abierta la banda «Continuar reservación»? `SiteHeader` escribe su alto en `--banda-alto` (sin banda no existe).
+  // Con la banda, las pastillas se esconden (dueño, 2026-11-18): barra + banda + pastillas tapaban media pantalla del
+  // teléfono, y retomar la reserva a medias importa más que saltar de sección.
+  const [conBanda, setConBanda] = useState(false);
+  useEffect(() => {
+    const raiz = document.documentElement;
+    const leer = () => {
+      const alto = parseFloat(raiz.style.getPropertyValue('--banda-alto'));
+      setConBanda(Number.isFinite(alto) && alto > 0);
+    };
+    leer();
+    const observador = new MutationObserver(leer);
+    observador.observe(raiz, { attributes: true, attributeFilter: ['style'] });
+    return () => observador.disconnect();
+  }, []);
 
   // Qué lados del carril esconden pastillas: solo ahí se desvanece el borde.
   const medirBordes = useCallback(() => {
@@ -103,12 +118,13 @@ export function NavegacionSede({ anclas, etiqueta, reservar, compra }: Props) {
     return () => observador.disconnect();
   }, [compra]);
 
+  const conPastillas = trasHeroe && !conBanda;
   // Con las pastillas a la vista, los saltos a una sección dejan su alto libre arriba.
   useEffect(() => {
     const raiz = document.documentElement;
-    raiz.style.setProperty('--secciones-alto', trasHeroe ? '3.5rem' : '0px');
+    raiz.style.setProperty('--secciones-alto', conPastillas ? '3.5rem' : '0px');
     return () => raiz.style.setProperty('--secciones-alto', '0px');
-  }, [trasHeroe]);
+  }, [conPastillas]);
 
   // La pastilla de la sección actual entra a la vista dentro del carril (sin mover la página). `offsetLeft` se mide
   // contra el carril (es `relative`).
@@ -130,7 +146,7 @@ export function NavegacionSede({ anclas, etiqueta, reservar, compra }: Props) {
       {anclas.length > 1 && (
         <nav
           aria-label={etiqueta}
-          data-visible={trasHeroe}
+          data-visible={conPastillas}
           // Desde 1280 px la barra de arriba ya enseña estas mismas secciones como enlaces: repetirlas debajo era
           // la misma navegación dos veces (dueño, 2026-11-17). Las pastillas son del teléfono y la tablet.
           className="aparece-desde-arriba pointer-events-none fixed inset-x-0 top-[calc(var(--nav-alto)+0.5rem)] z-30 data-[visible=true]:pointer-events-auto xl:hidden"
@@ -147,7 +163,7 @@ export function NavegacionSede({ anclas, etiqueta, reservar, compra }: Props) {
                 <Link
                   href={a.ancla}
                   aria-current={actual === a.ancla ? 'location' : undefined}
-                  tabIndex={trasHeroe ? undefined : -1}
+                  tabIndex={conPastillas ? undefined : -1}
                   className={cn(
                     'inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-5 texto-pequeno font-semibold transition-[color,background-color,transform] duration-200 active:scale-[0.97] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     actual === a.ancla ? 'bg-tinta text-hero-ink' : 'bg-superficie text-foreground',
