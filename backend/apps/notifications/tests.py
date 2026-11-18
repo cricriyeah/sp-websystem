@@ -612,6 +612,30 @@ class AvisoALaEmpresaTests(EmpresaTestCase):
         self.assertIn(f'#{reserva.pk}', cuerpo['html'])
 
     @mock.patch('apps.notifications.services.requests.post')
+    def test_el_aviso_lleva_las_notas_del_cliente_escapadas(self, post):
+        post.return_value.raise_for_status.return_value = None
+        self._con_correos('dueno@ejemplo.com')
+        reserva = crear_reserva_guardada(self.empresa, notas_cliente='Primera vez pescando\nAlergia a <mariscos>')
+
+        from .services import enviar_aviso_empresa
+        enviar_aviso_empresa(reserva)
+
+        html = _cuerpo_enviado(post)['html']
+        self.assertIn('Notas del cliente para el capitán', html)
+        self.assertIn('Primera vez pescando<br>Alergia a &lt;mariscos&gt;', html)
+
+    @mock.patch('apps.notifications.services.requests.post')
+    def test_sin_notas_el_aviso_no_lleva_el_bloque(self, post):
+        post.return_value.raise_for_status.return_value = None
+        self._con_correos('dueno@ejemplo.com')
+        reserva = crear_reserva_guardada(self.empresa)
+
+        from .services import enviar_aviso_empresa
+        enviar_aviso_empresa(reserva)
+
+        self.assertNotIn('Notas del cliente', _cuerpo_enviado(post)['html'])
+
+    @mock.patch('apps.notifications.services.requests.post')
     @override_settings(BACKEND_URL='https://api.ejemplo.com')
     def test_el_aviso_lleva_enlace_directo_a_la_reserva_en_el_admin(self, post):
         post.return_value.raise_for_status.return_value = None

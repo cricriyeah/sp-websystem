@@ -26,6 +26,7 @@ from apps.bookings.cupo import (
 )
 from apps.bookings.cupo.confirmacion import evaluar_cupo
 from apps.bookings.models import (
+    NOTAS_CLIENTE_MAX,
     Reserva,
     codigo_promocional_valido,
     evaluar_codigo_promocional,
@@ -1093,6 +1094,8 @@ class CrearOrdenView(APIView):
         # El idioma del sitio en el que compra: decide el idioma de sus correos (vacio = por la lada).
         idioma = str(request.data.get('idioma') or '').strip().lower()[:2]
         idioma = idioma if idioma in ('es', 'en') else ''
+        # La nota para quien lo lleva: una sola para todo el paquete, copiada a la reserva de cada empresa.
+        notas_cliente = str(request.data.get('notas_cliente') or '').strip()[:NOTAS_CLIENTE_MAX]
 
         componentes_data = request.data.get('componentes', [])
 
@@ -1201,6 +1204,7 @@ class CrearOrdenView(APIView):
                             reserva.atribucion = atribucion
                         if idioma:
                             reserva.idioma = idioma
+                        reserva.notas_cliente = notas_cliente
                         if es_lider and ref:
                             vendedora = Vendedora.por_codigo(ref, empresa)
                             if vendedora:

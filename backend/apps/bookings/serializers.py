@@ -21,6 +21,7 @@ from apps.fleet.models import (
 
 from .models import (
     DESLINDE_VERSION,
+    NOTAS_CLIENTE_MAX,
     DetalleTransporte,
     Reserva,
     Vendedora,
@@ -96,6 +97,11 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
         valor = (valor or '').strip().lower()[:2]
         return valor if valor in ('es', 'en') else ''
 
+    # Lo que el cliente le quiere decir a quien lo lleva. Opcional; si no viene, no toca la que ya habia.
+    notas_cliente = serializers.CharField(
+        required=False, allow_blank=True, max_length=NOTAS_CLIENTE_MAX, trim_whitespace=True, write_only=True,
+    )
+
     # Opcional en el esquema; `validate` la exige salvo en un paquete que no la pide.
     hora = serializers.TimeField(required=False, allow_null=True)
 
@@ -124,7 +130,7 @@ class ReservaCheckoutSerializer(serializers.ModelSerializer):
             'servicio', 'paquete', 'fecha_salida',
             'personas_por_servicio', 'fecha_inicio_paquete', 'aeropuerto',
             'personalizaciones',
-            'ref', 'atribucion', 'idioma', 'estado',
+            'ref', 'atribucion', 'idioma', 'notas_cliente', 'estado',
         ]
         read_only_fields = ['id', 'estado']
 
@@ -492,7 +498,8 @@ class TrasladoCheckoutSerializer(ReservaCheckoutSerializer):
             'id', 'checkout_id', 'servicio', 'tipo_traslado', 'punto_encuentro',
             'direccion_personalizada', 'zona', 'fecha', 'hora', 'fecha_regreso',
             'numero_personas', 'nombre_cliente', 'telefono_cliente', 'correo_cliente',
-            'deslinde_aceptado', 'deslinde_nombre', 'moneda', 'forma_pago', 'ref', 'atribucion', 'idioma', 'estado',
+            'deslinde_aceptado', 'deslinde_nombre', 'moneda', 'forma_pago', 'ref', 'atribucion', 'idioma', 'notas_cliente',
+            'estado',
         ]
 
     def get_fields(self):

@@ -1197,3 +1197,10 @@ Solo `forma_pago=completo`, sin anticipo. El precio base se almacena en MXN en
   cualquier empresa del paquete**, no solo la líder — la orden en memoria puede no
   traer `paquete` cacheado, o traerlo bajo RLS de la empresa equivocada. El servicio
   relee `orden.paquete` bajo el scope de `empresa_lider` antes de armar el correo.
+
+## Notas para el capitán (2026-11-16)
+
+- **`Reserva.notas_cliente`** (`0070`, hasta `NOTAS_CLIENTE_MAX` = 500): la nota opcional del checkout para quien lleva
+  al cliente. Write-only en la API; reenviar el checkout sin el campo no la borra. En una orden cruza-empresa la misma
+  nota se copia a la reserva de cada empresa. Sale en el admin (Cliente) y en el aviso de reserva nueva a la empresa,
+  escapada y con sus saltos de línea.

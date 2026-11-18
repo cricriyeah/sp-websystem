@@ -56,6 +56,10 @@ MAX_PERSONAS = 5
 # original (ver docs/contexto-negocio.md, seccion Cancelaciones y cambios).
 HORAS_MINIMAS_CAMBIO_FECHA = 48
 
+# Largo maximo de la nota que el cliente deja en el checkout para quien lo lleva. Espejo en el
+# frontend (`NOTAS_MAX`): un mensaje corto, no un formulario.
+NOTAS_CLIENTE_MAX = 500
+
 # Cuanto se espera antes de dar por abandonado un checkout que quedo en
 # pendiente_pago. Con margen: alguien puede tardarse buscando su tarjeta, y no
 # queremos hablarle a un cliente que sigue pagando en ese momento.
@@ -564,6 +568,14 @@ class Reserva(models.Model):
         from apps.bookings.telefono import idioma_por_telefono
 
         return self.idioma or idioma_por_telefono(self.telefono_cliente)
+
+    # Lo que el cliente le quiere decir a quien lo lleva (alergias, una celebracion, si es su primera vez).
+    # Opcional; lo escribe en el checkout y la empresa lo ve aqui y en el correo de reserva nueva. En un
+    # paquete de dos empresas la misma nota se copia a la reserva de cada una.
+    notas_cliente = models.TextField(
+        'Notas para el capitán', max_length=NOTAS_CLIENTE_MAX, blank=True, default='',
+        help_text='Lo que el cliente escribió al reservar para quien lo lleva.',
+    )
 
     # Deslinde de responsabilidad: casilla aceptada + nombre escrito por el cliente,
     # con fecha/hora e IP del momento en que lo acepto (ver docs/contexto-negocio.md,

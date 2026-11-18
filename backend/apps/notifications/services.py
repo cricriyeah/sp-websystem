@@ -481,6 +481,14 @@ def _enlace_admin_reserva_html(reserva):
     return f'<p><a href="{_html(url)}">Ver la reserva #{reserva.pk} en el panel</a></p>'
 
 
+def _notas_cliente_html(reserva):
+    """La nota que el cliente dejo para quien lo lleva, escapada y con sus saltos de linea; '' si no dejo."""
+    notas = (reserva.notas_cliente or '').strip()
+    if not notas:
+        return ''
+    return f'<p><strong>Notas del cliente para el capitán:</strong><br>{_html(notas).replace(chr(10), "<br>")}</p>'
+
+
 def _cuerpo_aviso_empresa_html(reserva):
     """Lo que necesita la empresa para saber que le entro una reserva y a quien
     hablarle. Solo lo de su propio componente: en un paquete de dos empresas cada
@@ -516,6 +524,7 @@ def _cuerpo_aviso_empresa_html(reserva):
         f'{pago}'
         f'<li><strong>Folio:</strong> #{reserva.pk}</li>'
         f'</ul>'
+        f'{_notas_cliente_html(reserva)}'
         f'{_enlace_admin_reserva_html(reserva)}'
     )
 
