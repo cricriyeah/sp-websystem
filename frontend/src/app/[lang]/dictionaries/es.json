@@ -171,7 +171,7 @@
       "aria": "Volver a {destino}",
       "destinos": { "corto": "Destinos", "aria": "Volver a todos los destinos" },
       "guias": { "corto": "Guías", "aria": "Volver a las guías" },
-      "anterior": { "corto": "Volver", "aria": "Volver a la página anterior" },
+      "anterior": { "corto": "SBE", "aria": "Volver a la página anterior" },
       "pasoAnterior": { "corto": "Paso anterior", "aria": "Volver al paso anterior" },
       "servicio": { "corto": "Detalles", "aria": "Volver a los detalles" },
       "paquete": { "corto": "Paquete", "aria": "Volver al paquete" }

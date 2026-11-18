@@ -78,6 +78,19 @@ export function regresoDe({ lang, ruta, sede, anterior, textos }: Entrada): Regr
 }
 
 /**
+ * El tamaño de letra del nombre en la esquina de la barra: el más grande que cabe en UNA línea (dueño, 2026-11-17). La
+ * letra de los titulares es monoespaciada (0.586 em por carácter, menos 0.05 em de tracking: 0.536 em) y a 390 px la
+ * barra del checkout deja 108 px para el nombre (la del sitio, 112). «LA VENTANA» va a 20, «PUERTO CHALE» y
+ * «DESTINATIONS» a 16, «PASO ANTERIOR» y «PREVIOUS STEP» a 14.
+ */
+export function tamanoDeEtiqueta(etiqueta: string): 20 | 16 | 14 {
+  const ancho = (px: number) => etiqueta.length * 0.536 * px;
+  if (ancho(20) <= 108) return 20;
+  if (ancho(16) <= 108) return 16;
+  return 14;
+}
+
+/**
  * Cuándo va el logo de la empresa en la barra (PFD, 2026-11-17). La colaboración «flama Sun Baja × empresa» solo tiene
  * sentido cuando la esquina es nuestro logo: junto al regreso se leía «DESTINOS × SAL Y SOL» y, sin la equis, el logo
  * quedaba suelto. Sin regreso (inicio), siempre; con un regreso al inicio (`soloHub`), solo en modo «solo sede», donde

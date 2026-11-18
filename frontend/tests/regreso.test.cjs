@@ -68,6 +68,12 @@ test('el logo de la empresa solo va en la barra cuando la esquina es nuestro log
   assert.equal(m.empresaEnBarra({ etiqueta: 'Paso anterior' }), 'nunca');
 });
 
+test('el nombre de la esquina siempre cabe en una línea: el tamaño más grande que entra', () => {
+  for (const e of ['LA PAZ', 'DESTINOS', 'LA VENTANA', 'GUÍAS', 'VOLVER', 'DETALLES', 'PAQUETE']) assert.equal(m.tamanoDeEtiqueta(e), 20, e);
+  for (const e of ['PUERTO CHALE', 'DESTINATIONS']) assert.equal(m.tamanoDeEtiqueta(e), 16, e);
+  for (const e of ['PASO ANTERIOR', 'PREVIOUS STEP']) assert.equal(m.tamanoDeEtiqueta(e), 14, e);
+});
+
 test('esLegal reconoce las tres legales', () => {
   assert.equal(m.esLegal('/en/privacidad'), true);
   assert.equal(m.esLegal('/es/sede/la-paz'), false);

@@ -171,7 +171,7 @@
       "aria": "Back to {destino}",
       "destinos": { "corto": "Destinations", "aria": "Back to all destinations" },
       "guias": { "corto": "Guides", "aria": "Back to the guides" },
-      "anterior": { "corto": "Back", "aria": "Back to the previous page" },
+      "anterior": { "corto": "SBE", "aria": "Back to the previous page" },
       "pasoAnterior": { "corto": "Previous step", "aria": "Back to the previous step" },
       "servicio": { "corto": "Details", "aria": "Back to the details" },
       "paquete": { "corto": "Package", "aria": "Back to the package" }

@@ -7,8 +7,10 @@ import { AnimatePresence, m, useReducedMotion, type Transition } from 'framer-mo
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 import { Flama, LogoMarca } from '@/components/barra-flotante';
+import { tamanoDeEtiqueta } from '@/lib/regreso';
 
 const MARCA = 'Sun Baja Experience';
+const TAMANO_LETRA = { 20: 'text-[20px]', 16: 'text-[16px]', 14: 'text-[14px]' } as const;
 
 /** A dónde vuelve la esquina: un enlace (`href`) o un paso del checkout (`alPulsar`). */
 export type DestinoEsquina = {
@@ -91,10 +93,8 @@ function PiezaRegreso({ destino, alPulsar, girado, retraso }: PiezaProps) {
   const viaje = (retardo: number): Transition => (sinMovimiento ? { duration: 0 } : { ...RESORTE, delay: retardo });
   const fundido = (retardo: number, duracion = 0.25): Transition => ({ duration: duracion, ease: 'easeOut', delay: retardo });
   const esperaNombre = asentado ? 0 : ENTRADA_NOMBRE_S + espera;
-  // En la letra de los titulares (monoespaciada, ~0.54 em por letra con su tracking) caben 10 letras a 20 px en los
-  // 112 px que deja la barra a 390 px: «LA VENTANA» va en una línea (dueño, 2026-11-17). Una palabra de más de 9 letras
-  // («DESTINATIONS») baja a 16; dos palabras que no caben en una línea («PUERTO CHALE», «PASO ANTERIOR») se apilan.
-  const palabraLarga = Math.max(...destino.etiqueta.split(/\s+/).map((p) => p.length)) > 9;
+  // Siempre en una línea (dueño, 2026-11-17: «PUERTO CHALE» en dos renglones no): el tamaño más grande que cabe.
+  const tamano = tamanoDeEtiqueta(destino.etiqueta);
 
   const contenido: ReactNode = (
     // Al presionar baja a 0.97 en el momento (pointer-down), no al soltar; con «reducir movimiento», solo se aclara.
@@ -121,8 +121,8 @@ function PiezaRegreso({ destino, alPulsar, girado, retraso }: PiezaProps) {
           <m.span
             key={destino.etiqueta}
             className={cn(
-              '[grid-area:1/1] max-w-[7rem] texto-mono-mayus font-bold leading-[0.9] tracking-[-0.05em] text-foreground [text-wrap:balance] transition-colors group-hover:text-cafe',
-              palabraLarga ? 'text-[16px]' : 'text-[20px]',
+              '[grid-area:1/1] whitespace-nowrap texto-mono-mayus font-bold leading-none tracking-[-0.05em] text-foreground transition-colors group-hover:text-cafe',
+              TAMANO_LETRA[tamano],
             )}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
