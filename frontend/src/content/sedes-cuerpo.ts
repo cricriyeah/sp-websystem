@@ -480,7 +480,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Tu viaje a La Ventana',
         etiqueta: 'Tu viaje a La Ventana, momento por momento',
         momentos: [
-          { titulo: 'Llegas', texto: 'Te recogemos en el aeropuerto y te llevamos al Hotel Casa Arrecife, donde duermes todo el viaje.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: 'Llegas', texto: 'Te recogemos en el aeropuerto y te llevamos al Hotel Casa Arrecife, donde duermes todo el viaje.', foto: '/catalogo/la-ventana-travel-hospedaje-habitacion-nautica.webp' },
           { titulo: '7:00 am', texto: 'Desde el día 2 sales al mar cada mañana, entre las 7:00 y las 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y si el mar lo permite nadas con ellas. También lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
           { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
@@ -601,7 +601,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Your trip to La Ventana',
         etiqueta: 'Your trip to La Ventana, moment by moment',
         momentos: [
-          { titulo: 'Arrival', texto: 'We pick you up at the airport and drive you to Hotel Casa Arrecife, where you stay the whole trip.', foto: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp' },
+          { titulo: 'Arrival', texto: 'We pick you up at the airport and drive you to Hotel Casa Arrecife, where you stay the whole trip.', foto: '/catalogo/la-ventana-travel-hospedaje-habitacion-nautica.webp' },
           { titulo: '7:00 am', texto: 'From day 2 you head out to sea every morning, between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and if the sea allows, you swim with them. We also look for whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
           { titulo: 'Snorkel', texto: 'We give you the snorkeling gear and head to a reef to swim among the fish.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
