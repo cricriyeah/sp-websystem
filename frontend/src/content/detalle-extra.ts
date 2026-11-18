@@ -46,7 +46,7 @@ function itinerario(lang: Locale, ultimoDiaMar: number): BloqueDetalle {
         { dia: 'Día', numero: '1', titulo: 'Llegada', texto: 'Te recogemos en el aeropuerto y te llevamos al Hotel Casa Arrecife. Entrada de 14:00 a 15:00.' },
         {
           dia: 'Días', numero: `2–${ultimoDiaMar}`, titulo: 'Seafari de orcas y fauna marina',
-          texto: 'Sales entre las 7:00 y las 8:00 am, de 5 a 6 horas en el mar. Por la tarde, playa, snorkel o pesca con mosca (se reserva aparte).',
+          texto: 'Sales {horario:la-ventana-travel/avistamiento-ballenas-orcas}, {duracion:la-ventana-travel/avistamiento-ballenas-orcas} en el mar. Por la tarde, playa, snorkel o pesca con mosca (se reserva aparte).',
         },
         { dia: 'Día', numero: String(salida), titulo: 'Regreso', texto: 'Dejas el hotel entre las 11:00 y las 12:00 y te llevamos al aeropuerto.' },
       ],
@@ -58,7 +58,7 @@ function itinerario(lang: Locale, ultimoDiaMar: number): BloqueDetalle {
         { dia: 'Day', numero: '1', titulo: 'Arrival', texto: 'We pick you up at the airport and take you to Hotel Casa Arrecife. Check-in from 2:00 to 3:00 pm.' },
         {
           dia: 'Days', numero: `2–${ultimoDiaMar}`, titulo: 'Orca and marine life seafari',
-          texto: 'You leave between 7:00 and 8:00 am for 5 to 6 hours at sea. Afternoons: beach, snorkeling or fly fishing (booked separately).',
+          texto: 'You leave {horario:la-ventana-travel/avistamiento-ballenas-orcas} for {duracion:la-ventana-travel/avistamiento-ballenas-orcas} at sea. Afternoons: beach, snorkeling or fly fishing (booked separately).',
         },
         { dia: 'Day', numero: String(salida), titulo: 'Departure', texto: 'Check out between 11:00 am and noon and we drive you to the airport.' },
       ],

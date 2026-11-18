@@ -44,6 +44,7 @@ type PropsResumen = Pick<
   | 'formaPago'
   | 'onFormaPagoChange'
   | 'formaPagoDisponible'
+  | 'porcentajeAnticipo'
   | 'codigoPromocional'
   | 'onCodigoPromocionalChange'
   | 'promoEstado'

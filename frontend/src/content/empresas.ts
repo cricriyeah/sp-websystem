@@ -54,8 +54,8 @@ export const EMPRESAS: readonly Empresa[] = [
   {
     ...marca('sal-y-sol'),
     descripcion: {
-      es: 'Pesca deportiva en La Paz con capitanes locales. La panga es solo para tu grupo y sale de Marina La Costa al amanecer.',
-      en: 'Sportfishing in La Paz with local captains. The panga is just for your group and leaves Marina La Costa at dawn.',
+      es: 'Pesca deportiva en La Paz con capitanes locales. La panga es solo para tu grupo y sale al amanecer.',
+      en: 'Sportfishing in La Paz with local captains. The panga is just for your group and heads out at dawn.',
     },
     webConfirmada: false,
     redes: [],
@@ -97,8 +97,8 @@ export const EMPRESAS: readonly Empresa[] = [
   {
     ...marca('piratas-adventures'),
     descripcion: {
-      es: 'Una familia local de Puerto Chale: safari marino, avistamiento de ballena gris y jorobada y pesca deportiva en el Pacífico.',
-      en: 'A local family in Puerto Chale: marine safaris, gray and humpback whale watching and sportfishing on the Pacific.',
+      es: 'Una familia de Puerto Chale, en Bahía Almejas: safari marino, avistamiento de ballena gris y jorobada, y pesca de atún, marlín y pargo en el Pacífico.',
+      en: 'A local family in Puerto Chale, on Bahía Almejas: marine safaris, gray and humpback whale watching, and fishing for tuna, marlin and snapper on the Pacific.',
     },
     web: 'https://piratas-landing.vercel.app/',
     webConfirmada: true,

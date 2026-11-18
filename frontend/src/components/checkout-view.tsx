@@ -71,12 +71,14 @@ import {
   rotuloDePaso,
 } from '@/lib/pasos-checkout';
 import { leerRef } from '@/lib/ref';
+import { notasParaEnviar } from '@/lib/notas';
 import { leerAtribucion } from '@/lib/atribucion';
 import { medir } from '@/lib/medicion';
 import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marca-confirmacion';
 import { borrarPendiente, guardarPendiente } from '@/lib/pendientes';
 import { evaluar, restaurarTelefono, telefonoParaEnviar } from '@/lib/telefono';
 import { lineaDeTelefono, nombradorDePaises } from '@/lib/telefono-campo';
+import type { EmpresaDeCompra } from '@/components/checkout/marca-empresa-compra';
 
 // Deliberadamente permisivo: acentos, apostrofos y guiones son parte de nombres
 // reales. Solo se rechaza lo que claramente no es un nombre.
@@ -173,7 +175,7 @@ type CheckoutViewProps = {
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
   /** `{ nombre, logo }` de la empresa del servicio (de `content/empresas`, server-only). */
-  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
+  empresa?: EmpresaDeCompra;
   servicio?: ServicioCatalogo | null;
 };
 
@@ -340,6 +342,8 @@ export function CheckoutView({
   const { mostrar: avisar } = useToast();
 
   const [contact, setContact] = useState({ phone: '', fullName: '', email: '' });
+  // La nota opcional para quien lo lleva («Tus datos»): no se valida, nunca detiene el paso.
+  const [notas, setNotas] = useState('');
 
   // Para poder mandarle el foco al primer campo con error.
   const refPhone = useRef<HTMLInputElement>(null);
@@ -692,7 +696,7 @@ export function CheckoutView({
     habilitado: phase !== 'recuperando',
     reponer: reponerBorrador,
     terminado: phase === 'confirmed',
-    estado: { day, time, people, personalizaciones, fechaSalidaManual, moneda, formaPago, contact, paso: actual },
+    estado: { day, time, people, personalizaciones, fechaSalidaManual, moneda, formaPago, contact, notas, paso: actual },
     restaurar: (guardado) => {
       // Una reserva recuperada del servidor ya llevó al cliente a Pago: manda sobre el borrador.
       if (actual === 'pago') return;
@@ -704,6 +708,7 @@ export function CheckoutView({
       setMoneda(guardado.moneda);
       setFormaPago(guardado.formaPago);
       setContact({ ...guardado.contact, phone: restaurarTelefono(guardado.contact.phone) });
+      setNotas(typeof guardado.notas === 'string' ? guardado.notas : '');
       setActual(pasoDeQuery(guardado.paso) ?? 'viaje');
     },
   });
@@ -1078,6 +1083,7 @@ export function CheckoutView({
         atribucion: leerAtribucion(),
         // El idioma del sitio: el backend le escribe sus correos en ese idioma.
         idioma: lang,
+        notas_cliente: notasParaEnviar(notas),
         captcha_token: captchaToken.current,
         servicio: servicio ? servicio.slug : (typeof servicioId === 'string' ? servicioId : undefined),
         // La seleccion viaja con la reserva, sin precio: crear-pago la congela
@@ -1521,6 +1527,12 @@ export function CheckoutView({
         // cliente corrige lo convierte en un regaño que no se calla.
         if (erroresCampo[campo]) setErroresCampo((prev) => ({ ...prev, [campo]: undefined }));
       }}
+      notas={{
+        valor: notas,
+        // Sin catálogo es la pesca de siempre: sale al mar.
+        alMar: !servicio || servicio.tipo_servicio === 'pesca' || servicio.tipo_servicio === 'paseo',
+        onCambio: setNotas,
+      }}
     />
   );
   const bloqueTarjetaPago = (mostrarDestino: boolean, pagoEnCurso: Pago | null) => (
@@ -1602,6 +1614,7 @@ export function CheckoutView({
           <EncabezadoCompra
             titulo={checkout.tituloPagina}
             detalle={servicioNombre || servicio?.nombre || undefined}
+            empresa={empresa}
           />
         }
         aviso={sinLugar && day ? (
@@ -1718,6 +1731,7 @@ export function CheckoutView({
             formaPago={formaPagoEfectiva}
             onFormaPagoChange={setFormaPago}
             formaPagoDisponible={permiteAnticipo}
+            porcentajeAnticipo={servicio?.porcentaje_anticipo}
             codigoPromocional={codigoPromocional}
             onCodigoPromocionalChange={onCodigoPromocionalChange}
             promoEstado={promoEstado}

@@ -63,6 +63,9 @@ export type ReservaInput = {
   atribucion?: Atribucion;
   // Idioma del sitio en el que compra (`/es` o `/en`): el backend escribe sus correos en ese idioma.
   idioma?: Idioma;
+  // Lo que el cliente le quiere decir a quien lo lleva (opcional, hasta `NOTAS_MAX`): la empresa lo ve en la
+  // reserva y en su correo de reserva nueva.
+  notas_cliente?: string;
   // Token de Cloudflare Turnstile. El backend solo lo exige al CREAR la reserva
   // — el token es de un solo uso y este endpoint es un upsert, asi que corregir
   // la fecha reenvia sin token (ver backend/apps/bookings/views.py).
@@ -528,6 +531,8 @@ export type CrearOrdenInput = {
   atribucion?: Atribucion;
   /** Idioma del sitio en el que compra: decide el idioma de sus correos. */
   idioma?: Idioma;
+  /** La nota para quien lo lleva: una sola, que llega a cada empresa del paquete. */
+  notas_cliente?: string;
   componentes?: ComponenteOrdenInput[];
   fecha?: string;
   hora?: string;

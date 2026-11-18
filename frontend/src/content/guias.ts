@@ -6,10 +6,13 @@
 // - Lo general de la región (migración de la ballena gris, temporada de mobulas, viento, especies de pesca que el
 //   calendario de la sede no trae, la ruta a Puerto Chale) sale de fuentes públicas y va dicho como rango, no como
 //   promesa. Esas filas llevan `fuente: 'region'`.
-// - Sin precios: cambian en el backoffice y cada guía enlaza a la página que los trae al día.
+// - Sin cifras de precio escritas: cambian en el backoffice. La pregunta «¿Cuánto cuesta…?» lleva una marca
+//   (`{precio:<empresa>/<servicio>}`, `lib/precio-en-texto.ts`) y la página pone la cifra del catálogo.
 // - Nunca se mencionan permisos ni dependencias de gobierno sobre el nado con orcas (decisión del dueño).
 // - Las fotos de las secciones son las que ya hay en el sitio, puestas de relleno (se repiten entre guías): el dueño
 //   las cambia después. La descripción de cada una es la misma que lleva en `sedes-cuerpo.ts`.
+
+import { GUIAS_ESTUDIO } from './guias-estudio';
 
 export type IdiomaGuia = 'es' | 'en';
 type Texto = Record<IdiomaGuia, string>;
@@ -76,6 +79,8 @@ export type Guia = {
 };
 
 const ACTUALIZADO = '2026-11-13';
+// Las guías escritas o revisadas con el estudio de competencia en Google (203 búsquedas, 2026-11-16).
+const REVISADO = '2026-11-16';
 const TODO_EL_ANIO = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const PAQUETES_VENTANA: DestinoGuia[] = [
@@ -93,7 +98,7 @@ export const GUIAS: readonly Guia[] = [
   {
     id: 'orcas-la-ventana',
     sede: 'la-ventana',
-    actualizado: ACTUALIZADO,
+    actualizado: REVISADO,
     foto: {
       src: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp',
       alt: { es: 'Dos orcas nadando bajo la superficie del mar, frente a La Ventana', en: 'Two orcas swimming under the surface off La Ventana' },
@@ -113,13 +118,13 @@ export const GUIAS: readonly Guia[] = [
         slug: 'nado-con-orcas-la-ventana',
         titulo: 'Nado con orcas en La Ventana: cuándo ir y cómo es la salida',
         metaTitulo: 'Nado con orcas en La Ventana, BCS: temporada y cómo es',
-        metaDescripcion: 'En La Ventana, Baja California Sur, las orcas se ven todo el año. Cuándo hay más encuentros, cómo es la salida para nadar con ellas y cómo reservarla.',
-        respuesta: 'En La Ventana, Baja California Sur, las orcas se ven todo el año, y de finales de abril a julio los encuentros son más frecuentes: es cuando llegan las mobulas. Sales en lancha a buscarlas y, cuando aparecen y el mar lo permite, entras al agua a nadar con ellas.',
+        metaDescripcion: 'En La Ventana, Baja California Sur, las orcas vienen todo el año. Cuándo hay más encuentros, cómo es la salida para nadar con ellas y cómo reservarla.',
+        respuesta: 'En La Ventana, Baja California Sur, las orcas vienen todo el año, y de finales de abril a julio los encuentros son más frecuentes: es cuando llegan las mobulas. Sales en lancha a buscarlas y, cuando aparecen y el mar lo permite, entras al agua a nadar con ellas.',
         frase: 'Cada salida es una oportunidad más de encontrarlas.',
         datos: [
           { etiqueta: 'Cuándo', valor: 'Todo el año, más de abril a julio' },
-          { etiqueta: 'Salida', valor: 'Entre 7:00 y 8:00 am' },
-          { etiqueta: 'Duración', valor: 'De 5 a 6 horas en el mar' },
+          { etiqueta: 'Salida', valor: '{horario:la-ventana-travel/avistamiento-ballenas-orcas}' },
+          { etiqueta: 'Duración', valor: '{duracion:la-ventana-travel/avistamiento-ballenas-orcas} en el mar' },
           { etiqueta: 'Cómo se reserva', valor: 'En paquetes de 5 y 7 noches' },
         ],
         calendario: {
@@ -140,9 +145,9 @@ export const GUIAS: readonly Guia[] = [
             ],
           },
           {
-            titulo: '¿Cómo es la salida?',
+            titulo: 'El safari marino: ¿cómo es la salida?',
             parrafos: [
-              'Sales en lancha entre las 7:00 y las 8:00 de la mañana, de La Ventana o de Bahía de los Sueños, con gente que conoce estas aguas. Son de 5 a 6 horas en el mar, con algo de comer, aguas, refrescos y el equipo de snorkel a bordo.',
+              'Sales en lancha {horario:la-ventana-travel/avistamiento-ballenas-orcas}, de {salida:la-ventana-travel/avistamiento-ballenas-orcas}, con gente que conoce estas aguas. Son {duracion:la-ventana-travel/avistamiento-ballenas-orcas} en el mar, con algo de comer, aguas, refrescos y el equipo de snorkel a bordo.',
               'El día incluye una parada para snorkelear en un arrecife. El resto del tiempo es de búsqueda: orcas, delfines, lobos marinos y lo que el mar traiga ese día.',
             ],
           },
@@ -172,8 +177,10 @@ export const GUIAS: readonly Guia[] = [
         ],
         faq: [
           { q: '¿Qué tan probable es ver orcas?', a: 'Las orcas viven libres y vienen a La Ventana todo el año, así que puedes encontrarlas en cualquier salida. Vas con gente que conoce estas aguas y sabe dónde buscarlas. Y en casi todas las salidas te acompañan delfines o lobos marinos.' },
-          { q: '¿Cuál es el mejor mes para nadar con orcas en La Ventana?', a: 'De finales de abril a julio, cuando las mobulas se juntan frente a La Ventana y las orcas llegan tras ellas. El resto del año también vienen.' },
+          { q: '¿Cuál es la mejor temporada para nadar con orcas en La Ventana?', a: 'De finales de abril a julio, cuando las mobulas se juntan frente a La Ventana y las orcas llegan tras ellas. El resto del año también vienen.' },
           { q: '¿Puedo reservar solo la salida de un día?', a: 'El seafari se reserva dentro de los paquetes de 5 y 7 noches, con hotel, traslado del aeropuerto y de 4 a 6 salidas al mar. Con varias salidas tienes varias oportunidades de encontrarlas.' },
+          { q: '¿Es seguro nadar con orcas?', a: 'Entras al agua con un guía que conoce a estos animales. Él observa cómo se comportan y cómo está el mar, y te dice cuándo es el momento. Nadas en la superficie, con visor, snorkel y aletas.' },
+          { q: '¿Cuánto cuesta nadar con orcas en La Ventana?', a: 'El nado con orcas va dentro de los paquetes de 5 y 7 noches, con hotel, traslado del aeropuerto y de 4 a 6 salidas al mar. El precio es por persona y está al día en cada paquete, en esta página. Reservas en línea con tarjeta.' },
           { q: '¿Necesito saber bucear?', a: 'No hace falta. Nadas en la superficie con visor, snorkel y aletas, y el equipo va incluido.' },
           { q: '¿Qué pasa si hay mal clima?', a: 'Si el mar no deja salir, esa salida se repone otro día de tu estancia.' },
         ],
@@ -186,13 +193,13 @@ export const GUIAS: readonly Guia[] = [
         slug: 'swim-with-orcas-la-ventana',
         titulo: 'Swim with orcas in La Ventana: when to go and what the trip is like',
         metaTitulo: 'Swim with Orcas in La Ventana, Baja: Season & What to Expect',
-        metaDescripcion: 'Orcas are seen off La Ventana, Baja California Sur, all year. When encounters peak, what the swim-with-orcas trip is like, and how to book it.',
-        respuesta: 'Orcas are seen off La Ventana, Baja California Sur, all year round, and encounters pick up from late April through July, when the mobula rays arrive. You head out by boat to find them and, when they show up and the sea allows it, you get in the water and swim with them.',
+        metaDescripcion: 'Orcas come to La Ventana, Baja California Sur, all year. When encounters peak, what the swim-with-orcas trip is like, and how to book it.',
+        respuesta: 'Orcas come to La Ventana, Baja California Sur, all year round, and encounters pick up from late April through July, when the mobula rays arrive. You head out by boat to find them and, when they show up and the sea allows it, you get in the water and swim with them.',
         frase: 'Every trip is one more chance to find them.',
         datos: [
           { etiqueta: 'When', valor: 'All year, most from April to July' },
-          { etiqueta: 'Departure', valor: 'Between 7:00 and 8:00 am' },
-          { etiqueta: 'Length', valor: '5 to 6 hours at sea' },
+          { etiqueta: 'Departure', valor: '{horario:la-ventana-travel/avistamiento-ballenas-orcas}' },
+          { etiqueta: 'Length', valor: '{duracion:la-ventana-travel/avistamiento-ballenas-orcas} at sea' },
           { etiqueta: 'How to book', valor: 'In 5- and 7-night packages' },
         ],
         calendario: {
@@ -213,9 +220,9 @@ export const GUIAS: readonly Guia[] = [
             ],
           },
           {
-            titulo: 'What is the trip like?',
+            titulo: 'The ocean safari: what is the trip like?',
             parrafos: [
-              'You leave by boat between 7:00 and 8:00 in the morning, from La Ventana or Bahía de los Sueños, with people who know these waters. You spend 5 to 6 hours at sea, with some food, water, soft drinks and snorkeling gear on board.',
+              'You leave by boat {horario:la-ventana-travel/avistamiento-ballenas-orcas}, from {salida:la-ventana-travel/avistamiento-ballenas-orcas}, with people who know these waters. You spend {duracion:la-ventana-travel/avistamiento-ballenas-orcas} at sea, with some food, water, soft drinks and snorkeling gear on board.',
               'The day includes a snorkel stop at a reef. The rest of the time you are searching: orcas, dolphins, sea lions and whatever the sea brings that day.',
             ],
           },
@@ -245,8 +252,10 @@ export const GUIAS: readonly Guia[] = [
         ],
         faq: [
           { q: 'How likely am I to see orcas?', a: 'Orcas are wild and come to La Ventana all year, so you can find them on any trip. You go with people who know these waters and where to look. And on almost every trip, dolphins or sea lions join you.' },
-          { q: 'What is the best month to swim with orcas in La Ventana?', a: 'Late April through July, when the mobula rays gather off La Ventana and the orcas come in after them. They visit the rest of the year too.' },
+          { q: 'When is the best time to see orcas in La Ventana, Baja?', a: 'Late April through July, when the mobula rays gather off La Ventana and the orcas come in after them. They visit the rest of the year too.' },
           { q: 'Can I book just a one-day trip?', a: 'The seafari is booked as part of the 5- and 7-night packages, with the hotel, airport transfers and 4 to 6 trips out to sea. Several trips give you several chances of finding them.' },
+          { q: 'Is it safe to swim with orcas in Mexico?', a: 'You get in the water with a guide who knows these animals. The guide watches how they are behaving and what the sea is doing, and tells you when the moment is right. You swim at the surface with a mask, snorkel and fins.' },
+          { q: 'How much does it cost to swim with orcas in La Ventana?', a: 'Swimming with orcas is part of the 5- and 7-night packages, with the hotel, airport transfers and 4 to 6 trips out to sea. The price is per person and is up to date on each package, on this page. You book online by card.' },
           { q: 'Do I need to know how to dive?', a: 'Not at all. You swim at the surface with a mask, snorkel and fins, and the gear is included.' },
           { q: 'What happens in bad weather?', a: 'If the sea keeps the boat in, that trip is made up on another day of your stay.' },
         ],
@@ -262,7 +271,7 @@ export const GUIAS: readonly Guia[] = [
   {
     id: 'calendario-pesca-la-paz',
     sede: 'la-paz',
-    actualizado: ACTUALIZADO,
+    actualizado: REVISADO,
     foto: {
       src: '/photos/cliente-dorado.webp',
       alt: { es: 'Un pescador levanta un dorado enorme en la popa de la panga, frente a La Paz', en: 'An angler holds up a huge dorado at the stern of the panga, off La Paz' },
@@ -281,15 +290,15 @@ export const GUIAS: readonly Guia[] = [
       es: {
         slug: 'calendario-de-pesca-la-paz',
         titulo: 'Calendario de pesca en La Paz: qué se pesca cada mes',
-        metaTitulo: 'Calendario de pesca en La Paz, BCS: qué pica cada mes',
-        metaDescripcion: 'En La Paz, Baja California Sur, se pesca todo el año: dorado y marlín de junio a octubre, jurel de enero a abril y sierra al cierre. Mes por mes.',
+        metaTitulo: 'Calendario y temporada de pesca en La Paz: qué pica cada mes',
+        metaDescripcion: 'Temporada de pesca en La Paz, BCS, mes por mes: dorado y marlín de junio a octubre, jurel de enero a abril y sierra al cierre. Se pesca todo el año.',
         respuesta: 'En La Paz se pesca todo el año. La temporada fuerte va de junio a octubre, con dorado y marlín. De enero a abril manda el jurel, y en noviembre y diciembre, la sierra.',
         frase: 'Tu capitán elige el rumbo según cómo amaneció el mar.',
         datos: [
           { etiqueta: 'Temporada fuerte', valor: 'Junio a octubre' },
-          { etiqueta: 'Salida', valor: 'Al amanecer, desde Marina La Costa' },
-          { etiqueta: 'Duración', valor: 'De 6 a 7 horas' },
-          { etiqueta: 'A bordo', valor: 'Solo tu grupo, hasta 5 personas' },
+          { etiqueta: 'Salida', valor: 'Al amanecer, desde {salida:sal-y-sol/pesca-deportiva}' },
+          { etiqueta: 'Duración', valor: '{duracion:sal-y-sol/pesca-deportiva}' },
+          { etiqueta: 'A bordo', valor: 'Solo tu grupo, hasta {maximo:sal-y-sol/pesca-deportiva} personas' },
         ],
         calendario: {
           titulo: 'Qué se pesca en La Paz, mes por mes',
@@ -338,10 +347,12 @@ export const GUIAS: readonly Guia[] = [
           },
         ],
         faq: [
+          { q: '¿Cuál es la temporada de pesca en La Paz?', a: 'Se pesca todo el año. La temporada fuerte va de junio a octubre, con dorado y marlín. De enero a abril pica el jurel, y en noviembre y diciembre, la sierra.' },
+          { q: '¿Cuánto cuesta un tour de pesca en La Paz?', a: 'La panga privada cuesta {precio:sal-y-sol/pesca-deportiva} con IVA incluido, para {personas:sal-y-sol/pesca-deportiva} personas, y cada persona más paga {extra:sal-y-sol/pesca-deportiva}, hasta {maximo:sal-y-sol/pesca-deportiva} por panga. El precio es el mismo todo el año.' },
           { q: '¿Cuándo es la temporada de dorado en La Paz?', a: 'De junio a octubre. Son los mismos meses del marlín y los más fuertes del año.' },
           { q: '¿Se puede pescar en La Paz en invierno?', a: 'Sí. De enero a abril pica el jurel, con pargo y cabrilla, y en noviembre y diciembre, la sierra. Salimos los 365 días del año.' },
-          { q: '¿Cuánto dura una salida de pesca?', a: 'De 6 a 7 horas. Sales al amanecer de Marina La Costa y eliges la hora al reservar.' },
-          { q: '¿Cuántas personas caben en la panga?', a: 'Hay pangas para hasta 3 y para hasta 5 personas. En cualquiera va solo tu grupo.' },
+          { q: '¿Cuánto dura una salida de pesca?', a: '{duracion:sal-y-sol/pesca-deportiva}. Sales al amanecer de {salida:sal-y-sol/pesca-deportiva} y eliges la hora al reservar.' },
+          { q: '¿Cuántas personas caben en la panga?', a: 'Hay pangas para hasta 3 y para hasta {maximo:sal-y-sol/pesca-deportiva} personas. En cualquiera va solo tu grupo.' },
           { q: '¿Qué pasa si hay mal clima?', a: 'Eliges tú: cambias la fecha o recibes el reembolso completo. Aplica cuando la capitanía de puerto o tu capitán deciden que el mar no está para salir.' },
         ],
         producto: {
@@ -352,15 +363,15 @@ export const GUIAS: readonly Guia[] = [
       en: {
         slug: 'la-paz-fishing-calendar',
         titulo: 'La Paz fishing calendar: what’s biting each month',
-        metaTitulo: 'La Paz Fishing Calendar: What’s Biting Month by Month',
-        metaDescripcion: 'La Paz, Baja California Sur, fishes all year: dorado and marlin June to October, yellowtail January to April, sierra at year’s end. Month by month.',
+        metaTitulo: 'La Paz Fishing Calendar & Seasons: What’s Biting Each Month',
+        metaDescripcion: 'La Paz fishing seasons month by month: dorado and marlin June to October, yellowtail January to April, sierra at year’s end. You can fish all year.',
         respuesta: 'You can fish La Paz all year. Peak season runs from June to October, with dorado (mahi mahi) and marlin. January to April belongs to yellowtail, and November and December to sierra.',
         frase: 'Your captain picks the heading by how the sea looks that morning.',
         datos: [
           { etiqueta: 'Peak season', valor: 'June to October' },
-          { etiqueta: 'Departure', valor: 'At dawn, from Marina La Costa' },
-          { etiqueta: 'Length', valor: '6 to 7 hours' },
-          { etiqueta: 'On board', valor: 'Just your group, up to 5 people' },
+          { etiqueta: 'Departure', valor: 'At dawn, from {salida:sal-y-sol/pesca-deportiva}' },
+          { etiqueta: 'Length', valor: '{duracion:sal-y-sol/pesca-deportiva}' },
+          { etiqueta: 'On board', valor: 'Just your group, up to {maximo:sal-y-sol/pesca-deportiva} people' },
         ],
         calendario: {
           titulo: 'What you catch in La Paz, month by month',
@@ -409,10 +420,12 @@ export const GUIAS: readonly Guia[] = [
           },
         ],
         faq: [
+          { q: 'When is fishing season in La Paz?', a: 'You can fish all year. Peak season runs from June to October, with dorado and marlin. January to April is yellowtail, and November and December, sierra.' },
+          { q: 'How much does a fishing charter in La Paz cost?', a: 'The private panga costs {precio:sal-y-sol/pesca-deportiva}, tax included, for {personas:sal-y-sol/pesca-deportiva} people, and each additional person pays {extra:sal-y-sol/pesca-deportiva}, up to {maximo:sal-y-sol/pesca-deportiva} per panga. The price is the same all year.' },
           { q: 'When is dorado (mahi mahi) season in La Paz?', a: 'June to October. Those are the marlin months too, and the strongest of the year.' },
           { q: 'Can you fish La Paz in winter?', a: 'Yes. Yellowtail bites from January to April, with snapper and cabrilla, and sierra in November and December. We go out 365 days a year.' },
-          { q: 'How long is a fishing trip?', a: '6 to 7 hours. You leave Marina La Costa at dawn and choose your time when you book.' },
-          { q: 'How many people fit on the panga?', a: 'There are pangas for up to 3 and for up to 5 people. On either one, only your group is on board.' },
+          { q: 'How long is a fishing trip?', a: '{duracion:sal-y-sol/pesca-deportiva}. You leave {salida:sal-y-sol/pesca-deportiva} at dawn and choose your time when you book.' },
+          { q: 'How many people fit on the panga?', a: 'There are pangas for up to 3 and for up to {maximo:sal-y-sol/pesca-deportiva} people. On either one, only your group is on board.' },
           { q: 'What happens in bad weather?', a: 'Your call: a new date or a full refund. That applies whenever the port captain or your captain decides the sea is not fit to go out.' },
         ],
         producto: {
@@ -427,7 +440,7 @@ export const GUIAS: readonly Guia[] = [
   {
     id: 'ballena-gris-bahia-magdalena',
     sede: 'puerto-chale',
-    actualizado: ACTUALIZADO,
+    actualizado: REVISADO,
     foto: {
       src: '/photos/puerto-chale/ballenas-junto-a-la-panga.webp',
       alt: { es: 'Dos ballenas grises nadan pegadas a la panga en Bahía Magdalena mientras una pasajera las toca', en: 'Two gray whales swim right beside the panga on Magdalena Bay while a passenger reaches out to them' },
@@ -448,12 +461,12 @@ export const GUIAS: readonly Guia[] = [
         titulo: 'Temporada de ballena gris en Bahía Magdalena: cuándo ir',
         metaTitulo: 'Temporada de ballena gris en Bahía Magdalena: cuándo ir',
         metaDescripcion: 'De enero a marzo la ballena gris está en Bahía Magdalena con sus crías y se acerca a las pangas. Cómo es la salida desde Puerto Chale, a 2 h de La Paz.',
-        respuesta: 'La ballena gris está en Bahía Magdalena de enero a marzo. Viaja desde el Ártico para tener a sus crías en estas aguas tranquilas, y aquí se deja ver de cerca. Sales de Puerto Chale, a unas 2 horas de La Paz, en un recorrido de 2 horas.',
+        respuesta: 'La ballena gris está en Bahía Magdalena de enero a marzo. Viaja desde el Ártico para tener a sus crías en estas aguas tranquilas, y aquí se deja ver de cerca. Sales de Puerto Chale, a unas 2 horas de La Paz, en un recorrido de {duracion:piratas-adventures/avistamiento-ballenas}.',
         frase: 'Aquí las ballenas se acercan solas a la panga.',
         datos: [
           { etiqueta: 'Temporada', valor: 'Enero a marzo' },
           { etiqueta: 'Sale de', valor: 'Puerto Chale, Bahía Magdalena' },
-          { etiqueta: 'Recorrido', valor: '2 horas en panga' },
+          { etiqueta: 'Recorrido', valor: '{duracion:piratas-adventures/avistamiento-ballenas} en panga' },
           { etiqueta: 'Desde La Paz', valor: 'De 1 h 40 min a 2 h por carretera' },
         ],
         calendario: {
@@ -484,8 +497,8 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: '¿Cuánto dura y cuántos caben?',
             parrafos: [
-              'El recorrido que reservas en línea dura 2 horas. Si quieres quedarte más tiempo con ellas, hay recorridos de 3 y 4 horas que se piden por WhatsApp.',
-              'El precio cubre de 1 a 6 personas y caben hasta 8, con un cargo por cada persona extra. Los niños son bienvenidos.',
+              'El recorrido que reservas en línea dura {duracion:piratas-adventures/avistamiento-ballenas}. Si quieres quedarte más tiempo con ellas, hay recorridos de 3 y 4 horas que se piden por WhatsApp.',
+              'El precio cubre de 1 a {personas:piratas-adventures/avistamiento-ballenas} personas y caben hasta {maximo:piratas-adventures/avistamiento-ballenas}, con un cargo por cada persona extra. Los niños son bienvenidos.',
             ],
           },
           {
@@ -501,11 +514,12 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: '¿Y fuera de la temporada?',
             parrafos: [
-              'De octubre a diciembre sale el safari marino, ocho horas entre islas con lobos marinos y peces, y a finales de año pasa la ballena jorobada. La pesca deportiva es todo el año.',
+              'De octubre a diciembre sale el safari marino, {duracion:piratas-adventures/safari-marino} entre islas con lobos marinos y peces, y a finales de año pasa la ballena jorobada. La pesca deportiva es todo el año.',
             ],
           },
         ],
         faq: [
+          { q: '¿Cuánto cuesta ver ballenas en Puerto Chale?', a: 'El avistamiento de {duracion:piratas-adventures/avistamiento-ballenas} cuesta {precio:piratas-adventures/avistamiento-ballenas} con IVA incluido. El precio es por la panga para tu grupo, de 1 a {personas:piratas-adventures/avistamiento-ballenas} personas, y cada persona extra paga {extra:piratas-adventures/avistamiento-ballenas}, hasta {maximo:piratas-adventures/avistamiento-ballenas}.' },
           { q: '¿Cuándo es la temporada de ballena gris en Bahía Magdalena?', a: 'De enero a marzo, cuando la ballena gris entra a la bahía a tener a sus crías.' },
           { q: '¿Se puede tocar a las ballenas?', a: 'Hay días en que las ballenas grises llegan solas hasta la panga y se quedan a un brazo de distancia. Se acercan cuando ellas quieren; nadie las persigue.' },
           { q: '¿Cómo llego a Puerto Chale?', a: 'Por carretera. Desde La Paz son entre 1 hora 40 minutos y 2 horas. La ruta completa está en la guía de cómo llegar a Puerto Chale.' },
@@ -522,12 +536,12 @@ export const GUIAS: readonly Guia[] = [
         titulo: 'Gray whale season in Magdalena Bay: when to go',
         metaTitulo: 'Gray Whale Season in Magdalena Bay, Baja: When to Go',
         metaDescripcion: 'From January to March gray whales are in Magdalena Bay with their calves and swim up to the pangas. The trip from Puerto Chale, 2 hours from La Paz.',
-        respuesta: 'Gray whales are in Magdalena Bay from January to March. They travel from the Arctic to give birth in these calm waters, and here you see them up close. You leave from Puerto Chale, about 2 hours from La Paz, on a 2-hour trip.',
+        respuesta: 'Gray whales are in Magdalena Bay from January to March. They travel from the Arctic to give birth in these calm waters, and here you see them up close. You leave from Puerto Chale, about 2 hours from La Paz, on a trip of {duracion:piratas-adventures/avistamiento-ballenas}.',
         frase: 'Here the whales swim up to the panga on their own.',
         datos: [
           { etiqueta: 'Season', valor: 'January to March' },
           { etiqueta: 'Leaves from', valor: 'Puerto Chale, Magdalena Bay' },
-          { etiqueta: 'Trip', valor: '2 hours by panga' },
+          { etiqueta: 'Trip', valor: '{duracion:piratas-adventures/avistamiento-ballenas} by panga' },
           { etiqueta: 'From La Paz', valor: '1 h 40 min to 2 h by road' },
         ],
         calendario: {
@@ -558,8 +572,8 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'How long is it, and how many fit?',
             parrafos: [
-              'The trip you book online lasts 2 hours. If you want more time with them, there are 3- and 4-hour trips you can ask for on WhatsApp.',
-              'The price covers 1 to 6 people and up to 8 fit, with a charge for each extra person. Children are welcome.',
+              'The trip you book online lasts {duracion:piratas-adventures/avistamiento-ballenas}. If you want more time with them, there are 3- and 4-hour trips you can ask for on WhatsApp.',
+              'The price covers 1 to {personas:piratas-adventures/avistamiento-ballenas} people and up to {maximo:piratas-adventures/avistamiento-ballenas} fit, with a charge for each extra person. Children are welcome.',
             ],
           },
           {
@@ -575,11 +589,12 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'What about outside the season?',
             parrafos: [
-              'From October to December the marine safari runs, eight hours among the islands with sea lions and fish, and humpback whales pass through late in the year. Sportfishing runs all year.',
+              'From October to December the marine safari runs, {duracion:piratas-adventures/safari-marino} among the islands with sea lions and fish, and humpback whales pass through late in the year. Sportfishing runs all year.',
             ],
           },
         ],
         faq: [
+          { q: 'How much does whale watching in Puerto Chale cost?', a: 'The whale watching trip lasts {duracion:piratas-adventures/avistamiento-ballenas} and costs {precio:piratas-adventures/avistamiento-ballenas}, tax included. The price is for the panga for your group, 1 to {personas:piratas-adventures/avistamiento-ballenas} people, and each extra person pays {extra:piratas-adventures/avistamiento-ballenas}, up to {maximo:piratas-adventures/avistamiento-ballenas}.' },
           { q: 'When is gray whale season in Magdalena Bay?', a: 'January to March, when gray whales enter the bay to give birth.' },
           { q: 'Can you touch the whales?', a: 'Some days the gray whales swim right up to the panga on their own and stay within arm’s reach. They come over when they want to; nobody chases them.' },
           { q: 'How do I get to Puerto Chale?', a: 'By road. From La Paz it is between 1 hour 40 minutes and 2 hours. The full route is in the guide on how to get to Puerto Chale.' },
@@ -598,7 +613,7 @@ export const GUIAS: readonly Guia[] = [
   {
     id: 'como-llegar-puerto-chale',
     sede: 'puerto-chale',
-    actualizado: ACTUALIZADO,
+    actualizado: REVISADO,
     foto: {
       src: '/photos/puerto-chale/panga-entre-islas.webp',
       alt: { es: 'Una panga navega entre las islas de Bahía Magdalena, frente a Puerto Chale', en: 'A panga runs between the islands of Magdalena Bay, off Puerto Chale' },
@@ -658,10 +673,11 @@ export const GUIAS: readonly Guia[] = [
           },
         ],
         faq: [
+          { q: '¿Qué tan lejos está Bahía Magdalena de Los Cabos?', a: 'Unas 4 horas por carretera: 2 de Cabo San Lucas a La Paz y cerca de 2 más hasta Puerto Chale.' },
           { q: '¿Cuánto tiempo se hace de La Paz a Puerto Chale?', a: 'Entre 1 hora 40 minutos y 2 horas por carretera.' },
           { q: '¿Dónde está la desviación a Puerto Chale?', a: 'En Santa Rita, en el kilómetro 157 de la carretera Transpeninsular, entre La Paz y Ciudad Constitución. De ahí son unos 23 kilómetros hasta el muelle.' },
-          { q: '¿Se puede ir y volver el mismo día desde La Paz?', a: 'Sí. El avistamiento de ballenas dura 2 horas, así que saliendo temprano de La Paz estás de vuelta el mismo día.' },
-          { q: '¿Dónde queda Puerto Chale?', a: 'En la orilla de Bahía Magdalena, del lado del Pacífico de Baja California Sur, dentro del municipio de La Paz.' },
+          { q: '¿Se puede ir y volver el mismo día desde La Paz?', a: 'Sí. El avistamiento de ballenas dura {duracion:piratas-adventures/avistamiento-ballenas}, así que saliendo temprano de La Paz estás de vuelta el mismo día.' },
+          { q: '¿Dónde queda Puerto Chale?', a: 'En la orilla de Bahía Almejas, la parte sur de Bahía Magdalena, del lado del Pacífico de Baja California Sur, dentro del municipio de La Paz.' },
         ],
         producto: {
           titulo: 'Qué te espera al llegar',
@@ -713,10 +729,11 @@ export const GUIAS: readonly Guia[] = [
           },
         ],
         faq: [
+          { q: 'How far is Magdalena Bay from Cabo?', a: 'About 4 hours by road: 2 from Cabo San Lucas to La Paz, and close to 2 more to Puerto Chale.' },
           { q: 'How long is the drive from La Paz to Puerto Chale?', a: 'Between 1 hour 40 minutes and 2 hours by road.' },
           { q: 'Where is the turnoff to Puerto Chale?', a: 'At Santa Rita, kilometer 157 of the Transpeninsular Highway, between La Paz and Ciudad Constitución. From there it is about 23 km (14 miles) to the pier.' },
-          { q: 'Can I do it as a day trip from La Paz?', a: 'Yes. The whale watching trip lasts 2 hours, so if you leave La Paz early you are back the same day.' },
-          { q: 'Where is Puerto Chale?', a: 'On the shore of Magdalena Bay, on the Pacific side of Baja California Sur, in the municipality of La Paz.' },
+          { q: 'Can I do it as a day trip from La Paz?', a: 'Yes. The whale watching trip lasts {duracion:piratas-adventures/avistamiento-ballenas}, so if you leave La Paz early you are back the same day.' },
+          { q: 'Where is Puerto Chale?', a: 'On the shore of Bahía Almejas, the southern end of Magdalena Bay, on the Pacific side of Baja California Sur, in the municipality of La Paz.' },
         ],
         producto: {
           titulo: 'What is waiting when you arrive',
@@ -772,14 +789,14 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'Salir al mar: el seafari',
             parrafos: [
-              'Es la salida por la que más gente viene. De 5 a 6 horas en lancha buscando orcas, delfines y lobos marinos, con una parada de snorkel en un arrecife. Cuando aparecen orcas y el mar lo permite, nadas con ellas.',
+              'Es la salida por la que más gente viene. Son {duracion:la-ventana-travel/avistamiento-ballenas-orcas} en lancha buscando orcas, delfines y lobos marinos, con una parada de snorkel en un arrecife. Cuando aparecen orcas y el mar lo permite, nadas con ellas.',
               'Va dentro de los paquetes de 5 y 7 noches, que traen de 4 a 6 salidas.',
             ],
           },
           {
             titulo: 'Pesca con mosca',
             parrafos: [
-              'Un día completo en panga para quien pesca y hasta dos acompañantes. El precio es por día y por grupo, y a bordo hay comida ligera y equipo de snorkel.',
+              'Un día completo en panga para un grupo de hasta {maximo:la-ventana-travel/pesca-con-mosca} personas, contando a quien pesca. El precio es por día y por grupo, y a bordo hay comida ligera y equipo de snorkel.',
             ],
           },
           {
@@ -839,14 +856,14 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'Out at sea: the seafari',
             parrafos: [
-              'This is the trip most people come for. Five to six hours by boat looking for orcas, dolphins and sea lions, with a snorkel stop at a reef. When orcas show up and the sea allows it, you swim with them.',
+              'This is the trip most people come for. It is {duracion:la-ventana-travel/avistamiento-ballenas-orcas} by boat looking for orcas, dolphins and sea lions, with a snorkel stop at a reef. When orcas show up and the sea allows it, you swim with them.',
               'It comes with the 5- and 7-night packages, which include 4 to 6 trips.',
             ],
           },
           {
             titulo: 'Fly fishing',
             parrafos: [
-              'A full day on a panga for the angler and up to two companions. The price is per day and per group, with a light meal and snorkeling gear on board.',
+              'A full day on a panga for a group of up to {maximo:la-ventana-travel/pesca-con-mosca} people, counting the angler. The price is per day and per group, with a light meal and snorkeling gear on board.',
             ],
           },
           {
@@ -932,7 +949,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'Invierno: enero a marzo',
             parrafos: [
-              'Es la temporada de la ballena gris. Llega del Ártico a Bahía Magdalena a tener a sus crías, y desde Puerto Chale la ves de cerca en recorridos de 2 horas. En La Paz, el invierno es del jurel.',
+              'Es la temporada de la ballena gris. Llega del Ártico a Bahía Magdalena a tener a sus crías, y desde Puerto Chale la ves de cerca en recorridos de {duracion:piratas-adventures/avistamiento-ballenas}. En La Paz, el invierno es del jurel.',
             ],
           },
           {
@@ -950,7 +967,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'Otoño: octubre a diciembre',
             parrafos: [
-              'En Puerto Chale sale el safari marino, ocho horas entre islas con lobos marinos, y a finales de año pasa la ballena jorobada. En La Paz cierra la temporada de dorado y empieza la de sierra.',
+              'En Puerto Chale sale el safari marino, {duracion:piratas-adventures/safari-marino} entre islas con lobos marinos, y a finales de año pasa la ballena jorobada. En La Paz cierra la temporada de dorado y empieza la de sierra.',
             ],
           },
         ],
@@ -1013,7 +1030,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'Fall: October to December',
             parrafos: [
-              'In Puerto Chale the marine safari runs, eight hours among the islands with sea lions, and humpback whales pass through late in the year. In La Paz, dorado season winds down and sierra season begins.',
+              'In Puerto Chale the marine safari runs, {duracion:piratas-adventures/safari-marino} among the islands with sea lions, and humpback whales pass through late in the year. In La Paz, dorado season winds down and sierra season begins.',
             ],
           },
         ],
@@ -1035,7 +1052,7 @@ export const GUIAS: readonly Guia[] = [
   {
     id: 'paquetes-vacacionales-bcs',
     sede: 'la-ventana',
-    actualizado: ACTUALIZADO,
+    actualizado: REVISADO,
     foto: {
       src: '/catalogo/la-ventana-travel-hospedaje-la-ventana.webp',
       alt: { es: 'Vista aérea del Hotel Casa Arrecife con el mar de La Ventana al fondo', en: 'Aerial view of Hotel Casa Arrecife with the sea off La Ventana behind it' },
@@ -1053,8 +1070,8 @@ export const GUIAS: readonly Guia[] = [
     textos: {
       es: {
         slug: 'paquetes-vacacionales-baja-california-sur',
-        titulo: 'Paquetes vacacionales en Baja California Sur: qué hay y qué incluyen',
-        metaTitulo: 'Paquetes vacacionales en Baja California Sur: qué incluyen',
+        titulo: 'Paquetes en La Ventana: hotel, traslado y salidas al mar con orcas',
+        metaTitulo: 'Paquetes en La Ventana, BCS: hotel y salidas al mar con orcas',
         metaDescripcion: 'Paquetes de 5 y 7 noches en La Ventana, Baja California Sur: hotel, traslado del aeropuerto y de 4 a 6 salidas al mar para buscar orcas y fauna marina.',
         respuesta: 'En La Ventana, Baja California Sur, hay dos paquetes: de 5 y de 7 noches. Los dos traen el Hotel Casa Arrecife, el traslado redondo del aeropuerto y las salidas al mar de seafari: 4 en el de 5 noches y 6 en el de 7. El precio es por persona.',
         frase: 'Te recogen en el aeropuerto y al día siguiente ya estás en el mar.',
@@ -1071,14 +1088,14 @@ export const GUIAS: readonly Guia[] = [
             lista: [
               'Hospedaje en el Hotel Casa Arrecife, en estudio para 2 personas con cama king size',
               'Traslado del aeropuerto al llegar y de regreso al terminar',
-              'Seafari de 5 a 6 horas cada día de mar: orcas, delfines, lobos marinos y snorkel',
+              'Seafari de {duracion:la-ventana-travel/avistamiento-ballenas-orcas} cada día de mar: orcas, delfines, lobos marinos y snorkel',
               'Comida ligera, botanas, bebidas y equipo de snorkel a bordo',
             ],
           },
           {
             titulo: '¿Cómo son los días?',
             parrafos: [
-              'El día 1 es de llegada: te recogen en el aeropuerto y te llevan al hotel. Desde el día 2 sales cada mañana al mar, entre las 7:00 y las 8:00, y vuelves pasado el mediodía con la tarde libre. El último día te llevan de vuelta al aeropuerto.',
+              'El día 1 es de llegada: te recogen en el aeropuerto y te llevan al hotel. Desde el día 2 sales cada mañana al mar, {horario:la-ventana-travel/avistamiento-ballenas-orcas}, y vuelves pasado el mediodía con la tarde libre. El último día te llevan de vuelta al aeropuerto.',
             ],
           },
           {
@@ -1114,10 +1131,10 @@ export const GUIAS: readonly Guia[] = [
       },
       en: {
         slug: 'baja-california-sur-vacation-packages',
-        titulo: 'Baja California Sur vacation packages: what’s available and what’s included',
-        metaTitulo: 'Baja California Sur Vacation Packages: What’s Included',
-        metaDescripcion: '5- and 7-night vacation packages in La Ventana, Baja California Sur: hotel, airport transfers and 4 to 6 trips out to sea to find orcas and marine life.',
-        respuesta: 'La Ventana, Baja California Sur, has two vacation packages: 5 nights and 7 nights. Both come with Hotel Casa Arrecife, round-trip airport transfers and seafari trips out to sea: 4 on the 5-night package and 6 on the 7-night one. Prices are per person.',
+        titulo: 'La Ventana packages: hotel, transfers and orca trips out to sea',
+        metaTitulo: 'La Ventana Packages: Hotel, Transfers & Orca Trips at Sea',
+        metaDescripcion: '5- and 7-night packages in La Ventana, Baja, priced per person: hotel, airport transfers and 4 to 6 trips out to sea to find orcas and marine life.',
+        respuesta: 'La Ventana, Baja California Sur, has two packages: 5 nights and 7 nights. Both come with Hotel Casa Arrecife, round-trip airport transfers and seafari trips out to sea: 4 on the 5-night package and 6 on the 7-night one. Prices are per person.',
         frase: 'You are picked up at the airport, and the next morning you are at sea.',
         datos: [
           { etiqueta: 'Packages', valor: '5 nights and 7 nights' },
@@ -1139,7 +1156,7 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'What are the days like?',
             parrafos: [
-              'Day 1 is arrival day: you are picked up at the airport and driven to the hotel. From day 2 you head out to sea each morning, between 7:00 and 8:00, and are back in the early afternoon with the rest of the day free. On the last day you are driven back to the airport.',
+              'Day 1 is arrival day: you are picked up at the airport and driven to the hotel. From day 2 you head out to sea each morning, {horario:la-ventana-travel/avistamiento-ballenas-orcas}, and are back in the early afternoon with the rest of the day free. On the last day you are driven back to the airport.',
             ],
           },
           {
@@ -1180,7 +1197,7 @@ export const GUIAS: readonly Guia[] = [
   {
     id: 'pesca-en-panga-la-paz',
     sede: 'la-paz',
-    actualizado: ACTUALIZADO,
+    actualizado: REVISADO,
     foto: {
       src: '/photos/flota-pangas-bahia.webp',
       alt: { es: 'Las siete pangas de Sal y Sol formadas en el agua turquesa de la bahía de La Paz', en: 'The seven Sal y Sol pangas lined up on the turquoise water of La Paz bay' },
@@ -1200,13 +1217,13 @@ export const GUIAS: readonly Guia[] = [
         slug: 'pesca-en-panga-la-paz',
         titulo: 'Pesca en panga en La Paz: qué es y cómo es un día a bordo',
         metaTitulo: 'Pesca en panga en La Paz: qué es y cómo es un día a bordo',
-        metaDescripcion: 'Qué es una panga y cómo es un día de pesca en La Paz con un capitán local: de 6 a 7 horas, solo tu grupo a bordo, qué incluye y qué llevar.',
-        respuesta: 'La panga es la lancha abierta, con motor fuera de borda, en la que trabajan los pescadores de Baja California Sur. En La Paz pescas en panga privada: van solo tu grupo y un capitán local, de 6 a 7 horas, saliendo al amanecer de Marina La Costa.',
+        metaDescripcion: 'Qué es una panga y cómo es un día de pesca en La Paz con un capitán local: {duracion:sal-y-sol/pesca-deportiva}, solo tu grupo a bordo, qué incluye y qué llevar.',
+        respuesta: 'La panga es la lancha abierta, con motor fuera de borda, en la que trabajan los pescadores de Baja California Sur. En La Paz pescas en panga privada: van solo tu grupo y un capitán local, {duracion:sal-y-sol/pesca-deportiva}, saliendo al amanecer de {salida:sal-y-sol/pesca-deportiva}.',
         frase: 'A bordo van solo tu grupo y tu capitán.',
         datos: [
-          { etiqueta: 'A bordo', valor: 'Solo tu grupo, hasta 5 personas' },
-          { etiqueta: 'Duración', valor: 'De 6 a 7 horas' },
-          { etiqueta: 'Sale de', valor: 'Marina La Costa, La Paz' },
+          { etiqueta: 'A bordo', valor: 'Solo tu grupo, hasta {maximo:sal-y-sol/pesca-deportiva} personas' },
+          { etiqueta: 'Duración', valor: '{duracion:sal-y-sol/pesca-deportiva}' },
+          { etiqueta: 'Sale de', valor: '{salida:sal-y-sol/pesca-deportiva}, La Paz' },
           { etiqueta: 'Incluye', valor: 'Capitán, comida y bebidas' },
         ],
         secciones: [
@@ -1220,8 +1237,8 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: '¿Cómo es un día de pesca?',
             parrafos: [
-              'Tu capitán te espera al amanecer en el muelle de Marina La Costa con la panga lista. Él elige el rumbo según cómo amaneció el mar.',
-              'Pasas de 6 a 7 horas en el Mar de Cortés buscando lo que da la temporada. Regresas al muelle con la captura y las fotos, con los pelícanos rondando la panga.',
+              'Tu capitán te espera al amanecer en el muelle de {salida:sal-y-sol/pesca-deportiva} con la panga lista. Él elige el rumbo según cómo amaneció el mar.',
+              'Pasas {duracion:sal-y-sol/pesca-deportiva} en el Mar de Cortés buscando lo que da la temporada. Regresas al muelle con la captura y las fotos, con los pelícanos rondando la panga.',
             ],
           },
           {
@@ -1247,12 +1264,13 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: '¿Cuántos caben y cómo se paga?',
             parrafos: [
-              'Hay pangas para hasta 3 y para hasta 5 personas, y pueden ir niños de cualquier edad. El precio base cubre a 2 personas; desde la tercera hay un cargo por persona que ves antes de pagar.',
-              'Puedes pagar todo en línea o apartar tu fecha con el 30 % y pagar el resto en efectivo, en pesos o en dólares. La licencia de pesca va aparte, solo para quien pesca.',
+              'Hay pangas para hasta 3 y para hasta {maximo:sal-y-sol/pesca-deportiva} personas, y pueden ir niños de cualquier edad. El precio base cubre a {personas:sal-y-sol/pesca-deportiva} personas; cada persona más tiene un cargo que ves antes de pagar.',
+              'Puedes pagar todo en línea o apartar tu fecha con el {anticipo:sal-y-sol/pesca-deportiva} y pagar el resto en efectivo, en pesos o en dólares. La licencia de pesca va aparte, solo para quien pesca.',
             ],
           },
         ],
         faq: [
+          { q: '¿Cuánto cuesta rentar una panga de pesca en La Paz?', a: 'La panga privada con capitán cuesta {precio:sal-y-sol/pesca-deportiva} con IVA incluido, para {personas:sal-y-sol/pesca-deportiva} personas. Cada persona más paga {extra:sal-y-sol/pesca-deportiva}, hasta {maximo:sal-y-sol/pesca-deportiva}. Reservas en línea con tarjeta y puedes apartar con el {anticipo:sal-y-sol/pesca-deportiva}.' },
           { q: '¿Qué es una panga?', a: 'Una lancha abierta de fibra de vidrio con motor fuera de borda, ligera y rápida. Es la embarcación tradicional de los pescadores de Baja California Sur.' },
           { q: '¿La panga es privada o compartida?', a: 'Privada. A bordo van solo tu grupo y tu capitán.' },
           { q: '¿Se pescan marlín y dorado desde una panga?', a: 'Sí. De junio a octubre es la temporada de marlín y dorado en La Paz, y se pescan desde la panga.' },
@@ -1268,13 +1286,13 @@ export const GUIAS: readonly Guia[] = [
         slug: 'panga-fishing-la-paz',
         titulo: 'Panga fishing in La Paz: what it is and what a day on board is like',
         metaTitulo: 'Panga Fishing in La Paz: What It Is & a Day on Board',
-        metaDescripcion: 'What a panga is and what a fishing day in La Paz with a local captain is like: 6 to 7 hours, only your group on board, what is included and what to bring.',
-        respuesta: 'A panga is the open, outboard-powered skiff that the fishermen of Baja California Sur work from. In La Paz you fish on a private panga: just your group and a local captain, for 6 to 7 hours, leaving Marina La Costa at dawn.',
+        metaDescripcion: 'What a panga is and what a fishing day in La Paz with a local captain is like: {duracion:sal-y-sol/pesca-deportiva}, only your group on board, what is included and what to bring.',
+        respuesta: 'A panga is the open, outboard-powered skiff that the fishermen of Baja California Sur work from. In La Paz you fish on a private panga: just your group and a local captain, for {duracion:sal-y-sol/pesca-deportiva}, leaving {salida:sal-y-sol/pesca-deportiva} at dawn.',
         frase: 'On board it is just your group and your captain.',
         datos: [
-          { etiqueta: 'On board', valor: 'Just your group, up to 5 people' },
-          { etiqueta: 'Length', valor: '6 to 7 hours' },
-          { etiqueta: 'Leaves from', valor: 'Marina La Costa, La Paz' },
+          { etiqueta: 'On board', valor: 'Just your group, up to {maximo:sal-y-sol/pesca-deportiva} people' },
+          { etiqueta: 'Length', valor: '{duracion:sal-y-sol/pesca-deportiva}' },
+          { etiqueta: 'Leaves from', valor: '{salida:sal-y-sol/pesca-deportiva}, La Paz' },
           { etiqueta: 'Includes', valor: 'Captain, food and drinks' },
         ],
         secciones: [
@@ -1288,8 +1306,8 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'What is a fishing day like?',
             parrafos: [
-              'Your captain is waiting at dawn on the Marina La Costa dock with the panga ready. He picks the heading based on how the sea looks that morning.',
-              'You spend 6 to 7 hours on the Sea of Cortez going after whatever the season brings. You come back to the dock with the catch and the photos, pelicans circling the panga.',
+              'Your captain is waiting at dawn on the {salida:sal-y-sol/pesca-deportiva} dock with the panga ready. He picks the heading based on how the sea looks that morning.',
+              'You spend {duracion:sal-y-sol/pesca-deportiva} on the Sea of Cortez going after whatever the season brings. You come back to the dock with the catch and the photos, pelicans circling the panga.',
             ],
           },
           {
@@ -1315,12 +1333,13 @@ export const GUIAS: readonly Guia[] = [
           {
             titulo: 'How many fit, and how do I pay?',
             parrafos: [
-              'There are pangas for up to 3 and for up to 5 people, and children of any age can come. The base price covers 2 people; from the third there is a per-person charge that you see before you pay.',
-              'You can pay in full online, or hold your date with 30% and pay the rest in cash, in pesos or dollars. Fishing licenses are separate, only for those who fish.',
+              'There are pangas for up to 3 and for up to {maximo:sal-y-sol/pesca-deportiva} people, and children of any age can come. The base price covers {personas:sal-y-sol/pesca-deportiva} people; each additional person has a charge that you see before you pay.',
+              'You can pay in full online, or hold your date with {anticipo:sal-y-sol/pesca-deportiva} and pay the rest in cash, in pesos or dollars. Fishing licenses are separate, only for those who fish.',
             ],
           },
         ],
         faq: [
+          { q: 'How much does a panga fishing charter in La Paz cost?', a: 'The private panga with a captain costs {precio:sal-y-sol/pesca-deportiva}, tax included, for {personas:sal-y-sol/pesca-deportiva} people. Each additional person pays {extra:sal-y-sol/pesca-deportiva}, up to {maximo:sal-y-sol/pesca-deportiva}. You book online by card and can hold your date with {anticipo:sal-y-sol/pesca-deportiva}.' },
           { q: 'What is a panga?', a: 'An open fiberglass skiff with an outboard motor, light and fast. It is the traditional boat of the fishermen of Baja California Sur.' },
           { q: 'Is the panga private or shared?', a: 'Private. Only your group and your captain are on board.' },
           { q: 'Can you catch marlin and dorado from a panga?', a: 'Yes. June to October is marlin and dorado season in La Paz, and they are caught from the panga.' },
@@ -1334,6 +1353,8 @@ export const GUIAS: readonly Guia[] = [
       },
     },
   },
+  // 9 a 15. Las que salieron del estudio de competencia (2026-11-16), en su propio archivo.
+  ...GUIAS_ESTUDIO,
 ];
 
 /** La guía con ese slug en ese idioma. */

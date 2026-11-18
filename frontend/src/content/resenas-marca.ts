@@ -35,7 +35,8 @@ export const RESENAS_MARCA: readonly ResenaMarca[] = [
       'I had a thousand unforgettable experiences when I came to La Paz, thanks to the service and the tours you offer. When I come back I will definitely book with you again!!',
     idioma: 'es',
     estrellas: 5,
-    sedes: ['la-paz', 'la-ventana', 'puerto-chale'],
+    // Dice «cuando vine a La Paz»: en otra sede se leería como una opinión ajena (PFD del detalle, 2026-11-17).
+    sedes: ['la-paz'],
   },
   {
     autor: 'Gustavo Santaolalla',

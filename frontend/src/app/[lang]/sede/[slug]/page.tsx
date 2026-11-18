@@ -10,6 +10,7 @@ import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { getEmpresa } from '@/content/empresas';
 import { getPaquetesSede, getSedes, getServiciosSede, type Moneda, type ServicioCatalogo } from '@/lib/api';
 import { sedeConVentana } from '@/lib/horario-servicio';
+import { conCatalogo, serviciosParaTexto } from '@/lib/catalogo-en-texto';
 import { fotosAptas, palabrasDeSede } from '@/lib/etiquetas-catalogo';
 import { tieneWhatsapp, whatsappHref, whatsappVisible } from '@/lib/contacto';
 import { hrefSede } from '@/lib/routes';
@@ -38,9 +39,11 @@ type Props = { params: Promise<{ lang: string; slug: string }>; searchParams: Pr
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lang, slug } = await params;
   if (!hasLocale(lang)) return {};
-  const contenido = getSedeContenido(slug, lang);
-  if (!contenido) return {};
-  const dict = await getDictionary(lang);
+  const escrito = getSedeContenido(slug, lang);
+  if (!escrito) return {};
+  // Título y descripción con los datos del backoffice, como el cuerpo (`catalogo-en-texto`).
+  const [dict, servicios, paquetes] = await Promise.all([getDictionary(lang), getServiciosSede(slug, lang).catch(() => null), getPaquetesSede(slug, lang).catch(() => null)]);
+  const contenido = conCatalogo({ metaTitle: escrito.metaTitle, metaDescription: escrito.metaDescription }, serviciosParaTexto(servicios, paquetes), lang);
   return metadataDePagina({
     lang, ruta: `/sede/${slug}`, titulo: contenido.metaTitle, tituloCompleto: true, descripcion: contenido.metaDescription,
     descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
@@ -60,8 +63,9 @@ export default async function SedePage({ params, searchParams }: Props) {
   const query = await searchParams;
   const moneda: Moneda = typeof query.moneda === 'string' && query.moneda.toUpperCase() === 'USD' ? 'USD' : 'MXN';
   const [dict, paquetes, servicios] = await Promise.all([getDictionary(lang), getPaquetesSede(slug, lang).catch(() => null), getServiciosSede(slug, lang).catch(() => null)]);
-  // La hora de salida de los textos es la del servicio destacado en el backoffice.
-  const contenido = sedeConVentana(escrito, servicios);
+  // La hora de salida de los textos es la del servicio destacado en el backoffice, y precios, duraciones, personas y
+  // anticipos salen de cada servicio (`catalogo-en-texto`): ningún texto repite a mano un dato del backoffice.
+  const contenido = conCatalogo(sedeConVentana(escrito, servicios), serviciosParaTexto(servicios, paquetes), lang);
   const protagonista = getEmpresa(contenido.empresaProtagonistaSlug);
   const isotipoSede = protagonista ? (protagonista.simbolo ?? protagonista.logo) : undefined;
   // Dónde va el logo largo como sello: sin `secciones`, solo en Temporadas (Sal y Sol).
@@ -70,8 +74,9 @@ export default async function SedePage({ params, searchParams }: Props) {
   const marcaSede = protagonista ? { nombre: protagonista.nombre, logo: protagonista.logo, simbolo: protagonista.simbolo, simboloBarra: protagonista.simboloBarra, logoLargo: protagonista.logoLargo } : undefined;
   const empresas = [protagonista, ...contenido.otrasEmpresas.map(getEmpresa)].filter((e) => e !== undefined);
   const { temporadas } = contenido;
-  // Máximo 8 preguntas: las que se pintan son las mismas que van al JSON-LD.
-  const faq = contenido.faq?.slice(0, 8);
+  // Máximo 8 preguntas: las que se pintan son las mismas que van al JSON-LD. Una respuesta con un dato del catálogo
+  // que no se pudo resolver ya se quitó arriba.
+  const faq = contenido.faq && contenido.faq.slice(0, 8);
   const textosFaq = dict.sedeContenido.faq;
   const whatsappFaq = tieneWhatsapp ? { texto: textosFaq.whatsapp, boton: textosFaq.whatsappBoton, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null;
   // Solo las confirmadas salen del servidor: el texto de una no confirmada nunca viaja al navegador.

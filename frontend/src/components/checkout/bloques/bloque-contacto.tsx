@@ -3,6 +3,7 @@
 import type { Ref } from 'react';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import { CamposContacto, type CampoContacto } from '@/components/checkout/campos-contacto';
+import { CampoNotas } from '@/components/checkout/campo-notas';
 
 type Props = {
   /** Prefijo de los ids de los campos y sus errores (`checkout`, `traslado`). */
@@ -17,6 +18,8 @@ type Props = {
   /** Con el pago en curso los datos ya no se editan; el paquete no bloquea la tarjeta de datos. */
   disabled?: boolean;
   onCambio: (campo: CampoContacto, valor: string) => void;
+  /** La nota opcional para quien lo lleva, después de lo obligatorio. Sin esto (traslados) no se pide. */
+  notas?: { valor: string; alMar: boolean; paquete?: boolean; onCambio: (valor: string) => void };
 };
 
 /**
@@ -25,8 +28,9 @@ type Props = {
  * código promocional, la reserva y la recuperación los leen), así que plegar
  * la tarjeta no pierde lo escrito.
  */
-export function BloqueContacto({ idPrefijo, lang, checkout, valores, errores, refs, disabled, onCambio }: Props) {
+export function BloqueContacto({ idPrefijo, lang, checkout, valores, errores, refs, disabled, onCambio, notas }: Props) {
   return (
+    <>
     <CamposContacto
       idPrefijo={idPrefijo}
       valores={valores}
@@ -53,5 +57,17 @@ export function BloqueContacto({ idPrefijo, lang, checkout, valores, errores, re
       disabled={disabled}
       onCambio={onCambio}
     />
+    {notas && (
+      <CampoNotas
+        idPrefijo={idPrefijo}
+        textos={checkout.notas}
+        alMar={notas.alMar}
+        paquete={notas.paquete}
+        valor={notas.valor}
+        disabled={disabled}
+        onCambio={notas.onCambio}
+      />
+    )}
+    </>
   );
 }

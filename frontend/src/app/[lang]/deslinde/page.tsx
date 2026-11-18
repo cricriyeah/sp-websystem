@@ -4,7 +4,6 @@ import { getDictionary, hasLocale } from '../dictionaries';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { TextoLegal } from '@/components/texto-legal';
-import { LegalBackLink } from '@/components/legal-back-link';
 import { getEmpresa } from '@/content/empresas';
 import { alternativasDe } from '@/lib/site';
 
@@ -42,9 +41,7 @@ export default async function DeslindePage({ params, searchParams }: PageProps<'
           globals.css) el contenido arrancaria debajo de la barra. El 3rem es
           la separacion que llevaba de siempre. */}
       <main className="mx-auto max-w-3xl px-pagina pt-[calc(3rem_+_var(--nav-alto))] pb-12">
-      <LegalBackLink label={page.back} fallbackHref={`/${lang}/reservar`} />
-
-      <h1 className="mt-8 texto-pagina text-foreground">
+      <h1 className="texto-pagina text-foreground">
         {page.title}
       </h1>
       <p className="mt-2 texto-cuerpo">{page.updated}</p>

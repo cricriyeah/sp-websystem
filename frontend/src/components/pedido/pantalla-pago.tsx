@@ -18,6 +18,7 @@ import { EncabezadoPago } from './encabezado-pago';
 import { ReservaPlegable } from './reserva-plegable';
 import { useCancelarOrden } from './use-cancelar-orden';
 import type { usePagoPedido } from './use-pago-pedido';
+import type { EmpresaDeCompra } from '@/components/checkout/marca-empresa-compra';
 
 type Linea = { etiqueta: string; valor: string };
 type Stepper = ComponentProps<typeof PaginaCheckout>['stepper'];
@@ -36,8 +37,8 @@ type Props = {
   /** Stepper de la vista con un cobro por paso (null si hay un solo cobro). */
   stepperPagos: (indicePago: number, monto?: number) => Stepper | null;
   volverHref: string;
-  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
-  sellos?: { nombre: string; logo?: string }[];
+  empresa?: EmpresaDeCompra;
+  sellos?: EmpresaDeCompra[];
   totalMovil: string | undefined;
   total: string;
   totalConMoneda: string | null;
@@ -55,7 +56,7 @@ type Props = {
   setDestinoTarjetaPago: (nodo: HTMLElement | null) => void;
   sedeSlug: string;
   /** `{ nombre, logo }` por slug (de `content/empresas`): el logo de cada cargo. */
-  empresas: Record<string, { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string }>;
+  empresas: Record<string, EmpresaDeCompra>;
   /** La orden se canceló y se liberó lo retenido: vuelve al formulario con este aviso. */
   onOrdenCancelada: (linea: string) => void;
 };
@@ -165,6 +166,7 @@ export function PantallaPago({
         <EncabezadoCompra
           titulo={checkout.tituloPagina}
             detalle={[paquete.nombre, detalleCompra].filter(Boolean).join(' · ')}
+            empresa={empresa}
         />
       }
       stepper={stepperPagos(pago.indice, Number(pasoPago.monto)) ?? (Number(pasoPago.monto) < Number(pasoPago.precioTotal ?? pasoPago.monto)

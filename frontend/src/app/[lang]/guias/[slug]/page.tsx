@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { ArrowDown, CaretRight, Check } from '@phosphor-icons/react/ssr';
+import { ArrowDown, Check } from '@phosphor-icons/react/ssr';
 import { getDictionary, hasLocale, type Locale } from '../../dictionaries';
 import { GUIAS, getGuia, guiasRelacionadas, partesDeTitulo, slugEnIdioma, type DestinoGuia, type Guia, type GuiaTexto, type TemaGuia } from '@/content/guias';
 import { SEDES_INDICE } from '@/content/sedes-indice';
@@ -27,6 +27,7 @@ import { textosDeDetalle } from '@/components/detalle-vistas';
 import { TarjetaProducto, type VistaProducto } from '@/components/tarjeta-producto';
 import { vistaDePaquete, vistaDeServicio } from '@/components/vistas-catalogo';
 import { FaqSection } from '@/components/faq-section';
+import { clavesDeMarcas, conCatalogo, serviciosParaTexto } from '@/lib/catalogo-en-texto';
 import { GuiaCalendario } from '@/components/guia-calendario';
 import { TarjetasGuias } from '@/components/tarjetas-guias';
 
@@ -49,12 +50,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!hasLocale(lang)) return {};
   const guia = getGuia(slug, lang);
   if (!guia) return {};
-  const dict = await getDictionary(lang);
-  const textos = guia.textos[lang];
+  const escritos = guia.textos[lang];
+  const [dict, servicios] = await Promise.all([getDictionary(lang), serviciosDeMarcas(escritos, lang)]);
+  const textos = conCatalogo({ metaTitulo: escritos.metaTitulo, metaDescripcion: escritos.metaDescripcion }, servicios, lang);
   return metadataDePagina({
     lang, rutas: rutasDe(guia), titulo: textos.metaTitulo, tituloCompleto: true, descripcion: textos.metaDescripcion,
     descripcionGeneral: dict.meta.home.description, nombreDelSitio: dict.home.title,
   });
+}
+
+/**
+ * Los servicios que nombran las marcas del texto (`catalogo-en-texto`), pedidos a la sede de cada empresa: así una
+ * guía puede decir la duración o el precio de un servicio de otra sede. Sin respuesta, `null`.
+ */
+async function serviciosDeMarcas(textos: unknown, lang: Locale) {
+  const sedes = [...new Set(clavesDeMarcas(textos).map((clave) => getEmpresa(clave.split('/')[0])?.sede).filter((sede): sede is string => Boolean(sede)))];
+  const listas = await Promise.all(sedes.map(async (sede) => serviciosParaTexto(...await Promise.all([
+    getServiciosSede(sede, lang).catch(() => null),
+    getPaquetesSede(sede, lang).catch(() => null),
+  ]))));
+  return listas.every((lista) => lista === null) && sedes.length > 0 ? null : listas.flatMap((lista) => lista ?? []);
 }
 
 /**
@@ -167,8 +182,11 @@ export default async function GuiaPage({ params }: Props) {
     if (propio) permanentRedirect(hrefGuia(lang, propio));
     notFound();
   }
-  const [dict, { productos, enlaces }] = await Promise.all([getDictionary(lang), productosDe(guia.destinos, lang)]);
-  const textos = guia.textos[lang];
+  const [dict, { productos, enlaces }, servicios] = await Promise.all([getDictionary(lang), productosDe(guia.destinos, lang), serviciosDeMarcas(guia.textos[lang], lang)]);
+  // Precios, duraciones, personas y anticipos salen del backoffice (`catalogo-en-texto`). Lo que no se pudo resolver
+  // se quita: una pregunta sin su dato no se pinta ni va al JSON-LD.
+  const textos = conCatalogo(guia.textos[lang], servicios, lang);
+  const preguntas = textos.faq;
   const t = dict.guias;
   const sede = guia.sede ? getSedeContenido(guia.sede, lang) : undefined;
   const empresa = guia.sede ? getEmpresa(SEDES_INDICE[guia.sede]?.empresaProtagonistaSlug) : undefined;
@@ -220,7 +238,7 @@ export default async function GuiaPage({ params }: Props) {
         { nombre: t.nombre, url: absolutaEn(lang, '/guias') },
         { nombre: textos.titulo, url },
       ]),
-      jsonLdPreguntas(textos.faq),
+      jsonLdPreguntas(preguntas),
     ]} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={guia.sede ?? undefined} />
     <main>
@@ -228,20 +246,8 @@ export default async function GuiaPage({ params }: Props) {
         <header>
           <HeroMedia imagen={guia.foto.src} video={null} alt={guia.foto.alt[lang]} preload alto="media">
             <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-pagina pb-10 pt-[calc(var(--nav-alto)+1rem)] text-hero-ink sm:pb-14">
-              <nav aria-label={t.migas} className="mb-auto">
-                <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 texto-pequeno font-semibold">
-                  {/* El índice es del hub: en modo «solo sede» se esconde con su flecha. */}
-                  <li className="sale-al-hub flex items-center gap-2">
-                    <Link href={hrefGuias(lang)} className="underline-offset-4 hover:underline">{t.nombre}</Link>
-                    <CaretRight size={12} weight="bold" aria-hidden="true" />
-                  </li>
-                  <li>
-                    {sede
-                      ? <Link href={hrefSede(lang, sede.slug)} className="underline-offset-4 hover:underline">{sede.nombre}</Link>
-                      : t.region}
-                  </li>
-                </ol>
-              </nav>
+              {/* Sin migas: volver a la sede es la esquina del logo, «‹ La Ventana», la misma en todo el sitio. */}
+              <span className="mb-auto" />
               <h1 className="texto-grande">
                 {titulo.principal}
                 {titulo.resto && <span className="mt-3 block texto-subtitulo tracking-normal">{titulo.resto}</span>}
@@ -321,7 +327,7 @@ export default async function GuiaPage({ params }: Props) {
         )}
       </section>
 
-      <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={textos.faq} whatsapp={whatsappFaq} fondo="blanco" />
+      <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={preguntas} whatsapp={whatsappFaq} fondo="blanco" />
 
       {relacionadas.length > 0 && (
         <SectionShell id="guia-mas" fondo="cafe-bruma" titulo={t.masGuias}>

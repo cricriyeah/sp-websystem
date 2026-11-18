@@ -25,7 +25,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       metaTitle: 'Pesca deportiva en La Paz, BCS: tours en panga privada | Sal y Sol',
       metaDescription:
-        'Tours de pesca deportiva en La Paz con capitanes locales: dorado, marlín, pez vela y jurel en el Mar de Cortés. Panga privada para hasta 5, desde Marina La Costa.',
+        'Pesca deportiva en La Paz con capitanes locales: dorado, marlín y jurel en panga privada para hasta {maximo:sal-y-sol/pesca-deportiva}. Reserva en línea con tarjeta y aparta con el {anticipo:sal-y-sol/pesca-deportiva}.',
       hero: {
         video: null,
         imagen: '/photos/panga-rumbo-a-la-pesca.webp',
@@ -37,12 +37,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Pesca', 'Dorado', 'Marlín', 'Jurel', 'Mar', 'Aventura', 'Sal y Sol'],
         encabezado: 'Tours de pesca deportiva en panga privada',
         subtitulo:
-          'Cada mañana salimos de Marina La Costa con tu grupo solo a bordo, a buscar dorado, marlín o lo que esté picando en el Mar de Cortés.',
+          'Cada mañana salimos de {salida:sal-y-sol/pesca-deportiva} con tu grupo solo a bordo, a buscar dorado, marlín o lo que esté picando en el Mar de Cortés.',
         presentacion: 'Somos capitanes de La Paz y crecimos en esta bahía.',
         facts: [
-          { value: '6 a 7 horas', label: 'En el mar' },
+          { value: '{duracion:sal-y-sol/pesca-deportiva}', label: 'En el mar' },
           { value: '{desde} a {hasta}', label: 'Tú eliges la hora de salida' },
-          { value: 'Hasta 5 personas', label: 'Solo tu grupo a bordo' },
+          { value: 'Hasta {maximo:sal-y-sol/pesca-deportiva} personas', label: 'Solo tu grupo a bordo' },
           { value: '365 días al año', label: 'Salimos todos los días' },
         ],
       },
@@ -57,9 +57,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Tu día de pesca',
         etiqueta: 'Tu día de pesca, momento por momento',
         momentos: [
-          { titulo: '{hora}', texto: 'Tu capitán te espera en el muelle de Marina La Costa con la panga lista. La hora la eliges tú, entre {desde} y {hasta}.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
+          { titulo: '{hora}', texto: 'Tu capitán te espera en el muelle de {salida:sal-y-sol/pesca-deportiva} con la panga lista. La hora la eliges tú, entre {desde} y {hasta}.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
           { titulo: 'A bordo', texto: 'En la panga van solo tu grupo y tu capitán. Él decide hacia dónde ir según cómo amaneció el mar.', foto: '/photos/capitan-cabrilla-bahia.webp' },
-          { titulo: 'Pesca', texto: 'De 6 a 7 horas en el Mar de Cortés, buscando lo que da la temporada: dorado, marlín, jurel o sierra.', foto: '/photos/cana-doblada-dorado.webp' },
+          { titulo: 'Pesca', texto: '{duracion:sal-y-sol/pesca-deportiva} en el Mar de Cortés, buscando lo que da la temporada: dorado, marlín, jurel o sierra.', foto: '/photos/cana-doblada-dorado.webp' },
           { titulo: 'Regresa', texto: 'Vuelves al muelle con la captura y las fotos, y con los pelícanos rondando la panga a ver si les toca algo.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
@@ -204,12 +204,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'De junio a octubre es la temporada fuerte: llegan el marlín y el dorado. De enero a abril pica el jurel, con pargo y cabrilla, y en noviembre y diciembre, la sierra. También salen pez vela y atún aleta amarilla. Lo que incluye cada salida está en su tarjeta.',
         },
         {
-          q: '¿Cuántas personas caben en la embarcación?',
-          a: 'Hay dos tamaños de panga: una para hasta 3 personas y otra para hasta 5. En las dos va solo tu grupo, y los niños de cualquier edad pueden ir.',
+          q: '¿Cuánto cuesta un tour de pesca en La Paz?',
+          a: 'La panga privada cuesta {precio:sal-y-sol/pesca-deportiva} con IVA incluido, para {personas:sal-y-sol/pesca-deportiva} personas, con capitán, desayuno ligero, comida y bebidas. Cada persona más paga {extra:sal-y-sol/pesca-deportiva}, hasta {maximo:sal-y-sol/pesca-deportiva} por panga. En la panga va solo tu grupo, y los niños de cualquier edad pueden ir.',
         },
         {
           q: '¿A qué hora salimos y cuánto dura?',
-          a: 'Tú eliges la hora al reservar, entre las {desde} y las {hasta}. El viaje dura de 6 a 7 horas.',
+          a: 'Tú eliges la hora al reservar, entre las {desde} y las {hasta}. El viaje dura {duracion:sal-y-sol/pesca-deportiva}.',
         },
         {
           q: '¿Dónde nos vemos?',
@@ -217,7 +217,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cómo puedo pagar?',
-          a: 'Puedes pagar el 100 % en línea con tarjeta, o apartar tu fecha con el 30 % en línea y pagar el resto en efectivo. Aceptamos pesos mexicanos (MXN) y dólares (USD).',
+          a: 'Puedes pagar el 100 % en línea con tarjeta, o apartar tu fecha con el {anticipo:sal-y-sol/pesca-deportiva} en línea y pagar el resto en efectivo. Aceptamos pesos mexicanos (MXN) y dólares (USD).',
         },
         {
           q: '¿Qué pasa si hay mal clima?',
@@ -247,7 +247,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       metaTitle: 'La Paz Fishing Charters: Private Panga Sportfishing | Sal y Sol',
       metaDescription:
-        'La Paz sportfishing charters with local captains: mahi mahi, marlin, sailfish and yellowtail in the Sea of Cortez. Private panga for up to 5, from Marina La Costa.',
+        'La Paz fishing charters with local captains: mahi mahi, marlin and yellowtail on a private panga for up to {maximo:sal-y-sol/pesca-deportiva}. Book online by card with a {anticipo:sal-y-sol/pesca-deportiva} deposit.',
       hero: {
         video: null,
         imagen: '/photos/panga-rumbo-a-la-pesca.webp',
@@ -259,12 +259,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         palabras: ['Fishing', 'Mahi', 'Marlin', 'Yellowtail', 'Sea', 'Adventure', 'Sal y Sol'],
         encabezado: 'Private panga fishing charters',
         subtitulo:
-          'Every morning we leave Marina La Costa with only your group on board, to go after mahi mahi, marlin or whatever is biting in the Sea of Cortez.',
+          'Every morning we leave {salida:sal-y-sol/pesca-deportiva} with only your group on board, to go after mahi mahi, marlin or whatever is biting in the Sea of Cortez.',
         presentacion: 'We are La Paz captains, and we grew up on this bay.',
         facts: [
-          { value: '6 to 7 hours', label: 'On the water' },
+          { value: '{duracion:sal-y-sol/pesca-deportiva}', label: 'On the water' },
           { value: '{desde} to {hasta}', label: 'You pick the departure time' },
-          { value: 'Up to 5 guests', label: 'Only your group on board' },
+          { value: 'Up to {maximo:sal-y-sol/pesca-deportiva} guests', label: 'Only your group on board' },
           { value: '365 days a year', label: 'We go out every day' },
         ],
       },
@@ -279,9 +279,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Your fishing day',
         etiqueta: 'Your fishing day, moment by moment',
         momentos: [
-          { titulo: '{hora}', texto: 'Your captain meets you on the dock at Marina La Costa with the panga ready. You pick the time, between {desde} and {hasta}.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
+          { titulo: '{hora}', texto: 'Your captain meets you on the dock at {salida:sal-y-sol/pesca-deportiva} with the panga ready. You pick the time, between {desde} and {hasta}.', foto: '/photos/yellowtail-pelicanos-bahia.webp' },
           { titulo: 'On board', texto: 'Only your group and your captain on the panga. He decides where to head based on how the sea looks that morning.', foto: '/photos/capitan-cabrilla-bahia.webp' },
-          { titulo: 'Fishing', texto: 'Six to seven hours on the Sea of Cortez, after whatever the season brings: dorado, marlin, yellowtail or sierra.', foto: '/photos/cana-doblada-dorado.webp' },
+          { titulo: 'Fishing', texto: '{duracion:sal-y-sol/pesca-deportiva} on the Sea of Cortez, after whatever the season brings: dorado, marlin, yellowtail or sierra.', foto: '/photos/cana-doblada-dorado.webp' },
           { titulo: 'Return', texto: 'Back at the dock with your catch and your photos, and pelicans circling the panga hoping for a share.', foto: '/photos/grupo-cabrilla-costa.webp' },
         ],
       },
@@ -424,12 +424,12 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           a: 'June to October is peak season, when marlin and dorado (mahi mahi) arrive. From January to April it is yellowtail, with snapper and cabrilla, and in November and December, sierra. Sailfish and yellowfin tuna come up too. What each trip includes is on its card.',
         },
         {
-          q: 'How many people fit on the boat?',
-          a: 'There are two panga sizes: one for up to 3 people and one for up to 5. Either way it carries only your group, and kids of any age can come.',
+          q: 'How much does a fishing charter in La Paz cost?',
+          a: 'The private panga costs {precio:sal-y-sol/pesca-deportiva}, tax included, for {personas:sal-y-sol/pesca-deportiva} people, with a captain, a light breakfast, lunch and drinks. Each additional person pays {extra:sal-y-sol/pesca-deportiva}, up to {maximo:sal-y-sol/pesca-deportiva} per panga. The panga carries only your group, and kids of any age can come.',
         },
         {
           q: 'What time do we leave and how long is the trip?',
-          a: 'You pick the time when you book, between {desde} and {hasta}. The trip lasts 6 to 7 hours.',
+          a: 'You pick the time when you book, between {desde} and {hasta}. The trip lasts {duracion:sal-y-sol/pesca-deportiva}.',
         },
         {
           q: 'Where do we meet?',
@@ -437,7 +437,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How can I pay?',
-          a: 'You can pay 100% online by card, or hold your date with 30% online and pay the rest in cash. We accept Mexican pesos (MXN) and US dollars (USD).',
+          a: 'You can pay 100% online by card, or hold your date with {anticipo:sal-y-sol/pesca-deportiva} online and pay the rest in cash. We accept Mexican pesos (MXN) and US dollars (USD).',
         },
         {
           q: 'What happens if the weather is bad?',
@@ -461,7 +461,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'Tours en La Ventana: nado con orcas, snorkel y pesca con mosca',
       metaDescription:
-        'Tours en La Ventana, BCS: seafari para nadar con orcas y ver delfines y mobulas, snorkel, pesca con mosca y paquetes de 5 y 7 noches con hotel y traslado.',
+        'Tours en La Ventana, BCS: seafari para nadar con orcas, pesca con mosca y paquetes de 5 y 7 noches con hotel y traslado. Reserva en línea con tarjeta.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -480,9 +480,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Tu día en La Ventana',
         etiqueta: 'Tu día en La Ventana, momento por momento',
         momentos: [
-          { titulo: '7:00 am', texto: 'Salimos todos los días entre 7:00 y 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+          { titulo: '{hora:la-ventana-travel/avistamiento-ballenas-orcas}', texto: 'Salimos todos los días {horario:la-ventana-travel/avistamiento-ballenas-orcas}, de {salida:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'Snorkel', texto: 'Te damos el equipo para snorkelear y vamos a un arrecife a nadar entre los peces.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y si el mar lo permite nadas con ellas. También lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos. En total, de 5 a 6 horas.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'En el mar', texto: 'Buscamos orcas, que vienen todo el año, y si el mar lo permite nadas con ellas. También lo que el mar traiga ese día: delfines, lobos marinos y, desde abril, ballenas jorobadas y mobulas. Llevamos algo de comer, aguas y refrescos. En total, {duracion:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
       },
       galeria: [
@@ -551,7 +551,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿A qué hora sale el seafari y cuánto dura?',
-          a: 'Salimos todos los días entre las 7:00 y las 8:00 am, de La Ventana o de Bahía de los Sueños. La salida dura de 5 a 6 horas, e incluye algo de comer, aguas y refrescos, y el equipo para snorkelear.',
+          a: 'Salimos todos los días {horario:la-ventana-travel/avistamiento-ballenas-orcas}, de {salida:la-ventana-travel/avistamiento-ballenas-orcas}. La salida dura {duracion:la-ventana-travel/avistamiento-ballenas-orcas}, e incluye algo de comer, aguas y refrescos, y el equipo para snorkelear.',
         },
         {
           q: '¿Cuántas personas caben y puedo ir en un grupo privado?',
@@ -559,7 +559,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cómo funciona la pesca con mosca?',
-          a: 'Es un día de pesca con mosca (fly fishing) para 2 o 3 personas como máximo. El precio es por día y por grupo, no por persona; lo ves en su tarjeta. La licencia de pesca no está incluida: es un extra que se paga aparte.',
+          a: 'Es un día de pesca con mosca (fly fishing) para hasta {maximo:la-ventana-travel/pesca-con-mosca} personas. El precio es por día y por grupo, no por persona; lo ves en su tarjeta. La licencia de pesca no está incluida: es un extra que se paga aparte.',
         },
         {
           q: '¿Cuándo se ven orcas en La Ventana y se puede nadar con ellas?',
@@ -580,7 +580,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       negocio: null,
       metaTitle: 'La Ventana Tours: Swim with Orcas, Snorkeling & Fly Fishing',
       metaDescription:
-        'Things to do in La Ventana, BCS: swim with orcas on an ocean safari, snorkeling, fly fishing, and 5- or 7-night vacation packages with hotel and transfers.',
+        'La Ventana tours: swim with orcas on an ocean safari, fly fishing, and 5- or 7-night packages with hotel and transfers. Book online by card.',
       hero: {
         video: '/videos/ventana-hero.webm',
         imagen: '/photos/ventana-poster.webp',
@@ -599,9 +599,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Your day in La Ventana',
         etiqueta: 'Your day in La Ventana, moment by moment',
         momentos: [
-          { titulo: '7:00 am', texto: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
+          { titulo: '{hora:la-ventana-travel/avistamiento-ballenas-orcas}', texto: 'We leave every day {horario:la-ventana-travel/avistamiento-ballenas-orcas}, from {salida:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
           { titulo: 'Snorkel', texto: 'We give you the snorkeling gear and head to a reef to swim among the fish.', foto: '/catalogo/la-ventana-travel-paquete-7-noches.webp' },
-          { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and if the sea allows, you swim with them. We also look for whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks. In all, 5 to 6 hours.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
+          { titulo: 'At sea', texto: 'We look for orcas, which visit all year round, and if the sea allows, you swim with them. We also look for whatever the sea brings that day: dolphins, sea lions and, from April, humpback whales and mobula rays. We bring some food, water and soft drinks. In all, {duracion:la-ventana-travel/avistamiento-ballenas-orcas}.', foto: '/catalogo/la-ventana-travel-avistamiento-ballenas-orcas.webp' },
         ],
       },
       galeria: [
@@ -670,7 +670,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'What time does the ocean safari leave, and how long does it last?',
-          a: 'We leave every day between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños. The trip lasts 5 to 6 hours and includes some food, water and soft drinks, and snorkeling gear.',
+          a: 'We leave every day {horario:la-ventana-travel/avistamiento-ballenas-orcas}, from {salida:la-ventana-travel/avistamiento-ballenas-orcas}. The trip lasts {duracion:la-ventana-travel/avistamiento-ballenas-orcas} and includes some food, water and soft drinks, and snorkeling gear.',
         },
         {
           q: 'How many people fit, and can I go in a private group?',
@@ -678,7 +678,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How does fly fishing work?',
-          a: 'It is a day of fly fishing for 2 or 3 people at most. The price is per day and per group, not per person; you can see it on its card. The fishing license is not included: it is an extra, paid separately.',
+          a: 'It is a day of fly fishing for up to {maximo:la-ventana-travel/pesca-con-mosca} people. The price is per day and per group, not per person; you can see it on its card. The fishing license is not included: it is an extra, paid separately.',
         },
         {
           q: 'When can you see orcas in La Ventana, and can you swim with them?',
@@ -699,9 +699,11 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Avistamiento de ballena gris en Bahía Magdalena | Puerto Chale',
+      // El título lleva la frase exacta que se busca (estudio de competencia, 2026-11-16: un portal gana «puerto chale
+      // ballenas» solo por titularse así). La descripción cabe entera en Google y dice cómo se reserva.
+      metaTitle: 'Avistamiento de ballenas en Puerto Chale, Bahía Magdalena',
       metaDescription:
-        'Tours en Puerto Chale, Bahía Magdalena, a 2 horas de La Paz: ballena gris de enero a marzo, ballena jorobada, safari marino y pesca deportiva en el Pacífico.',
+        'Ballena gris en Puerto Chale, Bahía Almejas, a 2 horas de La Paz, de enero a marzo. Safari marino y pesca de atún, marlín y pargo. Reserva en línea con tarjeta.',
       // Fotos reales de Piratas Adventures (dueño, 2026-11-10). Textos pasados por humanizer y por las reglas de taste.
       hero: {
         video: '/videos/puertochale-hero.mp4',
@@ -717,9 +719,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { src: '/photos/puerto-chale/lobos-marinos-en-la-superficie.webp', alt: 'Lobos marinos asoman en la superficie del mar', posicion: '50% 68%' },
         ],
         palabras: ['Ballenas', 'Safari', 'Pesca', 'Bahía'],
-        encabezado: 'Avistamiento de ballenas, safari marino y pesca',
+        encabezado: 'Avistamiento de ballena gris, safari marino y pesca',
         subtitulo:
-          'Puerto Chale es un pueblo de pescadores en Bahía Magdalena, Baja California Sur, donde la ballena gris llega a parir cada invierno.',
+          'Puerto Chale es un pueblo de pescadores en Bahía Almejas, al sur de Bahía Magdalena, donde la ballena gris llega a parir cada invierno.',
         presentacion:
           'Piratas Adventures, una familia de aquí, te lleva a ver ballenas, al safari marino o a pescar en el Pacífico.',
         facts: [],
@@ -729,10 +731,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Tu día en Puerto Chale',
         etiqueta: 'Tu día en Puerto Chale, momento por momento',
         momentos: [
-          { titulo: 'La bahía', texto: 'Sales en la panga de la familia a Bahía Magdalena, del lado del Pacífico.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
+          { titulo: 'La bahía', texto: 'Sales en la panga de la familia desde Bahía Almejas, la parte sur de Bahía Magdalena, del lado del Pacífico.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
           { titulo: 'Ballenas', texto: 'De enero a marzo la ballena gris está en la bahía con sus crías y se acerca a la panga. A finales de año pasa la ballena jorobada.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
-          { titulo: 'Safari marino', texto: 'Ocho horas recorriendo el mar entre islas, con lobos marinos y peces. Refrescos, aguas y comida sencilla van a bordo.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
-          { titulo: 'Pesca', texto: 'Ocho horas de pesca en el Pacífico. Casi todos traen su propio equipo, y la licencia se agrega a tu reserva.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
+          { titulo: 'Safari marino', texto: '{duracion:piratas-adventures/safari-marino} recorriendo el mar entre islas, con lobos marinos y peces. Refrescos, aguas y comida sencilla van a bordo.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
+          { titulo: 'Pesca', texto: '{duracion:piratas-adventures/pesca-deportiva} en el Pacífico tras el atún, el marlín y el pargo. Casi todos traen su propio equipo, y la licencia se agrega a tu reserva.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
           { titulo: 'De regreso', texto: 'Al final del día, la panga vuelve al pueblo.', foto: '/photos/puerto-chale/estela-rumbo-al-pueblo.webp' },
         ],
       },
@@ -742,7 +744,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Gente de la bahía',
         apertura: 'En Puerto Chale, el mar es el trabajo de toda la vida, y se hereda.',
         historia: [
-          'Puerto Chale es un pueblo de pescadores a la orilla de Bahía Magdalena, del lado del Pacífico. Aquí el oficio pasa de padres a hijos, y Piratas Adventures es una de esas familias: llevan más de cinco generaciones saliendo al mar.',
+          'Puerto Chale es un pueblo de pescadores a la orilla de Bahía Almejas, la parte sur de Bahía Magdalena, del lado del Pacífico. Aquí el oficio pasa de padres a hijos, y Piratas Adventures es una de esas familias: llevan más de cinco generaciones saliendo al mar.',
           'Hoy salen padre e hijo. Conocen la bahía como su casa: por dónde entra el pescado, dónde se arriman las ballenas y a qué hora conviene volver.',
           'Cada invierno ven llegar a la ballena gris a tener a sus crías en la bahía. Y cada temporada se la enseñan, desde su panga, a quien viene de lejos.',
         ],
@@ -781,7 +783,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'Enero a marzo',
             meses: ['Ene', 'Feb', 'Mar'],
             estrella: 'Ballena gris',
-            descripcion: 'La ballena gris llega a la bahía a tener a sus crías. Es la temporada fuerte del avistamiento, en recorridos de 2 horas.',
+            descripcion: 'La ballena gris llega a la bahía a tener a sus crías. Es la temporada fuerte del avistamiento, en recorridos de {duracion:piratas-adventures/avistamiento-ballenas}.',
             otras: '',
             foto: '/photos/puerto-chale/ballena-de-cerca.webp',
             fuerte: true,
@@ -790,7 +792,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'Octubre a diciembre',
             meses: ['Oct', 'Nov', 'Dic'],
             estrella: 'Safari marino',
-            descripcion: 'Ocho horas recorriendo el mar, con el lonche y las bebidas a bordo.',
+            descripcion: '{duracion:piratas-adventures/safari-marino} recorriendo el mar, con el lonche y las bebidas a bordo.',
             otras: 'Ballena jorobada',
             foto: '/photos/puerto-chale/cardumen.webp',
             fuerte: false,
@@ -799,21 +801,35 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'Todo el año',
             meses: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
             estrella: 'Pesca deportiva',
-            descripcion: 'Ocho horas de pesca en el Pacífico. Casi todos los que vienen traen su propio equipo.',
+            descripcion: '{duracion:piratas-adventures/pesca-deportiva} en el Pacífico tras el atún, el marlín y el pargo. Casi todos los que vienen traen su propio equipo.',
             otras: '',
             foto: '/photos/puerto-chale/costa-e-islas.webp',
             fuerte: false,
           },
         ],
       },
+      // La pregunta de precio va primero: es la que más repite Google en estas búsquedas (estudio de competencia,
+      // 2026-11-16). La cifra sale del catálogo (`lib/precio-en-texto.ts`); si no responde, la pregunta no se pinta.
       faq: [
+        {
+          q: '¿Cuánto cuesta ver ballenas en Puerto Chale?',
+          a: 'El avistamiento de {duracion:piratas-adventures/avistamiento-ballenas} cuesta {precio:piratas-adventures/avistamiento-ballenas} con IVA incluido. El precio es por la panga para tu grupo, de 1 a {personas:piratas-adventures/avistamiento-ballenas} personas, y cada persona extra paga {extra:piratas-adventures/avistamiento-ballenas}, hasta {maximo:piratas-adventures/avistamiento-ballenas}. Reservas en línea con tarjeta y puedes apartar con el {anticipo:piratas-adventures/avistamiento-ballenas}. Si quieres más tiempo en la bahía, hay recorridos de 3 y 4 horas: pídelos por WhatsApp.',
+        },
         {
           q: '¿Cuándo es la temporada de ballenas en Bahía Magdalena?',
           a: 'La temporada fuerte es de enero a marzo, cuando la ballena gris entra a la bahía a tener a sus crías. A finales de año pasa la ballena jorobada. El safari marino es de octubre a diciembre y la pesca deportiva, todo el año.',
         },
         {
           q: '¿Cómo llego a Puerto Chale?',
-          a: 'Por carretera: desde La Paz son entre 1 hora 40 minutos y 2 horas de camino. Si necesitas el punto exacto de salida, escríbenos por WhatsApp.',
+          a: 'Por carretera: desde La Paz son entre 1 hora 40 minutos y 2 horas de camino, y desde Los Cabos, unas 4 horas. La guía «Cómo llegar a Puerto Chale» trae la ruta paso a paso. Si necesitas el punto exacto de salida, escríbenos por WhatsApp.',
+        },
+        {
+          q: '¿Dónde queda Bahía Almejas?',
+          a: 'Es la parte sur de Bahía Magdalena, del lado del Pacífico de Baja California Sur, y Puerto Chale está en su orilla. Desde el muelle del pueblo sales en panga a ver ballenas, al safari marino o a pescar.',
+        },
+        {
+          q: '¿Qué se pesca en Puerto Chale?',
+          a: 'Atún, marlín y pargo, en salidas de {duracion:piratas-adventures/pesca-deportiva} en el Pacífico, todo el año. Escríbenos por WhatsApp con tus fechas y te decimos qué está saliendo esa semana.',
         },
         {
           q: '¿Tengo que llevar mi equipo de pesca? ¿La licencia está incluida?',
@@ -825,11 +841,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: '¿Cuántas personas caben?',
-          a: 'En el safari marino el precio es para 6 personas y caben 2 más con un cargo por persona. En el avistamiento de ballenas el precio cubre de 1 a 6 personas, y cada persona extra paga $600 MXN, hasta 8. La pesca es para hasta 4. Si son más, se puede sumar otra embarcación avisando con anticipación.',
-        },
-        {
-          q: '¿Cuánto dura el avistamiento de ballenas?',
-          a: 'El recorrido que reservas aquí es de 2 horas. Si quieres más tiempo, hay recorridos de 3 y 4 horas: pídelos por WhatsApp.',
+          a: 'En el avistamiento de ballenas el precio cubre de 1 a {personas:piratas-adventures/avistamiento-ballenas} personas y caben más, hasta {maximo:piratas-adventures/avistamiento-ballenas}. En el safari marino el precio es para {personas:piratas-adventures/safari-marino} personas y caben más con un cargo por persona, hasta {maximo:piratas-adventures/safari-marino}. La pesca es para hasta {maximo:piratas-adventures/pesca-deportiva}. Si son más, se puede sumar otra embarcación avisando con anticipación.',
         },
         {
           q: '¿Pueden ir niños?',
@@ -848,9 +860,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       slug: 'puerto-chale',
       empresaProtagonistaSlug: 'piratas-adventures',
       negocio: null,
-      metaTitle: 'Magdalena Bay Gray Whale Watching Tours from Puerto Chale',
+      metaTitle: 'Puerto Chale Whale Watching: Gray Whales in Magdalena Bay',
       metaDescription:
-        'Mag Bay whale watching from Puerto Chale, 2 hours from La Paz: gray whales January to March, humpback whales, a marine safari and Pacific sportfishing.',
+        'Puerto Chale whale watching on Bahía Almejas, Mag Bay, 2 hours from La Paz: gray whales January to March, plus tuna, marlin and snapper fishing. Book online.',
       hero: {
         video: '/videos/puertochale-hero.mp4',
         imagen: '/photos/puerto-chale/panga-entre-islas.webp',
@@ -864,9 +876,9 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           { src: '/photos/puerto-chale/lobos-marinos-en-la-superficie.webp', alt: 'Sea lions pop up at the surface', posicion: '50% 68%' },
         ],
         palabras: ['Whales', 'Safari', 'Fishing', 'Bay'],
-        encabezado: 'Whale watching, marine safari and fishing tours',
+        encabezado: 'Gray whale watching, marine safari and fishing tours',
         subtitulo:
-          'Puerto Chale is a fishing village on Magdalena Bay (Mag Bay), Baja California Sur, where gray whales come to calve every winter.',
+          'Puerto Chale is a fishing village on Bahía Almejas, the southern end of Magdalena Bay (Mag Bay), where gray whales come to calve every winter.',
         presentacion:
           'Piratas Adventures, a local family, takes you whale watching, on a marine safari or fishing on the Pacific.',
         facts: [],
@@ -875,10 +887,10 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'Your day in Puerto Chale',
         etiqueta: 'Your day in Puerto Chale, moment by moment',
         momentos: [
-          { titulo: 'The bay', texto: 'You head out in the family panga onto Magdalena Bay, on the Pacific side.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
+          { titulo: 'The bay', texto: 'You head out in the family panga from Bahía Almejas, the southern end of Magdalena Bay, on the Pacific side.', foto: '/photos/puerto-chale/sol-sobre-la-isla.webp' },
           { titulo: 'Whales', texto: 'From January to March the gray whales are in the bay with their calves and come close to the panga. Late in the year, humpback whales pass through.', foto: '/photos/puerto-chale/ballena-y-la-sierra.webp' },
-          { titulo: 'Marine safari', texto: 'Eight hours at sea among the islands, with sea lions and fish. Sodas, water and simple food are on board.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
-          { titulo: 'Fishing', texto: 'Eight hours of fishing on the Pacific. Almost everyone brings their own gear, and the license is added to your booking.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
+          { titulo: 'Marine safari', texto: '{duracion:piratas-adventures/safari-marino} at sea among the islands, with sea lions and fish. Sodas, water and simple food are on board.', foto: '/photos/puerto-chale/lobos-marinos-bajo-el-agua.webp' },
+          { titulo: 'Fishing', texto: '{duracion:piratas-adventures/pesca-deportiva} on the Pacific after tuna, marlin and snapper. Almost everyone brings their own gear, and the license is added to your booking.', foto: '/photos/puerto-chale/buzos-con-marlines.webp' },
           { titulo: 'Heading back', texto: 'At the end of the day, the panga heads back to the village.', foto: '/photos/puerto-chale/estela-rumbo-al-pueblo.webp' },
         ],
       },
@@ -887,7 +899,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         titulo: 'People of the bay',
         apertura: 'In Puerto Chale, the sea is a lifetime of work, and it is handed down.',
         historia: [
-          'Puerto Chale is a fishing village on the shore of Magdalena Bay, on the Pacific side. Here the trade passes from parents to children, and Piratas Adventures is one of those families: they have been going out to sea for more than five generations.',
+          'Puerto Chale is a fishing village on the shore of Bahía Almejas, the southern end of Magdalena Bay, on the Pacific side. Here the trade passes from parents to children, and Piratas Adventures is one of those families: they have been going out to sea for more than five generations.',
           'Today a father and his son go out. They know the bay like their own home: where the fish come in, where the whales come close and what time it is best to head back.',
           'Every winter they watch the gray whales arrive to give birth in the bay. And every season they show them, from their panga, to people who come from far away.',
         ],
@@ -926,7 +938,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'January to March',
             meses: ['Jan', 'Feb', 'Mar'],
             estrella: 'Gray whales',
-            descripcion: 'The gray whales come into the bay to give birth. This is peak whale-watching season, in 2-hour trips.',
+            descripcion: 'The gray whales come into the bay to give birth. This is peak whale-watching season, in trips of {duracion:piratas-adventures/avistamiento-ballenas}.',
             otras: '',
             foto: '/photos/puerto-chale/ballena-de-cerca.webp',
             fuerte: true,
@@ -935,7 +947,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'October to December',
             meses: ['Oct', 'Nov', 'Dec'],
             estrella: 'Marine safari',
-            descripcion: 'Eight hours out at sea, with lunch and drinks on board.',
+            descripcion: '{duracion:piratas-adventures/safari-marino} out at sea, with lunch and drinks on board.',
             otras: 'Humpback whales',
             foto: '/photos/puerto-chale/cardumen.webp',
             fuerte: false,
@@ -944,7 +956,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
             periodo: 'All year',
             meses: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             estrella: 'Sportfishing',
-            descripcion: 'Eight hours of fishing on the Pacific. Most people who come bring their own gear.',
+            descripcion: '{duracion:piratas-adventures/pesca-deportiva} on the Pacific after tuna, marlin and snapper. Most people who come bring their own gear.',
             otras: '',
             foto: '/photos/puerto-chale/costa-e-islas.webp',
             fuerte: false,
@@ -953,12 +965,24 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       },
       faq: [
         {
+          q: 'How much does whale watching in Puerto Chale cost?',
+          a: 'The whale watching trip lasts {duracion:piratas-adventures/avistamiento-ballenas} and costs {precio:piratas-adventures/avistamiento-ballenas}, tax included. The price is for the panga for your group, 1 to {personas:piratas-adventures/avistamiento-ballenas} people, and each extra person pays {extra:piratas-adventures/avistamiento-ballenas}, up to {maximo:piratas-adventures/avistamiento-ballenas}. You book online by card and can hold your date with {anticipo:piratas-adventures/avistamiento-ballenas}. If you want more time on the bay, there are 3- and 4-hour trips: ask for them on WhatsApp.',
+        },
+        {
           q: 'When is whale watching season in Magdalena Bay?',
           a: 'Peak season is January to March, when the gray whales come into the bay to give birth. Late in the year, humpback whales pass through. The marine safari runs October to December, and sportfishing all year.',
         },
         {
-          q: 'How do I get to Puerto Chale?',
-          a: 'By road: from La Paz it is a drive of 1 hour 40 minutes to 2 hours. If you need the exact meeting point, message us on WhatsApp.',
+          q: 'How do I get to Puerto Chale, and how far is Magdalena Bay from Cabo?',
+          a: 'By road: from La Paz it is a drive of 1 hour 40 minutes to 2 hours, and from Los Cabos about 4 hours. The guide “How to get to Puerto Chale” has the route step by step. If you need the exact meeting point, message us on WhatsApp.',
+        },
+        {
+          q: 'Where is Bahía Almejas?',
+          a: 'It is the southern end of Magdalena Bay, on the Pacific side of Baja California Sur, and Puerto Chale sits on its shore. From the village dock you head out by panga to see the whales, on the marine safari or to fish.',
+        },
+        {
+          q: 'What do you catch in Puerto Chale?',
+          a: 'Tuna, marlin and snapper, on trips of {duracion:piratas-adventures/pesca-deportiva} on the Pacific, all year. Message us on WhatsApp with your dates and we will tell you what is biting that week.',
         },
         {
           q: 'Do I need to bring my own fishing gear? Is the license included?',
@@ -970,11 +994,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
         },
         {
           q: 'How many people fit?',
-          a: 'The marine safari is priced for 6 people, with room for 2 more at a per-person charge. Whale watching covers 1 to 6 people, and each extra person pays $600 MXN, up to 8. Fishing is for up to 4. For a bigger group, another boat can be added with some notice.',
-        },
-        {
-          q: 'How long is the whale watching trip?',
-          a: 'The trip you book here is 2 hours. If you want more time, there are 3- and 4-hour trips: ask for them on WhatsApp.',
+          a: 'Whale watching covers 1 to {personas:piratas-adventures/avistamiento-ballenas} people, with room for more, up to {maximo:piratas-adventures/avistamiento-ballenas}. The marine safari is priced for {personas:piratas-adventures/safari-marino} people, with room for more at a per-person charge, up to {maximo:piratas-adventures/safari-marino}. Fishing is for up to {maximo:piratas-adventures/pesca-deportiva}. For a bigger group, another boat can be added with some notice.',
         },
         {
           q: 'Can children come?',

@@ -23,8 +23,8 @@ const SERVICIOS: Record<string, SeoDetalle> = {
       en: 'La Paz Fishing Charter Prices: Private Panga Trip | Sal y Sol',
     },
     encabezado: {
-      es: 'Panga privada en La Paz: precio y qué incluye',
-      en: 'Private panga charter in La Paz: price and what’s included',
+      es: 'Pesca en panga privada en La Paz',
+      en: 'Private panga fishing charter in La Paz',
     },
   },
   'la-ventana-travel/pesca-con-mosca': {
@@ -49,12 +49,15 @@ const SERVICIOS: Record<string, SeoDetalle> = {
   },
   'piratas-adventures/pesca-deportiva': {
     titulo: {
-      es: 'Pesca deportiva en Bahía Magdalena desde Puerto Chale',
-      en: 'Magdalena Bay Sportfishing Charter from Puerto Chale',
+      // «Puerto Chale» y «Mag Bay» al inicio: en esas búsquedas no sale ningún operador (estudio, 2026-11-16).
+      // Bahía Almejas y las especies: dueño, 2026-11-17.
+      es: 'Pesca en Puerto Chale, Bahía Almejas: atún, marlín y pargo',
+      en: 'Puerto Chale Fishing Charter, Mag Bay: Tuna, Marlin, Snapper',
     },
     encabezado: {
-      es: 'Ocho horas en el Pacífico desde Puerto Chale',
-      en: 'Eight hours on the Pacific from Puerto Chale',
+      // El nombre del servicio («Pesca deportiva») va debajo: aquí solo el lugar, sin repetirlo.
+      es: 'Puerto Chale, Bahía Almejas',
+      en: 'Puerto Chale, Bahía Almejas (Mag Bay)',
     },
   },
   'piratas-adventures/safari-marino': {
@@ -63,8 +66,8 @@ const SERVICIOS: Record<string, SeoDetalle> = {
       en: 'Magdalena Bay Marine Safari: Sea Lions and Islands by Boat',
     },
     encabezado: {
-      es: 'Ocho horas entre las islas de Bahía Magdalena',
-      en: 'Eight hours among the islands of Magdalena Bay',
+      es: '{duracion:piratas-adventures/safari-marino} entre las islas de Bahía Magdalena',
+      en: '{duracion:piratas-adventures/safari-marino} among the islands of Magdalena Bay',
     },
   },
 };
@@ -72,8 +75,10 @@ const SERVICIOS: Record<string, SeoDetalle> = {
 const PAQUETES: Record<string, SeoDetalle> = {
   'la-ventana/paquete-5-noches': {
     titulo: {
-      es: 'Paquete de 5 noches en La Ventana: nado con orcas y hotel',
-      en: 'La Ventana 5-Night Package: Swim with Orcas, Hotel Included',
+      // Noches, hotel y salidas al mar, por persona: lo que distingue al paquete de un cuarto de hotel (estudio,
+      // 2026-11-16). Las salidas son las de `detalle-extra.ts`: del día 2 a la última noche.
+      es: 'La Ventana 5 noches: hotel y 4 salidas con orcas, por persona',
+      en: 'La Ventana 5 Nights: Hotel + 4 Orcas Trips, Price per Person',
     },
     encabezado: {
       es: 'Paquete de seafari y nado con orcas en La Ventana',
@@ -82,8 +87,8 @@ const PAQUETES: Record<string, SeoDetalle> = {
   },
   'la-ventana/paquete-7-noches': {
     titulo: {
-      es: 'Paquete de 7 noches en La Ventana: nado con orcas y hotel',
-      en: 'La Ventana 7-Night Package: Swim with Orcas, Hotel Included',
+      es: 'La Ventana 7 noches: hotel y 6 salidas con orcas, por persona',
+      en: 'La Ventana 7 Nights: Hotel + 6 Orcas Trips, Price per Person',
     },
     encabezado: {
       es: 'Paquete de seafari y nado con orcas en La Ventana',

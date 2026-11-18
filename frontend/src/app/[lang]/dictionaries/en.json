@@ -5,14 +5,14 @@
   },
   "meta": {
     "servicioTitulo": "{nombre} in {sede}, BCS",
-    "paqueteTitulo": "{nombre} in {sede}, BCS: Vacation Package",
+    "paqueteTitulo": "{nombre} Package in {sede}, Baja California Sur",
     "home": {
       "title": "Baja California Sur Fishing & Whale Tours | Sun Baja Experience",
       "description": "Baja California Sur tours: La Paz fishing charters, swim with orcas and vacation packages in La Ventana, Magdalena Bay gray whale watching. Weather refund."
     },
     "reservar": {
       "title": "Book your fishing charter",
-      "description": "Choose your ideal day and time, customize your trip with everything you need, and easily secure your spot. Morning departures from Marina La Costa."
+      "description": "Choose your ideal day and time, customize your trip with everything you need, and easily secure your spot. Morning departures."
     },
     "deslinde": {
       "title": "Liability waiver",
@@ -166,7 +166,16 @@
     "empresas": "Companies",
     "colaboradores": "Partners",
     "eligeSede": "Choose a destination",
-    "todosLosDestinos": "All destinations"
+    "todosLosDestinos": "All destinations",
+    "regreso": {
+      "aria": "Back to {destino}",
+      "destinos": { "corto": "Destinations", "aria": "Back to all destinations" },
+      "guias": { "corto": "Guides", "aria": "Back to the guides" },
+      "anterior": { "corto": "Back", "aria": "Back to the previous page" },
+      "pasoAnterior": { "corto": "Previous step", "aria": "Back to the previous step" },
+      "servicio": { "corto": "Details", "aria": "Back to the details" },
+      "paquete": { "corto": "Package", "aria": "Back to the package" }
+    }
   },
   "booking": {
     "timeHelp": "Departure between {desde} and {hasta}",
@@ -194,7 +203,7 @@
       },
       {
         "icon": "horas",
-        "title": "6 to 7 hour tour",
+        "title": "{duracion:sal-y-sol/pesca-deportiva} on the water",
         "body": "Morning departures between {desde} and {hasta}, tailored to the time that suits you best."
       }
     ],
@@ -224,7 +233,7 @@
     "redAria": "Sun Baja Experience on {red} (opens in a new tab)",
     "pagosLabel": "Payment methods",
     "pagosTarjetas": "Credit and debit cards",
-    "pagosEfectivo": "Hold your date with 30% and pay the rest in cash",
+    "pagosEfectivo": "Hold your date with a deposit and pay the rest in cash",
     "pagosEfectivoCorto": "Cash",
     "credito": "Designed and developed by"
   },
@@ -343,6 +352,15 @@
     "phonePlaceholderOther": "Number without the country code",
     "fullName": "Full name",
     "email": "Email",
+    "notas": {
+      "tituloMar": "Notes for your captain",
+      "titulo": "Notes for the company",
+      "opcional": "Optional",
+      "ejemplo": "E.g. It is my first time fishing, we are celebrating a birthday, I am allergic to shellfish.",
+      "ayuda": "The company taking you out reads them before your trip.",
+      "ayudaPaquete": "The companies in your package read them before you arrive.",
+      "restantes": "{n} characters left"
+    },
     "contactExamples": {
       "fullName": "e.g. Jane Smith",
       "phone": "e.g. 612 123 4567",
@@ -445,8 +463,8 @@
     "paymentMethod": {
       "headline": "Payment option",
       "full": "100% online",
-      "deposit": "30% deposit online",
-      "depositNote": "Hold your date with 30% and pay the rest in cash."
+      "deposit": "{n}% deposit online",
+      "depositNote": "Hold your date with {n}% and pay the rest in cash."
     },
     "amountDueNow": "Total due now",
     "promoCode": {
@@ -777,6 +795,8 @@
       "tambienEn": "More to do in {sede}",
       "carril": "More services in {sede}",
       "verSede": "See everything in {sede}",
+        "reservarFecha": "Pick a date and book",
+        "conoceHistoria": "Read their story",
       "reservarServicio": "Book {nombre}",
       "etiquetaOpera": "With",
       "etiquetaIncluye": "Includes",
@@ -790,6 +810,9 @@
         "alMar": "At sea",
         "recogida": "Pickup",
         "hasta": "Up to {n}",
+          "equipo": "Gear",
+          "licencia": "Fishing license",
+          "licenciaNota": "Per person fishing. Add it when you book",
         "salidas": "{n} trips",
         "aeropuerto": "Airport"
       },
@@ -801,7 +824,28 @@
       "notaExtraMax": "The price includes {n} guests and adds {monto} for each extra guest, up to {max}.",
       "cobroPorEmpresa": "Each company charges its own part: you will see one payment per company.",
       "extraPrecio": "+{monto}",
-      "porPersona": "per person"
+      "porPersona": "per person",
+      "verMapa": "See on the map",
+      "sePesca": "What you catch",
+      "propina": "The tip for your captain is separate. It is customary to leave one if you had a good day, and how much is up to you.",
+      "condiciones": {
+        "titulo": "Book with peace of mind",
+        "confirmas": "Your spot is confirmed the moment you pay.",
+        "clima": "If the weather keeps the boat in, you pick another date or get all your money back.",
+        "fecha48": "Change your date free of charge up to 48 hours before.",
+        "fecha30": "Change your date free of charge up to 30 days before you arrive.",
+        "fecha24": "Change the date or time free of charge up to 24 hours before.",
+        "enlace": "Changes and cancellations"
+      },
+      "reglas": {
+        "titulo": "Good to know",
+        "quedasPesca": "You keep your catch",
+        "liberacion": "Catch and release",
+        "limpieza": "Fish cleaned at the dock",
+        "ninos": "Kids welcome",
+        "recogida": "Hotel pickup included",
+        "llegas": "You make your own way to the dock"
+      }
     },
     "tranquilidad": {
       "titulo": "Book with peace of mind",
@@ -991,7 +1035,6 @@
   "serviceDetail": {
     "metaFallback": "Service details",
     "fishingTitle": "Sportfishing in La Paz",
-    "backToServices": "Back to services",
     "fishingDescription": "A private trip around the bay with a local captain. See what is included, prepare your equipment and choose your date.",
     "unavailableDescription": "We could not load the details right now. Please try again in a few minutes.",
     "book": "Book",

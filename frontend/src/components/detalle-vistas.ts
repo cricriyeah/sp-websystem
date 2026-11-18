@@ -6,6 +6,10 @@ import type { Moneda, PaqueteCatalogo, ServicioCatalogo, ServicioPersonalizacion
 import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
 import { bloquesDeDetalle } from '@/content/detalle-extra';
+import { conCatalogo } from '@/lib/catalogo-en-texto';
+import { equipoDeServicio, especiesDeServicio, reglasDeServicio } from '@/content/datos-servicio';
+import { getGuia, slugEnIdioma } from '@/content/guias';
+import { condicionesDeCompra, enlaceAlMapa, etiquetasDeReglas, type ClaseDeCompra } from '@/lib/detalle-servicio';
 import { seoDePaquete, seoDeServicio } from '@/content/seo-detalle';
 import { claveDePaquete, claveDeServicio, galeriaDeCatalogo, imagenDeCatalogo, imagenesDeCatalogo } from '@/content/imagenes-catalogo';
 import { palabraDePaquete, palabraDeServicio } from '@/lib/etiquetas-catalogo';
@@ -14,10 +18,10 @@ import { hrefPaquete, hrefServicio } from '@/lib/booking-href';
 import { formatearPrecio } from '@/lib/pricing-paquete';
 import { aMoneda } from '@/lib/moneda';
 import { precioPublico } from '@/lib/iva';
-import { hrefInicio, hrefSede } from '@/lib/routes';
-import { ANCLA_DE, ANCLA_HUB } from '@/lib/secciones-sede';
+import { hrefGuia, hrefSede } from '@/lib/routes';
+import { ANCLA_DE } from '@/lib/secciones-sede';
 import { tieneWhatsapp, whatsappHref } from '@/lib/contacto';
-import type { BloqueLista, DatoFicha, ExtraDetalle, ItemLista, TextosDetalle, VistaDetalle } from '@/components/detalle-producto';
+import type { BloqueLista, DatoFicha, EtiquetaDetalle, ExtraDetalle, ItemLista, TextosDetalle, VistaDetalle, VistaQuien } from '@/components/detalle-producto';
 import type { VistaEmpresa } from '@/components/tarjeta-empresa';
 import { vistaDeEmpresa } from '@/components/vistas-empresa';
 import { esExclusion, vistaDePaquete, vistaDeServicio } from '@/components/vistas-catalogo';
@@ -41,8 +45,8 @@ function precioDeExtra(extra: ServicioPersonalizacionCatalogo, tipoCambio: strin
   };
 }
 
-function extrasDe(servicios: ServicioCatalogo[], comun: Comun): ExtraDetalle[] {
-  const vistos = new Set<number>();
+function extrasDe(servicios: ServicioCatalogo[], comun: Comun, enFicha: ReadonlySet<number> = new Set()): ExtraDetalle[] {
+  const vistos = new Set<number>(enFicha);
   const extras: ExtraDetalle[] = [];
   for (const servicio of servicios) {
     for (const extra of servicio.personalizaciones) {
@@ -80,15 +84,62 @@ function datosDePago(permiteAnticipo: boolean, porcentaje: number, { dict }: Com
   };
 }
 
+/** «Reserva con tranquilidad» del bloque de compra, con el plazo de lo que se compra y el enlace a la política. */
+function condicionesDe(clase: ClaseDeCompra, alMar: boolean, { lang, dict }: Comun): VistaDetalle['compra']['condiciones'] {
+  const textos = dict.sedeContenido.detalle.condiciones;
+  return {
+    titulo: textos.titulo,
+    renglones: condicionesDeCompra(clase, alMar, textos),
+    enlace: { href: `/${lang}/cancelaciones`, etiqueta: textos.enlace },
+  };
+}
+
+/** Las especies del servicio; la que tiene guía enlaza a la de su idioma. */
+function especiesDe(clave: string, { lang }: Comun): EtiquetaDetalle[] {
+  return especiesDeServicio(clave).map((especie) => {
+    const slug = especie.guia && (lang === 'es' ? especie.guia : slugEnIdioma(especie.guia, lang));
+    return { texto: especie.nombre[lang], href: slug && getGuia(slug, lang) ? hrefGuia(lang, slug) : undefined };
+  });
+}
+
+/**
+ * La licencia de pesca, en la ficha y no como algo que «puedes sumar» (PFD del detalle, 2026-11-17): es obligatoria para
+ * cada quien que pesca. Su precio es el del extra del backoffice.
+ */
+function licenciaDe(servicio: ServicioCatalogo | null, comun: Comun): { dato: DatoFicha; id: number } | null {
+  const licencia = servicio?.personalizaciones.find((p) => p.tipo === 'licencia' && !p.obligatorio && Number(p.precio) > 0);
+  if (!servicio || !licencia) return null;
+  const { moneda, dict } = comun;
+  const ficha = dict.sedeContenido.detalle.ficha;
+  const monto = `${formatearPrecio(precioPublico(aMoneda(licencia.precio, moneda, servicio.tipo_cambio_usd)), moneda)} ${moneda}`;
+  return {
+    id: licencia.personalizacion_id,
+    dato: { etiqueta: ficha.licencia, valor: `+${monto}`, nota: ficha.licenciaNota },
+  };
+}
+
+/**
+ * Quién te lleva, de la empresa protagonista de la sede: la familia (Puerto Chale) con su nombre, sus datos y su
+ * retrato, o el gremio (La Paz) con su foto y su relato. Sin «Conócenos» en la sede, `null` y la empresa va al final.
+ */
+function quienDe(empresaSlug: string, { lang, dict, sede }: Comun): VistaQuien | null {
+  if (!sede || sede.empresaProtagonistaSlug !== empresaSlug) return null;
+  const enlace = { href: hrefSede(lang, sede.slug, ANCLA_DE.conocenos), etiqueta: dict.sedeContenido.detalle.conoceHistoria };
+  const empresa = getEmpresa(empresaSlug)?.nombre;
+  if (sede.familia) {
+    const { quien, retrato, fotos, apertura } = sede.familia;
+    return { nombre: quien.nombre, empresa, detalles: quien.detalles, texto: apertura, retrato, fotos, enlace };
+  }
+  if (sede.conocenos) {
+    const { foto, tripulacion, apertura } = sede.conocenos;
+    return { nombre: empresa ?? sede.nombre, detalles: [], texto: apertura, retrato: foto, fotos: tripulacion.fotos, enlace };
+  }
+  return null;
+}
+
 /** El renglón del `h1`: el propio del producto o, sin él, el lugar («La Paz, Baja California Sur»). */
 function encabezadoDe(propio: string | undefined, sede: SedeContenido | undefined): string | undefined {
   return propio ?? (sede ? `${sede.nombre}, Baja California Sur` : undefined);
-}
-
-function volverASede({ lang, dict, sede }: Comun) {
-  return sede
-    ? { href: hrefSede(lang, sede.slug, ANCLA_DE.reservar), etiqueta: dict.sedeContenido.detalle.verSede.replace('{sede}', sede.nombre) }
-    : { href: hrefInicio(lang, ANCLA_HUB.sedes), etiqueta: dict.serviceDetail.backToServices };
 }
 
 function empresasDe(slugs: string[], { lang, sede }: Comun): VistaEmpresa[] {
@@ -149,14 +200,31 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
   const vista = servicio ? vistaDeServicio(servicio, lang, moneda, sede?.slug ?? '') : null;
   const porGrupo = servicio?.estrategia_precio === 'por_grupo';
   // La ficha: lo que el turista busca primero, en grande. Solo lo que el servicio tiene.
+  // Lo que más cambia la expectativa (el equipo, la licencia) va aquí y no solo en las preguntas (PFD, 2026-11-17).
+  const equipo = equipoDeServicio(clave, lang);
+  const licencia = licenciaDe(servicio, entrada);
   const ficha: DatoFicha[] = [
     ...(vista?.horario ? [{ etiqueta: detalle.ficha.salida, valor: vista.horario }] : []),
     ...(servicio?.duracion ? [{ etiqueta: detalle.ficha.duracion, valor: servicio.duracion }] : []),
     ...(servicio?.capacidad_maxima
       ? [{ etiqueta: detalle.ficha.personas, valor: detalle.ficha.hasta.replace('{n}', String(servicio.capacidad_maxima)) }]
       : []),
-    ...(servicio?.punto_salida ? [{ etiqueta: detalle.ficha.salesDe, valor: servicio.punto_salida }] : []),
+    ...(equipo ? [{ etiqueta: detalle.ficha.equipo, valor: equipo.valor, nota: equipo.nota }] : []),
+    ...(licencia ? [licencia.dato] : []),
+    ...(servicio?.punto_salida
+      ? [{
+          etiqueta: detalle.ficha.salesDe,
+          valor: servicio.punto_salida,
+          ...(() => {
+            const href = enlaceAlMapa(servicio.punto_salida, sede?.nombre);
+            return href ? { enlace: { href, etiqueta: detalle.verMapa } } : {};
+          })(),
+        }]
+      : []),
   ];
+  const alMar = tipo === 'pesca' || tipo === 'paseo';
+  // La propina va con lo que no incluye, dicha antes de pagar: nadie la descubre en la panga.
+  const noIncluye = alMar ? [...propia.noIncluye, detalle.propina] : propia.noIncluye;
   // El cupo máximo ya va en la ficha: el bloque de compra se queda con quién, cuántos cubre el precio y cómo pagas.
   const datos = [
     { etiqueta: detalle.etiquetaOpera, valor: nombreEmpresa },
@@ -168,7 +236,8 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
   return {
     titulo,
     // El traslado no es de una sede: sin renglón.
-    encabezado: traslado ? undefined : encabezadoDe(seoDeServicio(empresaSlug, slug)?.encabezado[lang], sede),
+    // El encabezado propio puede decir la duración del backoffice; sin ella, el genérico de la sede.
+    encabezado: traslado ? undefined : encabezadoDe(conCatalogo(seoDeServicio(empresaSlug, slug)?.encabezado[lang], servicio ? [servicio, ...(entrada.otros.servicios ?? [])] : entrada.otros.servicios, lang) || undefined, sede),
     lead,
     color: servicio ? colorDeServicio(servicio) : colorDeServicio({ tipo_servicio: tipo }),
     palabra: palabraDeServicio(tipo, lang),
@@ -176,13 +245,18 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
     fotos: imagenesDeCatalogo(clave, lang),
     galeria: galeriaDeCatalogo(clave, lang),
     linea: textos.opera.replace('{empresa}', nombreEmpresa),
-    volver: volverASede(entrada),
     tituloQueEs: detalle.queEs,
     ficha,
-    incluye: { titulo: detalle.queIncluye, items: incluye, noIncluye: propia.noIncluye },
-    extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicio ? [servicio] : [], entrada) },
+    especies: { titulo: detalle.sePesca, items: tipo === 'pesca' ? especiesDe(clave, entrada) : [] },
+    reglas: {
+      titulo: detalle.reglas.titulo,
+      items: etiquetasDeReglas(reglasDeServicio(clave), detalle.reglas).map((texto) => ({ texto })),
+    },
+    incluye: { titulo: detalle.queIncluye, items: incluye, noIncluye },
+    extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicio ? [servicio] : [], entrada, new Set(licencia ? [licencia.id] : [])) },
     otros,
-    bloques: bloquesDeDetalle(clave, lang),
+    // Los bloques escritos dicen duraciones y horarios del backoffice con marcas (`catalogo-en-texto`).
+    bloques: conCatalogo(bloquesDeDetalle(clave, lang), servicio ? [servicio, ...(entrada.otros.servicios ?? [])] : entrada.otros.servicios, lang),
     preguntaIncluye: servicio && !traslado && !pesca && propia.incluye.length === 0 && tieneWhatsapp
       ? { etiqueta: textos.preguntaIncluye, href: whatsappHref(textos.whatsappMensaje.replace('{sede}', sede?.nombre ?? '')) }
       : null,
@@ -192,11 +266,15 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
       nota: traslado
         ? dict.serviceDetail.transferInstructions
         : servicio && porGrupo ? notaDeExtra(servicio.personas_incluidas, servicio.precio_persona_extra, servicio.tipo_cambio_usd, servicio.capacidad_maxima, entrada) : undefined,
+      condiciones: puedeReservar
+        ? condicionesDe(traslado || tipo === 'transporte' ? 'traslado' : alMar ? 'mar' : 'otro', alMar, entrada)
+        : null,
       href: puedeReservar
         ? hrefServicio(servicio ?? { slug, empresa_slug: empresaSlug, tipo_servicio: tipo }, lang, moneda, { origen: 'servicio', sede: sede?.slug })
         : null,
       etiquetaBoton: detalle.reservarServicio.replace('{nombre}', titulo),
     },
+    quien: quienDe(empresaSlug, entrada),
     empresas: empresasDe([empresaSlug], entrada),
     tambien: tambienDe(entrada, (c) => c === clave),
   };
@@ -246,13 +324,14 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
     fotos: imagenesDeCatalogo(clave, lang),
     galeria: galeriaDeCatalogo(clave, lang),
     linea: textos.opera.replace('{empresa}', nombresEmpresa.join(' · ')),
-    volver: volverASede(entrada),
     tituloQueEs: detalle.queEsPaquete,
     ficha,
+    especies: { titulo: detalle.sePesca, items: [] },
+    reglas: { titulo: detalle.reglas.titulo, items: [] },
     incluye: { titulo: detalle.queIncluyePaquete, items: incluye, noIncluye: propia.noIncluye },
     extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicios, entrada) },
     otros: [],
-    bloques: bloquesDeDetalle(clave, lang),
+    bloques: conCatalogo(bloquesDeDetalle(clave, lang), servicios, lang),
     preguntaIncluye: null,
     compra: {
       precio: vista.precio,
@@ -260,9 +339,11 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
       nota: paquete.es_cruza_empresa
         ? detalle.cobroPorEmpresa
         : porGrupo ? notaDeExtra(paquete.personas_precio_base, paquete.precio_persona_extra, paquete.tipo_cambio_usd, undefined, entrada) : undefined,
+      condiciones: condicionesDe(paquete.noches ? 'paquete-hotel' : 'paquete', salidasAlMar > 0, entrada),
       href: hrefPaquete(paquete, lang, moneda),
       etiquetaBoton: detalle.reservarServicio.replace('{nombre}', paquete.nombre),
     },
+    quien: quienDe(paquete.empresa_lider_slug, entrada),
     empresas: empresasDe(slugsEmpresa, entrada),
     tambien: tambienDe(entrada, (c) => c === clave),
   };

@@ -182,7 +182,7 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
   `use-borrador.ts`, solo se repone con `?paso=` en la URL); la flecha es «paso
   anterior» salvo en Viaje o con un pago en curso, donde sale al origen
   (`lib/origen.ts`, `?origen=`). La cabecera de estas rutas es `CabeceraMinima`
-  (`components/reserva/`): flecha, marca Sun Baja Experience (+ sello de la empresa si es
+  (`components/reserva/`): la esquina de regreso (`EsquinaBarra`: ‹ + flama + destino) (+ sello de la empresa si es
   de una sola) e idioma ES | EN; sin navegación ni WhatsApp, 64 px como `SiteHeader`. Cada tarjeta es un
   `CheckoutSectionCard` con un solo CTA en el `pie` (`BotonPaso`) y bloques
   separados por espacio, no por rayas. El panel derecho (`StripePanel`) es SOLO
@@ -442,3 +442,66 @@ cómo llegar a Puerto Chale). Acomodo derivado con perception-first-design, cons
   `iniciarPago` revalida viaje, datos y recogida (cambiar el tipo después de elegir
   la recogida puede dejarla incompleta) y reabre la tarjeta que falle.
 - **Catálogo general**: `[lang]/catalogo/page.tsx` expone un banner secundario Perception-First para traslados cuando la sede seleccionada es La Paz.
+
+## Detalle de servicio: condiciones, especies y opiniones (2026-11-16)
+
+Pedido del dueño tras comparar con los marketplaces de pesca; acomodo derivado con perception-first-design (todo dentro
+de las zonas que ya existían, sin fichas de mercado), construido con taste.
+
+- **Bloque de compra**: bajo el botón, «Reserva con tranquilidad» (`compra.condiciones`, `lib/detalle-servicio.ts`):
+  confirmas al pagar, mal clima (solo donde se sale al mar) y el plazo de cambio de lo que se compra (48 h mar, 30 días
+  paquete con hotel, 24 h traslado), con enlace a «Cambios y cancelaciones».
+- **«Así es tu día»**: «Sales de» lleva «Ver en el mapa» (búsqueda de Google Maps); debajo, las especies
+  (`content/datos-servicio.ts`, enlazan a su guía) y las reglas del viaje (`REGLAS`, VACÍAS hasta que el dueño confirme
+  cada una: una regla sin dato no se pinta). La propina va en «No incluye» en pesca y paseos, sin cifra.
+- **Entre la compra y «Quién te lleva»** (`DetalleProducto antesDeEmpresas`): las opiniones con el mismo
+  `OpinionesEmpresas` de la sede. Sin cifra grande ni promedio (decisión del dueño 2026-11-11): por eso no hay renglón
+  de estrellas bajo el título. «Pesca reciente» (fotos del backoffice) se hizo y el dueño la descartó el mismo día.
+- **Checkout**: «Notas para tu capitán» (o «para la empresa» si no se sale al mar) al final de Tus datos
+  (`checkout/campo-notas.tsx`, `ui/area-texto.tsx`), opcional, hasta `NOTAS_MAX` (`lib/notas.ts`, espejo del backend).
+  Servicio suelto y paquete (una o varias empresas); traslados no la piden. Viaja como `notas_cliente`.
+
+## Volver: el logo es el regreso, «‹ + flama + destino» (PFD + Apple, 2026-11-17)
+
+Pedido del dueño: no había una forma confiable de volver ni se sabía si «Atrás» llevaba a la sede o al hub. La primera
+versión (una pastilla «← Destino» bajo la barra) la rechazó en el teléfono: el renglón extra ocupaba alto y
+desequilibraba la barra. Ahora la esquina izquierda de la barra es el regreso, sin alto extra.
+
+- `components/esquina-barra.tsx` (`EsquinaBarra`) va en el slot `inicio` de `BarraFlotante`, en `SiteHeader` y en
+  `CabeceraMinima`. En el inicio (`/es`, `/en`) es la marca de siempre (`LogoMarca`: flama + letras «SBE», enlace al
+  inicio). En cualquier otra página es UN solo enlace (o botón, para el paso anterior del checkout): «‹», la flama
+  (`Flama`, de `barra-flotante.tsx`) y, en el hueco de las letras, el nombre CORTO del destino, con aria-label «Volver a
+  …». Mismo alto de barra; en computadora es igual.
+- Etiquetas cortas (`nav.regreso` en los diccionarios: `corto` + `aria`; la prueba `regreso` exige 13 caracteres o
+  menos para que quepan a 390 px junto a ES/EN y al menú): el nombre de la sede; «Destinos»; «Volver» (legales a la
+  página anterior); «Guías»; en el checkout «Paso anterior», «Detalles» (al servicio) o «Paquete». El nombre va en la letra de
+  los titulares (Consola Mono Bold, `texto-mono-mayus`), en mayúsculas y a 20 px; dos palabras que no caben en 108 px
+  se apilan en dos líneas como un logo, y una palabra de más de 9 letras («DESTINATIONS») baja a 16 px para caber. El «‹» va en una casilla de 12 px (su trazo es un tercio del ícono) a 16 px del borde
+  de la píldora; en el teléfono la casilla vacía del logo de la empresa se esconde para dejarle sitio al nombre.
+- El destino sale de `lib/regreso.ts` (`regresoDe`, probado en `tests/regreso.test.cjs`): un mapa fijo, nunca el
+  historial del navegador (quien llegaba de un anuncio volvía a Instagram). Sede → todos los destinos; servicio o
+  paquete → su sede en «Qué reservar»; guía → su sede en «Antes de venir»; legales → la página del sitio de la que se
+  vino (`sessionStorage` `sbe:ruta-anterior`) o la sede. En el checkout, «Paso anterior» o el destino de `volverHref`
+  (`etiquetaDeHref`). Con `marcaFija` (dinero retenido) la esquina sigue volviendo al paso anterior o a la sede, como
+  antes; solo el logo deja de ser enlace donde lo es.
+- Modo «solo sede»: si el destino es el inicio (`soloHub`), la esquina NO se convierte: queda el logo, que en ese modo
+  lleva a la sede (`hrefLogo`). La cookie solo se lee en el cliente, así que se pintan las dos variantes y el CSS
+  esconde la que no toca antes de pintar: la pieza de regreso lleva `sale-al-hub` y el logo `solo-en-sede`
+  (globals.css, por `data-solo-sede`). Sin parpadeo.
+- Movimiento (framer-motion, solo `m.*`): el nombre entra donde y cuando entraban las letras (750 ms, la barra se
+  vuelve a abrir en cada página porque `SiteHeader` se monta por página), con fundido y resorte críticamente
+  amortiguado (sin rebote, 0.35 s); el «‹» entra desde la izquierda con el mismo resorte, salvo que la página anterior
+  ya lo tuviera (memoria en el módulo): entonces se queda quieto. Si la etiqueta cambia sin cambiar de página (paso del
+  checkout, la página anterior de una legal) es un fundido en el sitio. Al presionar, 0.97 en pointer-down
+  (`whileTap`). Con «reducir movimiento» nada viaja: solo opacidad.
+- El logo de la empresa en la barra (`LogoEmpresaAlLado`, «flama × empresa») solo va pegado a nuestro logo, nunca junto
+  al regreso (PFD, 2026-11-17: «DESTINOS × SAL Y SOL» no tenía sentido y sin la equis el logo quedaba suelto).
+  `empresaEnBarra` (`lib/regreso.ts`) lo decide: sin regreso, siempre; con regreso al inicio (`soloHub`), solo en modo
+  «solo sede» (`solo-en-sede`), donde la esquina vuelve a ser el logo; con cualquier otro regreso, nunca. Entonces la
+  empresa va en la página: el héroe de la sede (su sello) y, en el checkout de una empresa, `EncabezadoCompra` (el logo
+  largo a color a 48 px de alto si la empresa lo tiene, si no el sello de 48 px con su nombre: `MarcaEmpresaCompra`, que
+  usa también el resumen del pedido). En el teléfono no va nunca en la barra.
+- `--nav-alto` ya no incluye el regreso: `--banda-alto` es solo la banda «Continuar reservación»
+  (`components/use-alto-banda.ts`).
+- No añadir otros «Atrás» en las páginas: se quitaron el de la foto del detalle, «Ver todo {sede}», las migas visibles
+  de la guía (su JSON-LD se queda), `LegalBackLink` y la pastilla `BarraRegreso`.

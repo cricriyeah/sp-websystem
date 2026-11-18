@@ -5,14 +5,14 @@
   },
   "meta": {
     "servicioTitulo": "{nombre} en {sede}, BCS",
-    "paqueteTitulo": "{nombre} en {sede}, BCS: paquete vacacional",
+    "paqueteTitulo": "Paquete {nombre} en {sede}, Baja California Sur",
     "home": {
       "title": "Tours de pesca y ballenas en Baja California Sur | Sun Baja Experience",
       "description": "Tours en Baja California Sur: pesca deportiva en La Paz, nado con orcas y paquetes en La Ventana, ballena gris en Bahía Magdalena. Reembolso por mal clima."
     },
     "reservar": {
       "title": "Reserva tu tour de pesca deportiva",
-      "description": "Elige tu día y hora ideal, personaliza tu viaje con lo que necesites y asegura tu lugar fácilmente. Salidas matutinas desde Marina La Costa."
+      "description": "Elige tu día y hora ideal, personaliza tu viaje con lo que necesites y asegura tu lugar fácilmente. Salidas por la mañana."
     },
     "deslinde": {
       "title": "Deslinde de responsabilidad",
@@ -166,7 +166,16 @@
     "empresas": "Empresas",
     "colaboradores": "Colaboradores",
     "eligeSede": "Elige tu sede",
-    "todosLosDestinos": "Todos los destinos"
+    "todosLosDestinos": "Todos los destinos",
+    "regreso": {
+      "aria": "Volver a {destino}",
+      "destinos": { "corto": "Destinos", "aria": "Volver a todos los destinos" },
+      "guias": { "corto": "Guías", "aria": "Volver a las guías" },
+      "anterior": { "corto": "Volver", "aria": "Volver a la página anterior" },
+      "pasoAnterior": { "corto": "Paso anterior", "aria": "Volver al paso anterior" },
+      "servicio": { "corto": "Detalles", "aria": "Volver a los detalles" },
+      "paquete": { "corto": "Paquete", "aria": "Volver al paquete" }
+    }
   },
   "booking": {
     "timeHelp": "Salida entre {desde} y {hasta}",
@@ -194,7 +203,7 @@
       },
       {
         "icon": "horas",
-        "title": "De 6 a 7 horas de tour",
+        "title": "{duracion:sal-y-sol/pesca-deportiva} de tour",
         "body": "Salidas matutinas entre las {desde} y {hasta}, ajustándonos al horario que más te convenga."
       }
     ],
@@ -224,7 +233,7 @@
     "redAria": "Sun Baja Experience en {red} (abre en otra pestaña)",
     "pagosLabel": "Formas de pago",
     "pagosTarjetas": "Tarjetas de crédito y débito",
-    "pagosEfectivo": "Aparta con el 30 % y paga el resto en efectivo",
+    "pagosEfectivo": "Aparta con un anticipo y paga el resto en efectivo",
     "pagosEfectivoCorto": "Efectivo",
     "credito": "Diseñado y desarrollado por"
   },
@@ -343,6 +352,15 @@
     "phonePlaceholderOther": "Número sin el código",
     "fullName": "Nombre completo",
     "email": "Correo electrónico",
+    "notas": {
+      "tituloMar": "Notas para tu capitán",
+      "titulo": "Notas para la empresa",
+      "opcional": "Opcional",
+      "ejemplo": "Ej. Es mi primera vez pescando, celebramos un cumpleaños, tengo alergia a los mariscos.",
+      "ayuda": "Las lee la empresa que te lleva antes de tu salida.",
+      "ayudaPaquete": "Las leen las empresas de tu paquete antes de tu llegada.",
+      "restantes": "Te quedan {n} caracteres"
+    },
     "contactExamples": {
       "fullName": "Ej. María López",
       "phone": "Ej. 612 123 4567",
@@ -445,8 +463,8 @@
     "paymentMethod": {
       "headline": "Modalidad de pago",
       "full": "100% en línea",
-      "deposit": "30% de anticipo en línea",
-      "depositNote": "Apartas con el 30 % y pagas el resto en efectivo."
+      "deposit": "{n} % de anticipo en línea",
+      "depositNote": "Apartas con el {n} % y pagas el resto en efectivo."
     },
     "amountDueNow": "Total a pagar ahora",
     "promoCode": {
@@ -777,6 +795,8 @@
       "tambienEn": "Más para hacer en {sede}",
       "carril": "Otros servicios de {sede}",
       "verSede": "Ver todo {sede}",
+        "reservarFecha": "Elegir fecha y reservar",
+        "conoceHistoria": "Conoce su historia",
       "reservarServicio": "Reservar {nombre}",
       "etiquetaOpera": "Te lleva",
       "etiquetaIncluye": "Incluye",
@@ -790,6 +810,9 @@
         "alMar": "Al mar",
         "recogida": "Recogida",
         "hasta": "Hasta {n}",
+          "equipo": "Equipo",
+          "licencia": "Licencia de pesca",
+          "licenciaNota": "Por cada persona que pesca. La agregas al reservar",
         "salidas": "{n} salidas",
         "aeropuerto": "Aeropuerto"
       },
@@ -801,7 +824,28 @@
       "notaExtraMax": "El precio incluye {n} personas y suma {monto} por cada persona extra, hasta {max}.",
       "cobroPorEmpresa": "Cada empresa cobra su parte: verás un pago por empresa.",
       "extraPrecio": "+{monto}",
-      "porPersona": "por persona"
+      "porPersona": "por persona",
+      "verMapa": "Ver en el mapa",
+      "sePesca": "Lo que se pesca",
+      "propina": "La propina para tu capitán va aparte. Se acostumbra dejarla si te fue bien, y la cantidad la decides tú.",
+      "condiciones": {
+        "titulo": "Reserva con tranquilidad",
+        "confirmas": "Tu lugar queda confirmado en cuanto pagas.",
+        "clima": "Si el clima no deja salir, eliges otra fecha o te devolvemos todo.",
+        "fecha48": "Cambias la fecha sin costo hasta 48 horas antes.",
+        "fecha30": "Cambias la fecha sin costo hasta 30 días antes de tu llegada.",
+        "fecha24": "Cambias la fecha o la hora sin costo hasta 24 horas antes.",
+        "enlace": "Cambios y cancelaciones"
+      },
+      "reglas": {
+        "titulo": "Bueno saber",
+        "quedasPesca": "Te quedas con tu pesca",
+        "liberacion": "Captura y liberación",
+        "limpieza": "Te la limpian en el muelle",
+        "ninos": "Niños bienvenidos",
+        "recogida": "Te recogen en tu hotel",
+        "llegas": "Llegas por tu cuenta al muelle"
+      }
     },
     "tranquilidad": {
       "titulo": "Reserva con tranquilidad",
@@ -991,7 +1035,6 @@
   "serviceDetail": {
     "metaFallback": "Detalles del servicio",
     "fishingTitle": "Pesca deportiva en La Paz",
-    "backToServices": "Volver a los servicios",
     "fishingDescription": "Una salida privada por la bahía con capitán local. Conoce lo que incluye, prepara tu equipo y elige la fecha de tu viaje.",
     "unavailableDescription": "No pudimos cargar la información en este momento. Intenta de nuevo en unos minutos.",
     "book": "Reservar",

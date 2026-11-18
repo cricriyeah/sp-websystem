@@ -4,7 +4,6 @@ import { getDictionary, hasLocale } from '../dictionaries';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { TextoLegal } from '@/components/texto-legal';
-import { LegalBackLink } from '@/components/legal-back-link';
 import { alternativasDe } from '@/lib/site';
 
 export async function generateMetadata({
@@ -36,9 +35,7 @@ export default async function CancelacionesPage({ params }: PageProps<'/[lang]/c
           globals.css) el contenido arrancaria debajo de la barra. El 3rem es
           la separacion que llevaba de siempre. */}
       <main className="mx-auto max-w-3xl px-pagina pt-[calc(3rem_+_var(--nav-alto))] pb-12">
-        <LegalBackLink label={politica.back} fallbackHref={`/${lang}`} />
-
-        <h1 className="mt-8 texto-pagina text-foreground">
+        <h1 className="texto-pagina text-foreground">
           {politica.title}
         </h1>
         <p className="mt-2 texto-cuerpo">{politica.updated}</p>

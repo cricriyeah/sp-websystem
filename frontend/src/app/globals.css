@@ -55,6 +55,9 @@
      linea y el @theme normal solo emite lo que una utilidad usa. */
   --scrim-hoja: rgb(31 26 20 / 0.4); /* tinta al 40 %: fondo atenuado detras de Sheet y AlertDialog */
   --scrim-hero: linear-gradient(to top, rgb(31 26 20 / 0.72) 0%, rgb(31 26 20 / 0.35) 45%, rgb(31 26 20 / 0) 75%); /* degradado en tinta, no negro */
+  /* Detalles y guías (`alto="media"`): el texto sube hasta media foto (título, precio, botón), así que el velo también
+     (dueño, 2026-11-17: «le falta contraste entre la foto y el texto»). Arriba queda tenue para no apagar la foto. */
+  --scrim-hero-media: linear-gradient(to top, rgb(31 26 20 / 0.88) 0%, rgb(31 26 20 / 0.72) 40%, rgb(31 26 20 / 0.45) 70%, rgb(31 26 20 / 0.15) 100%);
   --scrim-temporada: linear-gradient(to top, rgba(10, 11, 14, 0.86) 0%, rgba(10, 11, 14, 0.3) 52%, rgba(10, 11, 14, 0) 100%); /* degradado de season-section sobre cada foto */
   --z-cabecera: 40;
   --z-barra: 50;
@@ -956,4 +959,14 @@
    Fuera de capa y con !important: tiene que ganarle a `sm:inline-block` y a cualquier utilidad. */
 body[data-solo-sede] .sale-al-hub {
   display: none !important;
+}
+
+/* Lo contrario: solo se pinta en modo «solo sede». Hoy, el logo de la esquina de la barra cuando el regreso llevaría al
+   inicio (esquina-barra.tsx): fuera de ese modo se ve «‹ Destinos»; dentro, el logo, que lleva a la sede. */
+.solo-en-sede {
+  display: none !important;
+}
+
+body[data-solo-sede] .solo-en-sede {
+  display: inline-flex !important;
 }

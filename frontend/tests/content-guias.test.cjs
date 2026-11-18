@@ -11,10 +11,14 @@ const SEDES = ['la-paz', 'la-ventana', 'puerto-chale'];
 
 const cadaTexto = () => m.GUIAS.flatMap((guia) => IDIOMAS.map((idioma) => ({ guia, idioma, textos: guia.textos[idioma] })));
 
+// Una marca del catálogo (`{duracion:…}`) se mide con el largo de su valor más largo de hoy.
+const LARGO_MARCA = { duracion: 11, maximo: 2, personas: 2, anticipo: 4, salida: 31, hora: 7, horario: 26, precio: 32, extra: 32 };
+const largo = (texto) => texto.replace(/\{([a-z]+):[a-z0-9-]+\/[a-z0-9-]+\}/g, (_, campo) => 'x'.repeat(LARGO_MARCA[campo] ?? 32)).length;
+
 test('el titulo de la pestaña y la descripcion caben en lo que Google muestra', () => {
   for (const { textos } of cadaTexto()) {
-    assert.ok(textos.metaTitulo.length <= 62, `${textos.metaTitulo.length}: ${textos.metaTitulo}`);
-    assert.ok(textos.metaDescripcion.length <= 155, `${textos.metaDescripcion.length}: ${textos.metaDescripcion}`);
+    assert.ok(largo(textos.metaTitulo) <= 62, `${largo(textos.metaTitulo)}: ${textos.metaTitulo}`);
+    assert.ok(largo(textos.metaDescripcion) <= 155, `${largo(textos.metaDescripcion)}: ${textos.metaDescripcion}`);
   }
 });
 

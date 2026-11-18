@@ -3,6 +3,7 @@ import type { Dictionary, Locale } from '@/app/[lang]/dictionaries';
 import type { Moneda } from '@/lib/api';
 import type { ClaveAccion, TipoProblema } from '@/lib/problema-reserva';
 import type { CargoVisible } from './renglon-cargo';
+import type { EmpresaDeCompra } from '@/components/checkout/marca-empresa-compra';
 
 export type OrderLine = {
   label: string;
@@ -19,7 +20,7 @@ export type StripePanelProps = {
   errorWaiver: boolean;
   lines: OrderLine[];
   /** Quién opera lo que se compra: un sello por empresa, al abrir el resumen (sin foto de catálogo, Task 9.0). */
-  sellos?: { nombre: string; logo?: string }[];
+  sellos?: EmpresaDeCompra[];
   /** Lo elegido en el viaje (fecha, hora, personas…), vivo desde el paso 1. */
   lineasViaje?: { etiqueta: string; valor: string }[];
   /** El total es una vista previa por estrategia (hospedaje por noche) hasta que el servidor cobre. */
@@ -43,6 +44,8 @@ export type StripePanelProps = {
   formaPago: 'completo' | 'anticipo';
   onFormaPagoChange: (value: 'completo' | 'anticipo') => void;
   formaPagoDisponible?: boolean;
+  /** El `porcentaje_anticipo` del backoffice: el texto del anticipo lo dice tal cual. */
+  porcentajeAnticipo?: number;
   codigoPromocional: string;
   onCodigoPromocionalChange: (value: string) => void;
   codigoPromocionalDisponible?: boolean;

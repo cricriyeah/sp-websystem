@@ -4,6 +4,7 @@ import type {
 import type { SeleccionPersonalizacion } from './personalizaciones';
 import { telefonoParaEnviar } from './telefono';
 import type { Atribucion } from './atribucion';
+import { notasParaEnviar } from './notas';
 
 export type DatosContacto = { fullName: string; phone: string; email: string };
 
@@ -50,6 +51,8 @@ type ArgsComunes = {
   atribucion?: Atribucion;
   /** Idioma del sitio (`es` o `en`): el backend escribe los correos del cliente en ese idioma. */
   idioma?: 'es' | 'en';
+  /** La nota para las empresas del paquete; vacía no se manda. */
+  notas?: string;
   /** Zona de un punto de encuentro del catálogo de traslados, o '' si no aplica. */
   zonaDePunto: ZonaDePunto;
 };
@@ -99,6 +102,7 @@ export function armarPayloadOrden(args: ArgsComunes): CrearOrdenInput {
     ref: args.ref,
     atribucion: args.atribucion,
     idioma: args.idioma,
+    ...(args.notas ? { notas_cliente: notasParaEnviar(args.notas) } : {}),
     fecha: args.inicio,
     ...(paquete.pide_hora === false ? {} : { hora: args.hora }),
     componentes: filas,
@@ -132,6 +136,7 @@ export function armarPayloadReserva(args: ArgsComunes): ReservaInput {
     ref: args.ref,
     atribucion: args.atribucion,
     idioma: args.idioma,
+    ...(args.notas ? { notas_cliente: notasParaEnviar(args.notas) } : {}),
     paquete: paquete.slug,
     ...(aeropuerto ? { aeropuerto } : {}),
     personalizaciones,

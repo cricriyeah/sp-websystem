@@ -12,10 +12,13 @@ export type EstadoPedido = {
   moneda: Moneda;
   formaPago: 'completo' | 'anticipo';
   componentes: Record<string, ComponentePedido>;
+  /** La nota opcional para las empresas del paquete («Tus datos»). */
+  notas: string;
 };
 
 export type AccionPedido =
   | { tipo: 'contacto'; cambios: Partial<DatosContacto> }
+  | { tipo: 'notas'; valor: string }
   | { tipo: 'inicio'; valor: string | null }
   | { tipo: 'hora'; valor: string }
   | { tipo: 'moneda'; valor: Moneda }
@@ -56,6 +59,7 @@ export function estadoInicial(paquete: PaqueteCatalogo, opciones: OpcionesEstado
   }
   return {
     contacto: { fullName: '', phone: '', email: '' },
+    notas: '',
     inicio: null,
     hora: horasDePaquete(paquete)[0] ?? '',
     moneda: opciones.moneda,
@@ -76,6 +80,8 @@ export function reducirPedido(estado: EstadoPedido, accion: AccionPedido): Estad
   switch (accion.tipo) {
     case 'contacto':
       return { ...estado, contacto: { ...estado.contacto, ...accion.cambios } };
+    case 'notas':
+      return { ...estado, notas: accion.valor };
     case 'inicio':
       return { ...estado, inicio: accion.valor };
     case 'hora':
@@ -107,6 +113,8 @@ export function reducirPedido(estado: EstadoPedido, accion: AccionPedido): Estad
         ...estado,
         ...accion.estado,
         contacto: { ...accion.estado.contacto, phone: restaurarTelefono(accion.estado.contacto.phone) },
+        // Un borrador anterior a la nota no la trae.
+        notas: typeof accion.estado.notas === 'string' ? accion.estado.notas : '',
         componentes: Object.fromEntries(
           Object.entries(estado.componentes).map(([slug, c]) => [slug, accion.estado.componentes?.[slug] ?? c]),
         ),

@@ -13,15 +13,16 @@ import { iniciales } from '@/lib/iniciales';
  * única señal y lleva el nombre. NUNCA lleva un color por empresa: azul, coral y
  * verde son de actividad.
  */
-type Tamano = 24 | 32 | 64;
+type Tamano = 24 | 32 | 48 | 64;
 
-const CIRCULO: Record<Tamano, string> = { 24: 'size-6', 32: 'size-8', 64: 'size-16' };
+const CIRCULO: Record<Tamano, string> = { 24: 'size-6', 32: 'size-8', 48: 'size-12', 64: 'size-16' };
 // Letra al 40 % del círculo en 32 y 64. A 24 el 40 % (9,6 px) queda bajo el mínimo
 // de 12 px: solo la inicial, en texto-pie.
-const LETRA: Record<Tamano, string> = { 24: 'texto-pie', 32: 'text-[12px] leading-none', 64: 'text-[24px] leading-none' };
+const LETRA: Record<Tamano, string> = { 24: 'texto-pie', 32: 'text-[12px] leading-none', 48: 'text-[20px] leading-none', 64: 'text-[24px] leading-none' };
 const NOMBRE: Record<Tamano, string> = {
   24: 'texto-etiqueta text-foreground',
   32: 'texto-etiqueta text-foreground',
+  48: 'texto-etiqueta text-foreground',
   64: 'texto-paso text-foreground',
 };
 

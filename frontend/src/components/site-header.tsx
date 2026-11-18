@@ -14,15 +14,17 @@ import { leerSedePreferidaCliente } from '@/lib/sede';
 import { guardarSoloSedeCliente, leerSoloSedeCliente } from '@/lib/solo-sede';
 import { hrefInicio, hrefSede } from '@/lib/routes';
 import { ANCLA_HUB } from '@/lib/secciones-sede';
-import { BarraFlotante, LogoEmpresaAlLado, LogoMarca } from '@/components/barra-flotante';
+import { BarraFlotante, LogoEmpresaAlLado } from '@/components/barra-flotante';
+import { EsquinaBarra } from '@/components/esquina-barra';
 import type { LogoLargo } from '@/content/empresas-marca';
 import { WhatsappContact } from '@/components/whatsapp-contact';
 import { SelectorIdioma } from '@/components/selector-idioma';
 import { SedeSelector } from '@/components/sede-selector';
 import { ContinuarReservacion } from '@/components/continuar-reservacion';
+import { useAltoBanda } from '@/components/use-alto-banda';
+import { empresaEnBarra, esLegal, regresoDe } from '@/lib/regreso';
+import { cn } from '@/components/ui/cn';
 import { Button } from '@/components/ui/button';
-
-const MARCA = 'Sun Baja Experience';
 
 // La cookie del modo «solo sede» no cambia mientras la página está abierta (salvo por
 // `guardarSoloSedeCliente`, que también marca <body>): no hace falta suscribirse a nada.
@@ -76,19 +78,19 @@ export function SiteHeader({
   }, [soloSede, sedeSlugActual]);
   const [slugResuelto, setSlugResuelto] = useState<string | undefined>(sedeSlugActual);
   const [sedesDisponibles, setSedesDisponibles] = useState<SedeIndiceEntry[]>(Object.values(SEDES_INDICE));
-  // El header es `fixed` y las paginas se apartan con `--nav-alto`: la banda le suma su
-  // propia altura a traves de `--banda-alto` (ver globals.css), asi todo el contenido baja
-  // solo, sin que cada pagina sepa que existe. Sin banda vale 0 y nada cambia.
+  // La página anterior del sitio en esta pestaña: solo la usan las legales para volver a donde se estaba (a ellas se
+  // llega del pie, del checkout o de un enlace directo). Nunca sale del sitio: sin anterior, vuelven a la sede.
+  const [anterior, setAnterior] = useState<string | null>(null);
   useEffect(() => {
-    const banda = bandaRef.current;
-    if (!banda) return;
-    const raiz = document.documentElement;
-    const medir = () => raiz.style.setProperty('--banda-alto', `${banda.getBoundingClientRect().height}px`);
-    medir();
-    const observador = new ResizeObserver(medir);
-    observador.observe(banda);
-    return () => { observador.disconnect(); raiz.style.removeProperty('--banda-alto'); };
-  }, [mostrarContinuar]);
+    try {
+      const actual = `${window.location.pathname}${window.location.search}`;
+      const guardada = sessionStorage.getItem('sbe:ruta-actual');
+      if (guardada && guardada !== actual) sessionStorage.setItem('sbe:ruta-anterior', guardada);
+      sessionStorage.setItem('sbe:ruta-actual', actual);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage solo existe en el navegador
+      if (esLegal(pathname)) setAnterior(sessionStorage.getItem('sbe:ruta-anterior'));
+    } catch { /* sin almacenamiento: las legales vuelven a la sede */ }
+  }, [pathname]);
   useEffect(() => {
     let montado = true;
     getSedes().catch(() => null).then(data => {
@@ -117,6 +119,21 @@ export function SiteHeader({
   // El logo lleva al inicio: el del sitio, o el de la sede en modo «solo sede».
   const hrefLogo = soloSede ? hrefSede(lang, sedeSlugActual ?? soloSede) : hrefInicio(lang);
   const baseSede = variante === 'sede' && slugActual ? hrefSede(lang, slugActual) : null;
+  // El regreso es la esquina del logo (`EsquinaBarra`, destino de `lib/regreso.ts`). La sede es la de la página o la del
+  // modo «solo sede»; sin ninguna, el regreso va a todos los destinos (no a la primera sede de la lista, que sería adivinar).
+  const slugRegreso = sedeSlugActual ?? soloSede ?? slugResuelto;
+  const sedeRegreso = slugRegreso ? sedesDisponibles.find((s) => s.slug === slugRegreso) ?? SEDES_INDICE[slugRegreso] : undefined;
+  const regreso = regresoDe({
+    lang,
+    ruta: pathname,
+    sede: sedeRegreso ? { slug: sedeRegreso.slug, nombre: sedeRegreso.nombre } : null,
+    anterior,
+    textos: nav.regreso,
+  });
+  const conBanda = mostrarContinuar && Boolean(continuar);
+  // El header es `fixed` y las páginas se apartan con `--nav-alto`: la banda «continuar» le suma su alto por
+  // `--banda-alto` (ver globals.css), así todo el contenido baja solo. El regreso no suma: va dentro de la barra.
+  useAltoBanda(bandaRef, conBanda);
 
   const links = baseSede
     ? (anclas ?? []).map((a) => ({ href: baseSede + a.ancla, label: a.etiqueta }))
@@ -182,14 +199,19 @@ export function SiteHeader({
     <BarraFlotante
       className={className}
       inicio={
-        <Link href={hrefLogo} className="inline-flex" onClick={alPulsarEnlace} aria-label={MARCA}>
-          <LogoMarca girado={open} />
-        </Link>
+        <EsquinaBarra regreso={regreso} hrefLogo={hrefLogo} alPulsar={alPulsarEnlace} girado={open} />
       }
       resto={
         <>
-          <div className="flex min-w-0 shrink-0 items-center gap-3">
-            <LogoEmpresaAlLado empresa={marcaSede} ocultoEnMovil />
+          {/* El logo de la empresa solo va pegado a nuestro logo («Sun Baja × Sal y Sol»), nunca junto al regreso: en la
+              sede normal la esquina es «‹ DESTINOS» y la empresa ya está en el héroe; en modo «solo sede» la esquina es el
+              logo y vuelve la colaboración (`empresaEnBarra`). En el teléfono no va: su hueco queda para el regreso. */}
+          <div className="flex min-w-0 shrink-0 items-center gap-3 max-sm:hidden">
+            {empresaEnBarra(regreso) !== 'nunca' && (
+              <span className={cn('flex min-w-0 items-center', empresaEnBarra(regreso) === 'solo-sede' && 'solo-en-sede')}>
+                <LogoEmpresaAlLado empresa={marcaSede} />
+              </span>
+            )}
           </div>
 
           {links.length > 1 && (
@@ -242,7 +264,7 @@ export function SiteHeader({
       }
       menu={menu}
       debajo={
-        mostrarContinuar && continuar ? (
+        conBanda && continuar ? (
           <div ref={bandaRef} className="mt-2 w-full">
             <ContinuarReservacion lang={lang} dict={{ continuar }} />
           </div>

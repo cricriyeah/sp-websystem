@@ -35,6 +35,7 @@ export function TarjetaComoPagas({
   usdDisponible,
   formaPago,
   onFormaPagoChange,
+  porcentajeAnticipo,
   formaPagoDisponible = true,
   codigoPromocional,
   onCodigoPromocionalChange,
@@ -173,14 +174,14 @@ export function TarjetaComoPagas({
                           onChange={() => onFormaPagoChange(option)}
                           className="size-6 shrink-0 accent-tinta"
                         />
-                        {option === 'completo' ? checkout.paymentMethod.full : checkout.paymentMethod.deposit}
+                        {option === 'completo' ? checkout.paymentMethod.full : checkout.paymentMethod.deposit.replace('{n}', String(porcentajeAnticipo ?? ''))}
                       </label>
                     ))}
                   </fieldset>
                   {/* La explicacion del anticipo solo cuando se elige: casi todos
                       pagan completo y no necesitan leerla. */}
                   <Despliegue abierto={formaPago === 'anticipo'}>
-                    <p className="texto-cuerpo">{checkout.paymentMethod.depositNote}</p>
+                    <p className="texto-cuerpo">{checkout.paymentMethod.depositNote.replace('{n}', String(porcentajeAnticipo ?? ''))}</p>
                   </Despliegue>
                 </BloqueDePaso>
               )}

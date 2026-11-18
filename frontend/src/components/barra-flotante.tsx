@@ -13,7 +13,7 @@ type BarraFlotanteProps = {
   resto: ReactNode;
   /** Lo que cuelga bajo la barra (menú móvil), ya posicionado respecto de ella. */
   menu?: ReactNode;
-  /** La banda que va pegada debajo de la barra (continuar reservación). */
+  /** La banda que va pegada debajo de la barra (continuar reservación). El regreso NO va aquí: es la esquina del logo. */
   debajo?: ReactNode;
   /** Clases extra del contenedor fijo. Existe para el `print:hidden` del recibo. */
   className?: string;
@@ -59,35 +59,46 @@ export function BarraFlotante({ inicio, resto, menu, debajo, className, oculta, 
   );
 }
 
-type LogoMarcaProps = {
-  /** `true` gira el logo media vuelta (el menú móvil lo usa al abrirse; al cerrarse vuelve hacia la izquierda). */
+type FlamaProps = {
+  /** `true` gira el isotipo media vuelta (el menú móvil lo usa al abrirse; al cerrarse vuelve hacia la izquierda). */
   girado?: boolean;
   /** Milisegundos que espera el giro de entrada: el checkout lo retrasa hasta que su barra ya se abrió. */
   retraso?: number;
+  className?: string;
 };
 
 /**
- * Nuestra marca: el logo mediano de Sun Baja Experience (isotipo y letras en dos capas con el mismo
- * encuadre), sin recuadro. Al cargar, el isotipo gira media vuelta (`.logo-gira`) mientras la barra se
- * expande y las letras aparecen con un fundido desde el isotipo hacia la derecha (`.logo-letras-barra`).
- * Con `girado`, el isotipo da otra media vuelta al abrir el menú móvil: la transición vuelve por el mismo
- * camino, o sea hacia la izquierda, al cerrarlo. El giro de carga es una animación y el del menú una
- * transición, y las dos usan `transform`, por eso van en capas distintas.
+ * La flama de Sun Baja Experience (44 px), sola. Al cargar da media vuelta (`.logo-gira`) mientras la barra se
+ * expande; con `girado`, otra media vuelta al abrir el menú móvil, que vuelve por el mismo camino al cerrarlo. El giro
+ * de carga es una animación y el del menú una transición, y las dos usan `transform`, por eso van en capas distintas.
+ * La usan `LogoMarca` (flama + letras) y la esquina de regreso (`components/esquina-barra.tsx`: ‹ + flama + destino).
  */
-export function LogoMarca({ girado = false, retraso = 0 }: LogoMarcaProps) {
+export function Flama({ girado = false, retraso = 0, className }: FlamaProps) {
   const estilo: CSSProperties | undefined = retraso ? { animationDelay: `${retraso}ms` } : undefined;
   return (
-    <span className="relative inline-flex h-11 w-24 shrink-0" style={{ '--retraso': `${retraso}ms` } as CSSProperties}>
-      <span className="logo-gira absolute left-0 top-0 inline-flex size-11" style={estilo}>
-        <span
-          className={cn(
-            'inline-flex transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
-            girado && 'rotate-180',
-          )}
-        >
-          <Image src="/sunbajaexperience/logosm.svg" alt={MARCA} width={44} height={44} className="size-11" priority />
-        </span>
+    <span className={cn('logo-gira inline-flex size-11 shrink-0', className)} style={estilo}>
+      <span
+        className={cn(
+          'inline-flex transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+          girado && 'rotate-180',
+        )}
+      >
+        <Image src="/sunbajaexperience/logosm.svg" alt={MARCA} width={44} height={44} className="size-11" priority />
       </span>
+    </span>
+  );
+}
+
+/**
+ * Nuestra marca: el logo mediano de Sun Baja Experience (la flama y las letras en dos capas con el mismo encuadre),
+ * sin recuadro. Las letras aparecen con un fundido desde la flama hacia la derecha (`.logo-letras-barra`) cuando la
+ * barra ya casi terminó de abrirse. Solo se ve así en el inicio: en las demás páginas la esquina es el regreso
+ * (`EsquinaBarra`), con el nombre del destino en el hueco de las letras.
+ */
+export function LogoMarca({ girado = false, retraso = 0 }: Omit<FlamaProps, 'className'>) {
+  return (
+    <span className="relative inline-flex h-11 w-24 shrink-0" style={{ '--retraso': `${retraso}ms` } as CSSProperties}>
+      <Flama girado={girado} retraso={retraso} className="absolute left-0 top-0" />
       <Image src="/sunbajaexperience/logomed-letras.svg" alt="" fill sizes="96px" className="logo-letras-barra" priority />
     </span>
   );
@@ -101,7 +112,8 @@ type LogosProps = {
 };
 
 /**
- * La empresa que acompaña a la marca: su logo suelto (sin círculo ni borde) detrás de una equis, o
+ * La empresa que acompaña a la marca: su logo suelto (sin círculo ni borde) detrás de una equis (solo pegada a nuestro
+ * logo, nunca junto al regreso: `empresaEnBarra` en `lib/regreso.ts`), o
  * su nombre en texto si todavía no tiene logo. Nunca iniciales: el nombre es la identidad.
  */
 export function LogoEmpresaAlLado({ empresa, ocultoEnMovil = false }: LogosProps) {

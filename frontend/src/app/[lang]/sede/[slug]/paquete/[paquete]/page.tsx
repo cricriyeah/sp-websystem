@@ -7,6 +7,7 @@ import { MedirEvento } from '@/components/medir-evento';
 import { conIva } from '@/lib/iva';
 import { API_URL, ApiError, getPaqueteDetalle, getPaquetesSede, getServiciosSede } from '@/lib/api';
 import { sedeConVentana } from '@/lib/horario-servicio';
+import { conCatalogo, serviciosParaTexto } from '@/lib/catalogo-en-texto';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
@@ -68,7 +69,7 @@ export default async function PaquetePage({ params, searchParams }: Props) {
     getPaquetesSede(slug, lang).catch(() => null),
   ]);
   if (!paquete) notFound();
-  const sede = sedeConVentana(escrita, servicios);
+  const sede = conCatalogo(sedeConVentana(escrita, servicios), serviciosParaTexto(servicios, paquetes), lang);
   const moneda = query.moneda === 'USD' ? 'USD' : 'MXN';
   const vista = vistaDeDetallePaquete({ lang, moneda, dict, sede, otros: { servicios, paquetes }, paquete });
   const urlPaquete = absolutaEn(lang, `/sede/${slug}/paquete/${paqueteSlug}`);
@@ -99,8 +100,11 @@ export default async function PaquetePage({ params, searchParams }: Props) {
     }} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede.slug} />
     <main>
-      <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />
-      {preguntas?.length ? <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={preguntas} whatsapp={whatsappFaq} fondo="cafe-bruma" /> : null}
+      <DetalleProducto
+        vista={vista}
+        textos={textosDeDetalle(dict)}
+        preguntas={preguntas?.length ? <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={preguntas} whatsapp={whatsappFaq} fondo="blanco" /> : null}
+      />
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={sede.negocio} sedeSlug={sede.slug} empresasDeslinde={[...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]} />
   </>;

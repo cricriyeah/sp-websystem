@@ -68,6 +68,7 @@ import { marcarPaginaComoConfirmacion, paginaPideConfirmacion } from '@/lib/marc
 import { guardarPendiente } from '@/lib/pendientes';
 import { evaluar, restaurarTelefono, telefonoParaEnviar } from '@/lib/telefono';
 import { lineaDeTelefono, nombradorDePaises } from '@/lib/telefono-campo';
+import type { EmpresaDeCompra } from '@/components/checkout/marca-empresa-compra';
 
 const CLAVE_CHECKOUT_ID = 'salysol:traslados:checkout_id';
 
@@ -91,7 +92,7 @@ type TrasladoViewProps = {
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
   /** `{ nombre, logo }` de la empresa de transporte (de `content/empresas`, server-only). */
-  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
+  empresa?: EmpresaDeCompra;
 };
 
 export function TrasladoView({
@@ -921,6 +922,7 @@ export function TrasladoView({
           <EncabezadoCompra
             titulo={checkout.tituloPagina}
             detalle={traslados.title}
+            empresa={empresa}
           />
         }
         stepper={{ ...stepperPago, steps: stepsList }}
@@ -999,6 +1001,7 @@ export function TrasladoView({
             formaPago={formaPago}
             onFormaPagoChange={setFormaPagoSeleccionada}
             formaPagoDisponible={permiteAnticipo}
+            porcentajeAnticipo={catalogo.servicio.porcentaje_anticipo}
             codigoPromocional={codigoPromocional}
             onCodigoPromocionalChange={onCodigoPromocionalChange}
             promoEstado={promoEstado}

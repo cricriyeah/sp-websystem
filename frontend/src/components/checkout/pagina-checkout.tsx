@@ -9,6 +9,7 @@ import { CabeceraMinima } from '@/components/reserva/cabecera-minima';
 import { ProveedorBarra } from '@/components/reserva/contexto-barra';
 import { LineaProgreso } from '@/components/reserva/linea-progreso';
 import { useMovil } from '@/components/reserva/use-movil';
+import type { EmpresaDeCompra } from '@/components/checkout/marca-empresa-compra';
 
 type Props = {
   lang: Locale;
@@ -20,8 +21,11 @@ type Props = {
    * «salir» al origen (`volverHref`). Sin esta función, siempre sale.
    */
   alPasoAnterior?: () => void;
-  /** Checkout de una sola empresa: su sello va junto a la marca (`CabeceraMinima`). */
-  empresa?: { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string };
+  /**
+   * Checkout de una sola empresa. Su logo ya no va en la barra junto al regreso (solo en modo «solo sede», ver
+   * `empresaEnBarra`); su sello va en `EncabezadoCompra`, que el llamador arma con la misma empresa.
+   */
+  empresa?: EmpresaDeCompra;
   /** Hay dinero retenido: la marca de la cabecera no enlaza. */
   marcaFija?: boolean;
   /** Pago en curso: la cabecera no se esconde al bajar en el teléfono. */

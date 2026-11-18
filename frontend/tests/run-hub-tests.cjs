@@ -69,6 +69,10 @@ const suites = {
   'ruta-inexistente': ['src/lib/ruta-inexistente.ts', 'RUTA_INEXISTENTE_TEST_OUT'],
   'seo-detalle': ['src/content/seo-detalle.ts', 'SEO_DETALLE_TEST_OUT'],
   'content-guias': ['src/content/guias.ts', 'CONTENT_GUIAS_TEST_OUT'],
+  'catalogo-en-texto': ['src/lib/catalogo-en-texto.ts', 'CATALOGO_EN_TEXTO_TEST_OUT'],
+  regreso: ['src/lib/regreso.ts', 'REGRESO_TEST_OUT'],
+  'detalle-servicio': ['src/lib/detalle-servicio.ts', 'DETALLE_SERVICIO_TEST_OUT'],
+  notas: ['src/lib/notas.ts', 'NOTAS_TEST_OUT'],
 };
 const chosen = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(suites);
 for (const name of chosen) {

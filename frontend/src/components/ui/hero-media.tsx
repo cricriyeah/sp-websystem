@@ -78,7 +78,7 @@ export function HeroMedia({ imagen, imagenes, video, alt, preload = false, objec
       ) : imagenes && imagenes.length > 1 ? (
         <CarruselFotos fotos={imagenes} sizes={sizes} preload={preload} sinPuntos className={claseEncuadre} />
       ) : foto}
-      <div className="absolute inset-0" style={{ background: 'var(--scrim-hero)' }} />
+      <div className="absolute inset-0" style={{ background: alto === 'media' ? 'var(--scrim-hero-media)' : 'var(--scrim-hero)' }} />
 
       <div
         className={

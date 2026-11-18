@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Check, Dot, Minus, Plus, Question } from '@phosphor-icons/react/ssr';
+import { ArrowUpRight, Check, Dot, Minus, Plus, Question } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
 import type { ColorActividad } from '@/lib/color-actividad';
 import { TarjetaEmpresa, type TextosEmpresa, type VistaEmpresa } from '@/components/tarjeta-empresa';
@@ -10,13 +11,33 @@ import { FilaArrastrable } from '@/components/ui/fila-arrastrable';
 import { HeroMedia } from '@/components/ui/hero-media';
 import { botonClases } from '@/components/ui/variantes';
 import { cn } from '@/components/ui/cn';
-import { LegalBackLink } from '@/components/legal-back-link';
+import { Foto } from '@/components/conocenos-sede';
 
 /** Un renglón de una lista del detalle: su título y, si lo hay, una línea que lo explica. */
 export type ItemLista = { titulo: string; detalle?: string };
 export type BloqueLista = { titulo: string; items: ItemLista[] };
 /** Un dato de la ficha: la cifra o el lugar en grande y debajo qué es («5–6 h» · «Duración»). */
-export type DatoFicha = { etiqueta: string; valor: string };
+export type DatoFicha = {
+  etiqueta: string;
+  valor: string;
+  /** Una línea chica bajo el dato («Cada quien que pesca necesita la suya»). */
+  nota?: string;
+  /** Un enlace bajo el dato (el mapa del punto de salida). */
+  enlace?: { href: string; etiqueta: string };
+};
+/** Quien te lleva: la persona (o el gremio) con su retrato y dos fotos de su mar, tomados de «Conócenos» de la sede. */
+export type VistaQuien = {
+  nombre: string;
+  /** La empresa, cuando el nombre es el de una persona. */
+  empresa?: string;
+  detalles: string[];
+  texto?: string;
+  retrato: { src: string; alt: string; posicion?: string };
+  fotos: { src: string; alt: string; posicion?: string }[];
+  enlace: { href: string; etiqueta: string };
+};
+/** Una etiqueta corta (una especie, una regla del viaje); con `href`, lleva a su guía. */
+export type EtiquetaDetalle = { texto: string; href?: string };
 /**
  * Un bloque propio de un servicio o paquete (`content/detalle-extra.ts`), con su forma: `dias` = una fila por día con
  * su ficha de calendario; `filas` = un dato grande con su explicación al lado; `cifras` = el recuadro arena de la ficha.
@@ -47,11 +68,14 @@ export type VistaDetalle = {
   galeria: FotoVisor[];
   /** Una línea bajo el título: quién lo opera. */
   linea: string;
-  volver: { href: string; etiqueta: string };
   /** «Así es tu día» (servicio) o «Así es tu viaje» (paquete). */
   tituloQueEs: string;
   /** Horario, duración, cupo y punto de salida (o noches, días de mar y recogida): solo los que existen. */
   ficha: DatoFicha[];
+  /** Lo que se pesca, bajo la ficha; cada especie con guía enlaza a ella. Vacía = no se pinta. */
+  especies: { titulo: string; items: EtiquetaDetalle[] };
+  /** Las reglas del viaje que la empresa ya confirmó («Te quedas con tu pesca»). Vacía = no se pinta. */
+  reglas: { titulo: string; items: EtiquetaDetalle[] };
   /** Lo que recibe el cliente; las exclusiones del backoffice van aparte, sin palomita. */
   incluye: { titulo: string; items: ItemLista[]; noIncluye: string[] };
   extras: { titulo: string; items: ExtraDetalle[] };
@@ -66,10 +90,14 @@ export type VistaDetalle = {
     precio: { monto: string; base: string; conDesde: boolean; aprox?: string } | 'ruta' | null;
     datos: { etiqueta: string; valor: string }[];
     nota?: string;
+    /** «Reserva con tranquilidad» pegado al precio: confirmación, mal clima y plazo de cambio, con su enlace. */
+    condiciones: { titulo: string; renglones: string[]; enlace: { href: string; etiqueta: string } } | null;
     /** `null` = no hay a dónde reservar (el catálogo no respondió). */
     href: string | null;
     etiquetaBoton: string;
   };
+  /** Va arriba, tras la ficha; sin él, las empresas van al final como antes. */
+  quien: VistaQuien | null;
   empresas: VistaEmpresa[];
   tambien: { titulo: string; etiqueta: string; productos: VistaProducto[] } | null;
 };
@@ -85,21 +113,33 @@ export type TextosDetalle = {
     tarifaRuta: string;
 };
 
-type Props = { vista: VistaDetalle; textos: TextosDetalle };
+type Props = {
+  vista: VistaDetalle;
+  textos: TextosDetalle;
+  /** Las opiniones del lugar: van tras el bloque de compra. */
+  opiniones?: ReactNode;
+  /** Las preguntas frecuentes: van antes de «Más para hacer», que cierra la página. */
+  preguntas?: ReactNode;
+};
 
 // Clases completas para que Tailwind las vea: la franja de arriba del bloque de compra y el campo sin foto.
 const FRANJA: Record<ColorActividad, string> = { mar: 'border-azul', traslado: 'border-coral', estancia: 'border-verde' };
 const CAMPO: Record<ColorActividad, string> = { mar: 'bg-azul', traslado: 'bg-coral', estancia: 'bg-verde' };
 
-function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['compra']['precio']>; textos: Props['textos']; grande?: boolean }) {
-  if (precio === 'ruta') return <span className={grande ? 'text-xl font-semibold' : 'font-semibold'}>{textos.tarifaRuta}</span>;
+/** `grande` en el bloque de compra, `heroe` sobre la foto del arranque y `chico` en la barra del teléfono. */
+function Precio({ precio, textos, tamano = 'chico' }: { precio: NonNullable<VistaDetalle['compra']['precio']>; textos: Props['textos']; tamano?: 'chico' | 'heroe' | 'grande' }) {
+  if (precio === 'ruta') return <span className={tamano === 'chico' ? 'font-semibold' : 'text-xl font-semibold'}>{textos.tarifaRuta}</span>;
   return (
     <>
-      <strong className={cn('block tabular-nums', grande ? 'texto-mono-mayus text-[40px] font-bold leading-none' : 'text-lg')}>
+      <strong className={cn('block tabular-nums', {
+        chico: 'text-lg',
+        heroe: 'texto-mono-mayus text-3xl font-bold leading-none',
+        grande: 'texto-mono-mayus text-[40px] font-bold leading-none',
+      }[tamano])}>
         {precio.conDesde && <span className="texto-cuerpo font-normal normal-case">{textos.desde} </span>}
         {precio.monto}
       </strong>
-      <span className={cn('block', grande && 'mt-3')}>
+      <span className={cn('block', tamano === 'grande' && 'mt-3', tamano === 'heroe' && 'mt-2 texto-cuerpo')}>
         {precio.aprox && `${precio.aprox} · `}
         {precio.base}
       </span>
@@ -107,17 +147,130 @@ function Precio({ precio, textos, grande }: { precio: NonNullable<VistaDetalle['
   );
 }
 
-/** La ficha de datos: el dato en la letra de los titulares sobre un campo arena y su etiqueta, chica, debajo. */
-function Cifras({ items, className }: { items: { valor: string; etiqueta: string }[]; className?: string }) {
+/** «Reserva con tranquilidad»: confirmación, mal clima y plazo de cambio, con su enlace a la política. */
+function Condiciones({ condiciones, className }: { condiciones: NonNullable<VistaDetalle['compra']['condiciones']>; className?: string }) {
   return (
-    <dl className={cn('rev grid grid-cols-2 gap-x-6 gap-y-7 bg-cafe-bruma p-6 sm:p-8', className)}>
+    <div className={cn('flex-col gap-3 p-5', className)}>
+      <p className="font-semibold">{condiciones.titulo}</p>
+      <ul className="flex flex-col gap-2.5">
+        {condiciones.renglones.map((renglon) => (
+          <li key={renglon} className="flex items-start gap-3 texto-cuerpo">
+            <Check size={18} weight="bold" aria-hidden="true" className="mt-0.5 shrink-0" />
+            {renglon}
+          </li>
+        ))}
+      </ul>
+      <Link href={condiciones.enlace.href} className="inline-flex min-h-11 items-center gap-2 self-start font-semibold underline-offset-4 hover:underline">
+        {condiciones.enlace.etiqueta}
+        <span aria-hidden="true">→</span>
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Quién te lleva, justo tras la ficha (PFD del detalle, 2026-11-17: en este nicho se compra al capitán y su panga).
+ * El retrato a la izquierda; a su lado el nombre en la letra de los titulares, sus datos, una frase y el enlace a su
+ * relato en la sede; debajo, dos fotos de su mar. En el teléfono, todo apilado con el retrato a lo ancho.
+ */
+function QuienTeLleva({ quien, titulo }: { quien: VistaQuien; titulo: string }) {
+  return (
+    <div>
+      <h2 className="rev texto-seccion">{titulo}</h2>
+      <div className="mt-8 grid gap-6 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:gap-8">
+        <Foto src={quien.retrato.src} alt={quien.retrato.alt} posicion={quien.retrato.posicion} sizes="(min-width: 640px) 14rem, 100vw" className="aspect-[4/5]" />
+        <div className="flex flex-col items-start gap-3 sm:pt-1">
+          <p className="rev texto-mono-mayus text-2xl font-bold leading-tight text-balance sm:text-3xl">{quien.nombre}</p>
+          {quien.empresa && <p className="rev texto-cuerpo font-semibold">{quien.empresa}</p>}
+          {quien.detalles.length > 0 && (
+            <ul className="rev flex flex-col gap-1.5">
+              {quien.detalles.map((dato) => (
+                <li key={dato} className="flex items-start gap-3 text-lg">
+                  <Check size={20} weight="bold" aria-hidden="true" className="mt-1 shrink-0 text-cafe" />
+                  {dato}
+                </li>
+              ))}
+            </ul>
+          )}
+          {quien.texto && <p className="rev max-w-[48ch] text-lg leading-snug">{quien.texto}</p>}
+          <Link href={quien.enlace.href} className="group/enlace inline-flex min-h-11 items-center gap-2 font-semibold text-cafe hover:text-tinta">
+            {quien.enlace.etiqueta}
+            <span aria-hidden="true" className="transition-transform duration-200 ease-[var(--curva-estandar)] motion-reduce:transition-none [@media(hover:hover)]:group-hover/enlace:translate-x-1">→</span>
+          </Link>
+        </div>
+      </div>
+      {quien.fotos.length > 0 && (
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          {quien.fotos.slice(0, 2).map((foto, i) => (
+            <Foto key={foto.src} src={foto.src} alt={foto.alt} posicion={foto.posicion} rapida={i === 1} sizes="(min-width: 1024px) 25vw, 50vw" className="aspect-[4/3]" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** La ficha de datos: el dato en la letra de los titulares sobre un campo arena y su etiqueta, chica, debajo. */
+function Cifras({ items, className }: { items: { valor: string; etiqueta: string; nota?: string; enlace?: DatoFicha['enlace'] }[]; className?: string }) {
+  return (
+    // En el teléfono cada dato es un renglón (la etiqueta a la izquierda, el dato a la derecha): en dos columnas de
+    // 140 px los datos largos se partían en tres líneas y la etiqueta quedaba lejos de su dato (dueño, 2026-11-17).
+    // Desde `sm`, las casillas: el dato grande y su etiqueta, chica, debajo; la nota y el enlace al final.
+    <dl className={cn('rev grid grid-cols-1 gap-y-5 bg-cafe-bruma p-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-7 sm:p-8', className)}>
       {items.map((dato) => (
-        <div key={`${dato.valor}-${dato.etiqueta}`} className="flex flex-col-reverse justify-end gap-1.5">
-          <dt className="texto-pequeno">{dato.etiqueta}</dt>
-          <dd className="texto-mono-mayus text-xl font-bold leading-tight text-balance">{dato.valor}</dd>
+        <div key={`${dato.valor}-${dato.etiqueta}`} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1 sm:flex sm:flex-col sm:items-start sm:gap-1.5">
+          <dt className="texto-pequeno sm:order-2">{dato.etiqueta}</dt>
+          <dd className="texto-mono-mayus text-lg font-bold leading-tight text-balance sm:order-1 sm:text-xl">{dato.valor}</dd>
+          {(dato.nota || dato.enlace) && (
+          <dd className="col-start-2 flex flex-col items-start gap-1 sm:order-3">
+            {dato.nota && <span className="texto-pequeno text-foreground">{dato.nota}</span>}
+            {dato.enlace && (
+              <a href={dato.enlace.href} target="_blank" rel="noopener noreferrer" className="-my-2 inline-flex min-h-11 items-center gap-1 texto-pequeno font-semibold text-cafe hover:text-tinta">
+                {dato.enlace.etiqueta}
+                <ArrowUpRight size={14} weight="bold" aria-hidden="true" />
+              </a>
+            )}
+          </dd>
+          )}
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * Etiquetas cortas en fila (especies, reglas): rectángulos arena con la palabra; la que tiene guía es un enlace que
+ * se entinta al pasar. Con `marca`, cada una lleva la palomita de «Qué incluye» (son reglas, no temas).
+ */
+function Etiquetas({ titulo, items, marca }: { titulo: string; items: EtiquetaDetalle[]; marca?: boolean }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="rev mt-6 flex flex-col gap-3">
+      <p className="texto-pequeno">{titulo}</p>
+      <ul className="flex flex-wrap gap-2">
+        {items.map((item) => {
+          const contenido = (
+            <>
+              {marca && <Check size={16} weight="bold" aria-hidden="true" className="shrink-0 text-cafe" />}
+              {item.texto}
+              {item.href && <ArrowUpRight size={14} weight="bold" aria-hidden="true" className="shrink-0" />}
+            </>
+          );
+          const forma = 'inline-flex min-h-11 items-center gap-2 bg-cafe-bruma px-4 text-base font-semibold';
+          return (
+            <li key={item.texto}>
+              {item.href ? (
+                <Link href={item.href} className={cn(forma, 'transition-colors hover:bg-tinta hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
+                  {contenido}
+                </Link>
+              ) : (
+                <span className={forma}>{contenido}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -181,33 +334,34 @@ function Bloque({ bloque, color }: { bloque: BloqueDetalle; color: ColorActivida
 }
 
 /**
- * El detalle de un servicio o de un paquete (F10), el mismo diseño para los dos: arranque con foto (o con un
- * campo del color de su tipo y su palabra), en dos columnas lo que es con su ficha de datos, lo que incluye (lista
- * con palomitas, las exclusiones aparte) y lo que se puede sumar (filas de precio), el bloque de compra que se queda fijo al lado (en el teléfono, una barra fija abajo), quién lo opera
- * y los demás servicios de la sede. Lo que no tiene contenido real no se pinta.
+ * El detalle de un servicio o de un paquete, el mismo diseño para los dos. Orden derivado con perception-first-design
+ * (2026-11-17), el de las preguntas de quien compara antes de pagar: el arranque con precio y botón; la ficha con todo
+ * lo que decide (horario, duración, cupo, equipo, licencia, salida); quién te lleva con sus fotos; lo que incluye y lo
+ * que no; el bloque de compra fijo al lado (en el teléfono, una barra fija abajo y las condiciones tras «Quién te
+ * lleva»); las opiniones; las preguntas, y al final lo demás de la sede. Lo que no tiene contenido real no se pinta.
  *
  * Server Component.
  */
-export function DetalleProducto({ vista, textos }: Props) {
+export function DetalleProducto({ vista, textos, opiniones, preguntas }: Props) {
   const { compra } = vista;
   const arranque = (
     <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col justify-end gap-6 px-pagina pb-10 pt-[calc(var(--nav-alto)+0.5rem)] text-hero-ink sm:pb-14">
       <div className="mb-auto flex flex-col items-start gap-6">
-        <LegalBackLink
-          label={textos.detalle.atras}
-          fallbackHref={vista.volver.href}
-          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-tinta px-5 texto-cuerpo font-semibold text-white transition-colors hover:bg-cafe focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        />
         {!vista.foto && <span aria-hidden="true" className="texto-gigante">{vista.palabra}</span>}
       </div>
       <h1 className="texto-grande">
         {vista.encabezado && <span className="mb-2 block texto-etiqueta">{vista.encabezado}</span>}
         {vista.titulo}
       </h1>
-      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
-        <p className="max-w-[52ch] text-xl leading-snug">{vista.linea}</p>
-        <Link href={vista.volver.href} className={botonClases({ variante: 'campana-claro' })}>{vista.volver.etiqueta}</Link>
-      </div>
+      <p className="max-w-[52ch] text-xl leading-snug">{vista.linea}</p>
+      {/* El precio y el botón en el arranque: la señal principal se ve antes de bajar. Volver a la sede es
+          «‹ La Paz» en la esquina del logo (`EsquinaBarra`), la misma en todo el sitio: aquí nada compite con reservar. */}
+      {compra.href && (
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
+          {compra.precio && <p><Precio precio={compra.precio} textos={textos} tamano="heroe" /></p>}
+          <Link href={compra.href} className={botonClases({ variante: 'campana-claro' })}>{textos.detalle.reservarFecha}</Link>
+        </div>
+      )}
     </div>
   );
 
@@ -228,11 +382,21 @@ export function DetalleProducto({ vista, textos }: Props) {
               <div>
                 <h2 className="rev texto-seccion">{vista.tituloQueEs}</h2>
                 {vista.lead && <p className="mt-5 max-w-[52ch] whitespace-pre-line text-xl leading-snug">{vista.lead}</p>}
-                {/* La ficha: lo que el turista busca primero (a qué hora, cuánto dura, cuántos caben, de dónde sale),
-                    en la letra de los titulares sobre un campo arena; la etiqueta, chica, debajo de cada dato. */}
-                {vista.ficha.length > 0 && <Cifras items={vista.ficha} className="mt-8" />}
+                {/* La ficha: todo lo que decide la compra en un solo campo arena (a qué hora, cuánto dura, cuántos caben,
+                    qué equipo llevas, la licencia y de dónde sale); la etiqueta, chica, debajo de cada dato. */}
+                {vista.ficha.length > 0 && <Cifras items={vista.ficha} className={cn('mt-8', vista.ficha.length > 4 && 'sm:grid-cols-3')} />}
+                {/* Lo que se pesca y las reglas del viaje: el mismo «cómo es tu día», en palabras sueltas. */}
+                <Etiquetas titulo={vista.especies.titulo} items={vista.especies.items} />
+                <Etiquetas titulo={vista.reglas.titulo} items={vista.reglas.items} marca />
               </div>
             )}
+            {/* Itinerario, temporada, qué se pesca: el resto de «cómo es», pegado a la ficha. */}
+            {vista.bloques.map((bloque) => (
+              <Bloque key={bloque.titulo} bloque={bloque} color={vista.color} />
+            ))}
+            {vista.quien && <QuienTeLleva quien={vista.quien} titulo={textos.detalle.quienOpera} />}
+            {/* En el teléfono el bloque de compra va hasta abajo: las condiciones se adelantan aquí. */}
+            {compra.condiciones && <Condiciones condiciones={compra.condiciones} className="rev flex bg-cafe-bruma lg:hidden" />}
             {vista.galeria.length > 0 && (
               <div>
                 <h2 className="rev texto-seccion">{textos.detalle.galeria}</h2>
@@ -303,9 +467,6 @@ export function DetalleProducto({ vista, textos }: Props) {
                 </ul>
               </div>
             ))}
-            {vista.bloques.map((bloque) => (
-              <Bloque key={bloque.titulo} bloque={bloque} color={vista.color} />
-            ))}
             {vista.preguntaIncluye && (
               <a href={vista.preguntaIncluye.href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center self-start font-semibold text-cafe">
                 {vista.preguntaIncluye.etiqueta}
@@ -320,7 +481,7 @@ export function DetalleProducto({ vista, textos }: Props) {
           >
             {compra.precio && (
               <p>
-                <Precio precio={compra.precio} textos={textos} grande />
+                <Precio precio={compra.precio} textos={textos} tamano="grande" />
               </p>
             )}
             {compra.datos.length > 0 && (
@@ -337,11 +498,16 @@ export function DetalleProducto({ vista, textos }: Props) {
               <Link href={compra.href} className={cn(botonClases({ variante: 'campana-claro', bloque: true }))}>{compra.etiquetaBoton}</Link>
             )}
             {compra.nota && <p className="texto-cuerpo">{compra.nota}</p>}
+            {/* Lo que se pregunta antes de pagar, donde se paga. En el teléfono ya salió tras «Quién te lleva». */}
+            {compra.condiciones && <Condiciones condiciones={compra.condiciones} className="hidden bg-hero-ink/10 lg:flex" />}
           </aside>
         </div>
       </section>
 
-      {vista.empresas.length > 0 && (
+      {opiniones}
+
+      {/* Sin «Quién te lleva» arriba (o con varias empresas), las empresas van aquí. */}
+      {vista.empresas.length > 0 && (!vista.quien || vista.empresas.length > 1) && (
         <section aria-labelledby="detalle-opera" className="bg-superficie py-16 sm:py-20 lg:py-28">
           <div className="mx-auto max-w-[1440px] px-pagina">
             <h2 id="detalle-opera" className="rev texto-seccion">{textos.detalle.quienOpera}</h2>
@@ -354,8 +520,11 @@ export function DetalleProducto({ vista, textos }: Props) {
         </section>
       )}
 
+      {preguntas}
+
       {vista.tambien && vista.tambien.productos.length > 0 && (
-        <section aria-labelledby="detalle-tambien" className="bg-superficie py-16 sm:py-20 lg:py-28">
+        // Arena: cierra la página tras las preguntas, que van en blanco.
+        <section aria-labelledby="detalle-tambien" className="bg-cafe-bruma py-16 sm:py-20 lg:py-28">
           <FilaArrastrable
             cabeza={<h2 id="detalle-tambien" className="rev texto-seccion">{vista.tambien.titulo}</h2>}
             etiqueta={vista.tambien.etiqueta}

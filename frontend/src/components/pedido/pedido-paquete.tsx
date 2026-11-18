@@ -60,6 +60,7 @@ import { armarResumenPaquete } from './resumen-paquete';
 import { usePagoPedido } from './use-pago-pedido';
 import { usePedidoEstado } from './use-pedido-estado';
 import { erroresDeContacto, errorDeGrupoPaquete, type ErroresContacto } from './validacion-paquete';
+import type { EmpresaDeCompra } from '@/components/checkout/marca-empresa-compra';
 
 type Props = {
   lang: Locale;
@@ -72,7 +73,7 @@ type Props = {
   /** Origen de «salir» en el primer paso (`lib/origen.ts`), ya con idioma. */
   volverHref: string;
   /** `{ nombre, logo }` por slug, de `content/empresas` (server-only: llega por prop). */
-  empresas: Record<string, { nombre: string; logo?: string; simbolo?: string; simboloBarra?: string }>;
+  empresas: Record<string, EmpresaDeCompra>;
   retomarCheckoutId?: string;
 };
 
@@ -155,7 +156,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
   // Quién opera el viaje: una empresa por componente, sin repetir; en cruza-empresa, una por cada una.
   const sellosDelPaquete = [...new Set(paquete.servicios_asociados.map((c) => c.servicio.empresa_slug))]
     .map((slug) => empresas[slug])
-    .filter((e): e is { nombre: string; logo?: string } => !!e);
+    .filter((e): e is EmpresaDeCompra => !!e);
   const cargosNetos = pedido?.cargos ?? [];
   const cantidadCargos = cargosNetos.length;
   const nombreEmpresa = (slug: string) => slug === paquete.empresa_lider_slug
@@ -223,7 +224,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       const args = {
         checkoutId, paquete, componentes: estado.componentes, inicio: estado.inicio ?? minDate,
         hora: estado.hora, moneda: estado.moneda, contacto: estado.contacto, ref: leerRef(), atribucion: leerAtribucion(),
-        idioma: lang, zonaDePunto,
+        idioma: lang, notas: estado.notas, zonaDePunto,
       };
       return motor === 'orden' ? armarPayloadOrden(args) : armarPayloadReserva(args);
     },
@@ -686,6 +687,13 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
       valores={estado.contacto}
       errores={erroresContacto}
       onCambio={(campo, valor) => despachar({ tipo: 'contacto', cambios: { [campo]: valor } })}
+      notas={{
+        valor: estado.notas,
+        alMar: paquete.servicios_asociados.some((c) => c.servicio.tipo_servicio === 'pesca' || c.servicio.tipo_servicio === 'paseo'),
+        // Con una sola empresa también la lee «la empresa que te lleva»; con varias, cada una.
+        paquete: paquete.es_cruza_empresa,
+        onCambio: (valor) => despachar({ tipo: 'notas', valor }),
+      }}
     />
   );
   // La pregunta «¿Dónde te recogemos?» va como título: el de la tarjeta de datos o el de la pantalla.
@@ -797,6 +805,7 @@ export function PedidoPaquete({ lang, dict, paquete, sedeSlug, tarifasPorEmpresa
           <EncabezadoCompra
             titulo={checkout.tituloPagina}
             detalle={[paquete.nombre, detalleCompra].filter(Boolean).join(' · ')}
+            empresa={paquete.es_cruza_empresa ? undefined : empresas[paquete.empresa_lider_slug]}
           />
         }
         stepper={(!movil && actual === 'pago' ? stepperPagos(0) : null) ?? {

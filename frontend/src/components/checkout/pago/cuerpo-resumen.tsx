@@ -1,6 +1,6 @@
 import { CifraViva } from '@/components/ui/cifra-viva';
 import { Despliegue } from '@/components/ui/despliegue';
-import { EmpresaSello } from '@/components/ui/empresa-sello';
+import { MarcaEmpresaCompra } from '@/components/checkout/marca-empresa-compra';
 import { ListaCargos } from '@/components/checkout/pago/renglon-cargo';
 import type { ResumenVivo } from '@/components/reserva/contexto-barra';
 
@@ -20,11 +20,11 @@ export function CuerpoResumen({ checkout, lines, lineasViaje = [], sellos = [], 
         </div>
       )}
       {cargos.length === 0 && sellos.length > 0 && (
-        // Quién opera el viaje: su logo con el nombre. En cruza-empresa, uno por empresa.
+        // Quién opera el viaje: su logo largo (o el sello de 48 px con su nombre). En cruza-empresa, uno por empresa.
         <ul className="flex flex-col gap-3">
           {sellos.map((s) => (
             <li key={s.nombre}>
-              <EmpresaSello nombre={s.nombre} logo={s.logo} tamano={32} mostrarNombre />
+              <MarcaEmpresaCompra empresa={s} conNombre />
             </li>
           ))}
         </ul>

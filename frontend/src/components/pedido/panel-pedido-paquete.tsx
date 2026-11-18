@@ -92,6 +92,7 @@ export function PanelPedidoPaquete({
       formaPago={formaPago}
       onFormaPagoChange={(valor) => despachar({ tipo: 'formaPago', valor })}
       formaPagoDisponible={paquete.permite_anticipo}
+      porcentajeAnticipo={paquete.porcentaje_anticipo}
       codigoPromocional={codigoPromocional}
       onCodigoPromocionalChange={onCodigoPromocionalChange}
       codigoPromocionalDisponible={motor === 'reserva'}

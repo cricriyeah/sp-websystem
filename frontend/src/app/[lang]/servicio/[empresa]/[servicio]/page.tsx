@@ -7,6 +7,7 @@ import { MedirEvento } from '@/components/medir-evento';
 import { conIva } from '@/lib/iva';
 import { API_URL, ApiError, getPaquetesSede, getServicioDetalle, getServiciosSede } from '@/lib/api';
 import { conVentana, sedeConVentana, ventanaDeSalida } from '@/lib/horario-servicio';
+import { conCatalogo, serviciosParaTexto } from '@/lib/catalogo-en-texto';
 import { getSedeContenido } from '@/content/sedes-cuerpo';
 import { absolutaEn } from '@/lib/site';
 import { metadataDePagina } from '@/lib/metadata-pagina';
@@ -21,6 +22,8 @@ import { JsonLd } from '@/components/json-ld';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { DetalleProducto } from '@/components/detalle-producto';
+import { OpinionesEmpresas, type OpinionVista } from '@/components/opiniones-empresas';
+import { FUENTE_GOOGLE, resenasMarcaDeSede } from '@/content/resenas-marca';
 import { textosDeDetalle, vistaDeDetalleServicio } from '@/components/detalle-vistas';
 
 type Props = {
@@ -69,21 +72,46 @@ export default async function ServicioPage({ params, searchParams }: Props) {
   const [servicios, paquetes] = escrita
     ? await Promise.all([getServiciosSede(escrita.slug, lang).catch(() => null), getPaquetesSede(escrita.slug, lang).catch(() => null)])
     : [null, null];
-  const sede = escrita && sedeConVentana(escrita, servicios);
+  const deTexto = serviciosParaTexto(servicio ? [servicio, ...(servicios ?? [])] : servicios, paquetes);
+  const sede = escrita && conCatalogo(sedeConVentana(escrita, servicios), deTexto, lang);
   // Los textos del servicio dicen su propia ventana; si la API no lo trajo, la de su sede.
   const ventana = (servicio?.pide_hora ? ventanaDeSalida(servicio.hora_apertura, servicio.hora_cierre) : null)
     ?? ventanaDeSalida(sede?.negocio?.horarioApertura, sede?.negocio?.horarioCierre);
-  const textosConHora = ventana ? { ...dict, included: conVentana(dict.included, ventana) } : dict;
+  // Lo incluido de la pesca de Sal y Sol dice su hora y su duración del backoffice.
+  const textosConHora = { ...dict, included: conCatalogo(ventana ? conVentana(dict.included, ventana) : dict.included, deTexto, lang) };
   const vista = vistaDeDetalleServicio({ lang, moneda, dict: textosConHora, sede, otros: { servicios, paquetes }, empresaSlug: empresa, slug, servicio, pesca, traslado });
   const urlServicio = absolutaEn(lang, `/servicio/${empresa}/${slug}`);
   // Las preguntas del servicio (si ya las tiene) se pintan y van al JSON-LD: son las mismas.
+  // Los datos del backoffice salen del catálogo (`catalogo-en-texto`); una respuesta sin su dato no se pinta.
   const escritas = getFaqServicio(empresa, slug, lang);
-  const preguntas = escritas && ventana ? conVentana(escritas, ventana) : escritas;
+  const conPrecio = escritas && conCatalogo(escritas, deTexto, lang);
+  const preguntas = conPrecio && ventana ? conVentana(conPrecio, ventana) : conPrecio;
   const textosFaq = dict.sedeContenido.faq;
   const nombreServicio = servicio?.nombre ?? dict.serviceDetail.metaFallback;
   const whatsappFaq = tieneWhatsapp
     ? { texto: textosFaq.whatsapp, boton: textosFaq.whatsappBoton, href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', nombreServicio)) }
     : null;
+  // Las mismas opiniones de la sede, en el mismo componente (PFD R3): las de Google de la marca en esta sede y las
+  // confirmadas de esta empresa. Sin cifra grande ni promedio (dueño, 2026-11-11).
+  const marcaEnSede = sedeDelServicio ? resenasMarcaDeSede(sedeDelServicio.slug) : [];
+  const opiniones: OpinionVista[] = [
+    ...marcaEnSede.map((r) => ({ autor: r.autor, texto: r.texto, idioma: r.idioma, traduccion: r.traduccion, estrellas: r.estrellas, fuente: FUENTE_GOOGLE, empresa: { nombre: 'Sun Baja Experience' } })),
+    ...(datosEmpresa?.resenas ?? []).filter((r) => r.confirmada).map((r) => ({
+      autor: r.autor, texto: r.texto, idioma: r.idioma, fuente: r.fuente, empresa: { nombre: datosEmpresa!.nombre, logo: datosEmpresa!.logo },
+    })),
+  ];
+  const textosFila = { anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente };
+  const bloqueOpiniones = (
+    <OpinionesEmpresas
+      id="opiniones"
+      lang={lang}
+      opiniones={opiniones}
+      textos={dict.sedeContenido.opiniones}
+      textosFila={{ ...textosFila, pausar: dict.sedeContenido.opiniones.pausar, reanudar: dict.sedeContenido.opiniones.reanudar }}
+      fondo="cafe-bruma"
+      todas={marcaEnSede.length > 0 ? FUENTE_GOOGLE : undefined}
+    />
+  );
   return <>
     {servicio && <JsonLd datos={[
       jsonLdViaje({
@@ -105,8 +133,12 @@ export default async function ServicioPage({ params, searchParams }: Props) {
     }} />}
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} sedeSlugActual={sede?.slug} />
     <main>
-      <DetalleProducto vista={vista} textos={textosDeDetalle(dict)} />
-      {preguntas && <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={preguntas} whatsapp={whatsappFaq} fondo="cafe-bruma" />}
+      <DetalleProducto
+        vista={vista}
+        textos={textosDeDetalle(dict)}
+        opiniones={bloqueOpiniones}
+        preguntas={preguntas && <FaqSection id="preguntas" titulo={textosFaq.titulo} preguntas={preguntas} whatsapp={whatsappFaq} fondo="blanco" />}
+      />
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={sede?.negocio ?? null} sedeSlug={sede?.slug} empresasDeslinde={[empresa]} />
   </>;
