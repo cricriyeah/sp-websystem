@@ -55,6 +55,7 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
     // Igual que el paquete: un texto propio del sitio manda; si no, la descripción del backoffice (ya en el idioma).
     descripcion: descripcionDeCatalogo(clave, lang) ?? (servicio.descripcion?.trim() || null),
     horario: horarioDe(servicio),
+    duracion: servicio.duracion?.trim() || null,
     // Los mismos renglones que un paquete, para que las tarjetas de una fila tengan la misma anatomía (sin huecos).
     incluye: (servicio.incluye?.[lang] ?? []).filter((r) => !esExclusion(r)).slice(0, 4),
     incluyeSiempre: true,

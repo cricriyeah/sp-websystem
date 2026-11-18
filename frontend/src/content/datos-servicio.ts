@@ -52,6 +52,34 @@ const EQUIPO: Record<string, Equipo> = {
   },
 };
 
+/**
+ * «Tu panga» en el detalle (PFD, 2026-11-18): la lancha en la página donde se paga, con datos que deciden (cuántos
+ * caben, que va solo tu grupo). El cupo es una marca del backoffice; «hasta 3» y «solo tu grupo» son del dueño (los
+ * dice también la guía de pesca en La Paz). Sin toldo ni medidas: no están confirmados.
+ */
+type Panga = { foto: { src: string; ancho: number; alto: number; alt: Record<Locale, string> }; titulo: Record<Locale, string>; texto: Record<Locale, string> };
+const PANGA: Record<string, Panga> = {
+  'servicio:sal-y-sol/pesca-deportiva': {
+    foto: {
+      src: '/photos/flota-pangas-bahia.webp',
+      ancho: 1600,
+      alto: 894,
+      alt: { es: 'Las siete pangas de Sal y Sol formadas en el agua turquesa de la bahía', en: 'The seven Sal y Sol pangas lined up on the turquoise water of the bay' },
+    },
+    titulo: { es: 'Tu panga', en: 'Your panga' },
+    texto: {
+      es: 'Sales en una de las siete pangas de Sal y Sol, cada una con su nombre y su capitán de La Paz. Hay pangas para hasta 3 y para hasta {maximo:sal-y-sol/pesca-deportiva} personas, y en cualquiera va solo tu grupo.',
+      en: "You go out on one of Sal y Sol's seven pangas, each with its own name and a captain from La Paz. There are pangas for up to 3 and for up to {maximo:sal-y-sol/pesca-deportiva} people, and either way only your group is on board.",
+    },
+  },
+};
+
+export function pangaDeServicio(clave: string, lang: Locale): { titulo: string; texto: string; foto: { src: string; alt: string; ancho: number; alto: number } } | null {
+  const panga = PANGA[clave];
+  if (!panga) return null;
+  return { titulo: panga.titulo[lang], texto: panga.texto[lang], foto: { src: panga.foto.src, alt: panga.foto.alt[lang], ancho: panga.foto.ancho, alto: panga.foto.alto } };
+}
+
 export function especiesDeServicio(clave: string): readonly Especie[] {
   return ESPECIES[clave] ?? [];
 }

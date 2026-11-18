@@ -248,12 +248,12 @@ ruta. Los traslados tienen su checkout en `/[lang]/traslados` y
 
 Acomodo derivado con perception-first-design; construido con taste. El héroe es la foto de la panga rumbo a la pesca (2026-11-05; el video volvió al hub).
 
-- **«Nuestras pangas»** (`pangas-sede.tsx`, id `pangas`): justo bajo el héroe y antes de «Reservar ahora»
-  (`seccionesDeSede` la pone ahí si `contenido.pangas` tiene fotos; fuera del menú). Cabe en una pantalla y no lleva botón
-  para no alejar la compra. Rehecha el 2026-10-30 (PFD + Apple): bajo el título, la foto de la flota COMPLETA, en su
-  proporción y sin nada encima (el dueño rechazó los nombres sobre la foto); pegado a ella, una frase grande y el párrafo
-  que nombra las siete pangas en el orden de la foto (`pangas.nombres`, `{nombres}` en `texto`); al lado, las dos fotos
-  navegando, que en el teléfono son una tira que se desliza de lado. En el teléfono la flota va de orilla a orilla.
+- **La flota ya no es una sección** (PFD, 2026-11-18; la sección «Nuestras pangas» pegada al héroe se quitó: retrasaba
+  la oferta y contaba la misma historia que «Gente de mar» con otra forma). `contenido.pangas` se usa en dos lugares:
+  abre «Conócenos» (`ConocenosSede flota`: la flota completa de orilla a orilla, en su proporción y sin nada encima, y
+  debajo la frase y el párrafo con los siete nombres en la retícula del relato) y, en el detalle de la pesca de Sal y
+  Sol, el bloque «Tu panga» (`pangaDeServicio` en `content/datos-servicio.ts`): la misma foto y cuántos caben (marca
+  `{maximo:…}` del backoffice) y que va solo tu grupo. Sin toldo ni medidas hasta que el dueño los confirme.
 - **«Conócenos»** (`conocenos-sede.tsx`): un solo relato a dos columnas en un solo fondo (2026-10-30; reemplazó la banda
   tinta con el collage del staff y el cartel gigante «Sal con el sol»). En escritorio, las fotos del gremio bajan a la
   izquierda (la del relato, la primera de `tripulacion.fotos` y las otras dos lado a lado), sin alinearse con ningún nombre;

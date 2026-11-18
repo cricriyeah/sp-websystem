@@ -18,13 +18,14 @@ import { ANCLA_DE, enlacesDeSede, fondosDeSecciones, seccionesDeSede, type Secci
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { SedeHero } from '@/components/sede-hero';
-import { QuePuedesReservar } from '@/components/que-puedes-reservar';
+import { QuePuedesReservar, vistasDeReservar } from '@/components/que-puedes-reservar';
 import { PaquetesSede } from '@/components/paquetes-sede';
 import { DiaDeSede } from '@/components/dia-de-sede';
+import { FranjaConfianza } from '@/components/franja-confianza';
+import { NavegacionSede } from '@/components/navegacion-sede';
 import { ReservaTranquila } from '@/components/reserva-tranquila';
 import { ConocenosSede } from '@/components/conocenos-sede';
 import { FamiliaSede } from '@/components/familia-sede';
-import { PangasSede } from '@/components/pangas-sede';
 import { SeasonSection } from '@/components/season-section';
 import { GallerySection } from '@/components/gallery-section';
 import { FaqSection } from '@/components/faq-section';
@@ -102,12 +103,11 @@ export default async function SedePage({ params, searchParams }: Props) {
   // Cada sección que sabe pintarse; `seccionesDeSede` decide cuáles van (sin reseñas confirmadas no hay opiniones).
   const pintar: Partial<Record<SeccionId, (fondo: Fondo) => ReactNode>> = {
     hero: () => <SedeHero nombre={contenido.nombre} contenido={contenido.hero} palabras={contenido.hero.palabras ?? palabrasDeSede(servicios, paquetes, lang)} empresa={marcaSede} empresaSinCirculo={protagonista?.heroSinCirculo} textos={dict.sedeContenido.arranque} />,
-    ...(contenido.pangas && { pangas: (fondo: Fondo) => <PangasSede id={ANCLA_DE.pangas} pangas={contenido.pangas!} fondo={fondo} empresa={marcaSede?.nombre ?? contenido.nombre} isotipo={marcaSede?.simbolo ?? marcaSede?.logo} isotipoSinFondo={marcaSede?.simboloBarra} logoLargo={marcaSede?.logoLargo} /> }),
     reservar: (fondo) => <QuePuedesReservar lang={lang} moneda={moneda} sede={{ slug, nombre: contenido.nombre }} servicios={servicios} paquetes={paquetes} estado={secciones.find((x) => x.id === 'reservar')?.estado ?? 'normal'} destacadas={contenido.destacadas} textos={dict.sedeContenido.queReservar} fondo={fondo} presentacion={contenido.hero.presentacion} />,
     paquetes: (fondo) => <PaquetesSede id={ANCLA_DE.paquetes} lang={lang} moneda={moneda} paquetes={paquetes ?? []} textos={dict.sedeContenido.paquetes} textosReservar={dict.sedeContenido.queReservar} fondo={fondo} />,
     ...(contenido.dia && { dia: (fondo: Fondo) => <DiaDeSede id={ANCLA_DE.dia} dia={contenido.dia!} textos={{ anterior: dict.sedeContenido.queReservar.flechaAnterior, siguiente: dict.sedeContenido.queReservar.flechaSiguiente }} fondo={fondo} /> }),
     tranquilidad: (fondo) => <ReservaTranquila id={ANCLA_DE.tranquilidad} textos={dict.sedeContenido.tranquilidad} porcentaje={porcentaje} atencion={tieneWhatsapp ? { numero: whatsappVisible(), href: whatsappHref(textosFaq.whatsappMensaje.replace('{sede}', contenido.nombre)) } : null} fondo={fondo} sello={isotipoSede && protagonista ? { isotipo: isotipoSede, sinFondo: protagonista.simboloBarra, empresa: protagonista.nombre, largo: largoEn('tranquilidad') } : undefined} ilustracion={protagonista?.ilustracionFondo} />,
-    ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
+    ...(contenido.conocenos && { conocenos: (fondo: Fondo) => <ConocenosSede id={ANCLA_DE.conocenos} conocenos={contenido.conocenos!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} flota={contenido.pangas} /> }),
     // Una sede lleva el «Conócenos» del gremio (La Paz) o el de una familia (Puerto Chale), nunca los dos.
     ...(!contenido.conocenos && contenido.familia && { conocenos: (fondo: Fondo) => <FamiliaSede id={ANCLA_DE.conocenos} familia={contenido.familia!} fondo={fondo} logo={marcaSede?.logoLargo} empresa={marcaSede?.nombre ?? contenido.nombre} /> }),
     ...(galeria && { galeria: (fondo: Fondo) => <GallerySection id={ANCLA_DE.galeria} titulo={dict.sedeContenido.galeria} fotos={galeria} empresas={empresasGaleria} textosVisor={dict.sedeContenido.galeriaVisor} fondo={fondo} sello={largoEn('galeria') && isotipoSede ? { isotipo: isotipoSede, sinFondo: protagonista?.simboloBarra, alt: protagonista?.nombre ?? '', largo: largoEn('galeria') } : undefined} /> }),
@@ -125,15 +125,30 @@ export default async function SedePage({ params, searchParams }: Props) {
     temporadas: temporadas?.filas,
     dia: contenido.dia?.momentos,
     conocenos: contenido.conocenos ? [contenido.conocenos.foto] : contenido.familia ? [contenido.familia.retrato] : undefined,
-    pangas: contenido.pangas?.fotos,
     guias,
   });
   const ids = secciones.map((s) => s.id).filter((id) => pintar[id]);
   const fondos = fondosDeSecciones(ids);
   const anclas = enlacesDeSede(ids).map(({ ancla, claveNav }) => ({
     ancla,
-    etiqueta: (claveNav === 'temporadas' && temporadas?.nav) || dict.nav[claveNav],
+    etiqueta: (claveNav === 'temporadas' && temporadas?.nav) || (claveNav === 'dia' && contenido.dia?.nav) || dict.nav[claveNav],
   }));
+
+  // El «Desde» del botón fijo del teléfono: el precio del producto que abre la fila de «Qué reservar».
+  const precioPrimero = vistasDeReservar({ lang, moneda, sedeSlug: slug, servicios, paquetes, destacadas: contenido.destacadas })
+    .find((e) => e.vista.precio)?.vista.precio;
+  const desde = precioPrimero ? dict.sedeContenido.navegacion.desde.replace('{monto}', precioPrimero.monto) : null;
+  const navegacion = (
+    <>
+      <FranjaConfianza textos={dict.sedeContenido.franja} opiniones={ids.includes('opiniones') ? `#${ANCLA_DE.opiniones}` : null} />
+      <NavegacionSede
+        anclas={anclas}
+        etiqueta={dict.sedeContenido.navegacion.etiqueta}
+        reservar={{ ancla: `#${ANCLA_DE.reservar}`, texto: dict.booking.verQueReservar, desde }}
+        compra={[ANCLA_DE.reservar, ANCLA_DE.paquetes]}
+      />
+    </>
+  );
 
   return <>
     <StructuredData
@@ -148,7 +163,7 @@ export default async function SedePage({ params, searchParams }: Props) {
     ])} />
     <SiteHeader lang={lang} nav={dict.nav} continuar={dict.continuar} variante="sede" sedeSlugActual={slug} marcaSede={marcaSede} anclas={anclas} />
     <main>
-      {ids.map((id) => <Fragment key={id}>{pintar[id]?.(fondos[id] ?? 'blanco')}</Fragment>)}
+      {ids.map((id) => <Fragment key={id}>{pintar[id]?.(fondos[id] ?? 'blanco')}{id === 'hero' && navegacion}</Fragment>)}
     </main>
     <SiteFooter lang={lang} footer={dict.footer} nav={dict.nav} bookLabel={dict.booking.verQueReservar} negocio={contenido.negocio} sedeSlug={slug} anclas={anclas} empresasDeslinde={marcaSede ? [contenido.empresaProtagonistaSlug ?? ''] : []} />
   </>;

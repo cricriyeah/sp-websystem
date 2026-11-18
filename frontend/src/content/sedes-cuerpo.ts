@@ -104,7 +104,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           fotos: [
             // Fotos de capitanes del staff (dueño, 2026-11-04). `posicion`: el punto que no se recorta.
             { src: '/photos/capitan-rogelio.webp', alt: 'El capitán Rogelio sostiene un dorado en la popa de la panga, con la bahía al fondo', posicion: '75% 50%' },
-            { src: '/photos/capitan-chito.webp', alt: 'El capitán Chito levanta un atún aleta amarilla sobre la pesca del día', posicion: '50% 30%' },
+            { src: '/photos/capitan-chito.webp', alt: 'El capitán Chito levanta un atún aleta amarilla sobre la pesca del día', posicion: '50% 30%', posicionAncha: '50% 0%' },
             { src: '/photos/capitan-omar.webp', alt: 'El capitán Omar sonríe junto a un pez vela recién subido a la panga', posicion: '60% 38%' },
             { src: '/photos/joel-dorado.webp', alt: 'El capitán Joel y un pescador levantan entre los dos un dorado enorme', posicion: '50% 30%' },
           ],
@@ -325,7 +325,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
           y: 'and',
           fotos: [
             { src: '/photos/capitan-rogelio.webp', alt: 'Captain Rogelio holds a dorado at the stern of the panga, with the bay behind him', posicion: '75% 50%' },
-            { src: '/photos/capitan-chito.webp', alt: 'Captain Chito lifts a yellowfin tuna over the day’s catch', posicion: '50% 30%' },
+            { src: '/photos/capitan-chito.webp', alt: 'Captain Chito lifts a yellowfin tuna over the day’s catch', posicion: '50% 30%', posicionAncha: '50% 0%' },
             { src: '/photos/capitan-omar.webp', alt: 'Captain Omar smiles next to a sailfish just brought aboard the panga', posicion: '60% 38%' },
             { src: '/photos/joel-dorado.webp', alt: 'Captain Joel and an angler lift a huge dorado together', posicion: '50% 30%' },
           ],
@@ -479,6 +479,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       dia: {
         titulo: 'Tu viaje a La Ventana',
         etiqueta: 'Tu viaje a La Ventana, momento por momento',
+        nav: 'Tu viaje',
         momentos: [
           { titulo: 'Llegas', texto: 'Te recogemos en el aeropuerto y te llevamos al Hotel Casa Arrecife, donde duermes todo el viaje.', foto: '/catalogo/la-ventana-travel-hospedaje-habitacion-nautica.webp' },
           { titulo: '7:00 am', texto: 'Desde el día 2 sales al mar cada mañana, entre las 7:00 y las 8:00 am, de La Ventana o de Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },
@@ -600,6 +601,7 @@ export const SEDES_CUERPO: Record<string, Record<Locale, SedeCuerpoContenido>> =
       dia: {
         titulo: 'Your trip to La Ventana',
         etiqueta: 'Your trip to La Ventana, moment by moment',
+        nav: 'Your trip',
         momentos: [
           { titulo: 'Arrival', texto: 'We pick you up at the airport and drive you to Hotel Casa Arrecife, where you stay the whole trip.', foto: '/catalogo/la-ventana-travel-hospedaje-habitacion-nautica.webp' },
           { titulo: '7:00 am', texto: 'From day 2 you head out to sea every morning, between 7:00 and 8:00 am, from La Ventana or Bahía de los Sueños.', foto: '/catalogo/la-ventana-travel-paquete-5-noches.webp' },

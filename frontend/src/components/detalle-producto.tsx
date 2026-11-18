@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Check, Dot, Minus, Plus, Question } from '@phosphor-icons/react/ssr';
 import type { Dictionary } from '@/app/[lang]/dictionaries';
@@ -76,6 +77,8 @@ export type VistaDetalle = {
   especies: { titulo: string; items: EtiquetaDetalle[] };
   /** Las reglas del viaje que la empresa ya confirmó («Te quedas con tu pesca»). Vacía = no se pinta. */
   reglas: { titulo: string; items: EtiquetaDetalle[] };
+  /** «Tu panga»: la lancha en la que sales, con su foto y lo que decide (cuántos caben, solo tu grupo). `null` = no hay. */
+  panga: { titulo: string; texto: string; foto: { src: string; alt: string; ancho: number; alto: number } } | null;
   /** Lo que recibe el cliente; las exclusiones del backoffice van aparte, sin palomita. */
   incluye: { titulo: string; items: ItemLista[]; noIncluye: string[] };
   extras: { titulo: string; items: ExtraDetalle[] };
@@ -388,6 +391,17 @@ export function DetalleProducto({ vista, textos, opiniones, preguntas }: Props) 
                 {/* Lo que se pesca y las reglas del viaje: el mismo «cómo es tu día», en palabras sueltas. */}
                 <Etiquetas titulo={vista.especies.titulo} items={vista.especies.items} />
                 <Etiquetas titulo={vista.reglas.titulo} items={vista.reglas.items} marca />
+              </div>
+            )}
+            {/* «Tu panga» (PFD, 2026-11-18): la lancha donde se decide la compra, como en los mercados de pesca. La flota
+                completa, en su proporción y sin nada encima (el dueño rechazó texto sobre esa foto), y debajo lo que decide. */}
+            {vista.panga && (
+              <div className="rev">
+                <h3 className="texto-subtitulo">{vista.panga.titulo}</h3>
+                <div className="rev-foto mt-5 -mx-[var(--margen-x)] sm:mx-0">
+                  <Image src={vista.panga.foto.src} alt={vista.panga.foto.alt} width={vista.panga.foto.ancho} height={vista.panga.foto.alto} sizes="(min-width: 1024px) 50vw, 100vw" className="block h-auto w-full" />
+                </div>
+                <p className="mt-5 max-w-[52ch] text-lg leading-relaxed">{vista.panga.texto}</p>
               </div>
             )}
             {/* Itinerario, temporada, qué se pesca: el resto de «cómo es», pegado a la ficha. */}

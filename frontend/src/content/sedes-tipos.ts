@@ -93,6 +93,8 @@ export type SedeDia = {
   titulo: string;
   /** Nombre accesible de la fila. */
   etiqueta: string;
+  /** La pastilla de la barra de secciones; sin ella, `nav.dia` («Tu día»). La Ventana cuenta un viaje, no un día. */
+  nav?: string;
   momentos: { titulo: string; texto: string; foto: string }[];
 };
 
@@ -124,7 +126,11 @@ export type SedeConocenos = {
      * Fotos de capitanes que siguen a la foto del relato en su columna: la primera encimada sobre ella y las demás en
      * dos columnas escalonadas (dueño, 2026-11-04). `posicion` es el `object-position` del recorte (por omisión 50% 40%).
      */
-    fotos: { src: string; alt: string; posicion?: string }[];
+    /**
+     * `posicionAncha`: el encuadre cuando la foto sale recortada horizontal (4:3, «Quién te lleva» del detalle); sin él,
+     * el mismo `posicion`. Un retrato vertical encuadrado para el recorte cuadrado de «Conócenos» pierde la cara en 4:3.
+     */
+    fotos: { src: string; alt: string; posicion?: string; posicionAncha?: string }[];
   };
   /** Solo el botón: encima va el logo largo de la empresa (`MarcaEmpresa.logoLargo`), que dice el resto. */
   cierre: { boton: string };

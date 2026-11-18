@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, Clock, UserCircle, UsersThree } from '@phosphor-icons/react/ssr';
+import { Check, Clock, Timer, UserCircle, UsersThree } from '@phosphor-icons/react/ssr';
 import type { ColorActividad } from '@/lib/color-actividad';
 import type { LogoLargo } from '@/content/empresas-marca';
 import { CarruselFotos } from '@/components/ui/carrusel-fotos';
@@ -30,6 +30,8 @@ export type VistaProducto = {
   descripcion?: string | null;
   /** Ventana de salida («5:00 - 7:00 am»), solo si el servicio pide hora. */
   horario?: string | null;
+  /** Lo que dura la salida, tal como está en el backoffice («6–7 h», «Día completo»); el mismo dato que la ficha del detalle. */
+  duracion?: string | null;
   /** Los primeros renglones de lo que incluye (máx. 3); solo los muestra la tarjeta única. */
   incluye?: string[];
   /** Los paquetes lo muestran también en una fila de varias tarjetas (como en la sección de paquetes). */
@@ -81,7 +83,7 @@ type Props = {
 
 /**
  * La tarjeta de «Reserva ahora mismo» (F10), igual para servicio y paquete: foto 4:5 (o un bloque del color
- * de su tipo con su palabra, cuando no hay foto honesta), nombre, quién te lleva, cupo y horario con ícono,
+ * de su tipo con su palabra, cuando no hay foto honesta), nombre, quién te lleva, horario, duración y cupo con ícono (el orden de la ficha del detalle),
  * descripción, el precio como bloque propio (cifra grande y debajo su base y la otra moneda) y el botón
  * «Reservar →». Toda la tarjeta es un solo enlace. En una fila, las tarjetas cierran a la misma altura y los
  * precios quedan alineados para compararlos.
@@ -89,15 +91,18 @@ type Props = {
  * Server Component.
  */
 export function TarjetaProducto({ vista, textos, prioridad = false, unica = false }: Props) {
-  const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad, descripcion, horario, incluye = [] } = vista;
+  const { nombre, empresa, color, palabra, foto, fotos, precio, capacidad, descripcion, horario, duracion, incluye = [] } = vista;
   // Sin `unica` la tarjeta es vertical (4:5) y las fotos horizontales: `object-cover` las escala a la altura, así que
   // la foto ocupa casi el doble del ancho de la tarjeta. `sizes` debe pedir ese ancho, no el de la tarjeta.
   const tamanos = unica ? '(min-width: 1024px) 55vw, 90vw' : '(min-width: 1024px) 52vw, 155vw';
   const marco = unica ? 'lg:aspect-auto lg:h-full lg:min-h-[30rem]' : '';
+  // Mismo orden que la ficha del detalle (salida, duración, personas; PFD, 2026-11-17): quien pasa de la tarjeta al
+  // detalle encuentra los datos donde ya los vio.
   const datos = [
     { icono: UserCircle, texto: textos.opera.replace('{empresa}', empresa) },
-    capacidad ? { icono: UsersThree, texto: textos.hasta.replace('{n}', String(capacidad)) } : null,
     horario ? { icono: Clock, texto: horario } : null,
+    duracion ? { icono: Timer, texto: duracion } : null,
+    capacidad ? { icono: UsersThree, texto: textos.hasta.replace('{n}', String(capacidad)) } : null,
   ].filter((d): d is { icono: typeof UserCircle; texto: string } => d !== null);
   const conIncluye = (unica || Boolean(vista.incluyeSiempre)) && incluye.length > 0;
 

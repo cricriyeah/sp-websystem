@@ -4,7 +4,7 @@
 // que es `server-only`: la página le pasa los datos.
 import { hayGaleria } from './etiquetas-catalogo';
 
-export type SeccionId = 'hero' | 'pangas' | 'reservar' | 'paquetes' | 'dia' | 'tranquilidad' | 'conocenos' | 'galeria' | 'temporadas' | 'opiniones' | 'guias' | 'preguntas';
+export type SeccionId = 'hero' | 'reservar' | 'paquetes' | 'dia' | 'tranquilidad' | 'conocenos' | 'galeria' | 'temporadas' | 'opiniones' | 'guias' | 'preguntas';
 
 export type Seccion = { id: SeccionId; estado?: 'normal' | 'vacio' | 'catalogo_caido' };
 
@@ -20,8 +20,6 @@ type Entrada = {
   dia: readonly unknown[] | undefined;
   /** Las fotos de «Conócenos»; sin ellas no hay sección. */
   conocenos: readonly unknown[] | undefined;
-  /** Las fotos de las pangas de la sede (justo bajo el héroe); sin ellas no hay sección. */
-  pangas?: readonly unknown[] | undefined;
   /** Las guías de la sede («Antes de venir»); sin ellas no hay sección. */
   guias?: readonly unknown[] | undefined;
 };
@@ -31,21 +29,20 @@ function estadoDeReservar(servicios: Entrada['servicios'], paquetes: Entrada['pa
   return servicios === null || paquetes === null ? 'catalogo_caido' : 'vacio';
 }
 
-export function seccionesDeSede({ servicios, paquetes, resenas, fotos, faq, temporadas, dia, conocenos, pangas, guias }: Entrada): Seccion[] {
+export function seccionesDeSede({ servicios, paquetes, resenas, fotos, faq, temporadas, dia, conocenos, guias }: Entrada): Seccion[] {
   const secciones: Seccion[] = [{ id: 'hero' }];
-  // Las pangas van pegadas al héroe (el dueño quiere que se vean al abrir) y antes de lo que se reserva: una sola
-  // pantalla, sin botón propio, para no alejar la compra.
-  if (pangas && pangas.length > 0) secciones.push({ id: 'pangas' });
+  // La flota de la sede ya no es una sección (PFD, 2026-11-18): retrasaba la oferta justo después del héroe. Va dentro
+  // de «Conócenos» y, como «Tu panga», en el detalle del servicio.
   secciones.push({ id: 'reservar', estado: estadoDeReservar(servicios, paquetes) });
   if ((paquetes?.length ?? 0) > 0) secciones.push({ id: 'paquetes' });
+  // Las reseñas pegadas a lo que se reserva (PFD, 2026-11-17): quien llega de GetYourGuide o Airbnb busca la prueba
+  // social junto al producto, antes del relato del día; detrás de la política quedaban en la séptima sección.
+  if (resenas.some((r) => r.confirmada)) secciones.push({ id: 'opiniones' });
   if (dia && dia.length > 0) secciones.push({ id: 'dia' });
   secciones.push(
     // El pago, la cancelación y el clima van junto al producto: la política es real en las 4 empresas.
     { id: 'tranquilidad' },
   );
-  // Las reseñas junto a la política y al producto, no al final (PFD, 2026-11-11): una prueba social lejos de la compra
-  // no se ve y no cuenta.
-  if (resenas.some((r) => r.confirmada)) secciones.push({ id: 'opiniones' });
   if (conocenos && conocenos.length > 0) secciones.push({ id: 'conocenos' });
   if (hayGaleria([...fotos])) secciones.push({ id: 'galeria' });
   if (temporadas && temporadas.length > 0) secciones.push({ id: 'temporadas' });
@@ -57,7 +54,6 @@ export function seccionesDeSede({ servicios, paquetes, resenas, fotos, faq, temp
 
 export const ANCLA_DE: Record<SeccionId, string> = {
   hero: 'inicio',
-  pangas: 'pangas',
   reservar: 'reservar',
   paquetes: 'paquetes',
   dia: 'dia',
@@ -81,7 +77,6 @@ export type Fondo = 'blanco' | 'cafe-bruma' | 'tinta';
  * El ritmo sale del cambio de tono entre bandas, sin rayas: nunca dos seguidas con el mismo.
  */
 const PREFERENCIA: Record<Exclude<SeccionId, 'hero'>, readonly Fondo[]> = {
-  pangas: ['cafe-bruma'],
   reservar: ['blanco'],
   paquetes: ['cafe-bruma', 'blanco'],
   dia: ['blanco', 'cafe-bruma'],
@@ -111,9 +106,13 @@ export function fondosDeSecciones(ids: readonly SeccionId[]): Partial<Record<Sec
   return resultado;
 }
 
-/** Fuera del menú: el héroe (es el inicio), las pangas (son la continuación del héroe), tranquilidad (va pegada a reservar), los paquetes y el día (van junto a reservar), conócenos (se lee de paso hacia la galería) y las guías (van pegadas a las preguntas). */
-type SinEnlace = 'hero' | 'pangas' | 'tranquilidad' | 'paquetes' | 'dia' | 'conocenos' | 'guias';
-const SIN_ENLACE: readonly SeccionId[] = ['hero', 'pangas', 'tranquilidad', 'paquetes', 'dia', 'conocenos', 'guias'] satisfies SinEnlace[];
+/**
+ * Fuera del menú: el héroe (es el inicio), tranquilidad (va pegada a
+ * reservar), los paquetes (van junto a reservar), conócenos (se lee de paso hacia la galería) y las guías (van pegadas
+ * a las preguntas). El día sí entra desde la barra de secciones (PFD, 2026-11-17): es lo que se busca después del precio.
+ */
+type SinEnlace = 'hero' | 'tranquilidad' | 'paquetes' | 'conocenos' | 'guias';
+const SIN_ENLACE: readonly SeccionId[] = ['hero', 'tranquilidad', 'paquetes', 'conocenos', 'guias'] satisfies SinEnlace[];
 export type SeccionNavegable = Exclude<SeccionId, SinEnlace>;
 
 /** Los enlaces del menú de la sede; la etiqueta sale de `dict.nav[claveNav]`. */

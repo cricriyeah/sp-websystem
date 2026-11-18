@@ -34,6 +34,31 @@ type Props = {
 type Elemento = { vista: VistaProducto; destacada: boolean };
 
 /**
+ * Las tarjetas de «Qué reservar», en el orden en que se pintan: paquetes primero y el destacado de la sede abriendo la
+ * fila. La usa también la página para el «Desde» del botón fijo del teléfono: el mismo producto que abre la fila.
+ */
+export function vistasDeReservar({ lang, moneda, sedeSlug, servicios, paquetes, destacadas }: {
+  lang: Locale;
+  moneda: Moneda;
+  sedeSlug: string;
+  servicios: ServicioCatalogo[] | null;
+  paquetes: PaqueteCatalogo[] | null;
+  destacadas: SedeDestacada[];
+}): Elemento[] {
+  const primera = destacadas[0];
+  return [
+    ...(paquetes ?? []).map((p) => ({
+      vista: vistaDePaquete(p, lang, moneda),
+      destacada: primera?.tipo === 'paquete' && primera.slug === p.slug,
+    })),
+    ...(servicios ?? []).map((s) => ({
+      vista: vistaDeServicio(s, lang, moneda, sedeSlug),
+      destacada: primera?.tipo === 'servicio' && primera.slug === s.slug && (!primera.empresaSlug || primera.empresaSlug === s.empresa_slug),
+    })),
+  ].sort((a, b) => Number(b.destacada) - Number(a.destacada));
+}
+
+/**
  * «Qué puedes reservar» (F10): los servicios y paquetes de la sede en una sola fila que se arrastra,
  * cada uno con su botón «Reservar →». Los paquetes van primero y el destacado de la sede abre la
  * fila. Proyecta en servidor la respuesta de la API a lo mínimo que pinta la tarjeta. Con el catálogo
@@ -71,17 +96,7 @@ export function QuePuedesReservar({ lang, moneda, sede, servicios, paquetes, est
     );
   }
 
-  const primera = destacadas[0];
-  const elementos: Elemento[] = [
-    ...(paquetes ?? []).map((p) => ({
-      vista: vistaDePaquete(p, lang, moneda),
-      destacada: primera?.tipo === 'paquete' && primera.slug === p.slug,
-    })),
-    ...(servicios ?? []).map((s) => ({
-      vista: vistaDeServicio(s, lang, moneda, sede.slug),
-      destacada: primera?.tipo === 'servicio' && primera.slug === s.slug && (!primera.empresaSlug || primera.empresaSlug === s.empresa_slug),
-    })),
-  ].sort((a, b) => Number(b.destacada) - Number(a.destacada));
+  const elementos = vistasDeReservar({ lang, moneda, sedeSlug: sede.slug, servicios, paquetes, destacadas });
   const textosTarjeta = { ...textos, reservarAria: textos.verYReservarAria };
   let fotosPintadas = 0;
 

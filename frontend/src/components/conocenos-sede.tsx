@@ -1,13 +1,14 @@
 import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import type { SedeConocenos } from '@/content/sedes-tipos';
+import type { SedeConocenos, SedePangas } from '@/content/sedes-tipos';
 import type { LogoLargo } from '@/content/empresas-marca';
 import { CLASE_FONDO, type Fondo } from '@/components/ui/section-shell';
 import { botonClases } from '@/components/ui/variantes';
 import { cn } from '@/components/ui/cn';
 import { capitanesVisibles, mostrarPendientesEnEsteEntorno } from '@/lib/capitanes-visibles';
 import { ANCLA_DE } from '@/lib/secciones-sede';
+import { fraseDeNombres } from '@/lib/frase-de-nombres';
 
 type Props = {
   id: string;
@@ -17,6 +18,12 @@ type Props = {
   logo?: LogoLargo;
   /** Nombre de la empresa: el texto alternativo del logo. */
   empresa: string;
+  /**
+   * La flota de la empresa (La Paz): ya no es una sección propia pegada al héroe (PFD, 2026-11-18: retrasaba la oferta y
+   * contaba la misma historia que este relato con otra forma). Es el capítulo con que abre el relato: la gente y sus
+   * lanchas, una sola vez.
+   */
+  flota?: SedePangas;
 };
 
 /**
@@ -47,7 +54,7 @@ const MARCO_DE: Record<Fondo, string> = { blanco: 'lg:outline-superficie', 'cafe
 /** En el teléfono, de borde a borde de la pantalla; en escritorio solo sale por la izquierda, hasta el borde. */
 const SANGRA = 'mx-[calc(var(--margen-x)*-1)] lg:mr-0';
 
-export function ConocenosSede({ id, conocenos, fondo, logo, empresa }: Props) {
+export function ConocenosSede({ id, conocenos, fondo, logo, empresa, flota }: Props) {
   const { titulo, apertura, historia, foto, desde, tripulacion, cierre, ilustracion } = conocenos;
   const capitanes = capitanesVisibles(tripulacion.capitanes, mostrarPendientesEnEsteEntorno(process.env));
   const [escena, ...resto] = tripulacion.fotos;
@@ -93,6 +100,22 @@ export function ConocenosSede({ id, conocenos, fondo, logo, empresa }: Props) {
               <span className="texto-gigante block text-azul max-sm:text-[46.6cqi] lg:text-[46.6cqi]">{desde.anio}</span>
             </span>
           </p>
+        </div>
+      )}
+      {flota && (
+        // Las lanchas del gremio, antes de su gente: la flota completa de orilla a orilla, en su proporción y sin nada
+        // encima (el dueño rechazó texto sobre esta foto), y debajo la frase y los nombres, en la retícula del relato
+        // (la frase sobre la columna de fotos, los nombres sobre la del texto).
+        <div className="mb-14 sm:mb-20 lg:mb-28">
+          <div className="rev-foto">
+            <Image src={flota.flota.src} alt={flota.flota.alt} width={flota.flota.ancho} height={flota.flota.alto} sizes="100vw" className="block h-auto w-full" />
+          </div>
+          <div className="mx-auto mt-8 flex max-w-[1440px] flex-col gap-5 px-pagina sm:mt-10 lg:grid lg:grid-cols-12 lg:gap-x-6">
+            <p className="rev m-0 texto-seccion text-balance lg:col-span-5">{flota.frase}</p>
+            <p className="rev m-0 max-w-[52ch] text-lg leading-relaxed sm:text-xl lg:col-span-6 lg:col-start-7">
+              {flota.texto.replace('{nombres}', fraseDeNombres(flota.nombres, flota.y))}
+            </p>
+          </div>
         </div>
       )}
       <div className="mx-auto flex max-w-[1440px] flex-col gap-7 px-pagina lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-6">

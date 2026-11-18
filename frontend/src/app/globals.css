@@ -519,6 +519,39 @@
     animation: revelar-foto 1s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  /* Navegación de la sede (`navegacion-sede.tsx`): la barra de secciones baja desde la barra de arriba y el botón fijo
+     del teléfono sube desde el borde. Escondidas no reciben clics (pointer-events en el componente). */
+  .aparece-desde-arriba,
+  .aparece-desde-abajo {
+    opacity: 0;
+    transition: opacity 0.25s ease-out, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* El carril de pastillas se desvanece solo del lado donde quedan más (efecto de borde de desplazamiento de Apple):
+     es una máscara sobre el contenido, no un degradado pintado. */
+  .carril-pastillas[data-izquierda='true'][data-derecha='false'] {
+    mask-image: linear-gradient(to right, transparent, #000 1.5rem);
+  }
+  .carril-pastillas[data-izquierda='false'][data-derecha='true'] {
+    mask-image: linear-gradient(to left, transparent, #000 1.5rem);
+  }
+  .carril-pastillas[data-izquierda='true'][data-derecha='true'] {
+    mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+  }
+  .aparece-desde-arriba { transform: translateY(-0.75rem); }
+  .aparece-desde-abajo { transform: translateY(1rem); }
+  .aparece-desde-arriba[data-visible='true'],
+  .aparece-desde-abajo[data-visible='true'] {
+    opacity: 1;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aparece-desde-arriba,
+    .aparece-desde-abajo {
+      transform: none;
+      transition: opacity 0.15s linear;
+    }
+  }
+
   .icono-cargando {
     animation: giro-carga 1s linear infinite;
   }
@@ -835,6 +868,17 @@
   a {
     color: inherit;
     text-decoration: none;
+  }
+
+  /* La barra de secciones de la sede escribe su alto aquí mientras se ve (0 en el resto del sitio). */
+  html {
+    scroll-padding-top: var(--secciones-alto, 0px);
+  }
+  /* Desde 1280 px no hay pastillas (las secciones van en la barra de arriba): nada que dejar libre. */
+  @media (min-width: 80rem) {
+    html {
+      scroll-padding-top: 0px;
+    }
   }
 
   @media (prefers-reduced-motion: no-preference) {

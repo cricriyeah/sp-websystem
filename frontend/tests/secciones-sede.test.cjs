@@ -10,13 +10,9 @@ const base = { servicios: [{}], paquetes: [], resenas: [], fotos: [], faq: [], t
 const ids = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).map((x) => x.id);
 const reservar = (entrada) => s.seccionesDeSede({ ...base, ...entrada }).find((x) => x.id === 'reservar');
 
-test('las pangas van justo después del héroe, antes de lo que se reserva, y no salen en el menú', () => {
-  assert.deepEqual(ids({ pangas: [{}] }).slice(0, 3), ['hero', 'pangas', 'reservar']);
-  assert.ok(!ids({ pangas: [] }).includes('pangas'));
-  assert.ok(!ids({}).includes('pangas'));
-  assert.deepEqual(s.enlacesDeSede(['hero', 'pangas', 'reservar']).map((e) => e.claveNav), ['reservar']);
-  const fondos = s.fondosDeSecciones(['hero', 'pangas', 'reservar']);
-  assert.notEqual(fondos.pangas, fondos.reservar, 'dos bandas seguidas nunca con el mismo tono');
+test('la flota ya no es una sección: va dentro de conócenos y del detalle (PFD, 2026-11-18)', () => {
+  assert.ok(!s.seccionesDeSede({ servicios: [], paquetes: [], resenas: [], fotos: [], faq: [] }).some((x) => x.id === 'pangas'));
+  assert.equal(s.ANCLA_DE.pangas, undefined);
 });
 
 test('catálogo caído: ambas listas null', () => {
@@ -48,7 +44,7 @@ test('galería solo con 3 fotos aptas', () => {
 test('orden fijo de la sede, con todo', () => {
   assert.deepEqual(
     ids({ paquetes: [{}], dia: [{}], conocenos: [{}], fotos: [foto, foto, foto], temporadas: [{}], resenas: [{ confirmada: true }], faq: [{}], guias: [{}] }),
-    ['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'opiniones', 'conocenos', 'galeria', 'temporadas', 'guias', 'preguntas'],
+    ['hero', 'reservar', 'paquetes', 'opiniones', 'dia', 'tranquilidad', 'conocenos', 'galeria', 'temporadas', 'guias', 'preguntas'],
   );
 });
 
@@ -80,9 +76,10 @@ test('conócenos solo con fotos, entre tranquilidad y la galería, y fuera del m
   assert.equal(fondos.galeria, 'cafe-bruma');
 });
 
-test('enlaces del menú: un ancla por sección navegable, sin héroe, paquetes, día ni tranquilidad', () => {
+test('enlaces del menú: un ancla por sección navegable, sin héroe, paquetes ni tranquilidad', () => {
   assert.deepEqual(s.enlacesDeSede(['hero', 'reservar', 'paquetes', 'dia', 'tranquilidad', 'preguntas']), [
     { ancla: '#reservar', claveNav: 'reservar' },
+    { ancla: '#dia', claveNav: 'dia' },
     { ancla: '#preguntas', claveNav: 'preguntas' },
   ]);
   assert.equal(s.ANCLA_DE.galeria, 'galeria');

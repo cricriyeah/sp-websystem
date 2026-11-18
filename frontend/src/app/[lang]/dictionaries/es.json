@@ -161,6 +161,7 @@
     "experiencias": "Experiencias",
     "servicios": "Servicios",
     "opiniones": "Opiniones",
+    "dia": "Tu día",
     "mapa": "Mapa",
     "sedes": "Sedes",
     "empresas": "Empresas",
@@ -754,6 +755,16 @@
     "haceHoras": "hace {n} h"
   },
   "sedeContenido": {
+    "navegacion": { "etiqueta": "Secciones de la página", "desde": "Desde {monto}" },
+    "franja": {
+      "etiqueta": "Antes de reservar",
+      "pago": "Pagas con tarjeta al reservar y tu lugar queda confirmado.",
+      "clima": "Eliges otra fecha o te devolvemos todo.",
+      "pagoCorto": "Pago\nen línea",
+      "climaCorto": "Reembolso\npor clima",
+      "opinionesCorto": "Lee las\nopiniones",
+      "opiniones": "Lo que cuentan quienes ya salieron con nosotros."
+    },
     "arranque": {
       "cta": "Reservar"
     },

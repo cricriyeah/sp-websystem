@@ -7,7 +7,7 @@ import type { SedeContenido } from '@/content/sedes-tipos';
 import { getEmpresa } from '@/content/empresas';
 import { bloquesDeDetalle } from '@/content/detalle-extra';
 import { conCatalogo } from '@/lib/catalogo-en-texto';
-import { equipoDeServicio, especiesDeServicio, reglasDeServicio } from '@/content/datos-servicio';
+import { equipoDeServicio, especiesDeServicio, pangaDeServicio, reglasDeServicio } from '@/content/datos-servicio';
 import { getGuia, slugEnIdioma } from '@/content/guias';
 import { condicionesDeCompra, enlaceAlMapa, etiquetasDeReglas, type ClaseDeCompra } from '@/lib/detalle-servicio';
 import { seoDePaquete, seoDeServicio } from '@/content/seo-detalle';
@@ -132,7 +132,9 @@ function quienDe(empresaSlug: string, { lang, dict, sede }: Comun): VistaQuien |
   }
   if (sede.conocenos) {
     const { foto, tripulacion, apertura } = sede.conocenos;
-    return { nombre: empresa ?? sede.nombre, detalles: [], texto: apertura, retrato: foto, fotos: tripulacion.fotos, enlace };
+    // Aquí las fotos van en 4:3: cada una con su encuadre horizontal si lo tiene (dueño, 2026-11-18: a Chito no se le veía la cara).
+    const fotos = tripulacion.fotos.map(({ posicionAncha, ...f }) => ({ ...f, posicion: posicionAncha ?? f.posicion }));
+    return { nombre: empresa ?? sede.nombre, detalles: [], texto: apertura, retrato: foto, fotos, enlace };
   }
   return null;
 }
@@ -252,6 +254,8 @@ export function vistaDeDetalleServicio(entrada: EntradaServicio): VistaDetalle {
       titulo: detalle.reglas.titulo,
       items: etiquetasDeReglas(reglasDeServicio(clave), detalle.reglas).map((texto) => ({ texto })),
     },
+    // El cupo de la panga es una marca del backoffice; si no se resuelve, la frase se cae y queda el resto.
+    panga: conCatalogo(pangaDeServicio(clave, lang), servicio ? [servicio, ...(entrada.otros.servicios ?? [])] : entrada.otros.servicios, lang),
     incluye: { titulo: detalle.queIncluye, items: incluye, noIncluye },
     extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicio ? [servicio] : [], entrada, new Set(licencia ? [licencia.id] : [])) },
     otros,
@@ -328,6 +332,7 @@ export function vistaDeDetallePaquete(entrada: EntradaPaquete): VistaDetalle {
     ficha,
     especies: { titulo: detalle.sePesca, items: [] },
     reglas: { titulo: detalle.reglas.titulo, items: [] },
+    panga: null,
     incluye: { titulo: detalle.queIncluyePaquete, items: incluye, noIncluye: propia.noIncluye },
     extras: { titulo: detalle.puedesAgregar, items: extrasDe(servicios, entrada) },
     otros: [],
