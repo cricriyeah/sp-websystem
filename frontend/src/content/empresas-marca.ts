@@ -14,7 +14,7 @@
  * Sol). Piratas (dueño, 2026-11-12) lo lleva en la galería y en Temporadas usa su escudo (`logo`, PNG). En la banda tinta
  * de «Reserva con tranquilidad» va la versión `blanco` (dueño, 2026-11-13: en lugar del escudo PNG en círculo).
  */
-export type LogoLargo = { src: string; ancho: number; alto: number; blanco?: string; barra?: string; sello?: string; secciones?: ('temporadas' | 'galeria' | 'tranquilidad')[] };
+export type LogoLargo = { src: string; ancho: number; alto: number; blanco?: string; barra?: string; sello?: string; /** Alto en «Te lleva» de las tarjetas (h-10 si falta): un logo ancho de letras grandes va más bajo. */ tarjeta?: string; secciones?: ('temporadas' | 'galeria' | 'tranquilidad')[] };
 
 export type MarcaEmpresa = {
   slug: string;
@@ -48,5 +48,5 @@ export const MARCAS: readonly MarcaEmpresa[] = [
   { slug: 'transporte-la-paz', sede: 'la-paz', nombre: 'DLS Transporte', logo: '/logos/dlstransporte.webp' },
   { slug: 'la-ventana-travel', sede: 'la-ventana', nombre: 'La Ventana Travel', logo: '/logos/laventanatravel-oscuro.webp', simbolo: '/logos/laventanatravel-simbolo.webp' },
   // Logo largo nuevo de Piratas (dueño, 2026-11-12): en la barra, el héroe, Temporadas y el cierre de «Conócenos».
-  { slug: 'piratas-adventures', sede: 'puerto-chale', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp', logoLargo: { src: '/logos/piratas-largo.svg', blanco: '/logos/piratas-largo-blanco.svg', ancho: 1105, alto: 325, barra: 'h-7 sm:h-8', sello: 'h-9 sm:h-11 lg:h-12 xl:h-14', secciones: ['galeria', 'tranquilidad'] } },
+  { slug: 'piratas-adventures', sede: 'puerto-chale', nombre: 'Piratas Adventures', logo: '/logos/piratasadventures.webp', logoLargo: { src: '/logos/piratas-largo.svg', blanco: '/logos/piratas-largo-blanco.svg', ancho: 1105, alto: 325, barra: 'h-7 sm:h-8', tarjeta: 'h-5', sello: 'h-9 sm:h-11 lg:h-12 xl:h-14', secciones: ['galeria', 'tranquilidad'] } },
 ];

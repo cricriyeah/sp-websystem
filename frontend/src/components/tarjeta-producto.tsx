@@ -154,7 +154,7 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
                 alt={empresa}
                 width={vista.logoLargo.ancho}
                 height={vista.logoLargo.alto}
-                className={cn('w-auto max-w-[9rem] shrink-0 object-contain', vista.logoLargo.barra ?? 'h-10')}
+                className={cn('w-auto max-w-[9rem] shrink-0 object-contain', vista.logoLargo.tarjeta ?? 'h-10')}
               />
             </li>
           )}
