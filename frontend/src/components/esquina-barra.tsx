@@ -91,9 +91,9 @@ function PiezaRegreso({ destino, alPulsar, girado, retraso }: PiezaProps) {
   const viaje = (retardo: number): Transition => (sinMovimiento ? { duration: 0 } : { ...RESORTE, delay: retardo });
   const fundido = (retardo: number, duracion = 0.25): Transition => ({ duration: duracion, ease: 'easeOut', delay: retardo });
   const esperaNombre = asentado ? 0 : ENTRADA_NOMBRE_S + espera;
-  // En la letra de los titulares (monoespaciada, ~0.55 em por letra con su tracking) una palabra de más de 9 letras
-  // («DESTINATIONS») no cabe a 20 px en los 108 px que deja la barra a 390 px: esa baja a 16. Las demás van a 20 y,
-  // si son dos palabras que no caben en una línea («PUERTO CHALE», «PASO ANTERIOR»), se apilan en dos, como un logo.
+  // En la letra de los titulares (monoespaciada, ~0.54 em por letra con su tracking) caben 10 letras a 20 px en los
+  // 112 px que deja la barra a 390 px: «LA VENTANA» va en una línea (dueño, 2026-11-17). Una palabra de más de 9 letras
+  // («DESTINATIONS») baja a 16; dos palabras que no caben en una línea («PUERTO CHALE», «PASO ANTERIOR») se apilan.
   const palabraLarga = Math.max(...destino.etiqueta.split(/\s+/).map((p) => p.length)) > 9;
 
   const contenido: ReactNode = (
@@ -121,7 +121,7 @@ function PiezaRegreso({ destino, alPulsar, girado, retraso }: PiezaProps) {
           <m.span
             key={destino.etiqueta}
             className={cn(
-              '[grid-area:1/1] max-w-[6.75rem] texto-mono-mayus font-bold leading-[0.9] tracking-[-0.04em] text-foreground [text-wrap:balance] transition-colors group-hover:text-cafe',
+              '[grid-area:1/1] max-w-[7rem] texto-mono-mayus font-bold leading-[0.9] tracking-[-0.05em] text-foreground [text-wrap:balance] transition-colors group-hover:text-cafe',
               palabraLarga ? 'text-[16px]' : 'text-[20px]',
             )}
             initial={{ opacity: 0, x: -8 }}

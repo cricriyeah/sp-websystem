@@ -475,8 +475,8 @@ desequilibraba la barra. Ahora la esquina izquierda de la barra es el regreso, s
 - Etiquetas cortas (`nav.regreso` en los diccionarios: `corto` + `aria`; la prueba `regreso` exige 13 caracteres o
   menos para que quepan a 390 px junto a ES/EN y al menú): el nombre de la sede; «Destinos»; «Volver» (legales a la
   página anterior); «Guías»; en el checkout «Paso anterior», «Detalles» (al servicio) o «Paquete». El nombre va en la letra de
-  los titulares (Consola Mono Bold, `texto-mono-mayus`), en mayúsculas y a 20 px; dos palabras que no caben en 108 px
-  se apilan en dos líneas como un logo, y una palabra de más de 9 letras («DESTINATIONS») baja a 16 px para caber. El «‹» va en una casilla de 12 px (su trazo es un tercio del ícono) a 16 px del borde
+  los titulares (Consola Mono Bold, `texto-mono-mayus`), en mayúsculas y a 20 px; hasta 10 letras van en una línea
+  («LA VENTANA», 112 px); dos palabras más largas se apilan en dos líneas como un logo, y una palabra de más de 9 letras («DESTINATIONS») baja a 16 px para caber. El «‹» va en una casilla de 12 px (su trazo es un tercio del ícono) a 16 px del borde
   de la píldora; en el teléfono la casilla vacía del logo de la empresa se esconde para dejarle sitio al nombre.
 - El destino sale de `lib/regreso.ts` (`regresoDe`, probado en `tests/regreso.test.cjs`): un mapa fijo, nunca el
   historial del navegador (quien llegaba de un anuncio volvía a Instagram). Sede → todos los destinos; servicio o
