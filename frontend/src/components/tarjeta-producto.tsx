@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Check, Clock, UserCircle, UsersThree } from '@phosphor-icons/react/ssr';
 import type { ColorActividad } from '@/lib/color-actividad';
+import type { LogoLargo } from '@/content/empresas-marca';
 import { CarruselFotos } from '@/components/ui/carrusel-fotos';
 import { botonClases } from '@/components/ui/variantes';
 import { cn } from '@/components/ui/cn';
@@ -17,6 +18,11 @@ export type VistaProducto = {
    */
   logoEmpresa?: string;
   logoSinFondo?: boolean;
+  /**
+   * El logo largo a color (isotipo y nombre): con él, «Te lleva» pinta el logo en lugar del isotipo y el nombre
+   * (dueño, 2026-11-17), igual que el checkout.
+   */
+  logoLargo?: LogoLargo;
   color: ColorActividad;
   /** La palabra del tipo («Pesca», «5 noches»): rotula el bloque de color cuando no hay foto honesta. */
   palabra: string;
@@ -138,10 +144,23 @@ export function TarjetaProducto({ vista, textos, prioridad = false, unica = fals
         {/* La única de su fila (la pesca de La Paz) lleva el nombre con la fuente de los titulares. */}
         <p className={cn(unica ? 'texto-paso lg:text-4xl lg:leading-tight' : 'text-lg font-semibold leading-snug')}>{nombre}</p>
 
-        <ul className="flex flex-wrap gap-x-5 gap-y-2 texto-cuerpo">
-          {datos.map(({ icono: Icono, texto }, i) => (
+        <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 texto-cuerpo">
+          {vista.logoLargo && (
+            // «Te lleva» + el logo largo, que ya trae el nombre dibujado (su `alt` lo dice al lector de pantalla).
+            <li className="flex items-center gap-2">
+              {textos.opera.split('{empresa}')[0].trim()}
+              <Image
+                src={vista.logoLargo.src}
+                alt={empresa}
+                width={vista.logoLargo.ancho}
+                height={vista.logoLargo.alto}
+                className={cn('w-auto max-w-[9rem] shrink-0 object-contain', vista.logoLargo.barra ?? 'h-10')}
+              />
+            </li>
+          )}
+          {(vista.logoLargo ? datos.slice(1) : datos).map(({ icono: Icono, texto }, i) => (
             <li key={texto} className="flex items-center gap-2">
-              {i === 0 && vista.logoEmpresa ? (
+              {i === 0 && !vista.logoLargo && vista.logoEmpresa ? (
                 <span aria-hidden className={cn('relative inline-block size-7 shrink-0', !vista.logoSinFondo && 'overflow-hidden rounded-full bg-blanco')}>
                   <Image src={vista.logoEmpresa} alt="" fill sizes="28px" className={cn('object-contain', !vista.logoSinFondo && 'p-[6%]')} />
                 </span>

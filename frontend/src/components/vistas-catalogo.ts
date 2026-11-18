@@ -49,6 +49,7 @@ export function vistaDeServicio(servicio: ServicioCatalogo, lang: Locale, moneda
     empresa: empresa?.nombre ?? servicio.empresa_slug,
     logoEmpresa: empresa?.simboloBarra ?? empresa?.simbolo ?? empresa?.logo,
     logoSinFondo: Boolean(empresa?.simboloBarra),
+    logoLargo: empresa?.logoLargo,
     color: colorDeServicio(servicio),
     palabra: palabraDeServicio(servicio.tipo_servicio, lang),
     // Igual que el paquete: un texto propio del sitio manda; si no, la descripción del backoffice (ya en el idioma).
@@ -84,6 +85,7 @@ export function vistaDePaquete(paquete: PaqueteCatalogo, lang: Locale, moneda: M
     empresa: empresa?.nombre ?? paquete.empresa_lider,
     logoEmpresa: empresa?.simboloBarra ?? empresa?.simbolo ?? empresa?.logo,
     logoSinFondo: Boolean(empresa?.simboloBarra),
+    logoLargo: empresa?.logoLargo,
     color: colorDePaquete(paquete),
     palabra: palabraDePaquete(paquete.noches, lang),
     // La del backoffice (ya en el idioma de la página); un texto propio del sitio, si lo hay, manda.
